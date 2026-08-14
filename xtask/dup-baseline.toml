@@ -27,8 +27,8 @@
 
 [[crate]]
 name = "conform"
-duplicate_lines = 765
-total_lines = 10298
+duplicate_lines = 367
+total_lines = 9891
 
 [[crate]]
 name = "examples"
@@ -48,7 +48,7 @@ total_lines = 1943
 [[crate]]
 name = "tests"
 duplicate_lines = 8
-total_lines = 2984
+total_lines = 2857
 
 [[crate]]
 name = "vyre"
@@ -122,8 +122,8 @@ total_lines = 1139
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 4270
-total_lines = 94690
+duplicate_lines = 4127
+total_lines = 94879
 
 [[crate]]
 name = "vyre-frontend-rust"
@@ -137,8 +137,8 @@ total_lines = 3276
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 10983
-total_lines = 187604
+duplicate_lines = 11425
+total_lines = 187461
 
 [[crate]]
 name = "vyre-lints"
@@ -187,8 +187,8 @@ total_lines = 1115
 
 [[crate]]
 name = "vyre-spec"
-duplicate_lines = 244
-total_lines = 9800
+duplicate_lines = 84
+total_lines = 9165
 
 [[crate]]
 name = "xtask"

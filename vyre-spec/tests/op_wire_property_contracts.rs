@@ -1,8 +1,18 @@
 //! Generated property coverage for builtin and opaque operation wire tags.
+//!
+//! The builtin variant space each strategy draws from is owned by
+//! `tests/support/spec_variant_tables.rs`. The round trip and the reserved-tag
+//! bound asserted below are this suite's own contract.
 
 mod spec_variants;
 
+#[path = "../../tests/support/spec_variant_tables.rs"]
+mod spec_variant_tables;
+
 use proptest::prelude::*;
+use spec_variant_tables::{
+    builtin_atomic_ops, builtin_bin_ops, builtin_ternary_ops, builtin_un_ops,
+};
 use spec_variants::collective_op_strategy;
 use vyre_spec::extension::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionTernaryOpId, ExtensionUnOpId,
@@ -13,109 +23,42 @@ fn extension_raw_id() -> impl Strategy<Value = u32> {
     any::<u32>().prop_map(|raw| raw | 0x8000_0000)
 }
 
+// Each builtin keeps the weight it had when every variant was its own
+// `prop_oneof!` arm, so folding the table into one `select` arm does not hand
+// the opaque arm half the corpus.
 fn bin_op_strategy() -> impl Strategy<Value = BinOp> {
+    let builtins = builtin_bin_ops();
+    let weight = builtins.len() as u32;
     prop_oneof![
-        Just(BinOp::Add),
-        Just(BinOp::Sub),
-        Just(BinOp::Mul),
-        Just(BinOp::Div),
-        Just(BinOp::Mod),
-        Just(BinOp::WrappingAdd),
-        Just(BinOp::WrappingSub),
-        Just(BinOp::BitAnd),
-        Just(BinOp::BitOr),
-        Just(BinOp::BitXor),
-        Just(BinOp::Shl),
-        Just(BinOp::Shr),
-        Just(BinOp::Eq),
-        Just(BinOp::Ne),
-        Just(BinOp::Lt),
-        Just(BinOp::Gt),
-        Just(BinOp::Le),
-        Just(BinOp::Ge),
-        Just(BinOp::And),
-        Just(BinOp::Or),
-        Just(BinOp::AbsDiff),
-        Just(BinOp::Min),
-        Just(BinOp::Max),
-        Just(BinOp::SaturatingAdd),
-        Just(BinOp::SaturatingSub),
-        Just(BinOp::SaturatingMul),
-        Just(BinOp::Shuffle),
-        Just(BinOp::Ballot),
-        Just(BinOp::WaveReduce),
-        Just(BinOp::WaveBroadcast),
-        Just(BinOp::RotateLeft),
-        Just(BinOp::RotateRight),
-        Just(BinOp::MulHigh),
-        extension_raw_id().prop_map(|raw| BinOp::Opaque(ExtensionBinOpId(raw))),
+        weight => prop::sample::select(builtins),
+        1 => extension_raw_id().prop_map(|raw| BinOp::Opaque(ExtensionBinOpId(raw))),
     ]
 }
 
 fn un_op_strategy() -> impl Strategy<Value = UnOp> {
+    let builtins = builtin_un_ops();
+    let weight = builtins.len() as u32;
     prop_oneof![
-        Just(UnOp::Negate),
-        Just(UnOp::BitNot),
-        Just(UnOp::LogicalNot),
-        Just(UnOp::Popcount),
-        Just(UnOp::Clz),
-        Just(UnOp::Ctz),
-        Just(UnOp::ReverseBits),
-        Just(UnOp::Cos),
-        Just(UnOp::Sin),
-        Just(UnOp::Abs),
-        Just(UnOp::Sqrt),
-        Just(UnOp::Floor),
-        Just(UnOp::Ceil),
-        Just(UnOp::Round),
-        Just(UnOp::Trunc),
-        Just(UnOp::Sign),
-        Just(UnOp::IsNan),
-        Just(UnOp::IsInf),
-        Just(UnOp::IsFinite),
-        Just(UnOp::Exp),
-        Just(UnOp::Log),
-        Just(UnOp::Log2),
-        Just(UnOp::Exp2),
-        Just(UnOp::Tan),
-        Just(UnOp::Acos),
-        Just(UnOp::Asin),
-        Just(UnOp::Atan),
-        Just(UnOp::Tanh),
-        Just(UnOp::Sinh),
-        Just(UnOp::Cosh),
-        Just(UnOp::InverseSqrt),
-        Just(UnOp::Unpack4Low),
-        Just(UnOp::Unpack4High),
-        Just(UnOp::Unpack8Low),
-        Just(UnOp::Unpack8High),
-        Just(UnOp::Reciprocal),
-        extension_raw_id().prop_map(|raw| UnOp::Opaque(ExtensionUnOpId(raw))),
+        weight => prop::sample::select(builtins),
+        1 => extension_raw_id().prop_map(|raw| UnOp::Opaque(ExtensionUnOpId(raw))),
     ]
 }
 
 fn atomic_op_strategy() -> impl Strategy<Value = AtomicOp> {
+    let builtins = builtin_atomic_ops();
+    let weight = builtins.len() as u32;
     prop_oneof![
-        Just(AtomicOp::Add),
-        Just(AtomicOp::Or),
-        Just(AtomicOp::And),
-        Just(AtomicOp::Xor),
-        Just(AtomicOp::Min),
-        Just(AtomicOp::Max),
-        Just(AtomicOp::Exchange),
-        Just(AtomicOp::CompareExchange),
-        Just(AtomicOp::CompareExchangeWeak),
-        Just(AtomicOp::FetchNand),
-        Just(AtomicOp::LruUpdate),
-        extension_raw_id().prop_map(|raw| AtomicOp::Opaque(ExtensionAtomicOpId(raw))),
+        weight => prop::sample::select(builtins),
+        1 => extension_raw_id().prop_map(|raw| AtomicOp::Opaque(ExtensionAtomicOpId(raw))),
     ]
 }
 
 fn ternary_op_strategy() -> impl Strategy<Value = TernaryOp> {
+    let builtins = builtin_ternary_ops();
+    let weight = builtins.len() as u32;
     prop_oneof![
-        Just(TernaryOp::Fma),
-        Just(TernaryOp::Select),
-        extension_raw_id().prop_map(|raw| TernaryOp::Opaque(ExtensionTernaryOpId(raw))),
+        weight => prop::sample::select(builtins),
+        1 => extension_raw_id().prop_map(|raw| TernaryOp::Opaque(ExtensionTernaryOpId(raw))),
     ]
 }
 

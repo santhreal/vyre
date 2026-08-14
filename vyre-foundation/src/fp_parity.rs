@@ -92,20 +92,34 @@ fn node_has_transcendental(node: &Node) -> bool {
     }
 }
 
+/// Whether `expr` reaches an f32 op a backend may lower to an approximate
+/// native instruction.
+///
+/// The set is the policy, so a `UnOp` left out of it asserts that backends
+/// agree with the reference to `BACKEND_ELEMENTARY_F32_ULP_BUDGET` on that op.
+/// `UnOp::Reciprocal` is deliberately outside: cuda and wgpu both lower it to
+/// a division rather than an approximate reciprocal instruction, so it stays
+/// in the elementary window.
 fn expr_has_transcendental(expr: &Expr) -> bool {
     match expr {
         Expr::UnOp { op, operand } => {
             matches!(
                 op,
                 UnOp::Exp
+                    | UnOp::Exp2
                     | UnOp::Log
+                    | UnOp::Log2
                     | UnOp::Sqrt
                     | UnOp::InverseSqrt
                     | UnOp::Sin
                     | UnOp::Cos
-                    | UnOp::Tanh
+                    | UnOp::Tan
+                    | UnOp::Asin
+                    | UnOp::Acos
+                    | UnOp::Atan
                     | UnOp::Sinh
                     | UnOp::Cosh
+                    | UnOp::Tanh
             ) || expr_has_transcendental(operand)
         }
         Expr::BinOp { left, right, .. } => {

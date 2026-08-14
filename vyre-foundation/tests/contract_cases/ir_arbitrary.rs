@@ -13,8 +13,13 @@
 // so `opaque_count` moves. That difference is the parameter of
 // `arb_expr_with`, not a reason for a second corpus.
 
+#[path = "../../../tests/support/spec_variant_tables.rs"]
+mod spec_variant_tables;
+
 use proptest::collection::vec as prop_vec;
 use proptest::prelude::*;
+pub(crate) use spec_variant_tables::buffer_data_types;
+use spec_variant_tables::{builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
 use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_foundation::MemoryOrdering;
 use vyre_spec::data_type::TypeId;
@@ -108,28 +113,14 @@ pub(crate) fn arb_datatype() -> BoxedStrategy<DataType> {
     .boxed()
 }
 
+/// The flat `DataType` forms a buffer element may take.
+///
+/// `Array` is the one flat form carrying a payload, so its element size is
+/// drawn rather than fixed; the rest of the set comes from the shared table.
 pub(crate) fn arb_buffer_datatype() -> BoxedStrategy<DataType> {
-    prop_oneof![
-        Just(DataType::U8),
-        Just(DataType::U16),
-        Just(DataType::U32),
-        Just(DataType::I8),
-        Just(DataType::I16),
-        Just(DataType::I32),
-        Just(DataType::I64),
-        Just(DataType::U64),
-        Just(DataType::Vec2U32),
-        Just(DataType::Vec4U32),
-        Just(DataType::Bool),
-        Just(DataType::Bytes),
-        (0usize..=64).prop_map(|element_size| DataType::Array { element_size }),
-        Just(DataType::F16),
-        Just(DataType::BF16),
-        Just(DataType::F32),
-        Just(DataType::F64),
-        Just(DataType::Tensor),
-    ]
-    .boxed()
+    (0usize..=64usize)
+        .prop_flat_map(|element_size| prop::sample::select(buffer_data_types(element_size)))
+        .boxed()
 }
 
 pub(crate) fn arb_literal() -> BoxedStrategy<Expr> {
@@ -232,102 +223,48 @@ pub(crate) fn arb_expr_with(opaque_leaf: BoxedStrategy<Expr>) -> BoxedStrategy<E
     .boxed()
 }
 
-pub(crate) fn arb_binop() -> BoxedStrategy<BinOp> {
+/// Draw uniformly from a builtin variant table, with one extra opaque arm.
+///
+/// The builtins keep the combined weight they had when each was its own
+/// `prop_oneof!` arm, so folding a table into a single `select` does not hand
+/// the opaque arm half the corpus.
+fn builtin_arm_with_opaque<T: std::fmt::Debug + Clone + 'static>(
+    builtins: Vec<T>,
+    opaque: BoxedStrategy<T>,
+) -> BoxedStrategy<T> {
+    let weight = u32::try_from(builtins.len()).expect("Fix: variant tables stay small.");
     prop_oneof![
-        Just(BinOp::Add),
-        Just(BinOp::Sub),
-        Just(BinOp::Mul),
-        Just(BinOp::Div),
-        Just(BinOp::Mod),
-        Just(BinOp::BitAnd),
-        Just(BinOp::BitOr),
-        Just(BinOp::BitXor),
-        Just(BinOp::Shl),
-        Just(BinOp::Shr),
-        Just(BinOp::Eq),
-        Just(BinOp::Ne),
-        Just(BinOp::Lt),
-        Just(BinOp::Gt),
-        Just(BinOp::Le),
-        Just(BinOp::Ge),
-        Just(BinOp::And),
-        Just(BinOp::Or),
-        Just(BinOp::AbsDiff),
-        Just(BinOp::Min),
-        Just(BinOp::Max),
-        Just(BinOp::SaturatingAdd),
-        Just(BinOp::SaturatingSub),
-        Just(BinOp::SaturatingMul),
-        Just(BinOp::Shuffle),
-        Just(BinOp::Ballot),
-        Just(BinOp::WaveReduce),
-        Just(BinOp::WaveBroadcast),
-        Just(BinOp::RotateLeft),
-        Just(BinOp::RotateRight),
-        any::<u32>().prop_map(|id| BinOp::Opaque(ExtensionBinOpId(id | 0x8000_0000))),
+        weight => prop::sample::select(builtins),
+        1 => opaque,
     ]
     .boxed()
+}
+
+pub(crate) fn arb_binop() -> BoxedStrategy<BinOp> {
+    builtin_arm_with_opaque(
+        builtin_bin_ops(),
+        any::<u32>()
+            .prop_map(|id| BinOp::Opaque(ExtensionBinOpId(id | 0x8000_0000)))
+            .boxed(),
+    )
 }
 
 pub(crate) fn arb_unop() -> BoxedStrategy<UnOp> {
-    prop_oneof![
-        Just(UnOp::Negate),
-        Just(UnOp::BitNot),
-        Just(UnOp::LogicalNot),
-        Just(UnOp::Popcount),
-        Just(UnOp::Clz),
-        Just(UnOp::Ctz),
-        Just(UnOp::ReverseBits),
-        Just(UnOp::Cos),
-        Just(UnOp::Sin),
-        Just(UnOp::Abs),
-        Just(UnOp::Sqrt),
-        Just(UnOp::Floor),
-        Just(UnOp::Ceil),
-        Just(UnOp::Round),
-        Just(UnOp::Trunc),
-        Just(UnOp::Sign),
-        Just(UnOp::IsNan),
-        Just(UnOp::IsInf),
-        Just(UnOp::IsFinite),
-        Just(UnOp::Exp),
-        Just(UnOp::Log),
-        Just(UnOp::Log2),
-        Just(UnOp::Exp2),
-        Just(UnOp::Tan),
-        Just(UnOp::Acos),
-        Just(UnOp::Asin),
-        Just(UnOp::Atan),
-        Just(UnOp::Tanh),
-        Just(UnOp::Sinh),
-        Just(UnOp::Cosh),
-        Just(UnOp::InverseSqrt),
-        Just(UnOp::Reciprocal),
-        Just(UnOp::Unpack4Low),
-        Just(UnOp::Unpack4High),
-        Just(UnOp::Unpack8Low),
-        Just(UnOp::Unpack8High),
-        any::<u32>().prop_map(|id| UnOp::Opaque(ExtensionUnOpId(id | 0x8000_0000))),
-    ]
-    .boxed()
+    builtin_arm_with_opaque(
+        builtin_un_ops(),
+        any::<u32>()
+            .prop_map(|id| UnOp::Opaque(ExtensionUnOpId(id | 0x8000_0000)))
+            .boxed(),
+    )
 }
 
 pub(crate) fn arb_atomic_op() -> BoxedStrategy<AtomicOp> {
-    prop_oneof![
-        Just(AtomicOp::Add),
-        Just(AtomicOp::Or),
-        Just(AtomicOp::And),
-        Just(AtomicOp::Xor),
-        Just(AtomicOp::Min),
-        Just(AtomicOp::Max),
-        Just(AtomicOp::Exchange),
-        Just(AtomicOp::CompareExchange),
-        Just(AtomicOp::CompareExchangeWeak),
-        Just(AtomicOp::FetchNand),
-        Just(AtomicOp::LruUpdate),
-        any::<u32>().prop_map(|id| AtomicOp::Opaque(ExtensionAtomicOpId(id | 0x8000_0000))),
-    ]
-    .boxed()
+    builtin_arm_with_opaque(
+        builtin_atomic_ops(),
+        any::<u32>()
+            .prop_map(|id| AtomicOp::Opaque(ExtensionAtomicOpId(id | 0x8000_0000)))
+            .boxed(),
+    )
 }
 
 /// An expression generator, passed as a function so one statement generator can

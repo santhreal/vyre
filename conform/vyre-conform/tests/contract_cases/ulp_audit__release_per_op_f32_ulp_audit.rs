@@ -39,7 +39,7 @@ fn release_per_op_f32_ulp_audit() {
             continue;
         };
 
-        let tolerance = audit_f32_ulp_budget(&program);
+        let tolerance = f32_ulp_tolerance(&program);
         let production = match ProductionSession::compile(&program, backend) {
             Ok(production) => production,
             Err(error) => {
@@ -76,7 +76,7 @@ fn release_per_op_f32_ulp_audit() {
             ));
             continue;
         }
-        let input_plan = match backend_dispatch_plan(&program) {
+        let input_plan = match WitnessInputPlan::for_program(&program) {
             Ok(plan) => plan,
             Err(error) => {
                 failures.push(format!(
@@ -86,16 +86,14 @@ fn release_per_op_f32_ulp_audit() {
                 continue;
             }
         };
-        let adv_input_indices = backend_input_buffer_indices(&input_plan);
+        let adv_input_indices: Vec<usize> = input_plan.buffer_indices().collect();
 
         let mut op_max_ulp = 0u32;
 
         // Fixture cases
         let mut backend_inputs: Vec<&[u8]> = Vec::with_capacity(program.buffers().len());
         for (case_index, inputs) in cases.iter().enumerate() {
-            if let Err(error) =
-                backend_inputs_from_fixture_into(inputs, &input_plan, &mut backend_inputs)
-            {
+            if let Err(error) = plan_witness_inputs_into(inputs, &input_plan, &mut backend_inputs) {
                 failures.push(format!(
                     "{} case {}: ULP audit input planning failed: {error}",
                     entry.id, case_index
@@ -148,9 +146,7 @@ fn release_per_op_f32_ulp_audit() {
 
         // Adversarial companion
         if !cases.is_empty() {
-            if let Err(error) =
-                backend_inputs_from_fixture_into_owned(&cases[0], &input_plan, &mut base)
-            {
+            if let Err(error) = plan_witness_inputs_owned_into(&cases[0], &input_plan, &mut base) {
                 failures.push(format!(
                     "{}: ULP audit adversarial base planning failed: {error}",
                     entry.id

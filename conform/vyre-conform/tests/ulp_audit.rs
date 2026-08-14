@@ -14,20 +14,16 @@
 
 use std::collections::BTreeMap;
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre::ir::{DataType, Program};
 use vyre_conform::fp_parity::{f32_ulp_tolerance, ulp_distance};
 use vyre_conform::production::ProductionSession;
+use vyre_conform::witness_plan::{
+    plan_witness_inputs_into, plan_witness_inputs_owned_into, WitnessInputPlan,
+};
 use vyre_reference::value::Value;
 
 type FixtureCases = Vec<Vec<Vec<u8>>>;
 type FixtureFn = fn() -> FixtureCases;
-
-const TRANSCENDENTAL_F32_ULP_BUDGET: u32 = 128;
-
-#[path = "contract_cases/ulp_audit_input_plan.rs"]
-mod ulp_audit_input_plan;
-
-pub(crate) use ulp_audit_input_plan::*;
 
 struct UnifiedEntry {
     id: &'static str,
@@ -127,104 +123,6 @@ fn max_ulp_delta(reference: &[Vec<u8>], backend: &[Vec<u8>], program: &Program) 
         }
     }
     Some(max_ulp)
-}
-
-fn audit_f32_ulp_budget(program: &Program) -> u32 {
-    if program_has_transcendental(program) {
-        TRANSCENDENTAL_F32_ULP_BUDGET
-    } else {
-        f32_ulp_tolerance(program)
-    }
-}
-
-fn program_has_transcendental(program: &Program) -> bool {
-    program.entry().iter().any(node_has_transcendental)
-}
-
-fn expr_has_transcendental(expr: &Expr) -> bool {
-    match expr {
-        Expr::UnOp { op, operand } => {
-            matches!(
-                op,
-                UnOp::Sqrt
-                    | UnOp::InverseSqrt
-                    | UnOp::Sin
-                    | UnOp::Cos
-                    | UnOp::Exp
-                    | UnOp::Log
-                    | UnOp::Log2
-                    | UnOp::Exp2
-                    | UnOp::Tan
-                    | UnOp::Acos
-                    | UnOp::Asin
-                    | UnOp::Atan
-                    | UnOp::Tanh
-                    | UnOp::Sinh
-                    | UnOp::Cosh
-            ) || expr_has_transcendental(operand)
-        }
-        Expr::BinOp { left, right, .. } => {
-            expr_has_transcendental(left) || expr_has_transcendental(right)
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_has_transcendental(cond)
-                || expr_has_transcendental(true_val)
-                || expr_has_transcendental(false_val)
-        }
-        Expr::Cast { value, .. } => expr_has_transcendental(value),
-        Expr::Fma { a, b, c } => {
-            expr_has_transcendental(a) || expr_has_transcendental(b) || expr_has_transcendental(c)
-        }
-        Expr::Load { index, .. } => expr_has_transcendental(index),
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            expr_has_transcendental(index)
-                || expected.as_deref().is_some_and(expr_has_transcendental)
-                || expr_has_transcendental(value)
-        }
-        Expr::SubgroupReduce { value, .. } | Expr::SubgroupBallot { cond: value } => {
-            expr_has_transcendental(value)
-        }
-        Expr::SubgroupShuffle { value, lane } => {
-            expr_has_transcendental(value) || expr_has_transcendental(lane)
-        }
-        Expr::Call { args, .. } => args.iter().any(expr_has_transcendental),
-        _ => false,
-    }
-}
-
-fn node_has_transcendental(node: &Node) -> bool {
-    match node {
-        Node::Let { value, .. } | Node::Assign { value, .. } => expr_has_transcendental(value),
-        Node::Store { index, value, .. } => {
-            expr_has_transcendental(index) || expr_has_transcendental(value)
-        }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            expr_has_transcendental(cond)
-                || then.iter().any(node_has_transcendental)
-                || otherwise.iter().any(node_has_transcendental)
-        }
-        Node::Loop { from, to, body, .. } => {
-            expr_has_transcendental(from)
-                || expr_has_transcendental(to)
-                || body.iter().any(node_has_transcendental)
-        }
-        Node::Block(body) => body.iter().any(node_has_transcendental),
-        Node::Region { body, .. } => body.iter().any(node_has_transcendental),
-        _ => false,
-    }
 }
 
 fn make_adversarial_inputs_into(

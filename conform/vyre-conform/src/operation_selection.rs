@@ -2,10 +2,8 @@
 //! entry into an executable case with CPU reference outputs.
 
 use crate::proof_options::ShardSpec;
-use crate::witness_fixtures::{
-    backend_dispatch_inputs_with_plan_into, backend_dispatch_plan, synthesize_witness_cases,
-    BackendDispatchPlan, FixtureCases, FixtureFn,
-};
+use crate::witness_fixtures::{synthesize_witness_cases, FixtureCases, FixtureFn};
+use vyre_conform::witness_plan::{plan_witness_inputs_into, WitnessInputPlan};
 use vyre_conform::{convergence_lens, dispatch_grid};
 use vyre_reference::value::Value;
 
@@ -23,7 +21,7 @@ pub(crate) struct PreparedEntry {
     pub(crate) dispatch_config: vyre_driver::DispatchConfig,
     pub(crate) cases: FixtureCases,
     pub(crate) reference_cases: FixtureCases,
-    pub(crate) input_plan: BackendDispatchPlan,
+    pub(crate) input_plan: WitnessInputPlan,
     pub(crate) convergence_max_iterations: Option<u32>,
 }
 
@@ -114,7 +112,7 @@ pub(crate) fn prepare_entry(entry: UnifiedEntry) -> Result<PreparedEntry, String
             ));
         }
     }
-    let input_plan = backend_dispatch_plan(&program)?;
+    let input_plan = WitnessInputPlan::for_program(&program)?;
     let convergence_max_iterations = vyre_libs::operation_catalog::convergence_contract(entry.id)
         .map(|contract| contract.max_iterations);
     let reference_cases = prepare_reference_cases(
@@ -141,7 +139,7 @@ fn prepare_reference_cases(
     op_id: &str,
     program: &vyre::Program,
     cases: &FixtureCases,
-    input_plan: &BackendDispatchPlan,
+    input_plan: &WitnessInputPlan,
     expected_cases: Option<FixtureCases>,
     convergence_max_iterations: Option<u32>,
 ) -> Result<FixtureCases, String> {
@@ -170,7 +168,7 @@ fn prepare_reference_cases(
     let mut reference_values = Vec::with_capacity(program.buffers().len());
     let mut planned_inputs: Vec<&[u8]> = Vec::with_capacity(input_plan.source_count());
     for (case_index, inputs) in cases.iter().enumerate() {
-        backend_dispatch_inputs_with_plan_into(inputs, input_plan, &mut planned_inputs).map_err(
+        plan_witness_inputs_into(inputs, input_plan, &mut planned_inputs).map_err(
             |error| {
                 format!(
                     "{op_id}: reference input planning failed while preparing case {case_index}: {error}"
@@ -250,7 +248,7 @@ mod tests {
                 vyre::ir::Expr::load("input", vyre::ir::Expr::u32(0)),
             )],
         );
-        let input_plan = backend_dispatch_plan(&program)
+        let input_plan = WitnessInputPlan::for_program(&program)
             .expect("Fix: static read-write zero-fill planning must succeed.");
         let cases = vec![vec![1u32.to_le_bytes().to_vec()]];
 

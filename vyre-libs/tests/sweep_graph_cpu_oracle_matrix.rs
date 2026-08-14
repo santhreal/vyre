@@ -33,31 +33,10 @@ const PRIMITIVE_CSR_CASES: u64 = 4096;
 /// Shapes per primitive batch family (path reconstruction, motif matching).
 const PRIMITIVE_BATCH_CASES: u64 = 2048;
 
-#[derive(Clone, Copy)]
-struct Rng(u64);
+#[path = "../../tests/support/sweep_rng.rs"]
+mod sweep_rng;
 
-impl Rng {
-    fn new(seed: u64) -> Self {
-        Self(seed)
-    }
-
-    fn next_u32(&mut self) -> u32 {
-        let mut x = self.0;
-        x ^= x << 7;
-        x ^= x >> 9;
-        x ^= x << 8;
-        self.0 = x;
-        (x >> 16) as u32
-    }
-
-    fn range(&mut self, upper: u32) -> u32 {
-        if upper == 0 {
-            0
-        } else {
-            self.next_u32() % upper
-        }
-    }
-}
+use sweep_rng::Rng;
 
 fn bitset_words(node_count: u32) -> usize {
     node_count.div_ceil(32) as usize
