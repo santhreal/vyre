@@ -2,28 +2,8 @@ use super::*;
 
 #[test]
 fn direct_record_and_readback_reuses_bind_groups() {
-    use std::sync::Arc;
-
-    let ((device, queue), adapter_info, enabled_features) =
-        crate::runtime::init_device().expect("Fix: GPU required for direct cache test");
-    let device_queue = Arc::new((device, queue));
-    let config = DispatchConfig::default();
-    let pipeline_cache = Arc::new(crate::runtime::cache::pipeline::LruPipelineCache::new(
-        vyre_driver::pipeline::DEFAULT_PIPELINE_CACHE_ENTRIES as u32,
-    ));
-    let layout_cache = Arc::new(super::BindGroupLayoutCache::with_hasher(
-        std::hash::BuildHasherDefault::<rustc_hash::FxHasher>::default(),
-    ));
-    let arena = Arc::new(crate::DispatchArena::new(
-        device_queue.0.clone(),
-        device_queue.1.clone(),
-        &config,
-    ));
-    // Share the arena's pool with the pipeline so buffer Arc identities
-    // match between compile-time bindings and run-time record_and_readback.
-    // A second BufferPool::new() would create distinct buffer identities,
-    // forcing every dispatch to be a bind-group-cache miss.
-    let pool = arena.pool().clone();
+    let harness = PipelineHarness::new("direct cache test");
+    let arena = harness.arena();
 
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(4)],
@@ -31,43 +11,19 @@ fn direct_record_and_readback_reuses_bind_groups() {
         vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
     );
 
-    let pipeline = super::WgpuPipeline::compile_with_device_queue(
-        &program,
-        &config,
-        adapter_info,
-        enabled_features,
-        device_queue.clone(),
-        arena.clone(),
-        pool,
-        pipeline_cache,
-        layout_cache,
-    )
-    .expect("Fix: compile must succeed; restore this invariant before continuing.");
-    let empty_inputs: [&[u8]; 0] = [];
+    let pipeline = harness
+        .compile_on_arena(&program, &arena)
+        .expect("Fix: compile must succeed; restore this invariant before continuing.");
 
     for _ in 0..2 {
-        let outputs = crate::engine::record_and_readback::record_and_readback(
-            crate::engine::record_and_readback::RecordAndReadback {
-                device_queue: &pipeline.device_queue,
-                pool: arena.pool(),
-                readback_rings: None,
-                pipeline: &pipeline.pipeline,
-                bind_group_layouts: &pipeline.bind_group_layouts,
-                bind_group_cache: Some(pipeline.bind_group_cache.as_ref()),
-                buffer_bindings: &pipeline.buffer_bindings,
-                inputs: &empty_inputs,
-                output_bindings: Arc::clone(&pipeline.output_bindings),
-                trap_tags: &pipeline.trap_tags,
-                workgroup_count: [1, 1, 1],
-                indirect: pipeline.indirect.as_ref(),
-                labels: crate::engine::record_and_readback::DispatchLabels {
-                    bind_group: "vyre direct cache test bind group",
-                    encoder: "vyre direct cache test",
-                    compute: "vyre direct cache test compute",
-                },
-                iterations: 1,
-                timestamp_profile: false,
-                inferred_grid_shape: None,
+        let outputs = record_once(
+            &pipeline,
+            &arena,
+            false,
+            DispatchLabels {
+                bind_group: "vyre direct cache test bind group",
+                encoder: "vyre direct cache test",
+                compute: "vyre direct cache test compute",
             },
         )
         .expect(
@@ -98,30 +54,9 @@ fn direct_record_and_readback_reuses_bind_groups() {
 
 #[test]
 fn direct_record_and_readback_trap_uses_readback_rings_only() {
-    use std::sync::Arc;
-
-    let ((device, queue), adapter_info, enabled_features) =
-        crate::runtime::init_device().expect("Fix: GPU required for trap-sidecar allocation test");
-    let device_queue = Arc::new((device, queue));
-    let config = DispatchConfig::default();
-    let pipeline_cache = Arc::new(crate::runtime::cache::pipeline::LruPipelineCache::new(
-        vyre_driver::pipeline::DEFAULT_PIPELINE_CACHE_ENTRIES as u32,
-    ));
-    let layout_cache = Arc::new(super::BindGroupLayoutCache::with_hasher(
-        std::hash::BuildHasherDefault::<rustc_hash::FxHasher>::default(),
-    ));
-    let with_rings_arena = Arc::new(crate::DispatchArena::new(
-        device_queue.0.clone(),
-        device_queue.1.clone(),
-        &config,
-    ));
-    let without_rings_arena = Arc::new(crate::DispatchArena::new(
-        device_queue.0.clone(),
-        device_queue.1.clone(),
-        &config,
-    ));
+    let harness = PipelineHarness::new("trap-sidecar allocation test");
+    let with_rings_arena = harness.arena();
     let with_rings_pool = with_rings_arena.pool().clone();
-    let _without_rings_pool = without_rings_arena.pool().clone();
 
     let program = Program::wrapped(
         vec![],
@@ -129,43 +64,19 @@ fn direct_record_and_readback_trap_uses_readback_rings_only() {
         vec![Node::trap(Expr::u32(3), "direct-readback-ring-trap")],
     );
 
-    let pipeline = super::WgpuPipeline::compile_with_device_queue(
-        &program,
-        &config,
-        adapter_info,
-        enabled_features,
-        device_queue.clone(),
-        with_rings_arena.clone(),
-        with_rings_pool.clone(),
-        pipeline_cache,
-        layout_cache,
-    )
-    .expect("Fix: trapped program compile must succeed; restore this invariant before continuing.");
+    let pipeline = harness
+        .compile_on_arena(&program, &with_rings_arena)
+        .expect("Fix: trapped program compile must succeed; restore this invariant before continuing.");
 
-    let empty_inputs: [&[u8]; 0] = [];
     let before_allocations = with_rings_pool.stats().allocations;
-    let error = crate::engine::record_and_readback::record_and_readback(
-        crate::engine::record_and_readback::RecordAndReadback {
-            device_queue: &pipeline.device_queue,
-            pool: with_rings_arena.pool(),
-            readback_rings: Some(with_rings_arena.readback_rings()),
-            pipeline: &pipeline.pipeline,
-            bind_group_layouts: &pipeline.bind_group_layouts,
-            bind_group_cache: Some(pipeline.bind_group_cache.as_ref()),
-            buffer_bindings: &pipeline.buffer_bindings,
-            inputs: &empty_inputs,
-            output_bindings: Arc::clone(&pipeline.output_bindings),
-            trap_tags: &pipeline.trap_tags,
-            workgroup_count: [1, 1, 1],
-            indirect: pipeline.indirect.as_ref(),
-            labels: crate::engine::record_and_readback::DispatchLabels {
-                bind_group: "vyre direct trap readback ring test bind group",
-                encoder: "vyre direct trap readback ring test",
-                compute: "vyre direct trap readback ring test compute",
-            },
-            iterations: 1,
-            timestamp_profile: false,
-            inferred_grid_shape: None,
+    let error = record_once(
+        &pipeline,
+        &with_rings_arena,
+        true,
+        DispatchLabels {
+            bind_group: "vyre direct trap readback ring test bind group",
+            encoder: "vyre direct trap readback ring test",
+            compute: "vyre direct trap readback ring test compute",
         },
     )
     .expect_err(
@@ -191,23 +102,8 @@ fn direct_record_and_readback_trap_uses_readback_rings_only() {
 #[test]
 
 fn direct_record_and_readback_trap_without_readback_rings_allocates_full_sidecar_copy() {
-    use std::sync::Arc;
-
-    let ((device, queue), adapter_info, enabled_features) = crate::runtime::init_device()
-        .expect("Fix: GPU required for trap-sidecar allocation delta test");
-    let device_queue = Arc::new((device, queue));
-    let config = DispatchConfig::default();
-    let pipeline_cache = Arc::new(crate::runtime::cache::pipeline::LruPipelineCache::new(
-        vyre_driver::pipeline::DEFAULT_PIPELINE_CACHE_ENTRIES as u32,
-    ));
-    let layout_cache = Arc::new(super::BindGroupLayoutCache::with_hasher(
-        std::hash::BuildHasherDefault::<rustc_hash::FxHasher>::default(),
-    ));
-    let arena = Arc::new(crate::DispatchArena::new(
-        device_queue.0.clone(),
-        device_queue.1.clone(),
-        &config,
-    ));
+    let harness = PipelineHarness::new("trap-sidecar allocation delta test");
+    let arena = harness.arena();
     let pool = arena.pool().clone();
 
     let program = Program::wrapped(
@@ -216,43 +112,19 @@ fn direct_record_and_readback_trap_without_readback_rings_allocates_full_sidecar
         vec![Node::trap(Expr::u32(5), "direct-readback-no-ring-trap")],
     );
 
-    let pipeline = super::WgpuPipeline::compile_with_device_queue(
-        &program,
-        &config,
-        adapter_info,
-        enabled_features,
-        device_queue.clone(),
-        Arc::clone(&arena),
-        pool.clone(),
-        pipeline_cache,
-        layout_cache,
-    )
-    .expect("Fix: trapped program compile must succeed; restore this invariant before continuing.");
+    let pipeline = harness
+        .compile_on_arena(&program, &arena)
+        .expect("Fix: trapped program compile must succeed; restore this invariant before continuing.");
 
-    let empty_inputs: [&[u8]; 0] = [];
     let before_allocations = pool.stats().allocations;
-    let error = crate::engine::record_and_readback::record_and_readback(
-        crate::engine::record_and_readback::RecordAndReadback {
-            device_queue: &pipeline.device_queue,
-            pool: arena.pool(),
-            readback_rings: None,
-            pipeline: &pipeline.pipeline,
-            bind_group_layouts: &pipeline.bind_group_layouts,
-            bind_group_cache: Some(pipeline.bind_group_cache.as_ref()),
-            buffer_bindings: &pipeline.buffer_bindings,
-            inputs: &empty_inputs,
-            output_bindings: Arc::clone(&pipeline.output_bindings),
-            trap_tags: &pipeline.trap_tags,
-            workgroup_count: [1, 1, 1],
-            indirect: pipeline.indirect.as_ref(),
-            labels: crate::engine::record_and_readback::DispatchLabels {
-                bind_group: "vyre direct trap readback no-ring test bind group",
-                encoder: "vyre direct trap readback no-ring test",
-                compute: "vyre direct trap readback no-ring test compute",
-            },
-            iterations: 1,
-            timestamp_profile: false,
-            inferred_grid_shape: None,
+    let error = record_once(
+        &pipeline,
+        &arena,
+        false,
+        DispatchLabels {
+            bind_group: "vyre direct trap readback no-ring test bind group",
+            encoder: "vyre direct trap readback no-ring test",
+            compute: "vyre direct trap readback no-ring test compute",
         },
     )
     .expect_err(

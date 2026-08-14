@@ -5,20 +5,13 @@ use super::*;
 /// shaders must have independent caches.
 #[test]
 fn bind_group_cache_shared_per_compiled_shader() {
-    use std::sync::Arc;
-
-    let ((device, queue), adapter_info, enabled_features) =
-        crate::runtime::init_device().expect("Fix: GPU required for cache-sharing test");
-    let device_queue = Arc::new((device, queue));
-    let config = DispatchConfig::default();
-    let pool =
-        crate::buffer::BufferPool::new(device_queue.0.clone(), device_queue.1.clone(), &config);
-    let pipeline_cache = Arc::new(crate::runtime::cache::pipeline::LruPipelineCache::new(
-        vyre_driver::pipeline::DEFAULT_PIPELINE_CACHE_ENTRIES as u32,
-    ));
-    let layout_cache = Arc::new(super::BindGroupLayoutCache::with_hasher(
-        std::hash::BuildHasherDefault::<rustc_hash::FxHasher>::default(),
-    ));
+    let harness = PipelineHarness::new("cache-sharing test");
+    let pool = BufferPool::new(
+        harness.device_queue.0.clone(),
+        harness.device_queue.1.clone(),
+        &harness.config,
+    );
+    let layout_cache = Arc::clone(&harness.layout_cache);
 
     let program1 = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(4)],
@@ -26,40 +19,18 @@ fn bind_group_cache_shared_per_compiled_shader() {
         vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
     );
 
-    let p1 = super::WgpuPipeline::compile_with_device_queue(
-        &program1,
-        &config,
-        adapter_info.clone(),
-        enabled_features,
-        device_queue.clone(),
-        Arc::new(crate::DispatchArena::new(
-            device_queue.0.clone(),
-            device_queue.1.clone(),
-            &config,
-        )),
-        pool.clone(),
-        pipeline_cache.clone(),
-        layout_cache.clone(),
-    )
-    .expect("Fix: first compile must succeed; restore this invariant before continuing.");
+    let p1 = harness
+        .compile(&program1, harness.arena(), pool.clone())
+        .expect("Fix: first compile must succeed; restore this invariant before continuing.");
     assert_eq!(
         layout_cache.len(),
         1,
         "Fix: first compile should insert one shared bind-group layout fingerprint"
     );
 
-    let p2 = super::WgpuPipeline::compile_with_device_queue(
-        &program1,
-        &config,
-        adapter_info.clone(),
-        enabled_features,
-        device_queue.clone(),
-        Arc::new(crate::DispatchArena::new(device_queue.0.clone(), device_queue.1.clone(), &config)),
-        pool.clone(),
-        pipeline_cache.clone(),
-        layout_cache.clone(),
-    )
-    .expect("Fix: second compile of same program must succeed; restore this invariant before continuing.");
+    let p2 = harness
+        .compile(&program1, harness.arena(), pool.clone())
+        .expect("Fix: second compile of same program must succeed; restore this invariant before continuing.");
     assert_eq!(
         layout_cache.len(),
         1,
@@ -98,22 +69,7 @@ fn bind_group_cache_shared_per_compiled_shader() {
         vec![Node::store("out2", Expr::u32(0), Expr::u32(42))],
     );
 
-    let p3 = super::WgpuPipeline::compile_with_device_queue(
-        &program2,
-        &config,
-        adapter_info,
-        enabled_features,
-        device_queue.clone(),
-        Arc::new(crate::DispatchArena::new(
-            device_queue.0.clone(),
-            device_queue.1.clone(),
-            &config,
-        )),
-        pool,
-        pipeline_cache,
-        layout_cache.clone(),
-    )
-    .expect(
+    let p3 = harness.compile(&program2, harness.arena(), pool).expect(
         "Fix: compile of different program must succeed; restore this invariant before continuing.",
     );
     assert_eq!(
@@ -130,12 +86,10 @@ fn bind_group_cache_shared_per_compiled_shader() {
 
 #[test]
 fn compiled_borrowed_timed_dispatch_reports_device_ns() {
-    use std::sync::Arc;
-
     use vyre_driver::CompiledPipeline;
 
-    let ((device, queue), adapter_info, enabled_features) =
-        crate::runtime::init_device().expect("Fix: GPU required for compiled timing test");
+    let harness = PipelineHarness::new("compiled timing test");
+    let device = &harness.device_queue.0;
     assert!(
         device.features().contains(wgpu::Features::TIMESTAMP_QUERY)
             && device
@@ -143,41 +97,19 @@ fn compiled_borrowed_timed_dispatch_reports_device_ns() {
                 .contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS),
         "Fix: WGPU compiled timing test requires timestamp query features to be negotiated."
     );
-    let device_queue = Arc::new((device, queue));
-    let config = DispatchConfig::default();
-    let arena = Arc::new(crate::DispatchArena::new(
-        device_queue.0.clone(),
-        device_queue.1.clone(),
-        &config,
-    ));
-    let pool = arena.pool().clone();
-    let pipeline_cache = Arc::new(crate::runtime::cache::pipeline::LruPipelineCache::new(
-        vyre_driver::pipeline::DEFAULT_PIPELINE_CACHE_ENTRIES as u32,
-    ));
-    let layout_cache = Arc::new(super::BindGroupLayoutCache::with_hasher(
-        std::hash::BuildHasherDefault::<rustc_hash::FxHasher>::default(),
-    ));
+    let arena = harness.arena();
 
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
     );
-    let pipeline = super::WgpuPipeline::compile_with_device_queue(
-        &program,
-        &config,
-        adapter_info,
-        enabled_features,
-        device_queue,
-        arena,
-        pool,
-        pipeline_cache,
-        layout_cache,
-    )
-    .expect("Fix: compiled timed dispatch test pipeline must compile.");
+    let pipeline = harness
+        .compile_on_arena(&program, &arena)
+        .expect("Fix: compiled timed dispatch test pipeline must compile.");
 
     let timed = pipeline
-        .dispatch_borrowed_timed(&[], &config)
+        .dispatch_borrowed_timed(&[], &harness.config)
         .expect("Fix: compiled borrowed timed dispatch must succeed.");
     assert_eq!(
         u32::from_le_bytes(timed.outputs[0][0..4].try_into().unwrap()),
