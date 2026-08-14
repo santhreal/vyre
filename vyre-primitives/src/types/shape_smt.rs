@@ -1,9 +1,10 @@
 //! Liquid-type / shape-predicate SMT-style evaluator (P-PRIM-15).
 //!
-//! Evaluates refinement predicates over a concrete `u32` count. The
-//! grammar mirrors `vyre_foundation::ir::ShapePredicate` but lives at
-//! the primitive layer so external crates and solver frontends can stage
-//! predicates without pulling in the IR.
+//! Evaluates refinement predicates over a concrete `u32` count. The grammar
+//! IS `vyre_foundation::ir::ShapePredicate`, re-exported here as
+//! `ShapeFormula`, so validation and primitive evaluation cannot drift. The
+//! evaluator is what lives at the primitive layer; the predicate type comes
+//! from the foundation, which is why the `types` feature depends on it.
 //!
 //! Supported predicates cover bounds, exact cardinality, divisibility,
 //! modular equality, Boolean composition, and affine ranges over the

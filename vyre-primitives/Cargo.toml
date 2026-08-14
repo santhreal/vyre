@@ -68,9 +68,14 @@ opt = ["vyre-foundation", "math"]
 # for handler-applied effect rows; no IR-builder deps.
 effects = []
 # Type-discipline primitives (P-PRIM-14, …). Substructural type
-# checks the foundation validate pipeline calls per buffer. Pure
-# scalar ops, no IR-builder dep.
-types = []
+# checks the foundation validate pipeline calls per buffer.
+# `types/shape_smt.rs` aliases `vyre_foundation::ir::ShapePredicate`
+# UNCONDITIONALLY so validation and primitive evaluation share one
+# grammar, so the domain does not compile standalone without the
+# foundation. Previously omitted, masked in-workspace by feature
+# unification; a consumer enabling ONLY `types` against the published
+# crate fails with E0433, same shape as the `matching` case above.
+types = ["vyre-foundation"]
 # Categorical primitives (P-PRIM-16/17/18). Yoneda / adjoint /
 # Kan extension over finite categories. Pure scalar + Vec ops.
 cat = []

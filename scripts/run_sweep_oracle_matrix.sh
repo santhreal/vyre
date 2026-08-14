@@ -1,8 +1,19 @@
 #!/usr/bin/env bash
-# Run every vyre `sweep_*` oracle-matrix integration test with crate-correct --features.
+# Run every tracked `sweep_*` oracle-matrix integration test that is not a volume wave.
 #
-# Cargo --test requires exact integration-test binary names (no globs). Feature-gated
-# sweeps must enable the same flags as their [[test]] required-features in Cargo.toml.
+# The class this closes: a feature-gated integration test that no workflow executes.
+# `ci.yml` runs `./cargo_full test --workspace` with default features, so a test whose
+# `[[test]] required-features` name a non-default feature is silently skipped there, and
+# `strict.yml` builds `--all-features --all-targets` without running anything. These
+# sweeps are the oracle-parity matrices, so a skipped one is unproven parity.
+#
+# The roster and the per-crate feature set are derived by scripts/lib/sweep_targets.py
+# from tracked sources and each crate's own manifest. Cargo's `--test` takes exact
+# binary names and no globs, which is why this script exists at all; it is not why the
+# names may be written down, and a hardcoded list stops running new sweeps in silence.
+#
+# Volume waves belong to scripts/run_volume_sweep_shard.sh. The two partitions come from
+# the same lister, so every tracked sweep is claimed by exactly one runner.
 #
 # Usage:
 #   scripts/run_sweep_oracle_matrix.sh
@@ -14,63 +25,50 @@ cd "$ROOT"
 source scripts/lib/cargo_runner.sh
 vyre_select_cargo_runner
 
-step() {
-    echo
-    echo "▶ $*"
-}
+mapfile -t ROSTER < <(python3 scripts/lib/sweep_targets.py "$ROOT" matrix)
+if ((${#ROSTER[@]} == 0)); then
+    echo "Fix: the sweep roster is empty; scripts/lib/sweep_targets.py found no matrix targets." >&2
+    exit 1
+fi
 
-PRIMITIVES_FEATURES='cpu-parity,bitset,graph,reduce,hash,predicate'
-PRIMITIVES_SWEEPS=(
-    sweep_bitset_binary_oracle_matrix
-    sweep_graph_csr_bidirectional_oracle_matrix
-    sweep_graph_motif_oracle_matrix
-    sweep_graph_path_reconstruct_oracle_matrix
-    sweep_hash_crc_oracle_matrix
-    sweep_hash_fnv1a_oracle_matrix
-    sweep_predicate_node_kind_oracle_matrix
-    sweep_radix_sort_oracle_matrix
-    sweep_reduce_scalar_oracle_matrix
-    sweep_segment_reduce_oracle_matrix
-    sweep_toposort_oracle_matrix
-)
-
-step "vyre-primitives sweep oracle matrices (${#PRIMITIVES_SWEEPS[@]} targets)"
-primitives_test_args=()
-for target in "${PRIMITIVES_SWEEPS[@]}"; do
-    primitives_test_args+=(--test "$target")
+# One cargo invocation per crate, with the union of the required-features its own sweep
+# targets declare. Cargo refuses a `--test` whose required-features are unmet, so the
+# union is the smallest feature set that can build the crate's whole partition at once.
+CRATES=()
+declare -A CRATE_TARGETS=()
+declare -A CRATE_FEATURES=()
+for row in "${ROSTER[@]}"; do
+    IFS=$'\t' read -r crate target features <<< "$row"
+    if [[ -z "${CRATE_TARGETS[$crate]+set}" ]]; then
+        CRATES+=("$crate")
+        CRATE_TARGETS[$crate]=""
+        CRATE_FEATURES[$crate]=""
+    fi
+    CRATE_TARGETS[$crate]+="$target "
+    [[ -n "$features" ]] && CRATE_FEATURES[$crate]+="$features,"
 done
-"$CARGO_RUNNER" test -p vyre-primitives --features "$PRIMITIVES_FEATURES" \
-    "${primitives_test_args[@]}"
 
-step "vyre-foundation sweep_validation_rejection_oracle_matrix"
-"$CARGO_RUNNER" test -p vyre-foundation --test sweep_validation_rejection_oracle_matrix
+echo "sweep oracle matrices: ${#ROSTER[@]} target(s) across ${#CRATES[@]} crate(s)"
 
-step "vyre-spec sweep_wire_roundtrip_oracle_matrix"
-"$CARGO_RUNNER" test -p vyre-spec --test sweep_wire_roundtrip_oracle_matrix
-
-step "vyre-reference sweep_dual_arith_oracle_matrix"
-"$CARGO_RUNNER" test -p vyre-reference --test sweep_dual_arith_oracle_matrix
-
-step "vyre-libs sweep oracle matrices (logical, hash, decode, text)"
-"$CARGO_RUNNER" test -p vyre-libs --features logical,hash,decode,text \
-    --test sweep_logical_reference_matrix \
-    --test sweep_hash_crc32_reference_matrix \
-    --test sweep_decode_hex_oracle_matrix \
-    --test sweep_text_utf8_oracle_matrix
-
-step "vyre-self-substrate sweep_graph_cpu_oracle_matrix"
-"$CARGO_RUNNER" test -p vyre-self-substrate --features cpu-parity \
-    --test sweep_graph_cpu_oracle_matrix
-
-step "vyre-driver sweep oracle matrices"
-"$CARGO_RUNNER" test -p vyre-driver \
-    --test sweep_dispatch_shape_oracle_matrix \
-    --test sweep_numeric_oracle_matrix
-
-step "vyre-runtime sweep oracle matrices"
-"$CARGO_RUNNER" test -p vyre-runtime \
-    --test sweep_tenant_policy_oracle_matrix \
-    --test sweep_ring_buffer_oracle_matrix
+total=0
+for crate in "${CRATES[@]}"; do
+    args=()
+    count=0
+    for target in ${CRATE_TARGETS[$crate]}; do
+        args+=(--test "$target")
+        count=$((count + 1))
+    done
+    features="$(tr ',' '\n' <<< "${CRATE_FEATURES[$crate]}" | sed '/^$/d' | sort -u | paste -sd,)"
+    echo
+    if [[ -n "$features" ]]; then
+        echo "▶ $crate: $count target(s), --features $features"
+        "$CARGO_RUNNER" test -p "$crate" --features "$features" "${args[@]}"
+    else
+        echo "▶ $crate: $count target(s), default features"
+        "$CARGO_RUNNER" test -p "$crate" "${args[@]}"
+    fi
+    total=$((total + count))
+done
 
 echo
-echo "All sweep_* oracle matrix integration tests passed."
+echo "All $total tracked sweep_* oracle matrix integration test(s) passed."
