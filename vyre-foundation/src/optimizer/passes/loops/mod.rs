@@ -48,141 +48,79 @@ pub mod loop_unroll;
 pub mod loop_var_range_fold;
 mod substitution;
 
-fn collect_vars_in_expr(expr: &crate::ir::Expr, out: &mut rustc_hash::FxHashSet<crate::ir::Ident>) {
-    let mut stack = smallvec::SmallVec::<[&crate::ir::Expr; 16]>::new();
-    stack.push(expr);
-    while let Some(candidate) = stack.pop() {
-        if let crate::ir::Expr::Var(name) = candidate {
+/// Every name read by an expression anywhere in `nodes`, nested scopes included.
+///
+/// Node nesting, operand positions, and sub-expressions all come from
+/// [`for_each_expr`](crate::transform::visit::for_each_expr), whose three
+/// enumerations are this crate's exhaustive owners.
+///
+/// The hand-written descent this replaces ended in `_ => {}`, so a `Var` read
+/// inside `Node::Trap.address` or an async copy's `offset` / `size` read as
+/// ABSENT. `loop_fusion::fusion_has_scalar_dependency` then saw no cross-loop
+/// dependency where one existed and fused two loops across a scalar that one of
+/// them assigns, which silently changes the observed values; the same reads were
+/// invisible to `legality::bindings_flow_across`, weakening the capture guard
+/// for both fusion and fission.
+fn collect_var_reads(nodes: &[crate::ir::Node], out: &mut rustc_hash::FxHashSet<crate::ir::Ident>) {
+    crate::transform::visit::for_each_expr(nodes, |expr| {
+        if let crate::ir::Expr::Var(name) = expr {
             out.insert(name.clone());
         }
-        crate::optimizer::rewrite::push_expr_children(candidate, &mut stack);
-    }
+    });
 }
 
-fn collect_var_reads(nodes: &[crate::ir::Node], out: &mut rustc_hash::FxHashSet<crate::ir::Ident>) {
-    for node in nodes {
-        match node {
-            crate::ir::Node::Let { value, .. } | crate::ir::Node::Assign { value, .. } => {
-                collect_vars_in_expr(value, out);
-            }
-            crate::ir::Node::Store { index, value, .. } => {
-                collect_vars_in_expr(index, out);
-                collect_vars_in_expr(value, out);
-            }
-            crate::ir::Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                collect_vars_in_expr(cond, out);
-                collect_var_reads(then, out);
-                collect_var_reads(otherwise, out);
-            }
-            crate::ir::Node::Loop { from, to, body, .. } => {
-                collect_vars_in_expr(from, out);
-                collect_vars_in_expr(to, out);
-                collect_var_reads(body, out);
-            }
-            crate::ir::Node::Block(body) => collect_var_reads(body, out),
-            crate::ir::Node::Region { body, .. } => collect_var_reads(body, out),
-            _ => {}
-        }
-    }
-}
-
+/// Every buffer named by `expr` or any sub-expression.
+///
+/// The per-variant decision is
+/// [`expr_buffer_ref`](crate::transform::visit::expr_buffer_ref) and the descent
+/// is [`for_each_subexpr`](crate::transform::visit::for_each_subexpr), both
+/// exhaustive. The match this replaces ended in `_ => {}` over `Expr`, so an
+/// expression variant that gains a buffer position would report the two loop
+/// bodies as touching disjoint memory and let fusion or fission reorder a real
+/// memory dependence.
+///
+/// `Expr::Opaque` names no buffer here even though its real effect is unknown;
+/// [`legality::unsummarisable_effect`] is the guard that refuses it, and it runs
+/// before this answer is used.
 fn collect_buffers_in_expr(
     expr: &crate::ir::Expr,
     out: &mut rustc_hash::FxHashSet<crate::ir::Ident>,
 ) {
-    let mut stack = smallvec::SmallVec::<[&crate::ir::Expr; 16]>::new();
-    stack.push(expr);
-    while let Some(candidate) = stack.pop() {
-        match candidate {
-            crate::ir::Expr::Load { buffer, .. }
-            | crate::ir::Expr::BufLen { buffer }
-            | crate::ir::Expr::BufferRef { buffer }
-            | crate::ir::Expr::Atomic { buffer, .. } => {
+    crate::transform::visit::for_each_subexpr(expr, &mut |candidate| {
+        match crate::transform::visit::expr_buffer_ref(candidate) {
+            crate::transform::visit::ExprBufferRef::Read(buffer)
+            | crate::transform::visit::ExprBufferRef::ReadWrite(buffer) => {
                 out.insert(buffer.clone());
             }
-            _ => {}
+            crate::transform::visit::ExprBufferRef::None
+            | crate::transform::visit::ExprBufferRef::Unknown => {}
         }
-        crate::optimizer::rewrite::push_expr_children(candidate, &mut stack);
-    }
+    });
 }
 
+/// Every buffer any statement in `nodes` touches, by name or through an operand.
+///
+/// The two halves of the answer come from their owners:
+/// [`node_buffer_refs`](crate::transform::visit::node_buffer_refs) for the
+/// buffers a statement names directly and [`collect_buffers_in_expr`] for the
+/// ones an operand expression reaches. Direction is collapsed because the
+/// disjointness test the loop passes run cares only about overlap.
 fn collect_touched_buffers(
     nodes: &[crate::ir::Node],
     out: &mut rustc_hash::FxHashSet<crate::ir::Ident>,
 ) {
-    for node in nodes {
-        match node {
-            crate::ir::Node::Store {
-                buffer,
-                index,
-                value,
-            } => {
-                out.insert(buffer.clone());
-                collect_buffers_in_expr(index, out);
-                collect_buffers_in_expr(value, out);
-            }
-            crate::ir::Node::Let { value, .. } | crate::ir::Node::Assign { value, .. } => {
-                collect_buffers_in_expr(value, out);
-            }
-            crate::ir::Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                collect_buffers_in_expr(cond, out);
-                collect_touched_buffers(then, out);
-                collect_touched_buffers(otherwise, out);
-            }
-            crate::ir::Node::Loop { from, to, body, .. } => {
-                collect_buffers_in_expr(from, out);
-                collect_buffers_in_expr(to, out);
-                collect_touched_buffers(body, out);
-            }
-            crate::ir::Node::Block(body) => collect_touched_buffers(body, out),
-            crate::ir::Node::Region { body, .. } => collect_touched_buffers(body, out),
-            crate::ir::Node::AsyncLoad {
-                source,
-                destination,
-                offset,
-                size,
-                ..
-            }
-            | crate::ir::Node::AsyncStore {
-                source,
-                destination,
-                offset,
-                size,
-                ..
-            } => {
-                out.insert(source.clone());
-                out.insert(destination.clone());
-                collect_buffers_in_expr(offset, out);
-                collect_buffers_in_expr(size, out);
-            }
-            crate::ir::Node::IndirectDispatch { count_buffer, .. } => {
-                out.insert(count_buffer.clone());
-            }
-            crate::ir::Node::Trap { address, .. } => collect_buffers_in_expr(address, out),
-            crate::ir::Node::AllReduce { buffer, .. }
-            | crate::ir::Node::Broadcast { buffer, .. } => {
-                out.insert(buffer.clone());
-            }
-            crate::ir::Node::AllGather { input, output, .. }
-            | crate::ir::Node::ReduceScatter { input, output, .. } => {
-                out.insert(input.clone());
-                out.insert(output.clone());
-            }
-            crate::ir::Node::Barrier { .. }
-            | crate::ir::Node::Return
-            | crate::ir::Node::AsyncWait { .. }
-            | crate::ir::Node::Resume { .. }
-            | crate::ir::Node::Opaque(_) => {}
+    crate::transform::visit::for_each_node(nodes, |node| {
+        let refs = crate::transform::visit::node_buffer_refs(node);
+        for buffer in refs.reads.into_iter().chain(refs.writes).flatten() {
+            out.insert(buffer.clone());
         }
-    }
+        for operand in crate::transform::visit::node_operands(node)
+            .into_iter()
+            .flatten()
+        {
+            collect_buffers_in_expr(operand, out);
+        }
+    });
 }
 
 fn buffers_disjoint_with(
