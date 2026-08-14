@@ -585,3 +585,28 @@ required-features = ["parsing"]
 name = "c_parser_hostile_malformed_stream_contracts"
 path = "tests/c_parser_hostile_malformed_stream_contracts.rs"
 required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_asm_extended_operand_goto_label_pg_lowering_contracts"
+path = "tests/c_ast_asm_extended_operand_goto_label_pg_lowering_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_compound_literal_designated_init_nested_pg_lowering_contracts"
+path = "tests/c_ast_compound_literal_designated_init_nested_pg_lowering_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_gnu_attribute_statement_pg_lowering_contracts"
+path = "tests/c_ast_gnu_attribute_statement_pg_lowering_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_gnu_builtin_control_flow_pg_lowering_contracts"
+path = "tests/c_ast_gnu_builtin_control_flow_pg_lowering_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_switch_case_complex_body_pg_lowering_contracts"
+path = "tests/c_ast_switch_case_complex_body_pg_lowering_contracts.rs"
+required-features = ["c-parser"]

@@ -1,82 +1,11 @@
-// C parser contract tests for switch/case/default bodies containing GNU
-// statement expressions, compound literals, designated initializers, and
-// nested labels  -  constructs likely to break VAST/PG lowering.
-//
-// Constructs under test:
-//   - switch with a statement expression in a case body
-//   - switch with a compound literal in a case body
-//   - switch with designated initializers in a case body
-//   - Duff's-device style interleaved switch/loop/label pattern
-//   - nested switch inside a statement expression
-//   - default label shared with a user label
-//   - PG lowering preservation and GPU/CPU parity
-//
-// A missing GPU adapter is a configuration failure; tests do not skip.
+//! Switch/case token fixtures with statement expressions, compound literals, and Duff's device.
+//!
+//! The CPU contracts in `vyre-libs/tests` and the backend parity arm in the
+//! driver crate build the same token streams, so the fixtures have one owner
+//! here rather than a copy per crate.
 
-use crate::c_ast_gpu_parity_support::{
-    build_fixture, row_indices, word_at, Fixture, FixtureToken, VAST_STRIDE_U32,
-};
+use crate::c_frontend::token_fixture::{build_fixture, Fixture, FixtureToken};
 use vyre_libs::parsing::c::lex::tokens::*;
-use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_BREAK_STMT, C_AST_KIND_CASE_STMT,
-    C_AST_KIND_GNU_STATEMENT_EXPR, C_AST_KIND_SWITCH_STMT,
-};
-
-pub(crate) const PG_STRIDE_U32: usize = 6;
-
-pub(crate) fn classify(fix: &Fixture) -> Vec<u8> {
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    reference_c11_classify_vast_node_kinds(&annotated)
-}
-
-pub(crate) fn pg_word_at(buf: &[u8], idx: usize, field: usize) -> u32 {
-    word_at(buf, idx * PG_STRIDE_U32 + field)
-}
-
-pub(crate) fn assert_pg_preserves_row(
-    typed_vast: &[u8],
-    pg: &[u8],
-    fix: &Fixture,
-    idx: usize,
-    expected_kind: u32,
-) {
-    assert_eq!(
-        pg_word_at(pg, idx, 0),
-        expected_kind,
-        "PG kind mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 1),
-        fix.tok_starts[idx],
-        "PG span_start mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 2),
-        fix.tok_starts[idx] + fix.tok_lens[idx],
-        "PG span_end mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 3),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 1),
-        "PG parent mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 4),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 2),
-        "PG first_child mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 5),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 3),
-        "PG next_sibling mismatch at row {idx}"
-    );
-}
-
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
 
 /// ```c
 /// void f(int x) {
@@ -349,32 +278,4 @@ pub(crate) fn fixture_default_with_user_label() -> Fixture {
         FixtureToken::new("}", TOK_RBRACE),
         FixtureToken::new("}", TOK_RBRACE),
     ])
-}
-
-// ---------------------------------------------------------------------------
-// CPU reference contracts
-// ---------------------------------------------------------------------------
-
-#[test]
-pub(crate) fn cpu_switch_case_with_statement_expr_classifies() {
-    let fix = fixture_switch_case_with_statement_expr();
-    let typed = classify(&fix);
-    assert_eq!(
-        row_indices(&typed, C_AST_KIND_SWITCH_STMT),
-        vec![7],
-        "switch must classify as SWITCH_STMT"
-    );
-    assert_eq!(
-        row_indices(&typed, C_AST_KIND_CASE_STMT),
-        vec![12],
-        "case must classify as CASE_STMT"
-    );
-    assert!(
-        !row_indices(&typed, C_AST_KIND_GNU_STATEMENT_EXPR).is_empty(),
-        "statement expression in case body must classify"
-    );
-    assert!(
-        !row_indices(&typed, C_AST_KIND_BREAK_STMT).is_empty(),
-        "break must classify as BREAK_STMT"
-    );
 }
