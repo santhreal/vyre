@@ -1,7 +1,9 @@
-use super::bytes::*;
+use super::expression_builtin::*;
 use crate::c_ast_gpu_parity_support::{
     run_gpu_expr_shape, run_gpu_pg_lower, starts_for_lens, word_at,
 };
+use crate::c_frontend::expression_pipeline::{run_pipeline, run_reference_pg_lower};
+use crate::c_frontend::rows::bytes;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_build_expression_shape_nodes, reference_c11_build_vast_nodes,
     reference_c11_classify_vast_node_kinds, C_EXPR_SHAPE_STRIDE_U32,

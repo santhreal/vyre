@@ -1,6 +1,6 @@
 // Integration test module for the containing Vyre package.
 
-use super::fixtures::*;
+use super::declaration_container_nodes::*;
 use super::support::{
     cpu_gpu_classified, node_count_from_vast, run_gpu_classifier, run_gpu_vast_builder,
     typed_indices, word_at, VAST_STRIDE_U32,

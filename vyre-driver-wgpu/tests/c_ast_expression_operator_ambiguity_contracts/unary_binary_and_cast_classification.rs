@@ -1,7 +1,12 @@
-use super::bytes::*;
+use super::expression_ambiguity::*;
 use crate::c_ast_gpu_parity_support::{
     run_gpu_expr_shape, run_gpu_pg_lower, starts_for_lens, word_at, VAST_STRIDE_U32,
 };
+use crate::c_frontend::expression_pipeline::{
+    assert_pg_links_match_vast, assert_pg_preserves_row, assert_shape_row, run_pipeline,
+    run_reference_pg_lower,
+};
+use crate::c_frontend::rows::{bytes, row_indices_by_stride as row_indices, SENTINEL};
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_build_expression_shape_nodes, reference_c11_build_vast_nodes,

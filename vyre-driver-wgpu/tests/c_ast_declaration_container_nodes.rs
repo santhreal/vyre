@@ -2,10 +2,10 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-#[path = "c_ast_declaration_container_nodes/cpu.rs"]
-mod cpu;
-#[path = "c_ast_declaration_container_nodes/fixtures.rs"]
-mod fixtures;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
+#[path = "../../tests/support/c_frontend/fixtures/declaration_container_nodes.rs"]
+mod declaration_container_nodes;
 #[path = "c_ast_declaration_container_nodes/gpu.rs"]
 mod gpu;
 #[path = "c_ast_declaration_container_nodes/support.rs"]

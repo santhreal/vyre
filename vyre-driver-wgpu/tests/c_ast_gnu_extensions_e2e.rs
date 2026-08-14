@@ -30,6 +30,8 @@ use vyre_libs::parsing::c::parse::vast::{
 };
 use vyre_primitives::predicate::node_kind;
 
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 mod c_ast_gpu_parity_support;
 use c_ast_gpu_parity_support::{
     assert_full_pipeline_parity, c_fixture, row_indices, word_at, Fixture, VAST_STRIDE_U32,

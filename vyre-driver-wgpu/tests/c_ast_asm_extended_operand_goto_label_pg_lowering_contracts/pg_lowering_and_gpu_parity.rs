@@ -1,5 +1,6 @@
-use super::classify::*;
+use super::asm_extended_operands::*;
 use crate::c_ast_gpu_parity_support::{assert_full_pipeline_parity, row_indices, run_gpu_pg_lower};
+use crate::c_frontend::rows::assert_pg_preserves_fixture_row as assert_pg_preserves_row;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,

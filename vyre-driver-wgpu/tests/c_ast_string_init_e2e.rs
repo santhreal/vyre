@@ -14,6 +14,8 @@ use vyre_primitives::predicate::node_kind;
 
 const PG_STRIDE_U32: usize = 6;
 
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 mod c_ast_gpu_parity_support;
 use c_ast_gpu_parity_support::{
     run_gpu_classifier, run_gpu_pg_lower, run_gpu_vast_builder_from_parts, starts_for_lens,

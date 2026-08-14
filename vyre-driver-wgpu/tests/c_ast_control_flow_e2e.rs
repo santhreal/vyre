@@ -15,6 +15,8 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_RETURN_STMT, C_AST_KIND_SWITCH_STMT, C_AST_KIND_WHILE_STMT,
 };
 
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 mod c_ast_gpu_parity_support;
 use c_ast_gpu_parity_support::{
     assert_words_eq, run_gpu_classifier, run_gpu_vast_builder_from_parts, starts_for_lens, word_at,

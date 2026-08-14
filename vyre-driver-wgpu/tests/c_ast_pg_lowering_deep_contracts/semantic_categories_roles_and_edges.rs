@@ -1,7 +1,11 @@
-use super::classify::*;
+use super::pg_lowering_deep_constructs::*;
 use crate::c_ast_gpu_parity_support::{
     row_indices, run_gpu_semantic_pg_lower as run_gpu_semantic_lower,
 };
+use crate::c_frontend::semantic_graph::{
+    assert_semantic_edge, assert_semantic_node, semantic_node_word, vast_word,
+};
+use crate::c_frontend::token_fixture::classify;
 use vyre_libs::parsing::c::lower::{
     reference_ast_to_pg_semantic_graph, C_AST_PG_CATEGORY_CONTROL, C_AST_PG_CATEGORY_DECLARATION,
     C_AST_PG_CATEGORY_EXPRESSION, C_AST_PG_EDGE_CASE_VALUE, C_AST_PG_EDGE_GOTO_TARGET,

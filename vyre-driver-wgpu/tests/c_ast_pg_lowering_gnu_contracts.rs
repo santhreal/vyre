@@ -2,6 +2,8 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 #[allow(dead_code)]
 mod c_ast_gpu_parity_support;
 

@@ -33,65 +33,13 @@ use vyre_libs::parsing::c::parse::vast::{
 };
 use vyre_primitives::predicate::node_kind;
 
-const VAST_STRIDE_U32: usize = 10;
-const PG_STRIDE_U32: usize = 6;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-fn bytes(words: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(words)
-}
-
-fn word_at(buf: &[u8], word: usize) -> u32 {
-    let off = word * 4;
-    u32::from_le_bytes(buf[off..off + 4].try_into().unwrap())
-}
-
-fn starts_for_lens(lens: &[u32]) -> Vec<u32> {
-    let mut cursor = 0u32;
-    lens.iter()
-        .map(|len| {
-            let start = cursor;
-            cursor = cursor.saturating_add(*len).saturating_add(1);
-            start
-        })
-        .collect()
-}
-
-fn assert_vast_row(
-    rows: &[u8],
-    idx: usize,
-    kind: u32,
-    parent: u32,
-    first_child: u32,
-    next_sibling: u32,
-) {
-    let row = idx * VAST_STRIDE_U32;
-    assert_eq!(word_at(rows, row), kind, "kind[{idx}]");
-    assert_eq!(word_at(rows, row + 1), parent, "parent[{idx}]");
-    assert_eq!(word_at(rows, row + 2), first_child, "first_child[{idx}]");
-    assert_eq!(word_at(rows, row + 3), next_sibling, "next_sibling[{idx}]");
-}
-
-fn assert_kind(rows: &[u8], idx: usize, kind: u32) {
-    assert_eq!(word_at(rows, idx * VAST_STRIDE_U32), kind, "kind[{idx}]");
-}
-
-fn typed_indices(rows: &[u8], kind: u32) -> Vec<usize> {
-    rows.chunks_exact(VAST_STRIDE_U32 * 4)
-        .enumerate()
-        .filter_map(|(idx, row)| {
-            let row_kind = u32::from_le_bytes(row[0..4].try_into().unwrap());
-            (row_kind == kind).then_some(idx)
-        })
-        .collect()
-}
-
-fn pg_word_at(buf: &[u8], idx: usize, field: usize) -> u32 {
-    word_at(buf, idx * PG_STRIDE_U32 + field)
-}
+use c_frontend::rows::{
+    assert_kind, assert_vast_row, bytes, pg_word_at, row_indices as typed_indices,
+    starts_for_lens, word_at, PG_STRIDE_U32, VAST_STRIDE_U32,
+};
 
 fn gpu_backend() -> &'static WgpuBackend {
     static BACKEND: OnceLock<WgpuBackend> = OnceLock::new();

@@ -363,6 +363,26 @@ name = "typedef_row_phase_witnesses"
 path = "tests/typedef_row_phase_witnesses.rs"
 required-features = ["c-parser"]
 
+[[test]]
+name = "c_ast_sema_scope_cast_decl_redecl_field_contracts"
+path = "tests/c_ast_sema_scope_cast_decl_redecl_field_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_sema_scope_function_parameter_prototype_contracts"
+path = "tests/c_ast_sema_scope_function_parameter_prototype_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_sema_scope_tag_enum_label_contracts"
+path = "tests/c_ast_sema_scope_tag_enum_label_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_sema_scope_typedef_shadow_restore_contracts"
+path = "tests/c_ast_sema_scope_typedef_shadow_restore_contracts.rs"
+required-features = ["c-parser"]
+
 # Neural-network contract tests. These 32 files referenced `vyre_libs::nn`
 # with no manifest entry, so `cargo test -p vyre-libs` could not build the
 # package at all: the module is feature-gated and nothing declared the
@@ -555,3 +575,121 @@ required-features = ["matching-regex"]
 name = "parsing_walker_clone_family"
 path = "tests/parsing_walker_clone_family.rs"
 required-features = ["parsing"]
+
+# C-frontend CPU contract families migrated out of the backend driver crate.
+# The driver keeps only the GPU-parity arm of each family; the CPU arm builds
+# the same fixtures from `tests/support/c_frontend` and needs `c-parser`.
+[[test]]
+name = "c_parser_hostile_malformed_stream_contracts"
+path = "tests/c_parser_hostile_malformed_stream_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_asm_extended_operand_goto_label_pg_lowering_contracts"
+path = "tests/c_ast_asm_extended_operand_goto_label_pg_lowering_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_compound_literal_designated_init_nested_pg_lowering_contracts"
+path = "tests/c_ast_compound_literal_designated_init_nested_pg_lowering_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_gnu_attribute_statement_pg_lowering_contracts"
+path = "tests/c_ast_gnu_attribute_statement_pg_lowering_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_gnu_builtin_control_flow_pg_lowering_contracts"
+path = "tests/c_ast_gnu_builtin_control_flow_pg_lowering_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_switch_case_complex_body_pg_lowering_contracts"
+path = "tests/c_ast_switch_case_complex_body_pg_lowering_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_expression_operator_ambiguity_contracts"
+path = "tests/c_ast_expression_operator_ambiguity_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_expression_operator_builtin_contracts"
+path = "tests/c_ast_expression_operator_builtin_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_expression_operator_postfix_contracts"
+path = "tests/c_ast_expression_operator_postfix_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_pg_expression_shape_e2e"
+path = "tests/c_ast_pg_expression_shape_e2e.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_pg_lowering_deep_contracts"
+path = "tests/c_ast_pg_lowering_deep_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c11_parser_typedef_contracts"
+path = "tests/c11_parser_typedef_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_semantic_gaps_linux_grade"
+path = "tests/c_ast_semantic_gaps_linux_grade.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "gemini_c_ast_contracts"
+path = "tests/gemini_c_ast_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_declaration_container_nodes"
+path = "tests/c_ast_declaration_container_nodes.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_expression_shape_gaps_e2e"
+path = "tests/c_ast_expression_shape_gaps_e2e.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_expression_operator_precedence_contracts"
+path = "tests/c_ast_expression_operator_precedence_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_expression_precedence_e2e"
+path = "tests/c_ast_expression_precedence_e2e.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_linux_corpus_macro_builtin_and_qualifier_contracts"
+path = "tests/c_ast_linux_corpus_macro_builtin_and_qualifier_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_declaration_advanced_contracts"
+path = "tests/c_ast_declaration_advanced_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_declarator_matrix_contracts"
+path = "tests/c_ast_declarator_matrix_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c11_build_vast_nodes"
+path = "tests/c11_build_vast_nodes.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c11_ast_corpus_complete_constructs"
+path = "tests/c11_ast_corpus_complete_constructs.rs"
+required-features = ["c-parser"]
