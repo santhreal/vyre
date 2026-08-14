@@ -30,6 +30,8 @@ use vyre_libs::parsing::c::parse::vast::{
 use vyre_libs::parsing::c::sema::c_sema_scope;
 
 pub(crate) use crate::c_frontend::rows::*;
+#[allow(unused_imports)]
+pub(crate) use crate::c_frontend::semantic_graph::*;
 pub(crate) use crate::c_frontend::token_fixture::*;
 #[allow(unused_imports)]
 pub(crate) use crate::c_frontend::{expression_pipeline, scope_fixture};

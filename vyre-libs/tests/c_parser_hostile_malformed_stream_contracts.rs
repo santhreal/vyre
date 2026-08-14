@@ -19,13 +19,13 @@
 mod c_frontend;
 
 use c_frontend::rows::{row_indices, word_at, VAST_STRIDE_U32};
+use c_frontend::semantic_graph::{semantic_edge_word, semantic_node_word};
 use c_frontend::token_fixture::{build_fixture, classify, FixtureToken};
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::{
     reference_ast_to_pg_nodes, reference_ast_to_pg_semantic_graph, C_AST_PG_EDGE_GOTO_TARGET,
-    C_AST_PG_EDGE_NONE, C_AST_PG_EDGE_ROWS_PER_NODE, C_AST_PG_EDGE_STRIDE_U32,
-    C_AST_PG_EDGE_SWITCH_CASE, C_AST_PG_EDGE_SWITCH_DEFAULT, C_AST_PG_ROLE_CASE,
-    C_AST_PG_ROLE_DEFAULT, C_AST_PG_ROLE_GOTO, C_AST_PG_SEMANTIC_NODE_STRIDE_U32,
+    C_AST_PG_EDGE_NONE, C_AST_PG_EDGE_STRIDE_U32, C_AST_PG_EDGE_SWITCH_CASE,
+    C_AST_PG_EDGE_SWITCH_DEFAULT, C_AST_PG_ROLE_CASE, C_AST_PG_ROLE_DEFAULT, C_AST_PG_ROLE_GOTO,
 };
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
@@ -40,18 +40,6 @@ use vyre_libs::parsing::c::parse::vast::{
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-fn semantic_edge_word(edges: &[u8], node_idx: usize, edge_slot: usize, field: usize) -> u32 {
-    let edge_idx = node_idx * C_AST_PG_EDGE_ROWS_PER_NODE as usize + edge_slot;
-    word_at(edges, edge_idx * C_AST_PG_EDGE_STRIDE_U32 as usize + field)
-}
-
-fn semantic_node_word(nodes: &[u8], idx: usize, field: usize) -> u32 {
-    word_at(
-        nodes,
-        idx * C_AST_PG_SEMANTIC_NODE_STRIDE_U32 as usize + field,
-    )
-}
 
 fn pg_lower(typed_vast: &[u8]) -> Vec<u8> {
     reference_ast_to_pg_nodes(typed_vast)

@@ -630,3 +630,8 @@ required-features = ["c-parser"]
 name = "c_ast_pg_expression_shape_e2e"
 path = "tests/c_ast_pg_expression_shape_e2e.rs"
 required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_pg_lowering_deep_contracts"
+path = "tests/c_ast_pg_lowering_deep_contracts.rs"
+required-features = ["c-parser"]

@@ -6,7 +6,6 @@
 //! owner here keeps the field offsets from drifting per test file.
 
 use super::token_fixture::Fixture;
-use vyre_libs::parsing::c::lower::C_AST_PG_SEMANTIC_NODE_STRIDE_U32;
 
 /// `u32` fields per VAST row.
 pub(crate) const VAST_STRIDE_U32: usize = 10;
@@ -96,24 +95,6 @@ pub(crate) fn starts_for_lens(lens: &[u32]) -> Vec<u32> {
             start
         })
         .collect()
-}
-
-pub(crate) fn assert_semantic_node(
-    nodes: &[u8],
-    index: usize,
-    kind: u32,
-    category: u32,
-    role: u32,
-) {
-    let field = |offset| {
-        word_at(
-            nodes,
-            index * C_AST_PG_SEMANTIC_NODE_STRIDE_U32 as usize + offset,
-        )
-    };
-    assert_eq!(field(0), kind, "kind[{index}]");
-    assert_eq!(field(6), category, "category[{index}]");
-    assert_eq!(field(7), role, "role[{index}]");
 }
 
 /// Assert the PG row at `idx` reproduces the VAST row's kind, span, and links.
