@@ -12,7 +12,7 @@
 
 mod common;
 use common::acquire_live_backend as live_backend;
-use common::self_optimizer::{WgpuOptimizerDispatcher, wrapped};
+use common::self_optimizer::{WgpuProgramDispatcher, wrapped};
 
 use vyre::ir::{Expr, Node};
 use vyre_foundation::optimizer::fingerprint_program;
@@ -23,7 +23,7 @@ use vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce;
 
 fn assert_gpu_dce_matches_cpu_oracle(entry: Vec<Node>) {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
+    let dispatcher = WgpuProgramDispatcher::new(&backend);
 
     let oracle_in = wrapped(entry.clone());
     let test_in = wrapped(entry);

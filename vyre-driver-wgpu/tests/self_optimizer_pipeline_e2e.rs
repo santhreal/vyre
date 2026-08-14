@@ -9,7 +9,7 @@
 
 mod common;
 use common::acquire_live_backend as live_backend;
-use common::self_optimizer::{WgpuOptimizerDispatcher, wrapped};
+use common::self_optimizer::{WgpuProgramDispatcher, wrapped};
 
 use vyre::ir::{BinOp, Expr, Node};
 use vyre_self_substrate::optimizer::canonicalize_via_encoded::gpu_canonicalize;
@@ -21,7 +21,7 @@ use vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce;
 #[test]
 fn full_pipeline_canonicalize_then_const_fold_then_dce_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
+    let dispatcher = WgpuProgramDispatcher::new(&backend);
 
     // Input program:
     //   let dead = 99;          (dead  -  no use)
@@ -91,7 +91,7 @@ fn full_pipeline_canonicalize_then_const_fold_then_dce_on_real_gpu() {
 #[test]
 fn pipeline_collapses_unused_compute_chain_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
+    let dispatcher = WgpuProgramDispatcher::new(&backend);
 
     // let a = 5 + 7;          (foldable to 12)
     // let b = a * 2;          (foldable to 24)

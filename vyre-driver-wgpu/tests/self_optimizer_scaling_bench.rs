@@ -17,7 +17,7 @@
 #![cfg(test)]
 
 mod common;
-use common::self_optimizer::WgpuOptimizerDispatcher;
+use common::self_optimizer::WgpuProgramDispatcher;
 
 use std::time::Instant;
 
@@ -158,7 +158,7 @@ fn bench_one(
 #[test]
 fn scaling_bench_gpu_vs_cpu_pipeline() {
     let backend = WgpuBackend::acquire().expect("WgpuBackend acquire");
-    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
+    let dispatcher = WgpuProgramDispatcher::new(&backend);
 
     bench_one(
         "wgpu chain fixture (depth-bound, worst case for parallelism)",

@@ -16,7 +16,7 @@
 
 mod common;
 use common::acquire_live_backend as live_backend;
-use common::self_optimizer::{WgpuOptimizerDispatcher, first_let_value, wrapped};
+use common::self_optimizer::{WgpuProgramDispatcher, first_let_value, wrapped};
 
 use vyre::ir::{Expr, Node};
 use vyre_self_substrate::optimizer::const_fold_via_encoded::gpu_const_fold;
@@ -27,7 +27,7 @@ use vyre_self_substrate::optimizer::const_fold_via_encoded::gpu_const_fold;
 #[test]
 fn const_fold_two_plus_three_yields_lit_five_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
+    let dispatcher = WgpuProgramDispatcher::new(&backend);
 
     // let x = 2 + 3
     let p = wrapped(vec![Node::let_bind(
@@ -45,7 +45,7 @@ fn const_fold_two_plus_three_yields_lit_five_on_real_gpu() {
 #[test]
 fn const_fold_chained_arithmetic_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
+    let dispatcher = WgpuProgramDispatcher::new(&backend);
 
     // let x = (2 + 3) * 4   →   20
     let p = wrapped(vec![Node::let_bind(
@@ -63,7 +63,7 @@ fn const_fold_chained_arithmetic_on_real_gpu() {
 #[test]
 fn const_fold_subtraction_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
+    let dispatcher = WgpuProgramDispatcher::new(&backend);
 
     // let x = 10 - 7   →   3
     let p = wrapped(vec![Node::let_bind(
@@ -78,7 +78,7 @@ fn const_fold_subtraction_on_real_gpu() {
 #[test]
 fn const_fold_bitwise_ops_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
+    let dispatcher = WgpuProgramDispatcher::new(&backend);
 
     // (0xFF | 0x100) & 0x1FF   →   0x1FF
     let p = wrapped(vec![Node::let_bind(
@@ -96,7 +96,7 @@ fn const_fold_bitwise_ops_on_real_gpu() {
 #[test]
 fn const_fold_unfoldable_var_passes_through_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
+    let dispatcher = WgpuProgramDispatcher::new(&backend);
 
     // let x = a + 2  →  unchanged (a is not foldable).
     let p = wrapped(vec![Node::let_bind(
