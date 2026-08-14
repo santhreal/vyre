@@ -6,6 +6,7 @@
 //! suite lives here because this is the only emitter crate that dev-depends on
 //! all three emitters.
 
+use vyre_emit_ptx::ComputeCapability;
 use vyre_foundation::ir::{BinOp, DataType};
 use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
 use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
@@ -14,15 +15,11 @@ fn out_slot() -> vyre_lower::BindingSlot {
     global_rw(0, DataType::U32, "out")
 }
 
-/// (1) Empty kernel.
-fn empty() -> KernelDescriptor {
-    descriptor("empty").build()
-}
-
-/// (2) Single store.
-fn single_store() -> KernelDescriptor {
-    descriptor("single_store")
-        .slot(out_slot())
+/// One store of literal 7 into element 0 of `slot`, dispatched over 64
+/// invocations: the smallest descriptor that reaches every emitter's store path.
+fn store_one_kernel(id: &str, slot: vyre_lower::BindingSlot) -> KernelDescriptor {
+    descriptor(id)
+        .slot(slot)
         .dispatch(64, 1, 1)
         .body(
             body()
@@ -32,6 +29,29 @@ fn single_store() -> KernelDescriptor {
                 .op(effect(KernelOpKind::StoreGlobal, [0, 0, 1])),
         )
         .build()
+}
+
+/// Every audit layer, substrate-neutral and per-target, reports the kernel id it
+/// was handed and the target it was asked about. Stated once: a layer that
+/// dropped the id would otherwise be caught only where someone remembered to
+/// list that layer.
+fn assert_audits_carry_kernel_id(desc: &KernelDescriptor, target: ComputeCapability) {
+    assert_eq!(vyre_lower::audit::audit(desc).kernel_id, desc.id);
+    assert_eq!(vyre_emit_naga::patterns::audit(desc).kernel_id, desc.id);
+    let ptx = vyre_emit_ptx::patterns::audit(desc, target);
+    assert_eq!(ptx.kernel_id, desc.id);
+    assert_eq!(ptx.target, target);
+    assert_eq!(vyre_emit_spirv::patterns::audit(desc).kernel_id, desc.id);
+}
+
+/// (1) Empty kernel.
+fn empty() -> KernelDescriptor {
+    descriptor("empty").build()
+}
+
+/// (2) Single store.
+fn single_store() -> KernelDescriptor {
+    store_one_kernel("single_store", out_slot())
 }
 
 /// (3) Add and store.
@@ -193,35 +213,16 @@ fn shared_cleanup_preserves_naga_emit_acceptance() {
 
 #[test]
 fn every_audit_layer_succeeds_without_panic_on_corpus() {
-    // The audit family must be robust across realistic shapes: each
-    // layer's audit() function takes a descriptor and produces a
-    // typed report. None should panic, even on edge cases (empty
-    // kernel, identity-only arithmetic, etc.).
-    use vyre_emit_ptx::ComputeCapability;
+    // The audit family must be robust across realistic shapes: each layer's
+    // audit() function takes a descriptor and produces a typed report. None
+    // should panic, even on edge cases (empty kernel, identity-only arithmetic).
     for desc in descriptor_corpus() {
-        // Substrate-neutral.
-        let lower_report = vyre_lower::audit::audit(&desc);
-        assert_eq!(lower_report.kernel_id, desc.id);
-
-        // Naga-specific.
-        let naga_report = vyre_emit_naga::patterns::audit(&desc);
-        assert_eq!(naga_report.kernel_id, desc.id);
-
-        // PTX-specific.
-        let ptx_report = vyre_emit_ptx::patterns::audit(&desc, ComputeCapability::SM_80);
-        assert_eq!(ptx_report.kernel_id, desc.id);
-        assert_eq!(ptx_report.target, ComputeCapability::SM_80);
-
-        // SPIR-V-specific.
-        let spirv_report = vyre_emit_spirv::patterns::audit(&desc);
-        assert_eq!(spirv_report.kernel_id, desc.id);
+        assert_audits_carry_kernel_id(&desc, ComputeCapability::SM_80);
     }
 }
 
 #[test]
 fn descriptor_verification_and_audits_succeed_on_corpus() {
-    use vyre_emit_ptx::ComputeCapability;
-
     for descriptor in descriptor_corpus() {
         let verified = vyre_lower::verify_descriptor(&descriptor).unwrap_or_else(|failure| {
             panic!(
@@ -231,45 +232,12 @@ fn descriptor_verification_and_audits_succeed_on_corpus() {
             )
         });
         assert_eq!(verified.id, descriptor.id, "id round-trips");
-
-        let lower = vyre_lower::audit::audit(&verified);
-        assert_eq!(lower.kernel_id, descriptor.id);
-        let naga = vyre_emit_naga::patterns::audit(&verified);
-        assert_eq!(naga.kernel_id, descriptor.id);
-        let ptx = vyre_emit_ptx::patterns::audit(&verified, ComputeCapability::SM_80);
-        assert_eq!(ptx.kernel_id, descriptor.id);
-        let spirv = vyre_emit_spirv::patterns::audit(&verified);
-        assert_eq!(spirv.kernel_id, descriptor.id);
+        assert_audits_carry_kernel_id(&verified, ComputeCapability::SM_80);
     }
 }
 
 #[test]
 fn audit_carries_kernel_id_through_every_layer() {
-    // For a kernel with a distinct id, the id should survive into all four
-    // audit reports unchanged.
-    let desc = descriptor("named_kernel_42")
-        .slot(global_rw(0, DataType::U32, "buf"))
-        .dispatch(64, 1, 1)
-        .body(
-            body()
-                .literals([LiteralValue::U32(0), LiteralValue::U32(7)])
-                .op(lit(0, 0))
-                .op(lit(1, 1))
-                .op(effect(KernelOpKind::StoreGlobal, [0, 0, 1])),
-        )
-        .build();
-    use vyre_emit_ptx::ComputeCapability;
-    assert_eq!(vyre_lower::audit::audit(&desc).kernel_id, "named_kernel_42");
-    assert_eq!(
-        vyre_emit_naga::patterns::audit(&desc).kernel_id,
-        "named_kernel_42"
-    );
-    assert_eq!(
-        vyre_emit_ptx::patterns::audit(&desc, ComputeCapability::SM_70).kernel_id,
-        "named_kernel_42"
-    );
-    assert_eq!(
-        vyre_emit_spirv::patterns::audit(&desc).kernel_id,
-        "named_kernel_42"
-    );
+    let desc = store_one_kernel("named_kernel_42", global_rw(0, DataType::U32, "buf"));
+    assert_audits_carry_kernel_id(&desc, ComputeCapability::SM_70);
 }
