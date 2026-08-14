@@ -68,9 +68,13 @@ mod tests {
         let mut desc = empty_desc();
         desc.body.ops.push(lit(0, 0));
         desc.body.literals.push(LiteralValue::U32(5));
-        desc.body.ops.push(op(KernelOpKind::SubgroupReduce {
+        desc.body.ops.push(op(
+            KernelOpKind::SubgroupReduce {
                 op: vyre_lower::SubgroupReduceOp::Add,
-            }, [0], 1));
+            },
+            [0],
+            1,
+        ));
         let r = analyze(&desc);
         assert!(r.capabilities.arithmetic);
         assert!(!r.capabilities.ballot);
@@ -83,7 +87,9 @@ mod tests {
         desc.body.ops.push(lit(1, 1));
         desc.body.literals.push(LiteralValue::U32(7));
         desc.body.literals.push(LiteralValue::U32(3));
-        desc.body.ops.push(op(KernelOpKind::SubgroupShuffle, [0, 1], 2));
+        desc.body
+            .ops
+            .push(op(KernelOpKind::SubgroupShuffle, [0, 1], 2));
         let r = analyze(&desc);
         assert!(r.capabilities.shuffle);
     }
@@ -112,9 +118,13 @@ mod tests {
         desc.body.ops.push(lit(0, 0));
         desc.body.ops.push(op(KernelOpKind::SubgroupBallot, [0], 1));
         desc.body.ops.push(lit(1, 2));
-        desc.body.ops.push(op(KernelOpKind::SubgroupReduce {
+        desc.body.ops.push(op(
+            KernelOpKind::SubgroupReduce {
                 op: vyre_lower::SubgroupReduceOp::Add,
-            }, [2], 3));
+            },
+            [2],
+            3,
+        ));
         desc.body.ops.push(op(KernelOpKind::SubgroupLocalId, [], 4));
         let r = analyze(&desc);
         assert!(r.capabilities.ballot);
@@ -148,8 +158,12 @@ mod tests {
         let mut desc = empty_desc();
         desc.body.literals.push(LiteralValue::Bool(true));
         desc.body.ops.push(lit(0, 0));
-        desc.body.ops.push(effect(KernelOpKind::StructuredIfThen, [0, 0]));
-        desc.body.child_bodies.push(body().op(op(KernelOpKind::SubgroupBallot, [0], 1)).build());
+        desc.body
+            .ops
+            .push(effect(KernelOpKind::StructuredIfThen, [0, 0]));
+        desc.body
+            .child_bodies
+            .push(body().op(op(KernelOpKind::SubgroupBallot, [0], 1)).build());
         let r = analyze(&desc);
         assert!(r.capabilities.ballot);
     }

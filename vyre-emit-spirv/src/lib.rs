@@ -147,7 +147,11 @@ mod tests {
             .dispatch(64, 1, 1)
             .body(
                 body()
-                    .ops([lit(0, 0), lit(1, 1), effect(KernelOpKind::StoreGlobal, [0, 0, 1])])
+                    .ops([
+                        lit(0, 0),
+                        lit(1, 1),
+                        effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
+                    ])
                     .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
             )
             .build()
@@ -187,14 +191,13 @@ mod tests {
     #[test]
     fn emit_with_unsupported_op_propagates_naga_error() {
         let desc = descriptor("bad")
-            .body(
-                body()
-                    .ops([
-                        op(KernelOpKind::SubgroupReduce {
-                        op: vyre_lower::SubgroupReduceOp::Add,
-                    }, [0], 0),
-                    ]),
-            )
+            .body(body().ops([op(
+                KernelOpKind::SubgroupReduce {
+                    op: vyre_lower::SubgroupReduceOp::Add,
+                },
+                [0],
+                0,
+            )]))
             .build();
         let r = emit(&desc);
         assert!(matches!(r, Err(EmitError::NagaEmit(_))));
@@ -208,7 +211,11 @@ mod tests {
                     .ops([
                         lit(0, 0),
                         lit(1, 1),
-                        op(KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add), [0, 1], 2),
+                        op(
+                            KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add),
+                            [0, 1],
+                            2,
+                        ),
                     ])
                     .literals([LiteralValue::U32(3), LiteralValue::U32(4)]),
             )
@@ -226,8 +233,7 @@ mod tests {
     #[test]
     fn emit_from_naga_module_independently_consumable() {
         // Build a valid naga::Module via emit-naga, then convert.
-        let module = vyre_emit_naga::emit(&descriptor("k").build())
-        .unwrap();
+        let module = vyre_emit_naga::emit(&descriptor("k").build()).unwrap();
         let words = emit_from_naga_module(&module).unwrap();
         assert_eq!(words[0], SPIRV_MAGIC);
     }
