@@ -44,6 +44,32 @@ CARGO_BUILD_JOBS=1 cargo test --workspace
 
 For targeted work, run the smallest meaningful gate first, then the broader gate that owns the contract you touched.
 
+### Several checkouts, one target directory
+
+Cargo hashes a workspace member by its path relative to the workspace root and
+decides freshness by mtime, so two checkouts of this repository that share a
+target directory address the same artifacts. The checkout whose files are older
+than the last build receives the other one's compiled binary, with no warning
+and no rebuild.
+
+`.cargo/config.toml` declares `VYRE_CHECKOUT_ROOT`, the absolute path of the
+checkout. `structure-gate`, `xtask`, `xtask-registry`, `xtask-evidence` and
+`vyre-lints` read it, cargo records the value in each crate's dep-info, and a
+gate therefore reports the tree it ran in.
+`structure-gate/tests/checkout_provenance.rs` fails when that stops holding.
+
+Two consequences. A checkout that predates that declaration overwrites the
+shared record with one that names no root, and a gate binary built there is then
+accepted as fresh; run `cargo clean -p <crate>` before trusting a number
+measured beside such a checkout. Crates outside that list still share artifacts
+across checkouts, which is what makes the shared directory worth having; the
+same `cargo clean -p <crate>` is the cure when a test result looks like another
+tree's.
+
+Running cargo from outside the checkout root skips `.cargo/config.toml`, and the
+gate crates then fail to compile with a `Fix:` message instead of baking a
+foreign root.
+
 ### SCCache Support
 
 Vyre uses `sccache` to speed up compilation. It is enabled by default in `.cargo/config.toml` (via `rustc-wrapper = "sccache"`).

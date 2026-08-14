@@ -13,7 +13,6 @@
 //! suites, never by fabricated cross-backend numbers.
 
 use std::fs;
-use std::path::PathBuf;
 use std::process;
 use std::time::Instant;
 
@@ -62,10 +61,7 @@ pub(crate) fn run(args: &[String]) {
 
     let markdown = render_markdown(&rows);
 
-    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("docs")
-        .join("perf");
+    let dir = xtask::checkout::checkout_root().join("docs").join("perf");
     fs::create_dir_all(&dir).unwrap_or_else(|error| {
         eprintln!("Fix: could not create {}: {error}", dir.display());
         process::exit(1);

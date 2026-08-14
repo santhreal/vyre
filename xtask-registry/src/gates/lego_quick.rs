@@ -140,9 +140,7 @@ struct Finding {
 }
 
 fn workspace_root() -> Option<PathBuf> {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(Path::to_path_buf)
+    Some(xtask::checkout::checkout_root())
 }
 
 fn staged_rust_files(root: &Path) -> Result<Vec<PathBuf>, String> {

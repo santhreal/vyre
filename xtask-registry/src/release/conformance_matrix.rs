@@ -203,10 +203,7 @@ pub(crate) fn run(args: &[String]) {
         .iter()
         .filter(|entry| entry.requires_fixture && entry.has_expected_output)
         .count();
-    let vyre_root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| PathBuf::from("."));
+    let vyre_root = xtask::checkout::checkout_root();
     let ci_gates = inspect_ci_conformance_gates(&vyre_root);
     let (required_ci_statuses, mut ci_status_scan_errors) = parse_required_ci_statuses(&vyre_root);
     let mut missing_required_ci_statuses = Vec::new();
@@ -833,10 +830,7 @@ fn parse_args(args: &[String]) -> Result<(PathBuf, bool), String> {
 }
 
 fn default_output() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(|path| path.join("release/evidence/conformance/conformance-matrix.json"))
-        .unwrap_or_else(|| PathBuf::from("release/evidence/conformance/conformance-matrix.json"))
+    xtask::checkout::checkout_root().join("release/evidence/conformance/conformance-matrix.json")
 }
 
 fn read_text_bounded(path: &Path) -> io::Result<String> {

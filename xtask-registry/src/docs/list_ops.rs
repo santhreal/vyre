@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::docs::operation_schema::{self, OperationRecord};
 
@@ -81,10 +81,7 @@ fn parse_args(args: &[String]) -> (Option<PathBuf>, bool) {
 }
 
 fn default_inventory_path() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("xtask must remain under the workspace root")
-        .join("docs/generated/OP_INVENTORY.md")
+    xtask::checkout::checkout_root().join("docs/generated/OP_INVENTORY.md")
 }
 
 fn build_markdown(operations: &[OperationRecord]) -> String {

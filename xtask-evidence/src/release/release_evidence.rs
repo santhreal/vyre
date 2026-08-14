@@ -110,10 +110,7 @@ impl EvidenceCommand {
 }
 
 pub(crate) fn run(_args: &[String]) {
-    let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(std::path::Path::to_path_buf)
-        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let workspace_root = xtask::checkout::checkout_root();
     let mut failures = Vec::new();
     let xtask = match std::env::current_exe() {
         Ok(path) => path,

@@ -57,10 +57,7 @@ pub(crate) fn run(args: &[String]) {
 }
 
 fn workspace_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(PathBuf::from)
-        .expect("Fix: xtask must live under the vyre workspace root.")
+    crate::checkout::checkout_root()
 }
 
 fn validate_crate_ownership_registry(root: &Path, failures: &mut Vec<String>) {

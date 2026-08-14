@@ -424,9 +424,7 @@ pub(crate) fn run(args: &[String]) {
 }
 
 fn workspace_root() -> Option<PathBuf> {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(Path::to_path_buf)
+    Some(crate::checkout::checkout_root())
 }
 
 fn parse_budget_vx_json(args: &[String]) -> Result<Option<PathBuf>, String> {

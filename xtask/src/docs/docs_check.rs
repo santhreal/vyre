@@ -7,10 +7,7 @@ pub(crate) fn run(args: &[String]) {
         eprintln!("Fix: docs-check accepts no arguments.");
         std::process::exit(2);
     }
-    let Some(workspace_root) = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent() else {
-        eprintln!("docs-check: xtask manifest has no workspace parent.");
-        std::process::exit(1);
-    };
+    let workspace_root = crate::checkout::checkout_root();
     let status = Command::new("python3")
         .arg("scripts/docs_manifest.py")
         .arg("--check")

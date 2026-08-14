@@ -79,10 +79,7 @@ pub(crate) fn run(args: &[String]) {
             std::process::exit(2);
         }
     };
-    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| PathBuf::from("."));
+    let workspace_root = crate::checkout::checkout_root();
     let mut failures = Vec::new();
     for backend in &config.backends {
         let artifact = match backend.as_str() {

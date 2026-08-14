@@ -94,10 +94,7 @@ pub(crate) fn run(args: &[String]) {
             std::process::exit(2);
         }
     };
-    let vyre_root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| PathBuf::from("."));
+    let vyre_root = crate::checkout::checkout_root();
     let mut crates = Vec::new();
     let mut collection_blockers = Vec::new();
     collect_workspace_versions(&vyre_root, "vyre", &mut crates, &mut collection_blockers);
@@ -744,10 +741,7 @@ fn parse_output(args: &[String]) -> Result<PathBuf, String> {
 }
 
 fn default_output() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(|path| path.join("release/evidence/version/version-matrix.json"))
-        .unwrap_or_else(|| PathBuf::from("release/evidence/version/version-matrix.json"))
+    crate::checkout::checkout_root().join("release/evidence/version/version-matrix.json")
 }
 
 fn read_text_bounded(path: &Path) -> io::Result<String> {

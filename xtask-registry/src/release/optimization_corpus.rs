@@ -340,8 +340,5 @@ fn parse_output(args: &[String]) -> Result<PathBuf, String> {
 }
 
 fn default_output() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(|path| path.join("release/evidence/optimization/optimization-corpus.json"))
-        .unwrap_or_else(|| PathBuf::from("release/evidence/optimization/optimization-corpus.json"))
+    xtask::checkout::checkout_root().join("release/evidence/optimization/optimization-corpus.json")
 }

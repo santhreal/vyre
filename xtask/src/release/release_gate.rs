@@ -30,8 +30,7 @@ use std::process::Command;
 pub(crate) fn run(_args: &[String]) {
     let mut failures: Vec<String> = Vec::new();
 
-    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
-    let workspace_root = PathBuf::from(&manifest_dir).join("..");
+    let workspace_root = crate::checkout::checkout_root();
 
     // 1. Canonical operation schema and derived catalog drift
     run_xtask_check(

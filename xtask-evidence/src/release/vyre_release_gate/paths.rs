@@ -48,10 +48,7 @@ pub(super) fn options_from_args(args: &[String]) -> Result<GateOptions, String> 
     })
 }
 pub(super) fn default_manifest_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(|path| path.join("release/vyre-release-evidence.toml"))
-        .unwrap_or_else(|| PathBuf::from("release/vyre-release-evidence.toml"))
+    xtask::checkout::checkout_root().join("release/vyre-release-evidence.toml")
 }
 pub(super) fn resolve_manifest_path(base_dir: &Path, path: &str) -> PathBuf {
     xtask::output_arg::resolve_path(base_dir, path)

@@ -558,10 +558,9 @@ mod tests {
     /// operator invoked the gate, which is the worst place to learn it.
     #[test]
     fn every_delegated_subcommand_names_a_workspace_member() {
-        let members = std::fs::read_to_string(
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../Cargo.toml"),
-        )
-        .expect("Fix: the workspace manifest must be readable from xtask");
+        let members =
+            std::fs::read_to_string(crate::checkout::checkout_root().join("Cargo.toml"))
+                .expect("Fix: the workspace manifest must be readable from xtask");
         for entry in SUBCOMMANDS {
             let Some(package) = entry.home.package() else {
                 continue;

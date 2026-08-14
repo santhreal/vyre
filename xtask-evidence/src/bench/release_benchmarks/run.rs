@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde_json::Value;
 
@@ -26,10 +26,7 @@ pub(crate) fn run(args: &[String]) {
             std::process::exit(2);
         }
     };
-    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| PathBuf::from("."));
+    let workspace_root = xtask::checkout::checkout_root();
     let matrix_path =
         workspace_root.join("release/evidence/benchmarks/release-workload-matrix.json");
     if let Some(parent) = matrix_path.parent() {

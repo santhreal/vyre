@@ -1,9 +1,28 @@
 use std::path::{Component, Path, PathBuf};
 
+/// Absolute root of the checkout that compiled this binary.
+///
+/// `VYRE_CHECKOUT_ROOT` is declared in `.cargo/config.toml` as a checkout-
+/// relative path, so reading it with `env!` records this checkout's absolute
+/// location in the crate's dep-info. Without that input, a target directory
+/// shared by several checkouts hands one checkout the lint binary another one
+/// compiled, and the report then describes the wrong tree.
+pub(crate) fn compiled_checkout_root() -> PathBuf {
+    PathBuf::from(env!(
+        "VYRE_CHECKOUT_ROOT",
+        "Fix: run cargo from inside the vyre checkout so its .cargo/config.toml applies."
+    ))
+}
+
+/// Absolute root of the checkout this tool was invoked in.
+pub(crate) fn checkout_root() -> PathBuf {
+    std::env::var_os("VYRE_CHECKOUT_ROOT")
+        .map(PathBuf::from)
+        .unwrap_or_else(compiled_checkout_root)
+}
+
 pub(crate) fn workspace_relative(path: &Path) -> String {
-    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap_or_else(|| Path::new("."));
+    let workspace_root = checkout_root();
     if let Ok(relative) = path.strip_prefix(workspace_root) {
         return normalized_path(relative);
     }

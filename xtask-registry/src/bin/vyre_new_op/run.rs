@@ -9,8 +9,6 @@ use super::split_id_into_path::split_id_into_path;
 use super::validate_archetype::validate_archetype;
 use super::validate_id::validate_id;
 use super::write_scaffold_file::write_scaffold_file;
-use std::env;
-use std::path::PathBuf;
 
 pub(crate) fn run(args: &mut impl Iterator<Item = String>) -> Result<(), String> {
     let command = args.next().ok_or_else(|| {
@@ -134,7 +132,7 @@ pub(crate) fn run(args: &mut impl Iterator<Item = String>) -> Result<(), String>
     let mod_rs = generate_mod_rs();
     let readme = generate_readme(id.as_str(), archetype.as_str(), summary.as_str());
 
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let manifest_dir = xtask::checkout::checkout_root().join("xtask-registry");
     let op_dir = manifest_dir
         .join("src")
         .join("ops")
