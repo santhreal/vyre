@@ -1,55 +1,23 @@
-//! Coverage for the new Sub/BitAnd/BitOr/BitXor identity rules in
-//! the GPU pattern-match pass. Each test runs a Program through the
-//! full persistent-resident pipeline and asserts the post-pipeline IR
-//! has the expected collapsed form.
+//! Coverage for the arithmetic, bitwise, min/max and boolean identity rules in
+//! the GPU pattern-match pass. Each case runs a Program through the full
+//! persistent-resident pipeline and asserts the post-pipeline IR has the
+//! expected collapsed form.
+//!
+//! The pipeline runner and the program shapes live in
+//! `common::self_optimizer`; this file only groups the per-rule submodules and
+//! puts the harness in scope for their `use super::*`.
 
 #![cfg(test)]
 
 mod common;
 
-use common::live_backend;
-use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver_cuda::CudaProgramDispatcher;
-use vyre_self_substrate::optimizer::pipeline_resident::gpu_pipeline_resident;
-
-/// Bind `x` to a non-literal value (`Load(input, 0)`) so const-prop
-/// at the end of the pipeline can't fold `Var(x)` into a literal.
-/// The `input` buffer is declared on the Program so the IR is
-/// well-typed.
-fn program_with_x_load_then(value: Expr) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage("buf", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::let_bind("x", Expr::load("input", Expr::u32(0))),
-            Node::store("buf", Expr::u32(0), value),
-        ],
-    )
-}
-
-fn run_pipeline(p: Program) -> Program {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
-    gpu_pipeline_resident(p, &dispatcher).expect("pipeline must succeed")
-}
-
-fn body_of(out: &Program) -> Vec<Node> {
-    match out.entry() {
-        [Node::Region { body, .. }] => body.as_ref().clone(),
-        entry => entry.to_vec(),
-    }
-}
-
-fn binop(op: BinOp, left: Expr, right: Expr) -> Expr {
-    Expr::BinOp {
-        op,
-        left: Box::new(left),
-        right: Box::new(right),
-    }
-}
+pub(crate) use common::self_optimizer::{
+    assert_branch_folded_to, assert_cond_not_headed_by, assert_lit_bool, assert_lit_u32,
+    assert_var, b_load_branch_program, binop, folded_x_store_value, folded_xy_store_value,
+    run_pipeline, unop,
+};
+pub(crate) use vyre::ir::model::spec_types::UnOp;
+pub(crate) use vyre::ir::{BinOp, Expr};
 
 #[path = "self_optimizer_pattern_match_extended/arithmetic_cse_contracts.rs"]
 mod arithmetic_cse_contracts;

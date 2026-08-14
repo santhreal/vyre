@@ -1,10 +1,16 @@
 use super::*;
+use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
+
+use crate::common::self_optimizer::optimized_store_value;
 
 #[test]
 fn cuda_bitxor_chain_cancels_right_via_cse() {
-    // Build `let y = Load(input, 0); store buf 0 ((x ^ y) ^ y)`
-    //  -  both `y` operands are CSE-equivalent so the outer BitXor
-    // cancels the inner pair and leaves `x`.
+    // `let x = Load(input, 0); let y = Load(input, 0); store buf 0 ((x ^ y) ^ y)`
+    //
+    // Unlike `xy_load_program`, both operands read the SAME slot, so nothing but
+    // CSE proving `x` and `y` alias can let the outer BitXor cancel the inner
+    // pair. That aliasing is the contract, which is why this shape is local to
+    // this case.
     let p = Program::wrapped(
         vec![
             BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
@@ -25,25 +31,18 @@ fn cuda_bitxor_chain_cancels_right_via_cse() {
             ),
         ],
     );
-    let out = run_pipeline(p);
-    let body = body_of(&out);
-    let store = body
-        .iter()
-        .find(|n| matches!(n, Node::Store { .. }))
-        .expect("store survives");
-    if let Node::Store { value, .. } = store {
-        // After CSE proves x and y both alias Load(input,0) and the
-        // outer BitXor folds, what remains is `Var(x)` (or potentially
-        // const-prop'd to a single Load reference). Both forms pass.
-        assert!(
-            !matches!(
-                value,
-                Expr::BinOp {
-                    op: BinOp::BitXor,
-                    ..
-                }
-            ),
-            "BitXor chain must collapse; got {value:?}"
-        );
-    }
+    // After CSE proves x and y both alias Load(input,0) and the outer BitXor
+    // folds, what remains is `Var(x)`, or potentially a const-prop'd single Load
+    // reference. Both forms pass; a surviving BitXor does not.
+    let value = optimized_store_value(p);
+    assert!(
+        !matches!(
+            &value,
+            Expr::BinOp {
+                op: BinOp::BitXor,
+                ..
+            }
+        ),
+        "BitXor chain must collapse; got {value:?}"
+    );
 }

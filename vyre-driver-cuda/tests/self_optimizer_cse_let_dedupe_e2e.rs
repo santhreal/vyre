@@ -9,16 +9,10 @@
 mod common;
 
 use common::live_backend;
+use common::self_optimizer::body_of;
 use vyre::ir::{Expr, Node, Program};
 use vyre_driver_cuda::CudaProgramDispatcher;
 use vyre_self_substrate::optimizer::cse_via_encoded::{apply_cse_let_dedupe, gpu_cse_canonicals};
-
-fn body_of(out: &Program) -> Vec<Node> {
-    match out.entry() {
-        [Node::Region { body, .. }] => body.as_ref().clone(),
-        entry => entry.to_vec(),
-    }
-}
 
 #[test]
 fn cuda_let_dedupe_collapses_duplicate_literal_let_pairs() {

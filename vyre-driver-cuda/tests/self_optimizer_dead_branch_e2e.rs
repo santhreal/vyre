@@ -8,23 +8,8 @@
 
 mod common;
 
-use common::live_backend;
+use common::self_optimizer::{body_of, run_pipeline};
 use vyre::ir::{Expr, Node, Program};
-use vyre_driver_cuda::CudaProgramDispatcher;
-use vyre_self_substrate::optimizer::pipeline_resident::gpu_pipeline_resident;
-
-fn run_pipeline(p: Program) -> Program {
-    let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher::new(&backend);
-    gpu_pipeline_resident(p, &dispatcher).expect("pipeline must succeed")
-}
-
-fn body_of(out: &Program) -> Vec<Node> {
-    match out.entry() {
-        [Node::Region { body, .. }] => body.as_ref().clone(),
-        entry => entry.to_vec(),
-    }
-}
 
 #[test]
 fn cuda_dead_branch_const_true_keeps_then_drops_otherwise() {

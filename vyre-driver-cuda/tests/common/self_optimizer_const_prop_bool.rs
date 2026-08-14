@@ -1,35 +1,6 @@
-use crate::{body_of, run_pipeline};
+use crate::common::self_optimizer::{b_load_branch_program, binop, if_cond, run_pipeline};
 use vyre::ir::model::spec_types::UnOp;
-use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-fn binop(op: BinOp, a: Expr, b: Expr) -> Expr {
-    Expr::BinOp {
-        op,
-        left: Box::new(a),
-        right: Box::new(b),
-    }
-}
-
-fn bool_false_comparison_program(cond: Expr) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage("buf", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::let_bind(
-                "b",
-                Expr::eq(Expr::load("input", Expr::u32(0)), Expr::u32(7)),
-            ),
-            Node::if_then_else(
-                cond,
-                vec![Node::store("buf", Expr::u32(0), Expr::u32(1))],
-                vec![Node::store("buf", Expr::u32(0), Expr::u32(2))],
-            ),
-        ],
-    )
-}
+use vyre::ir::{BinOp, Expr};
 
 #[test]
 fn cuda_const_prop_simplifies_bool_false_comparisons_to_logical_not() {
@@ -51,22 +22,19 @@ fn cuda_const_prop_simplifies_bool_false_comparisons_to_logical_not() {
             binop(BinOp::Ne, Expr::bool(true), Expr::var("b")),
         ),
     ] {
-        let out = run_pipeline(bool_false_comparison_program(cond));
-        let body = body_of(&out);
-        let if_node = body.iter().find(|n| matches!(n, Node::If { .. }));
-        if let Some(Node::If { cond, .. }) = if_node {
-            assert!(
-                matches!(
-                    cond,
-                    Expr::UnOp {
-                        op: UnOp::LogicalNot,
-                        ..
-                    }
-                ),
-                "{label} must simplify to LogicalNot(b); got cond={cond:?}"
-            );
-        } else {
-            panic!("{label} must preserve a runtime If with simplified condition; body={body:?}");
-        }
+        // `if_cond` panics when the branch was folded away, which is itself a
+        // failure for these cases: `b` is a runtime value, so the If must
+        // survive with a simplified condition.
+        let cond = if_cond(&run_pipeline(b_load_branch_program(cond, 1, 2)));
+        assert!(
+            matches!(
+                cond,
+                Expr::UnOp {
+                    op: UnOp::LogicalNot,
+                    ..
+                }
+            ),
+            "{label} must simplify to LogicalNot(b); got cond={cond:?}"
+        );
     }
 }
