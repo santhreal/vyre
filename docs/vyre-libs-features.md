@@ -21,11 +21,11 @@ Operational features:
 
 ## matching features and their source homes
 
-The `matching-*` features gate modules under `vyre-libs/src/scan/`. The
-prefix is historical: it names the dialect, not a directory. There is no
-`vyre-libs/src/matching/`. The features are not renamed, because a rename is
-a semver break for every consumer that lists them. Source homes below are
-workspace-relative, so each one resolves.
+The `matching-*` features gate modules under `vyre-libs/src/scan/`. The prefix
+is historical: it names the dialect, not a directory, and no matching
+directory exists under `vyre-libs/src/`. The features are not renamed, because
+a rename is a semver break for every consumer that lists them. Source homes
+below are workspace-relative, so each one resolves.
 
 | Feature | Implies | Source home |
 | --- | --- | --- |
