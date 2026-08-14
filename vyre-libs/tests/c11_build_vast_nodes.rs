@@ -7,7 +7,9 @@ mod c_frontend;
 #[path = "../../tests/support/c_frontend/fixtures/vast_builder_token_streams.rs"]
 mod vast_builder_token_streams;
 
-use crate::c_frontend::expression_pipeline::assert_shape_rows as assert_expr_shape_rows;
+use crate::c_frontend::expression_pipeline::{
+    assert_shape_rows as assert_expr_shape_rows, conditional_row,
+};
 use crate::c_frontend::rows::{
     assert_kind, assert_vast_row, row_indices as typed_indices, starts_for_lens, word_at,
     VAST_STRIDE_U32,
@@ -26,7 +28,7 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_IF_STMT, C_AST_KIND_INITIALIZER_LIST, C_AST_KIND_INLINE_ASM,
     C_AST_KIND_MEMBER_ACCESS_EXPR, C_AST_KIND_POINTER_DECL, C_AST_KIND_RETURN_STMT,
     C_AST_KIND_SIZEOF_EXPR, C_AST_KIND_SWITCH_STMT, C_AST_KIND_UNARY_EXPR, C_AST_KIND_WHILE_STMT,
-    C_EXPR_ASSOC_LEFT, C_EXPR_ASSOC_RIGHT, C_EXPR_SHAPE_BINARY, C_EXPR_SHAPE_CONDITIONAL,
+    C_EXPR_ASSOC_LEFT, C_EXPR_SHAPE_BINARY,
 };
 use vyre_primitives::predicate::node_kind;
 

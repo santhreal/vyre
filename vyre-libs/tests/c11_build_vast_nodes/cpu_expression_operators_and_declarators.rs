@@ -72,16 +72,7 @@ fn cpu_reference_builds_c11_expression_semantic_shape_rows() {
                 4,
                 u32::MAX,
             ),
-            (
-                5,
-                C_EXPR_SHAPE_CONDITIONAL,
-                TOK_QUESTION,
-                3,
-                C_EXPR_ASSOC_RIGHT,
-                1,
-                7,
-                11,
-            ),
+            conditional_row(5, 1, 7, 11),
             (
                 7,
                 C_EXPR_SHAPE_BINARY,

@@ -12,13 +12,11 @@
 use super::expression_ambiguity::*;
 use crate::c_frontend::expression_pipeline::{
     assert_pg_links_match_vast, assert_pg_preserves_row, assert_shape_none, assert_shape_rows,
-    run_pipeline,
+    binary_row, run_pipeline,
 };
-use crate::c_frontend::rows::{row_indices_by_stride, SENTINEL, VAST_STRIDE_U32};
+use crate::c_frontend::rows::{row_indices_by_stride, VAST_STRIDE_U32};
 use vyre_libs::parsing::c::lex::tokens::*;
-use vyre_libs::parsing::c::parse::vast::{
-    C_AST_KIND_UNARY_EXPR, C_EXPR_ASSOC_LEFT, C_EXPR_SHAPE_BINARY,
-};
+use vyre_libs::parsing::c::parse::vast::{C_AST_KIND_UNARY_EXPR, C_EXPR_ASSOC_LEFT};
 use vyre_primitives::predicate::node_kind;
 
 // ---------------------------------------------------------------------------
@@ -37,16 +35,7 @@ pub(crate) fn star_binary_is_binary_and_unary_is_unary() {
     );
     assert_shape_rows(
         &rows.expr_shape,
-        &[(
-            1,
-            C_EXPR_SHAPE_BINARY,
-            TOK_STAR,
-            13,
-            C_EXPR_ASSOC_LEFT,
-            0,
-            2,
-            SENTINEL,
-        )],
+        &[binary_row(1, TOK_STAR, 13, C_EXPR_ASSOC_LEFT, 0, 2)],
     );
     assert_pg_preserves_row(&rows, 1, node_kind::BINARY);
     assert_pg_links_match_vast(&rows, 1);
@@ -75,16 +64,7 @@ pub(crate) fn amp_binary_is_binary_and_unary_is_unary() {
     );
     assert_shape_rows(
         &rows.expr_shape,
-        &[(
-            1,
-            C_EXPR_SHAPE_BINARY,
-            TOK_AMP,
-            8,
-            C_EXPR_ASSOC_LEFT,
-            0,
-            2,
-            SENTINEL,
-        )],
+        &[binary_row(1, TOK_AMP, 8, C_EXPR_ASSOC_LEFT, 0, 2)],
     );
     assert_pg_preserves_row(&rows, 1, node_kind::BINARY);
     assert_pg_links_match_vast(&rows, 1);

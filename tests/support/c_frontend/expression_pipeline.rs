@@ -6,11 +6,12 @@
 //! [`PipelineRows`]; nothing here touches a backend.
 
 use vyre::ir::Expr;
+use vyre_libs::parsing::c::lex::tokens::TOK_QUESTION;
 use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes};
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_build_expression_shape_nodes, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_EXPR_ASSOC_NONE, C_EXPR_SHAPE_NONE,
-    C_EXPR_SHAPE_STRIDE_U32,
+    reference_c11_classify_vast_node_kinds, C_EXPR_ASSOC_NONE, C_EXPR_ASSOC_RIGHT,
+    C_EXPR_SHAPE_BINARY, C_EXPR_SHAPE_CONDITIONAL, C_EXPR_SHAPE_NONE, C_EXPR_SHAPE_STRIDE_U32,
 };
 use vyre_reference::value::Value;
 
@@ -191,6 +192,51 @@ pub(crate) fn shape_none_row(idx: usize, raw_operator: u32) -> ShapeRow {
         SENTINEL,
         SENTINEL,
         SENTINEL,
+    )
+}
+
+/// The expected row for a binary operator: two operands and no third.
+pub(crate) fn binary_row(
+    idx: usize,
+    raw_operator: u32,
+    precedence: u32,
+    associativity: u32,
+    first: u32,
+    second: u32,
+) -> ShapeRow {
+    (
+        idx,
+        C_EXPR_SHAPE_BINARY,
+        raw_operator,
+        precedence,
+        associativity,
+        first,
+        second,
+        SENTINEL,
+    )
+}
+
+/// Precedence band the C grammar gives the ternary conditional.
+const C_CONDITIONAL_PRECEDENCE: u32 = 3;
+
+/// The expected row for a ternary conditional. Its operator spelling,
+/// precedence and associativity are fixed by the grammar, so only the three
+/// operand links vary per fixture.
+pub(crate) fn conditional_row(
+    idx: usize,
+    condition: u32,
+    consequent: u32,
+    alternative: u32,
+) -> ShapeRow {
+    (
+        idx,
+        C_EXPR_SHAPE_CONDITIONAL,
+        TOK_QUESTION,
+        C_CONDITIONAL_PRECEDENCE,
+        C_EXPR_ASSOC_RIGHT,
+        condition,
+        consequent,
+        alternative,
     )
 }
 

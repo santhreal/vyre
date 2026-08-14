@@ -9,26 +9,8 @@ fn shift_operators_precedence_between_additive_and_relational() {
     assert_shape_rows(
         &rows.expr_shape,
         &[
-            (
-                1,
-                C_EXPR_SHAPE_BINARY,
-                TOK_LSHIFT,
-                11,
-                C_EXPR_ASSOC_LEFT,
-                0,
-                3,
-                SENTINEL,
-            ),
-            (
-                3,
-                C_EXPR_SHAPE_BINARY,
-                TOK_PLUS,
-                12,
-                C_EXPR_ASSOC_LEFT,
-                2,
-                4,
-                SENTINEL,
-            ),
+            binary_row(1, TOK_LSHIFT, 11, C_EXPR_ASSOC_LEFT, 0, 3),
+            binary_row(3, TOK_PLUS, 12, C_EXPR_ASSOC_LEFT, 2, 4),
         ],
     );
     assert_pg_preserves_row(&rows, 1, node_kind::BINARY);
@@ -44,26 +26,8 @@ fn relational_operators_precedence_between_shift_and_equality() {
     assert_shape_rows(
         &rows.expr_shape,
         &[
-            (
-                1,
-                C_EXPR_SHAPE_BINARY,
-                TOK_LT,
-                10,
-                C_EXPR_ASSOC_LEFT,
-                0,
-                3,
-                SENTINEL,
-            ),
-            (
-                3,
-                C_EXPR_SHAPE_BINARY,
-                TOK_LSHIFT,
-                11,
-                C_EXPR_ASSOC_LEFT,
-                2,
-                4,
-                SENTINEL,
-            ),
+            binary_row(1, TOK_LT, 10, C_EXPR_ASSOC_LEFT, 0, 3),
+            binary_row(3, TOK_LSHIFT, 11, C_EXPR_ASSOC_LEFT, 2, 4),
         ],
     );
     assert_pg_preserves_row(&rows, 1, node_kind::BINARY);
@@ -79,26 +43,8 @@ fn equality_operators_precedence_between_relational_and_bitwise_and() {
     assert_shape_rows(
         &rows.expr_shape,
         &[
-            (
-                1,
-                C_EXPR_SHAPE_BINARY,
-                TOK_EQ,
-                9,
-                C_EXPR_ASSOC_LEFT,
-                0,
-                3,
-                SENTINEL,
-            ),
-            (
-                3,
-                C_EXPR_SHAPE_BINARY,
-                TOK_LT,
-                10,
-                C_EXPR_ASSOC_LEFT,
-                2,
-                4,
-                SENTINEL,
-            ),
+            binary_row(1, TOK_EQ, 9, C_EXPR_ASSOC_LEFT, 0, 3),
+            binary_row(3, TOK_LT, 10, C_EXPR_ASSOC_LEFT, 2, 4),
         ],
     );
     assert_pg_preserves_row(&rows, 1, node_kind::BINARY);
@@ -115,26 +61,8 @@ fn equality_operators_are_left_associative() {
     assert_shape_rows(
         &rows.expr_shape,
         &[
-            (
-                1,
-                C_EXPR_SHAPE_BINARY,
-                TOK_EQ,
-                9,
-                C_EXPR_ASSOC_LEFT,
-                0,
-                2,
-                SENTINEL,
-            ),
-            (
-                3,
-                C_EXPR_SHAPE_BINARY,
-                TOK_NE,
-                9,
-                C_EXPR_ASSOC_LEFT,
-                1,
-                4,
-                SENTINEL,
-            ),
+            binary_row(1, TOK_EQ, 9, C_EXPR_ASSOC_LEFT, 0, 2),
+            binary_row(3, TOK_NE, 9, C_EXPR_ASSOC_LEFT, 1, 4),
         ],
     );
     assert_pg_preserves_row(&rows, 1, node_kind::BINARY);
@@ -150,26 +78,8 @@ fn compound_assignment_operators_are_right_associative() {
     assert_shape_rows(
         &rows.expr_shape,
         &[
-            (
-                1,
-                C_EXPR_SHAPE_BINARY,
-                TOK_PLUS_EQ,
-                2,
-                C_EXPR_ASSOC_RIGHT,
-                0,
-                3,
-                SENTINEL,
-            ),
-            (
-                3,
-                C_EXPR_SHAPE_BINARY,
-                TOK_MINUS_EQ,
-                2,
-                C_EXPR_ASSOC_RIGHT,
-                2,
-                4,
-                SENTINEL,
-            ),
+            binary_row(1, TOK_PLUS_EQ, 2, C_EXPR_ASSOC_RIGHT, 0, 3),
+            binary_row(3, TOK_MINUS_EQ, 2, C_EXPR_ASSOC_RIGHT, 2, 4),
         ],
     );
     assert_eq!(
@@ -191,26 +101,8 @@ fn ternary_precedence_looser_than_assignment() {
     assert_shape_rows(
         &rows.expr_shape,
         &[
-            (
-                1,
-                C_EXPR_SHAPE_BINARY,
-                TOK_ASSIGN,
-                2,
-                C_EXPR_ASSOC_RIGHT,
-                0,
-                3,
-                SENTINEL,
-            ),
-            (
-                3,
-                C_EXPR_SHAPE_CONDITIONAL,
-                TOK_QUESTION,
-                3,
-                C_EXPR_ASSOC_RIGHT,
-                2,
-                4,
-                6,
-            ),
+            binary_row(1, TOK_ASSIGN, 2, C_EXPR_ASSOC_RIGHT, 0, 3),
+            conditional_row(3, 2, 4, 6),
         ],
     );
     assert_pg_preserves_row(&rows, 1, C_AST_KIND_ASSIGN_EXPR);
@@ -225,28 +117,7 @@ fn ternary_right_associativity_chains_correctly() {
     // Outer ? at 1 is a ? b : (inner); inner ? at 5 is c ? d : e.
     assert_shape_rows(
         &rows.expr_shape,
-        &[
-            (
-                1,
-                C_EXPR_SHAPE_CONDITIONAL,
-                TOK_QUESTION,
-                3,
-                C_EXPR_ASSOC_RIGHT,
-                0,
-                2,
-                5,
-            ),
-            (
-                5,
-                C_EXPR_SHAPE_CONDITIONAL,
-                TOK_QUESTION,
-                3,
-                C_EXPR_ASSOC_RIGHT,
-                4,
-                6,
-                8,
-            ),
-        ],
+        &[conditional_row(1, 0, 2, 5), conditional_row(5, 4, 6, 8)],
     );
     assert_pg_preserves_row(&rows, 1, C_AST_KIND_CONDITIONAL_EXPR);
     assert_pg_preserves_row(&rows, 5, C_AST_KIND_CONDITIONAL_EXPR);
@@ -260,27 +131,9 @@ fn comma_is_expression_boundary_with_no_shape() {
     assert_shape_rows(
         &rows.expr_shape,
         &[
-            (
-                1,
-                C_EXPR_SHAPE_BINARY,
-                TOK_ASSIGN,
-                2,
-                C_EXPR_ASSOC_RIGHT,
-                0,
-                2,
-                SENTINEL,
-            ),
+            binary_row(1, TOK_ASSIGN, 2, C_EXPR_ASSOC_RIGHT, 0, 2),
             shape_none_row(3, TOK_COMMA),
-            (
-                5,
-                C_EXPR_SHAPE_BINARY,
-                TOK_ASSIGN,
-                2,
-                C_EXPR_ASSOC_RIGHT,
-                4,
-                6,
-                SENTINEL,
-            ),
+            binary_row(5, TOK_ASSIGN, 2, C_EXPR_ASSOC_RIGHT, 4, 6),
         ],
     );
     assert_pg_preserves_row(&rows, 1, C_AST_KIND_ASSIGN_EXPR);
@@ -296,106 +149,16 @@ fn full_precedence_ladder_from_star_to_or() {
     assert_shape_rows(
         &rows.expr_shape,
         &[
-            (
-                19,
-                C_EXPR_SHAPE_BINARY,
-                TOK_STAR,
-                13,
-                C_EXPR_ASSOC_LEFT,
-                18,
-                20,
-                SENTINEL,
-            ),
-            (
-                17,
-                C_EXPR_SHAPE_BINARY,
-                TOK_LSHIFT,
-                11,
-                C_EXPR_ASSOC_LEFT,
-                15,
-                19,
-                SENTINEL,
-            ),
-            (
-                15,
-                C_EXPR_SHAPE_BINARY,
-                TOK_PLUS,
-                12,
-                C_EXPR_ASSOC_LEFT,
-                14,
-                16,
-                SENTINEL,
-            ),
-            (
-                13,
-                C_EXPR_SHAPE_BINARY,
-                TOK_LT,
-                10,
-                C_EXPR_ASSOC_LEFT,
-                12,
-                17,
-                SENTINEL,
-            ),
-            (
-                11,
-                C_EXPR_SHAPE_BINARY,
-                TOK_EQ,
-                9,
-                C_EXPR_ASSOC_LEFT,
-                10,
-                13,
-                SENTINEL,
-            ),
-            (
-                9,
-                C_EXPR_SHAPE_BINARY,
-                TOK_AMP,
-                8,
-                C_EXPR_ASSOC_LEFT,
-                8,
-                11,
-                SENTINEL,
-            ),
-            (
-                7,
-                C_EXPR_SHAPE_BINARY,
-                TOK_CARET,
-                7,
-                C_EXPR_ASSOC_LEFT,
-                6,
-                9,
-                SENTINEL,
-            ),
-            (
-                5,
-                C_EXPR_SHAPE_BINARY,
-                TOK_PIPE,
-                6,
-                C_EXPR_ASSOC_LEFT,
-                4,
-                7,
-                SENTINEL,
-            ),
-            (
-                3,
-                C_EXPR_SHAPE_BINARY,
-                TOK_AND,
-                5,
-                C_EXPR_ASSOC_LEFT,
-                2,
-                5,
-                SENTINEL,
-            ),
-            (
-                1,
-                C_EXPR_SHAPE_BINARY,
-                TOK_OR,
-                4,
-                C_EXPR_ASSOC_LEFT,
-                0,
-                3,
-                SENTINEL,
-            ),
+            binary_row(19, TOK_STAR, 13, C_EXPR_ASSOC_LEFT, 18, 20),
+            binary_row(17, TOK_LSHIFT, 11, C_EXPR_ASSOC_LEFT, 15, 19),
+            binary_row(15, TOK_PLUS, 12, C_EXPR_ASSOC_LEFT, 14, 16),
+            binary_row(13, TOK_LT, 10, C_EXPR_ASSOC_LEFT, 12, 17),
+            binary_row(11, TOK_EQ, 9, C_EXPR_ASSOC_LEFT, 10, 13),
+            binary_row(9, TOK_AMP, 8, C_EXPR_ASSOC_LEFT, 8, 11),
+            binary_row(7, TOK_CARET, 7, C_EXPR_ASSOC_LEFT, 6, 9),
+            binary_row(5, TOK_PIPE, 6, C_EXPR_ASSOC_LEFT, 4, 7),
+            binary_row(3, TOK_AND, 5, C_EXPR_ASSOC_LEFT, 2, 5),
+            binary_row(1, TOK_OR, 4, C_EXPR_ASSOC_LEFT, 0, 3),
         ],
     );
 
