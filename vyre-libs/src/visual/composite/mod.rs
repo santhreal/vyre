@@ -203,15 +203,10 @@ pub fn alpha_over(fg: &str, bg: &str, output: &str, count: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| alpha_over("fg", "bg", "out", 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || alpha_over("fg", "bg", "out", 2),
+        Some(|| {
             // Pixel 0: semi-transparent red (128 alpha) over opaque blue.
             // Pixel 1: fully opaque green over opaque white.
             let fg = [0x8000_00FFu32, 0xFF00_FF00u32]; // RGBA: R=255 A=128; R=0 G=255 A=255
@@ -222,7 +217,7 @@ inventory::submit! {
                 vec![0u8; 8],   // output
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // Pixel 0: fg_r=255 fg_a=128, bg_b=255 bg_a=255
             //   inv_a = 127
             //   out_r = 255 + 0 = 255
@@ -234,6 +229,6 @@ inventory::submit! {
             let expected = [0xFF7F_00FFu32, 0xFF00_FF00u32];
             vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&expected)]]
         }),
-        category: Some("visual"),
-    }
+    )
+    .with_category("visual")
 }

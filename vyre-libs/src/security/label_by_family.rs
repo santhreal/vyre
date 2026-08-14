@@ -26,27 +26,22 @@ pub fn label_by_family(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| label_by_family("node_tags", "out", 4, 0b0010)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || label_by_family("node_tags", "out", 4, 0b0010),
+        Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![
                 to_bytes(&[0x01, 0x02, 0x06, 0x04]),
                 to_bytes(&[0]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![to_bytes(&[0b0110])]]
         }),
-        category: Some("security"),
-    }
+    )
+    .with_category("security")
 }
 
 #[cfg(test)]

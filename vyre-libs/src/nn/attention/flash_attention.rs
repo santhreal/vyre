@@ -265,14 +265,9 @@ pub fn flash_attention(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::nn::flash_attention",
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::nn::flash_attention",
+        || {
             flash_attention("q", "k", "v", "out", 9, 1).unwrap_or_else(|error| {
                 crate::builder::invalid_builder_trap_program(
                     "vyre-libs::nn::flash_attention",
@@ -281,8 +276,8 @@ inventory::submit! {
                     error,
                 )
             })
-        }),
-        test_inputs: Some(|| {
+        },
+        Some(|| {
             let q = [0.0_f32; 9];
             let k = [0.0_f32; 9];
             let v = [0.0_f32, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
@@ -297,11 +292,11 @@ inventory::submit! {
         // the tiny-shape specialization and the registered op covers the real
         // online-softmax flash kernel. With zero Q/K, every row has uniform
         // weights and returns mean(V)=4.0.
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![vyre_primitives::wire::pack_f32_slice(&[4.0_f32; 9])]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

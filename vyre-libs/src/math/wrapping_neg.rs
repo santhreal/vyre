@@ -11,20 +11,15 @@ pub fn wrapping_neg(a: &str, out: &str, size: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| wrapping_neg("a", "out", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || wrapping_neg("a", "out", 4),
+        Some(|| {
             let a = [0u32, 1, u32::MAX, 42];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![to_bytes(&a)]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let expected = [
                 0u32.wrapping_neg(),
                 1u32.wrapping_neg(),
@@ -34,8 +29,8 @@ inventory::submit! {
             let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
             vec![vec![bytes]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]

@@ -94,15 +94,10 @@ pub fn qk_gain(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| qk_gain("q_in", "q_out", "gain", 2, 1, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || qk_gain("q_in", "q_out", "gain", 2, 1, 2),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[1.0, 2.0, 3.0, 4.0]),  // q: 2 heads × 1 seq × 2 dim
@@ -110,14 +105,14 @@ inventory::submit! {
                 to_f32(&[5.25, 3.0]),              // gain per head
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             // h0: [1*5.25, 2*5.25] = [5.25, 10.5]
             // h1: [3*3.0, 4*3.0] = [9.0, 12.0]
             vec![vec![to_f32(&[5.25, 10.5, 9.0, 12.0])]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

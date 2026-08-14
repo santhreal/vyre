@@ -394,27 +394,23 @@ pub fn layer_norm(input: &str, output: &str, n: u32, eps: f32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(1),
-        id: "vyre-libs::nn::layer_norm",
-        build: Some(|| layer_norm("input", "output", 4, 1e-5)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::nn::layer_norm",
+        || layer_norm("input", "output", 4, 1e-5),
+        Some(|| {
             let input = [2.0f32, 2.0, 2.0, 2.0];
             vec![vec![
                 vyre_primitives::wire::pack_f32_slice(&input),
             ]]
         }),
-        expected_output: Some(|| vec![
+        Some(|| vec![
             vec![
                 vec![0; 16],
             ],
         ]),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
+    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(1))
 }
 
 #[cfg(test)]

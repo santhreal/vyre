@@ -79,29 +79,24 @@ pub fn ast_binding_strength(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::ast_binding_strength",
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::parsing::ast_binding_strength",
         // Use a small 4-token fixture so the witness is trivially
         // checkable: tok_types = [STAR, PLUS, '=', 0], depths = [1, 1, 0, 0].
         // Expected strengths = depth*100 + precedence: [1*100+40=140,
         // 1*100+30=130, 0*100+10=10, 0*100+0=0].
-        build: Some(|| ast_binding_strength("tok_types", "out_depths", "out_strengths", Expr::u32(4))),
-        test_inputs: Some(|| {
+        || ast_binding_strength("tok_types", "out_depths", "out_strengths", Expr::u32(4)),
+        Some(|| {
             let tokens: [u32; 4] = [TOK_STAR, TOK_PLUS, 0x3D, 0];
             let depths: [u32; 4] = [1, 1, 0, 0];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![to_bytes(&tokens), to_bytes(&depths), vec![0u8; 4 * 4]]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let strengths: [u32; 4] = [140, 130, 10, 0];
             let bytes = vyre_primitives::wire::pack_u32_slice(&strengths);
             vec![vec![bytes]]
         }),
-        category: Some("parsing"),
-    }
+    )
+    .with_category("parsing")
 }

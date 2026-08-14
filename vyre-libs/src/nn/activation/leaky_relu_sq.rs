@@ -27,21 +27,16 @@ pub fn leaky_relu_sq(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| leaky_relu_sq("input", "output", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || leaky_relu_sq("input", "output", 4),
+        Some(|| {
             let to_bytes = vyre_primitives::wire::pack_f32_slice;
             vec![vec![
                 to_bytes(&[0.0_f32, 2.0, -4.0, 1.0]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // leaky_relu(0, 0.5)² = max(0, 0)² = 0
             // leaky_relu(2, 0.5)² = max(1, 2)² = 4
             // leaky_relu(-4, 0.5)² = max(-2, -4)² = (-2)² = 4
@@ -54,8 +49,8 @@ inventory::submit! {
             let bytes = vyre_primitives::wire::pack_f32_slice(&out);
             vec![vec![bytes]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

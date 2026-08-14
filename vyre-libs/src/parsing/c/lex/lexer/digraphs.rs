@@ -229,37 +229,27 @@ pub fn c11_lex_digraphs(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::c_lexer",
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::parsing::c_lexer",
+        || {
             c11_lexer("haystack", "out_tok_types", "out_tok_starts", "out_tok_lens", "out_counts", 4096)
-        }),
-        test_inputs: Some(lexer_bounded_identifier_inputs),
-        expected_output: Some(lexer_bounded_identifier_expected),
-        category: Some("parsing"),
-    }
+        },
+        Some(lexer_bounded_identifier_inputs),
+        Some(lexer_bounded_identifier_expected),
+    )
+    .with_category("parsing")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::c11_lex_digraphs",
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::parsing::c11_lex_digraphs",
+        || {
             c11_lex_digraphs("tok_types", "tok_starts", "tok_lens", 4096)
-        }),
-        test_inputs: Some(digraph_inputs),
-        expected_output: Some(digraph_expected),
-        category: Some("parsing"),
-    }
+        },
+        Some(digraph_inputs),
+        Some(digraph_expected),
+    )
+    .with_category("parsing")
 }
 
 use vyre_primitives::wire::pack_u32_slice as pack_u32;

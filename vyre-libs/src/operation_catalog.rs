@@ -1,8 +1,9 @@
 //! Registry-derived library operation catalog.
 //!
-//! The canonical semantic records live in `vyre-foundation`. This read-only
-//! projection exposes the library tier and its bounded convergence metadata to
-//! conformance and documentation consumers.
+//! The canonical semantic records live in `vyre-foundation`, submitted through
+//! `OperationRegistration::library`. This read-only projection exposes the
+//! library tier and its bounded convergence metadata to conformance and
+//! documentation consumers.
 
 use vyre_foundation::operation::{OperationRegistry, OperationTier, SemanticOperation};
 

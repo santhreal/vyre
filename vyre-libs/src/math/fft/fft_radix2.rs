@@ -168,25 +168,20 @@ pub fn fft_radix2_complex(input: &str, output: &str, n: u32) -> Result<Program, 
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| fft_radix2_complex("input", "output", 4)
-            .unwrap_or_else(|_| unreachable!("Fix: catalog fixture uses a valid radix-2 FFT size."))),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || fft_radix2_complex("input", "output", 4)
+            .unwrap_or_else(|_| unreachable!("Fix: catalog fixture uses a valid radix-2 FFT size.")),
+        Some(|| {
             vec![vec![
                 crate::fixture_bytes::f32_bytes(&[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![crate::fixture_bytes::f32_bytes(&[1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0])]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]

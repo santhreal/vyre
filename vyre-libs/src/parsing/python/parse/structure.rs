@@ -423,48 +423,33 @@ pub fn python312_extract_with_blocks(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: STRUCTURE_OP_ID,
-        build: Some(|| python312_extract_structure("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16)),
-        test_inputs: Some(structure_fixture_inputs),
-        expected_output: Some(structure_fixture_expected),
-        category: Some("parsing"),
-    }
+    vyre_foundation::operation::OperationRegistration::library(
+        STRUCTURE_OP_ID,
+        || python312_extract_structure("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
+        Some(structure_fixture_inputs),
+        Some(structure_fixture_expected),
+    )
+    .with_category("parsing")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: IMPORTS_OP_ID,
-        build: Some(|| python312_extract_imports("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16)),
-        test_inputs: Some(import_fixture_inputs),
-        expected_output: Some(import_fixture_expected),
-        category: Some("parsing"),
-    }
+    vyre_foundation::operation::OperationRegistration::library(
+        IMPORTS_OP_ID,
+        || python312_extract_imports("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
+        Some(import_fixture_inputs),
+        Some(import_fixture_expected),
+    )
+    .with_category("parsing")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: WITH_BLOCKS_OP_ID,
-        build: Some(|| python312_extract_with_blocks("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16)),
-        test_inputs: Some(with_fixture_inputs),
-        expected_output: Some(with_fixture_expected),
-        category: Some("parsing"),
-    }
+    vyre_foundation::operation::OperationRegistration::library(
+        WITH_BLOCKS_OP_ID,
+        || python312_extract_with_blocks("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
+        Some(with_fixture_inputs),
+        Some(with_fixture_expected),
+    )
+    .with_category("parsing")
 }
 
 fn structure_fixture_inputs() -> Vec<Vec<Vec<u8>>> {

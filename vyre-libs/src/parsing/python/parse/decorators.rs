@@ -184,18 +184,13 @@ pub fn python312_extract_decorators(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| python312_extract_decorators("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16)),
-        test_inputs: Some(decorator_fixture_inputs),
-        expected_output: Some(decorator_fixture_expected),
-        category: Some("parsing"),
-    }
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || python312_extract_decorators("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
+        Some(decorator_fixture_inputs),
+        Some(decorator_fixture_expected),
+    )
+    .with_category("parsing")
 }
 
 fn decorator_fixture_inputs() -> Vec<Vec<Vec<u8>>> {

@@ -211,16 +211,11 @@ mod tests {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::nn::softmax_top_k",
-        build: Some(|| softmax_top_k("scores", "indices", "weights", 8, 2)),
-        test_inputs: Some(softmax_top_k_fixture_inputs),
-        expected_output: Some(softmax_top_k_fixture_expected),
-        category: Some("nn"),
-    }
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::nn::softmax_top_k",
+        || softmax_top_k("scores", "indices", "weights", 8, 2),
+        Some(softmax_top_k_fixture_inputs),
+        Some(softmax_top_k_fixture_expected),
+    )
+    .with_category("nn")
 }

@@ -276,49 +276,39 @@ pub fn try_rank1_query(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: RANK_SUPERBLOCKS_OP_ID,
-        build: Some(|| rank1_superblocks("bits", "superblocks", 4, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        RANK_SUPERBLOCKS_OP_ID,
+        || rank1_superblocks("bits", "superblocks", 4, 2),
+        Some(|| {
             let bits = [0b1011u32, 0x8000_0000, 0xFFFF_0000, 0u32];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![to_bytes(&bits)]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let expected = [0u32, 4, 20];
             let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
             vec![vec![bytes]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: RANK_QUERY_OP_ID,
-        build: Some(|| rank1_query("bits", "superblocks", "queries", "out", 4, 5, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        RANK_QUERY_OP_ID,
+        || rank1_query("bits", "superblocks", "queries", "out", 4, 5, 2),
+        Some(|| {
             let bits = [0b1011u32, 0x8000_0000, 0xFFFF_0000, 0u32];
             let superblocks = [0u32, 4, 20];
             let queries = [0u32, 1, 4, 63, 80];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![to_bytes(&bits), to_bytes(&superblocks), to_bytes(&queries)]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let expected = [0u32, 1, 3, 3, 4];
             let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
             vec![vec![bytes]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }

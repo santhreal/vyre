@@ -15,20 +15,15 @@ use vyre_primitives::wire::pack_u32_slice as pack_u32;
 use super::{MAX_TOK_SCAN, OP_ID, ast_shunting_yard_with_capacity};
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| ast_shunting_yard_with_capacity(
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || ast_shunting_yard_with_capacity(
             "tok_types", "statements", Expr::u32(100),
             "out_ast_nodes", "out_ast_count", "out_statement_roots",
             "scratch_val_stack", "scratch_op_stack",
             MAX_TOK_SCAN, 100
-        )),
-        test_inputs: Some(|| vec![vec![
+        ),
+        Some(|| vec![vec![
             shunting_token_fixture(),
             shunting_statement_fixture(),
             vec![0u8; MAX_TOK_SCAN as usize * 4 * 4],
@@ -37,9 +32,9 @@ inventory::submit! {
             vec![0u8; 6_400 * 4],
             vec![0u8; 6_400 * 4],
         ]]),
-        expected_output: Some(shunting_expected_output),
-        category: Some("parsing"),
-    }
+        Some(shunting_expected_output),
+    )
+    .with_category("parsing")
 }
 
 fn shunting_token_fixture() -> Vec<u8> {

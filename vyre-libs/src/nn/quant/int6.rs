@@ -73,15 +73,10 @@ pub fn int6_pack(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: UNPACK_OP_ID,
-        build: Some(|| int6_unpack("packed", "scale", "zero", "output", 4, 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        UNPACK_OP_ID,
+        || int6_unpack("packed", "scale", "zero", "output", 4, 4),
+        Some(|| {
             let to_u32 = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
@@ -90,36 +85,31 @@ inventory::submit! {
                 to_f32(&[0.0]),               // zero (1 block)
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // 63*0.1=6.3, 32*0.1=3.2, 1*0.1=0.1, 0*0.1=0.0
             let out = [6.3_f32, 3.2, 0.1, 0.0];
             let bytes = vyre_primitives::wire::pack_f32_slice(&out);
             vec![vec![bytes]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: PACK_OP_ID,
-        build: Some(|| int6_pack("input", "output", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        PACK_OP_ID,
+        || int6_pack("input", "output", 4),
+        Some(|| {
             let to_u32 = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![
                 to_u32(&[63, 100, 1, 0]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let to_u32 = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             // 63&0x3F=63, 100&0x3F=36, 1&0x3F=1, 0
             vec![vec![to_u32(&[63, 36, 1, 0])]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }

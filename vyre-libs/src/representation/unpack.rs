@@ -42,15 +42,10 @@ pub fn unpack_4bit_f32(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::representation::unpack_4bit_f32",
-        build: Some(|| unpack_4bit_f32("input", "output", 16)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::representation::unpack_4bit_f32",
+        || unpack_4bit_f32("input", "output", 16),
+        Some(|| {
 
             // Pack 16 4-bit values: 0..15 into 2 u32s (8 nibbles each)
             // u32[0] = 0x76543210, u32[1] = 0xFEDCBA98
@@ -58,7 +53,7 @@ inventory::submit! {
                 crate::fixture_bytes::u32_bytes(&[0x7654_3210, 0xFEDC_BA98]), // input: 2 packed u32s
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // u32 → f32 as a value-preserving cast (not a bit-cast),
             // matching target-text `f32(u32_value)`. The packed input
             // [0x76543210, 0xFEDCBA98] unpacks into nibbles 0..15
@@ -68,6 +63,5 @@ inventory::submit! {
             let bytes = vyre_primitives::wire::pack_f32_slice(&values);
             vec![vec![bytes]]
         }),
-        category: None,
-    }
+    )
 }

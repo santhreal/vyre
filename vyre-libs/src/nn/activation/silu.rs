@@ -57,21 +57,16 @@ pub fn silu(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(1),
-        id: "vyre-libs::nn::silu",
-        build: Some(|| silu("input", "output", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::nn::silu",
+        || silu("input", "output", 4),
+        Some(|| {
             let to_bytes = vyre_primitives::wire::pack_f32_slice;
             vec![vec![
                 to_bytes(&[0.0_f32, 1.0, -1.0, 2.0]), // input
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // SiLU via the same x / (1 + exp(-x)) formula the IR evaluates.
             // The cross-backend f32 ULP tolerance in parity_matrix
             // widens to 64 ULP for transcendentals, so this CPU-side
@@ -84,8 +79,9 @@ inventory::submit! {
             let bytes = vyre_primitives::wire::pack_f32_slice(&out);
             vec![vec![bytes]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
+    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(1))
 }
 
 #[cfg(test)]

@@ -50,26 +50,21 @@ macro_rules! define_atomic_serial_module {
         }
 
         inventory::submit! {
-            vyre_foundation::operation::OperationRegistration {
-                semantic_version: 1,
-                signature: None,
-                tier: vyre_foundation::operation::OperationTier::Library,
-                laws: &[],
-                tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-                id: OP_ID,
-                build: Some(|| $fn_name("values", "state", "trace", 4)),
-                test_inputs: Some(|| {
+            vyre_foundation::operation::OperationRegistration::library(
+                OP_ID,
+                || $fn_name("values", "state", "trace", 4),
+                Some(|| {
                     let to_bytes = vyre_primitives::wire::pack_u32_slice;
                     let values: &[u32] = &$values;
                     vec![vec![to_bytes(values), to_bytes(&[$initial])]]
                 }),
-                expected_output: Some(|| {
+                Some(|| {
                     let to_bytes = vyre_primitives::wire::pack_u32_slice;
                     let trace: &[u32] = &$trace;
                     vec![vec![to_bytes(&[$final_state]), to_bytes(trace)]]
                 }),
-                category: Some("math"),
-            }
+            )
+            .with_category("math")
         }
 
         #[cfg(test)]

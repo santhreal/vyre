@@ -95,14 +95,9 @@ pub fn conv2d_3x3_direct(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || {
             conv2d_3x3_direct("input", "kernel", "output", 4, 4).unwrap_or_else(|error| {
                 crate::builder::invalid_builder_trap_program(
                     OP_ID,
@@ -111,8 +106,8 @@ inventory::submit! {
                     error,
                 )
             })
-        }),
-        test_inputs: Some(|| {
+        },
+        Some(|| {
             // 4x4 input = identity matrix; 3x3 box kernel
             let input = crate::fixture_bytes::f32_bytes(&[
                 1.0, 0.0, 0.0, 0.0,
@@ -123,7 +118,7 @@ inventory::submit! {
             let kernel = crate::fixture_bytes::f32_bytes(&[1.0; 9]);
             vec![vec![input, kernel]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // box-kernel convolution of identity matrix with
             // zero-padding: each output pixel is the sum of the 3x3
             // window around it, where the window is intersected
@@ -145,8 +140,8 @@ inventory::submit! {
                 0.0, 1.0, 2.0, 2.0,
             ])]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]

@@ -138,15 +138,10 @@ pub fn try_rms_norm_linear(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(2),
-        id: "vyre-libs::nn::rms_norm_linear",
-        build: Some(|| rms_norm_linear("input", "w", "b", "out", 4, 4, 4, 1e-5)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::nn::rms_norm_linear",
+        || rms_norm_linear("input", "w", "b", "out", 4, 4, 4, 1e-5),
+        Some(|| {
             let to_bytes = vyre_primitives::wire::pack_f32_slice;
             let input = [1.0_f32, 2.0, 3.0, 4.0];
             let weights = (0u32..16u32).map(|v| v as f32).collect::<Vec<_>>();
@@ -156,7 +151,7 @@ inventory::submit! {
                 vec![0u8; 4 * 4],
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let to_bytes = vyre_primitives::wire::pack_f32_slice;
             let input = [1.0_f32, 2.0, 3.0, 4.0];
             let eps = 1e-5_f32;
@@ -172,6 +167,7 @@ inventory::submit! {
             }
             vec![vec![to_bytes(&out)]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
+    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(2))
 }

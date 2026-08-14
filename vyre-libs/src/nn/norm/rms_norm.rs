@@ -144,21 +144,16 @@ fn rms_norm_reference_program(input: &str, output: &str, n: u32, eps: f32) -> Pr
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(2),
-        id: "vyre-libs::nn::rms_norm",
-        build: Some(|| rms_norm("input", "output", 4, 1e-5)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::nn::rms_norm",
+        || rms_norm("input", "output", 4, 1e-5),
+        Some(|| {
             let to_bytes =
                 |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             // Input = [1.0, 2.0, 3.0, 4.0].
             vec![vec![to_bytes(&[1.0, 2.0, 3.0, 4.0])]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let to_bytes =
                 |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             // mean(x^2) = (1+4+9+16)/4 = 7.5.
@@ -169,8 +164,9 @@ inventory::submit! {
             let y: [f32; 4] = [1.0 * rms, 2.0 * rms, 3.0 * rms, 4.0 * rms];
             vec![vec![to_bytes(&y)]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
+    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(2))
 }
 
 #[cfg(test)]

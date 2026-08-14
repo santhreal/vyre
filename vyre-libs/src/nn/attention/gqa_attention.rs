@@ -337,18 +337,13 @@ pub fn gqa_attention_causal_typed(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(4),
-        id: OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || {
             gqa_attention("q", "k", "v", "out", 2, 1, 2, 2)
                 .unwrap_or_else(|error| crate::invalid_program(OP_ID, format!("Fix: gqa_attention fixture must build: {error}")))
-        }),
-        test_inputs: Some(|| {
+        },
+        Some(|| {
             let f = vyre_primitives::wire::pack_f32_slice;
             vec![vec![
                 f(&[1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0]),
@@ -357,14 +352,15 @@ inventory::submit! {
                 vec![0u8; 32],
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![vec![
                 145, 214, 132, 65, 146, 214, 212, 65, 111, 41, 187, 65, 183, 148, 5, 66, 111,
                 41, 187, 65, 183, 148, 5, 66, 145, 214, 132, 65, 146, 214, 212, 65,
             ]]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
+    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(4))
 }
 
 #[cfg(test)]

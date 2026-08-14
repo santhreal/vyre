@@ -22,15 +22,10 @@ pub fn leaky_relu_sq_backward(input: &str, grad_out: &str, grad_in: &str, n: u32
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| leaky_relu_sq_backward("input", "grad_out", "grad_in", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || leaky_relu_sq_backward("input", "grad_out", "grad_in", 4),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[2.0, -4.0, 0.0, 1.0]),
@@ -38,14 +33,14 @@ inventory::submit! {
                 vec![0u8; 4 * 4],
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // x=2: max(1,4)=4; x=-4: max(-2,-8)=-2; x=0: 0; x=1: max(0.5,2)=2
             let out = [4.0_f32, -2.0, 0.0, 2.0];
             let bytes = vyre_primitives::wire::pack_f32_slice(&out);
             vec![vec![bytes]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

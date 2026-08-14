@@ -44,23 +44,18 @@ fn wrap_large_scan_program(program: Program) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| scan_prefix_sum("input", "output", 4)),
-        test_inputs: Some(|| vec![vec![
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || scan_prefix_sum("input", "output", 4),
+        Some(|| vec![vec![
             vyre_primitives::wire::pack_u32_slice(&[1u32, 2, 3, 4]),
         ]]),
-        expected_output: Some(|| vec![vec![
+        Some(|| vec![vec![
             // Only ReadWrite buffer: prefix sum [1, 3, 6, 10]
             vyre_primitives::wire::pack_u32_slice(&[1u32, 3, 6, 10]),
         ]]),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]

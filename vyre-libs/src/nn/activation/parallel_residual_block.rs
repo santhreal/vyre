@@ -47,29 +47,24 @@ pub fn parallel_residual_block(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || {
             parallel_residual_block("x", "attn", "mlp", "out", 4)
                 .unwrap_or_else(|error| crate::invalid_program(OP_ID, format!("Fix: parallel_residual_block fixture must build: {error}")))
-        }),
-        test_inputs: Some(|| {
+        },
+        Some(|| {
             let f = vyre_primitives::wire::pack_f32_slice;
             vec![vec![
                 f(&[1.0, 2.0, 3.0, 4.0]), f(&[0.1, 0.2, 0.3, 0.4]),
                 f(&[0.01, 0.02, 0.03, 0.04]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let out = [1.11_f32, 2.22, 3.33, 4.44];
             let bytes = vyre_primitives::wire::pack_f32_slice(&out);
             vec![vec![bytes]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }

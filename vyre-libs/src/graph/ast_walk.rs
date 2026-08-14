@@ -236,33 +236,23 @@ fn harness_expected(order: VastWalkOrder) -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: PREORDER_OP_ID,
-        build: Some(|| ast_walk_preorder("nodes", "out", 6, 8)),
-        test_inputs: Some(harness_inputs),
-        expected_output: Some(|| harness_expected(VastWalkOrder::Preorder)),
-        category: Some("graph"),
-    }
+    vyre_foundation::operation::OperationRegistration::library(
+        PREORDER_OP_ID,
+        || ast_walk_preorder("nodes", "out", 6, 8),
+        Some(harness_inputs),
+        Some(|| harness_expected(VastWalkOrder::Preorder)),
+    )
+    .with_category("graph")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: POSTORDER_OP_ID,
-        build: Some(|| ast_walk_postorder_nodes("nodes", "out", 6, 8)),
-        test_inputs: Some(harness_inputs),
-        expected_output: Some(|| harness_expected(VastWalkOrder::Postorder)),
-        category: Some("graph"),
-    }
+    vyre_foundation::operation::OperationRegistration::library(
+        POSTORDER_OP_ID,
+        || ast_walk_postorder_nodes("nodes", "out", 6, 8),
+        Some(harness_inputs),
+        Some(|| harness_expected(VastWalkOrder::Postorder)),
+    )
+    .with_category("graph")
 }
 
 #[cfg(test)]

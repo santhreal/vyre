@@ -198,15 +198,10 @@ pub fn turboquant_attention(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| turboquant_attention("q", "kp", "vp", "out", 2, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || turboquant_attention("q", "kp", "vp", "out", 2, 2),
+        Some(|| {
             let to_f32_bytes =
                 |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
 
@@ -226,7 +221,7 @@ inventory::submit! {
                 vec![0u8; 2 * 4],
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let to_f32_bytes =
                 |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             // score[0] = dot([1,1], [k00=1, k01=2]) = 3
@@ -235,8 +230,8 @@ inventory::submit! {
             // out[1] = score[0]*v01 + score[1]*v11 = 3*0 + 7*1 = 7
             vec![vec![to_f32_bytes(&[3.0, 7.0])]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

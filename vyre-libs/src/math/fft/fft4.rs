@@ -143,25 +143,20 @@ pub fn fft4_complex(input: &str, output: &str) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| fft4_complex("input", "output")),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || fft4_complex("input", "output"),
+        Some(|| {
             // Real-valued sequence [1, 0, 0, 0] (impulse): all bins = 1+0i
             let input = crate::fixture_bytes::f32_bytes(&[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
             vec![vec![input]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // FFT of impulse = uniform [1, 1, 1, 1] across all bins.
             vec![vec![crate::fixture_bytes::f32_bytes(&[1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0])]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]

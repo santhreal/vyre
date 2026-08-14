@@ -201,35 +201,25 @@ pub fn int4_batched_matmul_top1_f32_scaled(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: DOT_OP_ID,
-        build: Some(|| int4_dot_i32("lhs", "rhs", "out", 8)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        DOT_OP_ID,
+        || int4_dot_i32("lhs", "rhs", "out", 8),
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321]),
                 vyre_primitives::wire::pack_u32_slice(&[0xFEDC_1234]),
             ]]
         }),
-        expected_output: Some(|| vec![vec![40i32.to_le_bytes().to_vec()]]),
-        category: Some("nn"),
-    }
+        Some(|| vec![vec![40i32.to_le_bytes().to_vec()]]),
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: DOT_SCALED_OP_ID,
-        build: Some(|| int4_dot_f32_scaled("lhs", "rhs", "lhs_scale", "rhs_scale", "out", 8)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        DOT_SCALED_OP_ID,
+        || int4_dot_f32_scaled("lhs", "rhs", "lhs_scale", "rhs_scale", "out", 8),
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321]),
                 vyre_primitives::wire::pack_u32_slice(&[0xFEDC_1234]),
@@ -237,66 +227,51 @@ inventory::submit! {
                 vyre_primitives::wire::pack_f32_slice(&[0.25]),
             ]]
         }),
-        expected_output: Some(|| vec![vec![5.0_f32.to_le_bytes().to_vec()]]),
-        category: Some("nn"),
-    }
+        Some(|| vec![vec![5.0_f32.to_le_bytes().to_vec()]]),
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: MATVEC_SCALED_OP_ID,
-        build: Some(|| int4_matvec_f32_scaled("weights", "x", "scales", "out", 2, 8)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        MATVEC_SCALED_OP_ID,
+        || int4_matvec_f32_scaled("weights", "x", "scales", "out", 2, 8),
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321, 0xFEDC_1234]),
                 vyre_primitives::wire::pack_f32_slice(&[1.0; 8]),
                 vyre_primitives::wire::pack_f32_slice(&[0.5, 0.25]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![vyre_primitives::wire::pack_f32_slice(&[0.0, 0.0])]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: BATCHED_MATVEC_SCALED_OP_ID,
-        build: Some(|| int4_batched_matvec_f32_scaled("weights", "x", "scales", "out", 2, 2, 8)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        BATCHED_MATVEC_SCALED_OP_ID,
+        || int4_batched_matvec_f32_scaled("weights", "x", "scales", "out", 2, 2, 8),
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321, 0xFEDC_1234]),
                 vyre_primitives::wire::pack_f32_slice(&[1.0; 16]),
                 vyre_primitives::wire::pack_f32_slice(&[0.5, 0.25]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![vyre_primitives::wire::pack_f32_slice(&[0.0, 0.0, 0.0, 0.0])]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: BATCHED_MATMUL_SCALED_OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        BATCHED_MATMUL_SCALED_OP_ID,
+        || {
             int4_batched_matmul_f32_scaled(
                 "weights",
                 "activations",
@@ -307,8 +282,8 @@ inventory::submit! {
                 2,
                 8,
             )
-        }),
-        test_inputs: Some(|| {
+        },
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0, 0]),
                 vyre_primitives::wire::pack_u32_slice(&[0, 0]),
@@ -316,22 +291,17 @@ inventory::submit! {
                 vyre_primitives::wire::pack_f32_slice(&[0.125, 0.25]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![vyre_primitives::wire::pack_f32_slice(&[0.0, 0.0, 0.0, 0.0])]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: BATCHED_MATMUL_TOP1_SCALED_OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        BATCHED_MATMUL_TOP1_SCALED_OP_ID,
+        || {
             int4_batched_matmul_top1_f32_scaled(
                 "weights",
                 "activations",
@@ -342,8 +312,8 @@ inventory::submit! {
                 2,
                 8,
             )
-        }),
-        test_inputs: Some(|| {
+        },
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0, 0]),
                 vyre_primitives::wire::pack_u32_slice(&[0, 0]),
@@ -351,11 +321,11 @@ inventory::submit! {
                 vyre_primitives::wire::pack_f32_slice(&[0.125, 0.25]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![vyre_primitives::wire::pack_f32_slice(&[0.0, 0.0, 0.0, 0.0])]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

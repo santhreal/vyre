@@ -139,15 +139,10 @@ pub fn partial_rope_backward(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| partial_rope_backward("grad_out", "cos", "sin", "grad_in", 1, 1, 4, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || partial_rope_backward("grad_out", "cos", "sin", "grad_in", 1, 1, 4, 2),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[1.0, 0.0, 5.0, 6.0]), // grad_out
@@ -156,11 +151,11 @@ inventory::submit! {
                 vec![0u8; 4 * 4],
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // cos=1, sin=0: backward rotation is also identity
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![to_f32(&[1.0, 0.0, 5.0, 6.0])]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }

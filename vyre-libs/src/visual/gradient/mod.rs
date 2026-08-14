@@ -312,30 +312,25 @@ pub fn try_linear_gradient(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| linear_gradient(
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || linear_gradient(
             "output", 4, 1, 90.0,
             &[
                 ColorStop { position: 0.0, color: 0xFF_0000FF }, // red
                 ColorStop { position: 1.0, color: 0xFF_FF0000 }, // blue
             ],
-        )),
-        test_inputs: Some(|| {
+        ),
+        Some(|| {
             vec![vec![vec![0u8; 16]]]  // initial 4×1 output buffer
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // 4-pixel horizontal gradient: red → blue.
             // Pixel 0: pure red, Pixel 3: pure blue.
             // Exact values depend on interpolation rounding.
             let expected = [0xFF_0000FFu32, 0xFF_5500AAu32, 0xFF_AA0055u32, 0xFF_FF0000u32];
             vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&expected)]]
         }),
-        category: Some("visual"),
-    }
+    )
+    .with_category("visual")
 }

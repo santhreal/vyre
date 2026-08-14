@@ -51,14 +51,9 @@ pub fn linear_silu(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || {
             linear_silu("x", "w", "b", "out", 4, 4).unwrap_or_else(|error| {
                 crate::builder::invalid_builder_trap_program(
                     OP_ID,
@@ -67,15 +62,15 @@ inventory::submit! {
                     error,
                 )
             })
-        }),
-        test_inputs: Some(|| {
+        },
+        Some(|| {
             let f32_bytes = vyre_primitives::wire::pack_f32_slice;
             let x = f32_bytes(&(0..4).map(|i| i as f32).collect::<Vec<_>>());
             let w = f32_bytes(&(0..16).map(|i| i as f32).collect::<Vec<_>>());
             let bias = f32_bytes(&[0.0, 0.0, 0.0, 0.0]);
             vec![vec![x, w, bias]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // linear: x=[0,1,2,3], w[k,i] = k*4+i, b=[0,0,0,0]
             // out[i] = sum_k x[k] * w[k, i]
             //        = 0*i + 1*(4+i) + 2*(8+i) + 3*(12+i)
@@ -88,8 +83,8 @@ inventory::submit! {
             let bytes = vyre_primitives::wire::pack_f32_slice(&silu);
             vec![vec![bytes]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

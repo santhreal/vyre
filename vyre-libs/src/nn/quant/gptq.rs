@@ -90,52 +90,42 @@ pub fn gptq_sdclip(input: &str, output: &str, n: u32, k: f32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: ROUND_OP_ID,
-        build: Some(|| gptq_round("input", "scale", "output", 4, 63.0)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        ROUND_OP_ID,
+        || gptq_round("input", "scale", "output", 4, 63.0),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[100.0, 200.0, 50.0, 10.0]),
                 to_f32(&[2.0, 3.0, 1.0, 5.0]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // 100/2=50, 200/3=66.7→63(clamped), 50/1=50, 10/5=2
             let out = [50.0_f32, 63.0, 50.0, 2.0];
             let bytes = vyre_primitives::wire::pack_f32_slice(&out);
             vec![vec![bytes]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: SDCLIP_OP_ID,
-        build: Some(|| gptq_sdclip("input", "output", 4, 30.0)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        SDCLIP_OP_ID,
+        || gptq_sdclip("input", "output", 4, 30.0),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[10.0, 50.0, -40.0, 25.0]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // clamp: 10, 30, -30, 25
             let out = [10.0_f32, 30.0, -30.0, 25.0];
             let bytes = vyre_primitives::wire::pack_f32_slice(&out);
             vec![vec![bytes]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }

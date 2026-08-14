@@ -338,28 +338,24 @@ fn softmax_reference_program(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(1),
-        id: "vyre-libs::nn::softmax",
-        build: Some(|| softmax("input", "output", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::nn::softmax",
+        || softmax("input", "output", 4),
+        Some(|| {
             let input = [0.5f32, -1.0, 1.5, 0.25];
             vec![vec![
                 vyre_primitives::wire::pack_f32_slice(&input),
                 vec![0u8; input.len() * core::mem::size_of::<f32>()],
             ]]
         }),
-        expected_output: Some(|| vec![
+        Some(|| vec![
             vec![
                 vec![0x7b, 0xf0, 0x58, 0x3e, 0x74, 0x9f, 0x41, 0x3d, 0xf3, 0x6c, 0x13, 0x3f, 0xdb, 0xf3, 0x28, 0x3e, ],
             ],
         ]),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
+    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(1))
 }
 
 #[cfg(test)]

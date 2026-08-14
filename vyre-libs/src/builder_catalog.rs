@@ -59,35 +59,23 @@ fn strided_accumulate_program() -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: INDEXED_MAP_OP_ID,
-        build: Some(indexed_map_program),
-        test_inputs: Some(|| vec![vec![
+    vyre_foundation::operation::OperationRegistration::library(
+        INDEXED_MAP_OP_ID,
+        indexed_map_program,
+        Some(|| vec![vec![
             u32s(&[1, 2, 3, 4]),
         ]]),
-        expected_output: Some(|| vec![vec![u32s(&[2, 3, 4, 5])]]),
-        category: None,
-    }
+        Some(|| vec![vec![u32s(&[2, 3, 4, 5])]]),
+    )
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: STRIDED_ACCUMULATE_OP_ID,
-        build: Some(strided_accumulate_program),
-        test_inputs: Some(|| vec![vec![
+    vyre_foundation::operation::OperationRegistration::library(
+        STRIDED_ACCUMULATE_OP_ID,
+        strided_accumulate_program,
+        Some(|| vec![vec![
             u32s(&[7, 11, 13, 17]),
         ]]),
-        expected_output: Some(|| vec![vec![u32s(&[7])]]),
-        category: None,
-    }
+        Some(|| vec![vec![u32s(&[7])]]),
+    )
 }

@@ -189,14 +189,9 @@ pub fn glyph_grid_blend(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || {
             glyph_grid_blend(
                 "glyphs",
                 "fg",
@@ -206,8 +201,8 @@ inventory::submit! {
                 GridShape { cols: 1, rows: 1, cell_width: 2, cell_height: 2 },
                 2,
             )
-        }),
-        test_inputs: Some(|| {
+        },
+        Some(|| {
             // One cell showing glyph 1: red foreground over a blue background.
             // Glyph 0 is blank, glyph 1 covers three of the four texels, one
             // of them only half.
@@ -223,7 +218,7 @@ inventory::submit! {
                 vec![0u8; 4 * 4],
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // Coverage 0 leaves the background, 255 takes the foreground, and
             // 128 lands between them:
             //   r = (255*128 + 0*127 + 128) * 257 >> 16 = 128
@@ -232,6 +227,6 @@ inventory::submit! {
             let expected = [0xFFFF_0000u32, 0xFF00_00FF, 0xFF7F_0080, 0xFF00_00FF];
             vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&expected)]]
         }),
-        category: Some("visual"),
-    }
+    )
+    .with_category("visual")
 }

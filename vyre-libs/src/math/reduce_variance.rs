@@ -293,26 +293,21 @@ fn reduce_variance_reference_program(input: &str, output: &str, n: u32, bessel: 
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::math::reduce_variance",
-        build: Some(|| reduce_variance("input", "output", 256)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::math::reduce_variance",
+        || reduce_variance("input", "output", 256),
+        Some(|| {
             let to_bytes = vyre_primitives::wire::pack_f32_slice;
             vec![vec![
                 to_bytes(&[2.0_f32; 256]), // input
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let to_bytes = vyre_primitives::wire::pack_f32_slice;
             vec![vec![to_bytes(&[0.0_f32])]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]

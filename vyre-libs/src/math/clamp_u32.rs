@@ -49,22 +49,17 @@ pub fn clamp_u32(input: &str, lo: &str, hi: &str, out: &str, n: u32) -> Program 
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| clamp_u32("input", "lo", "hi", "out", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || clamp_u32("input", "lo", "hi", "out", 4),
+        Some(|| {
             let input = [0u32, 5, 10, u32::MAX];
             let lo = [3u32, 3, 3, 100];
             let hi = [8u32, 8, 8, 200];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![to_bytes(&input), to_bytes(&lo), to_bytes(&hi)]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // u32::clamp per-element. The 4th lane (u32::MAX) clamps
             // down to hi=200; the first three clamp up to lo=3 or
             // pass through unchanged.
@@ -72,8 +67,8 @@ inventory::submit! {
             let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
             vec![vec![bytes]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]

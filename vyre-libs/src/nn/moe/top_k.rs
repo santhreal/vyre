@@ -127,15 +127,10 @@ mod tests {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::nn::top_k",
-        build: Some(|| top_k("input", "output", 8, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::nn::top_k",
+        || top_k("input", "output", 8, 2),
+        Some(|| {
             let scores: [f32; 8] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let input_bytes = vyre_primitives::wire::pack_f32_slice(&scores);
             vec![vec![
@@ -144,7 +139,7 @@ inventory::submit! {
                 vec![0u8; 4 * 2],
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // Top-2 of ascending [1..8] are indices 7 and 6
             let best_vals = vyre_primitives::wire::pack_f32_slice(&[8.0f32, 7.0f32]);
             let best_idxs = vyre_primitives::wire::pack_u32_slice(&[7u32, 6u32]);
@@ -154,6 +149,6 @@ inventory::submit! {
                 best_idxs,
             ]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }

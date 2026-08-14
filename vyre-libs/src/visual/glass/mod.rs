@@ -245,14 +245,9 @@ impl GlassHalfResPipeline {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| crate::region::tag_program(OP_ID, glass_blur_stage("scene", "output", "scratch", &GlassParams {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || crate::region::tag_program(OP_ID, glass_blur_stage("scene", "output", "scratch", &GlassParams {
             width: 4,
             height: 4,
             blur_radius: 1,
@@ -260,8 +255,8 @@ inventory::submit! {
             tint_rgba: 0x0D_FFFFFF,
             brightness: 1.0,
             saturation: 0.75,
-        }).horizontal)),
-        test_inputs: Some(|| {
+        }).horizontal),
+        Some(|| {
             // 4×4 all-white scene → glass blur → all-white.
             let pixels = vec![0xFFFF_FFFFu32; 16];
             vec![vec![
@@ -269,10 +264,10 @@ inventory::submit! {
                 vec![0u8; 64],
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let pixels = vec![0xFFFF_FFFFu32; 16];
             vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&pixels)]]
         }),
-        category: Some("visual"),
-    }
+    )
+    .with_category("visual")
 }

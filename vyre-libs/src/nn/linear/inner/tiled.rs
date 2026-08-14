@@ -148,17 +148,12 @@ pub fn linear_tiled_reference(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::nn::linear",
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::nn::linear",
+        || {
             linear("x", "w", "b", "out", 4, 4)
                 .unwrap_or_else(|error| crate::invalid_program("vyre-libs::nn::linear", format!("Fix: linear fixture dimensions are invalid: {error}")))
-        }),
+        },
         // V7-TEST-005: deterministic fixture for linear(4, 4).
         // Body indexes `w[k * out_dim + i]` (column-major per out_dim),
         // so for w = [0..16], out_dim = 4:
@@ -168,7 +163,7 @@ inventory::submit! {
         //   out[1] = 0*1 + 1*5 + 2*9  + 3*13 =  5 + 18 + 39 = 62
         //   out[2] = 0*2 + 1*6 + 2*10 + 3*14 =  6 + 20 + 42 = 68
         //   out[3] = 0*3 + 1*7 + 2*11 + 3*15 =  7 + 22 + 45 = 74
-        test_inputs: Some(|| {
+        Some(|| {
 
             let x = crate::fixture_bytes::u32_bytes(&(0..4).collect::<Vec<_>>());
             let w = crate::fixture_bytes::u32_bytes(&(0..16).collect::<Vec<_>>());
@@ -180,37 +175,32 @@ inventory::submit! {
             // the CPU/GPU length divergence assertion in cat_a_gpu_differential.
             vec![vec![x, w, bias]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
 
             vec![vec![crate::fixture_bytes::u32_bytes(&[56, 62, 68, 74])]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::nn::linear_tiled",
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::nn::linear_tiled",
+        || {
             linear_tiled("x", "w", "b", "out", 4, 4, 2)
                 .unwrap_or_else(|error| crate::invalid_program("vyre-libs::nn::linear_tiled", format!("Fix: linear_tiled fixture dimensions are invalid: {error}")))
-        }),
-        test_inputs: Some(|| {
+        },
+        Some(|| {
 
             let x = crate::fixture_bytes::u32_bytes(&(0..4).collect::<Vec<_>>());
             let w = crate::fixture_bytes::u32_bytes(&(0..16).collect::<Vec<_>>());
             let bias = crate::fixture_bytes::u32_bytes(&[0, 0, 0, 0]);
             vec![vec![x, w, bias]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
 
             vec![vec![crate::fixture_bytes::u32_bytes(&[56, 62, 68, 74])]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }

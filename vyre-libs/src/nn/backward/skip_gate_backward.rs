@@ -71,15 +71,10 @@ pub fn skip_gate_backward(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| skip_gate_backward("gate", "branch", "skip", "grad_out", "grad_gate", 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || skip_gate_backward("gate", "branch", "skip", "grad_out", "grad_gate", 2),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[0.0, 100.0]),
@@ -89,7 +84,7 @@ inventory::submit! {
                 vec![0u8; 4 * 2],
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             fn sigmoid(x: f32) -> f32 { 1.0 / (1.0 + (-x).exp()) }
             let out = [
                 sigmoid(0.0) * (1.0 - sigmoid(0.0)) * (10.0 - 30.0),
@@ -98,6 +93,6 @@ inventory::submit! {
             let bytes = vyre_primitives::wire::pack_f32_slice(&out);
             vec![vec![bytes]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }

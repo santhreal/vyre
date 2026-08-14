@@ -73,15 +73,10 @@ pub fn skip_gate(gate: &str, branch: &str, skip: &str, output: &str, n: u32) -> 
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| skip_gate("gate", "branch", "skip", "output", 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || skip_gate("gate", "branch", "skip", "output", 2),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[0.0, 100.0]),  // gate logits (sigmoid(0)=0.5, sigmoid(100)≈1)
@@ -89,7 +84,7 @@ inventory::submit! {
                 to_f32(&[30.0, 40.0]),  // skip
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             fn sigmoid(x: f32) -> f32 { 1.0 / (1.0 + (-x).exp()) }
             let out = [
                 sigmoid(0.0) * 10.0 + (1.0 - sigmoid(0.0)) * 30.0,   // 0.5*10 + 0.5*30 = 20
@@ -98,8 +93,8 @@ inventory::submit! {
             let bytes = vyre_primitives::wire::pack_f32_slice(&out);
             vec![vec![bytes]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

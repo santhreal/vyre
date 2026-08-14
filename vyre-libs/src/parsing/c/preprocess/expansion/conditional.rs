@@ -349,17 +349,12 @@ pub fn opt_conditional_mask_with_directives(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::opt_conditional_mask_with_directives",
-        build: Some(|| opt_conditional_mask_with_directives(
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::parsing::opt_conditional_mask_with_directives",
+        || opt_conditional_mask_with_directives(
             "tok_types", "directive_kinds", "directive_values", "out_mask", Expr::u32(3)
-        )),
-        test_inputs: Some(|| {
+        ),
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[
                     TOK_PREPROC,
@@ -371,29 +366,24 @@ inventory::submit! {
                 vec![0u8; 4 * 3],
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![vyre_primitives::wire::pack_u32_slice(&[1u32, 0, 1])]]
         }),
-        category: Some("parsing"),
-    }
+    )
+    .with_category("parsing")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::opt_dynamic_macro_expansion",
-        build: Some(|| opt_dynamic_macro_expansion(
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::parsing::opt_dynamic_macro_expansion",
+        || opt_dynamic_macro_expansion(
             "in_tok_types", "macro_keys", "macro_vals", "macro_sizes",
             "out_tok_types", "out_tok_counts", Expr::u32(4), 16
-        )),
-        test_inputs: Some(dynamic_macro_fixture_inputs),
-        expected_output: Some(dynamic_macro_fixture_expected),
-        category: Some("parsing"),
-    }
+        ),
+        Some(dynamic_macro_fixture_inputs),
+        Some(dynamic_macro_fixture_expected),
+    )
+    .with_category("parsing")
 }
 
 fn dynamic_macro_slot(token: u32) -> usize {

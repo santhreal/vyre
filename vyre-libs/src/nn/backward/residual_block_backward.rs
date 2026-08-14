@@ -61,15 +61,10 @@ pub fn residual_block_backward(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| residual_block_backward("grad_out", "grad_x", "grad_attn", "grad_mlp", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || residual_block_backward("grad_out", "grad_x", "grad_attn", "grad_mlp", 4),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[1.0, 2.0, 3.0, 4.0]),
@@ -77,14 +72,14 @@ inventory::submit! {
                 vec![0u8; 4 * 4], // grad_mlp
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // All three live-outs = copy of grad_out.
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             let expected = to_f32(&[1.0, 2.0, 3.0, 4.0]);
             vec![vec![expected.clone(), expected.clone(), expected]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

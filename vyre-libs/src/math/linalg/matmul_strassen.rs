@@ -163,26 +163,22 @@ pub fn matmul_strassen_2x2(a: &str, b: &str, c: &str) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(32),
-        id: OP_ID,
-        build: Some(|| matmul_strassen_2x2("a", "b", "c")),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || matmul_strassen_2x2("a", "b", "c"),
+        Some(|| {
             // A = [[1, 2], [3, 4]], B = [[5, 6], [7, 8]]
             let a = crate::fixture_bytes::f32_bytes(&[1.0, 2.0, 3.0, 4.0]);
             let b = crate::fixture_bytes::f32_bytes(&[5.0, 6.0, 7.0, 8.0]);
             vec![vec![a, b]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // C = A · B = [[19, 22], [43, 50]]
             vec![vec![crate::fixture_bytes::f32_bytes(&[19.0, 22.0, 43.0, 50.0])]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
+    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(32))
 }
 
 /// Build a Program that computes `C = A · B` for NxN row-major F32

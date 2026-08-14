@@ -71,14 +71,9 @@ pub fn weighted_sum_fma_f32(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || {
             weighted_sum_fma_f32("weights", "values", "output", 4).unwrap_or_else(|error| {
                 crate::builder::invalid_builder_trap_program(
                     OP_ID,
@@ -87,18 +82,18 @@ inventory::submit! {
                     error,
                 )
             })
-        }),
-        test_inputs: Some(|| {
+        },
+        Some(|| {
             let weights = crate::fixture_bytes::f32_bytes(&[0.5, 0.25, 0.125, 0.125]);
             let values = crate::fixture_bytes::f32_bytes(&[1.0, 2.0, 4.0, 8.0]);
             vec![vec![weights, values]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // 0.5*1 + 0.25*2 + 0.125*4 + 0.125*8 = 0.5 + 0.5 + 0.5 + 1.0 = 2.5
             vec![vec![crate::fixture_bytes::f32_bytes(&[2.5_f32])]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]

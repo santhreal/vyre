@@ -177,21 +177,16 @@ pub fn cell_grid_fill(cells: &str, output: &str, shape: GridShape) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || {
             cell_grid_fill(
                 "cells",
                 "out",
                 GridShape { cols: 2, rows: 2, cell_width: 2, cell_height: 2 },
             )
-        }),
-        test_inputs: Some(|| {
+        },
+        Some(|| {
             // Four cells behind a 4x4 surface: red, green on the top row,
             // blue, white on the bottom. Packing is little-endian RGBA, so
             // bits [7:0] are red and [31:24] are alpha.
@@ -201,7 +196,7 @@ inventory::submit! {
                 vec![0u8; 16 * 4],
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // Each cell covers a 2x2 block, so every colour appears four
             // times, in a quadrant rather than a run.
             const R: u32 = 0xFF00_00FF;
@@ -216,6 +211,6 @@ inventory::submit! {
             ];
             vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&expected)]]
         }),
-        category: Some("visual"),
-    }
+    )
+    .with_category("visual")
 }

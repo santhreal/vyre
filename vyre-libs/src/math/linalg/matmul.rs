@@ -666,15 +666,10 @@ mod tests {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::math::matmul",
-        build: Some(|| matmul("a", "b", "out", 4, 4, 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::math::matmul",
+        || matmul("a", "b", "out", 4, 4, 4),
+        Some(|| {
             let a: Vec<u32> = (0..16).collect();
             let b: Vec<u32> = (0..16).map(|i| i + 1).collect();
 
@@ -683,7 +678,7 @@ inventory::submit! {
                 crate::fixture_bytes::u32_bytes(&b),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // 4x4 matmul over u32: a[i,j] = i*4+j, b[i,j] = i*4+j+1.
             // out[i,j] = Σ_k a[i,k] * b[k,j]. Computed row-major.
             let a: Vec<u32> = (0..16).collect();
@@ -701,20 +696,15 @@ inventory::submit! {
             let bytes = vyre_primitives::wire::pack_u32_slice(&out);
             vec![vec![bytes]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID_BIAS,
-        build: Some(|| matmul_bias("a", "b", "bias", "out", 2, 2, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID_BIAS,
+        || matmul_bias("a", "b", "bias", "out", 2, 2, 2),
+        Some(|| {
 
             vec![vec![
                 crate::fixture_bytes::u32_bytes(&[1, 2, 3, 4]),
@@ -722,33 +712,28 @@ inventory::submit! {
                 crate::fixture_bytes::u32_bytes(&[10, 20]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
 
             vec![vec![crate::fixture_bytes::u32_bytes(&[29, 42, 53, 70])]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::math::matmul_bias::scalar",
-        build: Some(|| matmul_bias("a", "b", "bias", "out", 1, 1, 1)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::math::matmul_bias::scalar",
+        || matmul_bias("a", "b", "bias", "out", 1, 1, 1),
+        Some(|| {
             vec![vec![
                 crate::fixture_bytes::u32_bytes(&[2]),
                 crate::fixture_bytes::u32_bytes(&[3]),
                 crate::fixture_bytes::u32_bytes(&[5]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![crate::fixture_bytes::u32_bytes(&[11])]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }

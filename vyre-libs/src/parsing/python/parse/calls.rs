@@ -236,20 +236,15 @@ pub fn python312_extract_calls(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| python312_extract_calls(
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || python312_extract_calls(
             "tok_types", "tok_starts", "tok_lens", "out_calls", "out_call_counts", "out_kwargs", "out_kw_counts", 16
-        )),
-        test_inputs: Some(call_fixture_inputs),
-        expected_output: Some(call_fixture_expected),
-        category: Some("parsing"),
-    }
+        ),
+        Some(call_fixture_inputs),
+        Some(call_fixture_expected),
+    )
+    .with_category("parsing")
 }
 
 fn call_fixture_inputs() -> Vec<Vec<Vec<u8>>> {

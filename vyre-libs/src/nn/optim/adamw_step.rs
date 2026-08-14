@@ -98,15 +98,10 @@ pub fn adamw_step(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| adamw_step("params", "grads", "m", "v", 2, 0.001, 0.9, 0.999, 1e-8, 0.01)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || adamw_step("params", "grads", "m", "v", 2, 0.001, 0.9, 0.999, 1e-8, 0.01),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[1.0, 2.0]),          // params
@@ -115,13 +110,13 @@ inventory::submit! {
                 to_f32(&[0.0, 0.0]),          // v (first step)
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![
                 vec![215, 232, 126, 63, 24, 116, 255, 63],
                 vec![13, 215, 35, 60, 13, 215, 163, 60],
                 vec![31, 197, 39, 55, 31, 197, 39, 56],
             ]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }

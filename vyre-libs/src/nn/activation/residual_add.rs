@@ -48,25 +48,20 @@ fn build_residual_add(
     typed_binary_activation_program(OP_ID, residual, branch, output, n, dtype, Expr::add)
 }
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| residual_add("residual", "branch", "output", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || residual_add("residual", "branch", "output", 4),
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_f32_slice(&[1.0, -2.0, 3.5, 0.0]),
                 vyre_primitives::wire::pack_f32_slice(&[0.5, 4.0, -1.5, -0.0]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![vyre_primitives::wire::pack_f32_slice(&[
                 1.5, 2.0, 2.0, 0.0,
             ])]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }

@@ -609,15 +609,10 @@ fn attention_reference_program(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(4),
-        id: "vyre-libs::nn::attention",
-        build: Some(|| attention("q", "k", "v", "out", 2, 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::nn::attention",
+        || attention("q", "k", "v", "out", 2, 4),
+        Some(|| {
             let q = [0.5f32, -1.0, 1.5, 0.25, -0.75, 0.5, 1.0, -0.5];
             let k = [1.0f32, 0.25, -0.5, 1.5, 0.75, -1.25, 0.5, 0.5];
             let v = [2.0f32, -1.0, 0.5, 1.25, -0.25, 0.75, 1.5, -0.5];
@@ -628,26 +623,22 @@ inventory::submit! {
                 vec![0u8; 512 * core::mem::size_of::<f32>()],
             ]]
         }),
-        expected_output: Some(|| vec![
+        Some(|| vec![
             vec![
                 vec![0x46, 0x9b, 0x68, 0x3e, 0x82, 0xfc, 0xc1, 0x3e, 0xee, 0xda, 0xa4, 0x3f, 0x02, 0xf9, 0x03, 0xbe,
                      0x9c, 0xb5, 0x1d, 0x3f, 0x90, 0x79, 0x9c, 0x3d, 0x33, 0xbb, 0x8e, 0x3f, 0x38, 0xc3, 0x31, 0x3e, ],
             ],
         ]),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
+    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(4))
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: REFERENCE_OP_ID,
-        build: Some(|| attention_reference("q", "k", "v", "out", 2, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        REFERENCE_OP_ID,
+        || attention_reference("q", "k", "v", "out", 2, 2),
+        Some(|| {
             let pack = vyre_primitives::wire::pack_f32_slice;
             vec![vec![
                 pack(&[0.0; 4]),
@@ -656,12 +647,12 @@ inventory::submit! {
                 vec![0u8; 4 * core::mem::size_of::<f32>()],
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let pack = vyre_primitives::wire::pack_f32_slice;
             vec![vec![pack(&[4.0, 6.0, 4.0, 6.0])]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

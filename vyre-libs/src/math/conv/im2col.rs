@@ -141,14 +141,9 @@ fn shifted_coord(coord: &Expr, delta: i32) -> Expr {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || {
             im2col_3x3("input", "output", 4, 4).unwrap_or_else(|error| {
                 crate::builder::invalid_builder_trap_program(
                     OP_ID,
@@ -157,15 +152,15 @@ inventory::submit! {
                     error,
                 )
             })
-        }),
-        test_inputs: Some(|| {
+        },
+        Some(|| {
             vec![vec![f32_bytes(&im2col_fixture_input())]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![f32_bytes(&naive_im2col_3x3(&im2col_fixture_input(), 4, 4))]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 fn im2col_fixture_input() -> Vec<f32> {

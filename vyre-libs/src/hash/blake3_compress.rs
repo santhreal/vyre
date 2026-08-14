@@ -154,15 +154,10 @@ pub fn blake3_compress(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| blake3_compress("cv_in", "msg", "params", "cv_out")),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || blake3_compress("cv_in", "msg", "params", "cv_out"),
+        Some(|| {
             let iv: [u32; 8] = [
                 0x6A09_E667, 0xBB67_AE85, 0x3C6E_F372, 0xA54F_F53A,
                 0x510E_527F, 0x9B05_688C, 0x1F83_D9AB, 0x5BE0_CD19,
@@ -179,14 +174,13 @@ inventory::submit! {
                 crate::fixture_bytes::u32_bytes(&params),
             ]]
         }),
-        expected_output: Some(|| vec![
+        Some(|| vec![
             vec![
                 vec![0x82, 0x5e, 0x3e, 0x45, 0xc6, 0xa8, 0x67, 0x23, 0x78, 0xcf, 0xe6, 0x40, 0x51, 0x65, 0xd4, 0x78,
                      0x8a, 0xc6, 0xee, 0xef, 0x86, 0x39, 0xc4, 0x55, 0x31, 0x4f, 0x36, 0xd0, 0xbc, 0xf1, 0x3f, 0xe5, ],
             ],
         ]),
-        category: None,
-    }
+    )
 }
 
 #[cfg(test)]
