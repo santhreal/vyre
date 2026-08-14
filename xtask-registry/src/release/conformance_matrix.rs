@@ -9,14 +9,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use vyre_driver::backend::backend_dispatches;
 use xtask::release::conformance_op_matrix::{
-    read_conformance_required_op_matrix, OpMatrixReleaseBackendSpec,
+    evaluate_op_matrix_coverage, read_conformance_required_op_matrix, OpMatrixReleaseBackendSpec,
 };
 use xtask::release::conformance_workflows::{
     ci_status_defined, inspect_ci_conformance_gates, inspect_fail_closed_fanins,
     inspect_path_filtered_required_workflows, inspect_required_workflow_triggers,
     parse_required_ci_statuses, CiConformanceGate,
 };
-use xtask::release::release_backend_rows::count_supported_release_backend_rows;
 
 const MIN_RELEASE_OP_COUNT: usize = 49;
 const MAX_CONFORMANCE_EVIDENCE_TEXT_BYTES: u64 = 8_388_608;
@@ -231,16 +230,15 @@ pub(crate) fn run(args: &[String]) {
             finding.semantics, finding.engine, finding.issue
         ));
     }
-    let missing_catalog_ops = catalog
-        .required_ops
-        .iter()
-        .filter(|op| !ids.contains(op.as_str()))
-        .cloned()
-        .collect::<Vec<_>>();
-    let catalog_covered_op_count = catalog
-        .required_ops
-        .len()
-        .saturating_sub(missing_catalog_ops.len());
+    let mut catalog_blockers = Vec::new();
+    let coverage = evaluate_op_matrix_coverage(
+        &catalog,
+        |op| ids.contains(op),
+        |missing| {
+            format!("{missing} OP_MATRIX op id(s) are missing registered conformance entries")
+        },
+        &mut catalog_blockers,
+    );
     let ci_blocking_gate_count = ci_gates
         .iter()
         .filter(|gate| gate.present && gate.command_present && gate.artifact_check_present)
@@ -266,42 +264,7 @@ pub(crate) fn run(args: &[String]) {
             duplicate_op_ids.len()
         ));
     }
-    if catalog.required_ops.is_empty() {
-        blockers.push("OP_MATRIX contributed zero conformance-required op ids".to_string());
-    }
-    if !missing_catalog_ops.is_empty() {
-        blockers.push(format!(
-            "{} OP_MATRIX op id(s) are missing registered conformance entries",
-            missing_catalog_ops.len()
-        ));
-    }
-    if !catalog.blocked_release_rows.is_empty() {
-        blockers.push(format!(
-            "OP_MATRIX contains {} release backend row(s) marked blocked_release",
-            catalog.blocked_release_rows.len()
-        ));
-    }
-    if !catalog.missing_release_backend_rows.is_empty() {
-        blockers.push(format!(
-            "OP_MATRIX is missing {} release backend row(s)",
-            catalog.missing_release_backend_rows.len()
-        ));
-    }
-    let supported_release_backend_row_count =
-        count_supported_release_backend_rows(&catalog.release_backend_rows);
-    let expected_supported_rows = catalog.required_ops.len().saturating_mul(3);
-    if supported_release_backend_row_count != expected_supported_rows {
-        blockers.push(format!(
-            "OP_MATRIX declares {supported_release_backend_row_count} supported release backend row(s), expected {expected_supported_rows}"
-        ));
-    }
-    let expected_release_backend_rows = catalog.required_ops.len().saturating_mul(3);
-    if catalog.release_backend_rows.len() < expected_release_backend_rows {
-        blockers.push(format!(
-            "OP_MATRIX declares {} release backend row(s), expected {expected_release_backend_rows} for reference/cuda/wgpu coverage",
-            catalog.release_backend_rows.len()
-        ));
-    }
+    blockers.append(&mut catalog_blockers);
     for required in ["cuda", "wgpu", "cpu-ref"] {
         if !dispatch_backends.iter().any(|backend| backend == required) {
             blockers.push(format!("required dispatch backend `{required}` is missing"));
@@ -370,11 +333,11 @@ pub(crate) fn run(args: &[String]) {
         schema_version: 5,
         op_count: entries.len(),
         distinct_op_count: ids.len(),
-        catalog_required_op_count: catalog.required_ops.len(),
-        catalog_covered_op_count,
-        missing_catalog_ops,
-        release_backend_row_count: catalog.release_backend_rows.len(),
-        supported_release_backend_row_count,
+        catalog_required_op_count: coverage.catalog_required_op_count,
+        catalog_covered_op_count: coverage.catalog_covered_op_count,
+        missing_catalog_ops: coverage.missing_catalog_ops,
+        release_backend_row_count: coverage.release_backend_row_count,
+        supported_release_backend_row_count: coverage.supported_release_backend_row_count,
         release_backend_rows: catalog.release_backend_rows,
         case_class_blocker_count: release_backend_case_rows
             .iter()
@@ -383,7 +346,7 @@ pub(crate) fn run(args: &[String]) {
         release_backend_case_rows,
         required_case_classes: REPORTED_CONFORMANCE_CASE_CLASSES.to_vec(),
         missing_release_backend_rows: catalog.missing_release_backend_rows,
-        op_matrix_blocked_release_count: catalog.blocked_release_rows.len(),
+        op_matrix_blocked_release_count: coverage.op_matrix_blocked_release_count,
         op_matrix_blocked_release_rows: catalog.blocked_release_rows,
         op_matrix_errors: catalog.errors,
         duplicate_op_ids: duplicate_op_ids.into_iter().collect(),
