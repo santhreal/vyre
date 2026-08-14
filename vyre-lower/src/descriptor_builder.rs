@@ -37,8 +37,9 @@
 use vyre_foundation::ir::DataType;
 
 use crate::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor, KernelOp,
-    KernelOpKind, LiteralValue, MemoryClass,
+    BindingLayout, BindingSlot, BindingVisibility, Dispatch, EmissionTargetCapabilities, KernelBody,
+    KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MemoryClass, SubgroupCapabilities,
+    WorkgroupLimits,
 };
 
 /// An op that produces `result`.
@@ -303,6 +304,62 @@ impl From<KernelDescriptorBuilder> for KernelDescriptor {
     }
 }
 
+/// Invocation ceiling used by [`permissive_workgroup_limits`].
+const PERMISSIVE_MAX_INVOCATIONS: u32 = 1024;
+
+/// Per-axis ceiling used by [`permissive_workgroup_limits`].
+const PERMISSIVE_MAX_SIZE: [u32; 3] = [1024, 1024, 64];
+
+/// Workgroup limits with every axis and the invocation product named.
+#[must_use]
+pub fn workgroup_limits(max_size: [u32; 3], max_invocations: u32) -> WorkgroupLimits {
+    WorkgroupLimits {
+        max_size,
+        max_invocations,
+    }
+}
+
+/// Workgroup limits wide enough that an ordinary fixture dispatch does not
+/// violate them, so a test that is not about limits does not have to pick any.
+#[must_use]
+pub fn permissive_workgroup_limits() -> WorkgroupLimits {
+    workgroup_limits(PERMISSIVE_MAX_SIZE, PERMISSIVE_MAX_INVOCATIONS)
+}
+
+/// Every subgroup feature supported.
+#[must_use]
+pub fn all_subgroup_capabilities() -> SubgroupCapabilities {
+    SubgroupCapabilities {
+        basic: true,
+        ballot: true,
+        shuffle: true,
+        arithmetic: true,
+    }
+}
+
+/// Emission target capabilities from explicit workgroup limits and subgroup
+/// support.
+#[must_use]
+pub fn emission_target(
+    workgroup: WorkgroupLimits,
+    subgroup: SubgroupCapabilities,
+) -> EmissionTargetCapabilities {
+    EmissionTargetCapabilities {
+        workgroup,
+        subgroup,
+    }
+}
+
+/// A target that admits any ordinary dispatch but supports no subgroup
+/// feature, which is the shape a subgroup-rejection test needs.
+#[must_use]
+pub fn target_without_subgroups() -> EmissionTargetCapabilities {
+    emission_target(
+        permissive_workgroup_limits(),
+        SubgroupCapabilities::default(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -391,5 +448,26 @@ mod tests {
         assert_eq!(s.element_count, Some(64));
         assert_eq!(s.memory_class, MemoryClass::Shared);
         assert_eq!(global_ro(0, DataType::F32, "g").element_count, None);
+    }
+
+    /// The two capability fixtures must sit on opposite sides of the admission
+    /// gate for every feature, or a rejection test written against them proves
+    /// nothing about the gate.
+    #[test]
+    fn the_capability_fixtures_bracket_the_subgroup_admission_gate() {
+        let all = all_subgroup_capabilities();
+        assert_eq!(all.count(), 4);
+        assert!(all.first_missing(all).is_none());
+
+        let none = target_without_subgroups().subgroup;
+        assert!(!none.any());
+        assert_eq!(none.first_missing(all), Some("subgroup.basic"));
+    }
+
+    #[test]
+    fn permissive_limits_admit_a_full_invocation_workgroup_and_reject_one_over() {
+        let limits = permissive_workgroup_limits();
+        assert!(crate::validate_workgroup_size([1024, 1, 1], limits).is_empty());
+        assert!(!crate::validate_workgroup_size([1025, 1, 1], limits).is_empty());
     }
 }
