@@ -250,24 +250,19 @@ pub fn filter_chain(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| filter_chain("pixels", 4, 1.0, 1.0, 1.0, 0.0)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || filter_chain("pixels", 4, 1.0, 1.0, 1.0, 0.0),
+        Some(|| {
             // Identity transform: all params = 1.0/0.0 → output == input.
             let pixels = [0xFF_804020u32, 0xFF_FF0000, 0xFF_00FF00, 0xFF_0000FF];
             vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&pixels)]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // Identity: output == input.
             let pixels = [0xFF_804020u32, 0xFF_FF0000, 0xFF_00FF00, 0xFF_0000FF];
             vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&pixels)]]
         }),
-        category: Some("visual"),
-    }
+    )
+    .with_category("visual")
 }

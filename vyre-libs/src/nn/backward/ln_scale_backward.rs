@@ -61,15 +61,10 @@ pub fn ln_scale_backward(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| ln_scale_backward("input", "scale", "grad_out", "grad_x", "grad_scale", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || ln_scale_backward("input", "scale", "grad_out", "grad_x", "grad_scale", 4),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[1.0, 2.0, 3.0, 4.0]),  // input
@@ -78,7 +73,7 @@ inventory::submit! {
                 vec![0u8; 4 * 4],                 // grad_scale
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // grad_x = dy * scale = [0.5, 2.0, 1.0, 0.1]
             // grad_scale = dy * input = [1.0, 2.0, 3.0, 4.0]
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
@@ -87,8 +82,8 @@ inventory::submit! {
                 to_f32(&[1.0, 2.0, 3.0, 4.0]),
             ]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

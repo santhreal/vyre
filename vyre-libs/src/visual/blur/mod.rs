@@ -394,15 +394,10 @@ fn gaussian_blur_pass(
 pub use vyre_primitives::math::conv1d::gaussian_weights;
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| gaussian_blur_2pass("input", "output", "scratch", 4, 4, 1, 0.8).horizontal),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || gaussian_blur_2pass("input", "output", "scratch", 4, 4, 1, 0.8).horizontal,
+        Some(|| {
             // 4×4 all-white → blurred all-white (identity for uniform).
             let pixels = vec![0xFFFF_FFFFu32; 16];
             vec![vec![
@@ -410,11 +405,11 @@ inventory::submit! {
                 vec![0u8; 64],         // output (scratch for horizontal pass)
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // All-white blurred → all-white (±1).
             let pixels = vec![0xFFFF_FFFFu32; 16];
             vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&pixels)]]
         }),
-        category: Some("visual"),
-    }
+    )
+    .with_category("visual")
 }

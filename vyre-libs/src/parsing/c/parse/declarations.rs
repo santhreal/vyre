@@ -328,18 +328,13 @@ fn is_declaration_boundary(token: Expr, prev: Expr, prev_prev: Expr) -> Expr {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::opt_propagate_type_specifiers",
-        build: Some(|| opt_propagate_type_specifiers("tok_types", "tok_depths", "node_out", Expr::u32(1024))),
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::parsing::opt_propagate_type_specifiers",
+        || opt_propagate_type_specifiers("tok_types", "tok_depths", "node_out", Expr::u32(1024)),
         // Buffers: tok_types (read-only u32), tok_depths (read-only u32),
         // node_out (read-write u32). The witness asserts propagation across
         // `int a, b;` and termination before `char c;`.
-        test_inputs: Some(|| {
+        Some(|| {
             let mut tok_types = vec![0u8; 4 * 1024];
             let mut tok_depths = vec![0u8; 4 * 1024];
             for (i, tok) in [
@@ -360,7 +355,7 @@ inventory::submit! {
             }
             vec![vec![tok_types, tok_depths, vec![0u8; 4 * 1024]]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let mut out = vec![0u8; 4 * 1024];
             for (i, tok) in [
                 TOK_INT, TOK_INT, TOK_INT, TOK_INT, 0, TOK_CHAR_KW, TOK_CHAR_KW, 0,
@@ -372,8 +367,8 @@ inventory::submit! {
             }
             vec![vec![out]]
         }),
-        category: Some("parsing"),
-    }
+    )
+    .with_category("parsing")
 }
 
 #[cfg(test)]

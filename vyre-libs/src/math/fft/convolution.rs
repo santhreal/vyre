@@ -310,44 +310,29 @@ fn scale_conjugate_inverse_expected() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: MULTIPLY_OP_ID,
-        build: Some(pointwise_complex_multiply_conjugate_program),
-        test_inputs: Some(pointwise_complex_multiply_conjugate_inputs),
-        expected_output: Some(pointwise_complex_multiply_conjugate_expected),
-        category: Some("math"),
-    }
+    vyre_foundation::operation::OperationRegistration::library(
+        MULTIPLY_OP_ID,
+        pointwise_complex_multiply_conjugate_program,
+        Some(pointwise_complex_multiply_conjugate_inputs),
+        Some(pointwise_complex_multiply_conjugate_expected),
+    )
+    .with_category("math")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: SCALE_OP_ID,
-        build: Some(scale_conjugate_inverse_program),
-        test_inputs: Some(scale_conjugate_inverse_inputs),
-        expected_output: Some(scale_conjugate_inverse_expected),
-        category: Some("math"),
-    }
+    vyre_foundation::operation::OperationRegistration::library(
+        SCALE_OP_ID,
+        scale_conjugate_inverse_program,
+        Some(scale_conjugate_inverse_inputs),
+        Some(scale_conjugate_inverse_expected),
+    )
+    .with_category("math")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(4),
-        id: OP_ID,
-        build: Some(|| fft_convolve_circular_complex(
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || fft_convolve_circular_complex(
             "signal",
             "kernel",
             "signal_freq",
@@ -355,18 +340,19 @@ inventory::submit! {
             "product_freq",
             "output",
             4,
-        ).unwrap_or_else(|_| unreachable!("Fix: catalog fixture uses valid power-of-two buffers."))),
-        test_inputs: Some(|| {
+        ).unwrap_or_else(|_| unreachable!("Fix: catalog fixture uses valid power-of-two buffers.")),
+        Some(|| {
             vec![vec![
                 crate::fixture_bytes::f32_bytes(&[1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0]),
                 crate::fixture_bytes::f32_bytes(&[1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![crate::fixture_bytes::f32_bytes(&[5.0, 0.0, 3.0, 0.0, 5.0, 0.0, 7.0, 0.0])]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
+    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(4))
 }
 
 #[cfg(test)]

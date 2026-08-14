@@ -152,15 +152,10 @@ pub fn mlp_backward(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| mlp_backward("x", "w1", "b1", "w2", "grad_out", "grad_x", 2, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || mlp_backward("x", "w1", "b1", "w2", "grad_out", "grad_x", 2, 2),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[1.0, 2.0]),           // x
@@ -171,7 +166,7 @@ inventory::submit! {
                 vec![0u8; 4 * 2],
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // W1=W2=I, b1=0, x=[1,2], grad_out=[1,1]
             // h = x = [1, 2], d_act = max(0.5*h, 2*h) = [2, 4]
             // grad_h_act[j] = sum_k grad_out[k]*W2[j*2+k] → W2=I so [1,1]
@@ -181,6 +176,6 @@ inventory::submit! {
             let bytes = vyre_primitives::wire::pack_f32_slice(&out);
             vec![vec![bytes]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }

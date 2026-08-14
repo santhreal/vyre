@@ -89,15 +89,10 @@ pub fn quest_paging(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| quest_paging("q", "meta", "scores", "io", 4, 2, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || quest_paging("q", "meta", "scores", "io", 4, 2, 2),
+        Some(|| {
             let to_f32_bytes =
                 |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             // num_pages=4, d_head=2, k=2.
@@ -113,7 +108,7 @@ inventory::submit! {
                 vec![0u8; 4 * 4],
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let to_f32_bytes =
                 |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
 
@@ -126,8 +121,8 @@ inventory::submit! {
             let io_queue = [2u32, 1, 0, 0];
             vec![vec![to_f32_bytes(&scores), crate::fixture_bytes::u32_bytes(&io_queue)]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

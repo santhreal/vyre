@@ -19,26 +19,20 @@ macro_rules! define_synthesized_logical_binary {
             }
 
             inventory::submit! {
-                vyre_foundation::operation::OperationRegistration {
-                    semantic_version: 1,
-                    signature: None,
-                    tier: vyre_foundation::operation::OperationTier::Library,
-                    laws: &[],
-                    tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-                    id: OP_ID,
-                    build: Some(|| $function("a", "b", "out", 4)),
-                    test_inputs: Some(|| {
+                vyre_foundation::operation::OperationRegistration::library(
+                    OP_ID,
+                    || $function("a", "b", "out", 4),
+                    Some(|| {
                         let a = [0xFF00_FF00u32, 0x00FF_00FF, 0xFFFF_FFFF, 0x0000_0000];
                         let b = [0xF0F0_F0F0u32, 0x0F0F_0F0F, 0xFFFF_FFFF, 0x0000_0000];
                         let to_bytes = vyre_primitives::wire::pack_u32_slice;
                         vec![vec![to_bytes(&a), to_bytes(&b), vec![0u8; 16]]]
                     }),
-                    expected_output: Some(|| {
+                    Some(|| {
                         let to_bytes = vyre_primitives::wire::pack_u32_slice;
                         vec![vec![to_bytes($expected)]]
                     }),
-                    category: None,
-                }
+                )
             }
         }
     };

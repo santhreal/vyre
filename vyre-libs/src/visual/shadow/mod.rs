@@ -167,18 +167,13 @@ pub fn box_shadow(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| box_shadow("out", 8, 8, 2, 2, 4, 4, 2.0, 0x80_000000)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || box_shadow("out", 8, 8, 2, 2, 4, 4, 2.0, 0x80_000000),
+        Some(|| {
             vec![vec![vec![0u8; 256]]]  // initial 8×8 output buffer
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // Center pixel (4,4) is inside rect → alpha = shadow alpha (0x80).
             // Corner pixel (0,0) is far outside → alpha ≈ 0.
             // Exact values computed by reference interpreter.
@@ -203,6 +198,6 @@ inventory::submit! {
                 ],
             ]
         }),
-        category: Some("visual"),
-    }
+    )
+    .with_category("visual")
 }

@@ -154,24 +154,19 @@ pub fn c11_gnu_inline_asm_pass(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| c11_gnu_inline_asm_pass("ast", "out_asm", Expr::u32(4))),
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || c11_gnu_inline_asm_pass("ast", "out_asm", Expr::u32(4)),
         // ast: 4 u32 opcodes including one ASM tag (0x41534D00) at
         // index 2. out_asm: 4 u32 slots. out_asm_counts: 1 u32 slot
         // for the atomic counter. The pass writes t=2 into
         // out_asm[0] and leaves non-ASM slots untouched.
-        test_inputs: Some(|| {
+        Some(|| {
             let ast = [0u32, 1, GNU_INLINE_ASM_OPCODE, 3];
             let ast_bytes = vyre_primitives::wire::pack_u32_slice(&ast);
             vec![vec![ast_bytes, vec![0u8; 4 * 4], vec![0u8; 4]]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // t=2 sees the ASM tag, atomic_add claims slot 0, and
             // we store `t=2` into out_asm_blocks[0]. All other
             // slots stay zero. The counter records the single asm block.
@@ -181,6 +176,6 @@ inventory::submit! {
             count.copy_from_slice(&1u32.to_le_bytes());
             vec![vec![out, count]]
         }),
-        category: Some("parsing"),
-    }
+    )
+    .with_category("parsing")
 }

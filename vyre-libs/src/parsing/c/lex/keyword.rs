@@ -359,14 +359,9 @@ fn c_keyword_impl(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::c_keyword",
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::parsing::c_keyword",
+        || {
             c_keyword(
                 "tok_types",
                 "tok_starts",
@@ -378,9 +373,9 @@ inventory::submit! {
                 C_KEYWORDS.len() as u32,
                 4096,
             )
-        }),
-        test_inputs: Some(keyword_fixture_inputs),
-        expected_output: Some(|| {
+        },
+        Some(keyword_fixture_inputs),
+        Some(|| {
             let mut tok_types = vec![0u8; 1024 * 4];
             for (idx, tok) in [TOK_INT, TOK_IDENTIFIER, TOK_RETURN, TOK_GNU_ASM]
                 .into_iter()
@@ -390,19 +385,14 @@ inventory::submit! {
             }
             vec![vec![tok_types]]
         }),
-        category: Some("parsing"),
-    }
+    )
+    .with_category("parsing")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::c_keyword_packed_haystack",
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::parsing::c_keyword_packed_haystack",
+        || {
             c_keyword_packed_haystack(
                 "tok_types",
                 "tok_starts",
@@ -414,9 +404,9 @@ inventory::submit! {
                 C_KEYWORDS.len() as u32,
                 4096,
             )
-        }),
-        test_inputs: Some(keyword_packed_fixture_inputs),
-        expected_output: Some(|| {
+        },
+        Some(keyword_packed_fixture_inputs),
+        Some(|| {
             let mut tok_types = vec![0u8; 1024 * 4];
             for (idx, tok) in [TOK_INT, TOK_IDENTIFIER, TOK_RETURN, TOK_GNU_ASM]
                 .into_iter()
@@ -426,8 +416,8 @@ inventory::submit! {
             }
             vec![vec![tok_types]]
         }),
-        category: Some("parsing"),
-    }
+    )
+    .with_category("parsing")
 }
 
 fn keyword_fixture_inputs() -> Vec<Vec<Vec<u8>>> {

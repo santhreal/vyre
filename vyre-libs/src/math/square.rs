@@ -18,26 +18,21 @@ pub fn square(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::math::square",
-        build: Some(|| square("input", "output", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::math::square",
+        || square("input", "output", 4),
+        Some(|| {
             let to_bytes = vyre_primitives::wire::pack_f32_slice;
             vec![vec![
                 to_bytes(&[2.0_f32, 3.0, 4.0, 5.0]), // input
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let to_bytes = vyre_primitives::wire::pack_f32_slice;
             vec![vec![
                 to_bytes(&[4.0_f32, 9.0, 16.0, 25.0]), // output = x*x
             ]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }

@@ -10,30 +10,43 @@ pub(super) fn packed_source_word_count(source_len: u32) -> u32 {
     source_len.div_ceil(4).max(1)
 }
 
+/// One per-token U32 column, sized to the token count.
+pub(super) fn token_column(
+    name: &str,
+    binding: u32,
+    access: BufferAccess,
+    num_tokens: u32,
+) -> BufferDecl {
+    BufferDecl::storage(name, binding, access, DataType::U32).with_count(num_tokens.max(1))
+}
+
+/// One runtime-bound read-only column.
+///
+/// `count = 0` marks the buffer runtime-sized, so `Expr::buf_len` reports the
+/// host-supplied element count and the program's structure stays independent of
+/// how large a table the host packs.
+pub(super) fn runtime_sized_input(name: &str, binding: u32, element: DataType) -> BufferDecl {
+    BufferDecl::storage(name, binding, BufferAccess::ReadOnly, element).with_count(0)
+}
+
 pub(super) fn directive_parse_input_buffers(
     num_tokens: u32,
     source_len: u32,
     source_layout: DirectiveSourceLayout,
 ) -> Vec<BufferDecl> {
-    let (source_element, source_count) = match source_layout {
-        DirectiveSourceLayout::PackedU32 => (
-            super::gpu_source_bytes::source_buffer_element(source_layout),
-            packed_source_word_count(source_len),
-        ),
-        DirectiveSourceLayout::RawU8 => (
-            super::gpu_source_bytes::source_buffer_element(source_layout),
-            0,
-        ),
+    let source_element = source_buffer_element(source_layout);
+    let source = match source_layout {
+        DirectiveSourceLayout::PackedU32 => {
+            BufferDecl::storage("source", 3, BufferAccess::ReadOnly, source_element)
+                .with_count(packed_source_word_count(source_len))
+        }
+        DirectiveSourceLayout::RawU8 => runtime_sized_input("source", 3, source_element),
     };
     vec![
-        BufferDecl::storage("tok_starts", 0, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(num_tokens.max(1)),
-        BufferDecl::storage("tok_lens", 1, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(num_tokens.max(1)),
-        BufferDecl::storage("directive_kinds", 2, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(num_tokens.max(1)),
-        BufferDecl::storage("source", 3, BufferAccess::ReadOnly, source_element)
-            .with_count(source_count),
+        token_column("tok_starts", 0, BufferAccess::ReadOnly, num_tokens),
+        token_column("tok_lens", 1, BufferAccess::ReadOnly, num_tokens),
+        token_column("directive_kinds", 2, BufferAccess::ReadOnly, num_tokens),
+        source,
     ]
 }
 
@@ -56,13 +69,12 @@ pub(super) fn directive_output_buffers(
     columns
         .iter()
         .map(|column| {
-            BufferDecl::storage(
+            token_column(
                 column.name,
                 column.binding,
                 BufferAccess::ReadWrite,
-                DataType::U32,
+                num_tokens,
             )
-            .with_count(num_tokens.max(1))
         })
         .collect()
 }

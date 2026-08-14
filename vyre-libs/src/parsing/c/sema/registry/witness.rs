@@ -194,14 +194,9 @@ fn witness_expected_identifier_intern_phase() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::c_sema_scope",
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::parsing::c_sema_scope",
+        || {
             c_sema_scope(
                 "tok_types",
                 "tok_starts",
@@ -211,22 +206,17 @@ inventory::submit! {
                 Expr::u32(WITNESS_TOKEN_COUNT),
                 "out_scope_tree",
             )
-        }),
-        test_inputs: Some(witness_inputs),
-        expected_output: Some(witness_expected),
-        category: Some("parsing"),
-    }
+        },
+        Some(witness_inputs),
+        Some(witness_expected),
+    )
+    .with_category("parsing")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: SCOPE_PHASE_OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        SCOPE_PHASE_OP_ID,
+        || {
             c_sema_scope_phase(
                 CScopePhase::Scope,
                 SCOPE_PHASE_OP_ID,
@@ -238,22 +228,17 @@ inventory::submit! {
                 Expr::u32(WITNESS_TOKEN_COUNT),
                 "out_scope_tree",
             )
-        }),
-        test_inputs: Some(witness_inputs),
-        expected_output: Some(witness_expected_scope_phase),
-        category: Some("parsing"),
-    }
+        },
+        Some(witness_inputs),
+        Some(witness_expected_scope_phase),
+    )
+    .with_category("parsing")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: SCOPE_BRACE_PHASE_OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        SCOPE_BRACE_PHASE_OP_ID,
+        || {
             c_sema_scope_phase(
                 CScopePhase::ScopeBrace,
                 SCOPE_BRACE_PHASE_OP_ID,
@@ -265,22 +250,17 @@ inventory::submit! {
                 Expr::u32(WITNESS_TOKEN_COUNT),
                 "out_scope_tree",
             )
-        }),
-        test_inputs: Some(witness_inputs),
-        expected_output: Some(witness_expected_scope_brace_phase),
-        category: Some("parsing"),
-    }
+        },
+        Some(witness_inputs),
+        Some(witness_expected_scope_brace_phase),
+    )
+    .with_category("parsing")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: SCOPE_FUNCTION_PARAMS_PHASE_OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        SCOPE_FUNCTION_PARAMS_PHASE_OP_ID,
+        || {
             c_sema_scope_phase(
                 CScopePhase::ScopeFunctionParameters,
                 SCOPE_FUNCTION_PARAMS_PHASE_OP_ID,
@@ -292,22 +272,17 @@ inventory::submit! {
                 Expr::u32(WITNESS_TOKEN_COUNT),
                 "out_scope_tree",
             )
-        }),
-        test_inputs: Some(witness_inputs),
-        expected_output: Some(witness_expected_scope_function_parameters_phase),
-        category: Some("parsing"),
-    }
+        },
+        Some(witness_inputs),
+        Some(witness_expected_scope_function_parameters_phase),
+    )
+    .with_category("parsing")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: DECL_PHASE_OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        DECL_PHASE_OP_ID,
+        || {
             c_sema_scope_phase(
                 CScopePhase::Decl,
                 DECL_PHASE_OP_ID,
@@ -319,22 +294,17 @@ inventory::submit! {
                 Expr::u32(WITNESS_TOKEN_COUNT),
                 "out_scope_tree",
             )
-        }),
-        test_inputs: Some(witness_inputs),
-        expected_output: Some(witness_expected_decl_phase),
-        category: Some("parsing"),
-    }
+        },
+        Some(witness_inputs),
+        Some(witness_expected_decl_phase),
+    )
+    .with_category("parsing")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: IDENTIFIER_INTERN_PHASE_OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        IDENTIFIER_INTERN_PHASE_OP_ID,
+        || {
             c_sema_scope_phase(
                 CScopePhase::IdentifierIntern,
                 IDENTIFIER_INTERN_PHASE_OP_ID,
@@ -346,9 +316,9 @@ inventory::submit! {
                 Expr::u32(WITNESS_TOKEN_COUNT),
                 "out_scope_tree",
             )
-        }),
-        test_inputs: Some(witness_inputs),
-        expected_output: Some(witness_expected_identifier_intern_phase),
-        category: Some("parsing"),
-    }
+        },
+        Some(witness_inputs),
+        Some(witness_expected_identifier_intern_phase),
+    )
+    .with_category("parsing")
 }

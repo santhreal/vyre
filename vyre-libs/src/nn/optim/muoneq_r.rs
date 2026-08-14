@@ -39,15 +39,10 @@ pub fn muoneq_r(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(8),
-        id: OP_ID,
-        build: Some(|| muoneq_r("params", "grads", "momentum", "output", 4, 4, 2, 0.02, 0.95)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || muoneq_r("params", "grads", "momentum", "output", 4, 4, 2, 0.02, 0.95),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[1.0, 2.0, 3.0, 4.0]),
@@ -55,7 +50,7 @@ inventory::submit! {
                 to_f32(&[0.0, 0.0, 0.0, 0.0]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![
                 vec![
                     205, 204, 204, 61, 205, 204, 76, 62, 154, 153, 153, 62, 205, 204, 204, 62,
@@ -65,6 +60,7 @@ inventory::submit! {
                 ],
             ]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
+    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(8))
 }

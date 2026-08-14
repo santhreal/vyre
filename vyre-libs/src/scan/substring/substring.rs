@@ -135,15 +135,10 @@ fn build_substring_program(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: SCAN_SUBSTRING_OP_ID,
-        build: Some(|| substring_search("haystack", "needle", "matches", 8, 3)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        SCAN_SUBSTRING_OP_ID,
+        || substring_search("haystack", "needle", "matches", 8, 3),
+        Some(|| {
             let to_u32_vec = |s: &str| s.bytes().map(u32::from).collect::<Vec<_>>();
             vec![
                 vec![
@@ -156,7 +151,7 @@ inventory::submit! {
                 ]
             ]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // Case 0: haystack="abcabc++", needle="abc". Matches at
             //   i ∈ {0, 3}. Positions i > haystack_len - needle_len
             //   (5) stay at their zero init because the guard never
@@ -167,8 +162,8 @@ inventory::submit! {
             let case1 = crate::fixture_bytes::u32_bytes(&[1u32, 0, 0, 1, 0, 0, 0, 0]);
             vec![vec![case0], vec![case1]]
         }),
-        category: Some("scan"),
-    }
+    )
+    .with_category("scan")
 }
 
 #[cfg(test)]

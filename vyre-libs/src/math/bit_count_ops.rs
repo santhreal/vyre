@@ -24,25 +24,20 @@ macro_rules! define_bit_count_u32_op {
             }
 
             inventory::submit! {
-                vyre_foundation::operation::OperationRegistration {
-                    semantic_version: 1,
-                    signature: None,
-                    tier: vyre_foundation::operation::OperationTier::Library,
-                    laws: &[],
-                    tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-                    id: OP_ID,
-                    build: Some(|| $function("input", "out", 4)),
-                    test_inputs: Some(|| {
+                vyre_foundation::operation::OperationRegistration::library(
+                    OP_ID,
+                    || $function("input", "out", 4),
+                    Some(|| {
                         let input = [0u32, 1, 0x8000_0000, 0x00F0_0000];
                         let to_bytes = vyre_primitives::wire::pack_u32_slice;
                         vec![vec![to_bytes(&input)]]
                     }),
-                    expected_output: Some(|| {
+                    Some(|| {
                         let bytes = vyre_primitives::wire::pack_u32_slice(&$expected);
                         vec![vec![bytes]]
                     }),
-                    category: Some("math"),
-                }
+                )
+                .with_category("math")
             }
 
             #[cfg(test)]

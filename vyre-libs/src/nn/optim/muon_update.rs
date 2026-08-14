@@ -29,15 +29,10 @@ pub fn muon_update(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| muon_update("params", "grads", "momentum", "output", 2, 0.02, 0.95)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || muon_update("params", "grads", "momentum", "output", 2, 0.02, 0.95),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[1.0, 2.0]),    // params
@@ -45,12 +40,12 @@ inventory::submit! {
                 to_f32(&[0.0, 0.0]),    // momentum (first step)
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![
                 vec![205, 204, 204, 61, 205, 204, 76, 62],
                 vec![30, 138, 126, 63, 30, 138, 254, 63],
             ]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }

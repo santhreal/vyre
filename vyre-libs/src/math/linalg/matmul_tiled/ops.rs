@@ -337,48 +337,38 @@ pub fn matmul_bias_tiled(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::math::matmul_tiled",
-        build: Some(|| matmul_tiled("a", "b", "out", 2, 2, 2, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::math::matmul_tiled",
+        || matmul_tiled("a", "b", "out", 2, 2, 2, 2),
+        Some(|| {
             vec![vec![
                 crate::fixture_bytes::u32_bytes(&[1, 2, 3, 4]),
                 crate::fixture_bytes::u32_bytes(&[5, 6, 7, 8]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![crate::fixture_bytes::u32_bytes(&[19, 22, 43, 50])]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::math::matmul_bias_tiled",
-        build: Some(|| matmul_bias_tiled("a", "b", "bias", "out", 2, 2, 2, 2)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::math::matmul_bias_tiled",
+        || matmul_bias_tiled("a", "b", "bias", "out", 2, 2, 2, 2),
+        Some(|| {
             vec![vec![
                 crate::fixture_bytes::u32_bytes(&[1, 2, 3, 4]),
                 crate::fixture_bytes::u32_bytes(&[5, 6, 7, 8]),
                 crate::fixture_bytes::u32_bytes(&[10, 20]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             vec![vec![crate::fixture_bytes::u32_bytes(&[29, 42, 53, 70])]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]

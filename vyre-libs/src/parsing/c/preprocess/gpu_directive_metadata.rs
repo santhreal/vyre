@@ -61,14 +61,14 @@
 
 use super::gpu_directive_parse_shared::{
     keyword_match_expr, push_found_hash, push_hash_scan, push_keyword_bytes, push_keyword_start,
-    source_buffer_element, DirectiveSourceLayout,
+    runtime_sized_input, source_buffer_element, token_column, DirectiveSourceLayout,
 };
 use crate::parsing::c::lex::tokens::{
     TOK_PP_DEFINE, TOK_PP_ELIF, TOK_PP_ELSE, TOK_PP_ENDIF, TOK_PP_ERROR, TOK_PP_IDENT, TOK_PP_IF,
     TOK_PP_IFDEF, TOK_PP_IFNDEF, TOK_PP_INCLUDE, TOK_PP_INCLUDE_NEXT, TOK_PP_LINE, TOK_PP_NULL,
     TOK_PP_PRAGMA, TOK_PP_SCCS, TOK_PP_UNDEF, TOK_PP_WARNING, TOK_PREPROC,
 };
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, Expr, Node, Program};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::parsing::c::preprocess::gpu_directive_metadata";
@@ -248,52 +248,28 @@ fn gpu_directive_metadata_with_source_layout(
         ),
     ];
 
-    let source_element = source_buffer_element(source_layout);
-
     Program::wrapped(
         vec![
-            BufferDecl::storage(
-                "tok_types",
-                BINDING_TOK_TYPES,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(num_tokens.max(1)),
-            BufferDecl::storage(
-                "tok_starts",
-                BINDING_TOK_STARTS,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(num_tokens.max(1)),
-            BufferDecl::storage(
-                "tok_lens",
-                BINDING_TOK_LENS,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(num_tokens.max(1)),
-            BufferDecl::storage(
+            token_column("tok_types", BINDING_TOK_TYPES, BufferAccess::ReadOnly, num_tokens),
+            token_column("tok_starts", BINDING_TOK_STARTS, BufferAccess::ReadOnly, num_tokens),
+            token_column("tok_lens", BINDING_TOK_LENS, BufferAccess::ReadOnly, num_tokens),
+            runtime_sized_input(
                 "source",
                 BINDING_SOURCE,
-                BufferAccess::ReadOnly,
-                source_element,
-            )
-            .with_count(0),
-            BufferDecl::storage(
+                source_buffer_element(source_layout),
+            ),
+            token_column(
                 "directive_kinds",
                 BINDING_DIRECTIVE_KINDS,
                 BufferAccess::ReadWrite,
-                DataType::U32,
-            )
-            .with_count(num_tokens.max(1)),
-            BufferDecl::storage(
+                num_tokens,
+            ),
+            token_column(
                 "directive_values",
                 BINDING_DIRECTIVE_VALUES,
                 BufferAccess::ReadWrite,
-                DataType::U32,
-            )
-            .with_count(num_tokens.max(1)),
+                num_tokens,
+            ),
         ],
         [256, 1, 1],
         body,
@@ -304,6 +280,7 @@ fn gpu_directive_metadata_with_source_layout(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_foundation::ir::DataType;
 
     #[test]
     fn op_id_is_canonical_and_stable() {

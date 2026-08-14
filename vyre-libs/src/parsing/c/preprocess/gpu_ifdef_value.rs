@@ -43,11 +43,12 @@
 
 use super::gpu_directive_parse_shared::{
     push_c_identifier_span, push_directive_row_bounds, push_hash_and_keyword_start,
-    push_keyword_end, push_ws_skip_from_expr, source_buffer_element, DirectiveSourceLayout,
+    push_keyword_end, push_ws_skip_from_expr, runtime_sized_input, source_buffer_element,
+    token_column, DirectiveSourceLayout,
 };
 use super::gpu_source_bytes::{safe_load_source_layout_byte_expr, source_byte_len_expr};
 use crate::parsing::c::lex::tokens::{TOK_PP_IFDEF, TOK_PP_IFNDEF};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::parsing::c::preprocess::gpu_ifdef_value";
@@ -287,59 +288,31 @@ fn gpu_ifdef_value_with_byte_layouts(
 
     Program::wrapped(
         vec![
-            BufferDecl::storage(
-                "tok_starts",
-                BINDING_TOK_STARTS,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(num_tokens.max(1)),
-            BufferDecl::storage(
-                "tok_lens",
-                BINDING_TOK_LENS,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(num_tokens.max(1)),
-            BufferDecl::storage(
+            token_column("tok_starts", BINDING_TOK_STARTS, BufferAccess::ReadOnly, num_tokens),
+            token_column("tok_lens", BINDING_TOK_LENS, BufferAccess::ReadOnly, num_tokens),
+            token_column(
                 "directive_kinds",
                 BINDING_DIRECTIVE_KINDS,
                 BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(num_tokens.max(1)),
-            BufferDecl::storage(
+                num_tokens,
+            ),
+            runtime_sized_input(
                 "source",
                 BINDING_SOURCE,
-                BufferAccess::ReadOnly,
                 source_buffer_element(source_layout),
-            )
-            .with_count(0),
-            // Runtime-sized: count=0 marks the buffer as runtime-bound,
-            // so `Expr::buf_len` returns the host-supplied element count
-            // and the program's structure stays independent of how many
-            // macros the host packs.
-            BufferDecl::storage(
+            ),
+            runtime_sized_input(
                 "macro_names_packed",
                 BINDING_MACRO_NAMES_PACKED,
-                BufferAccess::ReadOnly,
                 source_buffer_element(macro_names_layout),
-            )
-            .with_count(0),
-            BufferDecl::storage(
-                "macro_offsets",
-                BINDING_MACRO_OFFSETS,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(0),
-            BufferDecl::storage(
+            ),
+            runtime_sized_input("macro_offsets", BINDING_MACRO_OFFSETS, DataType::U32),
+            token_column(
                 "directive_values",
                 BINDING_DIRECTIVE_VALUES,
                 BufferAccess::ReadWrite,
-                DataType::U32,
-            )
-            .with_count(num_tokens.max(1)),
+                num_tokens,
+            ),
         ],
         [256, 1, 1],
         body,

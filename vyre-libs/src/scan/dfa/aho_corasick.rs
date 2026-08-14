@@ -115,19 +115,14 @@ pub fn aho_corasick_bounded(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::matching::aho_corasick",
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::matching::aho_corasick",
+        || {
             let patterns: [&[u8]; 1] = [b"abra"];
             let compiled = vyre_primitives::matching::dfa_compile(&patterns);
             aho_corasick_bounded("haystack", "transitions", "accept", "matches", 11, compiled.accept.len() as u32, compiled.max_pattern_len)
-        }),
-        test_inputs: Some(|| {
+        },
+        Some(|| {
             let patterns: [&[u8]; 1] = [b"abra"];
             let compiled = vyre_primitives::matching::dfa_compile(&patterns);
             let haystack = b"abracadabra";
@@ -138,15 +133,15 @@ inventory::submit! {
                 crate::fixture_bytes::u32_bytes(&compiled.accept),
             ]]
         }),
-        expected_output: Some(|| vec![
+        Some(|| vec![
             vec![
                 vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, ],
             ],
         ]),
-        category: Some("scan"),
-    }
+    )
+    .with_category("scan")
 }
 
 #[cfg(test)]

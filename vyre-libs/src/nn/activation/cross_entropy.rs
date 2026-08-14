@@ -279,15 +279,10 @@ fn reference_cross_entropy_bytes(logits: &[f32], targets: &[u32], vocab_size: us
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| cross_entropy("logits", "targets", "loss", 2, 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || cross_entropy("logits", "targets", "loss", 2, 4),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             let to_u32 = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![
@@ -297,13 +292,13 @@ inventory::submit! {
                 to_u32(&[2, 0]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let logits = [1.0_f32, 2.0, 3.0, 0.5, 0.1, 0.2, 0.3, 0.4];
             let targets = [2_u32, 0];
             vec![vec![reference_cross_entropy_bytes(&logits, &targets, 4)]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

@@ -14,10 +14,10 @@ fn overflow_function_like_macro_missing_rparen() {
         starts: vec![0, 1, 2, 3, 4],
         lens: vec![1, 1, 1, 1, 1],
     };
-    let mut fixture = NamedFixture::empty();
+    let mut fixture = NamedMacroFixture::empty();
     fixture.insert(b"F", 512, C_MACRO_KIND_FUNCTION_LIKE, 2, &[(0, 0)]);
 
-    let result = catch_unwind(AssertUnwindSafe(|| run_named(&stream, &fixture, 8)));
+    let result = catch_unwind(AssertUnwindSafe(|| run_named_macro_expansion(&stream, &fixture, 8)));
     let eval = result.expect("missing-rparen must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
         assert!(
@@ -35,7 +35,7 @@ fn overflow_object_like_macro_replacement_cannot_reference_parameters() {
         starts: vec![0],
         lens: vec![3],
     };
-    let mut fixture = NamedFixture::empty();
+    let mut fixture = NamedMacroFixture::empty();
     fixture.insert_at_slot_with_hash(
         macro_slot(fnv1a32(b"OBJ")),
         fnv1a32(b"OBJ"),
@@ -45,7 +45,7 @@ fn overflow_object_like_macro_replacement_cannot_reference_parameters() {
         &[(TOK_INTEGER, 0)], // param 0 instead of LITERAL
     );
 
-    let result = catch_unwind(AssertUnwindSafe(|| run_named(&stream, &fixture, 8)));
+    let result = catch_unwind(AssertUnwindSafe(|| run_named_macro_expansion(&stream, &fixture, 8)));
     let eval = result.expect("object-like param ref must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
         assert!(
@@ -62,7 +62,7 @@ fn overflow_named_macro_replacement_range_out_of_bounds() {
         starts: vec![0],
         lens: vec![3],
     };
-    let mut fixture = NamedFixture::empty();
+    let mut fixture = NamedMacroFixture::empty();
     // Manually set up a macro whose replacement_offset + size exceeds TABLE_SLOTS.
     let hash = fnv1a32(b"FOO");
     let slot = macro_slot(hash);
@@ -73,7 +73,7 @@ fn overflow_named_macro_replacement_range_out_of_bounds() {
     fixture.kinds[slot] = C_MACRO_KIND_OBJECT_LIKE;
     fixture.sizes[macro_idx] = 2; // repl_size crosses the table boundary.
 
-    let result = catch_unwind(AssertUnwindSafe(|| run_named(&stream, &fixture, 8)));
+    let result = catch_unwind(AssertUnwindSafe(|| run_named_macro_expansion(&stream, &fixture, 8)));
     let eval = result.expect("replacement range overflow must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
         assert!(

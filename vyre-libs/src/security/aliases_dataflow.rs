@@ -262,18 +262,13 @@ fn witness_expected_outputs() -> Vec<Vec<u8>> {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(witness_program),
-        test_inputs: Some(|| vec![witness_inputs()]),
-        expected_output: Some(|| vec![witness_expected_outputs()]),
-        category: Some("security"),
-    }
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        witness_program,
+        Some(|| vec![witness_inputs()]),
+        Some(|| vec![witness_expected_outputs()]),
+    )
+    .with_category("security")
 }
 
 #[cfg(test)]

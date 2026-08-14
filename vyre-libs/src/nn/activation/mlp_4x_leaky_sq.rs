@@ -225,18 +225,13 @@ fn output_projection_body(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || {
             mlp_4x_leaky_sq("x", "w1", "b1", "w2", "b2", "out", 2, 4)
                 .unwrap_or_else(|error| crate::invalid_program(OP_ID, format!("Fix: mlp_4x_leaky_sq fixture must build: {error}")))
-        }),
-        test_inputs: Some(|| {
+        },
+        Some(|| {
             let f = vyre_primitives::wire::pack_f32_slice;
             vec![vec![
                 f(&[1.0, 2.0]),
@@ -245,7 +240,7 @@ inventory::submit! {
                 f(&[0.0, 0.0]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // model_dim=2, hidden_dim=4
             // x=[1,2], w1=[0.1,0.2,0.3,0.4, 0.5,0.6,0.7,0.8], b1=[0;4]
             // w2=[1,0,0,1, 1,0,0,1], b2=[0,0]
@@ -272,8 +267,8 @@ inventory::submit! {
             let bytes = vyre_primitives::wire::pack_f32_slice(&out);
             vec![vec![bytes]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 fn f32_fixture(values: &[f32]) -> Vec<u8> {
@@ -326,20 +321,15 @@ fn output_projection_program() -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: HIDDEN_PROJECTION_OP_ID,
-        build: Some(hidden_projection_program),
-        test_inputs: Some(|| vec![vec![
+    vyre_foundation::operation::OperationRegistration::library(
+        HIDDEN_PROJECTION_OP_ID,
+        hidden_projection_program,
+        Some(|| vec![vec![
             f32_fixture(&[1.0, 2.0]),
             f32_fixture(&[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]),
             f32_fixture(&[0.0; 4]),
         ]]),
-        expected_output: Some(|| {
+        Some(|| {
             let x = [1.0_f32, 2.0];
             let w1 = [0.1_f32, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
             let mut out = [0.0_f32; 4];
@@ -350,25 +340,20 @@ inventory::submit! {
             }
             vec![vec![f32_fixture(&out)]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OUTPUT_PROJECTION_OP_ID,
-        build: Some(output_projection_program),
-        test_inputs: Some(|| vec![vec![
+    vyre_foundation::operation::OperationRegistration::library(
+        OUTPUT_PROJECTION_OP_ID,
+        output_projection_program,
+        Some(|| vec![vec![
             f32_fixture(&[1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0]),
             f32_fixture(&[0.0, 0.0]),
             f32_fixture(&[1.21, 1.96, 2.89, 4.0]),
         ]]),
-        expected_output: Some(|| {
+        Some(|| {
             let hidden = [1.21_f32, 1.96, 2.89, 4.0];
             let w2 = [1.0_f32, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
             let mut out = [0.0_f32; 2];
@@ -379,8 +364,8 @@ inventory::submit! {
             }
             vec![vec![f32_fixture(&out)]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

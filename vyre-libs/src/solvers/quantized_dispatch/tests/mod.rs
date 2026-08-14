@@ -213,3 +213,72 @@ fn pack_i4_rows(rows: &[&[i32]]) -> Vec<u32> {
     }
     packed
 }
+
+/// Every batched INT4 entry point validates the same five shape preconditions before it builds a
+/// Program, and reports each one with the fragment paired below.
+fn assert_rejects_batched_shape_errors<T>(
+    call: impl Fn(&[u32], &[u32], &[f32], &[f32], u32, u32, u32) -> Result<T, DispatchError>,
+) {
+    let weights = pack_i4_rows(&[&[-1, 2, 3, -4, 5, -6, 7, -8]]);
+    let activations = pack_i4_rows(&[&[7, 5, 3, 1, -1, -3, -5, -7], &[-8, -6, -4, -2, 0, 2, 4, 6]]);
+    let row_scales = [0.5];
+    let batch_scales = [0.25, 0.375];
+    let cases: [(&str, &[u32], &[u32], &[f32], &[f32], u32, &str); 5] = [
+        (
+            "zero batch",
+            &weights,
+            &activations,
+            &row_scales,
+            &batch_scales,
+            0,
+            "batch > 0",
+        ),
+        (
+            "missing weights",
+            &[],
+            &activations,
+            &row_scales,
+            &batch_scales,
+            2,
+            "weights_packed.len()",
+        ),
+        (
+            "short activations",
+            &weights,
+            &activations[..1],
+            &row_scales,
+            &batch_scales,
+            2,
+            "activation_batches_packed.len()",
+        ),
+        (
+            "missing row scale",
+            &weights,
+            &activations,
+            &[],
+            &batch_scales,
+            2,
+            "row_scales.len() == rows",
+        ),
+        (
+            "missing batch scale",
+            &weights,
+            &activations,
+            &row_scales,
+            &batch_scales[..1],
+            2,
+            "batch_scales.len() == batch",
+        ),
+    ];
+
+    for (label, weights, activations, row_scales, batch_scales, batch, fragment) in cases {
+        let Err(err) = call(weights, activations, row_scales, batch_scales, batch, 1, 8) else {
+            panic!("Fix: {label} must be rejected before dispatch.");
+        };
+        let message = err.to_string();
+        assert!(
+            message.contains(fragment),
+            "Fix: {label} must report `{fragment}`, reported `{message}`."
+        );
+    }
+}

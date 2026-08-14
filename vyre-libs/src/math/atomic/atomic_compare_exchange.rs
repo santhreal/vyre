@@ -21,15 +21,10 @@ pub fn atomic_compare_exchange_u32(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| atomic_compare_exchange_u32("expected", "desired", "state", "trace", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || atomic_compare_exchange_u32("expected", "desired", "state", "trace", 4),
+        Some(|| {
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![
                 to_bytes(&[10u32, 99, 20, 30]),
@@ -37,7 +32,7 @@ inventory::submit! {
                 to_bytes(&[10u32]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // Serial CAS starting at state=10:
             //   i=0: exp=10, state matches → state=11. trace[0]=10.
             //   i=1: exp=99, no match. trace[1]=11.
@@ -50,8 +45,8 @@ inventory::submit! {
                 to_bytes(&[10u32, 11, 11, 11]),
             ]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]

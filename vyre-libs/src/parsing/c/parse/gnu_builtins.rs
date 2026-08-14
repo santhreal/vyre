@@ -174,15 +174,10 @@ pub fn c11_gnu_builtins_pass(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::c11_gnu_builtins_pass",
-        build: Some(|| c11_gnu_builtins_pass("ast", "out_ast", Expr::u32(4))),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::parsing::c11_gnu_builtins_pass",
+        || c11_gnu_builtins_pass("ast", "out_ast", Expr::u32(4)),
+        Some(|| {
             let ast = [
                 0x11u32,
                 GNU_BUILTIN_EXPECT_OPCODE,
@@ -192,7 +187,7 @@ inventory::submit! {
             let ast_bytes = vyre_primitives::wire::pack_u32_slice(&ast);
             vec![vec![ast_bytes, vec![0u8; 4 * 4]]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let out = [
                 0x11u32,
                 C_AST_KIND_BUILTIN_EXPECT_EXPR,
@@ -202,8 +197,8 @@ inventory::submit! {
             let out_bytes = vyre_primitives::wire::pack_u32_slice(&out);
             vec![vec![out_bytes]]
         }),
-        category: Some("parsing"),
-    }
+    )
+    .with_category("parsing")
 }
 
 #[cfg(test)]

@@ -190,7 +190,7 @@ fn table_named_macro_function_like_shapes() {
             starts: case.starts.to_vec(),
             lens: case.lens.to_vec(),
         };
-        let mut fixture = NamedFixture::empty();
+        let mut fixture = NamedMacroFixture::empty();
         let (name, kind): (&[u8], u32) = if case.source.starts_with(b"ADD") {
             (b"ADD", C_MACRO_KIND_FUNCTION_LIKE)
         } else if case.source.starts_with(b"OBJ") {
@@ -199,7 +199,7 @@ fn table_named_macro_function_like_shapes() {
             (b"F", C_MACRO_KIND_FUNCTION_LIKE)
         };
         fixture.insert(name, 512, kind, case.param_count, case.replacement);
-        let outputs = run_named(&stream, &fixture, 16)
+        let outputs = run_named_macro_expansion(&stream, &fixture, 16)
             .unwrap_or_else(|e| panic!("case {} failed: {}", idx, e));
         let out = decode_u32_words(&outputs[0].to_bytes());
         let count = decode_u32_words(&outputs[1].to_bytes());

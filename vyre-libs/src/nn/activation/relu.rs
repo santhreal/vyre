@@ -58,23 +58,18 @@ pub fn relu(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::nn::relu",
-        build: Some(|| relu("input", "output", 4)),
-        test_inputs: Some(|| vec![vec![
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::nn::relu",
+        || relu("input", "output", 4),
+        Some(|| vec![vec![
             vyre_primitives::wire::pack_u32_slice(&[0u32, 5, 10, 0]),
         ]]),
-        expected_output: Some(|| vec![vec![
+        Some(|| vec![vec![
             // Only ReadWrite buffer: output = max(0, input) = identity for u32
             vyre_primitives::wire::pack_u32_slice(&[0u32, 5, 10, 0]),
         ]]),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

@@ -45,23 +45,18 @@ pub fn broadcast(src: &str, dst: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::math::broadcast",
-        build: Some(|| broadcast("src", "dst", 4)),
-        test_inputs: Some(|| vec![vec![
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::math::broadcast",
+        || broadcast("src", "dst", 4),
+        Some(|| vec![vec![
             42u32.to_le_bytes().to_vec(),                       // src: scalar 42
         ]]),
-        expected_output: Some(|| vec![vec![
+        Some(|| vec![vec![
             // Only ReadWrite buffer: dst filled with 42
             vyre_primitives::wire::pack_u32_slice(&[42u32, 42, 42, 42]),
         ]]),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }
 
 #[cfg(test)]

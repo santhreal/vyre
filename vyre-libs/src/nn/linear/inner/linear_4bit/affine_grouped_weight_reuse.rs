@@ -1,9 +1,11 @@
 //! Grouped INT4 lowering that stages the packed weight column into a
 //! workgroup tile and reuses it across the batch rows a workgroup owns.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use super::grouped_layout::{
+    affine_grouped_buffers, affine_grouped_output_extent, broadcast_from_lane0,
+    push_group_affine_terms, push_lane0_sidecar_loads, push_packed_word_fetch,
     AFFINE_GROUPED_LANES_PER_OUTPUT, AFFINE_GROUPED_OP_ID, AFFINE_GROUPED_WARPS_PER_WORKGROUP,
     AFFINE_GROUPED_WEIGHT_TILE, AFFINE_GROUPED_WORKGROUP_SIZE,
 };
@@ -28,44 +30,33 @@ pub(super) fn linear_4bit_affine_grouped_weight_reuse(
 ) -> Result<Program, String> {
     let batch_tiles = batch_size / AFFINE_GROUPED_WARPS_PER_WORKGROUP;
     let output_workgroups = batch_tiles.checked_mul(out_dim).ok_or_else(|| {
-        "Fix: linear_4bit_affine_grouped batched output workgroups overflow u32; reduce dimensions."
+        "Fix: linear_4bit_affine_grouped output workgroups overflow u32; reduce dimensions."
             .to_string()
     })?;
-    let padded_output_count = output_workgroups
-        .checked_mul(AFFINE_GROUPED_WORKGROUP_SIZE[0])
-        .ok_or_else(|| {
-            "Fix: linear_4bit_affine_grouped batched padded output count overflows u32; reduce dimensions."
-                .to_string()
-        })?;
-    let output_byte_len = (logical_output_count as usize)
-        .checked_mul(core::mem::size_of::<f32>())
-        .ok_or_else(|| {
-            "Fix: linear_4bit_affine_grouped batched output byte length overflows usize; reduce dimensions."
-                .to_string()
-        })?;
+    let (padded_output_count, output_byte_len) =
+        affine_grouped_output_extent(output_workgroups, logical_output_count)?;
     let tile = AFFINE_GROUPED_LANES_PER_OUTPUT;
     let chunks = in_dim / tile;
     let local = Expr::var("local");
     let lane = Expr::var("lane");
-    let weight_k = Expr::var("weight_k");
     let out_idx = Expr::var("out_idx");
-    let lane_in_word = Expr::var("lane_in_word");
-    let word_leader_lane = Expr::var("word_leader_lane");
-    let word_leader_k = Expr::var("word_leader_k");
     let packed_idx = Expr::add(
-        Expr::mul(Expr::div(word_leader_k, Expr::u32(8)), Expr::u32(out_dim)),
-        out_idx.clone(),
-    );
-    let shift = Expr::mul(lane_in_word.clone(), Expr::u32(4));
-    let nibble = Expr::bitand(Expr::shr(Expr::var("packed_word"), shift), Expr::u32(0xF));
-    let sidecar_idx = Expr::add(
         Expr::mul(
-            Expr::div(weight_k.clone(), Expr::u32(group_size)),
+            Expr::div(Expr::var("word_leader_k"), Expr::u32(8)),
             Expr::u32(out_dim),
         ),
         out_idx.clone(),
     );
-    let body = vec![
+    let shift = Expr::mul(Expr::var("lane_in_word"), Expr::u32(4));
+    let nibble = Expr::bitand(Expr::shr(Expr::var("packed_word"), shift), Expr::u32(0xF));
+    let sidecar_idx = Expr::add(
+        Expr::mul(
+            Expr::div(Expr::var("weight_k"), Expr::u32(group_size)),
+            Expr::u32(out_dim),
+        ),
+        out_idx.clone(),
+    );
+    let mut body = vec![
         Node::let_bind("local", Expr::LocalId { axis: 0 }),
         Node::let_bind(
             "warp",
@@ -101,64 +92,23 @@ pub(super) fn linear_4bit_affine_grouped_weight_reuse(
             ),
         ),
         Node::let_bind("weight_k", local.clone()),
-        Node::let_bind("lane_in_word", Expr::bitand(lane.clone(), Expr::u32(7))),
-        Node::let_bind(
-            "word_leader_lane",
-            Expr::bitand(lane.clone(), Expr::u32(0xffff_fff8)),
-        ),
-        Node::let_bind(
-            "word_leader_k",
-            Expr::bitand(local.clone(), Expr::u32(0xffff_fff8)),
-        ),
-        Node::let_bind(
-            "packed_word_lane",
-            Expr::select(
-                Expr::eq(lane_in_word.clone(), Expr::u32(0)),
-                Expr::load(w_packed, packed_idx),
-                Expr::u32(0),
-            ),
-        ),
-        Node::let_bind(
-            "packed_word",
-            Expr::subgroup_shuffle(Expr::var("packed_word_lane"), word_leader_lane),
-        ),
-        Node::let_bind("sidecar_idx", sidecar_idx),
-        Node::let_bind(
-            "scale_lane",
-            Expr::select(
-                Expr::eq(lane.clone(), Expr::u32(0)),
-                Expr::load(scale, Expr::var("sidecar_idx")),
-                Expr::f32(0.0),
-            ),
-        ),
-        Node::let_bind(
-            "zero_point_lane",
-            Expr::select(
-                Expr::eq(lane.clone(), Expr::u32(0)),
-                Expr::load(zero_point, Expr::var("sidecar_idx")),
-                Expr::u32(0),
-            ),
-        ),
-        Node::let_bind(
-            "group_scale",
-            Expr::subgroup_shuffle(Expr::var("scale_lane"), Expr::u32(0)),
-        ),
-        Node::let_bind(
-            "group_zero_point",
-            Expr::subgroup_shuffle(Expr::var("zero_point_lane"), Expr::u32(0)),
-        ),
-        Node::let_bind(
-            "negative_group_scale",
-            Expr::fma(Expr::f32(-1.0), Expr::var("group_scale"), Expr::f32(-0.0)),
-        ),
-        Node::let_bind(
-            "group_zero_offset",
-            Expr::fma(
-                Expr::cast(DataType::F32, Expr::var("group_zero_point")),
-                Expr::var("negative_group_scale"),
-                Expr::f32(-0.0),
-            ),
-        ),
+    ];
+    push_packed_word_fetch(
+        &mut body,
+        &lane,
+        w_packed,
+        Expr::bitand(local.clone(), Expr::u32(0xffff_fff8)),
+        packed_idx,
+        None,
+    );
+    body.push(Node::let_bind("sidecar_idx", sidecar_idx));
+    push_lane0_sidecar_loads(&mut body, &lane, scale, zero_point);
+    push_group_affine_terms(
+        &mut body,
+        broadcast_from_lane0("scale_lane"),
+        broadcast_from_lane0("zero_point_lane"),
+    );
+    body.extend([
         Node::let_bind(
             "weight_value",
             Expr::fma(
@@ -208,24 +158,24 @@ pub(super) fn linear_4bit_affine_grouped_weight_reuse(
                 Expr::add(Expr::load(b, out_idx), Expr::var("warp_sum")),
             )],
         ),
-    ];
+    ]);
+
+    let mut buffers = affine_grouped_buffers(
+        [x, w_packed, scale, zero_point, b, out],
+        input_count,
+        total_u32s,
+        sidecar_count,
+        out_dim,
+        padded_output_count,
+        output_byte_len,
+    );
+    buffers.insert(
+        5,
+        BufferDecl::workgroup(AFFINE_GROUPED_WEIGHT_TILE, in_dim, DataType::F32),
+    );
 
     Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(x, 0, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(input_count),
-            BufferDecl::storage(w_packed, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(total_u32s),
-            BufferDecl::storage(scale, 2, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(sidecar_count),
-            BufferDecl::storage(zero_point, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(sidecar_count),
-            BufferDecl::storage(b, 4, BufferAccess::ReadOnly, DataType::F32).with_count(out_dim),
-            BufferDecl::workgroup(AFFINE_GROUPED_WEIGHT_TILE, in_dim, DataType::F32),
-            BufferDecl::output(out, 5, DataType::F32)
-                .with_count(padded_output_count)
-                .with_output_byte_range(0..output_byte_len),
-        ],
+        buffers,
         AFFINE_GROUPED_WORKGROUP_SIZE,
         vec![wrap_anonymous(AFFINE_GROUPED_OP_ID, body)],
     ))

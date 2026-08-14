@@ -14,21 +14,16 @@ pub fn avg_floor(a: &str, b: &str, out: &str, size: u32) -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| avg_floor("a", "b", "out", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || avg_floor("a", "b", "out", 4),
+        Some(|| {
             let a = [10u32, u32::MAX, 7, 100];
             let b = [20u32, u32::MAX, 12, 0];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![to_bytes(&a), to_bytes(&b)]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             // HD-style floor((a+b)/2) that never overflows:
             //   (a & b) + ((a ^ b) >> 1). For the fixture
             //   (10,20)->15, (MAX,MAX)->MAX, (7,12)->9, (100,0)->50.
@@ -42,6 +37,6 @@ inventory::submit! {
             let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
             vec![vec![bytes]]
         }),
-        category: Some("math"),
-    }
+    )
+    .with_category("math")
 }

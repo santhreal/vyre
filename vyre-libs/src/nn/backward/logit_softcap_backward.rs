@@ -34,15 +34,10 @@ pub fn logit_softcap_backward(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| logit_softcap_backward("input", "grad_out", "grad_in", 4, 30.0)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || logit_softcap_backward("input", "grad_out", "grad_in", 4, 30.0),
+        Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[0.0, 15.0, -60.0, 100.0]),
@@ -50,7 +45,7 @@ inventory::submit! {
                 vec![0u8; 4 * 4],
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let out = [
                 f32::from_bits(0x3f80_0000),
                 f32::from_bits(0x3f49_54a5),
@@ -60,8 +55,8 @@ inventory::submit! {
             let bytes = vyre_primitives::wire::pack_f32_slice(&out);
             vec![vec![bytes]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

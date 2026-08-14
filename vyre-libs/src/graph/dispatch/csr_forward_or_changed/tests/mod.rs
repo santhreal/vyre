@@ -1,5 +1,6 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
+use crate::test_support::NeverDispatches;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use std::sync::Mutex;
 use vyre_foundation::ir::Program;
@@ -72,6 +73,71 @@ fn linear_graph() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     (vec![0, 1, 2, 3, 3], vec![1, 2, 3], vec![1, 1, 1])
 }
 
+/// Runs the changed-flag closure over [`linear_graph`] seeded at node 0 with every edge kind
+/// allowed. The contracts below vary the dispatcher and the iteration budget; the graph itself is
+/// incidental to them.
+fn linear_closure(
+    dispatcher: &dyn ProgramDispatcher,
+    max_iters: u32,
+) -> Result<Vec<u32>, DispatchError> {
+    let (off, tgt, msk) = linear_graph();
+    forward_closure_via_change_flag_gpu(
+        dispatcher,
+        4,
+        &off,
+        &tgt,
+        &msk,
+        &[0b0001],
+        0xFFFF_FFFF,
+        max_iters,
+    )
+}
+
+/// [`linear_closure`] decoding into caller-owned frontier storage.
+fn linear_closure_into(
+    dispatcher: &dyn ProgramDispatcher,
+    max_iters: u32,
+    frontier: &mut Vec<u32>,
+) -> Result<(), DispatchError> {
+    let (off, tgt, msk) = linear_graph();
+    forward_closure_via_change_flag_gpu_into(
+        dispatcher,
+        4,
+        &off,
+        &tgt,
+        &msk,
+        &[0b0001],
+        0xFFFF_FFFF,
+        max_iters,
+        frontier,
+    )
+}
+
+/// [`linear_closure`] through caller-owned scratch, with the seed and allow mask exposed because
+/// they participate in the cached program key.
+fn linear_closure_with_scratch(
+    dispatcher: &dyn ProgramDispatcher,
+    seed: &[u32],
+    allow_mask: u32,
+    max_iters: u32,
+    scratch: &mut ForwardChangedGpuScratch,
+    frontier: &mut Vec<u32>,
+) -> Result<(), DispatchError> {
+    let (off, tgt, msk) = linear_graph();
+    forward_closure_via_change_flag_gpu_with_scratch_into(
+        dispatcher,
+        4,
+        &off,
+        &tgt,
+        &msk,
+        seed,
+        allow_mask,
+        max_iters,
+        scratch,
+        frontier,
+    )
+}
+
 #[test]
 fn gpu_into_decodes_exact_outputs_into_reused_frontier() {
     let dispatcher = CsrChangedDispatcher {
@@ -80,21 +146,9 @@ fn gpu_into_decodes_exact_outputs_into_reused_frontier() {
             u32_slice_to_le_bytes(&[0, 0, 0, 0]),
         ],
     };
-    let (off, tgt, msk) = linear_graph();
     let mut frontier = Vec::with_capacity(4);
     let ptr = frontier.as_ptr();
-    forward_closure_via_change_flag_gpu_into(
-        &dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        &[0b0001],
-        0xFFFF_FFFF,
-        4,
-        &mut frontier,
-    )
-    .expect("Fix: dispatch succeeds");
+    linear_closure_into(&dispatcher, 4, &mut frontier).expect("Fix: dispatch succeeds");
     assert_eq!(frontier, vec![0b1111]);
     assert_eq!(frontier.as_ptr(), ptr);
 }
@@ -108,18 +162,7 @@ fn gpu_rejects_extra_outputs() {
             u32_slice_to_le_bytes(&[99]),
         ],
     };
-    let (off, tgt, msk) = linear_graph();
-    let err = forward_closure_via_change_flag_gpu(
-        &dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        &[0b0001],
-        0xFFFF_FFFF,
-        4,
-    )
-    .expect_err("extra outputs must be rejected");
+    let err = linear_closure(&dispatcher, 4).expect_err("extra outputs must be rejected");
     assert!(
         matches!(err, DispatchError::BackendError(_)),
         "unexpected error: {err:?}"
@@ -131,18 +174,8 @@ fn gpu_rejects_trailing_changed_bytes() {
     let dispatcher = CsrChangedDispatcher {
         outputs: vec![u32_slice_to_le_bytes(&[0b1111]), vec![0, 0, 0, 0, 1]],
     };
-    let (off, tgt, msk) = linear_graph();
-    let err = forward_closure_via_change_flag_gpu(
-        &dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        &[0b0001],
-        0xFFFF_FFFF,
-        4,
-    )
-    .expect_err("trailing changed bytes must be rejected");
+    let err =
+        linear_closure(&dispatcher, 4).expect_err("trailing changed bytes must be rejected");
     assert!(
         matches!(err, DispatchError::BackendError(_)),
         "unexpected error: {err:?}"
@@ -157,18 +190,8 @@ fn gpu_rejects_non_boolean_changed_flag() {
             u32_slice_to_le_bytes(&[2]),
         ],
     };
-    let (off, tgt, msk) = linear_graph();
-    let err = forward_closure_via_change_flag_gpu(
-        &dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        &[0b0001],
-        0xFFFF_FFFF,
-        1,
-    )
-    .expect_err("non-boolean changed flag must be rejected");
+    let err =
+        linear_closure(&dispatcher, 1).expect_err("non-boolean changed flag must be rejected");
     assert!(
         matches!(err, DispatchError::BackendError(_)),
         "unexpected error: {err:?}"
@@ -177,30 +200,12 @@ fn gpu_rejects_non_boolean_changed_flag() {
 
 #[test]
 fn gpu_rejects_bad_seed_width_without_clobbering_frontier() {
-    struct NoDispatch;
-
-    impl ProgramDispatcher for NoDispatch {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            panic!("bad seed width must be rejected before dispatch");
-        }
-    }
-
-    let (off, tgt, msk) = linear_graph();
     let mut scratch = ForwardChangedGpuScratch::default();
     let mut frontier = vec![0xCAFE_BABEu32];
     let capacity = frontier.capacity();
 
-    let err = forward_closure_via_change_flag_gpu_with_scratch_into(
-        &NoDispatch,
-        4,
-        &off,
-        &tgt,
-        &msk,
+    let err = linear_closure_with_scratch(
+        &NeverDispatches("bad seed width must be rejected before dispatch"),
         &[],
         0xFFFF_FFFF,
         5,
@@ -224,18 +229,13 @@ fn gpu_reuses_dispatch_input_buffers() {
             u32_slice_to_le_bytes(&[0, 0, 0, 0]),
         ],
     };
-    let (off, tgt, msk) = linear_graph();
     let mut scratch =
         ForwardChangedGpuScratch::with_input_capacities(&[32, 32, 32, 32, 32, 32, 32, 8], 1);
     let mut frontier = Vec::with_capacity(4);
     let input_caps = scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>();
     let frontier_ptr = frontier.as_ptr();
-    forward_closure_via_change_flag_gpu_with_scratch_into(
+    linear_closure_with_scratch(
         &dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
         &[0b0001],
         0xFFFF_FFFF,
         4,
@@ -267,32 +267,30 @@ fn gpu_refreshes_static_inputs_when_same_shape_graph_content_changes() {
     let mut scratch = ForwardChangedGpuScratch::default();
     let mut frontier = Vec::new();
 
-    forward_closure_via_change_flag_gpu_with_scratch_into(
-        &dispatcher,
-        4,
-        &edge_offsets,
-        &first_targets,
-        &edge_kind_mask,
-        &[0b0001],
-        0xFFFF_FFFF,
-        1,
-        &mut scratch,
-        &mut frontier,
-    )
-    .expect("Fix: first same-shape dispatch should succeed");
-    forward_closure_via_change_flag_gpu_with_scratch_into(
-        &dispatcher,
-        4,
-        &edge_offsets,
-        &second_targets,
-        &edge_kind_mask,
-        &[0b0001],
-        0xFFFF_FFFF,
-        1,
-        &mut scratch,
-        &mut frontier,
-    )
-    .expect("Fix: second same-shape dispatch should refresh static CSR inputs");
+    for (edge_targets, why) in [
+        (
+            &first_targets,
+            "Fix: first same-shape dispatch should succeed",
+        ),
+        (
+            &second_targets,
+            "Fix: second same-shape dispatch should refresh static CSR inputs",
+        ),
+    ] {
+        forward_closure_via_change_flag_gpu_with_scratch_into(
+            &dispatcher,
+            4,
+            &edge_offsets,
+            edge_targets,
+            &edge_kind_mask,
+            &[0b0001],
+            0xFFFF_FFFF,
+            1,
+            &mut scratch,
+            &mut frontier,
+        )
+        .expect(why);
+    }
 
     let recorded_targets = dispatcher
         .edge_targets
@@ -323,69 +321,58 @@ fn gpu_reuses_cached_program_by_primitive_key() {
             u32_slice_to_le_bytes(&[0]),
         ],
     };
-    let (off, tgt, msk) = linear_graph();
     let mut scratch = ForwardChangedGpuScratch::default();
     let mut frontier = Vec::new();
 
-    forward_closure_via_change_flag_gpu_with_scratch_into(
-        &history_dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        &[0b0001],
-        0xFFFF_FFFF,
-        4,
-        &mut scratch,
-        &mut frontier,
-    )
-    .expect("Fix: first changed-history dispatch should build one program");
-    assert_eq!(scratch.program_builds(), 1);
+    // Only the seed width, the allow mask and the changed-history policy participate in the
+    // primitive key, so the cumulative build count after each step is the contract.
+    let steps: [(&dyn ProgramDispatcher, &[u32], u32, u32, usize, &str); 4] = [
+        (
+            &history_dispatcher,
+            &[0b0001],
+            0xFFFF_FFFF,
+            4,
+            1,
+            "Fix: first changed-history dispatch should build one program",
+        ),
+        (
+            &history_dispatcher,
+            &[0b0011],
+            0xFFFF_FFFF,
+            4,
+            1,
+            "Fix: identical primitive key should reuse the cached program",
+        ),
+        (
+            &history_dispatcher,
+            &[0b0001],
+            0b0001,
+            4,
+            2,
+            "Fix: changed allow mask should rebuild the primitive program",
+        ),
+        (
+            &legacy_dispatcher,
+            &[0b0001],
+            0b0001,
+            65,
+            3,
+            "Fix: switching changed-history policy should rebuild the program",
+        ),
+    ];
 
-    forward_closure_via_change_flag_gpu_with_scratch_into(
-        &history_dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        &[0b0011],
-        0xFFFF_FFFF,
-        4,
-        &mut scratch,
-        &mut frontier,
-    )
-    .expect("Fix: identical primitive key should reuse the cached program");
-    assert_eq!(scratch.program_builds(), 1);
-
-    forward_closure_via_change_flag_gpu_with_scratch_into(
-        &history_dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        &[0b0001],
-        0b0001,
-        4,
-        &mut scratch,
-        &mut frontier,
-    )
-    .expect("Fix: changed allow mask should rebuild the primitive program");
-    assert_eq!(scratch.program_builds(), 2);
-
-    forward_closure_via_change_flag_gpu_with_scratch_into(
-        &legacy_dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        &[0b0001],
-        0b0001,
-        65,
-        &mut scratch,
-        &mut frontier,
-    )
-    .expect("Fix: switching changed-history policy should rebuild the program");
-    assert_eq!(scratch.program_builds(), 3);
+    for (dispatcher, seed, allow_mask, max_iters, builds, why) in steps {
+        linear_closure_with_scratch(
+            dispatcher,
+            seed,
+            allow_mask,
+            max_iters,
+            &mut scratch,
+            &mut frontier,
+        )
+        .expect(why);
+        assert_eq!(scratch.program_builds(), builds, "{why}");
+    }
 }
 
 #[test]

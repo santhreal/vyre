@@ -64,15 +64,10 @@ pub fn upsample_2x(input: &str, output: &str, width: u32, height: u32) -> Progra
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| upsample_2x("input", "output", 4, 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || upsample_2x("input", "output", 4, 4),
+        Some(|| {
             // 2×2 all-white → 4×4 all-white
             let input = vec![0xFFFF_FFFFu32; 4];
             vec![vec![
@@ -80,10 +75,10 @@ inventory::submit! {
                 vec![0u8; 64],
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let expected = vec![0xFFFF_FFFFu32; 16];
             vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&expected)]]
         }),
-        category: Some("visual"),
-    }
+    )
+    .with_category("visual")
 }

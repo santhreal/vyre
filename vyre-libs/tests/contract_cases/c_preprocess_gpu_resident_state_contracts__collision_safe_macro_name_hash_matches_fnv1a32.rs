@@ -26,7 +26,7 @@ fn collision_safe_macro_name_probes_past_same_hash_different_name() {
     let foo_hash = fnv1a32(b"FOO");
     let first_slot = macro_slot(foo_hash);
     let second_slot = (first_slot + 1) & (TABLE_SLOTS - 1);
-    let mut fixture = NamedFixture::empty();
+    let mut fixture = NamedMacroFixture::empty();
     fixture.insert_at_slot_with_hash(
         first_slot,
         foo_hash,
@@ -44,7 +44,7 @@ fn collision_safe_macro_name_probes_past_same_hash_different_name() {
         &[(TOK_INTEGER, C_MACRO_REPLACEMENT_LITERAL)],
     );
 
-    let outputs = run_named(&stream, &fixture, 4).expect("collision probe must succeed");
+    let outputs = run_named_macro_expansion(&stream, &fixture, 4).expect("collision probe must succeed");
     let out = decode_u32_words(&outputs[0].to_bytes());
     let count = decode_u32_words(&outputs[1].to_bytes());
     assert_eq!(count, vec![1]);
@@ -61,7 +61,7 @@ fn collision_safe_macro_name_byte_exact_mismatch_does_not_expand() {
     };
     let foo_hash = fnv1a32(b"FOO");
     let slot = macro_slot(foo_hash);
-    let mut fixture = NamedFixture::empty();
+    let mut fixture = NamedMacroFixture::empty();
     fixture.insert_at_slot_with_hash(
         slot,
         foo_hash,
@@ -71,7 +71,7 @@ fn collision_safe_macro_name_byte_exact_mismatch_does_not_expand() {
         &[(TOK_PLUS, C_MACRO_REPLACEMENT_LITERAL)],
     );
 
-    let outputs = run_named(&stream, &fixture, 4).expect("byte mismatch must passthrough");
+    let outputs = run_named_macro_expansion(&stream, &fixture, 4).expect("byte mismatch must passthrough");
     let out = decode_u32_words(&outputs[0].to_bytes());
     let count = decode_u32_words(&outputs[1].to_bytes());
     assert_eq!(count, vec![1]);

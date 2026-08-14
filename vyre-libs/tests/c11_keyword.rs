@@ -85,124 +85,68 @@ fn packed_keyword_pass_promotes_keywords_without_expanded_haystack() {
     );
 }
 
-fn expected_c11_and_gnu_keywords() -> &'static [(&'static str, u32)] {
-    &[
-        ("auto", TOK_AUTO),
-        ("break", TOK_BREAK),
-        ("case", TOK_CASE),
-        ("char", TOK_CHAR_KW),
-        ("const", TOK_CONST),
-        ("__const", TOK_CONST),
-        ("__const__", TOK_CONST),
-        ("continue", TOK_CONTINUE),
-        ("default", TOK_DEFAULT),
-        ("do", TOK_DO),
-        ("double", TOK_DOUBLE),
-        ("else", TOK_ELSE),
-        ("enum", TOK_ENUM),
-        ("extern", TOK_EXTERN),
-        ("float", TOK_FLOAT_KW),
-        ("for", TOK_FOR),
-        ("goto", TOK_GOTO),
-        ("if", TOK_IF),
-        ("inline", TOK_INLINE),
-        ("int", TOK_INT),
-        ("long", TOK_LONG),
-        ("register", TOK_REGISTER),
-        ("restrict", TOK_RESTRICT),
-        ("__restrict", TOK_RESTRICT),
-        ("__restrict__", TOK_RESTRICT),
-        ("return", TOK_RETURN),
-        ("short", TOK_SHORT),
-        ("signed", TOK_SIGNED),
-        ("__signed", TOK_SIGNED),
-        ("__signed__", TOK_SIGNED),
-        ("sizeof", TOK_SIZEOF),
-        ("static", TOK_STATIC),
-        ("struct", TOK_STRUCT),
-        ("switch", TOK_SWITCH),
-        ("typedef", TOK_TYPEDEF),
-        ("union", TOK_UNION),
-        ("unsigned", TOK_UNSIGNED),
-        ("void", TOK_VOID),
-        ("volatile", TOK_VOLATILE),
-        ("__volatile", TOK_VOLATILE),
-        ("while", TOK_WHILE),
-        ("_Alignas", TOK_ALIGNAS),
-        ("_Alignof", TOK_ALIGNOF),
-        ("_Atomic", TOK_ATOMIC),
-        ("_Bool", TOK_BOOL),
-        ("_Complex", TOK_COMPLEX),
-        ("_Generic", TOK_GENERIC),
-        ("_Imaginary", TOK_IMAGINARY),
-        ("_Noreturn", TOK_NORETURN),
-        ("_Static_assert", TOK_STATIC_ASSERT),
-        ("_Thread_local", TOK_THREAD_LOCAL),
-        ("__thread", TOK_THREAD_LOCAL),
-        ("asm", TOK_GNU_ASM),
-        ("__asm", TOK_GNU_ASM),
-        ("__asm__", TOK_GNU_ASM),
-        ("__attribute", TOK_GNU_ATTRIBUTE),
-        ("__attribute__", TOK_GNU_ATTRIBUTE),
-        ("typeof", TOK_GNU_TYPEOF),
-        ("__typeof", TOK_GNU_TYPEOF),
-        ("__typeof__", TOK_GNU_TYPEOF),
-        ("typeof_unqual", TOK_GNU_TYPEOF_UNQUAL),
-        ("__typeof_unqual", TOK_GNU_TYPEOF_UNQUAL),
-        ("__typeof_unqual__", TOK_GNU_TYPEOF_UNQUAL),
-        ("__extension__", TOK_GNU_EXTENSION),
-        ("__alignof", TOK_ALIGNOF),
-        ("__alignof__", TOK_ALIGNOF),
-        ("__inline", TOK_INLINE),
-        ("__inline__", TOK_INLINE),
-        ("__complex__", TOK_COMPLEX),
-        ("__real__", TOK_GNU_REAL),
-        ("__imag__", TOK_GNU_IMAG),
-        ("__volatile__", TOK_VOLATILE),
-        ("__builtin_constant_p", TOK_BUILTIN_CONSTANT_P),
-        ("__builtin_choose_expr", TOK_BUILTIN_CHOOSE_EXPR),
-        (
-            "__builtin_types_compatible_p",
-            TOK_BUILTIN_TYPES_COMPATIBLE_P,
-        ),
-        ("__auto_type", TOK_GNU_AUTO_TYPE),
-        ("__int128", TOK_GNU_INT128),
-        ("__int128_t", TOK_GNU_INT128),
-        ("__uint128_t", TOK_GNU_INT128),
-        ("__builtin_va_list", TOK_GNU_BUILTIN_VA_LIST),
-        ("__seg_gs", TOK_GNU_ADDRESS_SPACE),
-        ("__seg_fs", TOK_GNU_ADDRESS_SPACE),
-        ("__label__", TOK_GNU_LABEL),
-        ("_BitInt", TOK_BITINT_KW),
-        ("_Float16", TOK_FLOAT16_KW),
-        ("_Float32", TOK_FLOAT32_KW),
-        ("_Float32x", TOK_FLOAT32_KW),
-        ("_Float64", TOK_FLOAT64_KW),
-        ("_Float64x", TOK_FLOAT64_KW),
-        ("_Float128", TOK_FLOAT128_KW),
-        ("_Float128x", TOK_FLOAT128_KW),
-        ("__float128", TOK_GNU_FLOAT128_KW),
-        ("__bf16", TOK_GNU_BF16_KW),
-        ("__fp16", TOK_GNU_FP16_KW),
-        ("_Decimal32", TOK_DECIMAL32_KW),
-        ("_Decimal64", TOK_DECIMAL64_KW),
-        ("_Decimal128", TOK_DECIMAL128_KW),
-        ("__forceinline", TOK_FORCEINLINE_KW),
-        ("_Nonnull", TOK_NULLABILITY_KW),
-        ("_Nullable", TOK_NULLABILITY_KW),
-        ("_Nullable_result", TOK_NULLABILITY_KW),
-        ("_Null_unspecified", TOK_NULLABILITY_KW),
-    ]
+/// Every spelling in `C_KEYWORDS` must promote to its declared token, through the CPU oracle and
+/// through the emitted pass alike. The case list is read off the table at run time, so a spelling
+/// added there without a working promotion turns this red instead of escaping coverage.
+#[test]
+fn keyword_pass_promotes_every_table_entry() {
+    let mut source = Vec::new();
+    let mut tok_starts = Vec::new();
+    let mut tok_lens = Vec::new();
+    let mut declared = Vec::new();
+    for (keyword, token) in C_KEYWORDS {
+        if !source.is_empty() {
+            source.push(b' ');
+        }
+        tok_starts.push(source.len() as u32);
+        tok_lens.push(keyword.len() as u32);
+        source.extend_from_slice(keyword.as_bytes());
+        declared.push(*token);
+    }
+    let tok_types = vec![TOK_IDENTIFIER; C_KEYWORDS.len()];
+
+    let expected = reference_c_keyword_types(&tok_types, &tok_starts, &tok_lens, &source);
+    assert_eq!(
+        expected, declared,
+        "the CPU keyword oracle must promote every table spelling to the token the table declares"
+    );
+
+    let keyword_map = c_keyword_map_words();
+    let program = c_keyword(
+        "tok_types",
+        "tok_starts",
+        "tok_lens",
+        "counts",
+        "haystack",
+        "keyword_map",
+        tok_types.len() as u32,
+        C_KEYWORDS.len() as u32,
+        source.len() as u32,
+    );
+    let input_bytes = [
+        bytes(&tok_types),
+        bytes(&tok_starts),
+        bytes(&tok_lens),
+        bytes(&[tok_types.len() as u32]),
+        bytes(&haystack_words(&source)),
+        bytes(&keyword_map),
+    ];
+    let values = input_bytes
+        .iter()
+        .cloned()
+        .map(Value::from)
+        .collect::<Vec<_>>();
+    let outputs = vyre_reference::reference_eval(&program, &values)
+        .expect("keyword Program must execute under the reference oracle");
+    assert_eq!(
+        words_from_bytes(&outputs[0].to_bytes()),
+        declared,
+        "the emitted keyword pass must promote every table spelling like the CPU oracle"
+    );
 }
 
 #[test]
-fn keyword_pass_promotes_full_c11_keyword_table_entries() {
-    assert_eq!(
-        C_KEYWORDS,
-        expected_c11_and_gnu_keywords(),
-        "C keyword map must include every ISO C11 keyword plus GNU parser spellings"
-    );
-
+fn keyword_pass_promotes_keywords_in_c_source_context() {
     let source = b"int main(void) { return _Bool; volatile x; __attribute__((cold)); asm volatile(\"nop\"); __asm__ __volatile__(\"mfence\"); }";
     let tok_types = [
         TOK_IDENTIFIER,

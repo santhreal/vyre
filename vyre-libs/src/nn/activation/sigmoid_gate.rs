@@ -48,21 +48,16 @@ fn build_sigmoid_gate(
     typed_sigmoid_gate_program(OP_ID, gate_logits, branch, output, n, dtype, false)
 }
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(2),
-        id: OP_ID,
-        build: Some(|| sigmoid_gate("gate", "branch", "output", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || sigmoid_gate("gate", "branch", "output", 4),
+        Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_f32_slice(&[0.0, 1.0, -1.0, 100.0]),
                 vyre_primitives::wire::pack_f32_slice(&[8.0, 2.0, -2.0, -7.0]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let gate = [0.0_f32, 1.0, -1.0, 100.0];
             let branch = [8.0_f32, 2.0, -2.0, -7.0];
             let output = std::array::from_fn::<_, 4, _>(|index| {
@@ -70,6 +65,7 @@ inventory::submit! {
             });
             vec![vec![vyre_primitives::wire::pack_f32_slice(&output)]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
+    .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(2))
 }

@@ -8,7 +8,7 @@ fn collision_safe_macro_name_long_name_exceeds_pool_bounds_fails_loudly() {
         starts: vec![0],
         lens: vec![3],
     };
-    let mut fixture = NamedFixture::empty();
+    let mut fixture = NamedMacroFixture::empty();
     // Manually corrupt the name lens to exceed NAME_POOL_BYTES.
     let hash = fnv1a32(b"FOO");
     let slot = macro_slot(hash);
@@ -20,7 +20,7 @@ fn collision_safe_macro_name_long_name_exceeds_pool_bounds_fails_loudly() {
     fixture.sizes[512] = 1;
     fixture.vals[512] = TOK_INTEGER;
 
-    let result = catch_unwind(AssertUnwindSafe(|| run_named(&stream, &fixture, 4)));
+    let result = catch_unwind(AssertUnwindSafe(|| run_named_macro_expansion(&stream, &fixture, 4)));
     let eval = result.expect("name-pool overflow must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
         assert!(
@@ -31,7 +31,7 @@ fn collision_safe_macro_name_long_name_exceeds_pool_bounds_fails_loudly() {
 
 #[test]
 fn collision_safe_macro_name_source_span_out_of_bounds_fails_loudly() {
-    let mut fixture = NamedFixture::empty();
+    let mut fixture = NamedMacroFixture::empty();
     // Corrupt start+len to exceed source length.
     let hash = fnv1a32(b"FOO");
     let slot = macro_slot(hash);
@@ -52,7 +52,7 @@ fn collision_safe_macro_name_source_span_out_of_bounds_fails_loudly() {
     fixture.sizes[512] = 1;
     fixture.vals[512] = TOK_INTEGER;
 
-    let result = catch_unwind(AssertUnwindSafe(|| run_named(&short_stream, &fixture, 4)));
+    let result = catch_unwind(AssertUnwindSafe(|| run_named_macro_expansion(&short_stream, &fixture, 4)));
     let eval = result.expect("source-span out-of-bounds must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
         assert!(

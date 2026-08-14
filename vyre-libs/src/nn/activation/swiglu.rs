@@ -49,22 +49,17 @@ fn build_swiglu(gate: &str, up: &str, output: &str, n: u32, dtype: DataType) -> 
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| swiglu("gate", "up", "output", 4)),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || swiglu("gate", "up", "output", 4),
+        Some(|| {
             let to_bytes = vyre_primitives::wire::pack_f32_slice;
             vec![vec![
                 to_bytes(&[0.0_f32, 1.0, -1.0, 2.0]), // gate
                 to_bytes(&[1.0_f32, 2.0, 3.0, 4.0]),  // up
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let gate = [0.0_f32, 1.0, -1.0, 2.0];
             let up = [1.0_f32, 2.0, 3.0, 4.0];
             let out: Vec<f32> = gate.iter().zip(up.iter()).map(|(&g, &u)| {
@@ -74,8 +69,8 @@ inventory::submit! {
             let bytes = vyre_primitives::wire::pack_f32_slice(&out);
             vec![vec![bytes]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

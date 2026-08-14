@@ -37,10 +37,10 @@ fn function_like_macro_arg_arena_bounds_are_zero_initialised() {
         starts: vec![0, 1, 2],
         lens: vec![1, 1, 1],
     };
-    let mut fixture = NamedFixture::empty();
+    let mut fixture = NamedMacroFixture::empty();
     fixture.insert(b"F", 512, C_MACRO_KIND_FUNCTION_LIKE, 0, &[]);
 
-    let outputs = run_named(&stream, &fixture, 8).expect("zero-arg call must succeed");
+    let outputs = run_named_macro_expansion(&stream, &fixture, 8).expect("zero-arg call must succeed");
     let out = decode_u32_words(&outputs[0].to_bytes());
     let count = decode_u32_words(&outputs[1].to_bytes());
     assert_eq!(count, vec![0]);
@@ -62,7 +62,7 @@ fn function_like_macro_arg_arena_tracks_multiple_args() {
         starts: vec![0, 3, 4, 5, 6, 7],
         lens: vec![3, 1, 1, 1, 1, 1],
     };
-    let mut fixture = NamedFixture::empty();
+    let mut fixture = NamedMacroFixture::empty();
     // replacement: arg0 + arg1
     fixture.insert(
         b"ADD",
@@ -72,7 +72,7 @@ fn function_like_macro_arg_arena_tracks_multiple_args() {
         &[(0, 0), (TOK_PLUS, C_MACRO_REPLACEMENT_LITERAL), (0, 1)],
     );
 
-    let outputs = run_named(&stream, &fixture, 8).expect("two-arg call must succeed");
+    let outputs = run_named_macro_expansion(&stream, &fixture, 8).expect("two-arg call must succeed");
     let out = decode_u32_words(&outputs[0].to_bytes());
     let count = decode_u32_words(&outputs[1].to_bytes());
     assert_eq!(count, vec![3]);

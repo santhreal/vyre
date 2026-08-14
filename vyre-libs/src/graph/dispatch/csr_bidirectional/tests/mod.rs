@@ -1,5 +1,6 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
+use crate::test_support::NeverDispatches;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use std::sync::Mutex;
 use vyre_foundation::ir::Program;
@@ -55,6 +56,63 @@ impl ProgramDispatcher for StaticBidirInputRecordingDispatcher {
 fn linear_graph() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     // 0 -> 1 -> 2 -> 3
     (vec![0, 1, 2, 3, 3], vec![1, 2, 3], vec![1, 1, 1])
+}
+
+/// Runs one bidirectional step over [`linear_graph`] into caller-owned storage. The contracts below
+/// vary the dispatcher and the seed; the graph itself is incidental to them.
+fn linear_step_into(
+    dispatcher: &dyn ProgramDispatcher,
+    seed: &[u32],
+    out: &mut Vec<u32>,
+) -> Result<(), DispatchError> {
+    let (off, tgt, msk) = linear_graph();
+    bidirectional_step_via_into(dispatcher, 4, &off, &tgt, &msk, seed, 0xFFFF_FFFF, out)
+}
+
+/// [`linear_step_into`] returning owned storage.
+fn linear_step(dispatcher: &dyn ProgramDispatcher, seed: &[u32]) -> Result<Vec<u32>, DispatchError> {
+    let (off, tgt, msk) = linear_graph();
+    bidirectional_step_via(dispatcher, 4, &off, &tgt, &msk, seed, 0xFFFF_FFFF)
+}
+
+/// [`linear_step_into`] through caller-owned scratch, with the allow mask exposed because it
+/// participates in the cached program key.
+fn linear_step_with_scratch(
+    dispatcher: &dyn ProgramDispatcher,
+    seed: &[u32],
+    allow_mask: u32,
+    scratch: &mut BidirectionalGpuScratch,
+    out: &mut Vec<u32>,
+) -> Result<(), DispatchError> {
+    let (off, tgt, msk) = linear_graph();
+    bidirectional_step_via_with_scratch_into(
+        dispatcher, 4, &off, &tgt, &msk, seed, allow_mask, scratch, out,
+    )
+}
+
+/// Iterated [`linear_step_with_scratch`] over caller-owned frontier buffers.
+fn linear_closure_with_scratch(
+    dispatcher: &dyn ProgramDispatcher,
+    seed: &[u32],
+    max_iters: u32,
+    scratch: &mut BidirectionalGpuScratch,
+    current: &mut Vec<u32>,
+    next: &mut Vec<u32>,
+) -> Result<(), DispatchError> {
+    let (off, tgt, msk) = linear_graph();
+    bidirectional_closure_via_with_scratch_into(
+        dispatcher,
+        4,
+        &off,
+        &tgt,
+        &msk,
+        seed,
+        0xFFFF_FFFF,
+        max_iters,
+        scratch,
+        current,
+        next,
+    )
 }
 
 #[test]
@@ -145,20 +203,9 @@ fn via_step_decodes_exact_output_into_reused_buffer() {
     let dispatcher = BidirDispatcher {
         outputs: vec![u32_slice_to_le_bytes(&[0b1010])],
     };
-    let (off, tgt, msk) = linear_graph();
     let mut out = Vec::with_capacity(4);
     let ptr = out.as_ptr();
-    bidirectional_step_via_into(
-        &dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        &[0b0010],
-        0xFFFF_FFFF,
-        &mut out,
-    )
-    .expect("Fix: dispatch succeeds");
+    linear_step_into(&dispatcher, &[0b0010], &mut out).expect("Fix: dispatch succeeds");
     assert_eq!(out, vec![0b1010]);
     assert_eq!(out.as_ptr(), ptr);
 }
@@ -168,39 +215,18 @@ fn via_step_with_scratch_reuses_dispatch_storage() {
     let dispatcher = BidirDispatcher {
         outputs: vec![u32_slice_to_le_bytes(&[0b1010])],
     };
-    let (off, tgt, msk) = linear_graph();
     let mut scratch = BidirectionalGpuScratch::default();
     let mut out = Vec::with_capacity(1);
 
-    bidirectional_step_via_with_scratch_into(
-        &dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        &[0b0010],
-        0xFFFF_FFFF,
-        &mut scratch,
-        &mut out,
-    )
-    .expect("Fix: dispatch succeeds");
+    linear_step_with_scratch(&dispatcher, &[0b0010], 0xFFFF_FFFF, &mut scratch, &mut out)
+        .expect("Fix: dispatch succeeds");
     assert_eq!(out, vec![0b1010]);
     let input_capacities = scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>();
     let out_capacity = out.capacity();
     assert_eq!(scratch.program_builds(), 1);
 
-    bidirectional_step_via_with_scratch_into(
-        &dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        &[0b0100],
-        0xFFFF_FFFF,
-        &mut scratch,
-        &mut out,
-    )
-    .expect("Fix: dispatch succeeds");
+    linear_step_with_scratch(&dispatcher, &[0b0100], 0xFFFF_FFFF, &mut scratch, &mut out)
+        .expect("Fix: dispatch succeeds");
     assert_eq!(
         scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>(),
         input_capacities
@@ -209,18 +235,8 @@ fn via_step_with_scratch_reuses_dispatch_storage() {
     assert_eq!(out, vec![0b1010]);
     assert_eq!(scratch.program_builds(), 1);
 
-    bidirectional_step_via_with_scratch_into(
-        &dispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        &[0b0100],
-        0x0000_0001,
-        &mut scratch,
-        &mut out,
-    )
-    .expect("Fix: changed allow_mask should dispatch");
+    linear_step_with_scratch(&dispatcher, &[0b0100], 0x0000_0001, &mut scratch, &mut out)
+        .expect("Fix: changed allow_mask should dispatch");
     assert_eq!(scratch.program_builds(), 2);
 }
 
@@ -237,30 +253,29 @@ fn via_step_refreshes_static_inputs_when_same_shape_graph_content_changes() {
     let mut scratch = BidirectionalGpuScratch::default();
     let mut out = Vec::new();
 
-    bidirectional_step_via_with_scratch_into(
-        &dispatcher,
-        4,
-        &edge_offsets,
-        &first_targets,
-        &edge_kind_mask,
-        &[0b0010],
-        0xFFFF_FFFF,
-        &mut scratch,
-        &mut out,
-    )
-    .expect("Fix: first same-shape bidirectional dispatch should succeed");
-    bidirectional_step_via_with_scratch_into(
-        &dispatcher,
-        4,
-        &edge_offsets,
-        &second_targets,
-        &edge_kind_mask,
-        &[0b0010],
-        0xFFFF_FFFF,
-        &mut scratch,
-        &mut out,
-    )
-    .expect("Fix: second same-shape bidirectional dispatch should refresh static CSR inputs");
+    for (edge_targets, why) in [
+        (
+            &first_targets,
+            "Fix: first same-shape bidirectional dispatch should succeed",
+        ),
+        (
+            &second_targets,
+            "Fix: second same-shape bidirectional dispatch should refresh static CSR inputs",
+        ),
+    ] {
+        bidirectional_step_via_with_scratch_into(
+            &dispatcher,
+            4,
+            &edge_offsets,
+            edge_targets,
+            &edge_kind_mask,
+            &[0b0010],
+            0xFFFF_FFFF,
+            &mut scratch,
+            &mut out,
+        )
+        .expect(why);
+    }
 
     let recorded_targets = dispatcher
         .edge_targets
@@ -299,17 +314,7 @@ fn via_step_uses_bridge_zero_inputs_for_graph_scratch() {
         }
     }
 
-    let (off, tgt, msk) = linear_graph();
-    let out = bidirectional_step_via(
-        &InspectingDispatcher,
-        4,
-        &off,
-        &tgt,
-        &msk,
-        &[0b0010],
-        0xFFFF_FFFF,
-    )
-    .expect("Fix: dispatch succeeds");
+    let out = linear_step(&InspectingDispatcher, &[0b0010]).expect("Fix: dispatch succeeds");
 
     assert_eq!(out, vec![0b1010]);
 }
@@ -322,9 +327,7 @@ fn via_step_rejects_extra_outputs() {
             u32_slice_to_le_bytes(&[0]),
         ],
     };
-    let (off, tgt, msk) = linear_graph();
-    let err = bidirectional_step_via(&dispatcher, 4, &off, &tgt, &msk, &[0b0010], 0xFFFF_FFFF)
-        .expect_err("extra outputs must be rejected");
+    let err = linear_step(&dispatcher, &[0b0010]).expect_err("extra outputs must be rejected");
     assert!(
         matches!(err, DispatchError::BackendError(_)),
         "unexpected error: {err:?}"
@@ -336,9 +339,8 @@ fn via_step_rejects_trailing_output_bytes() {
     let dispatcher = BidirDispatcher {
         outputs: vec![vec![0, 0, 0, 0, 1]],
     };
-    let (off, tgt, msk) = linear_graph();
-    let err = bidirectional_step_via(&dispatcher, 4, &off, &tgt, &msk, &[0b0010], 0xFFFF_FFFF)
-        .expect_err("trailing output bytes must be rejected");
+    let err =
+        linear_step(&dispatcher, &[0b0010]).expect_err("trailing output bytes must be rejected");
     assert!(
         matches!(err, DispatchError::BackendError(_)),
         "unexpected error: {err:?}"
@@ -357,53 +359,30 @@ fn via_step_rejects_mismatched_edge_arrays() {
 
 #[test]
 fn via_step_empty_graph_is_validated_by_primitive_and_does_not_dispatch() {
-    struct NoDispatch;
-
-    impl ProgramDispatcher for NoDispatch {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            panic!("empty bidirectional graph must not dispatch");
-        }
-    }
-
     let mut out = vec![u32::MAX];
-    bidirectional_step_via_into(&NoDispatch, 0, &[0], &[], &[], &[], u32::MAX, &mut out)
-        .expect("Fix: canonical empty graph is valid");
+    bidirectional_step_via_into(
+        &NeverDispatches("empty bidirectional graph must not dispatch"),
+        0,
+        &[0],
+        &[],
+        &[],
+        &[],
+        u32::MAX,
+        &mut out,
+    )
+    .expect("Fix: canonical empty graph is valid");
     assert!(out.is_empty());
 }
 
 #[test]
 fn closure_rejects_bad_seed_without_clobbering_reusable_buffers() {
-    struct NoDispatch;
-
-    impl ProgramDispatcher for NoDispatch {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            panic!("malformed closure seed must be rejected before dispatch");
-        }
-    }
-
-    let (off, tgt, msk) = linear_graph();
     let mut scratch = BidirectionalGpuScratch::default();
     let mut current = vec![0xCAFE_BABE];
     let mut next = vec![0xDEAD_BEEF];
 
-    let err = bidirectional_closure_via_with_scratch_into(
-        &NoDispatch,
-        4,
-        &off,
-        &tgt,
-        &msk,
+    let err = linear_closure_with_scratch(
+        &NeverDispatches("malformed closure seed must be rejected before dispatch"),
         &[],
-        0xFFFF_FFFF,
         5,
         &mut scratch,
         &mut current,
@@ -418,32 +397,13 @@ fn closure_rejects_bad_seed_without_clobbering_reusable_buffers() {
 
 #[test]
 fn closure_zero_iters_validates_and_returns_seed_without_program_or_dispatch() {
-    struct NoDispatch;
-
-    impl ProgramDispatcher for NoDispatch {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            panic!("zero-iteration bidirectional closure must not dispatch");
-        }
-    }
-
-    let (off, tgt, msk) = linear_graph();
     let mut scratch = BidirectionalGpuScratch::default();
     let mut current = Vec::with_capacity(8);
     let mut next = vec![0xDEAD_BEEF];
 
-    bidirectional_closure_via_with_scratch_into(
-        &NoDispatch,
-        4,
-        &off,
-        &tgt,
-        &msk,
+    linear_closure_with_scratch(
+        &NeverDispatches("zero-iteration bidirectional closure must not dispatch"),
         &[0b0010],
-        0xFFFF_FFFF,
         0,
         &mut scratch,
         &mut current,
@@ -459,25 +419,12 @@ fn closure_zero_iters_validates_and_returns_seed_without_program_or_dispatch() {
 
 #[test]
 fn closure_empty_graph_validates_and_returns_empty_without_program_or_dispatch() {
-    struct NoDispatch;
-
-    impl ProgramDispatcher for NoDispatch {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            panic!("empty bidirectional closure must not dispatch");
-        }
-    }
-
     let mut scratch = BidirectionalGpuScratch::default();
     let mut current = vec![0xCAFE_BABE];
     let mut next = vec![0xDEAD_BEEF];
 
     bidirectional_closure_via_with_scratch_into(
-        &NoDispatch,
+        &NeverDispatches("empty bidirectional closure must not dispatch"),
         0,
         &[0],
         &[],

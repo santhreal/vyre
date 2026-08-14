@@ -114,77 +114,21 @@ fn i4x8_batched_matmul_f32_scaled_via_reuses_cached_program_for_same_shape() {
 }
 
 #[test]
-
 fn i4x8_batched_matmul_f32_scaled_via_rejects_shape_errors_before_dispatch() {
-    let weights = pack_i4_rows(&[&[-1, 2, 3, -4, 5, -6, 7, -8]]);
-    let activations = pack_i4_rows(&[&[7, 5, 3, 1, -1, -3, -5, -7], &[-8, -6, -4, -2, 0, 2, 4, 6]]);
-    let row_scales = [0.5];
-    let batch_scales = [0.25, 0.375];
-
-    let err = i4x8_batched_matmul_f32_scaled_via(
-        &QuantizedBatchedMatmulDispatcher,
-        &weights,
-        &activations,
-        &row_scales,
-        &batch_scales,
-        0,
-        1,
-        8,
-    )
-    .expect_err("zero batch must fail");
-    assert!(err.to_string().contains("batch > 0"));
-
-    let err = i4x8_batched_matmul_f32_scaled_via(
-        &QuantizedBatchedMatmulDispatcher,
-        &[],
-        &activations,
-        &row_scales,
-        &batch_scales,
-        2,
-        1,
-        8,
-    )
-    .expect_err("missing weights must fail");
-    assert!(err.to_string().contains("weights_packed.len()"));
-
-    let err = i4x8_batched_matmul_f32_scaled_via(
-        &QuantizedBatchedMatmulDispatcher,
-        &weights,
-        &activations[..1],
-        &row_scales,
-        &batch_scales,
-        2,
-        1,
-        8,
-    )
-    .expect_err("short activations must fail");
-    assert!(err.to_string().contains("activation_batches_packed.len()"));
-
-    let err = i4x8_batched_matmul_f32_scaled_via(
-        &QuantizedBatchedMatmulDispatcher,
-        &weights,
-        &activations,
-        &[],
-        &batch_scales,
-        2,
-        1,
-        8,
-    )
-    .expect_err("missing row scale must fail");
-    assert!(err.to_string().contains("row_scales.len() == rows"));
-
-    let err = i4x8_batched_matmul_f32_scaled_via(
-        &QuantizedBatchedMatmulDispatcher,
-        &weights,
-        &activations,
-        &row_scales,
-        &batch_scales[..1],
-        2,
-        1,
-        8,
-    )
-    .expect_err("missing batch scale must fail");
-    assert!(err.to_string().contains("batch_scales.len() == batch"));
+    assert_rejects_batched_shape_errors(
+        |weights, activations, row_scales, batch_scales, batch, rows, cols| {
+            i4x8_batched_matmul_f32_scaled_via(
+                &QuantizedBatchedMatmulDispatcher,
+                weights,
+                activations,
+                row_scales,
+                batch_scales,
+                batch,
+                rows,
+                cols,
+            )
+        },
+    );
 }
 
 #[test]

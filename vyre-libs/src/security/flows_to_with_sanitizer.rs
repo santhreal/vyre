@@ -248,15 +248,10 @@ pub(crate) fn cpu_ref(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| flows_to_with_sanitizer(ProgramGraphShape::new(4, 3), "source", "sink", "sanitizer", "clean", "reach", "alive", "hits", "out_scalar")),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || flows_to_with_sanitizer(ProgramGraphShape::new(4, 3), "source", "sink", "sanitizer", "clean", "reach", "alive", "hits", "out_scalar"),
+        Some(|| {
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![
                 to_bytes(&[0b0001]),              // source = {0}
@@ -278,7 +273,7 @@ inventory::submit! {
                 to_bytes(&[0b0000]),              // out_scalar
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![
                 to_bytes(&[0b0001]),              // clean = {0}
@@ -288,8 +283,8 @@ inventory::submit! {
                 to_bytes(&[0b0001]),              // out_scalar = 1
             ]]
         }),
-        category: Some("security"),
-    }
+    )
+    .with_category("security")
 }
 
 #[cfg(test)]

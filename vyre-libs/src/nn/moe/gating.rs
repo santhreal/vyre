@@ -147,22 +147,17 @@ fn weight_write_body(
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| moe_gate("scores", "indices", "weights", 8, 2)),
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || moe_gate("scores", "indices", "weights", 8, 2),
         // Buffer order: scores (read-only f32 × 8), indices
         // (read-write u32 × 2), weights (output f32 × 2).
-        test_inputs: Some(|| {
+        Some(|| {
             let scores: [f32; 8] = [0.5, 1.0, 0.1, 2.0, 0.3, 3.0, 0.2, 0.4];
             let scores_bytes = vyre_primitives::wire::pack_f32_slice(&scores);
             vec![vec![scores_bytes, vec![0u8; 4 * 2], vec![0u8; 4 * 2]]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let scores: [f32; 8] = [0.5, 1.0, 0.1, 2.0, 0.3, 3.0, 0.2, 0.4];
             let max_score = scores.iter().copied().fold(f32::NEG_INFINITY, f32::max);
             let sum_exp = scores
@@ -178,8 +173,8 @@ inventory::submit! {
             let weights = vyre_primitives::wire::pack_f32_slice(&expected_weights);
             vec![vec![idx_bytes, weights]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 fn f32_fixture(values: &[f32]) -> Vec<u8> {
@@ -231,15 +226,10 @@ fn weight_write_program() -> Program {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: SOFTMAX_STATS_OP_ID,
-        build: Some(softmax_stats_program),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        SOFTMAX_STATS_OP_ID,
+        softmax_stats_program,
+        Some(|| {
             let scores = [0.5_f32, 1.0, 0.1, 2.0, 0.3, 3.0, 0.2, 0.4];
             vec![vec![
                 f32_fixture(&scores),
@@ -247,7 +237,7 @@ inventory::submit! {
                 f32_fixture(&[0.0; 2]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let scores = [0.5_f32, 1.0, 0.1, 2.0, 0.3, 3.0, 0.2, 0.4];
             let max_score = scores.iter().copied().fold(f32::NEG_INFINITY, f32::max);
             let sum_exp = scores
@@ -256,20 +246,15 @@ inventory::submit! {
                 .sum::<f32>();
             vec![vec![f32_fixture(&scores), f32_fixture(&[max_score, sum_exp])]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: WEIGHT_WRITE_OP_ID,
-        build: Some(weight_write_program),
-        test_inputs: Some(|| {
+    vyre_foundation::operation::OperationRegistration::library(
+        WEIGHT_WRITE_OP_ID,
+        weight_write_program,
+        Some(|| {
             let scores = [0.5_f32, 1.0, 0.1, 2.0, 0.3, 3.0, 0.2, 0.4];
             let max_score = scores.iter().copied().fold(f32::NEG_INFINITY, f32::max);
             let sum_exp = scores
@@ -283,7 +268,7 @@ inventory::submit! {
                 f32_fixture(&[0.0; 2]),
             ]]
         }),
-        expected_output: Some(|| {
+        Some(|| {
             let scores = [0.5_f32, 1.0, 0.1, 2.0, 0.3, 3.0, 0.2, 0.4];
             let max_score = scores.iter().copied().fold(f32::NEG_INFINITY, f32::max);
             let sum_exp = scores
@@ -295,8 +280,8 @@ inventory::submit! {
                 libm::expf(scores[3] - max_score) / sum_exp,
             ])]]
         }),
-        category: Some("nn"),
-    }
+    )
+    .with_category("nn")
 }
 
 #[cfg(test)]

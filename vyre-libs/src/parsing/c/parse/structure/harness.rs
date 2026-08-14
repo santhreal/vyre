@@ -2,52 +2,37 @@ use super::*;
 use vyre_primitives::hash::fnv1a::fnv1a32;
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::c11_extract_functions",
-        build: Some(|| c11_extract_functions(
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::parsing::c11_extract_functions",
+        || c11_extract_functions(
             "tok_types", "paren_pairs", "brace_pairs", Expr::u32(6), "out_functions", "out_counts"
-        )),
-        test_inputs: Some(function_extract_inputs),
-        expected_output: Some(function_extract_expected),
-        category: Some("parsing"),
-    }
+        ),
+        Some(function_extract_inputs),
+        Some(function_extract_expected),
+    )
+    .with_category("parsing")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::c11_extract_calls",
-        build: Some(|| c11_extract_calls(
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::parsing::c11_extract_calls",
+        || c11_extract_calls(
             "tok_types", "paren_pairs", "functions", Expr::u32(9), Expr::u32(1), "out_calls", "out_counts"
-        )),
-        test_inputs: Some(call_extract_inputs),
-        expected_output: Some(call_extract_expected),
-        category: Some("parsing"),
-    }
+        ),
+        Some(call_extract_inputs),
+        Some(call_extract_expected),
+    )
+    .with_category("parsing")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::c11_build_call_graph",
-        build: Some(|| c11_build_call_graph("calls", "fn_hashes", "tok_starts", "tok_lens", "haystack", Expr::u32(1), Expr::u32(1), Expr::u32(6), "out_edges", "out_counts")),
-        test_inputs: Some(call_graph_inputs),
-        expected_output: Some(call_graph_expected),
-        category: Some("parsing"),
-    }
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::parsing::c11_build_call_graph",
+        || c11_build_call_graph("calls", "fn_hashes", "tok_starts", "tok_lens", "haystack", Expr::u32(1), Expr::u32(1), Expr::u32(6), "out_edges", "out_counts"),
+        Some(call_graph_inputs),
+        Some(call_graph_expected),
+    )
+    .with_category("parsing")
 }
 
 use vyre_primitives::wire::pack_u32_slice as pack_u32;

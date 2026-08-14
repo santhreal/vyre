@@ -180,3 +180,23 @@ impl ProgramDispatcher for ReferenceEvalDispatcher {
             .collect())
     }
 }
+
+/// A dispatcher whose being called is the test failure.
+///
+/// Reaching the backend at all is what a reject-before-dispatch, short-circuit, or cache-hit
+/// contract forbids, so the assertion has to live in `dispatch` rather than after the call. The
+/// message names the contract that was supposed to stop first.
+#[cfg(test)]
+pub(crate) struct NeverDispatches(pub(crate) &'static str);
+
+#[cfg(test)]
+impl ProgramDispatcher for NeverDispatches {
+    fn dispatch(
+        &self,
+        _program: &Program,
+        _inputs: &[Vec<u8>],
+        _grid_override: Option<[u32; 3]>,
+    ) -> Result<Vec<Vec<u8>>, DispatchError> {
+        panic!("{}", self.0);
+    }
+}
