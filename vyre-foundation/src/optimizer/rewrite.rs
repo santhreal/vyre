@@ -103,7 +103,7 @@ pub(crate) fn rewrite_node_slices<'a>(
     rewritten.map_or(Cow::Borrowed(nodes), Cow::Owned)
 }
 
-fn rewrite_nodes_cow<'a>(
+pub(crate) fn rewrite_nodes_cow<'a>(
     nodes: &'a [Node],
     expr: &mut impl FnMut(&Expr) -> Option<Expr>,
 ) -> Cow<'a, [Node]> {

@@ -1,6 +1,7 @@
 mod buffer_validation_contracts;
 mod cache_digest_contracts;
 mod call_collection_contracts;
+mod canonical_contracts;
 mod equality_fingerprint_contracts;
 mod validation_cache_contracts;
 
