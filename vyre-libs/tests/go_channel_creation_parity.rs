@@ -13,22 +13,12 @@ use vyre::ir::Expr;
 use vyre_libs::parsing::go::lex::{TOK_IDENTIFIER, TOK_LPAREN};
 use vyre_libs::parsing::go::parse::ast_ops::go_extract_channel_creations;
 use vyre_libs::parsing::go::parse::structure::GO_SPAN_RECORD_WORDS;
+use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
 use vyre_reference::value::Value;
-
-fn pack(words: &[u32]) -> Vec<u8> {
-    words.iter().flat_map(|w| w.to_le_bytes()).collect()
-}
-
-fn unpack(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
-        .collect()
-}
 
 /// One u32 word per source byte (the builder loads `haystack[start+off] & 0xFF`).
 fn expanded(source: &[u8]) -> Vec<u8> {
-    pack(&source.iter().map(|b| u32::from(*b)).collect::<Vec<_>>())
+    pack_u32_slice(&source.iter().map(|b| u32::from(*b)).collect::<Vec<_>>())
 }
 
 /// Returns (out_ops, out_counts) after running the extractor.
@@ -51,9 +41,9 @@ fn run(
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
-            Value::from(pack(tok_types)),
-            Value::from(pack(tok_starts)),
-            Value::from(pack(tok_lens)),
+            Value::from(pack_u32_slice(tok_types)),
+            Value::from(pack_u32_slice(tok_starts)),
+            Value::from(pack_u32_slice(tok_lens)),
             Value::from(expanded(source)),
             Value::from(vec![0u8; n * GO_SPAN_RECORD_WORDS as usize * 4]), // out_ops
             Value::from(vec![0u8; n * 4]), // out_counts (sized to dispatch extent)
@@ -61,8 +51,8 @@ fn run(
     )
     .expect("go_extract_channel_creations must execute under reference_eval");
     (
-        unpack(&outputs[0].to_bytes()),
-        unpack(&outputs[1].to_bytes()),
+        decode_u32_le_bytes_all(&outputs[0].to_bytes()),
+        decode_u32_le_bytes_all(&outputs[1].to_bytes()),
     )
 }
 

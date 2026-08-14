@@ -7,6 +7,8 @@ pub(crate) mod c_macro_table;
 pub(crate) mod gpu_if_expression;
 #[cfg(feature = "c-parser")]
 pub(crate) mod gpu_pipeline_filter;
+pub(crate) mod ir_fingerprint;
+pub(crate) mod optimizer;
 #[cfg(feature = "c-parser")]
 pub(crate) mod preprocess_stream;
 

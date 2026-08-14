@@ -24,6 +24,7 @@ use vyre_libs::parsing::c::parse::vast::{
     c11_annotate_typedef_names, reference_c11_annotate_typedef_names,
     reference_c11_build_vast_nodes,
 };
+use vyre_primitives::wire::decode_u32_le_bytes_all;
 use vyre_reference::value::Value;
 
 const VAST_NODE_STRIDE_U32: usize = 10;
@@ -34,13 +35,6 @@ fn expanded_haystack(source: &[u8]) -> Vec<u8> {
     source
         .iter()
         .flat_map(|b| u32::from(*b).to_le_bytes())
-        .collect()
-}
-
-fn unpack(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
         .collect()
 }
 
@@ -84,7 +78,7 @@ fn assert_parity(source: &[u8], tokens: &[(u32, u32, u32)]) -> Vec<u32> {
         String::from_utf8_lossy(source)
     );
 
-    let words = unpack(&gpu);
+    let words = decode_u32_le_bytes_all(&gpu);
     (0..tokens.len())
         .map(|i| words[i * VAST_NODE_STRIDE_U32 + VAST_TYPEDEF_FLAGS_FIELD])
         .collect()

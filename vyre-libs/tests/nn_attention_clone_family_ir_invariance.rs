@@ -14,6 +14,9 @@
 
 #![forbid(unsafe_code)]
 
+mod support;
+
+use support::ir_fingerprint::assert_pinned_ir_fingerprints;
 use vyre_foundation::ir::{DataType, Node, Program};
 use vyre_libs::nn::attention::{
     chunked_gated_delta, flash_attention_2, mla_decode, recurrent_gated_delta, softmax,
@@ -145,41 +148,9 @@ const EXPECTED: [(&str, &str); 8] = [
     ),
 ];
 
-fn hex(program: &Program) -> String {
-    program
-        .fingerprint()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
-}
-
 #[test]
 fn clone_family_entry_points_emit_the_pinned_ir() {
-    let actual: Vec<(&'static str, String)> = entry_points()
-        .iter()
-        .map(|(name, program)| (*name, hex(program)))
-        .collect();
-    assert_eq!(
-        actual.len(),
-        EXPECTED.len(),
-        "fixture count drifted from the pinned table"
-    );
-    let mut report = String::new();
-    let mut drifted = false;
-    for ((name, got), (pinned_name, pinned)) in actual.iter().zip(EXPECTED.iter()) {
-        assert_eq!(name, pinned_name, "fixture order drifted from the table");
-        if got != pinned {
-            drifted = true;
-        }
-        report.push_str(&format!(
-            "    (\n        \"{name}\",\n        \"{got}\",\n    ),\n"
-        ));
-    }
-    assert!(
-        !drifted,
-        "generated IR changed for at least one clone-family entry point. \
-         Recorded fingerprints:\n{report}"
-    );
+    assert_pinned_ir_fingerprints(&entry_points(), &EXPECTED);
 }
 
 /// Body of the single region every one of these builders wraps its entry in.

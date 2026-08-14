@@ -18,6 +18,7 @@
 use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::tokens::{TOK_IDENTIFIER, TOK_INT, TOK_SEMICOLON, TOK_TYPEDEF};
 use vyre_libs::parsing::c::parse::vast::c11_annotate_global_typedef_names_fast;
+use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
 use vyre_reference::value::Value;
 
 // VAST wire layout (mirrors the private consts in parse/vast/mod.rs).
@@ -49,17 +50,6 @@ fn row(kind: u32, symbol_hash: u32) -> [u32; STRIDE] {
     r
 }
 
-fn pack(words: &[u32]) -> Vec<u8> {
-    words.iter().flat_map(|w| w.to_le_bytes()).collect()
-}
-
-fn unpack(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
-        .collect()
-}
-
 #[test]
 fn global_typedef_annotate_marks_declarator_visible_and_ordinary_flags() {
     // `typedef int foo ; foo bar ;`
@@ -88,13 +78,13 @@ fn global_typedef_annotate_marks_declarator_visible_and_ordinary_flags() {
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
-            Value::from(pack(&flat)),
-            Value::from(pack(&global_hashes)),
-            Value::from(pack(&out_init)),
+            Value::from(pack_u32_slice(&flat)),
+            Value::from(pack_u32_slice(&global_hashes)),
+            Value::from(pack_u32_slice(&out_init)),
         ],
     )
     .expect("global typedef annotate program must execute under reference_eval");
-    let out = unpack(&outputs[0].to_bytes());
+    let out = decode_u32_le_bytes_all(&outputs[0].to_bytes());
 
     let flag = |node: usize| out[node * STRIDE + FLAGS_FIELD];
 

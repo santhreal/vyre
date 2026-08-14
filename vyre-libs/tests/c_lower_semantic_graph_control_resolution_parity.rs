@@ -16,6 +16,7 @@ use vyre_libs::parsing::c::lower::ast_to_pg_nodes::{
     c_lower_ast_to_pg_semantic_graph_with_pg,
     c_lower_ast_to_pg_semantic_graph_with_pg_no_control_resolution,
 };
+use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
 use vyre_reference::value::Value;
 
 // VAST wire layout consumed by the lowering pass (mirrors the private IDX_* consts):
@@ -29,17 +30,6 @@ const SEMANTIC_PG_STRIDE: usize = 10; // C_AST_PG_SEMANTIC_NODE_STRIDE_U32
 const PG_EDGE_STRIDE: usize = 6; // C_AST_PG_EDGE_STRIDE_U32
 const PG_EDGE_ROWS_PER_NODE: usize = 5; // C_AST_PG_EDGE_ROWS_PER_NODE
 
-fn pack(words: &[u32]) -> Vec<u8> {
-    words.iter().flat_map(|w| w.to_le_bytes()).collect()
-}
-
-fn unpack(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
-        .collect()
-}
-
 /// Lower `nodes` with the given builder; returns (plain_pg, semantic_pg, pg_edges) words.
 fn lower(program: &vyre::ir::Program, n: usize) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     let flat: Vec<u32> = VAST_ROWS.iter().flat_map(|r| r.iter().copied()).collect();
@@ -51,17 +41,17 @@ fn lower(program: &vyre::ir::Program, n: usize) -> (Vec<u32>, Vec<u32>, Vec<u32>
     let outputs = vyre_reference::reference_eval(
         program,
         &[
-            Value::from(pack(&flat)),
-            Value::from(pack(&plain_init)),
-            Value::from(pack(&semantic_init)),
-            Value::from(pack(&edges_init)),
+            Value::from(pack_u32_slice(&flat)),
+            Value::from(pack_u32_slice(&plain_init)),
+            Value::from(pack_u32_slice(&semantic_init)),
+            Value::from(pack_u32_slice(&edges_init)),
         ],
     )
     .expect("lowering program must execute under reference_eval");
     (
-        unpack(&outputs[0].to_bytes()),
-        unpack(&outputs[1].to_bytes()),
-        unpack(&outputs[2].to_bytes()),
+        decode_u32_le_bytes_all(&outputs[0].to_bytes()),
+        decode_u32_le_bytes_all(&outputs[1].to_bytes()),
+        decode_u32_le_bytes_all(&outputs[2].to_bytes()),
     )
 }
 
