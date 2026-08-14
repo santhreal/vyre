@@ -4,16 +4,16 @@
 //! This root module owns expression evaluation and the split modules own their
 //! state, memory, execution, synchronization, and subgroup contracts.
 
+pub(crate) mod invocation;
 pub(crate) mod memory;
-pub(crate) mod state;
 pub(crate) mod step;
 pub(crate) mod subgroup;
 pub(crate) mod sync;
 
-use memory::{atomic_buffer_mut, output_value, resolve_buffer, HashmapMemory};
 #[cfg(feature = "subgroup-ops")]
-use state::HashmapInvocationSnapshot;
-use state::{create_invocations, run_invocations, HashmapInvocation};
+use invocation::HashmapInvocationSnapshot;
+use invocation::{create_invocations, run_invocations, HashmapInvocation};
+use memory::{atomic_buffer_mut, output_value, resolve_buffer, HashmapMemory};
 use step::{axis_value, eval_call, eval_to_index};
 #[cfg(feature = "subgroup-ops")]
 use subgroup::{eval_subgroup_ballot, eval_subgroup_reduce, eval_subgroup_shuffle};
@@ -197,7 +197,7 @@ pub(crate) fn run_hashmap_reference(
     explicit_grid: Option<[u32; 3]>,
 ) -> Result<Vec<Value>, ReferenceError> {
     #[cfg(feature = "subgroup-ops")]
-    let validation_report = vyre_foundation::validate::validate::validate_with_options(
+    let validation_report = vyre_foundation::validate::rule_pipeline::validate_with_options(
         program,
         vyre_foundation::validate::ValidationOptions::default().with_backend_capabilities(
             vyre_foundation::validate::BackendCapabilities {
@@ -207,7 +207,7 @@ pub(crate) fn run_hashmap_reference(
         ),
     );
     #[cfg(not(feature = "subgroup-ops"))]
-    let validation_report = vyre_foundation::validate::validate::validate_with_options(
+    let validation_report = vyre_foundation::validate::rule_pipeline::validate_with_options(
         program,
         vyre_foundation::validate::ValidationOptions::default(),
     );
