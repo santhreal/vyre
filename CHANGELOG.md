@@ -306,6 +306,19 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   shipped release corpus and over shapes the corpus does not generate: a
   `Block` that owns a binding is a scope, so it survives, while a `Block` that
   owns none is spliced into its parent at every body position.
+- The GPU queue bench families in `vyre-bench` have one owner per concern. The
+  skewed-CSR and IFDS cases each carried their own copy of the
+  queue-materialize dispatch sequence, the queue-driven traversal plan, the
+  queue-closure payload and its CPU oracle, the single-dispatch frontier step,
+  and the four-column Rust lexer dispatch, so a fix to any of them reached one
+  family and not the other. Those concerns now live in
+  `cases/queue_materialize.rs`, `cases/queue_traverse_plan.rs`,
+  `cases/queue_closure.rs`, `cases/queue_closure_oracle.rs`,
+  `cases/frontier_step.rs`, and `cases/rust_frontend/lex_columns.rs`, and nine
+  cases are described by a `WorkloadDescription` plus `CaseOps` over a shared
+  payload instead of a hand-written `BenchCase` impl. Case ids, metric names,
+  error strings, and readback ranges are unchanged. The `vyre-bench`
+  duplication pin drops from 3397 to 2491 lines.
 
 ### Removed
 

@@ -105,6 +105,8 @@ pub(crate) struct HostQueueSequenceSpec<'a> {
     pub(crate) context: &'static str,
 }
 
+/// The resident materialize sequence, which binds the shared queue resource
+/// layout below rather than restating it per case.
 pub(crate) struct ResidentQueueSequenceSpec<'a> {
     pub(crate) reset_program: &'a Program,
     pub(crate) queue_program: &'a Program,
@@ -114,14 +116,8 @@ pub(crate) struct ResidentQueueSequenceSpec<'a> {
     pub(crate) traverse_grid: [u32; 3],
     pub(crate) high_traverse_grid: [u32; 3],
     pub(crate) baseline_output_len: usize,
-    pub(crate) reset_grid: [u32; 3],
-    pub(crate) reset_indices: &'a [usize],
-    pub(crate) high_reset_indices: &'a [usize],
-    pub(crate) queue_indices: &'a [usize],
-    pub(crate) traverse_indices: &'a [usize],
-    pub(crate) split_indices: &'a [usize],
-    pub(crate) high_traverse_indices: &'a [usize],
-    pub(crate) labels: [&'static str; 6],
+    /// Family noun leading every stage label, e.g. `"IFDS"`.
+    pub(crate) context: &'static str,
 }
 
 pub(crate) fn dispatch_resident_queue_sequence(
@@ -130,22 +126,29 @@ pub(crate) fn dispatch_resident_queue_sequence(
     resident: &ResidentInputSet,
     workgroup: [u32; 3],
 ) -> Result<QueueSequenceRun, BenchError> {
-    let [reset_label, high_reset_label, queue_label, traverse_label, split_label, high_label] =
-        spec.labels;
-    let reset_resources = resident.resources_for_indices(spec.reset_indices, reset_label)?;
-    let high_reset_resources =
-        resident.resources_for_indices(spec.high_reset_indices, high_reset_label)?;
-    let queue_resources = resident.resources_for_indices(spec.queue_indices, queue_label)?;
+    let context = spec.context;
+    let reset_resources = resident.resources_for_indices(
+        &QUEUE_RESET_RESOURCE_INDICES,
+        &format!("{context} queue reset"),
+    )?;
+    let high_reset_resources = resident.resources_for_indices(
+        &QUEUE_HIGH_RESET_RESOURCE_INDICES,
+        &format!("{context} high queue reset"),
+    )?;
+    let queue_resources = resident.resources_for_indices(
+        &QUEUE_BUILD_RESOURCE_INDICES,
+        &format!("{context} queue build"),
+    )?;
     let reset_step = ResidentDispatchStep {
         program: spec.reset_program,
         resources: &reset_resources,
-        grid_override: Some(spec.reset_grid),
+        grid_override: Some(QUEUE_RESET_GRID),
         workgroup_override: None,
     };
     let high_reset_step = ResidentDispatchStep {
         program: spec.reset_program,
         resources: &high_reset_resources,
-        grid_override: Some(spec.reset_grid),
+        grid_override: Some(QUEUE_RESET_GRID),
         workgroup_override: None,
     };
     let queue_step = ResidentDispatchStep {
@@ -158,9 +161,14 @@ pub(crate) fn dispatch_resident_queue_sequence(
     let mut frontier_output = Vec::with_capacity(spec.baseline_output_len);
     let started = Instant::now();
     if let Some(high_program) = spec.high_traverse_program {
-        let split_resources = resident.resources_for_indices(spec.split_indices, split_label)?;
-        let high_resources =
-            resident.resources_for_indices(spec.high_traverse_indices, high_label)?;
+        let split_resources = resident.resources_for_indices(
+            &QUEUE_SPLIT_LOW_RESOURCE_INDICES,
+            &format!("{context} split-low queue traverse"),
+        )?;
+        let high_resources = resident.resources_for_indices(
+            &QUEUE_HIGH_TRAVERSE_RESOURCE_INDICES,
+            &format!("{context} high-degree queue traverse"),
+        )?;
         let split_step = ResidentDispatchStep {
             program: spec.traverse_program,
             resources: &split_resources,
@@ -191,8 +199,10 @@ pub(crate) fn dispatch_resident_queue_sequence(
         )
         .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     } else {
-        let traverse_resources =
-            resident.resources_for_indices(spec.traverse_indices, traverse_label)?;
+        let traverse_resources = resident.resources_for_indices(
+            &QUEUE_TRAVERSE_RESOURCE_INDICES,
+            &format!("{context} queue traverse"),
+        )?;
         let traverse_step = ResidentDispatchStep {
             program: spec.traverse_program,
             resources: &traverse_resources,
@@ -307,80 +317,6 @@ pub(crate) const QUEUE_CLOSURE_EDGE_OFFSETS_INDEX: usize = 7;
 pub(crate) const QUEUE_CLOSURE_EDGE_TARGETS_INDEX: usize = 8;
 pub(crate) const QUEUE_CLOSURE_EDGE_KIND_INDEX: usize = 9;
 pub(crate) const QUEUE_CLOSURE_ACCUMULATOR_INDEX: usize = 10;
-
-macro_rules! define_host_queue_sequence_dispatch {
-    ($visibility:vis $name:ident, $prepared:ty, $context:literal) => {
-        $visibility fn $name(
-            ctx: &$crate::api::case::BenchContext,
-            prepared: &$prepared,
-            workgroup: [u32; 3],
-        ) -> Result<$crate::cases::queue_stage::QueueSequenceRun, $crate::api::case::BenchError> {
-            $crate::cases::queue_stage::dispatch_host_queue_sequence(
-                ctx,
-                $crate::cases::queue_stage::HostQueueSequenceSpec {
-                    inputs: &prepared.inputs,
-                    reset_program: &prepared.reset_program,
-                    queue_program: &prepared.queue_program,
-                    traverse_program: &prepared.traverse_program,
-                    high_traverse_program: prepared.high_traverse_program.as_ref(),
-                    frontier_words: prepared.stats.frontier_words,
-                    traverse_grid: prepared.traverse_grid,
-                    high_traverse_grid: prepared.high_traverse_grid,
-                    context: $context,
-                },
-                workgroup,
-            )
-        }
-    };
-}
-
-pub(crate) use define_host_queue_sequence_dispatch;
-
-macro_rules! define_resident_queue_sequence_dispatch {
-    ($visibility:vis $name:ident, $prepared:ty, $context:literal) => {
-        $visibility fn $name(
-            ctx: &$crate::api::case::BenchContext,
-            prepared: &$prepared,
-            resident: &$crate::api::resident::ResidentInputSet,
-            workgroup: [u32; 3],
-        ) -> Result<$crate::cases::queue_stage::QueueSequenceRun, $crate::api::case::BenchError> {
-            $crate::cases::queue_stage::dispatch_resident_queue_sequence(
-                ctx,
-                $crate::cases::queue_stage::ResidentQueueSequenceSpec {
-                    reset_program: &prepared.reset_program,
-                    queue_program: &prepared.queue_program,
-                    traverse_program: &prepared.traverse_program,
-                    high_traverse_program: prepared.high_traverse_program.as_ref(),
-                    frontier_words: prepared.stats.frontier_words,
-                    traverse_grid: prepared.traverse_grid,
-                    high_traverse_grid: prepared.high_traverse_grid,
-                    baseline_output_len: prepared.baseline_output.len(),
-                    reset_grid: $crate::cases::queue_stage::QUEUE_RESET_GRID,
-                    reset_indices: &$crate::cases::queue_stage::QUEUE_RESET_RESOURCE_INDICES,
-                    high_reset_indices:
-                        &$crate::cases::queue_stage::QUEUE_HIGH_RESET_RESOURCE_INDICES,
-                    queue_indices: &$crate::cases::queue_stage::QUEUE_BUILD_RESOURCE_INDICES,
-                    traverse_indices: &$crate::cases::queue_stage::QUEUE_TRAVERSE_RESOURCE_INDICES,
-                    split_indices: &$crate::cases::queue_stage::QUEUE_SPLIT_LOW_RESOURCE_INDICES,
-                    high_traverse_indices:
-                        &$crate::cases::queue_stage::QUEUE_HIGH_TRAVERSE_RESOURCE_INDICES,
-                    labels: [
-                        concat!($context, " queue reset"),
-                        concat!($context, " high queue reset"),
-                        concat!($context, " queue build"),
-                        concat!($context, " queue traverse"),
-                        concat!($context, " split-low queue traverse"),
-                        concat!($context, " high-degree queue traverse"),
-                    ],
-                },
-                resident,
-                workgroup,
-            )
-        }
-    };
-}
-
-pub(crate) use define_resident_queue_sequence_dispatch;
 
 pub(crate) fn build_queue_inputs(
     frontier_in: &[u32],

@@ -1,16 +1,16 @@
 use super::fixture::{
-    ifds_active_high_degree_sources, ifds_active_queue_inputs, ifds_queue_inputs,
+    ifds_active_high_degree_sources, ifds_active_queue_inputs, ifds_queue_closure_inputs,
+    ifds_queue_inputs,
 };
 use super::queue::{
-    ifds_queue_closure_delta_lanes_per_source, ifds_queue_closure_inputs,
-    ifds_queue_closure_reset_program, ifds_queue_materialize_sequence_fingerprint,
-    ifds_queue_should_use_row_strided, ifds_queue_traverse_logical_lanes,
-    ifds_sparse_queue_capacity, prepare_ifds_skewed_active_queue_step,
-    prepare_ifds_skewed_queue_closure, prepare_ifds_skewed_queue_materialize_step,
-    ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX, ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX,
-    ACTIVE_QUEUE_EDGE_TARGETS_INDEX, ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_LEN_INDEX,
+    ifds_queue_materialize_sequence_fingerprint, ifds_sparse_queue_capacity,
+    prepare_ifds_skewed_active_queue_step, prepare_ifds_skewed_queue_closure,
+    prepare_ifds_skewed_queue_materialize_step, ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX,
+    ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX, ACTIVE_QUEUE_EDGE_TARGETS_INDEX,
+    ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_LEN_INDEX,
 };
 use super::*;
+use crate::cases::queue_closure::{delta_lanes_per_source, queue_closure_reset_program};
 pub(crate) use crate::cases::queue_stage::{
     QUEUE_ACTIVE_QUEUE_INDEX, QUEUE_CLOSURE_ACCUMULATOR_INDEX, QUEUE_CLOSURE_EDGE_KIND_INDEX,
     QUEUE_CLOSURE_EDGE_OFFSETS_INDEX, QUEUE_CLOSURE_EDGE_TARGETS_INDEX, QUEUE_CLOSURE_LEN_A_INDEX,
@@ -19,6 +19,7 @@ pub(crate) use crate::cases::queue_stage::{
     QUEUE_CLOSURE_SEED_QUEUE_INDEX, QUEUE_FRONTIER_IN_INDEX, QUEUE_FRONTIER_OUT_INDEX,
     QUEUE_HIGH_LEN_INDEX, QUEUE_HIGH_QUEUE_INDEX, QUEUE_LEN_INDEX, QUEUE_RESET_GRID,
 };
+use crate::cases::queue_traverse_plan::{should_use_row_strided, traverse_logical_lanes};
 use vyre_primitives::graph::csr_queue_split::{
     csr_queue_split_low_dispatch_grid, csr_queue_split_mixed_logical_lanes,
     CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
@@ -37,7 +38,7 @@ fn ifds_skewed_fixture_has_filtered_edges_and_bitset_frontier() {
     assert!(fixture.edge_targets.len() > 4096);
     assert_eq!(fixture.stats.max_degree, UGLY_HUB_DEGREE);
     assert!(fixture.stats.high_degree_sources > 0);
-    assert!(ifds_queue_should_use_row_strided(fixture.stats.max_degree));
+    assert!(should_use_row_strided(fixture.stats.max_degree));
     assert!(fixture.stats.active_sources > 0);
     assert!(oracle.allowed_edges_from_active > 0);
     assert!(oracle.filtered_edges_from_active > 0);
@@ -245,7 +246,7 @@ fn ifds_queue_materialize_prepare_builds_parallel_sparse_sequence() {
     );
     assert!(
         prepared.traverse_logical_lanes
-            < ifds_queue_traverse_logical_lanes(prepared.queue_capacity, true) / 16,
+            < traverse_logical_lanes(prepared.queue_capacity, true) / 16,
         "split IFDS traversal should avoid assigning a row-strided team to every active source"
     );
     assert!(prepared.stats.allowed_edges_from_active > 0);
@@ -260,7 +261,7 @@ fn ifds_queue_materialize_prepare_builds_parallel_sparse_sequence() {
 fn ifds_active_queue_prepare_builds_sparse_traversal_program() {
     let prepared = prepare_ifds_skewed_active_queue_step(None).unwrap();
 
-    assert_eq!(prepared.traverse_program.workgroup_size(), [256, 1, 1]);
+    assert_eq!(prepared.step.program.workgroup_size(), [256, 1, 1]);
     assert!(prepared.row_strided_traverse);
     assert_eq!(
         prepared.traverse_grid,
@@ -270,22 +271,22 @@ fn ifds_active_queue_prepare_builds_sparse_traversal_program() {
     );
     assert_eq!(
         prepared.traverse_logical_lanes,
-        ifds_queue_traverse_logical_lanes(prepared.queue_capacity, prepared.row_strided_traverse)
+        traverse_logical_lanes(prepared.queue_capacity, prepared.row_strided_traverse)
     );
-    assert_eq!(prepared.stats.nodes, NODE_COUNT);
-    assert_eq!(prepared.inputs.len(), 6);
+    assert_eq!(prepared.step.stats.nodes, NODE_COUNT);
+    assert_eq!(prepared.step.inputs.len(), 6);
     assert_eq!(
-        prepared.inputs[ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX].len(),
+        prepared.step.inputs[ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX].len(),
         prepared.queue_capacity as usize * std::mem::size_of::<u32>()
     );
     assert_eq!(
-        prepared.inputs[ACTIVE_QUEUE_LEN_INDEX],
-        vyre_primitives::wire::pack_u32_slice(&[prepared.stats.active_sources as u32])
+        prepared.step.inputs[ACTIVE_QUEUE_LEN_INDEX],
+        vyre_primitives::wire::pack_u32_slice(&[prepared.step.stats.active_sources as u32])
     );
-    assert_eq!(prepared.baseline_output.len(), FRONTIER_WORDS * 4);
-    assert!(u64::from(prepared.queue_capacity) >= prepared.stats.active_sources);
-    assert!(prepared.queue_capacity < prepared.stats.nodes / 32);
-    assert!(prepared.stats.allowed_edges_from_active > 0);
+    assert_eq!(prepared.step.baseline_output.len(), FRONTIER_WORDS * 4);
+    assert!(u64::from(prepared.queue_capacity) >= prepared.step.stats.active_sources);
+    assert!(prepared.queue_capacity < prepared.step.stats.nodes / 32);
+    assert!(prepared.step.stats.allowed_edges_from_active > 0);
 }
 
 #[test]

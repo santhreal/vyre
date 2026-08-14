@@ -1,6 +1,9 @@
 use crate::api::case::BenchError;
 use crate::api::suite::SuiteKind;
 use crate::cases::mix32;
+use crate::cases::queue_closure_oracle::{
+    queue_closure_oracle, QueueClosureGraph, QueueClosureOracle,
+};
 use crate::cases::skewed_graph::{
     skewed_degree as shared_skewed_degree, skewed_target, sparse_queue_capacity,
 };
@@ -30,6 +33,12 @@ pub(super) struct SkewedCsrStats {
     pub(super) high_degree_sources: u64,
 }
 
+impl crate::cases::queue_materialize::FrontierWords for SkewedCsrStats {
+    fn frontier_words(&self) -> u32 {
+        self.frontier_words
+    }
+}
+
 pub(super) struct SkewedCsrFixture {
     pub(super) nodes: Vec<u32>,
     pub(super) edge_offsets: Vec<u32>,
@@ -45,15 +54,6 @@ pub(super) struct SkewedCsrOracle {
     pub(super) output: Vec<u32>,
     pub(super) allowed_edges_from_active: u64,
     pub(super) output_words_set: u64,
-}
-
-pub(super) struct SkewedCsrQueueClosureOracle {
-    pub(super) output: Vec<u32>,
-    pub(super) changed: u32,
-    pub(super) iterations: u32,
-    pub(super) total_queue_pops: u64,
-    pub(super) max_wave_queue_len: u32,
-    pub(super) wave_queue_lengths: Vec<u32>,
 }
 
 pub(super) fn build_skewed_csr_fixture(node_count: u32) -> Result<SkewedCsrFixture, BenchError> {
@@ -260,68 +260,27 @@ pub(super) fn skewed_csr_queue_closure_oracle(
     fixture: &SkewedCsrFixture,
     max_iters: u32,
     queue_capacity: u32,
-) -> Result<SkewedCsrQueueClosureOracle, BenchError> {
-    let capacity = queue_capacity as usize;
-    let mut accumulator = fixture.frontier_in.clone();
-    let mut current =
-        materialize_skewed_csr_active_queue(fixture, capacity, "skewed CSR queue closure oracle")?;
-    let mut next = Vec::with_capacity(capacity.min(fixture.stats.node_count as usize));
-    let mut iterations = 0_u32;
-    let mut total_queue_pops = 0_u64;
-    let mut max_wave_queue_len = current.len() as u32;
-    let mut wave_queue_lengths = Vec::new();
-
-    while !current.is_empty() && iterations < max_iters {
-        wave_queue_lengths.push(current.len() as u32);
-        max_wave_queue_len = max_wave_queue_len.max(current.len() as u32);
-        total_queue_pops = total_queue_pops.saturating_add(current.len() as u64);
-        next.clear();
-        for &src in &current {
-            if src >= fixture.stats.node_count {
-                continue;
-            }
-            let start = fixture.edge_offsets[src as usize] as usize;
-            let end = fixture.edge_offsets[src as usize + 1] as usize;
-            for edge in start..end {
-                if fixture.edge_kind_mask[edge] & CSR_ALLOW_MASK == 0 {
-                    continue;
-                }
-                let dst = fixture.edge_targets[edge];
-                if dst >= fixture.stats.node_count {
-                    continue;
-                }
-                let dst_word = dst as usize / 32;
-                let dst_bit = 1_u32 << (dst % 32);
-                if accumulator[dst_word] & dst_bit != 0 {
-                    continue;
-                }
-                accumulator[dst_word] |= dst_bit;
-                if next.len() >= capacity {
-                    return Err(BenchError::EnvironmentInvalid(format!(
-                        "skewed CSR queue closure next wave exceeded queue_capacity={queue_capacity}. Fix: increase queue capacity or shard closure waves."
-                    )));
-                }
-                next.push(dst);
-            }
-        }
-        iterations = iterations.saturating_add(1);
-        std::mem::swap(&mut current, &mut next);
-    }
-
-    if !current.is_empty() {
-        return Err(BenchError::EnvironmentInvalid(format!(
-            "skewed CSR queue closure did not converge within {max_iters} queue waves. Fix: raise the closure wave bound or use a smaller fixture diameter."
-        )));
-    }
-
-    Ok(SkewedCsrQueueClosureOracle {
-        changed: u32::from(accumulator != fixture.frontier_in),
-        output: accumulator,
-        iterations,
-        total_queue_pops,
-        max_wave_queue_len,
-        wave_queue_lengths,
-    })
+) -> Result<QueueClosureOracle, BenchError> {
+    let seed_queue = materialize_skewed_csr_active_queue(
+        fixture,
+        queue_capacity as usize,
+        "skewed CSR queue closure oracle",
+    )?;
+    queue_closure_oracle(
+        QueueClosureGraph {
+            node_count: fixture.stats.node_count,
+            edge_offsets: &fixture.edge_offsets,
+            edge_targets: &fixture.edge_targets,
+            edge_kind_mask: &fixture.edge_kind_mask,
+            frontier_in: &fixture.frontier_in,
+            seed_queue,
+            allow_mask: CSR_ALLOW_MASK,
+        },
+        max_iters,
+        queue_capacity,
+        "skewed CSR",
+        "raise the closure wave bound",
+    )
 }
 
 fn skewed_degree(src: u32) -> u32 {

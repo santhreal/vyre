@@ -69,8 +69,8 @@ fn ifds_queue_closure_inputs_allocate_ping_pong_queues_and_seed_accumulator() {
 }
 
 #[test]
-fn ifds_queue_closure_reset_program_restores_accumulator_and_clears_lengths() {
-    let program = ifds_queue_closure_reset_program(128, 7, 256);
+fn queue_closure_reset_program_restores_accumulator_and_clears_lengths() {
+    let program = queue_closure_reset_program(128, 7, 256);
 
     assert_eq!(program.workgroup_size(), [256, 1, 1]);
     assert_eq!(program.buffers().len(), 7);
@@ -167,7 +167,7 @@ fn ifds_queue_closure_prepare_builds_delta_fixpoint_sequence() {
         crate::cases::queue_closure_profile::QueueClosureLaneProfile::from_wave_lengths_with_launch_lanes(
             prepared.queue_capacity,
             &prepared.wave_queue_lengths,
-            ifds_queue_closure_delta_lanes_per_source(prepared.row_strided_delta),
+            delta_lanes_per_source(prepared.row_strided_delta),
             launch_lanes,
         );
     assert_eq!(

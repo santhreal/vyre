@@ -1,246 +1,164 @@
+use super::lex_columns::{
+    lex_baseline_columns, lex_columns_bytes_touched, lex_columns_run, lex_columns_sample,
+    u32s_to_bytes, LexColumns, LexColumnsContract, LexSample, LEX_SUITES,
+};
 use super::rust_source_words;
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
+    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
-use crate::api::suite::SuiteKind;
+use crate::api::metric::MetricPoint;
+use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
+use vyre_foundation::ir::Program;
 use vyre_frontend_rust::lex::lexer::cpu_lexer::lex as lex_cpu;
 use vyre_frontend_rust::lex::lexer::plan::rust_lexer_batch;
-
-struct RustLexerBatchGpuPipeline;
 
 const RUST_LEXER_BATCH_SOURCES: usize = 2048;
 const WORKGROUP_SIZE: u32 = 256;
 
+const CONTRACT: LexColumnsContract = LexColumnsContract {
+    plan: "Rust batch lexer",
+    columns: "[types, starts, lens, counts]",
+};
+
 struct RustLexerBatchPrepared {
-    program: vyre::ir::Program,
-    inputs: Vec<Vec<u8>>,
-    source_bytes: usize,
+    lex: LexColumns,
     source_count: u32,
     token_stride: usize,
-    baseline_outputs: Vec<Vec<u8>>,
-    baseline_wall_ns: u64,
-    token_count: usize,
 }
 
-impl BenchCase for RustLexerBatchGpuPipeline {
-    fn id(&self) -> BenchId {
-        BenchId("frontend.rust.lexer.batch_ir_execute".to_string())
-    }
+static WORKLOAD: WorkloadDescription = WorkloadDescription {
+    id: "frontend.rust.lexer.batch_ir_execute",
+    name: "Batched Rust GPU Lexer IR Execute",
+    summary: "Many small Rust nano-subset sources packed into one GPU lexer dispatch with exact per-source CPU lexer column parity",
+    tags: &[
+        "frontend-rust",
+        "gpu-lexer",
+        "lexer",
+        "batch",
+        "many-source",
+        "tokenization",
+        "ir-lexer",
+        "release",
+    ],
+    layer: BenchLayer::Libs,
+    workload: WorkloadClass::Macro,
+    determinism: DeterminismClass::Deterministic,
+    owner_crate: "vyre-frontend-rust",
+    suites: LEX_SUITES,
+    needs_gpu: true,
+    needs_network: false,
+    min_vram_bytes: None,
+    min_input_bytes: Some((RUST_LEXER_BATCH_SOURCES * 192) as u64),
+    feature_set: &["rust-frontend", "gpu-lexer", "batched-lexer", "ir-lexer"],
+    contract: None,
+};
 
-    fn metadata(&self) -> BenchMetadata {
-        BenchMetadata {
-            id: self.id(),
-            name: "Batched Rust GPU Lexer IR Execute".to_string(),
-            description:
-                "Many small Rust nano-subset sources packed into one GPU lexer dispatch with exact per-source CPU lexer column parity"
-                    .to_string(),
-            tags: vec![
-                "frontend-rust".to_string(),
-                "gpu-lexer".to_string(),
-                "lexer".to_string(),
-                "batch".to_string(),
-                "many-source".to_string(),
-                "tokenization".to_string(),
-                "ir-lexer".to_string(),
-                "release".to_string(),
-            ],
-            layer: BenchLayer::Libs,
-            workload: WorkloadClass::Macro,
-            determinism: DeterminismClass::Deterministic,
-            owner_crate: "vyre-frontend-rust".to_string(),
-        }
-    }
+static OPS: CaseOps<RustLexerBatchPrepared> = CaseOps {
+    build: build_case,
+    measure,
+    verify: verify_exact,
+    program: batch_program,
+    fingerprint: None,
+    bytes_touched: batch_bytes_touched,
+};
 
-    fn suites(&self) -> &'static [SuiteKind] {
-        &[
-            SuiteKind::Release,
-            SuiteKind::Gpu,
-            SuiteKind::Deep,
-            SuiteKind::Honest,
-        ]
-    }
+static CASE: HarnessCase<RustLexerBatchPrepared> = HarnessCase {
+    workload: &WORKLOAD,
+    ops: &OPS,
+};
 
-    fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: None,
-            min_input_bytes: Some((RUST_LEXER_BATCH_SOURCES * 192) as u64),
-            feature_set: vec![
-                "rust-frontend".to_string(),
-                "gpu-lexer".to_string(),
-                "batched-lexer".to_string(),
-                "ir-lexer".to_string(),
-            ],
-        }
-    }
+fn batch_program(prepared: &RustLexerBatchPrepared) -> Option<&Program> {
+    Some(&prepared.lex.program)
+}
 
-    fn prepare(&self, _ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let sources = rust_lexer_batch_sources();
-        let layout = RustLexerBatchLayout::from_sources(&sources)?;
-        let source_count = u32::try_from(sources.len()).map_err(|_| {
-            BenchError::ExecutionFailed(
-                "Rust lexer batch source count exceeds u32-addressable plan limit".to_string(),
-            )
-        })?;
-        let haystack_len = u32::try_from(layout.packed_source.len()).map_err(|_| {
-            BenchError::ExecutionFailed(
-                "Rust lexer batch source bytes exceed u32-addressable plan limit".to_string(),
-            )
-        })?;
-        let token_stride = u32::try_from(layout.token_stride).map_err(|_| {
-            BenchError::ExecutionFailed(
-                "Rust lexer batch token stride exceeds u32-addressable plan limit".to_string(),
-            )
-        })?;
-        let program = rust_lexer_batch(
-            "haystack",
-            "source_offsets",
-            "source_lens",
-            "out_tok_types",
-            "out_tok_starts",
-            "out_tok_lens",
-            "out_counts",
-            haystack_len,
-            source_count,
-            token_stride,
-        );
-        let inputs = layout.inputs();
+fn batch_bytes_touched(prepared: &RustLexerBatchPrepared) -> (u64, u64) {
+    lex_columns_bytes_touched(&prepared.lex)
+}
 
-        let baseline_start = std::time::Instant::now();
-        let (baseline_outputs, token_count) =
-            rust_lexer_batch_baseline_outputs(&sources, layout.token_stride)?;
-        let baseline_wall_ns = baseline_start.elapsed().as_nanos() as u64;
+fn build_case(_ctx: &mut BenchContext) -> Result<RustLexerBatchPrepared, BenchError> {
+    let sources = rust_lexer_batch_sources();
+    let layout = RustLexerBatchLayout::from_sources(&sources)?;
+    let source_count = u32::try_from(sources.len()).map_err(|_| {
+        BenchError::ExecutionFailed(
+            "Rust lexer batch source count exceeds u32-addressable plan limit".to_string(),
+        )
+    })?;
+    let haystack_len = u32::try_from(layout.packed_source.len()).map_err(|_| {
+        BenchError::ExecutionFailed(
+            "Rust lexer batch source bytes exceed u32-addressable plan limit".to_string(),
+        )
+    })?;
+    let token_stride = u32::try_from(layout.token_stride).map_err(|_| {
+        BenchError::ExecutionFailed(
+            "Rust lexer batch token stride exceeds u32-addressable plan limit".to_string(),
+        )
+    })?;
+    let program = rust_lexer_batch(
+        "haystack",
+        "source_offsets",
+        "source_lens",
+        "out_tok_types",
+        "out_tok_starts",
+        "out_tok_lens",
+        "out_counts",
+        haystack_len,
+        source_count,
+        token_stride,
+    );
+    let inputs = layout.inputs();
 
-        Ok(Box::new(RustLexerBatchPrepared {
+    let baseline_start = std::time::Instant::now();
+    let (baseline_outputs, token_count) =
+        rust_lexer_batch_baseline_outputs(&sources, layout.token_stride)?;
+    let baseline_wall_ns = baseline_start.elapsed().as_nanos() as u64;
+
+    Ok(RustLexerBatchPrepared {
+        lex: LexColumns {
             program,
             inputs,
-            source_bytes: layout.packed_source.len(),
-            source_count,
-            token_stride: layout.token_stride,
+            source_bytes: layout.packed_source.len() as u64,
             baseline_outputs,
             baseline_wall_ns,
             token_count,
-        }))
-    }
+        },
+        source_count,
+        token_stride: layout.token_stride,
+    })
+}
 
-    fn program<'a>(&self, prepared: &'a PreparedCase) -> Option<&'a vyre::ir::Program> {
-        prepared
-            .downcast_ref::<RustLexerBatchPrepared>()
-            .map(|prepared| &prepared.program)
-    }
+fn measure(
+    ctx: &mut BenchContext,
+    prepared: &mut RustLexerBatchPrepared,
+) -> Result<BenchRun, BenchError> {
+    let grid = [prepared.source_count.div_ceil(WORKGROUP_SIZE).max(1), 1, 1];
+    let sample = lex_columns_sample(ctx, &prepared.lex, Some(grid), CONTRACT)?;
+    let custom = batch_metric_points(prepared, &sample);
+    Ok(lex_columns_run(ctx, &prepared.lex, sample, custom))
+}
 
-    fn bytes_touched(&self, prepared: &PreparedCase) -> (u64, u64) {
-        prepared
-            .downcast_ref::<RustLexerBatchPrepared>()
-            .map(|prepared| {
-                let read_bytes = prepared.inputs.iter().map(Vec::len).sum::<usize>() as u64;
-                let write_bytes = prepared
-                    .baseline_outputs
-                    .iter()
-                    .map(Vec::len)
-                    .sum::<usize>() as u64;
-                (read_bytes, write_bytes)
-            })
-            .unwrap_or((0, 0))
-    }
-
-    fn run(
-        &self,
-        ctx: &mut BenchContext,
-        prepared: &mut PreparedCase,
-    ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<RustLexerBatchPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "Rust lexer batch prepared payload type mismatch".to_string(),
-                )
-            })?;
-
-        let mut dispatch_config = ctx.dispatch_config.clone();
-        dispatch_config.grid_override =
-            Some([prepared.source_count.div_ceil(WORKGROUP_SIZE).max(1), 1, 1]);
-        let timed = ctx
-            .dispatch_timed(&prepared.program, &prepared.inputs, &dispatch_config)
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-        if timed.outputs.len() != 4 {
-            return Err(BenchError::BackendFailed(format!(
-                "Rust batch lexer IR must return 4 live-out columns [types, starts, lens, counts], got {}",
-                timed.outputs.len()
-            )));
-        }
-
-        let input_bytes = prepared.inputs.iter().map(Vec::len).sum::<usize>() as u64;
-        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
-
-        Ok(BenchRun {
-            metrics: BenchMetrics {
-                wall_ns: Some(timed.wall_ns),
-                dispatch_ns: Some(timed.wall_ns),
-                kernel_execute_ns: timed.device_ns.filter(|ns| *ns > 0),
-                input_bytes: Some(input_bytes),
-                output_bytes: Some(output_bytes),
-                bytes_read: Some(input_bytes),
-                bytes_written: Some(output_bytes),
-                wire_bytes: Some(prepared.source_bytes as u64),
-                custom: vec![
-                    MetricPoint {
-                        name: "rust_frontend_gpu_lexer_batch_speedup_x1000".to_string(),
-                        value: super::speedup_x1000(prepared.baseline_wall_ns, timed.wall_ns),
-                    },
-                    MetricPoint {
-                        name: "rust_frontend_gpu_lexer_batch_tokens".to_string(),
-                        value: prepared.token_count as u64,
-                    },
-                    MetricPoint {
-                        name: "rust_frontend_gpu_lexer_batch_source_bytes".to_string(),
-                        value: prepared.source_bytes as u64,
-                    },
-                    MetricPoint {
-                        name: "rust_frontend_gpu_lexer_batch_sources".to_string(),
-                        value: u64::from(prepared.source_count),
-                    },
-                    MetricPoint {
-                        name: "rust_frontend_gpu_lexer_batch_token_stride".to_string(),
-                        value: prepared.token_stride as u64,
-                    },
-                ],
-                ..Default::default()
-            },
-            baseline_metrics: Some(BenchMetrics {
-                wall_ns: Some(prepared.baseline_wall_ns),
-                input_bytes: Some(input_bytes),
-                output_bytes: Some(
-                    prepared
-                        .baseline_outputs
-                        .iter()
-                        .map(Vec::len)
-                        .sum::<usize>() as u64,
-                ),
-                bytes_read: Some(prepared.source_bytes as u64),
-                bytes_written: Some(
-                    prepared
-                        .baseline_outputs
-                        .iter()
-                        .map(Vec::len)
-                        .sum::<usize>() as u64,
-                ),
-                wire_bytes: Some(prepared.source_bytes as u64),
-                ..Default::default()
-            }),
-            outputs: timed.outputs,
-            baseline_outputs: ctx
-                .include_baseline_outputs
-                .then(|| prepared.baseline_outputs.clone()),
-        })
-    }
-
-    fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
-        run.verify_exact_outputs()
-    }
+fn batch_metric_points(prepared: &RustLexerBatchPrepared, sample: &LexSample) -> Vec<MetricPoint> {
+    vec![
+        MetricPoint {
+            name: "rust_frontend_gpu_lexer_batch_speedup_x1000".to_string(),
+            value: super::speedup_x1000(prepared.lex.baseline_wall_ns, sample.wall_ns),
+        },
+        MetricPoint {
+            name: "rust_frontend_gpu_lexer_batch_tokens".to_string(),
+            value: prepared.lex.token_count as u64,
+        },
+        MetricPoint {
+            name: "rust_frontend_gpu_lexer_batch_source_bytes".to_string(),
+            value: prepared.lex.source_bytes,
+        },
+        MetricPoint {
+            name: "rust_frontend_gpu_lexer_batch_sources".to_string(),
+            value: u64::from(prepared.source_count),
+        },
+        MetricPoint {
+            name: "rust_frontend_gpu_lexer_batch_token_stride".to_string(),
+            value: prepared.token_stride as u64,
+        },
+    ]
 }
 
 struct RustLexerBatchLayout {
@@ -363,36 +281,21 @@ fn rust_lexer_batch_baseline_outputs(
     }
 
     Ok((
-        vec![
-            u32s_to_bytes(&kinds),
-            u32s_to_bytes(&starts),
-            u32s_to_bytes(&lens),
-            u32s_to_bytes(&counts),
-        ],
+        lex_baseline_columns(&kinds, &starts, &lens, &counts),
         total_tokens,
     ))
 }
 
-fn u32s_to_bytes(words: &[u32]) -> Vec<u8> {
-    words.iter().flat_map(|word| word.to_le_bytes()).collect()
-}
-
 inventory::submit! {
-    &RustLexerBatchGpuPipeline as &'static dyn BenchCase
+    &CASE as &'static dyn BenchCase
 }
 
 #[cfg(test)]
 mod tests {
+    use super::super::lex_columns::decode_u32_words;
     use super::*;
     use vyre::ir::BufferAccess;
     use vyre_frontend_rust::lex::tokens::{EOF, KW_FN};
-
-    fn decode_u32_words(bytes: &[u8]) -> Vec<u32> {
-        bytes
-            .chunks_exact(std::mem::size_of::<u32>())
-            .map(|chunk| u32::from_le_bytes(chunk.try_into().expect("u32 chunk")))
-            .collect()
-    }
 
     #[test]
     fn rust_lexer_batch_baseline_pads_each_source_window_to_program_shape() {

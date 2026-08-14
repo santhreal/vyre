@@ -1,5 +1,8 @@
 use crate::api::case::BenchError;
 use crate::cases::mix32;
+use crate::cases::queue_closure_oracle::{
+    queue_closure_oracle, QueueClosureGraph, QueueClosureOracle,
+};
 use crate::cases::skewed_graph::{skewed_degree as shared_skewed_degree, skewed_target};
 use vyre_primitives::bitset::frontier::materialize_frontier_queue_exact_count_into;
 use vyre_primitives::predicate::edge_kind;
@@ -29,6 +32,12 @@ pub(super) struct IfdsSkewedStats {
     pub(super) output_words_set: u64,
     pub(super) max_degree: u32,
     pub(super) high_degree_sources: u64,
+}
+
+impl crate::cases::queue_materialize::FrontierWords for IfdsSkewedStats {
+    fn frontier_words(&self) -> u32 {
+        self.frontier_words
+    }
 }
 
 pub(super) struct IfdsSkewedFixture {
@@ -217,6 +226,49 @@ pub(in crate::cases::dataflow_irregular) fn materialize_ifds_active_queue(
         )));
     }
     Ok(active_queue)
+}
+
+pub(super) fn ifds_queue_closure_inputs(
+    fixture: &IfdsSkewedFixture,
+    queue_capacity: u32,
+) -> Result<Vec<Vec<u8>>, BenchError> {
+    crate::cases::queue_stage::build_queue_closure_inputs(
+        &fixture.frontier_in,
+        &fixture.edge_offsets,
+        &fixture.edge_targets,
+        &fixture.edge_kind_mask,
+        fixture.stats.active_sources,
+        queue_capacity,
+        "IFDS",
+        |capacity| materialize_ifds_active_queue(fixture, capacity, "IFDS queue closure seed"),
+    )
+}
+
+pub(super) fn ifds_skewed_queue_closure_oracle(
+    fixture: &IfdsSkewedFixture,
+    max_iters: u32,
+    queue_capacity: u32,
+) -> Result<QueueClosureOracle, BenchError> {
+    let seed_queue = materialize_ifds_active_queue(
+        fixture,
+        queue_capacity as usize,
+        "IFDS queue closure oracle seed",
+    )?;
+    queue_closure_oracle(
+        QueueClosureGraph {
+            node_count: fixture.stats.nodes,
+            edge_offsets: &fixture.edge_offsets,
+            edge_targets: &fixture.edge_targets,
+            edge_kind_mask: &fixture.edge_kind_mask,
+            frontier_in: &fixture.frontier_in,
+            seed_queue,
+            allow_mask: IFDS_REACH_MASK,
+        },
+        max_iters,
+        queue_capacity,
+        "IFDS",
+        "raise CLOSURE_MAX_ITERS",
+    )
 }
 
 pub(super) fn ifds_closure_inputs(fixture: &IfdsSkewedFixture) -> Vec<Vec<u8>> {

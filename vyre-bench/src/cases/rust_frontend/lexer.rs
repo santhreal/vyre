@@ -1,209 +1,119 @@
+use super::lex_columns::{
+    lex_baseline_columns, lex_columns_bytes_touched, lex_columns_run, lex_columns_sample,
+    u32s_to_bytes, LexColumns, LexColumnsContract, LexSample, LEX_SUITES,
+};
 use super::rust_source_words;
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
+    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
-use crate::api::suite::SuiteKind;
+use crate::api::metric::MetricPoint;
+use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
+use vyre_foundation::ir::Program;
 use vyre_frontend_rust::lex::lexer::cpu_lexer::lex as lex_cpu;
 use vyre_frontend_rust::lex::lexer::plan::rust_lexer;
 
-struct RustLexerGpuPipeline;
-
 const RUST_LEXER_REPEATS: usize = 32;
 
-struct RustLexerPrepared {
-    program: vyre::ir::Program,
-    inputs: Vec<Vec<u8>>,
-    source_bytes: Vec<u8>,
-    baseline_outputs: Vec<Vec<u8>>,
-    baseline_wall_ns: u64,
-    token_count: usize,
+const CONTRACT: LexColumnsContract = LexColumnsContract {
+    plan: "Rust lexer",
+    columns: "[types, starts, lens, count]",
+};
+
+static WORKLOAD: WorkloadDescription = WorkloadDescription {
+    id: "frontend.rust.lexer.ir_execute",
+    name: "Rust GPU Lexer IR Execute",
+    summary: "Rust nano-subset source tokenized by the Vyre IR lexer on GPU with exact CPU lexer column parity",
+    tags: &[
+        "frontend-rust",
+        "gpu-lexer",
+        "lexer",
+        "tokenization",
+        "ir-lexer",
+        "release",
+    ],
+    layer: BenchLayer::Libs,
+    workload: WorkloadClass::Macro,
+    determinism: DeterminismClass::Deterministic,
+    owner_crate: "vyre-frontend-rust",
+    suites: LEX_SUITES,
+    needs_gpu: true,
+    needs_network: false,
+    min_vram_bytes: None,
+    min_input_bytes: Some((RUST_LEXER_REPEATS * 512) as u64),
+    feature_set: &["rust-frontend", "gpu-lexer", "ir-lexer"],
+    contract: None,
+};
+
+static OPS: CaseOps<LexColumns> = CaseOps {
+    build: build_case,
+    measure,
+    verify: verify_exact,
+    program: lex_program,
+    fingerprint: None,
+    bytes_touched: lex_columns_bytes_touched,
+};
+
+static CASE: HarnessCase<LexColumns> = HarnessCase {
+    workload: &WORKLOAD,
+    ops: &OPS,
+};
+
+fn lex_program(prepared: &LexColumns) -> Option<&Program> {
+    Some(&prepared.program)
 }
 
-impl BenchCase for RustLexerGpuPipeline {
-    fn id(&self) -> BenchId {
-        BenchId("frontend.rust.lexer.ir_execute".to_string())
-    }
+fn build_case(_ctx: &mut BenchContext) -> Result<LexColumns, BenchError> {
+    let source_bytes = rust_lexer_source();
+    let haystack_len = u32::try_from(source_bytes.len()).map_err(|_| {
+        BenchError::ExecutionFailed(
+            "Rust lexer benchmark source exceeds u32-addressable plan limit".to_string(),
+        )
+    })?;
+    let program = rust_lexer(
+        "haystack",
+        "out_tok_types",
+        "out_tok_starts",
+        "out_tok_lens",
+        "out_counts",
+        haystack_len,
+    );
+    let inputs = rust_lexer_inputs(&source_bytes);
 
-    fn metadata(&self) -> BenchMetadata {
-        BenchMetadata {
-            id: self.id(),
-            name: "Rust GPU Lexer IR Execute".to_string(),
-            description:
-                "Rust nano-subset source tokenized by the Vyre IR lexer on GPU with exact CPU lexer column parity"
-                    .to_string(),
-            tags: vec![
-                "frontend-rust".to_string(),
-                "gpu-lexer".to_string(),
-                "lexer".to_string(),
-                "tokenization".to_string(),
-                "ir-lexer".to_string(),
-                "release".to_string(),
-            ],
-            layer: BenchLayer::Libs,
-            workload: WorkloadClass::Macro,
-            determinism: DeterminismClass::Deterministic,
-            owner_crate: "vyre-frontend-rust".to_string(),
-        }
-    }
+    let baseline_start = std::time::Instant::now();
+    let (baseline_outputs, token_count) = rust_lexer_baseline_outputs(&source_bytes)?;
+    let baseline_wall_ns = baseline_start.elapsed().as_nanos() as u64;
 
-    fn suites(&self) -> &'static [SuiteKind] {
-        &[
-            SuiteKind::Release,
-            SuiteKind::Gpu,
-            SuiteKind::Deep,
-            SuiteKind::Honest,
-        ]
-    }
+    Ok(LexColumns {
+        program,
+        inputs,
+        source_bytes: source_bytes.len() as u64,
+        baseline_outputs,
+        baseline_wall_ns,
+        token_count,
+    })
+}
 
-    fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: None,
-            min_input_bytes: Some((RUST_LEXER_REPEATS * 512) as u64),
-            feature_set: vec![
-                "rust-frontend".to_string(),
-                "gpu-lexer".to_string(),
-                "ir-lexer".to_string(),
-            ],
-        }
-    }
+fn measure(ctx: &mut BenchContext, prepared: &mut LexColumns) -> Result<BenchRun, BenchError> {
+    let sample = lex_columns_sample(ctx, prepared, None, CONTRACT)?;
+    let custom = lexer_metric_points(prepared, &sample);
+    Ok(lex_columns_run(ctx, prepared, sample, custom))
+}
 
-    fn prepare(&self, _ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let source_bytes = rust_lexer_source();
-        let haystack_len = u32::try_from(source_bytes.len()).map_err(|_| {
-            BenchError::ExecutionFailed(
-                "Rust lexer benchmark source exceeds u32-addressable plan limit".to_string(),
-            )
-        })?;
-        let program = rust_lexer(
-            "haystack",
-            "out_tok_types",
-            "out_tok_starts",
-            "out_tok_lens",
-            "out_counts",
-            haystack_len,
-        );
-        let inputs = rust_lexer_inputs(&source_bytes);
-
-        let baseline_start = std::time::Instant::now();
-        let (baseline_outputs, token_count) = rust_lexer_baseline_outputs(&source_bytes)?;
-        let baseline_wall_ns = baseline_start.elapsed().as_nanos() as u64;
-
-        Ok(Box::new(RustLexerPrepared {
-            program,
-            inputs,
-            source_bytes,
-            baseline_outputs,
-            baseline_wall_ns,
-            token_count,
-        }))
-    }
-
-    fn program<'a>(&self, prepared: &'a PreparedCase) -> Option<&'a vyre::ir::Program> {
-        prepared
-            .downcast_ref::<RustLexerPrepared>()
-            .map(|prepared| &prepared.program)
-    }
-
-    fn bytes_touched(&self, prepared: &PreparedCase) -> (u64, u64) {
-        prepared
-            .downcast_ref::<RustLexerPrepared>()
-            .map(|prepared| {
-                let read_bytes = prepared.inputs.iter().map(Vec::len).sum::<usize>() as u64;
-                let write_bytes = prepared
-                    .baseline_outputs
-                    .iter()
-                    .map(Vec::len)
-                    .sum::<usize>() as u64;
-                (read_bytes, write_bytes)
-            })
-            .unwrap_or((0, 0))
-    }
-
-    fn run(
-        &self,
-        ctx: &mut BenchContext,
-        prepared: &mut PreparedCase,
-    ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<RustLexerPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed("Rust lexer prepared payload type mismatch".to_string())
-            })?;
-
-        let timed = ctx
-            .dispatch_timed(&prepared.program, &prepared.inputs, &ctx.dispatch_config)
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-        if timed.outputs.len() != 4 {
-            return Err(BenchError::BackendFailed(format!(
-                "Rust lexer IR must return 4 live-out columns [types, starts, lens, count], got {}",
-                timed.outputs.len()
-            )));
-        }
-
-        let input_bytes = prepared.inputs.iter().map(Vec::len).sum::<usize>() as u64;
-        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
-
-        Ok(BenchRun {
-            metrics: BenchMetrics {
-                wall_ns: Some(timed.wall_ns),
-                dispatch_ns: Some(timed.wall_ns),
-                kernel_execute_ns: timed.device_ns.filter(|ns| *ns > 0),
-                input_bytes: Some(input_bytes),
-                output_bytes: Some(output_bytes),
-                bytes_read: Some(input_bytes),
-                bytes_written: Some(output_bytes),
-                wire_bytes: Some(prepared.source_bytes.len() as u64),
-                custom: vec![
-                    MetricPoint {
-                        name: "rust_frontend_gpu_lexer_speedup_x1000".to_string(),
-                        value: super::speedup_x1000(prepared.baseline_wall_ns, timed.wall_ns),
-                    },
-                    MetricPoint {
-                        name: "rust_frontend_gpu_lexer_tokens".to_string(),
-                        value: prepared.token_count as u64,
-                    },
-                    MetricPoint {
-                        name: "rust_frontend_gpu_lexer_source_bytes".to_string(),
-                        value: prepared.source_bytes.len() as u64,
-                    },
-                ],
-                ..Default::default()
-            },
-            baseline_metrics: Some(BenchMetrics {
-                wall_ns: Some(prepared.baseline_wall_ns),
-                input_bytes: Some(input_bytes),
-                output_bytes: Some(
-                    prepared
-                        .baseline_outputs
-                        .iter()
-                        .map(Vec::len)
-                        .sum::<usize>() as u64,
-                ),
-                bytes_read: Some(prepared.source_bytes.len() as u64),
-                bytes_written: Some(
-                    prepared
-                        .baseline_outputs
-                        .iter()
-                        .map(Vec::len)
-                        .sum::<usize>() as u64,
-                ),
-                wire_bytes: Some(prepared.source_bytes.len() as u64),
-                ..Default::default()
-            }),
-            outputs: timed.outputs,
-            baseline_outputs: ctx
-                .include_baseline_outputs
-                .then(|| prepared.baseline_outputs.clone()),
-        })
-    }
-
-    fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
-        run.verify_exact_outputs()
-    }
+fn lexer_metric_points(prepared: &LexColumns, sample: &LexSample) -> Vec<MetricPoint> {
+    vec![
+        MetricPoint {
+            name: "rust_frontend_gpu_lexer_speedup_x1000".to_string(),
+            value: super::speedup_x1000(prepared.baseline_wall_ns, sample.wall_ns),
+        },
+        MetricPoint {
+            name: "rust_frontend_gpu_lexer_tokens".to_string(),
+            value: prepared.token_count as u64,
+        },
+        MetricPoint {
+            name: "rust_frontend_gpu_lexer_source_bytes".to_string(),
+            value: prepared.source_bytes,
+        },
+    ]
 }
 
 fn rust_lexer_source() -> Vec<u8> {
@@ -269,12 +179,7 @@ fn rust_lexer_baseline_outputs(source: &[u8]) -> Result<(Vec<Vec<u8>>, usize), B
     })?;
 
     Ok((
-        vec![
-            u32s_to_bytes(&kinds),
-            u32s_to_bytes(&starts),
-            u32s_to_bytes(&lens),
-            u32s_to_bytes(&[count]),
-        ],
+        lex_baseline_columns(&kinds, &starts, &lens, &[count]),
         tokens.len(),
     ))
 }
@@ -283,27 +188,17 @@ fn token_capacity(source: &[u8]) -> usize {
     source.len().saturating_add(1).max(1)
 }
 
-fn u32s_to_bytes(words: &[u32]) -> Vec<u8> {
-    words.iter().flat_map(|word| word.to_le_bytes()).collect()
-}
-
 inventory::submit! {
-    &RustLexerGpuPipeline as &'static dyn BenchCase
+    &CASE as &'static dyn BenchCase
 }
 
 #[cfg(test)]
 mod tests {
+    use super::super::lex_columns::decode_u32_words;
     use super::*;
     use vyre::ir::BufferAccess;
     use vyre_frontend_rust::lex::lexer::cpu_lexer::Token;
     use vyre_frontend_rust::lex::tokens::{EOF, KW_FN};
-
-    fn decode_u32_words(bytes: &[u8]) -> Vec<u32> {
-        bytes
-            .chunks_exact(std::mem::size_of::<u32>())
-            .map(|chunk| u32::from_le_bytes(chunk.try_into().expect("u32 chunk")))
-            .collect()
-    }
 
     #[test]
     fn rust_lexer_baseline_pads_live_out_columns_to_program_shape() {
