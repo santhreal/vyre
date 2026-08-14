@@ -214,42 +214,24 @@ mod tests {
         Program::wrapped(vec![buf()], [1, 1, 1], entry)
     }
 
-    /// Count `Node::Barrier` occurrences anywhere in the program entry
-    /// tree (descending into Region / If / Loop / Block bodies). Lets
-    /// tests assert post-coalesce barrier count even though
-    /// Program::wrapped puts everything inside an outer Region.
+    /// Count `Node::Barrier` occurrences anywhere in the program entry tree.
+    /// Lets tests assert post-coalesce barrier count even though
+    /// `Program::wrapped` puts everything inside an outer Region.
     fn count_barriers(node: &Node) -> usize {
-        match node {
-            Node::Barrier { .. } => 1,
-            Node::If {
-                then, otherwise, ..
-            } => {
-                then.iter().map(count_barriers).sum::<usize>()
-                    + otherwise.iter().map(count_barriers).sum::<usize>()
-            }
-            Node::Loop { body, .. } | Node::Block(body) => body.iter().map(count_barriers).sum(),
-            Node::Region { body, .. } => body.iter().map(count_barriers).sum(),
-            _ => 0,
-        }
+        crate::test_util::count_nodes(std::slice::from_ref(node), |candidate| {
+            matches!(candidate, Node::Barrier { .. })
+        })
     }
 
-    /// Find the first `Node::Barrier` at any depth in the entry tree
-    /// and return its ordering. Returns None if no barrier exists.
+    /// The ordering of the first `Node::Barrier` at any depth, in source order.
     fn first_barrier_ordering(node: &Node) -> Option<MemoryOrdering> {
-        match node {
-            Node::Barrier { ordering } => Some(*ordering),
-            Node::If {
-                then, otherwise, ..
-            } => then
-                .iter()
-                .find_map(first_barrier_ordering)
-                .or_else(|| otherwise.iter().find_map(first_barrier_ordering)),
-            Node::Loop { body, .. } | Node::Block(body) => {
-                body.iter().find_map(first_barrier_ordering)
+        let mut first = None;
+        crate::transform::visit::for_each_node(std::slice::from_ref(node), |candidate| {
+            if let Node::Barrier { ordering } = candidate {
+                first = first.or(Some(*ordering));
             }
-            Node::Region { body, .. } => body.iter().find_map(first_barrier_ordering),
-            _ => None,
-        }
+        });
+        first
     }
 
     #[test]

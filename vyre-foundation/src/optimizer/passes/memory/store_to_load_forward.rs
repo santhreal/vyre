@@ -358,21 +358,15 @@ mod tests {
     }
 
     fn count_loads_in_lets(nodes: &[Node]) -> usize {
-        nodes
-            .iter()
-            .map(|n| match n {
+        crate::test_util::count_nodes(nodes, |node| {
+            matches!(
+                node,
                 Node::Let {
                     value: Expr::Load { .. },
                     ..
-                } => 1,
-                Node::If {
-                    then, otherwise, ..
-                } => count_loads_in_lets(then) + count_loads_in_lets(otherwise),
-                Node::Loop { body, .. } | Node::Block(body) => count_loads_in_lets(body),
-                Node::Region { body, .. } => count_loads_in_lets(body),
-                _ => 0,
-            })
-            .sum()
+                }
+            )
+        })
     }
 
     #[test]

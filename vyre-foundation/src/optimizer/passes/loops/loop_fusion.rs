@@ -528,18 +528,7 @@ mod tests {
     }
 
     fn count_loops(nodes: &[Node]) -> usize {
-        nodes
-            .iter()
-            .map(|n| match n {
-                Node::Loop { body, .. } => 1 + count_loops(body),
-                Node::If {
-                    then, otherwise, ..
-                } => count_loops(then) + count_loops(otherwise),
-                Node::Block(body) => count_loops(body),
-                Node::Region { body, .. } => count_loops(body),
-                _ => 0,
-            })
-            .sum()
+        crate::test_util::count_nodes(nodes, |node| matches!(node, Node::Loop { .. }))
     }
 
     #[test]

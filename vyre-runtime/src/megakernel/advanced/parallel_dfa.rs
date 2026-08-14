@@ -239,14 +239,12 @@ mod tests {
     }
 
     fn stores_buffer(nodes: &[Node], name: &str) -> bool {
-        nodes.iter().any(|node| match node {
-            Node::Store { buffer, .. } => buffer.as_str() == name,
-            Node::Block(body) | Node::Loop { body, .. } => stores_buffer(body, name),
-            Node::Region { body, .. } => stores_buffer(body, name),
-            Node::If {
-                then, otherwise, ..
-            } => stores_buffer(then, name) || stores_buffer(otherwise, name),
-            _ => false,
-        })
+        let mut found = false;
+        vyre_foundation::transform::visit::for_each_node(nodes, |node| {
+            if let Node::Store { buffer, .. } = node {
+                found = found || buffer.as_str() == name;
+            }
+        });
+        found
     }
 }

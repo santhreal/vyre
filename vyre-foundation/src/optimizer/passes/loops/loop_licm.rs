@@ -357,18 +357,9 @@ mod tests {
     }
 
     fn count_lets(node: &Node) -> usize {
-        match node {
-            Node::Let { .. } => 1,
-            Node::If {
-                then, otherwise, ..
-            } => {
-                then.iter().map(count_lets).sum::<usize>()
-                    + otherwise.iter().map(count_lets).sum::<usize>()
-            }
-            Node::Loop { body, .. } | Node::Block(body) => body.iter().map(count_lets).sum(),
-            Node::Region { body, .. } => body.iter().map(count_lets).sum(),
-            _ => 0,
-        }
+        crate::test_util::count_nodes(std::slice::from_ref(node), |candidate| {
+            matches!(candidate, Node::Let { .. })
+        })
     }
 
     fn count_lets_in_loop_body(entry: &[Node]) -> usize {

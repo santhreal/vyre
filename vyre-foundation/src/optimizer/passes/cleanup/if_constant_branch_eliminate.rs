@@ -114,18 +114,9 @@ mod tests {
     }
 
     fn count_ifs(node: &Node) -> usize {
-        match node {
-            Node::If {
-                then, otherwise, ..
-            } => {
-                1 + then.iter().map(count_ifs).sum::<usize>()
-                    + otherwise.iter().map(count_ifs).sum::<usize>()
-            }
-            Node::Loop { body, .. } => body.iter().map(count_ifs).sum(),
-            Node::Block(body) => body.iter().map(count_ifs).sum(),
-            Node::Region { body, .. } => body.iter().map(count_ifs).sum(),
-            _ => 0,
-        }
+        crate::test_util::count_nodes(std::slice::from_ref(node), |candidate| {
+            matches!(candidate, Node::If { .. })
+        })
     }
 
     #[test]

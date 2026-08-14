@@ -236,25 +236,7 @@ mod tests {
     }
 
     fn count_loops(nodes: &[Node]) -> usize {
-        let mut total = 0;
-        for n in nodes {
-            match n {
-                Node::Loop { body, .. } => {
-                    total += 1;
-                    total += count_loops(body);
-                }
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    total += count_loops(then);
-                    total += count_loops(otherwise);
-                }
-                Node::Block(body) => total += count_loops(body),
-                Node::Region { body, .. } => total += count_loops(body),
-                _ => {}
-            }
-        }
-        total
+        crate::test_util::count_nodes(nodes, |node| matches!(node, Node::Loop { .. }))
     }
 
     /// Positive: a loop body that writes two distinct buffers fissions

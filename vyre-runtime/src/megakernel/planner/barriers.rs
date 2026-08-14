@@ -366,34 +366,27 @@ mod tests {
         BufferDecl::storage(name, binding, BufferAccess::ReadWrite, DataType::U32)
     }
 
+    /// Nodes anywhere in `nodes` and its nested bodies that satisfy `pred`.
+    ///
+    /// Descent comes from `vyre_foundation::transform::visit::for_each_node`,
+    /// the single owner of which node variants nest, rather than from a match
+    /// here that would silently treat a new nesting variant as a leaf.
+    fn count_matching(nodes: &[Node], mut pred: impl FnMut(&Node) -> bool) -> usize {
+        let mut count = 0;
+        vyre_foundation::transform::visit::for_each_node(nodes, |node| {
+            if pred(node) {
+                count += 1;
+            }
+        });
+        count
+    }
+
     fn barrier_count(nodes: &[Node]) -> usize {
-        nodes
-            .iter()
-            .map(|node| match node {
-                Node::Barrier { .. } => 1,
-                Node::If {
-                    then, otherwise, ..
-                } => barrier_count(then) + barrier_count(otherwise),
-                Node::Loop { body, .. } | Node::Block(body) => barrier_count(body),
-                Node::Region { body, .. } => barrier_count(body),
-                _ => 0,
-            })
-            .sum()
+        count_matching(nodes, |node| matches!(node, Node::Barrier { .. }))
     }
 
     fn store_count(nodes: &[Node]) -> usize {
-        nodes
-            .iter()
-            .map(|node| match node {
-                Node::Store { .. } => 1,
-                Node::If {
-                    then, otherwise, ..
-                } => store_count(then) + store_count(otherwise),
-                Node::Loop { body, .. } | Node::Block(body) => store_count(body),
-                Node::Region { body, .. } => store_count(body),
-                _ => 0,
-            })
-            .sum()
+        count_matching(nodes, |node| matches!(node, Node::Store { .. }))
     }
 
     #[test]

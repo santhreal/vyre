@@ -401,24 +401,7 @@ mod tests {
     }
 
     fn count_ifs(nodes: &[Node]) -> usize {
-        let mut total = 0;
-
-        for n in nodes {
-            match n {
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    total += 1;
-                    total += count_ifs(then);
-                    total += count_ifs(otherwise);
-                }
-                Node::Loop { body, .. } => total += count_ifs(body),
-                Node::Block(body) => total += count_ifs(body),
-                Node::Region { body, .. } => total += count_ifs(body),
-                _ => {}
-            }
-        }
-        total
+        crate::test_util::count_nodes(nodes, |node| matches!(node, Node::If { .. }))
     }
 
     /// Positive: `Lt(Var(i), n)` with `n >= hi` is always true →

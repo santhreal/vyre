@@ -170,19 +170,13 @@ mod tests {
     }
 
     fn count_stores(nodes: &[Node]) -> usize {
-        nodes.iter().fold(0, |count, node| {
-            count
-                + match node {
-                    Node::Store { .. } => 1,
-                    Node::Block(body) => count_stores(body),
-                    Node::If {
-                        then, otherwise, ..
-                    } => count_stores(then) + count_stores(otherwise),
-                    Node::Loop { body, .. } => count_stores(body),
-                    Node::Region { body, .. } => count_stores(body),
-                    _ => 0,
-                }
-        })
+        let mut count = 0;
+        vyre_foundation::transform::visit::for_each_node(nodes, |node| {
+            if matches!(node, Node::Store { .. }) {
+                count += 1;
+            }
+        });
+        count
     }
 
     fn contains_subgroup(nodes: &[Node]) -> bool {
@@ -199,64 +193,18 @@ mod tests {
         })
     }
 
+    /// True when any expression anywhere in `nodes` reads the subgroup lane id.
+    ///
+    /// Node descent, operand positions and sub-expression structure all come
+    /// from `vyre_foundation::transform::visit`, the single owner of each. The
+    /// hand-written pair this replaces restated all three and ended each match
+    /// in a wildcard, so an operand position or expression kind added later
+    /// would have read as "no lane id" instead of failing to compile.
     fn contains_subgroup_local_id(nodes: &[Node]) -> bool {
-        nodes.iter().any(|node| match node {
-            Node::Let { value, .. } => expr_contains_subgroup_local_id(value),
-            Node::Store { index, value, .. } => {
-                expr_contains_subgroup_local_id(index) || expr_contains_subgroup_local_id(value)
-            }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                expr_contains_subgroup_local_id(cond)
-                    || contains_subgroup_local_id(then)
-                    || contains_subgroup_local_id(otherwise)
-            }
-            Node::Block(body) | Node::Loop { body, .. } => contains_subgroup_local_id(body),
-            Node::Region { body, .. } => contains_subgroup_local_id(body),
-            _ => false,
-        })
-    }
-
-    fn expr_contains_subgroup_local_id(expr: &Expr) -> bool {
-        match expr {
-            Expr::SubgroupLocalId => true,
-            Expr::BinOp { left, right, .. } => {
-                expr_contains_subgroup_local_id(left) || expr_contains_subgroup_local_id(right)
-            }
-            Expr::UnOp { operand, .. } => expr_contains_subgroup_local_id(operand),
-            Expr::Select {
-                cond,
-                true_val,
-                false_val,
-            } => {
-                expr_contains_subgroup_local_id(cond)
-                    || expr_contains_subgroup_local_id(true_val)
-                    || expr_contains_subgroup_local_id(false_val)
-            }
-            Expr::Cast { value, .. } | Expr::SubgroupBallot { cond: value } => {
-                expr_contains_subgroup_local_id(value)
-            }
-            Expr::SubgroupShuffle { value, lane } => {
-                expr_contains_subgroup_local_id(value) || expr_contains_subgroup_local_id(lane)
-            }
-            Expr::SubgroupReduce { value, .. } => expr_contains_subgroup_local_id(value),
-            Expr::Load { index, .. } => expr_contains_subgroup_local_id(index),
-            Expr::Atomic {
-                index,
-                expected,
-                value,
-                ..
-            } => {
-                expr_contains_subgroup_local_id(index)
-                    || expected
-                        .as_deref()
-                        .is_some_and(expr_contains_subgroup_local_id)
-                    || expr_contains_subgroup_local_id(value)
-            }
-            _ => false,
-        }
+        let mut found = false;
+        vyre_foundation::transform::visit::for_each_expr(nodes, |expr| {
+            found = found || matches!(expr, Expr::SubgroupLocalId);
+        });
+        found
     }
 }

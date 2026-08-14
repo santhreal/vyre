@@ -263,7 +263,7 @@ pub(crate) fn map_bodies_cow<'a>(
 /// (from, to), and the async copies (offset, size).
 #[inline]
 #[must_use]
-pub(crate) fn node_operands(node: &Node) -> [Option<&Expr>; 2] {
+pub fn node_operands(node: &Node) -> [Option<&Expr>; 2] {
     match node {
         Node::Let { value, .. } | Node::Assign { value, .. } => [Some(value), None],
         Node::Store { index, value, .. } => [Some(index), Some(value)],
@@ -286,6 +286,22 @@ pub(crate) fn node_operands(node: &Node) -> [Option<&Expr>; 2] {
         | Node::Resume { .. }
         | Node::Opaque(_) => [None, None],
     }
+}
+
+/// Every sub-expression of every node in `nodes` and in every nested body.
+///
+/// The slice-taking companion of [`for_each_node`], for an analysis outside this
+/// crate that holds a body rather than a whole program. Node descent comes from
+/// [`child_bodies`] and operand positions from [`node_operands`], so a caller
+/// asking "does anything in this body mention X" cannot miss a position by
+/// naming variants itself.
+#[inline]
+pub fn for_each_expr<'a>(nodes: &'a [Node], mut f: impl FnMut(&'a Expr)) {
+    for_each_node(nodes, |node| {
+        for operand in node_operands(node).into_iter().flatten() {
+            for_each_subexpr(operand, &mut f);
+        }
+    });
 }
 
 /// The buffers a node names directly, split by direction.
@@ -703,10 +719,26 @@ pub(crate) fn any_body(nodes: &[Node], pred: &mut impl FnMut(&[Node]) -> bool) -
 /// });
 /// ```
 #[inline]
-pub fn walk_nodes(program: &Program, mut f: impl FnMut(&Node)) {
-    let mut stack: SmallVec<[&Node; 128]> = SmallVec::new();
-    stack.reserve(program.entry().len());
-    for node in program.entry().iter().rev() {
+pub fn walk_nodes(program: &Program, f: impl FnMut(&Node)) {
+    for_each_node(program.entry(), f);
+}
+
+/// Every node in `nodes` and in every nested body, depth first, in source
+/// order.
+///
+/// This is the slice-taking form of [`walk_nodes`], for a caller holding a body
+/// rather than a whole program: an analysis that answers a question about one
+/// `Loop`'s body, or a rule that scans a branch. Both descend through
+/// [`child_bodies`], the single exhaustive owner, so neither restates which
+/// variants nest and a new nesting variant cannot be walked by one and skipped
+/// by the other.
+///
+/// The walk is iterative, so nesting depth costs heap rather than native stack.
+#[inline]
+pub fn for_each_node<'a>(nodes: &'a [Node], mut f: impl FnMut(&'a Node)) {
+    let mut stack: SmallVec<[&'a Node; 128]> = SmallVec::new();
+    stack.reserve(nodes.len());
+    for node in nodes.iter().rev() {
         stack.push(node);
     }
 

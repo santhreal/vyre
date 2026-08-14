@@ -91,18 +91,9 @@ mod tests {
 
     /// Count `Node::Loop` occurrences anywhere in the program tree.
     fn count_loops(node: &Node) -> usize {
-        match node {
-            Node::Loop { body, .. } => 1 + body.iter().map(count_loops).sum::<usize>(),
-            Node::If {
-                then, otherwise, ..
-            } => {
-                then.iter().map(count_loops).sum::<usize>()
-                    + otherwise.iter().map(count_loops).sum::<usize>()
-            }
-            Node::Block(body) => body.iter().map(count_loops).sum(),
-            Node::Region { body, .. } => body.iter().map(count_loops).sum(),
-            _ => 0,
-        }
+        crate::test_util::count_nodes(std::slice::from_ref(node), |candidate| {
+            matches!(candidate, Node::Loop { .. })
+        })
     }
 
     fn make_loop(from: u32, to: u32, body: Vec<Node>) -> Node {

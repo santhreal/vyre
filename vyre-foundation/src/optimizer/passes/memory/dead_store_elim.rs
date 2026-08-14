@@ -293,18 +293,9 @@ mod tests {
     }
 
     fn count_stores(node: &Node) -> usize {
-        match node {
-            Node::Store { .. } => 1,
-            Node::If {
-                then, otherwise, ..
-            } => {
-                then.iter().map(count_stores).sum::<usize>()
-                    + otherwise.iter().map(count_stores).sum::<usize>()
-            }
-            Node::Loop { body, .. } | Node::Block(body) => body.iter().map(count_stores).sum(),
-            Node::Region { body, .. } => body.iter().map(count_stores).sum(),
-            _ => 0,
-        }
+        crate::test_util::count_nodes(std::slice::from_ref(node), |candidate| {
+            matches!(candidate, Node::Store { .. })
+        })
     }
 
     #[test]

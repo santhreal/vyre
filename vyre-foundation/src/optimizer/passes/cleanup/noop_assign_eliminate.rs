@@ -67,19 +67,9 @@ mod tests {
     }
 
     fn count_assigns(node: &Node) -> usize {
-        match node {
-            Node::Assign { .. } => 1,
-            Node::If {
-                then, otherwise, ..
-            } => {
-                then.iter().map(count_assigns).sum::<usize>()
-                    + otherwise.iter().map(count_assigns).sum::<usize>()
-            }
-            Node::Loop { body, .. } => body.iter().map(count_assigns).sum(),
-            Node::Block(body) => body.iter().map(count_assigns).sum(),
-            Node::Region { body, .. } => body.iter().map(count_assigns).sum(),
-            _ => 0,
-        }
+        crate::test_util::count_nodes(std::slice::from_ref(node), |candidate| {
+            matches!(candidate, Node::Assign { .. })
+        })
     }
 
     #[test]
