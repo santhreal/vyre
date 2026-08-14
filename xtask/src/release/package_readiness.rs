@@ -191,11 +191,6 @@ fn publish_order() -> Vec<PublishStep> {
             "vyre-driver-reference/Cargo.toml",
         ),
         step(
-            "vyre-intrinsics",
-            release_train::vyre_version(),
-            "vyre-intrinsics/Cargo.toml",
-        ),
-        step(
             "vyre-libs",
             release_train::vyre_version(),
             "vyre-libs/Cargo.toml",

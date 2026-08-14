@@ -201,14 +201,14 @@ pub(crate) struct OpInfo {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum Tier {
-    T2,   // vyre-intrinsics::hardware::*
-    T2_5, // vyre-primitives::*
+    T2,   // vyre-primitives::hardware::*
+    T2_5, // every other vyre-primitives::*
     T3,   // vyre-libs::*
     Other,
 }
 
 fn tier_of(op_id: &str) -> Tier {
-    if op_id.starts_with("vyre-intrinsics::") {
+    if op_id.starts_with("vyre-primitives::hardware::") {
         Tier::T2
     } else if op_id.starts_with("vyre-primitives::") {
         Tier::T2_5

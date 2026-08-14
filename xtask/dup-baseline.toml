@@ -110,11 +110,6 @@ duplicate_lines = 137
 total_lines = 3393
 
 [[crate]]
-name = "vyre-intrinsics"
-duplicate_lines = 169
-total_lines = 1623
-
-[[crate]]
 name = "vyre-libs"
 duplicate_lines = 11805
 total_lines = 135478

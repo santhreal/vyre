@@ -1,10 +1,9 @@
 # vyre-primitives
 
-Compositional primitives for vyre: the Tier-2.5 LEGO substrate that
-sits between Tier-2 hardware intrinsics (`vyre-intrinsics`) and Tier-3
-domain libraries (`vyre-libs`). Every domain library reuses primitives
-from this crate; consumers compose primitives without touching
-`vyre-driver-*` directly.
+The operation substrate for vyre: Category C hardware intrinsics under
+`hardware/`, plus the compositional primitives that Tier-3 domain
+libraries (`vyre-libs`) reuse. Consumers compose primitives without
+touching `vyre-driver-*` directly.
 
 ## What this crate is
 
@@ -107,7 +106,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-primitives --example dominator_tree_
 
 ### Features
 
-- Manifest features: `all-lego`, `bitset`, `cat`, `cpu-parity`, `decode`, `default`, `dnnf`, `effects`, `fixpoint`, `geom`, `gpu`, `graph`, `hash`, `inventory-registry`, `label`, `matching`, `math`, `nfa`, `nn`, `opt`, `parsing`, `predicate`, `reduce`, `text`, `topology`, `types`, `visual`, `vyre-foundation`, `zx`
+- Manifest features: `all-lego`, `bitset`, `cat`, `cpu-parity`, `decode`, `default`, `dnnf`, `effects`, `fixpoint`, `geom`, `gpu`, `graph`, `hardware`, `hash`, `inventory-registry`, `label`, `matching`, `math`, `nfa`, `nn`, `opt`, `parsing`, `predicate`, `reduce`, `text`, `topology`, `types`, `visual`, `vyre-foundation`, `zx`
 - Default feature members: None
 
 ### Errors and unsupported behavior

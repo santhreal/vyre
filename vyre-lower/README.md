@@ -165,7 +165,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-lower --test analysis_fixture_corpu
 
 ### Features
 
-- Manifest features: `test-fixtures`
+- Manifest features: `default`, `test-fixtures`
 - Default feature members: None
 
 ### Errors and unsupported behavior
