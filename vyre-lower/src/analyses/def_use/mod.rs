@@ -125,7 +125,7 @@ fn walk(body: &KernelBody, path: &mut Vec<usize>, report: &mut DefUseReport) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::descriptor_builder::{binop, body, descriptor, effect, lit, op};
+    use crate::descriptor_builder::{binop, body, descriptor, effect, if_then, lit, op};
     use crate::{KernelOp, KernelOpKind, LiteralValue};
     use vyre_foundation::ir::BinOp;
 
@@ -217,7 +217,7 @@ mod tests {
                 body()
                     .literals([LiteralValue::U32(1)])
                     .op(lit(0, 0))
-                    .op(effect(KernelOpKind::StructuredIfThen, [0, 0]))
+                    .op(if_then(0, 0))
                     .child(
                         body()
                             .literals([LiteralValue::U32(3), LiteralValue::U32(4)])

@@ -1,7 +1,7 @@
 use super::*;
 use crate::descriptor::test_descriptors::build;
 use crate::descriptor::{BindingLayout, BindingSlot, BindingVisibility, LiteralValue, MemoryClass};
-use crate::descriptor_builder::{effect, lit, op};
+use crate::descriptor_builder::{effect, for_loop, if_then, lit, op};
 use vyre_foundation::ir::DataType;
 use vyre_foundation::memory_model::MemoryOrdering;
 
@@ -378,7 +378,7 @@ fn nested_if_then_body_round_trips() {
         literals: vec![],
     };
     let outer = KernelBody {
-        ops: vec![lit(0, 0), effect(KernelOpKind::StructuredIfThen, [0, 0])],
+        ops: vec![lit(0, 0), if_then(0, 0)],
         child_bodies: vec![inner],
         literals: vec![LiteralValue::Bool(true)],
     };
@@ -402,16 +402,7 @@ fn for_loop_with_var_name_round_trips() {
         literals: vec![],
     };
     let outer = KernelBody {
-        ops: vec![
-            lit(0, 0),
-            lit(1, 1),
-            effect(
-                KernelOpKind::StructuredForLoop {
-                    loop_var: "i".into(),
-                },
-                [0, 1, 0],
-            ),
-        ],
+        ops: vec![lit(0, 0), lit(1, 1), for_loop("i", 0, 1, 0)],
         child_bodies: vec![body],
         literals: vec![LiteralValue::U32(0), LiteralValue::U32(64)],
     };

@@ -135,8 +135,7 @@ mod tests {
     /// its own and tests it.
     #[test]
     fn both_promotion_analyses_read_the_same_nested_load_count() {
-        use crate::descriptor_builder::{body, descriptor, effect, global_ro, lit, SlotCount};
-        use crate::KernelOpKind;
+        use crate::descriptor_builder::{body, descriptor, global_ro, if_then, lit, SlotCount};
         use vyre_foundation::ir::DataType;
 
         let desc = descriptor("k")
@@ -145,7 +144,7 @@ mod tests {
             .body(
                 body()
                     .op(lit(0, 0))
-                    .op(effect(KernelOpKind::StructuredIfThen, [0, 0]))
+                    .op(if_then(0, 0))
                     .child(super::fixtures::literal_then_loads(3))
                     .literal(LiteralValue::Bool(true)),
             )

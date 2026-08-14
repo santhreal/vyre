@@ -106,7 +106,9 @@ fn bytes_per_element(t: &DataType) -> u32 {
 mod tests {
     use super::*;
     use crate::analyses::load_counts::fixtures::literal_then_loads;
-    use crate::descriptor_builder::{body, descriptor, effect, lit, load_global, op, store_global};
+    use crate::descriptor_builder::{
+        body, descriptor, effect, for_loop, if_then, lit, load_global, op, store_global,
+    };
     use crate::{BindingSlot, KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
     use rustc_hash::FxHashMap;
 
@@ -235,7 +237,7 @@ mod tests {
             32,
             body()
                 .op(lit(0, 0))
-                .op(effect(KernelOpKind::StructuredIfThen, [0, 0]))
+                .op(if_then(0, 0))
                 .child(literal_then_loads(2))
                 .literal(LiteralValue::Bool(true)),
         ));
@@ -250,12 +252,7 @@ mod tests {
             body()
                 .op(lit(0, 0))
                 .op(lit(0, 1))
-                .op(effect(
-                    KernelOpKind::StructuredForLoop {
-                        loop_var: "".into(),
-                    },
-                    [0, 1, 0],
-                ))
+                .op(for_loop("", 0, 1, 0))
                 .child(literal_then_loads(2))
                 .literal(LiteralValue::U32(0)),
         ));

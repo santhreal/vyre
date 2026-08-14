@@ -241,7 +241,7 @@ pub fn branch_at<'a>(body: &'a KernelBody, op: &KernelOp) -> Option<StructuredBr
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::descriptor_builder::{body, effect, lit};
+    use crate::descriptor_builder::{body, for_loop, if_then, if_then_else, lit};
     use crate::LiteralValue;
 
     #[derive(Default)]
@@ -275,13 +275,13 @@ mod tests {
         let arm = body()
             .literal(LiteralValue::Bool(true))
             .op(lit(0, 10))
-            .op(effect(KernelOpKind::StructuredIfThen, [10, 0]))
+            .op(if_then(10, 0))
             .child(inner);
         body()
             .literal(LiteralValue::Bool(true))
             .op(lit(0, 0))
-            .op(effect(KernelOpKind::StructuredIfThen, [0, 0]))
-            .op(effect(KernelOpKind::StructuredIfThen, [0, 1]))
+            .op(if_then(0, 0))
+            .op(if_then(0, 1))
             .child(arm)
             .child(body())
             .build()
@@ -349,18 +349,13 @@ mod tests {
         let loop_body = body()
             .literal(LiteralValue::Bool(true))
             .op(lit(0, 30))
-            .op(effect(KernelOpKind::StructuredIfThen, [30, 0]))
+            .op(if_then(30, 0))
             .child(body());
         let root = body()
             .literals([LiteralValue::U32(0), LiteralValue::U32(4)])
             .op(lit(0, 0))
             .op(lit(1, 1))
-            .op(effect(
-                KernelOpKind::StructuredForLoop {
-                    loop_var: "i".into(),
-                },
-                [0, 1, 0],
-            ))
+            .op(for_loop("i", 0, 1, 0))
             .child(loop_body)
             .build();
         let mut trace = Trace::default();
@@ -373,7 +368,7 @@ mod tests {
         let root = body()
             .literal(LiteralValue::Bool(true))
             .op(lit(0, 0))
-            .op(effect(KernelOpKind::StructuredIfThenElse, [0, 0, 1]))
+            .op(if_then_else(0, 0, 1))
             .child(body().literal(LiteralValue::U32(1)).op(lit(0, 10)))
             .child(body().literal(LiteralValue::U32(2)).op(lit(0, 20)))
             .build();
@@ -392,7 +387,7 @@ mod tests {
         let root = body()
             .literal(LiteralValue::Bool(true))
             .op(lit(0, 0))
-            .op(effect(KernelOpKind::StructuredIfThenElse, [0, 0, 1]))
+            .op(if_then_else(0, 0, 1))
             .child(body().literal(LiteralValue::U32(1)).op(lit(0, 10)))
             .child(body())
             .build();
@@ -409,7 +404,7 @@ mod tests {
         let root = body()
             .literal(LiteralValue::Bool(true))
             .op(lit(0, 0))
-            .op(effect(KernelOpKind::StructuredIfThen, [0, 0]))
+            .op(if_then(0, 0))
             .child(body())
             .child(body().literal(LiteralValue::U32(1)).op(lit(0, 10)))
             .build();

@@ -143,7 +143,8 @@ mod tests {
     use super::*;
     use crate::analyses::AccessKind;
     use crate::descriptor_builder::{
-        binop, body, descriptor, effect, global_ro, global_rw, lit, load_global, op, store_global,
+        binop, body, descriptor, effect, global_ro, global_rw, if_then, lit, load_global, op,
+        store_global,
     };
     use crate::{KernelBody, KernelDescriptor, KernelOp, LiteralValue};
     use vyre_foundation::ir::{BinOp, DataType};
@@ -419,7 +420,7 @@ mod tests {
                 .op(tid([], 0))
                 .op(lit(0, 1))
                 .op(binop(BinOp::Mul, 0, 1, 2))
-                .op(effect(KernelOpKind::StructuredIfThen, [2, 0]))
+                .op(if_then(2, 0))
                 .op(load_global(0, 2, 3))
                 .child(body().op(tid([], 10)).op(load_global(0, 10, 11)))
                 .literal(LiteralValue::U32(4)),

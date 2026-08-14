@@ -189,7 +189,7 @@ fn gcd_u32(a: u32, b: u32) -> u32 {
 mod tests {
     use super::*;
     use crate::descriptor_builder::{
-        binop, body, descriptor, effect, global_ro, lit, op, shared_rw,
+        binop, body, descriptor, effect, for_loop, global_ro, if_then, lit, op, shared_rw,
     };
     use crate::{BindingSlot, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
     use vyre_foundation::ir::{BinOp, DataType};
@@ -367,12 +367,7 @@ mod tests {
             body()
                 .op(lit(0, 0))
                 .op(lit(0, 1))
-                .op(effect(
-                    KernelOpKind::StructuredForLoop {
-                        loop_var: "".into(),
-                    },
-                    [0, 1, 0],
-                ))
+                .op(for_loop("", 0, 1, 0))
                 .child(
                     body()
                         .op(tid([], 0))
@@ -445,7 +440,7 @@ mod tests {
                 .op(tid([], 0))
                 .op(lit(0, 1))
                 .op(binop(BinOp::Mul, 0, 1, 2))
-                .op(effect(KernelOpKind::StructuredIfThen, [2, 0]))
+                .op(if_then(2, 0))
                 .op(op(KernelOpKind::LoadShared, [0, 2], 3))
                 .child(
                     body()
