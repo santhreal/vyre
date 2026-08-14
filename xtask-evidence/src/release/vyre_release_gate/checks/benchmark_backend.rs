@@ -311,7 +311,9 @@ pub(crate) fn check_single_benchmark_report(
 #[cfg(test)]
 mod benchmark_backend_tests {
     use super::*;
-    use crate::report_fixture::{cpu_sota_baseline, hidden_invalid_case, percentile_metrics};
+    use crate::report_fixture::{
+        cpu_sota_baseline, hidden_invalid_measured_case, percentile_metrics,
+    };
 
     #[test]
     fn single_benchmark_report_rejects_explicit_blockers() {
@@ -447,17 +449,11 @@ mod benchmark_backend_tests {
         let report = serde_json::json!({
             "selected_backend": "wgpu",
             "summary": {"failed": 0},
-            "cases": [hidden_invalid_case(
+            "cases": [hidden_invalid_measured_case(
                 "release.condition_eval.1m",
                 "wgpu",
-                [
-                    ("contract", cpu_sota_baseline(&["wgpu"], 100.0)),
-                    ("metrics", percentile_metrics([10, 11, 12], [2000, 2001, 2002])),
-                    (
-                        "performance",
-                        serde_json::json!({"contract_passed": true, "speedup_x": 200.0}),
-                    ),
-                ],
+                cpu_sota_baseline(&["wgpu"], 100.0),
+                percentile_metrics([10, 11, 12], [2000, 2001, 2002]),
             )]
         });
         let mut failures = Vec::new();

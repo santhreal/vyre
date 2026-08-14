@@ -7,10 +7,7 @@ pub(crate) fn check_backend_feature_markers(
     minimum: usize,
     failures: &mut Vec<String>,
 ) {
-    let Some(markers) = matrix.get(field).and_then(serde_json::Value::as_array) else {
-        failures.push(format!(
-            "requirement `{requirement_id}` backend matrix is missing `{field}`"
-        ));
+    let Some(markers) = backend_matrix_markers(requirement_id, matrix, field, failures) else {
         return;
     };
     if markers.len() < minimum {

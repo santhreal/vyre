@@ -230,13 +230,13 @@ fn expected_artifacts(args: &[&str]) -> &'static [&'static str] {
     expected_artifacts_for_command(args.first().copied().unwrap_or_default())
 }
 
-fn write_release_evidence_run(
-    workspace_root: &Path,
-    commands: Vec<ReleaseEvidenceCommandRecord>,
-    blockers: &[String],
-    reports: &[String],
-) -> Vec<String> {
-    let output = workspace_root.join(RELEASE_EVIDENCE_RUN_ARTIFACT);
+/// The absolute path of a release evidence artifact, with its directory made.
+///
+/// Both writers created the parent and exited on failure with the same
+/// sentence, which is the part of writing an artifact that has nothing to do
+/// with the artifact.
+fn release_evidence_output(workspace_root: &Path, relative: &str) -> std::path::PathBuf {
+    let output = workspace_root.join(relative);
     if let Some(parent) = output.parent() {
         if let Err(error) = fs::create_dir_all(parent) {
             eprintln!(
@@ -246,6 +246,16 @@ fn write_release_evidence_run(
             std::process::exit(1);
         }
     }
+    output
+}
+
+fn write_release_evidence_run(
+    workspace_root: &Path,
+    commands: Vec<ReleaseEvidenceCommandRecord>,
+    blockers: &[String],
+    reports: &[String],
+) -> Vec<String> {
+    let output = release_evidence_output(workspace_root, RELEASE_EVIDENCE_RUN_ARTIFACT);
     let required_command_count = commands.iter().filter(|command| command.required).count();
     let report_only_command_count = commands.len().saturating_sub(required_command_count);
     let successful_commands = commands

@@ -217,17 +217,10 @@ fn case_has_reusable_cpu_sota_contract(case: &Value, backend: &str, required_spe
         case,
         Some(backend),
         required_speedup,
-    ) && case
-        .get("performance")
-        .and_then(|performance| performance.get("contract_passed"))
-        .and_then(Value::as_bool)
-        == Some(true)
-        && case
-            .get("performance")
-            .and_then(|performance| performance.get("speedup_x"))
-            .and_then(Value::as_f64)
-            .is_some_and(|speedup| speedup >= required_speedup)
-        && measured_speedup(case).is_some_and(|speedup| speedup >= required_speedup)
+    ) && crate::bench::benchmark_evidence_semantics::benchmark_case_claims_contract_win(
+        case,
+        required_speedup,
+    ) && measured_speedup(case).is_some_and(|speedup| speedup >= required_speedup)
 }
 
 fn measured_speedup(case: &Value) -> Option<f64> {

@@ -162,12 +162,9 @@ mod tests {
                 "cases": [{"id": "release.weak", "status": "pass"}]
             }),
         );
-        let axes = serde_json::json!({
-            "source_artifacts": [stale_artifact, weak_artifact]
-        });
-        let cuda_suite = serde_json::json!({
-            "artifacts": [stale_artifact, weak_artifact]
-        });
+        let artifacts = [stale_artifact, weak_artifact];
+        let axes = EvidenceWorkspace::cuda_release_axes(&artifacts);
+        let cuda_suite = EvidenceWorkspace::cuda_release_suite(&artifacts);
 
         let issues = cuda_release_axes_source_artifact_issues(workspace.path(), &axes, &cuda_suite);
 

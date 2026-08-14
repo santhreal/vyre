@@ -231,7 +231,7 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
     }
     let aggregate_failed = cases.len().saturating_sub(passing_contract_case_count);
     blockers.extend(component_blockers.iter().cloned());
-    let evidence = json!({
+    let mut evidence = json!({
         "schema_version": 1,
         "selected_backend": "cuda",
         "environment": environment,
@@ -244,14 +244,6 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
         "missing_required_cpu_sota_100x_cases": missing_required_cases,
         "cpu_sota_100x_contract_case_count": contract_case_count,
         "cpu_sota_100x_passing_case_count": passing_contract_case_count,
-        "min_wall_samples": minima.wall_samples,
-        "min_wall_p50": minima.wall_p50,
-        "min_wall_p95": minima.wall_p95,
-        "min_wall_p99": minima.wall_p99,
-        "min_baseline_wall_samples": minima.baseline_wall_samples,
-        "min_baseline_wall_p50": minima.baseline_wall_p50,
-        "min_baseline_wall_p95": minima.baseline_wall_p95,
-        "min_baseline_wall_p99": minima.baseline_wall_p99,
         "component_speedup_proof": {
             "schema_version": 2,
             "comparator_identity": "cpu-sota-end-to-end-speedup:v2",
@@ -278,6 +270,10 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
         "cases": cases,
         "blockers": blockers,
     });
+    evidence
+        .as_object_mut()
+        .expect("Fix: the 100x proof evidence is a JSON object.")
+        .extend(minima.into_object());
     write_json(
         &workspace_root.join("release/evidence/benchmarks/cpu-only-100x-proof.json"),
         &evidence,
@@ -346,7 +342,7 @@ fn cpu_sota_component_proof_case(
 mod tests {
     use super::*;
     use crate::report_fixture::{
-        case_summary, cpu_sota_contract, hidden_invalid_case, percentile_metrics,
+        case_summary, cpu_sota_contract, hidden_invalid_measured_case, percentile_metrics,
     };
 
     use std::fs;
@@ -440,20 +436,11 @@ mod tests {
                 "schema_version": 2,
                 "selected_backend": "cuda",
                 "summary": case_summary(1, 0),
-                "cases": [hidden_invalid_case(
+                "cases": [hidden_invalid_measured_case(
                     "release.condition_eval.1m",
                     "cuda",
-                    [
-                        ("metrics", percentile_metrics([10, 11, 12], [2000, 2001, 2002])),
-                        (
-                            "contract",
-                            cpu_sota_contract("release condition eval", &["cuda"]),
-                        ),
-                        (
-                            "performance",
-                            json!({"contract_passed": true, "speedup_x": 200.0}),
-                        ),
-                    ],
+                    cpu_sota_contract("release condition eval", &["cuda"]),
+                    percentile_metrics([10, 11, 12], [2000, 2001, 2002]),
                 )]
             }))
             .expect("Fix: serialize hidden-invalid CUDA benchmark artifact JSON."),

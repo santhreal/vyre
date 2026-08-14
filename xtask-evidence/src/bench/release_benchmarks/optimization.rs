@@ -5,18 +5,21 @@ use serde_json::{json, Value};
 
 use vyre_foundation::optimizer::corpus::RELEASE_OPTIMIZATION_FAMILIES;
 
-use crate::bench::benchmark_evidence_semantics::cuda_release_axes_source_artifact_issues;
+use crate::bench::benchmark_evidence_semantics::{
+    cuda_release_axes_source_artifact_issues, COLD_PIPELINE_BUILD_METRICS, SCAN_THROUGHPUT_METRICS,
+};
 
 use super::evidence_schema::{
     OptimizationArtifactInspection, OptimizationBenchmarkEvidence, OptimizationBenchmarkManifest,
     OptimizationBenchmarkManifestSummary, ReleaseAxesEvidence,
 };
 use super::inspect_core::{
-    read_benchmark_report, read_text_bounded, suite_metric_percentile, WallClockMinima,
+    read_benchmark_report, read_text_bounded, report_cases, suite_metric_percentile,
+    WallClockMinima,
 };
 use super::metrics::{
-    max_metric_p50, max_observed_ulp, max_vram_mib, min_first_available_metric_p50, min_metric_p50,
-    release_axis_blockers, write_json,
+    max_first_available_metric_p50, max_observed_ulp, max_vram_mib, min_first_available_metric_p50,
+    min_metric_p50, release_axis_blockers, write_json,
 };
 use super::release_thresholds::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
 
@@ -64,14 +67,7 @@ pub(super) fn inspect_optimization_benchmark_artifact(
             summary_total_time_ns: None,
             summary_cache_hit_rate: None,
             case_count: 0,
-            min_wall_samples: None,
-            min_wall_p50: None,
-            min_wall_p95: None,
-            min_wall_p99: None,
-            min_baseline_wall_samples: None,
-            min_baseline_wall_p50: None,
-            min_baseline_wall_p95: None,
-            min_baseline_wall_p99: None,
+            minima: WallClockMinima::default(),
             min_wall_speedup_x1000: None,
             missing_custom_metrics: required_custom_metrics
                 .iter()
@@ -124,14 +120,7 @@ pub(super) fn inspect_optimization_benchmark_artifact(
         &format!("optimization benchmark `{artifact}`"),
         &mut blockers,
     );
-    let cases = report
-        .get("cases")
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
-    if cases.is_empty() {
-        blockers.push("cases array is empty or missing".to_string());
-    }
+    let cases = report_cases(&report, &mut blockers);
     let mut minima = WallClockMinima::default();
     let mut min_wall_speedup_x1000 = None::<u64>;
     let mut missing_custom_metrics = Vec::new();
@@ -214,14 +203,7 @@ pub(super) fn inspect_optimization_benchmark_artifact(
         summary_total_time_ns,
         summary_cache_hit_rate,
         case_count: cases.len(),
-        min_wall_samples: minima.wall_samples,
-        min_wall_p50: minima.wall_p50,
-        min_wall_p95: minima.wall_p95,
-        min_wall_p99: minima.wall_p99,
-        min_baseline_wall_samples: minima.baseline_wall_samples,
-        min_baseline_wall_p50: minima.baseline_wall_p50,
-        min_baseline_wall_p95: minima.baseline_wall_p95,
-        min_baseline_wall_p99: minima.baseline_wall_p99,
+        minima,
         min_wall_speedup_x1000,
         missing_custom_metrics,
         non_positive_required_metrics,
@@ -337,19 +319,10 @@ pub(super) fn write_release_axes(workspace_root: &Path) {
         reports.push(value);
     }
     let warm_us_per_file = min_metric_p50(&reports, "wall_ns").map(|ns| ns as f64 / 1_000.0);
-    let cold_pipeline_build_ms = min_first_available_metric_p50(
-        &reports,
-        &[
-            "cold_compile_ns",
-            "cold_wall_ns",
-            "compile_ns",
-            "lower_ns",
-            "optimize_ns",
-        ],
-    )
-    .map(|ns| ns as f64 / 1_000_000.0);
-    let gbs_scan_throughput = max_metric_p50(&reports, "wall_gb_s_x1000")
-        .or_else(|| max_metric_p50(&reports, "device_gb_s_x1000"))
+    let cold_pipeline_build_ms =
+        min_first_available_metric_p50(&reports, COLD_PIPELINE_BUILD_METRICS)
+            .map(|ns| ns as f64 / 1_000_000.0);
+    let gbs_scan_throughput = max_first_available_metric_p50(&reports, SCAN_THROUGHPUT_METRICS)
         .map(|gb_s_x1000| gb_s_x1000 as f64 / 1_000.0);
     let ulp_drift_max = Some(max_observed_ulp(&reports).unwrap_or(0));
     let max_vram_mib = max_vram_mib(&reports);
@@ -464,14 +437,7 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
                 exists: inspection.exists,
                 read_error: inspection.read_error,
                 case_count: inspection.case_count,
-                min_wall_samples: inspection.min_wall_samples,
-                min_wall_p50: inspection.min_wall_p50,
-                min_wall_p95: inspection.min_wall_p95,
-                min_wall_p99: inspection.min_wall_p99,
-                min_baseline_wall_samples: inspection.min_baseline_wall_samples,
-                min_baseline_wall_p50: inspection.min_baseline_wall_p50,
-                min_baseline_wall_p95: inspection.min_baseline_wall_p95,
-                min_baseline_wall_p99: inspection.min_baseline_wall_p99,
+                minima: inspection.minima,
                 min_wall_speedup_x1000: inspection.min_wall_speedup_x1000,
                 missing_custom_metrics: inspection.missing_custom_metrics,
                 non_positive_required_metrics: inspection.non_positive_required_metrics,

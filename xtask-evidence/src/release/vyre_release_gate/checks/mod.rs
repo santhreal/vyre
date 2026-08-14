@@ -102,6 +102,23 @@ pub(crate) fn schema_2_json_evidence(
     Some(report)
 }
 
+/// The marker rows a backend matrix records under `field`, or `None` after
+/// reporting that the matrix does not carry the field at all.
+pub(crate) fn backend_matrix_markers<'matrix>(
+    requirement_id: &str,
+    matrix: &'matrix serde_json::Value,
+    field: &str,
+    failures: &mut Vec<String>,
+) -> Option<&'matrix Vec<serde_json::Value>> {
+    let markers = matrix.get(field).and_then(serde_json::Value::as_array);
+    if markers.is_none() {
+        failures.push(format!(
+            "requirement `{requirement_id}` backend matrix is missing `{field}`"
+        ));
+    }
+    markers
+}
+
 /// The release workload matrix cited by `requirement`.
 ///
 /// Three semantic checks name the same artifact, so the name is stated here.

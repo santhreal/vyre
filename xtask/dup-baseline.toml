@@ -122,8 +122,8 @@ total_lines = 1139
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 4127
-total_lines = 94879
+duplicate_lines = 4028
+total_lines = 94408
 
 [[crate]]
 name = "vyre-frontend-rust"
@@ -197,10 +197,10 @@ total_lines = 17046
 
 [[crate]]
 name = "xtask-evidence"
-duplicate_lines = 475
-total_lines = 25648
+duplicate_lines = 91
+total_lines = 25387
 
 [[crate]]
 name = "xtask-registry"
-duplicate_lines = 58
-total_lines = 8078
+duplicate_lines = 49
+total_lines = 8070

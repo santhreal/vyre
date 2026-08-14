@@ -3,6 +3,10 @@ use std::path::Path;
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::bench::benchmark_evidence_semantics::{
+    COLD_PIPELINE_BUILD_METRICS, SCAN_THROUGHPUT_METRICS,
+};
+
 pub(super) fn write_json(path: &Path, value: &impl Serialize) {
     if let Err(error) = xtask::json_output::write_pretty_json(path, value) {
         eprintln!("Fix: {error}");
@@ -24,24 +28,10 @@ pub(super) fn release_axis_blockers(reports: &[Value]) -> Vec<String> {
     if min_metric_p50(reports, "wall_ns").is_none() {
         blockers.push("missing wall_ns metric for warm_us_per_file".to_string());
     }
-    if min_first_available_metric_p50(
-        reports,
-        &[
-            "cold_compile_ns",
-            "cold_wall_ns",
-            "compile_ns",
-            "lower_ns",
-            "optimize_ns",
-        ],
-    )
-    .is_none()
-    {
+    if min_first_available_metric_p50(reports, COLD_PIPELINE_BUILD_METRICS).is_none() {
         blockers.push("missing cold/compile metric for cold_pipeline_build_ms".to_string());
     }
-    if max_metric_p50(reports, "wall_gb_s_x1000")
-        .or_else(|| max_metric_p50(reports, "device_gb_s_x1000"))
-        .is_none()
-    {
+    if max_first_available_metric_p50(reports, SCAN_THROUGHPUT_METRICS).is_none() {
         blockers.push("missing throughput metric for gbs_scan_throughput".to_string());
     }
     if max_vram_mib(reports).is_none() {
@@ -52,6 +42,11 @@ pub(super) fn release_axis_blockers(reports: &[Value]) -> Vec<String> {
 
 pub(super) fn min_first_available_metric_p50(reports: &[Value], keys: &[&str]) -> Option<u64> {
     keys.iter().find_map(|key| min_metric_p50(reports, key))
+}
+
+/// The maximum p50 of the first metric in `keys` any report carries.
+pub(super) fn max_first_available_metric_p50(reports: &[Value], keys: &[&str]) -> Option<u64> {
+    keys.iter().find_map(|key| max_metric_p50(reports, key))
 }
 
 pub(super) fn min_metric_p50(reports: &[Value], key: &str) -> Option<u64> {

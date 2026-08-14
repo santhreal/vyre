@@ -1,7 +1,10 @@
 //! Status rows read against the artifacts that must prove them.
 
 use super::*;
-use crate::report_fixture::{cpu_sota_baseline, cpu_sota_baseline_for, hidden_invalid_case};
+use crate::report_fixture::{
+    benchmark_case, cpu_sota_baseline, cpu_sota_baseline_for, hidden_invalid_case,
+    launched_percentile_metrics,
+};
 
 #[test]
 fn backend_suite_artifact_status_rejects_stale_artifact_metadata() {
@@ -423,20 +426,22 @@ fn backend_suite_artifact_status_rejects_omitted_artifact_backed_fields() {
             "nvidia_driver_version": "570.211.01",
             "nvidia_cuda_version": "12.8"
         },
-        "cases": [
-            {
-                "id": "release.condition_eval.1m",
-                "backend_id": "cuda",
-                "status": "pass",
-                "metrics": {
-                    "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                    "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
-                    "kernel_launches": {"samples": 30, "p50": 1}
-                },
-                "contract": cpu_sota_baseline(&["cuda"], 100.0),
-                "performance": {"contract_passed": true, "speedup_x": 120.0}
-            }
-        ]
+        "cases": [benchmark_case(
+            "release.condition_eval.1m",
+            "cuda",
+            "pass",
+            [
+                (
+                    "metrics",
+                    launched_percentile_metrics([10, 11, 12], [1000, 1001, 1002], 1),
+                ),
+                ("contract", cpu_sota_baseline(&["cuda"], 100.0)),
+                (
+                    "performance",
+                    serde_json::json!({"contract_passed": true, "speedup_x": 120.0}),
+                ),
+            ],
+        )]
     });
 
     let missing_fields = backend_suite_artifact_status_issues(&status, &artifact)
