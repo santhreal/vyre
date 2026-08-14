@@ -8,7 +8,7 @@ fn overflow_named_macro_expansion_output_capacity() {
         starts: vec![0],
         lens: vec![3],
     };
-    let mut fixture = NamedFixture::empty();
+    let mut fixture = NamedMacroFixture::empty();
     fixture.insert(
         b"FOO",
         512,
@@ -21,7 +21,7 @@ fn overflow_named_macro_expansion_output_capacity() {
         ],
     );
 
-    let result = catch_unwind(AssertUnwindSafe(|| run_named(&stream, &fixture, 2)));
+    let result = catch_unwind(AssertUnwindSafe(|| run_named_macro_expansion(&stream, &fixture, 2)));
     let eval = result.expect("output overflow must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
         assert!(

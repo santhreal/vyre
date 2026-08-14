@@ -2,6 +2,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 #[cfg(feature = "c-parser")]
+pub(crate) mod c_macro_table;
+#[cfg(feature = "c-parser")]
 pub(crate) mod gpu_if_expression;
 #[cfg(feature = "c-parser")]
 pub(crate) mod gpu_pipeline_filter;

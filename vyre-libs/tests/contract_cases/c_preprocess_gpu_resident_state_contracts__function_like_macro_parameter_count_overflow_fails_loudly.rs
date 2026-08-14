@@ -8,10 +8,10 @@ fn function_like_macro_parameter_count_overflow_fails_loudly() {
         starts: vec![0, 1, 2, 3],
         lens: vec![1, 1, 1, 1],
     };
-    let mut fixture = NamedFixture::empty();
+    let mut fixture = NamedMacroFixture::empty();
     fixture.insert(b"F", 512, C_MACRO_KIND_FUNCTION_LIKE, 17, &[(0, 0)]);
 
-    let result = catch_unwind(AssertUnwindSafe(|| run_named(&stream, &fixture, 8)));
+    let result = catch_unwind(AssertUnwindSafe(|| run_named_macro_expansion(&stream, &fixture, 8)));
     let eval = result.expect("param-count overflow must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
         assert!(
@@ -46,10 +46,10 @@ fn function_like_macro_argument_count_overflow_fails_loudly() {
         starts,
         lens,
     };
-    let mut fixture = NamedFixture::empty();
+    let mut fixture = NamedMacroFixture::empty();
     fixture.insert(b"F", 512, C_MACRO_KIND_FUNCTION_LIKE, 0, &[]);
 
-    let result = catch_unwind(AssertUnwindSafe(|| run_named(&stream, &fixture, 8)));
+    let result = catch_unwind(AssertUnwindSafe(|| run_named_macro_expansion(&stream, &fixture, 8)));
     let eval = result.expect("arg-count overflow must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
         assert!(
