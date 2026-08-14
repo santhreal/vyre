@@ -1,0 +1,63 @@
+[package]
+name = "vyre-pass-engine"
+version = "0.7.2"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Vyre pass engine: executes the optimizer's own passes as Vyre Programs, dispatched through the ProgramDispatcher seam."
+readme = "README.md"
+keywords = ["compiler", "optimizer", "dispatch", "vyre"]
+categories = ["compilers", "algorithms"]
+documentation = "https://docs.rs/vyre-pass-engine"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true
+
+[features]
+default = ["optimizer"]
+optimizer = ["vyre-primitives/graph"]
+all-solvers = [
+    "vyre-libs/analysis",
+    "vyre-libs/encoding",
+    "vyre-libs/graph-dispatch",
+    "vyre-libs/reasoning",
+    "vyre-libs/solvers",
+    "vyre-libs/scheduling",
+    "vyre-libs/telemetry",
+]
+cpu-parity = ["all-solvers", "vyre-primitives/cpu-parity"]
+
+[dependencies]
+vyre-foundation.workspace = true
+# Host-side dispatch byte marshalling (`vyre_libs::dispatch_buffers`). The
+# target DAG puts the composition library below the pass engine.
+vyre-libs.workspace = true
+vyre-primitives = { workspace = true }
+tracing.workspace = true
+rustc-hash.workspace = true
+
+[dev-dependencies]
+vyre-test-support.workspace = true
+# Parity tests import the vyre-primitives CPU reference oracles (quantized *_cpu),
+# gated behind `cpu-parity`. Enable it for this crate's own test/bench builds only
+# (resolver 2 keeps it out of production builds of dependents).
+vyre-primitives = { path = "../vyre-primitives", features = ["cpu-parity"], default-features = false }
+vyre-reference = { path = "../vyre-reference" }
+# `vyre_libs::test_support` program-sequence helper and the `graph::dispatch`
+# CPU oracle dispatcher the encoded-pass parity tests dispatch through, gated
+# the same way as the primitives oracles above: dev builds only.
+vyre-libs = { workspace = true, features = ["test-fixtures", "graph-dispatch"] }
+proptest.workspace = true
+
+[[test]]
+name = "optimizer_bfs_and_softmax_parity"
+path = "tests/optimizer_bfs_and_softmax_parity.rs"
+required-features = ["cpu-parity"]
+

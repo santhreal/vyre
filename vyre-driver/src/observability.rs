@@ -3,8 +3,8 @@
 //! Single entry point for metrics consumers (Prometheus,
 //! OpenTelemetry, Datadog, custom dashboards). Aggregates:
 //!
-//! - Substrate-call counters from
-//!   `vyre_self_substrate::observability`.
+//! - Composition-call counters from
+//!   `vyre_libs::telemetry::observability`.
 //! - Cache hit/miss rates (when caches expose them).
 //! - Substrate-decision telemetry (which math chose what).
 //!
@@ -13,9 +13,9 @@
 //! [`crate::observability::BackendObservabilityProvider`] trait.
 
 #[cfg(feature = "self-substrate-adapters")]
-use vyre_self_substrate::decision_telemetry as decision_obs;
+use vyre_libs::analysis::decision_telemetry as decision_obs;
 #[cfg(feature = "self-substrate-adapters")]
-use vyre_self_substrate::observability as substrate_obs;
+use vyre_libs::telemetry::observability as substrate_obs;
 
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -49,7 +49,7 @@ pub struct DriverObservability {
     pub substrate_total_calls: u64,
     /// Substrate-decision histogram buckets (fusion / eviction /
     /// provenance) from
-    /// `vyre_self_substrate::decision_telemetry`.
+    /// `vyre_libs::analysis::decision_telemetry`.
     pub decision_buckets: Vec<(&'static str, u64)>,
     /// Bounded recent audit events emitted by substrate decisions
     /// while `VYRE_TRACE=1` is active.

@@ -148,14 +148,15 @@ Define backend-neutral device, target compiler registration, artifact materializ
 - Path: `vyre-driver`
 - Owner: `backend-contract`
 - Layer: `backend-neutral`
-- Internal production dependencies: `vyre-foundation`, `vyre-macros`, `vyre-megakernel`, `vyre-self-substrate`, `vyre-spec`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs`, `vyre-macros`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs` | composition library the driver adapters plan against | `private` | `product-libraries` |
 | `vyre-macros` | compile-time registration generation | `private` | `registration-macros` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `public` | `megakernel-compiler` |
-| `vyre-self-substrate` | optional scheduler and analysis substrate | `private` | `self-substrate` |
+| `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | `private` | `pass-engine` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
 
 ### `vyre-driver-cuda`
@@ -165,16 +166,17 @@ Own pure PTX target compilation, native device acquisition, materialization, dis
 - Path: `vyre-driver-cuda`
 - Owner: `cuda-driver`
 - Layer: `concrete-backend`
-- Internal production dependencies: `vyre-driver`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`, `vyre-self-substrate`, `vyre-spec`
+- Internal production dependencies: `vyre-driver`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `public` | `backend-contract` |
 | `vyre-emit-ptx` | primary binary backend text emission | `private` | `primary-binary-emitter` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs` | composition trees the CUDA adapters plan against | `private` | `product-libraries` |
 | `vyre-lower` | verified backend-neutral representation lowering | `private` | `lowering` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `private` | `megakernel-compiler` |
-| `vyre-self-substrate` | optional scheduler and analysis substrate | `public` | `self-substrate` |
+| `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | `public` | `pass-engine` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `private` | `specification` |
 
 ### `vyre-driver-metal`
@@ -234,16 +236,17 @@ Own pure WGSL target compilation, portable GPU acquisition, materialization, dis
 - Path: `vyre-driver-wgpu`
 - Owner: `portable-driver`
 - Layer: `concrete-backend`
-- Internal production dependencies: `vyre-driver`, `vyre-emit-naga`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`, `vyre-self-substrate`, `vyre-spec`
+- Internal production dependencies: `vyre-driver`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `public` | `backend-contract` |
 | `vyre-emit-naga` | primary text and related binary emission | `private` | `primary-text-emitter` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs` | composition trees the portable adapters plan against | `private` | `product-libraries` |
 | `vyre-lower` | verified backend-neutral representation lowering | `private` | `lowering` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `private` | `megakernel-compiler` |
-| `vyre-self-substrate` | optional scheduler and analysis substrate | `public` | `self-substrate` |
+| `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | `public` | `pass-engine` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
 
 ### `vyre-emit-metal`
@@ -346,12 +349,13 @@ Own product-facing Tier 3 program compositions built from neutral primitives and
 - Path: `vyre-libs`
 - Owner: `product-libraries`
 - Layer: `libraries`
-- Internal production dependencies: `vyre-foundation`, `vyre-primitives`, `vyre-spec`
+- Internal production dependencies: `vyre-foundation`, `vyre-primitives`, `vyre-reference`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
 | `vyre-primitives` | reusable semantic Program builders | `public` | `primitive-library` |
+| `vyre-reference` | reference interpreter behind the test-fixtures dispatcher | `private` | `reference-semantics` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
 
 ### `vyre-lints`
@@ -399,6 +403,21 @@ Explore and select legal whole-ProgramGraph fusion schedules under explicit Sear
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
 | `vyre-lower` | single verified selected-module representation lowering | `private` | `lowering` |
 
+### `vyre-pass-engine`
+
+Execute the optimizer's own passes as Vyre Programs, dispatched through the ProgramDispatcher seam.
+
+- Path: `vyre-pass-engine`
+- Owner: `pass-engine`
+- Layer: `pass-engine`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs`, `vyre-primitives`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs` | product operation builders | `private` | `product-libraries` |
+| `vyre-primitives` | reusable semantic Program builders | `public` | `primitive-library` |
+
 ### `vyre-primitives`
 
 Own reusable Tier 2.5 program builders shared by higher-level libraries and runtimes.
@@ -435,14 +454,15 @@ Own compile-to-materialize orchestration, artifact sessions, recovery, persisten
 - Path: `vyre-runtime`
 - Owner: `runtime`
 - Layer: `runtime`
-- Internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-self-substrate`
+- Internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-pass-engine`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `public` | `backend-contract` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs` | composition trees the megakernel planner plans against | `private` | `product-libraries` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `public` | `megakernel-compiler` |
-| `vyre-self-substrate` | optional scheduler and analysis substrate | `private` | `self-substrate` |
+| `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | `private` | `pass-engine` |
 
 ### `vyre-safetensors`
 
@@ -452,21 +472,6 @@ Validate safetensors metadata, shard indexes, compiler requirements, trusted sha
 - Owner: `safetensors-adapter`
 - Layer: `runtime`
 - Internal production dependencies: None
-
-### `vyre-self-substrate`
-
-Use Vyre primitives to implement scheduler, graph, coverage, and optimization support.
-
-- Path: `vyre-self-substrate`
-- Owner: `self-substrate`
-- Layer: `scheduler`
-- Internal production dependencies: `vyre-foundation`, `vyre-libs`, `vyre-primitives`
-
-| Dependency | Purpose | Boundary | Owning seam |
-| --- | --- | --- | --- |
-| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
-| `vyre-libs` | product operation builders | `private` | `product-libraries` |
-| `vyre-primitives` | reusable semantic Program builders | `public` | `primitive-library` |
 
 ### `vyre-spec`
 

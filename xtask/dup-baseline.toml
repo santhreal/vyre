@@ -182,9 +182,9 @@ duplicate_lines = 545
 total_lines = 29205
 
 [[crate]]
-name = "vyre-self-substrate"
-duplicate_lines = 4678
-total_lines = 57771
+name = "vyre-pass-engine"
+duplicate_lines = 4711
+total_lines = 58675
 
 [[crate]]
 name = "vyre-spec"

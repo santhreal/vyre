@@ -10,7 +10,7 @@ mod common;
 use common::live_backend;
 use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver_cuda::CudaProgramDispatcher;
-use vyre_self_substrate::optimizer::pipeline_resident::gpu_pipeline_resident;
+use vyre_pass_engine::optimizer::pipeline_resident::gpu_pipeline_resident;
 
 /// Bind `x` to a non-literal value (`Load(input, 0)`) so const-prop
 /// at the end of the pipeline can't fold `Var(x)` into a literal.

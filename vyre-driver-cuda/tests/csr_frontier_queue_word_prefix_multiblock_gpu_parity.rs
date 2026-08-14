@@ -10,7 +10,7 @@ use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::csr_frontier_queue::{
     csr_queue_forward_traverse_cpu, frontier_to_queue_cpu,
 };
-use vyre_self_substrate::csr_frontier_queue_resident::{
+use vyre_libs::graph::dispatch::csr_frontier_queue_resident::{
     run_resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
 };
 

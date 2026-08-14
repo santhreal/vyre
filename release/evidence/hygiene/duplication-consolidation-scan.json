@@ -16,7 +16,7 @@
       }
     },
     {
-      "command": "rg -n \"trait CpuOp|enum CategoryAOp|type CpuFn|enum Semiring|enum DeterminismClass|enum AccessKind|struct BindResultEntry\" vyre-foundation/src vyre-reference/src vyre-self-substrate/src vyre-primitives/src vyre-spec/src vyre-bench/src vyre-lower/src vyre-emit-naga/src",
+      "command": "rg -n \"trait CpuOp|enum CategoryAOp|type CpuFn|enum Semiring|enum DeterminismClass|enum AccessKind|struct BindResultEntry\" vyre-foundation/src vyre-reference/src vyre-pass-engine/src vyre-primitives/src vyre-spec/src vyre-bench/src vyre-lower/src vyre-emit-naga/src",
       "findings": {
         "CpuOp": ["vyre-foundation/src/runtime/cpu_op.rs"],
         "CategoryAOp": [],
@@ -32,7 +32,7 @@
       "findings": [
         "vyre-driver-wgpu/tests/self_optimizer_const_fold_e2e.rs",
         "vyre-lower/src/rewrites/descriptor_const_fold",
-        "vyre-self-substrate/src/optimizer/const_fold_via_encoded.rs"
+        "vyre-pass-engine/src/optimizer/const_fold_via_encoded.rs"
       ],
       "interpretation": "No dead scratch.rs or old compatibility module was found in the scanned consolidation set; remaining matches are active optimizer/test names."
     }

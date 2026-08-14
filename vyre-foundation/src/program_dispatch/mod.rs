@@ -4,8 +4,8 @@
 //! A caller encodes its own data into buffers, builds a `Program` that computes
 //! the answer, and asks a [`crate::program_dispatch::ProgramDispatcher`] to run it. The returned bytes
 //! are the result. Foundation owns the seam because it is stated entirely in
-//! `Program` and buffer terms and because every layer above needs it: the GPU
-//! pass engine replays optimizer passes through it, the composition library
+//! `Program` and buffer terms and because every layer above needs it: the pass
+//! engine replays optimizer passes through it, the composition library
 //! runs its device-resident solvers through it, and each concrete backend
 //! implements it.
 //!

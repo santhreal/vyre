@@ -24,7 +24,7 @@
 
 use vyre_primitives::graph::persistent_bfs::PERSISTENT_BFS_WORKGROUP_SIZE;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_self_substrate::persistent_bfs::{
+use vyre_libs::graph::dispatch::persistent_bfs::{
     bfs_expand_resident_graph_batch_with_scratch_into, upload_resident_bfs_graph,
     PersistentBfsResidentScratch,
 };

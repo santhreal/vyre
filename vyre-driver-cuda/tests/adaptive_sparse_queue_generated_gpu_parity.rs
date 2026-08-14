@@ -6,7 +6,7 @@ mod common;
 
 use common::live_dispatcher;
 use vyre_driver_cuda::{CudaBackend, CudaProgramDispatcher};
-use vyre_self_substrate::adaptive_traverse::{
+use vyre_libs::graph::dispatch::adaptive_traverse::{
     adaptive_traverse_resident_sparse_queue_step_with_scratch_into,
     upload_resident_adaptive_sparse_queue_graph, AdaptiveTraversalPlanCacheSnapshot,
     AdaptiveTraversalResidentScratch,

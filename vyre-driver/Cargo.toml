@@ -38,10 +38,12 @@ path = "tests/driver_lifecycle_e2e.rs"
 [features]
 default = []
 self-substrate-adapters = [
-    "dep:vyre-self-substrate",
-    "vyre-self-substrate/data",
-    "vyre-self-substrate/logic",
-    "vyre-self-substrate/telemetry",
+    "dep:vyre-pass-engine",
+    "dep:vyre-libs",
+    "vyre-libs/encoding",
+    "vyre-libs/reasoning",
+    "vyre-libs/telemetry",
+    "vyre-libs/analysis",
 ]
 
 # Elementwise parity-gate scaffolding, used only by the concrete driver crates'
@@ -51,7 +53,8 @@ test-fixtures = []
 [dependencies]
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
-vyre-self-substrate = { workspace = true, optional = true }
+vyre-pass-engine = { workspace = true, optional = true }
+vyre-libs = { workspace = true, optional = true }
 vyre-spec.workspace = true
 vyre-macros.workspace = true
 serde.workspace = true

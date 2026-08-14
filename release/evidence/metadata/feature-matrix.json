@@ -515,8 +515,8 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
-      "name": "vyre-self-substrate",
-      "manifest": "vyre-self-substrate/Cargo.toml",
+      "name": "vyre-pass-engine",
+      "manifest": "vyre-pass-engine/Cargo.toml",
       "feature_count": 11,
       "has_default_feature": true,
       "default_feature_members": [

@@ -22,6 +22,7 @@ PLATFORM_CRATES=(
   "vyre-driver-wgpu"
   "vyre-driver-spirv"
   "vyre-runtime"
+  "vyre-pass-engine"
 )
 
 PLATFORM_MARKDOWN_FILES=(
@@ -68,19 +69,6 @@ is_release_coordination_doc() {
 
 PLATFORM_TEXT_FILES=(
   "docs/optimization/OP_MATRIX.toml"
-)
-
-SELF_SUBSTRATE_PLATFORM_DIRS=(
-  "analysis"
-  "data"
-  "graph"
-  "hardware"
-  "logic"
-  "math"
-  "optimization"
-  "optimizer"
-  "scheduling"
-  "telemetry"
 )
 
 FORBIDDEN_RE='(^|[^A-Za-z0-9_])(weir|surgec|gossan|keyhog)([^A-Za-z0-9_]|$)'
@@ -133,16 +121,6 @@ done
 for doc in "${PLATFORM_TEXT_FILES[@]}"; do
   [[ -f "$doc" ]] && scan_markdown "$doc"
 done
-
-if [[ -d "vyre-self-substrate/src" ]]; then
-  [[ -f "vyre-self-substrate/src/lib.rs" ]] && scan_rust_comments "vyre-self-substrate/src/lib.rs"
-  for dir in "${SELF_SUBSTRATE_PLATFORM_DIRS[@]}"; do
-    [[ -d "vyre-self-substrate/src/$dir" ]] || continue
-    while IFS= read -r file; do
-      scan_rust_comments "$file"
-    done < <(find "vyre-self-substrate/src/$dir" -type f -name '*.rs' 2>/dev/null | sort)
-  done
-fi
 
 if (( ${#violations[@]} > 0 )); then
   printf 'platform consumer-doc boundary: %d violations.\n' "${#violations[@]}" >&2

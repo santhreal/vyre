@@ -74,7 +74,7 @@ them.
 
 Both failure modes above are invisible to the instrument, so a site carrying them
 presents as fully covered and fully green. Three successive readings of
-`vyre-self-substrate/src/optimizer/dce_program.rs` went wrong at that site: two
+`vyre-pass-engine/src/optimizer/dce_program.rs` went wrong at that site: two
 nearly concluded it was sound because the interpreter agreed, and the third
 overcorrected and fixed the wrong mechanism at a measured 4-6x cost. Only the
 exclusive-attribution reading survives, and it was established by reading the IR and
@@ -123,7 +123,7 @@ ordering AND the attribution, or on real hardware.
    a defect is real but unwitnessable, assert the true behaviour and say in the
    doc comment that a green run is not a soundness argument. See
    `dce_bfs_multi_workgroup_agreement_is_a_backend_limit_not_a_soundness_proof` in
-   `vyre-self-substrate/tests/optimizer_bfs_and_softmax_parity.rs`.
+   `vyre-pass-engine/tests/optimizer_bfs_and_softmax_parity.rs`.
 4. **Do not put a `GridSync` barrier inside a `Node::Loop`.** The barrier's release
    target is computed at emit time from a static index, so a loop body emits one
    barrier with one static target: iteration 0 releases correctly and every later
@@ -175,7 +175,7 @@ which means unrolling. That is a real constraint for `persistent_fixpoint_grid` 
 for `persistent_bfs`'s grid form, which unrolls its whole budget with no cap
 (`vyre-primitives/src/graph/persistent_bfs/program.rs:388`).
 
-`vyre-self-substrate`'s DCE was once recorded here as the worst case of this,
+`vyre-pass-engine`'s DCE was once recorded here as the worst case of this,
 because it passes `max_iters = node_count`. It is not a case of it at all.
 `build_dce_bfs_program` never unrolled: its waves live in a bounded `Node::loop_for`,
 so its IR is O(1) in the budget. Converting it to host-repeated grid-synced wave

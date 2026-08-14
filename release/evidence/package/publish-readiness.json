@@ -56,9 +56,9 @@
       "manifest": "vyre-reference/Cargo.toml"
     },
     {
-      "package": "vyre-self-substrate",
+      "package": "vyre-pass-engine",
       "version": "0.7.2",
-      "manifest": "vyre-self-substrate/Cargo.toml"
+      "manifest": "vyre-pass-engine/Cargo.toml"
     },
     {
       "package": "vyre-driver",
@@ -284,7 +284,7 @@
     },
     {
       "package": "vyre-driver",
-      "dependency": "vyre-self-substrate",
+      "dependency": "vyre-pass-engine",
       "dependency_version": "0.7.2",
       "manifest": "vyre-driver/Cargo.toml"
     },
@@ -326,7 +326,7 @@
     },
     {
       "package": "vyre-driver-cuda",
-      "dependency": "vyre-self-substrate",
+      "dependency": "vyre-pass-engine",
       "dependency_version": "0.7.2",
       "manifest": "vyre-driver-cuda/Cargo.toml"
     },
@@ -452,7 +452,7 @@
     },
     {
       "package": "vyre-driver-wgpu",
-      "dependency": "vyre-self-substrate",
+      "dependency": "vyre-pass-engine",
       "dependency_version": "0.7.2",
       "manifest": "vyre-driver-wgpu/Cargo.toml"
     },
@@ -626,21 +626,21 @@
     },
     {
       "package": "vyre-runtime",
-      "dependency": "vyre-self-substrate",
+      "dependency": "vyre-pass-engine",
       "dependency_version": "0.7.2",
       "manifest": "vyre-runtime/Cargo.toml"
     },
     {
-      "package": "vyre-self-substrate",
+      "package": "vyre-pass-engine",
       "dependency": "vyre-foundation",
       "dependency_version": "0.7.2",
-      "manifest": "vyre-self-substrate/Cargo.toml"
+      "manifest": "vyre-pass-engine/Cargo.toml"
     },
     {
-      "package": "vyre-self-substrate",
+      "package": "vyre-pass-engine",
       "dependency": "vyre-primitives",
       "dependency_version": "0.7.2",
-      "manifest": "vyre-self-substrate/Cargo.toml"
+      "manifest": "vyre-pass-engine/Cargo.toml"
     }
   ],
   "package_content_checks": [
@@ -765,8 +765,8 @@
       "blockers": []
     },
     {
-      "package": "vyre-self-substrate",
-      "manifest": "vyre-self-substrate/Cargo.toml",
+      "package": "vyre-pass-engine",
+      "manifest": "vyre-pass-engine/Cargo.toml",
       "cargo_package_list_succeeded": true,
       "file_count": 289,
       "file_list_digest": "blake3:5febddb00fe27c7d87cdfa8186630c8174f2d3169a350a7d2b1c50ce83b8666f",
@@ -1126,7 +1126,7 @@
     },
     {
       "package": "vyre-driver",
-      "dependency": "vyre-self-substrate",
+      "dependency": "vyre-pass-engine",
       "version": "0.7.2",
       "manifest": "vyre-driver/Cargo.toml",
       "source": "workspace"
@@ -1175,7 +1175,7 @@
     },
     {
       "package": "vyre-driver-cuda",
-      "dependency": "vyre-self-substrate",
+      "dependency": "vyre-pass-engine",
       "version": "0.7.2",
       "manifest": "vyre-driver-cuda/Cargo.toml",
       "source": "workspace"
@@ -1336,7 +1336,7 @@
     },
     {
       "package": "vyre-driver-wgpu",
-      "dependency": "vyre-self-substrate",
+      "dependency": "vyre-pass-engine",
       "version": "0.7.2",
       "manifest": "vyre-driver-wgpu/Cargo.toml",
       "source": "workspace"
@@ -1581,23 +1581,23 @@
     },
     {
       "package": "vyre-runtime",
-      "dependency": "vyre-self-substrate",
+      "dependency": "vyre-pass-engine",
       "version": "0.7.2",
       "manifest": "vyre-runtime/Cargo.toml",
       "source": "workspace"
     },
     {
-      "package": "vyre-self-substrate",
+      "package": "vyre-pass-engine",
       "dependency": "vyre-foundation",
       "version": "0.7.2",
-      "manifest": "vyre-self-substrate/Cargo.toml",
+      "manifest": "vyre-pass-engine/Cargo.toml",
       "source": "workspace"
     },
     {
-      "package": "vyre-self-substrate",
+      "package": "vyre-pass-engine",
       "dependency": "vyre-primitives",
       "version": "0.7.2",
-      "manifest": "vyre-self-substrate/Cargo.toml",
+      "manifest": "vyre-pass-engine/Cargo.toml",
       "source": "workspace"
     }
   ],

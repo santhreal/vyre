@@ -35,7 +35,7 @@ mode="${1:-enforce}"
 # be dropped silently, so the row scanned less than it claimed and scored 0,
 # which is at or below every floor. Three of these five rows were in exactly
 # that state: `vyre-driver-wgpu/src/lowering`, `vyre-foundation/src/
-# cpu_references.rs` and `vyre-driver/src/self_substrate` had all been moved,
+# cpu_references.rs` and the driver-owned substrate tree had all been moved,
 # and the rows reading them passed by measuring nothing.
 ROWS=(
     # P-DELETE-1 used to live here as a count of `match node {` occurrences in
@@ -57,7 +57,7 @@ ROWS=(
     # vyre-foundation/src/execution_plan/fusion/fuse.rs. The previous 0 was
     # never measured, because all three declared paths had moved; the row
     # scanned nothing. A second entry point anywhere fails this row.
-    "P-UNIFY-4__fusion_planning@@fn (plan_fusion|fuse_programs|tensor_network_fusion_order)\\b@@vyre-foundation/src/execution_plan vyre-self-substrate/src vyre-runtime/src/megakernel@@1"
+    "P-UNIFY-4__fusion_planning@@fn (plan_fusion|fuse_programs|tensor_network_fusion_order)\\b@@vyre-foundation/src/execution_plan vyre-pass-engine/src vyre-runtime/src/megakernel@@1"
     "P-UNIFY-1b__cache_in_wgpu@@impl PipelineCacheStore for@@vyre-driver-wgpu/src@@0"
 )
 

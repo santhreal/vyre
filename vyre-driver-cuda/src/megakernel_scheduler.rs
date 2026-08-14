@@ -6,7 +6,7 @@ use vyre_driver::megakernel_execution::{
     MegakernelExecutionTopology, MegakernelGraphShape, MegakernelMemoryBudget,
     MegakernelMemoryError, MegakernelTopologyDecision,
 };
-use vyre_self_substrate::megakernel_schedule::{
+use vyre_libs::scheduling::megakernel_schedule::{
     try_schedule_via_scale_aware_samples_into, MegakernelScaleSample, MegakernelScheduleError,
 };
 
@@ -181,7 +181,7 @@ mod tests {
         CudaMegakernelScheduleSample,
     };
     use crate::backend::CudaTelemetrySnapshot;
-    use vyre_self_substrate::megakernel_schedule::MegakernelScheduleError;
+    use vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError;
 
     #[test]
     fn telemetry_snapshot_maps_onto_a_scheduler_sample() {

@@ -6,7 +6,7 @@ use vyre_driver::accounting::{
     checked_add_u64_count as checked_add, checked_mul_u64_count as checked_mul, ArithmeticOverflow,
 };
 use vyre_driver::megakernel_execution::MegakernelGraphShape;
-use vyre_self_substrate::device_resident_token_fact_graph::DeviceResidentTokenFactGraph;
+use vyre_libs::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph;
 
 /// Number of rank buckets carried for token/fact out-degree skew planning.
 pub const CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS: usize = 16;
@@ -250,7 +250,7 @@ mod tests {
     use vyre_driver::megakernel_execution::{
         plan_megakernel_memory_budget, MegakernelExecutionTopology,
     };
-    use vyre_self_substrate::device_resident_token_fact_graph::{
+    use vyre_libs::device::device_resident_token_fact_graph::{
         plan_device_resident_token_fact_graph, TokenFactEdge, TokenFactEdgeKind, TokenFactNode,
         TokenFactNodeKind,
     };

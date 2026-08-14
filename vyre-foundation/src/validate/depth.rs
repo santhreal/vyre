@@ -13,7 +13,7 @@ pub const DEFAULT_MAX_NESTING_DEPTH: usize = 64;
 /// class into ONE program (see surge's `fuse::dispatch::build`), so the
 /// statement-node ceiling must accommodate a fully fused bundle, not a
 /// single hand-written kernel. The value mirrors the GPU-native limit
-/// validator in `vyre-self-substrate`'s `optimizer::validate_via_encoded`
+/// validator in `vyre-pass-engine`'s `optimizer::validate_via_encoded`
 /// (`DEFAULT_MAX_NODE_COUNT = 100_000`), which is exercised at that scale by
 /// the substrate's corpus-parity integration evidence. The two MUST agree:
 /// a program the encoded validator blesses must not be rejected here, or

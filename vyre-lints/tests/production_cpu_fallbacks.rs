@@ -64,7 +64,7 @@ fn cli_default_production_roots_are_vyre_owned_only() {
         "vyre-libs/src",
         "vyre-lower/src",
         "vyre-runtime/src",
-        "vyre-self-substrate/src",
+        "vyre-pass-engine/src",
     ] {
         fs::create_dir_all(dir.path().join(root)).expect("create default production root");
     }
@@ -155,7 +155,7 @@ fn permits_explicit_cpu_oracle_files() {
 #[test]
 fn permits_explicit_cpu_fallback_reachability_validator() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir.path().join("vyre-self-substrate/src");
+    let src = dir.path().join("vyre-pass-engine/src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("cpu_fallback_reachability.rs"),
@@ -225,7 +225,7 @@ fn flags_suffix_cpu_helper_definition_in_production_source() {
 #[test]
 fn flags_cpu_module_export_in_production_source() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir.path().join("vyre-self-substrate/src");
+    let src = dir.path().join("vyre-pass-engine/src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(src.join("lib.rs"), "pub mod cpu_fallback_reachability;\n").expect("write fixture");
 

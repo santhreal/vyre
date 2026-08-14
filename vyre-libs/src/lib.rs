@@ -120,6 +120,34 @@ pub use descriptor::{BufferDescriptor, ProgramDescriptor};
 /// Derived view over canonical library operation registrations.
 pub mod operation_catalog;
 
+/// Per-module call counters for the composition surface.
+#[cfg(feature = "telemetry")]
+pub mod telemetry;
+
+/// Device-boundary contracts and dispatch scratch.
+#[cfg(feature = "device")]
+pub mod device;
+
+/// Scheduling, fusion, batching, and dispatch-strategy compositions.
+#[cfg(feature = "scheduling")]
+pub mod scheduling;
+
+/// Static-analysis, fixpoint, diagnostics, and verification compositions.
+#[cfg(feature = "analysis")]
+pub mod analysis;
+
+/// Logic, causal reasoning, categorical rewrites, and knowledge compilation.
+#[cfg(feature = "reasoning")]
+pub mod reasoning;
+
+/// Bitset, provenance, matroid and fingerprint encoding compositions.
+#[cfg(feature = "encoding")]
+pub mod encoding;
+
+/// Numerical solver, autotuning, and spectral compositions.
+#[cfg(feature = "solvers")]
+pub mod solvers;
+
 /// Math dialect  -  linear algebra, scans, broadcasting.
 #[cfg(any(
     feature = "math-linalg",
@@ -249,6 +277,10 @@ pub(crate) mod fixture_bytes;
 /// `pub(crate)` because the registry is an internal pre-sweep tool  -
 /// downstream dialects do not submit through this path.
 pub(crate) mod test_migration;
+
+/// Program composition helpers for parity suites, in-tree and downstream.
+#[cfg(any(test, feature = "test-fixtures"))]
+pub mod test_support;
 
 /// Re-export the small set of vyre types every composition function
 /// returns. Consumers can `use vyre_libs::prelude::*` and get the API

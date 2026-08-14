@@ -1082,7 +1082,7 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-self-substrate/src/scheduling/megakernel_schedule.rs",
+      "path": "vyre-pass-engine/src/scheduling/megakernel_schedule.rs",
       "line": 167,
       "pattern": "documented_panic_contract",
       "owner_lane": "runtime_megakernel",
@@ -1092,7 +1092,7 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-self-substrate/src/hardware/scratch.rs",
+      "path": "vyre-pass-engine/src/hardware/scratch.rs",
       "line": 61,
       "pattern": "documented_panic_contract",
       "owner_lane": "runtime_megakernel",
@@ -1102,7 +1102,7 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-self-substrate/src/graph/vast_tree_walk/builders.rs",
+      "path": "vyre-pass-engine/src/graph/vast_tree_walk/builders.rs",
       "line": 96,
       "pattern": "documented_panic_contract",
       "owner_lane": "security_dataflow",
@@ -1112,7 +1112,7 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-self-substrate/src/graph/vast_tree_walk/builders.rs",
+      "path": "vyre-pass-engine/src/graph/vast_tree_walk/builders.rs",
       "line": 123,
       "pattern": "documented_panic_contract",
       "owner_lane": "security_dataflow",
@@ -2259,25 +2259,25 @@
       "text": "b\"TODO:\","
     },
     {
-      "path": "vyre-self-substrate/src/scheduling/megakernel_schedule.rs",
+      "path": "vyre-pass-engine/src/scheduling/megakernel_schedule.rs",
       "line": 167,
       "pattern": "documented_panic_contract",
-      "text": "panic!(\"vyre-self-substrate homotopy schedule generation failed: {error}\");"
+      "text": "panic!(\"vyre-pass-engine homotopy schedule generation failed: {error}\");"
     },
     {
-      "path": "vyre-self-substrate/src/hardware/scratch.rs",
+      "path": "vyre-pass-engine/src/hardware/scratch.rs",
       "line": 61,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
     },
     {
-      "path": "vyre-self-substrate/src/graph/vast_tree_walk/builders.rs",
+      "path": "vyre-pass-engine/src/graph/vast_tree_walk/builders.rs",
       "line": 96,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"trusted VAST preorder walk shape was not prevalidated: {error}\")"
     },
     {
-      "path": "vyre-self-substrate/src/graph/vast_tree_walk/builders.rs",
+      "path": "vyre-pass-engine/src/graph/vast_tree_walk/builders.rs",
       "line": 123,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"trusted VAST postorder walk shape was not prevalidated: {error}\")"

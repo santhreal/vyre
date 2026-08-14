@@ -33,7 +33,7 @@ use vyre::ir::Program;
 use vyre_primitives::graph::program_graph::{
     ProgramGraphShape, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS, NAME_EDGE_TARGETS,
 };
-use vyre_self_substrate::optimizer::dce_program::build_dce_bfs_program;
+use vyre_pass_engine::optimizer::dce_program::build_dce_bfs_program;
 use vyre_foundation::program_dispatch::ProgramDispatcher;
 
 const EDGE_KIND: u32 = 1;

@@ -5,7 +5,7 @@
 mod common;
 
 use common::with_cuda_optimizer_dispatcher;
-use vyre_self_substrate::dataflow_fixpoint::{
+use vyre_libs::analysis::dataflow_fixpoint::{
     forward_backward_bitsets_for_pivot, forward_backward_bitsets_for_pivot_via, lineage_closure,
     lineage_closure_via, reachability_closure, reachability_closure_via,
     scc_components_via_substrate, scc_components_via_substrate_via, shortest_path_closure,

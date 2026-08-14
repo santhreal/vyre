@@ -17,7 +17,7 @@ use common::self_optimizer::{WgpuProgramDispatcher, wrapped};
 use vyre::ir::{Expr, Node};
 use vyre_foundation::optimizer::fingerprint_program;
 use vyre_foundation::optimizer::passes::fusion_cse::dce::engine::dce as cpu_dce_oracle;
-use vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce;
+use vyre_pass_engine::optimizer::dce_via_encoded::gpu_dce;
 
 
 

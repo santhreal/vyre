@@ -19,7 +19,7 @@ pub fn build_sinkhorn_full_clustering_program(
     n: u32,
     max_iterations: u32,
 ) -> vyre_foundation::ir::Program {
-    vyre_self_substrate::sinkhorn_full_clustering::sinkhorn_full_clustering_program(
+    vyre_libs::solvers::sinkhorn_full_clustering::sinkhorn_full_clustering_program(
         k,
         k_t,
         a,
@@ -37,7 +37,7 @@ pub fn build_sinkhorn_full_clustering_program(
 }
 
 /// Build a multi-word scallop-provenance Program. Wraps
-/// [`vyre_self_substrate::scallop_provenance_wide::scallop_provenance_wide_program`]
+/// [`vyre_libs::encoding::scallop_provenance_wide::scallop_provenance_wide_program`]
 /// for >32-rule lineage tracking (W=8 → 256 rules max).
 #[must_use]
 pub fn build_scallop_provenance_wide_program(
@@ -49,7 +49,7 @@ pub fn build_scallop_provenance_wide_program(
     w: u32,
     max_iterations: u32,
 ) -> vyre_foundation::ir::Program {
-    vyre_self_substrate::scallop_provenance_wide::scallop_provenance_wide_program(
+    vyre_libs::encoding::scallop_provenance_wide::scallop_provenance_wide_program(
         state,
         next,
         join_rules,
@@ -60,7 +60,7 @@ pub fn build_scallop_provenance_wide_program(
     )
 }
 /// Bellman tensor-network ordering Program builder. Wraps
-/// [`vyre_self_substrate::bellman_tn_order::bellman_tn_order_program`].
+/// [`vyre_libs::solvers::bellman_tn_order::bellman_tn_order_program`].
 #[must_use]
 #[allow(clippy::too_many_arguments)]
 pub fn build_bellman_tn_order_program(
@@ -74,7 +74,7 @@ pub fn build_bellman_tn_order_program(
     n_edges: u32,
     max_iterations: u32,
 ) -> vyre_foundation::ir::Program {
-    vyre_self_substrate::bellman_tn_order::bellman_tn_order_program(
+    vyre_libs::solvers::bellman_tn_order::bellman_tn_order_program(
         src,
         dst,
         weight,
@@ -88,7 +88,7 @@ pub fn build_bellman_tn_order_program(
 }
 
 /// KFAC autotune-step Program builder. Wraps
-/// [`vyre_self_substrate::kfac_autotune_step::kfac_autotune_step_program`].
+/// [`vyre_libs::solvers::kfac_autotune_step::kfac_autotune_step_program`].
 #[must_use]
 pub fn build_kfac_autotune_step_program(
     blocks_out: &str,
@@ -97,13 +97,13 @@ pub fn build_kfac_autotune_step_program(
     num_blocks: u32,
     n: u32,
 ) -> vyre_foundation::ir::Program {
-    vyre_self_substrate::kfac_autotune_step::kfac_autotune_step_program(
+    vyre_libs::solvers::kfac_autotune_step::kfac_autotune_step_program(
         blocks_out, blocks_in, scratch, num_blocks, n,
     )
 }
 
 /// Build a sinkhorn dispatch-clustering Program. Wraps
-/// [`vyre_self_substrate::sinkhorn_dispatch_clustering::sinkhorn_clustering_program`].
+/// [`vyre_libs::solvers::sinkhorn_dispatch_clustering::sinkhorn_clustering_program`].
 #[must_use]
 pub fn build_sinkhorn_clustering_program(
     m: u32,
@@ -112,7 +112,7 @@ pub fn build_sinkhorn_clustering_program(
     iters: u32,
     eps: f32,
 ) -> vyre_foundation::ir::Program {
-    vyre_self_substrate::sinkhorn_dispatch_clustering::sinkhorn_clustering_program(
+    vyre_libs::solvers::sinkhorn_dispatch_clustering::sinkhorn_clustering_program(
         m, n, d, iters, eps,
     )
 }
@@ -134,7 +134,7 @@ pub fn build_persistent_fixpoint_program(
     words: u32,
     max_iterations: u32,
 ) -> vyre_foundation::ir::Program {
-    vyre_self_substrate::persistent_fixpoint_program::persistent_fixpoint_program(
+    vyre_libs::analysis::persistent_fixpoint_program::persistent_fixpoint_program(
         transfer_body,
         current,
         next,

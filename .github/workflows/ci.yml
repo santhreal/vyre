@@ -44,19 +44,21 @@ jobs:
         run: ./cargo_full test --workspace
 
 
-      - name: self-substrate CPU-parity oracle tests (cpu-parity)
+      - name: composition-library CPU-parity oracle tests (cpu-parity)
         shell: bash
-        # vyre-self-substrate is `default = []`, so the `--workspace` default-feature
-        # run above compiles NONE of its `cpu-parity`-gated tests, the CSR/graph CPU
-        # oracle matrices AND the `_via` end-to-end reference-parity suites (which run
-        # each production dispatch form through a reference-eval dispatcher against its
-        # CPU oracle: do-calculus surgery, functor_apply, hypervector xor-bind, and the
-        # Mori-Zwanzig fixed-point projection). Wire the specific integration binaries so
-        # a substrate parity regression fails the main PR check, not only the slower
-        # --all-features job. (Scoped to `--test` targets rather than `-p` so this step
-        # is not coupled to unrelated `--lib` release-evidence state.)
+        # The `--workspace` default-feature run above compiles NONE of the
+        # `cpu-parity`-gated tests: the CSR/graph CPU oracle matrices AND the
+        # `_via` end-to-end reference-parity suites (which run each production
+        # dispatch form through a reference-eval dispatcher against its CPU
+        # oracle: do-calculus surgery, functor_apply, hypervector xor-bind, and
+        # the Mori-Zwanzig fixed-point projection). Wire the specific
+        # integration binaries so a composition parity regression fails the main
+        # PR check, not only the slower --all-features job. (Scoped to `--test`
+        # targets rather than `-p` so this step is not coupled to unrelated
+        # `--lib` release-evidence state.)
         run: >-
-          ./cargo_full test -p vyre-self-substrate --features cpu-parity
+          ./cargo_full test -p vyre-libs
+          --features analysis,cpu-parity,encoding,graph-dispatch,reasoning,scheduling,solvers,test-fixtures
           --test sweep_graph_cpu_oracle_matrix
           --test do_calculus_surgery_via_reference_parity
           --test functor_apply_via_reference_parity
@@ -97,6 +99,14 @@ jobs:
           --test reconstruct_path_via_reference_parity
           --test match_motif_via_reference_parity
           --test smooth_matroid_flow_via_reference_parity
+
+      - name: pass-engine CPU-parity oracle tests (cpu-parity)
+        shell: bash
+        # The pass engine's own reference-parity suite is gated the same way and
+        # is likewise invisible to the default-feature workspace run.
+        run: >-
+          ./cargo_full test -p vyre-pass-engine --features cpu-parity
+          --test optimizer_bfs_and_softmax_parity
 
       - name: cargo_full doc
         shell: bash

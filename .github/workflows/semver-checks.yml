@@ -21,4 +21,4 @@ jobs:
       - uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
           manifest-path: Cargo.toml
-          package: vyre-grammar-gen,vyre-macros,vyre-spec,vyre-lints,vyre-foundation,vyre-megakernel,vyre-lower,vyre-emit-ptx,vyre-primitives,vyre-reference,vyre-self-substrate,vyre-driver,vyre-runtime,vyre-emit-naga,vyre-emit-spirv,vyre-emit-metal,vyre-driver-cuda,vyre-driver-wgpu,vyre-driver-metal,vyre-driver-spirv,vyre-driver-reference,vyre-libs,vyre-scan,vyre,vyre-debug,vyre-aot
+          package: vyre-grammar-gen,vyre-macros,vyre-spec,vyre-lints,vyre-foundation,vyre-megakernel,vyre-lower,vyre-emit-ptx,vyre-primitives,vyre-reference,vyre-pass-engine,vyre-driver,vyre-runtime,vyre-emit-naga,vyre-emit-spirv,vyre-emit-metal,vyre-driver-cuda,vyre-driver-wgpu,vyre-driver-metal,vyre-driver-spirv,vyre-driver-reference,vyre-libs,vyre-scan,vyre,vyre-debug,vyre-aot

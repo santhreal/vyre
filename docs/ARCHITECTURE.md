@@ -49,7 +49,7 @@ dispatch route. Metal is active on supported Apple targets. See
 | IR, registry, optimizer | `vyre-foundation` | `Program`, `ProgramGraph`, validation, serialization, semantic operation identity, diagnostics, backend-neutral optimization passes. |
 | Reusable operations | `vyre-primitives` | Category C hardware intrinsic builders under `src/hardware/`, plus the shared composition builders that still await the Category A move; see below. |
 | Library compositions | `vyre-libs` | Product-facing Category A compositions. Becoming the single Category A home; see below. |
-| Compiler self-use | `vyre-self-substrate` | GPU execution of compiler passes plus scheduling solvers. Narrowing to the pass engine; see below. |
+| Compiler self-use | `vyre-pass-engine` | Executes the optimizer's own passes as Vyre Programs through the dispatcher seam. |
 | Whole-program compiler | `vyre-megakernel` | Bounded legal whole-graph schedules, immutable artifacts, target payloads. |
 | Backend contracts | `vyre-driver` | Backend-neutral target compiler, materializer, device, binding, submission, completion, capability contracts. |
 | Concrete backends | `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-driver-spirv`, `vyre-driver-metal`, `vyre-driver-reference` | Target compilers, materializers, devices; admit authenticated payloads; submit typed work. |
@@ -127,41 +127,49 @@ operations.
   and a dedicated interpreter arm does not belong here.
 - `vyre-libs` owns every Category A composition: today's Tier 3 product
   ops, today's Tier 2.5 primitive domains, and the generic compositions
-  currently parked in `vyre-self-substrate`. Public, feature-gated per
-  domain, maximally deduplicated. Sharing a helper becomes a `pub`
-  change inside one crate, not a cross-crate migration; the two-caller
-  criterion in `docs/lego-block-rule.md` gates making a helper public.
+  the pass engine used to park. Public, feature-gated per domain,
+  maximally deduplicated. Sharing a helper becomes a `pub` change inside
+  one crate, not a cross-crate migration; the two-caller criterion in
+  `docs/lego-block-rule.md` gates making a helper public.
 - Category B stays banned.
 
 Optimization semantics live only in `vyre-foundation` and run on CPU.
 Compile time on CPU is the default; vyre optimizes for the runtime of
-user programs, not its own compile time. GPU execution of optimizer
-passes is an execution strategy for graphs too large for CPU passes,
-never a second implementation of a pass: the pass semantics are
-foundation's, the GPU engine replays them.
+user programs, not its own compile time. Executing optimizer passes as
+dispatched Programs is an execution strategy for graphs too large for
+CPU passes, never a second implementation of a pass: the pass semantics
+are foundation's, the pass engine replays them.
 
-`vyre-self-substrate` narrows to exactly that GPU pass engine
-(`optimizer/`: the pass dispatcher, resident pipeline, and
-`*_via_encoded` execution) and loses everything else:
+`vyre-pass-engine` is narrowed to exactly that pass engine, landed
+2026-08-13. It holds `src/lib.rs` and `optimizer/`: the pass pipeline,
+the resident pipeline, and the `*_via_encoded` execution paths. Nine
+module trees moved out, all of them to `vyre-libs`:
 
-- `scheduling/` solvers move to the stage owners that call them per
-  `megakernel-wiring.md`: compile-time selection in `vyre-megakernel`,
-  resident lifecycle selection in `vyre-runtime`'s planner.
-- Generic GPU ops (`graph/` resident CSR variants, `data/` pipelines,
-  generic `math/` solvers) move to `vyre-libs`.
-- Dispatch and telemetry machinery moves to its consumers in
-  `vyre-driver` and `vyre-runtime`.
-- Research modules consumed today only by their own tests become real
-  Category A operations in `vyre-libs`, registered like any other
-  composition.
+- `scheduling/` solvers to `vyre_libs::scheduling`.
+- `analysis/` to `vyre_libs::analysis`.
+- `logic/` to `vyre_libs::reasoning`.
+- `data/` to `vyre_libs::encoding`.
+- `math/` to `vyre_libs::solvers`.
+- `graph/` to `vyre_libs::graph::dispatch`, the CPU oracle dispatcher
+  with it.
+- `hardware/` device-boundary contracts to `vyre_libs::device`.
+- `telemetry/` call counters to `vyre_libs::telemetry`.
+- The parity-test program-sequence helper to `vyre_libs::test_support`.
+
+The name states the job, not a hardware tier: the crate executes passes,
+and which device runs them is the dispatcher's answer, not the crate's.
+The dispatch seam itself is `vyre_foundation::program_dispatch::ProgramDispatcher`,
+and the CPU dispatcher its parity tests measure against is
+`vyre_libs::graph::dispatch::cpu_oracle`.
 
 The dependency DAG: `vyre-foundation` (IR, registry, CPU optimizer) ←
 `vyre-primitives` (hardware intrinsics) ← `vyre-libs` (compositions) ←
-GPU pass engine ← compiler and drivers. Foundation cannot consume the
+`vyre-pass-engine` ← compiler and drivers. Foundation cannot consume the
 operation crates, so `vyre_foundation::pass_substrate` owns the CPU pass
-math outright. It is not a duplicate: the GPU crate imports those
+math outright. It is not a duplicate: the pass engine imports those
 functions and adds dispatch around them, so one implementation keeps one
-home. What the three `*substrate*` names share is the word, not the code.
+home. `pass_substrate` is now the only `*substrate*` name in the tree,
+which `structure-gate` enforces.
 
 Registry impact, landed: `OperationTier::Primitive` merged into
 `OperationTier::Intrinsic`, so `vyre-primitives::` classifies as
@@ -226,9 +234,9 @@ Two layers.
   changes instruction selection or scheduling without changing program
   semantics.
 
-GPU pass execution (the narrowed self-substrate crate) is not a third
-layer and not a second implementation: it replays Layer 1 semantics on
-GPU for graphs too large for CPU passes.
+Pass execution through the dispatcher seam is not a third layer and not
+a second implementation: it replays Layer 1 semantics on device for
+graphs too large for CPU passes.
 
 Shared launch planning, cache identity, and capability records live in
 `vyre-driver`. Persistent queue scheduling lives in `vyre-runtime`. The

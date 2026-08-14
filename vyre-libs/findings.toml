@@ -1295,7 +1295,7 @@ sum-scan op, so they should resolve to that op's id, not a neutral prefix.
   three Region generators from `...multi_block_prefix_scan::{guarded_single_block,
   pass_a,pass_c}` to `...multi_block_prefix_scan_inclusive_sum::<subpass>` so they
   resolve via region_chain_invariant rule (b) `<registered_op_id>::<subpass>`.
-- vyre-self-substrate/src/data/reduce_dispatch_pipeline.rs: updated the two
+- vyre-pass-engine/src/data/reduce_dispatch_pipeline.rs: updated the two
   provenance-contract assertions (prefix_pipeline_exposes_fused_and_resident_passes)
   in lockstep with the rename (pass_a/pass_c now assert the `_inclusive_sum::` form).
 Verified: region_chain_invariant -> 1 passed/0 failed; vyre-primitives integration
@@ -1382,7 +1382,7 @@ ONE shared error from the CUDA resident dispatch:
 
 emitted at vyre-driver-cuda/src/backend/dispatch.rs:229 (and the sibling resident
 paths backend/resident_dispatch/{batch.rs:63, async_dispatch.rs:121, borrowed.rs:103}).
-Call path: the tests call vyre_self_substrate::optimizer::pipeline_resident::
+Call path: the tests call vyre_pass_engine::optimizer::pipeline_resident::
 gpu_pipeline_resident(p, &CudaProgramDispatcher), which allocates resident handles
 for the arena optimizer passes and dispatches. One pass's Program declares 7 buffers
 but gpu_pipeline_resident provides only 3 resident handles -> hard contract violation.
@@ -1402,7 +1402,7 @@ self_optimizer_licm_e2e.rs:15 (4), self_optimizer_cross_scope_cse_e2e.rs:20 (4),
 self_optimizer_pipeline_resident_e2e.rs (cse/dce/loop-elim/idempotence cases).
 """
 fix_plan = """
-1. In vyre-self-substrate/src/optimizer/pipeline_resident.rs::gpu_pipeline_resident,
+1. In vyre-pass-engine/src/optimizer/pipeline_resident.rs::gpu_pipeline_resident,
    find the arena pass whose Program declares 7 resident buffers (kinds/depth + the
    CSE structural-hash/canonical/table scratch + ...) and confirm how many handles
    are passed to the dispatch (currently 3). Either the handle vector is missing the

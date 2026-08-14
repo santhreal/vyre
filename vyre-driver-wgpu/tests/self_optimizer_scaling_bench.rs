@@ -23,10 +23,10 @@ use std::time::Instant;
 
 use vyre::ir::{Expr, Node, Program};
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_pass_engine::optimizer::canonicalize_via_encoded::gpu_canonicalize;
+use vyre_pass_engine::optimizer::const_fold_via_encoded::gpu_const_fold;
+use vyre_pass_engine::optimizer::dce_via_encoded::gpu_dce;
 use vyre_foundation::program_dispatch::ProgramDispatcher;
-use vyre_self_substrate::optimizer::canonicalize_via_encoded::gpu_canonicalize;
-use vyre_self_substrate::optimizer::const_fold_via_encoded::gpu_const_fold;
-use vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce;
 
 const CPU_ORACLE_STACK_BYTES: usize = 64 * 1024 * 1024;
 

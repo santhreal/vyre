@@ -14,9 +14,9 @@ use common::{live_backend, CudaProgramDispatcher};
 use vyre::ir::{BinOp, Expr, Node, Program};
 use vyre_foundation::optimizer::fingerprint_program;
 use vyre_foundation::optimizer::passes::fusion_cse::dce::engine::dce as cpu_dce_oracle;
-use vyre_self_substrate::optimizer::canonicalize_via_encoded::gpu_canonicalize;
-use vyre_self_substrate::optimizer::const_fold_via_encoded::gpu_const_fold;
-use vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce;
+use vyre_pass_engine::optimizer::canonicalize_via_encoded::gpu_canonicalize;
+use vyre_pass_engine::optimizer::const_fold_via_encoded::gpu_const_fold;
+use vyre_pass_engine::optimizer::dce_via_encoded::gpu_dce;
 
 fn wrapped(entry: Vec<Node>) -> Program {
     Program::wrapped(Vec::new(), [1, 1, 1], entry)

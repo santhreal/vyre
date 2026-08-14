@@ -1,5 +1,5 @@
 use vyre_frontend_rust::borrowck::{BorrowFacts, Conflict, ConflictKind, LoanKind};
-use vyre_self_substrate::csr_forward_or_changed::forward_closure_via_change_flag_gpu;
+use vyre_libs::graph::dispatch::csr_forward_or_changed::forward_closure_via_change_flag_gpu;
 use vyre_foundation::program_dispatch::ProgramDispatcher;
 #[path = "borrowck_batched_cuda.rs"]
 mod batched;

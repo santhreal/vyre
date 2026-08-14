@@ -462,8 +462,8 @@ fn hygiene_owner_lane_for_path(path: &str) -> &'static str {
     if normalized.contains("/vyre-runtime/src/megakernel/") {
         return "runtime_megakernel";
     }
-    if normalized.contains("/vyre-self-substrate/src/scheduling/")
-        || normalized.contains("/vyre-self-substrate/src/hardware/")
+    if normalized.contains("/vyre-libs/src/scheduling/")
+        || normalized.contains("/vyre-libs/src/device/")
         || normalized.contains("/vyre-runtime/src/")
     {
         return "runtime_megakernel";
@@ -474,7 +474,7 @@ fn hygiene_owner_lane_for_path(path: &str) -> &'static str {
     if normalized.contains("/vyre-libs/src/scan/")
         || normalized.contains("/vyre-libs/src/decode/")
         || normalized.contains("/vyre-libs/src/rule/")
-        || normalized.contains("/vyre-self-substrate/src/data/")
+        || normalized.contains("/vyre-libs/src/encoding/")
         || normalized.contains("/vyre-primitives/src/matching/")
         || normalized.contains("/vyre-primitives/src/decode/")
         || normalized.contains("/vyre-primitives/src/nfa/")
@@ -484,8 +484,8 @@ fn hygiene_owner_lane_for_path(path: &str) -> &'static str {
     if normalized.contains("/vyre-libs/src/security/")
         || normalized.contains("/vyre-libs/src/dataflow/")
         || normalized.contains("/vyre-libs/src/borrowck/")
-        || normalized.contains("/vyre-self-substrate/src/analysis/")
-        || normalized.contains("/vyre-self-substrate/src/graph/")
+        || normalized.contains("/vyre-libs/src/analysis/")
+        || normalized.contains("/vyre-libs/src/graph/")
         || normalized.contains("/vyre-primitives/src/graph/")
         || normalized.contains("/vyre-primitives/src/fixpoint/")
         || normalized.contains("/vyre-primitives/src/predicate/")

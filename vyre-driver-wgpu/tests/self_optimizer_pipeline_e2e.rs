@@ -12,9 +12,9 @@ use common::acquire_live_backend as live_backend;
 use common::self_optimizer::{WgpuProgramDispatcher, wrapped};
 
 use vyre::ir::{BinOp, Expr, Node};
-use vyre_self_substrate::optimizer::canonicalize_via_encoded::gpu_canonicalize;
-use vyre_self_substrate::optimizer::const_fold_via_encoded::gpu_const_fold;
-use vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce;
+use vyre_pass_engine::optimizer::canonicalize_via_encoded::gpu_canonicalize;
+use vyre_pass_engine::optimizer::const_fold_via_encoded::gpu_const_fold;
+use vyre_pass_engine::optimizer::dce_via_encoded::gpu_dce;
 
 
 

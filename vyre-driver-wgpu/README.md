@@ -89,7 +89,7 @@ Own pure WGSL target compilation, portable GPU acquisition, materialization, dis
 ### Boundaries
 
 The `portable-driver` owner maintains this `concrete-backend` crate at `vyre-driver-wgpu`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-emit-naga`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`, `vyre-self-substrate`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre-driver`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

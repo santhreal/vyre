@@ -504,7 +504,7 @@ impl TaskQueueSnapshot {
         words: u32,
         max_iterations: u32,
     ) -> vyre_foundation::ir::Program {
-        vyre_self_substrate::persistent_fixpoint_program::persistent_fixpoint_program(
+        vyre_libs::analysis::persistent_fixpoint_program::persistent_fixpoint_program(
             transfer_body,
             current_buffer,
             next_buffer,

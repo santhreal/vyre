@@ -11,7 +11,7 @@ use vyre_primitives::graph::csr_forward_or_changed::{
     csr_forward_or_changed_parallel_batch_grid, csr_forward_or_changed_parallel_grid,
 };
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_self_substrate::csr_forward_or_changed::{
+use vyre_libs::graph::dispatch::csr_forward_or_changed::{
     forward_closure_via_change_flag_gpu, reference_forward_closure_via_change_flag,
 };
 

@@ -6,7 +6,7 @@ mod common;
 
 use common::with_cuda_optimizer_dispatcher;
 use vyre_primitives::math::bellman_shortest_path::cpu_ref as reference_bellman_shortest_path;
-use vyre_self_substrate::bellman_tn_order::bellman_tn_order_via;
+use vyre_libs::solvers::bellman_tn_order::bellman_tn_order_via;
 
 fn assert_bellman_tn_order_matches_reference(
     label: &str,

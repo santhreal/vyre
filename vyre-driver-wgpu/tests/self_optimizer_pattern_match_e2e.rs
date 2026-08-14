@@ -10,7 +10,7 @@ use common::acquire_live_backend as live_backend;
 use common::self_optimizer::{WgpuProgramDispatcher, first_let_value, wrapped};
 
 use vyre::ir::{BinOp, Expr, Node};
-use vyre_self_substrate::optimizer::pattern_match_via_encoded::gpu_algebraic_identities;
+use vyre_pass_engine::optimizer::pattern_match_via_encoded::gpu_algebraic_identities;
 
 
 

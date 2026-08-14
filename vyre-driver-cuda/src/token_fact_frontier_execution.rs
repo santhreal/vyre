@@ -494,11 +494,11 @@ mod tests {
     use super::*;
     use crate::frontier_typed_ir_adapter::adapt_frontier_typed_ir_to_cuda;
     use crate::token_fact_graph_cuda_adapter::adapt_token_fact_graph_to_cuda_layout;
-    use vyre_self_substrate::device_resident_token_fact_graph::{
+    use vyre_libs::device::device_resident_token_fact_graph::{
         plan_device_resident_token_fact_graph, TokenFactEdge, TokenFactEdgeKind, TokenFactNode,
         TokenFactNodeKind,
     };
-    use vyre_self_substrate::frontier_typed_ir::{
+    use vyre_libs::scheduling::frontier_typed_ir::{
         plan_frontier_typed_ir, FrontierDependency, FrontierDomain, FrontierNode,
     };
 

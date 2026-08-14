@@ -7,7 +7,7 @@ mod common;
 use common::live_backend;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver_cuda::CudaProgramDispatcher;
-use vyre_self_substrate::optimizer::pipeline_resident::gpu_pipeline_resident;
+use vyre_pass_engine::optimizer::pipeline_resident::gpu_pipeline_resident;
 
 fn run_pipeline(p: Program) -> Program {
     let backend = live_backend();

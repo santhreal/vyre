@@ -129,7 +129,7 @@ pub(crate) fn check_barrier(
 /// this tree, all with the same shape (clear the flag, synchronize, step, exit
 /// as the LAST node of the body): `persistent_fixpoint`, the
 /// `wide_lineage_body` behind `scallop_join_wide`, the `single_word_lineage_body`
-/// behind `scallop_join`, and the DCE fixpoint in `vyre-self-substrate`. The
+/// behind `scallop_join`, and the DCE fixpoint in `vyre-pass-engine`. The
 /// first was root-caused from an intermittent wrong answer downstream, not from
 /// a hang, which is what this rule's error message means by costing answers
 /// rather than liveness (reported by `ExactnessRegression`, whose measurement of

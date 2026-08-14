@@ -207,8 +207,8 @@ layer = "Graph/flow compiler seam"
 write = [
   "vyre-primitives/src/graph/**",
   "vyre-primitives/src/bitset/**",
-  "vyre-self-substrate/src/analysis/**",
-  "vyre-self-substrate/src/graph/**",
+  "vyre-libs/src/analysis/**",
+  "vyre-libs/src/graph/**",
   "vyre-libs/src/dataflow/**",
   "vyre-libs/src/security/**",
 ]
@@ -219,7 +219,7 @@ avoid = [
 ]
 required_commands = [
   "cargo_full test -p vyre-primitives graph",
-  "cargo_full test -p vyre-self-substrate dataflow",
+  "cargo_full test -p vyre-libs analysis",
 ]
 
 [lane.parser_frontend]
@@ -289,13 +289,13 @@ write = [
   "vyre-libs/src/security/**",
   "vyre-libs/src/dataflow/**",
   "vyre-libs/src/borrowck/**",
-  "vyre-self-substrate/src/analysis/**",
+  "vyre-libs/src/analysis/**",
   "vyre-foundation/src/pass_substrate/**",
   "vyre-foundation/src/transform/compiler/dataflow_fixpoint.rs",
 ]
 required_commands = [
   "cargo_full test -p vyre-libs security",
-  "cargo_full test -p vyre-self-substrate dataflow",
+  "cargo_full test -p vyre-libs analysis",
 ]
 
 [lane.security_reliability]
@@ -403,7 +403,7 @@ write = [
   "vyre-emit-ptx/src/**",
   "vyre-emit-spirv/src/**",
   "vyre-emit-metal/src/**",
-  "vyre-self-substrate/src/optimizer/**",
+  "vyre-pass-engine/src/optimizer/**",
   "vyre-driver/src/specialization.rs",
   "vyre-driver/src/launch_fusion.rs",
 ]

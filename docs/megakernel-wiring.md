@@ -106,7 +106,7 @@ This is not the runtime planner and not the artifact compiler.
 | --- | --- | --- |
 | `vyre-driver-cuda/src/megakernel_*.rs` | Live | Keep as **thin telemetry adapters** over driver policy (`CudaX` aliases + sample mapping). Device-local caches/gates may stay CUDA-owned. No second topology policy. |
 | Portable wgpu driver | **No megakernel planner** | There is no second wgpu megakernel planner. Protocol, lifecycle planning, and queue encoding live under `vyre-runtime/src/megakernel/` only. Do not recreate a driver-local planner. |
-| `vyre-self-substrate` matroid / `scheduling/megakernel_schedule` | Live | Self-hosted algorithm implementations on Vyre primitives. Call into them from one stage owner; do not fork a fifth public fusion API. |
+| `vyre-pass-engine` matroid / `scheduling/megakernel_schedule` | Live | Self-hosted algorithm implementations on Vyre primitives. Call into them from one stage owner; do not fork a fifth public fusion API. |
 | benches / conform / xtask | Evidence | Must import protocol and artifact types from the owners above. |
 
 ## Fusion and subset selection (do not merge blindly)
@@ -117,7 +117,7 @@ Same vocabulary, different stages:
 | --- | --- | --- |
 | IR / pass scheduling | `vyre-foundation::optimizer::megakernel::max_fusion_subset` | Bounded subset for optimizer fusion decisions |
 | Runtime lifecycle planning | `vyre-runtime::megakernel::planner::select_fused_subset*` | Costed subset for resident/batch fusion |
-| Continuous relaxation | `vyre-self-substrate::scheduling::megakernel_schedule` | Homotopy indicators before discrete rounding |
+| Continuous relaxation | `vyre-pass-engine::scheduling::megakernel_schedule` | Homotopy indicators before discrete rounding |
 | Artifact freeze | `vyre-megakernel` `SelectedPlan` / `FusionRecord` | Immutable compiler-selected groups in the envelope |
 | Device wave pressure | `vyre-driver/src/megakernel_execution.rs` fusion_pressure inputs | Topology bias, not subset ILP |
 

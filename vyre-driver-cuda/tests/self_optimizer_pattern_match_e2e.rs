@@ -7,7 +7,7 @@ mod common;
 
 use common::{live_backend, CudaProgramDispatcher};
 use vyre::ir::{BinOp, Expr, Node, Program};
-use vyre_self_substrate::optimizer::pattern_match_via_encoded::gpu_algebraic_identities;
+use vyre_pass_engine::optimizer::pattern_match_via_encoded::gpu_algebraic_identities;
 
 fn wrapped(entry: Vec<Node>) -> Program {
     Program::wrapped(Vec::new(), [1, 1, 1], entry)

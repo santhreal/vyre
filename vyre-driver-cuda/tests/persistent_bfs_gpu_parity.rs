@@ -1,6 +1,6 @@
 //! Parity test: GPU persistent-BFS dispatch matches the reference oracle.
 //!
-//! Drives the new `vyre_self_substrate::persistent_bfs::bfs_expand_via`
+//! Drives the new `vyre_libs::graph::dispatch::persistent_bfs::bfs_expand_via`
 //! GPU dispatch path against the existing reference oracle on real CUDA
 //! hardware. Asserts identical (frontier_out, changed) on a battery
 //! of graph shapes and allow_mask values.
@@ -11,7 +11,7 @@ mod common;
 
 use common::{with_live_backend, CudaProgramDispatcher};
 use vyre_driver_cuda::CudaProgramDispatcher as CudaResidentProgramDispatcher;
-use vyre_self_substrate::persistent_bfs::{
+use vyre_libs::graph::dispatch::persistent_bfs::{
     bfs_expand as reference_bfs_expand, bfs_expand_resident_graph_batch_with_scratch_into,
     bfs_expand_resident_graph_with_scratch_into, bfs_expand_via, try_bfs_expand_converged,
     upload_resident_bfs_graph, PersistentBfsPlanCacheSnapshot, PersistentBfsResidentScratch,

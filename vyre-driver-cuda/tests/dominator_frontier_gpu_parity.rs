@@ -5,7 +5,7 @@
 mod common;
 
 use common::with_cuda_optimizer_dispatcher;
-use vyre_self_substrate::dominator_frontier::{
+use vyre_libs::graph::dispatch::dominator_frontier::{
     compute_dominance_frontier as reference_compute_dominance_frontier,
     compute_dominance_frontier_via,
 };
