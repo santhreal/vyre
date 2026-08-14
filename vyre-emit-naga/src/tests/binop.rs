@@ -120,17 +120,25 @@ fn select_with_u64_arms_emits_without_coerce_passthrough_panic() {
             body()
                 .ops([
                     // result 0: vyre.literal.u64(100)
-                    op(KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
+                    op(
+                        KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
                             extension_id: 10,
                             extension_kind: "vyre.literal.u64".to_owned(),
                             payload: 100u64.to_le_bytes().to_vec(),
-                        })), [], 0),
+                        })),
+                        [],
+                        0,
+                    ),
                     // result 1: vyre.literal.u64(200)
-                    op(KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
+                    op(
+                        KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
                             extension_id: 11,
                             extension_kind: "vyre.literal.u64".to_owned(),
                             payload: 200u64.to_le_bytes().to_vec(),
-                        })), [], 1),
+                        })),
+                        [],
+                        1,
+                    ),
                     // result 2: Literal U32(0) for comparison
                     lit(0, 2),
                     // result 3: LocalInvocationId (U32)

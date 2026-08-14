@@ -46,9 +46,7 @@ fn emit_many_preserves_input_order_for_independent_descriptors() {
 #[test]
 fn scalar_store_descriptor_emits_globals_and_statements() {
     let desc = descriptor("store")
-        .slots([
-            global_rw(0, DataType::U32, "out"),
-        ])
+        .slots([global_rw(0, DataType::U32, "out")])
         .dispatch(64, 1, 1)
         .body(
             body()

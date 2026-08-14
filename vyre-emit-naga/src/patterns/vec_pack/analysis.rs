@@ -512,23 +512,24 @@ mod tests {
                     .ops([
                         op(KernelOpKind::Literal, [0], 0),
                         op(KernelOpKind::Literal, [1], 1),
-                        effect(KernelOpKind::StructuredForLoop {
-                            loop_var: "".into(),
-                        }, [0, 1, 0]),
+                        effect(
+                            KernelOpKind::StructuredForLoop {
+                                loop_var: "".into(),
+                            },
+                            [0, 1, 0],
+                        ),
                     ])
-                    .children([
-                        body()
-                            .ops([
-                                op(KernelOpKind::LocalInvocationId, [], 0),
-                                op(KernelOpKind::Literal, [0], 10),
-                                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 10], 11),
-                                op(KernelOpKind::LoadGlobal, [0, 11], 20),
-                                op(KernelOpKind::Literal, [1], 12),
-                                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 12], 13),
-                                op(KernelOpKind::LoadGlobal, [0, 13], 21),
-                            ])
-                            .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
-                    ])
+                    .children([body()
+                        .ops([
+                            op(KernelOpKind::LocalInvocationId, [], 0),
+                            op(KernelOpKind::Literal, [0], 10),
+                            op(KernelOpKind::BinOpKind(BinOp::Add), [0, 10], 11),
+                            op(KernelOpKind::LoadGlobal, [0, 11], 20),
+                            op(KernelOpKind::Literal, [1], 12),
+                            op(KernelOpKind::BinOpKind(BinOp::Add), [0, 12], 13),
+                            op(KernelOpKind::LoadGlobal, [0, 13], 21),
+                        ])
+                        .literals([LiteralValue::U32(0), LiteralValue::U32(1)])])
                     .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
             )
             .build();

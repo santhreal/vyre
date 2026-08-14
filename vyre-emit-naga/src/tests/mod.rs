@@ -2,16 +2,10 @@ use super::*;
 use naga::{Binding, Block, BuiltIn, Statement, TypeInner};
 use vyre_foundation::ir::{BinOp, DataType, UnOp};
 use vyre_foundation::memory_model::MemoryOrdering;
-use vyre_lower::descriptor_builder::{SlotCount, body, descriptor, effect, global_rw, lit};
+use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, SlotCount};
 use vyre_lower::{
-    BindingLayout,
-    BindingSlot,
-    BindingVisibility,
-    Dispatch,
-    KernelDescriptor,
-    KernelOpKind,
-    LiteralValue,
-    MemoryClass,
+    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelDescriptor, KernelOpKind,
+    LiteralValue, MemoryClass,
 };
 
 fn empty_desc() -> KernelDescriptor {

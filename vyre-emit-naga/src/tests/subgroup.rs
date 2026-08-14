@@ -54,9 +54,13 @@ fn subgroup_add_emits_collective_operation() {
             body()
                 .ops([
                     lit(0, 0),
-                    op(KernelOpKind::SubgroupReduce {
-                        op: vyre_lower::SubgroupReduceOp::Add,
-                    }, [0], 1),
+                    op(
+                        KernelOpKind::SubgroupReduce {
+                            op: vyre_lower::SubgroupReduceOp::Add,
+                        },
+                        [0],
+                        1,
+                    ),
                 ])
                 .literal(LiteralValue::U32(7)),
         )

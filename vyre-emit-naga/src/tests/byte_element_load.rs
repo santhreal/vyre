@@ -7,21 +7,12 @@
 //! pins the WGSL emit pattern that keeps both backends in agreement.
 use super::*;
 use vyre_lower::descriptor_builder::{
-    SlotCount,
-    body,
-    descriptor,
-    effect,
-    global_ro,
-    global_rw,
-    lit,
-    op,
+    body, descriptor, effect, global_ro, global_rw, lit, op, SlotCount,
 };
 
 fn byte_load_desc(element_type: DataType) -> KernelDescriptor {
     descriptor("byte_load")
-        .slots([
-            global_ro(0, element_type, "source").with_count(64),
-        ])
+        .slots([global_ro(0, element_type, "source").with_count(64)])
         .body(
             body()
                 .ops([
@@ -145,12 +136,14 @@ fn i8_load_global_emits_byte_extract_with_sign_extend() {
 
 fn byte_store_desc(element_type: DataType) -> KernelDescriptor {
     descriptor("byte_store")
-        .slots([
-            global_rw(0, element_type, "out").with_count(64),
-        ])
+        .slots([global_rw(0, element_type, "out").with_count(64)])
         .body(
             body()
-                .ops([lit(0, 0), lit(1, 1), effect(KernelOpKind::StoreGlobal, [0, 0, 1])])
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
+                ])
                 .literals([LiteralValue::U32(7), LiteralValue::U32(0xab)]),
         )
         .build()
@@ -257,9 +250,7 @@ fn u32_store_global_unchanged_by_byte_rmw_path() {
 /// in `naga_type_buffer_followup::bytes_buffers`.
 fn cast_to_bytes_desc() -> KernelDescriptor {
     descriptor("cast_to_bytes")
-        .slots([
-            global_rw(0, DataType::U32, "out").with_count(1),
-        ])
+        .slots([global_rw(0, DataType::U32, "out").with_count(1)])
         .body(
             body()
                 .ops([
@@ -267,9 +258,13 @@ fn cast_to_bytes_desc() -> KernelDescriptor {
                     lit(0, 0),
                     // result 1: cast that u32 -> Bytes. This is the invalid op that
                     // must fail closed, NOT silently emit a u32 `As` conversion.
-                    op(KernelOpKind::Cast {
+                    op(
+                        KernelOpKind::Cast {
                             target: DataType::Bytes,
-                        }, [0], 1),
+                        },
+                        [0],
+                        1,
+                    ),
                 ])
                 .literal(LiteralValue::U32(0xab)),
         )
