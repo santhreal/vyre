@@ -8,20 +8,17 @@
 //! neither still compiles, still appears in the catalogs generated from source,
 //! and still diverges from its reference arm with nothing red.
 //!
-//! [`assert_registry_closure`] is the one enumerator. A crate's gate is a
-//! `tests/registry_closure.rs` carrying only that crate's waiver and floor:
+//! [`assert_registry_closure`] is the one enumerator, and
+//! [`registry_closure_gate!`] is how a crate declares its gate. The crate's
+//! `tests/registry_closure.rs` carries only what is crate-specific, the floor
+//! and the waived builders, because the test name, the manifest-directory
+//! argument and the call itself are the same in every crate and were being
+//! copied verbatim:
 //!
 //! ```ignore
-//! const COVERAGE_WAIVER: &[&str] = &[/* uncovered builder, with its reason */];
-//! const BUILDER_FLOOR: usize = 4;
-//!
-//! #[test]
-//! fn every_program_builder_is_tested_registered_or_explicitly_waived() {
-//!     vyre_test_support::assert_registry_closure(
-//!         env!("CARGO_MANIFEST_DIR"),
-//!         COVERAGE_WAIVER,
-//!         BUILDER_FLOOR,
-//!     );
+//! vyre_test_support::registry_closure_gate! {
+//!     floor: 4,
+//!     waiver: ["uncovered_builder_with_its_reason_above"],
 //! }
 //! ```
 //!
@@ -35,6 +32,28 @@
 //! never compiles them, so it reports the same builder set whichever features
 //! the runner selects.
 #![forbid(unsafe_code)]
+
+/// Declare this crate's registry/coverage closure gate.
+///
+/// `floor` is the minimum builder count the source enumeration must find, and
+/// `waiver` lists builders that are knowingly uncovered. Both are the only
+/// crate-specific parts of the gate, so they are the only arguments; the test
+/// name and the crate directory are derived here. `env!("CARGO_MANIFEST_DIR")`
+/// expands at the call site, so it names the crate that declares the gate
+/// rather than this one.
+#[macro_export]
+macro_rules! registry_closure_gate {
+    (floor: $floor:expr, waiver: [$($waived:expr),* $(,)?] $(,)?) => {
+        #[test]
+        fn every_program_builder_is_tested_registered_or_explicitly_waived() {
+            $crate::assert_registry_closure(
+                env!("CARGO_MANIFEST_DIR"),
+                &[$($waived),*],
+                $floor,
+            );
+        }
+    };
+}
 
 pub mod consumer_boundary;
 #[cfg(feature = "ir-fixtures")]
