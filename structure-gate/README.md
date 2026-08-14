@@ -38,7 +38,7 @@ Enforce the crate roster, one operation identity per semantic operation, and one
 
 ### Boundaries
 
-The `release-tooling` owner maintains this `tooling` crate at `structure-gate`.
+The `release-tooling` owner maintains this `standalone-tooling` crate at `structure-gate`.
 Its allowed internal production dependencies are: None.
 Any other normal or build dependency requires an ownership-registry change.
 
@@ -57,7 +57,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full run -p structure-gate -- --help
 
 ### Errors and unsupported behavior
 
-Invalid arguments, stale evidence, violated repository contracts, and failed commands return a nonzero status with a concrete correction.
+Invalid arguments, violated repository contracts, and an unreadable checkout return a nonzero status with a concrete correction. Depends on no workspace crate, so it keeps answering while the workspace does not compile.
 
 ### Testing
 

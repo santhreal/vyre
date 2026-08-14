@@ -110,8 +110,10 @@ pub(super) fn benchmark_artifact_is_reusable(
     else {
         return false;
     };
-    if !crate::bench::benchmark_evidence_semantics::source_fingerprint_issues(report_source_fingerprint)
-        .is_empty()
+    if !crate::bench::benchmark_evidence_semantics::source_fingerprint_issues(
+        report_source_fingerprint,
+    )
+    .is_empty()
     {
         return false;
     }
@@ -165,11 +167,14 @@ fn benchmark_artifact_report_shape_is_reusable(
     {
         return false;
     }
-    if !crate::bench::benchmark_evidence_semantics::benchmark_report_summary_matches_case_evidence(report)
-    {
+    if !crate::bench::benchmark_evidence_semantics::benchmark_report_summary_matches_case_evidence(
+        report,
+    ) {
         return false;
     }
-    if !crate::bench::benchmark_evidence_semantics::benchmark_failed_case_summaries(report).is_empty() {
+    if !crate::bench::benchmark_evidence_semantics::benchmark_failed_case_summaries(report)
+        .is_empty()
+    {
         return false;
     }
     let Some(cases) = report.get("cases").and_then(Value::as_array) else {

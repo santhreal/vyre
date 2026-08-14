@@ -271,7 +271,7 @@ fn manual_records() -> Vec<OpRecord> {
 fn registered_records() -> Result<Vec<OpRecord>, String> {
     let mut ids = BTreeMap::<String, BTreeSet<String>>::new();
 
-    let registry = crate::live_registry::live_operation_registry();
+    let registry = vyre_registry_link::operation::live_operation_registry();
     for entry in registry.iter() {
         push_registered(&mut ids, entry.id, "vyre-foundation::operation")?;
     }

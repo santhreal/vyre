@@ -924,11 +924,9 @@ fn inspect_release_axes_scalar_values(
     if let Some(expected) = min_positive_metric_percentile(source_reports, "wall_ns", "p50") {
         inspect_release_axis_f64(axes, "warm_us_per_file", expected as f64 / 1_000.0, issues);
     }
-    if let Some(expected) = first_min_positive_metric_percentile(
-        source_reports,
-        COLD_PIPELINE_BUILD_METRICS,
-        "p50",
-    ) {
+    if let Some(expected) =
+        first_min_positive_metric_percentile(source_reports, COLD_PIPELINE_BUILD_METRICS, "p50")
+    {
         inspect_release_axis_f64(
             axes,
             "cold_pipeline_build_ms",
@@ -936,11 +934,9 @@ fn inspect_release_axes_scalar_values(
             issues,
         );
     }
-    if let Some(expected) = first_max_positive_metric_percentile(
-        source_reports,
-        SCAN_THROUGHPUT_METRICS,
-        "p50",
-    ) {
+    if let Some(expected) =
+        first_max_positive_metric_percentile(source_reports, SCAN_THROUGHPUT_METRICS, "p50")
+    {
         inspect_release_axis_f64(
             axes,
             "gbs_scan_throughput",
@@ -1172,24 +1168,14 @@ fn inspect_release_axis_source_artifact_metrics(
             "source_artifact `{artifact}` has no positive p50 wall_ns metric for warm_us_per_file"
         ));
     }
-    if first_positive_artifact_metric_percentile(
-        report,
-        COLD_PIPELINE_BUILD_METRICS,
-        "p50",
-    )
-    .is_none()
+    if first_positive_artifact_metric_percentile(report, COLD_PIPELINE_BUILD_METRICS, "p50")
+        .is_none()
     {
         issues.push(format!(
             "source_artifact `{artifact}` has no positive p50 cold/compile metric for cold_pipeline_build_ms"
         ));
     }
-    if first_positive_artifact_metric_percentile(
-        report,
-        SCAN_THROUGHPUT_METRICS,
-        "p50",
-    )
-    .is_none()
-    {
+    if first_positive_artifact_metric_percentile(report, SCAN_THROUGHPUT_METRICS, "p50").is_none() {
         issues.push(format!(
             "source_artifact `{artifact}` has no positive p50 throughput metric for gbs_scan_throughput"
         ));
@@ -2740,22 +2726,24 @@ pub(crate) fn cuda_telemetry_label_issues(report: &Value) -> Vec<CudaTelemetryLa
         .flat_map(|case| {
             let metrics = case.get("metrics").and_then(Value::as_object);
             let case_id = case_id(case);
-            CUDA_TELEMETRY_CHECKS.iter().filter_map(move |(label, counters)| {
-                let counters_active =
-                    metric_value_any(metrics, counters).is_some_and(|value| value > 0.0);
-                let label_present = optimization_passes_contain(case, label);
-                match (counters_active, label_present) {
-                    (true, false) => Some(CudaTelemetryLabelIssue::MissingLabel {
-                        case_id: case_id.clone(),
-                        label,
-                    }),
-                    (false, true) => Some(CudaTelemetryLabelIssue::LabelWithoutCounters {
-                        case_id: case_id.clone(),
-                        label,
-                    }),
-                    _ => None,
-                }
-            })
+            CUDA_TELEMETRY_CHECKS
+                .iter()
+                .filter_map(move |(label, counters)| {
+                    let counters_active =
+                        metric_value_any(metrics, counters).is_some_and(|value| value > 0.0);
+                    let label_present = optimization_passes_contain(case, label);
+                    match (counters_active, label_present) {
+                        (true, false) => Some(CudaTelemetryLabelIssue::MissingLabel {
+                            case_id: case_id.clone(),
+                            label,
+                        }),
+                        (false, true) => Some(CudaTelemetryLabelIssue::LabelWithoutCounters {
+                            case_id: case_id.clone(),
+                            label,
+                        }),
+                        _ => None,
+                    }
+                })
         })
         .collect()
 }

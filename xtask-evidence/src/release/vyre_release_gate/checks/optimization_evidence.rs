@@ -315,7 +315,10 @@ pub(crate) fn before_after_semantic_win(
     case_id: &str,
     metrics: &serde_json::Map<String, serde_json::Value>,
 ) -> bool {
-    crate::bench::benchmark_evidence_semantics::benchmark_before_after_semantic_win(case_id, Some(metrics))
+    crate::bench::benchmark_evidence_semantics::benchmark_before_after_semantic_win(
+        case_id,
+        Some(metrics),
+    )
 }
 pub(crate) fn metric_percentile(
     metric: Option<&serde_json::Value>,

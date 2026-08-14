@@ -3423,9 +3423,7 @@ dependencies = [
  "vyre",
  "vyre-driver",
  "vyre-driver-cuda",
- "vyre-driver-metal",
  "vyre-driver-reference",
- "vyre-driver-spirv",
  "vyre-driver-wgpu",
  "vyre-emit-naga",
  "vyre-emit-ptx",
@@ -3436,6 +3434,7 @@ dependencies = [
  "vyre-lower",
  "vyre-primitives",
  "vyre-reference",
+ "vyre-registry-link",
  "vyre-runtime",
  "vyre-spec",
  "vyre-test-support",
@@ -3460,14 +3459,13 @@ dependencies = [
  "vyre-conform-spec",
  "vyre-driver",
  "vyre-driver-cuda",
- "vyre-driver-metal",
- "vyre-driver-reference",
  "vyre-driver-wgpu",
  "vyre-foundation",
  "vyre-libs",
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
+ "vyre-registry-link",
  "vyre-runtime",
  "vyre-spec",
 ]
@@ -3933,6 +3931,22 @@ dependencies = [
  "vyre-primitives",
  "vyre-spec",
  "vyre-test-support",
+]
+
+[[package]]
+name = "vyre-registry-link"
+version = "0.7.2"
+dependencies = [
+ "toml",
+ "vyre-driver",
+ "vyre-driver-cuda",
+ "vyre-driver-metal",
+ "vyre-driver-reference",
+ "vyre-driver-spirv",
+ "vyre-driver-wgpu",
+ "vyre-foundation",
+ "vyre-libs",
+ "vyre-primitives",
 ]
 
 [[package]]
@@ -4685,8 +4699,7 @@ dependencies = [
  "toml",
  "vyre-bench",
  "vyre-driver",
- "vyre-driver-cuda",
- "vyre-driver-wgpu",
+ "vyre-registry-link",
  "walkdir",
  "xtask",
 ]
@@ -4703,16 +4716,13 @@ dependencies = [
  "toml",
  "vyre",
  "vyre-driver",
- "vyre-driver-cuda",
- "vyre-driver-reference",
- "vyre-driver-spirv",
- "vyre-driver-wgpu",
  "vyre-foundation",
  "vyre-libs",
  "vyre-lints",
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
+ "vyre-registry-link",
  "vyre-spec",
  "walkdir",
  "xtask",

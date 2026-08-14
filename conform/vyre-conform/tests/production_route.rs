@@ -4,12 +4,11 @@
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_conform::ProductionSession;
-use vyre_driver::backend::registered_backends;
-use vyre_driver_wgpu as _;
+use vyre_registry_link::backend::live_backend_registry;
 
 #[test]
 fn wgpu_production_route_executes_canonical_artifact() {
-    let registration = registered_backends()
+    let registration = live_backend_registry()
         .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == "wgpu")

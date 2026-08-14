@@ -15,20 +15,11 @@ use blake3::Hash;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node, Program};
 use vyre_conform::dispatch_grid;
 use vyre_conform::fp_parity::{compare_output_buffers, BufferParity};
-use vyre_driver::backend::{backend_dispatches, registered_backends};
+use vyre_driver::backend::backend_dispatches;
 use vyre_driver::{BackendRegistration, DispatchConfig};
 use vyre_foundation::validate::{validate_with_options, BackendCapabilities, ValidationOptions};
 use vyre_reference::value::Value;
 use vyre_spec::expr_variants;
-
-#[cfg(feature = "gpu")]
-use vyre_driver_cuda as _;
-#[cfg(feature = "gpu")]
-use vyre_driver_metal as _;
-#[cfg(feature = "gpu")]
-use vyre_driver_wgpu as _;
-use vyre_libs as _;
-use vyre_primitives as _;
 
 type FixtureCases = Vec<Vec<Vec<u8>>>;
 type FixtureFn = fn() -> FixtureCases;
@@ -705,18 +696,21 @@ fn parity_matrix_across_all_registered_ops() {
 }
 
 fn backend_runners(summary: &mut Summary) -> Vec<BackendRunner> {
-    force_link_backend_inventory();
     let selected = env::var("VYRE_BACKEND")
         .ok()
         .filter(|value| !value.trim().is_empty());
-    let mut registrations: Vec<&'static BackendRegistration> = registered_backends()
-        .expect("valid backend registry")
-        .iter()
-        .collect();
+    let mut registrations: Vec<&'static BackendRegistration> =
+        vyre_registry_link::backend::live_backend_registry()
+            .expect("valid backend registry")
+            .iter()
+            .collect();
     registrations.retain(|registration| {
-        selected
-            .as_deref()
-            .is_none_or(|backend| registration.id == backend)
+        // Runner one already is the reference, so keeping the reference oracle
+        // here would compare it against itself for every op.
+        !registration.reference_oracle
+            && selected
+                .as_deref()
+                .is_none_or(|backend| registration.id == backend)
     });
     registrations.sort_by(|left, right| left.id.cmp(right.id));
     summary.backends_linked = registrations.len() + 1;
@@ -743,17 +737,11 @@ fn build_backend_runner(registration: &'static BackendRegistration) -> Option<Ba
             id: registration.id,
             kind: BackendKind::Registered(registration),
         })
-}
 
-fn force_link_backend_inventory() {
-    #[cfg(feature = "gpu")]
-    {
-        std::hint::black_box(vyre_driver_metal::METAL_BACKEND_ID);
-    }
 }
 
 fn unified_entries() -> Vec<UnifiedEntry> {
-    let canonical = vyre_foundation::operation::OperationRegistry::global()
+    let canonical = vyre_registry_link::operation::live_operation_registry()
         .iter()
         .map(|entry| UnifiedEntry {
             id: entry.id,

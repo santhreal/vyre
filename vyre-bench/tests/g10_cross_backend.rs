@@ -11,12 +11,11 @@ const ELEMENTWISE_CASE_ID: &str = "foundation.elementwise.add.1m";
 
 #[test]
 fn test_cross_backend_elementwise() {
-    vyre_bench::link_benchmark_backend_registrations();
     let registry = vyre_bench::registry::collect_all();
 
     // Only registrations with the complete artifact compiler/materializer route
     // can satisfy this production-path benchmark contract.
-    let backends: Vec<&str> = vyre_driver::backend::registered_backends_by_precedence_slice()
+    let backends: Vec<&str> = vyre_registry_link::backend::live_backend_registry_by_precedence()
         .expect("valid backend registry")
         .iter()
         .filter(|registration| {

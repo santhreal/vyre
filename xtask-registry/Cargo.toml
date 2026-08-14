@@ -17,17 +17,22 @@ workspace = true
 # Every dependency here exists because a subcommand in this crate has to look at
 # the registry that these crates submit into, or at a linked backend driver.
 # A subcommand that only reads source text belongs in `xtask`, which links none
-# of this.
+# of this. The concrete driver crates are linked through `vyre-registry-link`,
+# which owns every registry link anchor and asserts the floor per source, so no
+# manifest here repeats that list.
 [dependencies]
 xtask = { path = "../xtask" }
 vyre.workspace = true
 vyre-foundation.workspace = true
 vyre-megakernel.workspace = true
 vyre-driver.workspace = true
-vyre-driver-cuda.workspace = true
-vyre-driver-reference.workspace = true
-vyre-driver-spirv.workspace = true
-vyre-driver-wgpu.workspace = true
+vyre-registry-link = { workspace = true, features = [
+    "operations",
+    "cuda",
+    "reference",
+    "spirv",
+    "wgpu",
+] }
 vyre-lints.workspace = true
 vyre-reference.workspace = true
 vyre-spec.workspace = true

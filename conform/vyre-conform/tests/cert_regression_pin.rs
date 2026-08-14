@@ -22,11 +22,6 @@ use vyre_primitives::wire::pack_u32_slice as bytes_u32;
 use vyre_reference::value::Value;
 use vyre_reference::ReferenceFacet;
 
-#[cfg(feature = "gpu")]
-use vyre_driver_metal as _;
-#[cfg(feature = "gpu")]
-use vyre_driver_wgpu as _;
-
 type BundleBuilderFn = fn() -> (Program, Vec<ConformanceCase>);
 
 const TEST_IDENTITY_U32_OP: &str = "vyre_conform_test::identity_u32";
@@ -522,7 +517,7 @@ fn cert_regression_pin_backend_verification_gpu() {
         ),
     ];
 
-    let backend = vyre_driver::backend::registered_backends()
+    let backend = vyre_registry_link::backend::live_backend_registry()
         .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == "wgpu")

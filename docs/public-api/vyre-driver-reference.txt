@@ -8,5 +8,6 @@ pub fn vyre_driver_reference::CpuRefBackend::max_compute_workgroups_per_dimensio
 pub fn vyre_driver_reference::CpuRefBackend::max_workgroup_size(&self) -> [u32; 3]
 pub fn vyre_driver_reference::CpuRefBackend::supported_ops(&self) -> &std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub fn vyre_driver_reference::CpuRefBackend::version(&self) -> &'static str
+pub fn vyre_driver_reference::registered_backend_id() -> core::option::Option<&'static str>
 pub mod vyre_driver_reference
 pub struct vyre_driver_reference::CpuRefBackend

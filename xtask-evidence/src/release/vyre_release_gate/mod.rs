@@ -10,14 +10,14 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 mod checks;
+mod gate_inputs;
 mod paths;
 mod semantic;
-mod gate_inputs;
 
 use checks::check_markdown_evidence_path_ready;
+use gate_inputs::{EvidenceManifest, GateMode};
 use paths::{escapes_repository, options_from_args, read_text_bounded, resolve_manifest_path};
 use semantic::run_semantic_requirement_checks;
-use gate_inputs::{EvidenceManifest, GateMode};
 
 pub(crate) fn run(args: &[String]) {
     let options = match options_from_args(args) {

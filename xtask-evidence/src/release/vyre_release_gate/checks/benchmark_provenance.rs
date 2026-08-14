@@ -3,11 +3,11 @@ use super::*;
 use crate::bench::benchmark_evidence_semantics::{
     backend_consistency_issues, benchmark_report_has_source_provenance,
     benchmark_source_artifact_paths, contract_backend_issues, cuda_forbidden_telemetry_issues,
-    cuda_telemetry_label_issues, current_freshness_fingerprint_for_report, launch_plan_label_issues,
-    report_freshness_fingerprint, source_fingerprint_freshness_issues, source_fingerprint_issues,
-    BackendConsistencyIssue, ContractBackendIssue, CudaForbiddenTelemetryIssue,
-    CudaTelemetryLabelIssue, LaunchPlanLabelIssue, SourceFingerprintFreshnessIssue,
-    SourceFingerprintIssue,
+    cuda_telemetry_label_issues, current_freshness_fingerprint_for_report,
+    launch_plan_label_issues, report_freshness_fingerprint, source_fingerprint_freshness_issues,
+    source_fingerprint_issues, BackendConsistencyIssue, ContractBackendIssue,
+    CudaForbiddenTelemetryIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
+    SourceFingerprintFreshnessIssue, SourceFingerprintIssue,
 };
 use crate::bench::benchmark_evidence_semantics::{
     metrics_has_any, metrics_has_positive_any, metrics_has_zero_any,
@@ -509,7 +509,6 @@ const NON_DISPATCH_PROOF_CASE_IDS: &[&str] = &["cuda.ptx.patterns.release.corpus
 fn is_non_dispatch_proof_case(case_id: &str) -> bool {
     NON_DISPATCH_PROOF_CASE_IDS.contains(&case_id)
 }
-
 
 fn check_launch_plan_label_matches_count(
     requirement: &Requirement,

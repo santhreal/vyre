@@ -13,7 +13,6 @@ mod artifact_status;
 mod evidence_index;
 mod expected_artifacts;
 
-use xtask::artifact_paths::{LEGO_AUDIT_DUPLICATES_ARTIFACT, REGISTERED_OP_DUPLICATES_ARTIFACT};
 use artifact_status::{
     artifact_blocker_suffix, generator_command, inspect_expected_artifacts,
     inspect_expected_artifacts_with_mode, release_artifact_status_has_failure,
@@ -27,6 +26,7 @@ use expected_artifacts::{
     COMMAND_MODE_EXTERNAL_ARTIFACTS_ONLY, COMMAND_MODE_SPAWNED, EXPECTED_ARTIFACT_REGISTRY,
     RELEASE_EVIDENCE_GENERATOR_COMMAND, RELEASE_EVIDENCE_RUN_ARTIFACT,
 };
+use xtask::artifact_paths::{LEGO_AUDIT_DUPLICATES_ARTIFACT, REGISTERED_OP_DUPLICATES_ARTIFACT};
 
 const RELEASE_EVIDENCE_RUN_SCHEMA_VERSION: u32 = 4;
 

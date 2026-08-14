@@ -70,7 +70,7 @@ struct OpInfo {
 
 fn collect_ops() -> Vec<OpInfo> {
     let mut ops = Vec::new();
-    for entry in crate::live_registry::live_operation_registry().iter() {
+    for entry in vyre_registry_link::operation::live_operation_registry().iter() {
         let program = entry.program().unwrap_or_else(|| {
             panic!(
                 "Fix: canonical operation `{}` provides no neutral builder; register one or remove the registration",

@@ -1,0 +1,52 @@
+[package]
+name = "vyre-registry-link"
+version = "0.7.2"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Sole owner of inventory registry link anchors and the per-source floor every registry read is judged against."
+# Linkage owner for internal binaries, never published.
+publish = false
+
+[lints]
+workspace = true
+
+# Every dependency here submits into a global inventory registry. This crate
+# exists to reference a symbol in each one, because that reference is what keeps
+# its registrations in a linked binary. A consumer enables the features naming
+# the registries it reads and the drivers it legitimately links.
+[dependencies]
+vyre-driver = { workspace = true }
+vyre-foundation = { workspace = true }
+vyre-driver-cuda = { workspace = true, optional = true }
+vyre-driver-metal = { workspace = true, optional = true }
+vyre-driver-reference = { workspace = true, optional = true }
+vyre-driver-spirv = { workspace = true, optional = true }
+vyre-driver-wgpu = { workspace = true, optional = true }
+vyre-libs = { workspace = true, optional = true }
+# `hardware` is the smallest primitive feature that carries registrations, and it
+# implies `inventory-registry`. Enabling less would give this crate a source that
+# contributes nothing, which is the state its floor exists to reject.
+vyre-primitives = { workspace = true, optional = true, features = ["hardware"] }
+
+[dev-dependencies]
+# The rules read the workspace member list to find registration-submitting
+# crates, instead of carrying a list that goes stale in silence.
+toml = { workspace = true }
+
+[features]
+# The default is every registry and every declared driver, so this crate's own
+# rules judge the whole tree. A consumer that links a subset opts out of the
+# default and names what it links.
+default = ["operations", "cuda", "metal", "reference", "spirv", "wgpu"]
+# The two operation-owning crates. `docs/ARCHITECTURE.md` gives the workspace
+# exactly two, and the rules fail when the tree grows a third.
+operations = ["dep:vyre-libs", "dep:vyre-primitives"]
+cuda = ["dep:vyre-driver-cuda"]
+metal = ["dep:vyre-driver-metal"]
+reference = ["dep:vyre-driver-reference"]
+spirv = ["dep:vyre-driver-spirv"]
+wgpu = ["dep:vyre-driver-wgpu"]

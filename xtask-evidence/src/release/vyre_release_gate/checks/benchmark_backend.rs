@@ -137,10 +137,13 @@ pub(crate) fn check_single_benchmark_report(
         .and_then(|summary| summary.get("failed"))
         .and_then(serde_json::Value::as_u64)
         .unwrap_or(u64::MAX);
-    let failed_cases = crate::bench::benchmark_evidence_semantics::benchmark_failed_case_summaries(report);
+    let failed_cases =
+        crate::bench::benchmark_evidence_semantics::benchmark_failed_case_summaries(report);
     let case_failed = failed_cases.len() as u64;
     if let Some(mismatch) =
-        crate::bench::benchmark_evidence_semantics::benchmark_report_summary_case_evidence_mismatch(report)
+        crate::bench::benchmark_evidence_semantics::benchmark_report_summary_case_evidence_mismatch(
+            report,
+        )
     {
         failures.push(format!(
             "requirement `{}` benchmark `{}` has invalid summary: {mismatch}",
@@ -265,9 +268,10 @@ pub(crate) fn check_single_benchmark_report(
             .and_then(serde_json::Value::as_bool)
             .unwrap_or(false);
         if !contract_passed {
-            let reason = crate::bench::benchmark_evidence_semantics::benchmark_case_failure_reason(case)
-                .map(|reason| format!(": {reason}"))
-                .unwrap_or_default();
+            let reason =
+                crate::bench::benchmark_evidence_semantics::benchmark_case_failure_reason(case)
+                    .map(|reason| format!(": {reason}"))
+                    .unwrap_or_default();
             failures.push(format!(
                 "requirement `{}` benchmark `{}` case `{id}` did not pass its performance contract{reason}",
                 requirement.id,

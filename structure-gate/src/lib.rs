@@ -70,6 +70,9 @@ const ALLOWED_MEMBERS: &[&str] = &[
     "conform/vyre-conform-spec",
     "vyre",
     "vyre-aot",
+    // Sole owner of the registry link anchors: it names every crate that submits
+    // into an inventory registry so no consumer has to.
+    "vyre-registry-link",
     "vyre-bench",
     "vyre-debug",
     "vyre-driver",
@@ -153,6 +156,10 @@ pub struct Workspace {
     pub frontend_paths: Vec<(String, String)>,
     /// `(path, source text)` for every concrete backend materializer.
     pub materializers: Vec<(String, String)>,
+    /// Member crates that submit into an `inventory` registry.
+    pub registry_submitters: Vec<String>,
+    /// Every `use <crate> as _;` found in member sources.
+    pub discarding_imports: Vec<DiscardingImport>,
 }
 
 /// Read the workspace rooted at `root` into the structural model.
@@ -163,12 +170,16 @@ pub fn scan(root: &Path) -> Workspace {
     let substrate_paths = scan_substrate_paths(root, &members);
     let frontend_paths = scan_frontend_paths(root, &members);
     let materializers = scan_materializers(root, &members);
+    let registry_submitters = scan_registry_submitters(root, &members);
+    let discarding_imports = scan_discarding_imports(root, &members);
     Workspace {
         members,
         registrations,
         substrate_paths,
         frontend_paths,
         materializers,
+        registry_submitters,
+        discarding_imports,
     }
 }
 
@@ -187,6 +198,10 @@ pub fn violations(root: &Path) -> Vec<String> {
     failures.extend(substrate_home_failures(&workspace.substrate_paths));
     failures.extend(frontend_owner_failures(&workspace.frontend_paths));
     failures.extend(materializer_admission_failures(&workspace.materializers));
+    failures.extend(registry_link_failures(
+        &workspace.registry_submitters,
+        &workspace.discarding_imports,
+    ));
     failures
 }
 
@@ -437,6 +452,52 @@ pub fn materializer_admission_failures(materializers: &[(String, String)]) -> Ve
     failures
 }
 
+/// Crate that owns every registry link anchor in this workspace.
+const REGISTRY_LINK_OWNER: &str = "vyre-registry-link";
+
+/// One `use <crate> as _;` read from member sources.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DiscardingImport {
+    /// Workspace-relative source file.
+    pub file: String,
+    /// Crate identifier as the import writes it, e.g. `vyre_libs`.
+    pub named: String,
+}
+
+/// Reject a discarding import that names a crate submitting inventory registrations.
+///
+/// An `inventory` registration lives in the object file of the declaring crate,
+/// and a linker keeps an archive member out of an rlib only when a symbol inside
+/// it is referenced. `use vyre_libs as _;` names the crate and references no
+/// symbol, so the registrations were dropped from every binary that did not
+/// otherwise call into that crate: the production binary saw all 354 operation
+/// registrations while three registry rules iterated an empty registry and
+/// passed. A `const` backend id is no anchor either, because it inlines at the
+/// use site. Reading the registry through [`REGISTRY_LINK_OWNER`] calls a real
+/// function in each source crate, which is what keeps the object file in.
+#[must_use]
+pub fn registry_link_failures(submitters: &[String], imports: &[DiscardingImport]) -> Vec<String> {
+    let mut failures = Vec::new();
+    for import in imports {
+        let Some(submitter) = submitters
+            .iter()
+            .find(|submitter| crate_ident(submitter) == import.named)
+        else {
+            continue;
+        };
+        failures.push(format!(
+            "`{}` names `{submitter}` with `use {} as _;`, which references no symbol in it, so the linker drops that crate's inventory registrations and every registry read in this binary judges a partial set; read the registry through `{REGISTRY_LINK_OWNER}` instead",
+            import.file, import.named
+        ));
+    }
+    failures
+}
+
+/// Crate identifier for a crate name, e.g. `vyre_libs` for `vyre-libs`.
+fn crate_ident(crate_name: &str) -> String {
+    crate_name.replace('-', "_")
+}
+
 fn path_names_language(path: &str, language: &str) -> bool {
     path.split(['/', '.'])
         .any(|segment| segment.eq_ignore_ascii_case(language))
@@ -681,9 +742,12 @@ pub fn parse_registrations(text: &str) -> Vec<(String, Option<String>)> {
     while let Some(start) = rest.find("OperationRegistration") {
         let body = &rest[start..];
         let after = &body["OperationRegistration".len()..];
-        let constructor = CONSTRUCTOR_TIERS
-            .iter()
-            .find(|(call, _)| after.trim_start().starts_with(call.trim_start_matches("::")) || after.starts_with(call));
+        let constructor = CONSTRUCTOR_TIERS.iter().find(|(call, _)| {
+            after
+                .trim_start()
+                .starts_with(call.trim_start_matches("::"))
+                || after.starts_with(call)
+        });
         if let Some((call, tier)) = constructor {
             if let Some(id) = first_argument(after, call).and_then(|raw| resolve_id(raw, &consts)) {
                 let tier = tier
@@ -832,9 +896,7 @@ fn char_literal_len(rest: &str) -> Option<usize> {
         return Some(2 + escaped + escape[escaped..].find('\'')? + 1);
     }
     let literal = body.chars().next()?.len_utf8();
-    body[literal..]
-        .starts_with('\'')
-        .then_some(literal + 2)
+    body[literal..].starts_with('\'').then_some(literal + 2)
 }
 
 /// Byte length of a literal carrying a `r`, `b` or `c` prefix, including every
@@ -1058,7 +1120,10 @@ fn scan_materializers(root: &Path, members: &[String]) -> Vec<(String, String)> 
             continue;
         }
         for path in source_files(root, member) {
-            if path.file_name().is_some_and(|name| name == "materializer.rs") {
+            if path
+                .file_name()
+                .is_some_and(|name| name == "materializer.rs")
+            {
                 let Ok(text) = read_source_bounded(&path) else {
                     continue;
                 };
@@ -1069,6 +1134,106 @@ fn scan_materializers(root: &Path, members: &[String]) -> Vec<(String, String)> 
     found.sort();
     found.dedup();
     found
+}
+
+/// Every member crate that submits into an `inventory` registry.
+///
+/// Read from the tree rather than listed here: a new submitting crate joins the
+/// set the moment it submits, so the link rule judges it without an edit.
+fn scan_registry_submitters(root: &Path, members: &[String]) -> Vec<String> {
+    let mut submitters = Vec::new();
+    for member in members {
+        let crate_name = member.rsplit('/').next().unwrap_or(member);
+        for path in source_files(root, member) {
+            let Ok(text) = read_source_bounded(&path) else {
+                continue;
+            };
+            if submits_registrations(&text) {
+                submitters.push(crate_name.to_string());
+                break;
+            }
+        }
+    }
+    submitters.sort();
+    submitters.dedup();
+    submitters
+}
+
+/// Every `use <crate> as _;` in member sources.
+fn scan_discarding_imports(root: &Path, members: &[String]) -> Vec<DiscardingImport> {
+    let mut imports = Vec::new();
+    for member in members {
+        for path in source_files(root, member) {
+            let Ok(text) = read_source_bounded(&path) else {
+                continue;
+            };
+            let file = relative(root, &path);
+            for named in discarding_imports(&text) {
+                imports.push(DiscardingImport {
+                    file: file.clone(),
+                    named,
+                });
+            }
+        }
+    }
+    imports.sort_by(|left, right| (&left.file, &left.named).cmp(&(&right.file, &right.named)));
+    imports.dedup();
+    imports
+}
+
+/// True when this source text submits an inventory registration.
+///
+/// Comments are skipped, so a doc comment explaining the linkage rule is not
+/// mistaken for a registration.
+#[must_use]
+pub fn submits_registrations(text: &str) -> bool {
+    code_offsets(text).any(|at| text[at..].starts_with("inventory::submit!"))
+}
+
+/// Crate identifiers named by a discarding import, as written.
+///
+/// Only a bare crate identifier counts. `use std::io::Read as _;` imports a
+/// trait into scope, which is the legitimate use of the form and references a
+/// symbol at every call site.
+#[must_use]
+pub fn discarding_imports(text: &str) -> Vec<String> {
+    code_offsets(text)
+        .filter_map(|at| discarded_crate(&text[at..]))
+        .collect()
+}
+
+/// Byte offsets of code in `text`, with comments and literals skipped.
+fn code_offsets(text: &str) -> impl Iterator<Item = usize> + '_ {
+    let mut skip_to = 0usize;
+    text.char_indices().filter_map(move |(at, _)| {
+        if at < skip_to {
+            return None;
+        }
+        if let Some(span) = opaque_span(text, at) {
+            skip_to = at + span.max(1);
+            return None;
+        }
+        Some(at)
+    })
+}
+
+/// Crate identifier of a `use <crate> as _;` statement starting at `rest`.
+fn discarded_crate(rest: &str) -> Option<String> {
+    let statement = rest.strip_prefix("use ")?;
+    let end = statement.find(';')?;
+    let (path, alias) = statement.get(..end)?.split_once(" as ")?;
+    if alias.trim() != "_" {
+        return None;
+    }
+    let path = path.trim();
+    if path.is_empty()
+        || !path
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || character == '_')
+    {
+        return None;
+    }
+    Some(path.to_string())
 }
 
 #[cfg(test)]
@@ -1225,7 +1390,10 @@ mod tests {
         // kept a flat layout with no lex/ directory, so only its name gave it
         // away. It has left the workspace; the rule keeps a replacement out.
         let failures = frontend_owner_failures(&[
-            ("vyre-libs".to_string(), "vyre-libs/src/parsing/c/lex/keyword.rs".to_string()),
+            (
+                "vyre-libs".to_string(),
+                "vyre-libs/src/parsing/c/lex/keyword.rs".to_string(),
+            ),
             ("vyre-frontend-c".to_string(), "vyre-frontend-c".to_string()),
         ]);
 
@@ -1246,7 +1414,10 @@ mod tests {
         )]);
 
         assert_eq!(failures.len(), 1, "{failures:?}");
-        assert!(failures[0].contains("puts a c frontend in vyre-driver-wgpu"), "{failures:?}");
+        assert!(
+            failures[0].contains("puts a c frontend in vyre-driver-wgpu"),
+            "{failures:?}"
+        );
     }
 
     #[test]
@@ -1254,8 +1425,14 @@ mod tests {
         // Control: naming a frontend is only a failure for a non-owner, and
         // the rust owner is a crate whose own name declares the language.
         let failures = frontend_owner_failures(&[
-            ("vyre-frontend-rust".to_string(), "vyre-frontend-rust".to_string()),
-            ("vyre-libs".to_string(), "vyre-libs/src/parsing/c/lex/keyword.rs".to_string()),
+            (
+                "vyre-frontend-rust".to_string(),
+                "vyre-frontend-rust".to_string(),
+            ),
+            (
+                "vyre-libs".to_string(),
+                "vyre-libs/src/parsing/c/lex/keyword.rs".to_string(),
+            ),
         ]);
 
         assert!(failures.is_empty(), "{failures:?}");
@@ -1263,10 +1440,7 @@ mod tests {
 
     #[test]
     fn a_product_crate_on_the_roster_is_rejected() {
-        let failures = roster_failures(&[
-            "vyre-foundation".to_string(),
-            "vyre-scan".to_string(),
-        ]);
+        let failures = roster_failures(&["vyre-foundation".to_string(), "vyre-scan".to_string()]);
 
         assert!(
             failures.iter().any(|f| f.contains("vyre-scan")),
@@ -1864,5 +2038,86 @@ inventory::submit! {
                 Some("Library".to_string())
             )]
         );
+    }
+
+    fn discarding_import(file: &str, named: &str) -> DiscardingImport {
+        DiscardingImport {
+            file: file.to_string(),
+            named: named.to_string(),
+        }
+    }
+
+    #[test]
+    fn a_discarding_import_of_a_submitting_crate_is_rejected() {
+        let failures = registry_link_failures(
+            &["vyre-libs".to_string(), "vyre-driver-cuda".to_string()],
+            &[discarding_import(
+                "conform/vyre-conform/tests/ulp_audit.rs",
+                "vyre_libs",
+            )],
+        );
+
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("vyre-libs"));
+        assert!(failures[0].contains("ulp_audit.rs"));
+        assert!(failures[0].contains(REGISTRY_LINK_OWNER));
+    }
+
+    #[test]
+    fn a_discarding_import_of_a_crate_that_registers_nothing_is_accepted() {
+        let failures = registry_link_failures(
+            &["vyre-libs".to_string()],
+            &[discarding_import("vyre/src/lib.rs", "vyre_spec")],
+        );
+
+        assert!(failures.is_empty(), "{failures:?}");
+    }
+
+    #[test]
+    fn a_crate_identifier_matches_its_hyphenated_crate_name() {
+        let failures = registry_link_failures(
+            &["vyre-driver-reference".to_string()],
+            &[discarding_import(
+                "conform/vyre-conform/src/main.rs",
+                "vyre_driver_reference",
+            )],
+        );
+
+        assert_eq!(failures.len(), 1);
+    }
+
+    #[test]
+    fn a_trait_import_is_not_a_discarding_crate_import() {
+        let named = discarding_imports("fn read() {\n    use std::io::Read as _;\n}\n");
+
+        assert!(named.is_empty(), "{named:?}");
+    }
+
+    #[test]
+    fn a_crate_named_only_inside_a_comment_is_not_an_import() {
+        let named = discarding_imports(
+            "/// Naming the crate with `use vyre_libs as _;` references nothing.\npub fn anchor() {}\n",
+        );
+
+        assert!(named.is_empty(), "{named:?}");
+    }
+
+    #[test]
+    fn a_discarding_crate_import_is_read_from_source() {
+        let named = discarding_imports(
+            "#[cfg(feature = \"gpu\")]\nuse vyre_driver_metal as _;\nuse vyre_libs as _;\n",
+        );
+
+        assert_eq!(named, vec!["vyre_driver_metal", "vyre_libs"]);
+    }
+
+    #[test]
+    fn a_submission_inside_a_comment_does_not_make_a_crate_a_submitter() {
+        assert!(!submits_registrations(
+            "// This crate reads the registry; inventory::submit! lives in the driver.\n"
+        ));
+        assert!(submits_registrations(
+            "inventory::submit! {\n    ExampleRegistration { id: \"example\" }\n}\n"
+        ));
     }
 }

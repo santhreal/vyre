@@ -8,11 +8,7 @@ use std::process::Command;
 use serde::Serialize;
 use vyre_driver::backend::{
     acquire, acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
-    registered_backends_by_precedence_slice,
 };
-
-use vyre_driver_cuda as _;
-use vyre_driver_wgpu as _;
 
 const MAX_BACKEND_EVIDENCE_TEXT_BYTES: u64 = 4_194_304;
 
@@ -318,7 +314,7 @@ pub(crate) fn run(args: &[String]) {
             std::process::exit(2);
         }
     };
-    let registrations = registered_backends_by_precedence_slice()
+    let registrations = vyre_registry_link::backend::live_backend_registry_by_precedence()
         .unwrap_or_else(|error| panic!("backend registry startup failed: {error}"));
     let mut backends = Vec::new();
     for registration in registrations {
@@ -978,11 +974,7 @@ fn default_output() -> PathBuf {
 }
 
 fn read_text_bounded(path: &Path) -> io::Result<String> {
-    xtask::output_arg::read_text_bounded(
-        path,
-        MAX_BACKEND_EVIDENCE_TEXT_BYTES,
-        "backend evidence",
-    )
+    xtask::output_arg::read_text_bounded(path, MAX_BACKEND_EVIDENCE_TEXT_BYTES, "backend evidence")
 }
 
 #[cfg(test)]

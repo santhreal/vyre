@@ -251,6 +251,7 @@ pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::fmt(&self, formatter: &mut core
 pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::id(&self) -> &str
 pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::prerecord_borrowed_dispatch(&self, inputs: &[&[u8]], workgroups: [u32; 3]) -> core::result::Result<vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::prerecord_persistent_dispatch(&self, inputs: &[vyre_driver_wgpu::buffer::GpuBufferHandle], outputs: &[vyre_driver_wgpu::buffer::GpuBufferHandle], params: core::option::Option<&vyre_driver_wgpu::buffer::GpuBufferHandle>, workgroups: [u32; 3]) -> core::result::Result<vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::registered_backend_id() -> core::option::Option<&'static str>
 pub fn vyre_driver_wgpu::runtime::adapter_caps_probe::from_backend(adapter_info: &wgpu_types::AdapterInfo, device_limits: &wgpu_types::Limits, enabled: &vyre_driver_wgpu::runtime::device::EnabledFeatures) -> vyre_foundation::optimizer::ctx::AdapterCaps
 pub fn vyre_driver_wgpu::runtime::adapter_caps_probe::from_backend_profile(adapter_info: &wgpu_types::AdapterInfo, device_limits: &wgpu_types::Limits, enabled: &vyre_driver_wgpu::runtime::device::EnabledFeatures) -> vyre_driver::device_profile::DeviceProfile
 pub fn vyre_driver_wgpu::runtime::adapter_caps_probe::probe(adapter: &wgpu::api::adapter::Adapter) -> vyre_foundation::optimizer::ctx::AdapterCaps

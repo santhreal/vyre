@@ -31,8 +31,8 @@ error_behavior = "Invalid plans, stale artifacts, unavailable selected backends,
 [profile.libraries]
 error_behavior = "Invalid shapes, unsupported compositions, arithmetic overflow, and malformed evidence are rejected by the builder or validator before dispatch."
 
-[profile.intrinsics]
-error_behavior = "An unsupported intrinsic, invalid operand contract, or missing selected lowering path is an explicit error. Intrinsics do not acquire a host substitute."
+[profile.registry-link]
+error_behavior = "A registration source that the build declared but the linker dropped, or a source that reached the registry under a different identity, is a panic naming the source rather than a registry read that silently judges a partial set."
 
 [profile.packaging]
 error_behavior = "Invalid plans, incompatible metadata, unsupported targets, and serialization failures prevent an artifact from being emitted or accepted."
@@ -51,6 +51,9 @@ error_behavior = "Invalid arguments, stale evidence, violated repository contrac
 
 [profile.test-tooling]
 error_behavior = "Fixture construction, execution, comparison, and certificate failures propagate to the calling test with exact mismatch context."
+
+[profile.standalone-tooling]
+error_behavior = "Invalid arguments, violated repository contracts, and an unreadable checkout return a nonzero status with a concrete correction. Depends on no workspace crate, so it keeps answering while the workspace does not compile."
 
 [profile.compiler-boundary]
 error_behavior = "Invalid program shape, unsupported whole-graph lowering, and artifact construction failures stop before a partial Artifact is emitted."

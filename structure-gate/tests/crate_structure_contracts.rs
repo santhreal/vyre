@@ -20,8 +20,8 @@ use std::collections::BTreeSet;
 
 use structure_gate::{
     category_home_failures, frontend_owner_failures, operation_identity_failures,
-    registration_owner_failures, roster_failures, scan, substrate_home_failures, workspace_root,
-    Workspace,
+    registration_owner_failures, registry_link_failures, roster_failures, scan,
+    substrate_home_failures, workspace_root, Workspace,
 };
 
 fn workspace() -> Workspace {
@@ -67,7 +67,11 @@ fn no_operation_is_registered_under_two_identities() {
 fn every_operation_sits_in_its_category_home() {
     let failures = category_home_failures(&workspace().registrations);
 
-    assert!(failures.is_empty(), "{}", report("category-home", &failures));
+    assert!(
+        failures.is_empty(),
+        "{}",
+        report("category-home", &failures)
+    );
 }
 
 /// The substrate concept has one home.
@@ -134,4 +138,53 @@ fn the_registration_scan_is_not_vacuous() {
          and every registration rule above is passing vacuously",
         registrations.len()
     );
+}
+
+/// No crate that submits inventory registrations is linked by name alone.
+///
+/// WHY: registrations live in the declaring crate's object file, and the linker
+/// keeps that object only when a symbol inside it is referenced. `use vyre_libs
+/// as _;` names the crate and references nothing, so the registrations were
+/// dropped from every binary that did not otherwise call into that crate: three
+/// registry rules iterated an empty registry and passed while the production
+/// binary saw all of it. The rule is derived from the tree, so a new submitting
+/// crate is judged the moment it submits.
+#[test]
+fn no_registry_source_is_linked_by_a_discarding_import() {
+    let workspace = workspace();
+    let failures = registry_link_failures(
+        &workspace.registry_submitters,
+        &workspace.discarding_imports,
+    );
+
+    assert!(
+        failures.is_empty(),
+        "{}",
+        report("registry-link", &failures)
+    );
+}
+
+/// The submitting-crate scan finds the crates that submit.
+///
+/// Guards the rule above: a scan that matched nothing would accept every
+/// discarding import in the tree.
+#[test]
+fn the_registry_submitter_scan_is_not_vacuous() {
+    let submitters = workspace().registry_submitters;
+
+    for expected in [
+        "vyre-libs",
+        "vyre-primitives",
+        "vyre-driver-cuda",
+        "vyre-driver-metal",
+        "vyre-driver-reference",
+        "vyre-driver-spirv",
+        "vyre-driver-wgpu",
+    ] {
+        assert!(
+            submitters.iter().any(|found| found == expected),
+            "`{expected}` submits inventory registrations but the scan did not find it; every \
+             discarding import naming it would be accepted. Found: {submitters:?}"
+        );
+    }
 }

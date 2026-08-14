@@ -22,8 +22,16 @@ workspace = true
 xtask = { path = "../xtask" }
 vyre-bench.workspace = true
 vyre-driver.workspace = true
-vyre-driver-cuda.workspace = true
-vyre-driver-wgpu.workspace = true
+# The backend matrix judges every driver this binary links, and `vyre-bench`
+# links all of them, so the declared set is all of them. `vyre-registry-link`
+# owns the anchors and asserts that each one reached the registry.
+vyre-registry-link = { workspace = true, features = [
+    "cuda",
+    "metal",
+    "reference",
+    "spirv",
+    "wgpu",
+] }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 toml.workspace = true

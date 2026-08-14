@@ -18,7 +18,13 @@ path = "src/lib.rs"
 
 [features]
 default = ["gpu"]
-gpu = ["dep:vyre-driver-cuda", "dep:vyre-driver-metal", "dep:vyre-driver-wgpu"]
+gpu = [
+    "dep:vyre-driver-cuda",
+    "dep:vyre-driver-wgpu",
+    "vyre-registry-link/cuda",
+    "vyre-registry-link/metal",
+    "vyre-registry-link/wgpu",
+]
 
 [dependencies]
 blake3 = { workspace = true }
@@ -34,14 +40,17 @@ vyre = { workspace = true }
 vyre-conform-spec = { workspace = true }
 vyre-driver = { workspace = true }
 vyre-driver-cuda = { workspace = true, optional = true }
-vyre-driver-metal = { workspace = true, optional = true }
-vyre-driver-reference = { workspace = true }
 vyre-driver-wgpu = { workspace = true, optional = true }
 vyre-foundation = { workspace = true }
 vyre-libs = { workspace = true, features = ["full", "logical", "nn-moe", "security", "visual", "parsing", "math", "nn", "matching", "crypto"] }
 vyre-megakernel = { workspace = true }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
+# The registries this harness judges are read through their owner, which links
+# every submitting crate and asserts each one reached the registry. Naming a
+# submitting crate here for link effect alone is what left readers judging a
+# partial registry.
+vyre-registry-link = { workspace = true, features = ["operations", "reference"] }
 vyre-runtime = { workspace = true }
 vyre-spec = { workspace = true }
 

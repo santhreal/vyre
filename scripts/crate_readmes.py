@@ -342,6 +342,15 @@ def run(root: Path, write: bool) -> int:
     unknown = sorted(set(overrides) - known)
     if unknown:
         raise ContractError(f"crate guide metadata has unknown package overrides: {unknown}")
+    # A profile for a layer no crate occupies is a promise about an architecture
+    # that no longer exists: it survives a layer rename or a crate absorption and
+    # reads as coverage while describing nothing.
+    layers_in_use = {record.layer for record in records}
+    orphaned = sorted(set(profiles) - layers_in_use)
+    if orphaned:
+        raise ContractError(
+            f"crate guide metadata has error profiles for layers no crate uses: {orphaned}"
+        )
     versions = release_versions(root)
 
     stale: list[str] = []

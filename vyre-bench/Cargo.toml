@@ -15,8 +15,16 @@ vyre = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-driver = { workspace = true }
 vyre-driver-wgpu = { workspace = true }
-vyre-driver-metal = { workspace = true }
-vyre-driver-spirv = { workspace = true }
+# Every driver crate is linked through this owner, which asserts that each one
+# reached the backend registry. Benchmarks report the linked dispatch set, so a
+# driver dropped at link time would understate the matrix instead of failing.
+vyre-registry-link = { workspace = true, features = [
+    "cuda",
+    "metal",
+    "reference",
+    "spirv",
+    "wgpu",
+] }
 vyre-driver-reference = { workspace = true }
 vyre-reference = { workspace = true }
 vyre-runtime = { workspace = true }

@@ -13,6 +13,11 @@ members = [
     "vyre-driver-spirv",
     "vyre-driver-cuda",
     "vyre-driver-reference",
+    # Sole owner of the inventory registry link anchors and the per-source floor
+    # every registry read is judged against. It is the one crate that names the
+    # registration-submitting crates, so a consumer reads a registry through it
+    # instead of naming those crates with imports that reference nothing.
+    "vyre-registry-link",
     "vyre-reference",
     "vyre-spec",
     "vyre-macros",
@@ -206,6 +211,8 @@ vyre-driver-wgpu = { version = "0.7.2", path = "vyre-driver-wgpu" }
 vyre-driver-cuda = { version = "0.7.2", path = "vyre-driver-cuda" }
 vyre-driver-reference = { version = "0.7.2", path = "vyre-driver-reference" }
 vyre-driver-spirv = { version = "0.7.2", path = "vyre-driver-spirv" }
+# publish = false, so no version.
+vyre-registry-link = { path = "vyre-registry-link", default-features = false }
 vyre-reference = { version = "0.7.2", path = "vyre-reference" }
 vyre-spec = { version = "0.7.2", path = "vyre-spec" }
 vyre-macros = { version = "0.7.2", path = "vyre-macros" }

@@ -180,7 +180,14 @@ mod tests {
     /// the timings have to be exactly what the caller asked for.
     #[test]
     fn a_case_reports_measured_timings_alongside_a_generous_claim() {
-        let case = cpu_sota_case("release.condition_eval.1m", "cuda", "pass", &["cuda"], 10, 2000);
+        let case = cpu_sota_case(
+            "release.condition_eval.1m",
+            "cuda",
+            "pass",
+            &["cuda"],
+            10,
+            2000,
+        );
         assert_eq!(case["id"], "release.condition_eval.1m");
         assert_eq!(case["backend_id"], "cuda");
         assert_eq!(case["status"], "pass");

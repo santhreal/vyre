@@ -7,11 +7,6 @@
 
 use vyre_conform::lens::{self, LensOutcome};
 
-#[cfg(feature = "gpu")]
-use vyre_driver_metal as _;
-#[cfg(feature = "gpu")]
-use vyre_driver_wgpu as _;
-
 fn report(op_id: &str, lens_name: &'static str, outcome: LensOutcome, failures: &mut Vec<String>) {
     match outcome {
         LensOutcome::Pass { cases } => {
@@ -165,16 +160,18 @@ fn cpu_vs_backend_accepts_transcendental_ulp_divergence() {
 }
 
 fn build_registered_backend() -> &'static vyre_driver::BackendRegistration {
-    force_link_backend_inventory();
     let selected = std::env::var("VYRE_BACKEND")
         .ok()
         .filter(|value| !value.trim().is_empty());
-    vyre_driver::backend::registered_backends()
+    vyre_registry_link::backend::live_backend_registry()
         .expect("valid backend registry")
         .iter()
         .find(|registration| {
-            vyre_driver::backend::backend_dispatches(registration.id)
-                .expect("valid backend registry")
+            // The lens compares a backend against the CPU reference, so the
+            // reference oracle would be compared against itself.
+            !registration.reference_oracle
+                && vyre_driver::backend::backend_dispatches(registration.id)
+                    .expect("valid backend registry")
                 && selected
                     .as_deref()
                     .is_none_or(|backend| registration.id == backend)
@@ -183,11 +180,4 @@ fn build_registered_backend() -> &'static vyre_driver::BackendRegistration {
             "Fix: a dispatch-capable backend must be registered for convergence lens. \
              Link a concrete driver crate into the test binary.",
         )
-}
-
-fn force_link_backend_inventory() {
-    #[cfg(feature = "gpu")]
-    {
-        std::hint::black_box(vyre_driver_metal::METAL_BACKEND_ID);
-    }
 }

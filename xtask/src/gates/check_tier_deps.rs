@@ -25,6 +25,11 @@ use crate::manifest_walk::MAX_MANIFEST_BYTES;
 /// `standalone-tooling` sits below `foundation` because it depends on no crate in
 /// the workspace and must keep answering while the workspace does not compile,
 /// which is what lets a test-support crate resolve the checkout root through it.
+///
+/// `registry-link` sits above `facade` and below `conformance` because the crate
+/// that owns the inventory link anchors has to name every registration source,
+/// including the concrete drivers, while still being callable from the
+/// conformance and tooling crates that read those registries.
 const LAYER_ORDER: &[&str] = &[
     "standalone-tooling",
     "foundation",
@@ -42,6 +47,7 @@ const LAYER_ORDER: &[&str] = &[
     "runtime",
     "packaging",
     "facade",
+    "registry-link",
     "conformance",
     "tooling",
 ];

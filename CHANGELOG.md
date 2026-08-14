@@ -116,6 +116,13 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   oracle's hostile-input half, which asserts that bytes outside the accepted
   subset fail loudly instead of tokenizing to a wrong answer; it is tracked
   under a name that says what it drives.
+- `structure-gate` derives the set of crates that submit `inventory`
+  registrations from the tree and rejects any `use <that crate> as _;` in
+  workspace sources, naming `vyre-registry-link` as the way to read the
+  registry instead. The submitting set is read at scan time rather than listed,
+  so a new submitting crate is judged the moment it submits, and a companion
+  contract fails when the scan finds no submitters, which is the state that
+  would accept every discarding import in the tree.
 
 ### Changed
 
@@ -683,6 +690,29 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   and the consumer boundary went through that compiled-in path and now ask the
   helper. `ConsumerBoundaryScan::for_crate` takes the crate directory as a
   path.
+- Every reader of the operation registry and the backend registry reads it
+  through `vyre-registry-link`, which references a real symbol in each
+  submitting crate and asserts that each linked source reached the registry. An
+  `inventory` registration lives in the object file of the declaring crate, and
+  the linker keeps that object only when a symbol inside it is referenced, so
+  `use vyre_libs as _;` and `std::hint::black_box(METAL_BACKEND_ID)` linked
+  nothing: the conformance test binaries registered two backends where the
+  build declared four, and their registry rules judged that partial set without
+  failing. The five driver crates now expose `registered_backend_id`, a
+  function call that anchors the object file and reports whether the target
+  compiled the registration at all, and the discarding imports and
+  `force_link_backend_inventory` helpers they replaced are gone.
+- The layer ordering places the registry link owner where its dependencies
+  allow it. It has to name every registration source, including the concrete
+  drivers, and it is read by the conformance and tooling crates, so it sits
+  above the facade and below conformance rather than in tooling, which the
+  conformance crates cannot depend on. The crate-guide generator now also
+  rejects an error profile for a layer no crate occupies, alongside the check
+  for a layer with no profile. Only the second direction was checked, so a
+  profile survived a crate absorption while describing a layer that no longer
+  existed, and the two layers introduced since had no profile at all, which
+  left the generator failing for every crate rather than for the ones that were
+  wrong.
 
 ## [0.7.1] - 2026-08-01
 

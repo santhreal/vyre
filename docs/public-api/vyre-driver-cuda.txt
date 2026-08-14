@@ -527,6 +527,7 @@ pub fn vyre_driver_cuda::profiler::cuda_profiler_ranges_enabled() -> bool
 pub fn vyre_driver_cuda::regex_hardware_comparison::CudaRegexHardwareComparisonEvidence::is_complete(self) -> bool
 pub fn vyre_driver_cuda::regex_hardware_comparison::cuda_regex_hardware_comparison_evidence(baseline_id: &'static str, software_path: &'static str, compiled_scan_artifact_id: &'static str, accelerator: vyre_driver::backend::regex_accelerator::RegexAcceleratorCapability, transfer_bytes: u64) -> core::result::Result<vyre_driver_cuda::regex_hardware_comparison::CudaRegexHardwareComparisonEvidence, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_cuda::regex_hardware_comparison::cuda_regex_software_fallback_comparison_evidence(baseline_id: &'static str, software_path: &'static str, compiled_scan_artifact_id: &'static str) -> core::result::Result<vyre_driver_cuda::regex_hardware_comparison::CudaRegexHardwareComparisonEvidence, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_cuda::registered_backend_id() -> core::option::Option<&'static str>
 pub fn vyre_driver_cuda::resident_graph_session::CudaResidentGraphSessionError::arithmetic_overflow(field: &'static str) -> Self
 pub fn vyre_driver_cuda::resident_graph_session::CudaResidentGraphSessionError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver_cuda::resident_graph_session::CudaResidentGraphSessionEvidenceError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result

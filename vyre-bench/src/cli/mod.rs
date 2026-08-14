@@ -138,7 +138,6 @@ where
     I: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
 {
-    crate::link_benchmark_backend_registrations();
     let cli = Cli::parse_from(args);
     match &cli.command {
         Commands::Run {

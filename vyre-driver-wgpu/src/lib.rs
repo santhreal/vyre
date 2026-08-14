@@ -213,6 +213,19 @@ pub fn artifact_materializer(
     materializer::materializer_for_backend(backend)
 }
 
+/// Backend id this crate submits into the backend registry on this target.
+///
+/// WHY: the registration below lives in this crate's object file, and a linker
+/// keeps that object only when a symbol inside it is referenced. Naming the
+/// crate with `use vyre_driver_wgpu as _;` references nothing, and reading
+/// [`WGPU_BACKEND_ID`] is a `const` that inlines at the use site, so neither
+/// keeps the registration. Calling this function does, which is why the backend
+/// registry owner calls it instead of importing the crate for effect.
+#[must_use]
+pub fn registered_backend_id() -> Option<&'static str> {
+    Some(WGPU_BACKEND_ID)
+}
+
 inventory::submit! {
     vyre_driver::BackendRegistration {
         id: WGPU_BACKEND_ID,

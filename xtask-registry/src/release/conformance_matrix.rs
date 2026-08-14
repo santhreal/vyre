@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use vyre_driver::backend::{backend_dispatches, registered_backends_by_precedence_slice};
+use vyre_driver::backend::backend_dispatches;
 use xtask::release::conformance_op_matrix::{
     read_conformance_required_op_matrix, OpMatrixReleaseBackendSpec,
 };
@@ -17,13 +17,6 @@ use xtask::release::conformance_workflows::{
     parse_required_ci_statuses, CiConformanceGate,
 };
 use xtask::release::release_backend_rows::count_supported_release_backend_rows;
-
-use vyre_driver_cuda as _;
-use vyre_driver_reference as _;
-use vyre_driver_spirv as _;
-use vyre_driver_wgpu as _;
-use vyre_libs as _;
-use vyre_primitives as _;
 
 const MIN_RELEASE_OP_COUNT: usize = 49;
 const MAX_CONFORMANCE_EVIDENCE_TEXT_BYTES: u64 = 8_388_608;
@@ -161,7 +154,7 @@ pub(crate) fn run(args: &[String]) {
             std::process::exit(2);
         }
     };
-    let operations = crate::live_registry::live_operation_registry()
+    let operations = vyre_registry_link::operation::live_operation_registry()
         .iter()
         .collect::<Vec<_>>();
     let mut entries = Vec::with_capacity(operations.len());
@@ -180,7 +173,7 @@ pub(crate) fn run(args: &[String]) {
         });
     }
     entries.sort_by(|left, right| left.id.cmp(&right.id));
-    let registered_backends = registered_backends_by_precedence_slice()
+    let registered_backends = vyre_registry_link::backend::live_backend_registry_by_precedence()
         .unwrap_or_else(|error| panic!("backend registry startup failed: {error}"));
     let mut dispatch_backends = Vec::new();
     for backend in registered_backends {

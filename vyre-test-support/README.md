@@ -42,20 +42,20 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 ### Boundaries
 
 The `test-support` owner maintains this `test-tooling` crate at `vyre-test-support`.
-Its allowed internal production dependencies are: None.
+Its allowed internal production dependencies are: `structure-gate`, `vyre-foundation`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
 
-Run the checked-in behavior from the `vyre-test-support` library target:
+Run the checked-in behavior from `vyre-test-support/tests/workspace_root_follows_the_working_directory.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --lib
+CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --test workspace_root_follows_the_working_directory
 ```
 
 ### Features
 
-- Manifest features: None
+- Manifest features: `ir-fixtures`
 - Default feature members: None
 
 ### Errors and unsupported behavior

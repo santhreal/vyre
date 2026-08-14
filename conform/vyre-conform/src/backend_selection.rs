@@ -1,11 +1,12 @@
 //! Discovery and filtering of dispatch-capable registered backends.
 
-use vyre_driver::backend::{backend_dispatches, registered_backends};
+use vyre_driver::backend::backend_dispatches;
+use vyre_registry_link::backend::live_backend_registry;
 
 pub(crate) fn backend_registration(
     backend_id: &str,
 ) -> Result<&'static vyre_driver::BackendRegistration, String> {
-    let registrations = registered_backends()
+    let registrations = live_backend_registry()
         .map_err(|error| format!("backend registry startup failed: {error}"))?;
     let requested = if backend_id == "auto" {
         let mut requested = None;
@@ -35,8 +36,7 @@ pub(crate) fn backend_registration(
 
 pub(crate) fn dispatch_capable_backends(
 ) -> Result<Vec<&'static vyre_driver::BackendRegistration>, String> {
-    force_link_backend_inventory();
-    let registrations = registered_backends()
+    let registrations = live_backend_registry()
         .map_err(|error| format!("backend registry startup failed: {error}"))?;
     let mut backends = Vec::new();
     for backend in registrations {
@@ -47,13 +47,6 @@ pub(crate) fn dispatch_capable_backends(
         }
     }
     Ok(backends)
-}
-
-fn force_link_backend_inventory() {
-    #[cfg(feature = "gpu")]
-    {
-        std::hint::black_box(vyre_driver_metal::METAL_BACKEND_ID);
-    }
 }
 
 pub(crate) fn select_backends(

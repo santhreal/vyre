@@ -11,7 +11,6 @@ pub(crate) fn check_optimization_analysis_fixture_manifest(
     );
 }
 
-
 pub(crate) fn first_json_evidence(
     requirement: &Requirement,
     base_dir: &Path,
@@ -438,7 +437,6 @@ fn check_declared_workload_matrix_count(
         ));
     }
 }
-
 
 #[cfg(test)]
 mod workload_evidence_tests {

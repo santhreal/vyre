@@ -5,6 +5,10 @@ use serde_json::{json, Value};
 
 use crate::bench::benchmark_evidence_semantics::cuda_release_axes_source_artifact_issues;
 
+use super::evidence_schema::{
+    OptimizationArtifactInspection, OptimizationBenchmarkEvidence, OptimizationBenchmarkManifest,
+    OptimizationBenchmarkManifestSummary, ReleaseAxesEvidence,
+};
 use super::inspect_core::{
     read_benchmark_report, read_text_bounded, suite_metric_percentile, WallClockMinima,
 };
@@ -13,7 +17,6 @@ use super::metrics::{
     release_axis_blockers, write_json,
 };
 use super::release_thresholds::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
-use super::evidence_schema::{OptimizationArtifactInspection, OptimizationBenchmarkEvidence, OptimizationBenchmarkManifest, OptimizationBenchmarkManifestSummary, ReleaseAxesEvidence};
 
 pub(super) fn metric_p50(metric: &Value) -> Option<u64> {
     metric.get("p50").and_then(Value::as_u64)
@@ -138,7 +141,12 @@ pub(super) fn inspect_optimization_benchmark_artifact(
             .and_then(Value::as_str)
             .unwrap_or("<unknown>");
         let metrics = case.get("metrics").and_then(Value::as_object);
-        minima.record_case(case_id, &format!("case `{case_id}`"), metrics, &mut blockers);
+        minima.record_case(
+            case_id,
+            &format!("case `{case_id}`"),
+            metrics,
+            &mut blockers,
+        );
         match (
             metrics.and_then(|metrics| suite_metric_percentile(metrics.get("wall_ns"), "p50")),
             metrics.and_then(|metrics| {

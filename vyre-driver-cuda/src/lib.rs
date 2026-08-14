@@ -1065,6 +1065,19 @@ fn cuda_semantic_operations() -> &'static std::collections::HashSet<vyre_foundat
     vyre_driver::backend::dialect_only_supported_ops()
 }
 
+/// Backend id this crate submits into the backend registry on this target.
+///
+/// WHY: the registration below lives in this crate's object file, and a linker
+/// keeps that object only when a symbol inside it is referenced. Naming the
+/// crate with `use vyre_driver_cuda as _;` references nothing, and reading
+/// [`CUDA_BACKEND_ID`] is a `const` that inlines at the use site, so neither
+/// keeps the registration. Calling this function does, which is why the backend
+/// registry owner calls it instead of importing the crate for effect.
+#[must_use]
+pub fn registered_backend_id() -> Option<&'static str> {
+    Some(CUDA_BACKEND_ID)
+}
+
 inventory::submit! {
     BackendRegistration {
         id: CUDA_BACKEND_ID,

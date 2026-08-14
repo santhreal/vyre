@@ -484,3 +484,18 @@ text = "Every registry closure gate in the workspace is a tracked test. The gate
 id = "queue-bench-families-one-owner-per-concern"
 category = "Changed"
 text = "The GPU queue bench families in `vyre-bench` have one owner per concern. The skewed-CSR and IFDS cases each carried their own copy of the queue-materialize dispatch sequence, the queue-driven traversal plan, the queue-closure payload and its CPU oracle, the single-dispatch frontier step, and the four-column Rust lexer dispatch, so a fix to any of them reached one family and not the other. Those concerns now live in `cases/queue_materialize.rs`, `cases/queue_traverse_plan.rs`, `cases/queue_closure.rs`, `cases/queue_closure_oracle.rs`, `cases/frontier_step.rs`, and `cases/rust_frontend/lex_columns.rs`, and nine cases are described by a `WorkloadDescription` plus `CaseOps` over a shared payload instead of a hand-written `BenchCase` impl. Case ids, metric names, error strings, and readback ranges are unchanged. The `vyre-bench` duplication pin drops from 3397 to 2491 lines."
+
+[[fragments]]
+id = "registry-link-anchors-have-one-owner"
+category = "Fixed"
+text = "Every reader of the operation registry and the backend registry reads it through `vyre-registry-link`, which references a real symbol in each submitting crate and asserts that each linked source reached the registry. An `inventory` registration lives in the object file of the declaring crate, and the linker keeps that object only when a symbol inside it is referenced, so `use vyre_libs as _;` and `std::hint::black_box(METAL_BACKEND_ID)` linked nothing: the conformance test binaries registered two backends where the build declared four, and their registry rules judged that partial set without failing. The five driver crates now expose `registered_backend_id`, a function call that anchors the object file and reports whether the target compiled the registration at all, and the discarding imports and `force_link_backend_inventory` helpers they replaced are gone."
+
+[[fragments]]
+id = "structure-gate-rejects-registry-discarding-imports"
+category = "Added"
+text = "`structure-gate` derives the set of crates that submit `inventory` registrations from the tree and rejects any `use <that crate> as _;` in workspace sources, naming `vyre-registry-link` as the way to read the registry instead. The submitting set is read at scan time rather than listed, so a new submitting crate is judged the moment it submits, and a companion contract fails when the scan finds no submitters, which is the state that would accept every discarding import in the tree."
+
+[[fragments]]
+id = "registry-link-layer-and-guide-profile-closure"
+category = "Fixed"
+text = "The layer ordering places the registry link owner where its dependencies allow it. It has to name every registration source, including the concrete drivers, and it is read by the conformance and tooling crates, so it sits above the facade and below conformance rather than in tooling, which the conformance crates cannot depend on. The crate-guide generator now also rejects an error profile for a layer no crate occupies, alongside the check for a layer with no profile. Only the second direction was checked, so a profile survived a crate absorption while describing a layer that no longer existed, and the two layers introduced since had no profile at all, which left the generator failing for every crate rather than for the ones that were wrong."
