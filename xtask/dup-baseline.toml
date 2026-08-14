@@ -76,8 +76,8 @@ total_lines = 2258
 
 [[crate]]
 name = "vyre-driver"
-duplicate_lines = 1463
-total_lines = 35594
+duplicate_lines = 1112
+total_lines = 35957
 
 [[crate]]
 name = "vyre-driver-cuda"
@@ -152,7 +152,7 @@ total_lines = 3443
 [[crate]]
 name = "vyre-lower"
 duplicate_lines = 279
-total_lines = 13195
+total_lines = 13222
 
 [[crate]]
 name = "vyre-macros"
@@ -176,8 +176,8 @@ total_lines = 15205
 
 [[crate]]
 name = "vyre-runtime"
-duplicate_lines = 520
-total_lines = 29187
+duplicate_lines = 412
+total_lines = 29211
 
 [[crate]]
 name = "vyre-pass-engine"

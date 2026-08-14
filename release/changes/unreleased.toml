@@ -489,3 +489,8 @@ text = "Megakernel builder and scheduler body inspection now walks nested node b
 id = "megakernel-lane-body-assembly-declared-once"
 category = "Changed"
 text = "Persistent, finite and JIT megakernel lane bodies now share one assembly path and one published-slot claim body, so the node reservation bound, the slot-base binding order and the IO polling block are decided in a single place. Emitted IR and reservation error text are unchanged."
+
+[[fragments]]
+id = "runtime-driver-dup-pins-lowered"
+category = "Changed"
+text = "The duplication baseline pins for vyre-driver and vyre-runtime now record the measured tree: 1463 to 1112 and 520 to 412 duplicated lines. The vyre-lower total line count is corrected to the measured value."
