@@ -7,7 +7,7 @@
 
 use super::report::{BranchSite, BranchUniformity, WorkgroupUniformReport};
 use crate::analyses::structured_walk::{branch_at, walk_structured, ArmDescent, StructuredVisitor};
-use crate::analyses::{producer_map, ProducerMap};
+use crate::analyses::ProducerMap;
 use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 use rustc_hash::FxHashSet;
 
@@ -23,33 +23,27 @@ pub fn analyze(desc: &KernelDescriptor) -> WorkgroupUniformReport {
 }
 
 /// Classifies each branch against the producer map of the body that holds it.
-///
-/// The map is rebuilt whenever the walk moves to a different body, including
-/// on the way back up out of a child, so a branch is never classified against
-/// a nested body's producers. Consecutive branches in one body reuse it.
+/// The walk owns that map, so this holds only the sites it has judged.
 #[derive(Default)]
-struct BranchCollector<'a> {
-    mapped_body: Option<&'a KernelBody>,
-    producers: ProducerMap<'a>,
+struct BranchCollector {
     branches: Vec<BranchSite>,
 }
 
-impl<'a> StructuredVisitor<'a> for BranchCollector<'a> {
-    fn visit_op(&mut self, body: &'a KernelBody, op_index: usize, op: &'a KernelOp) {
+impl<'a> StructuredVisitor<'a> for BranchCollector {
+    fn visit_op(
+        &mut self,
+        body: &'a KernelBody,
+        producers: &ProducerMap<'a>,
+        op_index: usize,
+        op: &'a KernelOp,
+    ) {
         let Some(branch) = branch_at(body, op) else {
             return;
         };
-        if !self
-            .mapped_body
-            .is_some_and(|held| std::ptr::eq(held, body))
-        {
-            self.mapped_body = Some(body);
-            self.producers = producer_map(body);
-        }
         self.branches.push(BranchSite {
             op_index,
             cond_operand_id: branch.cond_operand_id,
-            uniformity: classify(&self.producers, branch.cond_operand_id),
+            uniformity: classify(producers, branch.cond_operand_id),
         });
     }
 }

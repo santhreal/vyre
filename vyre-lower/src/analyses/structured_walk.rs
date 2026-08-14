@@ -1,10 +1,11 @@
 //! ONE owner for the structured control-flow walk over a body tree.
 //!
 //! Every analysis that reasons about branches, loops, blocks, or regions has
-//! to do the same three things before it can say anything interesting: iterate
-//! a body's ops, resolve the child bodies a structured op names, and assign
-//! each site a flattened op index. Written per analysis that is three chances
-//! to derive the child-body offsets differently, and the copies do drift.
+//! to do the same four things before it can say anything interesting: iterate
+//! a body's ops, resolve the child bodies a structured op names, assign each
+//! site a flattened op index, and index that body's ops by the result id each
+//! one publishes. Written per analysis that is four chances to derive the
+//! child-body offsets differently, and the copies do drift.
 //!
 //! This module owns the traversal. It owns nothing about what a site means:
 //! the judgment stays with the analysis, in the crate that has a reason to
@@ -14,7 +15,7 @@
 //! the per-kind operand layout, so a walk cannot invent its own idea of where
 //! a body index lives.
 
-use crate::analyses::child_body_operands;
+use crate::analyses::{child_body_operands, producer_map, AccessKind, ProducerMap};
 use crate::{KernelBody, KernelOp, KernelOpKind};
 
 /// Whether a walk enters the arms of a structured branch.
@@ -41,23 +42,23 @@ pub trait StructuredVisitor<'a> {
         let _ = (body, op_index_offset);
     }
 
-    /// Called once on leaving `body`, after its last op and after every child
-    /// body it reaches.
-    ///
-    /// WHY: a child body is walked in the middle of its parent's op stream, so
-    /// a visitor that caches per-body state keyed only on `enter_body` would
-    /// still be holding the child's state when the parent's next op arrives.
-    /// Bank-conflict and coalescing classification each avoided that by
-    /// hand-rolling the descent instead of using this walk, which is how the
-    /// per-kind child-body decision ended up restated in both.
-    fn exit_body(&mut self, body: &'a KernelBody) {
-        let _ = body;
-    }
-
     /// Called for each op of `body` in order, before the walk descends into
     /// any child body that op names.
-    fn visit_op(&mut self, body: &'a KernelBody, op_index: usize, op: &'a KernelOp) {
-        let _ = (body, op_index, op);
+    ///
+    /// `producers` indexes `body`'s own ops by the result id each publishes.
+    /// The walk owns it because a child body is walked in the MIDDLE of its
+    /// parent's op stream: a visitor holding one map of its own would still be
+    /// holding a nested arm's when the parent's next op arrived. All three
+    /// analyses on this walk had their own answer to that, two by hand-rolling
+    /// the descent outright.
+    fn visit_op(
+        &mut self,
+        body: &'a KernelBody,
+        producers: &ProducerMap<'a>,
+        op_index: usize,
+        op: &'a KernelOp,
+    ) {
+        let _ = (body, producers, op_index, op);
     }
 }
 
@@ -77,11 +78,14 @@ where
     V: StructuredVisitor<'a>,
 {
     visitor.enter_body(body, op_index_offset);
+    // Held on this frame, so descending into a child cannot displace it and
+    // returning from one cannot leave the parent reading the child's map.
+    let producers = producer_map(body);
     // Every child of this body shares one offset: the flattened index just
     // past the parent's own ops.
     let child_offset = op_index_offset + body.ops.len();
     for (local_index, op) in body.ops.iter().enumerate() {
-        visitor.visit_op(body, op_index_offset + local_index, op);
+        visitor.visit_op(body, &producers, op_index_offset + local_index, op);
         if skips_arms(arms, &op.kind) {
             continue;
         }
@@ -91,7 +95,6 @@ where
             }
         }
     }
-    visitor.exit_body(body);
 }
 
 fn skips_arms(arms: ArmDescent, kind: &KernelOpKind) -> bool {
@@ -100,6 +103,89 @@ fn skips_arms(arms: ArmDescent, kind: &KernelOpKind) -> bool {
             kind,
             KernelOpKind::StructuredIfThen | KernelOpKind::StructuredIfThenElse
         )
+}
+
+/// One memory access the walk reached, resolved against its own body.
+///
+/// `'a` is the descriptor's lifetime; `'p` is the walk frame that holds the
+/// body's producer map.
+pub(crate) struct AccessRef<'p, 'a> {
+    /// Body that holds the access op.
+    pub(crate) body: &'a KernelBody,
+    /// Producer map of that body.
+    pub(crate) producers: &'p ProducerMap<'a>,
+    /// Flattened index of the access op.
+    pub(crate) op_index: usize,
+    /// Direction of the access.
+    pub(crate) kind: AccessKind,
+    /// Binding slot the access targets, operand 0.
+    pub(crate) binding_slot: u32,
+    /// Result id of the index expression, operand 1.
+    pub(crate) index_operand_id: u32,
+}
+
+/// Slot and index operand positions, identical on every buffer access kind.
+const SLOT_POS: usize = 0;
+const INDEX_POS: usize = 1;
+
+/// Call `judge` for every op of `root` whose kind is `load` or `store`.
+///
+/// WHY: bank-conflict and coalescing classification differ in which pair of op
+/// kinds they read (shared or global) and in how they classify an index, not in
+/// how they find the accesses. Each selected its pair inside its own visitor,
+/// which left the whole visitor plus the malformed-operand guard restated on
+/// both sides. An op carrying fewer than two operands is malformed and never
+/// reaches `judge`, so a caller reads the slot and the index unconditionally.
+pub(crate) fn walk_accesses<'a, F>(
+    root: &'a KernelBody,
+    load: &KernelOpKind,
+    store: &KernelOpKind,
+    judge: F,
+) where
+    F: FnMut(AccessRef<'_, 'a>),
+{
+    let mut selector = AccessSelector { load, store, judge };
+    walk_structured(root, ArmDescent::Enter, &mut selector);
+}
+
+struct AccessSelector<'k, F> {
+    load: &'k KernelOpKind,
+    store: &'k KernelOpKind,
+    judge: F,
+}
+
+impl<'a, F> StructuredVisitor<'a> for AccessSelector<'_, F>
+where
+    F: FnMut(AccessRef<'_, 'a>),
+{
+    fn visit_op(
+        &mut self,
+        body: &'a KernelBody,
+        producers: &ProducerMap<'a>,
+        op_index: usize,
+        op: &'a KernelOp,
+    ) {
+        let kind = if &op.kind == self.load {
+            AccessKind::Load
+        } else if &op.kind == self.store {
+            AccessKind::Store
+        } else {
+            return;
+        };
+        // Bounds check the operand list so a malformed descriptor does not
+        // panic the analysis.
+        if op.operands.len() <= INDEX_POS {
+            return;
+        }
+        (self.judge)(AccessRef {
+            body,
+            producers,
+            op_index,
+            kind,
+            binding_slot: op.operands[SLOT_POS],
+            index_operand_id: op.operands[INDEX_POS],
+        });
+    }
 }
 
 /// Shape of a structured branch op.
@@ -169,7 +255,13 @@ mod tests {
             self.bodies.push(op_index_offset);
         }
 
-        fn visit_op(&mut self, body: &'a KernelBody, op_index: usize, op: &'a KernelOp) {
+        fn visit_op(
+            &mut self,
+            body: &'a KernelBody,
+            _producers: &ProducerMap<'a>,
+            op_index: usize,
+            op: &'a KernelOp,
+        ) {
             if branch_at(body, op).is_some() {
                 self.branches.push(op_index);
             }
@@ -195,42 +287,43 @@ mod tests {
             .build()
     }
 
-    /// Per-body state is only safe to cache if `exit_body` lands before the
-    /// parent's next op. The nested fixture is exactly the interleaving that
-    /// breaks a cache keyed on `enter_body` alone: the inner arm is entered
-    /// and left in the middle of the outer body's op stream.
+    /// A child body is walked in the middle of its parent's op stream, so the
+    /// map an op is judged against has to be its own body's. This fixture is
+    /// exactly that interleaving: outer op 2 follows the arm, and its map must
+    /// be the outer body's again rather than the arm's or the arm's own nest.
     #[test]
-    fn a_child_body_is_left_before_the_parent_resumes() {
+    fn each_op_is_visited_with_its_own_body_producer_map() {
         #[derive(Default)]
-        struct Order {
-            events: Vec<String>,
+        struct Seen {
+            per_op: Vec<(usize, Vec<u32>)>,
         }
-        impl<'a> StructuredVisitor<'a> for Order {
-            fn enter_body(&mut self, _body: &'a KernelBody, op_index_offset: usize) {
-                self.events.push(format!("enter@{op_index_offset}"));
-            }
-            fn exit_body(&mut self, body: &'a KernelBody) {
-                self.events.push(format!("exit/{}", body.ops.len()));
-            }
-            fn visit_op(&mut self, _body: &'a KernelBody, op_index: usize, _op: &'a KernelOp) {
-                self.events.push(format!("op@{op_index}"));
+        impl<'a> StructuredVisitor<'a> for Seen {
+            fn visit_op(
+                &mut self,
+                _body: &'a KernelBody,
+                producers: &ProducerMap<'a>,
+                op_index: usize,
+                _op: &'a KernelOp,
+            ) {
+                let mut ids: Vec<u32> = producers.keys().copied().collect();
+                ids.sort_unstable();
+                self.per_op.push((op_index, ids));
             }
         }
 
-        let mut order = Order::default();
-        walk_structured(&nested_then_sibling(), ArmDescent::Enter, &mut order);
+        let mut seen = Seen::default();
+        walk_structured(&nested_then_sibling(), ArmDescent::Enter, &mut seen);
         assert_eq!(
-            order.events,
+            seen.per_op,
             vec![
-                "enter@0", "op@0", "op@1", // outer body, up to its first branch
-                "enter@3", "op@3", "op@4", // that branch's arm
-                "enter@5", "op@5", "exit/1", // the arm's own nested arm
-                "exit/2",  // the arm closes before the outer body resumes
-                "op@2",    // outer body's next op, with the arm already left
-                "enter@3", "exit/0", // the second outer branch's empty arm
-                "exit/3",
+                (0, vec![0]),  // outer body
+                (1, vec![0]),  // outer body's first branch
+                (3, vec![10]), // that arm
+                (4, vec![10]), // the arm's own branch
+                (5, vec![20]), // the nested arm
+                (2, vec![0]),  // outer body resumes on its own map
             ],
-            "Fix: walk_structured must leave a child body before the parent's next op, or a visitor caching per-body state reads the child's state for a parent op."
+            "Fix: every op must be visited with the producer map of the body that holds it, or a site after a nested arm is classified against the arm's producers."
         );
     }
 

@@ -19,68 +19,31 @@
 //! as `Scattered`, which is the rewrite-safe direction.
 
 use super::report::{AccessPattern, AccessSite, CoalescenceReport};
-use crate::analyses::structured_walk::{walk_structured, ArmDescent, StructuredVisitor};
-use crate::analyses::{constant_u32_operand, producer_map, AccessKind, ProducerMap};
-use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
+use crate::analyses::structured_walk::walk_accesses;
+use crate::analyses::{constant_u32_operand, ProducerMap};
+use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 use vyre_foundation::ir::BinOp;
 
 /// Run coalescence analysis on a kernel.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> CoalescenceReport {
-    let mut collector = SiteCollector::default();
-    walk_structured(&desc.body, ArmDescent::Enter, &mut collector);
+    let mut sites = Vec::new();
+    walk_accesses(
+        &desc.body,
+        &KernelOpKind::LoadGlobal,
+        &KernelOpKind::StoreGlobal,
+        |access| {
+            sites.push(AccessSite {
+                op_index: access.op_index,
+                kind: access.kind,
+                binding_slot: access.binding_slot,
+                pattern: classify_index(access.body, access.producers, access.index_operand_id),
+            });
+        },
+    );
     CoalescenceReport {
         kernel_id: desc.id.clone(),
-        sites: collector.sites,
-    }
-}
-
-/// Slot and index operand positions on both global access kinds.
-const SLOT_POS: usize = 0;
-const INDEX_POS: usize = 1;
-
-/// Classifies every global access the walk reaches.
-///
-/// The producer map is per body, so it is rebuilt on entry and dropped on
-/// exit. Without the exit hook the map of a nested arm would still be in hand
-/// when the parent's next op arrives, which is why this analysis used to carry
-/// its own copy of the descent.
-#[derive(Default)]
-struct SiteCollector<'a> {
-    sites: Vec<AccessSite>,
-    producers: Vec<ProducerMap<'a>>,
-}
-
-impl<'a> StructuredVisitor<'a> for SiteCollector<'a> {
-    fn enter_body(&mut self, body: &'a KernelBody, _op_index_offset: usize) {
-        self.producers.push(producer_map(body));
-    }
-
-    fn exit_body(&mut self, _body: &'a KernelBody) {
-        self.producers.pop();
-    }
-
-    fn visit_op(&mut self, body: &'a KernelBody, op_index: usize, op: &'a KernelOp) {
-        let kind = match op.kind {
-            KernelOpKind::LoadGlobal => AccessKind::Load,
-            KernelOpKind::StoreGlobal => AccessKind::Store,
-            _ => return,
-        };
-        // Bounds check the operand list so a malformed descriptor
-        // doesn't panic the analysis.
-        if op.operands.len() <= INDEX_POS.max(SLOT_POS) {
-            return;
-        }
-        let Some(producers) = self.producers.last() else {
-            return;
-        };
-        let pattern = classify_index(body, producers, op.operands[INDEX_POS]);
-        self.sites.push(AccessSite {
-            op_index,
-            kind,
-            binding_slot: op.operands[SLOT_POS],
-            pattern,
-        });
+        sites,
     }
 }
 
@@ -178,6 +141,7 @@ fn classify_pool_operand(body: &KernelBody, operand_id: u32) -> AccessPattern {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::analyses::AccessKind;
     use crate::descriptor_builder::{
         binop, body, descriptor, effect, global_ro, global_rw, lit, load_global, op, store_global,
     };
