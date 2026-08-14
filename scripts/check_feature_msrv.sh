@@ -1,33 +1,29 @@
 #!/usr/bin/env bash
-# P1 inventory #110  -  feature-MSRV gate.
+# Every advertised feature of every publishable crate compiles alone, on the
+# workspace MSRV.
 #
-# For every advertised feature combination across the workspace, ensure
-# `cargo_full check --features <combo>` passes on the workspace MSRV
-# (`rust-toolchain.toml` / `[workspace.package].rust-version`).
+# Two classes, neither covered elsewhere:
 #
-# The gate runs a small, opinionated matrix:
-#   - default features per crate (always)  -  implicit, runs in main CI.
-#   - explicit feature combinations the workspace docs advertise:
-#       vyre-libs       : math, nn, matching, crypto, decode (each alone)
-#       vyre-primitives : default, all-lego
-#       vyre-runtime    : default, remote-cache, uring-cmd-nvme
-#       vyre-aot        : ptx, spirv
-#       vyre-driver-cuda: default
-#       vyre-driver-spirv: default
+#   - Feature isolation. strict.yml builds `--all-features`, which is a union:
+#     a feature whose prerequisites are turned on by some other feature passes
+#     there and breaks for the consumer who enables it alone. ci.yml builds
+#     default features only, so it never sees a granular feature at all.
+#   - MSRV. `[workspace.package].rust-version` is a published claim, and
+#     ci.yml's toolchain matrix is `stable` and `nightly`. Nothing compiles this
+#     workspace on the version it advertises.
 #
-# Why per-crate matrix instead of a global all-features run: feature
-# unification at the workspace level masks broken individual feature
-# sets (a feature passes because something else turns its prerequisites
-# on). The per-crate run pins each combination on its own.
-#
-# The gate is OPT-IN by default (it shells out to cargo_full). Run it
-# locally before publishing or with `--ci` in CI. Without `--ci`, the
-# gate emits the matrix and exits 0 so the release signoff stays
-# fast.
+# The matrix is derived from the tracked manifests at run time: every
+# publishable member that declares features contributes default,
+# `--no-default-features`, and each declared feature alone. A new feature or a
+# new member joins the matrix and turns this red until it compiles. The previous
+# revision hardcoded 19 entries, four of which named features that no longer
+# exist (`vyre-aot --features spirv` among them), so the sweep could only fail;
+# and its default mode printed the matrix and exited 0, which is a gate that
+# reports success without checking anything.
 #
 # Usage:
-#   scripts/check_feature_msrv.sh           # list matrix, exit 0
-#   scripts/check_feature_msrv.sh --ci      # run cargo_full check on each combo
+#   scripts/check_feature_msrv.sh          # run the derived sweep on the MSRV
+#   scripts/check_feature_msrv.sh --list   # print the derived matrix, check nothing
 
 set -euo pipefail
 
@@ -36,73 +32,113 @@ cd "$ROOT"
 source scripts/lib/cargo_runner.sh
 vyre_select_cargo_runner
 
-MSRV="$(grep -E '^rust-version' Cargo.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
-if [[ -z "$MSRV" ]]; then
-    echo "feature-MSRV gate: cannot determine MSRV from Cargo.toml." >&2
-    exit 1
-fi
+python3 - "$ROOT" "$CARGO_RUNNER" "${1:-}" <<'PY'
+import sys
+import tomllib
+from pathlib import Path
+from subprocess import run
 
-# matrix entries: "<crate>|<feature-spec>"
-# An empty <feature-spec> means default features.
-MATRIX=(
-    "vyre-libs|"
-    "vyre-libs|--no-default-features"
-    "vyre-libs|--no-default-features --features math"
-    "vyre-libs|--no-default-features --features nn"
-    "vyre-libs|--no-default-features --features matching"
-    "vyre-libs|--no-default-features --features crypto"
-    "vyre-libs|--no-default-features --features decode"
-    "vyre-libs|--no-default-features --features c-parser"
-    "vyre-primitives|"
-    "vyre-primitives|--features all-lego"
-    "vyre-primitives|--no-default-features --features bitset"
-    "vyre-primitives|--no-default-features --features reduce"
-    "vyre-runtime|"
-    "vyre-runtime|--features remote-cache"
-    "vyre-runtime|--features uring-cmd-nvme"
-    "vyre-aot|--no-default-features --features ptx"
-    "vyre-aot|--no-default-features --features spirv"
-    "vyre-driver-cuda|"
-    "vyre-driver-spirv|"
-)
+root = Path(sys.argv[1]).resolve()
+cargo = sys.argv[2]
+mode = sys.argv[3]
+NAME = "feature-MSRV"
 
-mode="${1:-list}"
+if mode not in ("", "--list"):
+    sys.exit(f"{NAME}: unknown argument `{mode}`; use --list or no argument.")
 
-if [[ "$mode" == "list" ]]; then
-    echo "feature-MSRV gate: workspace MSRV = $MSRV"
-    echo "Matrix (run with --ci to execute cargo_full check on each):"
-    for entry in "${MATRIX[@]}"; do
-        IFS='|' read -r crate spec <<< "$entry"
-        echo "  - $crate $spec"
-    done
-    echo
-    echo "Note: --ci runs cargo_full check serially against the workspace MSRV"
-    echo "and is intended for the publish-readiness sweep, not the release"
-    echo "signoff fast path."
-    exit 0
-fi
 
-if [[ "$mode" != "--ci" ]]; then
-    echo "Unknown mode: $mode (use --ci or no args)" >&2
-    exit 2
-fi
+def fatal(message: str) -> None:
+    sys.exit(f"{NAME}: {message}")
 
-failed=()
-for entry in "${MATRIX[@]}"; do
-    IFS='|' read -r crate spec <<< "$entry"
-    label="$crate ${spec:-(default)}"
-    echo "▶ $label"
-    if ! "$CARGO_RUNNER" +"$MSRV" check -p "$crate" $spec 2>&1 | tail -3; then
-        failed+=("$label")
-    fi
-done
 
-if (( ${#failed[@]} > 0 )); then
-    echo "feature-MSRV gate: ${#failed[@]} matrix entries failed on $MSRV." >&2
-    for f in "${failed[@]}"; do
-        echo "  ✗ $f" >&2
-    done
-    exit 1
-fi
-echo "feature-MSRV gate: all ${#MATRIX[@]} matrix entries pass on $MSRV."
-exit 0
+def read_manifest(rel: str) -> dict:
+    try:
+        return tomllib.loads((root / rel).read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        fatal(f"{rel} is not readable as TOML: {exc}")
+
+
+root_manifest = read_manifest("Cargo.toml")
+workspace = root_manifest.get("workspace") or {}
+msrv = ((workspace.get("package") or {}).get("rust-version") or "").strip()
+if not msrv:
+    fatal("[workspace.package].rust-version is missing; the MSRV is the whole point")
+
+try:
+    installed = run(["rustup", "toolchain", "list"], capture_output=True, text=True)
+except OSError as exc:
+    fatal(
+        f"`rustup` is not runnable: {exc}\n"
+        f"    Fix: install rustup. The sweep pins a toolchain by name, so without "
+        f"rustup there is no way to compile on {msrv} rather than on whatever "
+        f"compiler happens to be first on PATH."
+    )
+if installed.returncode != 0:
+    fatal(
+        f"`rustup toolchain list` failed: {installed.stderr.strip()}\n"
+        f"    A sweep that cannot confirm the toolchain would check some other "
+        f"compiler and report MSRV."
+    )
+if not any(line.startswith(msrv) for line in installed.stdout.splitlines()):
+    fatal(
+        f"the MSRV toolchain {msrv} is not installed.\n"
+        f"    Fix: rustup toolchain install {msrv}. Falling back to the default "
+        f"toolchain would report a pass for a compiler this crate does not claim."
+    )
+
+members = workspace.get("members") or []
+if not members:
+    fatal("[workspace.members] is empty; the sweep would check nothing")
+
+matrix: list[tuple[str, list[str], str]] = []
+for member in members:
+    manifest = read_manifest(f"{member}/Cargo.toml")
+    package = manifest.get("package") or {}
+    name = package.get("name")
+    if not name:
+        fatal(f"{member}/Cargo.toml has no [package].name")
+    publish = package.get("publish", True)
+    if publish is False or (isinstance(publish, list) and not publish):
+        continue
+    features = sorted(key for key in (manifest.get("features") or {}) if key != "default")
+    if not features:
+        continue
+    matrix.append((name, [], "default features"))
+    matrix.append((name, ["--no-default-features"], "no default features"))
+    for feature in features:
+        matrix.append(
+            (name, ["--no-default-features", "--features", feature], f"only `{feature}`")
+        )
+
+if not matrix:
+    fatal("no publishable member declares a feature; the sweep would check nothing")
+
+if mode == "--list":
+    print(f"{NAME}: MSRV {msrv}, {len(matrix)} derived matrix entries")
+    for name, flags, label in matrix:
+        print(f"  - {name}: {label}")
+    print("Run without --list to compile each entry. --list checks nothing.")
+    sys.exit(0)
+
+failed: list[tuple[str, str]] = []
+for index, (name, flags, label) in enumerate(matrix, 1):
+    argv = [cargo, f"+{msrv}", "check", "--locked", "-p", name, *flags]
+    print(f"[{index}/{len(matrix)}] {name}: {label}", flush=True)
+    done = run(argv, cwd=root, capture_output=True, text=True)
+    if done.returncode != 0:
+        tail = "\n".join(
+            f"      {line}" for line in done.stderr.strip().splitlines()[-6:]
+        )
+        failed.append((f"{name} ({label})", f"      $ {' '.join(argv)}\n{tail}"))
+
+if failed:
+    print(
+        f"{NAME}: {len(failed)} of {len(matrix)} matrix entries fail on {msrv}.",
+        file=sys.stderr,
+    )
+    for label, detail in failed:
+        print(f"  - {label}\n{detail}", file=sys.stderr)
+    sys.exit(1)
+
+print(f"{NAME}: all {len(matrix)} derived matrix entries compile on {msrv}.")
+PY
