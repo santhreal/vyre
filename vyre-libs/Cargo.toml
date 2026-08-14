@@ -426,11 +426,6 @@ path = "tests/c11_lexer_ir_identity.rs"
 required-features = ["c-parser"]
 
 [[test]]
-name = "c11_token_table_parity"
-path = "tests/c11_token_table_parity.rs"
-required-features = ["c-parser"]
-
-[[test]]
 name = "gpu_pipeline_lex_classify_roundtrip"
 path = "tests/gpu_pipeline_lex_classify_roundtrip.rs"
 required-features = ["c-parser"]

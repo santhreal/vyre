@@ -1,138 +1,16 @@
-//! C11 token ids and max-munch lexer patterns for the host oracle.
+//! C11 max-munch lexer patterns for the host oracle.
 //!
-//! The 107 ids below are a copy. `vyre_libs::parsing::c::lex::tokens` owns the
-//! numbering; this file carries the subset [`C11_PATTERNS`] can emit, and every
-//! one of them must hold the owner's value for the same name.
-//!
-//! The copy is deliberate and cannot be collapsed. This crate is a leaf
-//! generator with no vyre dependencies, and `vyre-libs` dev-depends on it as
-//! the host lexer oracle, so consuming the owning table here would invert the
-//! layering and close a dependency cycle over the whole compiler stack for one
-//! integer table.
-//!
-//! What is enforced instead is that the copy cannot drift.
-//! `vyre-libs/tests/c11_token_table_parity.rs` pairs every name here with the
-//! owner's constant through `stringify!`, so a rename on either side stops
-//! compiling, and it derives the emittable set from [`C11_PATTERNS`] at run
-//! time, so a new pattern carrying an id nobody pinned turns that suite red
-//! rather than letting the generated tables stop describing the GPU lexer.
-#![allow(missing_docs)]
+//! The token ids [`C11_PATTERNS`] emits are `vyre_spec::c11_token`, re-exported
+//! here so `vyre_grammar_gen::c11_lexer::TOK_*` keeps resolving. The numbering
+//! is the wire contract between the blobs this crate emits and the GPU lexer
+//! and parser that decode them, so it has one declaration site in the
+//! foundation-layer spec crate that both sides depend down onto. A value
+//! carried in two places drifts silently: the generated tables keep validating
+//! and the parser reads every affected token as something else.
 
 use crate::dfa::{DfaBuilder, DfaTable};
 use regex_automata::MatchKind;
-
-pub const TOK_IDENTIFIER: u32 = 1;
-pub const TOK_INTEGER: u32 = 2;
-//pub const TOK_FLOAT: u32 = 3;
-pub const TOK_STRING: u32 = 4;
-//pub const TOK_CHAR: u32 = 5;
-
-pub const TOK_LPAREN: u32 = 10;
-pub const TOK_RPAREN: u32 = 11;
-pub const TOK_LBRACE: u32 = 12;
-pub const TOK_RBRACE: u32 = 13;
-pub const TOK_LBRACKET: u32 = 14;
-pub const TOK_RBRACKET: u32 = 15;
-pub const TOK_SEMICOLON: u32 = 16;
-pub const TOK_COMMA: u32 = 17;
-pub const TOK_DOT: u32 = 18;
-pub const TOK_ARROW: u32 = 19; // ->
-pub const TOK_PLUS: u32 = 20;
-pub const TOK_MINUS: u32 = 21;
-pub const TOK_STAR: u32 = 22;
-pub const TOK_SLASH: u32 = 23;
-pub const TOK_PERCENT: u32 = 24;
-pub const TOK_AMP: u32 = 25;
-pub const TOK_PIPE: u32 = 26;
-pub const TOK_CARET: u32 = 27;
-pub const TOK_TILDE: u32 = 28;
-pub const TOK_BANG: u32 = 29;
-pub const TOK_ASSIGN: u32 = 30; // =
-pub const TOK_LT: u32 = 31;
-pub const TOK_GT: u32 = 32;
-pub const TOK_HASH: u32 = 33; // preprocessor
-pub const TOK_QUESTION: u32 = 34;
-pub const TOK_COLON: u32 = 35;
-
-pub const TOK_EQ: u32 = 40; // ==
-pub const TOK_NE: u32 = 41; // !=
-pub const TOK_LE: u32 = 42; // <=
-pub const TOK_GE: u32 = 43; // >=
-pub const TOK_AND: u32 = 44; // &&
-pub const TOK_OR: u32 = 45; // ||
-pub const TOK_LSHIFT: u32 = 46; // <<
-pub const TOK_RSHIFT: u32 = 47; // >>
-pub const TOK_INC: u32 = 48; // ++
-pub const TOK_DEC: u32 = 49; // --
-pub const TOK_PLUS_EQ: u32 = 50;
-pub const TOK_MINUS_EQ: u32 = 51;
-pub const TOK_STAR_EQ: u32 = 52;
-pub const TOK_SLASH_EQ: u32 = 53;
-pub const TOK_ELLIPSIS: u32 = 54;
-pub const TOK_PERCENT_EQ: u32 = 55;
-pub const TOK_AMP_EQ: u32 = 56;
-pub const TOK_PIPE_EQ: u32 = 57;
-pub const TOK_CARET_EQ: u32 = 58;
-pub const TOK_LSHIFT_EQ: u32 = 59;
-pub const TOK_RSHIFT_EQ: u32 = 60;
-pub const TOK_HASHHASH: u32 = 61;
-
-pub const TOK_IF: u32 = 100;
-pub const TOK_ELSE: u32 = 101;
-pub const TOK_FOR: u32 = 102;
-pub const TOK_WHILE: u32 = 103;
-pub const TOK_RETURN: u32 = 104;
-pub const TOK_STRUCT: u32 = 105;
-pub const TOK_TYPEDEF: u32 = 106;
-pub const TOK_INT: u32 = 107;
-pub const TOK_CHAR_KW: u32 = 108;
-pub const TOK_VOID: u32 = 109;
-pub const TOK_DO: u32 = 110;
-pub const TOK_SWITCH: u32 = 111;
-pub const TOK_CASE: u32 = 112;
-pub const TOK_DEFAULT: u32 = 113;
-pub const TOK_BREAK: u32 = 114;
-pub const TOK_CONTINUE: u32 = 115;
-pub const TOK_GOTO: u32 = 116;
-pub const TOK_SIZEOF: u32 = 117;
-pub const TOK_AUTO: u32 = 118;
-pub const TOK_CONST: u32 = 119;
-pub const TOK_DOUBLE: u32 = 120;
-pub const TOK_ENUM: u32 = 121;
-pub const TOK_EXTERN: u32 = 122;
-pub const TOK_FLOAT_KW: u32 = 123;
-pub const TOK_INLINE: u32 = 124;
-pub const TOK_LONG: u32 = 125;
-pub const TOK_REGISTER: u32 = 126;
-pub const TOK_RESTRICT: u32 = 127;
-pub const TOK_SHORT: u32 = 128;
-pub const TOK_SIGNED: u32 = 129;
-pub const TOK_STATIC: u32 = 130;
-pub const TOK_UNION: u32 = 131;
-pub const TOK_UNSIGNED: u32 = 132;
-pub const TOK_VOLATILE: u32 = 133;
-pub const TOK_ALIGNAS: u32 = 134;
-pub const TOK_ALIGNOF: u32 = 135;
-pub const TOK_ATOMIC: u32 = 136;
-pub const TOK_BOOL: u32 = 137;
-pub const TOK_COMPLEX: u32 = 138;
-pub const TOK_GENERIC: u32 = 139;
-pub const TOK_IMAGINARY: u32 = 140;
-pub const TOK_NORETURN: u32 = 141;
-pub const TOK_STATIC_ASSERT: u32 = 142;
-pub const TOK_THREAD_LOCAL: u32 = 143;
-pub const TOK_GNU_ASM: u32 = 144;
-pub const TOK_GNU_ATTRIBUTE: u32 = 145;
-pub const TOK_GNU_TYPEOF: u32 = 146;
-pub const TOK_GNU_EXTENSION: u32 = 147;
-pub const TOK_GNU_REAL: u32 = 148;
-pub const TOK_GNU_IMAG: u32 = 149;
-pub const TOK_BUILTIN_CONSTANT_P: u32 = 150;
-pub const TOK_BUILTIN_CHOOSE_EXPR: u32 = 151;
-pub const TOK_BUILTIN_TYPES_COMPATIBLE_P: u32 = 152;
-pub const TOK_COMMENT: u32 = 200; // will be stripped
-pub const TOK_WHITESPACE: u32 = 201; // will be stripped
-pub const TOK_PREPROC: u32 = 202; // preprocessor directive
+pub use vyre_spec::c11_token::*;
 
 /// `(token_id, regex source)` in **priority** order: earlier wins on tie length
 /// in [`crate::lex_c11_max_munch`].

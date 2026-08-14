@@ -47,6 +47,12 @@ pub mod by_category;
 /// Reverse index from op id string to its canonical descriptor.
 /// Specification element.
 pub mod by_id;
+/// Terminal ids for the LR(1) arithmetic expression grammar.
+/// Specification element.
+pub mod c11_expr_token;
+/// C11 lexer token ids shared by the host table generator and the GPU parser.
+/// Specification element.
+pub mod c11_token;
 /// Conformance invariant: the op catalog enumerates every known id.
 /// Specification element.
 pub mod catalog_is_complete;
@@ -75,6 +81,9 @@ pub mod extension;
 /// Floating-point type subset (F16/F32/F64) with associated properties.
 /// Specification element.
 pub mod float_type;
+/// Go lexer token ids shared by the GPU lexer program and its host matchers.
+/// Specification element.
+pub mod go_token;
 /// Golden reference samples  -  tiny fixtures every backend must reproduce exactly.
 /// Specification element.
 pub mod golden_sample;
@@ -117,6 +126,9 @@ pub mod op_signature;
 /// Packed graph node kinds for language-agnostic analysis.
 /// Specification element.
 pub mod pg_node_kind;
+/// Python lexer token ids shared by the GPU lexer program and its host matchers.
+/// Specification element.
+pub mod python_token;
 /// Canonical semiring selector for dataflow and algebraic kernels.
 pub mod semiring;
 /// Soundness markers and precision contracts for cross-engine analysis data.

@@ -67,6 +67,7 @@ This crate declares no Cargo features.
 | `test` | `sweep_wire_u32_volume_oracle_matrix` | `vyre-spec/tests/sweep_wire_u32_volume_oracle_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test sweep_wire_u32_volume_oracle_matrix` |
 | `test` | `test_descriptor_property_contracts` | `vyre-spec/tests/test_descriptor_property_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test test_descriptor_property_contracts` |
 | `test` | `test_descriptor_surface` | `vyre-spec/tests/test_descriptor_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test test_descriptor_surface` |
+| `test` | `token_ids_have_one_owner` | `vyre-spec/tests/token_ids_have_one_owner.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test token_ids_have_one_owner` |
 | `test` | `wire_tag_surface` | `vyre-spec/tests/wire_tag_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test wire_tag_surface` |
 
 ## Test classes
