@@ -414,10 +414,9 @@ impl BodyBuilder<'_> {
         fallback: naga::Handle<Type>,
     ) -> naga::Handle<Type> {
         match self.scalar_kind_of_expression(handle, 0) {
-            Some(ScalarKind::Bool) => self.types.bool_ty,
-            Some(ScalarKind::Sint) => self.types.i32_ty,
-            Some(ScalarKind::Float) => self.types.f32_ty,
-            Some(ScalarKind::Uint) => self.types.u32_ty,
+            Some(
+                kind @ (ScalarKind::Bool | ScalarKind::Sint | ScalarKind::Float | ScalarKind::Uint),
+            ) => self.canonical_type_for_scalar_kind(kind),
             _ => fallback,
         }
     }
