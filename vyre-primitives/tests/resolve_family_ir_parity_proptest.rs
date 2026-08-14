@@ -10,8 +10,6 @@
 //! the same flag alphabet, so hits and misses are both dense and multiple matching lanes atomic_or the
 //! same output word concurrently. Asserts the full packed NodeSet bit-exact vs `cpu_ref`, plus
 //! word-boundary + all-match / no-match (mask=0) / match-all (mask=!0) anchors.
-#![cfg(feature = "cpu-parity")]
-
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 

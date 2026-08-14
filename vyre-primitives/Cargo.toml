@@ -468,3 +468,11 @@ required-features = ["hardware"]
 name = "generated_hardware_registry_matrix"
 path = "tests/generated_hardware_registry_matrix.rs"
 required-features = ["hardware"]
+[[test]]
+name = "node_kind_eq_ir_parity_proptest"
+path = "tests/node_kind_eq_ir_parity_proptest.rs"
+required-features = ["predicate", "cpu-parity"]
+[[test]]
+name = "resolve_family_ir_parity_proptest"
+path = "tests/resolve_family_ir_parity_proptest.rs"
+required-features = ["label", "cpu-parity"]
