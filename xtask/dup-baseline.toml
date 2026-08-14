@@ -4,29 +4,15 @@
 # also appears in another file. More than the pin fails; less is reported so
 # the owning dedup PR can lower it here as part of its own diff.
 #
-# A pin is never raised. Eight rows are currently below what the crate
-# measures, and each is failing on purpose until the work that closes it lands.
+# A pin is never raised. Every row now meets what its crate measures, so a red
+# dup-scan means a change added a copy rather than an older debt coming due.
 # `--write-baseline` rewrites every row from the current tree and drops this
 # block, so it must not be used to record one crate's progress; edit that
 # crate's row by hand.
 #
-#   tests            8      the C-frontend fixture streams under
-#                           tests/support/c_frontend/fixtures are still spelled
-#                           one FixtureToken per line.
-#   vyre-libs        11805  measures 16069. Two causes. The migrated
-#                           c_ast_sema_scope_* and c_parser_hostile_* suites
-#                           still repeat their row assertions per case, and the
-#                           crate absorbed the six trees the pass engine gave up:
-#                           vyre-pass-engine fell 4711 to 834 in the same change.
-#                           Across the pair that is 16516 pinned against 16903
-#                           measured, so the move itself cost 387 lines by
-#                           placing those trees beside code they resemble. The
-#                           pin is not raised to meet it; the vyre-libs dedup
-#                           owes the difference.
-#   vyre-primitives  7727   the remaining rows are the CSR traversal and
-#                           iterative-solver program builders, which duplicate
-#                           against their vyre-libs dispatch partners rather
-#                           than against each other.
+# vyre-primitives sits at its measured floor: the remaining rows are the CSR
+# traversal and iterative-solver program builders, which duplicate against their
+# vyre-libs dispatch partners rather than against each other.
 
 
 [[crate]]
@@ -81,7 +67,7 @@ total_lines = 35594
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 4544
+duplicate_lines = 4531
 total_lines = 69251
 
 [[crate]]
@@ -101,7 +87,7 @@ total_lines = 1974
 
 [[crate]]
 name = "vyre-driver-wgpu"
-duplicate_lines = 5956
+duplicate_lines = 4229
 total_lines = 60338
 
 [[crate]]
@@ -141,7 +127,7 @@ total_lines = 3393
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 11805
+duplicate_lines = 11759
 total_lines = 142390
 
 [[crate]]
@@ -181,7 +167,7 @@ total_lines = 29187
 
 [[crate]]
 name = "vyre-pass-engine"
-duplicate_lines = 834
+duplicate_lines = 824
 total_lines = 58675
 
 [[crate]]
