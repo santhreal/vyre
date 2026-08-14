@@ -10,17 +10,18 @@
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{LazyLock, Mutex};
 
 use serde_json::Value;
 
 use super::data::{SourceFingerprintFreshnessIssue, SourceFingerprintIssue};
 use super::json_reader::is_blake3_hex_digest;
 
-static CURRENT_SOURCE_FINGERPRINTS: OnceLock<Mutex<BTreeMap<PathBuf, String>>> = OnceLock::new();
+static CURRENT_SOURCE_FINGERPRINTS: LazyLock<Mutex<BTreeMap<PathBuf, String>>> =
+    LazyLock::new(|| Mutex::new(BTreeMap::new()));
 
-static CURRENT_SOURCE_TREE_FINGERPRINTS: OnceLock<Mutex<BTreeMap<PathBuf, String>>> =
-    OnceLock::new();
+static CURRENT_SOURCE_TREE_FINGERPRINTS: LazyLock<Mutex<BTreeMap<PathBuf, String>>> =
+    LazyLock::new(|| Mutex::new(BTreeMap::new()));
 
 pub(crate) fn source_fingerprint_issues(source_fingerprint: &str) -> Vec<SourceFingerprintIssue> {
     let Some(rest) = source_fingerprint.strip_prefix("git:") else {
@@ -110,7 +111,7 @@ fn current_source_fingerprint_at(workspace_root: &Path) -> String {
     let key = workspace_root
         .canonicalize()
         .unwrap_or_else(|_| workspace_root.to_path_buf());
-    let cache = CURRENT_SOURCE_FINGERPRINTS.get_or_init(|| Mutex::new(BTreeMap::new()));
+    let cache = &*CURRENT_SOURCE_FINGERPRINTS;
     if let Ok(cache) = cache.lock() {
         if let Some(fingerprint) = cache.get(&key) {
             return fingerprint.clone();
@@ -129,7 +130,7 @@ fn current_source_tree_fingerprint_at(workspace_root: &Path) -> String {
     let key = workspace_root
         .canonicalize()
         .unwrap_or_else(|_| workspace_root.to_path_buf());
-    let cache = CURRENT_SOURCE_TREE_FINGERPRINTS.get_or_init(|| Mutex::new(BTreeMap::new()));
+    let cache = &*CURRENT_SOURCE_TREE_FINGERPRINTS;
     if let Ok(cache) = cache.lock() {
         if let Some(fingerprint) = cache.get(&key) {
             return fingerprint.clone();

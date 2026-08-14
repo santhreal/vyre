@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 use std::path::Path;
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -64,8 +64,8 @@ const FRONTIER_LEADERBOARD_REQUIRED_ROW_FIELDS: &[&str] = &[
     "blockers",
 ];
 
-static FRONTIER_BASELINE_CATALOG: OnceLock<Result<FrontierBaselineCatalog, String>> =
-    OnceLock::new();
+static FRONTIER_BASELINE_CATALOG: LazyLock<Result<FrontierBaselineCatalog, String>> =
+    LazyLock::new(read_frontier_baseline_catalog);
 
 #[derive(Debug, Deserialize)]
 struct FrontierBaselineCatalog {
@@ -142,7 +142,7 @@ struct FrontierLeaderboardRow {
 }
 
 fn baseline_catalog_result() -> &'static Result<FrontierBaselineCatalog, String> {
-    FRONTIER_BASELINE_CATALOG.get_or_init(read_frontier_baseline_catalog)
+    &FRONTIER_BASELINE_CATALOG
 }
 
 fn baseline_catalog() -> &'static FrontierBaselineCatalog {
