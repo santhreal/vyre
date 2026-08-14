@@ -29,6 +29,7 @@ This crate declares no Cargo features.
 | `lib` | `vyre_driver_reference` | `vyre-driver-reference/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-reference` |
 | `test` | `backend_registration` | `vyre-driver-reference/tests/backend_registration.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-reference --test backend_registration` |
 | `test` | `generated_boundary_matrix` | `vyre-driver-reference/tests/generated_boundary_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-reference --test generated_boundary_matrix` |
+| `test` | `hostile_input_closure_contract` | `vyre-driver-reference/tests/hostile_input_closure_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-reference --test hostile_input_closure_contract` |
 | `test` | `parity_suite` | `vyre-driver-reference/tests/parity_suite.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-reference --test parity_suite` |
 
 ## Test classes

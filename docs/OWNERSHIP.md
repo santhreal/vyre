@@ -498,7 +498,11 @@ Own the subcommand registry and every gate that judges the tree from source text
 - Path: `xtask`
 - Owner: `release-tooling`
 - Layer: `tooling`
-- Internal production dependencies: None
+- Internal production dependencies: `structure-gate`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `structure-gate` | resolve the checkout a gate reports on from the working directory at run time | `private` | `release-tooling` |
 
 ### `xtask-evidence`
 

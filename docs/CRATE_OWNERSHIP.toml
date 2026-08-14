@@ -903,6 +903,17 @@ owner = "release-tooling"
 layer = "tooling"
 responsibility = "Own the subcommand registry and every gate that judges the tree from source text, manifests, workflows, and recorded evidence, linking no vyre crate."
 
+[[crate.dependency]]
+package = "structure-gate"
+purpose = "resolve the checkout a gate reports on from the working directory at run time"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "release-tooling"
+
 [[crate]]
 package = "xtask-registry"
 path = "xtask-registry"

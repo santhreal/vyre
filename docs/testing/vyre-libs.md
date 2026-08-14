@@ -305,6 +305,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --all-features
 | `test` | `op_boundaries` | `vyre-libs/tests/op_boundaries.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test op_boundaries` |
 | `test` | `op_boundaries` | `vyre-libs/tests/op_boundaries.rs` | `nn-activation`, `nn-linear` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test op_boundaries` |
 | `test` | `operation_registry` | `vyre-libs/tests/operation_registry.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test operation_registry` |
+| `test` | `operation_registry` | `vyre-libs/tests/operation_registry.rs` | `math`, `math-linalg`, `nn-activation`, `nn-attention`, `nn-linear`, `nn-norm` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test operation_registry` |
 | `test` | `operator_reporting_interchange` | `vyre-libs/tests/operator_reporting_interchange.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test operator_reporting_interchange` |
 | `test` | `optimized_programs` | `vyre-libs/tests/optimized_programs.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test optimized_programs` |
 | `test` | `optimized_programs` | `vyre-libs/tests/optimized_programs.rs` | `nn-attention`, `nn-linear`, `nn-norm` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test optimized_programs` |

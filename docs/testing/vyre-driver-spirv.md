@@ -34,6 +34,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --all-features
 | `example` | `vulkan_probe` | `vyre-driver-spirv/examples/vulkan_probe.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --example vulkan_probe` |
 | `lib` | `vyre_driver_spirv` | `vyre-driver-spirv/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv` |
 | `test` | `dispatch` | `vyre-driver-spirv/tests/dispatch.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --test dispatch` |
+| `test` | `hostile_input_closure_contract` | `vyre-driver-spirv/tests/hostile_input_closure_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --test hostile_input_closure_contract` |
 | `test` | `spirv_parity` | `vyre-driver-spirv/tests/spirv_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --test spirv_parity` |
 | `test` | `spirv_parity` | `vyre-driver-spirv/tests/spirv_parity.rs` | `spirv-val` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --test spirv_parity` |
 | `test` | `target_payload_admission_contract` | `vyre-driver-spirv/tests/target_payload_admission_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --test target_payload_admission_contract` |

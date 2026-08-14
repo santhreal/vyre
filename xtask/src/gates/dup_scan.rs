@@ -22,7 +22,6 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 use serde::Deserialize;
-use walkdir::WalkDir;
 
 use crate::gates::gates::workspace_root;
 

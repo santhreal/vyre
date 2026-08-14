@@ -67,13 +67,17 @@ case.
 
 Every confirmed vulnerability:
 
-1. Gets a `FINDING-VYRE-<n>` identifier in `findings.toml`.
-2. Has a minimized fuzz input committed to
-   `fuzz/artifacts/<target>/<case>` in the fixing patch.
-3. Has a regression test added to the relevant crate's `tests/gap/`
-   that fails on the pre-fix commit and passes on the post-fix
-   commit.
-4. Gets a CHANGELOG entry at the next release.
+1. Gets a `FINDING-VYRE-<n>` entry, with a blocker and a fix plan, in the
+   owning crate's findings register. `vyre-libs/findings.toml` is the only
+   register that exists today; a crate that needs one creates it beside its
+   manifest under the same name.
+2. Has the minimized input that reproduces it committed as a fixture the
+   regression test reads, in the owning crate's `tests/fixtures/` directory.
+3. Has a regression test in the owning crate's `tests/` directory, named for
+   the class it closes, that fails on the pre-fix commit and passes on the
+   post-fix commit.
+4. Has a fragment in `release/changes/unreleased.toml`, which is what the
+   changelog is generated from.
 
-No finding is "documented and left open" without an explicit
-CEO-approval record in `findings.toml`. LAW 9 applies.
+No finding is "documented and left open" without an explicit CEO-approval
+record in its crate's findings register. LAW 9 applies.
