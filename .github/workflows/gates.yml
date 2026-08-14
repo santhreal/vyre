@@ -141,3 +141,22 @@ jobs:
       # that resolves outside the repository.
       - name: Every manifest path edge resolves to a tracked member
         run: bash scripts/check_path_deps_resolve.sh
+
+      # A file no target compiles is not code, it is a claim. glyph_grid shipped
+      # an op registration and eight contracts that no `mod` declaration ever
+      # named, while three generated docs listed the op as supported, and four
+      # CUDA contract chunks outlived the test file that declared them. A green
+      # build is exactly what an orphan produces, so only this scan sees them.
+      - name: Every tracked source file is reachable from a cargo target
+        run: bash scripts/check_every_source_file_is_reachable.sh
+
+      # The other half: whatever a tracked .rs file is declared to be, it must
+      # parse. rustfmt is the only single-file Rust parser in the toolchain, so
+      # this step installs the component instead of assuming the runner image
+      # carries it; the gate itself treats a missing rustfmt as a failure rather
+      # than as a clean tree. Formatting differences are ignored: the tree is
+      # never formatted here and nothing is written.
+      - name: Every tracked source file parses
+        run: |
+          rustup component add rustfmt
+          bash scripts/check_every_source_file_parses.sh
