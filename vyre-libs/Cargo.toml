@@ -610,3 +610,23 @@ required-features = ["c-parser"]
 name = "c_ast_switch_case_complex_body_pg_lowering_contracts"
 path = "tests/c_ast_switch_case_complex_body_pg_lowering_contracts.rs"
 required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_expression_operator_ambiguity_contracts"
+path = "tests/c_ast_expression_operator_ambiguity_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_expression_operator_builtin_contracts"
+path = "tests/c_ast_expression_operator_builtin_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_expression_operator_postfix_contracts"
+path = "tests/c_ast_expression_operator_postfix_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_pg_expression_shape_e2e"
+path = "tests/c_ast_pg_expression_shape_e2e.rs"
+required-features = ["c-parser"]
