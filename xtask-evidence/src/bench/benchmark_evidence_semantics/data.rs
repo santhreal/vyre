@@ -28,40 +28,21 @@ pub(crate) const RELEASE_SURFACE_COVERAGE_FLAGS: &[&str] = &[
 ];
 
 /// Hygiene pattern families and the patterns each one must cover.
+///
+/// The pattern names come from the scan that emits them, so this table records
+/// only which family each list has to appear under.
 pub(crate) const RELEASE_SURFACE_REQUIRED_PATTERNS: &[(&str, &[&str])] = &[
     (
         "resource_bound_patterns",
-        &[
-            "std_thread_sleep",
-            "thread_sleep",
-            "tokio_sleep",
-            "unbounded_read",
-        ],
+        xtask::gates::hygiene_matrix::RESOURCE_BOUND_PATTERNS,
     ),
     (
         "hidden_fallback_patterns",
-        &[
-            "silent_gpu_skip",
-            "silent_gpu_skipped",
-            "gpu_unavailable_skip",
-            "cfg_not_gpu",
-            "cpu_fallback",
-            "software_fallback",
-            "fallback_dispatch",
-            "falling_back_to_cpu",
-            "fallback_to_cpu",
-            "synthetic_gpu_timing",
-            "fake_gpu_timing_formula",
-        ],
+        xtask::gates::hygiene_matrix::HIDDEN_FALLBACK_PATTERNS,
     ),
     (
         "release_tooling_patterns",
-        &[
-            "raw_workspace_cargo",
-            "invalid_cargo_full_xtask",
-            "heredoc",
-            "missing_cargo_wrapper",
-        ],
+        xtask::gates::hygiene_matrix::CARGO_WRAPPER_PATTERNS,
     ),
 ];
 

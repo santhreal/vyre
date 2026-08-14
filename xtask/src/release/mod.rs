@@ -13,7 +13,6 @@ pub mod launch_contract;
 pub mod launch_state;
 pub mod metadata_matrix;
 pub mod package_readiness;
-pub mod release_backend_rows;
 pub mod release_conformance;
 pub mod release_gate;
 pub mod release_train;

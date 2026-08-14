@@ -42,15 +42,6 @@ pub const IMPLEMENTED: &[(&str, fn(&[String]))] = &[
     ("whats-similar", gates::whats_similar::run),
 ];
 
-/// Run the named subcommand, or report that it is not implemented here.
-///
-/// `args` is the process argument vector, so the subcommand name is `args[1]`
-/// and every subcommand reads its own options from the same slice `xtask` would
-/// have passed it.
-pub fn dispatch(name: &str, args: &[String]) -> bool {
-    xtask::subcommands::dispatch(IMPLEMENTED, name, args)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

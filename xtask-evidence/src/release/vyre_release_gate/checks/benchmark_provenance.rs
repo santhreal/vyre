@@ -13,21 +13,23 @@ use crate::bench::benchmark_evidence_semantics::{
     metrics_has_any, metrics_has_positive_any, metrics_has_zero_any,
 };
 
-pub(crate) fn check_benchmark_report_has_cases(
+/// Check the blocker array and the failed-case summary of one benchmark report.
+///
+/// Every gate that opens a benchmark report starts here, and the answer must be
+/// the same wherever the report came from: the three callers each carried this
+/// arithmetic and its four messages, differing only in whether they name the
+/// report by evidence suffix or by path, so a correction to the summary/case
+/// mismatch wording reached one report and not the next.
+pub(crate) fn check_benchmark_report_summary(
     requirement: &Requirement,
-    base_dir: &Path,
-    suffix: &str,
+    label: &str,
+    report: &serde_json::Value,
     failures: &mut Vec<String>,
 ) {
-    let Some((path, report)) =
-        first_json_evidence_with_path(requirement, base_dir, suffix, failures)
-    else {
-        return;
-    };
     check_json_value_has_no_blockers(
         requirement,
-        &format!("benchmark `{suffix}`"),
-        &report,
+        &format!("benchmark `{label}`"),
+        report,
         failures,
     );
     let failed = report
@@ -36,15 +38,15 @@ pub(crate) fn check_benchmark_report_has_cases(
         .and_then(serde_json::Value::as_u64)
         .unwrap_or(u64::MAX);
     let failed_cases =
-        crate::bench::benchmark_evidence_semantics::benchmark_failed_case_summaries(&report);
+        crate::bench::benchmark_evidence_semantics::benchmark_failed_case_summaries(report);
     let case_failed = failed_cases.len() as u64;
     if let Some(mismatch) =
         crate::bench::benchmark_evidence_semantics::benchmark_report_summary_case_evidence_mismatch(
-            &report,
+            report,
         )
     {
         failures.push(format!(
-            "requirement `{}` benchmark `{suffix}` has invalid summary: {mismatch}",
+            "requirement `{}` benchmark `{label}` has invalid summary: {mismatch}",
             requirement.id
         ));
     }
@@ -60,10 +62,24 @@ pub(crate) fn check_benchmark_report_has_cases(
             format!("; case evidence reports {case_failed} failed case(s)")
         };
         failures.push(format!(
-            "requirement `{}` benchmark `{suffix}` reports {failed} failed case(s){count_detail}{detail}",
+            "requirement `{}` benchmark `{label}` reports {failed} failed case(s){count_detail}{detail}",
             requirement.id
         ));
     }
+}
+
+pub(crate) fn check_benchmark_report_has_cases(
+    requirement: &Requirement,
+    base_dir: &Path,
+    suffix: &str,
+    failures: &mut Vec<String>,
+) {
+    let Some((path, report)) =
+        first_json_evidence_with_path(requirement, base_dir, suffix, failures)
+    else {
+        return;
+    };
+    check_benchmark_report_summary(requirement, suffix, &report, failures);
     let cases = report
         .get("cases")
         .and_then(serde_json::Value::as_array)
@@ -616,6 +632,22 @@ fn check_cuda_forbidden_telemetry_is_zero(
         }
     }
 }
+/// Whether any case in `report` carries a metrics object `accept` admits.
+///
+/// `None` means the report has no cases array at all, which is a different
+/// answer from "no case matched": two of the four requirements below report the
+/// missing array and two treat it as nothing to check.
+fn any_case_metrics(
+    report: &serde_json::Value,
+    accept: impl Fn(&serde_json::Map<String, serde_json::Value>) -> bool,
+) -> Option<bool> {
+    let cases = report.get("cases").and_then(serde_json::Value::as_array)?;
+    Some(cases.iter().any(|case| {
+        case.get("metrics")
+            .and_then(serde_json::Value::as_object)
+            .is_some_and(&accept)
+    }))
+}
 pub(crate) fn require_case_metric_at_least(
     requirement: &Requirement,
     suffix: &str,
@@ -624,15 +656,10 @@ pub(crate) fn require_case_metric_at_least(
     minimum: f64,
     failures: &mut Vec<String>,
 ) {
-    let Some(cases) = report.get("cases").and_then(serde_json::Value::as_array) else {
-        return;
-    };
-    if !cases.iter().any(|case| {
-        case.get("metrics")
-            .and_then(serde_json::Value::as_object)
-            .and_then(|metrics| metric_p50(metrics.get(metric)))
-            .is_some_and(|value| value >= minimum)
-    }) {
+    let observed = any_case_metrics(report, |metrics| {
+        metric_p50(metrics.get(metric)).is_some_and(|value| value >= minimum)
+    });
+    if observed == Some(false) {
         failures.push(format!(
             "requirement `{}` benchmark `{suffix}` has no case with p50 `{metric}` >= {minimum}",
             requirement.id
@@ -647,15 +674,10 @@ pub(crate) fn require_case_metric_equals(
     expected: f64,
     failures: &mut Vec<String>,
 ) {
-    let Some(cases) = report.get("cases").and_then(serde_json::Value::as_array) else {
-        return;
-    };
-    if !cases.iter().any(|case| {
-        case.get("metrics")
-            .and_then(serde_json::Value::as_object)
-            .and_then(|metrics| metric_p50(metrics.get(metric)))
-            .is_some_and(|value| (value - expected).abs() < f64::EPSILON)
-    }) {
+    let observed = any_case_metrics(report, |metrics| {
+        metric_p50(metrics.get(metric)).is_some_and(|value| (value - expected).abs() < f64::EPSILON)
+    });
+    if observed == Some(false) {
         failures.push(format!(
             "requirement `{}` benchmark `{suffix}` has no case with p50 `{metric}` == {expected}",
             requirement.id
@@ -669,27 +691,12 @@ pub(crate) fn require_case_metric_positive(
     metric: &str,
     failures: &mut Vec<String>,
 ) {
-    let Some(cases) = report.get("cases").and_then(serde_json::Value::as_array) else {
-        return;
-    };
-    let observed = cases.iter().any(|case| {
-        case.get("metrics")
-            .and_then(serde_json::Value::as_object)
-            .and_then(|metrics| metrics.get(metric))
-            .and_then(|metric| {
-                metric
-                    .get("p50")
-                    .and_then(serde_json::Value::as_f64)
-                    .or_else(|| {
-                        metric
-                            .get("p50")
-                            .and_then(serde_json::Value::as_u64)
-                            .map(|v| v as f64)
-                    })
-            })
-            .is_some_and(|value| value > 0.0)
+    // A bare scalar is not a positive p50 here: this requirement is what proves
+    // the percentile was recorded, so it reads the percentile only.
+    let observed = any_case_metrics(report, |metrics| {
+        metric_percentile(metrics.get(metric), "p50").is_some_and(|value| value > 0.0)
     });
-    if !observed {
+    if observed == Some(false) {
         failures.push(format!(
             "requirement `{}` benchmark `{suffix}` has no positive `{metric}` p50 metric",
             requirement.id
@@ -703,18 +710,14 @@ pub(crate) fn require_case_metric_present(
     metric: &str,
     failures: &mut Vec<String>,
 ) {
-    let Some(cases) = report.get("cases").and_then(serde_json::Value::as_array) else {
+    let observed = any_case_metrics(report, |metrics| metrics.contains_key(metric));
+    let Some(observed) = observed else {
         failures.push(format!(
             "requirement `{}` benchmark `{suffix}` has no cases array while checking `{metric}`",
             requirement.id
         ));
         return;
     };
-    let observed = cases.iter().any(|case| {
-        case.get("metrics")
-            .and_then(serde_json::Value::as_object)
-            .is_some_and(|metrics| metrics.contains_key(metric))
-    });
     if !observed {
         failures.push(format!(
             "requirement `{}` benchmark `{suffix}` has no `{metric}` metric claimed by pass-family manifest",

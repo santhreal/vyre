@@ -783,6 +783,60 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   owns `ReferenceOracle` and `CudaOracle`; the parity assertion each file makes
   stays in that file, because the two arms being compared are the point of the
   test.
+- The release conformance facts derived from `docs/optimization/OP_MATRIX.toml`
+  are derived once.
+  `xtask::release::conformance_op_matrix::evaluate_op_matrix_coverage` owns the
+  covered and missing required-op counts, the supported release-backend row
+  count, and the six blockers that follow from them; the registered-op matrix
+  in `xtask-registry` and the per-backend conformance artifacts in `xtask` each
+  carried their own copy of that arithmetic and of five of the six blocker
+  messages, differing only in which set of observed op ids they judge the
+  matrix against. The two artifacts report the same field names, so a
+  correction applied to one copy left the other reporting a different coverage
+  number for the same matrix and a release could be signed on whichever
+  artifact was read first. `release_backend_rows.rs` held half of that decision
+  for both callers and is folded into the matrix module, so the count is no
+  longer reachable without the judgement it feeds.
+- Every evidence-producing xtask subcommand parses `--output`, reports the
+  written artifact and chooses its exit code through one owner in
+  `xtask::output_arg`. Each command used to carry its own copy of the option
+  loop, the usage-error exit, the parent-directory creation and the
+  wrote-then-exit epilogue, so exit 2 for a usage error and exit 1 for a
+  failing gate were a dozen separate decisions that CI reads as one contract.
+  `parse_output_and_flag_arg` covers the commands that take a second valueless
+  flag, `parsed_or_exit` maps a usage error to exit 2,
+  `report_evidence_artifact` prints the path and exits 1 on a non-empty blocker
+  list, and `write_json` now creates the parent directory itself rather than
+  each caller doing it first. Help text, blocker text and exit codes are
+  unchanged.
+- `xtask::delegate::run_delegated_main` owns what a delegated binary's `main`
+  does: answer `--help` from the callee's own dispatch table, reject a missing
+  subcommand, then resolve the name. `xtask-registry` and `xtask-evidence` each
+  wrote that out, including the exit code for an unimplemented subcommand, so
+  the two entry points could disagree about a contract that `xtask` and CI read
+  as one. Each `main` is now a single call naming the package and why `xtask`
+  routes there, and the `dispatch` wrapper each crate exported for its own
+  `main` alone is gone. Help text, error text and exit codes are unchanged.
+- The release gate reads a benchmark report's blocker array and failed-case
+  summary in one place. `check_benchmark_report_summary` owns the
+  summary-versus-case-evidence mismatch and the failed-case message; the three
+  gates that open a benchmark report each carried that arithmetic and its four
+  messages, differing only in whether the report is named by evidence suffix or
+  by path, so a correction reached one report and not the next. The four
+  `require_case_metric_*` requirements now share one walk over the cases array,
+  which also makes explicit that only the present-metric requirement treats a
+  missing cases array as its own failure and that the positive-metric
+  requirement reads the recorded percentile rather than accepting a bare
+  scalar. An unreachable second copy of the markdown-evidence check is deleted:
+  it had no callers and had drifted to demand an evidence-sources list from
+  every markdown file, while the live check demands it only under
+  `evidence/docs/`.
+- The hygiene scan's pattern names are declared where the scan emits them.
+  `xtask::gates::hygiene_matrix` exports the hidden-fallback, resource-bound
+  and cargo-wrapper pattern lists, and the release-evidence check that requires
+  each family to have been covered now references them instead of restating
+  nineteen names. Adding a pattern to the scan previously left the gate
+  accepting evidence that never looked for it.
 
 ### Removed
 

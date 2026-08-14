@@ -28,13 +28,7 @@ struct OptimizationMatrixEntry {
 }
 
 pub(crate) fn run(args: &[String]) {
-    let output = match parse_output(args) {
-        Ok(output) => output,
-        Err(message) => {
-            eprintln!("{message}");
-            std::process::exit(2);
-        }
-    };
+    let output = xtask::output_arg::parsed_or_exit(parse_output(args));
     let (executable_passes, rows) = optimizer_pass_rows::collect();
     let mut blockers = optimizer_pass_rows::duplicate_id_blockers(&rows);
     let entries = rows
@@ -68,10 +62,11 @@ pub(crate) fn run(args: &[String]) {
         blockers,
     };
     xtask::output_arg::write_json(&output, &matrix);
-    println!("optimization-matrix: wrote {}", output.display());
-    if !matrix.blockers.is_empty() {
-        std::process::exit(1);
-    }
+    xtask::output_arg::report_evidence_artifact(
+        "optimization-matrix",
+        &output,
+        matrix.blockers.len(),
+    );
 }
 
 fn parse_output(args: &[String]) -> Result<PathBuf, String> {

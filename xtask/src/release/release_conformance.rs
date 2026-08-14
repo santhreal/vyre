@@ -6,7 +6,11 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::release::release_backend_rows::count_supported_release_backend_rows;
+// The op matrix and everything derived from it have one owner, so a second
+// copy here cannot drift from the registered-op matrix again.
+use crate::release::conformance_op_matrix::{
+    evaluate_op_matrix_coverage, read_conformance_required_op_matrix,
+};
 use serde::{Deserialize, Serialize};
 
 const MIN_RELEASE_OP_PAIRS: usize = 49;
@@ -203,52 +207,14 @@ fn run_backend_conformance(
     for error in &catalog.errors {
         blockers.push(error.clone());
     }
-    let missing_catalog_ops = catalog
-        .required_ops
-        .iter()
-        .filter(|op| !seen_ops.contains(op.as_str()))
-        .cloned()
-        .collect::<Vec<_>>();
-    let catalog_covered_op_count = catalog
-        .required_ops
-        .len()
-        .saturating_sub(missing_catalog_ops.len());
-    if catalog.required_ops.is_empty() {
-        blockers.push("OP_MATRIX contributed zero conformance-required op ids".to_string());
-    }
-    if !missing_catalog_ops.is_empty() {
-        blockers.push(format!(
-            "{backend_id} conformance is missing {} OP_MATRIX-required op id(s)",
-            missing_catalog_ops.len()
-        ));
-    }
-    if !catalog.blocked_release_rows.is_empty() {
-        blockers.push(format!(
-            "OP_MATRIX contains {} release backend row(s) marked blocked_release",
-            catalog.blocked_release_rows.len()
-        ));
-    }
-    if !catalog.missing_release_backend_rows.is_empty() {
-        blockers.push(format!(
-            "OP_MATRIX is missing {} release backend row(s)",
-            catalog.missing_release_backend_rows.len()
-        ));
-    }
-    let supported_release_backend_row_count =
-        count_supported_release_backend_rows(&catalog.release_backend_rows);
-    let expected_supported_rows = catalog.required_ops.len().saturating_mul(3);
-    if supported_release_backend_row_count != expected_supported_rows {
-        blockers.push(format!(
-            "OP_MATRIX declares {supported_release_backend_row_count} supported release backend row(s), expected {expected_supported_rows}"
-        ));
-    }
-    let expected_release_backend_rows = catalog.required_ops.len().saturating_mul(3);
-    if catalog.release_backend_rows.len() < expected_release_backend_rows {
-        blockers.push(format!(
-            "OP_MATRIX declares {} release backend row(s), expected {expected_release_backend_rows} for reference/cuda/wgpu coverage",
-            catalog.release_backend_rows.len()
-        ));
-    }
+    let coverage = evaluate_op_matrix_coverage(
+        &catalog,
+        |op| seen_ops.contains(op),
+        |missing| {
+            format!("{backend_id} conformance is missing {missing} OP_MATRIX-required op id(s)")
+        },
+        &mut blockers,
+    );
     if failed_pairs != 0 {
         blockers.push(format!(
             "{backend_id} conformance reported {failed_pairs} failed pair(s)"
@@ -275,14 +241,14 @@ fn run_backend_conformance(
         stdout_diagnostics,
         total_pairs: pairs.len(),
         distinct_op_count: seen_ops.len(),
-        catalog_required_op_count: catalog.required_ops.len(),
-        catalog_covered_op_count,
-        missing_catalog_ops,
-        release_backend_row_count: catalog.release_backend_rows.len(),
-        supported_release_backend_row_count,
+        catalog_required_op_count: coverage.catalog_required_op_count,
+        catalog_covered_op_count: coverage.catalog_covered_op_count,
+        missing_catalog_ops: coverage.missing_catalog_ops,
+        release_backend_row_count: coverage.release_backend_row_count,
+        supported_release_backend_row_count: coverage.supported_release_backend_row_count,
         release_backend_rows: catalog.release_backend_rows,
         missing_release_backend_rows: catalog.missing_release_backend_rows,
-        op_matrix_blocked_release_count: catalog.blocked_release_rows.len(),
+        op_matrix_blocked_release_count: coverage.op_matrix_blocked_release_count,
         op_matrix_blocked_release_rows: catalog.blocked_release_rows,
         op_matrix_errors: catalog.errors,
         passed_pairs: pairs.len().saturating_sub(failed_pairs),
@@ -306,10 +272,6 @@ fn run_backend_conformance(
         ))
     }
 }
-
-// `OpMatrixCatalog` and its reader live in `conformance_matrix`: one owner, one
-// reader, so a second copy here cannot drift from the matrix again.
-use crate::release::conformance_op_matrix::read_conformance_required_op_matrix;
 
 struct ParsedPairs {
     pairs: Vec<PairResult>,

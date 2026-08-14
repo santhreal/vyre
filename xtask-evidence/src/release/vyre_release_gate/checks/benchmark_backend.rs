@@ -126,48 +126,7 @@ pub(crate) fn check_single_benchmark_report(
     min_speedup_x: Option<f64>,
     failures: &mut Vec<String>,
 ) {
-    check_json_value_has_no_blockers(
-        requirement,
-        &format!("benchmark `{}`", path.display()),
-        report,
-        failures,
-    );
-    let failed = report
-        .get("summary")
-        .and_then(|summary| summary.get("failed"))
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(u64::MAX);
-    let failed_cases =
-        crate::bench::benchmark_evidence_semantics::benchmark_failed_case_summaries(report);
-    let case_failed = failed_cases.len() as u64;
-    if let Some(mismatch) =
-        crate::bench::benchmark_evidence_semantics::benchmark_report_summary_case_evidence_mismatch(
-            report,
-        )
-    {
-        failures.push(format!(
-            "requirement `{}` benchmark `{}` has invalid summary: {mismatch}",
-            requirement.id,
-            path.display()
-        ));
-    }
-    if failed != 0 || case_failed != 0 {
-        let detail = if failed_cases.is_empty() {
-            String::new()
-        } else {
-            format!(": {}", failed_cases.join("; "))
-        };
-        let count_detail = if failed == case_failed {
-            String::new()
-        } else {
-            format!("; case evidence reports {case_failed} failed case(s)")
-        };
-        failures.push(format!(
-            "requirement `{}` benchmark `{}` reports {failed} failed case(s){count_detail}{detail}",
-            requirement.id,
-            path.display()
-        ));
-    }
+    check_benchmark_report_summary(requirement, &path.display().to_string(), report, failures);
     let selected_backend = report
         .get("selected_backend")
         .and_then(serde_json::Value::as_str);

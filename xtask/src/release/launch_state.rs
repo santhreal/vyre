@@ -37,13 +37,7 @@ struct ExternalAction {
 }
 
 pub(crate) fn run(args: &[String]) {
-    let output = match parse_output(args) {
-        Ok(output) => output,
-        Err(message) => {
-            eprintln!("{message}");
-            std::process::exit(2);
-        }
-    };
+    let output = crate::output_arg::parsed_or_exit(parse_output(args));
     let completion_marker = output
         .parent()
         .unwrap_or_else(|| Path::new("."))
@@ -108,17 +102,8 @@ pub(crate) fn run(args: &[String]) {
             "not_complete_until_external_actions_are_approved_and_done"
         },
     };
-    if let Some(parent) = output.parent() {
-        if let Err(error) = fs::create_dir_all(parent) {
-            eprintln!("Fix: failed to create `{}`: {error}", parent.display());
-            std::process::exit(1);
-        }
-    }
     crate::output_arg::write_json(&output, &state);
-    println!("launch-state: wrote {}", output.display());
-    if !state.blockers.is_empty() {
-        std::process::exit(1);
-    }
+    crate::output_arg::report_evidence_artifact("launch-state", &output, state.blockers.len());
 }
 
 fn completion_marker_complete(path: &Path) -> bool {

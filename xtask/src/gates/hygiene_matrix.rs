@@ -218,13 +218,7 @@ const THRESHOLD_SUFFIXES: &[&str] = &[
 
 /// The vyre workspace root this build was compiled against.
 pub(crate) fn run(args: &[String]) {
-    let output = match parse_output(args) {
-        Ok(output) => output,
-        Err(message) => {
-            eprintln!("{message}");
-            std::process::exit(2);
-        }
-    };
+    let output = crate::output_arg::parsed_or_exit(parse_output(args));
     let roots = [crate::checkout::checkout_root()];
     let scanned_roots = roots
         .iter()
@@ -277,18 +271,9 @@ pub(crate) fn run(args: &[String]) {
         blockers,
     };
 
-    if let Some(parent) = output.parent() {
-        if let Err(error) = fs::create_dir_all(parent) {
-            eprintln!("Fix: failed to create `{}`: {error}", parent.display());
-            std::process::exit(1);
-        }
-    }
     crate::output_arg::write_json(&output, &matrix);
     write_sibling_artifacts(&output, &matrix);
-    println!("hygiene-matrix: wrote {}", output.display());
-    if !matrix.blockers.is_empty() {
-        std::process::exit(1);
-    }
+    crate::output_arg::report_evidence_artifact("hygiene-matrix", &output, matrix.blockers.len());
 }
 
 fn finding_summary(findings: &[HygieneFinding]) -> Vec<HygieneFindingSummary> {
@@ -1050,6 +1035,42 @@ fn relative_to_vyre(vyre_root: &Path, path: &Path) -> String {
         .replace('\\', "/")
 }
 
+/// Hidden-fallback pattern names the hygiene scan emits.
+///
+/// This list and the two below are the scan's output vocabulary, which the
+/// release gate then requires the recorded scan to have covered. Both sides
+/// used to spell the names out, so adding a pattern here left the gate
+/// accepting evidence that never looked for it.
+pub const HIDDEN_FALLBACK_PATTERNS: &[&str] = &[
+    "silent_gpu_skip",
+    "silent_gpu_skipped",
+    "gpu_unavailable_skip",
+    "cfg_not_gpu",
+    "cpu_fallback",
+    "software_fallback",
+    "fallback_dispatch",
+    "falling_back_to_cpu",
+    "fallback_to_cpu",
+    "synthetic_gpu_timing",
+    "fake_gpu_timing_formula",
+];
+
+/// Resource-bound pattern names the hygiene scan emits.
+pub const RESOURCE_BOUND_PATTERNS: &[&str] = &[
+    "std_thread_sleep",
+    "thread_sleep",
+    "tokio_sleep",
+    "unbounded_read",
+];
+
+/// Cargo-wrapper pattern names the hygiene scan emits.
+pub const CARGO_WRAPPER_PATTERNS: &[&str] = &[
+    "raw_workspace_cargo",
+    "invalid_cargo_full_xtask",
+    "heredoc",
+    "missing_cargo_wrapper",
+];
+
 const HYGIENE_SCANS: &[(&str, &str, &[&str])] = &[
     (
         "no-stubs-scan.json",
@@ -1067,29 +1088,12 @@ const HYGIENE_SCANS: &[(&str, &str, &[&str])] = &[
     (
         "no-hidden-fallback-scan.json",
         "no-hidden-fallback",
-        &[
-            "silent_gpu_skip",
-            "silent_gpu_skipped",
-            "gpu_unavailable_skip",
-            "cfg_not_gpu",
-            "cpu_fallback",
-            "software_fallback",
-            "fallback_dispatch",
-            "falling_back_to_cpu",
-            "fallback_to_cpu",
-            "synthetic_gpu_timing",
-            "fake_gpu_timing_formula",
-        ],
+        HIDDEN_FALLBACK_PATTERNS,
     ),
     (
         "resource-bound-scan.json",
         "resource-bound",
-        &[
-            "std_thread_sleep",
-            "thread_sleep",
-            "tokio_sleep",
-            "unbounded_read",
-        ],
+        RESOURCE_BOUND_PATTERNS,
     ),
     (
         "error-surface-scan.json",
@@ -1104,12 +1108,7 @@ const HYGIENE_SCANS: &[(&str, &str, &[&str])] = &[
     (
         "cargo-wrapper-scan.json",
         "cargo-wrapper",
-        &[
-            "raw_workspace_cargo",
-            "invalid_cargo_full_xtask",
-            "heredoc",
-            "missing_cargo_wrapper",
-        ],
+        CARGO_WRAPPER_PATTERNS,
     ),
 ];
 

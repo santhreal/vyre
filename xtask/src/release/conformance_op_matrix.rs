@@ -171,6 +171,110 @@ pub fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog 
     }
 }
 
+/// What one release conformance artifact reports about the op matrix.
+///
+/// Two artifacts derive these numbers: the registered-op matrix, whose observed
+/// set is the live registry, and a per-backend conformance run, whose observed
+/// set is the op ids the run emitted. The observed set differs, the matrix they
+/// are judged against does not, so the judging happens here once.
+pub struct OpMatrixCoverage {
+    /// Operations the matrix requires a release to cover.
+    pub catalog_required_op_count: usize,
+    /// Required operations the observed set covers.
+    pub catalog_covered_op_count: usize,
+    /// Required operations the observed set does not cover.
+    pub missing_catalog_ops: Vec<String>,
+    /// Release backend rows the matrix declares.
+    pub release_backend_row_count: usize,
+    /// Those rows claiming `supported`.
+    pub supported_release_backend_row_count: usize,
+    /// Rows whose declared status blocks a release.
+    pub op_matrix_blocked_release_count: usize,
+}
+
+/// Judge `catalog` against the operations a caller observed, appending the
+/// blockers every conformance artifact raises.
+///
+/// `covers` answers whether the caller observed a required operation.
+/// `missing_ops_blocker` renders the caller's own wording for the ones it did
+/// not, because a registry matrix reports missing registrations while a backend
+/// run reports missing coverage; every other blocker reads the same either way.
+/// The blockers are appended in a fixed order, which is the order both artifacts
+/// already recorded them in.
+pub fn evaluate_op_matrix_coverage(
+    catalog: &OpMatrixCatalog,
+    covers: impl Fn(&str) -> bool,
+    missing_ops_blocker: impl FnOnce(usize) -> String,
+    blockers: &mut Vec<String>,
+) -> OpMatrixCoverage {
+    let missing_catalog_ops = catalog
+        .required_ops
+        .iter()
+        .filter(|op| !covers(op.as_str()))
+        .cloned()
+        .collect::<Vec<_>>();
+    let catalog_required_op_count = catalog.required_ops.len();
+    let catalog_covered_op_count =
+        catalog_required_op_count.saturating_sub(missing_catalog_ops.len());
+    if catalog.required_ops.is_empty() {
+        blockers.push("OP_MATRIX contributed zero conformance-required op ids".to_string());
+    }
+    if !missing_catalog_ops.is_empty() {
+        blockers.push(missing_ops_blocker(missing_catalog_ops.len()));
+    }
+    if !catalog.blocked_release_rows.is_empty() {
+        blockers.push(format!(
+            "OP_MATRIX contains {} release backend row(s) marked blocked_release",
+            catalog.blocked_release_rows.len()
+        ));
+    }
+    if !catalog.missing_release_backend_rows.is_empty() {
+        blockers.push(format!(
+            "OP_MATRIX is missing {} release backend row(s)",
+            catalog.missing_release_backend_rows.len()
+        ));
+    }
+    let supported_release_backend_row_count =
+        count_supported_release_backend_rows(&catalog.release_backend_rows);
+    let expected_supported_rows = catalog_required_op_count.saturating_mul(3);
+    if supported_release_backend_row_count != expected_supported_rows {
+        blockers.push(format!(
+            "OP_MATRIX declares {supported_release_backend_row_count} supported release backend row(s), expected {expected_supported_rows}"
+        ));
+    }
+    let expected_release_backend_rows = catalog_required_op_count.saturating_mul(3);
+    if catalog.release_backend_rows.len() < expected_release_backend_rows {
+        blockers.push(format!(
+            "OP_MATRIX declares {} release backend row(s), expected {expected_release_backend_rows} for reference/cuda/wgpu coverage",
+            catalog.release_backend_rows.len()
+        ));
+    }
+    OpMatrixCoverage {
+        catalog_required_op_count,
+        catalog_covered_op_count,
+        missing_catalog_ops,
+        release_backend_row_count: catalog.release_backend_rows.len(),
+        supported_release_backend_row_count,
+        op_matrix_blocked_release_count: catalog.blocked_release_rows.len(),
+    }
+}
+
+/// Rows claiming `supported` for an operation.
+fn count_supported_release_backend_rows(rows: &[String]) -> usize {
+    rows.iter()
+        .filter(|row| {
+            parse_release_backend_row(row)
+                .is_some_and(|(_op, _backend, status)| status == "supported")
+        })
+        .count()
+}
+
+fn parse_release_backend_row(row: &str) -> Option<(&str, &str, &str)> {
+    let (prefix, status) = row.rsplit_once(':')?;
+    let (op, backend) = prefix.rsplit_once(':')?;
+    Some((op, backend, status))
+}
+
 /// Which case classes the named test files cover, from their names and text.
 pub fn classify_conformance_case_classes(
     vyre_root: &Path,
