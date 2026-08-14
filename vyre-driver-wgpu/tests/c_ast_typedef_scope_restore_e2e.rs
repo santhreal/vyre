@@ -2,17 +2,20 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-#[path = "../../tests/support/c_frontend/mod.rs"]
-mod c_frontend;
 #[path = "c_ast_gpu_parity_support/mod.rs"]
 mod c_ast_gpu_parity_support;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 
 use c_ast_gpu_parity_support::{
-    run_gpu_classifier_with_count, run_gpu_full_typedef_annotation, word_at, VAST_STRIDE_U32,
+    kind_at, run_gpu_classifier_with_count, run_gpu_full_typedef_annotation, word_at,
+    VAST_STRIDE_U32,
+};
+use c_frontend::scope_fixture::{
+    annotate_cpu, classify_cpu_annotated, fixture, ident, raw_vast, tok, ScopeFixture,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
     reference_c11_classify_vast_node_kinds, C_AST_KIND_POINTER_DECL,
 };
 use vyre_primitives::predicate::node_kind;
@@ -22,86 +25,37 @@ const TYPEDEF_FLAG_VISIBLE: u32 = 1;
 const TYPEDEF_FLAG_DECL: u32 = 1 << 1;
 const ORDINARY_FLAG_DECL: u32 = 1 << 2;
 
-enum Atom {
-    Tok(u32),
-    Ident(&'static str),
-}
-
-struct Fixture {
-    tok_types: Vec<u32>,
-    tok_starts: Vec<u32>,
-    tok_lens: Vec<u32>,
-    haystack: Vec<u8>,
-}
-
-fn tok(token: u32) -> Atom {
-    Atom::Tok(token)
-}
-
-fn ident(name: &'static str) -> Atom {
-    Atom::Ident(name)
-}
-
-fn fixture(atoms: &[Atom]) -> Fixture {
-    let mut tok_types = Vec::with_capacity(atoms.len());
-    let mut tok_starts = Vec::with_capacity(atoms.len());
-    let mut tok_lens = Vec::with_capacity(atoms.len());
-    let mut haystack = Vec::new();
-    let mut cursor = 0u32;
-
-    for atom in atoms {
-        match atom {
-            Atom::Tok(token) => {
-                tok_types.push(*token);
-                tok_starts.push(0);
-                tok_lens.push(0);
-            }
-            Atom::Ident(name) => {
-                tok_types.push(TOK_IDENTIFIER);
-                tok_starts.push(cursor);
-                tok_lens.push(name.len() as u32);
-                haystack.extend_from_slice(name.as_bytes());
-                cursor += name.len() as u32;
-            }
-        }
-    }
-
-    Fixture {
-        tok_types,
-        tok_starts,
-        tok_lens,
-        haystack,
-    }
-}
-
-fn typedef_restore_fixture() -> Fixture {
-    fixture(&[
-        tok(TOK_TYPEDEF),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-        ident("T"),
-        tok(TOK_STAR),
-        ident("y"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_RBRACE),
-        tok(TOK_VOID),
-        ident("g"),
-        tok(TOK_LPAREN),
-        ident("T"),
-        tok(TOK_STAR),
-        ident("p"),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-        tok(TOK_RBRACE),
-    ])
+fn typedef_restore_fixture() -> ScopeFixture {
+    fixture(
+        "typedef_parameter_scope_restore",
+        &[
+            tok(TOK_TYPEDEF),
+            tok(TOK_INT),
+            ident("T"),
+            tok(TOK_SEMICOLON),
+            tok(TOK_VOID),
+            ident("f"),
+            tok(TOK_LPAREN),
+            tok(TOK_INT),
+            ident("T"),
+            tok(TOK_RPAREN),
+            tok(TOK_LBRACE),
+            ident("T"),
+            tok(TOK_STAR),
+            ident("y"),
+            tok(TOK_SEMICOLON),
+            tok(TOK_RBRACE),
+            tok(TOK_VOID),
+            ident("g"),
+            tok(TOK_LPAREN),
+            ident("T"),
+            tok(TOK_STAR),
+            ident("p"),
+            tok(TOK_RPAREN),
+            tok(TOK_LBRACE),
+            tok(TOK_RBRACE),
+        ],
+    )
 }
 
 fn assert_words_eq(actual: &[u8], expected: &[u8]) {
@@ -128,27 +82,11 @@ fn assert_words_eq(actual: &[u8], expected: &[u8]) {
     }
 }
 
-fn kind_at(rows: &[u8], idx: usize) -> u32 {
-    word_at(rows, idx * VAST_STRIDE_U32)
-}
-
 fn flags_at(rows: &[u8], idx: usize) -> u32 {
     word_at(rows, idx * VAST_STRIDE_U32 + TYPEDEF_FLAGS_FIELD)
 }
 
-fn raw_vast(fix: &Fixture) -> Vec<u8> {
-    reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens)
-}
-
-fn annotate_cpu(fix: &Fixture) -> Vec<u8> {
-    reference_c11_annotate_typedef_names(&raw_vast(fix), &fix.haystack)
-}
-
-fn classify_cpu_annotated(fix: &Fixture) -> Vec<u8> {
-    reference_c11_classify_vast_node_kinds(&annotate_cpu(fix))
-}
-
-fn annotate_gpu(fix: &Fixture) -> Vec<u8> {
+fn annotate_gpu(fix: &ScopeFixture) -> Vec<u8> {
     let raw = raw_vast(fix);
     run_gpu_full_typedef_annotation(&fix.haystack, &raw)
 }

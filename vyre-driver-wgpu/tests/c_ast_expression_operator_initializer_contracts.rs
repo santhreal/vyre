@@ -24,9 +24,9 @@ use vyre_libs::parsing::c::parse::vast::{
 };
 use vyre_primitives::predicate::node_kind;
 
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 use c_ast_gpu_parity_support::{run_gpu_expr_shape, run_gpu_pg_lower};
 use c_frontend::expression_pipeline::{
     assert_pg_links_match_vast, assert_pg_preserves_row, assert_shape_row, run_pipeline,

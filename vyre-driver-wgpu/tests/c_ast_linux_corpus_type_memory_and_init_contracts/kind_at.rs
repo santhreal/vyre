@@ -11,10 +11,12 @@
 // All fixtures assert CPU/GPU parity through the full pipeline.
 // PG lowering preservation is asserted for rows that carry kernel-grade semantic payload.
 
+pub(crate) use crate::c_ast_gpu_parity_support::node_count_from_vast;
 use crate::c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, assert_pg_preserves_row, build_fixture, node_count_from_vast,
-    row_indices, run_gpu_pg_lower_with_count as run_gpu_pg_lower, Fixture, FixtureToken,
+    assert_full_pipeline_parity, build_fixture, row_indices,
+    run_gpu_pg_lower_with_count as run_gpu_pg_lower, Fixture, FixtureToken,
 };
+use crate::c_frontend::rows::assert_pg_preserves_row;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{

@@ -25,14 +25,15 @@
 use vyre_primitives::wire::{
     decode_u32_le_bytes_all as decode_u32_words, pack_u32_slice as u32_bytes,
 };
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, assert_pg_preserves_fixture_row, build_fixture, classify,
-    row_indices, word_at, Fixture, FixtureToken, FLAGS_FIELD, ORDINARY_FLAG_DECL, TYPEDEF_FLAG_DECL,
+    assert_full_pipeline_parity, assert_pg_preserves_fixture_row, build_fixture, row_indices,
+    word_at, Fixture, FixtureToken, FLAGS_FIELD, ORDINARY_FLAG_DECL, TYPEDEF_FLAG_DECL,
     TYPEDEF_FLAG_VISIBLE, VAST_STRIDE_U32,
 };
+use c_frontend::token_fixture::classify;
 use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
 use vyre_libs::parsing::c::lex::tokens::*;

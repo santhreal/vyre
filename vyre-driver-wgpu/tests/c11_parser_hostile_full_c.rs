@@ -37,8 +37,8 @@ use vyre_primitives::predicate::node_kind;
 mod c_frontend;
 
 use c_frontend::rows::{
-    assert_kind, assert_vast_row, bytes, pg_word_at, row_indices as typed_indices,
-    starts_for_lens, word_at, PG_STRIDE_U32, VAST_STRIDE_U32,
+    assert_kind, assert_vast_row, bytes, pg_word_at, row_indices as typed_indices, starts_for_lens,
+    word_at, PG_STRIDE_U32, VAST_STRIDE_U32,
 };
 
 fn gpu_backend() -> &'static WgpuBackend {

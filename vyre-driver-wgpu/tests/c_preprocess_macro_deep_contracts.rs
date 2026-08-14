@@ -18,9 +18,14 @@
 #![allow(clippy::erasing_op)]
 #![allow(deprecated)]
 
+mod c_macro_table_support;
 mod c_token_support;
 mod common;
-use c_token_support::{assemble, assert_pg_row, find_row_for_lexeme, row_typed_kind, Assembled};
+use c_macro_table_support::MacroFixture;
+use c_token_support::{
+    assemble, assert_pg_row, assert_shape_none, find_row_for_lexeme, node_count_from_vast,
+    row_typed_kind, run_c11_lexer, run_cpu_pipeline, word_at, PG_STRIDE_U32,
+};
 use common::{decode_u32_words, u32_bytes};
 use std::sync::OnceLock;
 
@@ -28,14 +33,10 @@ use c_grammar_gen::lex_c11_max_munch_kinds;
 use vyre::ir::Expr;
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::parsing::c::lex::lexer::c11_lexer;
 use vyre_libs::parsing::c::lex::tokens::*;
-use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes};
+use vyre_libs::parsing::c::lower::c_lower_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
     c11_build_expression_shape_nodes, c11_classify_vast_node_kinds,
-    reference_c11_build_expression_shape_nodes, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_EXPR_ASSOC_NONE, C_EXPR_SHAPE_NONE,
-    C_EXPR_SHAPE_STRIDE_U32,
 };
 use vyre_libs::parsing::c::preprocess::expansion::{
     opt_conditional_mask_with_directives, opt_dynamic_macro_expansion,
@@ -50,89 +51,13 @@ use vyre_reference::value::Value;
 // Byte / word helpers
 // ---------------------------------------------------------------------------
 
-fn haystack_words(source: &[u8]) -> Vec<u32> {
-    source.iter().map(|b| u32::from(*b)).collect()
-}
-
 // ---------------------------------------------------------------------------
 // GPU lexer helper
 // ---------------------------------------------------------------------------
 
-fn run_c11_lexer(source: &[u8], haystack_len: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>, u32) {
-    let program = c11_lexer(
-        "haystack",
-        "out_tok_types",
-        "out_tok_starts",
-        "out_tok_lens",
-        "out_counts",
-        haystack_len,
-    );
-    let haystack_buf = u32_bytes(&haystack_words(source));
-    let zero_buf = vec![0u8; haystack_len as usize * 4];
-    let count_zero = vec![0u8; 4];
-    let inputs = [
-        Value::from(haystack_buf),
-        Value::from(zero_buf.clone()),
-        Value::from(zero_buf.clone()),
-        Value::from(zero_buf),
-        Value::from(count_zero),
-    ];
-    let outputs = vyre_reference::reference_eval(&program, &inputs)
-        .expect("c11_lexer must execute under the reference oracle");
-    assert_eq!(
-        outputs.len(),
-        4,
-        "expected [tok_types, tok_starts, tok_lens, counts]"
-    );
-    let tok_types = decode_u32_words(&outputs[0].to_bytes());
-    let tok_starts = decode_u32_words(&outputs[1].to_bytes());
-    let tok_lens = decode_u32_words(&outputs[2].to_bytes());
-    let counts = decode_u32_words(&outputs[3].to_bytes());
-    let tok_count = counts.first().copied().unwrap_or(0);
-    (
-        tok_types[..tok_count as usize].to_vec(),
-        tok_starts[..tok_count as usize].to_vec(),
-        tok_lens[..tok_count as usize].to_vec(),
-        tok_count,
-    )
-}
-
 // ---------------------------------------------------------------------------
 // Dynamic macro-expansion helpers
 // ---------------------------------------------------------------------------
-
-const EMPTY_SLOT: u32 = u32::MAX;
-const TABLE_SLOTS: usize = 4096;
-
-fn hash_token(tok: u32) -> usize {
-    (tok.wrapping_mul(2_654_435_769) & (TABLE_SLOTS as u32 - 1)) as usize
-}
-
-struct MacroFixture {
-    keys: Vec<u32>,
-    vals: Vec<u32>,
-    sizes: Vec<u32>,
-}
-
-impl MacroFixture {
-    fn empty() -> Self {
-        Self {
-            keys: vec![EMPTY_SLOT; TABLE_SLOTS],
-            vals: vec![0; TABLE_SLOTS],
-            sizes: vec![0; TABLE_SLOTS],
-        }
-    }
-
-    fn insert(&mut self, token: u32, replacement_offset: usize, replacement: &[u32]) {
-        let slot = hash_token(token);
-        self.keys[slot] = token;
-        self.vals[slot] = replacement_offset as u32;
-        self.sizes[replacement_offset] = replacement.len() as u32;
-        for (idx, value) in replacement.iter().enumerate() {
-            self.vals[replacement_offset + idx] = *value;
-        }
-    }
-}
 
 fn run_dynamic_macro_expansion(
     input: &[u32],
@@ -192,69 +117,6 @@ fn run_conditional_mask_with_directives(
 // ---------------------------------------------------------------------------
 
 const VAST_STRIDE_U32: usize = 10;
-const PG_STRIDE_U32: usize = 6;
-
-fn word_at(buf: &[u8], word: usize) -> u32 {
-    let offset = word * 4;
-    u32::from_le_bytes(buf[offset..offset + 4].try_into().unwrap())
-}
-
-fn node_count_from_vast(vast: &[u8]) -> u32 {
-    u32::try_from(vast.len() / (VAST_STRIDE_U32 * 4)).unwrap_or_default()
-}
-
-fn run_reference_pg_lower(typed_vast: &[u8]) -> Vec<u8> {
-    let num_nodes = node_count_from_vast(typed_vast);
-    let program = c_lower_ast_to_pg_nodes("vast_nodes", Expr::u32(num_nodes), "pg_nodes");
-    let output_len = num_nodes.saturating_mul(PG_STRIDE_U32 as u32).max(1) as usize * 4;
-    let values = [
-        Value::from(typed_vast.to_vec()),
-        Value::from(vec![0; output_len]),
-    ];
-    let outputs = vyre_reference::reference_eval(&program, &values)
-        .unwrap_or_else(|e| panic!("C AST PG lowerer must execute on CPU: {e}"));
-    assert_eq!(outputs.len(), 1);
-    outputs[0].to_bytes()
-}
-
-struct PipelineOut {
-    raw_vast: Vec<u8>,
-    typed_vast: Vec<u8>,
-    expr_shape: Vec<u8>,
-    pg: Vec<u8>,
-}
-
-fn run_cpu_pipeline(assembled: &Assembled) -> PipelineOut {
-    let raw_vast = reference_c11_build_vast_nodes(
-        &assembled.tok_types,
-        &assembled.tok_starts,
-        &assembled.tok_lens,
-    );
-    let typed_vast = reference_c11_classify_vast_node_kinds(&raw_vast);
-    let expr_shape = reference_c11_build_expression_shape_nodes(&raw_vast, &typed_vast);
-    let pg = run_reference_pg_lower(&typed_vast);
-    assert_eq!(
-        pg,
-        reference_ast_to_pg_nodes(&typed_vast),
-        "executable PG lowerer must match byte oracle"
-    );
-    PipelineOut {
-        raw_vast,
-        typed_vast,
-        expr_shape,
-        pg,
-    }
-}
-
-fn assert_shape_none(expr_shape: &[u8], idx: usize) {
-    let base = idx * C_EXPR_SHAPE_STRIDE_U32 as usize;
-    assert_eq!(
-        word_at(expr_shape, base),
-        C_EXPR_SHAPE_NONE,
-        "preproc/structural rows stay shape-none"
-    );
-    assert_eq!(word_at(expr_shape, base + 4), C_EXPR_ASSOC_NONE);
-}
 
 // ---------------------------------------------------------------------------
 // GPU backend helpers

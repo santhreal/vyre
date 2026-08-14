@@ -3,8 +3,8 @@
 #![allow(deprecated)]
 #[path = "c_ast_real_corpus_harness/bytes.rs"]
 mod bytes;
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 #[path = "c_ast_real_corpus_harness/corpus_parity.rs"]
 mod corpus_parity;

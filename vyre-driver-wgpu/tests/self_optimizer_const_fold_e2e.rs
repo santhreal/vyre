@@ -16,13 +16,10 @@
 
 mod common;
 use common::acquire_live_backend as live_backend;
-use common::self_optimizer::{WgpuProgramDispatcher, first_let_value, wrapped};
+use common::self_optimizer::{first_let_value, wrapped, WgpuProgramDispatcher};
 
 use vyre::ir::{Expr, Node};
 use vyre_pass_engine::optimizer::const_fold_via_encoded::gpu_const_fold;
-
-
-
 
 #[test]
 fn const_fold_two_plus_three_yields_lit_five_on_real_gpu() {

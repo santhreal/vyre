@@ -9,14 +9,14 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, assert_pg_preserves_fixture_row, build_fixture, classify,
-    fixture_builtin_unreachable, row_indices, run_gpu_pg_lower, word_at, Fixture, FixtureToken,
-    VAST_STRIDE_U32,
+    assert_full_pipeline_parity, assert_pg_preserves_fixture_row, classify,
+    fixture_builtin_unreachable, row_indices, run_gpu_pg_lower, void_fn_fixture, word_at, Fixture,
+    FixtureToken, VAST_STRIDE_U32,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
@@ -34,12 +34,7 @@ use vyre_primitives::predicate::node_kind;
 
 /// void f() { __builtin_offsetof(struct S, field); }
 fn fixture_builtin_offsetof() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("__builtin_offsetof", TOK_IDENTIFIER),
         FixtureToken::new("(", TOK_LPAREN),
         FixtureToken::new("struct", TOK_STRUCT),
@@ -48,18 +43,12 @@ fn fixture_builtin_offsetof() -> Fixture {
         FixtureToken::new("field", TOK_IDENTIFIER),
         FixtureToken::new(")", TOK_RPAREN),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
 /// void f() { __builtin_object_size(ptr, 0); }
 fn fixture_builtin_object_size() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("__builtin_object_size", TOK_IDENTIFIER),
         FixtureToken::new("(", TOK_LPAREN),
         FixtureToken::new("ptr", TOK_IDENTIFIER),
@@ -67,18 +56,12 @@ fn fixture_builtin_object_size() -> Fixture {
         FixtureToken::new("0", TOK_INTEGER),
         FixtureToken::new(")", TOK_RPAREN),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
 /// void f() { __builtin_prefetch(addr, 0, 3); }
 fn fixture_builtin_prefetch() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("__builtin_prefetch", TOK_IDENTIFIER),
         FixtureToken::new("(", TOK_LPAREN),
         FixtureToken::new("addr", TOK_IDENTIFIER),
@@ -88,7 +71,6 @@ fn fixture_builtin_prefetch() -> Fixture {
         FixtureToken::new("3", TOK_INTEGER),
         FixtureToken::new(")", TOK_RPAREN),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 

@@ -13,13 +13,13 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 
 use c_ast_gpu_parity_support::{
     assert_full_pipeline_parity, assert_gpu_pg_parity, assert_pg_preserves_row, build_fixture,
-    c_fixture, kind_at, row_indices, Fixture, FixtureToken,
+    c_fixture, kind_at, lexeme_indices, row_indices, Fixture, FixtureToken,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
@@ -31,19 +31,6 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_LABEL_STMT, C_AST_KIND_RETURN_STMT, C_AST_KIND_SWITCH_STMT, C_AST_KIND_WHILE_STMT,
 };
 use vyre_primitives::predicate::node_kind;
-
-fn lexeme_indices(fix: &Fixture, lexeme: &str) -> Vec<usize> {
-    fix.tok_starts
-        .iter()
-        .zip(&fix.tok_lens)
-        .enumerate()
-        .filter_map(|(idx, (start, len))| {
-            let s = *start as usize;
-            let e = s.saturating_add(*len as usize);
-            (fix.source.as_bytes().get(s..e) == Some(lexeme.as_bytes())).then_some(idx)
-        })
-        .collect()
-}
 
 // ---------------------------------------------------------------------------
 // Fixtures

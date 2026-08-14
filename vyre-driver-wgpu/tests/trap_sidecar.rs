@@ -1,8 +1,8 @@
 //! WGPU trap sidecar integration tests.
 
-use vyre_primitives::wire::pack_u32_slice as pack_words;
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_primitives::wire::pack_u32_slice as pack_words;
 
 #[test]
 fn inflate_fixed_huffman_reports_wgpu_trap_tag() {

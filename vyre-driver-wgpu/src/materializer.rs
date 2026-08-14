@@ -4,8 +4,9 @@ use std::sync::Arc;
 
 use vyre_driver::materialize::{self, InstanceCore, MaterializerDevice};
 use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet, CompiledPipeline,
-    Completion, Device, DeviceIdentity, DispatchConfig, ResidentOwner, Submission,
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet,
+    CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig, ResidentOwner,
+    Submission,
 };
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{Artifact, ArtifactValueId, Digest, TargetPayload, TargetPayloadFormat};
@@ -93,15 +94,12 @@ impl ArtifactMaterializer for WgpuMaterializer {
         if !self.descriptor.is_healthy() {
             return Err(device_lost_error(self.descriptor.identity()));
         }
-        let admitted = materialize::admit(
-            artifact,
-            payload,
-            self.descriptor.target(WGPU_BACKEND_ID),
-        )?;
+        let admitted =
+            materialize::admit(artifact, payload, self.descriptor.target(WGPU_BACKEND_ID))?;
         let mut modules = Vec::with_capacity(admitted.len());
         for module in admitted {
-            let target: WgpuTargetModule = serde_json::from_slice(&module.image.bytes)
-                .map_err(|error| {
+            let target: WgpuTargetModule =
+                serde_json::from_slice(&module.image.bytes).map_err(|error| {
                     materialize::invalid_module(&format!(
                         "WGSL target module is malformed: {error}"
                     ))

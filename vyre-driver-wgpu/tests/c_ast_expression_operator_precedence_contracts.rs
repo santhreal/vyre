@@ -7,9 +7,9 @@
 //! GPU/CPU parity and PG lowering preservation are required for all fixtures.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/fixtures/expression_precedence.rs"]
 mod expression_precedence;
 

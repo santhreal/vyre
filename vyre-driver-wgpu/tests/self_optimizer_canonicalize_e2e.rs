@@ -10,13 +10,10 @@
 
 mod common;
 use common::acquire_live_backend as live_backend;
-use common::self_optimizer::{WgpuProgramDispatcher, first_let_value, wrapped};
+use common::self_optimizer::{first_let_value, wrapped, WgpuProgramDispatcher};
 
 use vyre::ir::{BinOp, Expr, Node};
 use vyre_pass_engine::optimizer::canonicalize_via_encoded::gpu_canonicalize;
-
-
-
 
 #[test]
 fn canonicalize_lit_plus_var_swaps_to_var_plus_lit_on_real_gpu() {

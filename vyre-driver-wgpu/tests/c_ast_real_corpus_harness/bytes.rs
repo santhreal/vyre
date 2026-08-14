@@ -2,6 +2,9 @@
 // Inspired by kernel, libc, and sqlite patterns.
 // Lexes, builds VAST, annotates, classifies, lowers to PG, and checks reference/GPU parity.
 
+pub(crate) use crate::c_ast_gpu_parity_support::{
+    bytes, haystack_words, node_count_from_vast, word_at,
+};
 use crate::c_ast_gpu_parity_support::{dispatch_gpu_program, run_gpu_fast_typedef_annotation};
 use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
@@ -15,23 +18,6 @@ use vyre_libs::parsing::c::parse::vast::{
 use vyre_reference::value::Value;
 
 pub(crate) const VAST_STRIDE_U32: usize = 10;
-
-pub(crate) fn bytes(words: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(words)
-}
-
-pub(crate) fn haystack_words(bytes: &[u8]) -> Vec<u8> {
-    vyre_primitives::wire::pack_bytes_as_u32_slice(bytes)
-}
-
-pub(crate) fn word_at(buf: &[u8], word: usize) -> u32 {
-    let offset = word * 4;
-    u32::from_le_bytes(buf[offset..offset + 4].try_into().unwrap())
-}
-
-pub(crate) fn node_count_from_vast(rows: &[u8]) -> u32 {
-    (rows.len() / (VAST_STRIDE_U32 * 4)) as u32
-}
 
 pub(crate) fn assert_parity(actual: &[u8], expected: &[u8], stage: &str, name: &str) {
     if actual == expected {

@@ -2,52 +2,28 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-#[path = "../../tests/support/c_frontend/mod.rs"]
-mod c_frontend;
 #[allow(dead_code)]
 mod c_ast_gpu_parity_support;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 
 use c_ast_gpu_parity_support::{
-    build_fixture, row_indices, run_gpu_semantic_pg_lower as run_gpu_semantic_lower, word_at,
-    Fixture, FixtureToken, VAST_STRIDE_U32,
+    build_fixture, classify, row_indices, run_gpu_semantic_pg_lower as run_gpu_semantic_lower,
+    semantic_edge_word, semantic_node_word, word_at, Fixture, FixtureToken, VAST_STRIDE_U32,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::{
     reference_ast_to_pg_semantic_graph, C_AST_PG_CATEGORY_GNU, C_AST_PG_EDGE_PARENT,
-    C_AST_PG_EDGE_ROWS_PER_NODE, C_AST_PG_EDGE_STRIDE_U32, C_AST_PG_ROLE_ASM_CLOBBER,
-    C_AST_PG_ROLE_ASM_GOTO_LABEL, C_AST_PG_ROLE_ASM_INPUT, C_AST_PG_ROLE_ASM_OUTPUT,
-    C_AST_PG_ROLE_ASM_TEMPLATE, C_AST_PG_ROLE_GNU_ATTRIBUTE, C_AST_PG_ROLE_GNU_ATTRIBUTE_DETAIL,
-    C_AST_PG_ROLE_INLINE_ASM, C_AST_PG_SEMANTIC_NODE_STRIDE_U32,
+    C_AST_PG_ROLE_ASM_CLOBBER, C_AST_PG_ROLE_ASM_GOTO_LABEL, C_AST_PG_ROLE_ASM_INPUT,
+    C_AST_PG_ROLE_ASM_OUTPUT, C_AST_PG_ROLE_ASM_TEMPLATE, C_AST_PG_ROLE_GNU_ATTRIBUTE,
+    C_AST_PG_ROLE_GNU_ATTRIBUTE_DETAIL, C_AST_PG_ROLE_INLINE_ASM,
 };
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_ASM_CLOBBERS_LIST,
-    C_AST_KIND_ASM_GOTO_LABELS, C_AST_KIND_ASM_INPUT_OPERAND, C_AST_KIND_ASM_OUTPUT_OPERAND,
-    C_AST_KIND_ASM_TEMPLATE, C_AST_KIND_ATTRIBUTE_ALIGNED, C_AST_KIND_ATTRIBUTE_SECTION,
-    C_AST_KIND_ATTRIBUTE_USED, C_AST_KIND_GNU_ATTRIBUTE, C_AST_KIND_INLINE_ASM,
+    C_AST_KIND_ASM_CLOBBERS_LIST, C_AST_KIND_ASM_GOTO_LABELS, C_AST_KIND_ASM_INPUT_OPERAND,
+    C_AST_KIND_ASM_OUTPUT_OPERAND, C_AST_KIND_ASM_TEMPLATE, C_AST_KIND_ATTRIBUTE_ALIGNED,
+    C_AST_KIND_ATTRIBUTE_SECTION, C_AST_KIND_ATTRIBUTE_USED, C_AST_KIND_GNU_ATTRIBUTE,
+    C_AST_KIND_INLINE_ASM,
 };
-
-fn classify(fix: &Fixture) -> Vec<u8> {
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    reference_c11_classify_vast_node_kinds(&annotated)
-}
-
-fn node_count_from_vast(vast: &[u8]) -> u32 {
-    (vast.len() / (VAST_STRIDE_U32 * 4)) as u32
-}
-
-fn semantic_node_word(nodes: &[u8], idx: usize, field: usize) -> u32 {
-    word_at(
-        nodes,
-        idx * C_AST_PG_SEMANTIC_NODE_STRIDE_U32 as usize + field,
-    )
-}
-
-fn semantic_edge_word(edges: &[u8], node_idx: usize, edge_slot: usize, field: usize) -> u32 {
-    let edge_idx = node_idx * C_AST_PG_EDGE_ROWS_PER_NODE as usize + edge_slot;
-    word_at(edges, edge_idx * C_AST_PG_EDGE_STRIDE_U32 as usize + field)
-}
 
 fn assert_gnu_role(nodes: &[u8], idx: usize, kind: u32, role: u32) {
     assert_eq!(semantic_node_word(nodes, idx, 0), kind, "kind[{idx}]");

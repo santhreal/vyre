@@ -18,22 +18,12 @@ use vyre_primitives::predicate::node_kind;
 
 const VAST_STRIDE_U32: usize = 10;
 
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 use c_ast_gpu_parity_support::{
-    build_fixture, run_gpu_classifier_with_count, Fixture, FixtureToken,
+    build_fixture, row_indices, run_gpu_classifier_with_count, Fixture, FixtureToken,
 };
-
-fn row_indices(rows: &[u8], kind: u32) -> Vec<usize> {
-    rows.chunks_exact(VAST_STRIDE_U32 * 4)
-        .enumerate()
-        .filter_map(|(idx, row)| {
-            let row_kind = u32::from_le_bytes(row[0..4].try_into().unwrap());
-            (row_kind == kind).then_some(idx)
-        })
-        .collect()
-}
 
 fn classify(fix: &Fixture) -> Vec<u8> {
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);

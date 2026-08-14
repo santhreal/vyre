@@ -3,6 +3,7 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 
+use c_frontend::semantic_graph::vast_word;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
@@ -14,12 +15,12 @@ use vyre_primitives::predicate::node_kind;
 
 const PG_STRIDE_U32: usize = 6;
 
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 use c_ast_gpu_parity_support::{
-    run_gpu_classifier, run_gpu_pg_lower, run_gpu_vast_builder_from_parts, starts_for_lens,
-    word_at, VAST_STRIDE_U32,
+    pg_word_at, run_gpu_classifier, run_gpu_pg_lower, run_gpu_vast_builder_from_parts,
+    starts_for_lens, VAST_STRIDE_U32,
 };
 
 struct PipelineRows {
@@ -37,14 +38,6 @@ fn typed_indices(rows: &[u8], kind: u32) -> Vec<usize> {
             (row_kind == kind).then_some(idx)
         })
         .collect()
-}
-
-fn vast_word_at(rows: &[u8], idx: usize, field: usize) -> u32 {
-    word_at(rows, idx * VAST_STRIDE_U32 + field)
-}
-
-fn pg_word_at(rows: &[u8], idx: usize, field: usize) -> u32 {
-    word_at(rows, idx * PG_STRIDE_U32 + field)
 }
 
 fn run_pipeline(tok_types: &[u32], tok_lens: &[u32]) -> PipelineRows {
@@ -80,7 +73,7 @@ fn run_pipeline(tok_types: &[u32], tok_lens: &[u32]) -> PipelineRows {
 
 fn assert_kind(rows: &PipelineRows, idx: usize, kind: u32) {
     assert_eq!(
-        vast_word_at(&rows.typed_vast, idx, 0),
+        vast_word(&rows.typed_vast, idx, 0),
         kind,
         "typed VAST kind at row {idx}"
     );
@@ -95,12 +88,12 @@ fn assert_span(rows: &PipelineRows, idx: usize) {
     let start = rows.tok_starts[idx];
     let end = start + rows.tok_lens[idx];
     assert_eq!(
-        vast_word_at(&rows.typed_vast, idx, 5),
+        vast_word(&rows.typed_vast, idx, 5),
         start,
         "typed VAST span_start at row {idx}"
     );
     assert_eq!(
-        vast_word_at(&rows.typed_vast, idx, 6),
+        vast_word(&rows.typed_vast, idx, 6),
         rows.tok_lens[idx],
         "typed VAST span_len at row {idx}"
     );
@@ -119,17 +112,17 @@ fn assert_span(rows: &PipelineRows, idx: usize) {
 fn assert_links_lowered(rows: &PipelineRows, idx: usize) {
     assert_eq!(
         pg_word_at(&rows.pg_nodes, idx, 3),
-        vast_word_at(&rows.typed_vast, idx, 1),
+        vast_word(&rows.typed_vast, idx, 1),
         "PG parent link at row {idx}"
     );
     assert_eq!(
         pg_word_at(&rows.pg_nodes, idx, 4),
-        vast_word_at(&rows.typed_vast, idx, 2),
+        vast_word(&rows.typed_vast, idx, 2),
         "PG first_child link at row {idx}"
     );
     assert_eq!(
         pg_word_at(&rows.pg_nodes, idx, 5),
-        vast_word_at(&rows.typed_vast, idx, 3),
+        vast_word(&rows.typed_vast, idx, 3),
         "PG next_sibling link at row {idx}"
     );
 }
@@ -145,12 +138,12 @@ fn assert_string_initializer_shape(
     assert_kind(rows, literal_idx, node_kind::LITERAL);
 
     assert_eq!(
-        vast_word_at(&rows.typed_vast, array_idx, 3),
+        vast_word(&rows.typed_vast, array_idx, 3),
         assign_idx as u32,
         "array declarator row {array_idx} must be followed by initializer assignment"
     );
     assert_eq!(
-        vast_word_at(&rows.typed_vast, assign_idx, 3),
+        vast_word(&rows.typed_vast, assign_idx, 3),
         literal_idx as u32,
         "assignment row {assign_idx} must be followed by string literal initializer"
     );
@@ -272,7 +265,7 @@ fn static_const_char_array_preserves_bound_and_string_initializer() {
     assert_span(&rows, 5);
     assert_links_lowered(&rows, 5);
     assert_eq!(
-        vast_word_at(&rows.typed_vast, 4, 2),
+        vast_word(&rows.typed_vast, 4, 2),
         5,
         "array declarator must retain the explicit bound as its first child"
     );
@@ -287,12 +280,12 @@ fn nested_struct_field_char_array_initializes_from_string_literal() {
     assert_kind(&rows, 27, C_AST_KIND_ASSIGN_EXPR);
     assert_kind(&rows, 28, node_kind::LITERAL);
     assert_eq!(
-        vast_word_at(&rows.typed_vast, 7, 2),
+        vast_word(&rows.typed_vast, 7, 2),
         8,
         "nested char array declarator must retain its explicit bound as first child"
     );
     assert_eq!(
-        vast_word_at(&rows.typed_vast, 27, 3),
+        vast_word(&rows.typed_vast, 27, 3),
         28,
         ".code assignment must be followed by the string literal initializer"
     );

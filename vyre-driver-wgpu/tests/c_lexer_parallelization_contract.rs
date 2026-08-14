@@ -9,7 +9,9 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+mod c_token_support;
 mod common;
+use c_token_support::{haystack_words, run_c11_lexer};
 use common::words_from_bytes;
 
 use c_grammar_gen::lex_c11_max_munch_kinds;
@@ -27,10 +29,6 @@ fn bytes(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }
 
-fn haystack_words(source: &[u8]) -> Vec<u32> {
-    source.iter().map(|b| u32::from(*b)).collect()
-}
-
 fn emit_wgsl(program: &vyre::ir::Program) -> String {
     let module =
         emit_module(program, [1, 1, 1]).expect("Program must lower to a valid Naga module");
@@ -42,49 +40,6 @@ fn emit_wgsl(program: &vyre::ir::Program) -> String {
     .expect("Naga must accept the Program");
     naga::back::wgsl::write_string(&module, &info, naga::back::wgsl::WriterFlags::empty())
         .expect("Program must serialize to WGSL")
-}
-
-/// Run the GPU lexer `c11_lexer` through the CPU reference oracle and return
-/// the compact token stream (`tok_types`, `tok_starts`, `tok_lens`) plus the
-/// emitted token count.
-fn run_c11_lexer(source: &[u8], haystack_len: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>, u32) {
-    let program = c11_lexer(
-        "haystack",
-        "out_tok_types",
-        "out_tok_starts",
-        "out_tok_lens",
-        "out_counts",
-        haystack_len,
-    );
-    let haystack_buf = bytes(&haystack_words(source));
-    let zero_buf = vec![0u8; haystack_len as usize * 4];
-    let count_zero = vec![0u8; 4];
-    let inputs = [
-        Value::from(haystack_buf),
-        Value::from(zero_buf.clone()),
-        Value::from(zero_buf.clone()),
-        Value::from(zero_buf),
-        Value::from(count_zero),
-    ];
-    let outputs = vyre_reference::reference_eval(&program, &inputs)
-        .expect("c11_lexer must execute under the reference oracle");
-    assert_eq!(
-        outputs.len(),
-        4,
-        "expected [tok_types, tok_starts, tok_lens, counts]"
-    );
-    let tok_types = words_from_bytes(&outputs[0].to_bytes());
-    let tok_starts = words_from_bytes(&outputs[1].to_bytes());
-    let tok_lens = words_from_bytes(&outputs[2].to_bytes());
-    let counts = words_from_bytes(&outputs[3].to_bytes());
-    let tok_count = counts.first().copied().unwrap_or(0);
-    // Trim to the actual number of emitted tokens.
-    (
-        tok_types[..tok_count as usize].to_vec(),
-        tok_starts[..tok_count as usize].to_vec(),
-        tok_lens[..tok_count as usize].to_vec(),
-        tok_count,
-    )
 }
 
 // ---------------------------------------------------------------------------

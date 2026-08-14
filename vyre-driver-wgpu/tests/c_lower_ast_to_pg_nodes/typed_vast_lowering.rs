@@ -101,7 +101,7 @@ fn typed_gnu_c_vast_lowers_to_program_graph_nodes() {
 
 #[test]
 fn typed_c_expression_operator_vast_lowers_to_program_graph_nodes() {
-    let (tok_types, tok_starts, tok_lens) = c_expression_operator_fixture_tokens();
+    let (tok_types, tok_starts, tok_lens) = expression_operator_fixture();
     let raw_vast = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed_vast = reference_c11_classify_vast_node_kinds(&raw_vast);
     let expected_pg = reference_ast_to_pg_nodes(&typed_vast);

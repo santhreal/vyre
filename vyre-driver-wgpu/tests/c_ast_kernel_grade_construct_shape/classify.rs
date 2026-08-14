@@ -12,25 +12,18 @@
 //
 // A missing GPU adapter is a configuration failure.
 
+pub(crate) use crate::c_ast_gpu_parity_support::classify;
 use crate::c_ast_gpu_parity_support::{
     assert_full_pipeline_parity, build_fixture, row_indices, Fixture, FixtureToken,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_ASSIGN_EXPR,
-    C_AST_KIND_COMPOUND_LITERAL_EXPR, C_AST_KIND_INITIALIZER_LIST,
+    C_AST_KIND_ASSIGN_EXPR, C_AST_KIND_COMPOUND_LITERAL_EXPR, C_AST_KIND_INITIALIZER_LIST,
 };
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-pub(crate) fn classify(fix: &Fixture) -> Vec<u8> {
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    reference_c11_classify_vast_node_kinds(&annotated)
-}
 
 // ---------------------------------------------------------------------------
 // Fixtures

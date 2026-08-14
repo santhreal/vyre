@@ -3,14 +3,15 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-#[path = "../../tests/support/c_frontend/mod.rs"]
-mod c_frontend;
 #[path = "c_ast_gpu_parity_support/mod.rs"]
 mod c_ast_gpu_parity_support;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 
 use c_ast_gpu_parity_support::{
-    build_fixture, run_gpu_classifier, run_gpu_scoped_typedef_annotation,
-    run_gpu_vast_builder_from_parts, Fixture, FixtureToken,
+    build_fixture, kind_at, lexeme_indices, row_indices, run_gpu_classifier,
+    run_gpu_scoped_typedef_annotation, run_gpu_vast_builder_from_parts, word_at, Fixture,
+    FixtureToken,
 };
 use c_grammar_gen::lex_c11_max_munch_kinds;
 use vyre_libs::parsing::c::lex::tokens::*;
@@ -193,23 +194,6 @@ fn fixture_token_stream() -> Fixture {
     build_fixture(&tokens)
 }
 
-fn bytes(words: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(words)
-}
-
-fn haystack_words(bytes: &[u8]) -> Vec<u8> {
-    vyre_primitives::wire::pack_bytes_as_u32_slice(bytes)
-}
-
-fn word_at(buf: &[u8], word: usize) -> u32 {
-    let offset = word * 4;
-    u32::from_le_bytes(buf[offset..offset + 4].try_into().unwrap())
-}
-
-fn kind_at(rows: &[u8], idx: usize) -> u32 {
-    word_at(rows, idx * VAST_STRIDE_U32)
-}
-
 fn flags_at(rows: &[u8], idx: usize) -> u32 {
     word_at(rows, idx * VAST_STRIDE_U32 + TYPEDEF_FLAGS_FIELD)
 }
@@ -237,34 +221,6 @@ fn assert_words_eq(actual: &[u8], expected: &[u8], context: &str) {
         actual.len(),
         expected.len()
     );
-}
-
-fn node_count_from_vast(rows: &[u8]) -> u32 {
-    u32::try_from(rows.len() / (VAST_STRIDE_U32 * core::mem::size_of::<u32>()))
-        .expect("VAST row count must fit in u32")
-}
-
-fn row_indices(rows: &[u8], kind: u32) -> Vec<usize> {
-    rows.chunks_exact(VAST_STRIDE_U32 * core::mem::size_of::<u32>())
-        .enumerate()
-        .filter_map(|(idx, row)| {
-            let row_kind = u32::from_le_bytes(row[0..4].try_into().unwrap());
-            (row_kind == kind).then_some(idx)
-        })
-        .collect()
-}
-
-fn lexeme_indices(fix: &Fixture, lexeme: &str) -> Vec<usize> {
-    fix.tok_starts
-        .iter()
-        .zip(&fix.tok_lens)
-        .enumerate()
-        .filter_map(|(idx, (start, len))| {
-            let start = *start as usize;
-            let end = start.saturating_add(*len as usize);
-            (fix.source.as_bytes().get(start..end) == Some(lexeme.as_bytes())).then_some(idx)
-        })
-        .collect()
 }
 
 fn assert_flag(rows: &[u8], idx: usize, flag: u32, message: &str) {

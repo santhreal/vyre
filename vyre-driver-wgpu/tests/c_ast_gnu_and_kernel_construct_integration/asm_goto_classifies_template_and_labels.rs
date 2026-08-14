@@ -187,12 +187,7 @@ pub(crate) fn attribute_aligned_and_section_classify_distinctly() {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn fixture_computed_goto_simple() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("void", TOK_VOID),
         FixtureToken::new("*", TOK_STAR),
         FixtureToken::new("p", TOK_IDENTIFIER),
@@ -204,7 +199,6 @@ pub(crate) fn fixture_computed_goto_simple() -> Fixture {
         FixtureToken::new(":", TOK_COLON),
         FixtureToken::new("return", TOK_RETURN),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
@@ -399,33 +393,21 @@ pub(crate) fn catalog_builtin_call_classifies_as_intrinsic() {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn fixture_atomic_qualifier() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("_Atomic", TOK_ATOMIC),
         FixtureToken::new("int", TOK_INT),
         FixtureToken::new("x", TOK_IDENTIFIER),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
 pub(crate) fn fixture_atomic_type_specifier() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("_Atomic", TOK_ATOMIC),
         FixtureToken::new("(", TOK_LPAREN),
         FixtureToken::new("int", TOK_INT),
         FixtureToken::new(")", TOK_RPAREN),
         FixtureToken::new("y", TOK_IDENTIFIER),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }

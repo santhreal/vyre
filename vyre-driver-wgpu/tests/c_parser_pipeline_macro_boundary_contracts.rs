@@ -2,9 +2,9 @@
 //! and GPU agreement with the reference expander.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 
 use vyre_primitives::wire::{
     decode_u32_le_bytes_all as decode_u32_words, pack_u32_slice as u32_bytes,

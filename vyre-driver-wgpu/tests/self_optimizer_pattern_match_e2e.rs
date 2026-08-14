@@ -7,13 +7,10 @@
 
 mod common;
 use common::acquire_live_backend as live_backend;
-use common::self_optimizer::{WgpuProgramDispatcher, first_let_value, wrapped};
+use common::self_optimizer::{first_let_value, wrapped, WgpuProgramDispatcher};
 
 use vyre::ir::{BinOp, Expr, Node};
 use vyre_pass_engine::optimizer::pattern_match_via_encoded::gpu_algebraic_identities;
-
-
-
 
 #[test]
 fn add_zero_left_collapses_on_real_gpu() {

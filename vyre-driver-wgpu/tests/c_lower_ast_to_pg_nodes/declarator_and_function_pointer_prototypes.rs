@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn typed_c_declarator_initializer_vast_lowers_to_program_graph_nodes() {
-    let (tok_types, tok_starts, tok_lens) = c_declarator_initializer_fixture_tokens();
+    let (tok_types, tok_starts, tok_lens) = declarator_initializer_fixture();
     let raw_vast = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed_vast = reference_c11_classify_vast_node_kinds(&raw_vast);
     let expected_pg = reference_ast_to_pg_nodes(&typed_vast);
@@ -55,7 +55,7 @@ fn typed_c_declarator_initializer_vast_lowers_to_program_graph_nodes() {
 
 #[test]
 fn nested_function_pointer_array_prototype_lowers_to_program_graph_nodes() {
-    let (tok_types, tok_starts, tok_lens) = c_function_pointer_array_prototype_fixture_tokens();
+    let (tok_types, tok_starts, tok_lens) = function_pointer_array_prototype_fixture();
     let raw_vast = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed_vast = reference_c11_classify_vast_node_kinds(&raw_vast);
     let expected_pg = reference_ast_to_pg_nodes(&typed_vast);
@@ -104,7 +104,7 @@ fn nested_function_pointer_array_prototype_gpu_lowers_like_cpu() {
     let backend =
         BACKEND.get_or_init(|| WgpuBackend::acquire().expect("Fix: GPU backend must be available"));
 
-    let (tok_types, _, tok_lens) = c_function_pointer_array_prototype_fixture_tokens();
+    let (tok_types, _, tok_lens) = function_pointer_array_prototype_fixture();
     let tok_starts = starts_for_lens(&tok_lens);
     let raw_vast = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed_vast = reference_c11_classify_vast_node_kinds(&raw_vast);

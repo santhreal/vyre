@@ -11,7 +11,7 @@
 #![allow(missing_docs)]
 
 mod common;
-use common::{add_one_program, acquire_live_backend as live_backend};
+use common::{acquire_live_backend as live_backend, add_one_program};
 
 use std::alloc::System;
 use std::sync::{Mutex, MutexGuard};

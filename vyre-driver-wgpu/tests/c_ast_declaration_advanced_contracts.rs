@@ -15,9 +15,9 @@
 //! A missing GPU adapter is a configuration failure, never a skip.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/fixtures/declaration_advanced_constructs.rs"]
 mod declaration_advanced_constructs;
 
