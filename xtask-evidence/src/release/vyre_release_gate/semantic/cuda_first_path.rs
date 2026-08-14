@@ -14,10 +14,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         .get("cuda_first")
         .and_then(serde_json::Value::as_bool)
         .unwrap_or(false);
-    let blockers = matrix
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let blockers = array_len(&matrix, "blockers");
     if !cuda_first {
         failures.push(
             "requirement `cuda-first-path` backend matrix does not prove CUDA-first dispatch"

@@ -729,6 +729,7 @@ pub(crate) fn require_case_metric_present(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::report_fixture::hidden_invalid_case;
 
     use std::fs;
 
@@ -791,18 +792,7 @@ mod tests {
             serde_json::to_string_pretty(&serde_json::json!({
                 "selected_backend": "wgpu",
                 "summary": {"failed": 0},
-                "cases": [
-                    {
-                        "id": "release.condition_eval.1m",
-                        "backend_id": "wgpu",
-                        "status": "pass",
-                        "correctness": {
-                            "Invalid": {
-                                "reason": "CUDA/WGPU output mismatch at row 17"
-                            }
-                        }
-                    }
-                ]
+                "cases": [hidden_invalid_case("release.condition_eval.1m", "wgpu", [])]
             }))
             .expect("Fix: serialize hidden failed benchmark evidence."),
         )

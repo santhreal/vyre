@@ -10,27 +10,16 @@ use super::super::checks::*;
 use super::super::gate_inputs::Requirement;
 
 pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
-    let Some(matrix) = first_json_evidence(
-        requirement,
-        base_dir,
-        "release-workload-matrix.json",
-        failures,
-    ) else {
+    let Some(matrix) = release_workload_matrix(requirement, base_dir, failures) else {
         return;
     };
-    let contracts = matrix
-        .get("cpu_sota_100x_contract_count")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
+    let contracts = u64_field(&matrix, "cpu_sota_100x_contract_count", 0);
     if contracts < 10 {
         failures.push(format!(
             "requirement `cpu-only-100x-proof` has {contracts} CPU-SOTA 100x contract(s) in the workload matrix; needs at least 10"
         ));
     }
-    let covered_families = matrix
-        .get("cpu_sota_100x_family_count")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
+    let covered_families = u64_field(&matrix, "cpu_sota_100x_family_count", 0);
     if covered_families < 10 {
         failures.push(format!(
             "requirement `cpu-only-100x-proof` has {covered_families} covered workload family/families with a CPU-SOTA 100x contract; needs at least 10"
@@ -51,10 +40,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         "required_cpu_sota_100x_families",
         failures,
     );
-    let missing_required_hundred_x = matrix
-        .get("missing_required_cpu_sota_100x_families")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let missing_required_hundred_x = array_len(&matrix, "missing_required_cpu_sota_100x_families");
     if missing_required_hundred_x != 0 {
         failures.push(format!(
             "requirement `cpu-only-100x-proof` matrix reports {missing_required_hundred_x} missing required 100x family/families"
@@ -117,10 +103,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                 "requirement `cpu-only-100x-proof` aggregate proof lists {required_proof_cases} required 100x case(s); needs at least 10 release 100x cases"
             ));
         }
-        let missing_proof_cases = proof
-            .get("missing_required_cpu_sota_100x_cases")
-            .and_then(serde_json::Value::as_array)
-            .map_or(usize::MAX, Vec::len);
+        let missing_proof_cases = array_len(&proof, "missing_required_cpu_sota_100x_cases");
         if missing_proof_cases != 0 {
             failures.push(format!(
                 "requirement `cpu-only-100x-proof` aggregate proof reports {missing_proof_cases} missing required 100x case(s)"
@@ -157,61 +140,35 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             &proof,
             failures,
         );
-        let aggregate_contract_cases = proof
-            .get("cpu_sota_100x_contract_case_count")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
+        let aggregate_contract_cases = u64_field(&proof, "cpu_sota_100x_contract_case_count", 0);
         if aggregate_contract_cases < 10 {
             failures.push(format!(
                 "requirement `cpu-only-100x-proof` aggregate proof has {aggregate_contract_cases} CPU-SOTA 100x contract case(s); needs at least 10"
             ));
         }
-        let aggregate_passing_cases = proof
-            .get("cpu_sota_100x_passing_case_count")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
+        let aggregate_passing_cases = u64_field(&proof, "cpu_sota_100x_passing_case_count", 0);
         if aggregate_passing_cases < 10 {
             failures.push(format!(
                 "requirement `cpu-only-100x-proof` aggregate proof has {aggregate_passing_cases} passing CPU-SOTA 100x case(s); needs at least 10"
             ));
         }
-        let min_wall_samples = proof
-            .get("min_wall_samples")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
+        let min_wall_samples = u64_field(&proof, "min_wall_samples", 0);
         if min_wall_samples < 30 {
             failures.push(format!(
                 "requirement `cpu-only-100x-proof` aggregate proof min_wall_samples={min_wall_samples}; needs at least 30"
             ));
         }
-        let min_baseline_wall_samples = proof
-            .get("min_baseline_wall_samples")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
+        let min_baseline_wall_samples = u64_field(&proof, "min_baseline_wall_samples", 0);
         if min_baseline_wall_samples < 30 {
             failures.push(format!(
                 "requirement `cpu-only-100x-proof` aggregate proof min_baseline_wall_samples={min_baseline_wall_samples}; needs at least 30"
             ));
         }
-        for field in [
-            "min_wall_p50",
-            "min_wall_p95",
-            "min_wall_p99",
-            "min_baseline_wall_p50",
-            "min_baseline_wall_p95",
-            "min_baseline_wall_p99",
-        ] {
-            if proof
-                .get(field)
-                .and_then(serde_json::Value::as_u64)
-                .unwrap_or(0)
-                == 0
-            {
-                failures.push(format!(
-                    "requirement `cpu-only-100x-proof` aggregate proof has non-positive `{field}`"
-                ));
-            }
-        }
+        check_aggregate_wall_percentiles_positive(
+            &proof,
+            "requirement `cpu-only-100x-proof` aggregate proof",
+            failures,
+        );
     }
     check_benchmark_evidence_reports(
         requirement,
@@ -305,10 +262,7 @@ fn check_cpu_100x_source_artifact_counts(
 ) {
     let unique_source_artifacts = benchmark_source_artifact_count(proof) as u64;
     let raw_source_artifacts = benchmark_source_artifact_entry_count(proof) as u64;
-    let declared_source_artifacts = proof
-        .get("source_artifact_count")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
+    let declared_source_artifacts = u64_field(proof, "source_artifact_count", 0);
     if declared_source_artifacts != unique_source_artifacts {
         failures.push(format!(
             "requirement `cpu-only-100x-proof` aggregate proof source_artifact_count={declared_source_artifacts}, but unique source_artifacts={unique_source_artifacts}"

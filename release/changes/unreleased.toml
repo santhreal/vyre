@@ -1014,3 +1014,23 @@ text = "Six intra-doc links were unresolved or pointed at a private item, and ea
 id = "dataflow-closure-shims-deleted"
 category = "Changed"
 text = "The host dataflow closures are read from their owner. `vyre-libs` carried a module whose six public functions each did nothing but call the identically named function in `vyre_foundation::pass_substrate::dataflow_fixpoint`, and it had grown a copy of the owner's whole test module: five assertions verbatim, plus two that could not fail because they compared the forwarder against the function it forwards to. The forwarders are gone and the module re-exports the owner, so the documented paths still resolve. What remains is the one thing this crate adds, the call counter, in a file named for it."
+
+[[fragments]]
+id = "release-evidence-readers-share-one-owner-per-concept"
+category = "Changed"
+text = "The release evidence readers in `xtask-evidence` read each shared concept through one owner. The eight wall-clock minima are a single `WallClockMinima` record flattened into the three artifacts that publish them, the schema-2 JSON read, the workload matrix, the `u64` field read and the array length read are one function each, the optimization family list is `vyre_foundation::optimizer::corpus::RELEASE_OPTIMIZATION_FAMILIES`, and the benchmark case fixtures are built rather than restated. A copy that a reader forgets to update is a gate that passes on evidence nobody checked."
+
+[[fragments]]
+id = "frontier-leaderboard-reads-float-percentiles"
+category = "Fixed"
+text = "The frontier leaderboard reads a metric percentile through the same reader as every other artifact inspector. Its private copy accepted only an integer p50, so an artifact recording a float percentile was reported as missing the metric entirely."
+
+[[fragments]]
+id = "wall-clock-minima-coverage-is-gated"
+category = "Added"
+text = "A gate takes the published `min_` key set from the serialized `WallClockMinima` at run time and fails unless each key is either a sample floor or a member of the aggregate percentile field list. A minimum added to the record that no reader checks now fails the suite by name instead of reaching the artifacts unexamined."
+
+[[fragments]]
+id = "xtask-evidence-duplication-pin-lowered-to-measured"
+category = "Changed"
+text = "Three duplication pins record what the tree measures: `xtask-evidence` 475 to 91 duplicated lines, `xtask-registry` 58 to 49, and `vyre-foundation` 4127 to 4028, each with `total_lines` measured. A pin with room under it hides the next copy."

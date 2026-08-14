@@ -3,6 +3,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::inspect_core::WallClockMinima;
+
 #[derive(Debug, Deserialize)]
 pub(super) struct ReleaseWorkloadMatrix {
     pub(super) families: Vec<ReleaseWorkloadFamily>,
@@ -77,14 +79,8 @@ pub(super) struct BackendSuiteArtifact {
     pub(super) case_count: usize,
     pub(super) failed_count: Option<u64>,
     pub(super) nonmatching_case_backend_count: usize,
-    pub(super) min_wall_samples: Option<u64>,
-    pub(super) min_wall_p50: Option<u64>,
-    pub(super) min_wall_p95: Option<u64>,
-    pub(super) min_wall_p99: Option<u64>,
-    pub(super) min_baseline_wall_samples: Option<u64>,
-    pub(super) min_baseline_wall_p50: Option<u64>,
-    pub(super) min_baseline_wall_p95: Option<u64>,
-    pub(super) min_baseline_wall_p99: Option<u64>,
+    #[serde(flatten)]
+    pub(super) minima: WallClockMinima,
     pub(super) cpu_sota_100x_required: bool,
     pub(super) cpu_sota_100x_contract_cases: usize,
     pub(super) cpu_sota_100x_passing_cases: usize,
@@ -150,14 +146,8 @@ pub(super) struct OptimizationBenchmarkEvidence {
     pub(super) exists: bool,
     pub(super) read_error: Option<String>,
     pub(super) case_count: usize,
-    pub(super) min_wall_samples: Option<u64>,
-    pub(super) min_wall_p50: Option<u64>,
-    pub(super) min_wall_p95: Option<u64>,
-    pub(super) min_wall_p99: Option<u64>,
-    pub(super) min_baseline_wall_samples: Option<u64>,
-    pub(super) min_baseline_wall_p50: Option<u64>,
-    pub(super) min_baseline_wall_p95: Option<u64>,
-    pub(super) min_baseline_wall_p99: Option<u64>,
+    #[serde(flatten)]
+    pub(super) minima: WallClockMinima,
     pub(super) min_wall_speedup_x1000: Option<u64>,
     pub(super) missing_custom_metrics: Vec<String>,
     pub(super) non_positive_required_metrics: Vec<String>,
@@ -176,14 +166,7 @@ pub(super) struct OptimizationArtifactInspection {
     pub(super) summary_total_time_ns: Option<u64>,
     pub(super) summary_cache_hit_rate: Option<f64>,
     pub(super) case_count: usize,
-    pub(super) min_wall_samples: Option<u64>,
-    pub(super) min_wall_p50: Option<u64>,
-    pub(super) min_wall_p95: Option<u64>,
-    pub(super) min_wall_p99: Option<u64>,
-    pub(super) min_baseline_wall_samples: Option<u64>,
-    pub(super) min_baseline_wall_p50: Option<u64>,
-    pub(super) min_baseline_wall_p95: Option<u64>,
-    pub(super) min_baseline_wall_p99: Option<u64>,
+    pub(super) minima: WallClockMinima,
     pub(super) min_wall_speedup_x1000: Option<u64>,
     pub(super) missing_custom_metrics: Vec<String>,
     pub(super) non_positive_required_metrics: Vec<String>,

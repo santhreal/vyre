@@ -149,10 +149,7 @@ fn check_launch_state(state: &serde_json::Value, mode: GateMode, failures: &mut 
         }
     }
 
-    let blocker_count = state
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let blocker_count = array_len(state, "blockers");
     if blocker_count != expected_blockers {
         failures.push(format!(
             "requirement `{REQUIREMENT_ID}` launch state has {blocker_count} blocker(s), expected {expected_blockers}"

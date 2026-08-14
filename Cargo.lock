@@ -4702,6 +4702,7 @@ dependencies = [
  "toml",
  "vyre-bench",
  "vyre-driver",
+ "vyre-foundation",
  "vyre-registry-link",
  "walkdir",
  "xtask",

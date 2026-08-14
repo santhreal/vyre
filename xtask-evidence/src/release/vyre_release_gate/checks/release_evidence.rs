@@ -56,34 +56,13 @@ pub(crate) fn check_release_evidence_run(
     run: &serde_json::Value,
     failures: &mut Vec<String>,
 ) {
-    let total = run
-        .get("total_commands")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let schema_version = run
-        .get("schema_version")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let successful = run
-        .get("successful_commands")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let required = run
-        .get("required_command_count")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let command_failures = run
-        .get("command_failures")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(u64::MAX);
-    let artifact_failures = run
-        .get("artifact_failures")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(u64::MAX);
-    let blockers = run
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let total = u64_field(run, "total_commands", 0);
+    let schema_version = u64_field(run, "schema_version", 0);
+    let successful = u64_field(run, "successful_commands", 0);
+    let required = u64_field(run, "required_command_count", 0);
+    let command_failures = u64_field(run, "command_failures", u64::MAX);
+    let artifact_failures = u64_field(run, "artifact_failures", u64::MAX);
+    let blockers = array_len(run, "blockers");
     if schema_version < 2
         || total < 13
         || required < 13
@@ -165,10 +144,7 @@ pub(crate) fn check_release_evidence_run(
                 .get("exists")
                 .and_then(serde_json::Value::as_bool)
                 .unwrap_or(false);
-            let bytes = status
-                .get("bytes")
-                .and_then(serde_json::Value::as_u64)
-                .unwrap_or(0);
+            let bytes = u64_field(status, "bytes", 0);
             let read_error = status.get("read_error");
             let read_error_is_clean = read_error.is_some_and(serde_json::Value::is_null);
             if !exists || bytes == 0 || !read_error_is_clean {

@@ -7,20 +7,14 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 use vyre_foundation::optimizer::corpus::{
     generate_release_corpus, manifest_for, OptimizationCorpusCase, OptimizationCorpusManifest,
+    RELEASE_OPTIMIZATION_FAMILIES,
 };
 
 use crate::release::optimizer_pass_rows::{self, OptimizerPassRow};
 
-const REQUIRED_FAMILIES: &[&str] = &[
-    "scalar-algebra",
-    "strength-reduction",
-    "fusion-cse",
-    "dead-code",
-    "memory-dataflow",
-    "loop-transform",
-    "control-flow",
-    "canonicalization",
-];
+/// The families this generator must produce, read from the generator itself so
+/// the manifest cannot demand a set the corpus never emits.
+const REQUIRED_FAMILIES: &[&str] = &RELEASE_OPTIMIZATION_FAMILIES;
 const MIN_CASES_PER_FAMILY: usize = 512;
 
 #[derive(Debug, Serialize)]

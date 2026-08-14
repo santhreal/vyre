@@ -54,19 +54,25 @@ pub(crate) fn inspect_cpu_sota_100x_case_count_consistency(
     }
 }
 
+/// Whether a case claims it passed its performance contract at `min_speedup_x`.
+///
+/// This reads only what the case declares about itself. A caller that must
+/// know the claim is true still has to derive the speedup from the metrics.
+pub(crate) fn benchmark_case_claims_contract_win(case: &Value, min_speedup_x: f64) -> bool {
+    let Some(performance) = case.get("performance") else {
+        return false;
+    };
+    performance.get("contract_passed").and_then(Value::as_bool) == Some(true)
+        && performance
+            .get("speedup_x")
+            .and_then(Value::as_f64)
+            .is_some_and(|speedup| speedup >= min_speedup_x)
+}
+
 pub(crate) fn benchmark_case_proves_cpu_sota_100x(case: &Value, backend_id: Option<&str>) -> bool {
     benchmark_case_has_cpu_sota_contract(case, backend_id, 100.0)
         && benchmark_case_passes_summary_evidence(case)
-        && case
-            .get("performance")
-            .and_then(|performance| performance.get("contract_passed"))
-            .and_then(Value::as_bool)
-            == Some(true)
-        && case
-            .get("performance")
-            .and_then(|performance| performance.get("speedup_x"))
-            .and_then(Value::as_f64)
-            .is_some_and(|speedup| speedup >= 100.0)
+        && benchmark_case_claims_contract_win(case, 100.0)
         && cpu_sota_100x_measured_speedup(case)
             .is_some_and(|measured_speedup| measured_speedup >= 100.0)
 }
