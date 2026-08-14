@@ -40,14 +40,8 @@ fn cuda_dispatch_matches_packed_int4_scaled_dot_oracle() {
         let (lhs_packed, rhs_packed) = patterned_dot_operands(lane_count);
         let lhs_scale = 0.125_f32 + (lane_count % 4) as f32 * 0.0625;
         let rhs_scale = 0.25_f32 + (lane_count % 3) as f32 * 0.125;
-        let program = i4x8_dot_f32_scaled(
-            "lhs",
-            "rhs",
-            "lhs_scale",
-            "rhs_scale",
-            "out",
-            lane_count,
-        );
+        let program =
+            i4x8_dot_f32_scaled("lhs", "rhs", "lhs_scale", "rhs_scale", "out", lane_count);
         let outputs = backend
             .dispatch(
                 &program,

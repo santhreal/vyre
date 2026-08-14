@@ -39,14 +39,8 @@ fn generated_cuda_int4_release_parity_sweeps_boundary_shapes() {
 
             let lhs_scale = 0.0625_f32 * (1 + (seed % 7)) as f32;
             let rhs_scale = 0.03125_f32 * (1 + (lane_count % 9)) as f32;
-            let program = i4x8_dot_f32_scaled(
-                "lhs",
-                "rhs",
-                "lhs_scale",
-                "rhs_scale",
-                "out",
-                lane_count,
-            );
+            let program =
+                i4x8_dot_f32_scaled("lhs", "rhs", "lhs_scale", "rhs_scale", "out", lane_count);
             let outputs = backend
                 .dispatch(
                     &program,
@@ -70,11 +64,8 @@ fn generated_cuda_int4_release_parity_sweeps_boundary_shapes() {
 
     for seed in 0_u32..6 {
         for (rows, cols) in GENERATED_MATVEC_SHAPES {
-            let weights_packed = pack_i4_matrix_rows(&generated_i4_rows(
-                rows,
-                cols,
-                seed.wrapping_mul(101) + 11,
-            ));
+            let weights_packed =
+                pack_i4_matrix_rows(&generated_i4_rows(rows, cols, seed.wrapping_mul(101) + 11));
             let x = generated_f32_values(cols as usize, seed.wrapping_mul(109) + rows + cols);
             let scales = generated_positive_scales(rows as usize, seed + rows * 13 + cols);
             let program = i4x8_matvec_f32_scaled("weights", "x", "scales", "out", rows, cols);
@@ -105,11 +96,8 @@ fn generated_cuda_int4_release_parity_sweeps_boundary_shapes() {
 
     for seed in 0_u32..5 {
         for (batch, rows, cols) in GENERATED_BATCHED_SHAPES {
-            let weights_packed = pack_i4_matrix_rows(&generated_i4_rows(
-                rows,
-                cols,
-                seed.wrapping_mul(127) + 19,
-            ));
+            let weights_packed =
+                pack_i4_matrix_rows(&generated_i4_rows(rows, cols, seed.wrapping_mul(127) + 19));
             let x_batches =
                 generated_f32_values((batch * cols) as usize, seed.wrapping_mul(131) + 23);
             let scales = generated_positive_scales(rows as usize, seed + 29);

@@ -3,10 +3,11 @@
 mod common;
 
 use common::{
-    assert_u32_output_lanes, bool_bytes, cuda_reference_outputs, live_backend, u32_bytes,
-    GENERATED_LANE_COUNT as LANE_COUNT, GENERATED_WORKGROUP_SIZE_X as WORKGROUP_SIZE_X,
+    assert_u32_matrix_sweep, bool_bytes, bool_word, compare_word, eq_word, ge_word,
+    generated_lane_program, gt_word, guarded_generated_store, le_word, live_backend, lt_word,
+    ne_word, u32_bytes, GeneratedMatrixCase, GENERATED_LANE_COUNT as LANE_COUNT,
 };
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{DataType, Expr, Program};
 
 const ADVERSARIAL_SEEDS: &[u32] = &[
     0,
@@ -45,12 +46,8 @@ struct BinaryCase {
     build: fn(Expr, Expr) -> Expr,
 }
 
-#[derive(Clone, Copy)]
-struct UnaryCase {
-    name: &'static str,
-    build: fn(Expr) -> Expr,
-}
-
+/// A binary case whose right operand needs no adversarial shaping, which is
+/// every Bool case: both operands come from the same predicate corpus.
 #[derive(Clone, Copy)]
 struct BoolBinaryCase {
     name: &'static str,
@@ -58,7 +55,7 @@ struct BoolBinaryCase {
 }
 
 #[derive(Clone, Copy)]
-struct BoolUnaryCase {
+struct UnaryCase {
     name: &'static str,
     build: fn(Expr) -> Expr,
 }
@@ -70,48 +67,16 @@ enum RhsKind {
     Shift,
 }
 
-fn eq_word(left: Expr, right: Expr) -> Expr {
-    Expr::select(Expr::eq(left, right), Expr::u32(1), Expr::u32(0))
-}
-
-fn ne_word(left: Expr, right: Expr) -> Expr {
-    Expr::select(Expr::ne(left, right), Expr::u32(1), Expr::u32(0))
-}
-
-fn lt_word(left: Expr, right: Expr) -> Expr {
-    Expr::select(Expr::lt(left, right), Expr::u32(1), Expr::u32(0))
-}
-
-fn le_word(left: Expr, right: Expr) -> Expr {
-    Expr::select(Expr::le(left, right), Expr::u32(1), Expr::u32(0))
-}
-
-fn gt_word(left: Expr, right: Expr) -> Expr {
-    Expr::select(Expr::gt(left, right), Expr::u32(1), Expr::u32(0))
-}
-
-fn ge_word(left: Expr, right: Expr) -> Expr {
-    Expr::select(Expr::ge(left, right), Expr::u32(1), Expr::u32(0))
-}
-
 fn bool_and_word(left: Expr, right: Expr) -> Expr {
-    Expr::select(Expr::and(left, right), Expr::u32(1), Expr::u32(0))
+    compare_word(left, right, Expr::and)
 }
 
 fn bool_or_word(left: Expr, right: Expr) -> Expr {
-    Expr::select(Expr::or(left, right), Expr::u32(1), Expr::u32(0))
-}
-
-fn bool_eq_word(left: Expr, right: Expr) -> Expr {
-    Expr::select(Expr::eq(left, right), Expr::u32(1), Expr::u32(0))
-}
-
-fn bool_ne_word(left: Expr, right: Expr) -> Expr {
-    Expr::select(Expr::ne(left, right), Expr::u32(1), Expr::u32(0))
+    compare_word(left, right, Expr::or)
 }
 
 fn bool_not_word(value: Expr) -> Expr {
-    Expr::select(Expr::not(value), Expr::u32(1), Expr::u32(0))
+    bool_word(Expr::not(value))
 }
 
 const BINARY_CASES: &[BinaryCase] = &[
@@ -251,15 +216,15 @@ const BOOL_BINARY_CASES: &[BoolBinaryCase] = &[
     },
     BoolBinaryCase {
         name: "bool_eq",
-        build: bool_eq_word,
+        build: eq_word,
     },
     BoolBinaryCase {
         name: "bool_ne",
-        build: bool_ne_word,
+        build: ne_word,
     },
 ];
 
-const BOOL_UNARY_CASES: &[BoolUnaryCase] = &[BoolUnaryCase {
+const BOOL_UNARY_CASES: &[UnaryCase] = &[UnaryCase {
     name: "bool_not",
     build: bool_not_word,
 }];
@@ -269,30 +234,18 @@ fn generated_binary_scalar_matrix_matches_reference_on_live_cuda() {
     let backend = live_backend();
     let lhs = adversarial_values(0x1357_2468);
 
-    let mut checked_lanes = 0usize;
-    for case in BINARY_CASES {
-        let rhs = adversarial_rhs(case.rhs, &lhs, 0x9e37_79b9);
-        let program = binary_program(case);
-        let inputs = vec![u32_bytes(&lhs), u32_bytes(&rhs)];
-        let outputs = cuda_reference_outputs(&backend, &program, &inputs, case.name);
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.direct_cuda,
-            &outputs.reference,
-        );
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.compiled_cuda,
-            &outputs.reference,
-        );
-    }
-
-    assert_eq!(
-        checked_lanes,
-        BINARY_CASES.len() * LANE_COUNT * 2,
-        "Fix: generated CUDA binary matrix must keep every adversarial lane active across direct and compiled paths."
+    assert_u32_matrix_sweep(
+        &backend,
+        "binary",
+        "every adversarial lane active",
+        BINARY_CASES.iter().map(|case| GeneratedMatrixCase {
+            name: case.name,
+            program: binary_program(case.build, DataType::U32),
+            inputs: vec![
+                u32_bytes(&lhs),
+                u32_bytes(&adversarial_rhs(case.rhs, &lhs, 0x9e37_79b9)),
+            ],
+        }),
     );
 }
 
@@ -301,29 +254,15 @@ fn generated_unary_scalar_matrix_matches_reference_on_live_cuda() {
     let backend = live_backend();
     let input = adversarial_values(0xfeed_babe);
 
-    let mut checked_lanes = 0usize;
-    for case in UNARY_CASES {
-        let program = unary_program(case);
-        let inputs = vec![u32_bytes(&input)];
-        let outputs = cuda_reference_outputs(&backend, &program, &inputs, case.name);
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.direct_cuda,
-            &outputs.reference,
-        );
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.compiled_cuda,
-            &outputs.reference,
-        );
-    }
-
-    assert_eq!(
-        checked_lanes,
-        UNARY_CASES.len() * LANE_COUNT * 2,
-        "Fix: generated CUDA unary matrix must keep every adversarial lane active across direct and compiled paths."
+    assert_u32_matrix_sweep(
+        &backend,
+        "unary",
+        "every adversarial lane active",
+        UNARY_CASES.iter().map(|case| GeneratedMatrixCase {
+            name: case.name,
+            program: unary_program(case.build, DataType::U32),
+            inputs: vec![u32_bytes(&input)],
+        }),
     );
 }
 
@@ -332,119 +271,53 @@ fn generated_bool_scalar_matrix_matches_reference_on_live_cuda() {
     let backend = live_backend();
     let lhs = adversarial_bool_values(0x1357_2468);
     let rhs = adversarial_bool_values(0x9e37_79b9);
-    let mut checked_lanes = 0usize;
 
-    for case in BOOL_BINARY_CASES {
-        let program = bool_binary_program(case);
-        let inputs = vec![bool_bytes(&lhs), bool_bytes(&rhs)];
-        let outputs = cuda_reference_outputs(&backend, &program, &inputs, case.name);
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.direct_cuda,
-            &outputs.reference,
-        );
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.compiled_cuda,
-            &outputs.reference,
-        );
-    }
-
-    for case in BOOL_UNARY_CASES {
-        let program = bool_unary_program(case);
-        let inputs = vec![bool_bytes(&lhs)];
-        let outputs = cuda_reference_outputs(&backend, &program, &inputs, case.name);
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.direct_cuda,
-            &outputs.reference,
-        );
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.compiled_cuda,
-            &outputs.reference,
-        );
-    }
-
-    assert_eq!(
-        checked_lanes,
-        (BOOL_BINARY_CASES.len() + BOOL_UNARY_CASES.len()) * LANE_COUNT * 2,
-        "Fix: generated CUDA bool scalar matrix must keep predicate ALU and bool memory active across direct and compiled paths."
+    // The two tables are swept separately so each proves its own lane coverage.
+    // A combined total lets one table over-count and cover the other's shortfall.
+    assert_u32_matrix_sweep(
+        &backend,
+        "bool scalar",
+        "predicate ALU active",
+        BOOL_BINARY_CASES.iter().map(|case| GeneratedMatrixCase {
+            name: case.name,
+            program: binary_program(case.build, DataType::Bool),
+            inputs: vec![bool_bytes(&lhs), bool_bytes(&rhs)],
+        }),
+    );
+    assert_u32_matrix_sweep(
+        &backend,
+        "bool scalar",
+        "bool memory active",
+        BOOL_UNARY_CASES.iter().map(|case| GeneratedMatrixCase {
+            name: case.name,
+            program: unary_program(case.build, DataType::Bool),
+            inputs: vec![bool_bytes(&lhs)],
+        }),
     );
 }
 
-fn binary_program(case: &BinaryCase) -> Program {
+/// `out[idx] = build(lhs[idx], rhs[idx])` over two `input_type` buffers.
+fn binary_program(build: fn(Expr, Expr) -> Expr, input_type: DataType) -> Program {
     let idx = Expr::var("idx");
-    let value = (case.build)(
+    let value = build(
         Expr::load("lhs", idx.clone()),
         Expr::load("rhs", idx.clone()),
     );
-    Program::wrapped(
-        vec![
-            BufferDecl::read("lhs", 0, DataType::U32).with_count(LANE_COUNT as u32),
-            BufferDecl::read("rhs", 1, DataType::U32).with_count(LANE_COUNT as u32),
-            BufferDecl::output("out", 2, DataType::U32).with_count(LANE_COUNT as u32),
-        ],
-        [WORKGROUP_SIZE_X, 1, 1],
-        guarded_store(value),
+    generated_lane_program(
+        &[("lhs", input_type.clone()), ("rhs", input_type)],
+        DataType::U32,
+        guarded_generated_store(value),
     )
 }
 
-fn bool_binary_program(case: &BoolBinaryCase) -> Program {
-    let idx = Expr::var("idx");
-    let value = (case.build)(
-        Expr::load("lhs", idx.clone()),
-        Expr::load("rhs", idx.clone()),
-    );
-    Program::wrapped(
-        vec![
-            BufferDecl::read("lhs", 0, DataType::Bool).with_count(LANE_COUNT as u32),
-            BufferDecl::read("rhs", 1, DataType::Bool).with_count(LANE_COUNT as u32),
-            BufferDecl::output("out", 2, DataType::U32).with_count(LANE_COUNT as u32),
-        ],
-        [WORKGROUP_SIZE_X, 1, 1],
-        guarded_store(value),
+/// `out[idx] = build(input[idx])` over one `input_type` buffer.
+fn unary_program(build: fn(Expr) -> Expr, input_type: DataType) -> Program {
+    let value = build(Expr::load("input", Expr::var("idx")));
+    generated_lane_program(
+        &[("input", input_type)],
+        DataType::U32,
+        guarded_generated_store(value),
     )
-}
-
-fn bool_unary_program(case: &BoolUnaryCase) -> Program {
-    let idx = Expr::var("idx");
-    let value = (case.build)(Expr::load("input", idx));
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::Bool).with_count(LANE_COUNT as u32),
-            BufferDecl::output("out", 1, DataType::U32).with_count(LANE_COUNT as u32),
-        ],
-        [WORKGROUP_SIZE_X, 1, 1],
-        guarded_store(value),
-    )
-}
-
-fn unary_program(case: &UnaryCase) -> Program {
-    let idx = Expr::var("idx");
-    let value = (case.build)(Expr::load("input", idx));
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(LANE_COUNT as u32),
-            BufferDecl::output("out", 1, DataType::U32).with_count(LANE_COUNT as u32),
-        ],
-        [WORKGROUP_SIZE_X, 1, 1],
-        guarded_store(value),
-    )
-}
-
-fn guarded_store(value: Expr) -> Vec<Node> {
-    vec![
-        Node::let_bind("idx", Expr::gid_x()),
-        Node::if_then(
-            Expr::lt(Expr::var("idx"), Expr::u32(LANE_COUNT as u32)),
-            vec![Node::store("out", Expr::var("idx"), value)],
-        ),
-    ]
 }
 
 fn adversarial_values(salt: u32) -> Vec<u32> {
