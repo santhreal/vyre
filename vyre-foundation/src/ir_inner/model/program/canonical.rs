@@ -28,7 +28,10 @@ impl Program {
     /// changed rather than rebuilding the whole tree to discover it changed
     /// nothing.
     fn canonical_form(&self) -> Cow<'_, Self> {
-        match (canonical_entry(self.entry()), canonical_buffers(self.buffers())) {
+        match (
+            canonical_entry(self.entry()),
+            canonical_buffers(self.buffers()),
+        ) {
             (Cow::Borrowed(_), None) => Cow::Borrowed(self),
             (Cow::Borrowed(_), Some(buffers)) => Cow::Owned(self.with_rewritten_buffers(buffers)),
             (Cow::Owned(entry), None) => Cow::Owned(self.with_rewritten_entry(entry)),
@@ -83,14 +86,21 @@ fn canonical_buffers(buffers: &[BufferDecl]) -> Option<Vec<BufferDecl>> {
     }
     let mut order: Vec<usize> = (0..buffers.len()).collect();
     order.sort_by(|&left, &right| keys[left].cmp(&keys[right]));
-    Some(order.into_iter().map(|index| buffers[index].clone()).collect())
+    Some(
+        order
+            .into_iter()
+            .map(|index| buffers[index].clone())
+            .collect(),
+    )
 }
 
 /// Canonical entry body: commutative operands normalized, then transparent
 /// `Block` wrappers flattened. Borrowed when neither step changes anything.
 fn canonical_entry(nodes: &[Node]) -> Cow<'_, [Node]> {
     let mut ctx = CanonicalCtx::default();
-    match rewrite_nodes_cow(nodes, &mut |candidate| ctx.swap_commutative_operands(candidate)) {
+    match rewrite_nodes_cow(nodes, &mut |candidate| {
+        ctx.swap_commutative_operands(candidate)
+    }) {
         Cow::Borrowed(nodes) => splice_transparent_blocks(nodes),
         Cow::Owned(nodes) => {
             let spliced = match splice_transparent_blocks(&nodes) {

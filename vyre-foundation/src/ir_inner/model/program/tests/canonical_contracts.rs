@@ -21,6 +21,7 @@ use std::borrow::Cow;
 use std::sync::Arc;
 
 use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::ir_inner::model::node::node_op_id;
 use crate::ir_inner::model::spec_types::{BinOp, CollectiveOp, CommGroup};
 use crate::memory_model::MemoryOrdering;
 use crate::optimizer::rewrite::{rewrite_node_slices, rewrite_nodes_cow};
@@ -97,8 +98,12 @@ fn canonical_fixtures() -> Vec<(&'static str, Program)> {
                     Expr::u32(16),
                     "stage",
                 ),
-                Node::AsyncWait { tag: "stage".into() },
-                Node::Resume { tag: "stage".into() },
+                Node::AsyncWait {
+                    tag: "stage".into(),
+                },
+                Node::Resume {
+                    tag: "stage".into(),
+                },
             ]),
         ),
         (
@@ -137,44 +142,59 @@ fn canonical_fixtures() -> Vec<(&'static str, Program)> {
     ]
 }
 
-/// Node kinds the fixtures must keep exercising: every shape that carries an
-/// expression or a nested body (so canonicalization has something to rebuild),
-/// plus one leaf shape per inert family. Named by the wire-format op id, so a
-/// renamed node kind fails here instead of quietly dropping coverage.
-const REQUIRED_NODE_KINDS: [&str; 15] = [
-    "vyre.node.let",
-    "vyre.node.assign",
-    "vyre.node.store",
-    "vyre.node.if",
-    "vyre.node.loop",
-    "vyre.node.block",
-    "vyre.node.region",
-    "vyre.node.async_load",
-    "vyre.node.async_store",
-    "vyre.node.async_wait",
-    "vyre.node.trap",
-    "vyre.node.resume",
-    "vyre.node.barrier",
-    "vyre.node.return",
-    "vyre.node.indirect_dispatch",
-];
+/// The nested statement lists `node` owns, in the order the splice walk must
+/// visit them; empty for a statement that owns none.
+///
+/// This is the run-time half of the splice-walk exhaustiveness contract. The
+/// match is total and carries no wildcard arm, so a new `Node` variant does not
+/// compile until it declares whether it owns a body. Every check below that has
+/// to know which shapes own bodies reads it from here instead of from a list
+/// that would silently stop covering a variant the IR gained.
+fn nested_bodies(node: &Node) -> Vec<&[Node]> {
+    match node {
+        Node::Block(body) => vec![body.as_slice()],
+        Node::Loop { body, .. } => vec![body.as_slice()],
+        Node::Region { body, .. } => vec![body.as_slice()],
+        Node::If {
+            then, otherwise, ..
+        } => vec![then.as_slice(), otherwise.as_slice()],
+        Node::Let { .. }
+        | Node::Assign { .. }
+        | Node::Store { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AsyncLoad { .. }
+        | Node::AsyncStore { .. }
+        | Node::AsyncWait { .. }
+        | Node::Trap { .. }
+        | Node::Resume { .. }
+        | Node::AllReduce { .. }
+        | Node::AllGather { .. }
+        | Node::ReduceScatter { .. }
+        | Node::Broadcast { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::Opaque(_) => Vec::new(),
+    }
+}
 
-fn node_kinds_in(nodes: &[Node], found: &mut Vec<&'static str>) {
-    for node in nodes {
-        let kind = crate::ir_inner::model::node::node_op_id(node);
-        if !found.contains(&kind) {
-            found.push(kind);
-        }
-        match node {
-            Node::If {
-                then, otherwise, ..
-            } => {
-                node_kinds_in(then, found);
-                node_kinds_in(otherwise, found);
+/// Path of every transparent `Block` still present under `nodes`.
+///
+/// Descends through [`nested_bodies`], never through the walk under test, so a
+/// body position the walk stepped over is still a body position this scan
+/// enters.
+fn transparent_blocks_remaining(nodes: &[Node], path: &str, found: &mut Vec<String>) {
+    for (index, node) in nodes.iter().enumerate() {
+        let here = format!("{path}/{index}:{}", node_op_id(node));
+        if let Node::Block(children) = node {
+            if children
+                .iter()
+                .all(|child| !matches!(child, Node::Let { .. }))
+            {
+                found.push(here.clone());
             }
-            Node::Loop { body, .. } | Node::Block(body) => node_kinds_in(body, found),
-            Node::Region { body, .. } => node_kinds_in(body, found),
-            _ => {}
+        }
+        for body in nested_bodies(node) {
+            transparent_blocks_remaining(body, &here, found);
         }
     }
 }
@@ -251,7 +271,12 @@ fn wrap_in_transparent_blocks(program: &Program) -> Program {
                     from,
                     to,
                     body,
-                } => Node::loop_for(var.clone(), from.clone(), to.clone(), wrap(body).into_owned()),
+                } => Node::loop_for(
+                    var.clone(),
+                    from.clone(),
+                    to.clone(),
+                    wrap(body).into_owned(),
+                ),
                 Node::Region {
                     generator,
                     source_region,
@@ -261,7 +286,26 @@ fn wrap_in_transparent_blocks(program: &Program) -> Program {
                     source_region: source_region.clone(),
                     body: Arc::new(wrap(body).into_owned()),
                 },
-                other => other.clone(),
+                Node::Block(body) => Node::block(wrap(body).into_owned()),
+                // Listed rather than wildcarded, for the same reason the splice
+                // walk lists them: a new node that owns a body must be routed
+                // above, or the perturbation would never reach inside it and
+                // the walk would go untested there.
+                Node::Assign { .. }
+                | Node::Store { .. }
+                | Node::IndirectDispatch { .. }
+                | Node::AsyncLoad { .. }
+                | Node::AsyncStore { .. }
+                | Node::AsyncWait { .. }
+                | Node::Trap { .. }
+                | Node::Resume { .. }
+                | Node::AllReduce { .. }
+                | Node::AllGather { .. }
+                | Node::ReduceScatter { .. }
+                | Node::Broadcast { .. }
+                | Node::Return
+                | Node::Barrier { .. }
+                | Node::Opaque(_) => node.clone(),
             };
             Cow::Owned(vec![Node::block(vec![inner])])
         })
@@ -275,20 +319,37 @@ fn reverse_buffers(program: &Program) -> Program {
     program.with_rewritten_buffers(buffers)
 }
 
+/// A transparent `Block` in any body position must be flattened.
+///
+/// Why this exists: the splice walk lists every `Node` variant explicitly, so a
+/// new body-carrying variant cannot compile until it is routed. What the
+/// compiler cannot catch is an existing variant routed to the leaf arm by
+/// mistake, because the walk then steps over its body and leaves transparent
+/// blocks inside it, under a fingerprint that claims to be canonical. The scan
+/// descends through `nested_bodies`, a second exhaustive match over the same
+/// enum, so a body the walk skipped is still a body the scan enters and the
+/// surviving block fails the assertion.
+///
+/// What it does not catch: a variant added to both matches as a leaf when it
+/// really owns a body. Nothing short of the enum declaration can catch that.
 #[test]
-fn fixtures_exercise_every_required_node_kind() {
-    let mut found = Vec::new();
-    for (_, program) in canonical_fixtures() {
-        node_kinds_in(program.entry(), &mut found);
+fn no_transparent_block_survives_in_any_body_position() {
+    for (name, program) in canonical_fixtures() {
+        let perturbed = wrap_in_transparent_blocks(&program);
+        let mut introduced = Vec::new();
+        transparent_blocks_remaining(perturbed.entry(), "", &mut introduced);
+        assert!(
+            !introduced.is_empty(),
+            "fixture `{name}` gained no transparent block under the perturbation, so this case proves nothing. Fix: give the fixture a statement the perturbation wraps."
+        );
+        let canonical = perturbed.canonicalized();
+        let mut surviving = Vec::new();
+        transparent_blocks_remaining(canonical.entry(), "", &mut surviving);
+        assert!(
+            surviving.is_empty(),
+            "fixture `{name}` still carries transparent blocks at {surviving:?} after canonicalization. Fix: route the owning node kind through the nested-body arms of splice_transparent_blocks."
+        );
     }
-    let missing: Vec<&str> = REQUIRED_NODE_KINDS
-        .into_iter()
-        .filter(|kind| !found.contains(kind))
-        .collect();
-    assert!(
-        missing.is_empty(),
-        "canonicalization fixtures no longer exercise {missing:?}. Fix: add a fixture carrying those node kinds so the borrow/rebuild decision stays covered for them."
-    );
 }
 
 #[test]
