@@ -14,6 +14,7 @@ use crate::ir_inner::model::program::Program;
 use smallvec::SmallVec;
 use std::borrow::Cow;
 use std::collections::HashSet;
+use std::ops::ControlFlow;
 use std::sync::Arc;
 
 /// Visitor called for each [`Node`] during [`walk_nodes_and_exprs`].
@@ -306,7 +307,7 @@ pub fn for_each_expr<'a>(nodes: &'a [Node], mut f: impl FnMut(&'a Expr)) {
 
 /// The buffers a node names directly, split by direction.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct BufferRefs<'a> {
+pub struct BufferRefs<'a> {
     /// Buffers read by name, in source order.
     pub reads: [Option<&'a Ident>; 2],
     /// Buffers written by name, in source order.
@@ -360,7 +361,7 @@ impl<'a> BufferRefs<'a> {
 /// dependency walk that answered this question with a per-variant match ending
 /// in `_ => {}` reported that an `AllReduce` touches nothing.
 #[must_use]
-pub(crate) fn node_buffer_refs(node: &Node) -> BufferRefs<'_> {
+pub fn node_buffer_refs(node: &Node) -> BufferRefs<'_> {
     match node {
         Node::Store { buffer, .. } => BufferRefs::write(buffer),
         Node::AsyncLoad {
@@ -403,7 +404,7 @@ pub(crate) fn node_buffer_refs(node: &Node) -> BufferRefs<'_> {
 
 /// What an expression does to the buffer it names.
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum ExprBufferRef<'a> {
+pub enum ExprBufferRef<'a> {
     /// Names no buffer.
     None,
     /// Reads the named buffer, or reads its metadata.
@@ -423,7 +424,7 @@ pub(crate) enum ExprBufferRef<'a> {
 /// direction that loses: a dependency walk that believes an atomic only reads
 /// sees no conflict with a store to the same buffer.
 #[must_use]
-pub(crate) fn expr_buffer_ref(expr: &Expr) -> ExprBufferRef<'_> {
+pub fn expr_buffer_ref(expr: &Expr) -> ExprBufferRef<'_> {
     match expr {
         Expr::Atomic { buffer, .. } => ExprBufferRef::ReadWrite(buffer),
         Expr::Load { buffer, .. } | Expr::BufLen { buffer } | Expr::BufferRef { buffer } => {
@@ -736,6 +737,37 @@ pub fn walk_nodes(program: &Program, f: impl FnMut(&Node)) {
 /// The walk is iterative, so nesting depth costs heap rather than native stack.
 #[inline]
 pub fn for_each_node<'a>(nodes: &'a [Node], mut f: impl FnMut(&'a Node)) {
+    let _: ControlFlow<()> = try_for_each_node(nodes, |node| {
+        f(node);
+        ControlFlow::Continue(())
+    });
+}
+
+/// Every node in `nodes` and in every nested body, depth first, in source
+/// order, stopping at the first `Break`.
+///
+/// The short-circuiting form of [`for_each_node`], and the descent every
+/// fallible scan outside this crate should use. Before it existed, a scan that
+/// wanted to stop early had to implement `NodeVisitor`, which is
+/// abstract-by-default: answering a question about two variants meant writing a
+/// no-op body, with its full signature, for the other fifteen. Four scanners in
+/// this workspace restated that same block of stubs, and the one that refused to
+/// hand-rolled its own recursive descent ending in `_ => {}` instead, which
+/// classified every nesting variant it had not been told about as containing
+/// nothing.
+///
+/// Descent is [`child_bodies`], the single exhaustive owner, so a new nesting
+/// variant is a compile error there rather than a silently empty answer here.
+/// A caller that also needs the expressions a node carries takes them from
+/// [`node_operands`], and the buffers it names from [`node_buffer_refs`]; both
+/// are exhaustive for the same reason.
+///
+/// The walk is iterative, so nesting depth costs heap rather than native stack.
+#[inline]
+pub fn try_for_each_node<'a, B>(
+    nodes: &'a [Node],
+    mut f: impl FnMut(&'a Node) -> ControlFlow<B>,
+) -> ControlFlow<B> {
     let mut stack: SmallVec<[&'a Node; 128]> = SmallVec::new();
     stack.reserve(nodes.len());
     for node in nodes.iter().rev() {
@@ -743,7 +775,7 @@ pub fn for_each_node<'a>(nodes: &'a [Node], mut f: impl FnMut(&'a Node)) {
     }
 
     while let Some(node) = stack.pop() {
-        f(node);
+        f(node)?;
         // Groups in reverse, each reversed: `then` pops before `otherwise`,
         // and both in source order. Same visit order as the hand-written match
         // this replaces.
@@ -753,6 +785,7 @@ pub fn for_each_node<'a>(nodes: &'a [Node], mut f: impl FnMut(&'a Node)) {
             }
         }
     }
+    ControlFlow::Continue(())
 }
 
 fn push_node_children_and_exprs<'a>(

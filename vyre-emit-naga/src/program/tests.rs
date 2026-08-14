@@ -3,7 +3,7 @@
 // Tests for `mod.rs`. Split out per audit item #85 to keep the
 // parent file focused on production code.
 
-use super::atomic_scanner::scan_atomic_targets;
+use super::atomic_scanner::{scan_buffer_targets, BufferTargets};
 use super::{extension_ops, LoweringError};
 use std::sync::Arc;
 use vyre_foundation::ir::{BufferDecl, DataType, Ident};
@@ -98,12 +98,12 @@ impl ExprNode for OpaqueUnknownExpr {
 
 #[test]
 fn atomic_scan_collects_targets_from_opaque_expr_extensions() {
-    let mut scanner = rustc_hash::FxHashSet::default();
+    let mut targets = BufferTargets::default();
     let expr = Expr::Opaque(Arc::new(OpaqueAtomicExpr));
     let node = Node::let_bind("x", expr);
-    scan_atomic_targets(&node, &mut scanner)
+    scan_buffer_targets(std::slice::from_ref(&node), &mut targets)
         .expect("Fix: atomic scanner should honor extension scan traits.");
-    assert!(scanner.contains(&Ident::from("opaque_target")));
+    assert!(targets.atomic.contains(&Ident::from("opaque_target")));
 }
 
 #[test]
@@ -117,8 +117,7 @@ fn atomic_scan_rejects_unknown_opaque_expr_extensions() {
             Expr::Opaque(Arc::new(OpaqueUnknownExpr)),
         )],
     );
-    let mut scanner = rustc_hash::FxHashSet::default();
-    let err = scan_atomic_targets(&program.entry()[0], &mut scanner)
+    let err = scan_buffer_targets(program.entry(), &mut BufferTargets::default())
         .expect_err("Fix: unsupported opaque atomics should fail with actionable error.");
     let message = err.to_string();
     assert!(message.contains("unsupported opaque expression"));

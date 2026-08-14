@@ -20,6 +20,7 @@ mod device_buffer;
 mod dispatch_config;
 mod dispatch_result;
 mod error;
+mod forward;
 mod pending_dispatch;
 mod regex_accelerator;
 mod resident_sequence;

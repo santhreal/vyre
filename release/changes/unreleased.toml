@@ -1039,3 +1039,30 @@ text = "Three duplication pins record what the tree measures: `xtask-evidence` 4
 id = "optimization-family-coverage-is-proved-not-declared"
 category = "Fixed"
 text = "The pass-family benchmark manifest records a family as covered only when the case proving it passed. It used to push each specification's declared families whether or not the artifact behind them could be read, and the specification list is the same list as `required_pass_families`, so `uncovered_pass_families` was structurally always empty and the release gate demanding it be empty could not fail on the one thing it exists to catch: a missing or blocked artifact. A test asserts that state, so the unconditional form turns the suite red."
+
+[[fragments]]
+
+[[fragments]]
+id = "naga-buffer-target-scan-has-one-owner"
+category = "Fixed"
+text = "The pre-emission scan that decides which buffers Naga emits as `atomic<...>` and which keep `BufferAccess::ReadWrite` takes descent, operand positions and per-node buffer direction from the exhaustive owners in `vyre_foundation::transform::visit`, and returns both sets together. The write half was a hand-rolled recursive descent ending in `_ => {}`, so the four collective variants were reported as writing nothing: a buffer written only by an `AllReduce`, `AllGather`, `ReduceScatter` or `Broadcast` was auto-downgraded to `ReadOnly` and emitted as `var<storage, read>`. The atomic half restated `node_operands` as fifteen `NodeVisitor` method bodies. `node_buffer_refs` disagreed with the old scan about `Node::IndirectDispatch`, which names its count buffer as a read because the host writes it and the shader only reads it; the scan now agrees, and no emitted shader changes because the Naga emitter rejects `IndirectDispatch` before producing WGSL."
+
+[[fragments]]
+id = "try-for-each-node-fallible-walk"
+category = "Added"
+text = "`vyre_foundation::transform::visit::try_for_each_node` walks every node in a body and every nested body, stopping at the first `Break`, and `for_each_node` now delegates to it. A short-circuiting scan outside the crate previously had to implement the abstract-by-default `NodeVisitor` and write a no-op body for every variant it did not care about, which is the cost that made one scan hand-roll its own descent with a catch-all arm instead. `node_buffer_refs`, `expr_buffer_ref` and their result types are public for the same reason: a lowering crate answering \"what does this statement do to a buffer\" now reads the exhaustive owner rather than restating it."
+
+[[fragments]]
+id = "vyre-backend-decorator-forwarding-has-one-owner"
+category = "Fixed"
+text = "A decorator that wraps a `VyreBackend` forwards the contract through `backend::forward`, split into the non-dispatch surface and the `Program`-carrying surface. `GridSyncSplitBackend` restated all 57 methods by hand and left seven on their trait defaults, so through the grid-sync registry wrapper a device-buffer-capable backend reported `UnsupportedFeature` for allocation, upload, download, free and device-buffer dispatch, a backend with distributed collectives reported none, and `cooperative_grid_sync_fits` answered `false` for every device. Device-buffer dispatch of a program that needs the host-side grid-sync split now fails closed naming the borrowed path, because the split carries each segment's state through host byte buffers and the device-buffer path exposes no readback between segments."
+
+[[fragments]]
+id = "node-nesting-and-forwarding-closure-gates"
+category = "Added"
+text = "Two suites close the classes above from the tree at run time. The Naga scanner's gate plants an atomic and a store in every body slot of every body-carrying `Node` variant and asserts the walk reaches both, and separately asserts that every buffer `node_buffer_refs` calls a write is reported as one; the variant set comes from `NODE_VARIANT_NAMES`, so a new variant is red before either question is asked. `vyre_backend_forwarding_closure` parses the trait declaration and the forwarding macros and fails when a method belongs to neither, when the grid-sync wrapper reaches a `Program`-carrying entry point without deciding the split, and when the wrapper hand-writes a forward the owner already emits."
+
+[[fragments]]
+id = "gridsync-naga-duplication-pins-lowered-to-measured"
+category = "Changed"
+text = "Three duplication pins record what the tree measures after the owners above: `vyre-driver` 1047 to 994 duplicated lines, `vyre-emit-naga` 221 to 155, and `vyre-reference` 743 to 676, each with `total_lines` measured. A pin with room under it hides the next copy."
