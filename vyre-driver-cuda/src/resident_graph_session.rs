@@ -6,14 +6,13 @@
 //! envelope and quantifies the upload/allocation/fence work removed by keeping
 //! graph state resident.
 
-use crate::backend::accounting::{
-    checked_add_u64_count as checked_add, checked_mul_u64_count as checked_mul,
-    CudaArithmeticOverflow,
-};
 use crate::backend::staging_reserve::reserved_vec;
 use crate::megakernel_speedup_gate::{
     format_validated_cuda_megakernel_speedup_evidence_csv, CudaMegakernelSpeedupGateError,
     CudaMegakernelSpeedupProof, CudaMegakernelSpeedupSample,
+};
+use vyre_driver::accounting::{
+    checked_add_u64_count as checked_add, checked_mul_u64_count as checked_mul, ArithmeticOverflow,
 };
 use vyre_driver::ResidentGraphReuseTelemetry;
 
@@ -192,7 +191,7 @@ impl std::fmt::Display for CudaResidentGraphSessionError {
 
 impl std::error::Error for CudaResidentGraphSessionError {}
 
-impl CudaArithmeticOverflow for CudaResidentGraphSessionError {
+impl ArithmeticOverflow for CudaResidentGraphSessionError {
     fn arithmetic_overflow(field: &'static str) -> Self {
         Self::ByteCountOverflow { field }
     }

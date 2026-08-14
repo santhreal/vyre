@@ -2,9 +2,8 @@
 
 use std::{cmp::Reverse, collections::BinaryHeap};
 
-use crate::backend::accounting::{
-    checked_add_u64_count as checked_add, checked_mul_u64_count as checked_mul,
-    CudaArithmeticOverflow,
+use vyre_driver::accounting::{
+    checked_add_u64_count as checked_add, checked_mul_u64_count as checked_mul, ArithmeticOverflow,
 };
 use vyre_driver::megakernel_execution::MegakernelGraphShape;
 use vyre_self_substrate::device_resident_token_fact_graph::DeviceResidentTokenFactGraph;
@@ -112,7 +111,7 @@ impl std::fmt::Display for CudaTokenFactGraphLayoutError {
 
 impl std::error::Error for CudaTokenFactGraphLayoutError {}
 
-impl CudaArithmeticOverflow for CudaTokenFactGraphLayoutError {
+impl ArithmeticOverflow for CudaTokenFactGraphLayoutError {
     fn arithmetic_overflow(field: &'static str) -> Self {
         Self::ByteCountOverflow { field }
     }

@@ -19,18 +19,12 @@
 mod common;
 use common::live_backend;
 
+use vyre_driver::parity_harness::{
+    dispatch_single_output, elementwise_program, u32_words, ParityInput,
+};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-/// Little-endian `u32` words -> bytes (self-contained).
-fn u32_bytes(words: &[u32]) -> Vec<u8> {
-    let mut bytes = Vec::with_capacity(words.len() * 4);
-    for &w in words {
-        bytes.extend_from_slice(&w.to_le_bytes());
-    }
-    bytes
-}
+use vyre_foundation::ir::{DataType, Expr};
 
 /// Probe inputs (u32 bit patterns) exercising truncation and the signed boundary:
 /// 300 (low byte 44), 0x12345 (low half 0x2345), 200 (i8 -56), 0xFFFF (i16 -1 /
@@ -50,54 +44,30 @@ fn inputs() -> Vec<u32> {
     ]
 }
 
-/// `out = cast(wide, cast(narrow, load(input)))` for every input word. `wide` is
-/// the non-narrowing integer that round-trips the narrowed value into a 32-bit
-/// store slot (U32 for U8/U16, I32 for I8/I16).
-fn narrow_program(narrow: DataType, wide: DataType, n: u32) -> Program {
-    let mut body = Vec::new();
-    for i in 0..n {
-        body.push(Node::store(
-            "out",
-            Expr::u32(i),
-            Expr::cast(
-                wide.clone(),
-                Expr::cast(narrow.clone(), Expr::load("input", Expr::u32(i))),
-            ),
-        ));
-    }
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::ReadWrite, wide).with_count(n),
-            BufferDecl::storage("input", 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-        ],
-        [1, 1, 1],
-        body,
-    )
-}
-
+/// Dispatch `out = cast(wide, cast(narrow, input))` for every probe input.
+///
+/// `wide` is the non-narrowing integer that round-trips the narrowed value into
+/// a 32-bit store slot (U32 for U8/U16, I32 for I8/I16), so the word read back
+/// reflects exactly what the narrowing cast produced rather than what a
+/// byte-element store would have masked it to.
 fn run(backend: &CudaBackend, narrow: DataType, wide: DataType) -> Vec<u32> {
     let ins = inputs();
-    let n = ins.len() as u32;
-    let program = narrow_program(narrow, wide, n);
-    let input_bytes = u32_bytes(&ins);
-    let out_init = u32_bytes(&vec![0u32; ins.len()]);
-    let outputs = backend
-        .dispatch_borrowed(
-            &program,
-            &[out_init.as_slice(), input_bytes.as_slice()],
-            &DispatchConfig::default(),
+    let buffers = vec![ParityInput::u32_words("input", &ins)];
+    let count = ins.len() as u32;
+    let program = elementwise_program(wide.clone(), &buffers, count, &|loads| {
+        Expr::cast(
+            wide.clone(),
+            Expr::cast(narrow.clone(), loads[0].clone()),
         )
-        .expect("Fix: CUDA must dispatch the narrowing-cast parity contract.");
-    assert_eq!(
-        outputs.len(),
-        1,
-        "narrowing program declares one ReadWrite output; CUDA returned {} buffer(s)",
-        outputs.len()
+    });
+    let bytes = dispatch_single_output(
+        &|program, inputs| backend.dispatch_borrowed(program, inputs, &DispatchConfig::default()),
+        &program,
+        &buffers,
+        ins.len() * 4,
+        "narrowing-cast parity",
     );
-    outputs[0]
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect()
+    u32_words(&bytes)
 }
 
 #[test]

@@ -19,61 +19,10 @@
 mod common;
 use common::live_backend;
 
+use vyre_driver::parity_harness::u32_binop_parity;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-/// Little-endian `u32` words -> bytes (self-contained).
-fn u32_bytes(words: &[u32]) -> Vec<u8> {
-    let mut bytes = Vec::with_capacity(words.len() * 4);
-    for &w in words {
-        bytes.extend_from_slice(&w.to_le_bytes());
-    }
-    bytes
-}
-
-fn program(n: u32, build: fn(Expr, Expr) -> Expr) -> Program {
-    let mut body = Vec::new();
-    for i in 0..n {
-        body.push(Node::store(
-            "out",
-            Expr::u32(i),
-            build(Expr::load("a", Expr::u32(i)), Expr::load("b", Expr::u32(i))),
-        ));
-    }
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(n),
-            BufferDecl::storage("a", 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::storage("b", 2, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-        ],
-        [1, 1, 1],
-        body,
-    )
-}
-
-fn dispatch(backend: &CudaBackend, program: &Program, ps: &[(u32, u32)]) -> Vec<u32> {
-    let a = u32_bytes(&ps.iter().map(|&(a, _)| a).collect::<Vec<_>>());
-    let b = u32_bytes(&ps.iter().map(|&(_, b)| b).collect::<Vec<_>>());
-    let out_init = u32_bytes(&vec![0u32; ps.len()]);
-    let outputs = backend
-        .dispatch_borrowed(
-            program,
-            &[out_init.as_slice(), a.as_slice(), b.as_slice()],
-            &DispatchConfig::default(),
-        )
-        .expect("Fix: CUDA must dispatch the synthetic-binop parity contract.");
-    assert_eq!(
-        outputs.len(),
-        1,
-        "program declares one ReadWrite output; CUDA returned {} buffer(s)",
-        outputs.len()
-    );
-    outputs[0]
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect()
-}
+use vyre_foundation::ir::Expr;
 
 /// Dispatch `build` on `pairs` and assert byte-for-byte against `reference`.
 fn check(
@@ -83,7 +32,12 @@ fn check(
     pairs: &[(u32, u32)],
     name: &str,
 ) {
-    let gpu = dispatch(backend, &program(pairs.len() as u32, build), pairs);
+    let gpu = u32_binop_parity(
+        &|program, inputs| backend.dispatch_borrowed(program, inputs, &DispatchConfig::default()),
+        build,
+        pairs,
+        name,
+    );
     let expected: Vec<u32> = pairs.iter().map(|&(a, b)| reference(a, b)).collect();
     assert_eq!(
         gpu, expected,
