@@ -9,10 +9,9 @@
 #![allow(clippy::assertions_on_constants)]
 
 mod common;
-use common::shared_live_backend as live_backend;
+use common::{add_one_program, shared_live_backend as live_backend};
 
 use std::time::Instant;
-use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::BackendValidationCapabilities;
@@ -20,31 +19,6 @@ use vyre_foundation::validate::BackendValidationCapabilities;
 fn selected_adapter(backend: &WgpuBackend) -> wgpu::Adapter {
     vyre_driver_wgpu::runtime::device::adapter_for_info(backend.adapter_info()).expect(
         "Fix: selected wgpu backend adapter must still be enumerable for live capability probing",
-    )
-}
-
-fn add_one_program(words: u32) -> Program {
-    let idx = Expr::gid_x();
-    let in_bounds = Expr::lt(idx.clone(), Expr::u32(words));
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(words),
-            BufferDecl::output("out", 1, DataType::U32)
-                .with_count(words)
-                .with_output_byte_range(0..(words as usize * 4)),
-        ],
-        [64, 1, 1],
-        vec![
-            Node::if_then(
-                in_bounds,
-                vec![Node::store(
-                    "out",
-                    idx.clone(),
-                    Expr::add(Expr::load("input", idx), Expr::u32(1)),
-                )],
-            ),
-            Node::return_(),
-        ],
     )
 }
 
