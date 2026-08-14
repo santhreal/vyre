@@ -139,6 +139,16 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Changed
 
+- Token numbering has one owner. `vyre-spec` now declares the C11, Go, Python
+  and LR(1) expression token ids in `c11_token`, `go_token`, `python_token` and
+  `c11_expr_token`; `vyre-grammar-gen` and `vyre-libs::parsing` re-export them,
+  so every published `TOK_*` path still resolves and no value changed. The C11
+  ids are the wire contract between the tables the generator emits and the GPU
+  parser that decodes them, and they were declared twice. A contract test in
+  `vyre-spec` walks the checkout and fails when any file outside it declares a
+  `TOK_`-prefixed constant, replacing the parity suite that could only report
+  drift after both copies existed.
+
 - The standalone `vyre-harness` package is gone. Semantic operation identity,
   tier classification, and registration now live in `vyre-foundation`; library
   fixture views live in `vyre-libs`; conformance execution and parity policy

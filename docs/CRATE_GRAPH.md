@@ -142,6 +142,7 @@ graph TD
   C17 --> C23
   C17 --> C31
   C18 --> C17
+  C19 --> C31
   C20 --> C17
   C20 --> C26
   C20 --> C27
@@ -290,6 +291,7 @@ graph TD
 | `vyre-foundation` | `vyre-macros` | compile-time registration generation | None | `always` | `normal` | `false` | `true` | `private` | `registration-macros` |
 | `vyre-foundation` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-frontend-rust` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
+| `vyre-grammar-gen` | `vyre-spec` | C11 token ids, the wire contract between the emitted tables and the GPU parser that decodes them | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-libs` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-libs` | `vyre-primitives` | reusable semantic Program builders | `graph`, `inventory-registry`, `text` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
 | `vyre-libs` | `vyre-reference` | reference interpreter behind the test-fixtures dispatcher | None | `always` | `normal` | `true` | `true` | `private` | `reference-semantics` |

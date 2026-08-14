@@ -1,24 +1,10 @@
 use super::action::{pack_accept, pack_error, pack_reduce, pack_shift};
 use super::{LrTables, Production};
 
-/// Identifier token id.
-pub const TOK_ID: u32 = 0;
-/// Numeric literal token id.
-pub const TOK_NUM: u32 = 1;
-/// `+` token id.
-pub const TOK_PLUS: u32 = 2;
-/// `-` token id.
-pub const TOK_MINUS: u32 = 3;
-/// `*` token id.
-pub const TOK_STAR: u32 = 4;
-/// `/` token id.
-pub const TOK_SLASH: u32 = 5;
-/// `(` token id.
-pub const TOK_LPAREN: u32 = 6;
-/// `)` token id.
-pub const TOK_RPAREN: u32 = 7;
-/// End-of-file token id.
-pub const TOK_EOF: u32 = 8;
+/// Terminal ids for this grammar. `vyre_spec::c11_expr_token` owns the
+/// numbering; the ids are the column order of [`ACTION_TABLE`] and the token
+/// values a caller feeds the GPU parser.
+pub use vyre_spec::c11_expr_token::*;
 
 /// Expression nonterminal id.
 pub const NT_E: u32 = 0;

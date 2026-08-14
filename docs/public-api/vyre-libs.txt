@@ -94,15 +94,6 @@ pub const vyre_libs::parsing::core::ast::node::AST_VAR: u32
 pub const vyre_libs::parsing::lr_tables::NT_E: u32
 pub const vyre_libs::parsing::lr_tables::NT_F: u32
 pub const vyre_libs::parsing::lr_tables::NT_T: u32
-pub const vyre_libs::parsing::lr_tables::TOK_EOF: u32
-pub const vyre_libs::parsing::lr_tables::TOK_ID: u32
-pub const vyre_libs::parsing::lr_tables::TOK_LPAREN: u32
-pub const vyre_libs::parsing::lr_tables::TOK_MINUS: u32
-pub const vyre_libs::parsing::lr_tables::TOK_NUM: u32
-pub const vyre_libs::parsing::lr_tables::TOK_PLUS: u32
-pub const vyre_libs::parsing::lr_tables::TOK_RPAREN: u32
-pub const vyre_libs::parsing::lr_tables::TOK_SLASH: u32
-pub const vyre_libs::parsing::lr_tables::TOK_STAR: u32
 pub const vyre_libs::range_ordering::MAX_CACHED_POSITIONS: u32
 pub const vyre_libs::range_ordering::MAX_DEPTH: u32
 pub const vyre_libs::scan::HIT_BUFFER_LIVE_LENGTH: &str
@@ -724,6 +715,15 @@ pub use vyre_libs::operation_catalog::tag_program
 pub use vyre_libs::operation_catalog::wrap
 pub use vyre_libs::operation_catalog::wrap_anonymous
 pub use vyre_libs::operation_catalog::wrap_child
+pub use vyre_libs::parsing::lr_tables::TOK_EOF
+pub use vyre_libs::parsing::lr_tables::TOK_ID
+pub use vyre_libs::parsing::lr_tables::TOK_LPAREN
+pub use vyre_libs::parsing::lr_tables::TOK_MINUS
+pub use vyre_libs::parsing::lr_tables::TOK_NUM
+pub use vyre_libs::parsing::lr_tables::TOK_PLUS
+pub use vyre_libs::parsing::lr_tables::TOK_RPAREN
+pub use vyre_libs::parsing::lr_tables::TOK_SLASH
+pub use vyre_libs::parsing::lr_tables::TOK_STAR
 pub use vyre_libs::parsing::vast::HEADER_LEN
 pub use vyre_libs::parsing::vast::NODE_STRIDE_U32
 pub use vyre_libs::parsing::vast::SENTINEL

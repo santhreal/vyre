@@ -338,7 +338,11 @@ Generate host-side grammar tables consumed by frontend and parsing crates.
 - Path: `vyre-grammar-gen`
 - Owner: `grammar-generation`
 - Layer: `tooling`
-- Internal production dependencies: None
+- Internal production dependencies: `vyre-spec`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-spec` | C11 token ids, the wire contract between the emitted tables and the GPU parser that decodes them | `public` | `specification` |
 
 ### `vyre-libs`
 

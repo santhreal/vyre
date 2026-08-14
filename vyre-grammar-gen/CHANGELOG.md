@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- The C11 token ids are no longer declared here. `vyre-spec::c11_token` owns the
+  numbering, this crate depends down onto it, and `c11_lexer` re-exports it, so
+  `vyre_grammar_gen::c11_lexer::TOK_*` still resolves and no value changed. The
+  ids are the wire contract between the blobs this crate emits and the GPU lexer
+  that decodes them, and a second declaration could drift without failing a
+  build.
+
 ## [0.6.0] - 2026-05-28
 
 ### Added

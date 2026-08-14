@@ -19,6 +19,7 @@ clap = { version = "=4.6.4", features = ["derive"] }
 blake3.workspace = true
 regex.workspace = true
 regex-automata.workspace = true
+vyre-spec.workspace = true
 
 [[bin]]
 name = "vyre-grammar-gen"

@@ -163,7 +163,7 @@ Generate host-side grammar tables consumed by frontend and parsing crates.
 ### Boundaries
 
 The `grammar-generation` owner maintains this `tooling` crate at `vyre-grammar-gen`.
-Its allowed internal production dependencies are: None.
+Its allowed internal production dependencies are: `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

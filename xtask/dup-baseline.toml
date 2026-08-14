@@ -131,13 +131,13 @@ total_lines = 5179
 
 [[crate]]
 name = "vyre-grammar-gen"
-duplicate_lines = 119
-total_lines = 3383
+duplicate_lines = 26
+total_lines = 3276
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 11539
-total_lines = 187422
+duplicate_lines = 11341
+total_lines = 187123
 
 [[crate]]
 name = "vyre-lints"
@@ -187,7 +187,7 @@ total_lines = 1115
 [[crate]]
 name = "vyre-spec"
 duplicate_lines = 244
-total_lines = 9259
+total_lines = 9800
 
 [[crate]]
 name = "xtask"

@@ -11,113 +11,6 @@ impl vyre_grammar_gen::lr::LrTable
 impl vyre_grammar_gen::wire::PackedBlob
 pub const vyre_grammar_gen::C11_PATTERNS: &[(u32, &str)]
 pub const vyre_grammar_gen::c11_lexer::C11_PATTERNS: &[(u32, &str)]
-pub const vyre_grammar_gen::c11_lexer::TOK_ALIGNAS: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_ALIGNOF: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_AMP: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_AMP_EQ: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_AND: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_ARROW: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_ASSIGN: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_ATOMIC: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_AUTO: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_BANG: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_BOOL: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_BREAK: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_BUILTIN_CHOOSE_EXPR: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_BUILTIN_CONSTANT_P: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_BUILTIN_TYPES_COMPATIBLE_P: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_CARET: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_CARET_EQ: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_CASE: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_CHAR_KW: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_COLON: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_COMMA: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_COMMENT: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_COMPLEX: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_CONST: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_CONTINUE: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_DEC: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_DEFAULT: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_DO: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_DOT: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_DOUBLE: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_ELLIPSIS: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_ELSE: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_ENUM: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_EQ: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_EXTERN: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_FLOAT_KW: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_FOR: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_GE: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_GENERIC: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_GNU_ASM: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_GNU_ATTRIBUTE: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_GNU_EXTENSION: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_GNU_IMAG: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_GNU_REAL: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_GNU_TYPEOF: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_GOTO: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_GT: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_HASH: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_HASHHASH: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_IDENTIFIER: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_IF: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_IMAGINARY: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_INC: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_INLINE: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_INT: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_INTEGER: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_LBRACE: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_LBRACKET: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_LE: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_LONG: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_LPAREN: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_LSHIFT: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_LSHIFT_EQ: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_LT: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_MINUS: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_MINUS_EQ: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_NE: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_NORETURN: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_OR: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_PERCENT: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_PERCENT_EQ: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_PIPE: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_PIPE_EQ: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_PLUS: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_PLUS_EQ: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_PREPROC: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_QUESTION: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_RBRACE: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_RBRACKET: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_REGISTER: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_RESTRICT: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_RETURN: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_RPAREN: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_RSHIFT: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_RSHIFT_EQ: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_SEMICOLON: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_SHORT: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_SIGNED: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_SIZEOF: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_SLASH: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_SLASH_EQ: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_STAR: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_STAR_EQ: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_STATIC: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_STATIC_ASSERT: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_STRING: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_STRUCT: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_SWITCH: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_THREAD_LOCAL: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_TILDE: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_TYPEDEF: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_UNION: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_UNSIGNED: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_VOID: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_VOLATILE: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_WHILE: u32
-pub const vyre_grammar_gen::c11_lexer::TOK_WHITESPACE: u32
 pub const vyre_grammar_gen::wire::MAGIC: [u8; 4]
 pub const vyre_grammar_gen::wire::VERSION: u16
 pub enum vyre_grammar_gen::LexCpuError
@@ -186,6 +79,7 @@ pub struct vyre_grammar_gen::lr::LrBuilder
 pub struct vyre_grammar_gen::lr::LrTable
 pub struct vyre_grammar_gen::lr::Production
 pub struct vyre_grammar_gen::wire::PackedBlob
+pub use vyre_grammar_gen::c11_lexer::<<vyre_spec::c11_token::*>>
 pub vyre_grammar_gen::BlobKind::LexerDfa = 0
 pub vyre_grammar_gen::BlobKind::LrTables = 1
 pub vyre_grammar_gen::DfaTable::num_classes: u32
