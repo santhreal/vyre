@@ -81,7 +81,9 @@ pub mod csr_frontier_queue;
 /// device shards by vertex ownership and OR-merge the per-shard outputs (W3-5
 /// graph-frontier-device-shards), exactly reproducing a single-device expansion.
 pub mod csr_frontier_shard;
-mod csr_frontier_step;
+/// The one CSR frontier step: the Program builder for either edge direction and
+/// the host reference that walks the same two directions.
+pub(crate) mod csr_frontier_step;
 /// Queue-to-queue sparse CSR delta expansion for GPU-resident fixpoint waves.
 pub mod csr_queue_delta;
 /// Mixed queue traversal that keeps low-degree rows scalar and sends only hubs

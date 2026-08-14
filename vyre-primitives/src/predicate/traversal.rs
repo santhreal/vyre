@@ -1,5 +1,8 @@
 use vyre_foundation::ir::Program;
 
+#[cfg(any(test, feature = "cpu-parity"))]
+use crate::graph::csr_frontier_step::define_csr_frontier_step_cpu_ref;
+use crate::graph::csr_frontier_step::{csr_frontier_step_program, CsrFrontierStepKind};
 use crate::graph::program_graph::ProgramGraphShape;
 
 pub(crate) fn forward_edge_program(
@@ -9,8 +12,9 @@ pub(crate) fn forward_edge_program(
     frontier_out: &str,
     edge_mask: u32,
 ) -> Program {
-    crate::graph::csr_forward_traverse::csr_forward_traverse_with_op_id(
+    csr_frontier_step_program(
         op_id,
+        CsrFrontierStepKind::Forward,
         shape,
         frontier_in,
         frontier_out,
@@ -25,8 +29,9 @@ pub(crate) fn backward_edge_program(
     frontier_out: &str,
     edge_mask: u32,
 ) -> Program {
-    crate::graph::csr_backward_traverse::csr_backward_traverse_with_op_id(
+    csr_frontier_step_program(
         op_id,
+        CsrFrontierStepKind::Backward,
         shape,
         frontier_in,
         frontier_out,
@@ -34,86 +39,22 @@ pub(crate) fn backward_edge_program(
     )
 }
 
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn cpu_ref_forward(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    edge_mask: u32,
-) -> Vec<u32> {
-    crate::graph::csr_forward_traverse::cpu_ref(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        edge_mask,
-    )
+define_csr_frontier_step_cpu_ref! {
+    direction: CsrFrontierStepKind::Forward,
+    label: "predicate forward edge step",
+    /// CPU reference for a predicate that is one forward masked step.
+    pub(crate) fn cpu_ref_forward,
+    /// Same forward step into caller-owned output storage.
+    pub(crate) fn cpu_ref_forward_into,
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn cpu_ref_forward_into(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    edge_mask: u32,
-    out: &mut Vec<u32>,
-) {
-    crate::graph::csr_forward_traverse::cpu_ref_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        edge_mask,
-        out,
-    );
-}
-
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn cpu_ref_backward(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    edge_mask: u32,
-) -> Vec<u32> {
-    crate::graph::csr_backward_traverse::cpu_ref(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        edge_mask,
-    )
-}
-
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn cpu_ref_backward_into(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    edge_mask: u32,
-    out: &mut Vec<u32>,
-) {
-    crate::graph::csr_backward_traverse::cpu_ref_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        edge_mask,
-        out,
-    );
+define_csr_frontier_step_cpu_ref! {
+    direction: CsrFrontierStepKind::Backward,
+    label: "predicate backward edge step",
+    /// CPU reference for a predicate that is one reverse masked step.
+    pub(crate) fn cpu_ref_backward,
+    /// Same reverse step into caller-owned output storage.
+    pub(crate) fn cpu_ref_backward_into,
 }
 
 #[cfg(test)]

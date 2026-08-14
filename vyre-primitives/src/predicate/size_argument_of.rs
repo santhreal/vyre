@@ -7,11 +7,11 @@
 
 use vyre_foundation::ir::Program;
 
-use crate::graph::csr_backward_traverse::csr_backward_traverse_with_op_id;
 use crate::graph::program_graph::ProgramGraphShape;
 use crate::predicate::edge_kind;
 #[cfg(feature = "inventory-registry")]
 use crate::predicate::node_kind;
+use crate::predicate::traversal::backward_edge_program;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::predicate::size_argument_of";
@@ -30,7 +30,7 @@ pub fn size_argument_of(
     frontier_in: &str,
     frontier_out: &str,
 ) -> Program {
-    csr_backward_traverse_with_op_id(OP_ID, shape, frontier_in, frontier_out, edge_kind::CALL_ARG)
+    backward_edge_program(OP_ID, shape, frontier_in, frontier_out, edge_kind::CALL_ARG)
 }
 
 /// CPU reference: reverse-traverse CallArg edges and mark every caller
