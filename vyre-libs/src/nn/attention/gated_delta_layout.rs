@@ -1,4 +1,5 @@
-//! Shape, index, and buffer math shared by the two gated delta schedules.
+//! Shape, index, buffer, and per-token numerics shared by the two gated delta
+//! schedules.
 //!
 //! [`recurrent_gated_delta`](super::gated_delta::recurrent_gated_delta) and
 //! [`chunked_gated_delta`](super::gated_delta::chunked_gated_delta) address the
@@ -7,7 +8,7 @@
 //! that math. The copies are merged here so a layout change cannot land in one
 //! schedule and miss the other.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, UnOp};
 
 use super::gated_delta::RecurrentGatedDeltaError;
 
@@ -193,4 +194,78 @@ pub(super) fn gated_delta_buffers(
         BufferDecl::storage(spec.state_output, 7, BufferAccess::ReadWrite, DataType::F32)
             .with_count(counts.state),
     ]
+}
+
+/// The delta-rule write strength for the current token:
+/// `beta = sigmoid(beta_logit) = 1 / (1 + exp(-beta_logit))`.
+///
+/// Both schedules bind `beta_logit` from `beta_logits` their own way (the
+/// recurrent one per token, the chunked one per triangular row) and then applied
+/// this identical sigmoid, so the gate's numeric form lives here once.
+///
+/// The form is deliberately the direct reciprocal rather than the
+/// overflow-shy `exp(x) / (1 + exp(x))` branch: `exp` of a large NEGATIVE logit
+/// saturates toward zero rather than overflowing, which is the harmless
+/// direction. It does not clamp, because a caller feeding a poisoned logit
+/// should see the NaN rather than a silently full-strength state write.
+pub(super) fn beta_gate_node() -> Node {
+    Node::let_bind(
+        "beta",
+        Expr::div(
+            Expr::f32(1.0),
+            Expr::add(
+                Expr::f32(1.0),
+                Expr::UnOp {
+                    op: UnOp::Exp,
+                    operand: Box::new(Expr::UnOp {
+                        op: UnOp::Negate,
+                        operand: Box::new(Expr::var("beta_logit")),
+                    }),
+                },
+            ),
+        ),
+    )
+}
+
+/// `1 / sqrt(sum + eps)`: the L2 normalizer both schedules apply to a
+/// squared-magnitude accumulator.
+///
+/// `sum` names the accumulator binding and `scale` the binding to produce; the
+/// chunked schedule prefixes both per triangular position, which is the only
+/// position that differs. `eps` is added inside the root, so a zero-magnitude
+/// row scales by `1 / sqrt(eps)` instead of dividing by zero.
+pub(super) fn l2_scale_node(scale: impl Into<Ident>, sum: &str, eps: f32) -> Node {
+    Node::let_bind(
+        scale,
+        Expr::UnOp {
+            op: UnOp::InverseSqrt,
+            operand: Box::new(Expr::add(Expr::var(sum), Expr::f32(eps))),
+        },
+    )
+}
+
+/// The query scale: the L2 normalizer over `query_sum`, multiplied by the
+/// `1 / sqrt(key_dim)` attention-logit scale.
+///
+/// Folding the two roots into one binding is why this is an owner and not two
+/// calls to [`l2_scale_node`]: the recurrent and chunked schedules must agree on
+/// WHICH scale carries the `1 / sqrt(key_dim)` factor, or the same weights
+/// produce different logits on the two paths. The key side takes the plain
+/// normalizer and the query side carries the head-dimension factor. Both
+/// schedules accumulate into `query_sum`, so that binding is fixed here rather
+/// than a parameter.
+pub(super) fn query_scale_node(eps: f32, key_dim: u32) -> Node {
+    Node::let_bind(
+        "query_scale",
+        Expr::mul(
+            Expr::UnOp {
+                op: UnOp::InverseSqrt,
+                operand: Box::new(Expr::add(Expr::var("query_sum"), Expr::f32(eps))),
+            },
+            Expr::UnOp {
+                op: UnOp::InverseSqrt,
+                operand: Box::new(Expr::f32(key_dim as f32)),
+            },
+        ),
+    )
 }

@@ -3,7 +3,10 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 use crate::region::wrap_anonymous;
 use vyre_primitives::matching::CompiledDfa;
 
-use super::{bounded_ranges_scan_nodes, candidate_end_gate_nodes, AcInputBindings};
+use super::{
+    ac_ranges_output_records_len, ac_ranges_program_or_fail_closed, bounded_ranges_scan_nodes,
+    candidate_end_gate_nodes, AcInputBindings,
+};
 
 mod suffix3;
 
@@ -116,9 +119,8 @@ pub fn classic_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
         output_records_len,
         pattern_count,
     }
-    .decls();
+    .decls_with_match_count(match_count);
     buffers.extend([
-        BufferDecl::read_write(match_count, 6, DataType::U32).with_count(1),
         BufferDecl::storage(candidate_end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
             .with_count(8),
         BufferDecl::output(matches, 8, DataType::U32).with_count(max_matches.saturating_mul(3)),
@@ -154,8 +156,8 @@ pub fn build_ac_bounded_ranges_prefilter_program(
 /// match-append coalescing selector.
 ///
 /// # Panics
-/// Panics when the prefilter program exceeds the GPU ABI limits. An empty mask would
-/// silently suppress every match, so callers that must recover use
+/// Panics when the prefilter program exceeds the GPU ABI limits, through
+/// [`ac_ranges_program_or_fail_closed`]. Callers that must recover use
 /// [`try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce`].
 #[must_use]
 pub fn build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
@@ -164,26 +166,16 @@ pub fn build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
     max_matches: u32,
     use_subgroup_coalesce: bool,
 ) -> Program {
-    match try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
-        dfa,
-        pattern_count,
-        max_matches,
-        use_subgroup_coalesce,
-    ) {
-        Ok(program) => program,
-        Err(error) => {
-            // Returning an empty-mask prefilter program would silently suppress
-            // every candidate position (a total recall-loss silent fallback).
-            // Fail closed instead. Callers that need graceful overflow handling
-            // must call try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce
-            // directly and shard oversized DFAs across multiple programs.
-            panic!(
-                "AC bounded-ranges prefilter program build failed: {error}. \
-                 returning an empty-mask program would silently suppress every match; \
-                 use try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce and shard oversized DFAs."
-            )
-        }
-    }
+    ac_ranges_program_or_fail_closed(
+        try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
+            dfa,
+            pattern_count,
+            max_matches,
+            use_subgroup_coalesce,
+        ),
+        "bounded-ranges prefilter",
+        "try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce",
+    )
 }
 
 /// Fallible variant of [`build_ac_bounded_ranges_prefilter_program`].
@@ -217,12 +209,7 @@ pub fn try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
     max_matches: u32,
     use_subgroup_coalesce: bool,
 ) -> Result<Program, String> {
-    let output_records_len = u32::try_from(dfa.output_records.len()).map_err(|source| {
-        format!(
-            "AC bounded-ranges prefilter DFA output record count {} exceeds u32 GPU buffer metadata: {source}. Fix: shard the pattern set or lower the DFA budget before dispatch.",
-            dfa.output_records.len()
-        )
-    })?;
+    let output_records_len = ac_ranges_output_records_len(dfa, "bounded-ranges prefilter")?;
     Ok(
         classic_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
             "haystack",
@@ -247,16 +234,14 @@ pub fn try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::pack_haystack_u32;
     use crate::scan::classic_ac::test_dispatch_and_decode::{
-        decode_match_triples, pattern_lengths,
+        ac_ranges_inputs, assert_infallible_matches_try, decode_match_triples, pattern_lengths,
+        u32_input,
     };
     use crate::scan::classic_ac::{
         classic_ac_bounded_ranges_scan, classic_ac_candidate_end_byte_mask_words,
         classic_ac_compile,
     };
-    use crate::scan::haystack::pack_haystack_u32;
-    use vyre_primitives::wire::pack_u32_slice;
 
     #[test]
     fn bounded_ranges_prefilter_reference_eval_matches_cpu_oracle() {
@@ -272,18 +257,11 @@ mod tests {
             128,
             false,
         );
-        let inputs = vec![
-            vyre_reference::value::Value::from(pack_haystack_u32(haystack)),
-            vyre_reference::value::Value::from(pack_u32_slice(&ac.dfa.transitions)),
-            vyre_reference::value::Value::from(pack_u32_slice(&ac.dfa.output_offsets)),
-            vyre_reference::value::Value::from(pack_u32_slice(&ac.dfa.output_records)),
-            vyre_reference::value::Value::from(pack_u32_slice(&lengths)),
-            vyre_reference::value::Value::from(pack_u32_slice(&[haystack.len() as u32])),
-            vyre_reference::value::Value::from(pack_u32_slice(&[0])),
-            vyre_reference::value::Value::from(pack_u32_slice(
-                &classic_ac_candidate_end_byte_mask_words(&ac.dfa),
-            )),
-        ];
+        let mut inputs = ac_ranges_inputs(&ac.dfa, haystack, &lengths);
+        inputs.push(u32_input(&[0]));
+        inputs.push(u32_input(&classic_ac_candidate_end_byte_mask_words(
+            &ac.dfa,
+        )));
         let outputs = vyre_reference::reference_eval(&program, &inputs).expect(
             "Fix: prefiltered AC bounded-ranges program should evaluate in reference backend.",
         );
@@ -306,21 +284,11 @@ mod tests {
             &ac.dfa, 3, 128, false,
         )
         .expect("valid DFA must build");
-        // Binding 3 is output_records: the empty fallback carried 0 here.
-        let records = via_infallible.buffers()[3].count;
-        assert_eq!(records as usize, ac.dfa.output_records.len());
-        assert!(
-            records > 0,
-            "infallible prefilter builder must not emit the empty-mask fallback program"
-        );
-        assert_eq!(
-            via_infallible.buffers()[1].count,
-            ac.dfa.state_count.saturating_mul(256)
-        );
-        assert_eq!(via_infallible.buffers().len(), via_try.buffers().len());
-        assert_eq!(
-            via_infallible.buffers()[3].count,
-            via_try.buffers()[3].count
+        assert_infallible_matches_try(
+            "bounded-ranges prefilter",
+            &via_infallible,
+            &via_try,
+            &ac.dfa,
         );
     }
 

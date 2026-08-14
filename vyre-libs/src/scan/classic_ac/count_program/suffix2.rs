@@ -123,13 +123,12 @@ pub fn build_ac_bounded_count_suffix2_prefilter_program(dfa: &CompiledDfa) -> Pr
 mod tests {
     use super::*;
     use crate::fixture_bytes::bytes_to_u32 as decode_u32;
-    use crate::fixture_bytes::pack_haystack_u32;
-    use crate::scan::classic_ac::test_dispatch_and_decode::with_reference_dispatch_lanes;
+    use crate::scan::classic_ac::test_dispatch_and_decode::{
+        ac_dfa_table_inputs, u32_input, with_reference_dispatch_lanes,
+    };
     use crate::scan::classic_ac::{
         classic_ac_candidate_end_byte_mask_words, classic_ac_compile, classic_ac_scan_counts,
     };
-    use crate::scan::haystack::pack_haystack_u32;
-    use vyre_primitives::wire::pack_u32_slice;
 
     fn suffix2_candidate(
         previous: u8,
@@ -161,19 +160,16 @@ mod tests {
             build_ac_bounded_count_suffix2_prefilter_program(&ac.dfa),
             haystack.len() as u32,
         );
-        let inputs = vec![
-            vyre_reference::value::Value::from(pack_haystack_u32(haystack)),
-            vyre_reference::value::Value::from(pack_u32_slice(&ac.dfa.transitions)),
-            vyre_reference::value::Value::from(pack_u32_slice(&ac.dfa.output_offsets)),
-            vyre_reference::value::Value::from(pack_u32_slice(
-                &classic_ac_candidate_end_byte_mask_words(&ac.dfa),
-            )),
-            vyre_reference::value::Value::from(pack_u32_slice(
-                &classic_ac_candidate_suffix2_mask_words(&ac.dfa),
-            )),
-            vyre_reference::value::Value::from(pack_u32_slice(&[haystack.len() as u32])),
-            vyre_reference::value::Value::from(vec![0_u8; haystack.len() * 4]),
-        ];
+        let mut inputs = ac_dfa_table_inputs(&ac.dfa, haystack);
+        inputs.push(u32_input(&classic_ac_candidate_end_byte_mask_words(
+            &ac.dfa,
+        )));
+        inputs.push(u32_input(&classic_ac_candidate_suffix2_mask_words(&ac.dfa)));
+        inputs.push(u32_input(&[haystack.len() as u32]));
+        inputs.push(vyre_reference::value::Value::from(vec![
+            0_u8;
+            haystack.len() * 4
+        ]));
         let outputs = vyre_reference::reference_eval(&program, &inputs).expect(
             "Fix: suffix2 prefiltered AC bounded count program should evaluate in reference backend.",
         );

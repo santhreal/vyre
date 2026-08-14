@@ -50,11 +50,9 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use super::planner::plan_flash_attention_scalar;
-use super::scaled_dot_product::direct_attention_program;
+use super::scaled_dot_product::{attention_score_nodes, direct_attention_program};
 use crate::region::wrap_anonymous;
-use vyre_primitives::nn::attention_stability::{
-    bounded_exp_arg, bounded_score, flush_tiny, positive_denominator,
-};
+use vyre_primitives::nn::attention_stability::{bounded_exp_arg, flush_tiny, positive_denominator};
 
 const OP_ID: &str = "vyre-libs::nn::flash_attention";
 
@@ -102,51 +100,13 @@ pub fn flash_attention(
         // discipline gate treats the j/k_idx/t loop nest as a child
         // composition (`flash_attention_row_accumulate`) and stops
         // counting nodes/loops once it descends past the boundary.
-        Node::loop_for(
-            "j",
-            Expr::u32(0),
-            Expr::u32(s),
-            vec![
-                // score = scale * dot(Q[row, :], K[j, :])
-                Node::let_bind("dot_val", Expr::f32(0.0)),
-                Node::loop_for(
-                    "k_idx",
-                    Expr::u32(0),
-                    Expr::u32(d),
-                    vec![Node::assign(
-                        "dot_val",
-                        Expr::add(
-                            Expr::var("dot_val"),
-                            Expr::mul(
-                                Expr::load(
-                                    q,
-                                    Expr::add(
-                                        Expr::mul(Expr::var("row"), Expr::u32(d)),
-                                        Expr::var("k_idx"),
-                                    ),
-                                ),
-                                Expr::load(
-                                    k,
-                                    Expr::add(
-                                        Expr::mul(Expr::var("j"), Expr::u32(d)),
-                                        Expr::var("k_idx"),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    )],
-                ),
-                // Clamp ±inf (from Q/K dot-product overflow) to -80
-                // BEFORE the online-softmax recurrence. inf would
-                // become m_new=inf, then score-m_new=NaN, exp(NaN)=NaN
-                // and poison the whole row. Crucially we preserve NaN
-                // inputs so the kernel's NaN-input contract still
-                // propagates them; only the finite-but-overflowing
-                // case is repaired.
-                Node::let_bind("score", {
-                    let raw = Expr::mul(Expr::var("dot_val"), scale_expr.clone());
-                    bounded_score(raw)
-                }),
+        Node::loop_for("j", Expr::u32(0), Expr::u32(s), {
+            // The clamp the shared score owner applies is load-bearing here:
+            // an overflowing dot product would make flash_m_new infinite,
+            // then `score - flash_m_new` NaN, and poison the whole row. A NaN
+            // INPUT still propagates, which is the kernel's contract.
+            let mut per_j = attention_score_nodes(q, k, d, scale_expr.clone());
+            per_j.extend([
                 // m_new = max(m, score)
                 Node::let_bind(
                     "flash_m_new",
@@ -218,8 +178,9 @@ pub fn flash_attention(
                 ),
                 Node::assign("flash_m", Expr::var("flash_m_new")),
                 Node::assign("flash_l", Expr::var("flash_l_new")),
-            ],
-        ),
+            ]);
+            per_j
+        }),
         // Final: out[row, t] = o[t] / max(l, MIN_POSITIVE)
         Node::let_bind("flash_denom", positive_denominator(Expr::var("flash_l"))),
         Node::loop_for(
@@ -323,23 +284,13 @@ mod tests {
             .map(|i| ((i as f32) * 0.19).sin() * 2.0)
             .collect();
         let run = |program: Program| {
-            let out_bytes = program
-                .buffers()
-                .iter()
-                .find(|b| b.name() == "out")
-                .map(|b| b.count() as usize * core::mem::size_of::<f32>())
-                .expect("Fix: output buffer present");
-            let outputs = vyre_reference::reference_eval(
+            crate::nn::attention::eval_qkv_program(
                 &program,
-                &[
-                    Value::from(f32_bytes(&q)),
-                    Value::from(f32_bytes(&k)),
-                    Value::from(f32_bytes(&v)),
-                    Value::from(vec![0u8; out_bytes]),
-                ],
+                &q,
+                &k,
+                &v,
+                "Fix: flash_attention must execute in the reference interpreter.",
             )
-            .expect("Fix: flash_attention must execute in the reference interpreter.");
-            decode_f32(&outputs[0].to_bytes())
         };
         let actual = run(flash_attention("q", "k", "v", "out", s, d).expect("Fix: build"));
         let expected = run(crate::nn::attention::attention_reference(

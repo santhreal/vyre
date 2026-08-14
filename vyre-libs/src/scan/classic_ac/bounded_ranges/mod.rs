@@ -234,6 +234,65 @@ impl AcInputBindings<'_> {
         ]);
         decls
     }
+
+    /// [`Self::decls`] plus the single-element read-write match counter every
+    /// bounded-ranges dispatch shape binds at slot 6.
+    ///
+    /// It deliberately stops there: slots 7 and up are the per-shape gate masks,
+    /// presence bitmaps and match sinks, which differ per program and stay with
+    /// their own builder.
+    pub(in crate::scan) fn decls_with_match_count(&self, match_count: &str) -> Vec<BufferDecl> {
+        let mut decls = self.decls();
+        decls.push(BufferDecl::read_write(match_count, 6, DataType::U32).with_count(1));
+        decls
+    }
+}
+
+/// The `dfa.output_records.len()` to u32 narrowing every bounded-ranges
+/// `try_build_*` entrypoint performs before it can size binding 3.
+///
+/// `program` names the dispatch shape in the message, and it is the only thing
+/// that differed across the six hand-written copies. What this deliberately does
+/// NOT do is clamp, saturate, or default: an unrepresentable record count has to
+/// reach the caller as an error, because a silently truncated `output_records`
+/// table drops matches with no other symptom.
+pub(in crate::scan) fn ac_ranges_output_records_len(
+    dfa: &CompiledDfa,
+    program: &str,
+) -> Result<u32, String> {
+    u32::try_from(dfa.output_records.len()).map_err(|source| {
+        format!(
+            "AC {program} DFA output record count {} exceeds u32 GPU buffer metadata: {source}. Fix: shard the pattern set or lower the DFA budget before dispatch.",
+            dfa.output_records.len()
+        )
+    })
+}
+
+/// Unwrap a bounded-ranges builder's `Result` for the infallible entrypoint,
+/// panicking with the recovery route rather than substituting a dispatchable
+/// program.
+///
+/// `program` names the dispatch shape and `fallible` the entrypoint a caller
+/// that must recover calls instead. Those two are the only positions that
+/// differed across the copies. The failure MODE is deliberately not a parameter:
+/// every bounded-ranges builder loses recall the same way, because an empty
+/// rejecting automaton and an all-zero candidate mask both admit nothing, so all
+/// of them fail closed here instead of returning something a caller would
+/// dispatch and trust.
+pub(in crate::scan) fn ac_ranges_program_or_fail_closed(
+    built: Result<Program, String>,
+    program: &str,
+    fallible: &str,
+) -> Program {
+    match built {
+        Ok(ready) => ready,
+        Err(error) => panic!(
+            "AC {program} program build failed: {error}. \
+             substituting an empty rejecting automaton or an all-zero candidate mask \
+             would silently lose every match; \
+             use {fallible} and shard oversized DFAs across multiple programs."
+        ),
+    }
 }
 
 /// Build a Program that scans `haystack` for any AC match and emits
@@ -356,10 +415,9 @@ pub fn classic_ac_bounded_ranges_program_with_subgroup_coalesce(
         output_records_len,
         pattern_count,
     }
-    .decls();
+    .decls_with_match_count(match_count);
     buffers.extend([
-        BufferDecl::read_write(match_count, 6, DataType::U32).with_count(1),
-        BufferDecl::output(matches, 7, DataType::U32).with_count(max_matches.saturating_mul(3)),
+        BufferDecl::output(matches, 7, DataType::U32).with_count(max_matches.saturating_mul(3))
     ]);
 
     Program::wrapped(
@@ -774,8 +832,8 @@ pub fn build_ac_bounded_ranges_program(
 /// `vyre-driver-cuda`).
 ///
 /// # Panics
-/// Panics when the automaton exceeds the GPU ABI limits. Returning an empty rejecting
-/// automaton would silently drop every match, so callers that must recover use
+/// Panics when the automaton exceeds the GPU ABI limits, through
+/// [`ac_ranges_program_or_fail_closed`]. Callers that must recover use
 /// [`try_build_ac_bounded_ranges_program_with_subgroup_coalesce`] and shard the DFA.
 #[must_use]
 pub fn build_ac_bounded_ranges_program_with_subgroup_coalesce(
@@ -784,26 +842,16 @@ pub fn build_ac_bounded_ranges_program_with_subgroup_coalesce(
     max_matches: u32,
     use_subgroup_coalesce: bool,
 ) -> Program {
-    match try_build_ac_bounded_ranges_program_with_subgroup_coalesce(
-        dfa,
-        pattern_count,
-        max_matches,
-        use_subgroup_coalesce,
-    ) {
-        Ok(program) => program,
-        Err(error) => {
-            // Returning an empty-rejecting program would silently drop every
-            // match without the caller knowing, a total recall-loss silent
-            // fallback. Fail closed instead. Callers that need graceful
-            // overflow handling must call try_build_ac_bounded_ranges_program_with_subgroup_coalesce
-            // directly and shard oversized DFAs across multiple programs.
-            panic!(
-                "AC bounded-ranges program build failed: {error}. \
-                 returning an empty rejecting automaton would silently drop every match; \
-                 use try_build_ac_bounded_ranges_program_with_subgroup_coalesce and shard oversized DFAs."
-            )
-        }
-    }
+    ac_ranges_program_or_fail_closed(
+        try_build_ac_bounded_ranges_program_with_subgroup_coalesce(
+            dfa,
+            pattern_count,
+            max_matches,
+            use_subgroup_coalesce,
+        ),
+        "bounded-ranges",
+        "try_build_ac_bounded_ranges_program_with_subgroup_coalesce",
+    )
 }
 
 /// Fallible variant of [`build_ac_bounded_ranges_program`].
@@ -837,12 +885,7 @@ pub fn try_build_ac_bounded_ranges_program_with_subgroup_coalesce(
     max_matches: u32,
     use_subgroup_coalesce: bool,
 ) -> Result<Program, String> {
-    let output_records_len = u32::try_from(dfa.output_records.len()).map_err(|source| {
-        format!(
-            "AC bounded-ranges DFA output record count {} exceeds u32 GPU buffer metadata: {source}. Fix: shard the pattern set or lower the DFA budget before dispatch.",
-            dfa.output_records.len()
-        )
-    })?;
+    let output_records_len = ac_ranges_output_records_len(dfa, "bounded-ranges")?;
     Ok(classic_ac_bounded_ranges_program_with_subgroup_coalesce(
         "haystack",
         "transitions",
@@ -897,6 +940,7 @@ pub fn classic_ac_bounded_ranges_scan(
 mod tests {
     use super::*;
     use crate::scan::classic_ac::classic_ac_compile;
+    use crate::scan::classic_ac::test_dispatch_and_decode::assert_infallible_matches_try;
 
     /// Behavioral regression guard: the infallible builder must wire the REAL DFA
     /// metadata (delegating to the `try_` variant's Ok program), never the deleted
@@ -910,23 +954,7 @@ mod tests {
         let via_try =
             try_build_ac_bounded_ranges_program_with_subgroup_coalesce(&ac.dfa, 3, 128, false)
                 .expect("valid DFA must build");
-        // Binding 3 is output_records: the empty fallback carried 0 here.
-        let records = via_infallible.buffers()[3].count;
-        assert_eq!(records as usize, ac.dfa.output_records.len());
-        assert!(
-            records > 0,
-            "infallible builder must not emit the empty-records fallback program"
-        );
-        // Binding 1 is the real transition table, not the 1-state stub.
-        assert_eq!(
-            via_infallible.buffers()[1].count,
-            ac.dfa.state_count.saturating_mul(256)
-        );
-        assert_eq!(via_infallible.buffers().len(), via_try.buffers().len());
-        assert_eq!(
-            via_infallible.buffers()[3].count,
-            via_try.buffers()[3].count
-        );
+        assert_infallible_matches_try("bounded-ranges", &via_infallible, &via_try, &ac.dfa);
     }
 
     /// Verify try_build_ac_bounded_ranges_program_with_subgroup_coalesce returns Ok for a valid

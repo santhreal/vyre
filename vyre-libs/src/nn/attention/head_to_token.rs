@@ -1,8 +1,8 @@
 //! Convert head-major attention output to token-major projection rows.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{DataType, Expr, Program};
 
-use crate::region::wrap_anonymous;
+use super::layout_permute::{check_layout_dims, layout_permute_program};
 
 const OP_ID: &str = "vyre-libs::nn::attention_head_to_token";
 
@@ -42,14 +42,11 @@ pub fn attention_head_to_token_typed(
     head_dim: u32,
     dtype: DataType,
 ) -> Result<Program, String> {
-    if batch == 0 || heads == 0 || sequence == 0 || head_dim == 0 {
-        return Err("Fix: attention_head_to_token requires nonzero dimensions".to_string());
-    }
-    if !matches!(dtype, DataType::F16 | DataType::BF16 | DataType::F32) {
-        return Err(format!(
-            "Fix: attention_head_to_token requires a floating dtype; got {dtype:?}"
-        ));
-    }
+    check_layout_dims(
+        "attention_head_to_token",
+        [batch, heads, sequence, head_dim],
+        &dtype,
+    )?;
     let count = [batch, heads, sequence, head_dim]
         .into_iter()
         .try_fold(1_u32, |product, value| product.checked_mul(value))
@@ -76,23 +73,7 @@ pub fn attention_head_to_token_typed(
             Expr::add(Expr::mul(token, Expr::u32(head_dim)), dimension),
         ),
     );
-    let body = vec![
-        Node::let_bind("index", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(index.clone(), Expr::u32(count)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index,
-                value: Expr::load(input, source),
-            }],
-        ),
-    ];
-    Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(count),
-            BufferDecl::output(output, 1, dtype).with_count(count),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+    Ok(layout_permute_program(
+        OP_ID, input, output, count, dtype, source,
     ))
 }

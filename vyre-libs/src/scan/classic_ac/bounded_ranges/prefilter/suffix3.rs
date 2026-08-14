@@ -8,6 +8,7 @@ use super::super::super::count_program::{
     CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
 use super::super::{
+    ac_ranges_output_records_len, ac_ranges_program_or_fail_closed,
     bounded_ranges_presence_and_positions_by_region_nodes, bounded_ranges_presence_by_region_nodes,
     bounded_ranges_presence_nodes, bounded_ranges_scan_nodes, AcInputBindings,
 };
@@ -279,12 +280,7 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_program(
     dfa: &CompiledDfa,
     pattern_count: u32,
 ) -> Result<Program, String> {
-    let output_records_len = u32::try_from(dfa.output_records.len()).map_err(|source| {
-        format!(
-            "AC bounded-ranges suffix3 presence DFA output record count {} exceeds u32 GPU buffer metadata: {source}. Fix: shard the pattern set or lower the DFA budget before dispatch.",
-            dfa.output_records.len()
-        )
-    })?;
+    let output_records_len = ac_ranges_output_records_len(dfa, "bounded-ranges suffix3 presence")?;
     Ok(classic_ac_bounded_ranges_suffix3_presence_program(
         "haystack",
         "transitions",
@@ -442,12 +438,8 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
     pattern_count: u32,
     max_regions: u32,
 ) -> Result<Program, String> {
-    let output_records_len = u32::try_from(dfa.output_records.len()).map_err(|source| {
-        format!(
-            "AC bounded-ranges suffix3 region-presence DFA output record count {} exceeds u32 GPU buffer metadata: {source}. Fix: shard the pattern set or lower the DFA budget before dispatch.",
-            dfa.output_records.len()
-        )
-    })?;
+    let output_records_len =
+        ac_ranges_output_records_len(dfa, "bounded-ranges suffix3 region-presence")?;
     Ok(
         classic_ac_bounded_ranges_suffix3_presence_by_region_program(
             "haystack",
@@ -664,12 +656,8 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_prog
             "AC bounded-ranges fused positioned pattern boundary {first_positioned_pattern_id} exceeds pattern count {pattern_count}. Fix: pass a boundary in 0..={pattern_count}."
         ));
     }
-    let output_records_len = u32::try_from(dfa.output_records.len()).map_err(|source| {
-        format!(
-            "AC bounded-ranges suffix3 region-presence+positions DFA output record count {} exceeds u32 GPU buffer metadata: {source}. Fix: shard the pattern set or lower the DFA budget before dispatch.",
-            dfa.output_records.len()
-        )
-    })?;
+    let output_records_len =
+        ac_ranges_output_records_len(dfa, "bounded-ranges suffix3 region-presence+positions")?;
     Ok(
         classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered(
             "haystack",
@@ -716,8 +704,8 @@ pub fn build_ac_bounded_ranges_suffix3_prefilter_program(
 /// exposes the match-append coalescing selector.
 ///
 /// # Panics
-/// Panics when the suffix3 prefilter exceeds the GPU ABI limits. An empty rejecting
-/// automaton would silently drop every match, so callers that must recover use
+/// Panics when the suffix3 prefilter exceeds the GPU ABI limits, through
+/// [`ac_ranges_program_or_fail_closed`]. Callers that must recover use
 /// [`try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce`].
 #[must_use]
 pub fn build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
@@ -726,26 +714,16 @@ pub fn build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
     max_matches: u32,
     use_subgroup_coalesce: bool,
 ) -> Program {
-    match try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
-        dfa,
-        pattern_count,
-        max_matches,
-        use_subgroup_coalesce,
-    ) {
-        Ok(program) => program,
-        Err(error) => {
-            // Returning an empty-rejecting program would silently drop every
-            // match without the caller knowing, a total recall-loss silent
-            // fallback (Law 10). Fail closed instead. Callers that need graceful
-            // overflow handling call try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce
-            // directly and shard oversized DFAs across multiple programs.
-            panic!(
-                "AC bounded-ranges suffix3 prefilter program build failed: {error}. \
-                 returning an empty rejecting automaton would silently drop every match; \
-                 use try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce and shard oversized DFAs."
-            )
-        }
-    }
+    ac_ranges_program_or_fail_closed(
+        try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
+            dfa,
+            pattern_count,
+            max_matches,
+            use_subgroup_coalesce,
+        ),
+        "bounded-ranges suffix3 prefilter",
+        "try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce",
+    )
 }
 
 /// Fallible variant of [`build_ac_bounded_ranges_suffix3_prefilter_program`].
@@ -779,12 +757,7 @@ pub fn try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coale
     max_matches: u32,
     use_subgroup_coalesce: bool,
 ) -> Result<Program, String> {
-    let output_records_len = u32::try_from(dfa.output_records.len()).map_err(|source| {
-        format!(
-            "AC bounded-ranges suffix3 prefilter DFA output record count {} exceeds u32 GPU buffer metadata: {source}. Fix: shard the pattern set or lower the DFA budget before dispatch.",
-            dfa.output_records.len()
-        )
-    })?;
+    let output_records_len = ac_ranges_output_records_len(dfa, "bounded-ranges suffix3 prefilter")?;
     Ok(
         classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
             "haystack",
@@ -811,17 +784,15 @@ pub fn try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coale
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::pack_haystack_u32;
     use crate::scan::classic_ac::test_dispatch_and_decode::{
-        decode_match_triples, pattern_lengths,
+        ac_ranges_inputs, assert_infallible_matches_try, decode_match_triples, pattern_lengths,
+        u32_input,
     };
     use crate::scan::classic_ac::{
         classic_ac_bounded_ranges_scan, classic_ac_candidate_end_byte_mask_words,
         classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,
         classic_ac_compile,
     };
-    use crate::scan::haystack::pack_haystack_u32;
-    use vyre_primitives::wire::pack_u32_slice;
 
     /// Behavioral Law-10 regression guard: the infallible suffix3 prefilter builder
     /// must wire the REAL DFA (delegating to the `try_` Ok program), never a
@@ -838,21 +809,11 @@ mod tests {
             &ac.dfa, 3, 128, false,
         )
         .expect("valid DFA must build");
-        // Binding 3 is output_records: the empty fallback carried 0 here.
-        let records = via_infallible.buffers()[3].count;
-        assert_eq!(records as usize, ac.dfa.output_records.len());
-        assert!(
-            records > 0,
-            "infallible suffix3 prefilter builder must not emit the empty rejecting program"
-        );
-        assert_eq!(
-            via_infallible.buffers()[1].count,
-            ac.dfa.state_count.saturating_mul(256)
-        );
-        assert_eq!(via_infallible.buffers().len(), via_try.buffers().len());
-        assert_eq!(
-            via_infallible.buffers()[3].count,
-            via_try.buffers()[3].count
+        assert_infallible_matches_try(
+            "bounded-ranges suffix3 prefilter",
+            &via_infallible,
+            &via_try,
+            &ac.dfa,
         );
     }
 
@@ -870,24 +831,15 @@ mod tests {
             128,
             false,
         );
-        let inputs = vec![
-            vyre_reference::value::Value::from(pack_haystack_u32(haystack)),
-            vyre_reference::value::Value::from(pack_u32_slice(&ac.dfa.transitions)),
-            vyre_reference::value::Value::from(pack_u32_slice(&ac.dfa.output_offsets)),
-            vyre_reference::value::Value::from(pack_u32_slice(&ac.dfa.output_records)),
-            vyre_reference::value::Value::from(pack_u32_slice(&lengths)),
-            vyre_reference::value::Value::from(pack_u32_slice(&[haystack.len() as u32])),
-            vyre_reference::value::Value::from(pack_u32_slice(&[0])),
-            vyre_reference::value::Value::from(pack_u32_slice(
-                &classic_ac_candidate_end_byte_mask_words(&ac.dfa),
-            )),
-            vyre_reference::value::Value::from(pack_u32_slice(
-                &classic_ac_candidate_suffix2_mask_words(&ac.dfa),
-            )),
-            vyre_reference::value::Value::from(pack_u32_slice(
-                &classic_ac_candidate_suffix3_bloom_words(&patterns),
-            )),
-        ];
+        let mut inputs = ac_ranges_inputs(&ac.dfa, haystack, &lengths);
+        inputs.push(u32_input(&[0]));
+        inputs.push(u32_input(&classic_ac_candidate_end_byte_mask_words(
+            &ac.dfa,
+        )));
+        inputs.push(u32_input(&classic_ac_candidate_suffix2_mask_words(&ac.dfa)));
+        inputs.push(u32_input(&classic_ac_candidate_suffix3_bloom_words(
+            &patterns,
+        )));
         let outputs = vyre_reference::reference_eval(&program, &inputs).expect(
             "Fix: suffix3 prefiltered AC bounded-ranges program should evaluate in reference backend.",
         );

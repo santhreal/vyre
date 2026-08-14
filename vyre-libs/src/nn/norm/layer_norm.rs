@@ -15,7 +15,9 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
-use crate::builder::{check_tensors, strided_accumulate2_child, BuildOptions};
+use crate::builder::{
+    check_same_shape, check_tensors, checked_element_count, strided_accumulate2_child, BuildOptions,
+};
 use crate::nn::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
 #[cfg(test)]
 use crate::region::wrap;
@@ -59,14 +61,7 @@ impl LayerNorm {
             OP_ID,
             &[(&self.input, DataType::F32), (&self.output, DataType::F32)],
         )?;
-        if self.input.shape != self.output.shape {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.output.name.as_str().to_string(),
-                found: self.output.shape.to_vec(),
-                expected: self.input.shape.to_vec(),
-                op: OP_ID,
-            });
-        }
+        check_same_shape(OP_ID, &self.input, &self.output)?;
         // V7-CORR-008: reject negative or NaN eps so sqrt(var + eps) never
         // poisons the output with NaN. Positive zero is allowed (the
         // caller accepts exact-divide-by-zero risk on zero-variance input).
@@ -78,23 +73,9 @@ impl LayerNorm {
                 op: OP_ID,
             });
         }
-        let n = self
-            .input
-            .element_count()
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: self.input.name_str().to_string(),
-                shape: self.input.shape.to_vec(),
-            })?;
-        // V7-CORR-012/013 parallel: reject n=0 so the first `Expr::load(input, 0)`
-        // is not out-of-bounds.
-        if n == 0 {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.input.name.as_str().to_string(),
-                found: self.input.shape.to_vec(),
-                expected: vec![1],
-                op: OP_ID,
-            });
-        }
+        // V7-CORR-012/013 parallel: the nonzero floor `checked_element_count`
+        // enforces is what keeps the first `Expr::load(input, 0)` in bounds.
+        let n = checked_element_count(OP_ID, &self.input)?;
         let workgroup = self
             .options
             .workgroup_size

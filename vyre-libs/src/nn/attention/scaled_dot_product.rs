@@ -25,7 +25,20 @@ use vyre_primitives::nn::attention_stability::{
 const OP_ID: &str = "vyre-libs::nn::attention";
 const REFERENCE_OP_ID: &str = "vyre-libs::nn::attention_reference";
 
-fn attention_score_nodes(q: &str, k: &str, d: u32, scale_expr: Expr) -> Vec<Node> {
+/// The scaled QK score for one `(row, j)` pair: `bounded_score(scale * dot(Q[row,
+/// :], K[j, :]))`, binding `dot_val` then `score`.
+///
+/// THE dot-product score for this dialect. The three-pass direct schedule here
+/// and the online-softmax recurrence in
+/// [`flash_attention`](super::flash_attention::flash_attention) both derive a
+/// score per `(row, j)` and each carried its own copy of the `k_idx` loop, so a
+/// change to the row-major index arithmetic or to the overflow clamp now reaches
+/// both at once. `scale_expr` is the only position that differs: the direct
+/// schedule passes an owned constant, the recurrence a clone it reuses per tile.
+///
+/// It reads, and does not bind, `row` and `j`. Both are the caller's loop
+/// variables, because the two schedules iterate them in opposite nesting orders.
+pub(super) fn attention_score_nodes(q: &str, k: &str, d: u32, scale_expr: Expr) -> Vec<Node> {
     vec![
         Node::let_bind("dot_val", Expr::f32(0.0)),
         Node::loop_for(
@@ -749,23 +762,13 @@ mod tests {
         let k = [0.5f32, 1.5, 2.5, 3.5];
         let v = [10.0f32, 20.0, 30.0, 40.0];
         let program = attention("q", "k", "v", "out", s, d);
-        let out_bytes = program
-            .buffers()
-            .iter()
-            .find(|b| b.name() == "out")
-            .map(|b| b.count() as usize * core::mem::size_of::<f32>())
-            .expect("Fix: output buffer present");
-        let outputs = vyre_reference::reference_eval(
+        let out = crate::nn::attention::eval_qkv_program(
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(f32_bytes(&k)),
-                Value::from(f32_bytes(&v)),
-                Value::from(vec![0u8; out_bytes]),
-            ],
-        )
-        .expect("Fix: attention single token must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+            &q,
+            &k,
+            &v,
+            "Fix: attention single token must execute",
+        );
         for (i, (&a, &e)) in out.iter().zip(v.iter()).enumerate() {
             assert!(
                 (a - e).abs() <= 1.0e-4,
@@ -785,23 +788,13 @@ mod tests {
         let k = [1.0f32, 0.0, 0.0, 1.0];
         let v = [10.0f32, 20.0, 30.0, 40.0];
         let program = attention("q", "k", "v", "out", s, d);
-        let out_bytes = program
-            .buffers()
-            .iter()
-            .find(|b| b.name() == "out")
-            .map(|b| b.count() as usize * core::mem::size_of::<f32>())
-            .expect("Fix: output buffer present");
-        let outputs = vyre_reference::reference_eval(
+        let out = crate::nn::attention::eval_qkv_program(
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(f32_bytes(&k)),
-                Value::from(f32_bytes(&v)),
-                Value::from(vec![0u8; out_bytes]),
-            ],
-        )
-        .expect("Fix: attention must not panic on NaN in Q");
-        let out = decode_f32(&outputs[0].to_bytes());
+            &q,
+            &k,
+            &v,
+            "Fix: attention must not panic on NaN in Q",
+        );
         assert!(
             out.iter().any(|v| v.is_nan()),
             "attention must propagate NaN in Q instead of silently producing finite output {:?}",
@@ -819,23 +812,13 @@ mod tests {
         let mut v = [10.0f32, 20.0, 30.0, 40.0];
         v[0] = f32::NAN;
         let program = attention("q", "k", "v", "out", s, d);
-        let out_bytes = program
-            .buffers()
-            .iter()
-            .find(|b| b.name() == "out")
-            .map(|b| b.count() as usize * core::mem::size_of::<f32>())
-            .expect("Fix: output buffer present");
-        let outputs = vyre_reference::reference_eval(
+        let out = crate::nn::attention::eval_qkv_program(
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(f32_bytes(&k)),
-                Value::from(f32_bytes(&v)),
-                Value::from(vec![0u8; out_bytes]),
-            ],
-        )
-        .expect("Fix: attention must not panic on NaN in V");
-        let out = decode_f32(&outputs[0].to_bytes());
+            &q,
+            &k,
+            &v,
+            "Fix: attention must not panic on NaN in V",
+        );
         assert!(
             out.iter().any(|v| v.is_nan()),
             "attention must propagate NaN in V instead of silently producing finite output {:?}",

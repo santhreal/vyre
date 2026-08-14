@@ -145,6 +145,59 @@ pub fn check_tensors(
     Ok(())
 }
 
+/// Reject an output whose shape differs from the input's.
+///
+/// Every shape-preserving builder in `nn` restated this check verbatim, down to
+/// blaming the OUTPUT tensor and reporting the input's shape as `expected`.
+/// That attribution is the contract: the input is what the caller asked to
+/// transform, so a divergent output is the output's defect.
+///
+/// It deliberately compares shapes and nothing else. Dtype and name-uniqueness
+/// stay with [`check_tensors`], and an op-specific parameter such as an epsilon
+/// range stays with the op that owns it, so a caller keeps control of the order
+/// its errors surface in.
+pub fn check_same_shape(
+    op: &'static str,
+    input: &TensorRef,
+    output: &TensorRef,
+) -> Result<(), TensorRefError> {
+    if input.shape != output.shape {
+        return Err(TensorRefError::ShapeMismatch {
+            name: output.name.as_str().to_string(),
+            found: output.shape.to_vec(),
+            expected: input.shape.to_vec(),
+            op,
+        });
+    }
+    Ok(())
+}
+
+/// The flattened element count of a tensor a reduction will index, rejecting
+/// both an unrepresentable product and an empty tensor.
+///
+/// The nonzero floor is a contract, not defensive padding: a tiled reduction
+/// seeds its accumulator from `load(input, 0)` before the loop bound is known,
+/// so an empty tensor is an out-of-bounds read rather than an empty result.
+/// Emptiness is reported as a `ShapeMismatch` against `[1]`, which is what the
+/// hand-written copies in `nn::softmax` and `nn::layer_norm` both returned.
+pub fn checked_element_count(op: &'static str, input: &TensorRef) -> Result<u32, TensorRefError> {
+    let n = input
+        .element_count()
+        .ok_or_else(|| TensorRefError::ElementCountOverflow {
+            name: input.name_str().to_string(),
+            shape: input.shape.to_vec(),
+        })?;
+    if n == 0 {
+        return Err(TensorRefError::ShapeMismatch {
+            name: input.name.as_str().to_string(),
+            found: input.shape.to_vec(),
+            expected: vec![1],
+            op,
+        });
+    }
+    Ok(n)
+}
+
 #[cfg(test)]
 mod cat_a_builder_option_macro_tests {
     #![allow(unreachable_pub)]

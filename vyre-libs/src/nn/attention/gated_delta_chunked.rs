@@ -56,13 +56,7 @@ fn key_norm_nodes(
                 ),
             ],
         ),
-        Node::let_bind(
-            scale,
-            Expr::UnOp {
-                op: UnOp::InverseSqrt,
-                operand: Box::new(Expr::add(Expr::var(sum), Expr::f32(eps))),
-            },
-        ),
+        gated_delta_layout::l2_scale_node(scale, &sum, eps),
     ]
 }
 
@@ -251,22 +245,7 @@ pub(super) fn chunked_gated_delta_impl(
                 ),
             ),
         ),
-        Node::let_bind(
-            "beta",
-            Expr::div(
-                Expr::f32(1.0),
-                Expr::add(
-                    Expr::f32(1.0),
-                    Expr::UnOp {
-                        op: UnOp::Exp,
-                        operand: Box::new(Expr::UnOp {
-                            op: UnOp::Negate,
-                            operand: Box::new(Expr::var("beta_logit")),
-                        }),
-                    },
-                ),
-            ),
-        ),
+        gated_delta_layout::beta_gate_node(),
         Node::loop_for("tri_value", Expr::u32(0), Expr::u32(value_dim), {
             let mut value_nodes = vec![
                 Node::let_bind(
@@ -534,19 +513,7 @@ pub(super) fn chunked_gated_delta_impl(
                 ),
             ],
         ),
-        Node::let_bind(
-            "query_scale",
-            Expr::mul(
-                Expr::UnOp {
-                    op: UnOp::InverseSqrt,
-                    operand: Box::new(Expr::add(Expr::var("query_sum"), Expr::f32(eps))),
-                },
-                Expr::UnOp {
-                    op: UnOp::InverseSqrt,
-                    operand: Box::new(Expr::f32(key_dim as f32)),
-                },
-            ),
-        ),
+        gated_delta_layout::query_scale_node(eps, key_dim),
     ];
     output_row.push(Node::loop_for(
         "output_value",

@@ -981,3 +981,7 @@ required-features = ["rule"]
 name = "solvers_dispatch_softmax_contract"
 path = "tests/solvers_dispatch_softmax_contract.rs"
 required-features = ["solvers"]
+
+[[test]]
+name = "family_duplication_budget"
+path = "tests/family_duplication_budget.rs"
