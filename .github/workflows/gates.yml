@@ -33,6 +33,25 @@ jobs:
       - name: External IR extension demo builds standalone
         run: bash scripts/check_external_ir_extension_ci.sh
 
+      # Manifest text gives direct edges only, which is all that
+      # check_architectural_invariants.sh and `xtask check-tier-deps` read. A
+      # forbidden edge three crates below a member is invisible to both and
+      # exists only in the resolved graph, so this runs `cargo tree` per member
+      # and holds every transitive internal edge to the closure
+      # docs/CRATE_OWNERSHIP.toml declares. It used to send cargo's stderr to
+      # /dev/null, so a cargo that could not resolve the workspace printed "All
+      # layer invariants green." and exited 0.
+      - name: Transitive layer closure per member
+        run: bash scripts/check_layering.sh
+
+      # bench-regression.yml times one case, which proves the runner works, not
+      # that the registry still covers the dimensions the audit rows claim. This
+      # holds each dimension to a named case and resolves every `--case`
+      # reference in a tracked file against the live registry, so a renamed case
+      # fails here instead of at the next release benchmark.
+      - name: Benchmark registry covers every claimed dimension
+        run: bash scripts/check_deep_bench_coverage.sh
+
   tree-rules:
     name: Rules that need no build
     runs-on: ubuntu-latest
@@ -45,6 +64,18 @@ jobs:
       # directory that no manifest lists is only visible here.
       - name: No orphan crate directories
         run: bash scripts/check_workspace_filesystem.sh
+
+      # A published crate depending on a published member must carry a version,
+      # or `cargo publish` has nothing to resolve outside this workspace; a
+      # dependency on a `publish = false` member must not carry one, because that
+      # version can never exist on the registry. Both crate sets are derived from
+      # tracked manifests through each member's own `publish` key, including
+      # renames via `package =` and versions inherited through
+      # `workspace = true`, so a new member is classified without editing a list.
+      # Nothing else sees this: cargo resolves path edges locally and is happy,
+      # and the failure appears only during a publish nobody can rehearse.
+      - name: Internal dependency versions match publishability
+        run: bash scripts/check_internal_deps_have_versions.sh
 
       # `missing_docs = "deny"` in [workspace.lints.rust] is the floor every
       # member inherits. A crate-root #![allow(missing_docs)] silently removes
@@ -141,3 +172,59 @@ jobs:
       # that resolves outside the repository.
       - name: Every manifest path edge resolves to a tracked member
         run: bash scripts/check_path_deps_resolve.sh
+
+  feature-msrv:
+    name: Every feature compiles alone on the MSRV
+    runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      # [workspace.package].rust-version is the single owner of the MSRV, so the
+      # toolchain is installed from that value instead of pinned a second time
+      # here, where a bump would leave the two disagreeing.
+      - name: Install the advertised MSRV toolchain
+        run: |
+          rustup toolchain install --profile minimal \
+            "$(python3 scripts/lib/read_toml_values.py Cargo.toml MSRV workspace.package.rust-version)"
+
+      # Two classes, neither reachable from another workflow. Feature isolation:
+      # strict.yml builds --all-features, a union in which a feature whose
+      # prerequisites some other feature happens to enable compiles anyway, and
+      # ci.yml builds default features only, so a granular feature is never
+      # built alone. MSRV: ci.yml's toolchain matrix is stable and nightly, so
+      # nothing compiled this workspace on the version it publishes. The matrix
+      # is derived from tracked manifests, so a new feature or member joins it
+      # and fails here until it compiles.
+      - name: Feature-isolated MSRV sweep
+        run: bash scripts/check_feature_msrv.sh
+
+  feature-gated-sweeps:
+    name: Oracle-matrix sweeps ci.yml cannot reach
+    runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      # ci.yml runs `./cargo_full test --workspace` with default features, so a
+      # sweep whose [[test]] required-features name a non-default feature is
+      # skipped there, and strict.yml builds --all-targets without running
+      # anything. These are the oracle-parity matrices, so a skipped one is
+      # unproven parity. Roster and per-crate features come from
+      # scripts/lib/sweep_targets.py, which reads tracked sources and each
+      # crate's own [[test]] entries, so a new sweep runs without an edit here
+      # and a stale [[test]] entry fails instead of reserving features for a
+      # target that cannot build.
+      - name: Sweep oracle matrices
+        run: bash scripts/run_sweep_oracle_matrix.sh
+
+      # The volume waves are the same rule at 16k cases per target. Run as a
+      # single shard of one: sharding exists so a developer can split the wall
+      # time locally, and four hosted runners would each rebuild the workspace
+      # to divide well under a minute of test time.
+      - name: Volume oracle matrix waves
+        run: bash scripts/run_volume_sweep_shard.sh 0 1
