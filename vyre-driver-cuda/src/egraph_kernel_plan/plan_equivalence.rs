@@ -4,8 +4,8 @@ use crate::egraph_device_image::CudaEGraphDeviceKernelView;
 use vyre_foundation::optimizer::eqsat_gpu::{Equivalence, GpuEGraphDeviceImage};
 
 use super::{
-    constants::SIGNATURE_BUCKET_RECORD_WORDS,
     device_image_rows::{packed_rows_structurally_equal, validate_image_view_matches},
+    kernel_abi::SIGNATURE_BUCKET_RECORD_WORDS,
     plan_cuda_egraph_signature_buckets,
     signature_pair_ordinals::cuda_egraph_signature_pair_rows,
     CudaEGraphKernelLaunchConfig, CudaEGraphKernelPlanError, CudaEGraphSignatureBucketDeviceImage,

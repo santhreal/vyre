@@ -737,8 +737,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   opted in, and each file carried its own copy of all three: the lane width,
   the seed, the program shapes, the sequence-step and read-range literals, the
   borrowed-fallback predicate, and the native compact-readback telemetry block.
-  `vyre-driver-cuda/tests/resident_dispatch_contracts/support.rs` now owns
-  them. A copy that had already drifted is what the split cost:
+  `vyre-driver-cuda/tests/resident_dispatch_contracts/resident_lane_fixture.rs`
+  now owns them. A copy that had already drifted is what the split cost:
   `repeated_sequence_contracts.rs` carried a second test with the same name as
   the parent's release-path contract, asserting the same borrowed-fallback
   counter over a multiply program but never checking the output lanes, so a run
@@ -1449,6 +1449,33 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   now takes `vyre-libs` with `default-features = false`, since it uses only
   `dispatch_buffers` and `graph`, so an optimizer-only consumer resolves seven
   primitive features instead of thirteen.
+- The feature-isolation gate records the eight pairs it was missing:
+  `vyre-registry-link` with no default features and with each of its `cuda`,
+  `metal`, `operations`, `reference`, `spirv` and `wgpu` features, and
+  `vyre-test-support` with `ir-fixtures`. The gate derives its axis from the
+  manifests at run time, so both crates turned it red the moment they landed
+  after the recorded set was written. Every one of the eight compiles. The
+  `SOURCES` builder in `vyre-registry-link/src/backend.rs` also stops binding a
+  `mut` vector that only the feature-enabled builds mutate; the linked sources
+  are now one `vec!` whose elements carry the `cfg`, so the no-default-features
+  probe compiles without a warning.
+- The feature-isolation axis judges two kinds of selection it never covered.
+  The plain default build of each member, which is what `cargo check -p
+  <member>` resolves and which neither the `--no-default-features` probe nor
+  any single-feature probe is, and every selection a workspace edge asks of a
+  sibling, spelled in the `feature` column as a comma-joined list that opens
+  with `(default)` when the edge keeps defaults. Both holes were load-bearing.
+  `vyre-aot` and `vyre-pass-engine` do not compile under their own default
+  build, which is why the public-API snapshot gate could not extract either
+  surface, and `vyre-libs` asks `vyre-primitives` for `graph`,
+  `inventory-registry` and `text` together, a combination no single-feature
+  probe reaches. Cargo unifies features across a build, so a whole-workspace
+  check hides a break inside such a selection behind whichever unrelated member
+  happens to enable the missing piece. `--sweep --write` now merges what a run
+  observed over the rows already recorded, and `--only-unrecorded` narrows the
+  compiling to the selections that have no row yet, so recording one decision
+  no longer costs a sweep of the whole axis, which is how the recorded set went
+  stale.
 
 ## [0.7.1] - 2026-08-01
 

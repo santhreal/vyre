@@ -11,12 +11,12 @@ mod backend_canonicalization;
 mod backend_rewrite;
 #[path = "egraph_kernel_plan/backend_structural.rs"]
 mod backend_structural;
-#[path = "egraph_kernel_plan/constants.rs"]
-mod constants;
 #[path = "egraph_kernel_plan/device_image_rows.rs"]
 mod device_image_rows;
 #[path = "egraph_kernel_plan/error.rs"]
 mod error;
+#[path = "egraph_kernel_plan/kernel_abi.rs"]
+mod kernel_abi;
 #[path = "egraph_kernel_plan/launch_waves.rs"]
 mod launch_waves;
 #[path = "egraph_kernel_plan/plan_equivalence.rs"]
@@ -49,14 +49,14 @@ mod ptx;
 #[path = "egraph_kernel_plan/tests/mod.rs"]
 mod tests;
 
-pub use constants::{
+pub use error::CudaEGraphKernelPlanError;
+pub use kernel_abi::{
     CUDA_EGRAPH_CANONICAL_REWRITE_KERNEL_ENTRY, CUDA_EGRAPH_CANONICAL_REWRITE_KERNEL_PARAM_COUNT,
     CUDA_EGRAPH_CANONICAL_REWRITE_RECORD_WORDS, CUDA_EGRAPH_SIGNATURE_BUCKET_RECORD_WORDS,
     CUDA_EGRAPH_SIGNATURE_REFRESH_KERNEL_ENTRY, CUDA_EGRAPH_SIGNATURE_REFRESH_KERNEL_PARAM_COUNT,
     CUDA_EGRAPH_STRUCTURAL_EQUIVALENCE_KERNEL_ENTRY,
     CUDA_EGRAPH_STRUCTURAL_EQUIVALENCE_KERNEL_PARAM_COUNT,
 };
-pub use error::CudaEGraphKernelPlanError;
 pub use plan_equivalence::{
     collect_cuda_egraph_structural_equivalences, pack_cuda_egraph_signature_bucket_device_image,
     plan_cuda_egraph_structural_equivalence_launch_artifact,
