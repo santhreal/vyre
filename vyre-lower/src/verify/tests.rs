@@ -1,4 +1,5 @@
 use super::*;
+use crate::descriptor_builder::{effect, lit, op};
 use crate::{
     BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
 };
@@ -26,21 +27,9 @@ fn empty_kernel_verifies() {
 fn well_formed_kernel_verifies() {
     let desc = empty_desc(
         vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![0, 1],
-                result: Some(2),
-            },
+            lit(0, 0),
+            lit(1, 1),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 2),
         ],
         vec![LiteralValue::U32(3), LiteralValue::U32(4)],
     );
@@ -51,16 +40,8 @@ fn well_formed_kernel_verifies() {
 fn duplicate_result_id_detected() {
     let desc = empty_desc(
         vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            }, // dup
+            lit(0, 0),
+            lit(0, 0), // dup
         ],
         vec![LiteralValue::U32(1)],
     );
@@ -76,16 +57,8 @@ fn duplicate_result_id_detected() {
 fn dangling_result_ref_detected() {
     let desc = empty_desc(
         vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![0, 99], // 99 is not produced anywhere
-                result: Some(1),
-            },
+            lit(0, 0),
+            effect(KernelOpKind::BinOpKind(BinOp::Add), [0, 99]),
         ],
         vec![LiteralValue::U32(1)],
     );
@@ -100,11 +73,7 @@ fn dangling_result_ref_detected() {
 #[test]
 fn literal_pool_out_of_range_detected() {
     let desc = empty_desc(
-        vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![5], // pool only has 1 entry
-            result: Some(0),
-        }],
+        vec![effect(KernelOpKind::Literal, [5])],
         vec![LiteralValue::U32(1)],
     );
     let r = verify(&desc);
@@ -126,18 +95,7 @@ fn child_body_index_out_of_range_detected() {
         bindings: BindingLayout { slots: vec![] },
         dispatch: Dispatch::new(1, 1, 1),
         body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StructuredIfThen,
-                    operands: vec![0, 7], // child idx 7 with no children
-                    result: None,
-                },
-            ],
+            ops: vec![lit(0, 0), effect(KernelOpKind::StructuredIfThen, [0, 7])],
             child_bodies: vec![],
             literals: vec![LiteralValue::U32(1)],
         },
@@ -157,11 +115,7 @@ fn child_body_index_out_of_range_detected() {
 #[test]
 fn literal_op_with_no_operands_detected() {
     let desc = empty_desc(
-        vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![],
-            result: Some(0),
-        }],
+        vec![op(KernelOpKind::Literal, [], 0)],
         vec![LiteralValue::U32(1)],
     );
     let r = verify(&desc);
@@ -174,18 +128,7 @@ fn literal_op_with_no_operands_detected() {
 #[test]
 fn operand_count_too_short_detected() {
     let desc = empty_desc(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![0], // only 1 operand, Add needs 2
-                result: Some(1),
-            },
-        ],
+        vec![lit(0, 0), effect(KernelOpKind::BinOpKind(BinOp::Add), [0])],
         vec![LiteralValue::U32(1)],
     );
     let r = verify(&desc);
@@ -204,21 +147,9 @@ fn errors_are_collected_not_short_circuited() {
     // 3 distinct violations in one body.
     let desc = empty_desc(
         vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![99],
-                result: Some(0),
-            }, // pool oor
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            }, // dup
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![100, 200], // dangling refs
-                result: Some(1),
-            },
+            lit(99, 0), // pool oor
+            lit(0, 0),  // dup
+            effect(KernelOpKind::BinOpKind(BinOp::Add), [100, 200]),
         ],
         vec![LiteralValue::U32(1)],
     );
@@ -236,11 +167,7 @@ fn child_body_violations_recurse() {
         body: KernelBody {
             ops: vec![],
             child_bodies: vec![KernelBody {
-                ops: vec![KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![99],
-                    result: Some(0),
-                }],
+                ops: vec![lit(99, 0)],
                 child_bodies: vec![],
                 literals: vec![LiteralValue::U32(1)],
             }],
@@ -255,11 +182,7 @@ fn child_body_violations_recurse() {
 #[test]
 fn child_body_may_capture_parent_result_available_before_control_op() {
     let child = KernelBody {
-        ops: vec![KernelOp {
-            kind: KernelOpKind::BinOpKind(BinOp::Add),
-            operands: vec![0, 0],
-            result: Some(1),
-        }],
+        ops: vec![op(KernelOpKind::BinOpKind(BinOp::Add), [0, 0], 1)],
         child_bodies: vec![],
         literals: vec![],
     };
@@ -268,18 +191,7 @@ fn child_body_may_capture_parent_result_available_before_control_op() {
         bindings: BindingLayout { slots: vec![] },
         dispatch: Dispatch::new(1, 1, 1),
         body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StructuredBlock,
-                    operands: vec![0],
-                    result: None,
-                },
-            ],
+            ops: vec![lit(0, 0), effect(KernelOpKind::StructuredBlock, [0])],
             child_bodies: vec![child],
             literals: vec![LiteralValue::U32(7)],
         },
@@ -291,11 +203,7 @@ fn child_body_may_capture_parent_result_available_before_control_op() {
 #[test]
 fn child_body_cannot_capture_parent_result_declared_after_control_op() {
     let child = KernelBody {
-        ops: vec![KernelOp {
-            kind: KernelOpKind::BinOpKind(BinOp::Add),
-            operands: vec![1, 1],
-            result: Some(2),
-        }],
+        ops: vec![op(KernelOpKind::BinOpKind(BinOp::Add), [1, 1], 2)],
         child_bodies: vec![],
         literals: vec![],
     };
@@ -305,21 +213,9 @@ fn child_body_cannot_capture_parent_result_declared_after_control_op() {
         dispatch: Dispatch::new(1, 1, 1),
         body: KernelBody {
             ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StructuredBlock,
-                    operands: vec![0],
-                    result: None,
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
+                lit(0, 0),
+                effect(KernelOpKind::StructuredBlock, [0]),
+                lit(1, 1),
             ],
             child_bodies: vec![child],
             literals: vec![LiteralValue::U32(7), LiteralValue::U32(9)],
@@ -339,11 +235,7 @@ fn child_body_cannot_capture_parent_result_declared_after_control_op() {
 #[test]
 fn parent_body_may_read_result_assigned_by_completed_child_body() {
     let child = KernelBody {
-        ops: vec![KernelOp {
-            kind: KernelOpKind::BinOpKind(BinOp::Add),
-            operands: vec![0, 0],
-            result: Some(1),
-        }],
+        ops: vec![op(KernelOpKind::BinOpKind(BinOp::Add), [0, 0], 1)],
         child_bodies: vec![],
         literals: vec![],
     };
@@ -353,21 +245,9 @@ fn parent_body_may_read_result_assigned_by_completed_child_body() {
         dispatch: Dispatch::new(1, 1, 1),
         body: KernelBody {
             ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StructuredBlock,
-                    operands: vec![0],
-                    result: None,
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                    operands: vec![1, 0],
-                    result: Some(2),
-                },
+                lit(0, 0),
+                effect(KernelOpKind::StructuredBlock, [0]),
+                op(KernelOpKind::BinOpKind(BinOp::Mul), [1, 0], 2),
             ],
             child_bodies: vec![child],
             literals: vec![LiteralValue::U32(7)],
@@ -518,4 +398,3 @@ fn workgroup_binding_in_host_range_is_rejected() {
         .iter()
         .any(|e| matches!(e.kind, VerifyErrorKind::WorkgroupBindingInHostRange { .. })));
 }
-

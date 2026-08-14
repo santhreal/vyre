@@ -83,13 +83,15 @@ pub fn classify_operand(kind: &KernelOpKind, pos: usize) -> OperandClass {
                 OperandClass::Other
             }
         }
+        // `[lo, hi, body]` is the contract. An operand past the body index
+        // is out of contract, and stays an SSA reference: under-counting a
+        // use is the unsafe direction, because a value that is still read
+        // looks dead to an elimination or hoisting decision.
         StructuredForLoop { .. } => {
-            if pos == 0 || pos == 1 {
-                OperandClass::ResultRef
-            } else if pos == 2 {
+            if pos == 2 {
                 OperandClass::ChildBodyIdx
             } else {
-                OperandClass::Other
+                OperandClass::ResultRef
             }
         }
         StructuredBlock => {
@@ -172,5 +174,24 @@ mod tests {
             &KernelOpKind::IndirectDispatch { count_offset: 0 },
             0,
         ));
+    }
+
+    /// Two tables once answered this question and disagreed: one treated an
+    /// operand past a structured op's contract as metadata, the owner kept
+    /// it as an SSA reference. The owner's answer is the one that cannot
+    /// miscompile, because a use that is not counted makes a live value look
+    /// dead to elimination and hoisting.
+    #[test]
+    fn out_of_contract_operands_stay_result_references() {
+        let loop_kind = KernelOpKind::StructuredForLoop {
+            loop_var: "i".into(),
+        };
+        assert_eq!(classify_operand(&loop_kind, 2), OperandClass::ChildBodyIdx);
+        assert_eq!(classify_operand(&loop_kind, 3), OperandClass::ResultRef);
+        assert!(operand_is_result_reference(&loop_kind, 3));
+
+        let carrier = KernelOpKind::LoopCarrier { name: "acc".into() };
+        assert!(operand_is_result_reference(&carrier, 0));
+        assert!(operand_is_result_reference(&carrier, 1));
     }
 }

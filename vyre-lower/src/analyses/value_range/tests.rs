@@ -2,387 +2,170 @@ use vyre_foundation::ir::BinOp;
 
 use super::analysis::mul_range;
 use super::*;
-use crate::{
-    BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
-};
+use crate::descriptor_builder::{binop, body, descriptor, lit, op};
+use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
 
-fn build(ops: Vec<KernelOp>, lits: Vec<LiteralValue>) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "k".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops,
-            child_bodies: vec![],
-            literals: lits,
-        },
-    }
+/// A single-thread kernel with no bindings, which is all the range
+/// analysis reads.
+fn build(body: impl Into<KernelBody>) -> KernelDescriptor {
+    descriptor("k").dispatch(1, 1, 1).body(body).build()
+}
+
+/// The ranges inferred for a body whose literals are `values` and whose
+/// ops are `values.len()` literal reads, one per pool entry.
+fn literals(values: impl IntoIterator<Item = LiteralValue>) -> ValueRangeReport {
+    let values: Vec<_> = values.into_iter().collect();
+    let reads = (0..values.len()).map(|i| lit(i as u32, i as u32));
+    analyze(&build(body().ops(reads).literals(values)))
+}
+
+/// The range inferred for `lhs kind rhs` with both operands literal, which
+/// is the shape of every binary-operator case below. `None` means the
+/// analysis refused to propagate.
+fn fold(kind: BinOp, lhs: LiteralValue, rhs: LiteralValue) -> Option<IntRange> {
+    let desc = build(
+        body()
+            .op(lit(0, 0))
+            .op(lit(1, 1))
+            .op(binop(kind, 0, 1, 2))
+            .literals([lhs, rhs]),
+    );
+    analyze(&desc).ranges.get(&2).copied()
+}
+
+fn u32_lit(value: u32) -> LiteralValue {
+    LiteralValue::U32(value)
+}
+
+fn i32_lit(value: i32) -> LiteralValue {
+    LiteralValue::I32(value)
 }
 
 #[test]
 fn empty_kernel_no_ranges() {
-    let r = analyze(&build(vec![], vec![]));
+    let r = analyze(&build(body()));
     assert!(r.ranges.is_empty());
     assert_eq!(r.known_count(), 0);
 }
 
 #[test]
 fn lit_u32_yields_singleton() {
-    let desc = build(
-        vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![0],
-            result: Some(0),
-        }],
-        vec![LiteralValue::U32(42)],
-    );
-    let r = analyze(&desc);
+    let r = literals([u32_lit(42)]);
     assert_eq!(r.ranges[&0], IntRange::singleton(42));
     assert!(r.ranges[&0].is_singleton());
 }
 
 #[test]
 fn lit_i32_negative_yields_correct_range() {
-    let desc = build(
-        vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![0],
-            result: Some(0),
-        }],
-        vec![LiteralValue::I32(-7)],
-    );
-    let r = analyze(&desc);
+    let r = literals([i32_lit(-7)]);
     assert_eq!(r.ranges[&0], IntRange::singleton(-7));
 }
 
 #[test]
 fn bool_true_is_one_false_is_zero() {
-    let desc = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-        ],
-        vec![LiteralValue::Bool(true), LiteralValue::Bool(false)],
-    );
-    let r = analyze(&desc);
+    let r = literals([LiteralValue::Bool(true), LiteralValue::Bool(false)]);
     assert_eq!(r.ranges[&0], IntRange::singleton(1));
     assert_eq!(r.ranges[&1], IntRange::singleton(0));
 }
 
 #[test]
 fn min_of_two_lits_propagates() {
-    let desc = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Min),
-                operands: vec![0, 1],
-                result: Some(2),
-            },
-        ],
-        vec![LiteralValue::U32(3), LiteralValue::U32(5)],
-    );
-    let r = analyze(&desc);
     // Both operands are singletons; result range is min..=min.
-    assert_eq!(r.ranges[&2], IntRange::singleton(3));
+    assert_eq!(
+        fold(BinOp::Min, u32_lit(3), u32_lit(5)),
+        Some(IntRange::singleton(3))
+    );
 }
 
 #[test]
 fn max_of_two_lits_propagates() {
-    let desc = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Max),
-                operands: vec![0, 1],
-                result: Some(2),
-            },
-        ],
-        vec![LiteralValue::U32(3), LiteralValue::U32(5)],
+    assert_eq!(
+        fold(BinOp::Max, u32_lit(3), u32_lit(5)),
+        Some(IntRange::singleton(5))
     );
-    let r = analyze(&desc);
-    assert_eq!(r.ranges[&2], IntRange::singleton(5));
 }
 
 #[test]
 fn add_propagates_singleton_ranges() {
     // 3 + 5 → [8, 8]
-    let desc = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![0, 1],
-                result: Some(2),
-            },
-        ],
-        vec![LiteralValue::U32(3), LiteralValue::U32(5)],
+    assert_eq!(
+        fold(BinOp::Add, u32_lit(3), u32_lit(5)),
+        Some(IntRange::singleton(8))
     );
-    let r = analyze(&desc);
-    assert_eq!(r.ranges[&2], IntRange::singleton(8));
 }
 
 #[test]
 fn sub_flips_operand_bounds() {
     // l - r where l ∈ [a,b] and r ∈ [c,d] → [a-d, b-c]
     // For singletons: 10 - 3 = 7
-    let desc = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Sub),
-                operands: vec![0, 1],
-                result: Some(2),
-            },
-        ],
-        vec![LiteralValue::I32(10), LiteralValue::I32(3)],
+    assert_eq!(
+        fold(BinOp::Sub, i32_lit(10), i32_lit(3)),
+        Some(IntRange::singleton(7))
     );
-    let r = analyze(&desc);
-    assert_eq!(r.ranges[&2], IntRange::singleton(7));
 }
 
 #[test]
-
 fn bitand_with_mask_bounds_to_zero_through_mask() {
     // x & 0xFF where x is unknown but BitAnd(x, 0xFF) bounds to [0, 0xFF].
     // Phase 1 only knows x's range when x is itself a literal,
     // so use lit-lit here.
-    let desc = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::BitAnd),
-                operands: vec![0, 1],
-                result: Some(2),
-            },
-        ],
-        vec![LiteralValue::U32(0x12345678), LiteralValue::U32(0xFF)],
-    );
-    let r = analyze(&desc);
     // l.max = 0x12345678, r.max = 0xFF; min(...) = 0xFF.
-    assert_eq!(r.ranges[&2], IntRange { min: 0, max: 0xFF });
+    assert_eq!(
+        fold(BinOp::BitAnd, u32_lit(0x1234_5678), u32_lit(0xFF)),
+        Some(IntRange { min: 0, max: 0xFF })
+    );
 }
 
 #[test]
 fn shl_propagates_with_singleton_shift() {
     // 5 << 3 = 40
-    let desc = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Shl),
-                operands: vec![0, 1],
-                result: Some(2),
-            },
-        ],
-        vec![LiteralValue::U32(5), LiteralValue::U32(3)],
+    assert_eq!(
+        fold(BinOp::Shl, u32_lit(5), u32_lit(3)),
+        Some(IntRange::singleton(40))
     );
-    let r = analyze(&desc);
-    assert_eq!(r.ranges[&2], IntRange::singleton(40));
 }
 
 #[test]
 fn shr_propagates_with_singleton_shift() {
     // 40 >> 3 = 5
-    let desc = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Shr),
-                operands: vec![0, 1],
-                result: Some(2),
-            },
-        ],
-        vec![LiteralValue::U32(40), LiteralValue::U32(3)],
+    assert_eq!(
+        fold(BinOp::Shr, u32_lit(40), u32_lit(3)),
+        Some(IntRange::singleton(5))
     );
-    let r = analyze(&desc);
-    assert_eq!(r.ranges[&2], IntRange::singleton(5));
 }
 
 #[test]
 fn shl_with_huge_shift_not_propagated() {
     // shift ≥ 32: refuse (would be overflow on i64 too in extreme cases).
-    let desc = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Shl),
-                operands: vec![0, 1],
-                result: Some(2),
-            },
-        ],
-        vec![LiteralValue::U32(1), LiteralValue::U32(64)],
-    );
-    let r = analyze(&desc);
-    assert!(!r.ranges.contains_key(&2));
+    assert_eq!(fold(BinOp::Shl, u32_lit(1), u32_lit(64)), None);
 }
 
 #[test]
 fn bitor_propagates_with_singletons() {
     // 0xF0 | 0x0F = 0xFF
-    let desc = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::BitOr),
-                operands: vec![0, 1],
-                result: Some(2),
-            },
-        ],
-        vec![LiteralValue::U32(0xF0), LiteralValue::U32(0x0F)],
-    );
-    let r = analyze(&desc);
     // l.max=0xF0, r.max=0x0F → max = 0xF0|0x0F = 0xFF.
     // l.min=0xF0, r.min=0x0F → min = max(0xF0, 0x0F) = 0xF0.
     assert_eq!(
-        r.ranges[&2],
-        IntRange {
+        fold(BinOp::BitOr, u32_lit(0xF0), u32_lit(0x0F)),
+        Some(IntRange {
             min: 0xF0,
             max: 0xFF
-        }
+        })
     );
 }
 
 #[test]
 fn bitand_negative_operand_not_propagated() {
-    let desc = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::BitAnd),
-                operands: vec![0, 1],
-                result: Some(2),
-            },
-        ],
-        vec![LiteralValue::I32(-1), LiteralValue::I32(0xFF)],
-    );
-    let r = analyze(&desc);
     // Neg operand → BitAnd refused.
-    assert!(!r.ranges.contains_key(&2));
+    assert_eq!(fold(BinOp::BitAnd, i32_lit(-1), i32_lit(0xFF)), None);
 }
 
 #[test]
 fn mul_singletons() {
-    let desc = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                operands: vec![0, 1],
-                result: Some(2),
-            },
-        ],
-        vec![LiteralValue::I32(7), LiteralValue::I32(-3)],
+    assert_eq!(
+        fold(BinOp::Mul, i32_lit(7), i32_lit(-3)),
+        Some(IntRange::singleton(-21))
     );
-    let r = analyze(&desc);
-    assert_eq!(r.ranges[&2], IntRange::singleton(-21));
 }
 
 #[test]
@@ -400,38 +183,13 @@ fn mul_range_corner_helper() {
 fn add_chains_propagate() {
     // (3 + 5) + 7 = 15
     let desc = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![2],
-                result: Some(2),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![0, 1],
-                result: Some(3),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![3, 2],
-                result: Some(4),
-            },
-        ],
-        vec![
-            LiteralValue::U32(3),
-            LiteralValue::U32(5),
-            LiteralValue::U32(7),
-        ],
+        body()
+            .op(lit(0, 0))
+            .op(lit(1, 1))
+            .op(lit(2, 2))
+            .op(binop(BinOp::Add, 0, 1, 3))
+            .op(binop(BinOp::Add, 3, 2, 4))
+            .literals([u32_lit(3), u32_lit(5), u32_lit(7)]),
     );
     let r = analyze(&desc);
     assert_eq!(r.ranges[&4], IntRange::singleton(15));
@@ -440,39 +198,22 @@ fn add_chains_propagate() {
 #[test]
 fn non_lit_op_no_range() {
     // LocalInvocationId  -  can't statically bound in phase 1.
-    let desc = build(
-        vec![KernelOp {
-            kind: KernelOpKind::LocalInvocationId,
-            operands: vec![0],
-            result: Some(0),
-        }],
-        vec![],
-    );
+    let desc = build(body().op(op(KernelOpKind::LocalInvocationId, [0], 0)));
     let r = analyze(&desc);
     assert!(!r.ranges.contains_key(&0));
 }
 
 #[test]
 fn as_constant_returns_value_for_singleton() {
-    let desc = build(
-        vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![0],
-            result: Some(0),
-        }],
-        vec![LiteralValue::U32(42)],
-    );
-    let r = analyze(&desc);
+    let r = literals([u32_lit(42)]);
     assert_eq!(r.as_constant(0), Some(42));
     assert_eq!(r.as_constant(99), None); // unknown id
 }
 
 #[test]
 fn as_constant_returns_none_for_non_singleton() {
-    // Build an Add of two ranges that produces a non-singleton.
-    // Phase 1: lit + lit folds to singleton, so we can't easily
-    // produce a non-singleton via the analyses. Test via direct
-    // ValueRangeReport construction.
+    // Phase 1 folds lit + lit to a singleton, so a non-singleton range
+    // cannot come out of the analysis; construct the report directly.
     let mut report = ValueRangeReport::default();
     report.ranges.insert(7, IntRange { min: 0, max: 10 });
     assert_eq!(report.as_constant(7), None);
@@ -480,22 +221,7 @@ fn as_constant_returns_none_for_non_singleton() {
 
 #[test]
 fn report_accessors() {
-    let desc = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-        ],
-        vec![LiteralValue::U32(0), LiteralValue::U32(42)],
-    );
-    let r = analyze(&desc);
+    let r = literals([u32_lit(0), u32_lit(42)]);
     // is_definitely
     assert_eq!(r.is_definitely(0, 0), Some(true));
     assert_eq!(r.is_definitely(0, 1), Some(false));

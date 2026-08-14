@@ -1,8 +1,7 @@
 use super::*;
 use crate::descriptor::test_descriptors::build;
-use crate::descriptor::{
-    BindingLayout, BindingSlot, BindingVisibility, LiteralValue, MemoryClass,
-};
+use crate::descriptor::{BindingLayout, BindingSlot, BindingVisibility, LiteralValue, MemoryClass};
+use crate::descriptor_builder::{effect, lit, op};
 use vyre_foundation::ir::DataType;
 use vyre_foundation::memory_model::MemoryOrdering;
 
@@ -31,14 +30,7 @@ fn summary_includes_all_counts() {
 
 #[test]
 fn summary_compact_terser_form() {
-    let d = build(
-        vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![0],
-            result: Some(0),
-        }],
-        vec![],
-    );
+    let d = build(vec![lit(0, 0)], vec![]);
     let s = d.summary_compact();
     assert_eq!(s, "k(1 ops, 1 bindings)");
 }
@@ -54,26 +46,11 @@ fn unnamed_descriptor_uses_unnamed_label() {
 #[test]
 fn total_ops_recurses_into_child_bodies() {
     let child = KernelBody {
-        ops: vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(1),
-            },
-        ],
+        ops: vec![lit(0, 0), lit(0, 1)],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(5)],
     };
-    let parent_ops = vec![KernelOp {
-        kind: KernelOpKind::Literal,
-        operands: vec![0],
-        result: Some(0),
-    }];
+    let parent_ops = vec![lit(0, 0)];
     let d = build(parent_ops, vec![child]);
     assert_eq!(d.body.ops.len(), 1); // shallow
     assert_eq!(d.total_ops(), 3); // 1 parent + 2 child
@@ -81,14 +58,7 @@ fn total_ops_recurses_into_child_bodies() {
 
 #[test]
 fn body_at_empty_path_returns_parent() {
-    let d = build(
-        vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![0],
-            result: Some(7),
-        }],
-        vec![],
-    );
+    let d = build(vec![lit(0, 7)], vec![]);
     let body = d.body_at(&[]).unwrap();
     assert_eq!(body.ops.len(), 1);
     assert_eq!(body.ops[0].result, Some(7));
@@ -97,11 +67,7 @@ fn body_at_empty_path_returns_parent() {
 #[test]
 fn body_at_descends_into_children() {
     let grandchild = KernelBody {
-        ops: vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![0],
-            result: Some(99),
-        }],
+        ops: vec![lit(0, 99)],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(7)],
     };
@@ -195,14 +161,7 @@ fn is_empty_true_when_no_ops() {
 
 #[test]
 fn is_empty_false_when_parent_has_ops() {
-    let d = build(
-        vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![0],
-            result: Some(0),
-        }],
-        vec![],
-    );
+    let d = build(vec![lit(0, 0)], vec![]);
     assert!(!d.is_empty());
     assert_eq!(d.total_ops(), 1);
 }
@@ -210,11 +169,7 @@ fn is_empty_false_when_parent_has_ops() {
 #[test]
 fn is_empty_false_when_child_has_ops() {
     let child = KernelBody {
-        ops: vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![0],
-            result: Some(0),
-        }],
+        ops: vec![lit(0, 0)],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(1)],
     };
@@ -226,18 +181,7 @@ fn is_empty_false_when_child_has_ops() {
 #[test]
 fn has_side_effects_true_with_store() {
     let d = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![0, 0, 0],
-                result: None,
-            },
-        ],
+        vec![lit(0, 0), effect(KernelOpKind::StoreGlobal, [0, 0, 0])],
         vec![],
     );
     assert!(d.has_side_effects());
@@ -247,16 +191,12 @@ fn has_side_effects_true_with_store() {
 fn has_side_effects_false_with_only_arithmetic() {
     let d = build(
         vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add),
-                operands: vec![0, 0],
-                result: Some(1),
-            },
+            lit(0, 0),
+            op(
+                KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add),
+                [0, 0],
+                1,
+            ),
         ],
         vec![],
     );
@@ -276,14 +216,7 @@ fn has_side_effects_true_for_async_and_indirect_dispatch_ops() {
         KernelOpKind::AsyncWait { tag: "t".into() },
         KernelOpKind::IndirectDispatch { count_offset: 0 },
     ] {
-        let d = build(
-            vec![KernelOp {
-                kind: kind.clone(),
-                operands: vec![0],
-                result: None,
-            }],
-            vec![],
-        );
+        let d = build(vec![effect(kind.clone(), [0])], vec![]);
         assert!(
             d.has_side_effects(),
             "{kind:?} is a cross-thread/dispatch effect and must not be droppable"
@@ -295,45 +228,16 @@ fn has_side_effects_true_for_async_and_indirect_dispatch_ops() {
 #[test]
 fn ops_iter_visits_parent_then_children_in_order() {
     let child0 = KernelBody {
-        ops: vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(10),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(11),
-            },
-        ],
+        ops: vec![lit(0, 10), lit(0, 11)],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(1)],
     };
     let child1 = KernelBody {
-        ops: vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![0],
-            result: Some(20),
-        }],
+        ops: vec![lit(0, 20)],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(2)],
     };
-    let d = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(1),
-            },
-        ],
-        vec![child0, child1],
-    );
+    let d = build(vec![lit(0, 0), lit(0, 1)], vec![child0, child1]);
     let visited: Vec<u32> = d.ops_iter().map(|o| o.result.unwrap()).collect();
     // Parent ops (0, 1) first, then child0 (10, 11), then child1 (20).
     assert_eq!(visited, vec![0, 1, 10, 11, 20]);
@@ -342,29 +246,11 @@ fn ops_iter_visits_parent_then_children_in_order() {
 #[test]
 fn ops_iter_count_matches_total_ops() {
     let child = KernelBody {
-        ops: vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(1),
-            },
-        ],
+        ops: vec![lit(0, 0), lit(0, 1)],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(7)],
     };
-    let d = build(
-        vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![0],
-            result: Some(0),
-        }],
-        vec![child],
-    );
+    let d = build(vec![lit(0, 0)], vec![child]);
     assert_eq!(d.ops_iter().count(), d.total_ops());
 }
 
@@ -380,14 +266,7 @@ fn dispatch_total_threads_multiplies_dims() {
 
 #[test]
 fn with_id_preserves_everything_else() {
-    let d = build(
-        vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![0],
-            result: Some(0),
-        }],
-        vec![],
-    );
+    let d = build(vec![lit(0, 0)], vec![]);
     let renamed = d.with_id("renamed");
     assert_eq!(renamed.id, "renamed");
     assert_eq!(d.id, "k"); // original unchanged
@@ -406,21 +285,7 @@ fn dispatch_total_threads_saturates_on_overflow() {
 
 #[test]
 fn find_op_by_id_in_parent() {
-    let d = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(7),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(42),
-            },
-        ],
-        vec![],
-    );
+    let d = build(vec![lit(0, 7), lit(0, 42)], vec![]);
     let op = d.find_op_by_id(42).expect("Fix: found");
     assert_eq!(op.result, Some(42));
     assert!(d.find_op_by_id(99).is_none());
@@ -429,11 +294,7 @@ fn find_op_by_id_in_parent() {
 #[test]
 fn find_op_by_id_finds_in_child() {
     let child = KernelBody {
-        ops: vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![0],
-            result: Some(100),
-        }],
+        ops: vec![lit(0, 100)],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(7)],
     };
@@ -449,30 +310,12 @@ fn ops_iter_empty_descriptor_yields_none() {
 
 #[test]
 fn is_pure_inverse_of_has_side_effects() {
-    let pure_kernel = build(
-        vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![0],
-            result: Some(0),
-        }],
-        vec![],
-    );
+    let pure_kernel = build(vec![lit(0, 0)], vec![]);
     assert!(pure_kernel.is_pure());
     assert!(!pure_kernel.has_side_effects());
 
     let impure = build(
-        vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![0, 0, 0],
-                result: None,
-            },
-        ],
+        vec![lit(0, 0), effect(KernelOpKind::StoreGlobal, [0, 0, 0])],
         vec![],
     );
     assert!(!impure.is_pure());
@@ -508,21 +351,9 @@ fn one_store_kernel_round_trips_byte_stable() {
         dispatch: Dispatch::new(1, 1, 1),
         body: KernelBody {
             ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 0, 1],
-                    result: None,
-                },
+                lit(0, 0),
+                lit(1, 1),
+                effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
             ],
             child_bodies: vec![],
             literals: vec![LiteralValue::U32(0), LiteralValue::U32(7)],
@@ -537,29 +368,17 @@ fn one_store_kernel_round_trips_byte_stable() {
 #[test]
 fn nested_if_then_body_round_trips() {
     let inner = KernelBody {
-        ops: vec![KernelOp {
-            kind: KernelOpKind::Barrier {
+        ops: vec![effect(
+            KernelOpKind::Barrier {
                 ordering: MemoryOrdering::SeqCst,
             },
-            operands: vec![],
-            result: None,
-        }],
+            [],
+        )],
         child_bodies: vec![],
         literals: vec![],
     };
     let outer = KernelBody {
-        ops: vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::StructuredIfThen,
-                operands: vec![0, 0],
-                result: None,
-            },
-        ],
+        ops: vec![lit(0, 0), effect(KernelOpKind::StructuredIfThen, [0, 0])],
         child_bodies: vec![inner],
         literals: vec![LiteralValue::Bool(true)],
     };
@@ -584,23 +403,14 @@ fn for_loop_with_var_name_round_trips() {
     };
     let outer = KernelBody {
         ops: vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::StructuredForLoop {
+            lit(0, 0),
+            lit(1, 1),
+            effect(
+                KernelOpKind::StructuredForLoop {
                     loop_var: "i".into(),
                 },
-                operands: vec![0, 1, 0],
-                result: None,
-            },
+                [0, 1, 0],
+            ),
         ],
         child_bodies: vec![body],
         literals: vec![LiteralValue::U32(0), LiteralValue::U32(64)],
@@ -620,30 +430,20 @@ fn for_loop_with_var_name_round_trips() {
 fn async_load_wait_carry_tag() {
     let body = KernelBody {
         ops: vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::AsyncLoad {
+            lit(0, 0),
+            lit(1, 1),
+            effect(
+                KernelOpKind::AsyncLoad {
                     tag: "chunk-0".into(),
                 },
-                operands: vec![0, 1, 0, 1],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::AsyncWait {
+                [0, 1, 0, 1],
+            ),
+            effect(
+                KernelOpKind::AsyncWait {
                     tag: "chunk-0".into(),
                 },
-                operands: vec![],
-                result: None,
-            },
+                [],
+            ),
         ],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(0), LiteralValue::U32(16)],
