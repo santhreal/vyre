@@ -17,11 +17,15 @@ fn write_fixture(root: &Path, source: &str) {
     let _ = fs::remove_dir_all(root);
     fs::create_dir_all(root.join("src")).expect("Fix: feature fixture source must be creatable");
     let substrate = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let foundation = substrate
+        .parent()
+        .expect("Fix: the crate directory must have a workspace parent")
+        .join("vyre-foundation");
     fs::write(
         root.join("Cargo.toml"),
         format!(
-            "[package]\nname = \"self-substrate-feature-fixture\"\nversion = \"0.0.0\"\nedition = \"2021\"\n\n[dependencies]\nvyre-self-substrate = {{ path = {:?}, default-features = false, features = [\"optimizer\"] }}\n",
-            substrate
+            "[package]\nname = \"self-substrate-feature-fixture\"\nversion = \"0.0.0\"\nedition = \"2021\"\n\n[dependencies]\nvyre-self-substrate = {{ path = {:?}, default-features = false, features = [\"optimizer\"] }}\nvyre-foundation = {{ path = {:?} }}\n",
+            substrate, foundation
         ),
     )
     .expect("Fix: feature fixture manifest must be writable");
@@ -42,14 +46,15 @@ fn cargo(root: &Path, arguments: &[&str]) -> Output {
 /// The optimizer-only contract must compile without exposing solver families.
 ///
 /// This guards both sides of the boundary: the canonical optimizer namespace is
-/// usable, while an accidental import from the math solver family is rejected.
+/// usable, while an accidental import from the solver family that now lives in
+/// `vyre-libs` is rejected: this crate does not re-export it at any feature.
 /// The resolved primitive graph must also omit unrelated heavyweight domains.
 #[test]
 fn optimizer_feature_is_standalone_and_excludes_unrequested_solver_domains() {
     let root = fixture_root();
     write_fixture(
         &root,
-        "fn accepts(_: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) {}\nfn main() {}\n",
+        "fn accepts(_: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) {}\nfn main() { let _ = vyre_self_substrate::optimizer::dce_program::OP_ID; }\n",
     );
     let success = cargo(&root, &["check", "--quiet"]);
     assert!(
@@ -77,16 +82,16 @@ fn optimizer_feature_is_standalone_and_excludes_unrequested_solver_domains() {
 
     write_fixture(
         &root,
-        "use vyre_libs::solvers::tensor_train_compression;\nfn main() { let _ = tensor_train_compression::TT_MAX_RANK; }\n",
+        "use vyre_self_substrate::solvers::tensor_train_compression;\nfn main() { let _ = tensor_train_compression::TT_MAX_RANK; }\n",
     );
     let rejected = cargo(&root, &["check", "--quiet"]);
     assert!(
         !rejected.status.success(),
-        "optimizer-only consumer must not see the math solver family"
+        "optimizer-only consumer must not see the solver family"
     );
     let stderr = String::from_utf8_lossy(&rejected.stderr);
     assert!(
-        stderr.contains("could not find `math` in `vyre_self_substrate`"),
+        stderr.contains("could not find `solvers` in `vyre_self_substrate`"),
         "rejection must identify the unavailable public family:\n{stderr}"
     );
 

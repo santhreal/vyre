@@ -50,9 +50,10 @@ vyre-test-support.workspace = true
 # (resolver 2 keeps it out of production builds of dependents).
 vyre-primitives = { path = "../vyre-primitives", features = ["cpu-parity"], default-features = false }
 vyre-reference = { path = "../vyre-reference" }
-# `vyre_libs::test_support` program-sequence helper, gated the same way as the
-# primitives oracles above: dev builds only.
-vyre-libs = { workspace = true, features = ["test-fixtures"] }
+# `vyre_libs::test_support` program-sequence helper and the `graph::dispatch`
+# CPU oracle dispatcher the encoded-pass parity tests dispatch through, gated
+# the same way as the primitives oracles above: dev builds only.
+vyre-libs = { workspace = true, features = ["test-fixtures", "graph-dispatch"] }
 proptest.workspace = true
 
 [[test]]
