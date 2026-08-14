@@ -1,6 +1,6 @@
 use super::*;
 use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node};
-use crate::test_util::count_nodes;
+use crate::test_ir_inspect::count_nodes;
 use crate::transform::visit::for_each_node;
 
 fn buf() -> BufferDecl {

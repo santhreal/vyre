@@ -26,7 +26,7 @@ fn cse_rewrites_call_args_without_extra_prefix_growth() -> Result<(), String> {
     ));
 
     let optimized = cse(program);
-    let body = crate::test_region_body::region_body(&optimized);
+    let body = crate::test_ir_inspect::region_body(&optimized);
     let Node::Let { value, .. } = &body[1] else {
         return Err(format!(
             "Fix: expected optimized entry[1] to remain Let, got {:?}",

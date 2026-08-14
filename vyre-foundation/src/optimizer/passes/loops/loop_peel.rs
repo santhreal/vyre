@@ -186,7 +186,7 @@ mod tests {
     }
 
     fn count_loops(node: &Node) -> usize {
-        crate::test_util::count_nodes(std::slice::from_ref(node), |candidate| {
+        crate::test_ir_inspect::count_nodes(std::slice::from_ref(node), |candidate| {
             matches!(candidate, Node::Loop { .. })
         })
     }
@@ -332,7 +332,7 @@ mod tests {
         let result = LoopPeelPass::transform(program_with_entry(entry));
         assert!(result.changed, "peeling must fire");
 
-        let body = crate::test_region_body::region_body(&result.program);
+        let body = crate::test_ir_inspect::region_body(&result.program);
 
         // Full store sequence across the peeled program, in document order.
         // The peeled prologue runs `then[i:=0]` (store 0,99) then `rest[i:=0]`

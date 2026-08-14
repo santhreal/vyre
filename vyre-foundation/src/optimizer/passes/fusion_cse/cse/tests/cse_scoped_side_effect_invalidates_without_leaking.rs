@@ -27,7 +27,7 @@ fn cse_scoped_side_effect_invalidates_without_leaking() -> Result<(), String> {
     ));
 
     let optimized = cse(program);
-    let body = crate::test_region_body::region_body(&optimized);
+    let body = crate::test_ir_inspect::region_body(&optimized);
     let Node::If { then, .. } = &body[1] else {
         return Err(format!(
             "Fix: expected optimized entry[1] to remain If, got {:?}",

@@ -138,7 +138,7 @@ mod tests {
     /// body-bearing variant read as absent and the assertion would have passed
     /// on a program the pass had not finished promoting.
     fn count_singleton_block_regions(node: &Node) -> usize {
-        crate::test_util::count_nodes(
+        crate::test_ir_inspect::count_nodes(
             std::slice::from_ref(node),
             |n| matches!(n, Node::Region { body, .. } if matches!(body.as_slice(), [Node::Block(_)])),
         )

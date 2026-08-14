@@ -26,7 +26,7 @@ fn cse_does_not_alias_literal_through_mutable_variable() -> Result<(), String> {
     ));
     let optimized = cse(program);
     // The loop's `from` expression must remain a literal  -  not `Var("state")`.
-    let body = crate::test_region_body::region_body(&optimized);
+    let body = crate::test_ir_inspect::region_body(&optimized);
     match &body[1] {
         Node::Loop { from, .. } => {
             assert!(

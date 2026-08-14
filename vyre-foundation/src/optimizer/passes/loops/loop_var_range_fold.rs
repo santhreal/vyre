@@ -400,7 +400,7 @@ mod tests {
     }
 
     fn count_ifs(nodes: &[Node]) -> usize {
-        crate::test_util::count_nodes(nodes, |node| matches!(node, Node::If { .. }))
+        crate::test_ir_inspect::count_nodes(nodes, |node| matches!(node, Node::If { .. }))
     }
 
     /// Positive: `Lt(Var(i), n)` with `n >= hi` is always true →

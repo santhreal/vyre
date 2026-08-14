@@ -102,7 +102,7 @@ mod tests {
         );
 
         assert!(result.changed);
-        let body = crate::test_region_body::region_body(&result.program);
+        let body = crate::test_ir_inspect::region_body(&result.program);
         assert!(matches!(
             &body[0],
             Node::Store {
@@ -146,7 +146,7 @@ mod tests {
             result.changed,
             "folding the lut load inside subgroup_add must change the program"
         );
-        let body = crate::test_region_body::region_body(&result.program);
+        let body = crate::test_ir_inspect::region_body(&result.program);
         let Node::Store { value, .. } = &body[0] else {
             panic!("expected a store, got {:?}", body[0]);
         };

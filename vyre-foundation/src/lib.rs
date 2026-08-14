@@ -178,4 +178,4 @@ pub use error::{IrError, IrResult};
 /// `pub(crate)` because they are an internal contract  -  no consumer
 /// outside vyre-foundation should depend on these helpers.
 #[cfg(test)]
-pub(crate) mod test_region_body;
+pub(crate) mod test_ir_inspect;

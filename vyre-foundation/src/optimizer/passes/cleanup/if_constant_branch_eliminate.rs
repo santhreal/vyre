@@ -114,7 +114,7 @@ mod tests {
     }
 
     fn count_ifs(node: &Node) -> usize {
-        crate::test_util::count_nodes(std::slice::from_ref(node), |candidate| {
+        crate::test_ir_inspect::count_nodes(std::slice::from_ref(node), |candidate| {
             matches!(candidate, Node::If { .. })
         })
     }

@@ -363,7 +363,7 @@ fn shared_merge_keeps_cross_arm_value_linked_and_valid() {
 /// have been counted and the assertion below would have passed on a fusion that
 /// dropped it.
 fn count_stores(node: &Node) -> usize {
-    crate::test_util::count_nodes(std::slice::from_ref(node), |n| {
+    crate::test_ir_inspect::count_nodes(std::slice::from_ref(node), |n| {
         matches!(n, Node::Store { .. })
     })
 }

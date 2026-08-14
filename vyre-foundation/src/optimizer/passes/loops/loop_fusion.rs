@@ -524,7 +524,7 @@ mod tests {
     }
 
     fn count_loops(nodes: &[Node]) -> usize {
-        crate::test_util::count_nodes(nodes, |node| matches!(node, Node::Loop { .. }))
+        crate::test_ir_inspect::count_nodes(nodes, |node| matches!(node, Node::Loop { .. }))
     }
 
     #[test]
