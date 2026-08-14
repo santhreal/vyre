@@ -133,3 +133,11 @@ jobs:
       # or unsafe-budget gate can see it. Only a source scan can.
       - name: Reserve calls size from len, not capacity
         run: bash scripts/check_no_under_reserve.sh
+
+      # A manifest naming a member that does not exist makes every cargo command
+      # fail from a clean checkout, which is why this gate runs no cargo at all:
+      # the defect it detects is precisely a workspace cargo cannot load. It
+      # reads tracked manifests with git and tomllib, and also rejects a path
+      # that resolves outside the repository.
+      - name: Every manifest path edge resolves to a tracked member
+        run: bash scripts/check_path_deps_resolve.sh
