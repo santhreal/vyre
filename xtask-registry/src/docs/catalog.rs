@@ -2,10 +2,11 @@
 
 use std::collections::BTreeMap;
 use std::fs;
-use std::io::{self, Read};
+use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::docs::operation_schema::{self, OperationRecord};
+use crate::docs::schema_cells;
 
 const MAX_CATALOG_TEXT_BYTES: u64 = 4_194_304;
 
@@ -117,35 +118,6 @@ fn render(subsystem: &str, rows: &[OperationRecord]) -> String {
     output.push_str("| operation | tier | category | signature | features | oracle | backend support | laws | composition |\n");
     output.push_str("| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
     for row in rows {
-        let signature = if row.signature.kind == "program_buffers" {
-            row.signature
-                .buffers
-                .iter()
-                .map(|buffer| {
-                    format!(
-                        "{}:{}:{}:{}",
-                        buffer.binding, buffer.name, buffer.access, buffer.element
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("<br>")
-        } else {
-            let inputs = row
-                .signature
-                .inputs
-                .iter()
-                .map(|parameter| format!("{}:{}", parameter.name, parameter.data_type))
-                .collect::<Vec<_>>()
-                .join(", ");
-            let outputs = row
-                .signature
-                .outputs
-                .iter()
-                .map(|parameter| format!("{}:{}", parameter.name, parameter.data_type))
-                .collect::<Vec<_>>()
-                .join(", ");
-            format!("({inputs}) -> ({outputs})")
-        };
         let oracle = format!(
             "reference={} inputs={} expected={} tolerance={} ULP",
             row.oracle.reference_eval,
@@ -153,48 +125,18 @@ fn render(subsystem: &str, rows: &[OperationRecord]) -> String {
             row.oracle.expected_output,
             row.oracle.tolerance_ulp
         );
-        let backends = row
-            .backend_support
-            .iter()
-            .map(|(backend, support)| format!("{backend}:{}", support.status))
-            .collect::<Vec<_>>()
-            .join("<br>");
-        let composition = if row.composition_chain.is_empty() {
-            "leaf".to_string()
-        } else {
-            row.composition_chain
-                .iter()
-                .map(|step| {
-                    format!(
-                        "{}{}{}",
-                        "&nbsp;".repeat(step.depth * 2),
-                        step.operation,
-                        if step.registered { "" } else { " (internal)" }
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("<br>")
-        };
         let _ = writeln!(
             output,
             "| `{}` | `{}` | `{}` | {} | {} | {} | {} | {} | {} |",
             row.id,
             row.tier,
             row.category,
-            signature,
-            row.features
-                .iter()
-                .map(|feature| format!("`{feature}`"))
-                .collect::<Vec<_>>()
-                .join("<br>"),
+            schema_cells::signature_cell(row),
+            schema_cells::features_cell(row),
             oracle,
-            backends,
-            if row.laws.is_empty() {
-                "none declared".to_string()
-            } else {
-                row.laws.join("<br>")
-            },
-            composition
+            schema_cells::backend_support_entries(row).join("<br>"),
+            schema_cells::laws_cell(row),
+            schema_cells::composition_cell(row)
         );
     }
     output
@@ -301,14 +243,5 @@ fn render_index(catalog: &BTreeMap<String, Vec<OperationRecord>>) -> String {
 }
 
 fn read_text_bounded(path: &Path) -> io::Result<String> {
-    let mut reader = fs::File::open(path)?.take(MAX_CATALOG_TEXT_BYTES + 1);
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > MAX_CATALOG_TEXT_BYTES {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("{} exceeds the catalog read cap", path.display()),
-        ));
-    }
-    Ok(text)
+    xtask::output_arg::read_text_bounded(path, MAX_CATALOG_TEXT_BYTES, "catalog")
 }

@@ -5,6 +5,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::docs::operation_schema::{self, OperationRecord};
+use crate::docs::schema_cells;
 
 pub(crate) fn run(args: &[String]) {
     let (out_path, check) = parse_args(args);
@@ -109,35 +110,6 @@ fn build_markdown(operations: &[OperationRecord]) -> String {
         output.push_str("| operation | category | signature | features | oracle | backends | laws | composition |\n");
         output.push_str("| --- | --- | --- | --- | --- | --- | --- | --- |\n");
         for row in rows {
-            let signature = if row.signature.kind == "program_buffers" {
-                row.signature
-                    .buffers
-                    .iter()
-                    .map(|buffer| {
-                        format!(
-                            "{}:{}:{}:{}",
-                            buffer.binding, buffer.name, buffer.access, buffer.element
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .join("<br>")
-            } else {
-                let inputs = row
-                    .signature
-                    .inputs
-                    .iter()
-                    .map(|parameter| format!("{}:{}", parameter.name, parameter.data_type))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                let outputs = row
-                    .signature
-                    .outputs
-                    .iter()
-                    .map(|parameter| format!("{}:{}", parameter.name, parameter.data_type))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                format!("({inputs}) -> ({outputs})")
-            };
             let oracle = format!(
                 "reference={} flat-facet={} inputs={} expected={} tolerance={} ULP",
                 row.oracle.reference_eval,
@@ -146,53 +118,23 @@ fn build_markdown(operations: &[OperationRecord]) -> String {
                 row.oracle.expected_output,
                 row.oracle.tolerance_ulp
             );
-            let mut backends = row
-                .backend_support
-                .iter()
-                .map(|(backend, support)| format!("{backend}:{}", support.status))
-                .collect::<Vec<_>>();
+            let mut backends = schema_cells::backend_support_entries(row);
             backends.extend(
                 row.target_facets
                     .iter()
                     .map(|target| format!("target:{target}")),
             );
-            let backends = backends.join("<br>");
-            let laws = if row.laws.is_empty() {
-                "none declared".to_string()
-            } else {
-                row.laws.join("<br>")
-            };
-            let composition = if row.composition_chain.is_empty() {
-                "leaf".to_string()
-            } else {
-                row.composition_chain
-                    .iter()
-                    .map(|step| {
-                        format!(
-                            "{}{}{}",
-                            "&nbsp;".repeat(step.depth * 2),
-                            step.operation,
-                            if step.registered { "" } else { " (internal)" }
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .join("<br>")
-            };
             let _ = writeln!(
                 output,
                 "| `{}` | `{}` | {} | {} | {} | {} | {} | {} |",
                 row.id,
                 row.category,
-                signature,
-                row.features
-                    .iter()
-                    .map(|feature| format!("`{feature}`"))
-                    .collect::<Vec<_>>()
-                    .join("<br>"),
+                schema_cells::signature_cell(row),
+                schema_cells::features_cell(row),
                 oracle,
-                backends,
-                laws,
-                composition
+                backends.join("<br>"),
+                schema_cells::laws_cell(row),
+                schema_cells::composition_cell(row)
             );
         }
         if index + 1 < tier_count {
