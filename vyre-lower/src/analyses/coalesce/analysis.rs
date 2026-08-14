@@ -22,7 +22,7 @@ use super::report::{AccessPattern, AccessSite, CoalescenceReport};
 use crate::analyses::{
     child_body_operands, constant_u32_operand, producer_map, AccessKind, ProducerMap,
 };
-use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
+use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 use vyre_foundation::ir::BinOp;
 
 /// Run coalescence analysis on a kernel.
@@ -176,7 +176,7 @@ mod tests {
     use crate::descriptor_builder::{
         binop, body, descriptor, effect, global_ro, global_rw, lit, load_global, op, store_global,
     };
-    use crate::{KernelBody, KernelDescriptor, KernelOp};
+    use crate::{KernelBody, KernelDescriptor, KernelOp, LiteralValue};
     use vyre_foundation::ir::{BinOp, DataType};
 
     /// A 64-thread kernel over a single read-write `u32` global.
