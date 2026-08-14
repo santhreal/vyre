@@ -27,6 +27,7 @@
 //! streams here were measured as.
 
 pub(crate) mod expression_pipeline;
+pub(crate) mod macro_expansion;
 pub(crate) mod reference_lexer;
 pub(crate) mod rows;
 pub(crate) mod scope_fixture;

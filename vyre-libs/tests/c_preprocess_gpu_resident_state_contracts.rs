@@ -11,8 +11,13 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 mod common;
 mod support;
+use c_frontend::macro_expansion::{
+    hash_token, run_dynamic_macro_expansion as run_dynamic, MacroFixture as DynamicFixture,
+};
 use common::{decode_u32_words, u32_bytes};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use support::c_macro_table::{
@@ -22,8 +27,8 @@ use support::c_macro_table::{
 use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::preprocess::expansion::{
-    opt_conditional_mask, opt_conditional_mask_with_directives, opt_dynamic_macro_expansion,
-    C_MACRO_KIND_FUNCTION_LIKE, C_MACRO_KIND_OBJECT_LIKE, C_MACRO_REPLACEMENT_LITERAL,
+    opt_conditional_mask, opt_conditional_mask_with_directives, C_MACRO_KIND_FUNCTION_LIKE,
+    C_MACRO_KIND_OBJECT_LIKE, C_MACRO_REPLACEMENT_LITERAL,
 };
 use vyre_libs::parsing::c::preprocess::{
     c_translation_phase_line_splice, reference_c_preprocessor_directive_metadata,
@@ -36,71 +41,8 @@ use vyre_reference::value::Value;
 #[allow(dead_code)]
 const MAX_FN_ARGS: u32 = 16;
 // ---------------------------------------------------------------------------
-// Byte / word helpers
-// ---------------------------------------------------------------------------
-fn hash_token(tok: u32) -> usize {
-    (tok.wrapping_mul(2_654_435_769) & TABLE_MASK) as usize
-}
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-#[derive(Clone)]
-struct DynamicFixture {
-    keys: Vec<u32>,
-    vals: Vec<u32>,
-    sizes: Vec<u32>,
-}
-impl DynamicFixture {
-    fn empty() -> Self {
-        Self {
-            keys: vec![EMPTY_SLOT; TABLE_SLOTS],
-            vals: vec![0; TABLE_SLOTS],
-            sizes: vec![0; TABLE_SLOTS],
-        }
-    }
-    fn insert(&mut self, token: u32, replacement_offset: usize, replacement: &[u32]) {
-        let slot = hash_token(token);
-        self.keys[slot] = token;
-        self.vals[slot] = replacement_offset as u32;
-        self.sizes[replacement_offset] = replacement.len() as u32;
-        for (idx, value) in replacement.iter().enumerate() {
-            self.vals[replacement_offset + idx] = *value;
-        }
-    }
-}
-// ---------------------------------------------------------------------------
 // Runners
 // ---------------------------------------------------------------------------
-fn run_dynamic(
-    input: &[u32],
-    fixture: &DynamicFixture,
-    max_out: u32,
-) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
-    let program = opt_dynamic_macro_expansion(
-        "in_tok_types",
-        "macro_keys",
-        "macro_vals",
-        "macro_sizes",
-        "out_tok_types",
-        "out_tok_counts",
-        Expr::u32(input.len() as u32),
-        max_out,
-    );
-    let input_bytes = if input.is_empty() {
-        vec![0u8; 4]
-    } else {
-        u32_bytes(input)
-    };
-    let values = [
-        Value::from(input_bytes),
-        Value::from(u32_bytes(&fixture.keys)),
-        Value::from(u32_bytes(&fixture.vals)),
-        Value::from(u32_bytes(&fixture.sizes)),
-        Value::from(vec![0u8; max_out.max(1) as usize * 4]),
-        Value::from(vec![0u8; 4]),
-    ];
-    vyre_reference::reference_eval(&program, &values)
-}
 fn run_conditional_mask(tok_types: &[u32]) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
     let program = opt_conditional_mask("tok_types", "out_mask", Expr::u32(tok_types.len() as u32));
     let input_bytes = if tok_types.is_empty() {

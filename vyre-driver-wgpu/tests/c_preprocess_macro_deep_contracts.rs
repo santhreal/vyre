@@ -20,11 +20,10 @@
 
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_macro_table_support;
 mod c_token_support;
 mod common;
+use c_frontend::macro_expansion::{run_dynamic_macro_expansion, MacroFixture};
 use c_frontend::token_fixture::c_fixture;
-use c_macro_table_support::MacroFixture;
 use c_token_support::{
     assert_pg_row, assert_shape_none, find_row_for_lexeme, node_count_from_vast, row_typed_kind,
     run_c11_lexer, run_cpu_pipeline, word_at, PG_STRIDE_U32,
@@ -41,9 +40,7 @@ use vyre_libs::parsing::c::lower::c_lower_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
     c11_build_expression_shape_nodes, c11_classify_vast_node_kinds,
 };
-use vyre_libs::parsing::c::preprocess::expansion::{
-    opt_conditional_mask_with_directives, opt_dynamic_macro_expansion,
-};
+use vyre_libs::parsing::c::preprocess::expansion::opt_conditional_mask_with_directives;
 use vyre_libs::parsing::c::preprocess::{
     c_translation_phase_line_splice, reference_c_preprocessor_directive_metadata,
 };
@@ -59,40 +56,6 @@ use vyre_reference::value::Value;
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// Dynamic macro-expansion helpers
-// ---------------------------------------------------------------------------
-
-fn run_dynamic_macro_expansion(
-    input: &[u32],
-    fixture: &MacroFixture,
-    max_out_tokens: u32,
-) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
-    let program = opt_dynamic_macro_expansion(
-        "in_tok_types",
-        "macro_keys",
-        "macro_vals",
-        "macro_sizes",
-        "out_tok_types",
-        "out_tok_counts",
-        Expr::u32(input.len() as u32),
-        max_out_tokens,
-    );
-    let input_bytes = if input.is_empty() {
-        vec![0u8; 4]
-    } else {
-        u32_bytes(input)
-    };
-    let out_len = max_out_tokens.max(1) as usize * 4;
-    let values = [
-        Value::from(input_bytes),
-        Value::from(u32_bytes(&fixture.keys)),
-        Value::from(u32_bytes(&fixture.vals)),
-        Value::from(u32_bytes(&fixture.sizes)),
-        Value::from(vec![0u8; out_len]),
-        Value::from(vec![0u8; 4]),
-    ];
-    vyre_reference::reference_eval(&program, &values)
-}
 
 fn run_conditional_mask_with_directives(
     tok_types: &[u32],
