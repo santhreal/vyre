@@ -6,5 +6,7 @@ mod dual_volume;
 
 #[test]
 fn sweep_dual_bitwise_shift_left_volume_oracle_matrix() {
-    dual_volume::assert_volume_oracle("primitive.bitwise.shift_left", |left, right| left << (right & 31));
+    dual_volume::assert_volume_oracle("primitive.bitwise.shift_left", |left, right| {
+        left << (right & 31)
+    });
 }

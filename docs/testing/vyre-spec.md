@@ -36,7 +36,6 @@ This crate declares no Cargo features.
 | `test` | `collective_property_contracts` | `vyre-spec/tests/collective_property_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test collective_property_contracts` |
 | `test` | `comm_group_property_contracts` | `vyre-spec/tests/comm_group_property_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test comm_group_property_contracts` |
 | `test` | `data_type_generated_edge_matrix` | `vyre-spec/tests/data_type_generated_edge_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test data_type_generated_edge_matrix` |
-| `test` | `data_type_generated_edge_matrix_support` | `vyre-spec/tests/data_type_generated_edge_matrix_support.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test data_type_generated_edge_matrix_support` |
 | `test` | `data_type_layout_matrix` | `vyre-spec/tests/data_type_layout_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test data_type_layout_matrix` |
 | `test` | `data_type_min_bytes_property_contracts` | `vyre-spec/tests/data_type_min_bytes_property_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test data_type_min_bytes_property_contracts` |
 | `test` | `data_type_packed_size_adversarial` | `vyre-spec/tests/data_type_packed_size_adversarial.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test data_type_packed_size_adversarial` |

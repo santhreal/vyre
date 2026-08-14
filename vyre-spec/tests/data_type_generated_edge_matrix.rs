@@ -12,8 +12,10 @@ use vyre_spec::extension::{
 };
 use vyre_spec::{DataType, QuantizationScale, QuantizationZeroPoint};
 
-mod data_type_generated_edge_matrix_support;
-use data_type_generated_edge_matrix_support::{
+mod data_type_edge_matrix_support;
+mod spec_variants;
+
+use data_type_edge_matrix_support::{
     assert_layout_invariants, assert_serde_round_trip, builtin_wire_tag_representatives,
     generated_edge_types, generated_extension_name, quantization_scales, quantization_zero_points,
     quantized_storage_types,

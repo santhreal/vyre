@@ -42,6 +42,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --all-features -- --ignored
 | `test` | `cert_regression_pin` | `conform/vyre-conform/tests/cert_regression_pin.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --test cert_regression_pin` |
 | `test` | `composition_discipline` | `conform/vyre-conform/tests/composition_discipline.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --test composition_discipline` |
 | `test` | `countless_readwrite_output_parity` | `conform/vyre-conform/tests/countless_readwrite_output_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --test countless_readwrite_output_parity` |
+| `test` | `countless_readwrite_output_parity` | `conform/vyre-conform/tests/countless_readwrite_output_parity.rs` | `gpu` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --test countless_readwrite_output_parity` |
 | `test` | `dispatch_grid_contracts` | `conform/vyre-conform/tests/dispatch_grid_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --test dispatch_grid_contracts` |
 | `test` | `fp_parity_ul_policy_contracts` | `conform/vyre-conform/tests/fp_parity_ul_policy_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --test fp_parity_ul_policy_contracts` |
 | `test` | `invariants` | `conform/vyre-conform/tests/invariants.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --test invariants` |

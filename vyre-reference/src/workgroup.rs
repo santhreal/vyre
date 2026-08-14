@@ -9,13 +9,13 @@ use std::convert::Infallible;
 use std::ops::ControlFlow::{self, Continue};
 use std::sync::Arc;
 
+use crate::execution::async_transfer::AsyncTransfer;
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 use vyre_foundation::ir::model::expr::GeneratorRef;
 #[cfg(test)]
 use vyre_foundation::ir::BufferAccess;
 use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::visit::{visit_node_preorder, visit_preorder, ExprVisitor, NodeVisitor};
 
 use crate::ReferenceError;
@@ -424,12 +424,7 @@ pub struct Invocation<'a> {
     /// Async transfers started by `AsyncLoad`/`AsyncStore` and pending
     /// observation by `AsyncWait`.
     pub(crate) pending_async: FxHashMap<Arc<str>, AsyncTransfer>,
-    pub(crate) op_cache: FxHashMap<*const Expr, ResolvedCall>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct ResolvedCall {
-    pub(crate) operation: SemanticOperation,
+    pub(crate) op_cache: crate::execution::call::OpCache,
 }
 
 /// Interpreter continuation stack.
@@ -628,16 +623,6 @@ impl<'a> Invocation<'a> {
     pub(crate) fn frames_mut(&mut self) -> &mut Vec<Frame<'a>> {
         &mut self.frames
     }
-}
-
-/// Deferred byte-copy transfer for the workgroup reference scheduler.
-pub(crate) enum AsyncTransfer {
-    /// Copy `payload` into `destination` starting at byte offset `start`.
-    Copy {
-        destination: Arc<str>,
-        start: usize,
-        payload: Vec<u8>,
-    },
 }
 
 #[cfg(test)]

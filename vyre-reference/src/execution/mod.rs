@@ -4,6 +4,7 @@
 //! the existing invocation simulator until `Program` stores graph nodes
 //! directly.
 
+pub(crate) mod async_transfer;
 pub(crate) mod call;
 pub mod expr;
 pub(crate) mod expr_cast;

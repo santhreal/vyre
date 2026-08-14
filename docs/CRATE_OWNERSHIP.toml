@@ -830,7 +830,7 @@ features = []
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
-default_features = true
+default_features = false
 boundary = "private"
 seam = "product-libraries"
 
@@ -1311,7 +1311,7 @@ seam = "foundation-ir"
 [[crate.dependency]]
 package = "vyre-primitives"
 purpose = "reusable semantic Program builders"
-features = ["bitset", "decode", "fixpoint", "geom", "graph", "hash", "inventory-registry", "label", "matching", "math", "nfa", "nn", "opt", "parsing", "predicate", "reduce", "text", "topology", "visual"]
+features = ["graph", "inventory-registry", "text"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false

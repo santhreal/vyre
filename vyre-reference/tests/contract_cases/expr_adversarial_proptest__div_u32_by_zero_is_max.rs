@@ -135,4 +135,3 @@ fn div_i32_by_zero_errors() {
     );
     assert!(result.is_err(), "i32 division by zero must error");
 }
-

@@ -3,18 +3,14 @@ use super::super::state::HashmapInvocationSnapshot;
 use super::super::{
     eval_expr,
     memory::{buffer_mut, HashmapMemory},
-    state::{HashmapAsyncTransfer, HashmapInvocation, HashmapResolvedCall},
+    state::HashmapInvocation,
     sync::{contains_barrier, node_id},
 };
-use crate::execution::call::invoke_cpu_ref;
-use crate::execution::expr_cast::spec_output_value;
+use crate::execution::async_transfer::{self, AsyncTransfer};
+use crate::execution::call::{callable_signature, invoke_signature, resolve_call};
 use crate::ReferenceError;
 use crate::{oob, value::Value, workgroup::Frame};
-use vyre_foundation::ir::{DataType, Expr, Node};
-use vyre_foundation::operation::OperationRegistry;
-use vyre_foundation::TypedParam;
-
-const MAX_CALL_INPUT_BYTES: usize = 64 * 1024 * 1024;
+use vyre_foundation::ir::{Expr, Node};
 
 pub(crate) fn step_nodes_frame<'a>(
     invocation: &mut HashmapInvocation<'a>,
@@ -295,92 +291,17 @@ pub(crate) fn eval_call(
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<Value, ReferenceError> {
-    let HashmapResolvedCall { operation } = resolve_call(expr, op_id, invocation)?;
-    let signature = operation.signature.ok_or_else(|| {
-        ReferenceError::new(format!(
-            "op `{op_id}` has no callable signature. Fix: attach a Signature to its canonical OperationRegistration before reference execution."
-        ))
-    })?;
-    validate_arity(op_id, inputs.len(), signature.inputs.len())?;
-    let input = encode_inputs(
-        op_id,
-        inputs,
-        signature.inputs,
-        invocation,
-        memory,
-        #[cfg(feature = "subgroup-ops")]
-        snapshots,
-    )?;
-    let mut output = Vec::new();
-    let cpu_ref = crate::reference_fn(op_id).ok_or_else(|| {
-        ReferenceError::new(format!(
-            "op `{op_id}` has no CPU reference implementation. Fix: register one ReferenceFacet for this canonical operation or inline its composition body."
-        ))
-    })?;
-    invoke_cpu_ref(op_id, cpu_ref, &input, &mut output)?;
-    let parsed_out_type = signature
-        .outputs
-        .first()
-        .map(|param| match param.ty {
-            "u32" => DataType::U32,
-            "i32" => DataType::I32,
-            "f32" => DataType::F32,
-            "u8" | "bool" => DataType::Bytes,
-            _ => DataType::Bytes,
-        })
-        .unwrap_or(DataType::Bytes);
-    Ok(spec_output_value(parsed_out_type, &output))
-}
-
-fn validate_arity(op_id: &str, actual: usize, expected: usize) -> Result<(), ReferenceError> {
-    if actual == expected {
-        return Ok(());
-    }
-    Err(ReferenceError::new(format!(
-        "call `{op_id}` received {actual} arguments but the primitive signature requires {expected}. Fix: pass exactly {expected} arguments."
-    )))
-}
-
-fn encode_inputs(
-    op_id: &str,
-    args: &[Expr],
-    inputs: &[TypedParam],
-    invocation: &mut HashmapInvocation<'_>,
-    memory: &mut HashmapMemory,
-    #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
-) -> Result<Vec<u8>, ReferenceError> {
-    let mut input = Vec::with_capacity(inputs.iter().map(|param| param_width(param.ty)).sum());
-    for (arg, param) in args.iter().zip(inputs) {
-        let declared_width = param_width(param.ty);
-        let next_len = input.len().checked_add(declared_width).ok_or_else(|| {
-            ReferenceError::new(format!(
-                "call `{op_id}` input byte size overflows usize. Fix: reduce the argument count or byte payload size."
-            ))
-        })?;
-        if next_len > MAX_CALL_INPUT_BYTES {
-            return Err(ReferenceError::new(format!(
-                "call `{op_id}` requires {next_len} input bytes, exceeding the {MAX_CALL_INPUT_BYTES}-byte reference budget. Fix: reduce call input size."
-            )));
-        }
-        let value = eval_expr(
+    let resolved = resolve_call(expr, op_id, &mut invocation.op_cache)?;
+    let signature = callable_signature(op_id, &resolved.operation)?;
+    invoke_signature(op_id, signature, inputs, |arg| {
+        eval_expr(
             arg,
             invocation,
             memory,
             #[cfg(feature = "subgroup-ops")]
             snapshots,
-        )?;
-        value.extend_bytes_width(declared_width, &mut input)?;
-    }
-    Ok(input)
-}
-
-fn param_width(ty: &str) -> usize {
-    match ty {
-        "u32" | "i32" | "f32" | "vec-count" => 4,
-        "u64" | "i64" | "f64" => 8,
-        "u8" | "i8" | "bool" => 1,
-        _ => 1,
-    }
+        )
+    })
 }
 
 fn eval_indirect_dispatch(
@@ -401,7 +322,7 @@ fn eval_async_load(
     invocation: &mut HashmapInvocation<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
-) -> Result<HashmapAsyncTransfer, ReferenceError> {
+) -> Result<AsyncTransfer, ReferenceError> {
     let start = eval_byte_count(
         offset,
         "async load source offset",
@@ -420,11 +341,7 @@ fn eval_async_load(
     )?;
     let payload = read_bytes(memory, source, start, byte_count)?;
     ensure_buffer_exists(memory, destination)?;
-    Ok(HashmapAsyncTransfer::Copy {
-        destination: destination.to_string(),
-        start: 0,
-        payload,
-    })
+    Ok(AsyncTransfer::load(destination, payload))
 }
 
 fn eval_async_store(
@@ -435,7 +352,7 @@ fn eval_async_store(
     invocation: &mut HashmapInvocation<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
-) -> Result<HashmapAsyncTransfer, ReferenceError> {
+) -> Result<AsyncTransfer, ReferenceError> {
     let start = eval_byte_count(
         offset,
         "async store destination offset",
@@ -454,11 +371,7 @@ fn eval_async_store(
     )?;
     let payload = read_bytes(memory, source, 0, byte_count)?;
     ensure_buffer_exists(memory, destination)?;
-    Ok(HashmapAsyncTransfer::Copy {
-        destination: destination.to_string(),
-        start,
-        payload,
-    })
+    Ok(AsyncTransfer::store(destination, start, payload))
 }
 
 fn eval_byte_count(
@@ -475,92 +388,29 @@ fn eval_byte_count(
         #[cfg(feature = "subgroup-ops")]
         snapshots,
     )?;
-    usize::try_from(value.try_as_u64().ok_or_else(|| {
-        ReferenceError::new(format!(
-            "{label} cannot be represented as u64. Fix: use an in-range non-negative byte count."
-        ))
-    })?)
-    .map_err(|_| {
-        ReferenceError::new(format!(
-            "{label} exceeds host usize. Fix: reduce the async transfer span."
-        ))
-    })
+    async_transfer::byte_count(&value, label)
 }
 
-/// Read `byte_count` bytes from a reference buffer at `start`, zero-padding a short tail.
-///
-/// # Panics
-/// Panics when the buffer's byte lock is poisoned. A poisoned lock means a writer
-/// panicked mid-store, and reading past it would let the CPU oracle emit corrupt
-/// golden values the conform gate then trusts.
 fn read_bytes(
     memory: &HashmapMemory,
     source: &str,
     start: usize,
     byte_count: usize,
 ) -> Result<Vec<u8>, ReferenceError> {
-    let buffer = super::super::memory::resolve_buffer(memory, source)?;
-    let bytes = buffer
-        .bytes
-        .read()
-        .unwrap_or_else(|_| panic!("reference Buffer byte lock was poisoned"));
-    let mut payload = vec![0; byte_count];
-    if start < bytes.len() {
-        let available = (bytes.len() - start).min(byte_count);
-        payload[..available].copy_from_slice(&bytes[start..start + available]);
-    }
-    Ok(payload)
+    Ok(super::super::memory::resolve_buffer(memory, source)?.read_window(start, byte_count))
 }
 
 fn ensure_buffer_exists(memory: &HashmapMemory, name: &str) -> Result<(), ReferenceError> {
     super::super::memory::resolve_buffer(memory, name).map(|_| ())
 }
 
-/// Apply a queued async transfer to a reference buffer.
-///
-/// # Panics
-/// Panics when the buffer's byte lock is poisoned; see the reading counterpart.
 fn apply_async_transfer(
-    transfer: HashmapAsyncTransfer,
+    transfer: AsyncTransfer,
     memory: &mut HashmapMemory,
 ) -> Result<(), ReferenceError> {
-    match transfer {
-        HashmapAsyncTransfer::Copy {
-            destination,
-            start,
-            payload,
-        } => {
-            let buffer = buffer_mut(memory, &destination)?;
-            let mut bytes = buffer
-                .bytes
-                .write()
-                .unwrap_or_else(|_| panic!("reference Buffer byte lock was poisoned"));
-            if start >= bytes.len() {
-                return Ok(());
-            }
-            let write_len = payload.len().min(bytes.len() - start);
-            bytes[start..start + write_len].copy_from_slice(&payload[..write_len]);
-            Ok(())
-        }
-    }
-}
-
-fn resolve_call(
-    call_expr: *const Expr,
-    op_id: &str,
-    invocation: &mut HashmapInvocation<'_>,
-) -> Result<HashmapResolvedCall, ReferenceError> {
-    if let Some(resolved) = invocation.op_cache.get(&call_expr).copied() {
-        return Ok(resolved);
-    }
-    let operation = OperationRegistry::global().get(op_id).ok_or_else(|| {
-        ReferenceError::new(format!(
-            "unsupported call `{op_id}`. Fix: submit one canonical OperationRegistration or inline the callee as IR."
-        ))
-    })?;
-    let resolved = HashmapResolvedCall { operation };
-    invocation.op_cache.insert(call_expr, resolved);
-    Ok(resolved)
+    let buffer = buffer_mut(memory, transfer.destination())?;
+    transfer.apply_to(buffer);
+    Ok(())
 }
 
 #[cfg(test)]
@@ -616,7 +466,7 @@ mod tests {
     /// path inside `apply_async_transfer`.
     #[test]
     fn apply_async_transfer_fails_closed_on_poisoned_buffer_lock() {
-        use super::super::super::state::HashmapAsyncTransfer;
+        use super::AsyncTransfer;
         let buffer = Buffer::new(vec![0xcd_u8; 8], DataType::U32);
         let poisoner = buffer.bytes.clone();
         let _ = std::thread::spawn(move || {
@@ -631,11 +481,7 @@ mod tests {
 
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             super::apply_async_transfer(
-                HashmapAsyncTransfer::Copy {
-                    destination: "dst".to_string(),
-                    start: 0,
-                    payload: vec![0x11, 0x22, 0x33, 0x44],
-                },
+                AsyncTransfer::store("dst", 0, vec![0x11, 0x22, 0x33, 0x44]),
                 &mut memory,
             )
         }));

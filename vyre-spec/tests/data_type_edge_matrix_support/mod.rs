@@ -1,7 +1,9 @@
-//! Data type generated edge matrix support test suite.
+//! Case builders for the generated data-type edge matrix.
 
 use vyre_spec::extension::ExtensionDataTypeId;
 use vyre_spec::{DataType, QuantizationScale, QuantizationZeroPoint, TypeId};
+
+use crate::spec_variants::{QUANTIZED_STORAGE_TYPES, SCALAR_LEAF_TYPES};
 
 /// Assert the size/bit-width/tag layout invariants hold for one generated type.
 pub(crate) fn assert_layout_invariants(idx: usize, ty: &DataType) {
@@ -141,30 +143,12 @@ pub(crate) fn generated_edge_types() -> Vec<DataType> {
 }
 
 /// The leaf (non-composite) data types used as building blocks for the matrix.
+///
+/// The scalar leaves come from the shared table so a new one enters this matrix
+/// too; what this list adds is the boundary payloads for the parametrized leaves.
 pub(crate) fn leaf_edge_types() -> Vec<DataType> {
-    vec![
-        DataType::U8,
-        DataType::U16,
-        DataType::U32,
-        DataType::U64,
-        DataType::I8,
-        DataType::I16,
-        DataType::I32,
-        DataType::I64,
-        DataType::Bool,
-        DataType::F16,
-        DataType::BF16,
-        DataType::F32,
-        DataType::F64,
-        DataType::F8E4M3,
-        DataType::F8E5M2,
-        DataType::I4,
-        DataType::FP4,
-        DataType::NF4,
-        DataType::Vec2U32,
-        DataType::Vec4U32,
-        DataType::Bytes,
-        DataType::Tensor,
+    let mut types = SCALAR_LEAF_TYPES.to_vec();
+    types.extend([
         DataType::Array { element_size: 0 },
         DataType::Array { element_size: 1 },
         DataType::Array {
@@ -182,22 +166,13 @@ pub(crate) fn leaf_edge_types() -> Vec<DataType> {
             axes: [u32::MAX].as_slice().into(),
         },
         DataType::Opaque(ExtensionDataTypeId::from_name("edge_matrix.dtype")),
-    ]
+    ]);
+    types
 }
 
 /// Storage element types that are valid backings for a quantized type.
 pub(crate) fn quantized_storage_types() -> Vec<DataType> {
-    vec![
-        DataType::I4,
-        DataType::I8,
-        DataType::I16,
-        DataType::U8,
-        DataType::U16,
-        DataType::F8E4M3,
-        DataType::F8E5M2,
-        DataType::FP4,
-        DataType::NF4,
-    ]
+    QUANTIZED_STORAGE_TYPES.to_vec()
 }
 
 /// Representative quantization scale modes (per-tensor, per-channel, per-group).

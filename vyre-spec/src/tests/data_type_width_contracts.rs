@@ -1,5 +1,8 @@
-//! Test: type backend contracts.
-use crate::{BackendId, DataType, IntrinsicLowering, IntrinsicTable, OpSignature};
+//! `DataType` width contracts: bytes, bits, and what has no compile-time width.
+//!
+//! `IntrinsicTable::missing_backends` is covered by `spec_contract_errors.rs`,
+//! which owns the whole missing-backend family including partial population.
+use crate::{DataType, OpSignature};
 
 #[test]
 fn data_type_min_bytes_is_monotonic_for_integer_scalars() {
@@ -22,28 +25,6 @@ fn op_signature_min_input_bytes_sums_inputs() {
         contract: None,
     };
     assert_eq!(sig.min_input_bytes(), 4 + 8 + 16);
-}
-
-#[test]
-fn intrinsic_table_missing_backends_reports_all_empty() {
-    let empty = IntrinsicTable::default();
-    let required = required_backends();
-    let missing = empty.missing_backends(&required).collect::<Vec<_>>();
-    assert_eq!(missing, vec!["alpha", "beta", "gamma", "delta"]);
-}
-
-#[test]
-fn intrinsic_table_detects_whitespace_as_missing() {
-    let table = IntrinsicTable {
-        lowerings: vec![
-            IntrinsicLowering::new("alpha", "   "),
-            IntrinsicLowering::new("beta", "atom.add"),
-            IntrinsicLowering::new("gamma", ""),
-        ],
-    };
-    let required = required_backends();
-    let missing = table.missing_backends(&required).collect::<Vec<_>>();
-    assert_eq!(missing, vec!["alpha", "gamma", "delta"]);
 }
 
 #[test]
@@ -118,11 +99,4 @@ fn variable_and_extension_types_have_no_compile_time_width() {
         DataType::Opaque(crate::extension::ExtensionDataTypeId(7)).bit_width(),
         None
     );
-}
-
-fn required_backends() -> Vec<BackendId> {
-    ["alpha", "beta", "gamma", "delta"]
-        .into_iter()
-        .map(BackendId::from)
-        .collect()
 }

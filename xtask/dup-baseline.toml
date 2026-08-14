@@ -156,8 +156,8 @@ total_lines = 101792
 
 [[crate]]
 name = "vyre-reference"
-duplicate_lines = 971
-total_lines = 15205
+duplicate_lines = 743
+total_lines = 15255
 
 [[crate]]
 name = "vyre-runtime"
@@ -176,8 +176,8 @@ total_lines = 0
 
 [[crate]]
 name = "vyre-spec"
-duplicate_lines = 446
-total_lines = 9439
+duplicate_lines = 244
+total_lines = 9259
 
 [[crate]]
 name = "xtask"

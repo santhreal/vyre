@@ -182,6 +182,39 @@ impl Buffer {
         self.write_bytes().fill(0);
     }
 
+    /// Copy `byte_count` bytes starting at `start`, zero-padding a short tail.
+    ///
+    /// An async transfer names a byte span rather than an element index, so it
+    /// reads through here instead of the element-indexed [`load`]. A span that
+    /// starts past the end, or runs off the end, yields zeros for the part that
+    /// is not backed by bytes, which is the same silent absorption the module
+    /// docstring defines for an out-of-bounds load.
+    ///
+    /// # Panics
+    /// Panics when the byte lock is poisoned; see [`Buffer::read_bytes`].
+    pub(crate) fn read_window(&self, start: usize, byte_count: usize) -> Vec<u8> {
+        let bytes_guard = self.read_bytes();
+        let mut payload = vec![0; byte_count];
+        if start < bytes_guard.len() {
+            let available = (bytes_guard.len() - start).min(byte_count);
+            payload[..available].copy_from_slice(&bytes_guard[start..start + available]);
+        }
+        payload
+    }
+
+    /// Write `payload` starting at `start`, dropping the part past the end.
+    ///
+    /// # Panics
+    /// Panics when the byte lock is poisoned; see [`Buffer::read_bytes`].
+    pub(crate) fn write_window(&self, start: usize, payload: &[u8]) {
+        let mut bytes_guard = self.write_bytes();
+        if start >= bytes_guard.len() {
+            return;
+        }
+        let write_len = payload.len().min(bytes_guard.len() - start);
+        bytes_guard[start..start + write_len].copy_from_slice(&payload[..write_len]);
+    }
+
     /// Consume the buffer and return its bytes.
     ///
     /// # Panics
@@ -491,5 +524,51 @@ mod tests {
             message.contains("reference Buffer byte lock was poisoned"),
             "panic must name the poisoned reference buffer lock, got: {message}"
         );
+    }
+
+    /// Both async-transfer window helpers must fail closed on a poisoned lock,
+    /// for the same reason [`poisoned_reference_buffer_lock_is_not_silently_recovered`]
+    /// gives: an async copy that reads or writes half-mutated bytes hands the
+    /// conform gate a golden value that no correct backend can reproduce.
+    ///
+    /// Both reference node executors reach the copy through these two methods,
+    /// so this covers both arms. The statement executor used to recover the
+    /// poisoned guard with `into_inner()` while the hashmap executor panicked,
+    /// which is the divergence that made one arm's oracle trustworthy and the
+    /// other's not.
+    #[test]
+    fn poisoned_lock_fails_closed_in_both_async_window_helpers() {
+        for (label, access) in [
+            (
+                "read_window",
+                (|buffer: &Buffer| {
+                    let _ = buffer.read_window(0, 4);
+                }) as fn(&Buffer),
+            ),
+            ("write_window", |buffer: &Buffer| {
+                buffer.write_window(0, &[1, 2, 3, 4]);
+            }),
+        ] {
+            let buffer = Buffer::new(vec![0u8; 8], DataType::U32);
+            let poisoner = buffer.clone();
+            let _ = std::thread::spawn(move || {
+                let _guard = poisoner.write_bytes();
+                panic!("poison reference buffer lock mid-store");
+            })
+            .join();
+
+            let payload = std::panic::catch_unwind(|| access(&buffer)).expect_err(
+                "Fix: an async window helper must panic on a poisoned buffer lock, not recover",
+            );
+            let message = payload
+                .downcast_ref::<String>()
+                .map(String::as_str)
+                .or_else(|| payload.downcast_ref::<&'static str>().copied())
+                .unwrap_or("<non-string panic>");
+            assert!(
+                message.contains("reference Buffer byte lock was poisoned"),
+                "Fix: {label} must name the poisoned lock contract, got: {message}"
+            );
+        }
     }
 }

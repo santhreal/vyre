@@ -1,96 +1,24 @@
-//! Integration test crate for the containing Vyre package.
-
-#![allow(dead_code)]
 //! Adversarial proptest coverage for every BinOp, UnOp, Cast, Atomic, Load,
 //! BufLen, Store, Call, and Opaque expression variant (TEST-03 + TEST-04).
 //!
 //! Every property compares the reference interpreter against Rust-native
-//! semantics or the documented error contract.  No stubs, no shortcuts.
+//! semantics or the documented error contract.
+#![allow(dead_code)]
+
+mod flat_expr_eval;
+
 use proptest::prelude::*;
 use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_foundation::MemoryOrdering;
 use vyre_reference::{
-    execution::expr as eval_expr,
-    execution::expr::Buffer,
-    value::Value,
-    workgroup::{Invocation, InvocationIds, Memory},
+    execution::expr as eval_expr, execution::expr::Buffer, value::Value, workgroup::Memory,
 };
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-fn empty_program() -> Program {
-    Program::wrapped(Vec::new(), [1, 1, 1], Vec::new())
-}
-fn zero_invocation(program: &Program) -> Invocation<'_> {
-    Invocation::new(InvocationIds::ZERO, program.entry())
-}
-fn eval_expr_value(expr: &Expr) -> Value {
-    let program = empty_program();
-    eval_expr::eval(
-        expr,
-        &mut zero_invocation(&program),
-        &mut Memory::empty(),
-        &program,
-    )
-    .expect("Fix: flat evaluator must evaluate generated expression")
-}
-fn eval_binop_u32(op: BinOp, a: u32, b: u32) -> Value {
-    let expr = Expr::BinOp {
-        op,
-        left: Box::new(Expr::u32(a)),
-        right: Box::new(Expr::u32(b)),
-    };
-    eval_expr_value(&expr)
-}
-fn eval_binop_i32(op: BinOp, a: i32, b: i32) -> Value {
-    let expr = Expr::BinOp {
-        op,
-        left: Box::new(Expr::i32(a)),
-        right: Box::new(Expr::i32(b)),
-    };
-    eval_expr_value(&expr)
-}
-fn eval_binop_f32(op: BinOp, a: f32, b: f32) -> Value {
-    let expr = Expr::BinOp {
-        op,
-        left: Box::new(Expr::f32(a)),
-        right: Box::new(Expr::f32(b)),
-    };
-    eval_expr_value(&expr)
-}
-fn eval_unop_u32(op: UnOp, a: u32) -> Value {
-    let expr = Expr::UnOp {
-        op,
-        operand: Box::new(Expr::u32(a)),
-    };
-    eval_expr_value(&expr)
-}
-fn eval_unop_i32(op: UnOp, a: i32) -> Value {
-    let expr = Expr::UnOp {
-        op,
-        operand: Box::new(Expr::i32(a)),
-    };
-    eval_expr_value(&expr)
-}
-fn eval_unop_f32(op: UnOp, a: f32) -> Value {
-    let expr = Expr::UnOp {
-        op,
-        operand: Box::new(Expr::f32(a)),
-    };
-    eval_expr_value(&expr)
-}
-fn canonical_f32(value: f32) -> f32 {
-    if value.is_nan() {
-        f32::from_bits(0x7FC0_0000)
-    } else if value.is_subnormal() {
-        f32::from_bits(value.to_bits() & 0x8000_0000)
-    } else {
-        value
-    }
-}
-fn expected_f32(value: f32) -> Value {
-    Value::Float(f64::from(canonical_f32(value)))
-}
+
+use flat_expr_eval::{
+    canonical_f32, empty_program, eval_binop_f32, eval_binop_i32, eval_binop_u32, eval_expr_value,
+    eval_unop_f32, eval_unop_i32, eval_unop_u32, expected_f32, zero_invocation,
+};
+
 fn eval_cast(target: DataType, value: Expr) -> Value {
     let expr = Expr::Cast {
         target,
@@ -243,7 +171,7 @@ proptest! {
 // ---------------------------------------------------------------------------
 // Edge cases: divide-by-zero (proptest with any::<u32> never generates 0)
 // ---------------------------------------------------------------------------
-#[path = "contract_cases/expr_adversarial_proptest__div_u32_by_zero_is_max.rs"]
-mod expr_adversarial_proptest_div_u32_by_zero_is_max;
 #[path = "contract_cases/expr_adversarial_proptest__arithmetic_error_case_modules.rs"]
 mod expr_adversarial_proptest_arithmetic_error_case_modules;
+#[path = "contract_cases/expr_adversarial_proptest__div_u32_by_zero_is_max.rs"]
+mod expr_adversarial_proptest_div_u32_by_zero_is_max;

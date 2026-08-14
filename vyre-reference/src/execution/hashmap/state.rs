@@ -9,6 +9,7 @@ use super::{
     step::step_round_robin,
     sync::{live_waiting_count, release_barrier_if_ready, verify_uniform_control_flow},
 };
+use crate::execution::async_transfer::AsyncTransfer;
 use crate::ReferenceError;
 use crate::{
     value::Value,
@@ -17,8 +18,7 @@ use crate::{
 use im::HashMap;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
-use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_foundation::operation::SemanticOperation;
+use vyre_foundation::ir::{Node, Program};
 
 #[doc = " Local variable environment backed by persistent maps for O(1) subgroup snapshots."]
 pub(crate) struct HashmapLocals {
@@ -118,21 +118,8 @@ pub(crate) struct HashmapInvocation<'a> {
     pub(crate) waiting_at_barrier: bool,
     pub(crate) uniform_checks: Vec<(usize, bool)>,
     pub(crate) frames: Vec<Frame<'a>>,
-    pub(crate) pending_async: FxHashMap<Arc<str>, HashmapAsyncTransfer>,
-    pub(crate) op_cache: FxHashMap<*const Expr, HashmapResolvedCall>,
-}
-
-pub(crate) enum HashmapAsyncTransfer {
-    Copy {
-        destination: String,
-        start: usize,
-        payload: Vec<u8>,
-    },
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct HashmapResolvedCall {
-    pub(crate) operation: SemanticOperation,
+    pub(crate) pending_async: FxHashMap<Arc<str>, AsyncTransfer>,
+    pub(crate) op_cache: crate::execution::call::OpCache,
 }
 
 impl<'a> HashmapInvocation<'a> {
@@ -160,7 +147,7 @@ impl<'a> HashmapInvocation<'a> {
     pub(crate) fn begin_async(
         &mut self,
         tag: &str,
-        transfer: HashmapAsyncTransfer,
+        transfer: AsyncTransfer,
     ) -> Result<(), ReferenceError> {
         if self.pending_async.contains_key(tag) {
             return Err(ReferenceError::new(format!(
@@ -171,10 +158,7 @@ impl<'a> HashmapInvocation<'a> {
         Ok(())
     }
 
-    pub(crate) fn finish_async(
-        &mut self,
-        tag: &str,
-    ) -> Result<HashmapAsyncTransfer, ReferenceError> {
+    pub(crate) fn finish_async(&mut self, tag: &str) -> Result<AsyncTransfer, ReferenceError> {
         self.pending_async.remove(tag).ok_or_else(|| ReferenceError::new(format!(
             "async wait for tag `{tag}` has no matching async transfer. Fix: emit AsyncLoad or AsyncStore before AsyncWait."
         )))

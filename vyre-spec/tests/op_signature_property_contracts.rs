@@ -1,62 +1,11 @@
 //! Generated property coverage for operation signature byte accounting.
 
+mod spec_variants;
+
 use proptest::prelude::*;
+use spec_variants::data_type_strategy;
 use vyre_spec::op_signature::SignatureParam;
-use vyre_spec::{DataType, OpSignature, TypeId};
-
-fn scalar_type_strategy() -> impl Strategy<Value = DataType> {
-    prop_oneof![
-        Just(DataType::U8),
-        Just(DataType::U16),
-        Just(DataType::U32),
-        Just(DataType::U64),
-        Just(DataType::I8),
-        Just(DataType::I16),
-        Just(DataType::I32),
-        Just(DataType::I64),
-        Just(DataType::Bool),
-        Just(DataType::F16),
-        Just(DataType::BF16),
-        Just(DataType::F32),
-        Just(DataType::F64),
-        Just(DataType::F8E4M3),
-        Just(DataType::F8E5M2),
-        Just(DataType::I4),
-        Just(DataType::FP4),
-        Just(DataType::NF4),
-        Just(DataType::Vec2U32),
-        Just(DataType::Vec4U32),
-        Just(DataType::Bytes),
-        Just(DataType::Tensor),
-        any::<u32>().prop_map(|raw| DataType::Handle(TypeId(raw))),
-        (1usize..=64usize).prop_map(|element_size| DataType::Array { element_size }),
-    ]
-}
-
-fn data_type_strategy() -> BoxedStrategy<DataType> {
-    scalar_type_strategy()
-        .prop_recursive(3, 48, 4, |inner| {
-            prop_oneof![
-                (inner.clone(), 1u8..=16u8).prop_map(|(element, count)| DataType::Vec {
-                    element: Box::new(element),
-                    count,
-                }),
-                (inner.clone(), prop::collection::vec(1u32..=16, 0..=4)).prop_map(
-                    |(element, shape)| DataType::TensorShaped {
-                        element: Box::new(element),
-                        shape: shape.as_slice().into(),
-                    },
-                ),
-                inner.clone().prop_map(|element| DataType::SparseCsr {
-                    element: Box::new(element),
-                }),
-                inner.prop_map(|element| DataType::SparseCoo {
-                    element: Box::new(element),
-                }),
-            ]
-        })
-        .boxed()
-}
+use vyre_spec::{DataType, OpSignature};
 
 fn signature_param_strategy() -> impl Strategy<Value = SignatureParam> {
     (
