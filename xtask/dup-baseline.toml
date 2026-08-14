@@ -158,8 +158,8 @@ total_lines = 15205
 
 [[crate]]
 name = "vyre-runtime"
-duplicate_lines = 545
-total_lines = 29205
+duplicate_lines = 520
+total_lines = 29187
 
 [[crate]]
 name = "vyre-self-substrate"
