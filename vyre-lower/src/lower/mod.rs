@@ -11,7 +11,7 @@ mod carrier_names;
 mod context;
 mod descriptor_metadata;
 mod expr_lowering;
-pub(crate) mod fixture_builders;
+mod loop_site;
 mod node_lowering;
 mod op_emission;
 mod scope;

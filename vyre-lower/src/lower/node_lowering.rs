@@ -535,6 +535,7 @@ impl LowerCtx {
 mod tests {
     use super::super::lower;
     use crate::descriptor::{KernelBody, KernelOp, KernelOpKind};
+    use crate::lower::loop_site::find_loop;
     use vyre_foundation::ir::{BufferAccess, DataType, Program};
 
     #[test]
@@ -571,15 +572,6 @@ mod tests {
             ),
             "loop body must materialize the induction value before lowering input[i]"
         );
-
-        fn find_loop(body: &KernelBody) -> Option<(&KernelBody, &KernelOp)> {
-            for op in &body.ops {
-                if matches!(op.kind, KernelOpKind::StructuredForLoop { .. }) {
-                    return Some((body, op));
-                }
-            }
-            body.child_bodies.iter().find_map(find_loop)
-        }
     }
 
     #[test]
