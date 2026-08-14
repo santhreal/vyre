@@ -809,3 +809,18 @@ text = "The duplication baseline pins for vyre-reference and vyre-spec now recor
 id = "duplication-pins-lowered-to-the-merged-tree"
 category = "Changed"
 text = "Twelve duplication pins now sit at what the merged tree measures rather than at what each lane measured in isolation: vyre 40 to 22, vyre-aot 54 to 31, vyre-debug 71 to 54, vyre-driver-cuda 3252 to 3238, vyre-driver-wgpu 4229 to 4017, vyre-foundation 5125 to 5117, vyre-libs 11759 to 11539, vyre-megakernel 60 to 8, vyre-primitives 7145 to 7038, vyre-runtime 412 to 345, vyre-pass-engine 299 to 288. Duplication is measured across files, so collapsing a copy in one crate moves every crate that shared it: vyre-megakernel lost 52 lines it never edited, and vyre-primitives lost 107. A pin left at the isolated measurement would have carried that slack as headroom for the next copy. `total_lines` is measured too, not carried forward, because a stale total makes the ratio it exists to report meaningless."
+
+[[fragments]]
+id = "iterative-solver-binding-records"
+category = "Changed"
+text = "`bellman_shortest_path` and `sinkhorn_iterate` take a named binding record plus an extents record instead of nine and thirteen positional arguments. The IR-parity test for Sinkhorn had been passing its ten same-typed buffer names in binding order rather than parameter order, so it emitted a program that named its kernel matrix `u_curr` and its convergence flag `kv`; a record forces each name to be spelled at the call. `bellman_tn_order_program` and `sinkhorn_full_clustering_program` forward the same records."
+
+[[fragments]]
+id = "fixpoint-routing-single-owner"
+category = "Changed"
+text = "Harness selection and convergence-flag width for the persistent fixpoint are one decision with one owner, `routed_persistent_fixpoint`, which returns both halves together. The grid form indexes `changed[iteration]`, so taking the harness without its flag width was an out-of-bounds atomic write on the second iteration."
+
+[[fragments]]
+id = "grid-sync-inspection-single-owner"
+category = "Fixed"
+text = "Grid-fence counting for wave-structure assertions descends through the workspace's single exhaustive owner of node nesting. Seven copies each re-derived the walk with a trailing catch-all arm, which classifies an unrecognised nesting variant as containing no fences and would let an under-fenced program pass its own structure test. The grid-fence builder, the launch-width reader, and the declared-flag-width reader also had three copies each."
