@@ -188,13 +188,13 @@ const CUDA_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
     },
     BackendFeatureRequirement {
         id: "cuda-module-cache",
-        relative: "vyre-driver-cuda/src/backend/module_cache.rs",
+        relative: "vyre-driver-cuda/src/backend/module_cache/module_registry.rs",
         role: "CUDA PTX module cache",
         tokens: &["function_for_ptx", "ptx_target_sm"],
     },
     BackendFeatureRequirement {
         id: "cuda-ptx-source-cache",
-        relative: "vyre-driver-cuda/src/backend/module_cache.rs",
+        relative: "vyre-driver-cuda/src/backend/module_cache/ptx_source_cache.rs",
         role: "CUDA PTX source cache before module load",
         tokens: &[
             "CudaPtxSourceCache",

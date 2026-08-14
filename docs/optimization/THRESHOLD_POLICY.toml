@@ -147,7 +147,7 @@ release_rule = "VX-475"
 
 [[threshold]]
 id = "VX475-DEFAULT_EXTRACTION_ITER_BUDGET"
-path = "vyre-foundation/src/optimizer/eqsat.rs"
+path = "vyre-foundation/src/optimizer/eqsat/mod.rs"
 name = "DEFAULT_EXTRACTION_ITER_BUDGET"
 unit = "extraction iterations"
 provenance = "Existing equality-saturation extraction iteration budget; bounds optimizer compile time."

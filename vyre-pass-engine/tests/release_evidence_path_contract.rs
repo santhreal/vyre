@@ -182,3 +182,67 @@ fn evidence_path_gate_reports_a_cited_path_that_is_gitignored() {
         "a tracked file must not be reported; check-ignore must stay index-aware.\nstderr:\n{stderr}"
     );
 }
+
+/// A citation the gate would previously never read must still be reported.
+///
+/// Discovery used to walk one shape only: a top-level key holding an array of
+/// objects with a `path` field. Every other placement was invisible, which is
+/// the same defect as a docs index that reads most of a document: the gate
+/// reports a clean tree it did not measure. On this tree that hid 81 of 634
+/// citations, and the one dead citation among them sat on an artifact's own root
+/// object, an unexpanded `${SANTH_ROOT}` template naming a README in a
+/// repository this one does not contain.
+///
+/// The fixture places one absent path at each shape the earlier filter missed:
+/// the root object, an object nested under another object, and an object inside
+/// an array that is itself nested rather than top level. Each must be reported
+/// with a locatable route, so a schema that moves a citation deeper cannot
+/// silently take it out of the gate's reach.
+#[test]
+fn evidence_path_gate_reads_citations_outside_a_top_level_array() {
+    let workspace = vyre_test_support::monorepo::vyre_workspace_root();
+    let script = workspace.join("scripts/check_evidence_paths.sh");
+
+    let fixture = std::env::temp_dir().join("vyre_evidence_path_gate_nested_fixture");
+    let evidence = fixture.join("evidence");
+    let _ = std::fs::remove_dir_all(&fixture);
+    std::fs::create_dir_all(&evidence).expect("fixture evidence directory should be creatable");
+    std::fs::write(
+        evidence.join("artifact.json"),
+        concat!(
+            r#"{"path":"absent/on/the/root/object.rs","#,
+            r#""subject":{"path":"absent/under/an/object.rs"},"#,
+            r#""groups":[{"rows":[{"path":"absent/in/a/nested/array.rs"}]}]}"#
+        ),
+    )
+    .expect("fixture artifact should be writable");
+
+    let output = Command::new("bash")
+        .arg(&script)
+        .current_dir(workspace)
+        .env("EVIDENCE_DIR", &evidence)
+        .output()
+        .expect("evidence path contract script should execute");
+
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    let _ = std::fs::remove_dir_all(&fixture);
+
+    assert!(
+        !output.status.success(),
+        "gate must exit non-zero for citations outside a top-level array.\nstderr:\n{stderr}"
+    );
+    for (route, path) in [
+        ("<root>", "absent/on/the/root/object.rs"),
+        ("subject", "absent/under/an/object.rs"),
+        ("groups[0].rows[0]", "absent/in/a/nested/array.rs"),
+    ] {
+        assert!(
+            stderr.contains(&format!("{route} cites a path that does not exist: {path}")),
+            "failure must locate the citation at `{route}`.\nstderr:\n{stderr}"
+        );
+    }
+    assert!(
+        stderr.contains("3 citation(s)"),
+        "every unreadable placement must be counted, not just the first.\nstderr:\n{stderr}"
+    );
+}

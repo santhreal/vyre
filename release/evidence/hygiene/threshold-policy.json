@@ -22,7 +22,7 @@
     {
       "id": "VX475-BIND_GROUP_CACHE_CAP",
       "path": "vyre-driver-wgpu/src/buffer/handle.rs",
-      "line": 781,
+      "line": 779,
       "name": "BIND_GROUP_CACHE_CAP",
       "observed_value": "256",
       "unit": "bind group entries",
@@ -73,8 +73,8 @@
     },
     {
       "id": "VX475-DEFAULT_EXTRACTION_ITER_BUDGET",
-      "path": "vyre-foundation/src/optimizer/eqsat.rs",
-      "line": 47,
+      "path": "vyre-foundation/src/optimizer/eqsat/mod.rs",
+      "line": 68,
       "name": "DEFAULT_EXTRACTION_ITER_BUDGET",
       "observed_value": "1024",
       "unit": "extraction iterations",

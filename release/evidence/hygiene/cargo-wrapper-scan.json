@@ -9,6 +9,12 @@
       "text": "//! Run it with `cargo run -p structure-gate`. It reads source text and depends"
     },
     {
+      "path": "structure-gate/src/lib.rs",
+      "line": 19,
+      "pattern": "raw_workspace_cargo",
+      "text": "//! Re-verifying a change to this gate means running `cargo test -p"
+    },
+    {
       "path": "vyre-driver-cuda/src/backend/host_dispatch/host_cost_attribution.rs",
       "line": 77,
       "pattern": "raw_workspace_cargo",
@@ -31,8 +37,139 @@
       "line": 169,
       "pattern": "raw_workspace_cargo",
       "text": "Fix: regenerate the witness via `cargo xtask trace-f32 {}` or repair the reference.\","
+    },
+    {
+      "path": "scripts/check_every_source_file_is_reachable.sh",
+      "line": 34,
+      "pattern": "heredoc",
+      "text": "python3 - \"$ROOT\" <<'PY'"
+    },
+    {
+      "path": "scripts/check_internal_deps_have_versions.sh",
+      "line": 32,
+      "pattern": "heredoc",
+      "text": "python3 - \"$ROOT\" <<'PY'"
+    },
+    {
+      "path": "scripts/check_internal_deps_have_versions.sh",
+      "line": 169,
+      "pattern": "raw_workspace_cargo",
+      "text": "f\"against a versioned table entry. Path-only blocks `cargo publish` from \""
+    },
+    {
+      "path": "scripts/check_deep_bench_coverage.sh",
+      "line": 28,
+      "pattern": "heredoc",
+      "text": "python3 - \"$ROOT\" \"$CARGO_RUNNER\" <<'PY'"
+    },
+    {
+      "path": "scripts/check_feature_msrv.sh",
+      "line": 35,
+      "pattern": "heredoc",
+      "text": "python3 - \"$ROOT\" \"$CARGO_RUNNER\" \"${1:-}\" <<'PY'"
+    },
+    {
+      "path": "scripts/check_every_source_file_parses.sh",
+      "line": 38,
+      "pattern": "heredoc",
+      "text": "python3 - \"$ROOT\" <<'PY'"
+    },
+    {
+      "path": "scripts/check_layering.sh",
+      "line": 28,
+      "pattern": "heredoc",
+      "text": "python3 - \"$PWD\" \"$CARGO_RUNNER\" <<'PY'"
+    },
+    {
+      "path": "scripts/check_path_deps_resolve.sh",
+      "line": 18,
+      "pattern": "heredoc",
+      "text": "python3 - \"$ROOT\" <<'PY'"
     }
   ],
-  "release_blocking_findings": [],
-  "blockers": []
+  "release_blocking_findings": [
+    {
+      "path": "scripts/check_every_source_file_is_reachable.sh",
+      "line": 34,
+      "pattern": "heredoc",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "scripts/check_internal_deps_have_versions.sh",
+      "line": 32,
+      "pattern": "heredoc",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "scripts/check_internal_deps_have_versions.sh",
+      "line": 169,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "scripts/check_deep_bench_coverage.sh",
+      "line": 28,
+      "pattern": "heredoc",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "scripts/check_feature_msrv.sh",
+      "line": 35,
+      "pattern": "heredoc",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "scripts/check_every_source_file_parses.sh",
+      "line": 38,
+      "pattern": "heredoc",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "scripts/check_layering.sh",
+      "line": 28,
+      "pattern": "heredoc",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "scripts/check_path_deps_resolve.sh",
+      "line": 18,
+      "pattern": "heredoc",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    }
+  ],
+  "blockers": [
+    "8 release-blocking `cargo-wrapper` finding(s) remain"
+  ]
 }

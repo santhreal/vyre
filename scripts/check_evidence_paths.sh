@@ -23,15 +23,21 @@
 # be trusted at release time. An artifact that authoritatively cites deleted
 # symbols certifies against fiction.
 #
-# SCOPE: every object array carrying a `path` field, in every JSON under
-# release/evidence. Deliberately NOT just `findings`. When this gate was written
-# the tree carried 185 stale citations across 16 artifacts, and only 8 of those
-# were in a findings array. The largest single block was a stale path prefix:
-# a renamed analysis component left two artifacts pointing at its previous
-# source directory. The evidence described a real capability at the wrong path,
-# which is the failure mode a path oracle catches and a self-consistency check
-# cannot.
+# SCOPE: every `path` string at any depth, in every JSON under release/evidence.
+# Deliberately NOT just `findings`, and deliberately not just objects sitting
+# directly inside a top-level array. When this gate was written the tree carried
+# 185 stale citations across 16 artifacts, and only 8 of those were in a
+# findings array. The largest single block was a stale path prefix: a renamed
+# analysis component left two artifacts pointing at its previous source
+# directory. The evidence described a real capability at the wrong path, which is
+# the failure mode a path oracle catches and a self-consistency check cannot.
 # Gating findings alone would have covered 4 percent of the defect.
+#
+# The depth rule is not decoration either. Restricting discovery to members of a
+# top-level array left 81 of 634 citations unread, and the one dead citation
+# among them sat on an artifact's own root object: an unexpanded ${SANTH_ROOT}
+# template naming a README in another repository. A gate that reads most of a
+# document reports a clean tree it did not measure.
 #
 # PATH RESOLUTION, three conventions in use, all of them live:
 #   absolute            taken as-is (the hygiene scanners emit absolute paths)
@@ -84,28 +90,33 @@ present="$(mktemp)"
 ignored="$(mktemp)"
 trap 'rm -f "$cited" "$present" "$ignored"' EXIT
 
-# Every (artifact, array, index, path) citation in the evidence tree. One line
-# each, tab separated. Any object array with a string `path` field qualifies.
+# Every (artifact, location, path) citation in the evidence tree. One line each,
+# tab separated. Any `path` string at any depth qualifies, and the location is
+# the jq-style route to the object that carries it, so a citation stays
+# addressable no matter how deeply the schema nests it.
 : > "$cited"
 while IFS= read -r artifact; do
   jq -r --arg artifact "$artifact" '
-    select(type == "object")
-    | to_entries[]
-    | select((.value | type) == "array")
-    | .key as $array
-    | .value
-    | to_entries[]
-    | select((.value | type) == "object")
-    | select((.value.path | type) == "string")
-    | select(.value.path != "")
-    | "\($artifact)\t\($array)\t\(.key)\t\(.value.path)"
+    . as $root
+    | [paths]
+    | .[]
+    | select(.[-1] == "path")
+    | . as $route
+    | ($root | getpath($route)) as $value
+    | select(($value | type) == "string")
+    | select($value != "")
+    | ($route[:-1]
+        | map(if type == "number" then "[\(.)]" else ".\(.)" end)
+        | join("")
+        | sub("^\\."; "")) as $location
+    | "\($artifact)\t\(if $location == "" then "<root>" else $location end)\t\($value)"
   ' "$artifact" >> "$cited"
 done < <(find "$EVIDENCE_DIR" -type f -name '*.json' -print | LC_ALL=C sort)
 
 missing_report=()
 : > "$present"
 
-while IFS=$'\t' read -r artifact array index path; do
+while IFS=$'\t' read -r artifact location path; do
   [[ -n "$path" ]] || continue
   resolved=""
   if [[ "$path" = /* ]]; then
@@ -119,7 +130,7 @@ while IFS=$'\t' read -r artifact array index path; do
   fi
 
   if [[ -z "$resolved" ]]; then
-    missing_report+=("  ${artifact} ${array}[${index}] cites a path that does not exist: ${path}")
+    missing_report+=("  ${artifact} ${location} cites a path that does not exist: ${path}")
   else
     printf '%s\n' "$resolved" >> "$present"
   fi

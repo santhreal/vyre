@@ -3,8 +3,8 @@
   "scan": "no-stubs",
   "findings": [
     {
-      "path": "vyre-driver/src/grid_sync.rs",
-      "line": 1437,
+      "path": "vyre-driver/src/grid_sync/resident_dispatch.rs",
+      "line": 217,
       "pattern": "placeholder_text",
       "text": "// unused buffer, so the placeholder is bound but inert (proven equal to"
     },
