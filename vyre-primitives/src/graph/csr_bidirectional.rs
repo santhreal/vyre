@@ -7,7 +7,6 @@ use vyre_foundation::execution_plan::fusion::fuse_programs;
 use vyre_foundation::ir::{DataType, Program};
 
 use crate::graph::csr_backward_traverse::csr_backward_traverse;
-#[cfg(any(test, feature = "cpu-parity"))]
 use crate::graph::csr_closure_entry_points::{
     define_panicking_csr_closure_entry_points, define_try_csr_closure_entry_points,
 };

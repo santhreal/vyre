@@ -169,7 +169,11 @@ pub(crate) fn csr_frontier_step_cpu_ref_into(
 /// edge-kind mask. The pair of entry points, their inputs, and the buffer-reuse
 /// contract are stated here once; each op supplies its direction, the label its
 /// diagnostics carry, and its own documentation.
-#[cfg(any(test, feature = "cpu-parity"))]
+///
+/// The macro itself is always defined and always invocable: whether the entry
+/// points it publishes exist is decided once, by the `cfg` on the items it
+/// expands to, so an op invokes it unconditionally and expands to nothing when
+/// host references are not built.
 macro_rules! define_csr_frontier_step_cpu_ref {
     (
         direction: $direction:expr,
@@ -229,7 +233,6 @@ macro_rules! define_csr_frontier_step_cpu_ref {
     };
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
 pub(crate) use define_csr_frontier_step_cpu_ref;
 
 /// Build a one-step CSR frontier traversal under a caller-owned op id.
