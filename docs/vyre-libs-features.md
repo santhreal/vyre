@@ -24,24 +24,27 @@ Operational features:
 The `matching-*` features gate modules under `vyre-libs/src/scan/`. The
 prefix is historical: it names the dialect, not a directory. There is no
 `vyre-libs/src/matching/`. The features are not renamed, because a rename is
-a semver break for every consumer that lists them.
+a semver break for every consumer that lists them. Source homes below are
+workspace-relative, so each one resolves.
 
 | Feature | Implies | Source home |
 | --- | --- | --- |
-| `matching-dfa` | `cpu-parity` | `scan/dfa/`, `scan/classic_ac/` |
-| `matching-substring` | `cpu-parity`, `matching-dfa` | `scan/substring/` |
-| `matching-nfa` | `matching-dfa` | `scan/nfa/`, `scan/scan_program.rs` |
-| `matching-regex` | `matching-nfa`, `dep:regex-syntax` | `scan/regex_compile.rs`, `scan/regex_dfa.rs`, `scan/regex_region_admission.rs`, `scan/regex_anchored_window.rs`, `scan/fused_region_evidence.rs` |
+| `matching-dfa` | `cpu-parity` | `vyre-libs/src/scan/dfa/`, `vyre-libs/src/scan/classic_ac/` |
+| `matching-substring` | `cpu-parity`, `matching-dfa` | `vyre-libs/src/scan/substring/` |
+| `matching-nfa` | `matching-dfa` | `vyre-libs/src/scan/nfa/`, `vyre-libs/src/scan/scan_program.rs` |
+| `matching-regex` | `matching-nfa`, `dep:regex-syntax` | `vyre-libs/src/scan/regex_compile/`, `vyre-libs/src/scan/regex_dfa.rs`, `vyre-libs/src/scan/regex_region_admission.rs`, `vyre-libs/src/scan/regex_anchored_window.rs`, `vyre-libs/src/scan/fused_region_evidence.rs` |
 | `matching` | `matching-substring`, `matching-dfa` | Aggregate rollup with no source of its own. |
 
-`scan/builders.rs`, `scan/hit_buffer.rs`, and `scan/post_process.rs` are
-ungated and build under every configuration.
+`vyre-libs/src/scan/builders.rs`, `vyre-libs/src/scan/hit_buffer.rs`, and
+`vyre-libs/src/scan/post_process.rs` are ungated and build under every
+configuration.
 
-`scan/classic_ac/bounded_ranges/` owns the Aho-Corasick transition step, the
-output-link span, the region-search prologue, the candidate end gate, and the
-shared DFA buffer declarations. Every other builder under `scan/` projects
-from it. `vyre-libs/tests/scan_ac_transition_walk_single_owner.rs` fails if a
-second copy of that walk appears.
+`vyre-libs/src/scan/classic_ac/bounded_ranges/` owns the Aho-Corasick
+transition step, the output-link span, the region-search prologue, the
+candidate end gate, and the shared DFA buffer declarations. Every other builder
+under `vyre-libs/src/scan/` projects from it.
+`vyre-libs/tests/scan_ac_transition_walk_single_owner.rs` fails if a second
+copy of that walk appears.
 
 CI policy:
 

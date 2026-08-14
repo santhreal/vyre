@@ -6,10 +6,6 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Added
 
-- `xtask dup-scan --report [CRATE]` attributes duplicated lines to individual
-  files and names the files each one shares shingles with. The gate could report
-  that a crate exceeded its pin but not which copy to collapse, so a failure
-  named a crate and left the search manual.
 - Grouped affine INT4 linear now provides a typed batched program builder that
   dequantizes each immutable weight tile once and reuses it across independent
   resident batch rows. Release evidence measures normalized per-inference
@@ -79,95 +75,6 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Changed
 
-- "Substrate" now names one thing: the GPU pass engine. Four modules that
-  borrowed the word for unrelated concepts are renamed to what they are.
-  `vyre_driver::speculation_substrate` is `vyre_driver::speculation_verdict`.
-  `vyre_foundation::optimizer::fact_substrate::FactSubstrate` is
-  `fact_cache::FactCache`, and the scheduler metrics it feeds are
-  `fact_cache_reused` / `_recomputed` / `_invalidated`.
-  `vyre-libs`' `substrate_catalog` is `builder_catalog`, and the two shared
-  child-region ops it registers moved from the `vyre-libs::substrate::`
-  namespace to `vyre-libs::builder::`. `vyre-libs`' `linear_algebra_substrate`
-  was a three-line re-export of `math::linalg` and is gone; its two callers
-  import from the owner directly.
-- `structure-gate` resolves the workspace root from the environment at run time
-  instead of from `env!("CARGO_MANIFEST_DIR")`. A shared cargo target directory
-  hands one compiled gate binary to every worktree, so the baked path made a
-  gate run inside a worktree report the main checkout's tree and hide the
-  worktree's own findings.
-- The dispatch seam moved below the composition library.
-  `vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher` is
-  `vyre_foundation::program_dispatch::ProgramDispatcher`, and `DispatchError`,
-  `ResidentDispatchStep`, `ResidentReadRange`, `ResidentStaticBufferSet`, and
-  `declared_dispatch_outputs` moved with it. The trait only speaks `Program`,
-  buffers, and resident handles, so nothing about it was engine-specific, and
-  every crate that dispatches a `Program` needed it above the pass engine.
-  `vyre_driver_cuda::CudaOptimizerDispatcher` follows the trait and is
-  `CudaProgramDispatcher`. The host-side byte marshalling that goes with the
-  seam is `vyre_libs::dispatch_buffers` rather than a second module in
-  `vyre-foundation`, because it delegates to `vyre_primitives::wire`, which
-  foundation sits below. Its former `#[cfg(test)]` helpers
-  (`f32_slice_to_le_bytes`, `decode_u32_input_aligned`,
-  `decode_f32_input_aligned`, `read_u32s`, `read_f32s`) are unconditional now
-  that their callers are in another crate. The scalar oracle that shared the old
-  `dispatcher.rs` file is `vyre_self_substrate::optimizer::cpu_oracle`, still
-  gated on `cpu-parity`. Public API snapshots for `vyre-foundation`,
-  `vyre-libs`, `vyre-self-substrate`, `vyre-driver-cuda`, and
-  `vyre-driver-wgpu` are refreshed for the move.
-
-- `vyre_foundation::allocation::reserve_exact_cleared` is public and is now the
-  single owner of the clear-then-refill reservation idiom. It was `pub(crate)`
-  in `vyre-primitives`, so seven other crates hand-rolled it as
-  `try_reserve(target - capacity())`. That form derives the additional count
-  from capacity instead of length, so a warm buffer whose capacity is between
-  `target / 2` and `target` stayed short and the following fill reallocated.
-  Thirteen reserve sites across the drivers, the runtime, the wire decoder, the
-  C preprocessor scratch path, and the tensor-train scratch retention now route
-  through `reserve_exact_cleared` or, where the buffer keeps its contents,
-  through the existing `allocation::try_reserve_vec_to_capacity`.
-  `scripts/check_no_under_reserve.sh` runs in the `tree-rules` gate job.
-- The standalone `vyre-intrinsics` package is gone. Its nine Category C
-  hardware intrinsics now live in `vyre-primitives/src/hardware/` behind the
-  crate's `hardware` feature, and every op id moved from
-  `vyre-intrinsics::hardware::<op>` to `vyre-primitives::hardware::<op>`.
-  `vyre-primitives` is the single Category C home; the region helper is
-  `vyre_primitives::hardware::region`. The archived
-  `docs/migration-vyre-ops-to-intrinsics.md` page is removed; the Category A
-  and C classification rule it carried is owned by `docs/lego-block-rule.md`.
-- The three emitter pattern-audit reports no longer carry inherent copies of
-  the `PatternAudit` methods they already inherit. `NagaAuditReport` and
-  `PtxAuditReport` drop `total_candidates`, `has_any`, `format_short`, and
-  `is_clean`; `SpirvAuditReport` drops `total_findings`, `requires_action`,
-  `format_short`, and `is_clean`. Each forwarded to the trait, and the three
-  that shared a name with the trait method shadowed it. Callers import
-  `vyre_lower::pattern_audit::PatternAudit` and use `finding_count` and
-  `has_any`.
-- `vyre-emit-ptx` publishes one vector memory fusion module instead of two.
-  `patterns::vec_load_fusion` and `patterns::vec_store_fusion` were facades
-  over the same detector whose only difference was spelling one field
-  `first_load_idx` and `first_store_idx`; both are replaced by
-  `patterns::vec_memory_fusion` with `analyze(desc, MemoryFusionKind)`,
-  `MemoryFusionCandidate::first_op_idx`, and `MemoryFusionPlan`.
-  `PtxAuditReport::vec_load` and `::vec_store` keep their names and now share
-  that one plan type.
-- The four emitter crates no longer open with their own `#![allow(...)]`
-  block. Every lint named in those blocks is already allowed by
-  `[workspace.lints]`, which all four crates inherit.
-- Emitter test descriptors are built through
-  `vyre_lower::descriptor_builder`, which gains `binop`, `load_global`,
-  `store_global`, and neutral emission-target capability fixtures
-  (`workgroup_limits`, `permissive_workgroup_limits`,
-  `all_subgroup_capabilities`, `emission_target`, `target_without_subgroups`)
-  behind its existing `test-fixtures` feature.
-- Public API snapshots for `vyre-debug`, `vyre-driver`, `vyre-driver-cuda`,
-  `vyre-emit-naga`, `vyre-emit-ptx`, `vyre-emit-spirv`, and `vyre-libs` now
-  match their live surfaces. `vyre-debug` drops the `scan_explain` report,
-  error, exactness, and factor-role types that left with the scan product.
-  `vyre-libs` folds `graph::ast_walk_preorder` and `graph::ast_walk_postorder`
-  into one `graph::ast_walk` module and publishes `scan::pack_haystack_u32`.
-  The emitters and drivers publish the megakernel frontier plan error, the
-  neutral execution planner, and device capability constants that had shipped
-  without a snapshot refresh.
 - The standalone `vyre-harness` package is gone. Semantic operation identity,
   tier classification, and registration now live in `vyre-foundation`; library
   fixture views live in `vyre-libs`; conformance execution and parity policy
@@ -196,21 +103,31 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 - C typedef row phases remain canonical callable operations. The operation
   matrix marks them as inlined callees whose execution coverage belongs to
   fixture-backed parent operations.
+- Five checks that no workflow invoked now run in
+  `.github/workflows/gates.yml`: the transitive layer closure, benchmark
+  registry coverage, internal dependency versions, the feature-isolated MSRV
+  sweep, and the oracle-matrix sweeps with their volume waves. Each step names
+  the class it closes and why no other workflow sees it.
+- `scripts/check_layering.sh` discarded `cargo tree` stderr, so a cargo that
+  could not resolve the workspace printed a green result and exited 0. It now
+  derives every workspace member, requires a `docs/CRATE_OWNERSHIP.toml`
+  decision for each, and holds every transitive internal edge to the declared
+  closure.
+- `scripts/check_feature_msrv.sh` printed a hardcoded 19-entry matrix and
+  exited 0 without compiling anything. It now derives one entry per publishable
+  member per declared feature from tracked manifests and compiles each alone on
+  the toolchain `[workspace.package].rust-version` names, which must be
+  installed.
+- The internal dependency version rule, the benchmark coverage rule, and both
+  sweep runners derive their crate, case, and test rosters from tracked
+  manifests and sources instead of hardcoded lists, no longer write outside the
+  repository, and fail on a cargo failure instead of reporting a clean tree.
+  The volume sweep runner had a three-crate list that left one tracked volume
+  wave in no shard, and a shard index outside the shard count selected nothing
+  and exited 0.
 
 ### Removed
 
-- `OperationTier::Primitive` and `OperationTier::Runtime` are gone.
-  `vyre-primitives::` classifies as `OperationTier::Intrinsic`, the only Category C
-  tier, and the operation-matrix spelling is `intrinsic`.
-- `vyre-driver` no longer registers `core.indirect_dispatch`, `io.dma_from_nvme`,
-  `io.write_back_to_nvme`, `mem.zerocopy_map` or `mem.unmap`, and
-  `vyre_driver::registry::INDIRECT_DISPATCH_OP_ID` is gone with them. A host-side
-  runtime capability has no program to lower and no fixture to compare, so it
-  carries no operation identity; indirect dispatch is reached through
-  `RequiredCapabilities` and `VyreBackend::supports_indirect_dispatch`, and NVMe
-  ingest and zero-copy mapping through the `vyre-runtime` io_uring driver. The
-  registry now refuses an id whose namespace names no owning crate, so the
-  fixture-coverage exemption for those five ids is gone too.
 - Self-substrate no longer publishes source-text validators for deleted
   C-frontend test files or parser release artifacts. Diagnostic and
   preprocessing conformance now belongs to the live frontend and conformance
@@ -229,77 +146,18 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   semantic pass registration generators. Test-only operation registration,
   algebraic-law derive, no-op builder marker, and generated decoder stubs are
   gone.
-- Twelve `vyre-libs` operations that re-registered a `vyre-primitives` kernel
-  under a second identity are gone: `hash::{adler32, crc32, fnv1a32, fnv1a64,
-  multi_hash}`, `logical::{and, or, xor}`, `parsing::{bracket_match,
-  core_delimiter_match}`, `security::path_reconstruct` and
-  `math::succinct::select1_query`. Each wrapper only re-tagged the primitive
-  program, so the kernel keeps one id and callers use the `vyre-primitives`
-  builder directly. `vyre-libs::hash` now holds `blake3_compress` alone and
-  `vyre-libs::logical` holds the synthesized `nand` and `nor`.
-
-### Fixed: a gate could report the checkout that last compiled it (`structure-gate`, `xtask`, `xtask-registry`, `xtask-evidence`, `vyre-lints`)
-
-Cargo hashes a workspace member by its path relative to the workspace root and
-decides freshness by mtime, so two checkouts sharing a target directory compute
-the same unit hash and address the same artifacts. The checkout whose files were
-older than the last build silently ran the other one's compiled logic:
-`cargo run -p structure-gate` in one checkout reported 208 violations while its
-own source produced 209, and `dup-scan` read 11811 duplicate lines for
-`vyre-libs` against a true 13406.
-
-`.cargo/config.toml` now declares `VYRE_CHECKOUT_ROOT` as a checkout-relative
-path, so its value is the absolute path of the checkout. Every unpublished gate
-binary whose output describes the tree reads it with `env!`, which records the
-value in that crate's dep-info; cargo rebuilds instead of reusing when it
-changes. The 46 hand-rolled derivations of the workspace root from
-`CARGO_MANIFEST_DIR` across those crates are now three `checkout_root()` owners.
-
-A gate binary compiled outside the checkout, where `.cargo/config.toml` does not
-apply, now fails to compile with a `Fix:` message rather than baking a foreign
-root.
-
-`vyre-lints` is published, so it is held to the opposite rule: it resolves the
-root from its own `--workspace-root` argument, reads `VYRE_CHECKOUT_ROOT` only
-when the environment sets it at run time, and bakes nothing. A recorded build
-path would name the machine that compiled the crate, and requiring the variable
-at compile time would break every consumer's build. `structure-gate` enforces
-both directions.
+- The `check_warning_budget` gate script is gone: its baseline lived at a
+  gitignored path with no file, so it exited before measuring anything, it
+  counted cargo summary lines as warnings, and a trailing `|| true` reported
+  zero warnings for a failed build. `strict.yml` already builds the workspace
+  with all targets and all features under deny-warnings, so the enforced
+  ceiling is zero. The `check_tier_b_rule_contracts` gate script is gone: it
+  required a repository-root `rules/` tree that does not exist here, and its
+  second rule scanned a directory that does not exist behind a suppressed
+  error.
 
 ### Fixed
 
-- `xtask-registry --help` and `xtask-evidence --help` exit 0 and list the
-  subcommands each binary dispatches, derived from its `IMPLEMENTED` table. Both
-  treated `--help` as an unknown subcommand and exited 1.
-- The `structure-gate` binary is registered in `docs/CLI.toml`. It is the
-  program `.github/workflows/gates.yml` runs for the workspace structure check,
-  and it was the only workspace binary absent from the CLI contract.
-- `xtask dup-scan` no longer advertises an `--output PATH` option. No such
-  option was ever implemented.
-- Emitted SPIR-V is validated again. When `spirv-val` was absent the shared
-  assertion fell back to checking that a blob held at least five words and
-  carried a plausible version word, then returned, so every emission passed on a
-  machine without the validator and the gate built on it proved nothing there.
-  The validator is now required, the suite is registered behind the new
-  `spirv-val` feature of `vyre-driver-spirv` so a default `--workspace` run skips
-  the target instead of running the header-only path, and the `spirv-validation`
-  job in `gates.yml` installs the validator and runs it. No device is involved.
-- Every `vyre-driver-cuda` test target is now gated on a real device. Fifty-five
-  `*gpu_parity*` targets were named by no workflow, and the script meant to cover
-  them still named a test file that no longer exists, so it exited at its first
-  target and measured nothing. Its roster is derived from tracked test targets,
-  so a target added later is covered by existing, and the `CUDA parity suite` job
-  in `gpu-parity.yml` runs it with the GPU release gate requiring the result.
-- Documentation builds again. Sixteen intra-doc links resolved to nothing, and
-  because the workspace denies `broken_intra_doc_links` that made `cargo doc`
-  fail outright for `vyre-driver`, `vyre-foundation`, `vyre-libs`,
-  `vyre-primitives`, `vyre-self-substrate`, and `vyre-conform`. A module's inner
-  documentation merges with the outer comment at its declaration, so a link
-  written against a sibling by bare name resolves in the parent module instead;
-  those links now carry a full path. Links that pointed at items compiled only
-  under `cpu-parity` name the item as code instead of linking it.
-- `vyre-lints` exposes `Allowlist::default` and `Allowlist::measured_roots`,
-  which the recorded public API surface had not captured.
 - Driver decorators now preserve the concrete backend device profile, including
   device-timestamp capability and timing quality.
 - Enforced benchmark contract failures now retain correctness, timing metrics,
@@ -406,6 +264,18 @@ both directions.
   configuration, hardware, and failure contracts in crate READMEs, and gates
   drift in documentation CI. The vyre-wgpu demo is documented and exercised on
   the real GPU lane, while helper --help routes are side-effect free.
+- The `types` feature of `vyre-primitives` now depends on `vyre-foundation`,
+  which its shape-predicate evaluator has always aliased. Enabling only that
+  feature against the published crate failed to compile; in-workspace builds
+  hid it because another member always enabled a feature that pulled the
+  foundation in.
+- The documentation reference rule read an absolute path in a code span as
+  workspace-relative, so a document mentioning `/dev/null` was reported as
+  claiming a missing `dev/null` in this repository. An absolute path outside
+  the checkout is no longer treated as a claim this repository can satisfy; one
+  inside the checkout is still checked. The feature matrix for `vyre-libs` also
+  named nine scan modules by a path that resolved nowhere, and one of them, the
+  regex compiler, has been a directory rather than a file since it was split.
 
 ## [0.7.1] - 2026-08-01
 

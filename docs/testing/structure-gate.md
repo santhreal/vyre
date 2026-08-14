@@ -27,6 +27,7 @@ This crate declares no Cargo features.
 | --- | --- | --- | --- | --- |
 | `bin` | `structure-gate` | `structure-gate/src/main.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p structure-gate --bin structure-gate` |
 | `lib` | `structure_gate` | `structure-gate/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p structure-gate` |
+| `test` | `checkout_provenance` | `structure-gate/tests/checkout_provenance.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p structure-gate --test checkout_provenance` |
 | `test` | `crate_structure_contracts` | `structure-gate/tests/crate_structure_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p structure-gate --test crate_structure_contracts` |
 | `test` | `materializer_admission` | `structure-gate/tests/materializer_admission.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p structure-gate --test materializer_admission` |
 

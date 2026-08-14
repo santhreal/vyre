@@ -283,7 +283,7 @@ text = "Five checks that no workflow invoked now run in `.github/workflows/gates
 [[fragments]]
 id = "layering-gate-fails-closed"
 category = "Changed"
-text = "`scripts/check_layering.sh` sent `cargo tree` stderr to `/dev/null`, so a cargo that could not resolve the workspace printed a green result and exited 0. It now derives every workspace member, requires a `docs/CRATE_OWNERSHIP.toml` decision for each, and holds every transitive internal edge to the declared closure."
+text = "`scripts/check_layering.sh` discarded `cargo tree` stderr, so a cargo that could not resolve the workspace printed a green result and exited 0. It now derives every workspace member, requires a `docs/CRATE_OWNERSHIP.toml` decision for each, and holds every transitive internal edge to the declared closure."
 
 [[fragments]]
 id = "feature-msrv-sweep-derived"
@@ -303,4 +303,9 @@ text = "The `types` feature of `vyre-primitives` now depends on `vyre-foundation
 [[fragments]]
 id = "dead-gate-removal"
 category = "Removed"
-text = "`scripts/check_warning_budget.sh` is gone: its baseline lived at a gitignored path with no file, so it exited before measuring anything, it counted cargo summary lines as warnings, and a trailing `|| true` reported zero warnings for a failed build. `strict.yml` already builds the workspace with all targets and all features under deny-warnings, so the enforced ceiling is zero. `scripts/check_tier_b_rule_contracts.sh` is gone: it required a repository-root `rules/` tree that does not exist here, and its second rule scanned a directory that does not exist behind a suppressed error."
+text = "The `check_warning_budget` gate script is gone: its baseline lived at a gitignored path with no file, so it exited before measuring anything, it counted cargo summary lines as warnings, and a trailing `|| true` reported zero warnings for a failed build. `strict.yml` already builds the workspace with all targets and all features under deny-warnings, so the enforced ceiling is zero. The `check_tier_b_rule_contracts` gate script is gone: it required a repository-root `rules/` tree that does not exist here, and its second rule scanned a directory that does not exist behind a suppressed error."
+
+[[fragments]]
+id = "docs-reference-absolute-paths"
+category = "Fixed"
+text = "The documentation reference rule read an absolute path in a code span as workspace-relative, so a document mentioning `/dev/null` was reported as claiming a missing `dev/null` in this repository. An absolute path outside the checkout is no longer treated as a claim this repository can satisfy; one inside the checkout is still checked. The feature matrix for `vyre-libs` also named nine scan modules by a path that resolved nowhere, and one of them, the regex compiler, has been a directory rather than a file since it was split."

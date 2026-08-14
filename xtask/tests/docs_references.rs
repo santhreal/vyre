@@ -238,3 +238,36 @@ fn crate_readme_relative_paths_resolve_inside_the_crate() {
     let output = run_checker(root.path());
     assert!(output.status.success(), "{}", stderr(&output));
 }
+
+/// A device or system path is not something this repository can publish, and
+/// reporting it as a missing repository input names a defect the document does
+/// not have.
+#[test]
+fn absolute_paths_outside_the_checkout_are_not_repository_claims() {
+    let root = fixture();
+    fs::write(
+        root.path().join("docs/guide.md"),
+        "The old script discarded stderr to `/dev/null`, and `/etc/hostname` is not ours.\n",
+    )
+    .unwrap();
+
+    let output = run_checker(root.path());
+    assert!(output.status.success(), "{}", stderr(&output));
+}
+
+/// An absolute path that lands inside the checkout is still a claim about a
+/// published input, so it must not become an escape hatch from the check.
+#[test]
+fn absolute_paths_inside_the_checkout_are_still_checked() {
+    let root = fixture();
+    let absolute = root.path().join("docs/absent.md");
+    fs::write(
+        root.path().join("docs/guide.md"),
+        format!("The input is `{}`.\n", absolute.display()),
+    )
+    .unwrap();
+
+    let output = run_checker(root.path());
+    assert!(!output.status.success(), "an absolute in-checkout path must be checked");
+    assert!(stderr(&output).contains("MISSING docs/guide.md"), "{}", stderr(&output));
+}

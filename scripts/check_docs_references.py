@@ -181,8 +181,13 @@ def resolve(
     token = path_token(raw)
     if not is_path_candidate(root, token):
         return None
-    if token.startswith("/"):
-        candidate = root / token.lstrip("/")
+    absolute = token.startswith("/")
+    if absolute:
+        # An absolute token is not a workspace-relative claim. Stripping the
+        # leading slash reported `/dev/null` as a missing `dev/null` in this
+        # repository, which names a defect the document does not have. An
+        # absolute path into this checkout is still a claim and is checked.
+        candidate = Path(token)
     elif (
         document.name == "README.md"
         and document.parent != root
@@ -198,6 +203,8 @@ def resolve(
     try:
         relative = candidate.resolve(strict=False).relative_to(root.resolve())
     except ValueError:
+        if absolute:
+            return None
         return ("outside", candidate)
     return (relative.as_posix(), candidate)
 
