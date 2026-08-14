@@ -400,9 +400,6 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
             blockers.extend(inspection.blockers.iter().map(|blocker| {
                 format!("optimization benchmark `{case_id}` artifact `{artifact}`: {blocker}")
             }));
-            for family in &pass_families {
-                covered_pass_families.push(*family);
-            }
             if source_fingerprint.is_none() {
                 source_fingerprint = inspection.source_fingerprint.clone();
             }
@@ -417,11 +414,17 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
             if let Some(cache_hit_rate) = inspection.summary_cache_hit_rate {
                 cache_hit_rates.push(cache_hit_rate);
             }
-            let status = if inspection.exists && inspection.blockers.is_empty() {
-                "pass"
-            } else {
-                "failed"
-            };
+            let passed = inspection.exists && inspection.blockers.is_empty();
+            // Coverage is a claim about what the run PROVED, so it is recorded
+            // only for a case that passed. Pushing a spec's families
+            // unconditionally made `uncovered_pass_families` derive from the
+            // same list as `required_pass_families`, so it was always empty and
+            // the release gate demanding it be empty could not fail on the one
+            // thing it exists to catch: a missing or blocked artifact.
+            if passed {
+                covered_pass_families.extend(pass_families.iter().copied());
+            }
+            let status = if passed { "pass" } else { "failed" };
             OptimizationBenchmarkEvidence {
                 id: case_id,
                 case_id,
@@ -921,5 +924,72 @@ mod tests {
             "Fix: optimization benchmark inspection must expose borrowed resident CUDA dispatch telemetry; blockers={:?}",
             borrowed_inspection.blockers
         );
+    }
+
+    /// A missing artifact must leave every required family UNCOVERED.
+    ///
+    /// The manifest used to push each spec's declared families whether or not
+    /// the artifact behind them was read, and the spec list is the same list as
+    /// `required_pass_families`. `uncovered_pass_families` was therefore always
+    /// empty and the release gate demanding it be empty could not fail. This
+    /// asserts the state that gate exists to catch, so restoring the
+    /// unconditional push turns it red rather than passing quietly.
+    #[test]
+    fn a_missing_optimization_artifact_leaves_every_family_uncovered() {
+        let dir = TempDir::new()
+            .expect("Fix: create temp workspace for optimization coverage source test.");
+        fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
+
+        write_optimization_benchmark_manifest(dir.path(), "cuda");
+
+        let manifest: Value = serde_json::from_str(
+            &fs::read_to_string(
+                dir.path()
+                    .join("release/evidence/optimization/pass-family-benchmark-manifest.json"),
+            )
+            .expect("Fix: read the manifest the writer just produced."),
+        )
+        .expect("Fix: the manifest must be JSON.");
+
+        let covered = manifest["covered_pass_families"]
+            .as_array()
+            .expect("Fix: the manifest must publish covered_pass_families.");
+        assert!(
+            covered.is_empty(),
+            "Fix: no family is covered when the artifact proving it does not exist; covered={covered:?}"
+        );
+
+        let uncovered = manifest["uncovered_pass_families"]
+            .as_array()
+            .expect("Fix: the manifest must publish uncovered_pass_families.")
+            .iter()
+            .map(|family| {
+                family
+                    .as_str()
+                    .expect("Fix: a family name is a string.")
+                    .to_string()
+            })
+            .collect::<Vec<_>>();
+        for family in RELEASE_OPTIMIZATION_FAMILIES {
+            assert!(
+                uncovered.iter().any(|name| name == family),
+                "Fix: `{family}` has no passing benchmark case, so it must be reported uncovered; uncovered={uncovered:?}"
+            );
+        }
+
+        let blockers = manifest["blockers"]
+            .as_array()
+            .expect("Fix: the manifest must publish blockers.");
+        for family in RELEASE_OPTIMIZATION_FAMILIES {
+            assert!(
+                blockers.iter().any(|blocker| {
+                    blocker.as_str().is_some_and(|text| {
+                        text.contains(family) && text.contains("no benchmark manifest coverage")
+                    })
+                }),
+                "Fix: an uncovered family must be named by a blocker; family={family} blockers={blockers:?}"
+            );
+        }
     }
 }

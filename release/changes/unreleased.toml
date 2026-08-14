@@ -1034,3 +1034,8 @@ text = "A gate takes the published `min_` key set from the serialized `WallClock
 id = "xtask-evidence-duplication-pin-lowered-to-measured"
 category = "Changed"
 text = "Three duplication pins record what the tree measures: `xtask-evidence` 475 to 91 duplicated lines, `xtask-registry` 58 to 49, and `vyre-foundation` 4127 to 4028, each with `total_lines` measured. A pin with room under it hides the next copy."
+
+[[fragments]]
+id = "optimization-family-coverage-is-proved-not-declared"
+category = "Fixed"
+text = "The pass-family benchmark manifest records a family as covered only when the case proving it passed. It used to push each specification's declared families whether or not the artifact behind them could be read, and the specification list is the same list as `required_pass_families`, so `uncovered_pass_families` was structurally always empty and the release gate demanding it be empty could not fail on the one thing it exists to catch: a missing or blocked artifact. A test asserts that state, so the unconditional form turns the suite red."
