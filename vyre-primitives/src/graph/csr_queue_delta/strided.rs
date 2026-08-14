@@ -4,7 +4,10 @@ use vyre_foundation::ir::{DataType, Program};
 
 use crate::graph::csr_frontier_step::{csr_queue_step_program, CsrQueueLanes};
 
-use super::{CsrQueueDeltaEnqueueParams, CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE};
+use super::{
+    define_csr_queue_delta_entry_point, CsrQueueDeltaEnqueueParams,
+    CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE,
+};
 
 /// Canonical op id for row-strided queue-to-queue delta CSR expansion.
 pub const CSR_QUEUE_DELTA_STRIDED_ENQUEUE_OP_ID: &str =
@@ -55,45 +58,15 @@ pub const fn csr_queue_delta_strided_dispatch_grid(active_queue_capacity: u32) -
     [if blocks == 0 { 1 } else { blocks }, 1, 1]
 }
 
-/// Build a row-strided delta enqueue program for skewed CSR source rows.
-///
-/// This uses the same resident buffer ABI as
-/// [`super::csr_queue_delta_enqueue`], but assigns a fixed lane team to each
-/// queued source and stripes that source row across the team. It keeps
-/// high-degree IFDS hubs from serializing all edge work behind a single
-/// invocation.
-#[must_use]
-#[allow(clippy::too_many_arguments)]
-pub fn csr_queue_delta_strided_enqueue(
-    active_queue: &str,
-    active_len: &str,
-    edge_offsets: &str,
-    edge_targets: &str,
-    edge_kind_mask: &str,
-    accumulator: &str,
-    next_queue: &str,
-    next_len: &str,
-    node_count: u32,
-    edge_count: u32,
-    active_queue_capacity: u32,
-    next_queue_capacity: u32,
-    allow_mask: u32,
-) -> Program {
-    csr_queue_delta_strided_enqueue_with(CsrQueueDeltaEnqueueParams {
-        active_queue,
-        active_len,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        accumulator,
-        next_queue,
-        next_len,
-        node_count,
-        edge_count,
-        active_queue_capacity,
-        next_queue_capacity,
-        allow_mask,
-    })
+define_csr_queue_delta_entry_point! {
+    /// Build a row-strided delta enqueue program for skewed CSR source rows.
+    ///
+    /// This uses the same resident buffer ABI as
+    /// [`super::csr_queue_delta_enqueue`], but assigns a fixed lane team to each
+    /// queued source and stripes that source row across the team. It keeps
+    /// high-degree IFDS hubs from serializing all edge work behind a single
+    /// invocation.
+    csr_queue_delta_strided_enqueue -> csr_queue_delta_strided_enqueue_with
 }
 
 /// Build a row-strided delta enqueue program for skewed CSR source rows.
@@ -128,25 +101,12 @@ pub fn csr_queue_delta_strided_enqueue_with(params: CsrQueueDeltaEnqueueParams<'
 
 #[cfg(test)]
 mod tests {
+    use super::super::tests::{assert_offset_overflow_traps, delta_program};
     use super::*;
 
     #[test]
     fn emitted_strided_program_keeps_delta_queue_abi_and_expands_grid() {
-        let program = csr_queue_delta_strided_enqueue(
-            "active_queue",
-            "active_len",
-            "edge_offsets",
-            "edge_targets",
-            "edge_kind_mask",
-            "accumulator",
-            "next_queue",
-            "next_len",
-            64,
-            7,
-            8,
-            16,
-            1,
-        );
+        let program = delta_program(csr_queue_delta_strided_enqueue, 64, 7, 8);
 
         assert_eq!(
             program.workgroup_size,
@@ -170,20 +130,11 @@ mod tests {
         assert!(!program_debug.contains("qds_lane_iter"));
         assert!(program_debug.contains("qds_logical_lane"));
 
-        let capped_program = csr_queue_delta_strided_enqueue(
-            "active_queue",
-            "active_len",
-            "edge_offsets",
-            "edge_targets",
-            "edge_kind_mask",
-            "accumulator",
-            "next_queue",
-            "next_len",
+        let capped_program = delta_program(
+            csr_queue_delta_strided_enqueue,
             64,
             7,
             CSR_QUEUE_DELTA_STRIDED_CAPPED_LAUNCH_MIN_CAPACITY + 1,
-            16,
-            1,
         );
         let capped_debug = format!("{:?}", capped_program.entry);
         assert!(capped_debug.contains("qds_lane_iter"));
@@ -192,34 +143,9 @@ mod tests {
 
     #[test]
     fn strided_delta_rejects_offset_count_overflow_without_panic() {
-        let result = std::panic::catch_unwind(|| {
-            csr_queue_delta_strided_enqueue(
-                "active_queue",
-                "active_len",
-                "edge_offsets",
-                "edge_targets",
-                "edge_kind_mask",
-                "accumulator",
-                "next_queue",
-                "next_len",
-                u32::MAX,
-                0,
-                1,
-                1,
-                1,
-            )
-        });
-
-        assert!(
-            result.is_ok(),
-            "CSR queue delta strided builder must reject offset-count overflow without panicking"
-        );
-        let program = result.unwrap();
-        assert!(program.stats().trap());
-        let entry = format!("{:?}", program.entry());
-        assert!(
-            entry.contains("node_count + 1 overflows u32"),
-            "Fix: trap must retain the CSR offset-count overflow diagnostic, got: {entry}"
+        assert_offset_overflow_traps(
+            csr_queue_delta_strided_enqueue,
+            "CSR queue delta strided builder",
         );
     }
 
