@@ -42,7 +42,7 @@ pub(crate) fn run(args: &[String]) {
         process::exit(2);
     }
 
-    let root = vyre_workspace_root();
+    let root = crate::checkout::checkout_root();
     let mut findings = Vec::new();
     let mut errors = Vec::new();
     for relative in PLATFORM_ROOTS {
@@ -82,10 +82,6 @@ pub(crate) fn run(args: &[String]) {
         "Fix: replace downstream names with neutral platform/dataflow/frontend wording, or move the doc to the consumer-owned crate."
     );
     process::exit(1);
-}
-
-fn vyre_workspace_root() -> PathBuf {
-    crate::checkout::checkout_root()
 }
 
 fn scan_tree(root: &Path, workspace: &Path, findings: &mut Vec<Finding>, errors: &mut Vec<String>) {

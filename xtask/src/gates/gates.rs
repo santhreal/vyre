@@ -21,11 +21,6 @@ use serde::Deserialize;
 use crate::subcommands::{self, Kind, Subcommand};
 
 /// Workspace root, resolved from the xtask manifest directory.
-#[must_use]
-pub(crate) fn workspace_root() -> PathBuf {
-    crate::checkout::checkout_root()
-}
-
 /// Pinned result for one gate.
 #[derive(Debug, Deserialize)]
 struct Baseline {
@@ -103,7 +98,10 @@ fn workflow_invocations(root: &Path) -> Vec<String> {
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.extension().is_none_or(|ext| ext != "yml" && ext != "yaml") {
+        if path
+            .extension()
+            .is_none_or(|ext| ext != "yml" && ext != "yaml")
+        {
             continue;
         }
         let Ok(text) = fs::read_to_string(&path) else {
@@ -224,7 +222,7 @@ fn render_baseline(rows: &[(String, Observed, Option<String>)]) -> String {
 
 /// Run the gate sweep.
 pub(crate) fn run(args: &[String]) {
-    let root = workspace_root();
+    let root = crate::checkout::checkout_root();
 
     if args.iter().any(|argument| argument == "--list") {
         for entry in subcommands::gates() {
@@ -305,7 +303,10 @@ pub(crate) fn run(args: &[String]) {
             );
             continue;
         }
-        println!("{}: {} ({} lines)", entry.name, pin.status, pin.output_lines);
+        println!(
+            "{}: {} ({} lines)",
+            entry.name, pin.status, pin.output_lines
+        );
     }
 
     if !failures.is_empty() {
@@ -315,7 +316,10 @@ pub(crate) fn run(args: &[String]) {
         }
         process::exit(1);
     }
-    println!("gates: {} registered gate(s) hold their baseline", subcommands::gates().len());
+    println!(
+        "gates: {} registered gate(s) hold their baseline",
+        subcommands::gates().len()
+    );
 }
 
 #[cfg(test)]
@@ -335,7 +339,7 @@ mod tests {
     /// a gate CI never runs, and that must not be expressible.
     #[test]
     fn a_gate_with_no_baseline_row_is_a_failure() {
-        let failures = wiring_failures(&workspace_root(), &[]);
+        let failures = wiring_failures(&crate::checkout::checkout_root(), &[]);
         assert!(
             failures
                 .iter()
@@ -348,7 +352,10 @@ mod tests {
     /// how a temporary exemption becomes permanent.
     #[test]
     fn a_red_pin_without_an_owner_is_a_failure() {
-        let failures = wiring_failures(&workspace_root(), &[pin("gate1", "red", None)]);
+        let failures = wiring_failures(
+            &crate::checkout::checkout_root(),
+            &[pin("gate1", "red", None)],
+        );
         assert!(
             failures
                 .iter()
@@ -363,9 +370,19 @@ mod tests {
     /// writer or a human reaches for has to be rejected by name, in any case.
     #[test]
     fn a_red_pin_owned_by_a_placeholder_is_a_failure() {
-        for placeholder in ["unassigned", "UNASSIGNED", "unknown", "none", "tbd", "todo", "  "] {
-            let failures =
-                wiring_failures(&workspace_root(), &[pin("gate1", "red", Some(placeholder))]);
+        for placeholder in [
+            "unassigned",
+            "UNASSIGNED",
+            "unknown",
+            "none",
+            "tbd",
+            "todo",
+            "  ",
+        ] {
+            let failures = wiring_failures(
+                &crate::checkout::checkout_root(),
+                &[pin("gate1", "red", Some(placeholder))],
+            );
             assert!(
                 failures
                     .iter()
@@ -374,7 +391,10 @@ mod tests {
             );
         }
 
-        let failures = wiring_failures(&workspace_root(), &[pin("gate1", "red", Some("PR-26"))]);
+        let failures = wiring_failures(
+            &crate::checkout::checkout_root(),
+            &[pin("gate1", "red", Some("PR-26"))],
+        );
         assert!(
             !failures
                 .iter()
@@ -387,7 +407,10 @@ mod tests {
     /// covering anything.
     #[test]
     fn a_pin_for_an_unregistered_subcommand_is_a_failure() {
-        let failures = wiring_failures(&workspace_root(), &[pin("no-such-gate", "green", None)]);
+        let failures = wiring_failures(
+            &crate::checkout::checkout_root(),
+            &[pin("no-such-gate", "green", None)],
+        );
         assert!(
             failures
                 .iter()
@@ -400,9 +423,14 @@ mod tests {
     /// sweep run something CI cannot judge.
     #[test]
     fn a_pin_for_a_non_gate_is_a_failure() {
-        let failures = wiring_failures(&workspace_root(), &[pin("shrink", "green", None)]);
+        let failures = wiring_failures(
+            &crate::checkout::checkout_root(),
+            &[pin("shrink", "green", None)],
+        );
         assert!(
-            failures.iter().any(|failure| failure.contains("not a gate")),
+            failures
+                .iter()
+                .any(|failure| failure.contains("not a gate")),
             "got {failures:?}"
         );
     }

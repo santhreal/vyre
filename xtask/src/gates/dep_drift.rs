@@ -10,14 +10,7 @@ use toml::Value;
 const MAX_DEP_DRIFT_MANIFEST_BYTES: u64 = 1_048_576;
 
 pub(crate) fn run(_args: &[String]) {
-    let workspace_root = std::env::current_dir().expect(
-        "Fix: xtask must run from the vyre workspace; restore this invariant before continuing.",
-    );
-    let repo_root = workspace_root
-        .ancestors()
-        .nth(4)
-        .map(Path::to_path_buf)
-        .expect("Fix: vyre workspace must remain nested under libs/performance/matching/vyre.");
+    let workspace_root = crate::checkout::checkout_root();
 
     let workspace_manifest = workspace_root.join("Cargo.toml");
     let workspace_text = read_text_bounded(&workspace_manifest).unwrap_or_else(|error| {
@@ -32,11 +25,6 @@ pub(crate) fn run(_args: &[String]) {
     let mut manifests = BTreeSet::new();
     let mut failures = Vec::new();
     collect_manifests(&workspace_root, &mut manifests, &mut failures);
-    collect_manifests(
-        &repo_root.join("libs/performance/matching/vyre/vyre-grammar-gen"),
-        &mut manifests,
-        &mut failures,
-    );
     manifests.remove(&workspace_manifest);
 
     for manifest in manifests {

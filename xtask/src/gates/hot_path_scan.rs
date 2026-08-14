@@ -255,13 +255,7 @@ pub(crate) fn run(args: &[String]) {
             process::exit(2);
         }
     };
-    let root = match workspace_root() {
-        Some(r) => r,
-        None => {
-            eprintln!("Fix: hot-path-scan must run from the vyre workspace.");
-            process::exit(1);
-        }
-    };
+    let root = crate::checkout::checkout_root();
     let config_path = root
         .join("docs")
         .join("optimization")
@@ -421,10 +415,6 @@ pub(crate) fn run(args: &[String]) {
         );
         process::exit(1);
     }
-}
-
-fn workspace_root() -> Option<PathBuf> {
-    Some(crate::checkout::checkout_root())
 }
 
 fn parse_budget_vx_json(args: &[String]) -> Result<Option<PathBuf>, String> {

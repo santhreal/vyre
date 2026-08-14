@@ -217,10 +217,6 @@ const THRESHOLD_SUFFIXES: &[&str] = &[
 ];
 
 /// The vyre workspace root this build was compiled against.
-fn vyre_root() -> PathBuf {
-    crate::checkout::checkout_root()
-}
-
 pub(crate) fn run(args: &[String]) {
     let output = match parse_output(args) {
         Ok(output) => output,
@@ -229,7 +225,7 @@ pub(crate) fn run(args: &[String]) {
             std::process::exit(2);
         }
     };
-    let roots = [vyre_root()];
+    let roots = [crate::checkout::checkout_root()];
     let scanned_roots = roots
         .iter()
         .map(|root| root.display().to_string())
@@ -1126,12 +1122,7 @@ fn scan_root(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
         let name = entry.file_name().to_string_lossy();
         !matches!(
             name.as_ref(),
-            "target"
-                | "target-codex"
-                | "target_tests"
-                | ".git"
-                | ".cargo-target"
-                | "release"
+            "target" | "target-codex" | "target_tests" | ".git" | ".cargo-target" | "release"
         ) && !is_xtask_tree_directory(&name)
     }) {
         let entry = match entry {
@@ -2434,7 +2425,7 @@ mod tests {
     /// resolves to a file that exists, wherever the layout puts it.
     #[test]
     fn every_named_release_command_module_resolves_to_a_source_file() {
-        let root = vyre_root();
+        let root = crate::checkout::checkout_root();
         let unresolved: Vec<&str> = RELEASE_XTASK_COMMAND_MODULES
             .iter()
             .filter(|module| resolve_xtask_module_source(&root, module).is_err())
@@ -2451,7 +2442,7 @@ mod tests {
     /// has to stay an error rather than resolve to a neighbour.
     #[test]
     fn unknown_command_module_stays_unresolved() {
-        let root = vyre_root();
+        let root = crate::checkout::checkout_root();
         let error = resolve_xtask_module_source(&root, "no_such_command_module")
             .expect_err("Fix: an xtask module with no source file must not resolve.");
         assert_eq!(

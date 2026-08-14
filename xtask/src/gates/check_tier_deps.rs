@@ -4,7 +4,7 @@
 //! → self-substrate → T3 libs → reference/emit/conform → T4 drivers/runtime.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{self, Command};
 
 use toml::Value;
@@ -25,7 +25,7 @@ pub(crate) fn run(args: &[String]) {
         process::exit(2);
     }
 
-    let root = workspace_root();
+    let root = crate::checkout::checkout_root();
     let members = workspace_members(&root);
     let mut failures = Vec::new();
 
@@ -54,10 +54,6 @@ pub(crate) fn run(args: &[String]) {
         );
         process::exit(1);
     }
-}
-
-fn workspace_root() -> PathBuf {
-    crate::checkout::checkout_root()
 }
 
 fn validate_crate_ownership_registry(root: &Path, failures: &mut Vec<String>) {
@@ -136,9 +132,9 @@ fn crate_tier(member_path: &str) -> u32 {
 }
 
 fn resolve_path_dep(member: &str, dep_path: &str) -> Option<String> {
-    let base = workspace_root().join(member).join(dep_path);
+    let base = crate::checkout::checkout_root().join(member).join(dep_path);
     let canonical = base.canonicalize().ok()?;
-    let root = workspace_root().canonicalize().ok()?;
+    let root = crate::checkout::checkout_root().canonicalize().ok()?;
     let rel = canonical.strip_prefix(&root).ok()?;
     if rel.as_os_str().is_empty() {
         return None;
@@ -220,10 +216,7 @@ fn read_contract_doc(root: &Path, rel: &str, failures: &mut Vec<String>) -> Opti
     }
 }
 
-fn cross_crate_promotion_contract_text_failures(
-    crate_graph: &str,
-    lego_rule: &str,
-) -> Vec<String> {
+fn cross_crate_promotion_contract_text_failures(crate_graph: &str, lego_rule: &str) -> Vec<String> {
     let mut failures = Vec::new();
     // The generated crate graph proves the dependency surface exists and is
     // fresh (crate_ownership.py --check); the LEGO rule owns the promotion

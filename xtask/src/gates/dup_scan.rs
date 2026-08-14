@@ -23,8 +23,6 @@ use std::process;
 
 use serde::Deserialize;
 
-use crate::gates::gates::workspace_root;
-
 /// Shingle length in normalized lines.
 const SHINGLE: usize = 8;
 
@@ -339,7 +337,7 @@ fn render(counts: &BTreeMap<String, CrateCount>) -> String {
 
 /// Run the duplicate scan.
 pub(crate) fn run(args: &[String]) {
-    let root = workspace_root();
+    let root = crate::checkout::checkout_root();
 
     if let Some(position) = args.iter().position(|argument| argument == "--report") {
         let only = args
@@ -374,7 +372,10 @@ pub(crate) fn run(args: &[String]) {
             process::exit(1);
         });
         let total: usize = counts.values().map(|count| count.duplicate_lines).sum();
-        println!("dup-scan: wrote {} ({total} duplicated lines)", path.display());
+        println!(
+            "dup-scan: wrote {} ({total} duplicated lines)",
+            path.display()
+        );
         return;
     }
 
@@ -445,7 +446,11 @@ mod tests {
             .arg(dir)
             .status()
             .expect("git must be available to measure a repository");
-        assert!(status.success(), "git init must succeed in {}", dir.display());
+        assert!(
+            status.success(),
+            "git init must succeed in {}",
+            dir.display()
+        );
     }
 
     /// WHY: comments and indentation are exactly what a copy-paste edits first,
@@ -503,7 +508,9 @@ mod tests {
         init_repository(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
-        let block: String = (0..SHINGLE - 1).map(|n| format!("let v{n} = {n};\n")).collect();
+        let block: String = (0..SHINGLE - 1)
+            .map(|n| format!("let v{n} = {n};\n"))
+            .collect();
         fs::write(dir.join("crate-a/src/lib.rs"), &block).expect("write");
         fs::write(dir.join("crate-b/src/lib.rs"), &block).expect("write");
 
@@ -558,7 +565,10 @@ mod tests {
             .iter()
             .map(|entry| entry.duplicate_lines)
             .sum();
-        assert_eq!(reported, measured, "report must explain the measured figure");
+        assert_eq!(
+            reported, measured,
+            "report must explain the measured figure"
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
