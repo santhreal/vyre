@@ -17,7 +17,8 @@
 //! const COVERAGE_WAIVER: &[&str] = &[ /* builder, reason */ ];
 //! #[test]
 //! fn every_program_builder_is_tested_registered_or_explicitly_waived() {
-//!     vyre_test_support::assert_registry_closure(env!("CARGO_MANIFEST_DIR"), COVERAGE_WAIVER, 4);
+//!     let crate_dir = vyre_test_support::monorepo::vyre_workspace_root().join("vyre-libs");
+//!     vyre_test_support::assert_registry_closure(crate_dir, COVERAGE_WAIVER, 4);
 //! }
 //! ```
 //!
@@ -66,16 +67,22 @@ fn read_source_file_with_cap(path: &Path, max_bytes: u64) -> std::io::Result<Str
     Ok(text)
 }
 
-/// Assert the registry-closure contract for the crate rooted at `manifest_dir`.
+/// Assert the registry-closure contract for the crate rooted at `crate_dir`.
 ///
-/// Source-enumerates every `pub fn NAME(...) -> Program` builder under `<manifest_dir>/src`,
+/// Resolve `crate_dir` from the working directory, with
+/// [`monorepo::vyre_workspace_root`] joined to the crate's directory name. A
+/// compiled-in `CARGO_MANIFEST_DIR` answers for whichever checkout built the
+/// test binary, which is not the checkout the command ran in whenever a target
+/// directory is shared.
+///
+/// Source-enumerates every `pub fn NAME(...) -> Program` builder under `<crate_dir>/src`,
 /// EXCLUDING `impl`-block methods (`&self` receiver) and IR-transform passes (first parameter
 /// is `Program`/`&Program`/`&mut Program`: a pass rewrites an existing Program rather than
 /// constructing one from source inputs, so it submits no `OperationRegistration` and is
 /// exercised by optimizer/pass tests, not the source-builder registry contract).
 ///
 /// A builder is COVERED iff its name appears (word-boundary) in (a) an `inventory::submit!`
-/// block, (b) any file under `<manifest_dir>/tests` (except the closure gate itself), or
+/// block, (b) any file under `<crate_dir>/tests` (except the closure gate itself), or
 /// (c) an inline `#[cfg(test)]` / `#[test]` / `mod tests` region of a source file.
 ///
 /// Every UNCOVERED builder must be listed in `waiver` with a trailing `//` reason. Three
@@ -89,13 +96,14 @@ fn read_source_file_with_cap(path: &Path, max_bytes: u64) -> std::io::Result<Str
 ///
 /// # Panics
 /// Panics (i.e. fails the test) on any guard violation, or if a source/test file is unreadable.
-pub fn assert_registry_closure(manifest_dir: &str, waiver: &[&str], floor: usize) {
-    let crate_name = Path::new(manifest_dir)
+pub fn assert_registry_closure(crate_dir: impl AsRef<Path>, waiver: &[&str], floor: usize) {
+    let crate_dir = crate_dir.as_ref();
+    let crate_name = crate_dir
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("<crate>");
-    let src = Path::new(manifest_dir).join("src");
-    let tests = Path::new(manifest_dir).join("tests");
+    let src = crate_dir.join("src");
+    let tests = crate_dir.join("tests");
 
     let mut src_files = Vec::new();
     collect_rust_files(&src, &mut src_files);

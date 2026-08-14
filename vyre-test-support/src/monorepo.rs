@@ -19,9 +19,12 @@
 //!
 //! # How resolution works
 //!
-//! [`vyre_workspace_root`] is always available: this crate is a direct child of
-//! the vyre workspace root, so its own `CARGO_MANIFEST_DIR` fixes the answer
-//! whatever the tree sits inside.
+//! [`vyre_workspace_root`] delegates to [`structure_gate::workspace_root`],
+//! which walks up from the working directory to the manifest that declares the
+//! workspace. It is deliberately not this crate's `CARGO_MANIFEST_DIR`: a
+//! target directory shared by several checkouts computes the same unit hash for
+//! this crate, so cargo hands one checkout a binary another one built, and a
+//! compiled-in path then names the wrong tree.
 //!
 //! [`santh_root`] takes the first of these that works:
 //!
@@ -56,15 +59,18 @@ const DATAFLOW_RELATIVE: &str = "libs/dataflow";
 
 /// Root of the vyre cargo workspace.
 ///
-/// This crate lives at `<workspace root>/vyre-test-support`, so the answer is
-/// the parent of its manifest directory. It does not depend on where the
-/// workspace itself sits.
+/// Resolved from the working directory at run time by
+/// [`structure_gate::workspace_root`], the one owner of that question. A path
+/// baked in at compile time answers for whichever checkout built the binary,
+/// which is not the checkout the command ran in whenever a target directory is
+/// shared.
+///
+/// # Panics
+///
+/// Panics when no ancestor of the working directory declares a `[workspace]`.
 #[must_use]
 pub fn vyre_workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("vyre-test-support must live directly under the vyre workspace root")
-        .to_path_buf()
+    structure_gate::workspace_root()
 }
 
 /// Root of the monorepo hosting vyre and its sibling products, if there is one.

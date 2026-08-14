@@ -535,6 +535,7 @@ mod basic_execution;
 mod batching;
 mod cost_monotone;
 mod effect_handlers;
+mod gate_fact_cache;
 mod invalidation_metrics;
 mod linear_types;
 mod lookup_identity;

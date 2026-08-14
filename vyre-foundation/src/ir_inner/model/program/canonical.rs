@@ -1,8 +1,11 @@
+use std::borrow::Cow;
+use std::slice;
 use std::sync::Arc;
 
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::spec_types::BinOp;
+use crate::optimizer::rewrite::{rewrite_node_slices, rewrite_nodes_cow};
 
 use super::{meta::buffer_decl_canonical_key, BufferDecl, Program};
 
@@ -15,11 +18,28 @@ impl Program {
     /// wrappers that do not own local bindings are flattened.
     #[must_use]
     pub fn canonicalized(&self) -> Self {
-        let mut buffers = self.buffers().to_vec();
-        sort_buffers(&mut buffers);
-        let mut ctx = CanonicalCtx::default();
-        self.with_rewritten_entry(ctx.canonicalize_nodes(self.entry()))
-            .with_rewritten_buffers(buffers)
+        self.canonical_form().into_owned()
+    }
+
+    /// Canonical shape of this program, borrowed when it is already canonical.
+    ///
+    /// Fingerprints are taken after every optimizer pass, and by then the
+    /// program is normally canonical already, so the walk reports what it
+    /// changed rather than rebuilding the whole tree to discover it changed
+    /// nothing.
+    fn canonical_form(&self) -> Cow<'_, Self> {
+        match (
+            canonical_entry(self.entry()),
+            canonical_buffers(self.buffers()),
+        ) {
+            (Cow::Borrowed(_), None) => Cow::Borrowed(self),
+            (Cow::Borrowed(_), Some(buffers)) => Cow::Owned(self.with_rewritten_buffers(buffers)),
+            (Cow::Owned(entry), None) => Cow::Owned(self.with_rewritten_entry(entry)),
+            (Cow::Owned(entry), Some(buffers)) => Cow::Owned(
+                self.with_rewritten_entry(entry)
+                    .with_rewritten_buffers(buffers),
+            ),
+        }
     }
 
     /// Serialize the canonical IR shape into stable VIR0 wire bytes.
@@ -30,7 +50,7 @@ impl Program {
     /// but after canonical normalization has been applied.
     #[must_use]
     pub fn canonical_wire_bytes(&self) -> Result<Vec<u8>, crate::error::IrError> {
-        let canonical = self.canonicalized();
+        let canonical = self.canonical_form();
         // Pre-size: VIR0 wire encoding lands in the ballpark of ~32
         // bytes per IR node + a fixed program header. Over-sizing is
         // free at this stage and avoids the typical 4-7 reallocations
@@ -58,8 +78,122 @@ impl Program {
     }
 }
 
-fn sort_buffers(buffers: &mut [BufferDecl]) {
-    buffers.sort_by_cached_key(buffer_decl_canonical_key);
+/// Canonically ordered buffer table, or `None` when it is already ordered.
+fn canonical_buffers(buffers: &[BufferDecl]) -> Option<Vec<BufferDecl>> {
+    let keys: Vec<Vec<u8>> = buffers.iter().map(buffer_decl_canonical_key).collect();
+    if keys.windows(2).all(|pair| pair[0] <= pair[1]) {
+        return None;
+    }
+    let mut order: Vec<usize> = (0..buffers.len()).collect();
+    order.sort_by(|&left, &right| keys[left].cmp(&keys[right]));
+    Some(
+        order
+            .into_iter()
+            .map(|index| buffers[index].clone())
+            .collect(),
+    )
+}
+
+/// Canonical entry body: commutative operands normalized, then transparent
+/// `Block` wrappers flattened. Borrowed when neither step changes anything.
+fn canonical_entry(nodes: &[Node]) -> Cow<'_, [Node]> {
+    let mut ctx = CanonicalCtx::default();
+    match rewrite_nodes_cow(nodes, &mut |candidate| {
+        ctx.swap_commutative_operands(candidate)
+    }) {
+        Cow::Borrowed(nodes) => splice_transparent_blocks(nodes),
+        Cow::Owned(nodes) => {
+            let spliced = match splice_transparent_blocks(&nodes) {
+                Cow::Borrowed(_) => None,
+                Cow::Owned(spliced) => Some(spliced),
+            };
+            Cow::Owned(spliced.unwrap_or(nodes))
+        }
+    }
+}
+
+/// Flatten every `Block` that owns no local binding, bottom up. A flattened
+/// block loses its wrapper, so it always reports an owned rewrite.
+fn splice_transparent_blocks(nodes: &[Node]) -> Cow<'_, [Node]> {
+    rewrite_node_slices(nodes, |node| match node {
+        Node::Block(children) => {
+            let children = splice_transparent_blocks(children);
+            if can_splice_block(children.as_ref()) {
+                Cow::Owned(children.into_owned())
+            } else {
+                match children {
+                    Cow::Borrowed(_) => Cow::Borrowed(slice::from_ref(node)),
+                    Cow::Owned(children) => Cow::Owned(vec![Node::Block(children)]),
+                }
+            }
+        }
+        Node::If {
+            cond,
+            then,
+            otherwise,
+        } => {
+            let then_body = splice_transparent_blocks(then);
+            let otherwise_body = splice_transparent_blocks(otherwise);
+            if matches!(
+                (&then_body, &otherwise_body),
+                (Cow::Borrowed(_), Cow::Borrowed(_))
+            ) {
+                Cow::Borrowed(slice::from_ref(node))
+            } else {
+                Cow::Owned(vec![Node::if_then_else(
+                    cond.clone(),
+                    then_body.into_owned(),
+                    otherwise_body.into_owned(),
+                )])
+            }
+        }
+        Node::Loop {
+            var,
+            from,
+            to,
+            body,
+        } => match splice_transparent_blocks(body) {
+            Cow::Borrowed(_) => Cow::Borrowed(slice::from_ref(node)),
+            Cow::Owned(body) => Cow::Owned(vec![Node::loop_for(
+                var.clone(),
+                from.clone(),
+                to.clone(),
+                body,
+            )]),
+        },
+        Node::Region {
+            generator,
+            source_region,
+            body,
+        } => match splice_transparent_blocks(body) {
+            Cow::Borrowed(_) => Cow::Borrowed(slice::from_ref(node)),
+            Cow::Owned(body) => Cow::Owned(vec![Node::Region {
+                generator: generator.clone(),
+                source_region: source_region.clone(),
+                body: Arc::new(body),
+            }]),
+        },
+        // Every remaining statement carries no nested node list, so there is
+        // nothing to flatten. Listed rather than wildcarded: a new statement
+        // node that owns a body must be routed above, and this match is what
+        // refuses to compile until it is.
+        Node::Let { .. }
+        | Node::Assign { .. }
+        | Node::Store { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AsyncLoad { .. }
+        | Node::AsyncStore { .. }
+        | Node::AsyncWait { .. }
+        | Node::Trap { .. }
+        | Node::Resume { .. }
+        | Node::AllReduce { .. }
+        | Node::AllGather { .. }
+        | Node::ReduceScatter { .. }
+        | Node::Broadcast { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::Opaque(_) => Cow::Borrowed(slice::from_ref(node)),
+    })
 }
 
 #[derive(Default)]
@@ -69,164 +203,21 @@ struct CanonicalCtx {
 }
 
 impl CanonicalCtx {
-    fn canonicalize_nodes(&mut self, nodes: &[Node]) -> Vec<Node> {
-        let mut out = Vec::with_capacity(nodes.len());
-        for node in nodes {
-            push_canonical_node(&mut out, self.canonicalize_node(node));
+    /// Normalize one commutative `BinOp` operand pair. `None` leaves the
+    /// expression untouched, which is what keeps an already-canonical subtree
+    /// borrowed instead of cloned.
+    fn swap_commutative_operands(&mut self, candidate: &Expr) -> Option<Expr> {
+        let Expr::BinOp { op, left, right } = candidate else {
+            return None;
+        };
+        if !should_swap_operands(*op, left, right, &mut self.left_key, &mut self.right_key) {
+            return None;
         }
-        out
-    }
-
-    fn canonicalize_node(&mut self, node: &Node) -> Node {
-        match node {
-            Node::Let { name, value } => Node::Let {
-                name: name.clone(),
-                value: self.canonicalize_expr(value),
-            },
-            Node::Assign { name, value } => Node::Assign {
-                name: name.clone(),
-                value: self.canonicalize_expr(value),
-            },
-            Node::Store {
-                buffer,
-                index,
-                value,
-            } => Node::Store {
-                buffer: buffer.clone(),
-                index: self.canonicalize_expr(index),
-                value: self.canonicalize_expr(value),
-            },
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => Node::If {
-                cond: self.canonicalize_expr(cond),
-                then: self.canonicalize_nodes(then),
-                otherwise: self.canonicalize_nodes(otherwise),
-            },
-            Node::Loop {
-                var,
-                from,
-                to,
-                body,
-            } => Node::Loop {
-                var: var.clone(),
-                from: self.canonicalize_expr(from),
-                to: self.canonicalize_expr(to),
-                body: self.canonicalize_nodes(body),
-            },
-            Node::Block(children) => Node::Block(self.canonicalize_nodes(children)),
-            Node::Region {
-                generator,
-                source_region,
-                body,
-            } => Node::Region {
-                generator: generator.clone(),
-                source_region: source_region.clone(),
-                body: Arc::new(self.canonicalize_nodes(body)),
-            },
-            Node::AsyncLoad {
-                source,
-                destination,
-                offset,
-                size,
-                tag,
-            } => Node::AsyncLoad {
-                source: source.clone(),
-                destination: destination.clone(),
-                offset: Box::new(self.canonicalize_expr(offset)),
-                size: Box::new(self.canonicalize_expr(size)),
-                tag: tag.clone(),
-            },
-            Node::AsyncStore {
-                source,
-                destination,
-                offset,
-                size,
-                tag,
-            } => Node::AsyncStore {
-                source: source.clone(),
-                destination: destination.clone(),
-                offset: Box::new(self.canonicalize_expr(offset)),
-                size: Box::new(self.canonicalize_expr(size)),
-                tag: tag.clone(),
-            },
-            Node::Trap { address, tag } => Node::Trap {
-                address: Box::new(self.canonicalize_expr(address)),
-                tag: tag.clone(),
-            },
-            Node::IndirectDispatch {
-                count_buffer,
-                count_offset,
-            } => Node::IndirectDispatch {
-                count_buffer: count_buffer.clone(),
-                count_offset: *count_offset,
-            },
-            Node::AllReduce { buffer, op, group } => Node::AllReduce {
-                buffer: buffer.clone(),
-                op: *op,
-                group: *group,
-            },
-            Node::AllGather {
-                input,
-                output,
-                group,
-            } => Node::AllGather {
-                input: input.clone(),
-                output: output.clone(),
-                group: *group,
-            },
-            Node::ReduceScatter {
-                input,
-                output,
-                op,
-                group,
-            } => Node::ReduceScatter {
-                input: input.clone(),
-                output: output.clone(),
-                op: *op,
-                group: *group,
-            },
-            Node::Broadcast {
-                buffer,
-                root,
-                group,
-            } => Node::Broadcast {
-                buffer: buffer.clone(),
-                root: *root,
-                group: *group,
-            },
-            Node::AsyncWait { tag } => Node::AsyncWait { tag: tag.clone() },
-            Node::Resume { tag } => Node::Resume { tag: tag.clone() },
-            Node::Return => Node::Return,
-            Node::Barrier { ordering } => Node::barrier_with_ordering(*ordering),
-            Node::Opaque(extension) => Node::Opaque(Arc::clone(extension)),
-        }
-    }
-
-    fn canonicalize_expr(&mut self, expr: &Expr) -> Expr {
-        crate::optimizer::rewrite::rewrite_expr(expr, &mut |candidate| {
-            let Expr::BinOp { op, left, right } = candidate else {
-                return None;
-            };
-            if !should_swap_operands(*op, left, right, &mut self.left_key, &mut self.right_key) {
-                return None;
-            }
-            Some(Expr::BinOp {
-                op: *op,
-                left: Box::new((**right).clone()),
-                right: Box::new((**left).clone()),
-            })
+        Some(Expr::BinOp {
+            op: *op,
+            left: Box::new((**right).clone()),
+            right: Box::new((**left).clone()),
         })
-        .into_owned()
-    }
-}
-
-fn push_canonical_node(out: &mut Vec<Node>, node: Node) {
-    match node {
-        Node::Block(children) if can_splice_block(&children) => out.extend(children),
-        other => out.push(other),
     }
 }
 

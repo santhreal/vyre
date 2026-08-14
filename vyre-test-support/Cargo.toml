@@ -20,6 +20,9 @@ publish = false
 ir-fixtures = ["dep:vyre-foundation"]
 
 [dependencies]
+# The one owner of "which checkout am I reporting on". Resolved from the working
+# directory at run time, never compiled in.
+structure-gate = { path = "../structure-gate" }
 vyre-foundation = { workspace = true, optional = true }
 
 [dev-dependencies]

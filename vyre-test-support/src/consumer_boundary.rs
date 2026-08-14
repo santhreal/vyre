@@ -17,13 +17,14 @@
 //!
 //! [`FORBIDDEN_CONSUMER_NAMES`] is the one definition, and
 //! [`assert_source_does_not_name_downstream_consumers`] is the one scan. A
-//! suite becomes three lines:
+//! suite becomes four lines:
 //!
 //! ```ignore
 //! #[test]
 //! fn driver_source_does_not_name_downstream_consumers() {
+//!     let crate_dir = vyre_test_support::monorepo::vyre_workspace_root().join("vyre-driver");
 //!     vyre_test_support::consumer_boundary::assert_source_does_not_name_downstream_consumers(
-//!         ConsumerBoundaryScan::for_crate("vyre-driver", env!("CARGO_MANIFEST_DIR"))
+//!         ConsumerBoundaryScan::for_crate("vyre-driver", crate_dir)
 //!             .with_rationale("vyre-driver is a platform crate"),
 //!     );
 //! }
@@ -66,15 +67,19 @@ pub struct ConsumerBoundaryScan {
 }
 
 impl ConsumerBoundaryScan {
-    /// Scans `src/` under a crate's manifest directory.
+    /// Scans `src/` under a crate's directory.
     ///
-    /// Pass `env!("CARGO_MANIFEST_DIR")` for `manifest_dir`; the label is the
-    /// crate name and appears in every diagnostic the scan produces.
+    /// Resolve `crate_dir` from the working directory, with
+    /// [`vyre_workspace_root`](crate::monorepo::vyre_workspace_root) joined to
+    /// the crate's directory name. A compiled-in `CARGO_MANIFEST_DIR` answers
+    /// for whichever checkout built the test binary, which is not the checkout
+    /// the command ran in whenever a target directory is shared. The label is
+    /// the crate name and appears in every diagnostic the scan produces.
     #[must_use]
-    pub fn for_crate(crate_label: &str, manifest_dir: &str) -> Self {
+    pub fn for_crate(crate_label: &str, crate_dir: impl AsRef<Path>) -> Self {
         Self {
             crate_label: crate_label.to_owned(),
-            source_root: Path::new(manifest_dir).join("src"),
+            source_root: crate_dir.as_ref().join("src"),
             rationale: format!("{crate_label} is a platform crate"),
             skipped_directory_names: Vec::new(),
         }
