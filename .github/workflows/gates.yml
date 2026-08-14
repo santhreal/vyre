@@ -78,3 +78,9 @@ jobs:
       # months reporting success while scanning deleted trees.
       - name: Unification baselines hold
         run: bash scripts/check_unification_baselines.sh
+
+      # unsafe_code = "deny" is inherited workspace-wide, so the set of files
+      # carrying an allow(unsafe_code) override IS the complete unsafe surface,
+      # enforced by rustc rather than approximated by grep. This pins that set.
+      - name: Unsafe surface matches the reviewed budget
+        run: bash scripts/check_unsafe_budget.sh
