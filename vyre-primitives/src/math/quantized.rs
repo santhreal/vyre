@@ -113,12 +113,11 @@ inventory::submit! {
 inventory::submit! {
         vyre_foundation::operation::OperationRegistration::primitive(
             I4_MATVEC_F32_SCALED_OP_ID,
-            || i4x8_matvec_f32_scaled("matrix_packed", "vector_packed", "matrix_scale", "vector_scale", 4, 8),
+            || i4x8_matvec_f32_scaled("matrix_packed", "vector_packed", "matrix_scale", "out", 4, 8),
             Some(|| vec![vec![
                 u32s(&[0x7621_0F98; 4]),
                 f32s(&[-8.0, -7.0, -1.0, 0.0, 1.0, 2.0, 6.0, 7.0]),
                 f32s(&[1.0; 4]),
-                f32s(&[1.0]),
             ]]),
         Some(|| vec![vec![f32s(&[204.0; 4])]]),
     ).with_category("math")
@@ -128,12 +127,11 @@ inventory::submit! {
 inventory::submit! {
         vyre_foundation::operation::OperationRegistration::primitive(
             I4_BATCHED_MATVEC_F32_SCALED_OP_ID,
-            || i4x8_batched_matvec_f32_scaled("matrix_packed", "vector_packed", "matrix_scale", "vector_scale", 2, 4, 8),
+            || i4x8_batched_matvec_f32_scaled("matrix_packed", "vector_packed", "matrix_scale", "out", 2, 4, 8),
             Some(|| vec![vec![
                 u32s(&[0x7621_0F98; 4]),
                 f32s(&[-8.0, -7.0, -1.0, 0.0, 1.0, 2.0, 6.0, 7.0, -8.0, -7.0, -1.0, 0.0, 1.0, 2.0, 6.0, 7.0]),
                 f32s(&[1.0; 4]),
-                f32s(&[1.0; 2]),
             ]]),
             Some(|| vec![vec![f32s(&[204.0; 8])]]),
     ).with_category("math")

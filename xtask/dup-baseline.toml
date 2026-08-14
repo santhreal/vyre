@@ -23,8 +23,10 @@
 #                           placing those trees beside code they resemble. The
 #                           pin is not raised to meet it; the vyre-libs dedup
 #                           owes the difference.
-#   vyre-primitives  8454   the CRC and graph oracle matrices still restate
-#                           src/hash/crc32.rs and src/graph/motif.rs.
+#   vyre-primitives  7727   the remaining rows are the CSR traversal and
+#                           iterative-solver program builders, which duplicate
+#                           against their vyre-libs dispatch partners rather
+#                           than against each other.
 
 
 [[crate]]
@@ -164,8 +166,8 @@ total_lines = 3653
 
 [[crate]]
 name = "vyre-primitives"
-duplicate_lines = 8454
-total_lines = 102327
+duplicate_lines = 7727
+total_lines = 101801
 
 [[crate]]
 name = "vyre-reference"

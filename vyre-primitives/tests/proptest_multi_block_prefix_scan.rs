@@ -2,9 +2,10 @@
 
 #![cfg(all(feature = "reduce", feature = "cpu-parity"))]
 
+mod ir_shape;
+use ir_shape::{contains_invocation_id, contains_loop, grid_sync_barrier_count};
+
 use proptest::prelude::*;
-use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
 use vyre_primitives::reduce::multi_block_prefix_scan::{
     cpu_ref, multi_block_prefix_scan_sum_u32, BLOCK_LANES,
 };
@@ -18,122 +19,6 @@ fn independent_wrapping_prefix(values: &[u32]) -> Vec<u32> {
             acc
         })
         .collect()
-}
-
-fn contains_loop(program: &Program) -> bool {
-    program.entry().iter().any(node_contains_loop)
-}
-
-fn node_contains_loop(node: &Node) -> bool {
-    match node {
-        Node::Loop { .. } => true,
-        Node::Block(children) => children.iter().any(node_contains_loop),
-        Node::If {
-            then, otherwise, ..
-        } => then.iter().any(node_contains_loop) || otherwise.iter().any(node_contains_loop),
-        Node::Region { body, .. } => body.iter().any(node_contains_loop),
-        _ => false,
-    }
-}
-
-fn contains_invocation_id(program: &Program) -> bool {
-    program.entry().iter().any(node_contains_invocation_id)
-}
-
-fn grid_sync_barrier_count(program: &Program) -> usize {
-    program
-        .entry()
-        .iter()
-        .map(node_grid_sync_barrier_count)
-        .sum()
-}
-
-fn node_grid_sync_barrier_count(node: &Node) -> usize {
-    match node {
-        Node::Barrier {
-            ordering: MemoryOrdering::GridSync,
-        } => 1,
-        Node::Block(children) => children.iter().map(node_grid_sync_barrier_count).sum(),
-        Node::If {
-            then, otherwise, ..
-        } => {
-            then.iter().map(node_grid_sync_barrier_count).sum::<usize>()
-                + otherwise
-                    .iter()
-                    .map(node_grid_sync_barrier_count)
-                    .sum::<usize>()
-        }
-        Node::Loop { body, .. } => body.iter().map(node_grid_sync_barrier_count).sum(),
-        Node::Region { body, .. } => body.iter().map(node_grid_sync_barrier_count).sum(),
-        _ => 0,
-    }
-}
-
-fn node_contains_invocation_id(node: &Node) -> bool {
-    match node {
-        Node::Let { value, .. } | Node::Assign { value, .. } => expr_contains_invocation_id(value),
-        Node::Store { index, value, .. } => {
-            expr_contains_invocation_id(index) || expr_contains_invocation_id(value)
-        }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            expr_contains_invocation_id(cond)
-                || then.iter().any(node_contains_invocation_id)
-                || otherwise.iter().any(node_contains_invocation_id)
-        }
-        Node::Loop { from, to, body, .. } => {
-            expr_contains_invocation_id(from)
-                || expr_contains_invocation_id(to)
-                || body.iter().any(node_contains_invocation_id)
-        }
-        Node::Block(children) => children.iter().any(node_contains_invocation_id),
-        Node::Region { body, .. } => body.iter().any(node_contains_invocation_id),
-        _ => false,
-    }
-}
-
-fn expr_contains_invocation_id(expr: &Expr) -> bool {
-    match expr {
-        Expr::InvocationId { .. } => true,
-        Expr::Load { index, .. } | Expr::UnOp { operand: index, .. } => {
-            expr_contains_invocation_id(index)
-        }
-        Expr::BinOp { left, right, .. } => {
-            expr_contains_invocation_id(left) || expr_contains_invocation_id(right)
-        }
-        Expr::Call { args, .. } => args.iter().any(expr_contains_invocation_id),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_contains_invocation_id(cond)
-                || expr_contains_invocation_id(true_val)
-                || expr_contains_invocation_id(false_val)
-        }
-        Expr::Atomic {
-            index,
-            value,
-            expected,
-            ..
-        } => {
-            expr_contains_invocation_id(index)
-                || expr_contains_invocation_id(value)
-                || expected
-                    .as_ref()
-                    .is_some_and(|expr| expr_contains_invocation_id(expr))
-        }
-        Expr::Cast { value, .. } => expr_contains_invocation_id(value),
-        Expr::Fma { a, b, c } => {
-            expr_contains_invocation_id(a)
-                || expr_contains_invocation_id(b)
-                || expr_contains_invocation_id(c)
-        }
-        _ => false,
-    }
 }
 
 proptest! {

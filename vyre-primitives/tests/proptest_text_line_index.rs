@@ -2,8 +2,11 @@
 
 #![cfg(all(feature = "text", feature = "cpu-parity"))]
 
+mod ir_shape;
+use ir_shape::{contains_invocation_zero_gate, contains_loop};
+
 use proptest::prelude::*;
-use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, DataType, Program};
 use vyre_primitives::reduce::multi_block_prefix_scan::BLOCK_LANES;
 use vyre_primitives::text::line_index::{line_index, line_index_u8, reference_line_index};
 use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_u32s;
@@ -54,91 +57,6 @@ fn byte_strategy() -> impl Strategy<Value = u8> {
         1 => Just(0xFFu8),
         8 => any::<u8>(),
     ]
-}
-
-fn contains_loop(program: &Program) -> bool {
-    program.entry().iter().any(node_contains_loop)
-}
-
-fn node_contains_loop(node: &Node) -> bool {
-    match node {
-        Node::Loop { .. } => true,
-        Node::Block(children) => children.iter().any(node_contains_loop),
-        Node::If {
-            then, otherwise, ..
-        } => then.iter().any(node_contains_loop) || otherwise.iter().any(node_contains_loop),
-        Node::Region { body, .. } => body.iter().any(node_contains_loop),
-        _ => false,
-    }
-}
-
-fn contains_lane_zero_serial_gate(program: &Program) -> bool {
-    program
-        .entry()
-        .iter()
-        .any(node_contains_lane_zero_serial_gate)
-}
-
-fn node_contains_lane_zero_serial_gate(node: &Node) -> bool {
-    match node {
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            expr_is_invocation_zero(cond)
-                || then.iter().any(node_contains_lane_zero_serial_gate)
-                || otherwise.iter().any(node_contains_lane_zero_serial_gate)
-        }
-        Node::Block(children) => children.iter().any(node_contains_lane_zero_serial_gate),
-        Node::Loop { body, .. } => body.iter().any(node_contains_lane_zero_serial_gate),
-        Node::Region { body, .. } => body.iter().any(node_contains_lane_zero_serial_gate),
-        _ => false,
-    }
-}
-
-fn expr_is_invocation_zero(expr: &Expr) -> bool {
-    match expr {
-        Expr::BinOp { op, left, right } if *op == vyre_foundation::ir::BinOp::Eq => {
-            matches!(
-                (&**left, &**right),
-                (Expr::InvocationId { axis: 0 }, Expr::LitU32(0))
-                    | (Expr::LitU32(0), Expr::InvocationId { axis: 0 })
-            )
-        }
-        Expr::BinOp { left, right, .. } => {
-            expr_is_invocation_zero(left) || expr_is_invocation_zero(right)
-        }
-        Expr::UnOp { operand, .. } => expr_is_invocation_zero(operand),
-        Expr::Load { index, .. } => expr_is_invocation_zero(index),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_is_invocation_zero(cond)
-                || expr_is_invocation_zero(true_val)
-                || expr_is_invocation_zero(false_val)
-        }
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            expr_is_invocation_zero(index)
-                || expected
-                    .as_ref()
-                    .is_some_and(|expr| expr_is_invocation_zero(expr))
-                || expr_is_invocation_zero(value)
-        }
-        Expr::Cast { value, .. } => expr_is_invocation_zero(value),
-        Expr::Call { args, .. } => args.iter().any(expr_is_invocation_zero),
-        Expr::Fma { a, b, c } => {
-            expr_is_invocation_zero(a) || expr_is_invocation_zero(b) || expr_is_invocation_zero(c)
-        }
-        _ => false,
-    }
 }
 
 // Locate outputs via the interpreter's OWN selection predicate
@@ -202,7 +120,7 @@ proptest! {
             "line_index must not contain a serial byte loop for n={n}"
         );
         prop_assert!(
-            !contains_lane_zero_serial_gate(&program),
+            !contains_invocation_zero_gate(&program),
             "line_index must not gate all useful work behind InvocationId.x == 0 for n={n}"
         );
         let has_source = program.buffers().iter().any(|buffer| {
@@ -274,7 +192,7 @@ proptest! {
             "line_index_u8 must not contain a serial byte loop for n={n}"
         );
         prop_assert!(
-            !contains_lane_zero_serial_gate(&program),
+            !contains_invocation_zero_gate(&program),
             "line_index_u8 must not gate useful work behind InvocationId.x == 0 for n={n}"
         );
         let has_u8_source = program.buffers().iter().any(|buffer| {

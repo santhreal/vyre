@@ -2,8 +2,10 @@
 
 #![cfg(all(feature = "math", feature = "cpu-parity"))]
 
-use vyre_foundation::ir::{BinOp, Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
+mod ir_shape;
+use ir_shape::{contains_invocation_zero_gate, contains_loop, grid_sync_barrier_count};
+
+use vyre_foundation::ir::{Node, Program};
 use vyre_primitives::math::prefix_scan::{
     cpu_ref, prefix_scan_large, prefix_scan_large_with_op_id, ScanKind,
 };
@@ -128,115 +130,3 @@ fn assert_top_region_generator(program: &Program, expected: &str) {
     }
 }
 
-fn contains_loop(program: &Program) -> bool {
-    program.entry().iter().any(node_contains_loop)
-}
-
-fn node_contains_loop(node: &Node) -> bool {
-    match node {
-        Node::Loop { .. } => true,
-        Node::Block(children) => children.iter().any(node_contains_loop),
-        Node::If {
-            then, otherwise, ..
-        } => then.iter().any(node_contains_loop) || otherwise.iter().any(node_contains_loop),
-        Node::Region { body, .. } => body.iter().any(node_contains_loop),
-        _ => false,
-    }
-}
-
-fn contains_invocation_zero_gate(program: &Program) -> bool {
-    program
-        .entry()
-        .iter()
-        .any(node_contains_invocation_zero_gate)
-}
-
-fn node_contains_invocation_zero_gate(node: &Node) -> bool {
-    match node {
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            expr_is_invocation_zero(cond)
-                || then.iter().any(node_contains_invocation_zero_gate)
-                || otherwise.iter().any(node_contains_invocation_zero_gate)
-        }
-        Node::Block(children) => children.iter().any(node_contains_invocation_zero_gate),
-        Node::Loop { body, .. } => body.iter().any(node_contains_invocation_zero_gate),
-        Node::Region { body, .. } => body.iter().any(node_contains_invocation_zero_gate),
-        _ => false,
-    }
-}
-
-fn expr_is_invocation_zero(expr: &Expr) -> bool {
-    match expr {
-        Expr::BinOp { op, left, right } if *op == BinOp::Eq => matches!(
-            (&**left, &**right),
-            (Expr::InvocationId { axis: 0 }, Expr::LitU32(0))
-                | (Expr::LitU32(0), Expr::InvocationId { axis: 0 })
-        ),
-        Expr::BinOp { left, right, .. } => {
-            expr_is_invocation_zero(left) || expr_is_invocation_zero(right)
-        }
-        Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
-            expr_is_invocation_zero(operand)
-        }
-        Expr::Load { index, .. } => expr_is_invocation_zero(index),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_is_invocation_zero(cond)
-                || expr_is_invocation_zero(true_val)
-                || expr_is_invocation_zero(false_val)
-        }
-        Expr::Atomic {
-            index,
-            value,
-            expected,
-            ..
-        } => {
-            expr_is_invocation_zero(index)
-                || expr_is_invocation_zero(value)
-                || expected
-                    .as_ref()
-                    .is_some_and(|expr| expr_is_invocation_zero(expr))
-        }
-        Expr::Fma { a, b, c } => {
-            expr_is_invocation_zero(a) || expr_is_invocation_zero(b) || expr_is_invocation_zero(c)
-        }
-        Expr::Call { args, .. } => args.iter().any(expr_is_invocation_zero),
-        _ => false,
-    }
-}
-
-fn grid_sync_barrier_count(program: &Program) -> usize {
-    program
-        .entry()
-        .iter()
-        .map(node_grid_sync_barrier_count)
-        .sum()
-}
-
-fn node_grid_sync_barrier_count(node: &Node) -> usize {
-    match node {
-        Node::Barrier {
-            ordering: MemoryOrdering::GridSync,
-        } => 1,
-        Node::Block(children) => children.iter().map(node_grid_sync_barrier_count).sum(),
-        Node::If {
-            then, otherwise, ..
-        } => {
-            then.iter().map(node_grid_sync_barrier_count).sum::<usize>()
-                + otherwise
-                    .iter()
-                    .map(node_grid_sync_barrier_count)
-                    .sum::<usize>()
-        }
-        Node::Loop { body, .. } => body.iter().map(node_grid_sync_barrier_count).sum(),
-        Node::Region { body, .. } => body.iter().map(node_grid_sync_barrier_count).sum(),
-        _ => 0,
-    }
-}
