@@ -12,7 +12,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::ordering::sort_unstable_by_key_if_needed;
 use crate::reservation_policy::{
     reserve_typed_hash_map_to_capacity, reserve_typed_hash_set_to_capacity,
-    reserve_typed_vec_to_capacity, reserved_typed_vec, ReservationPolicy,
+    reserve_typed_vec_to_capacity, reserved_typed_vec, storage_reserve_failure_adapter,
+    ReservationPolicy,
 };
 use crate::ResidentGraphReuseTelemetry;
 
@@ -303,17 +304,7 @@ pub enum MultiQueryExecutionError {
     },
 }
 
-fn storage_reserve_failed(
-    field: &'static str,
-    requested: usize,
-    message: String,
-) -> MultiQueryExecutionError {
-    MultiQueryExecutionError::StorageReserveFailed {
-        field,
-        requested,
-        message,
-    }
-}
+storage_reserve_failure_adapter!(MultiQueryExecutionError);
 
 fn reserve_vec<T>(
     vec: &mut Vec<T>,

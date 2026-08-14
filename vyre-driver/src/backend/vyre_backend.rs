@@ -5,6 +5,9 @@ use std::sync::Arc;
 use smallvec::SmallVec;
 use vyre_foundation::ir::Program;
 
+use crate::backend::resident_sequence::{
+    dispatch_resident_steps, read_resident_ranges_into, resident_step_config,
+};
 use crate::backend::{
     device_buffer::unsupported_device_buffer, private, BackendError, DeviceBuffer, DispatchConfig,
     OutputBuffers, PendingDispatch, Resource, TimedDispatchResult,
@@ -482,16 +485,8 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
         read_ranges: &[ResidentReadRange<'_>],
         outputs: &mut [&mut Vec<u8>],
     ) -> Result<(), BackendError> {
-        for step in steps {
-            let mut config = DispatchConfig::default();
-            config.grid_override = step.grid_override;
-            self.dispatch_resident_timed(step.program, step.resources, &config)?;
-        }
-        let ranges = read_ranges
-            .iter()
-            .map(|range| (range.resource, range.byte_offset, range.byte_len))
-            .collect::<SmallVec<[_; 8]>>();
-        self.download_resident_ranges_into(&ranges, outputs)
+        dispatch_resident_steps(self, steps)?;
+        read_resident_ranges_into(self, read_ranges, outputs)
     }
 
     /// Timed variant of
@@ -517,9 +512,11 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
         let mut enqueue_ns = Some(0_u64);
         let mut wait_ns = Some(0_u64);
         for step in steps {
-            let mut config = DispatchConfig::default();
-            config.grid_override = step.grid_override;
-            let timed = self.dispatch_resident_timed(step.program, step.resources, &config)?;
+            let timed = self.dispatch_resident_timed(
+                step.program,
+                step.resources,
+                &resident_step_config(step),
+            )?;
             device_ns = crate::accounting::sum_optional_timing(
                 device_ns,
                 timed.device_ns,
@@ -542,11 +539,7 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
                 "per-step",
             )?;
         }
-        let ranges = read_ranges
-            .iter()
-            .map(|range| (range.resource, range.byte_offset, range.byte_len))
-            .collect::<SmallVec<[_; 8]>>();
-        self.download_resident_ranges_into(&ranges, outputs)?;
+        read_resident_ranges_into(self, read_ranges, outputs)?;
         Ok(ResidentSequenceTiming {
             wall_ns: elapsed_resident_sequence_wall_ns(started)?,
             device_ns,
@@ -576,23 +569,11 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
         read_ranges: &[ResidentReadRange<'_>],
         outputs: &mut [&mut Vec<u8>],
     ) -> Result<(), BackendError> {
-        for step in prefix_steps {
-            let mut config = DispatchConfig::default();
-            config.grid_override = step.grid_override;
-            self.dispatch_resident_timed(step.program, step.resources, &config)?;
-        }
+        dispatch_resident_steps(self, prefix_steps)?;
         for _ in 0..repeat_count {
-            for step in repeated_steps {
-                let mut config = DispatchConfig::default();
-                config.grid_override = step.grid_override;
-                self.dispatch_resident_timed(step.program, step.resources, &config)?;
-            }
+            dispatch_resident_steps(self, repeated_steps)?;
         }
-        let ranges = read_ranges
-            .iter()
-            .map(|range| (range.resource, range.byte_offset, range.byte_len))
-            .collect::<SmallVec<[_; 8]>>();
-        self.download_resident_ranges_into(&ranges, outputs)
+        read_resident_ranges_into(self, read_ranges, outputs)
     }
 
     /// Optional compiled-pipeline cache counters for compile telemetry.

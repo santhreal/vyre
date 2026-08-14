@@ -26,7 +26,8 @@ use crate::megakernel_execution::{
     MegakernelGraphShape, MegakernelMemoryError,
 };
 use crate::reservation_policy::{
-    reserve_typed_vec_to_capacity as reserve_vec_to_capacity, ReservationPolicy,
+    reserve_typed_vec_to_capacity as reserve_vec_to_capacity, storage_reserve_failure_adapter,
+    ReservationPolicy,
 };
 
 const MEGAKERNEL_FRONTIER_RESERVATION: ReservationPolicy = ReservationPolicy::new(
@@ -523,17 +524,7 @@ fn reserve_vec<T>(
     )
 }
 
-fn storage_reserve_failed(
-    field: &'static str,
-    requested: usize,
-    message: String,
-) -> MegakernelFrontierMemoryPlanError {
-    MegakernelFrontierMemoryPlanError::StorageReserveFailed {
-        field,
-        requested,
-        message,
-    }
-}
+storage_reserve_failure_adapter!(MegakernelFrontierMemoryPlanError);
 
 #[cfg(test)]
 mod tests {
@@ -548,7 +539,8 @@ mod tests {
         MegakernelGraphShape, NeutralMegakernelExecutionPlanner,
     };
     use crate::megakernel_fixtures::{
-        DIAMOND_DEPENDENCIES, DIAMOND_WAVES, OUTPUT_HEAVY_WAVES, OVERFLOW_WAVES, THREE_SMALL_WAVES,
+        layered_dag_dependencies, DIAMOND_DEPENDENCIES, DIAMOND_WAVES, GROWING_PAIR_WAVES,
+        OUTPUT_HEAVY_WAVES, OVERFLOW_WAVES, THREE_SMALL_WAVES,
     };
 
     #[test]
@@ -693,8 +685,8 @@ mod tests {
         let mut scratch = MegakernelBarrierScratch::default();
         for width in 1u64..=32 {
             for depth in 1u64..=32 {
+                let dependencies = layered_dag_dependencies(width as usize, depth as usize);
                 let mut waves = Vec::new();
-                let mut dependencies = Vec::new();
                 for layer in 0..depth {
                     for slot in 0..width {
                         waves.push(MegakernelFrontierWave {
@@ -702,12 +694,6 @@ mod tests {
                             scratch_bytes: slot + 1,
                             output_bytes: layer + 1,
                         });
-                        if layer + 1 < depth {
-                            dependencies.push(MegakernelWaveDependency {
-                                before: (layer * width + slot) as usize,
-                                after: ((layer + 1) * width + slot) as usize,
-                            });
-                        }
                     }
                 }
 
@@ -731,19 +717,6 @@ mod tests {
         }
     }
 
-    const FUSION_WAVES: &[MegakernelFrontierWave] = &[
-        MegakernelFrontierWave {
-            frontier_bytes: 1_024,
-            scratch_bytes: 512,
-            output_bytes: 256,
-        },
-        MegakernelFrontierWave {
-            frontier_bytes: 2_048,
-            scratch_bytes: 1_024,
-            output_bytes: 512,
-        },
-    ];
-
     fn fused_pressure_plan(
         capabilities: MegakernelDeviceCapabilities,
     ) -> Result<super::MegakernelFrontierExecutionPlan, MegakernelFrontierExecutionPlanError> {
@@ -760,7 +733,7 @@ mod tests {
             },
             16,
             8,
-            FUSION_WAVES,
+            GROWING_PAIR_WAVES,
             &[MegakernelWaveDependency {
                 before: 0,
                 after: 1,

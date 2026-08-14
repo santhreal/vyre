@@ -6,7 +6,8 @@ use crate::accounting::{
 };
 use crate::numeric::BackendNumericPolicy;
 use crate::reservation_policy::{
-    reserved_typed_vec as reserved_vec, ReservationPolicy, ReusableIndexScratch,
+    reserved_typed_vec as reserved_vec, storage_reserve_failure_adapter, ReservationPolicy,
+    ReusableIndexScratch,
 };
 
 const RESULT_COMPACTION_RESERVATION: ReservationPolicy = ReservationPolicy::new(
@@ -305,17 +306,7 @@ fn reserved_result_vec<T>(
     )
 }
 
-fn storage_reserve_failed(
-    field: &'static str,
-    requested: usize,
-    message: String,
-) -> ResultCompactionError {
-    ResultCompactionError::StorageReserveFailed {
-        field,
-        requested,
-        message,
-    }
-}
+storage_reserve_failure_adapter!(ResultCompactionError);
 
 #[cfg(test)]
 mod tests {

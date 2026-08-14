@@ -13,7 +13,7 @@ fn launch_cache_update_does_not_duplicate_entries() {
     cache.insert(key, rec);
     cache.insert(key, rec);
 
-    assert_eq!(cache.entries.len(), 1);
+    assert_eq!(cache.len(), 1);
 }
 
 #[test]
@@ -56,7 +56,7 @@ fn launch_cache_get_promotes_hot_key_before_eviction() {
 
     assert!(cache.get(&hot_key).is_some());
     assert_eq!(cache.hits, 2);
-    assert_eq!(cache.entries.len(), 128);
+    assert_eq!(cache.len(), 128);
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn launch_cache_records_misses_without_mutating_capacity() {
 
     assert_eq!(cache.hits, 0);
     assert_eq!(cache.misses, 1);
-    assert!(cache.entries.is_empty());
+    assert_eq!(cache.len(), 0);
 }
 
 #[test]

@@ -15,7 +15,8 @@ use super::segment_buffers::{
     PlannedGridSyncSegment,
 };
 use super::{
-    elapsed_wall_ns, grid_sync_segment_error, reserve_grid_sync_hash_map, reserve_grid_sync_vec,
+    elapsed_wall_ns, grid_sync_segment_error, reject_empty_grid_sync_split,
+    reserve_grid_sync_hash_map, reserve_grid_sync_vec,
 };
 use crate::backend::{
     BackendError, DispatchConfig, OutputBuffers, TimedDispatchResult, VyreBackend,
@@ -149,14 +150,7 @@ where
         return dispatch_segment(program, inputs, config, outputs);
     }
     let segments = plan_host_grid_sync_segments(program)?;
-    if segments.is_empty() {
-        return Err(BackendError::InvalidProgram {
-            fix: "Fix: program contains GridSync barrier but split_on_grid_sync produced 0 \
-                  segments. This is a grid_sync invariant bug  -  split_on_grid_sync must \
-                  always return at least one segment."
-                .to_string(),
-        });
-    }
+    reject_empty_grid_sync_split(&segments)?;
     crate::observability::record_grid_sync_split(segments.len());
     // Build a mutable input set we rotate between segments. ReadOnly
     // inputs stay borrowed from the caller for the whole split; only
@@ -335,7 +329,9 @@ mod tests {
     use crate::grid_sync::segment_buffers::{
         segment_buffer_consumes_input, segment_buffer_produces_output, segment_output_names,
     };
-    use crate::grid_sync::test_programs::{buffer, region};
+    use crate::grid_sync::test_programs::{
+        apply_out_stores, cross_segment_store_program, grid_sync_chain,
+    };
     use std::sync::atomic::{AtomicUsize, Ordering};
     use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
     use vyre_foundation::memory_model::MemoryOrdering;
@@ -390,15 +386,7 @@ mod tests {
 
     #[test]
     fn split_into_preserves_caller_output_slot_after_named_output_collection() {
-        let program = Program::wrapped(
-            vec![buffer()],
-            [1, 1, 1],
-            vec![
-                region("a", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![Node::Return]),
-            ],
-        );
+        let program = grid_sync_chain(&["a", "b"]);
         let mut outputs = vec![Vec::with_capacity(8)];
         let outputs_addr = outputs.as_ptr() as usize;
         let slot_addr = outputs[0].as_ptr() as usize;
@@ -478,15 +466,7 @@ mod tests {
     #[test]
     fn split_into_loops_whole_sequence_fixpoint_iterations_times() {
         // Two segments separated by a GridSync barrier.
-        let program = Program::wrapped(
-            vec![buffer()],
-            [1, 1, 1],
-            vec![
-                region("a", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![Node::Return]),
-            ],
-        );
+        let program = grid_sync_chain(&["a", "b"]);
 
         // Single pass (default): 2 segment launches, accumulator = 2.
         let backend = IncrementingBackend {
@@ -580,15 +560,7 @@ mod tests {
         // produce byte-identical output. This is the ONE-PLACE contract that
         // lets a host-loop dataflow solver route its fixpoint through the closure
         // entry with no separate split implementation.
-        let program = Program::wrapped(
-            vec![buffer()],
-            [1, 1, 1],
-            vec![
-                region("a", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![Node::Return]),
-            ],
-        );
+        let program = grid_sync_chain(&["a", "b"]);
         let config = DispatchConfig {
             fixpoint_iterations: Some(3),
             ..DispatchConfig::default()
@@ -689,15 +661,7 @@ mod tests {
 
     #[test]
     fn split_owned_wrapper_reserves_final_output_vector_before_final_segment() {
-        let program = Program::wrapped(
-            vec![buffer()],
-            [1, 1, 1],
-            vec![
-                region("a", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![Node::Return]),
-            ],
-        );
+        let program = grid_sync_chain(&["a", "b"]);
         let backend = OwnedFinalReserveBackend {
             calls: AtomicUsize::new(0),
         };
@@ -717,17 +681,7 @@ mod tests {
 
     #[test]
     fn grid_sync_split_records_segment_telemetry() {
-        let program = Program::wrapped(
-            vec![buffer()],
-            [1, 1, 1],
-            vec![
-                region("a", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("c", vec![Node::Return]),
-            ],
-        );
+        let program = grid_sync_chain(&["a", "b", "c"]);
         let backend = ReuseCheckingBackend {
             calls: AtomicUsize::new(0),
             final_outputs_addr: 0,
@@ -810,17 +764,7 @@ mod tests {
 
     #[test]
     fn split_reuses_intermediate_output_slot_between_segments() {
-        let program = Program::wrapped(
-            vec![buffer()],
-            [1, 1, 1],
-            vec![
-                region("a", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("c", vec![Node::Return]),
-            ],
-        );
+        let program = grid_sync_chain(&["a", "b", "c"]);
         let backend = IntermediateReuseBackend {
             calls: AtomicUsize::new(0),
             first_outputs_addr: AtomicUsize::new(0),
@@ -906,32 +850,7 @@ mod tests {
                 Some(i) => inputs[i].to_vec(),
                 None => vec![0u8; 16],
             };
-
-            fn apply(nodes: &[Node], state: &mut [u8]) {
-                for node in nodes {
-                    match node {
-                        Node::Store {
-                            buffer,
-                            index: Expr::LitU32(i),
-                            value: Expr::LitU32(v),
-                        } if buffer.as_str() == "out" => {
-                            let off = (*i as usize) * 4;
-                            state[off] = (*v & 0xff) as u8;
-                        }
-                        Node::Region { body, .. } => apply(body, state),
-                        Node::Block(body) => apply(body, state),
-                        Node::If {
-                            then, otherwise, ..
-                        } => {
-                            apply(then, state);
-                            apply(otherwise, state);
-                        }
-                        Node::Loop { body, .. } => apply(body, state),
-                        _ => {}
-                    }
-                }
-            }
-            apply(entry_sequence(program), &mut state);
+            apply_out_stores(entry_sequence(program), &mut state);
 
             self.calls.fetch_add(1, Ordering::SeqCst);
             while outputs.len() <= out_pos {
@@ -951,16 +870,7 @@ mod tests {
         // write-only `out` zeroed element 0, dropping arm A entirely (a co-fused
         // rule whose result-store does not land in the final grid-sync segment
         // returned recall=0). Both slots must now survive.
-        let out = BufferDecl::output("out", 0, DataType::U32).with_count(4);
-        let program = Program::wrapped(
-            vec![out],
-            [1, 1, 1],
-            vec![
-                region("a", vec![Node::store("out", Expr::u32(0), Expr::u32(0xAA))]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![Node::store("out", Expr::u32(2), Expr::u32(0xBB))]),
-            ],
-        );
+        let program = cross_segment_store_program();
         let backend = SlotStoringBackend {
             calls: AtomicUsize::new(0),
         };
@@ -1040,15 +950,7 @@ mod tests {
         // of 10, byte 0 saturates at 3, after which a whole pass leaves the
         // accumulator unchanged. The outer loop must stop once two consecutive
         // passes match instead of burning all 10 iterations.
-        let program = Program::wrapped(
-            vec![buffer()],
-            [1, 1, 1],
-            vec![
-                region("a", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![Node::Return]),
-            ],
-        );
+        let program = grid_sync_chain(&["a", "b"]);
         let backend = SaturatingBackend {
             calls: AtomicUsize::new(0),
             cap: 3,
@@ -1085,15 +987,7 @@ mod tests {
         // The dual of the early-exit test: an accumulator that changes every
         // pass (never reaches a fixpoint within budget) must run all
         // iterations (early-exit must not fire on a still-advancing closure).
-        let program = Program::wrapped(
-            vec![buffer()],
-            [1, 1, 1],
-            vec![
-                region("a", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![Node::Return]),
-            ],
-        );
+        let program = grid_sync_chain(&["a", "b"]);
         // cap=255 so it never saturates within 4 passes (8 increments).
         let backend = SaturatingBackend {
             calls: AtomicUsize::new(0),

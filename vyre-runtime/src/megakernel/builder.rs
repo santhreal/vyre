@@ -340,17 +340,11 @@ fn persistent_body_with_io(
     opcodes: &[OpcodeHandler],
     include_io_polling: bool,
 ) -> Vec<Node> {
-    let mut body = persistent_lane_prologue(workgroup_size_x);
-    let additional_nodes = if include_io_polling { 3 } else { 2 };
-    if let Some(body_capacity) = body.len().checked_add(additional_nodes) {
-        let _ = vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut body, body_capacity);
-    }
-    body.push(direct_slot_base_binding());
-    body.push(Node::Block(execute_slot_body(opcodes)));
-    if include_io_polling {
-        body.push(Node::Block(process_io_requests()));
-    }
-    body
+    assemble_lane_body(
+        persistent_lane_prologue(workgroup_size_x),
+        execute_slot_body(opcodes),
+        include_io_polling,
+    )
 }
 
 fn finite_body_with_io(
@@ -358,17 +352,11 @@ fn finite_body_with_io(
     opcodes: &[OpcodeHandler],
     include_io_polling: bool,
 ) -> Vec<Node> {
-    let mut body = vec![Node::let_bind("lane_id", lane_id_expr(workgroup_size_x))];
-    let additional_nodes = if include_io_polling { 3 } else { 2 };
-    if let Some(body_capacity) = body.len().checked_add(additional_nodes) {
-        let _ = vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut body, body_capacity);
-    }
-    body.push(direct_slot_base_binding());
-    body.push(Node::Block(execute_slot_body(opcodes)));
-    if include_io_polling {
-        body.push(Node::Block(process_io_requests()));
-    }
-    body
+    assemble_lane_body(
+        vec![Node::let_bind("lane_id", lane_id_expr(workgroup_size_x))],
+        execute_slot_body(opcodes),
+        include_io_polling,
+    )
 }
 
 fn try_persistent_body_with_io(
@@ -376,23 +364,61 @@ fn try_persistent_body_with_io(
     opcodes: &[OpcodeHandler],
     include_io_polling: bool,
 ) -> Result<Vec<Node>, String> {
-    let mut body = persistent_lane_prologue(workgroup_size_x);
-    let additional_nodes = if include_io_polling { 3 } else { 2 };
-    let body_capacity = body.len().checked_add(additional_nodes).ok_or_else(|| {
-        "megakernel persistent body node reservation overflowed usize. Fix: reduce fused IO/body staging before building the megakernel."
-            .to_string()
-    })?;
-    vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut body, body_capacity).map_err(|error| {
-        format!(
-            "megakernel persistent body node reservation failed: {error}. Fix: reduce fused IO/body staging before building the megakernel."
-        )
-    })?;
+    try_assemble_lane_body(
+        persistent_lane_prologue(workgroup_size_x),
+        execute_slot_body(opcodes),
+        include_io_polling,
+        "megakernel persistent body",
+        "reduce fused IO/body staging before building the megakernel",
+    )
+}
+
+/// Assemble one lane body: `prologue`, the slot-base binding, the slot body,
+/// and the IO polling block when `include_io_polling`.
+///
+/// Reservation here is best effort: a failure costs a later reallocation and
+/// nothing else, so it is absorbed. Callers that must report it instead use
+/// [`try_assemble_lane_body`].
+pub(super) fn assemble_lane_body(
+    mut prologue: Vec<Node>,
+    slot_body: Vec<Node>,
+    include_io_polling: bool,
+) -> Vec<Node> {
+    if let Some(capacity) = lane_body_capacity(prologue.len(), include_io_polling) {
+        let _ = vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut prologue, capacity);
+    }
+    push_lane_body(&mut prologue, slot_body, include_io_polling);
+    prologue
+}
+
+/// [`assemble_lane_body`] with the node reservation reported rather than
+/// absorbed. `subject` names the body being built and `fix` states the
+/// corrective action, both quoted verbatim into the error.
+pub(super) fn try_assemble_lane_body(
+    mut prologue: Vec<Node>,
+    slot_body: Vec<Node>,
+    include_io_polling: bool,
+    subject: &str,
+    fix: &str,
+) -> Result<Vec<Node>, String> {
+    let capacity = lane_body_capacity(prologue.len(), include_io_polling)
+        .ok_or_else(|| format!("{subject} node reservation overflowed usize. Fix: {fix}."))?;
+    vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut prologue, capacity)
+        .map_err(|error| format!("{subject} node reservation failed: {error}. Fix: {fix}."))?;
+    push_lane_body(&mut prologue, slot_body, include_io_polling);
+    Ok(prologue)
+}
+
+fn lane_body_capacity(prologue_len: usize, include_io_polling: bool) -> Option<usize> {
+    prologue_len.checked_add(if include_io_polling { 3 } else { 2 })
+}
+
+fn push_lane_body(body: &mut Vec<Node>, slot_body: Vec<Node>, include_io_polling: bool) {
     body.push(direct_slot_base_binding());
-    body.push(Node::Block(execute_slot_body(opcodes)));
+    body.push(Node::Block(slot_body));
     if include_io_polling {
         body.push(Node::Block(process_io_requests()));
     }
-    Ok(body)
 }
 
 fn persistent_lane_prologue(workgroup_size_x: u32) -> Vec<Node> {
@@ -532,6 +558,12 @@ fn process_io_requests() -> Vec<Node> {
 }
 
 fn execute_slot_body(opcodes: &[OpcodeHandler]) -> Vec<Node> {
+    execute_published_slot_body(claimed_slot_body(opcodes))
+}
+
+/// Read the lane's slot status and, when it is PUBLISHED, run `claimed_body`
+/// behind the tenant-authorized claim.
+pub(super) fn execute_published_slot_body(claimed_body: Vec<Node>) -> Vec<Node> {
     vec![
         Node::let_bind(
             "status_index",
@@ -543,7 +575,7 @@ fn execute_slot_body(opcodes: &[OpcodeHandler]) -> Vec<Node> {
         ),
         Node::if_then(
             Expr::eq(Expr::var("observed_status"), Expr::u32(slot::PUBLISHED)),
-            tenant_authorized_claim_body(slot_tenant_id_load(), claimed_slot_body(opcodes)),
+            tenant_authorized_claim_body(slot_tenant_id_load(), claimed_body),
         ),
     ]
 }

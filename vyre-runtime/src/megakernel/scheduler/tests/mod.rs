@@ -1,23 +1,5 @@
+use super::super::ir_util::let_names_preorder;
 use super::*;
-
-fn collect_let_names_preorder<'a>(nodes: &'a [Node], out: &mut Vec<&'a str>) {
-    for node in nodes {
-        match node {
-            Node::Let { name, .. } => out.push(name.as_str()),
-            Node::If {
-                then, otherwise, ..
-            } => {
-                collect_let_names_preorder(then, out);
-                collect_let_names_preorder(otherwise, out);
-            }
-            Node::Loop { body, .. } | Node::Block(body) => {
-                collect_let_names_preorder(body, out);
-            }
-            Node::Region { body, .. } => collect_let_names_preorder(body, out),
-            _ => {}
-        }
-    }
-}
 
 #[test]
 fn default_offsets_cover_all_slots() {
@@ -85,8 +67,7 @@ fn policy_offset_start_never_emits_zero_denominator_rem() {
 #[test]
 fn priority_scan_authorizes_tenant_before_claim_cas() {
     let nodes = priority_scan_body(256);
-    let mut names = Vec::new();
-    collect_let_names_preorder(&nodes, &mut names);
+    let names = let_names_preorder(&nodes);
     let tenant_mask = names
         .iter()
         .position(|name| *name == "probe_tenant_mask")

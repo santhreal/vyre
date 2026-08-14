@@ -2,10 +2,10 @@
 
 use std::collections::HashSet;
 
-use smallvec::SmallVec;
 use vyre_foundation::ir::OpId;
 use vyre_foundation::ir::Program;
 
+use crate::backend::resident_sequence::{dispatch_resident_steps, read_resident_ranges_into};
 use crate::backend::{
     BackendError, DispatchConfig, OutputBuffers, PendingDispatch, ResidentDispatchStep,
     ResidentReadRange, Resource, TimedDispatchResult, VyreBackend,
@@ -224,16 +224,8 @@ impl VyreBackend for GridSyncSplitBackend {
             .iter()
             .any(|step| self.should_split_grid_sync(step.program))
         {
-            for step in steps {
-                let mut config = DispatchConfig::default();
-                config.grid_override = step.grid_override;
-                self.dispatch_resident_timed(step.program, step.resources, &config)?;
-            }
-            let ranges = read_ranges
-                .iter()
-                .map(|range| (range.resource, range.byte_offset, range.byte_len))
-                .collect::<SmallVec<[_; 8]>>();
-            return self.download_resident_ranges_into(&ranges, outputs);
+            dispatch_resident_steps(self, steps)?;
+            return read_resident_ranges_into(self, read_ranges, outputs);
         }
         self.inner
             .dispatch_resident_sequence_read_ranges_into(steps, read_ranges, outputs)
@@ -252,23 +244,11 @@ impl VyreBackend for GridSyncSplitBackend {
             .chain(repeated_steps)
             .any(|step| self.should_split_grid_sync(step.program))
         {
-            for step in prefix_steps {
-                let mut config = DispatchConfig::default();
-                config.grid_override = step.grid_override;
-                self.dispatch_resident_timed(step.program, step.resources, &config)?;
-            }
+            dispatch_resident_steps(self, prefix_steps)?;
             for _ in 0..repeat_count {
-                for step in repeated_steps {
-                    let mut config = DispatchConfig::default();
-                    config.grid_override = step.grid_override;
-                    self.dispatch_resident_timed(step.program, step.resources, &config)?;
-                }
+                dispatch_resident_steps(self, repeated_steps)?;
             }
-            let ranges = read_ranges
-                .iter()
-                .map(|range| (range.resource, range.byte_offset, range.byte_len))
-                .collect::<SmallVec<[_; 8]>>();
-            return self.download_resident_ranges_into(&ranges, outputs);
+            return read_resident_ranges_into(self, read_ranges, outputs);
         }
         self.inner
             .dispatch_resident_repeated_sequence_read_ranges_into(

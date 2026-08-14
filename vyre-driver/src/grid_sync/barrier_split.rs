@@ -348,7 +348,7 @@ fn wrap_split_segment(program: &Program, wrappers: &[EntryWrapper], entry: Vec<N
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grid_sync::test_programs::{buffer, region};
+    use crate::grid_sync::test_programs::{barrier_chain, buffer, grid_sync_chain, region};
     use vyre_foundation::ir::Expr;
 
     /// Get the inner-segment node count for a wrapped or unwrapped Program.
@@ -411,34 +411,14 @@ mod tests {
 
     #[test]
     fn three_grid_syncs_split_into_four() {
-        let program = Program::wrapped(
-            vec![buffer()],
-            [1, 1, 1],
-            vec![
-                region("a", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("c", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("d", vec![Node::Return]),
-            ],
-        );
+        let program = grid_sync_chain(&["a", "b", "c", "d"]);
         let segments = split_on_grid_sync(&program);
         assert_eq!(segments.len(), 4);
     }
 
     #[test]
     fn workgroup_barrier_does_not_split() {
-        let program = Program::wrapped(
-            vec![buffer()],
-            [1, 1, 1],
-            vec![
-                region("a", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::SeqCst),
-                region("b", vec![Node::Return]),
-            ],
-        );
+        let program = barrier_chain(&["a", "b"], MemoryOrdering::SeqCst, [1, 1, 1]);
         assert!(!contains_grid_sync(&program));
         let segments = split_on_grid_sync(&program);
         assert_eq!(segments.len(), 1);
@@ -448,15 +428,7 @@ mod tests {
 
     #[test]
     fn buffers_and_workgroup_size_propagate_to_each_segment() {
-        let program = Program::wrapped(
-            vec![buffer()],
-            [256, 1, 1],
-            vec![
-                region("a", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![Node::Return]),
-            ],
-        );
+        let program = barrier_chain(&["a", "b"], MemoryOrdering::GridSync, [256, 1, 1]);
         let segments = split_on_grid_sync(&program);
         for seg in &segments {
             assert_eq!(seg.workgroup_size(), [256, 1, 1]);

@@ -226,6 +226,38 @@ impl ReservationPolicy {
 /// Convert a shared reservation failure into a caller-domain error.
 pub type StagingReservationFailureAdapter<E> = fn(&'static str, usize, String) -> E;
 
+/// Declare a planner's storage-reservation failure adapter.
+///
+/// Every planner in this crate reserves its scratch and its result vectors
+/// before it decides anything, and reports a failure in its own error type so a
+/// caller keeps one error to match on. The conversion carries the same three
+/// facts every time: which field was being reserved, how many entries it wanted,
+/// and what the allocator said. Six planners wrote that function out, so a
+/// fourth fact added here had to be threaded through six identical copies, and a
+/// planner that was missed would report a reservation failure with less context
+/// than the shared layer already had.
+///
+/// `$error` must be an enum with a `StorageReserveFailed { field, requested,
+/// message }` variant; the message it renders stays that planner's own, because
+/// it names the planner and the sharding that fixes it.
+macro_rules! storage_reserve_failure_adapter {
+    ($error:ident) => {
+        fn storage_reserve_failed(
+            field: &'static str,
+            requested: usize,
+            message: String,
+        ) -> $error {
+            $error::StorageReserveFailed {
+                field,
+                requested,
+                message,
+            }
+        }
+    };
+}
+
+pub(crate) use storage_reserve_failure_adapter;
+
 /// Reserve Vec capacity and map failures into a caller-domain typed error.
 ///
 /// # Errors

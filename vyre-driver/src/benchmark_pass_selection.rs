@@ -11,7 +11,8 @@ use crate::accounting::{
 };
 use crate::numeric::checked_compose_basis_points_u64;
 use crate::reservation_policy::{
-    reserved_typed_vec as reserved_vec, ReservationPolicy, ReusableIndexScratch,
+    reserved_typed_vec as reserved_vec, storage_reserve_failure_adapter, ReservationPolicy,
+    ReusableIndexScratch,
 };
 
 const BENCHMARK_PASS_SELECTION_RESERVATION: ReservationPolicy = ReservationPolicy::new(
@@ -469,17 +470,7 @@ fn reserved_selection_vec<T>(
     )
 }
 
-fn storage_reserve_failed(
-    field: &'static str,
-    requested: usize,
-    message: String,
-) -> BenchmarkPassSelectionError {
-    BenchmarkPassSelectionError::StorageReserveFailed {
-        field,
-        requested,
-        message,
-    }
-}
+storage_reserve_failure_adapter!(BenchmarkPassSelectionError);
 
 #[cfg(test)]
 mod tests {

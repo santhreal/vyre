@@ -1,8 +1,8 @@
+use super::super::lru_tick_cache::LruTickCache;
 use super::{
     ResidentLaunchCacheStats, ResidentLaunchPolicy, ResidentLaunchRecommendation,
     ResidentLaunchRequest,
 };
-use rustc_hash::FxHashMap;
 use std::cell::RefCell;
 
 const LAUNCH_RECOMMENDATION_CACHE_CAP: usize = 128;
@@ -14,15 +14,9 @@ pub(super) struct LaunchRecommendationCacheKey {
 }
 
 pub(super) struct LaunchRecommendationCache {
-    pub(super) entries: FxHashMap<LaunchRecommendationCacheKey, LaunchRecommendationCacheEntry>,
-    clock: u64,
+    entries: LruTickCache<LaunchRecommendationCacheKey, ResidentLaunchRecommendation>,
     pub(super) hits: u64,
     pub(super) misses: u64,
-}
-
-pub(super) struct LaunchRecommendationCacheEntry {
-    recommendation: ResidentLaunchRecommendation,
-    last_seen: u64,
 }
 
 impl LaunchRecommendationCache {
@@ -30,20 +24,12 @@ impl LaunchRecommendationCache {
         &mut self,
         key: &LaunchRecommendationCacheKey,
     ) -> Option<ResidentLaunchRecommendation> {
-        if self.clock == u64::MAX {
-            self.clock = 0;
-            for entry in self.entries.values_mut() {
-                entry.last_seen = 0;
-            }
-        }
-        let Some(entry) = self.entries.get_mut(key) else {
+        let Some(recommendation) = self.entries.get(key).copied() else {
             self.misses = self.misses.saturating_add(1);
             return None;
         };
-        self.clock += 1;
-        entry.last_seen = self.clock;
         self.hits = self.hits.saturating_add(1);
-        Some(entry.recommendation)
+        Some(recommendation)
     }
 
     pub(super) fn insert(
@@ -51,26 +37,11 @@ impl LaunchRecommendationCache {
         key: LaunchRecommendationCacheKey,
         value: ResidentLaunchRecommendation,
     ) {
-        let tick = self.next_tick();
-        self.entries.insert(
-            key,
-            LaunchRecommendationCacheEntry {
-                recommendation: value,
-                last_seen: tick,
-            },
-        );
-        while self.entries.len() > LAUNCH_RECOMMENDATION_CACHE_CAP {
-            let Some(evicted) = self
-                .entries
-                .iter()
-                .filter(|(candidate, _)| **candidate != key)
-                .min_by_key(|(_, entry)| entry.last_seen)
-                .map(|(candidate, _)| *candidate)
-            else {
-                break;
-            };
-            self.entries.remove(&evicted);
-        }
+        self.entries.insert(key, value);
+    }
+
+    pub(super) fn len(&self) -> usize {
+        self.entries.len()
     }
 
     pub(super) fn stats(&self) -> ResidentLaunchCacheStats {
@@ -83,31 +54,15 @@ impl LaunchRecommendationCache {
 
     pub(super) fn clear(&mut self) {
         self.entries.clear();
-        self.clock = 0;
         self.hits = 0;
         self.misses = 0;
-    }
-
-    fn next_tick(&mut self) -> u64 {
-        if self.clock == u64::MAX {
-            self.clock = 0;
-            for entry in self.entries.values_mut() {
-                entry.last_seen = 0;
-            }
-        }
-        self.clock += 1;
-        self.clock
     }
 }
 
 impl Default for LaunchRecommendationCache {
     fn default() -> Self {
         Self {
-            entries: FxHashMap::with_capacity_and_hasher(
-                LAUNCH_RECOMMENDATION_CACHE_CAP,
-                Default::default(),
-            ),
-            clock: 0,
+            entries: LruTickCache::with_capacity(LAUNCH_RECOMMENDATION_CACHE_CAP),
             hits: 0,
             misses: 0,
         }
