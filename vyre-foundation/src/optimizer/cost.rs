@@ -45,8 +45,9 @@
 //! capability requirements; cost-direction is orthogonal.
 
 use super::is_invocation_id_eq_constant;
-use crate::ir::{Node, Program};
+use crate::ir::{Expr, Node, Program};
 use crate::optimizer::AdapterCaps;
+use crate::transform::visit::expr_children;
 
 /// A frozen snapshot of the cost dimensions tracked by the optimizer's
 /// monotone-down post-condition gate.
@@ -233,6 +234,34 @@ fn count_divergent_patterns(node: &Node, score: &mut u64) {
         }
         false
     });
+}
+
+/// True when recomputing `expr` at a use site costs no more than holding it in
+/// a named binding.
+///
+/// This is the ONE owner of the rematerialization cost question. It has no
+/// operand to re-evaluate, so one register holding a name and one register
+/// holding the same value cost the same, and dropping the name pays one fewer
+/// live binding without paying any extra arithmetic.
+///
+/// The operand count comes from [`expr_children`], the exhaustive owner of which
+/// expression variants contain other expressions, so a variant added tomorrow is
+/// classified by its shape instead of by a per-pass list that predates it. Three
+/// passes carried their own copy of the same twelve-name leaf list; they agreed,
+/// but nothing made them agree, and `rematerialize_cheap_let` dropping a binding
+/// that `fusion` still considers worth one is an oscillation between two passes
+/// in the same pipeline.
+///
+/// Two childless variants are excluded by name because "no operand" does not
+/// make them free: an `Expr::Opaque` payload is extension-defined and an
+/// argument-less `Expr::Call` runs an operation body, so duplicating either one
+/// duplicates work and may duplicate a side effect.
+#[must_use]
+pub fn is_rematerializable_leaf(expr: &Expr) -> bool {
+    match expr {
+        Expr::Opaque(_) | Expr::Call { .. } => false,
+        _ => expr_children(expr).iter().next().is_none(),
+    }
 }
 
 #[cfg(test)]
