@@ -13,11 +13,7 @@ fn bind_group_cache_shared_per_compiled_shader() {
     );
     let layout_cache = Arc::clone(&harness.layout_cache);
 
-    let program1 = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(4)],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
-    );
+    let program1 = stores_u32("out", 4, 7);
 
     let p1 = harness
         .compile(&program1, pool.clone())
@@ -63,11 +59,7 @@ fn bind_group_cache_shared_per_compiled_shader() {
     );
     assert_eq!(stats_after_hit.misses, 1);
 
-    let program2 = Program::wrapped(
-        vec![BufferDecl::output("out2", 0, DataType::U32).with_count(8)],
-        [1, 1, 1],
-        vec![Node::store("out2", Expr::u32(0), Expr::u32(42))],
-    );
+    let program2 = stores_u32("out2", 8, 42);
 
     let p3 = harness.compile(&program2, pool).expect(
         "Fix: compile of different program must succeed; restore this invariant before continuing.",
@@ -99,11 +91,7 @@ fn compiled_borrowed_timed_dispatch_reports_device_ns() {
     );
     let arena = harness.arena();
 
-    let program = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
-    );
+    let program = stores_u32("out", 1, 7);
     let pipeline = harness
         .compile_on_arena(&program, &arena)
         .expect("Fix: compiled timed dispatch test pipeline must compile.");

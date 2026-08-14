@@ -5,11 +5,7 @@ fn direct_record_and_readback_reuses_bind_groups() {
     let harness = PipelineHarness::new("direct cache test");
     let arena = harness.arena();
 
-    let program = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(4)],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
-    );
+    let program = stores_u32("out", 4, 7);
 
     let pipeline = harness
         .compile_on_arena(&program, &arena)
