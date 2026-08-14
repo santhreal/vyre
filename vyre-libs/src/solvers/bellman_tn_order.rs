@@ -337,15 +337,35 @@ mod tests {
         }
     }
 
+    /// Every name the caller supplies must reach a declared buffer.
+    ///
+    /// The old form asserted the literal `"dist"` was present, which passes for any
+    /// program that happens to declare that name and says nothing about the other
+    /// five. Reading the names out of the record instead means a field that stops
+    /// being forwarded fails here.
     #[test]
-    fn test_tn_order_program_structure() {
-        let p = bellman_tn_order_program(FIXTURE, extents(8, 12, 5));
+    fn every_supplied_binding_name_is_declared() {
+        let program = bellman_tn_order_program(FIXTURE, extents(8, 12, 5));
+        let declared: Vec<&str> = program.buffers().iter().map(|b| b.name()).collect();
+
+        for name in [
+            FIXTURE.dist,
+            FIXTURE.next_dist,
+            FIXTURE.changed,
+            FIXTURE.src,
+            FIXTURE.dst,
+            FIXTURE.weight,
+        ] {
+            assert!(
+                declared.contains(&name),
+                "Fix: the program must declare the buffer named `{name}`; it declared {declared:?}."
+            );
+        }
         assert_eq!(
-            p.buffers().len(),
+            declared.len(),
             6,
-            "Must expose 6 buffers for Bellman-Ford"
+            "Fix: bellman_tn_order_program must expose exactly the six bindings it is given."
         );
-        assert!(p.buffers().iter().any(|b| b.name() == "dist"));
     }
 
     /// The consumer must upload a convergence-flag buffer as wide as the routed
