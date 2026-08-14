@@ -41,6 +41,7 @@
 use std::path::PathBuf;
 use std::process;
 
+use crate::gates::lego_audit::{collect_ops, OpInfo, Tier};
 use xtask::gates::dedup_report::{
     duplicate_family_report, duplicate_report_generator_command, duplicate_report_json_path,
     duplicate_severity, registered_op_duplicate_family_id, registered_op_duplicate_subject,
@@ -50,7 +51,6 @@ use xtask::gates::dedup_report::{
 use xtask::gates::implementation_family::{
     implementation_family_id, known_distinct_implementation_families, same_implementation_family,
 };
-use crate::gates::lego_audit::{collect_ops, OpInfo, Tier};
 
 const DEFAULT_TOP_N: usize = 5;
 const DEFAULT_MIN_SCORE: f64 = 0.20;

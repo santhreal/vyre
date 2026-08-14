@@ -5,7 +5,9 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use xtask::release::release_backend_rows::count_supported_release_backend_rows;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use vyre_driver::backend::{backend_dispatches, registered_backends_by_precedence_slice};
 use xtask::release::conformance_op_matrix::{
     read_conformance_required_op_matrix, OpMatrixReleaseBackendSpec,
 };
@@ -14,9 +16,7 @@ use xtask::release::conformance_workflows::{
     inspect_path_filtered_required_workflows, inspect_required_workflow_triggers,
     parse_required_ci_statuses, CiConformanceGate,
 };
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use vyre_driver::backend::{backend_dispatches, registered_backends_by_precedence_slice};
+use xtask::release::release_backend_rows::count_supported_release_backend_rows;
 
 use vyre_driver_cuda as _;
 use vyre_driver_reference as _;
@@ -109,7 +109,6 @@ struct ConformanceCaseClassEvidence {
     source: String,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 struct ScanConformanceRowEvidence {
     semantics: String,
@@ -162,7 +161,7 @@ pub(crate) fn run(args: &[String]) {
             std::process::exit(2);
         }
     };
-    let operations = vyre_foundation::operation::OperationRegistry::global()
+    let operations = crate::live_registry::live_operation_registry()
         .iter()
         .collect::<Vec<_>>();
     let mut entries = Vec::with_capacity(operations.len());
@@ -430,7 +429,6 @@ pub(crate) fn run(args: &[String]) {
     }
 }
 
-
 fn release_backend_case_rows(
     specs: &[OpMatrixReleaseBackendSpec],
     entries: &BTreeMap<&str, &ConformanceEntry>,
@@ -540,7 +538,6 @@ fn required_case_classes_for_status(status: &str) -> Vec<&'static str> {
         vec!["unsupported_diagnostic"]
     }
 }
-
 
 fn read_scan_conformance_matrix(
     vyre_root: &Path,
@@ -693,7 +690,6 @@ fn read_scan_conformance_matrix(
 fn is_even_hex(value: &str) -> bool {
     !value.is_empty() && value.len() % 2 == 0 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
-
 
 fn strip_toml_comment_lines(text: &str) -> String {
     text.lines()

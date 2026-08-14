@@ -70,7 +70,7 @@ struct OpInfo {
 
 fn collect_ops() -> Vec<OpInfo> {
     let mut ops = Vec::new();
-    for entry in vyre_foundation::operation::OperationRegistry::global().iter() {
+    for entry in crate::live_registry::live_operation_registry().iter() {
         let program = entry.program().unwrap_or_else(|| {
             panic!(
                 "Fix: canonical operation `{}` provides no neutral builder; register one or remove the registration",
@@ -255,7 +255,10 @@ mod tests {
     /// composing. The parent it cites still has to be a real registered op.
     #[test]
     fn an_anonymous_inline_child_is_not_an_unregistered_child() {
-        let node = child("inline::vyre-libs::security::flows_to", "vyre-libs::security::flows_to");
+        let node = child(
+            "inline::vyre-libs::security::flows_to",
+            "vyre-libs::security::flows_to",
+        );
         let failures = findings(&node, &["vyre-libs::security::flows_to"]);
         assert!(
             failures.is_empty(),
@@ -268,7 +271,10 @@ mod tests {
     /// inline:: exemption must not widen to cover it.
     #[test]
     fn a_child_naming_an_unregistered_operation_is_still_reported() {
-        let node = child("vyre-libs::security::ghost", "vyre-libs::security::flows_to");
+        let node = child(
+            "vyre-libs::security::ghost",
+            "vyre-libs::security::flows_to",
+        );
         let failures = findings(&node, &["vyre-libs::security::flows_to"]);
         assert!(
             failures
@@ -282,7 +288,10 @@ mod tests {
     /// generator that merely contains it elsewhere is an ordinary child.
     #[test]
     fn a_generator_merely_containing_inline_is_still_reported() {
-        let node = child("vyre-libs::security::not_inline::thing", "vyre-libs::security::flows_to");
+        let node = child(
+            "vyre-libs::security::not_inline::thing",
+            "vyre-libs::security::flows_to",
+        );
         let failures = findings(&node, &["vyre-libs::security::flows_to"]);
         assert!(
             failures
@@ -297,7 +306,10 @@ mod tests {
     /// wrapping its own body.
     #[test]
     fn an_anonymous_inline_child_does_not_count_as_registered_composition() {
-        let node = child("inline::vyre-libs::security::flows_to", "vyre-libs::security::flows_to");
+        let node = child(
+            "inline::vyre-libs::security::flows_to",
+            "vyre-libs::security::flows_to",
+        );
         let ids: BTreeSet<String> = ["vyre-libs::security::flows_to".to_string()].into();
         let mut state = WalkState::default();
         let mut failures = BTreeSet::new();

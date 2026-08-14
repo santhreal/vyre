@@ -7,10 +7,10 @@
 //! that answer their question from source text stay in `xtask`, which links
 //! neither.
 
-
 pub mod compile;
 pub mod docs;
 pub mod gates;
+pub mod live_registry;
 pub mod print_composition;
 pub mod release;
 pub mod trace_f32;
@@ -33,7 +33,9 @@ pub const IMPLEMENTED: &[(&str, fn(&[String]))] = &[
     ("optimization-corpus", release::optimization_corpus::run),
     ("optimization-docs", docs::optimization_docs::run),
     ("optimization-matrix", release::optimization_matrix::run),
-    ("primitive-admission-gate", |_args| gates::lego_audit::run_primitive_admission_gate()),
+    ("primitive-admission-gate", |_args| {
+        gates::lego_audit::run_primitive_admission_gate()
+    }),
     ("print-composition", print_composition::run),
     ("trace-f32", trace_f32::run_cmd),
     ("verify-rewrite-proofs", gates::verify_rewrite_proofs::run),

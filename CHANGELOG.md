@@ -173,6 +173,16 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   bounded file reads route through `xtask::output_arg::read_text_bounded`. The
   xtask integration tests link as three binaries instead of ten and the
   registry tests as one instead of two.
+- The graph single-source rules derive what they judge from the tree. They
+  carried a table of eleven wrapper file names, each with identifier and prose
+  fragments its source had to contain and a line ceiling, and every rename in
+  `vyre-primitives` or test reorganisation in `vyre-libs` reported a refactor
+  as a regression while a real fork that kept the old words would have passed.
+  The wrapper set is now the directories under `vyre-libs/src/graph/dispatch/`
+  whose name is also a module in `vyre-primitives/src/graph/`, the reference
+  functions a wrapper must name are the ones its primitive publishes, and a new
+  wrapper is judged without editing the rules. A floor on the derived set keeps
+  a broken pairing from making every rule vacuous.
 
 ### Removed
 
@@ -373,6 +383,24 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   are gone; `vyre_debug::source_walker` is now
   `vyre_debug::source_assignments`, and the value-range report types are
   reachable from `vyre_lower::analyses`.
+- Every rule that reads the live operation registry now links the crates that
+  submit into it. `inventory` registrations live in the object file of the
+  declaring crate, and a linker pulls an archive member out of an rlib only
+  when a symbol inside it is referenced, so naming a crate with a discarding
+  import left the registrations out of any binary that called nothing in it.
+  The production binary calls the catalogs while generating documents and saw
+  all 354 registrations; the test binaries called nothing and saw zero, so
+  three registry rules passed while judging an empty registry and a fourth
+  reported it. Reads go through `xtask_registry::live_registry`, which calls
+  each source crate's catalog and asserts what it contributed, and two new
+  rules keep the account current: one requires every crate publishing an
+  `operation_catalog` module to be linked there, and one requires the registry
+  to hold exactly what the counted sources contributed. The tier fail-closed
+  rule also mutated a tier to the value it already held, so it accepted the
+  unmutated schema; the mutation is now derived from the tiers the schema uses.
+  The duplicate-analysis rule no longer asserts that a signature-only
+  registration exists, which the registry refuses by design, and states the set
+  equality it relies on instead.
 
 ## [0.7.1] - 2026-08-01
 

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 use serde_json::Value;
-use vyre_foundation::operation::{classify_operation_id, OperationRegistry, OperationTier};
+use vyre_foundation::operation::{classify_operation_id, OperationTier};
 
 fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -25,12 +25,7 @@ fn workspace_members() -> std::collections::BTreeSet<String> {
         .expect("Fix: [workspace] must declare members")
         .iter()
         .filter_map(|member| member.as_str())
-        .map(|path| {
-            path.rsplit('/')
-                .next()
-                .unwrap_or(path)
-                .to_string()
-        })
+        .map(|path| path.rsplit('/').next().unwrap_or(path).to_string())
         .collect()
 }
 
@@ -199,7 +194,7 @@ fn schema_rows_cover_every_required_operation_contract() {
 #[test]
 fn every_registered_operation_id_namespaces_its_owning_crate() {
     let members = workspace_members();
-    let registry = OperationRegistry::global();
+    let registry = xtask_registry::live_registry::live_operation_registry();
 
     assert!(
         registry.iter().len() > 100,
@@ -266,10 +261,28 @@ fn duplicate_operation_id_fails_closed() {
 }
 
 /// An operation tier cannot drift from the canonical ID classifier.
+///
+/// WHY the mutated value is derived: this test wrote the literal `"libs"` into
+/// the first operation's tier, and the first operation is a `vyre-libs`
+/// registration whose tier already reads `libs`. The mutation was a no-op, so
+/// the candidate schema was identical to the live one and the run was accepted,
+/// which the test then reported as a fail-open. It only ever proved anything
+/// while the first operation happened to be an intrinsic. The replacement takes
+/// a tier the schema itself uses for some other operation, so the mutation is a
+/// real disagreement whatever order the registry is in.
 #[test]
 fn mismatched_tier_fails_closed() {
     assert_mutation_rejected("tier", |schema| {
-        schema["operations"][0]["tier"] = Value::String("libs".to_string());
+        let operations = schema["operations"].as_array().unwrap();
+        let current = operations[0]["tier"].as_str().unwrap().to_string();
+        let other = operations
+            .iter()
+            .find_map(|operation| {
+                let tier = operation["tier"].as_str()?;
+                (tier != current).then(|| tier.to_string())
+            })
+            .expect("Fix: the schema must carry more than one tier for this mutation to disagree");
+        schema["operations"][0]["tier"] = Value::String(other);
     });
 }
 

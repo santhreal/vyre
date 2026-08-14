@@ -220,7 +220,7 @@ fn tier_of(op_id: &str) -> Tier {
 }
 
 pub(crate) fn collect_ops() -> Vec<OpInfo> {
-    vyre_foundation::operation::OperationRegistry::global()
+    crate::live_registry::live_operation_registry()
         .iter()
         .filter_map(|entry| entry.program().map(|program| build_info(entry.id, program)))
         .collect()
@@ -950,7 +950,11 @@ fn check_6_composition_chain_coverage(ops: &[OpInfo]) -> usize {
 /// dialects must not regain private sibling dependencies.
 fn check_4_cross_dialect_reachthrough() -> usize {
     println!("[4/10] Cross-dialect reach-through (Tier 3 dialects must not import private items from sibling Tier 3 dialects)");
-    let libs_root = Some(xtask::checkout::checkout_root().join("vyre-libs").join("src"));
+    let libs_root = Some(
+        xtask::checkout::checkout_root()
+            .join("vyre-libs")
+            .join("src"),
+    );
     let Some(libs_root) = libs_root.filter(|p| p.is_dir()) else {
         println!(
             "  ⚠ vyre-libs/src not reachable from xtask. Fix: invoke from the workspace root."
@@ -1638,18 +1642,34 @@ mod dedup_contract_tests {
         }
     }
 
-    /// Signature-only operations belong to the canonical registry but have no IR to compare.
+    /// IR duplicate analysis judges exactly the registrations that carry a
+    /// program.
+    ///
+    /// WHY: `collect_ops` fingerprints a program, so a registration without one
+    /// cannot be compared and has to be left out rather than fingerprinted as
+    /// an empty body. Set equality is what makes this non-vacuous: dropping a
+    /// program-carrying operation would shrink the analysis in silence, and
+    /// admitting a signature-only one would compare it against nothing. This
+    /// used to assert that a signature-only registration exists, which the
+    /// design then removed: `OperationRegistry` refuses the dotted
+    /// host-capability ids that were the last of them, so that assertion could
+    /// only ever fail.
     #[test]
-    fn signature_only_operations_are_excluded_from_ir_duplicate_analysis() {
-        assert!(vyre_foundation::operation::OperationRegistry::global()
+    fn ir_duplicate_analysis_judges_exactly_the_operations_that_carry_a_program() {
+        let registry = crate::live_registry::live_operation_registry();
+        let mut expected: Vec<&str> = registry
             .iter()
-            .any(|entry| entry.program().is_none()));
+            .filter(|entry| entry.program().is_some())
+            .map(|entry| entry.id)
+            .collect();
+        expected.sort_unstable();
         let ops = collect_ops();
-        assert!(ops.iter().all(|op| {
-            vyre_foundation::operation::OperationRegistry::global()
-                .get(&op.id)
-                .is_some_and(|entry| entry.program().is_some())
-        }));
+        let mut analysed: Vec<&str> = ops.iter().map(|op| op.id.as_str()).collect();
+        analysed.sort_unstable();
+        assert_eq!(
+            analysed, expected,
+            "Fix: the duplicate analysis must judge every registration that carries a program and no registration that does not"
+        );
     }
 
     /// This test prevents generated consumer_a/consumer_b aliases from satisfying the two-caller primitive promotion rule.

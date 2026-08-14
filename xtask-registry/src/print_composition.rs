@@ -45,7 +45,7 @@ pub(crate) fn run(args: &[String]) {
 }
 
 fn resolve_program(op_id: &str) -> Option<Program> {
-    vyre_foundation::operation::OperationRegistry::global()
+    crate::live_registry::live_operation_registry()
         .get(op_id)
         .and_then(|entry| entry.program())
 }

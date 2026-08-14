@@ -25,11 +25,11 @@
 //! Exit code 0 on clean and on advisory-only runs; 1 only when a hard
 //! raw-IR or cross-dialect boundary is violated.
 
-use xtask::gates::use_paths::{collect_use_paths, is_test_source_path};
 use std::collections::BTreeSet;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
+use xtask::gates::use_paths::{collect_use_paths, is_test_source_path};
 
 /// Line count at which a source file is *flagged for a split-by-responsibility
 /// review*. This is a guideline, not a law: crossing it does not fail the gate.

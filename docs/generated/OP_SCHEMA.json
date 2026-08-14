@@ -28616,7 +28616,7 @@
           },
           {
             "binding": 3,
-            "name": "vector_scale",
+            "name": "out",
             "access": "ReadWrite",
             "memory": "Global",
             "element": "F32",
@@ -28907,7 +28907,7 @@
           },
           {
             "binding": 3,
-            "name": "vector_scale",
+            "name": "out",
             "access": "ReadWrite",
             "memory": "Global",
             "element": "F32",

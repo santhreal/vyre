@@ -288,7 +288,7 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
         Err(error) => errors.push(format!("target facet registry startup failed: {error}")),
     }
 
-    let live = vyre_foundation::operation::OperationRegistry::global()
+    let live = crate::live_registry::live_operation_registry()
         .iter()
         .map(|entry| LiveEntry {
             id: entry.id,
@@ -703,11 +703,7 @@ fn read_manifest_features(
     errors: &mut Vec<String>,
 ) -> BTreeMap<String, BTreeSet<String>> {
     let mut catalog = BTreeMap::new();
-    for crate_name in [
-        "vyre-driver",
-        "vyre-primitives",
-        "vyre-libs",
-    ] {
+    for crate_name in ["vyre-driver", "vyre-primitives", "vyre-libs"] {
         let path = root.join(crate_name).join("Cargo.toml");
         let text = match read_text_bounded(&path) {
             Ok(value) => value,
