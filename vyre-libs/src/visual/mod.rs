@@ -18,6 +18,7 @@
 //! - `gradient`  -  IR expressions only (dot product + lerp)
 //! - `downsample`  -  IR expressions only (box filter = average of 4)
 //! - `cell_grid`  -  IR expressions only (constant div/mul index arithmetic)
+//! - `glyph_grid`  -  composes `cell_grid`'s cell lookup, blends by coverage
 //! - `glass`  -  composes blur + filter_chain (hero composition)
 
 use vyre_foundation::ir::Expr;
@@ -35,6 +36,8 @@ pub mod downsample;
 pub mod filter_chain;
 /// Complete glass material (blur + tint + border)  -  the hero composition.
 pub mod glass;
+/// Glyph compositing over a character-cell grid (composes `cell_grid`).
+pub mod glyph_grid;
 /// CSS-compatible gradient rasterization (linear, radial, conic).
 pub mod gradient;
 /// GPU-computed box shadow with SDF falloff.
@@ -51,6 +54,7 @@ pub use filter_chain::filter_chain;
 pub use glass::{
     glass_blur_stage, glass_filter_stage, glass_stages, glass_stages_half_res, GlassParams,
 };
+pub use glyph_grid::glyph_grid_blend;
 pub use gradient::{linear_gradient, ColorStop};
 pub use shadow::box_shadow;
 pub use upsample::upsample_2x;

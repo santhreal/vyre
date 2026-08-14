@@ -176,6 +176,8 @@ define_bitset_and_security_op!(
 mod catalog;
 pub mod dominance_predecessors;
 pub mod facts;
+/// Canonical `@family` name to tag-bit allocation shared by rule labels.
+pub mod family_mask;
 pub(crate) mod flow_composition;
 pub mod flows_to;
 pub mod flows_to_to_sink;
