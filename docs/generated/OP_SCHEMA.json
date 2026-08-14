@@ -10,6 +10,7 @@
   },
   "category_counts": {
     "bitset": 23,
+    "builder": 2,
     "core": 1,
     "decode": 9,
     "fixpoint": 2,
@@ -31,7 +32,6 @@
     "representation": 1,
     "scan": 2,
     "security": 23,
-    "substrate": 2,
     "text": 6,
     "vfs": 1,
     "visual": 11
@@ -5060,7 +5060,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::strided_accumulate",
+          "operation": "vyre-libs::builder::strided_accumulate",
           "registered": true
         },
         {
@@ -6305,7 +6305,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::strided_accumulate",
+          "operation": "vyre-libs::builder::strided_accumulate",
           "registered": true
         },
         {
@@ -6594,7 +6594,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::indexed_map",
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         }
       ]
@@ -7753,7 +7753,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::indexed_map",
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         }
       ]
@@ -8172,7 +8172,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::strided_accumulate",
+          "operation": "vyre-libs::builder::strided_accumulate",
           "registered": true
         },
         {
@@ -8274,7 +8274,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::indexed_map",
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         }
       ]
@@ -10179,7 +10179,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::indexed_map",
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         }
       ]
@@ -10907,7 +10907,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::strided_accumulate",
+          "operation": "vyre-libs::builder::strided_accumulate",
           "registered": true
         },
         {
@@ -10917,7 +10917,7 @@
         },
         {
           "depth": 1,
-          "operation": "anonymous::vyre-libs::substrate::strided_writeback",
+          "operation": "anonymous::vyre-libs::builder::strided_writeback",
           "registered": false
         }
       ]
@@ -11489,7 +11489,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::strided_accumulate",
+          "operation": "vyre-libs::builder::strided_accumulate",
           "registered": true
         },
         {
@@ -11499,7 +11499,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::strided_accumulate",
+          "operation": "vyre-libs::builder::strided_accumulate",
           "registered": true
         },
         {
@@ -11509,7 +11509,7 @@
         },
         {
           "depth": 1,
-          "operation": "anonymous::vyre-libs::substrate::strided_writeback",
+          "operation": "anonymous::vyre-libs::builder::strided_writeback",
           "registered": false
         }
       ]
@@ -16662,7 +16662,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::indexed_map",
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         }
       ]
@@ -17534,7 +17534,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::indexed_map",
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         }
       ]
@@ -17635,7 +17635,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::indexed_map",
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         }
       ]
@@ -20768,9 +20768,9 @@
       ]
     },
     {
-      "id": "vyre-libs::substrate::indexed_map",
+      "id": "vyre-libs::builder::indexed_map",
       "tier": "libs",
-      "category": "substrate",
+      "category": "builder",
       "signature": {
         "kind": "program_buffers",
         "buffers": [
@@ -20840,20 +20840,20 @@
       "composition_chain": [
         {
           "depth": 0,
-          "operation": "vyre-libs::substrate::indexed_map",
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::indexed_map",
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         }
       ]
     },
     {
-      "id": "vyre-libs::substrate::strided_accumulate",
+      "id": "vyre-libs::builder::strided_accumulate",
       "tier": "libs",
-      "category": "substrate",
+      "category": "builder",
       "signature": {
         "kind": "program_buffers",
         "buffers": [
@@ -20932,12 +20932,12 @@
       "composition_chain": [
         {
           "depth": 0,
-          "operation": "vyre-libs::substrate::strided_accumulate",
+          "operation": "vyre-libs::builder::strided_accumulate",
           "registered": true
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::strided_accumulate",
+          "operation": "vyre-libs::builder::strided_accumulate",
           "registered": true
         }
       ]

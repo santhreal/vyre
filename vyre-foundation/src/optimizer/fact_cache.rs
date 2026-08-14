@@ -55,11 +55,11 @@ impl FactPartition {
 /// Unified fact cache for a single program revision.
 ///
 /// Passes that need shape, use, or type information call
-/// [`FactSubstrate::derive`] once, then read the cached fields.  When a
-/// pass mutates the program the scheduler calls [`FactSubstrate::invalidate`]
+/// [`FactCache::derive`] once, then read the cached fields.  When a
+/// pass mutates the program the scheduler calls [`FactCache::invalidate`]
 /// so the next reader re-derives.
 #[derive(Default, Clone, Debug)]
-pub struct FactSubstrate {
+pub struct FactCache {
     /// Canonical fingerprint of the program these facts describe.
     fingerprint: [u8; 32],
     /// Per-buffer static shape facts.
@@ -122,24 +122,24 @@ impl UseFacts {
     }
 }
 
-// Thread-local cache of the most recently derived FactSubstrate, keyed by
+// Thread-local cache of the most recently derived FactCache, keyed by
 // the program's 32-byte canonical fingerprint. Three slots so a pass that
 // needs shape+use facts on iteration N does not invalidate the use-only
 // cache that the next pass on iteration N+1 reuses. Each slot stores the
-// fully-populated FactSubstrate; the `_*` variants narrow on read by
-// returning a clone with the unrequested fields cleared. All FactSubstrate
+// fully-populated FactCache; the `_*` variants narrow on read by
+// returning a clone with the unrequested fields cleared. All FactCache
 // fields are `Arc`, so the clone is a handful of refcount bumps  -  never a
 // deep copy.
 thread_local! {
-    static FACT_SUBSTRATE_CACHE_FULL: std::cell::RefCell<Option<([u8; 32], FactSubstrate)>> =
+    static FACT_CACHE_FULL: std::cell::RefCell<Option<([u8; 32], FactCache)>> =
         const { std::cell::RefCell::new(None) };
-    static FACT_SUBSTRATE_CACHE_SHAPE_USE: std::cell::RefCell<Option<([u8; 32], FactSubstrate)>> =
+    static FACT_CACHE_SHAPE_USE: std::cell::RefCell<Option<([u8; 32], FactCache)>> =
         const { std::cell::RefCell::new(None) };
-    static FACT_SUBSTRATE_CACHE_USE_ONLY: std::cell::RefCell<Option<([u8; 32], FactSubstrate)>> =
+    static FACT_CACHE_USE_ONLY: std::cell::RefCell<Option<([u8; 32], FactCache)>> =
         const { std::cell::RefCell::new(None) };
 }
 
-impl FactSubstrate {
+impl FactCache {
     /// Derive all facts for `program`.
     #[must_use]
     pub fn derive(program: &Program) -> Self {
@@ -161,7 +161,7 @@ impl FactSubstrate {
     #[must_use]
     pub fn derive_cached(program: &Program) -> Self {
         let fp = program.fingerprint();
-        FACT_SUBSTRATE_CACHE_FULL.with(|cell| {
+        FACT_CACHE_FULL.with(|cell| {
             if let Some((cached_fp, ref cached)) = *cell.borrow() {
                 if cached_fp == fp {
                     return cached.clone();
@@ -192,7 +192,7 @@ impl FactSubstrate {
     #[must_use]
     pub fn derive_shape_and_use_cached(program: &Program) -> Self {
         let fp = program.fingerprint();
-        FACT_SUBSTRATE_CACHE_SHAPE_USE.with(|cell| {
+        FACT_CACHE_SHAPE_USE.with(|cell| {
             if let Some((cached_fp, ref cached)) = *cell.borrow() {
                 if cached_fp == fp {
                     return cached.clone();
@@ -222,7 +222,7 @@ impl FactSubstrate {
     #[must_use]
     pub fn derive_use_only_cached(program: &Program) -> Self {
         let fp = program.fingerprint();
-        FACT_SUBSTRATE_CACHE_USE_ONLY.with(|cell| {
+        FACT_CACHE_USE_ONLY.with(|cell| {
             if let Some((cached_fp, ref cached)) = *cell.borrow() {
                 if cached_fp == fp {
                     return cached.clone();

@@ -17,7 +17,7 @@ every backend.
 | Memory transformation | `vyre-foundation/src/optimizer/passes/memory/` | Alias, effect, and exact-output tests |
 | Fusion and CSE | `vyre-foundation/src/optimizer/passes/fusion_cse/` | Effect safety and cost-gate evidence |
 | Cleanup | `vyre-foundation/src/optimizer/passes/cleanup/` | Structural and observable-equivalence tests |
-| Shared facts | `vyre-foundation/src/optimizer/fact_substrate/` | Invalidation and single-source fact tests |
+| Shared facts | `vyre-foundation/src/optimizer/fact_cache/` | Invalidation and single-source fact tests |
 
 Layer 1 does not inspect a concrete backend name or emit target code.
 

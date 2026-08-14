@@ -75,6 +75,23 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Changed
 
+- "Substrate" now names one thing: the GPU pass engine. Four modules that
+  borrowed the word for unrelated concepts are renamed to what they are.
+  `vyre_driver::speculation_substrate` is `vyre_driver::speculation_verdict`.
+  `vyre_foundation::optimizer::fact_substrate::FactSubstrate` is
+  `fact_cache::FactCache`, and the scheduler metrics it feeds are
+  `fact_cache_reused` / `_recomputed` / `_invalidated`.
+  `vyre-libs`' `substrate_catalog` is `builder_catalog`, and the two shared
+  child-region ops it registers moved from the `vyre-libs::substrate::`
+  namespace to `vyre-libs::builder::`. `vyre-libs`' `linear_algebra_substrate`
+  was a three-line re-export of `math::linalg` and is gone; its two callers
+  import from the owner directly.
+- `structure-gate` resolves the workspace root from the environment at run time
+  instead of from `env!("CARGO_MANIFEST_DIR")`. A shared cargo target directory
+  hands one compiled gate binary to every worktree, so the baked path made a
+  gate run inside a worktree report the main checkout's tree and hide the
+  worktree's own findings.
+
 - `vyre_foundation::allocation::reserve_exact_cleared` is public and is now the
   single owner of the clear-then-refill reservation idiom. It was `pub(crate)`
   in `vyre-primitives`, so seven other crates hand-rolled it as

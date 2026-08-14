@@ -924,7 +924,7 @@ fn cloning_a_cold_program_warms_no_memo() {
 /// mutation path invalidates them. The two invariants are a pair, and testing
 /// propagation without testing invalidation converts a wasted-work bug into a
 /// wrong-reuse bug. `hash` and `fingerprint` matter most here: the fingerprint
-/// keys `ProgramShapeFacts::derive_cached`, `FactSubstrate`, the validation
+/// keys `ProgramShapeFacts::derive_cached`, `FactCache`, the validation
 /// cache, and the `fingerprint_program(&optimized) != before` comparison in
 /// four optimizer passes, so a stale fingerprint makes a mutated program claim
 /// it did not change.

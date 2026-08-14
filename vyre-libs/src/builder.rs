@@ -27,12 +27,12 @@ use crate::tensor_ref::{TensorRef, TensorRefError};
 /// This is the kernel skeleton behind embedding lookup, byte shuffles,
 /// quant pack/unpack, and similar data-layout transforms:
 /// `for i in 0..n { out[dst(i)] = value(i) }`.
-pub(crate) const INDEXED_MAP_OP_ID: &str = "vyre-libs::substrate::indexed_map";
+pub(crate) const INDEXED_MAP_OP_ID: &str = "vyre-libs::builder::indexed_map";
 /// Shared child region for strided per-lane workgroup accumulators.
-pub(crate) const STRIDED_ACCUMULATE_OP_ID: &str = "vyre-libs::substrate::strided_accumulate";
+pub(crate) const STRIDED_ACCUMULATE_OP_ID: &str = "vyre-libs::builder::strided_accumulate";
 /// Shared child region for strided writeback after a tiled row reduction.
 pub(crate) const STRIDED_WRITEBACK_OP_ID: &str =
-    "anonymous::vyre-libs::substrate::strided_writeback";
+    "anonymous::vyre-libs::builder::strided_writeback";
 
 /// Shared options every Cat-A builder threads through. Lives here so
 /// every op agrees on the same surface.

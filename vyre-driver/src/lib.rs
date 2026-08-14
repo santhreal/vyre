@@ -136,7 +136,7 @@ pub mod specialization;
 /// N2 substrate (foundation half): per-rewrite speculation-as-substrate
 /// decision policy. Given baseline + speculative dispatch observations
 /// + side-compile cost, returns Adopt / Reject / KeepRacing.
-pub mod speculation_substrate;
+pub mod speculation_verdict;
 /// Canonical subgroup operation taxonomy and capability records.
 pub mod subgroup;
 /// Trace-based JIT specialization decision policy (ROADMAP I2).

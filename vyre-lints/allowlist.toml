@@ -29,6 +29,7 @@ measured_roots = [
 
 exempt_files = [
   "vyre-libs/src/builder.rs",
+  "vyre-libs/src/builder_catalog.rs",
   "vyre-libs/src/compiler/cfg.rs",
   "vyre-libs/src/compiler/object_writer.rs",
   "vyre-libs/src/compiler/regalloc.rs",
@@ -227,7 +228,6 @@ exempt_files = [
   "vyre-libs/src/security/integer_overflow_arith.rs",
   "vyre-libs/src/security/sanitized_by.rs",
   "vyre-libs/src/security/sink_intersection.rs",
-  "vyre-libs/src/substrate_catalog.rs",
   "vyre-libs/src/visual/blur/mod.rs",
   "vyre-libs/src/visual/gradient/mod.rs",
 ]

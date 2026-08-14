@@ -294,8 +294,8 @@ impl vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules
 impl vyre_foundation::optimizer::expr_arena::ExprArena
 impl vyre_foundation::optimizer::expr_arena::ExprId
 impl vyre_foundation::optimizer::expr_arena_analysis::ExprArenaStats
-impl vyre_foundation::optimizer::fact_substrate::FactSubstrate
-impl vyre_foundation::optimizer::fact_substrate::UseFacts
+impl vyre_foundation::optimizer::fact_cache::FactCache
+impl vyre_foundation::optimizer::fact_cache::UseFacts
 impl vyre_foundation::optimizer::fusion_cert::FusionCertificate
 impl vyre_foundation::optimizer::hot_path_hints::HotPathHints
 impl vyre_foundation::optimizer::hot_path_hints::RegionRecord
@@ -1467,24 +1467,24 @@ pub fn vyre_foundation::optimizer::expr_arena::ExprArena::rebuild(&self, id: vyr
 pub fn vyre_foundation::optimizer::expr_arena::ExprId::raw(self) -> u32
 pub fn vyre_foundation::optimizer::expr_arena_analysis::ExprArenaStats::dedup_ratio(&self) -> f64
 pub fn vyre_foundation::optimizer::expr_arena_analysis::analyze_program_expr_arena(program: &vyre_foundation::ir::Program) -> vyre_foundation::optimizer::expr_arena_analysis::ExprArenaStats
-pub fn vyre_foundation::optimizer::fact_substrate::FactSubstrate::derive(program: &vyre_foundation::ir::Program) -> Self
-pub fn vyre_foundation::optimizer::fact_substrate::FactSubstrate::derive_cached(program: &vyre_foundation::ir::Program) -> Self
-pub fn vyre_foundation::optimizer::fact_substrate::FactSubstrate::derive_shape_and_use(program: &vyre_foundation::ir::Program) -> Self
-pub fn vyre_foundation::optimizer::fact_substrate::FactSubstrate::derive_shape_and_use_cached(program: &vyre_foundation::ir::Program) -> Self
-pub fn vyre_foundation::optimizer::fact_substrate::FactSubstrate::derive_use_only(program: &vyre_foundation::ir::Program) -> Self
-pub fn vyre_foundation::optimizer::fact_substrate::FactSubstrate::derive_use_only_cached(program: &vyre_foundation::ir::Program) -> Self
-pub fn vyre_foundation::optimizer::fact_substrate::FactSubstrate::has_fresh_shape_and_use_for(&self, program: &vyre_foundation::ir::Program) -> bool
-pub fn vyre_foundation::optimizer::fact_substrate::FactSubstrate::has_fresh_use_facts_for(&self, program: &vyre_foundation::ir::Program) -> bool
-pub fn vyre_foundation::optimizer::fact_substrate::FactSubstrate::invalidate(&mut self)
-pub fn vyre_foundation::optimizer::fact_substrate::FactSubstrate::invalidate_shape(&mut self)
-pub fn vyre_foundation::optimizer::fact_substrate::FactSubstrate::invalidate_type_map(&mut self)
-pub fn vyre_foundation::optimizer::fact_substrate::FactSubstrate::invalidate_use_facts(&mut self)
-pub fn vyre_foundation::optimizer::fact_substrate::FactSubstrate::is_fresh_for(&self, program: &vyre_foundation::ir::Program) -> bool
-pub fn vyre_foundation::optimizer::fact_substrate::FactSubstrate::use_count_of(&self, name: &vyre_foundation::ir::Ident) -> usize
-pub fn vyre_foundation::optimizer::fact_substrate::FactSubstrate::use_counts(&self) -> core::option::Option<&rustc_hash::FxHashMap<vyre_foundation::ir::Ident, usize>>
-pub fn vyre_foundation::optimizer::fact_substrate::FactSubstrate::use_facts(&self) -> core::option::Option<&vyre_foundation::optimizer::fact_substrate::UseFacts>
-pub fn vyre_foundation::optimizer::fact_substrate::UseFacts::access_count(&self, buffer: &vyre_foundation::ir::Ident) -> usize
-pub fn vyre_foundation::optimizer::fact_substrate::UseFacts::dominant_index_axis(&self, buffer: &vyre_foundation::ir::Ident) -> core::option::Option<u8>
+pub fn vyre_foundation::optimizer::fact_cache::FactCache::derive(program: &vyre_foundation::ir::Program) -> Self
+pub fn vyre_foundation::optimizer::fact_cache::FactCache::derive_cached(program: &vyre_foundation::ir::Program) -> Self
+pub fn vyre_foundation::optimizer::fact_cache::FactCache::derive_shape_and_use(program: &vyre_foundation::ir::Program) -> Self
+pub fn vyre_foundation::optimizer::fact_cache::FactCache::derive_shape_and_use_cached(program: &vyre_foundation::ir::Program) -> Self
+pub fn vyre_foundation::optimizer::fact_cache::FactCache::derive_use_only(program: &vyre_foundation::ir::Program) -> Self
+pub fn vyre_foundation::optimizer::fact_cache::FactCache::derive_use_only_cached(program: &vyre_foundation::ir::Program) -> Self
+pub fn vyre_foundation::optimizer::fact_cache::FactCache::has_fresh_shape_and_use_for(&self, program: &vyre_foundation::ir::Program) -> bool
+pub fn vyre_foundation::optimizer::fact_cache::FactCache::has_fresh_use_facts_for(&self, program: &vyre_foundation::ir::Program) -> bool
+pub fn vyre_foundation::optimizer::fact_cache::FactCache::invalidate(&mut self)
+pub fn vyre_foundation::optimizer::fact_cache::FactCache::invalidate_shape(&mut self)
+pub fn vyre_foundation::optimizer::fact_cache::FactCache::invalidate_type_map(&mut self)
+pub fn vyre_foundation::optimizer::fact_cache::FactCache::invalidate_use_facts(&mut self)
+pub fn vyre_foundation::optimizer::fact_cache::FactCache::is_fresh_for(&self, program: &vyre_foundation::ir::Program) -> bool
+pub fn vyre_foundation::optimizer::fact_cache::FactCache::use_count_of(&self, name: &vyre_foundation::ir::Ident) -> usize
+pub fn vyre_foundation::optimizer::fact_cache::FactCache::use_counts(&self) -> core::option::Option<&rustc_hash::FxHashMap<vyre_foundation::ir::Ident, usize>>
+pub fn vyre_foundation::optimizer::fact_cache::FactCache::use_facts(&self) -> core::option::Option<&vyre_foundation::optimizer::fact_cache::UseFacts>
+pub fn vyre_foundation::optimizer::fact_cache::UseFacts::access_count(&self, buffer: &vyre_foundation::ir::Ident) -> usize
+pub fn vyre_foundation::optimizer::fact_cache::UseFacts::dominant_index_axis(&self, buffer: &vyre_foundation::ir::Ident) -> core::option::Option<u8>
 pub fn vyre_foundation::optimizer::fingerprint_program(program: &vyre_foundation::ir::Program) -> u64
 pub fn vyre_foundation::optimizer::fusion_cert::FusionCertificate::for_fusion(pre: &vyre_foundation::ir::Program, post: &vyre_foundation::ir::Program, witness_set: &'static str, parity_holds: bool) -> Self
 pub fn vyre_foundation::optimizer::fusion_cert::FusionCertificate::is_sound(&self) -> bool
@@ -2353,6 +2353,8 @@ pub fn vyre_foundation::transform::inline::zero_value(ty: &vyre_spec::data_type:
 pub fn vyre_foundation::transform::parallelism::detect_parallelism(nodes: &[vyre_foundation::ir::Node]) -> alloc::vec::Vec<vyre_foundation::transform::parallelism::DispatchGroup>
 pub fn vyre_foundation::transform::visit::ExprVisitor::visit_expr(&mut self, expr: &vyre_foundation::ir::Expr)
 pub fn vyre_foundation::transform::visit::NodeVisitor::visit_node(&mut self, node: &vyre_foundation::ir::Node)
+pub fn vyre_foundation::transform::visit::any_descendant(node: &vyre_foundation::ir::Node, pred: &mut impl core::ops::function::FnMut(&vyre_foundation::ir::Node) -> bool) -> bool
+pub fn vyre_foundation::transform::visit::child_bodies(node: &vyre_foundation::ir::Node) -> [&[vyre_foundation::ir::Node]; 2]
 pub fn vyre_foundation::transform::visit::collect_call_op_ids(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<alloc::sync::Arc<str>>
 pub fn vyre_foundation::transform::visit::referenced_buffers(program: &vyre_foundation::ir::Program) -> std::collections::hash::set::HashSet<vyre_foundation::ir::Ident>
 pub fn vyre_foundation::transform::visit::walk_exprs(program: &vyre_foundation::ir::Program, f: impl core::ops::function::FnMut(&vyre_foundation::ir::Expr))
@@ -2619,7 +2621,7 @@ pub mod vyre_foundation::optimizer::eqsat_gpu
 pub mod vyre_foundation::optimizer::eqsat_toml
 pub mod vyre_foundation::optimizer::expr_arena
 pub mod vyre_foundation::optimizer::expr_arena_analysis
-pub mod vyre_foundation::optimizer::fact_substrate
+pub mod vyre_foundation::optimizer::fact_cache
 pub mod vyre_foundation::optimizer::fusion_cert
 pub mod vyre_foundation::optimizer::hot_path_hints
 pub mod vyre_foundation::optimizer::megakernel
@@ -2956,9 +2958,9 @@ pub struct vyre_foundation::optimizer::expr_arena::ExprArena
 pub struct vyre_foundation::optimizer::expr_arena::ExprId(pub u32)
 pub struct vyre_foundation::optimizer::expr_arena::OpaqueId(_)
 pub struct vyre_foundation::optimizer::expr_arena_analysis::ExprArenaStats
-pub struct vyre_foundation::optimizer::fact_substrate::FactSubstrate
-pub struct vyre_foundation::optimizer::fact_substrate::TypeFacts
-pub struct vyre_foundation::optimizer::fact_substrate::UseFacts
+pub struct vyre_foundation::optimizer::fact_cache::FactCache
+pub struct vyre_foundation::optimizer::fact_cache::TypeFacts
+pub struct vyre_foundation::optimizer::fact_cache::UseFacts
 pub struct vyre_foundation::optimizer::fusion_cert::FusionCertificate
 pub struct vyre_foundation::optimizer::hot_path_hints::HotPathHints
 pub struct vyre_foundation::optimizer::hot_path_hints::RegionRecord
@@ -4353,8 +4355,6 @@ pub vyre_foundation::operation::OperationTier::External
 pub vyre_foundation::operation::OperationTier::Foundation
 pub vyre_foundation::operation::OperationTier::Intrinsic
 pub vyre_foundation::operation::OperationTier::Library
-pub vyre_foundation::operation::OperationTier::Primitive
-pub vyre_foundation::operation::OperationTier::Runtime
 pub vyre_foundation::operation::OperationTier::Unknown
 pub vyre_foundation::operation::SemanticOperation::build: core::option::Option<fn() -> vyre_foundation::ir::Program>
 pub vyre_foundation::operation::SemanticOperation::category: core::option::Option<&'static str>
@@ -4436,7 +4436,7 @@ pub vyre_foundation::optimizer::PassBoundaryClass::Unknown
 pub vyre_foundation::optimizer::PassCtx::adapter_caps: &'a vyre_foundation::optimizer::ctx::AdapterCaps
 pub vyre_foundation::optimizer::PassCtx::analyses: &'a mut vyre_foundation::optimizer::ctx::AnalysisCache
 pub vyre_foundation::optimizer::PassCtx::diagnostics: &'a mut alloc::vec::Vec<vyre_foundation::diagnostics::Diagnostic>
-pub vyre_foundation::optimizer::PassCtx::fact_substrate: &'a mut vyre_foundation::optimizer::fact_substrate::FactSubstrate
+pub vyre_foundation::optimizer::PassCtx::fact_cache: &'a mut vyre_foundation::optimizer::fact_cache::FactCache
 pub vyre_foundation::optimizer::PassCtx::program: &'a mut vyre_foundation::ir::Program
 pub vyre_foundation::optimizer::PassExplanation::benchmark: core::option::Option<&'static str>
 pub vyre_foundation::optimizer::PassExplanation::boundary_class: core::option::Option<vyre_foundation::optimizer::PassBoundaryClass>
@@ -4446,9 +4446,9 @@ pub vyre_foundation::optimizer::PassExplanation::cost_model_family: core::option
 pub vyre_foundation::optimizer::PassExplanation::decision: vyre_foundation::optimizer::PassRunDecision
 pub vyre_foundation::optimizer::PassExplanation::declared_invalidations: &'static [&'static str]
 pub vyre_foundation::optimizer::PassExplanation::delta: vyre_foundation::optimizer::pass_explain::PassMetricDelta
-pub vyre_foundation::optimizer::PassExplanation::fact_substrate_invalidated: bool
-pub vyre_foundation::optimizer::PassExplanation::fact_substrate_recomputed: bool
-pub vyre_foundation::optimizer::PassExplanation::fact_substrate_reused: bool
+pub vyre_foundation::optimizer::PassExplanation::fact_cache_invalidated: bool
+pub vyre_foundation::optimizer::PassExplanation::fact_cache_recomputed: bool
+pub vyre_foundation::optimizer::PassExplanation::fact_cache_reused: bool
 pub vyre_foundation::optimizer::PassExplanation::invalidated_analyses: &'static [&'static str]
 pub vyre_foundation::optimizer::PassExplanation::invariant: core::option::Option<&'static str>
 pub vyre_foundation::optimizer::PassExplanation::iteration: usize
@@ -4518,9 +4518,9 @@ pub vyre_foundation::optimizer::PassRunMetric::decision: vyre_foundation::optimi
 pub vyre_foundation::optimizer::PassRunMetric::declared_invalidations: &'static [&'static str]
 pub vyre_foundation::optimizer::PassRunMetric::effect_bits_after: u32
 pub vyre_foundation::optimizer::PassRunMetric::effect_bits_before: u32
-pub vyre_foundation::optimizer::PassRunMetric::fact_substrate_invalidated: bool
-pub vyre_foundation::optimizer::PassRunMetric::fact_substrate_recomputed: bool
-pub vyre_foundation::optimizer::PassRunMetric::fact_substrate_reused: bool
+pub vyre_foundation::optimizer::PassRunMetric::fact_cache_invalidated: bool
+pub vyre_foundation::optimizer::PassRunMetric::fact_cache_recomputed: bool
+pub vyre_foundation::optimizer::PassRunMetric::fact_cache_reused: bool
 pub vyre_foundation::optimizer::PassRunMetric::instruction_count_after: u64
 pub vyre_foundation::optimizer::PassRunMetric::instruction_count_before: u64
 pub vyre_foundation::optimizer::PassRunMetric::ir_heap_allocations_after: usize
@@ -4650,7 +4650,7 @@ pub vyre_foundation::optimizer::ctx::AdapterCaps::supports_subgroup_ops: bool
 pub vyre_foundation::optimizer::ctx::PassCtx::adapter_caps: &'a vyre_foundation::optimizer::ctx::AdapterCaps
 pub vyre_foundation::optimizer::ctx::PassCtx::analyses: &'a mut vyre_foundation::optimizer::ctx::AnalysisCache
 pub vyre_foundation::optimizer::ctx::PassCtx::diagnostics: &'a mut alloc::vec::Vec<vyre_foundation::diagnostics::Diagnostic>
-pub vyre_foundation::optimizer::ctx::PassCtx::fact_substrate: &'a mut vyre_foundation::optimizer::fact_substrate::FactSubstrate
+pub vyre_foundation::optimizer::ctx::PassCtx::fact_cache: &'a mut vyre_foundation::optimizer::fact_cache::FactCache
 pub vyre_foundation::optimizer::ctx::PassCtx::program: &'a mut vyre_foundation::ir::Program
 pub vyre_foundation::optimizer::derived_order::DerivedPassEdge::after: &'static str
 pub vyre_foundation::optimizer::derived_order::DerivedPassEdge::before: &'static str
@@ -4825,20 +4825,20 @@ pub vyre_foundation::optimizer::expr_arena::FlatExpr::WorkgroupId::axis: u8
 pub vyre_foundation::optimizer::expr_arena_analysis::ExprArenaStats::distinct_subexpr_count: usize
 pub vyre_foundation::optimizer::expr_arena_analysis::ExprArenaStats::fingerprint: [u8; 32]
 pub vyre_foundation::optimizer::expr_arena_analysis::ExprArenaStats::root_intern_count: usize
-pub vyre_foundation::optimizer::fact_substrate::FactSubstrate::shape: core::option::Option<alloc::sync::Arc<vyre_foundation::optimizer::program_shape_facts::ProgramShapeFacts>>
-pub vyre_foundation::optimizer::fact_substrate::FactSubstrate::type_map: core::option::Option<alloc::sync::Arc<vyre_foundation::optimizer::fact_substrate::TypeFacts>>
-pub vyre_foundation::optimizer::fact_substrate::FactSubstrate::use_counts: core::option::Option<alloc::sync::Arc<rustc_hash::FxHashMap<vyre_foundation::ir::Ident, usize>>>
-pub vyre_foundation::optimizer::fact_substrate::FactSubstrate::use_facts: core::option::Option<alloc::sync::Arc<vyre_foundation::optimizer::fact_substrate::UseFacts>>
-pub vyre_foundation::optimizer::fact_substrate::TypeFacts::expr_types: rustc_hash::FxHashMap<u64, vyre_spec::data_type::DataType>
-pub vyre_foundation::optimizer::fact_substrate::TypeFacts::var_types: rustc_hash::FxHashMap<vyre_foundation::ir::Ident, vyre_spec::data_type::DataType>
-pub vyre_foundation::optimizer::fact_substrate::UseFacts::buffer_index_axes: rustc_hash::FxHashMap<vyre_foundation::ir::Ident, [usize; 3]>
-pub vyre_foundation::optimizer::fact_substrate::UseFacts::buffer_reads: rustc_hash::FxHashMap<vyre_foundation::ir::Ident, usize>
-pub vyre_foundation::optimizer::fact_substrate::UseFacts::buffer_write_deps: rustc_hash::FxHashMap<vyre_foundation::ir::Ident, rustc_hash::FxHashSet<vyre_foundation::ir::Ident>>
-pub vyre_foundation::optimizer::fact_substrate::UseFacts::buffer_writes: rustc_hash::FxHashMap<vyre_foundation::ir::Ident, usize>
-pub vyre_foundation::optimizer::fact_substrate::UseFacts::has_opaque: bool
-pub vyre_foundation::optimizer::fact_substrate::UseFacts::indirect_dispatch_buffers: rustc_hash::FxHashSet<vyre_foundation::ir::Ident>
-pub vyre_foundation::optimizer::fact_substrate::UseFacts::var_buffer_deps: rustc_hash::FxHashMap<vyre_foundation::ir::Ident, rustc_hash::FxHashSet<vyre_foundation::ir::Ident>>
-pub vyre_foundation::optimizer::fact_substrate::UseFacts::var_counts: alloc::sync::Arc<rustc_hash::FxHashMap<vyre_foundation::ir::Ident, usize>>
+pub vyre_foundation::optimizer::fact_cache::FactCache::shape: core::option::Option<alloc::sync::Arc<vyre_foundation::optimizer::program_shape_facts::ProgramShapeFacts>>
+pub vyre_foundation::optimizer::fact_cache::FactCache::type_map: core::option::Option<alloc::sync::Arc<vyre_foundation::optimizer::fact_cache::TypeFacts>>
+pub vyre_foundation::optimizer::fact_cache::FactCache::use_counts: core::option::Option<alloc::sync::Arc<rustc_hash::FxHashMap<vyre_foundation::ir::Ident, usize>>>
+pub vyre_foundation::optimizer::fact_cache::FactCache::use_facts: core::option::Option<alloc::sync::Arc<vyre_foundation::optimizer::fact_cache::UseFacts>>
+pub vyre_foundation::optimizer::fact_cache::TypeFacts::expr_types: rustc_hash::FxHashMap<u64, vyre_spec::data_type::DataType>
+pub vyre_foundation::optimizer::fact_cache::TypeFacts::var_types: rustc_hash::FxHashMap<vyre_foundation::ir::Ident, vyre_spec::data_type::DataType>
+pub vyre_foundation::optimizer::fact_cache::UseFacts::buffer_index_axes: rustc_hash::FxHashMap<vyre_foundation::ir::Ident, [usize; 3]>
+pub vyre_foundation::optimizer::fact_cache::UseFacts::buffer_reads: rustc_hash::FxHashMap<vyre_foundation::ir::Ident, usize>
+pub vyre_foundation::optimizer::fact_cache::UseFacts::buffer_write_deps: rustc_hash::FxHashMap<vyre_foundation::ir::Ident, rustc_hash::FxHashSet<vyre_foundation::ir::Ident>>
+pub vyre_foundation::optimizer::fact_cache::UseFacts::buffer_writes: rustc_hash::FxHashMap<vyre_foundation::ir::Ident, usize>
+pub vyre_foundation::optimizer::fact_cache::UseFacts::has_opaque: bool
+pub vyre_foundation::optimizer::fact_cache::UseFacts::indirect_dispatch_buffers: rustc_hash::FxHashSet<vyre_foundation::ir::Ident>
+pub vyre_foundation::optimizer::fact_cache::UseFacts::var_buffer_deps: rustc_hash::FxHashMap<vyre_foundation::ir::Ident, rustc_hash::FxHashSet<vyre_foundation::ir::Ident>>
+pub vyre_foundation::optimizer::fact_cache::UseFacts::var_counts: alloc::sync::Arc<rustc_hash::FxHashMap<vyre_foundation::ir::Ident, usize>>
 pub vyre_foundation::optimizer::fusion_cert::FusionCertificate::parity_holds: bool
 pub vyre_foundation::optimizer::fusion_cert::FusionCertificate::post_blake3: [u8; 32]
 pub vyre_foundation::optimizer::fusion_cert::FusionCertificate::pre_blake3: [u8; 32]
@@ -4869,9 +4869,9 @@ pub vyre_foundation::optimizer::pass_explain::PassExplanation::cost_model_family
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::decision: vyre_foundation::optimizer::PassRunDecision
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::declared_invalidations: &'static [&'static str]
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::delta: vyre_foundation::optimizer::pass_explain::PassMetricDelta
-pub vyre_foundation::optimizer::pass_explain::PassExplanation::fact_substrate_invalidated: bool
-pub vyre_foundation::optimizer::pass_explain::PassExplanation::fact_substrate_recomputed: bool
-pub vyre_foundation::optimizer::pass_explain::PassExplanation::fact_substrate_reused: bool
+pub vyre_foundation::optimizer::pass_explain::PassExplanation::fact_cache_invalidated: bool
+pub vyre_foundation::optimizer::pass_explain::PassExplanation::fact_cache_recomputed: bool
+pub vyre_foundation::optimizer::pass_explain::PassExplanation::fact_cache_reused: bool
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::invalidated_analyses: &'static [&'static str]
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::invariant: core::option::Option<&'static str>
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::iteration: usize

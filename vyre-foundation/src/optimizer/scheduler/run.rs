@@ -14,14 +14,14 @@ use super::{
 use crate::ir::{BufferDecl, Expr, Node};
 use crate::ir_inner::model::program::Program;
 use crate::optimizer::{
-    fact_substrate::FactSubstrate, registered_passes, requirements_satisfied, OptimizerError,
+    fact_cache::FactCache, registered_passes, requirements_satisfied, OptimizerError,
     PassMetadata, ProgramPassKind, ProgramPassRegistration,
 };
 use crate::perf::PerfScope;
 
 #[derive(Debug, Default)]
 pub(crate) struct SchedulerFactState {
-    substrate: Option<FactSubstrate>,
+    facts: Option<FactCache>,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -33,7 +33,7 @@ struct SchedulerFactEvent {
 impl SchedulerFactState {
     fn prepare(&mut self, program: &Program) -> SchedulerFactEvent {
         if self
-            .substrate
+            .facts
             .as_ref()
             .is_some_and(|facts| facts.is_fresh_for(program))
         {
@@ -42,7 +42,7 @@ impl SchedulerFactState {
                 recomputed: false,
             };
         }
-        self.substrate = Some(FactSubstrate::derive(program));
+        self.facts = Some(FactCache::derive(program));
         SchedulerFactEvent {
             reused: false,
             recomputed: true,
@@ -50,10 +50,10 @@ impl SchedulerFactState {
     }
 
     fn invalidate(&mut self) -> bool {
-        let Some(substrate) = self.substrate.as_mut() else {
+        let Some(facts) = self.facts.as_mut() else {
             return false;
         };
-        substrate.invalidate();
+        facts.invalidate();
         true
     }
 }
@@ -411,9 +411,9 @@ impl PassScheduler {
                 refusal_kind: None,
                 required_analyses: metadata.requires,
                 declared_invalidations: metadata.invalidates,
-                fact_substrate_reused: false,
-                fact_substrate_recomputed: false,
-                fact_substrate_invalidated: false,
+                fact_cache_reused: false,
+                fact_cache_recomputed: false,
+                fact_cache_invalidated: false,
                 effect_bits_before: 0,
                 effect_bits_after: 0,
                 linear_type_violations_before: 0,
@@ -443,8 +443,8 @@ impl PassScheduler {
 
             if dirty.get(pass_index).copied().unwrap_or(false) {
                 let fact_event = fact_state.prepare(&program);
-                metric.fact_substrate_reused = fact_event.reused;
-                metric.fact_substrate_recomputed = fact_event.recomputed;
+                metric.fact_cache_reused = fact_event.reused;
+                metric.fact_cache_recomputed = fact_event.recomputed;
                 if !pass.analyze(&program).should_run {
                     metric.decision = PassRunDecision::AnalysisSkipped;
                     metrics.push(metric);
@@ -649,7 +649,7 @@ impl PassScheduler {
                 if metric.changed {
                     changed = true;
                     changed_by = Some(pass.pass_id());
-                    metric.fact_substrate_invalidated = fact_state.invalidate();
+                    metric.fact_cache_invalidated = fact_state.invalidate();
                     next_dirty.fill(true);
                 }
             }

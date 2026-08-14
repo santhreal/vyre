@@ -99,8 +99,8 @@ pub(super) fn is_simple_pure(expr: &Expr) -> bool {
 /// lane/workgroup builtins are always reflexive-safe.
 ///
 /// Recovering reflexive comparison folding for a *provably-integer*
-/// `Var` requires the type-fact substrate
-/// (`optimizer::fact_substrate::type_facts`) to be threaded into
+/// `Var` requires the type-fact cache
+/// (`optimizer::fact_cache::type_facts`) to be threaded into
 /// const_fold so the operand's `DataType` can be proven non-float
 /// before the fold fires; until then this declines `Var`, per the
 /// soundness-over-reach contract.
@@ -620,7 +620,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         // `is_reflexive_cmp_safe` admits only integer/bool literals and
         // the u32 builtins, it EXCLUDES `Var` (unknown type, may be a
         // float NaN) and `LitF32`. See its doc for how a provably-integer
-        // `Var` could be recovered via the type-fact substrate.
+        // `Var` could be recovered via the type-fact cache.
         BinOp::Eq if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(true)),
         BinOp::Ne if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(false)),
         // x < x → false,  x > x → false   -  same guards apply.

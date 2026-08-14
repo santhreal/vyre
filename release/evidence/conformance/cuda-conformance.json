@@ -619,12 +619,12 @@
     "vyre-libs::security::xss_escape:reference:supported",
     "vyre-libs::security::xss_escape:cuda:supported",
     "vyre-libs::security::xss_escape:wgpu:supported",
-    "vyre-libs::substrate::indexed_map:reference:supported",
-    "vyre-libs::substrate::indexed_map:cuda:supported",
-    "vyre-libs::substrate::indexed_map:wgpu:supported",
-    "vyre-libs::substrate::strided_accumulate:reference:supported",
-    "vyre-libs::substrate::strided_accumulate:cuda:supported",
-    "vyre-libs::substrate::strided_accumulate:wgpu:supported",
+    "vyre-libs::builder::indexed_map:reference:supported",
+    "vyre-libs::builder::indexed_map:cuda:supported",
+    "vyre-libs::builder::indexed_map:wgpu:supported",
+    "vyre-libs::builder::strided_accumulate:reference:supported",
+    "vyre-libs::builder::strided_accumulate:cuda:supported",
+    "vyre-libs::builder::strided_accumulate:wgpu:supported",
     "vyre-libs::visual::blur:reference:supported",
     "vyre-libs::visual::blur:cuda:supported",
     "vyre-libs::visual::blur:wgpu:supported",
@@ -3124,7 +3124,7 @@
       "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
-      "op_id": "vyre-libs::substrate::indexed_map",
+      "op_id": "vyre-libs::builder::indexed_map",
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:182a448e4cfbc9f6d241dd07dac943a97f15bd47fbd13221ab5c7365db05f751",
       "output_digest": "vyre-conform-output-envelope-v1:80c525521894acb74bf590eee3022196c6604b2a69d30f0711922a97624f731e",
@@ -3134,7 +3134,7 @@
       "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
-      "op_id": "vyre-libs::substrate::strided_accumulate",
+      "op_id": "vyre-libs::builder::strided_accumulate",
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:61620088d5b08f687c76db05198ac38ef918e66a02f98ac4654734bed9676874",
       "output_digest": "vyre-conform-output-envelope-v1:8e87fa7fbce0721b53487c799d3127d9f074dbf9fb1b24109613ce047f25960a",
@@ -5916,13 +5916,13 @@
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
     },
     {
-      "op_id": "vyre-libs::substrate::indexed_map",
+      "op_id": "vyre-libs::builder::indexed_map",
       "backend_id": "cuda",
       "passed": true,
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
     },
     {
-      "op_id": "vyre-libs::substrate::strided_accumulate",
+      "op_id": "vyre-libs::builder::strided_accumulate",
       "backend_id": "cuda",
       "passed": true,
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"

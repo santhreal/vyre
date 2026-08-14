@@ -413,6 +413,19 @@ generator = "../xtask/src/docs/catalog.rs"
 nav = true
 
 [[page]]
+path = "catalog/builder.md"
+title = "`builder` operations"
+status = "generated"
+audience = "extension"
+owner = "operation-registry"
+kind = "reference"
+section = "API and operation reference"
+authority = "generated/OP_SCHEMA.json"
+generation = "generated"
+generator = "../xtask/src/docs/catalog.rs"
+nav = true
+
+[[page]]
 path = "catalog/core.md"
 title = "`core` operations"
 status = "generated"
@@ -701,19 +714,6 @@ nav = true
 [[page]]
 path = "catalog/security.md"
 title = "`security` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask/src/docs/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/substrate.md"
-title = "`substrate` operations"
 status = "generated"
 audience = "extension"
 owner = "operation-registry"

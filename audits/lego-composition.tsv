@@ -190,8 +190,8 @@ vyre-libs::security::taint_kill	0.666666666667
 vyre-libs::security::taint_pollution	0.947368421053
 vyre-libs::security::unchecked_return	0.500000000000
 vyre-libs::security::xss_escape	0.500000000000
-vyre-libs::substrate::indexed_map	0.600000000000
-vyre-libs::substrate::strided_accumulate	0.538461538462
+vyre-libs::builder::indexed_map	0.600000000000
+vyre-libs::builder::strided_accumulate	0.538461538462
 vyre-libs::visual::blur	0.944444444444
 vyre-libs::visual::box_shadow	0.000000000000
 vyre-libs::visual::composite	0.920000000000

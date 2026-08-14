@@ -115,7 +115,7 @@ pub struct ProgramShapeFacts {
 // Thread-local fingerprint-keyed cache so consumers that call derive
 // directly (e.g. `Autotune::transform`) reuse the previous result on the
 // same program instead of re-walking every BufferDecl. The
-// FactSubstrate caches own a separate `Arc<ProgramShapeFacts>` for
+// FactCache caches own a separate `Arc<ProgramShapeFacts>` for
 // shape+use bundles; this slot serves direct `derive()` callers.
 thread_local! {
     static SHAPE_FACTS_CACHE: std::cell::RefCell<Option<([u8; 32], std::rc::Rc<ProgramShapeFacts>)>> =

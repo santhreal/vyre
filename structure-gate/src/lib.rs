@@ -167,13 +167,22 @@ pub fn violations(root: &Path) -> Vec<String> {
     failures
 }
 
-/// Workspace root, resolved from the xtask manifest directory.
+/// Workspace root, resolved from the gate crate's manifest directory.
+///
+/// Read from the environment at run time, with the compile-time value only as
+/// a fallback. `env!` alone bakes the path of whichever checkout produced the
+/// binary, and a shared cargo target directory hands the same binary to every
+/// worktree: a gate run inside a worktree then reported the main checkout's
+/// tree and hid the worktree's own findings entirely.
 #[must_use]
 pub fn workspace_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    let manifest_dir = std::env::var_os("CARGO_MANIFEST_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")));
+    manifest_dir
         .parent()
         .map(PathBuf::from)
-        .expect("Fix: xtask must live under the vyre workspace root.")
+        .expect("Fix: structure-gate must live under the vyre workspace root.")
 }
 
 /// Run the crate-structure gate.
@@ -947,15 +956,18 @@ mod tests {
 
     #[test]
     fn a_second_substrate_home_is_rejected() {
+        // Illustrative names: the second homes this rule caught in the tree
+        // (`vyre-libs/src/substrate_catalog.rs`, `vyre-driver/src/speculation_substrate.rs`)
+        // have been renamed, so the fixture keeps the shape rather than a path.
         let failures = substrate_home_failures(&[
             "vyre-self-substrate/src/optimizer/dispatcher.rs".to_string(),
             "vyre-self-substrate/src/scheduling/homotopy_ilp.rs".to_string(),
-            "vyre-libs/src/substrate_catalog.rs".to_string(),
+            "vyre-libs/src/matmul_substrate.rs".to_string(),
         ]);
 
         assert_eq!(failures.len(), 2, "{failures:?}");
         assert!(failures.iter().any(|f| f.contains("scheduling")));
-        assert!(failures.iter().any(|f| f.contains("substrate_catalog")));
+        assert!(failures.iter().any(|f| f.contains("matmul_substrate")));
     }
 
     #[test]

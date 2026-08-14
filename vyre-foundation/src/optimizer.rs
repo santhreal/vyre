@@ -52,7 +52,7 @@ pub mod diff_compile;
 /// and exposes `compose(producer, consumer)` returning either the combined effect
 /// or `RefusalReason::EffectLatticeViolation` with a structured fix string.
 pub mod effect_lattice;
-pub mod fact_substrate;
+pub mod fact_cache;
 pub mod fusion_cert;
 /// Program-level shape-facts analysis (audit P0 #38). Derives one
 /// `BufferShapeFacts` per `BufferDecl`; downstream passes consume the

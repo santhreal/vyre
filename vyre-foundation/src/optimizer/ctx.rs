@@ -219,7 +219,7 @@ pub struct PassCtx<'a> {
     /// Shared fact substrate (shape / use / type facts) for this
     /// schedule run. The scheduler initializes it before the first
     /// pass and invalidates it whenever a pass changes the program.
-    pub fact_substrate: &'a mut crate::optimizer::fact_substrate::FactSubstrate,
+    pub fact_cache: &'a mut crate::optimizer::fact_cache::FactCache,
     /// Diagnostics accumulated during this pass run. Severity
     /// `Error` halts the scheduler; `Warning` and `Note` surface
     /// after the run completes.
