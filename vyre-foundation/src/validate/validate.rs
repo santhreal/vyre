@@ -88,6 +88,56 @@ pub fn validate_with_options(
     program: &Program,
     options: ValidationOptions<'_>,
 ) -> ValidationReport {
+    let (mut report, buffer_map) = validate_program_level(program);
+
+    let mut validator = PreorderValidator::new(options, buffer_map);
+    validator.run(program.entry());
+    report.errors.append(&mut validator.errors);
+    report.warnings.append(&mut validator.warnings);
+
+    // P-1.0-V2.2: linear-type discipline checker. Reports buffers
+    // whose `LinearType` declaration is violated by the actual usage
+    // count in the IR.
+    report
+        .errors
+        .extend(crate::validate::linear_type::check_linear_types(program));
+
+    // P-1.0-V3.2: shape-predicate refinement checker. Reports buffers
+    // whose static `count` violates the declared `ShapePredicate`.
+    report
+        .errors
+        .extend(crate::validate::shape_predicate::check_shape_predicates(
+            program,
+        ));
+
+    for (ordinal, issue) in report.errors.iter_mut().enumerate() {
+        if matches!(issue.location(), ValidationLocation::Program) {
+            issue.set_location(ValidationLocation::Traversal {
+                ordinal: ordinal as u64,
+            });
+        }
+    }
+
+    report
+        .trace
+        .extend(report.errors.iter().map(ValidationError::trace_event));
+
+    report
+}
+
+/// Every rule that reads the program header rather than the node tree, plus the
+/// buffer lookup a node walk needs and the report the walk appends to.
+///
+/// Both the production single walk and the multi-walk validator that the
+/// differential property test keeps as its second arm start here. Stating it
+/// once is why a correction to a buffer-table diagnostic cannot make that
+/// property fail for a reason that has nothing to do with the walk it compares.
+pub(crate) fn validate_program_level<'p>(
+    program: &'p Program,
+) -> (
+    ValidationReport,
+    FxHashMap<&'p str, &'p crate::ir_inner::model::program::BufferDecl>,
+) {
     let mut report = ValidationReport {
         errors: Vec::with_capacity(program.buffers().len() + program.entry().len()),
         warnings: Vec::new(),
@@ -111,7 +161,7 @@ pub fn validate_with_options(
                 ValidationPhase::Program,
                 ValidationLocation::WorkgroupAxis(axis as u8),
                 format!("workgroup_size[{axis}] is 0"),
-                format!("all workgroup dimensions must be >= 1."),
+                "all workgroup dimensions must be >= 1.",
             ));
         }
     }
@@ -160,39 +210,7 @@ pub fn validate_with_options(
     buffer_map.reserve(program.buffers().len());
     buffer_map.extend(program.buffers().iter().map(|b| (b.name.as_ref(), b)));
 
-    let mut validator = PreorderValidator::new(options, buffer_map);
-    validator.run(program.entry());
-    report.errors.append(&mut validator.errors);
-    report.warnings.append(&mut validator.warnings);
-
-    // P-1.0-V2.2: linear-type discipline checker. Reports buffers
-    // whose `LinearType` declaration is violated by the actual usage
-    // count in the IR.
-    report
-        .errors
-        .extend(crate::validate::linear_type::check_linear_types(program));
-
-    // P-1.0-V3.2: shape-predicate refinement checker. Reports buffers
-    // whose static `count` violates the declared `ShapePredicate`.
-    report
-        .errors
-        .extend(crate::validate::shape_predicate::check_shape_predicates(
-            program,
-        ));
-
-    for (ordinal, issue) in report.errors.iter_mut().enumerate() {
-        if matches!(issue.location(), ValidationLocation::Program) {
-            issue.set_location(ValidationLocation::Traversal {
-                ordinal: ordinal as u64,
-            });
-        }
-    }
-
-    report
-        .trace
-        .extend(report.errors.iter().map(ValidationError::trace_event));
-
-    report
+    (report, buffer_map)
 }
 
 fn validate_output_buffer_contract(

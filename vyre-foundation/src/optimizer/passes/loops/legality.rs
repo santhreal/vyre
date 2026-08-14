@@ -309,52 +309,20 @@ mod tests {
         );
     }
 
-    #[derive(Debug)]
-    struct OpaqueValue;
-
-    impl ExprNode for OpaqueValue {
-        fn extension_kind(&self) -> &'static str {
-            "test.legality.opaque_value"
-        }
-        fn debug_identity(&self) -> &str {
-            "opaque_value"
-        }
-        fn result_type(&self) -> Option<DataType> {
-            Some(DataType::U32)
-        }
-        fn cse_safe(&self) -> bool {
-            false
-        }
-        fn stable_fingerprint(&self) -> [u8; 32] {
-            [21; 32]
-        }
-        fn validate_extension(&self) -> std::result::Result<(), String> {
-            Ok(())
-        }
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
+    vyre_test_support::test_expr_extension! {
+        OpaqueValue,
+        kind: "test.legality.opaque_value",
+        identity: "opaque_value",
+        result_type: Some(DataType::U32),
+        cse_safe: false,
+        fingerprint: 21,
     }
 
-    #[derive(Debug)]
-    struct OpaqueStatement;
-
-    impl NodeExtension for OpaqueStatement {
-        fn extension_kind(&self) -> &'static str {
-            "test.legality.opaque_statement"
-        }
-        fn debug_identity(&self) -> &str {
-            "opaque_statement"
-        }
-        fn stable_fingerprint(&self) -> [u8; 32] {
-            [22; 32]
-        }
-        fn validate_extension(&self) -> std::result::Result<(), String> {
-            Ok(())
-        }
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
+    vyre_test_support::test_node_extension! {
+        OpaqueStatement,
+        kind: "test.legality.opaque_statement",
+        identity: "opaque_statement",
+        fingerprint: 22,
     }
 
     #[test]

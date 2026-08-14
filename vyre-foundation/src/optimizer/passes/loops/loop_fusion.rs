@@ -393,58 +393,26 @@ mod tests {
         Program::wrapped(vec![buf("a"), buf("b")], [1, 1, 1], entry)
     }
 
-    /// An opaque expression whose real buffer effect (it may read or write ANY
-    /// buffer) is invisible to `collect_buffers_in_expr`, which summarises
-    /// `Expr::Opaque(_)` as touching no buffers.
-    #[derive(Debug)]
-    struct OpaqueReader;
-
-    impl ExprNode for OpaqueReader {
-        fn extension_kind(&self) -> &'static str {
-            "test.fusion.opaque_buffer_reader"
-        }
-        fn debug_identity(&self) -> &str {
-            "opaque_reader"
-        }
-        fn result_type(&self) -> Option<DataType> {
-            Some(DataType::U32)
-        }
-        fn cse_safe(&self) -> bool {
-            false
-        }
-        fn stable_fingerprint(&self) -> [u8; 32] {
-            [13; 32]
-        }
-        fn validate_extension(&self) -> std::result::Result<(), String> {
-            Ok(())
-        }
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
+    // An opaque expression whose real buffer effect (it may read or write ANY
+    // buffer) is invisible to `collect_buffers_in_expr`, which summarises
+    // `Expr::Opaque(_)` as touching no buffers.
+    vyre_test_support::test_expr_extension! {
+        OpaqueReader,
+        kind: "test.fusion.opaque_buffer_reader",
+        identity: "opaque_reader",
+        result_type: Some(DataType::U32),
+        cse_safe: false,
+        fingerprint: 13,
     }
 
-    /// An opaque statement node whose real buffer effect is invisible to
-    /// `collect_touched_buffers`, which summarises `Node::Opaque(_)` as
-    /// touching no buffers.
-    #[derive(Debug)]
-    struct OpaqueWriter;
-
-    impl NodeExtension for OpaqueWriter {
-        fn extension_kind(&self) -> &'static str {
-            "test.fusion.opaque_buffer_writer"
-        }
-        fn debug_identity(&self) -> &str {
-            "opaque_writer"
-        }
-        fn stable_fingerprint(&self) -> [u8; 32] {
-            [14; 32]
-        }
-        fn validate_extension(&self) -> std::result::Result<(), String> {
-            Ok(())
-        }
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
+    // An opaque statement node whose real buffer effect is invisible to
+    // `collect_touched_buffers`, which summarises `Node::Opaque(_)` as
+    // touching no buffers.
+    vyre_test_support::test_node_extension! {
+        OpaqueWriter,
+        kind: "test.fusion.opaque_buffer_writer",
+        identity: "opaque_writer",
+        fingerprint: 14,
     }
 
     #[test]

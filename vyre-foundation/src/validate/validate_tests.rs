@@ -2,90 +2,25 @@
 // parent file focused on production code.
 
 use super::*;
-use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use crate::ir::{BufferDecl, DataType, Expr, Node, Program, UnOp};
 use crate::validate::fusion_safety::validate_fusion_alias_hazards;
 use crate::validate::self_composition::validate_self_composition;
 use proptest::prelude::*;
-use std::borrow::Cow;
 use std::collections::BTreeSet;
 
 // ------------------------------------------------------------------
-// Legacy multi-walk validator (copied from pre-refactor code) for
-// regression testing.
+// The multi-walk validator the single-walk `PreorderValidator` replaced,
+// kept as the second arm of a differential property test. It shares the
+// program-header rules with production through `validate_program_level`,
+// because those are not what the property compares: the two arms differ in
+// how they walk the node tree, and a program-header diagnostic corrected in
+// one copy and not the other would fail the property for the wrong reason.
 // ------------------------------------------------------------------
 fn validate_with_options_legacy(
     program: &Program,
     options: ValidationOptions<'_>,
 ) -> ValidationReport {
-    let mut report = ValidationReport {
-        errors: Vec::with_capacity(program.buffers().len() + program.entry().len()),
-        warnings: Vec::new(),
-        trace: Vec::new(),
-    };
-
-    if let Some(message) = program.top_level_region_violation_cause() {
-        report.errors.push(err(
-            "V105",
-            ValidationPhase::Program,
-            ValidationLocation::Program,
-            message,
-            "construct runnable programs with Program::wrapped or add one top-level Region",
-        ));
-    }
-
-    for (axis, &size) in program.workgroup_size.iter().enumerate() {
-        if size == 0 {
-            report.errors.push(err(
-                "V106",
-                ValidationPhase::Program,
-                ValidationLocation::WorkgroupAxis(axis as u8),
-                format!("workgroup_size[{axis}] is 0"),
-                format!("all workgroup dimensions must be >= 1."),
-            ));
-        }
-    }
-
-    let mut seen_names = FxHashSet::default();
-    let mut seen_bindings = FxHashSet::default();
-    for buf in program.buffers() {
-        if !seen_names.insert(&buf.name) {
-            report.errors.push(err(
-                "V107",
-                ValidationPhase::Program,
-                ValidationLocation::Buffer(Cow::Owned(buf.name.to_string())),
-                format!("duplicate buffer name `{}`", buf.name),
-                "each buffer must have a unique name",
-            ));
-        }
-        if buf.access != BufferAccess::Workgroup && !seen_bindings.insert(buf.binding) {
-            report.errors.push(err(
-                "V108",
-                ValidationPhase::Program,
-                ValidationLocation::Buffer(Cow::Owned(buf.name.to_string())),
-                format!(
-                    "duplicate binding slot {} (buffer `{}`)",
-                    buf.binding, buf.name
-                ),
-                "each buffer must have a unique binding",
-            ));
-        }
-        if buf.access == BufferAccess::Workgroup && buf.count == 0 {
-            report.errors.push(err(
-                "V109",
-                ValidationPhase::Program,
-                ValidationLocation::Buffer(Cow::Owned(buf.name.to_string())),
-                format!("workgroup buffer `{}` has count 0", buf.name),
-                "declare a positive element count",
-            ));
-        }
-        validate_output_buffer_contract(buf, &mut report.errors);
-    }
-    validate_output_markers(program.buffers(), &mut report.errors);
-
-    let mut buffer_map: FxHashMap<&str, &crate::ir_inner::model::program::BufferDecl> =
-        FxHashMap::default();
-    buffer_map.reserve(program.buffers().len());
-    buffer_map.extend(program.buffers().iter().map(|b| (b.name.as_ref(), b)));
+    let (mut report, buffer_map) = validate_program_level(program);
 
     let mut scope = FxHashMap::default();
     let mut limits = depth::LimitState::default();

@@ -237,31 +237,13 @@ mod tests {
     use super::*;
     use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node};
 
-    #[derive(Debug)]
-    struct OpaqueReader;
-
-    impl ExprNode for OpaqueReader {
-        fn extension_kind(&self) -> &'static str {
-            "test.opaque_buffer_reader"
-        }
-        fn debug_identity(&self) -> &str {
-            "opaque_reader"
-        }
-        fn result_type(&self) -> Option<DataType> {
-            Some(DataType::U32)
-        }
-        fn cse_safe(&self) -> bool {
-            false
-        }
-        fn stable_fingerprint(&self) -> [u8; 32] {
-            [11; 32]
-        }
-        fn validate_extension(&self) -> std::result::Result<(), String> {
-            Ok(())
-        }
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
+    vyre_test_support::test_expr_extension! {
+        OpaqueReader,
+        kind: "test.opaque_buffer_reader",
+        identity: "opaque_reader",
+        result_type: Some(DataType::U32),
+        cse_safe: false,
+        fingerprint: 11,
     }
 
     fn buf(name: &str) -> BufferDecl {

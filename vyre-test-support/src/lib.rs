@@ -55,6 +55,97 @@ macro_rules! registry_closure_gate {
     };
 }
 
+/// Declare a test-only `Expr::Opaque` payload type.
+///
+/// An extension payload is six trait methods of which five are the same in
+/// every test that needs one: report `Ok(())` from validation, hand back
+/// `self` for downcasting, and answer the two identity questions from a
+/// literal. Only the kind string, the debug identity, the result type, the
+/// CSE answer and the fingerprint byte differ, so those are the arguments.
+///
+/// A test that needs a payload with reachable structure, a wire body, or a
+/// validation failure writes the impl out: this macro is for the inert leaf.
+///
+/// `ExprNode` and `DataType` are named unqualified, so the caller must have
+/// both in scope. `vyre-foundation` implements these traits on its own types
+/// from inside itself, where a path through this crate's dependency on it
+/// names a different crate instance and does not compile.
+#[macro_export]
+macro_rules! test_expr_extension {
+    (
+        $name:ident,
+        kind: $kind:expr,
+        identity: $identity:expr,
+        result_type: $result_type:expr,
+        cse_safe: $cse_safe:expr,
+        fingerprint: $fingerprint:expr $(,)?
+    ) => {
+        #[derive(Debug)]
+        struct $name;
+
+        impl ExprNode for $name {
+            fn extension_kind(&self) -> &'static str {
+                $kind
+            }
+            fn debug_identity(&self) -> &str {
+                $identity
+            }
+            fn result_type(&self) -> Option<DataType> {
+                $result_type
+            }
+            fn cse_safe(&self) -> bool {
+                $cse_safe
+            }
+            fn stable_fingerprint(&self) -> [u8; 32] {
+                [$fingerprint; 32]
+            }
+            fn validate_extension(&self) -> ::core::result::Result<(), ::std::string::String> {
+                Ok(())
+            }
+            fn as_any(&self) -> &dyn ::std::any::Any {
+                self
+            }
+        }
+    };
+}
+
+/// Declare a test-only `Node::Opaque` payload type.
+///
+/// The statement form of [`test_expr_extension!`]: a statement extension has
+/// no result type and no CSE answer, so only the kind string, the debug
+/// identity and the fingerprint byte differ between tests. `NodeExtension` is
+/// named unqualified, so the caller must have it in scope.
+#[macro_export]
+macro_rules! test_node_extension {
+    (
+        $name:ident,
+        kind: $kind:expr,
+        identity: $identity:expr,
+        fingerprint: $fingerprint:expr $(,)?
+    ) => {
+        #[derive(Debug)]
+        struct $name;
+
+        impl NodeExtension for $name {
+            fn extension_kind(&self) -> &'static str {
+                $kind
+            }
+            fn debug_identity(&self) -> &str {
+                $identity
+            }
+            fn stable_fingerprint(&self) -> [u8; 32] {
+                [$fingerprint; 32]
+            }
+            fn validate_extension(&self) -> ::core::result::Result<(), ::std::string::String> {
+                Ok(())
+            }
+            fn as_any(&self) -> &dyn ::std::any::Any {
+                self
+            }
+        }
+    };
+}
+
 pub mod consumer_boundary;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_variants;
