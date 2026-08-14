@@ -4,7 +4,8 @@ use std::sync::Arc;
 use vyre_driver::materialize::{self, InstanceCore, InstanceMessages, MaterializerDevice};
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingRole, BindingSet,
-    CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig, ResidentOwner, Submission,
+    CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig, ResidentOwner,
+    Submission,
 };
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{Artifact, ArtifactValueId, Digest, TargetPayload, TargetPayloadFormat};
@@ -43,7 +44,9 @@ fn unbound_input(value: ArtifactValueId, name: &str) -> BackendError {
 /// Rejection for a host dispatch that skipped a declared output slot.
 fn omitted_output(output_index: usize, name: &str) -> BackendError {
     BackendError::InvalidProgram {
-        fix: format!("Fix: CUDA target module omitted output {output_index} for Program buffer `{name}`."),
+        fix: format!(
+            "Fix: CUDA target module omitted output {output_index} for Program buffer `{name}`."
+        ),
     }
 }
 
@@ -96,11 +99,8 @@ impl ArtifactMaterializer for CudaMaterializer {
         artifact: &Artifact,
         payload: &TargetPayload,
     ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
-        let admitted = materialize::admit(
-            artifact,
-            payload,
-            self.descriptor.target(CUDA_BACKEND_ID),
-        )?;
+        let admitted =
+            materialize::admit(artifact, payload, self.descriptor.target(CUDA_BACKEND_ID))?;
         let mut modules = Vec::with_capacity(admitted.len());
         for module in admitted {
             let ptx = std::str::from_utf8(&module.image.bytes).map_err(|error| {
@@ -192,9 +192,9 @@ impl CudaArtifactInstance {
             let mut config = module.config.clone();
             materialize::override_grid(&mut config, invocation_grid);
             let plan = BindingPlan::build(&module.program)?;
-            let inputs =
-                self.core
-                    .gather_inputs(&plan, &module.program, &state, unbound_input)?;
+            let inputs = self
+                .core
+                .gather_inputs(&plan, &module.program, &state, unbound_input)?;
             let dispatched = module.pipeline.dispatch_borrowed_timed(&inputs, &config)?;
             if let Some(ns) = dispatched.device_ns {
                 device_ns = device_ns.saturating_add(ns);

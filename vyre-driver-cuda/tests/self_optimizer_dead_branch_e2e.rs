@@ -11,7 +11,6 @@ mod common;
 use common::self_optimizer::{body_of, run_pipeline};
 use vyre::ir::{Expr, Node, Program};
 
-
 #[test]
 fn cuda_dead_branch_const_true_keeps_then_drops_otherwise() {
     // if true { store buf 0 (LitU32 1) } else { store buf 0 (LitU32 99) }

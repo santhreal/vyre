@@ -10,8 +10,8 @@ use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::memory_model::MemoryOrdering;
-use vyre_reference::value::Value;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_reference::value::Value;
 
 /// Default generated-matrix lane count for live CUDA/reference differential tests.
 pub(crate) const GENERATED_LANE_COUNT: usize = 512;

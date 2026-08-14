@@ -12,7 +12,6 @@ mod common;
 use common::self_optimizer::{body_of, run_pipeline};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-
 #[test]
 fn cuda_cross_scope_cse_hoists_shared_store_value() {
     // store buf 0 (Var(x) + 7); store buf 1 (Var(x) + 7);

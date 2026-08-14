@@ -13,12 +13,12 @@ mod backend_rewrite;
 mod backend_structural;
 #[path = "egraph_kernel_plan/constants.rs"]
 mod constants;
+#[path = "egraph_kernel_plan/device_image_rows.rs"]
+mod device_image_rows;
 #[path = "egraph_kernel_plan/error.rs"]
 mod error;
 #[path = "egraph_kernel_plan/launch_waves.rs"]
 mod launch_waves;
-#[path = "egraph_kernel_plan/device_image_rows.rs"]
-mod device_image_rows;
 #[path = "egraph_kernel_plan/plan_equivalence.rs"]
 mod plan_equivalence;
 #[path = "egraph_kernel_plan/plan_kernel_work.rs"]
@@ -57,7 +57,6 @@ pub use constants::{
     CUDA_EGRAPH_STRUCTURAL_EQUIVALENCE_KERNEL_PARAM_COUNT,
 };
 pub use error::CudaEGraphKernelPlanError;
-pub use signature_pair_ordinals::cuda_egraph_signature_pair_rows;
 pub use plan_equivalence::{
     collect_cuda_egraph_structural_equivalences, pack_cuda_egraph_signature_bucket_device_image,
     plan_cuda_egraph_structural_equivalence_launch_artifact,
@@ -76,6 +75,7 @@ pub use ptx::{
     cuda_egraph_canonical_rewrite_kernel_ptx, cuda_egraph_signature_refresh_kernel_ptx,
     cuda_egraph_structural_equivalence_kernel_ptx,
 };
+pub use signature_pair_ordinals::cuda_egraph_signature_pair_rows;
 pub use types_canonicalization::{
     CudaEGraphFixedPointReadback, CudaEGraphStructuralCanonicalizationFixedPointReport,
     CudaEGraphStructuralCanonicalizationFixedPointResult,

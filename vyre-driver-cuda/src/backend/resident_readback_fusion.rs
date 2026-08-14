@@ -132,9 +132,10 @@ mod tests {
             let requested = generated_transfer_requests(seed);
             let fused = fuse_resident_readback_copies(&requested)
                 .expect("Fix: generated resident readback requests must fuse without overflow");
-            validate_fused_resident_readbacks(&fused, requested.len(), "generated readback").expect(
-                "Fix: generated resident readback fusion must produce a materializable plan",
-            );
+            validate_fused_resident_readbacks(&fused, requested.len(), "generated readback")
+                .expect(
+                    "Fix: generated resident readback fusion must produce a materializable plan",
+                );
 
             assert_fused_transfers_preserve_requests(seed, &requested, &fused);
         }

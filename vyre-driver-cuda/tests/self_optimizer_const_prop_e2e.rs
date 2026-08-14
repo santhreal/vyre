@@ -160,7 +160,10 @@ fn cuda_const_prop_folds_unop_literals() {
     );
 
     // Popcount(0xFF) → 8
-    assert_lit_u32(&folded_store_value(unop(UnOp::Popcount, Expr::u32(0xFF))), 8);
+    assert_lit_u32(
+        &folded_store_value(unop(UnOp::Popcount, Expr::u32(0xFF))),
+        8,
+    );
 
     // LogicalNot(true) → false, so the branch picks the else arm.
     let out = run_pipeline(Program::wrapped(
