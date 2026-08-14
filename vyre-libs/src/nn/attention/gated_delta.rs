@@ -216,26 +216,8 @@ fn recurrent_gated_delta_impl(
                 ),
             ],
         ),
-        Node::let_bind(
-            "query_scale",
-            Expr::mul(
-                Expr::UnOp {
-                    op: UnOp::InverseSqrt,
-                    operand: Box::new(Expr::add(Expr::var("query_sum"), Expr::f32(eps))),
-                },
-                Expr::UnOp {
-                    op: UnOp::InverseSqrt,
-                    operand: Box::new(Expr::f32(key_dim as f32)),
-                },
-            ),
-        ),
-        Node::let_bind(
-            "key_scale",
-            Expr::UnOp {
-                op: UnOp::InverseSqrt,
-                operand: Box::new(Expr::add(Expr::var("key_sum"), Expr::f32(eps))),
-            },
-        ),
+        gated_delta_layout::query_scale_node(eps, key_dim),
+        gated_delta_layout::l2_scale_node("key_scale", "key_sum", eps),
     ];
     let decay_state = Node::loop_for(
         "key_index",
@@ -374,22 +356,7 @@ fn recurrent_gated_delta_impl(
             "beta_logit",
             Expr::cast(DataType::F32, Expr::load(beta_logits, scalar_index)),
         ),
-        Node::let_bind(
-            "beta",
-            Expr::div(
-                Expr::f32(1.0),
-                Expr::add(
-                    Expr::f32(1.0),
-                    Expr::UnOp {
-                        op: UnOp::Exp,
-                        operand: Box::new(Expr::UnOp {
-                            op: UnOp::Negate,
-                            operand: Box::new(Expr::var("beta_logit")),
-                        }),
-                    },
-                ),
-            ),
-        ),
+        gated_delta_layout::beta_gate_node(),
         decay_state,
         value_update,
     ]);

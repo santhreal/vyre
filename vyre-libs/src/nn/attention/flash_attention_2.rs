@@ -409,28 +409,15 @@ pub fn flash_attention_2_reference(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     fn run_program(program: Program, q: &[f32], k: &[f32], v: &[f32]) -> Vec<f32> {
-        let out_bytes = program
-            .buffers()
-            .iter()
-            .find(|b| b.name() == "out")
-            .map(|b| b.count() as usize * core::mem::size_of::<f32>())
-            .expect("Fix: output buffer present");
-        let outputs = vyre_reference::reference_eval(
+        crate::nn::attention::eval_qkv_program(
             &program,
-            &[
-                Value::from(f32_bytes(q)),
-                Value::from(f32_bytes(k)),
-                Value::from(f32_bytes(v)),
-                Value::from(vec![0u8; out_bytes]),
-            ],
+            q,
+            k,
+            v,
+            "Fix: reference eval must succeed",
         )
-        .expect("Fix: reference eval must succeed");
-        decode_f32(&outputs[0].to_bytes())
     }
 
     /// Tiled FlashAttention-2 agrees with the scalar reference on a
