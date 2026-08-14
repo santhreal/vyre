@@ -57,7 +57,7 @@ impl GridShape {
         self.width() * self.height()
     }
 
-    fn validated(self) -> Self {
+    pub(super) fn validated(self) -> Self {
         assert!(
             self.cols > 0 && self.rows > 0,
             "Fix: a cell grid needs at least one row and one column, got {}x{}",
@@ -91,6 +91,45 @@ impl GridShape {
     }
 }
 
+/// Bind `y`, `x`, `col`, `row` and `cell` for the pixel already bound as
+/// `idx`. Shared by every op that expands a cell grid, so the mapping cannot
+/// drift between them.
+///
+/// Every divisor is a build-time constant, so the Layer 1 strength-reduction
+/// pass turns each division into mulhi plus a shift. Writing the division is
+/// the correct thing to write.
+pub(super) fn cell_lookup_nodes(shape: GridShape) -> Vec<Node> {
+    let width = shape.width();
+    vec![
+        Node::let_bind("y", Expr::div(Expr::var("idx"), Expr::u32(width))),
+        // x = idx - y * width, not idx % width. The remainder lowers to the
+        // same division just performed, plus a multiply and a subtract, so
+        // reusing y keeps one division for the pair.
+        Node::let_bind(
+            "x",
+            Expr::sub(
+                Expr::var("idx"),
+                Expr::mul(Expr::var("y"), Expr::u32(width)),
+            ),
+        ),
+        Node::let_bind(
+            "col",
+            Expr::div(Expr::var("x"), Expr::u32(shape.cell_width)),
+        ),
+        Node::let_bind(
+            "row",
+            Expr::div(Expr::var("y"), Expr::u32(shape.cell_height)),
+        ),
+        Node::let_bind(
+            "cell",
+            Expr::add(
+                Expr::mul(Expr::var("row"), Expr::u32(shape.cols)),
+                Expr::var("col"),
+            ),
+        ),
+    ]
+}
+
 /// Build a Program that fills `output` with one packed RGBA pixel per pixel of
 /// the surface, taking each pixel's colour from the cell that covers it.
 ///
@@ -121,41 +160,15 @@ pub fn cell_grid_fill(cells: &str, output: &str, shape: GridShape) -> Program {
                     Node::let_bind("idx", Expr::gid_x()),
                     Node::if_then(
                         Expr::lt(Expr::var("idx"), Expr::u32(pixels)),
-                        vec![
-                            // Every divisor here is a build-time constant, so
-                            // the Layer 1 strength-reduction pass turns each
-                            // division into mulhi plus a shift. Writing the
-                            // division is the correct thing to write.
-                            Node::let_bind("y", Expr::div(Expr::var("idx"), Expr::u32(width))),
-                            // x = idx - y * width, not idx % width. The
-                            // remainder lowers to the same division we just
-                            // did, plus a multiply and a subtract; reusing y
-                            // keeps one division for the pair.
-                            Node::let_bind(
-                                "x",
-                                Expr::sub(
-                                    Expr::var("idx"),
-                                    Expr::mul(Expr::var("y"), Expr::u32(width)),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "col",
-                                Expr::div(Expr::var("x"), Expr::u32(shape.cell_width)),
-                            ),
-                            Node::let_bind(
-                                "row",
-                                Expr::div(Expr::var("y"), Expr::u32(shape.cell_height)),
-                            ),
-                            Node::let_bind(
-                                "cell",
-                                Expr::add(
-                                    Expr::mul(Expr::var("row"), Expr::u32(shape.cols)),
-                                    Expr::var("col"),
-                                ),
-                            ),
-                            Node::let_bind("colour", Expr::load(cells, Expr::var("cell"))),
-                            Node::store(output, Expr::var("idx"), Expr::var("colour")),
-                        ],
+                        {
+                            let mut body = cell_lookup_nodes(shape);
+                            body.push(Node::let_bind(
+                                "colour",
+                                Expr::load(cells, Expr::var("cell")),
+                            ));
+                            body.push(Node::store(output, Expr::var("idx"), Expr::var("colour")));
+                            body
+                        },
                     ),
                 ],
             )],
