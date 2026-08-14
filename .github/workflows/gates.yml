@@ -90,3 +90,27 @@ jobs:
       # enforced by rustc rather than approximated by grep. This pins that set.
       - name: Unsafe surface matches the reviewed budget
         run: bash scripts/check_unsafe_budget.sh
+
+      # Source-scanning rules, all on scripts/lib/source_scan.sh. They were
+      # written against ripgrep with `2>/dev/null || true`, which reports a clean
+      # tree whenever ripgrep is missing or lacks a feature, so none of them could
+      # be trusted until they stopped depending on an optional binary.
+      - name: No registry walk on the dispatch hot path
+        run: bash scripts/check_no_hot_path_inventory.sh
+      - name: Nested byte rows held at their ceiling
+        run: bash scripts/check_no_hot_path_vec_vec.sh
+      - name: Unbounded container construction held at its ceiling
+        run: bash scripts/check_no_unbounded_cache.sh
+      - name: Read-all confined to reviewed cache modules
+        run: bash scripts/check_no_unbounded_external_read.sh
+      - name: Production dispatch stays borrowed
+        run: bash scripts/check_no_owned_dispatch_hot_paths.sh
+
+      # `try_reserve(additional)` guarantees `len() + additional`, so deriving
+      # `additional` from `capacity()` under-reserves any warm buffer whose
+      # capacity sits between `target / 2` and `target`: the call succeeds, the
+      # capacity stays short, and the following fill reallocates. It compiles,
+      # it returns Ok, and every result is correct, so no build, test, clippy,
+      # or unsafe-budget gate can see it. Only a source scan can.
+      - name: Reserve calls size from len, not capacity
+        run: bash scripts/check_no_under_reserve.sh

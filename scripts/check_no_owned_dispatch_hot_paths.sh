@@ -1,30 +1,34 @@
 #!/usr/bin/env bash
-# P1 inventory #5  -  production callers must prefer borrowed dispatch.
+# Production callers must prefer borrowed dispatch.
 #
-# `VyreBackend::dispatch(&[Vec<u8>])` remains as compatibility surface area,
-# but hot production/conformance paths should call `dispatch_borrowed` so
-# backends with clone-free staging do not get forced through owned row APIs.
+# `VyreBackend::dispatch(&[Vec<u8>])` stays as compatibility surface, but hot
+# production and conformance paths call `dispatch_borrowed` so a backend with
+# clone-free staging is not forced through owned row APIs.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+source scripts/lib/source_scan.sh
 
-scan_roots=(
+SCAN_PATHS=(
     "vyre-libs/src"
     "vyre-runtime/src"
     "conform/vyre-conform/src"
 )
+EXCLUDE='/tests?/'
+PATTERN='\.dispatch\('
 
-hits="$(rg --no-heading --line-number --glob '*.rs' --glob '!**/tests/**' '\.dispatch\(' "${scan_roots[@]}" 2>/dev/null || true)"
+hits="$(vyre_scan_tracked "$PATTERN" "$EXCLUDE" "${SCAN_PATHS[@]}")"
 
-if [[ -z "$hits" ]]; then
-    echo "owned dispatch hot-path scan: 0 occurrences."
-    exit 0
+if [[ -n "$hits" ]]; then
+    echo "owned dispatch on a hot path:" >&2
+    printf '%s\n' "$hits" >&2
+    echo "" >&2
+    echo "Fix: build borrowed rows with inputs.iter().map(Vec::as_slice) and call" >&2
+    echo "dispatch_borrowed." >&2
+    exit 1
 fi
 
-echo "owned dispatch hot-path calls detected:" >&2
-printf '%s\n' "$hits" >&2
-echo >&2 ""
-echo "Fix: build borrowed rows with inputs.iter().map(Vec::as_slice) and call dispatch_borrowed." >&2
-exit 1
+echo "owned dispatch gate: no .dispatch( call on the scanned production paths."
+exit 0
