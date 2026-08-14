@@ -34,7 +34,7 @@ total_lines = 10518
 
 [[crate]]
 name = "examples"
-duplicate_lines = 46
+duplicate_lines = 37
 total_lines = 490
 
 [[crate]]
@@ -79,12 +79,12 @@ total_lines = 35594
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 4649
+duplicate_lines = 4544
 total_lines = 69251
 
 [[crate]]
 name = "vyre-driver-metal"
-duplicate_lines = 279
+duplicate_lines = 251
 total_lines = 4735
 
 [[crate]]
@@ -94,7 +94,7 @@ total_lines = 641
 
 [[crate]]
 name = "vyre-driver-spirv"
-duplicate_lines = 223
+duplicate_lines = 194
 total_lines = 1974
 
 [[crate]]

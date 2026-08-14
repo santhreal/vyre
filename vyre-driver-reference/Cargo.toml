@@ -25,3 +25,6 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+vyre-driver = { workspace = true, features = ["test-fixtures"] }

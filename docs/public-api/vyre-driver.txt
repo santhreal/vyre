@@ -178,6 +178,7 @@ impl vyre_driver::speculate::SpeculationReport
 impl vyre_driver::speculate::SpeculativeVariantRace
 impl vyre_driver::subgroup::SubgroupCaps
 impl vyre_driver::subgroup::SubgroupOp
+impl vyre_driver::target_dialect::TargetDialect
 impl vyre_driver::transfer_accounting::TransferAccountingPolicy
 impl vyre_driver::tuner::DefaultPolicy
 impl vyre_driver::tuner::Mode
@@ -1199,6 +1200,8 @@ pub fn vyre_driver::subgroup::reduction_offsets(subgroup_size: u32) -> alloc::ve
 pub fn vyre_driver::subgroup::reduction_offsets_into(subgroup_size: u32, offsets: &mut alloc::vec::Vec<u32>)
 pub fn vyre_driver::subgroup::try_reduction_offsets(subgroup_size: u32) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
 pub fn vyre_driver::subgroup::try_reduction_offsets_into(subgroup_size: u32, offsets: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_driver::target_dialect::TargetDialect::compiler(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_megakernel::target::TargetCompiler>, vyre_driver::BackendError>
+pub fn vyre_driver::target_dialect::TargetDialect::profile(&self) -> core::result::Result<vyre_megakernel::envelope::TargetProfile, vyre_driver::BackendError>
 pub fn vyre_driver::trace_jit_policy::decide_trace_jit_speculation(inputs: vyre_driver::trace_jit_policy::TraceJitInputs) -> vyre_driver::trace_jit_policy::TraceJitDecision
 pub fn vyre_driver::transfer_accounting::TransferAccountingPolicy::add_bytes(self, total: &mut u64, bytes: usize, label: &str) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::transfer_accounting::TransferAccountingPolicy::add_copy_count(self, total: &mut usize, label: &str) -> core::result::Result<(), vyre_driver::BackendError>
@@ -1334,6 +1337,7 @@ pub mod vyre_driver::speculate
 pub mod vyre_driver::speculation_verdict
 pub mod vyre_driver::strategy
 pub mod vyre_driver::subgroup
+pub mod vyre_driver::target_dialect
 pub mod vyre_driver::trace_jit_policy
 pub mod vyre_driver::transfer_accounting
 pub mod vyre_driver::tuner
@@ -1551,6 +1555,8 @@ pub struct vyre_driver::speculate::SpeculativeVariantKeys<'a>
 pub struct vyre_driver::speculate::SpeculativeVariantRace
 pub struct vyre_driver::speculation_verdict::SpeculationObservation
 pub struct vyre_driver::subgroup::SubgroupCaps
+pub struct vyre_driver::target_dialect::EmittedDialectModule
+pub struct vyre_driver::target_dialect::TargetDialect
 pub struct vyre_driver::trace_jit_policy::TraceJitInputs
 pub struct vyre_driver::transfer_accounting::TransferAccountingPolicy
 pub struct vyre_driver::tuner::DefaultPolicy
@@ -1599,6 +1605,7 @@ pub type vyre_driver::backend::OutputBuffers = alloc::vec::Vec<alloc::vec::Vec<u
 pub type vyre_driver::input_identity::ExactInputKey = [u8; 32]
 pub type vyre_driver::reservation_policy::StagingReservationFailureAdapter<E> = fn(&'static str, usize, alloc::string::String) -> E
 pub type vyre_driver::shape_prediction::ShapeFingerprint = [u32; 8]
+pub type vyre_driver::target_dialect::EmitSelected = fn(&vyre_megakernel::target::SelectedLowering, &vyre_megakernel::envelope::TargetProfile) -> core::result::Result<vyre_driver::target_dialect::EmittedDialectModule, vyre_megakernel::target::TargetCompileError>
 pub type vyre_driver::tuner::BackendTimer::Error
 pub use vyre_driver::AotTargetId
 pub use vyre_driver::Diagnostic
@@ -2907,6 +2914,19 @@ pub vyre_driver::subgroup::SubgroupOp::InclusiveAdd
 pub vyre_driver::subgroup::SubgroupOp::Max
 pub vyre_driver::subgroup::SubgroupOp::Min
 pub vyre_driver::subgroup::SubgroupOp::ShuffleXor
+pub vyre_driver::target_dialect::EmittedDialectModule::bytes: alloc::vec::Vec<u8>
+pub vyre_driver::target_dialect::EmittedDialectModule::dynamic_shared_bytes: u32
+pub vyre_driver::target_dialect::EmittedDialectModule::entry_point: alloc::string::String
+pub vyre_driver::target_dialect::TargetDialect::backend_id: &'static str
+pub vyre_driver::target_dialect::TargetDialect::dialect: &'static str
+pub vyre_driver::target_dialect::TargetDialect::emit: vyre_driver::target_dialect::EmitSelected
+pub vyre_driver::target_dialect::TargetDialect::format: &'static str
+pub vyre_driver::target_dialect::TargetDialect::format_version: u16
+pub vyre_driver::target_dialect::TargetDialect::generation: u64
+pub vyre_driver::target_dialect::TargetDialect::max_dynamic_shared_bytes: u32
+pub vyre_driver::target_dialect::TargetDialect::max_invocations_per_workgroup: u32
+pub vyre_driver::target_dialect::TargetDialect::max_workgroup_size: [u32; 3]
+pub vyre_driver::target_dialect::TargetDialect::subgroup_size: u32
 pub vyre_driver::trace_jit_policy::TraceJitDecision::HoldSteady
 pub vyre_driver::trace_jit_policy::TraceJitDecision::Speculate
 pub vyre_driver::trace_jit_policy::TraceJitDecision::Speculate::expected_savings_ns: u128

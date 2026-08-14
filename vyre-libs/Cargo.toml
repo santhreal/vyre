@@ -737,6 +737,22 @@ name = "op_boundaries"
 path = "tests/op_boundaries.rs"
 required-features = ["nn-activation", "nn-linear"]
 
+# Asserts the tolerance every registered composition carries, so it needs every
+# feature that registers one: fft and Strassen from math, and the four nn
+# domains. Without them the ops are not compiled in and the target failed on a
+# missing registration rather than on a wrong tolerance.
+[[test]]
+name = "operation_registry"
+path = "tests/operation_registry.rs"
+required-features = [
+    "math",
+    "math-linalg",
+    "nn-activation",
+    "nn-attention",
+    "nn-linear",
+    "nn-norm",
+]
+
 [[test]]
 name = "optimized_programs"
 path = "tests/optimized_programs.rs"

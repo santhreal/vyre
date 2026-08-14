@@ -44,6 +44,7 @@ ash.workspace = true
 smallvec = { workspace = true }
 
 [dev-dependencies]
+vyre-driver = { workspace = true, features = ["test-fixtures"] }
 # integration tests/benches assert against these crates' public APIs
 vyre-reference = { path = "../vyre-reference" }
 tempfile.workspace = true

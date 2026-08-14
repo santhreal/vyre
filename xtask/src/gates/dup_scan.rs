@@ -74,21 +74,52 @@ fn crate_of(root: &Path, path: &Path) -> Option<String> {
         .map(|component| component.as_os_str().to_string_lossy().into_owned())
 }
 
+/// Every Rust source file the repository will carry, in sorted order.
+///
+/// The set is what git would commit: tracked files plus untracked files no
+/// ignore rule excludes. A working tree also holds scratch that git ignores,
+/// and counting it made the measurement local. Twenty-two `.rs` files ignored
+/// by one rule were once counted into their crates' totals here, so a pin
+/// recorded on a workstation described that workstation and CI measured a
+/// smaller tree, which is the direction that lets a gate pass by accident.
 fn source_files(root: &Path) -> Vec<PathBuf> {
-    let mut files = Vec::new();
-    for entry in WalkDir::new(root)
-        .into_iter()
-        .filter_entry(|entry| {
-            let name = entry.file_name().to_string_lossy();
-            name != "target" && name != ".git" && !name.starts_with(".cargo")
-        })
-        .flatten()
-    {
-        let path = entry.path();
-        if path.is_file() && path.extension().is_some_and(|extension| extension == "rs") {
-            files.push(path.to_path_buf());
+    let listing = process::Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args([
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "-z",
+            "--",
+            "*.rs",
+        ])
+        .output();
+    let listing = match listing {
+        Ok(listing) if listing.status.success() => listing.stdout,
+        Ok(listing) => {
+            eprintln!(
+                "dup-scan cannot list the repository's source files: git ls-files exited {}. \
+                 Fix: run dup-scan inside a git checkout of this repository.",
+                listing.status
+            );
+            process::exit(1);
         }
-    }
+        Err(error) => {
+            eprintln!(
+                "dup-scan cannot list the repository's source files: {error}. \
+                 Fix: install git, or run dup-scan inside a git checkout of this repository."
+            );
+            process::exit(1);
+        }
+    };
+    let mut files: Vec<PathBuf> = listing
+        .split(|byte| *byte == 0)
+        .filter(|entry| !entry.is_empty())
+        .map(|entry| root.join(String::from_utf8_lossy(entry).as_ref()))
+        .filter(|path| path.is_file())
+        .collect();
     files.sort();
     files
 }
@@ -406,6 +437,18 @@ pub(crate) fn run(args: &[String]) {
 mod tests {
     use super::*;
 
+    /// Initialize the temporary tree as a git checkout, because the scan
+    /// measures what the repository will carry rather than what the working
+    /// directory happens to hold.
+    fn init_repository(dir: &Path) {
+        let status = process::Command::new("git")
+            .args(["init", "--quiet"])
+            .arg(dir)
+            .status()
+            .expect("git must be available to measure a repository");
+        assert!(status.success(), "git init must succeed in {}", dir.display());
+    }
+
     /// WHY: comments and indentation are exactly what a copy-paste edits first,
     /// so normalization must see through both or the scan misses real clones.
     #[test]
@@ -418,8 +461,9 @@ mod tests {
     /// within one, or every long file would report itself as duplicated.
     #[test]
     fn a_block_repeated_inside_one_file_is_not_cross_file_duplication() {
-        let dir = std::env::temp_dir().join("vyre-dup-scan-single");
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-single-{}", process::id()));
         let _ = fs::remove_dir_all(&dir);
+        init_repository(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         let block: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
         fs::write(dir.join("crate-a/src/lib.rs"), format!("{block}{block}")).expect("write");
@@ -436,8 +480,9 @@ mod tests {
     /// crate. It must be counted in both crates.
     #[test]
     fn the_same_block_in_two_crates_is_counted_in_both() {
-        let dir = std::env::temp_dir().join("vyre-dup-scan-pair");
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-pair-{}", process::id()));
         let _ = fs::remove_dir_all(&dir);
+        init_repository(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let block: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
@@ -454,8 +499,9 @@ mod tests {
     /// Counting it would drown the real findings.
     #[test]
     fn a_shared_run_shorter_than_the_shingle_is_not_duplication() {
-        let dir = std::env::temp_dir().join("vyre-dup-scan-short");
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-short-{}", process::id()));
         let _ = fs::remove_dir_all(&dir);
+        init_repository(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let block: String = (0..SHINGLE - 1).map(|n| format!("let v{n} = {n};\n")).collect();
@@ -471,8 +517,9 @@ mod tests {
     /// so the partner path is the contract, not the count beside it.
     #[test]
     fn the_report_names_the_file_a_copy_was_made_from() {
-        let dir = std::env::temp_dir().join("vyre-dup-scan-report");
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-report-{}", process::id()));
         let _ = fs::remove_dir_all(&dir);
+        init_repository(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let block: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
@@ -496,8 +543,9 @@ mod tests {
     /// other rather than each being checked alone.
     #[test]
     fn per_file_duplication_sums_to_the_crate_measure() {
-        let dir = std::env::temp_dir().join("vyre-dup-scan-agree");
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-agree-{}", process::id()));
         let _ = fs::remove_dir_all(&dir);
+        init_repository(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let shared: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
@@ -512,6 +560,35 @@ mod tests {
             .map(|entry| entry.duplicate_lines)
             .sum();
         assert_eq!(reported, measured, "report must explain the measured figure");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// WHY: a pin has to mean the same thing on a workstation and in CI. A
+    /// working tree carries scratch that git ignores, and counting it made the
+    /// local figure larger than the one CI can measure, which is the direction
+    /// that lets a pin pass by accident. This tree once carried twenty-two
+    /// ignored `.rs` files that were counted into their crates' totals.
+    #[test]
+    fn a_file_the_repository_ignores_is_not_measured() {
+        let dir = std::env::temp_dir().join(format!("vyre-dup-scan-ignored-{}", process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        init_repository(&dir);
+        fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
+        fs::create_dir_all(dir.join("crate-b/tests")).expect("temp dir");
+        fs::write(dir.join(".gitignore"), "**/tests/scratch.rs\n").expect("write");
+        let block: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
+        fs::write(dir.join("crate-a/src/lib.rs"), &block).expect("write");
+        fs::write(dir.join("crate-b/tests/scratch.rs"), &block).expect("write");
+
+        let counts = measure(&dir);
+        assert_eq!(
+            counts["crate-a"].duplicate_lines, 0,
+            "an ignored copy is not part of the repository, so it makes nothing duplicated"
+        );
+        assert!(
+            !counts.contains_key("crate-b"),
+            "a crate whose only source is ignored is not measured at all"
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 }

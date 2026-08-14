@@ -85,6 +85,9 @@ pub mod fixpoint_iterations;
 pub mod fusion;
 /// Backend-neutral replayable graph-capture binding planning.
 pub mod graph_capture;
+/// Hostile-input closure obligations shared by every backend's adversarial gate.
+#[cfg(any(test, feature = "test-fixtures"))]
+pub mod hostile_input_closure;
 /// Backend-neutral exact-input identity keys for replay caches.
 pub mod input_identity;
 /// Backend-neutral target-payload admission shared by every concrete driver.
@@ -146,6 +149,8 @@ pub mod specialization;
 pub mod speculation_verdict;
 /// Canonical subgroup operation taxonomy and capability records.
 pub mod subgroup;
+/// Target-compiler shell shared by every backend's dialect.
+pub mod target_dialect;
 /// Trace-based JIT specialization decision policy (ROADMAP I2).
 /// Decides whether the dispatcher should fire a speculative
 /// pre-spec on a predicted shape, weighted by recent hit count and
