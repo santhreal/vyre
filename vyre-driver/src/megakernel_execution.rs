@@ -821,10 +821,7 @@ mod tests {
             MegakernelExecutionTopology::FusedWave,
             MegakernelDeviceCapabilities::FUSION_CAPABLE,
         );
-        assert_eq!(
-            held_fusion.topology,
-            MegakernelExecutionTopology::FusedWave
-        );
+        assert_eq!(held_fusion.topology, MegakernelExecutionTopology::FusedWave);
 
         let released_fusion = select_megakernel_topology_stable(
             MegakernelExecutionSample {

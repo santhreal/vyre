@@ -543,12 +543,12 @@ mod tests {
         MegakernelFrontierMemoryPlanError, MegakernelFrontierWave,
     };
     use crate::megakernel_barrier::{MegakernelBarrierScratch, MegakernelWaveDependency};
-    use crate::megakernel_fixtures::{
-        DIAMOND_DEPENDENCIES, DIAMOND_WAVES, OUTPUT_HEAVY_WAVES, OVERFLOW_WAVES, THREE_SMALL_WAVES,
-    };
     use crate::megakernel_execution::{
         MegakernelDeviceCapabilities, MegakernelExecutionSample, MegakernelExecutionTopology,
         MegakernelGraphShape, NeutralMegakernelExecutionPlanner,
+    };
+    use crate::megakernel_fixtures::{
+        DIAMOND_DEPENDENCIES, DIAMOND_WAVES, OUTPUT_HEAVY_WAVES, OVERFLOW_WAVES, THREE_SMALL_WAVES,
     };
 
     #[test]

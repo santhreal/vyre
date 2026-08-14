@@ -129,9 +129,13 @@ fn launch_recommendation_rejects_route_window_demand_overflow_without_panic() {
 
     let error = telemetry
         .recommend_launch(ResidentLaunchRequest::direct(4096, 64, 256))
-        .expect_err("Fix: route-window demand overflow must not panic during launch recommendation");
+        .expect_err(
+            "Fix: route-window demand overflow must not panic during launch recommendation",
+        );
     assert!(
-        error.to_string().contains("route-window slot demand overflowed"),
+        error
+            .to_string()
+            .contains("route-window slot demand overflowed"),
         "Fix: launch recommendation overflow errors must identify route-window demand: {error}"
     );
 }

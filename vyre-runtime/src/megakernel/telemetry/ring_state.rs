@@ -6,7 +6,6 @@ use super::slot;
 use super::{TelemetryDecodeCapacityEvidence, TELEMETRY_DECODE_CAPACITY_SCHEMA_VERSION};
 use rustc_hash::FxHashMap;
 
-
 /// Decoded top-level ring slot state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RingStatus {
@@ -189,7 +188,6 @@ impl RingOccupancy {
         )
     }
 }
-
 
 /// Structured view of the control buffer.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

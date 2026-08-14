@@ -96,7 +96,9 @@ fn decode_window_opcodes_matches_dense_bitmap_opcodes() {
         1
     );
     assert_eq!(
-        telemetry.active_slots_for_opcode(second_window_opcode).len(),
+        telemetry
+            .active_slots_for_opcode(second_window_opcode)
+            .len(),
         1
     );
 }
@@ -214,18 +216,14 @@ fn decode_sorted_window_opcodes_reuses_scratch_without_resort_growth() {
     assert_eq!(scratch.window_opcodes.capacity(), opcode_capacity);
     assert_eq!(scratch.windows.capacity(), window_capacity);
     assert_eq!(telemetry.windows.len(), 2);
-    assert!(
-        telemetry
-            .windows
-            .iter()
-            .any(|window| window.opcode == first_opcode && window.ticket == 7)
-    );
-    assert!(
-        telemetry
-            .windows
-            .iter()
-            .any(|window| window.opcode == second_opcode && window.ticket == 9)
-    );
+    assert!(telemetry
+        .windows
+        .iter()
+        .any(|window| window.opcode == first_opcode && window.ticket == 7));
+    assert!(telemetry
+        .windows
+        .iter()
+        .any(|window| window.opcode == second_opcode && window.ticket == 9));
 }
 
 #[test]

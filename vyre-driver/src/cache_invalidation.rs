@@ -5,15 +5,15 @@
 //! depend on self-substrate implementation modules directly.
 
 #[cfg(feature = "self-substrate-adapters")]
-use vyre_libs::reasoning::do_calculus_change_impact::{
-    predict_impact_via_into, DoCalculusImpactScratch,
-};
-#[cfg(feature = "self-substrate-adapters")]
 use vyre_foundation::program_dispatch::{
     DispatchError as SelfSubstrateDispatchError, ProgramDispatcher,
 };
 #[cfg(feature = "self-substrate-adapters")]
 use vyre_libs::encoding::scallop_provenance::provenance_closure_via_into;
+#[cfg(feature = "self-substrate-adapters")]
+use vyre_libs::reasoning::do_calculus_change_impact::{
+    predict_impact_via_into, DoCalculusImpactScratch,
+};
 
 /// Error raised by GPU-resident cache invalidation.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -21,9 +21,7 @@ where
     entries.serialize(serializer)
 }
 
-pub(crate) fn deserialize<'de, D, V>(
-    deserializer: D,
-) -> Result<BTreeMap<Vec<usize>, V>, D::Error>
+pub(crate) fn deserialize<'de, D, V>(deserializer: D) -> Result<BTreeMap<Vec<usize>, V>, D::Error>
 where
     D: Deserializer<'de>,
     V: DeserializeOwned + Ord,

@@ -456,11 +456,8 @@ mod tests {
 
     #[test]
     fn dependency_chain_requires_one_barrier_between_each_wave() {
-        let plan = plan_megakernel_barriers(
-            4,
-            LONG_CHAIN_DEPENDENCIES,
-        )
-        .expect("Fix: acyclic megakernel wave chain should be schedulable.");
+        let plan = plan_megakernel_barriers(4, LONG_CHAIN_DEPENDENCIES)
+            .expect("Fix: acyclic megakernel wave chain should be schedulable.");
 
         assert_eq!(plan.global_barriers, 3);
         assert_eq!(plan.groups[0].waves, vec![0]);
@@ -471,11 +468,8 @@ mod tests {
 
     #[test]
     fn diamond_dependencies_fuse_middle_waves() {
-        let plan = plan_megakernel_barriers(
-            4,
-            DIAMOND_DEPENDENCIES,
-        )
-        .expect("Fix: diamond megakernel dependencies should preserve middle-wave fusion.");
+        let plan = plan_megakernel_barriers(4, DIAMOND_DEPENDENCIES)
+            .expect("Fix: diamond megakernel dependencies should preserve middle-wave fusion.");
 
         assert_eq!(plan.global_barriers, 2);
         assert_eq!(plan.groups[0].waves, vec![0]);

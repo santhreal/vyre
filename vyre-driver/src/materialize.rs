@@ -134,9 +134,10 @@ pub fn admit(
                 "target entry metadata must name the emitted target entry point",
             ));
         }
-        let program = Arc::new(Program::from_wire(&image.program).map_err(|error| {
-            invalid_module(&format!("selected Program is malformed: {error}"))
-        })?);
+        let program =
+            Arc::new(Program::from_wire(&image.program).map_err(|error| {
+                invalid_module(&format!("selected Program is malformed: {error}"))
+            })?);
         let mut config = DispatchConfig::default();
         config.grid_override = Some(entry.grid_size);
         config.dispatch_grid = Some(entry.grid_size);
@@ -331,9 +332,7 @@ pub const NEUTRAL_MESSAGES: InstanceMessages = InstanceMessages {
             value.0
         ))
     },
-    completion_consumed: || {
-        invalid_module("each Submission completion may be consumed only once")
-    },
+    completion_consumed: || invalid_module("each Submission completion may be consumed only once"),
 };
 
 /// Identity and artifact ABI projection every materialized instance keeps.

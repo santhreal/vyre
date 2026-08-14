@@ -35,10 +35,8 @@ pub struct EmittedDialectModule {
 
 /// Emit one selected lowering as target bytes. The only per-backend half of a
 /// target compiler.
-pub type EmitSelected = fn(
-    &SelectedLowering,
-    &TargetProfile,
-) -> Result<EmittedDialectModule, TargetCompileError>;
+pub type EmitSelected =
+    fn(&SelectedLowering, &TargetProfile) -> Result<EmittedDialectModule, TargetCompileError>;
 
 /// One backend's target dialect: its payload identity, its device limits and
 /// its emitter.
@@ -81,13 +79,10 @@ impl TargetDialect {
 
     /// Build the target compiler this dialect registers.
     pub fn compiler(&self) -> Result<Box<dyn TargetCompiler>, BackendError> {
-        let format = TargetPayloadFormat::new(self.format, self.format_version).map_err(|error| {
-            self.invalid(
-                "format",
-                "repair the registered format identity",
-                &error,
-            )
-        })?;
+        let format =
+            TargetPayloadFormat::new(self.format, self.format_version).map_err(|error| {
+                self.invalid("format", "repair the registered format identity", &error)
+            })?;
         let profile = self.profile()?;
         Ok(Box::new(DialectCompiler {
             format,
