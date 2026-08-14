@@ -1217,9 +1217,7 @@ impl vyre_foundation::program_dispatch::ProgramDispatcher for WgpuBackend {
         let mut config = vyre_driver::DispatchConfig::default();
         config.grid_override = grid_override;
         vyre_driver::VyreBackend::dispatch(self, program, inputs, &config).map_err(|error| {
-            vyre_foundation::program_dispatch::DispatchError::BackendError(
-                error.to_string(),
-            )
+            vyre_foundation::program_dispatch::DispatchError::BackendError(error.to_string())
         })
     }
 }

@@ -11,9 +11,7 @@ use std::hash::BuildHasherDefault;
 use std::sync::Arc;
 
 use crate::buffer::BufferPool;
-use crate::engine::record_and_readback::{
-    record_and_readback, DispatchLabels, RecordAndReadback,
-};
+use crate::engine::record_and_readback::{record_and_readback, DispatchLabels, RecordAndReadback};
 use crate::runtime::cache::pipeline::LruPipelineCache;
 use crate::runtime::device::EnabledFeatures;
 use crate::DispatchArena;
@@ -41,12 +39,10 @@ impl PipelineHarness {
             adapter_info,
             enabled_features,
             config: DispatchConfig::default(),
-            pipeline_cache: Arc::new(LruPipelineCache::new(
-                DEFAULT_PIPELINE_CACHE_ENTRIES as u32,
-            )),
-            layout_cache: Arc::new(BindGroupLayoutCache::with_hasher(
-                BuildHasherDefault::<rustc_hash::FxHasher>::default(),
-            )),
+            pipeline_cache: Arc::new(LruPipelineCache::new(DEFAULT_PIPELINE_CACHE_ENTRIES as u32)),
+            layout_cache: Arc::new(BindGroupLayoutCache::with_hasher(BuildHasherDefault::<
+                rustc_hash::FxHasher,
+            >::default())),
         }
     }
 

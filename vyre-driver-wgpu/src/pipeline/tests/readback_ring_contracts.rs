@@ -66,7 +66,9 @@ fn direct_record_and_readback_trap_uses_readback_rings_only() {
 
     let pipeline = harness
         .compile_on_arena(&program, &with_rings_arena)
-        .expect("Fix: trapped program compile must succeed; restore this invariant before continuing.");
+        .expect(
+            "Fix: trapped program compile must succeed; restore this invariant before continuing.",
+        );
 
     let before_allocations = with_rings_pool.stats().allocations;
     let error = record_once(
@@ -112,9 +114,9 @@ fn direct_record_and_readback_trap_without_readback_rings_allocates_full_sidecar
         vec![Node::trap(Expr::u32(5), "direct-readback-no-ring-trap")],
     );
 
-    let pipeline = harness
-        .compile_on_arena(&program, &arena)
-        .expect("Fix: trapped program compile must succeed; restore this invariant before continuing.");
+    let pipeline = harness.compile_on_arena(&program, &arena).expect(
+        "Fix: trapped program compile must succeed; restore this invariant before continuing.",
+    );
 
     let before_allocations = pool.stats().allocations;
     let error = record_once(
