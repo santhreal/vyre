@@ -1,8 +1,12 @@
-//! `cargo xtask check-tier-deps` - reject upward tier dependencies in workspace manifests.
+//! `cargo xtask check-tier-deps` - reject upward layer dependencies in workspace manifests.
 //!
-//! Tier order (low → high): T1 foundation/spec/core → T2 intrinsics → T2.5 primitives
-//! → self-substrate → T3 libs → reference/emit/conform → T4 drivers/runtime.
+//! A crate may depend on its own architectural layer or on any layer below it,
+//! never on one above. Each crate declares its layer in
+//! `docs/CRATE_OWNERSHIP.toml`; this gate owns only the ordering between layers,
+//! so adding a crate states its layer once, in the registry, and adding a layer
+//! turns the gate red until its position is recorded here.
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 use std::process::{self, Command};
@@ -11,12 +15,43 @@ use toml::Value;
 
 use crate::manifest_walk::MAX_MANIFEST_BYTES;
 
+/// Architectural layers, most fundamental first. A crate may depend on its own
+/// layer or on any earlier layer, never on a later one.
+///
+/// This is the only statement of the ordering. Which layer a crate belongs to is
+/// read from `docs/CRATE_OWNERSHIP.toml`, so a rename or a new crate cannot make
+/// this list stale.
+///
+/// `standalone-tooling` sits below `foundation` because it depends on no crate in
+/// the workspace and must keep answering while the workspace does not compile,
+/// which is what lets a test-support crate resolve the checkout root through it.
+const LAYER_ORDER: &[&str] = &[
+    "standalone-tooling",
+    "foundation",
+    "test-tooling",
+    "primitives",
+    "frontend",
+    "lowering",
+    "semantics",
+    "libraries",
+    "pass-engine",
+    "compiler-boundary",
+    "emitter",
+    "backend-neutral",
+    "concrete-backend",
+    "runtime",
+    "packaging",
+    "facade",
+    "conformance",
+    "tooling",
+];
+
 /// Run the tier-dependency gate.
 pub(crate) fn run(args: &[String]) {
     if args.iter().any(|arg| arg == "--help" || arg == "-h") {
         println!(
             "USAGE:\n  cargo xtask check-tier-deps\n\n\
-             Fails on upward tier dependencies, undeclared production edges, incomplete crate ownership, or generated crate-documentation drift."
+             Fails on upward layer dependencies, undeclared production edges, incomplete crate ownership, or generated crate-documentation drift."
         );
         return;
     }
@@ -29,19 +64,53 @@ pub(crate) fn run(args: &[String]) {
     let members = workspace_members(&root);
     let mut failures = Vec::new();
 
+    let layers = declared_layers(&root, &mut failures);
+    let workspace_deps = workspace_dependency_packages(&root);
+    let mut packages = BTreeMap::new();
+    let mut manifests = Vec::new();
     for member in &members {
         let manifest = root.join(member).join("Cargo.toml");
-        let tier = crate_tier(member);
         let text = read_bounded(&manifest);
         let table = parse_toml(&manifest, &text);
-        scan_manifest(&member, tier, &table, &mut failures);
+        let package = package_name(&manifest, &table);
+        packages.insert(package.clone(), member.clone());
+        manifests.push((package, table));
+    }
+    let members_by_package: BTreeSet<&str> = packages.keys().map(String::as_str).collect();
+    let mut claimed: BTreeSet<&str> = BTreeSet::new();
+    for (package, table) in &manifests {
+        let Some(layer) = layers.get(package) else {
+            failures.push(format!(
+                "`{package}` is a workspace member with no entry in docs/CRATE_OWNERSHIP.toml; declare its layer there"
+            ));
+            continue;
+        };
+        claimed.insert(
+            LAYER_ORDER[layer_rank(layer).expect("declared_layers rejects unknown layers")],
+        );
+        scan_manifest(
+            package,
+            layer,
+            &layers,
+            &members_by_package,
+            &workspace_deps,
+            table,
+            &mut failures,
+        );
+    }
+    for layer in LAYER_ORDER {
+        if !claimed.contains(layer) {
+            failures.push(format!(
+                "layer `{layer}` holds a position in the layer order and no crate declares it; remove the position or record the crate"
+            ));
+        }
     }
     validate_cross_crate_promotion_contract(&root, &mut failures);
     validate_crate_ownership_registry(&root, &mut failures);
 
     if failures.is_empty() {
         println!(
-            "check-tier-deps: {} workspace members; tier, ownership, and generated graph contracts agree",
+            "check-tier-deps: {} workspace members; layer, ownership, and generated graph contracts agree",
             members.len()
         );
     } else {
@@ -50,7 +119,7 @@ pub(crate) fn run(args: &[String]) {
             eprintln!("  - {f}");
         }
         eprintln!(
-            "Fix: remove the upward dependency or update the manifest and docs/CRATE_OWNERSHIP.toml together, then regenerate the ownership docs."
+            "Fix: remove the upward dependency, or move the crate to the layer that matches it in docs/CRATE_OWNERSHIP.toml, then regenerate the ownership docs."
         );
         process::exit(1);
     }
@@ -105,89 +174,125 @@ fn workspace_members(root: &Path) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// Lower number = more fundamental (may be depended upon by higher tiers).
-fn crate_tier(member_path: &str) -> u32 {
-    let name = member_path.rsplit('/').next().unwrap_or(member_path);
-    match name {
-        "vyre-foundation" | "vyre-spec" | "vyre" | "vyre-macros" => 10,
-        "vyre-primitives" => 25,
-        "vyre-pass-engine" => 28,
-        "vyre-libs" => 30,
-        "vyre-reference" | "vyre-lower" | "vyre-emit-naga" | "vyre-emit-ptx"
-        | "vyre-emit-spirv" => 35,
-        "vyre-conform-spec" | "vyre-conform" => 35,
-        "vyre-driver"
-        | "vyre-driver-wgpu"
-        | "vyre-driver-cuda"
-        | "vyre-driver-spirv"
-        | "vyre-driver-reference"
-        | "vyre-runtime"
-        | "vyre-aot"
-        | "vyre-bench"
-        | "vyre-debug"
-        | "vyre-lints" => 40,
-        "xtask" => 99,
-        _ => 45,
-    }
+/// Position of a layer in [`LAYER_ORDER`], or `None` when the layer is unknown.
+fn layer_rank(layer: &str) -> Option<usize> {
+    LAYER_ORDER.iter().position(|known| *known == layer)
 }
 
-fn resolve_path_dep(member: &str, dep_path: &str) -> Option<String> {
-    let base = crate::checkout::checkout_root().join(member).join(dep_path);
-    let canonical = base.canonicalize().ok()?;
-    let root = crate::checkout::checkout_root().canonicalize().ok()?;
-    let rel = canonical.strip_prefix(&root).ok()?;
-    if rel.as_os_str().is_empty() {
-        return None;
-    }
-    let s = rel.to_string_lossy();
-    let member = s
-        .trim_start_matches("./")
-        .trim_end_matches("/Cargo.toml")
-        .trim_end_matches('\\');
-    if member.ends_with("Cargo.toml") {
-        member
-            .strip_suffix("/Cargo.toml")
-            .or_else(|| member.strip_suffix("\\Cargo.toml"))
-            .map(str::to_string)
-    } else {
-        Some(member.to_string())
-    }
-}
-
-fn dep_crate_name(dep_key: &str, value: &Value) -> Option<String> {
-    if let Some(path) = value.get("path").and_then(Value::as_str) {
-        return Some(path.to_string());
-    }
-    if let Some(pkg) = value.get("package").and_then(Value::as_str) {
-        return Some(pkg.to_string());
-    }
-    Some(dep_key.to_string())
-}
-
-fn scan_manifest(member: &str, tier: u32, table: &Value, failures: &mut Vec<String>) {
-    let deps_tables = [
-        ("dependencies", table.get("dependencies")),
-        ("dev-dependencies", table.get("dev-dependencies")),
-        ("build-dependencies", table.get("build-dependencies")),
-    ];
-    for (dep_kind, deps) in deps_tables {
-        let Some(deps) = deps else {
+/// Each crate's declared architectural layer, read from the ownership registry.
+///
+/// A layer the registry names and [`LAYER_ORDER`] does not is a failure rather
+/// than a default, so a new layer cannot be introduced without recording where
+/// it sits.
+fn declared_layers(root: &Path, failures: &mut Vec<String>) -> BTreeMap<String, String> {
+    let path = root.join("docs/CRATE_OWNERSHIP.toml");
+    let text = read_bounded(&path);
+    let table = parse_toml(&path, &text);
+    let mut layers = BTreeMap::new();
+    let Some(entries) = table.get("crate").and_then(Value::as_array) else {
+        failures.push("docs/CRATE_OWNERSHIP.toml declares no `[[crate]]` entries".to_string());
+        return layers;
+    };
+    for entry in entries {
+        let Some(package) = entry.get("package").and_then(Value::as_str) else {
+            failures.push("a docs/CRATE_OWNERSHIP.toml entry declares no `package`".to_string());
             continue;
         };
-        let Some(deps) = deps.as_table() else {
+        let Some(layer) = entry.get("layer").and_then(Value::as_str) else {
+            failures.push(format!(
+                "`{package}` declares no `layer` in docs/CRATE_OWNERSHIP.toml"
+            ));
+            continue;
+        };
+        if layer_rank(layer).is_none() {
+            failures.push(format!(
+                "`{package}` declares layer `{layer}`, which holds no position in the layer order; record where it sits relative to the existing layers"
+            ));
+            continue;
+        }
+        layers.insert(package.to_string(), layer.to_string());
+    }
+    layers
+}
+
+/// Package name a workspace member publishes, which is what a dependency names.
+fn package_name(manifest: &Path, table: &Value) -> String {
+    table
+        .get("package")
+        .and_then(|package| package.get("name"))
+        .and_then(Value::as_str)
+        .unwrap_or_else(|| panic!("Fix: {} declares no [package] name", manifest.display()))
+        .to_string()
+}
+
+/// Package each `[workspace.dependencies]` key resolves to, so a member written
+/// as `dep.workspace = true` is checked like any other edge.
+fn workspace_dependency_packages(root: &Path) -> BTreeMap<String, String> {
+    let path = root.join("Cargo.toml");
+    let text = read_bounded(&path);
+    let table = parse_toml(&path, &text);
+    let mut packages = BTreeMap::new();
+    let Some(deps) = table
+        .get("workspace")
+        .and_then(|workspace| workspace.get("dependencies"))
+        .and_then(Value::as_table)
+    else {
+        return packages;
+    };
+    for (key, value) in deps {
+        let package = value
+            .get("package")
+            .and_then(Value::as_str)
+            .unwrap_or(key.as_str());
+        packages.insert(key.clone(), package.to_string());
+    }
+    packages
+}
+
+/// Package a dependency entry names, resolving renames and workspace inheritance.
+fn dep_package(key: &str, value: &Value, workspace_deps: &BTreeMap<String, String>) -> String {
+    if let Some(package) = value.get("package").and_then(Value::as_str) {
+        return package.to_string();
+    }
+    if value.get("workspace").and_then(Value::as_bool) == Some(true) {
+        if let Some(package) = workspace_deps.get(key) {
+            return package.clone();
+        }
+    }
+    key.to_string()
+}
+
+/// Report every production dependency that climbs to a later layer.
+///
+/// Dev-dependencies are exempt: a contract test legitimately drives its own
+/// crate through a backend or the facade, and that edge is absent from anything
+/// a consumer builds.
+fn scan_manifest(
+    package: &str,
+    layer: &str,
+    layers: &BTreeMap<String, String>,
+    members: &BTreeSet<&str>,
+    workspace_deps: &BTreeMap<String, String>,
+    table: &Value,
+    failures: &mut Vec<String>,
+) {
+    let rank = layer_rank(layer).expect("declared_layers rejects unknown layers");
+    for dep_kind in ["dependencies", "build-dependencies"] {
+        let Some(deps) = table.get(dep_kind).and_then(Value::as_table) else {
             continue;
         };
         for (key, value) in deps {
-            let Some(path) = value.get("path").and_then(Value::as_str) else {
+            let dep = dep_package(key, value, workspace_deps);
+            if !members.contains(dep.as_str()) {
+                continue;
+            }
+            let Some(dep_layer) = layers.get(&dep) else {
                 continue;
             };
-            let resolved = resolve_path_dep(member, path);
-            let fallback = dep_crate_name(key, value);
-            let dep_name = resolved.or(fallback).unwrap_or_else(|| key.to_string());
-            let dep_tier = crate_tier(&dep_name);
-            if dep_tier > tier && tier < 99 && dep_kind != "dev-dependencies" {
+            let dep_rank = layer_rank(dep_layer).expect("declared_layers rejects unknown layers");
+            if dep_rank > rank {
                 failures.push(format!(
-                    "{member} (T{tier}) must not path-depend on {dep_name} (T{dep_tier}) via `{key}` = `{path}` in {dep_kind}"
+                    "{package} ({layer}) must not depend on {dep} ({dep_layer}) via `{key}` in {dep_kind}"
                 ));
             }
         }
@@ -291,46 +396,101 @@ mod tests {
 mod dependency_kind_tests {
     use super::*;
 
-    #[test]
-    fn production_upward_path_dependency_fails() {
-        let table = parse_toml(
-            Path::new("fixture/Cargo.toml"),
-            r#"
-[dependencies]
-vyre-driver = { path = "../vyre-driver" }
-"#,
-        );
-        let mut failures = Vec::new();
+    fn fixture_layers() -> BTreeMap<String, String> {
+        BTreeMap::from([
+            ("vyre-primitives".to_string(), "primitives".to_string()),
+            ("vyre-driver".to_string(), "backend-neutral".to_string()),
+        ])
+    }
 
+    fn fixture_members() -> BTreeSet<&'static str> {
+        BTreeSet::from(["vyre-primitives", "vyre-driver"])
+    }
+
+    fn scan(manifest: &str) -> Vec<String> {
+        let table = parse_toml(Path::new("fixture/Cargo.toml"), manifest);
+        let layers = fixture_layers();
+        let members = fixture_members();
+        let workspace_deps =
+            BTreeMap::from([("vyre-driver".to_string(), "vyre-driver".to_string())]);
+        let mut failures = Vec::new();
         scan_manifest(
             "vyre-primitives",
-            crate_tier("vyre-primitives"),
+            "primitives",
+            &layers,
+            &members,
+            &workspace_deps,
             &table,
             &mut failures,
         );
-
-        assert_eq!(failures.len(), 1);
-        assert!(failures[0].contains("dependencies"));
+        failures
     }
 
     #[test]
-    fn dev_upward_path_dependency_is_allowed_for_contract_tests() {
+    fn production_upward_dependency_fails() {
+        let failures = scan("[dependencies]\nvyre-driver = { path = \"../vyre-driver\" }\n");
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(
+            failures[0].contains(
+                "vyre-primitives (primitives) must not depend on vyre-driver (backend-neutral)"
+            ),
+            "{failures:?}"
+        );
+    }
+
+    /// A `dep.workspace = true` edge carries no path, and reading only inline
+    /// `path` entries left almost every real dependency unjudged.
+    #[test]
+    fn production_upward_workspace_inherited_dependency_fails() {
+        let failures = scan("[dependencies]\nvyre-driver.workspace = true\n");
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(failures[0].contains("in dependencies"), "{failures:?}");
+    }
+
+    #[test]
+    fn dev_upward_dependency_is_allowed_for_contract_tests() {
+        let failures = scan("[dev-dependencies]\nvyre-driver.workspace = true\n");
+
+        assert!(failures.is_empty(), "{failures:?}");
+    }
+
+    #[test]
+    fn downward_dependency_is_allowed() {
         let table = parse_toml(
             Path::new("fixture/Cargo.toml"),
-            r#"
-[dev-dependencies]
-vyre-driver = { path = "../vyre-driver" }
-"#,
+            "[dependencies]\nvyre-primitives.workspace = true\n",
         );
         let mut failures = Vec::new();
-
         scan_manifest(
-            "vyre-primitives",
-            crate_tier("vyre-primitives"),
+            "vyre-driver",
+            "backend-neutral",
+            &fixture_layers(),
+            &fixture_members(),
+            &BTreeMap::from([("vyre-primitives".to_string(), "vyre-primitives".to_string())]),
             &table,
             &mut failures,
         );
 
         assert!(failures.is_empty(), "{failures:?}");
+    }
+
+    /// Every layer named in the registry must hold a position, so a new layer
+    /// cannot arrive with an implicit default rank.
+    #[test]
+    fn every_declared_layer_holds_a_position_in_the_order() {
+        let root = crate::checkout::checkout_root();
+        let mut failures = Vec::new();
+        let layers = declared_layers(&root, &mut failures);
+
+        assert!(failures.is_empty(), "{failures:?}");
+        assert!(!layers.is_empty());
+        for (package, layer) in &layers {
+            assert!(
+                layer_rank(layer).is_some(),
+                "`{package}` declares unranked layer `{layer}`"
+            );
+        }
     }
 }

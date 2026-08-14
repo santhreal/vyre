@@ -487,6 +487,23 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   vyre-primitives --bench wire_throughput` and `cargo bench -p vyre-bench
   --bench release` with the machine, GPU, CPU, toolchain, and commit they were
   measured on.
+- `cargo xtask check-tier-deps` judges every production dependency in the
+  workspace, derived from the layer each crate already declares in
+  `docs/CRATE_OWNERSHIP.toml`. It carried its own hardcoded table of crate
+  names mapped to tier numbers, and it only inspected dependency entries
+  written with an inline `path`, of which the workspace has three. Every
+  `dep.workspace = true` edge, which is how the other several hundred are
+  written, went unjudged, and the name table had gone stale in a way that made
+  the two edges it could see report as violations: `xtask-registry` and
+  `xtask-evidence` were unlisted and fell to a default library tier while
+  `xtask` was pinned above them, so two crates in the same tooling layer were
+  reported as an inversion. The gate now states one thing, the order of the
+  layers, and reads the layer of each crate from the registry, so a rename
+  cannot make it stale and a crate added without a declared layer, a layer
+  declared without a recorded position, or a recorded position no crate claims
+  each fail the gate. `structure-gate` moves to a new `standalone-tooling`
+  layer below `foundation`, which is what it already is: it depends on no crate
+  in the workspace so it keeps answering while the workspace does not compile.
 
 ## [0.7.1] - 2026-08-01
 

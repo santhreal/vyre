@@ -17,7 +17,7 @@ Enforce the crate roster, one operation identity per semantic operation, and one
 
 - Path: `structure-gate`
 - Owner: `release-tooling`
-- Layer: `tooling`
+- Layer: `standalone-tooling`
 - Internal production dependencies: None
 
 ### `vyre`
