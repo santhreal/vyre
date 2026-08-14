@@ -4,11 +4,10 @@
 use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
 
 use vyre_driver::accounting::{
-    checked_atomic_add_usize_with_order, pinning_atomic_increment_u32, pinning_atomic_increment_u64,
+    checked_atomic_add_usize_with_order, checked_atomic_sub_usize as checked_sub_usize,
+    pinning_atomic_increment_u32, pinning_atomic_increment_u64,
 };
 use vyre_driver::BackendError;
-
-use crate::backend::accounting::checked_sub_usize;
 
 pub(super) fn reserve_cached_source_bytes(
     cached_source_bytes: &AtomicUsize,

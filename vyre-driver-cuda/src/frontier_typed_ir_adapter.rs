@@ -1,9 +1,9 @@
 //! Adapter from substrate frontier-typed IR plans to CUDA frontier waves.
 
-use crate::backend::accounting::{checked_mul_u64_count as checked_mul, CudaArithmeticOverflow};
 use crate::backend::staging_reserve::{
     reserve_typed_vec as reserve_vec, CudaStorageReserveFailure,
 };
+use vyre_driver::accounting::{checked_mul_u64_count as checked_mul, ArithmeticOverflow};
 use vyre_driver::megakernel_barrier::MegakernelWaveDependency;
 use vyre_driver::megakernel_frontier::MegakernelFrontierWave;
 use vyre_self_substrate::frontier_typed_ir::FrontierTypedPlan;
@@ -80,7 +80,7 @@ pub enum CudaFrontierTypedIrAdapterError {
     },
 }
 
-impl CudaArithmeticOverflow for CudaFrontierTypedIrAdapterError {
+impl ArithmeticOverflow for CudaFrontierTypedIrAdapterError {
     fn arithmetic_overflow(field: &'static str) -> Self {
         Self::ByteCountOverflow { field }
     }

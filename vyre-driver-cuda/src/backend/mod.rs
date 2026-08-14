@@ -6,8 +6,6 @@
 //! `dispatch` owns the `CudaBackend` struct, launch geometry, and
 //! kernel-launch orchestration. The public surface is re-exported below.
 
-/// Shared non-wrapping atomic accounting primitives.
-pub(crate) mod accounting;
 /// Device-side allocation pools, pinned-host pools, and `cuda_check`.
 pub mod allocations;
 /// Capability, feature-flag, and validation-cache policy.

@@ -12,11 +12,10 @@ use smallvec::SmallVec;
 use vyre_driver::accounting::{
     checked_add_u64_lazy, checked_add_usize_lazy, checked_atomic_add_u64_guarded_with_order,
     checked_atomic_add_usize_with_order, checked_atomic_next_u64_with_order,
-    checked_atomic_sub_usize_with_order,
+    checked_atomic_sub_u64 as checked_sub_u64, checked_atomic_sub_usize_with_order,
 };
 use vyre_driver::{BackendError, ResidentHandle, ResidentOwner};
 
-use super::accounting::checked_sub_u64;
 use super::allocations::{alloc_cuda_ptr, free_cuda_ptr};
 use super::staging_reserve::{reserve_hash_map, reserve_smallvec};
 
