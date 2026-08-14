@@ -669,28 +669,7 @@ impl CompiledPipeline for WgpuPipeline {
         }
         let (device, queue) = &*self.device_queue;
         self.raise_if_trapped(&input_handles, device, queue, deadline)?;
-        resize_vec_with(
-            outputs,
-            output_handles.len(),
-            Vec::new,
-            "borrowed dispatch output slots",
-        )?;
-        for ((handle, output), bytes) in output_handles
-            .iter()
-            .zip(self.output_bindings.iter())
-            .zip(outputs.iter_mut())
-        {
-            crate::pipeline::output_readback::read_trimmed_output(
-                handle,
-                output,
-                device,
-                &self.staging_pool,
-                queue,
-                "persistent pipeline output",
-                deadline,
-                bytes,
-            )?;
-        }
+        self.readback_persistent_outputs(&output_handles, deadline, outputs)?;
         enforce_actual_output_budget(config, outputs.as_slice())?;
         Ok(())
     }

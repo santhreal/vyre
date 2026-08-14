@@ -670,6 +670,11 @@ impl WgpuPipeline {
 }
 
 impl WgpuPipeline {
+    /// Read every persistent output handle back into caller slots, trimmed to
+    /// each output's declared byte range.
+    ///
+    /// The single readback pass for the persistent pool. Both the resident and
+    /// the legacy borrowed dispatch paths land here.
     fn readback_persistent_outputs(
         &self,
         output_handles: &[crate::buffer::GpuBufferHandle],
@@ -681,7 +686,7 @@ impl WgpuPipeline {
             outputs,
             output_handles.len(),
             Vec::new,
-            "borrowed persistent output slots",
+            "persistent pipeline output slots",
         )?;
         for ((handle, output), bytes) in output_handles
             .iter()
@@ -694,7 +699,7 @@ impl WgpuPipeline {
                 device,
                 &self.staging_pool,
                 queue,
-                "borrowed persistent output",
+                "persistent pipeline output",
                 deadline,
                 bytes,
             )?;
