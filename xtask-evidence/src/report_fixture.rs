@@ -56,6 +56,21 @@ pub(crate) fn cpu_sota_baseline(backend_ids: &[&str], min_speedup_x: f64) -> Val
     })
 }
 
+/// The short-form CPU-SOTA contract attributed to the primitive it measures.
+///
+/// Readers that report a failure by name need the attribution; readers that only
+/// decide pass or fail never look at it, which is why [`cpu_sota_baseline`] omits
+/// it rather than carrying a placeholder.
+pub(crate) fn cpu_sota_baseline_for(
+    primitive: &str,
+    backend_ids: &[&str],
+    min_speedup_x: f64,
+) -> Value {
+    let mut contract = cpu_sota_baseline(backend_ids, min_speedup_x);
+    contract["primitive"] = json!(primitive);
+    contract
+}
+
 /// One measured CPU-SOTA case: which backend ran it, the status the runner
 /// recorded, and the wall timings a reader derives the achieved speedup from.
 ///
@@ -100,6 +115,99 @@ pub(crate) fn percentile_metrics(wall_ns: [u64; 3], baseline_wall_ns: [u64; 3]) 
             "p95": baseline_wall_ns[1],
             "p99": baseline_wall_ns[2]
         }
+    })
+}
+
+/// [`percentile_metrics`] plus the kernel launch count a GPU case must report.
+///
+/// The release gate refuses a GPU measurement that never launched a kernel, so
+/// every artifact fixture for a dispatching backend carries this metric and the
+/// count is the only part of it a fixture varies.
+pub(crate) fn launched_percentile_metrics(
+    wall_ns: [u64; 3],
+    baseline_wall_ns: [u64; 3],
+    kernel_launches_p50: u64,
+) -> Value {
+    let mut metrics = percentile_metrics(wall_ns, baseline_wall_ns);
+    metrics["kernel_launches"] = json!({"samples": 30, "p50": kernel_launches_p50});
+    metrics
+}
+
+/// [`launched_percentile_metrics`] plus the PTX source cache counters a CUDA case
+/// reports, as `[entries, hits, misses]`.
+///
+/// The suite readers demand all three before they will call a CUDA measurement
+/// release-grade, so a fixture that omits one is testing the missing-metric path
+/// rather than the path it names.
+pub(crate) fn cuda_cached_metrics(
+    wall_ns: [u64; 3],
+    baseline_wall_ns: [u64; 3],
+    kernel_launches_p50: u64,
+    ptx_source_cache: [u64; 3],
+) -> Value {
+    let mut metrics = launched_percentile_metrics(wall_ns, baseline_wall_ns, kernel_launches_p50);
+    metrics["cuda_ptx_source_cache_entries"] = json!({"samples": 30, "p50": ptx_source_cache[0]});
+    metrics["cuda_ptx_source_cache_hits"] = json!({"samples": 30, "p50": ptx_source_cache[1]});
+    metrics["cuda_ptx_source_cache_misses"] = json!({"samples": 30, "p50": ptx_source_cache[2]});
+    metrics
+}
+
+/// A backend suite descriptor over the artifacts of one benchmark family.
+///
+/// `artifacts` is derived from the same paths the statuses name. A fixture that
+/// spells the list twice can disagree with itself by a typo, and a reader under
+/// test would then be judged against a shape no suite writer emits; a fixture
+/// that is about that disagreement assigns to `suite["artifacts"]`.
+pub(crate) fn backend_suite(
+    family_id: &str,
+    requested_case_id: &str,
+    artifact_paths: &[&str],
+) -> Value {
+    json!({
+        "artifact_statuses": artifact_paths
+            .iter()
+            .map(|path| json!({
+                "path": path,
+                "family_id": family_id,
+                "requested_case_id": requested_case_id
+            }))
+            .collect::<Vec<_>>(),
+        "artifacts": artifact_paths
+    })
+}
+
+/// The environment block an artifact carries when the GPU memory evidence is the
+/// only part of it a reader looks at: the release axis proves a `max_vram_mib`
+/// claim from `gpu_devices[0].memory_total_mib` and reads nothing else.
+pub(crate) fn gpu_memory_environment(memory_total_mib: u64) -> Value {
+    json!({"gpu_devices": [{"memory_total_mib": memory_total_mib}]})
+}
+
+/// The environment block the suite inspection readers parse, keyed
+/// `host_cpu_model`.
+///
+/// Every attribution string is a parameter because the provenance readers reject
+/// blank attribution, and that rejection is what several fixtures are about: a
+/// caller passing whitespace is stating the negative case in one line instead of
+/// restating the whole block to change four strings.
+pub(crate) fn host_environment(
+    host_cpu_model: &str,
+    gpu_name: &str,
+    nvidia_driver_version: &str,
+    nvidia_cuda_version: &str,
+) -> Value {
+    json!({
+        "host_cpu_model": host_cpu_model,
+        "gpu_devices": [
+            {
+                "name": gpu_name,
+                "memory_total_mib": 24576,
+                "compute_capability_major": 8,
+                "compute_capability_minor": 9
+            }
+        ],
+        "nvidia_driver_version": nvidia_driver_version,
+        "nvidia_cuda_version": nvidia_cuda_version
     })
 }
 

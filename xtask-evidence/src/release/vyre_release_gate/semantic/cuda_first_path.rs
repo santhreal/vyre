@@ -70,6 +70,7 @@ fn check_release_axes_source_artifacts(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::report_fixture::gpu_memory_environment;
 
     #[test]
     fn cuda_first_axes_counts_only_usable_source_artifacts() {
@@ -205,9 +206,7 @@ mod tests {
                 serde_json::to_string_pretty(&serde_json::json!({
                     "selected_backend": "cuda",
                     "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                    "environment": {
-                        "gpu_devices": [{"memory_total_mib": 24576}]
-                    },
+                    "environment": gpu_memory_environment(24576),
                     "cases": [
                         {
                             "id": format!("case-{index}"),

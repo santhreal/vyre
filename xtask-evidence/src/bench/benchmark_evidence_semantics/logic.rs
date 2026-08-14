@@ -2942,6 +2942,9 @@ fn is_blake3_hex_digest(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::report_fixture::{
+        cpu_sota_baseline, cpu_sota_baseline_for, cpu_sota_case, gpu_memory_environment,
+    };
     use std::path::Path;
 
     fn current_test_source_fingerprint(workspace_root: &Path) -> String {
@@ -3637,9 +3640,7 @@ mod tests {
                     "source_fingerprint": &source_fingerprint,
                     "source_tree_fingerprint": &source_tree_fingerprint,
                     "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                    "environment": {
-                        "gpu_devices": [{"memory_total_mib": 24576}]
-                    },
+                    "environment": gpu_memory_environment(24576),
                     "cases": [
                         {
                             "id": format!("release.scalar-required.{index}"),
@@ -3708,9 +3709,7 @@ mod tests {
                     "source_fingerprint": &source_fingerprint,
                     "source_tree_fingerprint": &source_tree_fingerprint,
                     "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                    "environment": {
-                        "gpu_devices": [{"memory_total_mib": 24576}]
-                    },
+                    "environment": gpu_memory_environment(24576),
                     "cases": [
                         {
                             "id": format!("release.scalar-drift.{index}"),
@@ -3776,9 +3775,7 @@ mod tests {
                     "source_fingerprint": &source_fingerprint,
                     "source_tree_fingerprint": &source_tree_fingerprint,
                     "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                    "environment": {
-                        "gpu_devices": [{"memory_total_mib": 24576}]
-                    },
+                    "environment": gpu_memory_environment(24576),
                     "cases": [
                         {
                             "id": format!("release.inventory-drift.{index}"),
@@ -4286,57 +4283,13 @@ mod tests {
         let report = serde_json::json!({
             "selected_backend": "cuda",
             "cases": [
-                {
-                    "id": "release.condition_eval.1m",
-                    "backend_id": "cuda",
-                    "status": "pass",
-                    "contract": {
-                        "baselines": [
-                            {
-                                "class": "CpuSota",
-                                "backend_ids": ["cuda"],
-                                "min_speedup_x": 100.0
-                            }
-                        ]
-                    },
-                    "metrics": {
-                        "wall_ns": {"p50": 10},
-                        "baseline_wall_ns": {"p50": 2000}
-                    },
-                    "performance": {"contract_passed": true, "speedup_x": 200.0}
-                },
-                {
-                    "id": "release.entropy_window.1m",
-                    "backend_id": "cuda",
-                    "status": "fail",
-                    "contract": {
-                        "baselines": [
-                            {
-                                "class": "CpuSota",
-                                "backend_ids": ["cuda"],
-                                "min_speedup_x": 100.0
-                            }
-                        ]
-                    },
-                    "metrics": {
-                        "wall_ns": {"p50": 10},
-                        "baseline_wall_ns": {"p50": 2000}
-                    },
-                    "performance": {"contract_passed": true, "speedup_x": 200.0}
-                },
+                cpu_sota_case("release.condition_eval.1m", "cuda", "pass", &["cuda"], 10, 2000),
+                cpu_sota_case("release.entropy_window.1m", "cuda", "fail", &["cuda"], 10, 2000),
                 {
                     "id": "release.wgpu-drift.1m",
                     "backend_id": "wgpu",
                     "status": "pass",
-                    "contract": {
-                        "baselines": [
-                            {
-                                "class": "CpuSota",
-                                "backend_ids": ["cuda"],
-                                "min_speedup_x": 100.0
-                            }
-                        ]
-                    },
+                    "contract": cpu_sota_baseline(&["cuda"], 100.0),
                     "performance": {"contract_passed": true, "speedup_x": 200.0}
                 }
             ]
@@ -4354,25 +4307,7 @@ mod tests {
         let report = serde_json::json!({
             "selected_backend": "cuda",
             "cases": [
-                {
-                    "id": "release.claimed-speedup.1m",
-                    "backend_id": "cuda",
-                    "status": "pass",
-                    "contract": {
-                        "baselines": [
-                            {
-                                "class": "CpuSota",
-                                "backend_ids": ["cuda"],
-                                "min_speedup_x": 100.0
-                            }
-                        ]
-                    },
-                    "metrics": {
-                        "wall_ns": {"p50": 100},
-                        "baseline_wall_ns": {"p50": 1000}
-                    },
-                    "performance": {"contract_passed": true, "speedup_x": 200.0}
-                }
+                cpu_sota_case("release.claimed-speedup.1m", "cuda", "pass", &["cuda"], 100, 1000)
             ]
         });
 
@@ -4392,15 +4327,7 @@ mod tests {
                     "id": "release.dispatch-timed.1m",
                     "backend_id": "cuda",
                     "status": "pass",
-                    "contract": {
-                        "baselines": [
-                            {
-                                "class": "CpuSota",
-                                "backend_ids": ["cuda"],
-                                "min_speedup_x": 100.0
-                            }
-                        ]
-                    },
+                    "contract": cpu_sota_baseline(&["cuda"], 100.0),
                     "metrics": {
                         "dispatch_ns": {"p50": 10},
                         "wall_ns": {"p50": 2000},
@@ -5514,15 +5441,7 @@ mod tests {
                         "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
                         "kernel_launches": {"samples": 30, "p50": 1}
                     },
-                    "contract": {
-                        "baselines": [
-                            {
-                                "class": "CpuSota",
-                                "backend_ids": ["cuda"],
-                                "min_speedup_x": 100.0
-                            }
-                        ]
-                    },
+                    "contract": cpu_sota_baseline(&["cuda"], 100.0),
                     "performance": {"contract_passed": true, "speedup_x": 120.0}
                 }
             ]
@@ -5846,16 +5765,7 @@ mod tests {
                     "id": "release.condition_eval.1m",
                     "backend_id": "wgpu",
                     "status": "pass",
-                    "contract": {
-                        "primitive": "condition eval",
-                        "baselines": [
-                            {
-                                "class": "CpuSota",
-                                "backend_ids": ["cuda"],
-                                "min_speedup_x": 100.0
-                            }
-                        ]
-                    },
+                    "contract": cpu_sota_baseline_for("condition eval", &["cuda"], 100.0),
                     "performance": {"contract_passed": true, "speedup_x": 120.0}
                 }
             ]
@@ -5900,16 +5810,7 @@ mod tests {
                 {
                     "id": "release.condition_eval.1m",
                     "backend_id": "wgpu",
-                    "contract": {
-                        "primitive": "condition eval",
-                        "baselines": [
-                            {
-                                "class": "CpuSota",
-                                "backend_ids": ["wgpu"],
-                                "min_speedup_x": 100.0
-                            }
-                        ]
-                    },
+                    "contract": cpu_sota_baseline_for("condition eval", &["wgpu"], 100.0),
                     "performance": {"contract_passed": true, "speedup_x": 120.0}
                 }
             ]
@@ -5955,16 +5856,7 @@ mod tests {
                     "id": "release.condition_eval.1m",
                     "backend_id": "wgpu",
                     "status": "pass",
-                    "contract": {
-                        "primitive": "condition eval",
-                        "baselines": [
-                            {
-                                "class": "CpuSota",
-                                "backend_ids": ["cuda", "wgpu"],
-                                "min_speedup_x": 100.0
-                            }
-                        ]
-                    },
+                    "contract": cpu_sota_baseline_for("condition eval", &["cuda", "wgpu"], 100.0),
                     "metrics": {
                         "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
                         "baseline_wall_ns": {"samples": 30, "p50": 1200, "p95": 1201, "p99": 1202}

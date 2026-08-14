@@ -936,7 +936,9 @@ pub(super) fn nonblank_str(value: &Value) -> Option<&str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::report_fixture::{case_summary, cpu_sota_contract};
+    use crate::report_fixture::{
+        case_summary, cpu_sota_contract, cuda_cached_metrics, host_environment,
+    };
 
     use tempfile::TempDir;
 
@@ -1275,19 +1277,7 @@ mod tests {
                 "source_fingerprint": "   ",
                 "source_tree_fingerprint": "\t",
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                "environment": {
-                    "host_cpu_model": " ",
-                    "gpu_devices": [
-                        {
-                            "name": " ",
-                            "memory_total_mib": 24576,
-                            "compute_capability_major": 8,
-                            "compute_capability_minor": 9
-                        }
-                    ],
-                    "nvidia_driver_version": "\t",
-                    "nvidia_cuda_version": "\n"
-                },
+                "environment": host_environment(" ", " ", "\t", "\n"),
                 "cases": [
                     {
                         "id": "release.condition_eval.1m",
@@ -1385,32 +1375,13 @@ mod tests {
                 "selected_backend": "cuda",
                 "source_tree_fingerprint": "source-tree-v1:abc",
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                "environment": {
-                    "host_cpu_model": "test CPU",
-                    "gpu_devices": [
-                        {
-                            "name": "RTX 5090",
-                            "memory_total_mib": 24576,
-                            "compute_capability_major": 8,
-                            "compute_capability_minor": 9
-                        }
-                    ],
-                    "nvidia_driver_version": "580.0",
-                    "nvidia_cuda_version": "13.0"
-                },
+                "environment": host_environment("test CPU", "RTX 5090", "580.0", "13.0"),
                 "cases": [
                     {
                         "id": "release.condition_eval.1m",
                         "backend_id": "cuda",
                         "status": "pass",
-                        "metrics": {
-                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
-                            "kernel_launches": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_entries": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_hits": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_misses": {"samples": 30, "p50": 0}
-                        },
+                        "metrics": cuda_cached_metrics([10, 11, 12], [1000, 1001, 1002], 1, [1, 1, 0]),
                         "performance": {"contract_passed": true, "speedup_x": 120.0}
                     }
                 ]
@@ -1472,32 +1443,13 @@ mod tests {
                 "source_fingerprint": "git:abc:dirty=false",
                 "source_tree_fingerprint": "source-tree-v1:stale",
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                "environment": {
-                    "host_cpu_model": "test CPU",
-                    "gpu_devices": [
-                        {
-                            "name": "RTX 5090",
-                            "memory_total_mib": 24576,
-                            "compute_capability_major": 8,
-                            "compute_capability_minor": 9
-                        }
-                    ],
-                    "nvidia_driver_version": "580.0",
-                    "nvidia_cuda_version": "13.0"
-                },
+                "environment": host_environment("test CPU", "RTX 5090", "580.0", "13.0"),
                 "cases": [
                     {
                         "id": "release.condition_eval.1m",
                         "backend_id": "cuda",
                         "status": "pass",
-                        "metrics": {
-                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
-                            "kernel_launches": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_entries": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_hits": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_misses": {"samples": 30, "p50": 0}
-                        },
+                        "metrics": cuda_cached_metrics([10, 11, 12], [1000, 1001, 1002], 1, [1, 1, 0]),
                         "performance": {"contract_passed": true, "speedup_x": 120.0}
                     }
                 ]
@@ -1547,46 +1499,20 @@ mod tests {
                 "source_fingerprint": "git:abc:dirty=false",
                 "source_tree_fingerprint": "source-tree-v1:abc",
                 "summary": {"total_cases": 2, "passed": 2, "failed": 0},
-                "environment": {
-                    "host_cpu_model": "test CPU",
-                    "gpu_devices": [
-                        {
-                            "name": "RTX 5090",
-                            "memory_total_mib": 24576,
-                            "compute_capability_major": 8,
-                            "compute_capability_minor": 9
-                        }
-                    ],
-                    "nvidia_driver_version": "580.0",
-                    "nvidia_cuda_version": "13.0"
-                },
+                "environment": host_environment("test CPU", "RTX 5090", "580.0", "13.0"),
                 "cases": [
                     {
                         "id": "release.condition_eval.1m",
                         "backend_id": "cuda",
                         "status": "pass",
-                        "metrics": {
-                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
-                            "kernel_launches": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_entries": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_hits": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_misses": {"samples": 30, "p50": 0}
-                        },
+                        "metrics": cuda_cached_metrics([10, 11, 12], [1000, 1001, 1002], 1, [1, 1, 0]),
                         "performance": {"contract_passed": true, "speedup_x": 120.0}
                     },
                     {
                         "id": "release.condition_eval.1m",
                         "backend_id": "cuda",
                         "status": "pass",
-                        "metrics": {
-                            "wall_ns": {"samples": 30, "p50": 12, "p95": 13, "p99": 14},
-                            "baseline_wall_ns": {"samples": 30, "p50": 1200, "p95": 1201, "p99": 1202},
-                            "kernel_launches": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_entries": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_hits": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_misses": {"samples": 30, "p50": 0}
-                        },
+                        "metrics": cuda_cached_metrics([12, 13, 14], [1200, 1201, 1202], 1, [1, 1, 0]),
                         "performance": {"contract_passed": true, "speedup_x": 100.0}
                     }
                 ]
@@ -1635,32 +1561,13 @@ mod tests {
                 "source_fingerprint": "git:abc:dirty=false",
                 "source_tree_fingerprint": "source-tree-v1:abc",
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                "environment": {
-                    "host_cpu_model": "test CPU",
-                    "gpu_devices": [
-                        {
-                            "name": "RTX 5090",
-                            "memory_total_mib": 24576,
-                            "compute_capability_major": 8,
-                            "compute_capability_minor": 9
-                        }
-                    ],
-                    "nvidia_driver_version": "580.0",
-                    "nvidia_cuda_version": "13.0"
-                },
+                "environment": host_environment("test CPU", "RTX 5090", "580.0", "13.0"),
                 "cases": [
                     {
                         "id": "release.condition_eval.1m",
                         "backend_id": "wgpu",
                         "status": "pass",
-                        "metrics": {
-                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
-                            "kernel_launches": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_entries": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_hits": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_misses": {"samples": 30, "p50": 0}
-                        },
+                        "metrics": cuda_cached_metrics([10, 11, 12], [1000, 1001, 1002], 1, [1, 1, 0]),
                         "contract": cpu_sota_contract("release condition eval", &["cuda"]),
                         "performance": {"contract_passed": true, "speedup_x": 200.0}
                     }
@@ -1721,6 +1628,10 @@ mod tests {
                 .expect("Fix: suite artifact must have parent directory."),
         )
         .expect("Fix: create CUDA suite integrity artifact parent directory.");
+        let mut fallback_dispatch_metrics =
+            cuda_cached_metrics([10, 11, 12], [2000, 2001, 2002], 1, [1, 1, 0]);
+        fallback_dispatch_metrics["cuda_resident_borrowed_fallback_dispatches"] =
+            json!({"p50": 2.0});
         fs::write(
             &artifact_path,
             serde_json::to_string_pretty(&json!({
@@ -1729,34 +1640,14 @@ mod tests {
                 "source_fingerprint": "git:abc:dirty=false",
                 "source_tree_fingerprint": "source-tree-v1:abc",
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                "environment": {
-                    "host_cpu_model": "test CPU",
-                    "gpu_devices": [
-                        {
-                            "name": "RTX 5090",
-                            "memory_total_mib": 24576,
-                            "compute_capability_major": 8,
-                            "compute_capability_minor": 9
-                        }
-                    ],
-                    "nvidia_driver_version": "580.0",
-                    "nvidia_cuda_version": "13.0"
-                },
+                "environment": host_environment("test CPU", "RTX 5090", "580.0", "13.0"),
                 "cases": [
                     {
                         "id": "release.condition_eval.1m",
                         "backend_id": "cuda",
                         "status": "pass",
                         "optimization_passes_applied": ["cuda-resident-borrowed-escape-hatch"],
-                        "metrics": {
-                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                            "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002},
-                            "kernel_launches": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_entries": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_hits": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_misses": {"samples": 30, "p50": 0},
-                            "cuda_resident_borrowed_fallback_dispatches": {"p50": 2.0}
-                        },
+                        "metrics": fallback_dispatch_metrics,
                         "contract": cpu_sota_contract("release condition eval", &["wgpu"]),
                         "performance": {"contract_passed": true, "speedup_x": 200.0}
                     }

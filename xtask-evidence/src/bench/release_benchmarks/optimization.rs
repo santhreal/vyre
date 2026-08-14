@@ -566,6 +566,7 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::report_fixture::{cpu_sota_baseline_for, gpu_memory_environment};
 
     use tempfile::TempDir;
 
@@ -592,9 +593,7 @@ mod tests {
                     "source_fingerprint": &source_fingerprint,
                     "source_tree_fingerprint": &source_tree_fingerprint,
                     "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                    "environment": {
-                        "gpu_devices": [{"memory_total_mib": 24576}]
-                    },
+                    "environment": gpu_memory_environment(24576),
                     "cases": [
                         {
                             "id": format!("release.axis.{index}"),
@@ -726,9 +725,7 @@ mod tests {
                     "selected_backend": "cuda",
                     "source_fingerprint": "git:abc123:dirty=true",
                     "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                    "environment": {
-                        "gpu_devices": [{"memory_total_mib": 24576}]
-                    },
+                    "environment": gpu_memory_environment(24576),
                     "cases": [
                         {
                             "id": format!("release.axis.provenance.{index}"),
@@ -801,9 +798,7 @@ mod tests {
                     "source_fingerprint": &source_fingerprint,
                     "source_tree_fingerprint": &source_tree_fingerprint,
                     "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                    "environment": {
-                        "gpu_devices": [{"memory_total_mib": 24576}]
-                    },
+                    "environment": gpu_memory_environment(24576),
                     "cases": [
                         {
                             "id": format!("release.axis.suite-backend.{index}"),
@@ -886,16 +881,11 @@ mod tests {
                             "optimizer_nodes_eliminated": {"p50": 15},
                             "benchmark_repeats": {"p50": 30}
                         },
-                        "contract": {
-                            "primitive": "foundation optimizer impact",
-                            "baselines": [
-                                {
-                                    "class": "CpuSota",
-                                    "backend_ids": ["cuda"],
-                                    "min_speedup_x": 100.0
-                                }
-                            ]
-                        },
+                        "contract": cpu_sota_baseline_for(
+                            "foundation optimizer impact",
+                            &["cuda"],
+                            100.0,
+                        ),
                         "performance": {"contract_passed": true, "speedup_x": 100.0}
                     }
                 ]

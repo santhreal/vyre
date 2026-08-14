@@ -685,6 +685,7 @@ fn check_backend_suite_artifact_status(
 #[cfg(test)]
 mod backend_suite_tests {
     use super::*;
+    use crate::report_fixture::{backend_suite, cuda_cached_metrics, launched_percentile_metrics};
 
     #[test]
     fn backend_suite_status_rejects_dirty_fingerprint_without_worktree_digest() {
@@ -821,14 +822,7 @@ mod backend_suite_tests {
                         "id": "release.condition_eval.1m",
                         "backend_id": "cuda",
                         "status": "pass",
-                        "metrics": {
-                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
-                            "kernel_launches": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_entries": {"samples": 30, "p50": 1},
-                            "cuda_ptx_source_cache_hits": {"samples": 30, "p50": 0},
-                            "cuda_ptx_source_cache_misses": {"samples": 30, "p50": 1}
-                        },
+                        "metrics": cuda_cached_metrics([10, 11, 12], [1000, 1001, 1002], 1, [1, 0, 1]),
                         "performance": {"contract_passed": true, "speedup_x": 120.0}
                     }
                 ]
@@ -1131,47 +1125,27 @@ mod backend_suite_tests {
         );
         std::fs::write(
             benchmark_dir.join("cuda-release-suite.json"),
-            serde_json::to_string_pretty(&serde_json::json!({
-                "artifact_statuses": [
-                    {
-                        "path": "release/evidence/benchmarks/cuda-condition-a.json",
-                        "family_id": "condition-eval",
-                        "requested_case_id": "release.condition_eval.1m"
-                    },
-                    {
-                        "path": "release/evidence/benchmarks/cuda-condition-b.json",
-                        "family_id": "condition-eval",
-                        "requested_case_id": "release.condition_eval.1m"
-                    }
-                ],
-                "artifacts": [
+            serde_json::to_string_pretty(&backend_suite(
+                "condition-eval",
+                "release.condition_eval.1m",
+                &[
                     "release/evidence/benchmarks/cuda-condition-a.json",
-                    "release/evidence/benchmarks/cuda-condition-b.json"
-                ]
-            }))
+                    "release/evidence/benchmarks/cuda-condition-b.json",
+                ],
+            ))
             .expect("Fix: serialize CUDA suite for backend suite duplicate parity test."),
         )
         .expect("Fix: write CUDA suite for backend suite duplicate parity test.");
         std::fs::write(
             benchmark_dir.join("wgpu-fallback-suite.json"),
-            serde_json::to_string_pretty(&serde_json::json!({
-                "artifact_statuses": [
-                    {
-                        "path": "release/evidence/benchmarks/wgpu-condition-a.json",
-                        "family_id": "condition-eval",
-                        "requested_case_id": "release.condition_eval.1m"
-                    },
-                    {
-                        "path": "release/evidence/benchmarks/wgpu-condition-b.json",
-                        "family_id": "condition-eval",
-                        "requested_case_id": "release.condition_eval.1m"
-                    }
-                ],
-                "artifacts": [
+            serde_json::to_string_pretty(&backend_suite(
+                "condition-eval",
+                "release.condition_eval.1m",
+                &[
                     "release/evidence/benchmarks/wgpu-condition-a.json",
-                    "release/evidence/benchmarks/wgpu-condition-b.json"
-                ]
-            }))
+                    "release/evidence/benchmarks/wgpu-condition-b.json",
+                ],
+            ))
             .expect("Fix: serialize WGPU suite for backend suite duplicate parity test."),
         )
         .expect("Fix: write WGPU suite for backend suite duplicate parity test.");
@@ -1467,11 +1441,7 @@ mod backend_suite_tests {
                         "id": "release.condition_eval.1m",
                         "backend_id": "wgpu",
                         "status": "pass",
-                        "metrics": {
-                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
-                            "kernel_launches": {"samples": 30, "p50": 1}
-                        },
+                        "metrics": launched_percentile_metrics([10, 11, 12], [1000, 1001, 1002], 1),
                         "performance": {"contract_passed": true, "speedup_x": 120.0}
                     }
                 ]
