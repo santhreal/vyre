@@ -26,8 +26,9 @@
 use super::report::{BankAccessSite, BankConflictKind, BankConflictReport};
 use super::DEFAULT_BANK_COUNT;
 use crate::analyses::constant_u32_operand;
-use crate::analyses::{child_body_operands, producer_map, AccessKind, ProducerMap};
-use crate::{KernelBody, KernelDescriptor, KernelOpKind, MemoryClass};
+use crate::analyses::structured_walk::{walk_structured, ArmDescent, StructuredVisitor};
+use crate::analyses::{producer_map, AccessKind, ProducerMap};
+use crate::{BindingLayout, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, MemoryClass};
 use vyre_foundation::ir::BinOp;
 
 /// Run bank-conflict analysis using the default 32-bank layout.
@@ -39,72 +40,73 @@ pub fn analyze(desc: &KernelDescriptor) -> BankConflictReport {
 /// Run bank-conflict analysis with an explicit bank count.
 #[must_use]
 pub fn analyze_with_bank_count(desc: &KernelDescriptor, bank_count: u32) -> BankConflictReport {
-    let mut sites = Vec::new();
-    walk_body(&desc.body, &desc.bindings, bank_count, &mut sites, 0);
+    let mut collector = SiteCollector {
+        bindings: &desc.bindings,
+        bank_count,
+        sites: Vec::new(),
+        producers: Vec::new(),
+    };
+    walk_structured(&desc.body, ArmDescent::Enter, &mut collector);
     BankConflictReport {
         kernel_id: desc.id.clone(),
         bank_count,
-        sites,
+        sites: collector.sites,
     }
 }
 
-fn walk_body(
-    body: &KernelBody,
-    bindings: &crate::BindingLayout,
-    bank_count: u32,
-    sites: &mut Vec<BankAccessSite>,
-    op_index_offset: usize,
-) {
-    let producers = producer_map(body);
-    for (local_idx, op) in body.ops.iter().enumerate() {
-        let op_index = op_index_offset + local_idx;
-        let Some(kind) = (match op.kind {
-            KernelOpKind::LoadShared => Some(AccessKind::Load),
-            KernelOpKind::StoreShared => Some(AccessKind::Store),
-            KernelOpKind::StructuredIfThen
-            | KernelOpKind::StructuredIfThenElse
-            | KernelOpKind::StructuredForLoop { .. }
-            | KernelOpKind::StructuredBlock
-            | KernelOpKind::Region { .. } => {
-                for child_id in child_body_operands(&op.kind, &op.operands) {
-                    if let Some(child) = body.child_bodies.get(child_id as usize) {
-                        walk_body(
-                            child,
-                            bindings,
-                            bank_count,
-                            sites,
-                            op_index_offset + body.ops.len(),
-                        );
-                    }
-                }
-                None
-            }
-            _ => None,
-        }) else {
-            continue;
-        };
+/// Slot and index operand positions on both shared access kinds.
+const SLOT_POS: usize = 0;
+const INDEX_POS: usize = 1;
 
+/// Classifies every shared-memory access the walk reaches.
+///
+/// The producer map is per body, so it is rebuilt on entry and dropped on
+/// exit. Without the exit hook the map of a nested arm would still be in hand
+/// when the parent's next op arrives, which is why this analysis used to carry
+/// its own copy of the descent.
+struct SiteCollector<'a> {
+    bindings: &'a BindingLayout,
+    bank_count: u32,
+    sites: Vec<BankAccessSite>,
+    producers: Vec<ProducerMap<'a>>,
+}
+
+impl<'a> StructuredVisitor<'a> for SiteCollector<'a> {
+    fn enter_body(&mut self, body: &'a KernelBody, _op_index_offset: usize) {
+        self.producers.push(producer_map(body));
+    }
+
+    fn exit_body(&mut self, _body: &'a KernelBody) {
+        self.producers.pop();
+    }
+
+    fn visit_op(&mut self, body: &'a KernelBody, op_index: usize, op: &'a KernelOp) {
+        let kind = match op.kind {
+            KernelOpKind::LoadShared => AccessKind::Load,
+            KernelOpKind::StoreShared => AccessKind::Store,
+            _ => return,
+        };
+        if op.operands.len() <= INDEX_POS {
+            return;
+        }
         // We only flag accesses whose target binding is in the Shared
         // memory class  -  guards against a future emitter using
         // LoadShared on a non-shared binding (which would be invalid
         // but the analysis stays robust).
-        let slot_pos = 0usize;
-        let index_pos = 1usize;
-        if op.operands.len() <= index_pos {
-            continue;
-        }
-        let binding_slot = op.operands[slot_pos];
-        let is_shared = bindings
+        let binding_slot = op.operands[SLOT_POS];
+        let is_shared = self
+            .bindings
             .slots
             .iter()
             .any(|b| b.slot == binding_slot && matches!(b.memory_class, MemoryClass::Shared));
         if !is_shared {
-            continue;
+            return;
         }
-
-        let index_operand_id = op.operands[index_pos];
-        let conflict = classify_index(body, &producers, index_operand_id, bank_count);
-        sites.push(BankAccessSite {
+        let Some(producers) = self.producers.last() else {
+            return;
+        };
+        let conflict = classify_index(body, producers, op.operands[INDEX_POS], self.bank_count);
+        self.sites.push(BankAccessSite {
             op_index,
             kind,
             binding_slot,
@@ -466,6 +468,42 @@ mod tests {
         assert_eq!(
             r6.sites[0].conflict,
             BankConflictKind::Conflict { way_count: 3 }
+        );
+    }
+
+    /// The walk reports a nested site between its parent's branch and the
+    /// parent's next op, and each site is classified against the producer map
+    /// of the body that owns it. A single map carried across bodies would
+    /// classify the post-branch parent load `Unknown`, because its `Mul`
+    /// producer lives in the parent and not in the arm.
+    #[test]
+    fn a_site_after_a_branch_is_classified_against_the_parent_body() {
+        let kk = k(
+            vec![shared_binding(0)],
+            body()
+                .op(tid([], 0))
+                .op(lit(0, 1))
+                .op(binop(BinOp::Mul, 0, 1, 2))
+                .op(effect(KernelOpKind::StructuredIfThen, [2, 0]))
+                .op(op(KernelOpKind::LoadShared, [0, 2], 3))
+                .child(
+                    body()
+                        .op(tid([], 10))
+                        .op(op(KernelOpKind::LoadShared, [0, 10], 11)),
+                )
+                .literal(LiteralValue::U32(4)),
+        );
+        let r = analyze(&kk);
+        assert_eq!(
+            r.sites
+                .iter()
+                .map(|site| (site.op_index, site.conflict))
+                .collect::<Vec<_>>(),
+            vec![
+                (6, BankConflictKind::NoConflict),
+                (4, BankConflictKind::Conflict { way_count: 4 }),
+            ],
+            "Fix: the arm's site must be reported before the parent's next op, and the parent's site must classify against the parent's own producers."
         );
     }
 

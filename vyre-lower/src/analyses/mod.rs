@@ -106,16 +106,65 @@ pub(crate) fn body_refs_only(body: &KernelBody, produced: &rustc_hash::FxHashSet
 /// Child-body indices referenced by a structured control-flow op's operands.
 ///
 /// ONE owner for the per-op-kind child-body start-offset table; every
-/// placement analysis imports this instead of re-deriving the skip offsets.
+/// placement analysis and every descriptor walk imports this instead of
+/// re-deriving the skip offsets.
+///
+/// The match is exhaustive on purpose. A `_` arm here reads as "this op names
+/// no child body", which is the wrong default: a new `KernelOpKind` that
+/// carries a nested body would silently stop every analysis from descending
+/// into it, and the analyses would still report clean. Adding a variant now
+/// fails to compile until someone states where its child indices begin.
 pub fn child_body_operands<'a>(
     kind: &KernelOpKind,
     operands: &'a [u32],
 ) -> impl Iterator<Item = u32> + 'a {
     let start = match kind {
+        // Structured control flow: child indices follow the condition or the
+        // loop bounds.
         KernelOpKind::StructuredIfThen | KernelOpKind::StructuredIfThenElse => 1,
         KernelOpKind::StructuredForLoop { .. } => 2,
         KernelOpKind::StructuredBlock | KernelOpKind::Region { .. } => 0,
-        _ => operands.len(),
+        // Every other kind names no child body, so no operand of it is a
+        // child index.
+        KernelOpKind::Literal
+        | KernelOpKind::Copy
+        | KernelOpKind::LocalInvocationId
+        | KernelOpKind::GlobalInvocationId
+        | KernelOpKind::WorkgroupId
+        | KernelOpKind::SubgroupLocalId
+        | KernelOpKind::SubgroupSize
+        | KernelOpKind::LoopIndex { .. }
+        | KernelOpKind::LoopCarrierInit { .. }
+        | KernelOpKind::LoopCarrier { .. }
+        | KernelOpKind::LoopCarrierEnd { .. }
+        | KernelOpKind::LoadGlobal
+        | KernelOpKind::LoadShared
+        | KernelOpKind::LoadConstant
+        | KernelOpKind::BufferLength
+        | KernelOpKind::StoreGlobal
+        | KernelOpKind::StoreShared
+        | KernelOpKind::BinOpKind(_)
+        | KernelOpKind::UnOpKind(_)
+        | KernelOpKind::Fma
+        | KernelOpKind::MatrixMma { .. }
+        | KernelOpKind::Select
+        | KernelOpKind::Cast { .. }
+        | KernelOpKind::Atomic { .. }
+        | KernelOpKind::SubgroupBallot
+        | KernelOpKind::SubgroupShuffle
+        | KernelOpKind::SubgroupBroadcast
+        | KernelOpKind::SubgroupReduce { .. }
+        | KernelOpKind::Return
+        | KernelOpKind::Barrier { .. }
+        | KernelOpKind::AsyncLoad { .. }
+        | KernelOpKind::AsyncStore { .. }
+        | KernelOpKind::AsyncWait { .. }
+        | KernelOpKind::Trap { .. }
+        | KernelOpKind::Resume { .. }
+        | KernelOpKind::IndirectDispatch { .. }
+        | KernelOpKind::Call { .. }
+        | KernelOpKind::OpaqueExpr(_)
+        | KernelOpKind::OpaqueNode(_) => operands.len(),
     };
     operands.iter().skip(start).copied()
 }

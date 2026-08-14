@@ -30,7 +30,7 @@ pub enum ArmDescent {
 
 /// Receives the sites a [`walk_structured`] pass reaches.
 ///
-/// Both hooks default to doing nothing, so an analysis implements only the
+/// Every hook defaults to doing nothing, so an analysis implements only the
 /// granularity it needs: whole-body for window scans, per-op for site
 /// classification.
 pub trait StructuredVisitor<'a> {
@@ -39,6 +39,19 @@ pub trait StructuredVisitor<'a> {
     /// `op_index_offset` is the flattened index of the body's first op.
     fn enter_body(&mut self, body: &'a KernelBody, op_index_offset: usize) {
         let _ = (body, op_index_offset);
+    }
+
+    /// Called once on leaving `body`, after its last op and after every child
+    /// body it reaches.
+    ///
+    /// WHY: a child body is walked in the middle of its parent's op stream, so
+    /// a visitor that caches per-body state keyed only on `enter_body` would
+    /// still be holding the child's state when the parent's next op arrives.
+    /// Bank-conflict and coalescing classification each avoided that by
+    /// hand-rolling the descent instead of using this walk, which is how the
+    /// per-kind child-body decision ended up restated in both.
+    fn exit_body(&mut self, body: &'a KernelBody) {
+        let _ = body;
     }
 
     /// Called for each op of `body` in order, before the walk descends into
@@ -78,6 +91,7 @@ where
             }
         }
     }
+    visitor.exit_body(body);
 }
 
 fn skips_arms(arms: ArmDescent, kind: &KernelOpKind) -> bool {
@@ -179,6 +193,45 @@ mod tests {
             .child(arm)
             .child(body())
             .build()
+    }
+
+    /// Per-body state is only safe to cache if `exit_body` lands before the
+    /// parent's next op. The nested fixture is exactly the interleaving that
+    /// breaks a cache keyed on `enter_body` alone: the inner arm is entered
+    /// and left in the middle of the outer body's op stream.
+    #[test]
+    fn a_child_body_is_left_before_the_parent_resumes() {
+        #[derive(Default)]
+        struct Order {
+            events: Vec<String>,
+        }
+        impl<'a> StructuredVisitor<'a> for Order {
+            fn enter_body(&mut self, _body: &'a KernelBody, op_index_offset: usize) {
+                self.events.push(format!("enter@{op_index_offset}"));
+            }
+            fn exit_body(&mut self, body: &'a KernelBody) {
+                self.events.push(format!("exit/{}", body.ops.len()));
+            }
+            fn visit_op(&mut self, _body: &'a KernelBody, op_index: usize, _op: &'a KernelOp) {
+                self.events.push(format!("op@{op_index}"));
+            }
+        }
+
+        let mut order = Order::default();
+        walk_structured(&nested_then_sibling(), ArmDescent::Enter, &mut order);
+        assert_eq!(
+            order.events,
+            vec![
+                "enter@0", "op@0", "op@1", // outer body, up to its first branch
+                "enter@3", "op@3", "op@4", // that branch's arm
+                "enter@5", "op@5", "exit/1", // the arm's own nested arm
+                "exit/2",  // the arm closes before the outer body resumes
+                "op@2",    // outer body's next op, with the arm already left
+                "enter@3", "exit/0", // the second outer branch's empty arm
+                "exit/3",
+            ],
+            "Fix: walk_structured must leave a child body before the parent's next op, or a visitor caching per-body state reads the child's state for a parent op."
+        );
     }
 
     #[test]
