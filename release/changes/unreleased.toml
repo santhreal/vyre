@@ -1041,8 +1041,6 @@ category = "Fixed"
 text = "The pass-family benchmark manifest records a family as covered only when the case proving it passed. It used to push each specification's declared families whether or not the artifact behind them could be read, and the specification list is the same list as `required_pass_families`, so `uncovered_pass_families` was structurally always empty and the release gate demanding it be empty could not fail on the one thing it exists to catch: a missing or blocked artifact. A test asserts that state, so the unconditional form turns the suite red."
 
 [[fragments]]
-
-[[fragments]]
 id = "naga-buffer-target-scan-has-one-owner"
 category = "Fixed"
 text = "The pre-emission scan that decides which buffers Naga emits as `atomic<...>` and which keep `BufferAccess::ReadWrite` takes descent, operand positions and per-node buffer direction from the exhaustive owners in `vyre_foundation::transform::visit`, and returns both sets together. The write half was a hand-rolled recursive descent ending in `_ => {}`, so the four collective variants were reported as writing nothing: a buffer written only by an `AllReduce`, `AllGather`, `ReduceScatter` or `Broadcast` was auto-downgraded to `ReadOnly` and emitted as `var<storage, read>`. The atomic half restated `node_operands` as fifteen `NodeVisitor` method bodies. `node_buffer_refs` disagreed with the old scan about `Node::IndirectDispatch`, which names its count buffer as a read because the host writes it and the shader only reads it; the scan now agrees, and no emitted shader changes because the Naga emitter rejects `IndirectDispatch` before producing WGSL."
