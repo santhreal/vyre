@@ -21,24 +21,10 @@ use common::u32_bytes;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-/// Probe inputs (as u32 bit patterns) that exercise truncation and the signed
-/// boundary: 300 (low byte 44), 0x12345 (low half 0x2345), 200 (i8 -56), 0xFFFF
-/// (i16 -1 / u16 max), 0x8000 (i16 MIN), 0xFFFFFFFF (all ones), 0, 127, 128, 255.
-fn inputs() -> Vec<u32> {
-    vec![
-        300,
-        0x0001_2345,
-        200,
-        0x0000_FFFF,
-        0x0000_8000,
-        0xFFFF_FFFF,
-        0,
-        127,
-        128,
-        255,
-    ]
-}
+use vyre_test_support::cast_parity::{
+    NARROWING_INPUTS, U32_TO_I16_EXPECTED, U32_TO_I8_EXPECTED, U32_TO_U16_EXPECTED,
+    U32_TO_U8_EXPECTED,
+};
 
 /// `out = cast(wide, cast(narrow, load(input)))` for every input word. `wide` is
 /// the non-narrowing integer that round-trips the narrowed value into a 32-bit
@@ -66,7 +52,7 @@ fn narrow_program(narrow: DataType, wide: DataType, n: u32) -> Program {
 }
 
 fn run(backend: &WgpuBackend, narrow: DataType, wide: DataType) -> Vec<u32> {
-    let ins = inputs();
+    let ins = NARROWING_INPUTS;
     let n = ins.len() as u32;
     let program = narrow_program(narrow, wide, n);
     let input_bytes = u32_bytes(&ins);
@@ -89,18 +75,20 @@ fn u32_to_u8_narrowing_truncates_low_byte_on_gpu() {
     let backend =
         WgpuBackend::acquire().expect("Fix: narrowing-cast parity requires a live GPU backend.");
     let gpu = run(&backend, DataType::U8, DataType::U32);
-    let expected: Vec<u32> = inputs().iter().map(|&v| u32::from(v as u8)).collect();
+    let expected: Vec<u32> = NARROWING_INPUTS
+        .iter()
+        .map(|&v| u32::from(v as u8))
+        .collect();
     // Pin the contract literally: 300->44, 0x12345->0x45, 200->200, 0xFFFF->0xFF,
     // 0x8000->0, 0xFFFFFFFF->0xFF, 0->0, 127->127, 128->128, 255->255.
     assert_eq!(
-        expected,
-        vec![44, 0x45, 200, 0xFF, 0, 0xFF, 0, 127, 128, 255],
+        expected, U32_TO_U8_EXPECTED,
         "reference u32->u8 truncation drifted"
     );
     assert_eq!(
         gpu, expected,
         "GPU u32->u8 narrowing diverged from `as u8`.\n  inputs:   {:?}\n  expected: {:?}\n  gpu:      {:?}",
-        inputs(), expected, gpu
+        NARROWING_INPUTS, expected, gpu
     );
 }
 
@@ -109,10 +97,12 @@ fn u32_to_u16_narrowing_truncates_low_half_on_gpu() {
     let backend =
         WgpuBackend::acquire().expect("Fix: narrowing-cast parity requires a live GPU backend.");
     let gpu = run(&backend, DataType::U16, DataType::U32);
-    let expected: Vec<u32> = inputs().iter().map(|&v| u32::from(v as u16)).collect();
+    let expected: Vec<u32> = NARROWING_INPUTS
+        .iter()
+        .map(|&v| u32::from(v as u16))
+        .collect();
     assert_eq!(
-        expected,
-        vec![300, 0x2345, 200, 0xFFFF, 0x8000, 0xFFFF, 0, 127, 128, 255],
+        expected, U32_TO_U16_EXPECTED,
         "reference u32->u16 truncation drifted"
     );
     assert_eq!(
@@ -129,12 +119,14 @@ fn u32_to_i8_narrowing_sign_extends_on_gpu() {
         .into_iter()
         .map(|w| w as i32)
         .collect();
-    let expected: Vec<i32> = inputs().iter().map(|&v| i32::from(v as u8 as i8)).collect();
+    let expected: Vec<i32> = NARROWING_INPUTS
+        .iter()
+        .map(|&v| i32::from(v as u8 as i8))
+        .collect();
     // 300->44, 0x12345->0x45(69), 200->-56, 0xFFFF->-1, 0x8000->0, 0xFFFFFFFF->-1,
     // 0->0, 127->127, 128->-128, 255->-1.
     assert_eq!(
-        expected,
-        vec![44, 69, -56, -1, 0, -1, 0, 127, -128, -1],
+        expected, U32_TO_I8_EXPECTED,
         "reference u32->i8 sign-extension drifted"
     );
     assert_eq!(
@@ -151,14 +143,13 @@ fn u32_to_i16_narrowing_sign_extends_on_gpu() {
         .into_iter()
         .map(|w| w as i32)
         .collect();
-    let expected: Vec<i32> = inputs()
+    let expected: Vec<i32> = NARROWING_INPUTS
         .iter()
         .map(|&v| i32::from(v as u16 as i16))
         .collect();
     // 0xFFFF->-1, 0x8000->-32768, others positive low-half values.
     assert_eq!(
-        expected,
-        vec![300, 0x2345, 200, -1, -32768, -1, 0, 127, 128, 255],
+        expected, U32_TO_I16_EXPECTED,
         "reference u32->i16 sign-extension drifted"
     );
     assert_eq!(

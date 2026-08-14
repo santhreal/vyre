@@ -25,6 +25,9 @@ use common::u32_bytes;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_test_support::cast_parity::{
+    I32_TO_I64_EXPECTED, SIGNED_WIDENING_INPUTS, UNSIGNED_WIDENING_INPUTS,
+};
 
 /// `out[i] = cast(target64, load(src, i))`: `src` is a 32-bit buffer (signed or
 /// unsigned per `src_ty`), `out` is the 64-bit `target64` buffer (`array<vec2<u32>>`).
@@ -71,45 +74,17 @@ fn run(backend: &WgpuBackend, src_ty: DataType, target64: DataType, words: &[u32
         .collect()
 }
 
-/// Bit patterns spanning the sign boundary and the extremes.
-fn signed_inputs() -> Vec<i32> {
-    vec![
-        -7,
-        7,
-        -1,
-        0,
-        1,
-        i32::MIN,
-        i32::MAX,
-        -128,
-        0x4000_0000,
-        -0x4000_0000,
-    ]
-}
-
 #[test]
 fn i32_to_i64_sign_extends_high_word_on_gpu() {
     let backend =
         WgpuBackend::acquire().expect("Fix: 64-bit widening parity requires a live GPU backend.");
-    let ins = signed_inputs();
+    let ins = SIGNED_WIDENING_INPUTS;
     let words: Vec<u32> = ins.iter().map(|&v| v as u32).collect();
     let gpu = run(&backend, DataType::I32, DataType::I64, &words);
     let expected: Vec<u64> = ins.iter().map(|&v| (v as i64) as u64).collect();
     // Pin the contract literally: negatives MUST carry a 0xFFFF_FFFF high word.
     assert_eq!(
-        expected,
-        vec![
-            0xFFFF_FFFF_FFFF_FFF9,
-            0x0000_0000_0000_0007,
-            0xFFFF_FFFF_FFFF_FFFF,
-            0x0000_0000_0000_0000,
-            0x0000_0000_0000_0001,
-            0xFFFF_FFFF_8000_0000,
-            0x0000_0000_7FFF_FFFF,
-            0xFFFF_FFFF_FFFF_FF80,
-            0x0000_0000_4000_0000,
-            0xFFFF_FFFF_C000_0000,
-        ],
+        expected, I32_TO_I64_EXPECTED,
         "reference i32->i64 sign-extension drifted"
     );
     assert_eq!(
@@ -128,7 +103,7 @@ fn i32_to_u64_sign_extends_high_word_on_gpu() {
     // does not change the SOURCE-driven high word.
     let backend =
         WgpuBackend::acquire().expect("Fix: 64-bit widening parity requires a live GPU backend.");
-    let ins = signed_inputs();
+    let ins = SIGNED_WIDENING_INPUTS;
     let words: Vec<u32> = ins.iter().map(|&v| v as u32).collect();
     let gpu = run(&backend, DataType::I32, DataType::U64, &words);
     let expected: Vec<u64> = ins.iter().map(|&v| v as u64).collect();
@@ -151,7 +126,7 @@ fn u32_to_u64_zero_extends_high_word_on_gpu() {
     // on the SOURCE, not the value's top bit.
     let backend =
         WgpuBackend::acquire().expect("Fix: 64-bit widening parity requires a live GPU backend.");
-    let words: Vec<u32> = vec![0xFFFF_FFFF, 0x8000_0000, 7, 0, 1, 0x7FFF_FFFF, 0xDEAD_BEEF];
+    let words = UNSIGNED_WIDENING_INPUTS;
     let gpu = run(&backend, DataType::U32, DataType::U64, &words);
     let expected: Vec<u64> = words.iter().map(|&w| u64::from(w)).collect();
     assert_eq!(

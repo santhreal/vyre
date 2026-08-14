@@ -25,24 +25,10 @@ use vyre_driver::parity_harness::{
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{DataType, Expr};
-
-/// Probe inputs (u32 bit patterns) exercising truncation and the signed boundary:
-/// 300 (low byte 44), 0x12345 (low half 0x2345), 200 (i8 -56), 0xFFFF (i16 -1 /
-/// u16 max), 0x8000 (i16 MIN), 0xFFFFFFFF (all ones), 0, 127, 128, 255.
-fn inputs() -> Vec<u32> {
-    vec![
-        300,
-        0x0001_2345,
-        200,
-        0x0000_FFFF,
-        0x0000_8000,
-        0xFFFF_FFFF,
-        0,
-        127,
-        128,
-        255,
-    ]
-}
+use vyre_test_support::cast_parity::{
+    NARROWING_INPUTS, U32_TO_I16_EXPECTED, U32_TO_I8_EXPECTED, U32_TO_U16_EXPECTED,
+    U32_TO_U8_EXPECTED,
+};
 
 /// Dispatch `out = cast(wide, cast(narrow, input))` for every probe input.
 ///
@@ -51,7 +37,7 @@ fn inputs() -> Vec<u32> {
 /// reflects exactly what the narrowing cast produced rather than what a
 /// byte-element store would have masked it to.
 fn run(backend: &CudaBackend, narrow: DataType, wide: DataType) -> Vec<u32> {
-    let ins = inputs();
+    let ins = NARROWING_INPUTS;
     let buffers = vec![ParityInput::u32_words("input", &ins)];
     let count = ins.len() as u32;
     let program = elementwise_program(wide.clone(), &buffers, count, &|loads| {
@@ -71,16 +57,18 @@ fn run(backend: &CudaBackend, narrow: DataType, wide: DataType) -> Vec<u32> {
 fn u32_to_u8_narrowing_truncates_low_byte_on_cuda() {
     let backend = live_backend();
     let gpu = run(&backend, DataType::U8, DataType::U32);
-    let expected: Vec<u32> = inputs().iter().map(|&v| u32::from(v as u8)).collect();
+    let expected: Vec<u32> = NARROWING_INPUTS
+        .iter()
+        .map(|&v| u32::from(v as u8))
+        .collect();
     assert_eq!(
-        expected,
-        vec![44, 0x45, 200, 0xFF, 0, 0xFF, 0, 127, 128, 255],
+        expected, U32_TO_U8_EXPECTED,
         "reference u32->u8 truncation drifted"
     );
     assert_eq!(
         gpu, expected,
         "CUDA u32->u8 narrowing diverged from `as u8` (cvt.u32.u8 skipped?).\n  inputs:   {:?}\n  expected: {:?}\n  gpu:      {:?}",
-        inputs(), expected, gpu
+        NARROWING_INPUTS, expected, gpu
     );
 }
 
@@ -88,10 +76,12 @@ fn u32_to_u8_narrowing_truncates_low_byte_on_cuda() {
 fn u32_to_u16_narrowing_truncates_low_half_on_cuda() {
     let backend = live_backend();
     let gpu = run(&backend, DataType::U16, DataType::U32);
-    let expected: Vec<u32> = inputs().iter().map(|&v| u32::from(v as u16)).collect();
+    let expected: Vec<u32> = NARROWING_INPUTS
+        .iter()
+        .map(|&v| u32::from(v as u16))
+        .collect();
     assert_eq!(
-        expected,
-        vec![300, 0x2345, 200, 0xFFFF, 0x8000, 0xFFFF, 0, 127, 128, 255],
+        expected, U32_TO_U16_EXPECTED,
         "reference u32->u16 truncation drifted"
     );
     assert_eq!(
@@ -107,10 +97,12 @@ fn u32_to_i8_narrowing_sign_extends_on_cuda() {
         .into_iter()
         .map(|w| w as i32)
         .collect();
-    let expected: Vec<i32> = inputs().iter().map(|&v| i32::from(v as u8 as i8)).collect();
+    let expected: Vec<i32> = NARROWING_INPUTS
+        .iter()
+        .map(|&v| i32::from(v as u8 as i8))
+        .collect();
     assert_eq!(
-        expected,
-        vec![44, 69, -56, -1, 0, -1, 0, 127, -128, -1],
+        expected, U32_TO_I8_EXPECTED,
         "reference u32->i8 sign-extension drifted"
     );
     assert_eq!(
@@ -126,13 +118,12 @@ fn u32_to_i16_narrowing_sign_extends_on_cuda() {
         .into_iter()
         .map(|w| w as i32)
         .collect();
-    let expected: Vec<i32> = inputs()
+    let expected: Vec<i32> = NARROWING_INPUTS
         .iter()
         .map(|&v| i32::from(v as u16 as i16))
         .collect();
     assert_eq!(
-        expected,
-        vec![300, 0x2345, 200, -1, -32768, -1, 0, 127, 128, 255],
+        expected, U32_TO_I16_EXPECTED,
         "reference u32->i16 sign-extension drifted"
     );
     assert_eq!(
