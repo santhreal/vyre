@@ -117,7 +117,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-driver --example vyre_driver_release
 
 ### Features
 
-- Manifest features: `default`, `self-substrate-adapters`
+- Manifest features: `default`, `self-substrate-adapters`, `test-fixtures`
 - Default feature members: None
 
 ### Errors and unsupported behavior

@@ -59,6 +59,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --all-features
 | `test` | `reference_abi_predicates` | `vyre-reference/tests/reference_abi_predicates.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test reference_abi_predicates` |
 | `test` | `reference_error_contract` | `vyre-reference/tests/reference_error_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test reference_error_contract` |
 | `test` | `reference_eval_fma_select_generated` | `vyre-reference/tests/reference_eval_fma_select_generated.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test reference_eval_fma_select_generated` |
+| `test` | `reference_output_byte_stability` | `vyre-reference/tests/reference_output_byte_stability.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test reference_output_byte_stability` |
 | `test` | `region_frame_lifetime` | `vyre-reference/tests/region_frame_lifetime.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test region_frame_lifetime` |
 | `test` | `region_gate` | `vyre-reference/tests/region_gate.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test region_gate` |
 | `test` | `saturating_binops_contract` | `vyre-reference/tests/saturating_binops_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test saturating_binops_contract` |

@@ -24,7 +24,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver --all-features
 ## Feature sets
 
 - Default feature members: None
-- Available manifest features: `default`, `self-substrate-adapters`
+- Available manifest features: `default`, `self-substrate-adapters`, `test-fixtures`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
