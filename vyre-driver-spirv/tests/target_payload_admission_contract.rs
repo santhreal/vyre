@@ -13,74 +13,19 @@
 //!
 //! Not covered here: native module loading, which needs a device.
 
-use std::collections::BTreeMap;
-
 use vyre_driver::materialize::{self, MaterializerTarget};
 use vyre_driver::BackendError;
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphOutput, Node, Program, ProgramGraph, ShapeDim,
-    ValueContract, ValueLifetime,
-};
 use vyre_megakernel::{
-    Artifact, CompileRequest, Digest, ExternalFacts, SearchBudget, TargetEntryPoint,
-    TargetModuleBundle, TargetPayload, TargetPayloadFormat, TargetProfile,
+    Artifact, TargetEntryPoint, TargetModuleBundle, TargetPayload, TargetPayloadFormat,
+    TargetProfile,
 };
 
-fn program() -> Program {
-    Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [64, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
-    )
-}
-
-fn artifact_with_configuration(configuration: u8) -> Artifact {
-    let mut graph = ProgramGraph::new();
-    graph
-        .add_node(
-            "main",
-            program(),
-            Vec::new(),
-            vec![GraphOutput {
-                buffer: "out".into(),
-                name: "out".into(),
-                contract: ValueContract {
-                    dtype: DataType::U32,
-                    shape: vec![ShapeDim::Known(1)],
-                    access: BufferAccess::ReadWrite,
-                    lifetime: ValueLifetime::Output,
-                },
-                retained_successor_of: None,
-            }],
-        )
-        .expect("graph node must register");
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([configuration; 32]), BTreeMap::new()),
-        SearchBudget::new(1, 1, 0, 0, 1),
-        1_000_000,
-    )
-    .validate()
-    .expect("compile request must validate");
-    vyre_megakernel::compile(&request).expect("artifact must compile")
-}
+mod support;
+use support::{foreign_artifact, spirv};
 
 /// A real artifact and the real payload a target compiler produced for it.
 fn compiled() -> (Artifact, TargetPayload) {
-    let registration = vyre_driver::backend::registered_backends()
-        .expect("valid backend registry")
-        .iter()
-        .find(|registration| registration.id == vyre_driver_spirv::SPIRV_BACKEND_ID)
-        .expect("SPIR-V registration must be force-linked")
-        .clone();
-    let compiler = registration
-        .target_compiler()
-        .expect("SPIR-V target compiler must be registered");
-    let artifact = artifact_with_configuration(0);
-    let payload = compiler
-        .compile(&artifact)
-        .expect("artifact must compile to a target payload");
-    (artifact, payload)
+    spirv().compiled()
 }
 
 fn target<'a>(payload: &'a TargetPayload) -> MaterializerTarget<'a> {
@@ -155,7 +100,7 @@ fn admission_pairs_every_selected_group_with_its_program_and_grid() {
 #[test]
 fn admission_rejects_a_payload_sealed_for_another_artifact() {
     let (_, payload) = compiled();
-    let other = artifact_with_configuration(1);
+    let other = foreign_artifact();
     let error = materialize::admit(&other, &payload, target(&payload))
         .expect_err("foreign artifact must be rejected");
     expect_invalid_program(error, "not authenticated");
@@ -188,8 +133,8 @@ fn admission_reports_a_foreign_payload_format_as_unsupported() {
 #[test]
 fn admission_rejects_a_payload_built_for_another_profile() {
     let (artifact, payload) = compiled();
-    let foreign =
-        TargetProfile::new("foreign-profile", 1, [64, 1, 1], 64, 0, 32).expect("profile must build");
+    let foreign = TargetProfile::new("foreign-profile", 1, [64, 1, 1], 64, 0, 32)
+        .expect("profile must build");
     let mismatched = MaterializerTarget {
         profile: &foreign,
         ..target(&payload)

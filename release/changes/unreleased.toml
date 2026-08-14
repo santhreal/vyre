@@ -924,3 +924,23 @@ text = "`vyre-libs` feature `full` is every dialect the crate ships, meaning eve
 id = "registration-visibility-is-a-gate"
 category = "Added"
 text = "A registration behind a feature the registry walker does not enable is invisible rather than absent, so nothing was red when one fell out. Two rules in `xtask-registry` close that class, both derived from the tree at run time rather than from a list: every file that submits a registration is reachable through the walker's declared feature selection, resolved transitively through the source crate's own feature table, and every feature that gates a registration is one the source crate's widest aggregate turns on. A new domain feature carrying registrations turns both red until the aggregate covers it, and a consumer naming the aggregate then needs no change."
+
+[[fragments]]
+id = "registered-target-compiler-contract-has-one-owner"
+category = "Changed"
+text = "The registered-target-compiler contract has one owner, `tests/support/target_compiler_contract.rs`, which every backend reaches with its own backend id, payload format identity and version, entry point and output access class. Four backends had restated all four statements, and the copies had drifted: two asserted the payload format version and two did not, three asserted the completion digest and one did not, each looked its registration up through only one of the two registry routes, and the value the fixture program stores was a separate literal from the value the assertion read back. The shared contract asserts both registry routes resolve to one registration, one emitted module per compiler-selected fusion group, entry-point agreement between the bundle and the payload entry, and the payload seal against the compiled artifact; whatever is target-native about a module is inspected by the caller's own closure inside its own crate. `vyre-driver-spirv/tests/shared_target_contract_discrimination.rs` proves the contract rejects a falsified payload format identity, format version, entry point, unlinked backend id and precedence rank, so a helper that accepted every argument cannot pass."
+
+[[fragments]]
+id = "resident-async-overlap-contract-has-one-owner"
+category = "Changed"
+text = "The resident asynchronous overlap contract has one owner, `tests/support/resident_async_overlap_contract.rs`. Two backends had carried it verbatim apart from acquisition, message text and one assertion. Device-measured time is now a parameter rather than a shared assumption, so a backend without a device timer on that path is still held to exact per-slot outputs and to enqueue and wait time being separated."
+
+[[fragments]]
+id = "spirv-device-profile-uses-the-conservative-owner"
+category = "Changed"
+text = "`vyre-driver-spirv` builds its `DeviceProfile` from `DeviceProfile::conservative` plus the four limits it probes, instead of restating all thirty-two fields. The driver already owned the unprobed-capability defaults and nothing used them; a new capability field had to be answered by hand in `vyre-driver-spirv/src/lib.rs` and the answer was always the conservative one."
+
+[[fragments]]
+id = "driver-dup-pins-lowered"
+category = "Changed"
+text = "The duplication pins for the four driver crates in this change record what this branch measures in isolation: vyre-driver-cuda 3238 to 3187, vyre-driver-wgpu 4017 to 3918, vyre-driver-spirv 194 to 118, vyre-driver-reference unchanged at 23 with its stale total corrected. Every `total_lines` is measured, not carried forward. Duplication is cross-file, so collapsing one side of a copy moves the other: vyre-driver-metal fell 251 to 175 and vyre-driver 1082 to 1069 without either being edited, and both sit below pins this change does not touch."
