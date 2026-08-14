@@ -9,7 +9,7 @@
 //   * K&R-style function declarations
 //   * deeply parenthesised declarators
 
-pub(crate) use crate::gemini_named_fixtures::{ident, named_fixture, tok, NamedFixture};
+pub(crate) use crate::c_frontend::scope_fixture::{c_atoms, fixture, ScopeFixture};
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_build_vast_nodes, reference_c11_classify_vast_node_kinds,
@@ -131,25 +131,11 @@ pub(crate) fn fixture_nested_qualifiers() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
 ///   T * y;
 /// }
 /// ```
-pub(crate) fn fixture_parameter_typedef_shadowing() -> NamedFixture {
-    named_fixture(&[
-        tok(TOK_TYPEDEF),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-        ident("T"),
-        tok(TOK_STAR),
-        ident("y"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_RBRACE),
-    ])
+pub(crate) fn fixture_parameter_typedef_shadowing() -> ScopeFixture {
+    fixture(
+        "parameter_typedef_shadowing",
+        &c_atoms("typedef int T ; void f ( int T ) { T * y ; }"),
+    )
 }
 
 /// ```c

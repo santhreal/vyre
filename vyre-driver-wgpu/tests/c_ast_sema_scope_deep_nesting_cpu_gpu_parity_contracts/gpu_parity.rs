@@ -2,18 +2,7 @@ use super::*;
 
 #[test]
 fn gpu_parity_full_pipeline_typedef_shadow_restore_deep() {
-    let mut atoms = vec![
-        tok(TOK_TYPEDEF),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-    ];
+    let mut atoms = c_atoms("typedef int T ; void f ( void ) {");
     for _ in 0..6 {
         atoms.push(tok(TOK_LBRACE));
     }
@@ -61,17 +50,7 @@ fn gpu_parity_full_pipeline_typedef_shadow_restore_deep() {
 
 #[test]
 fn gpu_parity_full_pipeline_kr_deep_nesting() {
-    let mut atoms = vec![
-        tok(TOK_TYPEDEF),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        ident("T"),
-        tok(TOK_RPAREN),
-    ];
+    let mut atoms = c_atoms("typedef int T ; void f ( T )");
     for _ in 0..4 {
         atoms.push(tok(TOK_LBRACE));
     }
@@ -96,20 +75,7 @@ fn gpu_parity_full_pipeline_kr_deep_nesting() {
 
 #[test]
 fn gpu_parity_full_pipeline_enum_tag_deep() {
-    let mut atoms = vec![
-        tok(TOK_ENUM),
-        ident("E"),
-        tok(TOK_LBRACE),
-        ident("A"),
-        tok(TOK_RBRACE),
-        tok(TOK_SEMICOLON),
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-    ];
+    let mut atoms = c_atoms("enum E { A } ; void f ( void ) {");
     for _ in 0..5 {
         atoms.push(tok(TOK_LBRACE));
     }

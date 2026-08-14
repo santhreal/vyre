@@ -4,32 +4,7 @@ use super::*;
 fn scope_tree_struct_tag_does_not_shadow_ordinary_variable() {
     let fix = fixture(
         "struct_tag_var",
-        &[
-            tok(TOK_STRUCT),
-            ident("S"),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_SEMICOLON),
-            tok(TOK_INT),
-            ident("S"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("S"),
-            tok(TOK_ASSIGN),
-            ident("S"),
-            tok(TOK_PLUS),
-            ident("S"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("struct S { int x ; } ; int S ; void f ( void ) { S = S + S ; }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -57,28 +32,7 @@ fn scope_tree_struct_tag_does_not_shadow_ordinary_variable() {
 fn scope_tree_enum_tag_coexists_with_ordinary_variable() {
     let fix = fixture(
         "enum_tag_var",
-        &[
-            tok(TOK_ENUM),
-            ident("E"),
-            tok(TOK_LBRACE),
-            ident("A"),
-            tok(TOK_RBRACE),
-            tok(TOK_SEMICOLON),
-            tok(TOK_INT),
-            ident("E"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("E"),
-            tok(TOK_ASSIGN),
-            ident("A"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("enum E { A } ; int E ; void f ( void ) { E = A ; }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -106,32 +60,7 @@ fn scope_tree_enum_tag_coexists_with_ordinary_variable() {
 fn scope_tree_union_tag_coexists_with_typedef() {
     let fix = fixture(
         "union_tag_typedef",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("U"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_UNION),
-            ident("U"),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_UNION),
-            ident("U"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int U ; union U { int x ; } ; void f ( void ) { union U * p ; }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -153,33 +82,7 @@ fn scope_tree_union_tag_coexists_with_typedef() {
 fn annotation_enum_constant_does_not_interfere_with_typedef_visibility() {
     let fix = fixture(
         "enum_const_td",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("A"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_ENUM),
-            ident("E"),
-            tok(TOK_LBRACE),
-            ident("A"),
-            tok(TOK_COMMA),
-            ident("B"),
-            tok(TOK_RBRACE),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_LPAREN),
-            ident("A"),
-            tok(TOK_RPAREN),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int A ; enum E { A , B } ; void f ( void ) { ( A ) * p ; }"),
     );
     let ann = annotate_cpu(&fix);
     let typed = classify_cpu_annotated(&fix);
@@ -204,28 +107,7 @@ fn annotation_enum_constant_does_not_interfere_with_typedef_visibility() {
 fn scope_tree_enum_constant_used_as_value_has_no_decl_kind() {
     let fix = fixture(
         "enum_const_use",
-        &[
-            tok(TOK_ENUM),
-            ident("E"),
-            tok(TOK_LBRACE),
-            ident("A"),
-            tok(TOK_COMMA),
-            ident("B"),
-            tok(TOK_COMMA),
-            ident("C"),
-            tok(TOK_RBRACE),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_RETURN),
-            ident("B"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("enum E { A , B , C } ; void f ( void ) { return B ; }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -254,20 +136,7 @@ fn scope_tree_enum_constant_used_as_value_has_no_decl_kind() {
 fn scope_tree_label_declaration_kind_is_label() {
     let fix = fixture(
         "label_decl",
-        &[
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("start"),
-            tok(TOK_COLON),
-            tok(TOK_GOTO),
-            ident("start"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("void f ( void ) { start : goto start ; }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -287,27 +156,7 @@ fn scope_tree_label_declaration_kind_is_label() {
 fn scope_tree_label_does_not_shadow_ordinary_identifier() {
     let fix = fixture(
         "label_no_shadow",
-        &[
-            tok(TOK_INT),
-            ident("start"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("start"),
-            tok(TOK_ASSIGN),
-            tok(TOK_INTEGER),
-            tok(TOK_SEMICOLON),
-            ident("start"),
-            tok(TOK_COLON),
-            tok(TOK_GOTO),
-            ident("start"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("int start ; void f ( void ) { start = INTEGER@ ; start : goto start ; }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -341,25 +190,7 @@ fn scope_tree_label_does_not_shadow_ordinary_identifier() {
 fn scope_tree_multiple_labels_same_function() {
     let fix = fixture(
         "multi_labels",
-        &[
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("L1"),
-            tok(TOK_COLON),
-            ident("L2"),
-            tok(TOK_COLON),
-            tok(TOK_GOTO),
-            ident("L1"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_GOTO),
-            ident("L2"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("void f ( void ) { L1 : L2 : goto L1 ; goto L2 ; }"),
     );
     let st = scope_tree_for(&fix);
 

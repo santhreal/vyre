@@ -6,68 +6,6 @@
 //! here rather than a copy per crate.
 
 use crate::c_frontend::spelling::c_rows;
-use vyre_libs::parsing::c::lex::tokens::*;
-use vyre_libs::parsing::c::parse::vast::*;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-pub(crate) enum Atom {
-    Tok(u32),
-    Ident(&'static str),
-}
-
-pub(crate) struct NamedFixture {
-    pub(crate) tok_types: Vec<u32>,
-    pub(crate) tok_starts: Vec<u32>,
-    pub(crate) tok_lens: Vec<u32>,
-    pub(crate) haystack: Vec<u8>,
-}
-
-pub(crate) fn tok(token: u32) -> Atom {
-    Atom::Tok(token)
-}
-
-pub(crate) fn ident(name: &'static str) -> Atom {
-    Atom::Ident(name)
-}
-
-pub(crate) fn named_fixture(atoms: &[Atom]) -> NamedFixture {
-    let mut tok_types = Vec::with_capacity(atoms.len());
-    let mut tok_starts = Vec::with_capacity(atoms.len());
-    let mut tok_lens = Vec::with_capacity(atoms.len());
-    let mut haystack = Vec::new();
-    let mut cursor = 0u32;
-
-    for atom in atoms {
-        match atom {
-            Atom::Tok(token) => {
-                tok_types.push(*token);
-                tok_starts.push(0);
-                tok_lens.push(0);
-            }
-            Atom::Ident(name) => {
-                tok_types.push(TOK_IDENTIFIER);
-                tok_starts.push(cursor);
-                tok_lens.push(name.len() as u32);
-                haystack.extend_from_slice(name.as_bytes());
-                cursor = cursor.saturating_add(name.len() as u32);
-            }
-        }
-    }
-
-    NamedFixture {
-        tok_types,
-        tok_starts,
-        tok_lens,
-        haystack,
-    }
-}
-
-pub(crate) fn annotated_named_vast(fix: &NamedFixture) -> Vec<u8> {
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    reference_c11_annotate_typedef_names(&raw, &fix.haystack)
-}
 
 // ---------------------------------------------------------------------------
 // Fixtures

@@ -2,14 +2,7 @@ use super::*;
 
 #[test]
 fn scope_tree_depth_8_block_chain_parent_links_correct() {
-    let mut atoms = vec![
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-    ];
+    let mut atoms = c_atoms("void f ( void ) {");
     for _ in 0..8 {
         atoms.push(tok(TOK_LBRACE));
         atoms.push(tok(TOK_INT));
@@ -48,18 +41,7 @@ fn scope_tree_depth_8_block_chain_parent_links_correct() {
 
 #[test]
 fn scope_tree_depth_12_typedef_visible_at_bottom() {
-    let mut atoms = vec![
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-        tok(TOK_TYPEDEF),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_SEMICOLON),
-    ];
+    let mut atoms = c_atoms("void f ( void ) { typedef int T ;");
     for _ in 0..12 {
         atoms.push(tok(TOK_LBRACE));
     }
@@ -86,14 +68,7 @@ fn scope_tree_depth_12_typedef_visible_at_bottom() {
 
 #[test]
 fn scope_tree_depth_16_all_braces_balanced() {
-    let mut atoms = vec![
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-    ];
+    let mut atoms = c_atoms("void f ( void ) {");
     for _ in 0..16 {
         atoms.push(tok(TOK_LBRACE));
     }
@@ -119,18 +94,7 @@ fn scope_tree_depth_16_all_braces_balanced() {
 
 #[test]
 fn annotation_typedef_survives_10_levels_of_nesting() {
-    let mut atoms = vec![
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-        tok(TOK_TYPEDEF),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_SEMICOLON),
-    ];
+    let mut atoms = c_atoms("void f ( void ) { typedef int T ;");
     for _ in 0..10 {
         atoms.push(tok(TOK_LBRACE));
     }
@@ -161,18 +125,7 @@ fn annotation_typedef_survives_10_levels_of_nesting() {
 
 #[test]
 fn annotation_typedef_shadowed_at_level_5_restored_at_level_8() {
-    let mut atoms = vec![
-        tok(TOK_TYPEDEF),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-    ];
+    let mut atoms = c_atoms("typedef int T ; void f ( void ) {");
     for _ in 0..5 {
         atoms.push(tok(TOK_LBRACE));
     }
@@ -214,14 +167,7 @@ fn annotation_typedef_shadowed_at_level_5_restored_at_level_8() {
 
 #[test]
 fn gpu_parity_scope_tree_depth_8() {
-    let mut atoms = vec![
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-    ];
+    let mut atoms = c_atoms("void f ( void ) {");
     for _ in 0..8 {
         atoms.push(tok(TOK_LBRACE));
         atoms.push(tok(TOK_INT));
@@ -240,14 +186,7 @@ fn gpu_parity_scope_tree_depth_8() {
 
 #[test]
 fn gpu_parity_scope_tree_depth_12() {
-    let mut atoms = vec![
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-    ];
+    let mut atoms = c_atoms("void f ( void ) {");
     for _ in 0..12 {
         atoms.push(tok(TOK_LBRACE));
         atoms.push(tok(TOK_INT));
@@ -266,18 +205,7 @@ fn gpu_parity_scope_tree_depth_12() {
 
 #[test]
 fn gpu_parity_annotation_depth_8() {
-    let mut atoms = vec![
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-        tok(TOK_TYPEDEF),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_SEMICOLON),
-    ];
+    let mut atoms = c_atoms("void f ( void ) { typedef int T ;");
     for _ in 0..8 {
         atoms.push(tok(TOK_LBRACE));
     }
@@ -300,18 +228,7 @@ fn gpu_parity_annotation_depth_8() {
 
 #[test]
 fn gpu_parity_classifier_depth_8() {
-    let mut atoms = vec![
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-        tok(TOK_TYPEDEF),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_SEMICOLON),
-    ];
+    let mut atoms = c_atoms("void f ( void ) { typedef int T ;");
     for _ in 0..8 {
         atoms.push(tok(TOK_LBRACE));
     }
@@ -338,14 +255,7 @@ fn gpu_parity_classifier_depth_8() {
 
 #[test]
 fn gpu_parity_vast_builder_depth_8() {
-    let mut atoms = vec![
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-    ];
+    let mut atoms = c_atoms("void f ( void ) {");
     for _ in 0..8 {
         atoms.push(tok(TOK_LBRACE));
         atoms.push(tok(TOK_INT));
@@ -364,14 +274,7 @@ fn gpu_parity_vast_builder_depth_8() {
 
 #[test]
 fn gpu_parity_pg_lower_depth_8() {
-    let mut atoms = vec![
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-    ];
+    let mut atoms = c_atoms("void f ( void ) {");
     for _ in 0..8 {
         atoms.push(tok(TOK_LBRACE));
         atoms.push(tok(TOK_INT));

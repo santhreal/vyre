@@ -8,82 +8,22 @@ mod c_ast_gpu_parity_support;
 mod c_frontend;
 
 use c_ast_gpu_parity_support::{
-    kind_at, run_gpu_classifier_with_count, run_gpu_full_typedef_annotation, word_at,
-    VAST_STRIDE_U32,
+    assert_words_eq, kind_at, run_gpu_classifier_with_count, run_gpu_full_typedef_annotation,
 };
 use c_frontend::scope_fixture::{
-    annotate_cpu, classify_cpu_annotated, fixture, ident, raw_vast, tok, ScopeFixture,
+    annotate_cpu, c_atoms, classify_cpu_annotated, fixture, flags_at, raw_vast, ScopeFixture,
+    ORDINARY_FLAG_DECL, TYPEDEF_FLAG_DECL, TYPEDEF_FLAG_VISIBLE,
 };
-use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_classify_vast_node_kinds, C_AST_KIND_POINTER_DECL,
 };
 use vyre_primitives::predicate::node_kind;
 
-const TYPEDEF_FLAGS_FIELD: usize = 7;
-const TYPEDEF_FLAG_VISIBLE: u32 = 1;
-const TYPEDEF_FLAG_DECL: u32 = 1 << 1;
-const ORDINARY_FLAG_DECL: u32 = 1 << 2;
-
 fn typedef_restore_fixture() -> ScopeFixture {
     fixture(
         "typedef_parameter_scope_restore",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("y"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_VOID),
-            ident("g"),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( int T ) { T * y ; } void g ( T * p ) { }"),
     )
-}
-
-fn assert_words_eq(actual: &[u8], expected: &[u8]) {
-    if actual != expected {
-        let actual_words = actual.len() / 4;
-        let expected_words = expected.len() / 4;
-        let limit = actual_words.min(expected_words);
-        for word in 0..limit {
-            let actual_word = word_at(actual, word);
-            let expected_word = word_at(expected, word);
-            if actual_word != expected_word {
-                panic!(
-                    "word {word} differs: actual={actual_word}, expected={expected_word}, row={}, field={}",
-                    word / VAST_STRIDE_U32,
-                    word % VAST_STRIDE_U32
-                );
-            }
-        }
-        panic!(
-            "byte lengths differ: actual={}, expected={}",
-            actual.len(),
-            expected.len()
-        );
-    }
-}
-
-fn flags_at(rows: &[u8], idx: usize) -> u32 {
-    word_at(rows, idx * VAST_STRIDE_U32 + TYPEDEF_FLAGS_FIELD)
 }
 
 fn annotate_gpu(fix: &ScopeFixture) -> Vec<u8> {
@@ -142,10 +82,18 @@ fn gpu_parameter_scope_restores_typedef_for_later_function() {
     let fix = typedef_restore_fixture();
     let expected_annotations = annotate_cpu(&fix);
     let gpu_annotations = annotate_gpu(&fix);
-    assert_words_eq(&gpu_annotations, &expected_annotations);
+    assert_words_eq(
+        &gpu_annotations,
+        &expected_annotations,
+        "typedef annotation GPU/CPU parity",
+    );
 
     let expected_typed = reference_c11_classify_vast_node_kinds(&expected_annotations);
     let gpu_typed = classify_gpu(&gpu_annotations, fix.tok_types.len());
-    assert_words_eq(&gpu_typed, &expected_typed);
+    assert_words_eq(
+        &gpu_typed,
+        &expected_typed,
+        "classified VAST GPU/CPU parity",
+    );
     assert_parameter_shadow_restores_typedef(&gpu_annotations, &gpu_typed);
 }
