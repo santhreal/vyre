@@ -484,3 +484,8 @@ text = "The megakernel empty-template cache and the resident launch recommendati
 id = "megakernel-body-walk-has-one-owner"
 category = "Changed"
 text = "Megakernel builder and scheduler body inspection now walks nested node bodies through one shared preorder helper built on the foundation-owned child-body enumeration, instead of two hand-written recursive matches that each had to list the nesting variants."
+
+[[fragments]]
+id = "megakernel-lane-body-assembly-declared-once"
+category = "Changed"
+text = "Persistent, finite and JIT megakernel lane bodies now share one assembly path and one published-slot claim body, so the node reservation bound, the slot-base binding order and the IO polling block are decided in a single place. Emitted IR and reservation error text are unchanged."

@@ -1,10 +1,9 @@
 use super::persistent_lane_prologue;
 use super::{
-    claimed_slot_bindings, direct_slot_base_binding, process_io_requests, slot_tenant_id_load,
-    tenant_authorized_claim_body, wrap_persistent_megakernel_program,
+    assemble_lane_body, claimed_slot_bindings, execute_published_slot_body, try_assemble_lane_body,
+    wrap_persistent_megakernel_program,
 };
-use crate::resident_work_queue::ir_util::atomic_load_relaxed;
-use crate::resident_work_queue::protocol::{control, slot, STATUS_WORD};
+use crate::resident_work_queue::protocol::{control, slot};
 use vyre_foundation::ir::{Expr, Node, Program};
 
 /// Build the JIT Megakernel IR where payload processor logic is fused into the body stream.
@@ -28,23 +27,7 @@ pub fn build_program_jit_slots(
 }
 
 fn execute_slot_body_jit(payload_processor: &[Node]) -> Vec<Node> {
-    vec![
-        Node::let_bind(
-            "status_index",
-            Expr::add(Expr::var("slot_base"), Expr::u32(STATUS_WORD)),
-        ),
-        Node::let_bind(
-            "observed_status",
-            atomic_load_relaxed("ring_buffer", Expr::var("status_index")),
-        ),
-        Node::if_then(
-            Expr::eq(Expr::var("observed_status"), Expr::u32(slot::PUBLISHED)),
-            tenant_authorized_claim_body(
-                slot_tenant_id_load(),
-                claimed_slot_body_jit(payload_processor),
-            ),
-        ),
-    ]
+    execute_published_slot_body(claimed_slot_body_jit(payload_processor))
 }
 
 // ---- JIT variant ----
@@ -52,14 +35,11 @@ fn execute_slot_body_jit(payload_processor: &[Node]) -> Vec<Node> {
 /// The JIT body that runs once per iteration per lane.
 #[must_use]
 pub fn persistent_body_jit(workgroup_size_x: u32, payload_processor: &[Node]) -> Vec<Node> {
-    let mut body = persistent_lane_prologue(workgroup_size_x);
-    if let Some(body_capacity) = body.len().checked_add(3) {
-        let _ = vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut body, body_capacity);
-    }
-    body.push(direct_slot_base_binding());
-    body.push(Node::Block(execute_slot_body_jit(payload_processor)));
-    body.push(Node::Block(process_io_requests()));
-    body
+    assemble_lane_body(
+        persistent_lane_prologue(workgroup_size_x),
+        execute_slot_body_jit(payload_processor),
+        true,
+    )
 }
 
 /// Fallible JIT body builder with explicit staging-allocation reporting.
@@ -67,20 +47,13 @@ pub(super) fn try_persistent_body_jit(
     workgroup_size_x: u32,
     payload_processor: &[Node],
 ) -> Result<Vec<Node>, String> {
-    let mut body = persistent_lane_prologue(workgroup_size_x);
-    let body_capacity = body.len().checked_add(3).ok_or_else(|| {
-        "megakernel JIT body node reservation overflowed usize. Fix: reduce fused payload/body staging before building the JIT megakernel."
-            .to_string()
-    })?;
-    vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut body, body_capacity).map_err(|error| {
-        format!(
-            "megakernel JIT body node reservation failed: {error}. Fix: reduce fused payload/body staging before building the JIT megakernel."
-        )
-    })?;
-    body.push(direct_slot_base_binding());
-    body.push(Node::Block(execute_slot_body_jit(payload_processor)));
-    body.push(Node::Block(process_io_requests()));
-    Ok(body)
+    try_assemble_lane_body(
+        persistent_lane_prologue(workgroup_size_x),
+        execute_slot_body_jit(payload_processor),
+        true,
+        "megakernel JIT body",
+        "reduce fused payload/body staging before building the JIT megakernel",
+    )
 }
 
 fn claimed_slot_body_jit(payload_processor: &[Node]) -> Vec<Node> {
