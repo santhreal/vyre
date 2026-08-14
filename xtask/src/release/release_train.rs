@@ -1,3 +1,8 @@
+//! The release train manifest: versions, tags and packaging obligations.
+//!
+//! `release/release-train.toml` is embedded at build time and is the single
+//! source for the version every gate and document is checked against.
+
 use std::sync::OnceLock;
 
 use serde::Deserialize;
@@ -34,19 +39,23 @@ fn data() -> &'static ReleaseTrainData {
     }))
 }
 
-pub(crate) fn vyre_version() -> &'static str {
+/// The version this release train ships.
+pub fn vyre_version() -> &'static str {
     data().versions.vyre.as_str()
 }
 
-pub(crate) fn vyre_rc_tag() -> &'static str {
+/// Release-candidate tag for this train.
+pub fn vyre_rc_tag() -> &'static str {
     data().tags.vyre_rc.as_str()
 }
 
-pub(crate) fn vyre_tag() -> &'static str {
+/// Final release tag for this train.
+pub fn vyre_tag() -> &'static str {
     data().tags.vyre.as_str()
 }
 
-pub(crate) fn tag_story_fields() -> [(&'static str, &'static str); 2] {
+/// The tag fields a release note must state, and their expected values.
+pub fn tag_story_fields() -> [(&'static str, &'static str); 2] {
     [("vyre_rc_tag", vyre_rc_tag()), ("vyre_tag", vyre_tag())]
 }
 
@@ -62,7 +71,8 @@ pub(crate) fn tag_policy() -> &'static str {
     data().tags.policy.as_str()
 }
 
-pub(crate) fn required_release_note_tokens() -> Vec<&'static str> {
+/// Tokens a release note must contain.
+pub fn required_release_note_tokens() -> Vec<&'static str> {
     data()
         .required_release_note_tokens
         .iter()
@@ -86,7 +96,8 @@ pub(crate) fn package_verify_passed() -> Vec<&'static str> {
         .collect()
 }
 
-pub(crate) fn required_release_packages() -> [(&'static str, &'static str, &'static str); 3] {
+/// Every package this train publishes, with its version and group.
+pub fn required_release_packages() -> [(&'static str, &'static str, &'static str); 3] {
     [
         ("vyre", vyre_version(), "vyre"),
         ("vyre-driver-cuda", vyre_version(), "vyre"),

@@ -868,7 +868,25 @@ package = "xtask"
 path = "xtask"
 owner = "release-tooling"
 layer = "tooling"
-responsibility = "Generate evidence and enforce repository, release, documentation, and architecture contracts."
+responsibility = "Own the subcommand registry and every gate that judges the tree from source text, manifests, workflows, and recorded evidence, linking no vyre crate."
+
+[[crate]]
+package = "xtask-registry"
+path = "xtask-registry"
+owner = "release-tooling"
+layer = "tooling"
+responsibility = "Own the xtask subcommands that must observe the live operation registry, the primitive catalog behind it, or a linked backend driver."
+
+[[crate.dependency]]
+package = "xtask"
+purpose = "subcommand registry, bounded readers, and release manifests"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "release-tooling"
 
 [[crate.dependency]]
 package = "vyre"
@@ -882,15 +900,26 @@ boundary = "private"
 seam = "public-facade"
 
 [[crate.dependency]]
-package = "vyre-bench"
-purpose = "benchmark workloads and evidence"
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
 features = []
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
 default_features = true
 boundary = "private"
-seam = "benchmarks"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "neutral artifact compilation and target payload contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "megakernel-compiler"
 
 [[crate.dependency]]
 package = "vyre-driver"
@@ -948,28 +977,6 @@ boundary = "private"
 seam = "portable-driver"
 
 [[crate.dependency]]
-package = "vyre-emit-metal"
-purpose = "native Apple source emission"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "metal-emitter"
-
-[[crate.dependency]]
-package = "vyre-foundation"
-purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "foundation-ir"
-
-[[crate.dependency]]
 package = "vyre-intrinsics"
 purpose = "hardware-mapped intrinsic builders"
 features = []
@@ -1003,28 +1010,6 @@ boundary = "private"
 seam = "lint-policy"
 
 [[crate.dependency]]
-package = "vyre-lower"
-purpose = "verified backend-neutral representation lowering"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "lowering"
-
-[[crate.dependency]]
-package = "vyre-megakernel"
-purpose = "neutral artifact compilation and target payload contracts"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "megakernel-compiler"
-
-[[crate.dependency]]
 package = "vyre-primitives"
 purpose = "reusable semantic Program builders"
 features = ["bitset", "fixpoint", "graph", "hash", "inventory-registry", "label", "matching", "math", "nn", "parsing", "predicate", "reduce", "text"]
@@ -1056,6 +1041,67 @@ optional = false
 default_features = true
 boundary = "private"
 seam = "specification"
+[[crate]]
+package = "xtask-evidence"
+path = "xtask-evidence"
+owner = "release-tooling"
+layer = "tooling"
+responsibility = "Own the xtask subcommands that decide whether a recorded benchmark or release measurement still describes this tree."
+
+[[crate.dependency]]
+package = "xtask"
+purpose = "subcommand registry, bounded readers, and release manifests"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "release-tooling"
+
+[[crate.dependency]]
+package = "vyre-bench"
+purpose = "benchmark workloads and evidence"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "benchmarks"
+
+[[crate.dependency]]
+package = "vyre-driver"
+purpose = "backend-neutral target, materialization, submission, and completion contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "backend-contract"
+
+[[crate.dependency]]
+package = "vyre-driver-cuda"
+purpose = "native accelerator backend execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "cuda-driver"
+
+[[crate.dependency]]
+package = "vyre-driver-wgpu"
+purpose = "portable backend execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "portable-driver"
 
 [[crate]]
 package = "vyre-runtime"

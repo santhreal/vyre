@@ -1,6 +1,7 @@
 //! Shared OP_MATRIX release-backend row classification.
 
-pub(crate) const RUNTIME_DIALECT_CONTRACT_OPS: &[&str] = &[
+/// Operations whose backend support is a runtime contract, not a kernel.
+pub const RUNTIME_DIALECT_CONTRACT_OPS: &[&str] = &[
     "core.indirect_dispatch",
     "io.dma_from_nvme",
     "io.write_back_to_nvme",
@@ -8,7 +9,8 @@ pub(crate) const RUNTIME_DIALECT_CONTRACT_OPS: &[&str] = &[
     "mem.zerocopy_map",
 ];
 
-pub(crate) fn count_runtime_dialect_contract_rows(rows: &[String]) -> usize {
+/// Rows that satisfy the runtime dialect contract for their backend.
+pub fn count_runtime_dialect_contract_rows(rows: &[String]) -> usize {
     rows.iter()
         .filter(|row| {
             let Some((op, backend, status)) = parse_release_backend_row(row) else {
@@ -21,7 +23,8 @@ pub(crate) fn count_runtime_dialect_contract_rows(rows: &[String]) -> usize {
         .count()
 }
 
-pub(crate) fn count_non_runtime_supported_release_backend_rows(rows: &[String]) -> usize {
+/// Rows claiming `supported` for an operation that is a real kernel.
+pub fn count_non_runtime_supported_release_backend_rows(rows: &[String]) -> usize {
     rows.iter()
         .filter(|row| {
             let Some((op, _backend, status)) = parse_release_backend_row(row) else {

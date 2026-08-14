@@ -139,13 +139,19 @@ def commands_from_help(binary: str, help_text: str) -> list[str]:
 
 
 def validate_xtask_dispatch(commands: list[str]) -> None:
-    source = (ROOT / "xtask/src/main.rs").read_text(encoding="utf-8")
-    dispatch = set()
-    for left, right in re.findall(r'"([^"]+)"(?:\s*\|\s*"([^"]+)")?\s*=>', source):
-        dispatch.add(left)
-        if right:
-            dispatch.add(right)
-    dispatch = {command for command in dispatch if not command.startswith("-")}
+    """Check the generated help against the registered subcommand table.
+
+    Dispatch used to be a `match` in `xtask/src/main.rs` and this read its arms.
+    The table in `xtask/src/subcommands.rs` is now the single registry that help,
+    dispatch and CI wiring are all built from, so read that instead.
+    """
+    source = (ROOT / "xtask/src/subcommands.rs").read_text(encoding="utf-8")
+    table = source.split("pub const SUBCOMMANDS", 1)
+    if len(table) != 2:
+        fail("xtask/src/subcommands.rs no longer defines SUBCOMMANDS")
+    dispatch = set(re.findall(r'^\s+name: "([^"]+)",$', table[1], re.M))
+    if not dispatch:
+        fail("xtask/src/subcommands.rs defines no subcommand rows")
     documented = set(commands)
     if dispatch != documented:
         missing = sorted(dispatch - documented)

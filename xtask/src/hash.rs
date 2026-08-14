@@ -5,5 +5,5 @@ mod sha256_hex;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use sha256::sha256;
-pub(crate) use sha256_hex::sha256_hex;
+pub use sha256::sha256;
+pub use sha256_hex::sha256_hex;

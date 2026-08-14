@@ -3,7 +3,11 @@
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
-pub(crate) fn read_text_bounded(path: &Path, max_bytes: u64, context: &str) -> io::Result<String> {
+/// Read a text file, failing rather than allocating past `max_bytes`.
+///
+/// `context` names the cap in the error, so an operator can tell which reader
+/// refused the file.
+pub fn read_text_bounded(path: &Path, max_bytes: u64, context: &str) -> io::Result<String> {
     let mut reader = std::fs::File::open(path)?.take(max_bytes.saturating_add(1));
     let mut text = String::new();
     reader.read_to_string(&mut text)?;
@@ -32,7 +36,8 @@ pub(crate) fn contains_any(text: &str, needles: &[&str]) -> bool {
     needles.iter().any(|needle| text.contains(needle))
 }
 
-pub(crate) fn resolve_path(base_dir: &Path, path: &str) -> PathBuf {
+/// Resolve `path` against `base_dir` unless it is already absolute.
+pub fn resolve_path(base_dir: &Path, path: &str) -> PathBuf {
     let candidate = PathBuf::from(path);
     if candidate.is_absolute() {
         candidate
@@ -41,7 +46,9 @@ pub(crate) fn resolve_path(base_dir: &Path, path: &str) -> PathBuf {
     }
 }
 
-pub(crate) fn resolve_release_artifact_path(base_dir: &Path, path: &str) -> PathBuf {
+/// Resolve a release artifact path, which is written relative to the workspace
+/// root rather than to the crate that reads it.
+pub fn resolve_release_artifact_path(base_dir: &Path, path: &str) -> PathBuf {
     let candidate = PathBuf::from(path);
     if candidate.is_absolute() {
         return candidate;
@@ -55,7 +62,8 @@ pub(crate) fn resolve_release_artifact_path(base_dir: &Path, path: &str) -> Path
     base_dir.join(candidate)
 }
 
-pub(crate) fn parse_output_arg(
+/// Parse `--output <path>` for `command`, falling back to `default_output`.
+pub fn parse_output_arg(
     args: &[String],
     command: &str,
     description: &str,
@@ -82,7 +90,8 @@ pub(crate) fn parse_output_arg(
     Ok(output.unwrap_or_else(default_output))
 }
 
-pub(crate) fn write_json(path: &Path, value: &impl serde::Serialize) {
+/// Write `value` as pretty JSON, exiting with a `Fix:` message on failure.
+pub fn write_json(path: &Path, value: &impl serde::Serialize) {
     let json = match serde_json::to_string_pretty(value) {
         Ok(json) => json,
         Err(error) => {

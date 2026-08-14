@@ -3,23 +3,7 @@
 use std::env;
 use std::process;
 
-mod artifact_paths;
-mod bench;
-mod binary;
-mod compile;
-mod docs;
-mod gates;
-mod hash;
-mod json_output;
-mod manifest_walk;
-mod output_arg;
-mod print_composition;
-mod release;
-mod shrink;
-mod subcommands;
-mod text_markers;
-mod toml_config;
-mod trace_f32;
+use xtask::subcommands::{self, Home};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -34,7 +18,11 @@ fn main() {
         process::exit(0);
     }
     match subcommands::find(name) {
-        Some(entry) => (entry.run)(&args),
+        Some(entry) => match entry.home {
+            Home::Local(run) => run(&args),
+            Home::Registry => xtask::delegate::run("xtask-registry", &args),
+            Home::Evidence => xtask::delegate::run("xtask-evidence", &args),
+        },
         None => {
             eprintln!("Fix: unknown subcommand '{name}'. See --help.");
             process::exit(1);

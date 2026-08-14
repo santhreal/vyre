@@ -109,12 +109,12 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Generate evidence and enforce repository, release, documentation, and architecture contracts.
+Own the subcommand registry and every gate that judges the tree from source text, manifests, workflows, and recorded evidence, linking no vyre crate.
 
 ### Boundaries
 
 The `release-tooling` owner maintains this `tooling` crate at `xtask`.
-Its allowed internal production dependencies are: `vyre`, `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-spec`.
+Its allowed internal production dependencies are: None.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

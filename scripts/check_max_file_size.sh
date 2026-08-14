@@ -65,7 +65,6 @@ AUDIT_EXCEPTIONS["vyre-driver-wgpu/src/engine/record_and_readback.rs"]=900  # #7
 AUDIT_EXCEPTIONS["vyre-reference/src/hashmap_interp/step.rs"]=760           # interpreter step
 AUDIT_EXCEPTIONS["vyre-foundation/src/transform/visit.rs"]=830              # transform visit
 AUDIT_EXCEPTIONS["vyre-reference/src/eval_expr.rs"]=840                     # reference eval
-AUDIT_EXCEPTIONS["xtask/src/lego_audit.rs"]=870                             # xtask audit dumper
 
 declare -A CORE_AUDIT_EXCEPTIONS
 CORE_AUDIT_EXCEPTIONS["vyre-libs/src/parsing/c/parse/vast.rs"]=8692
@@ -141,7 +140,7 @@ CORE_AUDIT_EXCEPTIONS["vyre-primitives/src/math/semiring_gemm.rs"]=535
 
 is_test_path() {
     case "$1" in
-        */tests/*|*/benches/*|*/fuzz/*|*tests.rs|*xtask/src/*|conform/*) return 0;;
+        */tests/*|*/benches/*|*/fuzz/*|*tests.rs|*xtask/src/*|*xtask-registry/src/*|*xtask-evidence/src/*|conform/*) return 0;;
         *) return 1;;
     esac
 }

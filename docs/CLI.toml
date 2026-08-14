@@ -58,15 +58,37 @@ failure = "Missing slugs and filesystem creation failures return non-zero withou
 exit_codes = "0 on scaffold creation or help, 1 on filesystem failure, 2 on invalid arguments."
 
 [[binary]]
-package = "xtask"
+package = "xtask-registry"
 name = "vyre_new_op"
-readme = "xtask/README.md"
+readme = "xtask-registry/README.md"
 audience = "internal"
 hardware = "No accelerator is required."
 environment = "VYRE_SPEC_MAINTAINER=1 permits reserved internal. and test. operation identifiers."
 config = "Operation id, archetype, display name, summary, and category are explicit arguments."
 failure = "Invalid identifiers, archetypes, categories, collisions, and write failures return non-zero."
 exit_codes = "0 on scaffold creation or help, 1 on validation or write failure, 2 on invalid arguments."
+
+[[binary]]
+package = "xtask-registry"
+name = "xtask-registry"
+readme = "xtask-registry/README.md"
+audience = "internal"
+hardware = "No accelerator is required; a missing device is reported, not assumed."
+environment = "No environment variables alter CLI behavior."
+config = "The command reads the same repository manifests the dispatched subcommand reads."
+failure = "A subcommand this crate does not implement returns status 1 with a Fix: message."
+exit_codes = "0 on success, 1 on a gate finding or an unowned subcommand, 2 on invalid arguments."
+
+[[binary]]
+package = "xtask-evidence"
+name = "xtask-evidence"
+readme = "xtask-evidence/README.md"
+audience = "internal"
+hardware = "No accelerator is required; a missing device is reported, not assumed."
+environment = "No environment variables alter CLI behavior."
+config = "The command reads recorded evidence under release/evidence/ and the release manifests."
+failure = "A subcommand this crate does not implement returns status 1 with a Fix: message."
+exit_codes = "0 on success, 1 on a gate finding or an unowned subcommand, 2 on invalid arguments."
 
 [[binary]]
 package = "xtask"

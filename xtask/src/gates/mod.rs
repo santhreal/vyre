@@ -6,22 +6,15 @@
 //! meta-check that keeps every registered gate connected to a pinned
 //! baseline and a workflow.
 
-pub(crate) mod abstraction_gate;
-pub(crate) mod check_cat_a;
-pub(crate) mod check_tier_deps;
-pub(crate) mod dedup_report;
-pub(crate) mod dep_drift;
-pub(crate) mod dup_scan;
-pub(crate) mod gate1;
-pub(crate) mod gates;
-pub(crate) mod heuristic_audit;
-pub(crate) mod hot_path_scan;
-pub(crate) mod hygiene_matrix;
-pub(crate) mod implementation_family;
-pub(crate) mod lego_audit;
-pub(crate) mod lego_quick;
-pub(crate) mod ownership;
-pub(crate) mod platform_boundary;
-pub(crate) mod use_paths;
-pub(crate) mod verify_rewrite_proofs;
-pub(crate) mod whats_similar;
+pub mod check_cat_a;
+pub mod check_tier_deps;
+pub mod dedup_report;
+pub mod dep_drift;
+pub mod dup_scan;
+pub mod gates;
+pub mod hot_path_scan;
+pub mod hygiene_matrix;
+pub mod implementation_family;
+pub mod ownership;
+pub mod platform_boundary;
+pub mod use_paths;

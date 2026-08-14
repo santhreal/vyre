@@ -1,3 +1,8 @@
+//! Walk a source tree for `Cargo.toml` files and parse each one.
+//!
+//! Parse failures are collected as blockers rather than aborting the walk, so a
+//! gate reports every bad manifest in one run.
+
 use std::path::Path;
 
 use walkdir::WalkDir;

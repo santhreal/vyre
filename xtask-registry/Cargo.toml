@@ -1,0 +1,48 @@
+[package]
+name = "xtask-registry"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "xtask subcommands that read the live vyre operation registry."
+# Internal build-task crate, never published.
+publish = false
+
+[lints]
+workspace = true
+
+# Every dependency here exists because a subcommand in this crate has to look at
+# the registry that these crates submit into, or at a linked backend driver.
+# A subcommand that only reads source text belongs in `xtask`, which links none
+# of this.
+[dependencies]
+xtask = { path = "../xtask" }
+vyre.workspace = true
+vyre-foundation.workspace = true
+vyre-megakernel.workspace = true
+vyre-driver.workspace = true
+vyre-driver-cuda.workspace = true
+vyre-driver-reference.workspace = true
+vyre-driver-spirv.workspace = true
+vyre-driver-wgpu.workspace = true
+vyre-intrinsics.workspace = true
+vyre-lints.workspace = true
+vyre-reference.workspace = true
+vyre-spec.workspace = true
+# `lego-audit` is the release catalog gate. It must link every shipped Tier-3
+# consumer so primitive coverage is measured against the real composition
+# surface, not a feature-narrow slice.
+vyre-libs = { workspace = true, features = ["full", "logical", "nn-moe", "security", "visual", "parsing", "math", "nn", "matching", "crypto"] }
+vyre-primitives = { workspace = true, features = ["text", "matching", "math", "nn", "hash", "parsing", "graph", "bitset", "reduce", "label", "predicate", "fixpoint", "inventory-registry"] }
+inventory.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+syn = { workspace = true, features = ["full", "visit"] }
+toml.workspace = true
+walkdir.workspace = true
+
+[dev-dependencies]
+tempfile = { workspace = true }

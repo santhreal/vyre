@@ -503,32 +503,56 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 
 ### `xtask`
 
-Generate evidence and enforce repository, release, documentation, and architecture contracts.
+Own the subcommand registry and every gate that judges the tree from source text, manifests, workflows, and recorded evidence, linking no vyre crate.
 
 - Path: `xtask`
 - Owner: `release-tooling`
 - Layer: `tooling`
-- Internal production dependencies: `vyre`, `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-spec`
+- Internal production dependencies: None
+
+### `xtask-evidence`
+
+Own the xtask subcommands that decide whether a recorded benchmark or release measurement still describes this tree.
+
+- Path: `xtask-evidence`
+- Owner: `release-tooling`
+- Layer: `tooling`
+- Internal production dependencies: `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `xtask`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `vyre-bench` | benchmark workloads and evidence | `private` | `benchmarks` |
+| `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `private` | `backend-contract` |
+| `vyre-driver-cuda` | native accelerator backend execution | `private` | `cuda-driver` |
+| `vyre-driver-wgpu` | portable backend execution | `private` | `portable-driver` |
+| `xtask` | subcommand registry, bounded readers, and release manifests | `private` | `release-tooling` |
+
+### `xtask-registry`
+
+Own the xtask subcommands that must observe the live operation registry, the primitive catalog behind it, or a linked backend driver.
+
+- Path: `xtask-registry`
+- Owner: `release-tooling`
+- Layer: `tooling`
+- Internal production dependencies: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-spec`, `xtask`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre` | public lifecycle facade | `private` | `public-facade` |
-| `vyre-bench` | benchmark workloads and evidence | `private` | `benchmarks` |
 | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `private` | `backend-contract` |
 | `vyre-driver-cuda` | native accelerator backend execution | `private` | `cuda-driver` |
 | `vyre-driver-reference` | reference backend adaptation | `private` | `reference-driver` |
 | `vyre-driver-spirv` | SPIR-V backend execution | `private` | `spirv-driver` |
 | `vyre-driver-wgpu` | portable backend execution | `private` | `portable-driver` |
-| `vyre-emit-metal` | native Apple source emission | `private` | `metal-emitter` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `private` | `foundation-ir` |
 | `vyre-intrinsics` | hardware-mapped intrinsic builders | `private` | `hardware-intrinsics` |
 | `vyre-libs` | product operation builders | `private` | `product-libraries` |
 | `vyre-lints` | source policy enforcement | `private` | `lint-policy` |
-| `vyre-lower` | verified backend-neutral representation lowering | `private` | `lowering` |
 | `vyre-megakernel` | neutral artifact compilation and target payload contracts | `private` | `megakernel-compiler` |
 | `vyre-primitives` | reusable semantic Program builders | `private` | `primitive-library` |
 | `vyre-reference` | independent semantic oracle execution | `private` | `reference-semantics` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `private` | `specification` |
+| `xtask` | subcommand registry, bounded readers, and release manifests | `private` | `release-tooling` |
 
 ## Changing a boundary
 

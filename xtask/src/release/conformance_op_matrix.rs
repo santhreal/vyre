@@ -9,25 +9,40 @@ use std::path::Path;
 
 const MAX_CONFORMANCE_EVIDENCE_TEXT_BYTES: u64 = 8_388_608;
 
-pub(crate) struct OpMatrixCatalog {
-    pub(crate) required_ops: BTreeSet<String>,
-    pub(crate) release_backend_rows: Vec<String>,
-    pub(crate) release_backend_specs: Vec<OpMatrixReleaseBackendSpec>,
-    pub(crate) missing_release_backend_rows: Vec<String>,
-    pub(crate) blocked_release_rows: Vec<String>,
-    pub(crate) errors: Vec<String>,
+/// What `docs/optimization/OP_MATRIX.toml` requires of a release.
+pub struct OpMatrixCatalog {
+    /// Operations the matrix requires a release to cover.
+    pub required_ops: BTreeSet<String>,
+    /// Raw `op:backend:status` rows as written.
+    pub release_backend_rows: Vec<String>,
+    /// The same rows parsed.
+    pub release_backend_specs: Vec<OpMatrixReleaseBackendSpec>,
+    /// Rows a required operation needs and the matrix omits.
+    pub missing_release_backend_rows: Vec<String>,
+    /// Rows whose declared status blocks a release.
+    pub blocked_release_rows: Vec<String>,
+    /// Problems hit reading the matrix, reported instead of raised.
+    pub errors: Vec<String>,
 }
 
+/// One operation-and-backend row the op matrix declares.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct OpMatrixReleaseBackendSpec {
-    pub(crate) op_id: String,
-    pub(crate) backend: String,
-    pub(crate) status: String,
-    pub(crate) test_paths: Vec<String>,
-    pub(crate) test_case_classes: BTreeSet<&'static str>,
+pub struct OpMatrixReleaseBackendSpec {
+    /// Operation the row is about.
+    pub op_id: String,
+    /// Backend the row claims a status for.
+    pub backend: String,
+    /// Status claimed for that pair.
+    pub status: String,
+    /// Tests the row cites as proof.
+    pub test_paths: Vec<String>,
+    /// Case classes those tests were found to cover.
+    pub test_case_classes: BTreeSet<&'static str>,
 }
 
-pub(crate) fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog {
+/// Read the op matrix. Read failures become `errors` so every problem in the
+/// file is reported in one run.
+pub fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog {
     let matrix_path = vyre_root.join("docs/optimization/OP_MATRIX.toml");
     let text = match read_text_bounded(&matrix_path) {
         Ok(text) => text,
@@ -156,7 +171,8 @@ pub(crate) fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixC
     }
 }
 
-fn classify_conformance_case_classes(
+/// Which case classes the named test files cover, from their names and text.
+pub fn classify_conformance_case_classes(
     vyre_root: &Path,
     test_paths: &[String],
 ) -> BTreeSet<&'static str> {

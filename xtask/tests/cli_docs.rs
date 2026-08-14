@@ -48,7 +48,6 @@ fn every_xtask_binary_help_route_exits_zero() {
             "Usage: audit_rule_contracts",
         ),
         (env!("CARGO_BIN_EXE_scaffold_rule"), "Usage: scaffold_rule"),
-        (env!("CARGO_BIN_EXE_vyre_new_op"), "Usage:"),
         (env!("CARGO_BIN_EXE_xtask"), "SUBCOMMANDS:"),
     ];
     for (executable, expected) in cases {

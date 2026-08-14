@@ -5,24 +5,18 @@
 //! the release manifests (`release/release-train.toml`,
 //! `release/repo-boundary.toml`) those decisions are made against.
 
-pub(crate) mod backend_matrix;
-pub(crate) mod conformance_evidence_semantics;
-pub(crate) mod conformance_matrix;
-pub(crate) mod conformance_op_matrix;
-pub(crate) mod conformance_workflows;
-pub(crate) mod feature_matrix;
-pub(crate) mod launch_contract;
-pub(crate) mod launch_state;
-pub(crate) mod metadata_matrix;
-pub(crate) mod optimization_corpus;
-pub(crate) mod optimization_matrix;
-pub(crate) mod package_readiness;
-pub(crate) mod release_backend_rows;
-pub(crate) mod release_conformance;
-pub(crate) mod release_evidence;
-pub(crate) mod release_gate;
-pub(crate) mod release_train;
-pub(crate) mod release_workload_matrix;
-pub(crate) mod repo_boundary;
-pub(crate) mod version_matrix;
-pub(crate) mod vyre_release_gate;
+pub mod conformance_evidence_semantics;
+pub mod conformance_op_matrix;
+pub mod conformance_workflows;
+pub mod feature_matrix;
+pub mod launch_contract;
+pub mod launch_state;
+pub mod metadata_matrix;
+pub mod package_readiness;
+pub mod release_backend_rows;
+pub mod release_conformance;
+pub mod release_gate;
+pub mod release_train;
+pub mod release_workload_matrix;
+pub mod repo_boundary;
+pub mod version_matrix;

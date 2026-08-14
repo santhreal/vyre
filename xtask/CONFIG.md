@@ -22,7 +22,7 @@ sub-directory is a usage bug, not a configuration choice.
 ## Tier B  -  community knowledge
 
 xtask both produces and consumes `rules/op/*.toml`. The generator in
-`xtask/src/gates/lego_audit.rs` walks the workspace and emits
+`xtask-registry/src/gates/lego_audit.rs` walks the workspace and emits
 Tier-B TOML; downstream gates consume the same
 TOML. Adding a new audit dimension is a code change in xtask AND a
 schema change under `rules/SCHEMA.md`. Both must land in the same patch.

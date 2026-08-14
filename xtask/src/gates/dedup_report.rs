@@ -10,46 +10,74 @@ use crate::hash::sha256_hex;
 
 pub(crate) const DUPLICATE_FAMILY_SCHEMA_VERSION: u32 = 2;
 
+/// One duplicate-detection run, as written to its JSON artifact.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub(crate) struct DuplicateFamilyReport {
-    pub(crate) schema_version: u32,
-    pub(crate) generator_command: String,
-    pub(crate) detector_family: String,
-    pub(crate) family_count: usize,
-    pub(crate) families: Vec<DuplicateFamilyFinding>,
+pub struct DuplicateFamilyReport {
+    /// Artifact schema version, so a stale file is rejected.
+    pub schema_version: u32,
+    /// Command that regenerates this artifact.
+    pub generator_command: String,
+    /// Detector that produced the findings.
+    pub detector_family: String,
+    /// Number of families in `families`.
+    pub family_count: usize,
+    /// Every family the detector found.
+    pub families: Vec<DuplicateFamilyFinding>,
 }
 
+/// One pair of subjects a detector judged to be the same family.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub(crate) struct DuplicateFamilyFinding {
-    pub(crate) family_id: String,
-    pub(crate) detector: String,
-    pub(crate) severity: &'static str,
-    pub(crate) score: f64,
-    pub(crate) left: DuplicateSubject,
-    pub(crate) right: DuplicateSubject,
-    pub(crate) import_owner: String,
-    pub(crate) import_target: String,
-    pub(crate) evidence: DuplicateEvidence,
+pub struct DuplicateFamilyFinding {
+    /// Stable id for the pair, so a finding can be tracked across runs.
+    pub family_id: String,
+    /// Detector that found it.
+    pub detector: String,
+    /// Severity band derived from `score`.
+    pub severity: &'static str,
+    /// Similarity in `0.0..=1.0`.
+    pub score: f64,
+    /// First subject.
+    pub left: DuplicateSubject,
+    /// Second subject.
+    pub right: DuplicateSubject,
+    /// Lane that owns the importing side.
+    pub import_owner: String,
+    /// Lane the import points at.
+    pub import_target: String,
+    /// How the score was computed and what to do about it.
+    pub evidence: DuplicateEvidence,
 }
 
+/// One side of a duplicate finding, and how it was measured.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub(crate) struct DuplicateSubject {
-    pub(crate) id: String,
-    pub(crate) owner_lane: String,
-    pub(crate) fingerprint: Option<String>,
-    pub(crate) tokens: Option<usize>,
-    pub(crate) bytes: Option<u64>,
+pub struct DuplicateSubject {
+    /// Operation id or source path naming the subject.
+    pub id: String,
+    /// Lane that owns it.
+    pub owner_lane: String,
+    /// Structural fingerprint, when the detector computes one.
+    pub fingerprint: Option<String>,
+    /// Token or node count, when the detector measures one.
+    pub tokens: Option<usize>,
+    /// Source size, when the detector measures one.
+    pub bytes: Option<u64>,
 }
 
+/// How the similarity between the two subjects was computed and what to do.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub(crate) struct DuplicateEvidence {
-    pub(crate) similarity_metric: &'static str,
-    pub(crate) left_metric: String,
-    pub(crate) right_metric: String,
-    pub(crate) dedup_action: &'static str,
+pub struct DuplicateEvidence {
+    /// Metric the score came from.
+    pub similarity_metric: &'static str,
+    /// The metric read from the left subject.
+    pub left_metric: String,
+    /// The metric read from the right subject.
+    pub right_metric: String,
+    /// What resolving this duplicate requires.
+    pub dedup_action: &'static str,
 }
 
-pub(crate) fn duplicate_family_report(
+/// Assemble a report from a detector run, dropping repeated families.
+pub fn duplicate_family_report(
     generator_command: &str,
     detector_family: &str,
     families: Vec<DuplicateFamilyFinding>,
@@ -96,7 +124,8 @@ fn merged_detector_label(left: &str, right: &str) -> String {
     detectors.join("+")
 }
 
-pub(crate) fn write_duplicate_report_json(
+/// Write `report` as pretty JSON, creating parent directories.
+pub fn write_duplicate_report_json(
     path: &Path,
     report: &DuplicateFamilyReport,
 ) -> Result<(), String> {
@@ -110,7 +139,11 @@ pub(crate) fn write_duplicate_report_json(
         .map_err(|error| format!("write duplicate family report: {error}"))
 }
 
-pub(crate) fn duplicate_report_json_path(
+/// Resolve the artifact path from a `--duplicate-report-json` argument.
+///
+/// A value that looks like another flag is rejected, because that means the
+/// path was omitted and the next flag was swallowed as one.
+pub fn duplicate_report_json_path(
     flag: &str,
     raw: Option<&str>,
     missing_message: &str,
@@ -124,14 +157,17 @@ pub(crate) fn duplicate_report_json_path(
     Ok(PathBuf::from(path))
 }
 
-pub(crate) fn duplicate_report_generator_command(prefix: &str, output_path: &Path) -> String {
+/// The command line that regenerates an artifact, recorded inside it.
+pub fn duplicate_report_generator_command(prefix: &str, output_path: &Path) -> String {
     format!(
         "xtask {prefix} --duplicate-report-json {}",
         output_path.display()
     )
 }
 
-pub(crate) fn validate_duplicate_family_report_artifact(
+/// Blockers against a recorded artifact: bad JSON, wrong schema version, or a
+/// generator command that does not match the one that would rebuild it.
+pub fn validate_duplicate_family_report_artifact(
     bytes: &[u8],
     expected_generator_command: &str,
 ) -> Vec<String> {
@@ -222,11 +258,13 @@ pub(crate) fn duplicate_family_id(detector: &str, left: &str, right: &str) -> St
     format!("duplicate-family:v1:{}", sha256_hex(material.as_bytes()))
 }
 
-pub(crate) fn registered_op_duplicate_family_id(left: &str, right: &str) -> String {
+/// Stable family id for a pair of registered operations.
+pub fn registered_op_duplicate_family_id(left: &str, right: &str) -> String {
     duplicate_family_id("registered-op", left, right)
 }
 
-pub(crate) fn registered_op_duplicate_subject(
+/// Describe one registered operation as a duplicate-finding subject.
+pub fn registered_op_duplicate_subject(
     op_id: &str,
     fingerprint: &[u8],
     node_count: usize,
@@ -247,7 +285,8 @@ fn registered_op_fingerprint(fingerprint: &[u8]) -> String {
     )
 }
 
-pub(crate) fn duplicate_severity(score: f64) -> &'static str {
+/// Severity band for a similarity score.
+pub fn duplicate_severity(score: f64) -> &'static str {
     if score >= 0.95 {
         "duplicate"
     } else if score >= 0.86 {
@@ -263,7 +302,7 @@ pub(crate) fn duplicate_severity(score: f64) -> &'static str {
 ///
 /// The metric compares byte-bigram frequency vectors with cosine similarity,
 /// so adjacent node-kind order matters instead of only set membership.
-pub(crate) fn structural_similarity(a: &[u8], b: &[u8]) -> f64 {
+pub fn structural_similarity(a: &[u8], b: &[u8]) -> f64 {
     if a.len() < 4 || b.len() < 4 {
         return 0.0;
     }
@@ -294,7 +333,8 @@ fn bigram_counts(bytes: &[u8]) -> HashMap<(u8, u8), u32> {
     out
 }
 
-pub(crate) fn registered_op_owner_lane(op_id: &str) -> &'static str {
+/// The lane that owns a registered operation, derived from its id.
+pub fn registered_op_owner_lane(op_id: &str) -> &'static str {
     if op_id.starts_with("vyre-intrinsics::") {
         "lower_emit"
     } else if op_id.starts_with("vyre-primitives::graph::")

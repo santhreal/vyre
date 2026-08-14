@@ -1,3 +1,8 @@
+//! The public and private repository boundary a release is checked against.
+//!
+//! `release/repo-boundary.toml` is embedded at build time and names which
+//! repository each artifact may appear in.
+
 use std::sync::OnceLock;
 
 use serde::Deserialize;
@@ -26,7 +31,8 @@ fn data() -> &'static RepoBoundaryData {
     }))
 }
 
-pub(crate) fn vyre_public_repository() -> &'static str {
+/// The one repository public artifacts may name.
+pub fn vyre_public_repository() -> &'static str {
     data().public_repository.as_str()
 }
 
@@ -64,7 +70,9 @@ pub(crate) fn repo_boundary_description() -> &'static str {
     data().boundary_description.as_str()
 }
 
-pub(crate) fn has_single_public_repository(value: &serde_json::Value) -> bool {
+/// Whether an artifact names exactly the public repository, with no legacy
+/// plural field beside it.
+pub fn has_single_public_repository(value: &serde_json::Value) -> bool {
     value.get(legacy_public_repositories_field()).is_none()
         && value
             .get(public_repository_field())
@@ -83,7 +91,8 @@ pub(crate) fn touches_private_santh_visibility(line: &str) -> bool {
         || line.contains(data().legacy_plural_release_repo_variable.as_str())
 }
 
-pub(crate) fn public_artifact_boundary_blockers(artifact: &str, bytes: &[u8]) -> Vec<String> {
+/// Everything in a public artifact that names something private.
+pub fn public_artifact_boundary_blockers(artifact: &str, bytes: &[u8]) -> Vec<String> {
     let mut blockers = Vec::new();
     match serde_json::from_slice::<serde_json::Value>(bytes) {
         Ok(value) => inspect_public_artifact_json(artifact, "$", &value, &mut blockers),
