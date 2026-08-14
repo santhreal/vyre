@@ -9,13 +9,9 @@ use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
 };
 use crate::api::suite::SuiteKind;
+use crate::cases::queue_traverse_plan::{single_queue_traverse, traverse_logical_lanes};
 use crate::cases::skewed_graph::sparse_queue_capacity;
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::csr_frontier_queue::csr_queue_forward_traverse;
-use vyre_primitives::graph::csr_queue_strided::{
-    csr_queue_strided_forward_dispatch_grid, csr_queue_strided_forward_traverse,
-    CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE,
-};
 
 use super::fixture::{
     build_ifds_skewed_fixture, ifds_active_queue_inputs, ifds_skewed_cpu_oracle, IfdsSkewedStats,
@@ -34,8 +30,7 @@ pub(super) use closure::{
 };
 #[cfg(test)]
 pub(super) use materialize::{
-    ifds_queue_materialize_sequence_fingerprint, ifds_queue_should_use_split_high_degree,
-    prepare_ifds_skewed_queue_materialize_step,
+    ifds_queue_materialize_sequence_fingerprint, prepare_ifds_skewed_queue_materialize_step,
 };
 
 pub(super) const ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX: usize = 0;
@@ -65,76 +60,6 @@ pub(super) fn ifds_sparse_queue_capacity(active_sources: u64) -> Result<u32, Ben
         "IFDS queue benchmark requires at least one active source. Fix: seed the frontier before queue sizing.",
         "IFDS queue",
     )
-}
-
-pub(super) struct IfdsQueueTraversePlan {
-    pub(super) program: Program,
-    pub(super) grid: [u32; 3],
-    pub(super) row_strided: bool,
-}
-
-pub(super) fn ifds_queue_traverse_plan(
-    max_degree: u32,
-    node_count: u32,
-    edge_count: u32,
-    queue_capacity: u32,
-) -> IfdsQueueTraversePlan {
-    let row_strided = ifds_queue_should_use_row_strided(max_degree);
-    let program = if row_strided {
-        csr_queue_strided_forward_traverse(
-            "active_queue",
-            "queue_len",
-            "edge_offsets",
-            "edge_targets",
-            "edge_kind_mask",
-            "frontier_out",
-            node_count,
-            edge_count,
-            queue_capacity,
-            IFDS_REACH_MASK,
-        )
-    } else {
-        csr_queue_forward_traverse(
-            "active_queue",
-            "queue_len",
-            "edge_offsets",
-            "edge_targets",
-            "edge_kind_mask",
-            "frontier_out",
-            node_count,
-            edge_count,
-            queue_capacity,
-            IFDS_REACH_MASK,
-        )
-    };
-    let grid = if row_strided {
-        csr_queue_strided_forward_dispatch_grid(queue_capacity)
-    } else {
-        [queue_capacity.div_ceil(256).max(1), 1, 1]
-    };
-
-    IfdsQueueTraversePlan {
-        program,
-        grid,
-        row_strided,
-    }
-}
-
-pub(super) const fn ifds_queue_should_use_row_strided(max_degree: u32) -> bool {
-    max_degree
-        >= CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE
-            .saturating_mul(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE)
-}
-
-pub(super) const fn ifds_queue_traverse_logical_lanes(
-    queue_capacity: u32,
-    row_strided_traverse: bool,
-) -> u64 {
-    if row_strided_traverse {
-        (queue_capacity as u64).saturating_mul(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE as u64)
-    } else {
-        queue_capacity as u64
-    }
 }
 
 /// Queue-driven IFDS step when the active frontier queue is already resident.
@@ -307,11 +232,12 @@ pub(super) fn prepare_ifds_skewed_active_queue_step(
 ) -> Result<DataflowIfdsSkewedActiveQueuePrepared, BenchError> {
     let fixture = build_ifds_skewed_fixture(NODE_COUNT)?;
     let queue_capacity = ifds_sparse_queue_capacity(fixture.stats.active_sources)?;
-    let traverse_plan = ifds_queue_traverse_plan(
+    let traverse_plan = single_queue_traverse(
         fixture.stats.max_degree,
         fixture.stats.nodes,
         fixture.stats.edges,
         queue_capacity,
+        IFDS_REACH_MASK,
     );
 
     let baseline_start = Instant::now();
@@ -336,10 +262,7 @@ pub(super) fn prepare_ifds_skewed_active_queue_step(
         traverse_program: traverse_plan.program,
         traverse_grid: traverse_plan.grid,
         row_strided_traverse: traverse_plan.row_strided,
-        traverse_logical_lanes: ifds_queue_traverse_logical_lanes(
-            queue_capacity,
-            traverse_plan.row_strided,
-        ),
+        traverse_logical_lanes: traverse_logical_lanes(queue_capacity, traverse_plan.row_strided),
         inputs,
         input_bytes_total,
         baseline_output: vyre_primitives::wire::pack_u32_slice(&oracle.output),

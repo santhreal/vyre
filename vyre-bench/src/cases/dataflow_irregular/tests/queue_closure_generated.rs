@@ -1,14 +1,13 @@
 use super::super::fixture::{
     ifds_skewed_closure_oracle, IfdsSkewedFixture, IfdsSkewedStats, IFDS_REACH_MASK,
 };
-use super::super::queue::{
-    ifds_queue_closure_inputs, ifds_queue_should_use_row_strided, ifds_skewed_queue_closure_oracle,
-};
+use super::super::queue::{ifds_queue_closure_inputs, ifds_skewed_queue_closure_oracle};
 use crate::cases::mix32;
 use crate::cases::queue_stage::{
     QUEUE_CLOSURE_QUEUE_A_INDEX, QUEUE_CLOSURE_QUEUE_B_INDEX, QUEUE_CLOSURE_SEED_LEN_INDEX,
     QUEUE_CLOSURE_SEED_QUEUE_INDEX,
 };
+use crate::cases::queue_traverse_plan::should_use_row_strided;
 use proptest::prelude::*;
 
 fn generated_ifds_fixture(
@@ -166,7 +165,7 @@ fn ifds_queue_closure_generated_ugly_hubs_match_bitset_with_exact_capacity() {
         let fixture = generated_ifds_fixture(node_count, &seeds, &edges);
         let max_iters = node_count.saturating_add(1);
 
-        row_strided_cases += u32::from(ifds_queue_should_use_row_strided(fixture.stats.max_degree));
+        row_strided_cases += u32::from(should_use_row_strided(fixture.stats.max_degree));
         filtered_active_cases += u32::from(fixture.stats.filtered_edges_from_active > 0);
 
         let full = ifds_skewed_queue_closure_oracle(&fixture, max_iters, fixture.stats.nodes)

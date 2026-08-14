@@ -1,4 +1,5 @@
 use super::*;
+use crate::cases::queue_traverse_plan;
 
 #[test]
 fn skewed_csr_fixture_has_variable_degree_and_bitset_frontier() {
@@ -139,14 +140,14 @@ fn skewed_csr_graph_row_striding_requires_wide_rows() {
     let lanes =
         vyre_primitives::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE;
     assert_eq!(
-        queue_materialize::GRAPH_QUEUE_ROW_STRIDED_MIN_DEGREE,
+        queue_traverse_plan::ROW_STRIDED_MIN_DEGREE,
         lanes.saturating_mul(lanes)
     );
     assert!(
-        !queue_materialize::graph_queue_should_use_row_strided(96),
+        !queue_traverse_plan::should_use_row_strided(96),
         "96-degree rows are not wide enough to justify a 32-lane team for every queued graph source"
     );
-    assert!(queue_materialize::graph_queue_should_use_row_strided(
+    assert!(queue_traverse_plan::should_use_row_strided(
         support::UGLY_HUB_DEGREE
     ));
     assert_eq!(
@@ -154,11 +155,11 @@ fn skewed_csr_graph_row_striding_requires_wide_rows() {
         lanes * 2
     );
     assert!(
-        queue_materialize::graph_queue_should_use_split_high_degree(1_000, 256),
+        queue_traverse_plan::should_use_split_high_degree(1_000, 256),
         "graph hubs should use the mixed split path when most queued rows stay low-degree"
     );
-    assert!(queue_materialize::graph_queue_should_use_row_strided(
-        queue_materialize::GRAPH_QUEUE_ROW_STRIDED_MIN_DEGREE
+    assert!(queue_traverse_plan::should_use_row_strided(
+        queue_traverse_plan::ROW_STRIDED_MIN_DEGREE
     ));
 }
 
@@ -209,10 +210,10 @@ fn generated_skewed_csr_queue_capacity_covers_active_sources_without_node_grid()
                 .is_err(),
             "undersized queue should fail case {case}"
         );
-        all_row_strided_candidates += u32::from(
-            queue_materialize::graph_queue_should_use_row_strided(fixture.stats.max_degree),
-        );
-        split_cases += u32::from(queue_materialize::graph_queue_should_use_split_high_degree(
+        all_row_strided_candidates += u32::from(queue_traverse_plan::should_use_row_strided(
+            fixture.stats.max_degree,
+        ));
+        split_cases += u32::from(queue_traverse_plan::should_use_split_high_degree(
             capacity,
             high_capacity,
         ));

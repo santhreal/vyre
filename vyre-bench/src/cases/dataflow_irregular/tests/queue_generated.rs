@@ -1,11 +1,9 @@
 use super::super::fixture::{ifds_active_high_degree_sources, ifds_queue_inputs};
-use super::super::queue::{
-    ifds_queue_should_use_split_high_degree, ifds_queue_traverse_logical_lanes,
-    ifds_sparse_queue_capacity,
-};
+use super::super::queue::ifds_sparse_queue_capacity;
 use super::*;
 use crate::cases::mix32;
 use crate::cases::queue_stage::{QUEUE_ACTIVE_QUEUE_INDEX, QUEUE_HIGH_QUEUE_INDEX};
+use crate::cases::queue_traverse_plan::{should_use_split_high_degree, traverse_logical_lanes};
 use vyre_primitives::graph::csr_queue_split::{
     csr_queue_split_mixed_logical_lanes, CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
 };
@@ -33,7 +31,7 @@ fn generated_ifds_queue_split_targets_only_active_hub_rows() {
                 });
         let inputs = ifds_queue_inputs(&fixture, queue_capacity, high_capacity)
             .unwrap_or_else(|error| panic!("generated IFDS queue inputs case {case}: {error}"));
-        let row_strided_lanes = ifds_queue_traverse_logical_lanes(queue_capacity, true);
+        let row_strided_lanes = traverse_logical_lanes(queue_capacity, true);
         let split_lanes = csr_queue_split_mixed_logical_lanes(queue_capacity, high_capacity);
 
         assert_eq!(
@@ -46,7 +44,7 @@ fn generated_ifds_queue_split_targets_only_active_hub_rows() {
             high_capacity as usize * std::mem::size_of::<u32>(),
             "high queue bytes case {case}"
         );
-        let uses_split = ifds_queue_should_use_split_high_degree(queue_capacity, high_capacity);
+        let uses_split = should_use_split_high_degree(queue_capacity, high_capacity);
         if uses_split {
             assert!(
                 split_lanes < row_strided_lanes,

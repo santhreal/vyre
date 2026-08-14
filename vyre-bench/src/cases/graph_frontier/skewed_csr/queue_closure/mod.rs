@@ -14,11 +14,11 @@ use vyre_primitives::graph::csr_queue_delta::{
     csr_queue_delta_strided_enqueue, CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE,
 };
 
-use super::queue_materialize::graph_queue_should_use_row_strided;
 use super::support::{
     build_skewed_csr_fixture, skewed_csr_queue_closure_inputs, skewed_csr_queue_closure_oracle,
     SkewedCsrStats, CSR_ALLOW_MASK, CSR_NODE_COUNT, SUITES,
 };
+use crate::cases::queue_traverse_plan::should_use_row_strided;
 
 mod metrics;
 
@@ -222,7 +222,7 @@ pub(super) fn prepare_skewed_csr_queue_closure(
         queue_capacity,
     );
     let clear_len_program = frontier_queue_len_init("queue_len");
-    let row_strided_delta = graph_queue_should_use_row_strided(fixture.stats.max_degree);
+    let row_strided_delta = should_use_row_strided(fixture.stats.max_degree);
     let (delta_program, delta_grid) = if row_strided_delta {
         (
             csr_queue_delta_strided_enqueue(

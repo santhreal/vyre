@@ -31,6 +31,12 @@ pub(super) struct IfdsSkewedStats {
     pub(super) high_degree_sources: u64,
 }
 
+impl crate::cases::queue_materialize::FrontierWords for IfdsSkewedStats {
+    fn frontier_words(&self) -> u32 {
+        self.frontier_words
+    }
+}
+
 pub(super) struct IfdsSkewedFixture {
     pub(super) nodes: Vec<u32>,
     pub(super) edge_offsets: Vec<u32>,
