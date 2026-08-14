@@ -33,6 +33,7 @@ use rustc_hash::FxHashMap;
 use std::sync::Arc;
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
+use vyre_foundation::transform::visit::{child_bodies, for_each_subexpr, node_operands};
 
 /// Canonical edge-kind bits used by the encoder.
 pub mod edge_kind {
@@ -308,69 +309,26 @@ impl EncoderCtx {
         // Recurse into nested scope bodies. Each branch / loop body /
         // block / region body gets its own scope frame so a Let inside
         // does not leak out.
-        match node {
-            Node::If {
-                cond: _,
-                then,
-                otherwise,
-            } => {
-                self.push_scope();
-                self.encode_scope(then)?;
-                self.pop_scope();
-                self.push_scope();
-                self.encode_scope(otherwise)?;
-                self.pop_scope();
-            }
-            Node::Loop {
-                var,
-                from: _,
-                to: _,
-                body,
-            } => {
-                self.push_scope();
-                // The induction variable is defined at body entry.
-                // Bind it to the Loop wrapper itself; any Var(var)
-                // inside the body resolves to my_id, and my_id is
-                // ROOT-rooted so the var is always reachable while
-                // the loop is live.
+        //
+        // The slots come from `transform::visit::child_bodies`, the owner of
+        // which variants nest. The hand-written match this replaces ended in
+        // `EncodeError::Unsupported`, so a fifth body-bearing variant turned
+        // gpu_dce off for the whole program rather than descending into it.
+        let loop_var = match node {
+            Node::Loop { var, .. } => Some(var),
+            _ => None,
+        };
+        for body in child_bodies(node) {
+            self.push_scope();
+            // The induction variable is defined at body entry. Bind it to the
+            // Loop wrapper itself; any Var(var) inside the body resolves to
+            // my_id, and my_id is ROOT-rooted so the var is always reachable
+            // while the loop is live.
+            if let Some(var) = loop_var {
                 self.bind(var.clone(), my_id);
-                self.encode_scope(body)?;
-                self.pop_scope();
             }
-            Node::Block(body) => {
-                self.push_scope();
-                self.encode_scope(body)?;
-                self.pop_scope();
-            }
-            Node::Region {
-                generator: _,
-                source_region: _,
-                body,
-            } => {
-                self.push_scope();
-                self.encode_scope(body.as_slice())?;
-                self.pop_scope();
-            }
-            // Leaf-at-Node-level (no nested Node bodies to walk).
-            Node::Let { .. }
-            | Node::Assign { .. }
-            | Node::Store { .. }
-            | Node::Return
-            | Node::Barrier { .. }
-            | Node::IndirectDispatch { .. }
-            | Node::AsyncLoad { .. }
-            | Node::AsyncStore { .. }
-            | Node::AsyncWait { .. }
-            | Node::Trap { .. }
-            | Node::Resume { .. }
-            | Node::Opaque(_) => {}
-            // Future variants  -  non-exhaustive enum.
-            _ => {
-                return Err(EncodeError::Unsupported(
-                    "Fix: encoder encountered an unknown Node variant; \
-                     extend `encode.rs` to handle it before invoking gpu_dce.",
-                ))
-            }
+            self.encode_scope(body)?;
+            self.pop_scope();
         }
         Ok(())
     }
@@ -506,105 +464,30 @@ fn node_definition_name(node: &Node) -> Option<&Ident> {
 /// Collect every `Expr::Var(name)` referenced inside this Node's own
 /// expressions, NOT recursing into nested Node bodies (those are
 /// walked by the encoder separately, with their own scope frames).
+///
+/// Operand positions come from `transform::visit::node_operands`, the owner of
+/// which variants carry an expression, so a variant that gains an operand
+/// position contributes its USE_DEF edges without an edit here.
 fn collect_node_own_var_refs(node: &Node, out: &mut Vec<Ident>) {
-    match node {
-        Node::Let { value, .. } | Node::Assign { value, .. } => collect_expr_var_refs(value, out),
-        Node::Store { index, value, .. } => {
-            collect_expr_var_refs(index, out);
-            collect_expr_var_refs(value, out);
-        }
-        Node::If { cond, .. } => collect_expr_var_refs(cond, out),
-        Node::Loop { from, to, .. } => {
-            collect_expr_var_refs(from, out);
-            collect_expr_var_refs(to, out);
-        }
-        Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
-            collect_expr_var_refs(offset, out);
-            collect_expr_var_refs(size, out);
-        }
-        Node::Trap { address, .. } => collect_expr_var_refs(address, out),
-        Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncWait { .. }
-        | Node::Resume { .. }
-        | Node::Opaque(_)
-        | Node::Block(_)
-        | Node::Region { .. } => {}
-        // Future variants: nothing collected; the unknown-variant
-        // detection in `encode_node` surfaces the gap via
-        // `EncodeError::Unsupported`.
-        _ => {}
+    for operand in node_operands(node).into_iter().flatten() {
+        collect_expr_var_refs(operand, out);
     }
 }
 
 /// Walk every sub-expression and push every `Expr::Var(name)` ident
 /// into `out`.
+///
+/// Children come from `transform::visit::for_each_subexpr`, the owner of which
+/// expression variants carry operands. The hand-written match this replaces
+/// ended in `_ => {}` and had already lost `Expr::BufferRef`; an unresolved
+/// name costs a USE_DEF edge, and a missing USE_DEF edge is a binding DCE is
+/// free to drop.
 pub fn collect_expr_var_refs(expr: &Expr, out: &mut Vec<Ident>) {
-    match expr {
-        Expr::Var(name) => out.push(name.clone()),
-        Expr::Load { index, .. } => collect_expr_var_refs(index, out),
-        Expr::BinOp { left, right, .. } => {
-            collect_expr_var_refs(left, out);
-            collect_expr_var_refs(right, out);
+    for_each_subexpr(expr, &mut |sub| {
+        if let Expr::Var(name) = sub {
+            out.push(name.clone());
         }
-        Expr::UnOp { operand, .. } => collect_expr_var_refs(operand, out),
-        Expr::Call { args, .. } => {
-            for arg in args {
-                collect_expr_var_refs(arg, out);
-            }
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            collect_expr_var_refs(cond, out);
-            collect_expr_var_refs(true_val, out);
-            collect_expr_var_refs(false_val, out);
-        }
-        Expr::Cast { value, .. } => collect_expr_var_refs(value, out),
-        Expr::Fma { a, b, c } => {
-            collect_expr_var_refs(a, out);
-            collect_expr_var_refs(b, out);
-            collect_expr_var_refs(c, out);
-        }
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            collect_expr_var_refs(index, out);
-            if let Some(exp) = expected {
-                collect_expr_var_refs(exp, out);
-            }
-            collect_expr_var_refs(value, out);
-        }
-        Expr::SubgroupBallot { cond } => collect_expr_var_refs(cond, out),
-        Expr::SubgroupShuffle { value, lane } => {
-            collect_expr_var_refs(value, out);
-            collect_expr_var_refs(lane, out);
-        }
-        Expr::SubgroupReduce { value, .. } => collect_expr_var_refs(value, out),
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => {}
-        // Future Expr variants: silently no-op. The encoder walks
-        // every Node; if a future Expr variant is the only one
-        // referencing a name, that name will be unresolved and
-        // potentially over-kept (conservative safe direction for
-        // DCE). When a new Expr variant lands, add its arm here.
-        _ => {}
-    }
+    });
 }
 
 #[cfg(test)]

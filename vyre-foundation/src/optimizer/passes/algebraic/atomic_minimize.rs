@@ -97,6 +97,7 @@ fn is_identity_atomic(op: AtomicOp, value: &Expr) -> bool {
 mod tests {
     use super::*;
     use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node};
+    use crate::transform::visit::for_each_node;
 
     fn buf() -> BufferDecl {
         BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)
@@ -319,28 +320,25 @@ mod tests {
         }
     }
 
+    /// The value bound to `target` by the first matching `Let`, at any nesting
+    /// depth.
+    ///
+    /// Descent comes from `transform::visit::for_each_node`, the one owner of
+    /// which node variants nest. The hand-written worklist this replaces ended
+    /// in `_ => {}`, so a binding inside a fifth body-bearing variant read as
+    /// absent and the assertion below would have failed for the wrong reason.
     fn find_let_value_ref<'a>(program: &'a Program, target: &str) -> Option<&'a Expr> {
-        let mut stack = Vec::new();
-        stack.extend(program.entry().iter().rev());
-        while let Some(node) = stack.pop() {
-            match node {
-                Node::Let { name, value } if name.as_str() == target => return Some(value),
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    stack.extend(otherwise.iter().rev());
-                    stack.extend(then.iter().rev());
+        let mut found: Option<&'a Expr> = None;
+        for_each_node(program.entry(), |node| {
+            if found.is_none() {
+                if let Node::Let { name, value } = node {
+                    if name.as_str() == target {
+                        found = Some(value);
+                    }
                 }
-                Node::Loop { body, .. } | Node::Block(body) => {
-                    stack.extend(body.iter().rev());
-                }
-                Node::Region { body, .. } => {
-                    stack.extend(body.iter().rev());
-                }
-                _ => {}
             }
-        }
-        None
+        });
+        found
     }
 
     #[test]

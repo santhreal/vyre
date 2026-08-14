@@ -1,5 +1,6 @@
 use super::*;
 use crate::ir::BinOp;
+use crate::transform::visit::{any_subexpr, for_each_node};
 
 /// Test: d(x*x)/dx = 2*x for a simple square program.
 #[test]
@@ -180,24 +181,15 @@ fn generated_backward_program_zeroes_gradient_buffers_before_accumulation() {
     }
 }
 
+/// Every node in `nodes` and in every nested body, flattened.
+///
+/// Descent comes from `transform::visit::for_each_node`, the one owner of which
+/// node variants nest. The hand-written match this replaces ended in `_ => {}`,
+/// so a node inside a fifth body-bearing variant never reached the list and
+/// every assertion driven off it read a shorter program than the one produced.
 fn flatten_autodiff_test_nodes(nodes: &[Node]) -> Vec<&Node> {
     let mut out = Vec::new();
-    for node in nodes {
-        out.push(node);
-        match node {
-            Node::If {
-                then, otherwise, ..
-            } => {
-                out.extend(flatten_autodiff_test_nodes(then));
-                out.extend(flatten_autodiff_test_nodes(otherwise));
-            }
-            Node::Loop { body, .. } | Node::Block(body) => {
-                out.extend(flatten_autodiff_test_nodes(body));
-            }
-            Node::Region { body, .. } => out.extend(flatten_autodiff_test_nodes(body)),
-            _ => {}
-        }
-    }
+    for_each_node(nodes, |node| out.push(node));
     out
 }
 
@@ -269,30 +261,30 @@ fn backward_loop_body_uses_reversed_index_not_forward_var() {
     // if the raw var appears as a top-level Store index the substitution was
     // not applied and the backward pass would write in forward order.
     fn contains_bare_loop_var(expr: &Expr, var_name: &str) -> bool {
-        match expr {
-            Expr::Var(name) => name.as_str() == var_name,
-            Expr::Load { index, .. } => contains_bare_loop_var(index, var_name),
-            Expr::BinOp { left, right, .. } => {
-                contains_bare_loop_var(left, var_name) || contains_bare_loop_var(right, var_name)
-            }
-            _ => false,
-        }
+        // Children come from `transform::visit::any_subexpr`, the owner of which
+        // expression variants carry operands. The hand-written match this
+        // replaces listed three and ended in `_ => false`, so a reversal
+        // expression built with `Select`, `Fma` or a cast read as containing no
+        // reference to the induction variable at all.
+        any_subexpr(
+            expr,
+            &mut |sub| matches!(sub, Expr::Var(name) if name.as_str() == var_name),
+        )
     }
 
+    /// The index of every `Store` in `nodes`, at any nesting depth.
+    ///
+    /// Descent comes from `transform::visit::for_each_node`, the one owner of
+    /// which node variants nest. The hand-written match this replaces ended in
+    /// `_ => {}` and had no `Region` arm at all, so a store inside a region was
+    /// already invisible and the assertion below passed on a backward body it
+    /// had not inspected.
     fn store_indices_in_nodes<'a>(nodes: &'a [Node], out: &mut Vec<&'a Expr>) {
-        for node in nodes {
-            match node {
-                Node::Store { index, .. } => out.push(index),
-                Node::Loop { body, .. } | Node::Block(body) => store_indices_in_nodes(body, out),
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    store_indices_in_nodes(then, out);
-                    store_indices_in_nodes(otherwise, out);
-                }
-                _ => {}
+        for_each_node(nodes, |node| {
+            if let Node::Store { index, .. } = node {
+                out.push(index);
             }
-        }
+        });
     }
 
     let mut store_indices: Vec<&Expr> = Vec::new();

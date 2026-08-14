@@ -4,6 +4,7 @@
 use std::collections::{HashMap, HashSet};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, Expr, Ident, MemoryKind, Node, Program};
+use vyre_foundation::transform::visit::{for_each_node, node_operands};
 
 use super::barrier_split::{entry_sequence, try_split_on_grid_sync};
 use super::{reserve_grid_sync_hash_map, reserve_grid_sync_hash_set, reserve_grid_sync_vec};
@@ -89,9 +90,7 @@ fn first_writer_segment_per_buffer(
             program.buffers().len(),
             "grid-sync first-writer write scan",
         )?;
-        for node in entry_sequence(segment) {
-            collect_segment_buffer_targets(node, &mut reads, &mut writes);
-        }
+        collect_segment_buffer_targets(entry_sequence(segment), &mut reads, &mut writes);
         for name in writes {
             first_writer.entry(name).or_insert(segment_idx);
         }
@@ -117,9 +116,7 @@ fn rewrite_segment_buffers_for_host_split(
         source.buffers().len(),
         "grid-sync segment write set",
     )?;
-    for node in entry_sequence(segment) {
-        collect_segment_buffer_targets(node, &mut reads, &mut writes);
-    }
+    collect_segment_buffer_targets(entry_sequence(segment), &mut reads, &mut writes);
 
     let mut buffers = Vec::new();
     reserve_grid_sync_vec(
@@ -264,70 +261,40 @@ pub(super) fn segment_buffer_produces_output(buffer: &BufferDecl) -> bool {
         )
 }
 
+/// The buffers `nodes` reads and writes, at any nesting depth.
+///
+/// Descent and operand positions come from `transform::visit::for_each_node`
+/// and `node_operands`, the owners of which variants nest and which carry an
+/// expression. The match below asks only what a statement does to a buffer BY
+/// NAME, which is a per-variant question with no body-bearing arm left in it:
+/// the previous version restated the four nesting variants and the operand
+/// positions of six more, so it read a `Loop` bound but not an `AsyncLoad`
+/// offset, and a first-writer set that misses a buffer promotes a segment
+/// output to an input.
 fn collect_segment_buffer_targets(
-    node: &Node,
+    nodes: &[Node],
     reads: &mut HashSet<Ident>,
     writes: &mut HashSet<Ident>,
 ) {
-    match node {
-        Node::Let { value, .. } | Node::Assign { value, .. } => {
-            collect_segment_expr_targets(value, reads, writes);
-        }
-        Node::Store {
-            buffer,
-            index,
-            value,
-        } => {
-            writes.insert(Ident::from(buffer));
-            collect_segment_expr_targets(index, reads, writes);
-            collect_segment_expr_targets(value, reads, writes);
-        }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            collect_segment_expr_targets(cond, reads, writes);
-            for child in then.iter().chain(otherwise.iter()) {
-                collect_segment_buffer_targets(child, reads, writes);
+    for_each_node(nodes, |node| {
+        match node {
+            Node::Store { buffer, .. } => {
+                writes.insert(Ident::from(buffer));
             }
-        }
-        Node::Loop { from, to, body, .. } => {
-            collect_segment_expr_targets(from, reads, writes);
-            collect_segment_expr_targets(to, reads, writes);
-            for child in body {
-                collect_segment_buffer_targets(child, reads, writes);
+            Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
+                reads.insert(buffer.clone());
+                writes.insert(buffer.clone());
             }
-        }
-        Node::Block(body) => {
-            for child in body {
-                collect_segment_buffer_targets(child, reads, writes);
+            Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
+                reads.insert(input.clone());
+                writes.insert(output.clone());
             }
+            _ => {}
         }
-        Node::Region { body, .. } => {
-            for child in body.iter() {
-                collect_segment_buffer_targets(child, reads, writes);
-            }
+        for operand in node_operands(node).into_iter().flatten() {
+            collect_segment_expr_targets(operand, reads, writes);
         }
-        Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
-            reads.insert(buffer.clone());
-            writes.insert(buffer.clone());
-        }
-        Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
-            reads.insert(input.clone());
-            writes.insert(output.clone());
-        }
-        Node::IndirectDispatch { .. }
-        | Node::Return
-        | Node::Barrier { .. }
-        | Node::AsyncLoad { .. }
-        | Node::AsyncStore { .. }
-        | Node::AsyncWait { .. }
-        | Node::Trap { .. }
-        | Node::Resume { .. }
-        | Node::Opaque(_) => {}
-        _ => {}
-    }
+    });
 }
 
 fn collect_segment_expr_targets(

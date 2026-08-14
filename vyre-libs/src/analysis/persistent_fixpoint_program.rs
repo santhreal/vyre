@@ -123,6 +123,7 @@ mod tests {
     }
 
     /// Grid-wide fences in `nodes`, counted through every nesting construct.
+
     /// A transfer body in which lane 0 publishes the value of the LAST element and
     /// nothing else writes: `if t == 0 { next[last] = 9 }`.
     ///

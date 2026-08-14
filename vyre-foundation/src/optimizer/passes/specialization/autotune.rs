@@ -4,6 +4,7 @@ use crate::optimizer::program_shape_facts::ProgramShapeFacts;
 use crate::optimizer::program_soa::ProgramFacts;
 use crate::optimizer::AdapterCaps;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::visit::any_descendant;
 use rustc_hash::FxHashSet;
 
 /// Dynamically adjust dispatch dimensions and workgroup bounds.
@@ -102,8 +103,20 @@ fn tuned_workgroup_size_for(
     ]
 }
 
+/// Whether any `If` in the program guards on `invocation_id.x` against a bound.
+///
+/// Descent comes from `transform::visit::any_descendant`, the one owner of which
+/// node variants nest. The hand-written match this replaces re-listed all four
+/// body-bearing variants and every leaf, so a fifth nesting variant had to be
+/// added here as well or a guard inside it read as absent and autotune would
+/// widen the dispatch past a bound that was in fact checked.
 fn program_has_gid_x_bounds_check(program: &Program) -> bool {
-    program.entry().iter().any(node_has_gid_x_bounds_check)
+    program.entry().iter().any(|node| {
+        any_descendant(node, &mut |current| match current {
+            Node::If { cond, .. } => is_gid_x_bounds_cond(cond),
+            _ => false,
+        })
+    })
 }
 
 fn inferred_guard_bound_buffer(program: &Program) -> Option<&crate::ir::BufferDecl> {
@@ -187,38 +200,6 @@ fn check_even_divisible_without_guard(
         }
     }
     Ok(())
-}
-
-fn node_has_gid_x_bounds_check(node: &Node) -> bool {
-    match node {
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            is_gid_x_bounds_cond(cond)
-                || then.iter().any(node_has_gid_x_bounds_check)
-                || otherwise.iter().any(node_has_gid_x_bounds_check)
-        }
-        Node::Loop { body, .. } | Node::Block(body) => body.iter().any(node_has_gid_x_bounds_check),
-        Node::Region { body, .. } => body.iter().any(node_has_gid_x_bounds_check),
-        Node::Let { .. }
-        | Node::Assign { .. }
-        | Node::Store { .. }
-        | Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncLoad { .. }
-        | Node::AsyncStore { .. }
-        | Node::AllReduce { .. }
-        | Node::AllGather { .. }
-        | Node::ReduceScatter { .. }
-        | Node::Broadcast { .. }
-        | Node::AsyncWait { .. }
-        | Node::Trap { .. }
-        | Node::Resume { .. }
-        | Node::Opaque(_) => false,
-    }
 }
 
 fn is_gid_x_bounds_cond(cond: &Expr) -> bool {

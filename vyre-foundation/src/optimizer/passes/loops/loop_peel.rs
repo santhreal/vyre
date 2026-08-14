@@ -175,6 +175,7 @@ fn is_peelable_loop(node: &Node) -> bool {
 mod tests {
     use super::*;
     use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node};
+    use crate::transform::visit::for_each_node;
 
     fn buf() -> BufferDecl {
         BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)
@@ -288,23 +289,19 @@ mod tests {
     }
 
     /// Collect every `(index, value)` Store pair in document order.
+    ///
+    /// Descent comes from `transform::visit::for_each_node`, the one owner of
+    /// which node variants nest. The hand-written match this replaces ended in
+    /// `_ => {}`, so a store inside a fifth body-bearing variant would have been
+    /// missing from the pair list and the peeled-prologue assertion would have
+    /// passed on a prologue that dropped it.
     fn store_pairs(nodes: &[Node]) -> Vec<(Expr, Expr)> {
         let mut out = Vec::new();
-        for n in nodes {
-            match n {
-                Node::Store { index, value, .. } => out.push((index.clone(), value.clone())),
-                Node::Block(b) => out.extend(store_pairs(b)),
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    out.extend(store_pairs(then));
-                    out.extend(store_pairs(otherwise));
-                }
-                Node::Loop { body, .. } => out.extend(store_pairs(body)),
-                Node::Region { body, .. } => out.extend(store_pairs(body)),
-                _ => {}
+        for_each_node(nodes, |n| {
+            if let Node::Store { index, value, .. } = n {
+                out.push((index.clone(), value.clone()));
             }
-        }
+        });
         out
     }
 

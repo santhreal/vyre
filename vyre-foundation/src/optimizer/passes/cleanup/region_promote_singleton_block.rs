@@ -130,40 +130,18 @@ mod tests {
         Program::wrapped(vec![buf()], [1, 1, 1], entry)
     }
 
+    /// Regions whose whole body is one `Block`, counted at any nesting depth.
+    ///
+    /// Descent comes from `test_util::count_nodes` over
+    /// `transform::visit::for_each_node`. The hand-written pair of matches this
+    /// replaces ended in `_ => {}`, so a promotable region inside a fifth
+    /// body-bearing variant read as absent and the assertion would have passed
+    /// on a program the pass had not finished promoting.
     fn count_singleton_block_regions(node: &Node) -> usize {
-        let mut count = 0;
-        if let Node::Region { body, .. } = node {
-            if matches!(body.as_slice(), [Node::Block(_)]) {
-                count += 1;
-            }
-            for child in body.iter() {
-                count += count_singleton_block_regions(child);
-            }
-        }
-        match node {
-            Node::If {
-                then, otherwise, ..
-            } => {
-                for n in then {
-                    count += count_singleton_block_regions(n);
-                }
-                for n in otherwise {
-                    count += count_singleton_block_regions(n);
-                }
-            }
-            Node::Loop { body, .. } => {
-                for n in body {
-                    count += count_singleton_block_regions(n);
-                }
-            }
-            Node::Block(body) => {
-                for n in body {
-                    count += count_singleton_block_regions(n);
-                }
-            }
-            _ => {}
-        }
-        count
+        crate::test_util::count_nodes(
+            std::slice::from_ref(node),
+            |n| matches!(n, Node::Region { body, .. } if matches!(body.as_slice(), [Node::Block(_)])),
+        )
     }
 
     #[test]

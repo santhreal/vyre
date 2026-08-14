@@ -71,10 +71,10 @@ impl DeadStoreElim {
     /// to the same buffer that *could* alias each other.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        driver::analyze_candidates(
+        driver::analyze_candidate_bodies(
             program,
             &[crate::ir::stats::NODE_KIND_STORE],
-            &mut has_redundant_store_pair,
+            &mut contains_buffer_pair,
         )
     }
 
@@ -253,20 +253,14 @@ fn expr_structurally_eq(left: &Expr, right: &Expr) -> bool {
 /// Whether the program has any sibling pair of stores to the same
 /// buffer  -  cheap analysis used by the pass scheduler to skip programs
 /// where DSE has nothing to do.
-fn has_redundant_store_pair(node: &Node) -> bool {
-    let body: &[Node] = match node {
-        Node::If {
-            then, otherwise, ..
-        } => {
-            return contains_buffer_pair(then) || contains_buffer_pair(otherwise);
-        }
-        Node::Loop { body, .. } | Node::Block(body) => body,
-        Node::Region { body, .. } => body.as_ref(),
-        _ => return false,
-    };
-    contains_buffer_pair(body)
-}
-
+///
+/// The candidate is a relation between ADJACENT siblings, so it cannot flatten
+/// to a per-node scan: two stores to one buffer are invisible from either store
+/// alone. [`driver::analyze_candidate_bodies`] hands the pairwise test each
+/// enclosing body, and its slot list comes from `child_bodies`. The
+/// hand-written slot match this replaces ended in `_ => return false`, so a
+/// redundant pair inside a fifth body-bearing variant read as absent and the
+/// pass reported SKIP.
 fn contains_buffer_pair(body: &[Node]) -> bool {
     let mut seen: rustc_hash::FxHashSet<&Ident> = rustc_hash::FxHashSet::default();
     for n in body {

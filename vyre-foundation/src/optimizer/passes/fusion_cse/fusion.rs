@@ -2,7 +2,8 @@ use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::rewrite::push_expr_children;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::transform::visit::{
-    expr_buffer_ref, for_each_descendant, node_buffer_refs, node_operands, ExprBufferRef,
+    expr_buffer_ref, for_each_descendant, for_each_node, node_buffer_refs, node_operands,
+    ExprBufferRef,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
@@ -253,25 +254,19 @@ fn fuse_nodes(nodes: &[Node], buffers: &[crate::ir::BufferDecl], program: &Progr
     fuse_nodes_with_counts(nodes, buffers, &use_counts, &mutable_names)
 }
 
+/// Every name `program` assigns to, at any nesting depth.
+///
+/// Descent comes from [`for_each_node`], the one owner of which node variants
+/// nest. The hand-written worklist this replaces ended in `_ => {}`, so an
+/// `Assign` inside a fifth body-bearing variant read as absent and fusion
+/// treated a mutable scalar as immutable.
 fn assigned_names(program: &Program) -> FxHashSet<Ident> {
     let mut names = FxHashSet::default();
-    let mut stack: Vec<&Node> = program.entry().iter().collect();
-    while let Some(node) = stack.pop() {
-        match node {
-            Node::Assign { name, .. } => {
-                names.insert(name.clone());
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                stack.extend(then);
-                stack.extend(otherwise);
-            }
-            Node::Loop { body, .. } | Node::Block(body) => stack.extend(body),
-            Node::Region { body, .. } => stack.extend(body.iter()),
-            _ => {}
+    for_each_node(program.entry(), |node| {
+        if let Node::Assign { name, .. } = node {
+            names.insert(name.clone());
         }
-    }
+    });
     names
 }
 

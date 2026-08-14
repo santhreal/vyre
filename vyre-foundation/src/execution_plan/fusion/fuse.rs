@@ -4,6 +4,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::execution_plan::SchedulingPolicy;
 use crate::ir::{BufferAccess, BufferDecl, Ident, Node, Program};
+use crate::transform::visit::any_descendant;
 
 use super::alpha_rename::{multiply_declared_names, push_alpha_renamed_arm_entry_node, ArmRenamer};
 use super::collectors::collect_buffer_targets;
@@ -414,16 +415,15 @@ fn reject_workgroup_geometry_change(
 }
 
 /// Is there a barrier anywhere in this node sequence?
+///
+/// Descent comes from [`any_descendant`], the one owner of which node variants
+/// nest. The hand-written match this replaces ended in `_ => false`, and a
+/// barrier hidden inside an unrecognised nesting variant makes a fused arm look
+/// unsynchronized when it is not.
 fn has_barrier(nodes: &[Node]) -> bool {
-    nodes.iter().any(|node| match node {
-        Node::Barrier { .. } => true,
-        Node::Region { body, .. } => has_barrier(body),
-        Node::Block(body) | Node::Loop { body, .. } => has_barrier(body),
-        Node::If {
-            then, otherwise, ..
-        } => has_barrier(then) || has_barrier(otherwise),
-        _ => false,
-    })
+    nodes
+        .iter()
+        .any(|node| any_descendant(node, &mut |n| matches!(n, Node::Barrier { .. })))
 }
 
 fn flatten_arm_entries(

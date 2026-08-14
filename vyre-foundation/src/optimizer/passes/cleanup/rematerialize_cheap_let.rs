@@ -54,6 +54,7 @@
 
 use crate::ir::{Expr, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::visit::any_descendant;
 
 /// Drop `Let` bindings whose value is a trivially cheap leaf and whose
 /// name is never reassigned, inlining the value at every use site.
@@ -75,9 +76,7 @@ impl RematerializeCheapLetPass {
         if !program.stats().has_node_let() {
             return PassAnalysis::SKIP;
         }
-        let mut found = false;
-        scan_for_candidate(program.entry(), &mut found);
-        if found {
+        if scan_for_candidate(program.entry()) {
             PassAnalysis::RUN
         } else {
             PassAnalysis::SKIP
@@ -389,32 +388,27 @@ fn node_reassigns(node: &Node, name: &str) -> bool {
     }
 }
 
-/// Recursive analyze helper: true iff any `Let` in the tree has a
-/// cheap-leaf value.
-fn scan_for_candidate(nodes: &[Node], found: &mut bool) {
-    for node in nodes {
-        if *found {
-            return;
-        }
-        match node {
-            Node::Let { value, .. } if is_cheap_leaf(value) => *found = true,
-            Node::If {
-                then, otherwise, ..
-            } => {
-                scan_for_candidate(then, found);
-                scan_for_candidate(otherwise, found);
-            }
-            Node::Loop { body, .. } | Node::Block(body) => scan_for_candidate(body, found),
-            Node::Region { body, .. } => scan_for_candidate(body, found),
-            _ => {}
-        }
-    }
+/// True when any `Let` anywhere under `nodes` has a cheap-leaf value.
+///
+/// Descent comes from [`any_descendant`], the one owner of which node variants
+/// nest, which also short-circuits on the first hit as the hand-written scan
+/// did. That scan ended in `_ => {}`, so a candidate inside a fifth
+/// body-bearing variant read as absent and the pass reported SKIP for a program
+/// it had work in.
+fn scan_for_candidate(nodes: &[Node]) -> bool {
+    nodes.iter().any(|node| {
+        any_descendant(
+            node,
+            &mut |n| matches!(n, Node::Let { value, .. } if is_cheap_leaf(value)),
+        )
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
+    use crate::transform::visit::{child_bodies, node_shape};
 
     fn buf() -> BufferDecl {
         BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)
@@ -438,12 +432,15 @@ mod tests {
             return Some(nodes);
         }
         for node in nodes {
-            let body = match node {
-                Node::Block(body) => body.as_slice(),
-                Node::Region { body, .. } => body.as_ref().as_slice(),
-                _ => continue,
-            };
-            if let Some(found) = find_user_siblings(body) {
+            // A wrapper is a node whose whole content is one body: `node_shape`
+            // owns that classification, so a new body-only variant is unwrapped
+            // here without an edit. An `If` or a `Loop` is not a wrapper, and
+            // the sibling sequence this looks for is the unguarded one.
+            let shape = node_shape(node);
+            if !shape.nests_nodes || shape.carries_operands {
+                continue;
+            }
+            if let Some(found) = find_user_siblings(child_bodies(node)[0]) {
                 return Some(found);
             }
         }

@@ -23,6 +23,7 @@
 
 use vyre_foundation::ir::model::spec_types::{BinOp, UnOp};
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
+use vyre_foundation::transform::visit::{child_bodies, node_operands};
 
 use super::encode::EncodeError;
 
@@ -210,75 +211,23 @@ impl ArenaCtx {
         let node_index = self.node_top_level_exprs.len();
         self.node_top_level_exprs.push(Vec::new());
 
-        match node {
-            Node::Let { value, .. } | Node::Assign { value, .. } => {
-                let id = self.encode_expr(value)?;
-                self.node_top_level_exprs[node_index].push(id);
-            }
-            Node::Store { index, value, .. } => {
-                let id_index = self.encode_expr(index)?;
-                let id_value = self.encode_expr(value)?;
-                self.node_top_level_exprs[node_index].push(id_index);
-                self.node_top_level_exprs[node_index].push(id_value);
-            }
-            Node::If { cond, .. } => {
-                let id = self.encode_expr(cond)?;
-                self.node_top_level_exprs[node_index].push(id);
-            }
-            Node::Loop { from, to, .. } => {
-                let id_from = self.encode_expr(from)?;
-                let id_to = self.encode_expr(to)?;
-                self.node_top_level_exprs[node_index].push(id_from);
-                self.node_top_level_exprs[node_index].push(id_to);
-            }
-            Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
-                let id_off = self.encode_expr(offset)?;
-                let id_sz = self.encode_expr(size)?;
-                self.node_top_level_exprs[node_index].push(id_off);
-                self.node_top_level_exprs[node_index].push(id_sz);
-            }
-            Node::Trap { address, .. } => {
-                let id = self.encode_expr(address)?;
-                self.node_top_level_exprs[node_index].push(id);
-            }
-            Node::Return
-            | Node::Barrier { .. }
-            | Node::IndirectDispatch { .. }
-            | Node::AsyncWait { .. }
-            | Node::Resume { .. }
-            | Node::Opaque(_)
-            | Node::Block(_)
-            | Node::Region { .. } => {
-                // Wrappers carry no Exprs at this level; their nested
-                // bodies are walked by the recursion below.
-            }
-            _ => {
-                return Err(EncodeError::Unsupported(
-                    "Fix: ExprArena encoder hit an unknown Node variant; \
-                     extend `expr_arena.rs::encode_node`.",
-                ));
-            }
+        // Every operand this Node carries, in source order, from
+        // `transform::visit::node_operands`: the owner of which variants carry
+        // an expression and in which order. The hand-written match this
+        // replaces reproduced that order by hand and ended in
+        // `EncodeError::Unsupported`, so a variant gaining an operand position
+        // failed the whole encode instead of encoding the operand.
+        for operand in node_operands(node).into_iter().flatten() {
+            let id = self.encode_expr(operand)?;
+            self.node_top_level_exprs[node_index].push(id);
         }
 
         // Recurse into nested scope bodies. Each pushes its own
-        // node_top_level_exprs entries.
-        match node {
-            Node::If {
-                then, otherwise, ..
-            } => {
-                self.encode_scope(then)?;
-                self.encode_scope(otherwise)?;
-            }
-            Node::Loop { body, .. } => {
-                self.encode_scope(body)?;
-            }
-            Node::Block(body) => {
-                self.encode_scope(body)?;
-            }
-            Node::Region { body, .. } => {
-                self.encode_scope(body.as_slice())?;
-            }
-            _ => {}
+        // node_top_level_exprs entries. The slots come from
+        // `transform::visit::child_bodies`, so a fifth body-bearing variant is
+        // descended into rather than encoded as a leaf.
+        for body in child_bodies(node) {
+            self.encode_scope(body)?;
         }
         Ok(())
     }

@@ -63,6 +63,7 @@ mod tests {
     use super::*;
     use crate::fixture_bytes::{bytes_to_u32 as decode_u32_words, u32_bytes};
     use vyre_foundation::ir::{BufferAccess, Expr, Node};
+    use vyre_foundation::transform::visit::any_descendant;
     use vyre_reference::value::Value;
 
     /// Run `scan_prefix_sum` through the reference interpreter and return the
@@ -252,44 +253,25 @@ mod tests {
     }
 
     fn contains_loop(program: &Program) -> bool {
-        program.entry().iter().any(node_contains_loop)
-    }
-
-    fn node_contains_loop(node: &Node) -> bool {
-        match node {
-            Node::Loop { .. } => true,
-            Node::Block(children) => children.iter().any(node_contains_loop),
-            Node::If {
-                then, otherwise, ..
-            } => then.iter().any(node_contains_loop) || otherwise.iter().any(node_contains_loop),
-            Node::Region { body, .. } => body.iter().any(node_contains_loop),
-            _ => false,
-        }
-    }
-
-    fn contains_invocation_zero_gate(program: &Program) -> bool {
         program
             .entry()
             .iter()
-            .any(node_contains_invocation_zero_gate)
+            .any(|node| any_descendant(node, &mut |n| matches!(n, Node::Loop { .. })))
     }
 
-    fn node_contains_invocation_zero_gate(node: &Node) -> bool {
-        match node {
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                expr_is_invocation_zero(cond)
-                    || then.iter().any(node_contains_invocation_zero_gate)
-                    || otherwise.iter().any(node_contains_invocation_zero_gate)
-            }
-            Node::Block(children) => children.iter().any(node_contains_invocation_zero_gate),
-            Node::Loop { body, .. } => body.iter().any(node_contains_invocation_zero_gate),
-            Node::Region { body, .. } => body.iter().any(node_contains_invocation_zero_gate),
-            _ => false,
-        }
+    /// True when any `If` anywhere in `program` is gated on invocation zero.
+    ///
+    /// Descent comes from `transform::visit::any_descendant`, the one owner of
+    /// which node variants nest. The two hand-written matches this replaces both
+    /// ended in `_ => false`, so a fifth body-bearing variant would have hidden
+    /// the gate and the assertion would have reported the wrong shape.
+    fn contains_invocation_zero_gate(program: &Program) -> bool {
+        program.entry().iter().any(|node| {
+            any_descendant(
+                node,
+                &mut |n| matches!(n, Node::If { cond, .. } if expr_is_invocation_zero(cond)),
+            )
+        })
     }
 
     fn expr_is_invocation_zero(expr: &Expr) -> bool {

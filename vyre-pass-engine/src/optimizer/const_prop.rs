@@ -23,6 +23,7 @@ use std::sync::Arc;
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::model::spec_types::{BinOp, UnOp};
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
+use vyre_foundation::visit::node_map;
 
 /// The post-substitution folder splits between u32-result ops and
 /// bool-result ops. The caller picks the right folder based on the
@@ -276,14 +277,22 @@ fn rewrite_node(node: &Node, env: &mut ConstEnv) -> Node {
                 body: Arc::new(new_body),
             }
         }
-        // Pass-through: no Expr payload.
-        Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncWait { .. }
-        | Node::Resume { .. }
-        | Node::Opaque(_) => node.clone(),
-        _ => node.clone(),
+        // A variant this pass has no operand rule for. Its bodies are still
+        // rewritten, through `visit::node_map::map_body` and its `child_bodies`
+        // owner: the wildcard this replaces returned the node unchanged, so a
+        // fifth body-bearing variant would have switched const propagation off
+        // for everything inside it. `Node` is `#[non_exhaustive]`, so this crate
+        // cannot write the match exhaustively and the default has to be right
+        // rather than absent.
+        other => {
+            let saved = env.snapshot();
+            let rebuilt = node_map::map_body(other.clone(), &mut |body| {
+                env.restore(saved.clone());
+                rewrite_scope(&body, env)
+            });
+            env.restore(saved);
+            rebuilt
+        }
     }
 }
 

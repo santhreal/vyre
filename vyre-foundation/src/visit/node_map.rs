@@ -329,6 +329,13 @@ mod tests {
 
     /// Reference recursive walker used only for correctness comparison on
     /// small trees where recursion depth is safe.
+    ///
+    /// This stays hand-written on purpose: it is the differential arm the
+    /// iterative [`any_descendant`] is checked against, and a reference that
+    /// reads its child list from the same owner as the implementation cannot
+    /// disagree with it about anything. The match is exhaustive with no
+    /// catch-all instead, so a new `Node` variant fails to compile here and the
+    /// author has to state whether the reference descends into it.
     fn any_descendant_recursive<P>(node: &Node, pred: &mut P) -> bool
     where
         P: FnMut(&Node) -> bool,
@@ -346,7 +353,22 @@ mod tests {
             Node::Loop { body, .. } => body.iter().any(|n| any_descendant_recursive(n, pred)),
             Node::Block(body) => body.iter().any(|n| any_descendant_recursive(n, pred)),
             Node::Region { body, .. } => body.iter().any(|n| any_descendant_recursive(n, pred)),
-            _ => false,
+            Node::Let { .. }
+            | Node::Assign { .. }
+            | Node::Store { .. }
+            | Node::Return
+            | Node::Barrier { .. }
+            | Node::IndirectDispatch { .. }
+            | Node::AllReduce { .. }
+            | Node::AllGather { .. }
+            | Node::ReduceScatter { .. }
+            | Node::Broadcast { .. }
+            | Node::AsyncLoad { .. }
+            | Node::AsyncStore { .. }
+            | Node::AsyncWait { .. }
+            | Node::Trap { .. }
+            | Node::Resume { .. }
+            | Node::Opaque(_) => false,
         }
     }
 

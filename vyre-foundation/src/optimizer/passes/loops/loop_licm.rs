@@ -56,6 +56,7 @@ use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::passes::expr_is_observably_free_for_reexecution;
 use crate::optimizer::rewrite::push_expr_children;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::visit::{any_descendant, for_each_node};
 use crate::visit::bound_names::count_bound_names;
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
@@ -227,30 +228,23 @@ fn split_invariant_lets(
     (hoisted, kept)
 }
 
+/// Every name `nodes` mutates, at any nesting depth: `Assign` targets, plus
+/// `Let` bindings when `include_let_bindings`.
+///
+/// Descent comes from [`for_each_node`], the one owner of which node variants
+/// nest. The hand-written match this replaces ended in `_ => {}`, so a mutation
+/// inside a fifth body-bearing variant read as absent and LICM hoisted an
+/// expression that was not invariant.
 fn collect_mutated_names(nodes: &[Node], out: &mut FxHashSet<Ident>, include_let_bindings: bool) {
-    for node in nodes {
-        match node {
-            Node::Assign { name, .. } => {
+    for_each_node(nodes, |node| {
+        if let Node::Assign { name, .. } = node {
+            out.insert(name.clone());
+        } else if let Node::Let { name, .. } = node {
+            if include_let_bindings {
                 out.insert(name.clone());
             }
-            Node::Let { name, .. } if include_let_bindings => {
-                out.insert(name.clone());
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                collect_mutated_names(then, out, include_let_bindings);
-                collect_mutated_names(otherwise, out, include_let_bindings);
-            }
-            Node::Loop { body, .. } | Node::Block(body) => {
-                collect_mutated_names(body, out, include_let_bindings);
-            }
-            Node::Region { body, .. } => {
-                collect_mutated_names(body, out, include_let_bindings);
-            }
-            _ => {}
         }
-    }
+    });
 }
 
 /// Walk `nodes` collecting every name that appears as the target of
@@ -299,48 +293,47 @@ fn expr_references_any(expr: &Expr, mutated: &FxHashSet<Ident>) -> bool {
     expr_references_mutated_name(expr, mutated, None)
 }
 
-/// Cheap matcher used by `analyze`: walks `node` looking for any
-/// `Node::Loop` whose body contains at least one Let whose value
-/// references neither the loop var nor any mutated-in-body name and
-/// is observably free.
-fn has_hoistable_let_in_any_loop(node: &Node) -> bool {
-    match node {
-        Node::Loop { var, body, .. } => {
-            let mut mutated: FxHashSet<Ident> = FxHashSet::default();
-            mutated.insert(var.clone());
-            collect_assigned_and_let_bound_names(body, &mut mutated);
-            let mut assigned: FxHashSet<Ident> = FxHashSet::default();
-            collect_assigned_names(body, &mut assigned);
-            for n in body {
-                if let Node::Let { name, value } = n {
-                    // Previously: clone `mutated` and `remove(name)` per Let,
-                    // which was O(|mutated|) clone per Let just to mask the
-                    // current Let's own name. Pass `name` through to the
-                    // reference check directly so it can skip the masked id
-                    // without rebuilding the set.
-                    if !assigned.contains(name)
-                        && !expr_references_any_except(value, &mutated, name)
-                        && expr_is_observably_free_for_reexecution(value, false)
-                    {
-                        return true;
-                    }
-                }
-                if has_hoistable_let_in_any_loop(n) {
-                    return true;
-                }
-            }
+/// True iff `body` holds a top-level `Let` whose value references neither
+/// `var` nor any name mutated inside `body`, and is observably free to
+/// re-execute outside the loop.
+fn loop_has_hoistable_let(var: &Ident, body: &[Node]) -> bool {
+    let mut mutated: FxHashSet<Ident> = FxHashSet::default();
+    mutated.insert(var.clone());
+    collect_assigned_and_let_bound_names(body, &mut mutated);
+    let mut assigned: FxHashSet<Ident> = FxHashSet::default();
+    collect_assigned_names(body, &mut assigned);
+    body.iter().any(|n| {
+        if let Node::Let { name, value } = n {
+            // Previously: clone `mutated` and `remove(name)` per Let, which was
+            // O(|mutated|) clone per Let just to mask the current Let's own
+            // name. Pass `name` through to the reference check directly so it
+            // can skip the masked id without rebuilding the set.
+            !assigned.contains(name)
+                && !expr_references_any_except(value, &mutated, name)
+                && expr_is_observably_free_for_reexecution(value, false)
+        } else {
             false
         }
-        Node::If {
-            then, otherwise, ..
-        } => {
-            then.iter().any(has_hoistable_let_in_any_loop)
-                || otherwise.iter().any(has_hoistable_let_in_any_loop)
+    })
+}
+
+/// Cheap matcher used by `analyze`: is there any `Node::Loop` under `node` with
+/// a hoistable top-level `Let`?
+///
+/// Descent comes from [`any_descendant`], the one owner of which node variants
+/// nest, which also short-circuits on the first hit as the hand-written scan
+/// did. That scan ended in `_ => false`, so a loop nested inside a fifth
+/// body-bearing variant read as absent and the pass reported SKIP. Every loop
+/// the walk reaches, nested or not, is asked about its own body, so nesting no
+/// longer needs a recursive arm here.
+fn has_hoistable_let_in_any_loop(node: &Node) -> bool {
+    any_descendant(node, &mut |n| {
+        if let Node::Loop { var, body, .. } = n {
+            loop_has_hoistable_let(var, body)
+        } else {
+            false
         }
-        Node::Block(body) => body.iter().any(has_hoistable_let_in_any_loop),
-        Node::Region { body, .. } => body.iter().any(has_hoistable_let_in_any_loop),
-        _ => false,
-    }
+    })
 }
 
 #[cfg(test)]
