@@ -49,8 +49,8 @@
 //!     first store before overwriting it, so the first store is live).
 
 use crate::ir::{Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 
 /// Drop straight-line `Node::Store` values that are overwritten by the
 /// next sibling `Node::Store` to the same `(buffer, index)` with no
@@ -71,50 +71,26 @@ impl DeadStoreElim {
     /// to the same buffer that *could* alias each other.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        if !program
-            .stats()
-            .has_any_node_kind(crate::ir::stats::NODE_KIND_STORE)
-        {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut has_redundant_store_pair))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_STORE],
+            &mut has_redundant_store_pair,
+        )
     }
 
     /// Walk the program tree; remove dead sibling stores in every
     /// sequence body that has them.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            drop_dead_stores(
-                entry
-                    .into_iter()
-                    .map(|n| rewrite_node(n, &mut changed))
-                    .collect(),
-                &mut changed,
-            )
-        });
-        PassResult { program, changed }
+        driver::rewrite_entry_bodies(program, &mut drop_dead_stores)
     }
-}
-
-fn rewrite_node(node: Node, changed: &mut bool) -> Node {
-    let recursed = node_map::map_children(node, &mut |child| rewrite_node(child, changed));
-    node_map::map_body(recursed, &mut |body| drop_dead_stores(body, changed))
 }
 
 /// Remove every `Store(b, i, _)` that has a later sibling `Store(b, i, _)`
 /// with no intervening reader of `b` between them.
-fn drop_dead_stores(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
+fn drop_dead_stores(body: &[Node]) -> Option<Vec<Node>> {
     let mut keep = vec![true; body.len()];
+    let mut dropped_any = false;
     for first_idx in 0..body.len() {
         if !keep[first_idx] {
             continue;
@@ -155,7 +131,7 @@ fn drop_dead_stores(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
                     && !expr_touches_buffer(second_value, first_buf) =>
                 {
                     keep[first_idx] = false;
-                    *changed = true;
+                    dropped_any = true;
                     break;
                 }
                 node if node_observes_buffer(node, first_buf) => {
@@ -169,10 +145,12 @@ fn drop_dead_stores(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
             }
         }
     }
-    body.into_iter()
-        .zip(keep)
-        .filter_map(|(node, alive)| alive.then_some(node))
-        .collect()
+    dropped_any.then(|| {
+        body.iter()
+            .zip(keep)
+            .filter_map(|(node, alive)| alive.then(|| node.clone()))
+            .collect()
+    })
 }
 
 /// True iff any node in `nodes` could read or otherwise observe the

@@ -48,8 +48,8 @@
 use std::sync::Arc;
 
 use crate::ir::{Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 
 /// Unwrap `Region { body: [Block(inner)] }` to `Region { body: inner }`.
 #[derive(Debug, Default)]
@@ -64,78 +64,40 @@ impl RegionPromoteSingletonBlockPass {
     /// Skip programs without any Region wrapping a singleton Block.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        // Need both a Region AND a Block; either missing → no work.
         use crate::ir::stats::{NODE_KIND_BLOCK, NODE_KIND_REGION};
-        let stats = program.stats();
-        if !stats.has_any_node_kind(NODE_KIND_REGION) || !stats.has_any_node_kind(NODE_KIND_BLOCK) {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut is_singleton_block_region))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[NODE_KIND_REGION, NODE_KIND_BLOCK],
+            &mut is_singleton_block_region,
+        )
     }
 
     /// Walk the entry tree and unwrap every singleton-block Region body.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            entry
-                .into_iter()
-                .map(|n| promote_node(n, &mut changed))
-                .collect()
-        });
-        PassResult { program, changed }
+        driver::rewrite_entry_nodes(program, &mut promote_singleton_block)
     }
 }
 
-/// Recurse into `node`'s descendants. After recursion, if `node` is a
-/// `Region` whose body is exactly a single `Block`, lift the Block's
-/// children to be the Region's direct children.
-fn promote_node(node: Node, changed: &mut bool) -> Node {
-    let recursed = node_map::map_children(node, &mut |child| promote_node(child, changed));
-    if let Node::Region {
+/// A `Region` whose body is exactly one `Block`, with the Block's children
+/// lifted to be the Region's direct children.
+fn promote_singleton_block(node: &Node) -> Option<Vec<Node>> {
+    let Node::Region {
         generator,
         source_region,
         body,
-    } = recursed
-    {
-        // Fast path: peek at the shared Arc first. If it isn't a
-        // singleton Block, we never unwrap or clone the body  -  just
-        // hand the Arc back to a fresh Region. The previous shape
-        // unconditionally unwrapped (or fully cloned) every Region
-        // body even when the rule did not fire, which is the common
-        // case for any program where most Regions wrap multiple
-        // ops.
-        if !matches!(body.as_slice(), [Node::Block(_)]) {
-            return Node::Region {
-                generator,
-                source_region,
-                body,
-            };
-        }
-        let body_vec: Vec<Node> = match Arc::try_unwrap(body) {
-            Ok(v) => v,
-            Err(arc) => (*arc).clone(),
-        };
-        *changed = true;
-        let mut iter = body_vec.into_iter();
-        let Some(Node::Block(inner)) = iter.next() else {
-            unreachable!("matched [Node::Block(_)] above");
-        };
-        return Node::Region {
-            generator,
-            source_region,
-            body: Arc::new(inner),
-        };
-    }
-    recursed
+    } = node
+    else {
+        return None;
+    };
+    let [Node::Block(inner)] = body.as_slice() else {
+        return None;
+    };
+    Some(vec![Node::Region {
+        generator: generator.clone(),
+        source_region: source_region.clone(),
+        body: Arc::new(inner.clone()),
+    }])
 }
 
 /// True iff `node` is a `Region` whose body is exactly a single `Block`.

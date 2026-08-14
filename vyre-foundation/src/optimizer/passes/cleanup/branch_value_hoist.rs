@@ -34,9 +34,9 @@
 //! without needing the alias substrate.
 
 use crate::ir::{Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::passes::expr_is_observably_free;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 
 /// Hoist a common prefix of side-effect-free `Let` bindings out of
 /// every `Node::If` in the program.
@@ -55,102 +55,46 @@ impl BranchValueHoistPass {
     /// Skip programs with no candidate `If`.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        if !program
-            .stats()
-            .has_any_node_kind(crate::ir::stats::NODE_KIND_IF)
-        {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut is_prefix_candidate))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_IF],
+            &mut is_prefix_candidate,
+        )
     }
 
     /// Walk the entry tree and hoist common prefixes.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            entry
-                .into_iter()
-                .flat_map(|node| hoist_prefix(node, &mut changed))
-                .collect()
-        });
-        PassResult { program, changed }
+        driver::rewrite_entry_nodes(program, &mut hoist_prefix)
     }
 }
 
-/// Recurse into descendants then hoist this node's prefix.
-fn hoist_prefix(node: Node, changed: &mut bool) -> Vec<Node> {
-    let recursed = node_map::map_children(node, &mut |child| {
-        let hoisted = hoist_prefix(child, changed);
-        if hoisted.len() == 1 {
-            hoisted
-                .into_iter()
-                .next()
-                .unwrap_or(Node::Block(Vec::new()))
-        } else {
-            Node::Block(hoisted)
-        }
-    });
-
-    if let Node::If {
+/// The `If`'s common arm prefix, followed by the `If` with both arms shortened
+/// by it.
+///
+/// The prefix is the longest run of leading nodes that are identical,
+/// observably free `Let` bindings, so hoisting it out of both arms is
+/// observationally equivalent to binding it once before the branch.
+fn hoist_prefix(node: &Node) -> Option<Vec<Node>> {
+    let Node::If {
         cond,
         then,
         otherwise,
-    } = recursed
-    {
-        let (prefix, new_then, new_otherwise) = extract_common_prefix(then, otherwise);
-        if !prefix.is_empty() {
-            *changed = true;
-            let mut out = prefix;
-            out.push(Node::If {
-                cond,
-                then: new_then,
-                otherwise: new_otherwise,
-            });
-            return out;
-        }
-        return vec![Node::If {
-            cond,
-            then: new_then,
-            otherwise: new_otherwise,
-        }];
-    }
-
-    vec![recursed]
-}
-
-/// Pull the longest run of leading nodes that are identical, observably
-/// free `Let` bindings out of both arms.
-fn extract_common_prefix(
-    mut then: Vec<Node>,
-    mut otherwise: Vec<Node>,
-) -> (Vec<Node>, Vec<Node>, Vec<Node>) {
-    // Count the prefix length first, then drain in one pass  -  the
-    // previous loop did Vec::remove(0) per matched Let which is O(n)
-    // each (every remaining element shifts left). For an If with a
-    // long body and a 5-deep common prefix that's 5 * 2 * (n - 5)
-    // shifts; the count-then-drain version is one shift per arm.
-    let mut prefix_len = 0;
-    let pair_limit = then.len().min(otherwise.len());
-    while prefix_len < pair_limit
-        && is_hoistable_let_pair(&then[prefix_len], &otherwise[prefix_len])
-    {
-        prefix_len += 1;
-    }
+    } = node
+    else {
+        return None;
+    };
+    let prefix_len = driver::common_prefix_len(then, otherwise, is_hoistable_let_pair);
     if prefix_len == 0 {
-        return (Vec::new(), then, otherwise);
+        return None;
     }
-    let prefix: Vec<Node> = then.drain(0..prefix_len).collect();
-    otherwise.drain(0..prefix_len);
-    (prefix, then, otherwise)
+    let mut out = then[..prefix_len].to_vec();
+    out.push(Node::If {
+        cond: cond.clone(),
+        then: then[prefix_len..].to_vec(),
+        otherwise: otherwise[prefix_len..].to_vec(),
+    });
+    Some(out)
 }
 
 /// True iff both nodes are the same `Let` with an observably-free value.
@@ -170,19 +114,16 @@ fn is_hoistable_let_pair(a: &Node, b: &Node) -> bool {
     }
 }
 
-/// True iff `node` is an `If` with a hoistable common prefix.
+/// True iff `node` is an `If` the rewrite will shorten, which is the same
+/// question [`hoist_prefix`] answers: a non-empty common prefix.
 fn is_prefix_candidate(node: &Node) -> bool {
-    if let Node::If {
+    let Node::If {
         then, otherwise, ..
     } = node
-    {
-        match (then.first(), otherwise.first()) {
-            (Some(t), Some(o)) => is_hoistable_let_pair(t, o),
-            _ => false,
-        }
-    } else {
-        false
-    }
+    else {
+        return false;
+    };
+    driver::common_prefix_len(then, otherwise, is_hoistable_let_pair) > 0
 }
 
 #[cfg(test)]

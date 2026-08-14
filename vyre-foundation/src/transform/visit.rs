@@ -12,6 +12,7 @@ use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::Program;
 use smallvec::SmallVec;
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -162,6 +163,94 @@ pub fn child_bodies(node: &Node) -> [&[Node]; 2] {
     }
 }
 
+/// `node` with each body slot replaced by `map`'s result for that slot.
+///
+/// This is the borrowed, change-reporting counterpart of
+/// [`node_map::map_body`](crate::visit::node_map::map_body), and the ONE owner
+/// of "which body slots does this variant have" in the rebuild direction.
+/// `child_bodies` answers the same question for a read-only scan, but a scan
+/// cannot say what to do with a slot it changed, so a rebuild that re-derives
+/// the slot list can descend into a body and then drop it.
+///
+/// A variant with no body is returned borrowed without calling `map`, and a
+/// variant with one body has `map` called once: a one-slot variant must not see
+/// the empty second slice `child_bodies` pads its answer with, because a rule
+/// that rewrites a whole body would then be handed a body that does not exist.
+///
+/// The node is rebuilt only when a slot came back owned, and the rebuild clones
+/// the variant's own operands rather than its bodies, so an unchanged subtree
+/// costs nothing.
+#[must_use]
+pub(crate) fn map_bodies_cow<'a>(
+    node: &'a Node,
+    map: &mut impl FnMut(&'a [Node]) -> Cow<'a, [Node]>,
+) -> Cow<'a, Node> {
+    match node {
+        Node::If {
+            cond,
+            then,
+            otherwise,
+        } => {
+            let then_body = map(then);
+            let otherwise_body = map(otherwise);
+            if matches!(then_body, Cow::Borrowed(_)) && matches!(otherwise_body, Cow::Borrowed(_)) {
+                return Cow::Borrowed(node);
+            }
+            Cow::Owned(Node::If {
+                cond: cond.clone(),
+                then: then_body.into_owned(),
+                otherwise: otherwise_body.into_owned(),
+            })
+        }
+        Node::Loop {
+            var,
+            from,
+            to,
+            body,
+        } => match map(body) {
+            Cow::Borrowed(_) => Cow::Borrowed(node),
+            Cow::Owned(body) => Cow::Owned(Node::Loop {
+                var: var.clone(),
+                from: from.clone(),
+                to: to.clone(),
+                body,
+            }),
+        },
+        Node::Block(body) => match map(body) {
+            Cow::Borrowed(_) => Cow::Borrowed(node),
+            Cow::Owned(body) => Cow::Owned(Node::Block(body)),
+        },
+        Node::Region {
+            generator,
+            source_region,
+            body,
+        } => match map(body) {
+            Cow::Borrowed(_) => Cow::Borrowed(node),
+            Cow::Owned(body) => Cow::Owned(Node::Region {
+                generator: generator.clone(),
+                source_region: source_region.clone(),
+                body: Arc::new(body),
+            }),
+        },
+        Node::Let { .. }
+        | Node::Assign { .. }
+        | Node::Store { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AllReduce { .. }
+        | Node::AllGather { .. }
+        | Node::ReduceScatter { .. }
+        | Node::Broadcast { .. }
+        | Node::AsyncLoad { .. }
+        | Node::AsyncStore { .. }
+        | Node::AsyncWait { .. }
+        | Node::Trap { .. }
+        | Node::Resume { .. }
+        | Node::Opaque(_) => Cow::Borrowed(node),
+    }
+}
+
 /// Every operand expression `node` carries directly, in source order.
 ///
 /// This is the ONE owner of the question "which node variants carry
@@ -174,7 +263,7 @@ pub fn child_bodies(node: &Node) -> [&[Node]; 2] {
 /// (from, to), and the async copies (offset, size).
 #[inline]
 #[must_use]
-pub fn node_operands(node: &Node) -> [Option<&Expr>; 2] {
+pub(crate) fn node_operands(node: &Node) -> [Option<&Expr>; 2] {
     match node {
         Node::Let { value, .. } | Node::Assign { value, .. } => [Some(value), None],
         Node::Store { index, value, .. } => [Some(index), Some(value)],
@@ -196,6 +285,154 @@ pub fn node_operands(node: &Node) -> [Option<&Expr>; 2] {
         | Node::AsyncWait { .. }
         | Node::Resume { .. }
         | Node::Opaque(_) => [None, None],
+    }
+}
+
+/// The buffers a node names directly, split by direction.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct BufferRefs<'a> {
+    /// Buffers read by name, in source order.
+    pub reads: [Option<&'a Ident>; 2],
+    /// Buffers written by name, in source order.
+    pub writes: [Option<&'a Ident>; 2],
+    /// False when the node carries an opaque payload whose buffer references
+    /// core cannot enumerate, which makes the two arrays a LOWER BOUND. A
+    /// caller whose answer has to be sound must then treat the node as touching
+    /// every buffer rather than none.
+    pub complete: bool,
+}
+
+impl<'a> BufferRefs<'a> {
+    const NONE: Self = Self {
+        reads: [None, None],
+        writes: [None, None],
+        complete: true,
+    };
+
+    const fn read(buffer: &'a Ident) -> Self {
+        Self {
+            reads: [Some(buffer), None],
+            ..Self::NONE
+        }
+    }
+
+    const fn write(buffer: &'a Ident) -> Self {
+        Self {
+            writes: [Some(buffer), None],
+            ..Self::NONE
+        }
+    }
+
+    const fn read_write(read: &'a Ident, write: &'a Ident) -> Self {
+        Self {
+            reads: [Some(read), None],
+            writes: [Some(write), None],
+            complete: true,
+        }
+    }
+}
+
+/// Which buffers `node` names, and in which direction.
+///
+/// This is the ONE owner of "what does this statement do to a buffer BY NAME".
+/// A buffer reached through an operand expression is not here: that is
+/// [`node_operands`] followed by [`expr_buffer_ref`], and the two answers
+/// compose. Adding a `Node` variant fails to compile here.
+///
+/// The four collective variants are the reason this exists. They name their
+/// operands as buffers and carry no operand expression at all, so every
+/// dependency walk that answered this question with a per-variant match ending
+/// in `_ => {}` reported that an `AllReduce` touches nothing.
+#[must_use]
+pub(crate) fn node_buffer_refs(node: &Node) -> BufferRefs<'_> {
+    match node {
+        Node::Store { buffer, .. } => BufferRefs::write(buffer),
+        Node::AsyncLoad {
+            source,
+            destination,
+            ..
+        }
+        | Node::AsyncStore {
+            source,
+            destination,
+            ..
+        } => BufferRefs::read_write(source, destination),
+        Node::IndirectDispatch { count_buffer, .. } => BufferRefs::read(count_buffer),
+        // In place on every rank: each contributes its own copy of `buffer` and
+        // receives the combined one. `Broadcast` reads it on the root rank and
+        // writes it on the others, which is the same pair of names.
+        Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
+            BufferRefs::read_write(buffer, buffer)
+        }
+        Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
+            BufferRefs::read_write(input, output)
+        }
+        Node::Let { .. }
+        | Node::Assign { .. }
+        | Node::If { .. }
+        | Node::Loop { .. }
+        | Node::Trap { .. }
+        | Node::AsyncWait { .. }
+        | Node::Resume { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::Block(_)
+        | Node::Region { .. } => BufferRefs::NONE,
+        Node::Opaque(_) => BufferRefs {
+            complete: false,
+            ..BufferRefs::NONE
+        },
+    }
+}
+
+/// What an expression does to the buffer it names.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum ExprBufferRef<'a> {
+    /// Names no buffer.
+    None,
+    /// Reads the named buffer, or reads its metadata.
+    Read(&'a Ident),
+    /// Reads and writes the named buffer: an atomic read-modify-write.
+    ReadWrite(&'a Ident),
+    /// An out-of-tree extension, whose buffer references core cannot enumerate.
+    /// A caller whose answer has to be sound must treat it as touching every
+    /// buffer.
+    Unknown,
+}
+
+/// The buffer `expr` names, and what it does to it.
+///
+/// The expression half of [`node_buffer_refs`]. `Expr::Atomic` is the case every
+/// buffer-set walk in this crate had recorded as a pure read, which is the
+/// direction that loses: a dependency walk that believes an atomic only reads
+/// sees no conflict with a store to the same buffer.
+#[must_use]
+pub(crate) fn expr_buffer_ref(expr: &Expr) -> ExprBufferRef<'_> {
+    match expr {
+        Expr::Atomic { buffer, .. } => ExprBufferRef::ReadWrite(buffer),
+        Expr::Load { buffer, .. } | Expr::BufLen { buffer } | Expr::BufferRef { buffer } => {
+            ExprBufferRef::Read(buffer)
+        }
+        Expr::LitU32(_)
+        | Expr::LitI32(_)
+        | Expr::LitF32(_)
+        | Expr::LitBool(_)
+        | Expr::Var(_)
+        | Expr::InvocationId { .. }
+        | Expr::WorkgroupId { .. }
+        | Expr::LocalId { .. }
+        | Expr::BinOp { .. }
+        | Expr::UnOp { .. }
+        | Expr::Call { .. }
+        | Expr::Select { .. }
+        | Expr::Cast { .. }
+        | Expr::Fma { .. }
+        | Expr::SubgroupBallot { .. }
+        | Expr::SubgroupShuffle { .. }
+        | Expr::SubgroupReduce { .. }
+        | Expr::SubgroupLocalId
+        | Expr::SubgroupSize => ExprBufferRef::None,
+        Expr::Opaque(_) => ExprBufferRef::Unknown,
     }
 }
 
@@ -370,6 +607,22 @@ pub fn any_descendant(node: &Node, pred: &mut impl FnMut(&Node) -> bool) -> bool
     false
 }
 
+/// Call `f` on `node` and on every node nested under it.
+///
+/// The visiting counterpart of [`any_descendant`], which four call sites in this
+/// crate obtained by handing `any_descendant` a predicate that always returned
+/// `false` and discarding the result. That spelling works only for as long as
+/// nobody makes the predicate answer `true`: the search stops on the first
+/// match, so a visitor written that way turns into a visitor of a prefix, with
+/// no diagnostic. The same defect once cost this crate a liveness bug.
+pub(crate) fn for_each_descendant(node: &Node, f: &mut impl FnMut(&Node)) {
+    // The predicate never reports a match, so the scan runs to exhaustion.
+    let _: bool = any_descendant(node, &mut |current| {
+        f(current);
+        false
+    });
+}
+
 /// True when any expression anywhere under `nodes` satisfies `pred`.
 ///
 /// This is the scan a pass runs to decide whether it has anything to do. Node
@@ -381,12 +634,43 @@ pub fn any_descendant(node: &Node, pred: &mut impl FnMut(&Node) -> bool) -> bool
 ///
 /// The scan short-circuits on the first match.
 #[must_use]
-pub fn any_expr_in(nodes: &[Node], pred: &mut impl FnMut(&Expr) -> bool) -> bool {
+pub(crate) fn any_expr_in(nodes: &[Node], pred: &mut impl FnMut(&Expr) -> bool) -> bool {
     let mut stack: SmallVec<[&Node; 64]> = SmallVec::new();
     stack.extend(nodes.iter().rev());
     while let Some(current) = stack.pop() {
         for operand in node_operands(current).into_iter().flatten() {
             if any_subexpr(operand, pred) {
+                return true;
+            }
+        }
+        for body in child_bodies(current).into_iter().rev() {
+            stack.extend(body.iter().rev());
+        }
+    }
+    false
+}
+
+/// True when `pred` holds for `nodes` itself or for any body nested under it.
+///
+/// A pass whose candidate is a RELATION between siblings, rather than a
+/// property of one node, cannot use [`any_descendant`]: two adjacent loops are
+/// invisible from either loop alone. Such a pass needs the enclosing body, and
+/// the bodies come from [`child_bodies`] so a new nesting variant reaches the
+/// scan. `loop_fusion` re-derived the nesting list here and ended it in
+/// `_ => return false`, which would have reported "no fusable pair" for a
+/// variant that later gains a body.
+///
+/// The scan short-circuits on the first match.
+#[must_use]
+pub(crate) fn any_body(nodes: &[Node], pred: &mut impl FnMut(&[Node]) -> bool) -> bool {
+    if pred(nodes) {
+        return true;
+    }
+    let mut stack: SmallVec<[&Node; 64]> = SmallVec::new();
+    stack.extend(nodes.iter().rev());
+    while let Some(current) = stack.pop() {
+        for body in child_bodies(current) {
+            if !body.is_empty() && pred(body) {
                 return true;
             }
         }

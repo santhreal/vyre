@@ -55,8 +55,8 @@
 
 use super::substitution::body_rebinds_var;
 use crate::ir::{BinOp, Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 
 /// Polyhedral lower-bound normalization pass.
 #[derive(Debug, Default)]
@@ -71,77 +71,51 @@ impl LoopLowerBoundNormalize {
     /// Skip programs that have no normalizable Loop.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        if !program.stats().has_node_loop() {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut is_normalizable_loop))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_LOOP],
+            &mut is_normalizable_loop,
+        )
     }
 
     /// Walk the entry tree and normalize every eligible Loop.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            entry
-                .into_iter()
-                .map(|n| recurse(n, &mut changed))
-                .collect()
-        });
-        PassResult { program, changed }
+        driver::rewrite_entry_nodes(program, &mut normalize_loop)
     }
 }
 
-fn recurse(node: Node, changed: &mut bool) -> Node {
-    let recursed = node_map::map_children(node, &mut |child| recurse(child, changed));
-    match recursed {
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => {
-            let (lo, hi) = match (&from, &to) {
-                (Expr::LitU32(lo), Expr::LitU32(hi)) if *lo > 0 && *hi >= *lo => (*lo, *hi),
-                _ => {
-                    return Node::Loop {
-                        var,
-                        from,
-                        to,
-                        body,
-                    };
-                }
-            };
-            if body_rebinds_var(&body, &var) {
-                return Node::Loop {
-                    var,
-                    from,
-                    to,
-                    body,
-                };
-            }
-            let offset = Expr::u32(lo);
-            let new_body: Vec<Node> = body
-                .into_iter()
-                .map(|n| substitute_var_in_node(n, &var, &var, &offset))
-                .collect();
-            *changed = true;
-            Node::Loop {
-                var,
-                from: Expr::u32(0),
-                to: Expr::u32(hi - lo),
-                body: new_body,
-            }
-        }
-        other => other,
+/// `node` with its induction range shifted to start at zero, when the shift is
+/// legal.
+///
+/// Eligibility is [`is_normalizable_loop`]'s decision, so the analysis and the
+/// rewrite cannot disagree about which loop the pass fires on.
+fn normalize_loop(node: &Node) -> Option<Vec<Node>> {
+    if !is_normalizable_loop(node) {
+        return None;
     }
+    let Node::Loop {
+        var,
+        from,
+        to,
+        body,
+    } = node
+    else {
+        return None;
+    };
+    let (Expr::LitU32(lo), Expr::LitU32(hi)) = (from, to) else {
+        return None;
+    };
+    let offset = Expr::u32(*lo);
+    Some(vec![Node::Loop {
+        var: var.clone(),
+        from: Expr::u32(0),
+        to: Expr::u32(hi - lo),
+        body: body
+            .iter()
+            .map(|n| substitute_var_in_node(n.clone(), var, var, &offset))
+            .collect(),
+    }])
 }
 
 fn is_normalizable_loop(node: &Node) -> bool {

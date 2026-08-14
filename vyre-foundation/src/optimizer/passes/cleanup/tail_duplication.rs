@@ -23,10 +23,10 @@
 use rustc_hash::FxHashSet;
 
 use crate::ir::{Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::passes::expr_is_observably_free;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::bound_names::collect_bound_names;
-use crate::visit::node_map;
 
 /// Hoist common side-effect-free tails out of `Node::If`.
 #[derive(Debug, Default)]
@@ -44,76 +44,39 @@ impl TailDuplicationPass {
     /// Skip programs without any candidate If.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        if !program
-            .stats()
-            .has_any_node_kind(crate::ir::stats::NODE_KIND_IF)
-        {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut is_tail_candidate))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_IF],
+            &mut is_tail_candidate,
+        )
     }
 
     /// Walk the entry tree; hoist common tails.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            entry
-                .into_iter()
-                .flat_map(|node| hoist_tail(node, &mut changed))
-                .collect()
-        });
-        PassResult { program, changed }
+        driver::rewrite_entry_nodes(program, &mut hoist_tail)
     }
 }
 
-/// Recurse into descendants, then try to hoist this node's tail.
-fn hoist_tail(node: Node, changed: &mut bool) -> Vec<Node> {
-    // First recurse into children
-    let recursed = node_map::map_children(node, &mut |child| {
-        let hoisted = hoist_tail(child, changed);
-        if hoisted.len() == 1 {
-            hoisted
-                .into_iter()
-                .next()
-                .unwrap_or(Node::Block(Vec::new()))
-        } else {
-            Node::Block(hoisted)
-        }
-    });
-
-    // Then try to hoist from this node's body
-    if let Node::If {
+/// The `If` with its arms' common tail lifted out, followed by that tail.
+fn hoist_tail(node: &Node) -> Option<Vec<Node>> {
+    let Node::If {
         cond,
         then,
         otherwise,
-    } = recursed
-    {
-        if let Some((new_then, new_otherwise, tail)) = try_extract_tail(&then, &otherwise) {
-            *changed = true;
-            let new_if = Node::If {
-                cond,
-                then: new_then,
-                otherwise: new_otherwise,
-            };
-            return vec![new_if, tail];
-        }
-        return vec![Node::If {
-            cond,
-            then,
-            otherwise,
-        }];
-    }
-
-    vec![recursed]
+    } = node
+    else {
+        return None;
+    };
+    let (new_then, new_otherwise, tail) = try_extract_tail(then, otherwise)?;
+    Some(vec![
+        Node::If {
+            cond: cond.clone(),
+            then: new_then,
+            otherwise: new_otherwise,
+        },
+        tail,
+    ])
 }
 
 /// Try to extract a common tail from `then` and `otherwise` arms.

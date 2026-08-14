@@ -16,8 +16,8 @@
 //! pass, the wire format and downstream codegen carry the no-op forward.
 
 use crate::ir::{Expr, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 
 /// Drop `Node::Assign` whose RHS is the name being assigned.
 #[derive(Debug, Default)]
@@ -32,59 +32,20 @@ impl NoopAssignEliminatePass {
     /// Skip programs without any self-assigning Assign.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        if !program
-            .stats()
-            .has_any_node_kind(crate::ir::stats::NODE_KIND_ASSIGN)
-        {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut is_noop_assign))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_ASSIGN],
+            &mut is_noop_assign,
+        )
     }
 
     /// Walk the entry tree; drop noop self-assignments from sibling sequences.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            drop_noop_assigns(
-                entry
-                    .into_iter()
-                    .map(|n| rewrite_node(n, &mut changed))
-                    .collect(),
-                &mut changed,
-            )
-        });
-        PassResult { program, changed }
+        driver::rewrite_entry_bodies(program, &mut |body| {
+            driver::without_nodes(body, is_noop_assign)
+        })
     }
-}
-
-/// Recurse into `node`'s descendants and drop noop self-assignments
-/// from each container's body sequence.
-fn rewrite_node(node: Node, changed: &mut bool) -> Node {
-    let recursed = node_map::map_children(node, &mut |child| rewrite_node(child, changed));
-    node_map::map_body(recursed, &mut |body| drop_noop_assigns(body, changed))
-}
-
-/// Drop `Node::Assign { name, value: Var(name) }` from a body sequence,
-/// flipping `changed` when at least one is dropped.
-fn drop_noop_assigns(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
-    let mut out = Vec::with_capacity(body.len());
-    for node in body {
-        if is_noop_assign(&node) {
-            *changed = true;
-        } else {
-            out.push(node);
-        }
-    }
-    out
 }
 
 /// True iff `node` is `Assign { name, value: Var(name) }`.

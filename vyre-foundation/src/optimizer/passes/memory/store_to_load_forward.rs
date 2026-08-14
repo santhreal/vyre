@@ -47,9 +47,9 @@
 //!   `find_forwarding_store` rejects that case (`node_reassigns_any_var`).
 
 use crate::ir::{Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::passes::expr_is_observably_free_for_reexecution;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 use rustc_hash::FxHashSet;
 
 /// `ProgramPass` registration for the store-to-load forwarding rewrite
@@ -71,86 +71,58 @@ impl StoreToLoadForward {
     /// `Store` / `Let(Load)` pair under the conservative rule.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        // Forwarding requires both a Store AND a Let; either missing
-        // means the recursive walk would find no forwardable pair.
         use crate::ir::stats::{NODE_KIND_LET, NODE_KIND_STORE};
-        let stats = program.stats();
-        if !stats.has_any_node_kind(NODE_KIND_STORE) || !stats.has_any_node_kind(NODE_KIND_LET) {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut has_forwardable_pair))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[NODE_KIND_STORE, NODE_KIND_LET],
+            &mut has_forwardable_pair,
+        )
     }
 
     /// Walk the program; rewrite every forwardable `Let(Load)` to
     /// the value of its preceding `Store`.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            let mapped: Vec<Node> = entry
-                .into_iter()
-                .map(|n| rewrite_node(n, &mut changed))
-                .collect();
-            forward_in_body(mapped, &mut changed)
-        });
-        PassResult { program, changed }
+        driver::rewrite_entry_bodies(program, &mut forward_in_body)
     }
 }
 
-fn rewrite_node(node: Node, changed: &mut bool) -> Node {
-    let recursed = node_map::map_children(node, &mut |child| rewrite_node(child, changed));
-    node_map::map_body(recursed, &mut |body| forward_in_body(body, changed))
-}
-
-fn forward_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
+fn forward_in_body(body: &[Node]) -> Option<Vec<Node>> {
     let mut out: Vec<Node> = Vec::with_capacity(body.len());
-    // Take `body` by value and walk it once, moving each node into `out`
-    // unchanged unless it's a forwardable Let. The previous shape iterated
-    // by reference (`body.iter().enumerate()`) and unconditionally cloned
-    // every Node into `out` even when no forwarding fired  -  so a body of
-    // 1000 nodes with no opportunities still paid 1000 deep clones.
-    //
-    // Forwarding lookback now scans the partially-built `out` instead of
+    let mut forwarded_any = false;
+    // Forwarding lookback scans the partially-built `out` instead of
     // `body[..idx]`. Since we only rewrite Let-of-Load (never Store), and
     // find_forwarding_store only inspects Store nodes (which we never
     // rewrite), `out` carries the same Store-position information as the
     // original prefix did.
     for node in body {
         let Node::Let { name, value } = node else {
-            out.push(node);
+            out.push(node.clone());
             continue;
         };
         let Expr::Load {
             buffer: load_buffer,
             index: load_index,
-        } = &value
+        } = value
         else {
-            out.push(Node::Let { name, value });
+            out.push(node.clone());
             continue;
         };
         let Some(forwarded_value) = find_forwarding_store(&out, load_buffer, load_index) else {
-            out.push(Node::Let { name, value });
+            out.push(node.clone());
             continue;
         };
         if !expr_is_observably_free_for_reexecution(&forwarded_value, true) {
-            out.push(Node::Let { name, value });
+            out.push(node.clone());
             continue;
         }
-        *changed = true;
+        forwarded_any = true;
         out.push(Node::Let {
-            name,
+            name: name.clone(),
             value: forwarded_value,
         });
     }
-    out
+    forwarded_any.then_some(out)
 }
 
 /// Walk back through `prev_siblings` looking for a `Node::Store(b, i, v)`

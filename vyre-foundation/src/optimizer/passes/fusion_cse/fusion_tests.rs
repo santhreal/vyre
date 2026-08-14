@@ -2,9 +2,7 @@
 // parent file focused on production code.
 
 use crate::ir::{BufferDecl, DataType, Expr, Ident, Node, Program};
-use crate::optimizer::passes::fusion_cse::fusion::{
-    collect_buffer_reads, collect_buffer_writes, Fusion,
-};
+use crate::optimizer::passes::fusion_cse::fusion::{buffer_sets, Fusion};
 use crate::optimizer::{PassScheduler, ProgramPassKind};
 
 /// WHY: region inlining can expose a statement-shaped root before fusion.
@@ -372,112 +370,131 @@ fn fusion_dependency_sets_include_async_and_indirect_nodes() {
         },
     ];
 
-    let writes = collect_buffer_writes(&nodes);
-    let reads = collect_buffer_reads(&nodes);
+    let sets = buffer_sets(&nodes);
 
-    assert!(writes.contains(&Ident::from("dst")));
-    assert!(writes.contains(&Ident::from("sink")));
+    assert!(sets.writes.contains(&Ident::from("dst")));
+    assert!(sets.writes.contains(&Ident::from("sink")));
     for name in ["src", "dst", "offsets", "counts", "trap_addr"] {
         assert!(
-            reads.contains(&Ident::from(name)),
+            sets.reads.contains(&Ident::from(name)),
             "missing async/indirect/trap read dependency `{name}`"
         );
     }
 }
 
+/// WHY: fusion asks which buffers a region reads and writes. Two things can
+/// silently shrink that answer: a nesting position the walk never descends into,
+/// and a buffer position the per-variant match never looks at.
+///
+/// The suite these replace compared two inline copies of the walk against each
+/// other and never called the production one, so it passed for every bug in it,
+/// including the four collective variants that named no buffer at all and the
+/// atomic that was recorded as a pure read.
+///
+/// The nesting half is not restated here: `buffer_sets` descends through
+/// `child_bodies`, whose closure over every declared variant is proved by
+/// `tests/node_variant_traversal_closure.rs` against `NODE_VARIANT_NAMES`. What
+/// is left is the per-variant buffer decision, and `node_buffer_refs` and
+/// `expr_buffer_ref` make that exhaustively, so a new variant is a compile error
+/// rather than an empty dependency set.
 #[test]
-fn walker_matches_canonical_on_corpus() {
-    fn collect_buffer_writes_old(
-        nodes: &[Node],
-        visited: &mut Vec<Node>,
-    ) -> rustc_hash::FxHashSet<Ident> {
-        let mut writes = rustc_hash::FxHashSet::default();
-        let mut stack: smallvec::SmallVec<[&Node; 64]> = nodes.iter().rev().collect();
-        while let Some(node) = stack.pop() {
-            visited.push(node.clone());
-            match node {
-                Node::Store { buffer, .. } => {
-                    writes.insert(buffer.clone());
-                }
-                Node::AsyncLoad { destination, .. } | Node::AsyncStore { destination, .. } => {
-                    writes.insert(destination.clone());
-                }
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    stack.extend(then.iter().rev());
-                    stack.extend(otherwise.iter().rev());
-                }
-                Node::Loop { body, .. } | Node::Block(body) => {
-                    stack.extend(body.iter().rev());
-                }
-                Node::Region { body, .. } => {
-                    stack.extend(body.iter().rev());
-                }
-                _ => {}
-            }
-        }
-        writes
-    }
-
-    let nodes = vec![
-        Node::Region {
-            generator: "R1".into(),
-            source_region: None,
-            body: std::sync::Arc::new(vec![
-                Node::if_then(
-                    Expr::bool(true),
-                    vec![Node::store("buf_a", Expr::u32(0), Expr::u32(1))],
-                ),
-                Node::Block(vec![Node::store("buf_b", Expr::u32(0), Expr::u32(2))]),
-            ]),
-        },
-        Node::loop_for(
+fn buffer_sets_see_a_buffer_nested_under_control_flow() {
+    let marker = Node::store(
+        "marker_buf",
+        Expr::u32(0),
+        Expr::load("read_buf", Expr::u32(0)),
+    );
+    let nodes = vec![Node::Region {
+        generator: "R".into(),
+        source_region: None,
+        body: std::sync::Arc::new(vec![Node::loop_for(
             "i",
             Expr::u32(0),
-            Expr::u32(10),
-            vec![Node::store("buf_c", Expr::u32(0), Expr::u32(3))],
+            Expr::u32(4),
+            vec![Node::if_then(
+                Expr::bool(true),
+                vec![Node::Block(vec![marker])],
+            )],
+        )]),
+    }];
+    let sets = buffer_sets(&nodes);
+    assert!(sets.writes.contains(&Ident::from("marker_buf")));
+    assert!(sets.reads.contains(&Ident::from("read_buf")));
+    assert!(sets.complete);
+}
+
+#[test]
+fn buffer_sets_report_the_collective_operands() {
+    let group = crate::ir::CommGroup::WORLD;
+    for (node, reads, writes) in [
+        (
+            Node::AllReduce {
+                buffer: Ident::from("acc"),
+                op: crate::ir::CollectiveOp::Sum,
+                group,
+            },
+            "acc",
+            "acc",
         ),
-    ];
-
-    let mut visited_old = Vec::new();
-    let writes_old = collect_buffer_writes_old(&nodes, &mut visited_old);
-
-    let mut visited_new = Vec::new();
-    let mut writes_new = rustc_hash::FxHashSet::default();
-    for node in &nodes {
-        let _ = crate::visit::node_map::any_descendant(node, &mut |n| {
-            visited_new.push(n.clone());
-            match n {
-                Node::Store { buffer, .. } => {
-                    writes_new.insert(buffer.clone());
-                }
-                Node::AsyncLoad { destination, .. } | Node::AsyncStore { destination, .. } => {
-                    writes_new.insert(destination.clone());
-                }
-                _ => {}
-            }
-            false
-        });
+        (
+            Node::AllGather {
+                input: Ident::from("part"),
+                output: Ident::from("whole"),
+                group,
+            },
+            "part",
+            "whole",
+        ),
+        (
+            Node::ReduceScatter {
+                input: Ident::from("part"),
+                output: Ident::from("whole"),
+                op: crate::ir::CollectiveOp::Sum,
+                group,
+            },
+            "part",
+            "whole",
+        ),
+        (
+            Node::Broadcast {
+                buffer: Ident::from("acc"),
+                root: 0,
+                group,
+            },
+            "acc",
+            "acc",
+        ),
+    ] {
+        let sets = buffer_sets(std::slice::from_ref(&node));
+        assert!(
+            sets.reads.contains(&Ident::from(reads)),
+            "{node:?} reads `{reads}`"
+        );
+        assert!(
+            sets.writes.contains(&Ident::from(writes)),
+            "{node:?} writes `{writes}`"
+        );
+        assert!(sets.complete, "{node:?} names its buffers in core IR");
     }
+}
 
-    assert_eq!(writes_old, writes_new, "Writes sets must match");
-    assert_eq!(
-        visited_old.len(),
-        visited_new.len(),
-        "Node set length must match"
+#[test]
+fn buffer_sets_report_an_atomic_as_a_write() {
+    let nodes = vec![Node::let_bind(
+        "old",
+        Expr::Atomic {
+            op: crate::ir::AtomicOp::Add,
+            buffer: Ident::from("counter"),
+            index: Box::new(Expr::u32(0)),
+            expected: None,
+            value: Box::new(Expr::u32(1)),
+            ordering: crate::memory_model::MemoryOrdering::Relaxed,
+        },
+    )];
+    let sets = buffer_sets(&nodes);
+    assert!(sets.reads.contains(&Ident::from("counter")));
+    assert!(
+        sets.writes.contains(&Ident::from("counter")),
+        "an atomic read-modify-write writes its buffer"
     );
-
-    for node in &visited_old {
-        assert!(
-            visited_new.contains(node),
-            "Old walker visited a node that the new canonical walker missed"
-        );
-    }
-    for node in &visited_new {
-        assert!(
-            visited_old.contains(node),
-            "New canonical walker visited a node that the old walker missed"
-        );
-    }
 }
