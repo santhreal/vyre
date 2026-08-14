@@ -609,3 +609,18 @@ text = "Persistent, finite and JIT megakernel lane bodies now share one assembly
 id = "runtime-driver-dup-pins-lowered"
 category = "Changed"
 text = "The duplication baseline pins for vyre-driver and vyre-runtime now record the measured tree: 1463 to 1112 and 520 to 412 duplicated lines. The vyre-lower total line count is corrected to the measured value."
+
+[[fragments]]
+id = "proptest-ir-corpus-fully-shared"
+category = "Fixed"
+text = "The wire-roundtrip and ProgramStats property suites draw statements and programs from the one random-IR owner, not just expressions. `ir_arbitrary` already owned identifiers, data types, literals and expressions after an earlier collapse, but each suite still carried its own copy of the five statement leaves, the three body-carrying statements, and the nine-buffer program wrapper the generated body is placed in. The buffer table is what makes a generated body valid, since the statement generator stores into `out`, `rw` and `bytes_out` and the expression generator loads from every declared name, so a suite holding its own copy had to be kept in step with both generators by hand and the copies had already drifted once. The stats suite generates seven statement forms the wire suite does not, so the shared control flow enters its choice weighted at three, which leaves each of `If`, `Loop` and `Block` the same one-in-eleven share it had when all eleven arms were written out."
+
+[[fragments]]
+id = "grid-sync-fixture-walk-takes-its-nesting-from-one-owner"
+category = "Fixed"
+text = "The grid-sync split fixtures read a segment body through `transform::visit::child_bodies` instead of a hand-written match with a catch-all arm. The walk applies each literal store a test backend stands in for, so a nesting form it does not descend into makes a store invisible and a split that dropped a write looks correct. The catch-all meant a statement variant that gains a body would have been skipped silently; the nesting is now stated once, in the crate that owns the IR."
+
+[[fragments]]
+id = "driver-and-foundation-dup-pins-lowered"
+category = "Changed"
+text = "The duplication baseline records the measured tree for three more crates: vyre-driver 1112 to 1082 and vyre-driver-wgpu 5710 to 5709 after their lanes merged, and vyre-foundation 5443 to 5339. Duplication is cross-file, so a crate's count moves when a sibling lands or drops a copy of its text, and each pin is measured against the merged tree rather than carried over from the branch that lowered it."

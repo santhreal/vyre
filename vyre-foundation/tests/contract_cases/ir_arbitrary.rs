@@ -15,7 +15,7 @@
 
 use proptest::collection::vec as prop_vec;
 use proptest::prelude::*;
-use vyre_foundation::ir::{AtomicOp, BinOp, DataType, Expr, UnOp};
+use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_foundation::MemoryOrdering;
 use vyre_spec::data_type::TypeId;
 use vyre_spec::extension::{
@@ -328,4 +328,103 @@ pub(crate) fn arb_atomic_op() -> BoxedStrategy<AtomicOp> {
         any::<u32>().prop_map(|id| AtomicOp::Opaque(ExtensionAtomicOpId(id | 0x8000_0000))),
     ]
     .boxed()
+}
+
+/// An expression generator, passed as a function so one statement generator can
+/// draw as many independent expressions as it needs. `BoxedStrategy` is not
+/// `Clone`, so a strategy value could only be used once.
+pub(crate) type ExprFactory = fn() -> BoxedStrategy<Expr>;
+
+/// The statement leaves every suite's node generator starts from.
+pub(crate) fn arb_statement_leaf(expr: ExprFactory) -> BoxedStrategy<Node> {
+    prop_oneof![
+        (arb_ident(), expr()).prop_map(|(name, value)| Node::Let {
+            name: name.into(),
+            value,
+        }),
+        (arb_ident(), expr()).prop_map(|(name, value)| Node::Assign {
+            name: name.into(),
+            value,
+        }),
+        (
+            prop::sample::select(vec!["out", "rw", "bytes_out"]),
+            expr(),
+            expr(),
+        )
+            .prop_map(|(buffer, index, value)| Node::Store {
+                buffer: buffer.into(),
+                index,
+                value,
+            }),
+        Just(Node::Return),
+        Just(Node::barrier()),
+    ]
+    .boxed()
+}
+
+/// The three body-carrying statements every suite recurses through, over
+/// `inner`. A suite that also generates other body-carrying statements weights
+/// this at 3 so each of the three keeps the share it had in a flat `prop_oneof!`.
+pub(crate) fn arb_control_flow(
+    expr: ExprFactory,
+    inner: BoxedStrategy<Node>,
+) -> BoxedStrategy<Node> {
+    prop_oneof![
+        (
+            expr(),
+            prop_vec(inner.clone(), 0..=3),
+            prop_vec(inner.clone(), 0..=3),
+        )
+            .prop_map(|(cond, then, otherwise)| Node::If {
+                cond,
+                then,
+                otherwise,
+            }),
+        (arb_ident(), expr(), expr(), prop_vec(inner.clone(), 0..=3),).prop_map(
+            |(var, from, to, body)| Node::Loop {
+                var: var.into(),
+                from,
+                to,
+                body,
+            }
+        ),
+        prop_vec(inner, 0..=3).prop_map(Node::Block),
+    ]
+    .boxed()
+}
+
+/// The nine-buffer program every suite wraps a generated entry body in.
+///
+/// The buffer table is what makes a generated body valid: `arb_statement_leaf`
+/// stores into `out`, `rw` and `bytes_out`, and `arb_expr_with` loads from every
+/// name in `BUFFER_NAMES`, so a suite that declared its own table would have to
+/// keep it in step with both generators.
+pub(crate) fn arb_program_with(node: BoxedStrategy<Node>) -> BoxedStrategy<Program> {
+    (
+        arb_buffer_datatype(),
+        arb_buffer_datatype(),
+        prop_vec(node, 0..=6),
+        prop_oneof![9 => Just(false), 1 => Just(true)],
+    )
+        .prop_map(|(extra_a, extra_b, entry, non_composable)| {
+            Program::wrapped(
+                vec![
+                    BufferDecl::output("out", 0, DataType::U32)
+                        .with_count(8)
+                        .with_output_byte_range(0..16),
+                    BufferDecl::read("input", 1, DataType::U32).with_count(8),
+                    BufferDecl::read_write("rw", 2, DataType::U32).with_count(8),
+                    BufferDecl::read("bytes_in", 3, DataType::Bytes).with_count(16),
+                    BufferDecl::read_write("bytes_out", 4, DataType::Bytes).with_count(16),
+                    BufferDecl::read("counts", 5, DataType::U32).with_count(8),
+                    BufferDecl::workgroup("scratch", 4, DataType::U32),
+                    BufferDecl::read("extra_a", 6, extra_a).with_count(1),
+                    BufferDecl::read("extra_b", 7, extra_b).with_count(1),
+                ],
+                [1, 1, 1],
+                entry,
+            )
+            .with_non_composable_with_self(non_composable)
+        })
+        .boxed()
 }

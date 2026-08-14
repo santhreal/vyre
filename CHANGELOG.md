@@ -467,6 +467,80 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   for the one-expression fixture every test used. The grid is now a stated
   expectation rather than a copied literal, so a pass whose dispatch shape
   changes has one place to say so.
+- The three non-native grid-sync dispatch routes in `vyre-driver` ask one owner
+  whether a split produced segments. `reject_empty_grid_sync_split` in
+  `grid_sync` states the invariant once; the resident timed route, the resident
+  fixpoint route, and the host split route each carried the same eight-line
+  guard with the same error text, so a route added or reworded without it would
+  dispatch nothing, leave the caller's output buffers untouched, and return
+  success. The split tests likewise share their fixtures: `grid_sync_chain`
+  builds the returning-region-per-segment program eleven call sites wrote out
+  by hand, `barrier_chain` covers the two that vary the barrier ordering or the
+  workgroup size, `cross_segment_store_program` states the cross-segment
+  accumulator regression once instead of four times, and `apply_out_stores` is
+  the single reading of a segment body the stand-in device backends interpret.
+  Two copies of that walk existed, so a nested node form one of them forgot
+  would hide a dropped store behind a passing test. Dispatch behavior, segment
+  counts and error strings are unchanged.
+- The unfused resident-sequence fallback in `vyre-driver` has one owner,
+  `backend::resident_sequence`. Two decisions were written five times between
+  the `VyreBackend` defaults and the grid-sync split decorator: the launch
+  configuration a sequence step gets, which is that step's grid override and
+  nothing else from the caller's config, and the conversion of a readback range
+  list into the one `download_resident_ranges_into` call that ends the
+  sequence. `dispatch_resident_steps`, `resident_step_config` and
+  `read_resident_ranges_into` now hold them, so the plain sequence default, the
+  timed default, the repeated default and both decorator overrides read the
+  same sequence. A copy that drifted would have launched a step with the wrong
+  grid or read back a different set of ranges than the sequence it belongs to,
+  on the backends that do not fuse the sequence and therefore have no other
+  check on it. Dispatch order, launch counts and readback ranges are unchanged.
+- The six planners in `vyre-driver` that reserve their scratch before they
+  decide anything declare their storage-reservation failure adapter with one
+  line. `reservation_policy::storage_reserve_failure_adapter!` owns the
+  conversion, which carries the field being reserved, the entry count
+  requested, and what the allocator said; result compaction, device diagnostic
+  aggregation, benchmark pass selection, the megakernel barrier planner, the
+  megakernel frontier memory planner, and multi-query execution each wrote that
+  function out identically. A seventh fact added to the shared reservation
+  layer had to be threaded through six copies, and a planner missed in that
+  pass would have reported a reservation failure with less context than the
+  layer had already produced. Each planner's rendered message stays its own,
+  because it names the planner and the sharding that fixes it. Error variants,
+  message text and reservation behavior are unchanged.
+- The megakernel wave-policy corpora in `vyre-driver` are read from
+  `megakernel_fixtures` by every test that drives them. The barrier planner
+  suite rebuilt the two-wave cycle and the four-wave chain inline next to the
+  fixtures it already imported, the frontier suite declared its own two-wave
+  growing pair, and both generated sweeps wrote their own copy of the
+  width-by-depth layered DAG edge generator. That module exists because a
+  corpus edited on one side turns a backend parity gate into two suites that
+  agree about nothing and still pass, so an inline copy of a corpus defeats the
+  gate it was written for. `CYCLE_DEPENDENCIES`, `LONG_CHAIN_DEPENDENCIES`, the
+  new `GROWING_PAIR_WAVES`, which is the first two `DIAMOND_WAVES` by
+  construction rather than by retyped numbers, and `layered_dag_dependencies`
+  now own those shapes. Every planned barrier count, group width and peak byte
+  figure the suites assert is unchanged.
+- The megakernel empty-template cache and the resident launch recommendation
+  cache now share one bounded least-recently-used map, so eviction order and
+  tick saturation are decided in one place instead of two.
+- Megakernel builder and scheduler body inspection now walks nested node bodies
+  through one shared preorder helper built on the foundation-owned child-body
+  enumeration, instead of two hand-written recursive matches that each had to
+  list the nesting variants.
+- Persistent, finite and JIT megakernel lane bodies now share one assembly path
+  and one published-slot claim body, so the node reservation bound, the
+  slot-base binding order and the IO polling block are decided in a single
+  place. Emitted IR and reservation error text are unchanged.
+- The duplication baseline pins for vyre-driver and vyre-runtime now record the
+  measured tree: 1463 to 1112 and 520 to 412 duplicated lines. The vyre-lower
+  total line count is corrected to the measured value.
+- The duplication baseline records the measured tree for three more crates:
+  vyre-driver 1112 to 1082 and vyre-driver-wgpu 5710 to 5709 after their lanes
+  merged, and vyre-foundation 5443 to 5339. Duplication is cross-file, so a
+  crate's count moves when a sibling lands or drops a copy of its text, and
+  each pin is measured against the merged tree rather than carried over from
+  the branch that lowered it.
 
 ### Removed
 
@@ -908,6 +982,27 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   asynchronous-copy offsets and sizes and trap addresses unfolded. Both now
   drive the shared rewrite walk, so the positions an analysis inspects and the
   positions a rewrite visits are the same list.
+- The wire-roundtrip and ProgramStats property suites draw statements and
+  programs from the one random-IR owner, not just expressions. `ir_arbitrary`
+  already owned identifiers, data types, literals and expressions after an
+  earlier collapse, but each suite still carried its own copy of the five
+  statement leaves, the three body-carrying statements, and the nine-buffer
+  program wrapper the generated body is placed in. The buffer table is what
+  makes a generated body valid, since the statement generator stores into
+  `out`, `rw` and `bytes_out` and the expression generator loads from every
+  declared name, so a suite holding its own copy had to be kept in step with
+  both generators by hand and the copies had already drifted once. The stats
+  suite generates seven statement forms the wire suite does not, so the shared
+  control flow enters its choice weighted at three, which leaves each of `If`,
+  `Loop` and `Block` the same one-in-eleven share it had when all eleven arms
+  were written out.
+- The grid-sync split fixtures read a segment body through
+  `transform::visit::child_bodies` instead of a hand-written match with a
+  catch-all arm. The walk applies each literal store a test backend stands in
+  for, so a nesting form it does not descend into makes a store invisible and a
+  split that dropped a write looks correct. The catch-all meant a statement
+  variant that gains a body would have been skipped silently; the nesting is
+  now stated once, in the crate that owns the IR.
 
 ## [0.7.1] - 2026-08-01
 

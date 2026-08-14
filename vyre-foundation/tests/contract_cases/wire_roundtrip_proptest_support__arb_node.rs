@@ -10,91 +10,16 @@ fn arb_node() -> BoxedStrategy<Node> {
 }
 
 fn arb_node_with_depth(depth: u32) -> BoxedStrategy<Node> {
-    let leaf = prop_oneof![
-        (arb_ident(), arb_expr()).prop_map(|(name, value)| Node::Let {
-            name: name.into(),
-            value,
-        }),
-        (arb_ident(), arb_expr()).prop_map(|(name, value)| Node::Assign {
-            name: name.into(),
-            value,
-        }),
-        (
-            prop::sample::select(vec!["out", "rw", "bytes_out"]),
-            arb_expr(),
-            arb_expr(),
-        )
-            .prop_map(|(buffer, index, value)| Node::Store {
-                buffer: buffer.into(),
-                index,
-                value,
-            }),
-        Just(Node::Return),
-        Just(Node::barrier()),
-    ];
-
+    let leaf = arb_statement_leaf(arb_expr);
     if depth == 0 {
-        return leaf.boxed();
+        return leaf;
     }
-
-    leaf.prop_recursive(3, 64, 3, move |inner| {
-        prop_oneof![
-            (
-                arb_expr(),
-                prop_vec(inner.clone(), 0..=3),
-                prop_vec(inner.clone(), 0..=3),
-            )
-                .prop_map(|(cond, then, otherwise)| Node::If {
-                    cond,
-                    then,
-                    otherwise,
-                }),
-            (
-                arb_ident(),
-                arb_expr(),
-                arb_expr(),
-                prop_vec(inner.clone(), 0..=3),
-            )
-                .prop_map(|(var, from, to, body)| Node::Loop {
-                    var: var.into(),
-                    from,
-                    to,
-                    body,
-                }),
-            prop_vec(inner, 0..=3).prop_map(Node::Block),
-        ]
-    })
-    .boxed()
+    leaf.prop_recursive(3, 64, 3, move |inner| arb_control_flow(arb_expr, inner))
+        .boxed()
 }
 
 fn arb_program() -> BoxedStrategy<Program> {
-    (
-        arb_buffer_datatype(),
-        arb_buffer_datatype(),
-        prop_vec(arb_node(), 0..=6),
-        prop_oneof![9 => Just(false), 1 => Just(true)],
-    )
-        .prop_map(|(extra_a, extra_b, entry, non_composable)| {
-            Program::wrapped(
-                vec![
-                    BufferDecl::output("out", 0, DataType::U32)
-                        .with_count(8)
-                        .with_output_byte_range(0..16),
-                    BufferDecl::read("input", 1, DataType::U32).with_count(8),
-                    BufferDecl::read_write("rw", 2, DataType::U32).with_count(8),
-                    BufferDecl::read("bytes_in", 3, DataType::Bytes).with_count(16),
-                    BufferDecl::read_write("bytes_out", 4, DataType::Bytes).with_count(16),
-                    BufferDecl::read("counts", 5, DataType::U32).with_count(8),
-                    BufferDecl::workgroup("scratch", 4, DataType::U32),
-                    BufferDecl::read("extra_a", 6, extra_a).with_count(1),
-                    BufferDecl::read("extra_b", 7, extra_b).with_count(1),
-                ],
-                [1, 1, 1],
-                entry,
-            )
-            .with_non_composable_with_self(non_composable)
-        })
-        .boxed()
+    arb_program_with(arb_node())
 }
 
 fn first_replaced(bytes: &[u8], needle: &[u8], replacement: &[u8]) -> Vec<u8> {

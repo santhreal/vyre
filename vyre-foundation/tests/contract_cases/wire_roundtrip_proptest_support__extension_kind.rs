@@ -7,7 +7,6 @@ mod ir_arbitrary;
 mod wire_roundtrip_proptest_support_arb_node;
 
 use ir_arbitrary::*;
-use proptest::collection::vec as prop_vec;
 use proptest::prelude::*;
 use smallvec::smallvec;
 use std::sync::Arc;

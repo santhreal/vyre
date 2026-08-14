@@ -5,33 +5,7 @@ fn arb_node() -> BoxedStrategy<Node> {
 }
 
 fn arb_program() -> BoxedStrategy<Program> {
-    (
-        arb_buffer_datatype(),
-        arb_buffer_datatype(),
-        prop_vec(arb_node(), 0..=6),
-        prop_oneof![9 => Just(false), 1 => Just(true)],
-    )
-        .prop_map(|(extra_a, extra_b, entry, non_composable)| {
-            Program::wrapped(
-                vec![
-                    BufferDecl::output("out", 0, DataType::U32)
-                        .with_count(8)
-                        .with_output_byte_range(0..16),
-                    BufferDecl::read("input", 1, DataType::U32).with_count(8),
-                    BufferDecl::read_write("rw", 2, DataType::U32).with_count(8),
-                    BufferDecl::read("bytes_in", 3, DataType::Bytes).with_count(16),
-                    BufferDecl::read_write("bytes_out", 4, DataType::Bytes).with_count(16),
-                    BufferDecl::read("counts", 5, DataType::U32).with_count(8),
-                    BufferDecl::workgroup("scratch", 4, DataType::U32),
-                    BufferDecl::read("extra_a", 6, extra_a).with_count(1),
-                    BufferDecl::read("extra_b", 7, extra_b).with_count(1),
-                ],
-                [1, 1, 1],
-                entry,
-            )
-            .with_non_composable_with_self(non_composable)
-        })
-        .boxed()
+    arb_program_with(arb_node())
 }
 
 // ─── manual recompute functions (must mirror compute_stats exactly) ───
