@@ -15,11 +15,10 @@ use vyre_foundation::ir::Program;
 use super::cache_key::{ptx_source_cache_key_from_program_identity, PtxSourceCacheKey};
 use super::capacity_accounting::{
     increment_cache_access_u32, increment_cache_counter_u64, release_cached_source_bytes,
-    reserve_cached_source_bytes, retention_problem_size,
+    reserve_cached_source_bytes, select_evicted_keys,
 };
 use super::ptx_disk_cache::{load_ptx_from_disk, store_ptx_to_disk};
 use super::CudaPtxSourceCacheSnapshot;
-use crate::backend::staging_reserve::reserve_smallvec;
 
 const PTX_SOURCE_CACHE_SOFT_CAP: usize = 512;
 const PTX_SOURCE_CACHE_RETAIN_AFTER_EVICTION: usize = PTX_SOURCE_CACHE_SOFT_CAP / 2;
@@ -185,53 +184,17 @@ impl CudaPtxSourceCache {
             keys.push(*entry.key());
             gains.push(entry.access_count.load(Ordering::Relaxed));
         }
-        let Some((n, k)) = retention_problem_size(
-            gains.len(),
+        let Some(to_remove) = select_evicted_keys::<_, PTX_SOURCE_CACHE_SOFT_CAP>(
+            &keys,
+            &mut gains,
             PTX_SOURCE_CACHE_RETAIN_AFTER_EVICTION,
             "CUDA PTX source cache",
+            "PTX source cache eviction removal key",
         ) else {
-            self.sources.clear();
-            self.cached_source_bytes.store(0, Ordering::Release);
-            vyre_driver::cache_eviction::record_eviction_counts(keys.len(), keys.len());
+            self.clear_and_report_total_eviction(keys.len());
             return;
         };
-        let retention =
-            match vyre_driver::cache_eviction::try_select_retention_set(&mut gains, n, k) {
-                Ok(retention) => retention,
-                Err(error) => {
-                    tracing::error!(
-                    "CUDA PTX source cache eviction could not allocate retention state: {error}"
-                );
-                    self.sources.clear();
-                    self.cached_source_bytes.store(0, Ordering::Release);
-                    vyre_driver::cache_eviction::record_eviction_counts(keys.len(), keys.len());
-                    return;
-                }
-            };
 
-        let mut to_remove: SmallVec<[PtxSourceCacheKey; PTX_SOURCE_CACHE_SOFT_CAP]> =
-            SmallVec::new();
-        if let Err(error) = reserve_smallvec(
-            &mut to_remove,
-            retention.len(),
-            "PTX source cache eviction removal key",
-        ) {
-            tracing::error!(
-                "CUDA PTX source cache eviction could not reserve {} removal key slot(s): {error}",
-                retention.len()
-            );
-            self.sources.clear();
-            self.cached_source_bytes.store(0, Ordering::Release);
-            vyre_driver::cache_eviction::record_eviction_counts(keys.len(), keys.len());
-            return;
-        }
-        for (i, retain) in retention.iter().enumerate() {
-            if *retain == 0 {
-                if let Some(key) = keys.get(i) {
-                    to_remove.push(*key);
-                }
-            }
-        }
         let dropped = to_remove.len();
         let total = keys.len().max(1);
         let mut dropped_bytes = 0usize;
@@ -239,23 +202,28 @@ impl CudaPtxSourceCache {
             if let Some((_, removed)) = self.sources.remove(key) {
                 let Ok(next) = checked_add_usize_lazy(dropped_bytes, removed.source_bytes, || ())
                 else {
-                    self.sources.clear();
-                    self.cached_source_bytes.store(0, Ordering::Release);
-                    vyre_driver::cache_eviction::record_eviction_counts(keys.len(), keys.len());
+                    self.clear_and_report_total_eviction(keys.len());
                     return;
                 };
                 dropped_bytes = next;
             }
         }
-        if dropped_bytes != 0 {
-            if release_cached_source_bytes(&self.cached_source_bytes, dropped_bytes).is_err() {
-                self.sources.clear();
-                self.cached_source_bytes.store(0, Ordering::Release);
-                vyre_driver::cache_eviction::record_eviction_counts(keys.len(), keys.len());
-                return;
-            }
+        if dropped_bytes != 0
+            && release_cached_source_bytes(&self.cached_source_bytes, dropped_bytes).is_err()
+        {
+            self.clear_and_report_total_eviction(keys.len());
+            return;
         }
         vyre_driver::cache_eviction::record_eviction_counts(dropped, total);
+    }
+
+    /// Drop every cached source and report that the whole cache went. Reached
+    /// when retention selection or byte accounting cannot be trusted to leave
+    /// the cache and its byte counter agreeing.
+    fn clear_and_report_total_eviction(&self, candidates: usize) {
+        self.sources.clear();
+        self.cached_source_bytes.store(0, Ordering::Release);
+        vyre_driver::cache_eviction::record_eviction_counts(candidates, candidates);
     }
 }
 

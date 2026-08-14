@@ -3,11 +3,14 @@
 
 use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
 
+use smallvec::SmallVec;
 use vyre_driver::accounting::{
     checked_atomic_add_usize_with_order, checked_atomic_sub_usize as checked_sub_usize,
     pinning_atomic_increment_u32, pinning_atomic_increment_u64,
 };
 use vyre_driver::BackendError;
+
+use crate::backend::staging_reserve::reserve_smallvec;
 
 pub(super) fn reserve_cached_source_bytes(
     cached_source_bytes: &AtomicUsize,
@@ -78,6 +81,47 @@ pub(super) fn retention_problem_size(
         return None;
     }
     Some((n, k))
+}
+
+/// Keys the submodular retention pass drops, or `None` when the retention
+/// state could not be built. `None` means the caller clears the whole cache
+/// and reports a total eviction; both caches make that same fallback choice.
+pub(super) fn select_evicted_keys<K, const CAP: usize>(
+    keys: &[K],
+    gains: &mut [u32],
+    retain_after_eviction: usize,
+    cache_label: &str,
+    removal_key_label: &'static str,
+) -> Option<SmallVec<[K; CAP]>>
+where
+    [K; CAP]: smallvec::Array<Item = K>,
+    K: Copy,
+{
+    let (n, k) = retention_problem_size(gains.len(), retain_after_eviction, cache_label)?;
+    let retention = match vyre_driver::cache_eviction::try_select_retention_set(gains, n, k) {
+        Ok(retention) => retention,
+        Err(error) => {
+            tracing::error!("{cache_label} eviction could not allocate retention state: {error}");
+            return None;
+        }
+    };
+
+    let mut to_remove: SmallVec<[K; CAP]> = SmallVec::new();
+    if let Err(error) = reserve_smallvec(&mut to_remove, retention.len(), removal_key_label) {
+        tracing::error!(
+            "{cache_label} eviction could not reserve {} removal key slot(s): {error}",
+            retention.len()
+        );
+        return None;
+    }
+    for (i, retain) in retention.iter().enumerate() {
+        if *retain == 0 {
+            if let Some(key) = keys.get(i) {
+                to_remove.push(*key);
+            }
+        }
+    }
+    Some(to_remove)
 }
 
 #[cfg(test)]

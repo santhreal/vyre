@@ -18,7 +18,7 @@ use crate::CUDA_BACKEND_ID;
 use super::allocations::{DispatchAllocations, HostTransferAllocations};
 use super::copy::aligned_async_copy_len;
 use super::dispatch::CudaBackend;
-use super::enqueue_cleanup::{abandon_failed_enqueue, FailedEnqueueGuards};
+use super::enqueue_cleanup::{EnqueueGuards, EnqueueRecording};
 use super::launch_params::launch_param_byte_len;
 use super::module_cache::ModuleCacheKey;
 use super::output_range::cuda_output_readback_for_binding;
@@ -532,19 +532,17 @@ impl CudaBackend {
             params_buf_ptr
         };
 
-        let launch_resources = crate::stream::CudaLaunchResourceLease::acquire(
-            Arc::clone(&self.launch_resources),
-            capture_timing,
-        )?;
-        let mut launch_resources = Some(launch_resources);
-        let mut allocations = Some(allocations);
-        let mut host_transfers = Some(host_transfers);
-        let stream_raw = launch_resources
-            .as_ref()
-            .ok_or_else(|| BackendError::InvalidProgram {
-                fix: "Fix: CUDA host dispatch launch resources were consumed before enqueue; rebuild pending dispatch ownership before launching.".to_string(),
-            })?
-            .stream_raw()?;
+        let mut guards = EnqueueGuards::new(
+            "host dispatch",
+            crate::stream::CudaLaunchResourceLease::acquire(
+                Arc::clone(&self.launch_resources),
+                capture_timing,
+            )?,
+            allocations,
+            host_transfers,
+            None,
+        );
+        let stream_raw = guards.stream_raw()?;
         if trace {
             tracing::debug!(
                 "[cuda-trace] +{}ms stream/events",
@@ -552,20 +550,11 @@ impl CudaBackend {
             );
         }
         let pending = (|| {
-            let allocations_ref = allocations.as_ref().ok_or_else(|| BackendError::InvalidProgram {
-                fix: "Fix: CUDA host dispatch allocations were consumed before enqueue finished; rebuild pending dispatch ownership before launching.".to_string(),
-            })?;
-            let host_transfers_ref = host_transfers
-                .as_mut()
-                .ok_or_else(|| BackendError::InvalidProgram {
-                    fix: "Fix: CUDA host dispatch host staging was consumed before enqueue finished; rebuild pending dispatch ownership before launching.".to_string(),
-                })?;
-            let launch_resources_ref =
-                launch_resources
-                    .as_ref()
-                    .ok_or_else(|| BackendError::InvalidProgram {
-                        fix: "Fix: CUDA host dispatch launch resources were consumed before enqueue finished; rebuild pending dispatch ownership before launching.".to_string(),
-                    })?;
+            let EnqueueRecording {
+                allocations: allocations_ref,
+                host_transfers: host_transfers_ref,
+                launch_resources: launch_resources_ref,
+            } = guards.recording()?;
 
             enqueue_host_uploads_async(&host_uploads, stream_raw)?;
             self.telemetry.record_host_to_device_bytes(upload_bytes);
@@ -648,23 +637,13 @@ impl CudaBackend {
                 stream_raw,
                 "host dispatch grid-sync launch",
                 |grid_barrier| {
-                    for _ in 0..prepared.fixpoint_iterations {
-                        // SAFETY: stream_raw is this dispatch's stream and
-                        // outlives the enqueued memset, which is ordered ahead of
-                        // the launch.
-                        unsafe {
-                            grid_barrier.enqueue_reset(stream_raw)?;
-                        }
-                        self.launch_prevalidated_function(
-                            func,
-                            &mut kernel_args,
-                            &prepared.launch,
-                            stream_raw,
-                            false,
-                            prepared.cooperative,
-                        )?;
-                    }
-                    Ok(())
+                    self.replay_fixpoint_launches(
+                        grid_barrier,
+                        func,
+                        &mut kernel_args,
+                        prepared,
+                        stream_raw,
+                    )
                 },
             )?;
             if trace {
@@ -781,24 +760,9 @@ impl CudaBackend {
                     start.elapsed().as_millis()
                 );
             }
-            let (stream, timing_events) =
-                launch_resources
-                    .take()
-                    .ok_or_else(|| BackendError::InvalidProgram {
-                        fix: "Fix: CUDA host dispatch launch resources were consumed before pending dispatch ownership transfer.".to_string(),
-                    })?
-                    .into_parts()?;
-            let allocations = allocations
-                .take()
-                .ok_or_else(|| BackendError::InvalidProgram {
-                    fix: "Fix: CUDA host dispatch allocations were consumed before pending dispatch ownership transfer.".to_string(),
-                })?;
-            let host_transfers =
-                host_transfers
-                    .take()
-                    .ok_or_else(|| BackendError::InvalidProgram {
-                    fix: "Fix: CUDA host dispatch host staging was consumed before pending dispatch ownership transfer.".to_string(),
-                })?;
+            let (stream, timing_events) = guards.take_stream_and_timing()?;
+            let allocations = guards.take_allocations()?;
+            let host_transfers = guards.take_host_transfers()?;
             if let Some((start_event, end_event)) = timing_events {
                 Ok(crate::stream::CudaPendingDispatch::new_with_timing(
                     Arc::clone(&self.ctx),
@@ -828,19 +792,12 @@ impl CudaBackend {
             }
         })();
         if let Err(error) = pending {
-            return Err(abandon_failed_enqueue(
+            return Err(guards.abandon(
                 error,
                 &self.telemetry,
                 stream_raw,
                 "cuStreamSynchronize (host dispatch error cleanup)",
-                "host dispatch",
                 "enqueue",
-                FailedEnqueueGuards {
-                    launch_resources: &mut launch_resources,
-                    allocations: &mut allocations,
-                    host_transfers: &mut host_transfers,
-                    resident_use: None,
-                },
             ));
         }
         pending

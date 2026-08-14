@@ -60,24 +60,12 @@ impl CudaBackend {
                 resident_view_cache,
                 "resident sequence view cache",
             )?;
-            if let Some(expected) = binding.static_byte_len {
-                if resident.byte_len < expected {
-                    return Err(BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA resident sequence binding `{}` expected at least {expected} bytes but handle {} has {} bytes.",
-                            binding.name, handle.handle, resident.byte_len
-                        ),
-                    });
-                }
-            }
-            if resident.ptr == 0 {
-                return Err(BackendError::InvalidProgram {
-                    fix: format!(
-                        "Fix: CUDA resident sequence binding `{}` resolved to a null device pointer; resident launch arguments must preserve descriptor order.",
-                        binding.name
-                    ),
-                });
-            }
+            resident.validate_binding(
+                "resident sequence",
+                &binding.name,
+                binding.static_byte_len,
+                handle.handle,
+            )?;
             launch_ptrs.push(resident.ptr);
         }
         Ok(launch_ptrs)
@@ -197,37 +185,69 @@ impl CudaBackend {
         Ok(outputs)
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub(super) fn prepare_resident_param_upload(
+    /// Resolve the kernel parameter pointer for one resident dispatch,
+    /// uploading the parameter words when the plan has no static pointer.
+    ///
+    /// Three answers, and every resident path needs all three: a plan that
+    /// already owns a device-side parameter block hands its pointer straight
+    /// back, a plan with no parameters at all launches with a null block rather
+    /// than allocating an empty one, and anything else stages the words into a
+    /// transient allocation whose upload the caller enqueues.
+    ///
+    /// `role` names the dispatch path and reaches only the four accounting
+    /// labels. It was four separately spelled label constants per caller, which
+    /// is four chances to record one path's parameter bytes under another's
+    /// budget.
+    pub(super) fn resolve_resident_params_ptr(
         &self,
         param_words: &[u32],
         param_bytes: usize,
-        allocation_budget_label: &'static str,
-        upload_budget_label: &'static str,
-        allocation_metric_label: &'static str,
-        upload_metric_label: &'static str,
+        static_params_ptr: Option<u64>,
+        role: &str,
+        allocations: &mut DispatchAllocations,
+        host_transfers: &mut HostTransferAllocations,
+    ) -> Result<ParamUpload, BackendError> {
+        match static_params_ptr {
+            Some(ptr) => Ok((ptr, None)),
+            None if param_bytes == 0 => Ok((0, None)),
+            None => self.prepare_resident_param_upload(
+                param_words,
+                param_bytes,
+                role,
+                allocations,
+                host_transfers,
+            ),
+        }
+    }
+
+    fn prepare_resident_param_upload(
+        &self,
+        param_words: &[u32],
+        param_bytes: usize,
+        role: &str,
         allocations: &mut DispatchAllocations,
         host_transfers: &mut HostTransferAllocations,
     ) -> Result<ParamUpload, BackendError> {
         self.validate_transient_allocation_memory_budget(
             param_bytes,
-            allocation_budget_label,
-            upload_budget_label,
+            &format!("CUDA {role} parameter bytes"),
+            &format!("CUDA {role} parameter upload"),
         )?;
         let params_allocation = self.transient_pool.acquire(param_bytes)?;
         self.telemetry.record_transient_allocation_bytes(
-            crate::numeric::CUDA_NUMERIC
-                .usize_to_u64(params_allocation.byte_len, allocation_metric_label)?,
+            crate::numeric::CUDA_NUMERIC.usize_to_u64(
+                params_allocation.byte_len,
+                &format!("{role} parameter allocation byte count"),
+            )?,
         );
         let params_ptr = params_allocation.ptr;
         let param_host_ptr = host_transfers.push_u32_words(param_words)?;
-        self.telemetry.record_host_to_device_bytes(
-            crate::numeric::CUDA_NUMERIC.usize_to_u64(param_bytes, upload_metric_label)?,
-        );
+        let upload_metric = format!("{role} parameter upload byte count");
+        let upload_bytes =
+            crate::numeric::CUDA_NUMERIC.usize_to_u64(param_bytes, &upload_metric)?;
+        self.telemetry.record_host_to_device_bytes(upload_bytes);
         self.telemetry.record_host_upload_operations(1);
-        self.telemetry.record_param_upload_bytes(
-            crate::numeric::CUDA_NUMERIC.usize_to_u64(param_bytes, upload_metric_label)?,
-        );
+        self.telemetry.record_param_upload_bytes(upload_bytes);
         allocations.set_params(params_allocation);
         Ok((params_ptr, Some((params_ptr, param_host_ptr, param_bytes))))
     }

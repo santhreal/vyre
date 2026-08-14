@@ -18,14 +18,14 @@ use super::cache_key::{
     CUDA_MODULE_FROM_PTX_SOURCE_KEY_DOMAIN, CUDA_MODULE_FROM_RAW_PTX_ARTIFACT_DOMAIN,
 };
 use super::capacity_accounting::{
-    increment_cache_access_u32, increment_cache_counter_u64, retention_problem_size,
+    increment_cache_access_u32, increment_cache_counter_u64, select_evicted_keys,
 };
 use super::driver_module::{
     get_cuda_module_function, get_cuda_module_global, load_cuda_module_data,
     unload_cuda_module_or_log, GRID_BARRIER_SYMBOL_CSTR, GRID_BARRIER_SYMBOL_NAME,
 };
 use super::ptx_disk_cache::write_ptx_dump;
-use crate::backend::staging_reserve::{reserve_smallvec, reserve_vec};
+use crate::backend::staging_reserve::reserve_vec;
 
 const MODULE_CACHE_SOFT_CAP: usize = 2048;
 const MODULE_CACHE_RETAIN_AFTER_EVICTION: usize = MODULE_CACHE_SOFT_CAP / 2;
@@ -201,50 +201,18 @@ impl CudaModuleCache {
             keys.push(*entry.key());
             gains.push(entry.access_count.load(Ordering::Relaxed));
         }
-        let Some((n, k)) = retention_problem_size(
-            gains.len(),
+        let Some(to_remove) = select_evicted_keys::<_, MODULE_CACHE_SOFT_CAP>(
+            &keys,
+            &mut gains,
             MODULE_CACHE_RETAIN_AFTER_EVICTION,
             "CUDA module cache",
+            "module cache eviction removal key",
         ) else {
             self.modules.clear();
             vyre_driver::cache_eviction::record_eviction_counts(keys.len(), keys.len());
             return;
         };
 
-        let retention =
-            match vyre_driver::cache_eviction::try_select_retention_set(&mut gains, n, k) {
-                Ok(retention) => retention,
-                Err(error) => {
-                    tracing::error!(
-                        "CUDA module cache eviction could not allocate retention state: {error}"
-                    );
-                    self.modules.clear();
-                    vyre_driver::cache_eviction::record_eviction_counts(keys.len(), keys.len());
-                    return;
-                }
-            };
-
-        let mut to_remove: SmallVec<[ModuleCacheKey; MODULE_CACHE_SOFT_CAP]> = SmallVec::new();
-        if let Err(error) = reserve_smallvec(
-            &mut to_remove,
-            retention.len(),
-            "module cache eviction removal key",
-        ) {
-            tracing::error!(
-                "CUDA module cache eviction could not reserve {} removal key slot(s): {error}",
-                retention.len()
-            );
-            self.modules.clear();
-            vyre_driver::cache_eviction::record_eviction_counts(keys.len(), keys.len());
-            return;
-        }
-        for (i, retain) in retention.iter().enumerate() {
-            if *retain == 0 {
-                if let Some(key) = keys.get(i) {
-                    to_remove.push(*key);
-                }
-            }
-        }
         let dropped = to_remove.len();
         let total = keys.len().max(1);
         for key in &to_remove {

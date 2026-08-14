@@ -9,7 +9,7 @@ use vyre_foundation::ir::Program;
 
 use crate::backend::allocations::{DispatchAllocations, HostTransferAllocations};
 use crate::backend::dispatch::CudaBackend;
-use crate::backend::enqueue_cleanup::{abandon_failed_enqueue, FailedEnqueueGuards};
+use crate::backend::enqueue_cleanup::EnqueueGuards;
 use crate::backend::launch_params::launch_param_byte_len;
 use crate::backend::module_cache::ModuleCacheKey;
 use crate::backend::ordering::sort_unstable_by_key_if_needed;
@@ -79,25 +79,14 @@ impl CudaBackend {
             usize::from(static_params_ptr.is_none() && param_bytes != 0),
             0,
         )?;
-        let mut param_upload: Option<(u64, *const c_void, usize)> = None;
-        let params_ptr = match static_params_ptr {
-            Some(ptr) => ptr,
-            None if param_bytes == 0 => 0,
-            None => {
-                let (params_ptr, upload) = self.prepare_resident_param_upload(
-                    &prepared.launch.param_words,
-                    param_bytes,
-                    "CUDA resident batch dispatch parameter bytes",
-                    "CUDA resident batch dispatch parameter upload",
-                    "resident batch dispatch parameter allocation byte count",
-                    "resident batch dispatch parameter upload byte count",
-                    &mut allocations,
-                    &mut host_transfers,
-                )?;
-                param_upload = upload;
-                params_ptr
-            }
-        };
+        let (params_ptr, param_upload) = self.resolve_resident_params_ptr(
+            &prepared.launch.param_words,
+            param_bytes,
+            static_params_ptr,
+            "resident batch dispatch",
+            &mut allocations,
+            &mut host_transfers,
+        )?;
 
         let func = self.resolve_launch_function(
             ptx_src,
@@ -185,24 +174,12 @@ impl CudaBackend {
                     &mut resident_view_cache,
                     "resident batch dispatch view cache",
                 )?;
-                if let Some(expected) = binding.static_byte_len {
-                    if resident.byte_len < expected {
-                        return Err(BackendError::InvalidProgram {
-                            fix: format!(
-                                "Fix: CUDA resident batch dispatch item {batch_index} binding `{}` expected at least {expected} bytes but handle {} has {} bytes.",
-                                binding.name, handle.handle, resident.byte_len
-                            ),
-                        });
-                    }
-                }
-                if resident.ptr == 0 {
-                    return Err(BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA resident batch dispatch item {batch_index} binding `{}` resolved to a null device pointer; resident launch arguments must preserve descriptor order.",
-                            binding.name
-                        ),
-                    });
-                }
+                resident.validate_binding(
+                    &format!("resident batch dispatch item {batch_index}"),
+                    &binding.name,
+                    binding.static_byte_len,
+                    handle.handle,
+                )?;
                 launch_ptrs.push(resident.ptr);
                 if let Some(output_index) = binding.output_index {
                     let full_byte_len = match binding.static_byte_len {
@@ -299,21 +276,21 @@ impl CudaBackend {
             output_readbacks_by_batch.push(output_readbacks);
         }
 
+        // Marked in-flight before the launch lease is taken: the lease blocks
+        // while another launch holds it, and a handle must already be pinned
+        // before this dispatch can wait behind one that reads it.
         let resident_use = self.resident_store.mark_inflight(&all_handles)?;
-        let launch_resources = crate::stream::CudaLaunchResourceLease::acquire(
-            Arc::clone(&self.launch_resources),
-            false,
-        )?;
-        let mut launch_resources = Some(launch_resources);
-        let mut allocations = Some(allocations);
-        let mut resident_use = Some(resident_use);
-        let mut host_transfers = Some(host_transfers);
-        let stream_raw = launch_resources
-            .as_ref()
-            .ok_or_else(|| BackendError::InvalidProgram {
-                fix: "Fix: CUDA resident batch launch resources were consumed before enqueue; rebuild pending dispatch ownership before launching.".to_string(),
-            })?
-            .stream_raw()?;
+        let mut guards = EnqueueGuards::new(
+            "resident batch",
+            crate::stream::CudaLaunchResourceLease::acquire(
+                Arc::clone(&self.launch_resources),
+                false,
+            )?,
+            allocations,
+            host_transfers,
+            Some(resident_use),
+        );
+        let stream_raw = guards.stream_raw()?;
         let pending = (|| {
             enqueue_optional_resident_h2d_copy(param_upload, stream_raw)?;
 
@@ -332,21 +309,13 @@ impl CudaBackend {
                     for launch_ptrs in launch_ptrs_by_batch.iter_mut() {
                         let mut params_ref = params_ptr;
                         Self::kernel_args_into(launch_ptrs, &mut params_ref, &mut kernel_args)?;
-                        for _ in 0..prepared.fixpoint_iterations {
-                            // SAFETY: stream_raw is the live batch stream and
-                            // outlives the memset enqueued ahead of each launch.
-                            unsafe {
-                                grid_barrier.enqueue_reset(stream_raw)?;
-                            }
-                            self.launch_prevalidated_function(
-                                func,
-                                &mut kernel_args,
-                                &prepared.launch,
-                                stream_raw,
-                                false,
-                                prepared.cooperative,
-                            )?;
-                        }
+                        self.replay_fixpoint_launches(
+                            grid_barrier,
+                            func,
+                            &mut kernel_args,
+                            prepared,
+                            stream_raw,
+                        )?;
                     }
                     Ok(())
                 },
@@ -357,28 +326,10 @@ impl CudaBackend {
                 self.launch_resources.release_event(event);
                 return Err(error);
             }
-            let (stream, _) = launch_resources
-                .take()
-                .ok_or_else(|| BackendError::InvalidProgram {
-                    fix: "Fix: CUDA resident batch launch resources were consumed before pending dispatch ownership transfer.".to_string(),
-                })?
-                .into_parts()?;
-            let allocations = allocations
-                .take()
-                .ok_or_else(|| BackendError::InvalidProgram {
-                    fix: "Fix: CUDA resident batch allocations were consumed before pending dispatch ownership transfer.".to_string(),
-                })?;
-            let resident_use = resident_use
-                .take()
-                .ok_or_else(|| BackendError::InvalidProgram {
-                    fix: "Fix: CUDA resident batch use guard was consumed before pending dispatch ownership transfer.".to_string(),
-                })?;
-            let host_transfers =
-                host_transfers
-                    .take()
-                    .ok_or_else(|| BackendError::InvalidProgram {
-                        fix: "Fix: CUDA resident batch host staging was consumed before pending dispatch ownership transfer.".to_string(),
-                    })?;
+            let (stream, _) = guards.take_stream_and_timing()?;
+            let allocations = guards.take_allocations()?;
+            let resident_use = guards.take_resident_use()?;
+            let host_transfers = guards.take_host_transfers()?;
             Ok(
                 crate::stream::CudaPendingDispatch::new_resident_batch_pending(
                     Arc::clone(&self.ctx),
@@ -395,19 +346,12 @@ impl CudaBackend {
         let pending = match pending {
             Ok(pending) => pending,
             Err(error) => {
-                return Err(abandon_failed_enqueue(
+                return Err(guards.abandon(
                     error,
                     &self.telemetry,
                     stream_raw,
                     "cuStreamSynchronize (resident batch error cleanup)",
-                    "resident batch",
                     "enqueue",
-                    FailedEnqueueGuards {
-                        launch_resources: &mut launch_resources,
-                        allocations: &mut allocations,
-                        host_transfers: &mut host_transfers,
-                        resident_use: Some(&mut resident_use),
-                    },
                 ));
             }
         };
