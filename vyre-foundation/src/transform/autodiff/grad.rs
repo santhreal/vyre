@@ -233,9 +233,7 @@ fn first_dangling_forward_local(body: &[Node], local_targets: &[Ident]) -> Optio
                 expr_ref(index, locals).or_else(|| expr_ref(value, locals))
             }
             Node::If { cond, .. } => expr_ref(cond, locals),
-            Node::Loop { from, to, .. } => {
-                expr_ref(from, locals).or_else(|| expr_ref(to, locals))
-            }
+            Node::Loop { from, to, .. } => expr_ref(from, locals).or_else(|| expr_ref(to, locals)),
             Node::Block(_)
             | Node::Region { .. }
             | Node::Return

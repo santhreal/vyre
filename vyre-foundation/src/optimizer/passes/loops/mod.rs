@@ -5,6 +5,8 @@
 //! IR-level transformations; target-specific loop emission remains inside the
 //! driver crates.
 
+/// Shared legality / dependence analysis for the loop restructuring passes.
+mod legality;
 /// Tighten a `Node::Loop` upper bound when its body is a single
 /// `If(Lt(Var(loop_var), Lit(n)), ...)` with `n < to` (ROADMAP A19).
 pub mod loop_bound_tighten;
@@ -44,8 +46,6 @@ pub mod loop_unroll;
 /// `Loop(i, lo, hi, body)` (ROADMAP A16  -  range facts into branch
 /// elision via the structural loop range).
 pub mod loop_var_range_fold;
-/// Shared legality / dependence analysis for the loop restructuring passes.
-mod legality;
 mod substitution;
 
 fn collect_vars_in_expr(expr: &crate::ir::Expr, out: &mut rustc_hash::FxHashSet<crate::ir::Ident>) {

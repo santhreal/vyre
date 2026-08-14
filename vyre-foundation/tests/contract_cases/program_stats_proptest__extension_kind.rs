@@ -184,4 +184,3 @@ fn arb_node_with_depth(depth: u32) -> BoxedStrategy<Node> {
     })
     .boxed()
 }
-

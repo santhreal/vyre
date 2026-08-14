@@ -21,7 +21,9 @@ fn assert_rejected(expr: Expr, output_ty: DataType, expected: &str) {
     );
     let errors = validate(&program);
     assert!(
-        errors.iter().any(|error| error.message().contains(expected)),
+        errors
+            .iter()
+            .any(|error| error.message().contains(expected)),
         "expected critical rejection: {expected}"
     );
 }

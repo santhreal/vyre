@@ -456,7 +456,9 @@ pub(crate) fn expr_type(
                     | crate::ir_inner::model::spec_types::UnOp::Ceil
                     | crate::ir_inner::model::spec_types::UnOp::Round
                     | crate::ir_inner::model::spec_types::UnOp::Trunc
-                    | crate::ir_inner::model::spec_types::UnOp::Sign => values.push(Some(DataType::F32)),
+                    | crate::ir_inner::model::spec_types::UnOp::Sign => {
+                        values.push(Some(DataType::F32))
+                    }
                     _ => values.push(None),
                 },
                 Expr::Select {

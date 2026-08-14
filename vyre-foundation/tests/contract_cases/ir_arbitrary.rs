@@ -15,8 +15,8 @@
 
 use proptest::collection::vec as prop_vec;
 use proptest::prelude::*;
-use vyre_foundation::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BinOp, DataType, Expr, UnOp};
+use vyre_foundation::MemoryOrdering;
 use vyre_spec::data_type::TypeId;
 use vyre_spec::extension::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionUnOpId,

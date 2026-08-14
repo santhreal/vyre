@@ -14,8 +14,8 @@ use super::{
 use crate::ir::{BufferDecl, Expr, Node};
 use crate::ir_inner::model::program::Program;
 use crate::optimizer::{
-    fact_cache::FactCache, registered_passes, requirements_satisfied, OptimizerError,
-    PassMetadata, ProgramPassKind, ProgramPassRegistration,
+    fact_cache::FactCache, registered_passes, requirements_satisfied, OptimizerError, PassMetadata,
+    ProgramPassKind, ProgramPassRegistration,
 };
 use crate::perf::PerfScope;
 
