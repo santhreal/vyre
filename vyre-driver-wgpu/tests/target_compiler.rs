@@ -1,68 +1,41 @@
-//! WGPU target-compiler registry and immutable module-bundle contracts.
+//! WGPU's arguments to the shared registered-target-compiler contract.
+//!
+//! The contract itself is `tests/support/target_compiler_contract.rs`. Only what
+//! is genuinely WGPU-native stays here: the payload format this backend
+//! registers, the shape of a WGSL module, and the target operation facets this
+//! backend publishes.
 
-use std::collections::BTreeMap;
-use vyre_driver::{BindingSet, BoundResource};
+use vyre_foundation::ir::BufferAccess;
 
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphOutput, Node, Program, ProgramGraph, ShapeDim,
-    ValueContract, ValueLifetime,
+#[path = "../../tests/support/target_compiler_contract.rs"]
+mod target_compiler_contract;
+use target_compiler_contract::{
+    assert_materializer_executes_payload, assert_materializer_executes_resident_binding,
+    assert_target_compiler_emits_bundle, TargetExpectation,
 };
-use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget, TargetModuleBundle};
 
-fn artifact() -> vyre_megakernel::Artifact {
-    let program = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [64, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
-    );
-    let mut graph = ProgramGraph::new();
-    graph
-        .add_node(
-            "main",
-            program,
-            Vec::new(),
-            vec![GraphOutput {
-                buffer: "out".into(),
-                name: "out".into(),
-                contract: ValueContract {
-                    dtype: DataType::U32,
-                    shape: vec![ShapeDim::Known(1)],
-                    access: BufferAccess::WriteOnly,
-                    lifetime: ValueLifetime::Output,
-                },
-                retained_successor_of: None,
-            }],
-        )
-        .unwrap();
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        SearchBudget::new(1, 1, 0, 0, 1),
-        1_000_000,
-    )
-    .validate()
-    .unwrap();
-    vyre_megakernel::compile(&request).unwrap()
+fn wgpu() -> TargetExpectation<'static> {
+    TargetExpectation {
+        backend_id: vyre_driver_wgpu::WGPU_BACKEND_ID,
+        format_identity: "wgsl",
+        format_version: 2,
+        entry_point: "main",
+        output_access: BufferAccess::WriteOnly,
+    }
 }
 
-/// WHY: WGPU payload production is a pure registered compiler operation with no device probe.
+/// WHY: WGPU payload production is a pure registered compiler operation with no
+/// device probe, and the WGSL it emits must declare a compute entry point.
 #[test]
 fn registered_target_compiler_emits_selected_wgsl_bundle() {
-    let registration = vyre_driver::backend::registered_backends()
-        .expect("valid backend registry")
-        .iter()
-        .find(|registration| registration.id == vyre_driver_wgpu::WGPU_BACKEND_ID)
-        .expect("WGPU target compiler registration must be linked");
-    let compiler = registration.target_compiler().unwrap();
-    let artifact = artifact();
-    let payload = compiler.compile(&artifact).unwrap();
-    let bundle = TargetModuleBundle::from_bytes(payload.bytes()).unwrap();
-    assert_eq!(compiler.format().identity(), "wgsl");
-    assert_eq!(compiler.format().version(), 2);
-    assert_eq!(bundle.modules.len(), 1);
-    let source = std::str::from_utf8(&bundle.modules[0].bytes).unwrap();
-    assert!(source.contains("@compute"));
-    assert_eq!(payload.neutral_artifact(), artifact.digest());
+    assert_target_compiler_emits_bundle(&wgpu(), |bundle| {
+        let source = std::str::from_utf8(&bundle.modules[0].bytes)
+            .expect("Fix: WGPU target module bytes must be UTF-8");
+        assert!(
+            source.contains("@compute"),
+            "Fix: WGPU target module must declare a `@compute` entry point"
+        );
+    });
 }
 
 /// WHY: target support is a facet of the canonical semantic identity, not a
@@ -90,58 +63,16 @@ fn registered_target_facets_resolve_canonical_operations() {
     }
 }
 
-/// WHY: WGPU materialization must execute authenticated WGSL instead of re-emitting a Program.
+/// WHY: WGPU materialization must execute authenticated WGSL instead of
+/// re-emitting a Program.
 #[test]
 fn registered_materializer_executes_authenticated_wgsl() {
-    let registration = vyre_driver::backend::registered_backends()
-        .expect("valid backend registry")
-        .iter()
-        .find(|registration| registration.id == vyre_driver_wgpu::WGPU_BACKEND_ID)
-        .expect("WGPU materializer registration must be linked");
-    let compiler = registration.target_compiler().unwrap();
-    let materializer = registration
-        .materializer()
-        .expect("WGPU materializer must acquire on the GPU-required host");
-    let artifact = artifact();
-    let payload = compiler.compile(&artifact).unwrap();
-    let instance = materializer.materialize(&artifact, &payload).unwrap();
-    let completion = instance
-        .submit(BindingSet::new(artifact.digest()))
-        .unwrap()
-        .wait()
-        .unwrap();
-    assert_eq!(completion.artifact, artifact.digest());
-    assert_eq!(
-        completion.outputs.get(&vyre_megakernel::ArtifactValueId(0)),
-        Some(&1_u32.to_le_bytes().to_vec())
-    );
+    assert_materializer_executes_payload(&wgpu());
 }
 
-/// WHY: resident benchmark hot loops must submit authenticated artifact instances,
-/// not bypass materialization through raw `Program` dispatch.
+/// WHY: resident benchmark hot loops must submit authenticated artifact
+/// instances, not bypass materialization through raw `Program` dispatch.
 #[test]
 fn registered_materializer_executes_resident_artifact_bindings() {
-    let registration =
-        vyre_driver::backend::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
-            .expect("WGPU materializer registration must be linked");
-    let compiler = registration.target_compiler().unwrap();
-    let materializer = registration
-        .materializer()
-        .expect("WGPU materializer must acquire on the GPU-required host");
-    let artifact = artifact();
-    let payload = compiler.compile(&artifact).unwrap();
-    let instance = materializer.materialize(&artifact, &payload).unwrap();
-    let resource = materializer.allocate_resident(4).unwrap();
-    materializer.upload_resident(&resource, &[0; 4]).unwrap();
-    let mut bindings = BindingSet::new(artifact.digest());
-    bindings.insert(
-        vyre_megakernel::ArtifactValueId(0),
-        BoundResource::Resident(resource.clone()),
-    );
-    let completion = instance.submit(bindings).unwrap().wait().unwrap();
-    materializer.free_resident(resource).unwrap();
-    assert_eq!(
-        completion.outputs.get(&vyre_megakernel::ArtifactValueId(0)),
-        Some(&1_u32.to_le_bytes().to_vec())
-    );
+    assert_materializer_executes_resident_binding(&wgpu());
 }

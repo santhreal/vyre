@@ -220,41 +220,19 @@ impl VyreBackend for SpirvBackendRegistration {
         false
     }
 
+    /// The Vulkan compute path probes four limits and claims nothing else.
+    ///
+    /// Every remaining field restated `DeviceProfile::conservative`, which is the
+    /// driver's own owner for "this backend has not probed that capability". The
+    /// copy meant a new capability field had to be answered here by hand, and the
+    /// answer was always the conservative one.
     fn device_profile(&self) -> vyre_driver::DeviceProfile {
-        let max_workgroup_size = self.max_workgroup_size();
         vyre_driver::DeviceProfile {
-            backend: self.id(),
-            supports_subgroup_ops: false,
-            supports_indirect_dispatch: false,
-            supports_distributed_collectives: false,
-            supports_specialization_constants: false,
-            supports_f16: false,
-            supports_bf16: false,
-            supports_trap_propagation: false,
-            supports_tensor_cores: false,
-            has_mul_high: false,
-            has_dual_issue_fp32_int32: false,
-            has_subgroup_shuffle: false,
-            has_shared_memory: false,
-            max_native_int_width: 32,
-            max_workgroup_size,
+            max_workgroup_size: self.max_workgroup_size(),
             max_invocations_per_workgroup: self.max_compute_invocations_per_workgroup(),
             max_shared_memory_bytes: self.device.properties.limits.max_compute_shared_memory_size,
             max_storage_buffer_binding_size: self.max_storage_buffer_bytes(),
-            subgroup_size: 0,
-            compute_units: 0,
-            regs_per_thread_max: 0,
-            l1_cache_bytes: 0,
-            l2_cache_bytes: 0,
-            mem_bw_gbps: 0,
-            timing_quality: vyre_driver::DeviceTimingQuality::HostOnly,
-            supports_device_timestamps: false,
-            supports_hardware_counters: false,
-            ideal_unroll_depth: 0,
-            ideal_vector_pack_bits: 0,
-            ideal_workgroup_tile: [0, 0, 0],
-            shared_memory_bank_count: 0,
-            shared_memory_bank_width_bytes: 0,
+            ..vyre_driver::DeviceProfile::conservative(self.id())
         }
     }
 }

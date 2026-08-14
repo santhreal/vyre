@@ -1,20 +1,29 @@
 //! SPIR-V driver contracts through canonical verified lowering and emission.
+//!
+//! The registry, payload-format and authenticated-execution statements are the
+//! shared contract in `tests/support/target_compiler_contract.rs`. What stays
+//! here is SPIR-V specific: structural validation of emitted words through
+//! `spirv-val`, determinism of the SPIR-V writer, and the perturbation cases that
+//! prove this materializer refuses a payload before it touches Vulkan.
 
-use std::collections::BTreeMap;
 use std::io::Write;
 use std::process::Command;
 
 use tempfile::NamedTempFile;
 use vyre_driver::BindingSet;
 use vyre_driver_spirv::SpirvBackend;
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphOutput, Node, Program, ProgramGraph, ShapeDim,
-    ValueContract, ValueLifetime,
+use vyre_foundation::ir::Program;
+use vyre_megakernel::{TargetModuleBundle, TargetPayload, TargetPayloadFormat};
+
+mod support;
+use support::target_compiler_contract::{
+    assert_materializer_executes_payload, assert_target_compiler_emits_bundle, registration,
+    store_one_program,
 };
-use vyre_megakernel::{
-    CompileRequest, Digest, ExternalFacts, SearchBudget, TargetModuleBundle, TargetPayload,
-    TargetPayloadFormat,
-};
+use support::{artifact, foreign_artifact, spirv};
+
+/// First word of every well-formed SPIR-V module.
+const SPIRV_MAGIC: u32 = 0x0723_0203;
 
 fn assert_spirv_structural_invariants(label: &str, words: &[u32]) {
     assert!(
@@ -22,7 +31,7 @@ fn assert_spirv_structural_invariants(label: &str, words: &[u32]) {
         "Fix: {label} emitted an empty SPIR-V blob"
     );
     assert_eq!(
-        words[0], 0x0723_0203,
+        words[0], SPIRV_MAGIC,
         "Fix: {label} emitted a SPIR-V blob without the SPIR-V magic header"
     );
 
@@ -65,54 +74,11 @@ fn assert_spirv_structural_invariants(label: &str, words: &[u32]) {
     );
 }
 
-fn program() -> Program {
-    Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [64, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
-    )
-}
-
-fn artifact_with_configuration(configuration: u8) -> vyre_megakernel::Artifact {
-    let mut graph = ProgramGraph::new();
-    graph
-        .add_node(
-            "main",
-            program(),
-            Vec::new(),
-            vec![GraphOutput {
-                buffer: "out".into(),
-                name: "out".into(),
-                contract: ValueContract {
-                    dtype: DataType::U32,
-                    shape: vec![ShapeDim::Known(1)],
-                    access: BufferAccess::ReadWrite,
-                    lifetime: ValueLifetime::Output,
-                },
-                retained_successor_of: None,
-            }],
-        )
-        .unwrap();
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([configuration; 32]), BTreeMap::new()),
-        SearchBudget::new(1, 1, 0, 0, 1),
-        1_000_000,
-    )
-    .validate()
-    .unwrap();
-    vyre_megakernel::compile(&request).unwrap()
-}
-
-fn artifact() -> vyre_megakernel::Artifact {
-    artifact_with_configuration(0)
-}
-
 #[test]
 fn program_compilation_uses_one_deterministic_spirv_writer() {
-    let first = SpirvBackend::program_to_spv(&program())
+    let first = SpirvBackend::program_to_spv(&store_one_program())
         .expect("Fix: canonical Program must compile to SPIR-V");
-    let second = SpirvBackend::program_to_spv(&program())
+    let second = SpirvBackend::program_to_spv(&store_one_program())
         .expect("Fix: identical Program must compile to SPIR-V");
     assert_eq!(
         first, second,
@@ -124,35 +90,29 @@ fn program_compilation_uses_one_deterministic_spirv_writer() {
 /// WHY: inventory discovery must compile immutable selected modules, never caller Programs.
 #[test]
 fn registered_target_compiler_emits_spirv_module_bundle() {
-    let registration = vyre_driver::backend::registered_backends()
-        .expect("valid backend registry")
-        .iter()
-        .find(|registration| registration.id == vyre_driver_spirv::SPIRV_BACKEND_ID)
-        .expect("SPIR-V registration must be force-linked");
-    let compiler = registration
-        .target_compiler()
-        .expect("SPIR-V target compiler must be registered");
-    let artifact = artifact();
-    let payload = compiler.compile(&artifact).expect("artifact must compile");
-    let bundle = TargetModuleBundle::from_bytes(payload.bytes()).expect("bundle must decode");
-    assert_eq!(bundle.modules.len(), 1);
-    assert_eq!(bundle.modules[0].entry_point, "main");
-    assert_eq!(payload.entries()[0].name, "main");
-    assert_eq!(
-        &bundle.modules[0].bytes[..4],
-        &0x0723_0203_u32.to_le_bytes()
-    );
-    assert_eq!(payload.neutral_artifact(), artifact.digest());
+    assert_target_compiler_emits_bundle(&spirv(), |bundle| {
+        assert_eq!(
+            &bundle.modules[0].bytes[..4],
+            &SPIRV_MAGIC.to_le_bytes(),
+            "Fix: SPIR-V target module must begin with the SPIR-V magic word"
+        );
+    });
 }
 
-/// WHY: materialization and submission must execute authenticated payload bytes without recompiling.
+/// WHY: materialization and submission must execute authenticated payload bytes
+/// without recompiling.
 #[test]
 fn registered_materializer_executes_artifact_instance() {
-    let registration = vyre_driver::backend::registered_backends()
-        .expect("valid backend registry")
-        .iter()
-        .find(|registration| registration.id == vyre_driver_spirv::SPIRV_BACKEND_ID)
-        .expect("SPIR-V registration must be force-linked");
+    assert_materializer_executes_payload(&spirv());
+}
+
+/// WHY: every perturbation of an authentic payload must be refused before the
+/// materializer touches Vulkan. This backend reaches the shared admission choke
+/// point, so a case that passes here would pass for a payload no artifact digest
+/// covers.
+#[test]
+fn perturbed_payloads_fail_before_native_materialization() {
+    let registration = registration(vyre_driver_spirv::SPIRV_BACKEND_ID);
     let compiler = registration.target_compiler().unwrap();
     let materializer = registration
         .materializer()
@@ -160,7 +120,7 @@ fn registered_materializer_executes_artifact_instance() {
     let artifact = artifact();
     let payload = compiler.compile(&artifact).unwrap();
     let instance = materializer.materialize(&artifact, &payload).unwrap();
-    let wrong_artifact = artifact_with_configuration(1);
+    let wrong_artifact = foreign_artifact();
     assert!(
         materializer.materialize(&wrong_artifact, &payload).is_err(),
         "payload association mismatch must fail before native materialization"
@@ -237,16 +197,6 @@ fn registered_materializer_executes_artifact_instance() {
             .submit(BindingSet::new(wrong_artifact.digest()))
             .is_err(),
         "binding association mismatch must fail before submission"
-    );
-    let completion = instance
-        .submit(BindingSet::new(artifact.digest()))
-        .unwrap()
-        .wait()
-        .unwrap();
-    assert_eq!(completion.artifact, artifact.digest());
-    assert_eq!(
-        completion.outputs.get(&vyre_megakernel::ArtifactValueId(0)),
-        Some(&1_u32.to_le_bytes().to_vec())
     );
 }
 
