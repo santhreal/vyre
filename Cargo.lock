@@ -3498,6 +3498,7 @@ dependencies = [
  "vyre-foundation",
  "vyre-libs",
  "vyre-lower",
+ "vyre-megakernel",
  "vyre-primitives",
  "vyre-test-support",
 ]

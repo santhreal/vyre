@@ -42,38 +42,38 @@ pub struct BackendSource {
 /// Referencing each crate's `registered_backend_id` is what links it. A `const`
 /// backend id would inline at the use site and link nothing.
 static SOURCES: LazyLock<Vec<BackendSource>> = LazyLock::new(|| {
-    let mut sources: Vec<BackendSource> = Vec::new();
-    #[cfg(feature = "cuda")]
-    sources.push(BackendSource {
-        crate_name: "vyre-driver-cuda",
-        backend_id: vyre_driver_cuda::CUDA_BACKEND_ID,
-        registered_here: vyre_driver_cuda::registered_backend_id(),
-    });
-    #[cfg(feature = "metal")]
-    sources.push(BackendSource {
-        crate_name: "vyre-driver-metal",
-        backend_id: vyre_driver_metal::METAL_BACKEND_ID,
-        registered_here: vyre_driver_metal::registered_backend_id(),
-    });
-    #[cfg(feature = "reference")]
-    sources.push(BackendSource {
-        crate_name: "vyre-driver-reference",
-        backend_id: vyre_driver_reference::CPU_REF_BACKEND_ID,
-        registered_here: vyre_driver_reference::registered_backend_id(),
-    });
-    #[cfg(feature = "spirv")]
-    sources.push(BackendSource {
-        crate_name: "vyre-driver-spirv",
-        backend_id: vyre_driver_spirv::SPIRV_BACKEND_ID,
-        registered_here: vyre_driver_spirv::registered_backend_id(),
-    });
-    #[cfg(feature = "wgpu")]
-    sources.push(BackendSource {
-        crate_name: "vyre-driver-wgpu",
-        backend_id: vyre_driver_wgpu::WGPU_BACKEND_ID,
-        registered_here: vyre_driver_wgpu::registered_backend_id(),
-    });
-    sources
+    vec![
+        #[cfg(feature = "cuda")]
+        BackendSource {
+            crate_name: "vyre-driver-cuda",
+            backend_id: vyre_driver_cuda::CUDA_BACKEND_ID,
+            registered_here: vyre_driver_cuda::registered_backend_id(),
+        },
+        #[cfg(feature = "metal")]
+        BackendSource {
+            crate_name: "vyre-driver-metal",
+            backend_id: vyre_driver_metal::METAL_BACKEND_ID,
+            registered_here: vyre_driver_metal::registered_backend_id(),
+        },
+        #[cfg(feature = "reference")]
+        BackendSource {
+            crate_name: "vyre-driver-reference",
+            backend_id: vyre_driver_reference::CPU_REF_BACKEND_ID,
+            registered_here: vyre_driver_reference::registered_backend_id(),
+        },
+        #[cfg(feature = "spirv")]
+        BackendSource {
+            crate_name: "vyre-driver-spirv",
+            backend_id: vyre_driver_spirv::SPIRV_BACKEND_ID,
+            registered_here: vyre_driver_spirv::registered_backend_id(),
+        },
+        #[cfg(feature = "wgpu")]
+        BackendSource {
+            crate_name: "vyre-driver-wgpu",
+            backend_id: vyre_driver_wgpu::WGPU_BACKEND_ID,
+            registered_here: vyre_driver_wgpu::registered_backend_id(),
+        },
+    ]
 });
 
 /// Every driver crate linked into this build, with what it registers here.

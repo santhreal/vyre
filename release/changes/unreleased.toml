@@ -809,3 +809,8 @@ text = "The duplication baseline pins for vyre-reference and vyre-spec now recor
 id = "duplication-pins-lowered-to-the-merged-tree"
 category = "Changed"
 text = "Twelve duplication pins now sit at what the merged tree measures rather than at what each lane measured in isolation: vyre 40 to 22, vyre-aot 54 to 31, vyre-debug 71 to 54, vyre-driver-cuda 3252 to 3238, vyre-driver-wgpu 4229 to 4017, vyre-foundation 5125 to 5117, vyre-libs 11759 to 11539, vyre-megakernel 60 to 8, vyre-primitives 7145 to 7038, vyre-runtime 412 to 345, vyre-pass-engine 299 to 288. Duplication is measured across files, so collapsing a copy in one crate moves every crate that shared it: vyre-megakernel lost 52 lines it never edited, and vyre-primitives lost 107. A pin left at the isolated measurement would have carried that slack as headroom for the next copy. `total_lines` is measured too, not carried forward, because a stale total makes the ratio it exists to report meaningless."
+
+[[fragments]]
+id = "feature-isolation-axis-covers-the-newest-crates"
+category = "Fixed"
+text = "The feature-isolation gate records the eight pairs it was missing: `vyre-registry-link` with no default features and with each of its `cuda`, `metal`, `operations`, `reference`, `spirv` and `wgpu` features, and `vyre-test-support` with `ir-fixtures`. The gate derives its axis from the manifests at run time, so both crates turned it red the moment they landed after the recorded set was written. Every one of the eight compiles. The `SOURCES` builder in `vyre-registry-link/src/backend.rs` also stops binding a `mut` vector that only the feature-enabled builds mutate; the linked sources are now one `vec!` whose elements carry the `cfg`, so the no-default-features probe compiles without a warning."

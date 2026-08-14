@@ -656,6 +656,41 @@ feature = "subgroup-ops"
 outcome = "compiles"
 
 [[pair]]
+member = "vyre-registry-link"
+feature = "(none)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "cuda"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "metal"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "operations"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "reference"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "spirv"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "wgpu"
+outcome = "compiles"
+
+[[pair]]
 member = "vyre-runtime"
 feature = "(none)"
 outcome = "compiles"
@@ -698,6 +733,11 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-test-support"
 feature = "(none)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "ir-fixtures"
 outcome = "compiles"
 
 [[pair]]
