@@ -29,11 +29,7 @@ struct PackageFeatures {
     release_policy: &'static str,
 }
 
-const REQUIRED_RELEASE_PACKAGES: &[&str] = &[
-    "vyre",
-    "vyre-driver-cuda",
-    "vyre-driver-wgpu",
-];
+const REQUIRED_RELEASE_PACKAGES: &[&str] = &["vyre", "vyre-driver-cuda", "vyre-driver-wgpu"];
 
 pub(crate) fn run(args: &[String]) {
     let output = match parse_output(args) {

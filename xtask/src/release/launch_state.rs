@@ -271,9 +271,12 @@ mod tests {
     fn completion_marker_rejects_a_missing_release_candidate_tag() {
         let dir = tempfile::tempdir().expect("Fix: create missing RC tag fixture directory.");
         let marker = dir.path().join("public-launch-completion.json");
-        let rc_line = format!("      \"{}\",\n", crate::release::release_train::vyre_rc_tag());
-        let marker_json =
-            completed_marker_json(crate::release::release_train::vyre_version()).replacen(&rc_line, "", 1);
+        let rc_line = format!(
+            "      \"{}\",\n",
+            crate::release::release_train::vyre_rc_tag()
+        );
+        let marker_json = completed_marker_json(crate::release::release_train::vyre_version())
+            .replacen(&rc_line, "", 1);
         std::fs::write(&marker, marker_json)
             .expect("Fix: write launch completion marker without the Vyre RC tag.");
 

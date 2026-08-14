@@ -261,6 +261,13 @@ fn absolute_paths_inside_the_checkout_are_still_checked() {
     .unwrap();
 
     let output = run_checker(root.path());
-    assert!(!output.status.success(), "an absolute in-checkout path must be checked");
-    assert!(stderr(&output).contains("MISSING docs/guide.md"), "{}", stderr(&output));
+    assert!(
+        !output.status.success(),
+        "an absolute in-checkout path must be checked"
+    );
+    assert!(
+        stderr(&output).contains("MISSING docs/guide.md"),
+        "{}",
+        stderr(&output)
+    );
 }

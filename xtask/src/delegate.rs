@@ -106,13 +106,7 @@ fn rendered_diagnostic(line: &str) -> Option<String> {
     if value.get("reason").and_then(Value::as_str)? != "compiler-message" {
         return None;
     }
-    Some(
-        value
-            .get("message")?
-            .get("rendered")?
-            .as_str()?
-            .to_string(),
-    )
+    Some(value.get("message")?.get("rendered")?.as_str()?.to_string())
 }
 
 /// The binary path cargo reported for `package`'s own binary target.

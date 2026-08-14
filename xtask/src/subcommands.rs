@@ -95,12 +95,16 @@ pub fn delegate_table_problems(package: &str, implemented: Implemented<'_>) -> V
     let mut names: Vec<&str> = implemented.iter().map(|(name, _)| *name).collect();
     for name in &assigned {
         if !names.contains(name) {
-            problems.push(format!("`{package}` is assigned `{name}` but does not implement it"));
+            problems.push(format!(
+                "`{package}` is assigned `{name}` but does not implement it"
+            ));
         }
     }
     for name in &names {
         if !assigned.contains(name) {
-            problems.push(format!("`{package}` implements `{name}` but is not assigned it"));
+            problems.push(format!(
+                "`{package}` implements `{name}` but is not assigned it"
+            ));
         }
     }
     names.sort_unstable();
@@ -551,7 +555,11 @@ mod tests {
         let before = names.len();
         names.sort_unstable();
         names.dedup();
-        assert_eq!(before, names.len(), "duplicate subcommand name in the table");
+        assert_eq!(
+            before,
+            names.len(),
+            "duplicate subcommand name in the table"
+        );
     }
 
     /// WHY: the exemption is the whole escape hatch. An empty reason turns it
@@ -573,7 +581,12 @@ mod tests {
     /// vacuously. These four only report when asked to check.
     #[test]
     fn check_only_gates_are_run_with_check() {
-        for name in ["catalog", "conformance-matrix", "list-ops", "operation-schema"] {
+        for name in [
+            "catalog",
+            "conformance-matrix",
+            "list-ops",
+            "operation-schema",
+        ] {
             let entry = find(name).expect("registered");
             assert!(
                 entry.ci_args.contains(&"--check"),
@@ -611,9 +624,8 @@ mod tests {
     /// operator invoked the gate, which is the worst place to learn it.
     #[test]
     fn every_delegated_subcommand_names_a_workspace_member() {
-        let members =
-            std::fs::read_to_string(crate::checkout::checkout_root().join("Cargo.toml"))
-                .expect("Fix: the workspace manifest must be readable from xtask");
+        let members = std::fs::read_to_string(crate::checkout::checkout_root().join("Cargo.toml"))
+            .expect("Fix: the workspace manifest must be readable from xtask");
         for entry in SUBCOMMANDS {
             let Some(package) = entry.home.package() else {
                 continue;

@@ -25,8 +25,9 @@ fn write_json(path: &Path, value: &Value) {
 /// check before reaching the behaviour it names.
 fn enforced_schema_shape() -> (u64, Vec<String>) {
     let path = workspace_root().join("docs/generated/OP_SCHEMA.json");
-    let text = fs::read_to_string(&path)
-        .unwrap_or_else(|err| panic!("Fix: the generated operation schema must be readable at {path:?}: {err}"));
+    let text = fs::read_to_string(&path).unwrap_or_else(|err| {
+        panic!("Fix: the generated operation schema must be readable at {path:?}: {err}")
+    });
     let schema: Value = serde_json::from_str(&text)
         .unwrap_or_else(|err| panic!("Fix: {path:?} must be valid JSON: {err}"));
     let version = schema["schema_version"]
@@ -73,10 +74,8 @@ fn write_fixture(root: &Path) {
         .iter()
         .map(|tier| json!({"id": tier, "tier": tier}))
         .collect();
-    let tier_counts: serde_json::Map<String, Value> = tiers
-        .iter()
-        .map(|tier| (tier.clone(), json!(1)))
-        .collect();
+    let tier_counts: serde_json::Map<String, Value> =
+        tiers.iter().map(|tier| (tier.clone(), json!(1))).collect();
     write_json(
         &root.join("docs/generated/OP_SCHEMA.json"),
         &json!({
@@ -230,9 +229,10 @@ fn missing_semantic_operation_registry_fails_closed() {
     let temp = tempfile::tempdir().unwrap();
     write_fixture(temp.path());
     let path = temp.path().join("docs/ARCHITECTURE.md");
-    let text = fs::read_to_string(&path)
-        .unwrap()
-        .replace("vyre-foundation::operation::OperationRegistry", "runtime registry");
+    let text = fs::read_to_string(&path).unwrap().replace(
+        "vyre-foundation::operation::OperationRegistry",
+        "runtime registry",
+    );
     fs::write(&path, text).unwrap();
     let output = run_checker(temp.path());
     assert!(!output.status.success());

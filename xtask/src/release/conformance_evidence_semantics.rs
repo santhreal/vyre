@@ -40,11 +40,7 @@ fn complete_ci_entry(entry: &Value) -> bool {
 }
 
 /// Check a recorded conformance matrix against what a release requires.
-pub fn inspect_conformance_matrix(
-    context: &str,
-    matrix: &Value,
-    failures: &mut Vec<String>,
-) {
+pub fn inspect_conformance_matrix(context: &str, matrix: &Value, failures: &mut Vec<String>) {
     let op_count = u64_field(matrix, "op_count", 0);
     let distinct_op_count = u64_field(matrix, "distinct_op_count", 0);
     let catalog_required = u64_field(matrix, "catalog_required_op_count", 0);

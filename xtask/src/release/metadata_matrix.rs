@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use crate::manifest_walk::{MAX_MANIFEST_BYTES, workspace_package as load_workspace_package};
+use crate::manifest_walk::{workspace_package as load_workspace_package, MAX_MANIFEST_BYTES};
 use crate::release::release_train;
 
 #[derive(Debug, Serialize)]
