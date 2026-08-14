@@ -122,14 +122,16 @@ pub fn assert_registry_closure(manifest_dir: &str, waiver: &[&str], floor: usize
         }
     }
     for path in &test_files {
-        if path.file_name().and_then(|n| n.to_str()) == Some("adversarial_registry_closure.rs") {
+        let text = read_source_file_bounded(path)
+            .unwrap_or_else(|e| panic!("{crate_name} test file {path:?} must be readable: {e}"));
+        // The gate's own caller is not coverage. Excluding it by name would
+        // only exclude one spelling of the file; excluding every file that
+        // calls the enumerator keeps a waiver entry from covering itself
+        // whatever the caller is named.
+        if text.contains("assert_registry_closure(") {
             continue;
         }
-        corpus.push_str(
-            &read_source_file_bounded(path).unwrap_or_else(|e| {
-                panic!("{crate_name} test file {path:?} must be readable: {e}")
-            }),
-        );
+        corpus.push_str(&text);
         corpus.push('\n');
     }
 
