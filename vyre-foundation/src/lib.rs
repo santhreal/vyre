@@ -43,6 +43,9 @@ pub mod ir {
     pub use crate::ir_inner::model;
     pub use crate::ir_inner::model::arena::{ArenaProgram, ExprArena, ExprRef};
     pub use crate::ir_inner::model::expr::{Expr, ExprNode, Ident};
+    pub use crate::ir_inner::model::generated::{
+        expr_variant_name, node_variant_name, EXPR_VARIANT_NAMES, NODE_VARIANT_NAMES,
+    };
     pub use crate::ir_inner::model::node::{Node, NodeExtension};
     pub use crate::ir_inner::model::node_kind::{
         EvalError, InterpCtx, NodeId, NodeStorage, OpId, RegionId, Value, VarId,

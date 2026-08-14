@@ -239,6 +239,7 @@ fn splice_straight_line<'a>(nodes: &'a [Node], out: &mut Vec<&'a Node>) {
         match node {
             Node::Block(inner) => splice_straight_line(inner, out),
             Node::Region { body, .. } => splice_straight_line(body, out),
+            // Only transparent wrappers (`Block`, `Region`) splice: an unknown variant stays a single statement, which is the conservative reading for barrier ordering.
             other => out.push(other),
         }
     }

@@ -2,6 +2,7 @@ use crate::error::IrResult as Result;
 use crate::ir_inner::model::expr::{Expr, GeneratorRef, Ident};
 use crate::ir_inner::model::generated::Node;
 use crate::ir_inner::model::node::NodeExtension;
+use crate::transform::visit::child_bodies;
 use crate::visit::VisitOrder;
 use smallvec::SmallVec;
 use std::ops::ControlFlow;
@@ -173,28 +174,8 @@ pub fn visit_node_preorder<V: NodeVisitor>(visitor: &mut V, node: &Node) -> Cont
     stack.push(node);
     while let Some(current) = stack.pop() {
         dispatch_node(visitor, current)?;
-        match current {
-            Node::If {
-                then, otherwise, ..
-            } => {
-                for n in otherwise.iter().rev() {
-                    stack.push(n);
-                }
-                for n in then.iter().rev() {
-                    stack.push(n);
-                }
-            }
-            Node::Loop { body, .. } | Node::Block(body) => {
-                for n in body.iter().rev() {
-                    stack.push(n);
-                }
-            }
-            Node::Region { body, .. } => {
-                for n in body.iter().rev() {
-                    stack.push(n);
-                }
-            }
-            _ => {}
+        for body in child_bodies(current).into_iter().rev() {
+            stack.extend(body.iter().rev());
         }
     }
     ControlFlow::Continue(())
@@ -212,28 +193,8 @@ pub fn visit_node_postorder<V: NodeVisitor>(visitor: &mut V, node: &Node) -> Con
         match task {
             Task::Visit(n) => {
                 stack.push(Task::Dispatch(n));
-                match n {
-                    Node::If {
-                        then, otherwise, ..
-                    } => {
-                        for child in otherwise.iter().rev() {
-                            stack.push(Task::Visit(child));
-                        }
-                        for child in then.iter().rev() {
-                            stack.push(Task::Visit(child));
-                        }
-                    }
-                    Node::Loop { body, .. } | Node::Block(body) => {
-                        for child in body.iter().rev() {
-                            stack.push(Task::Visit(child));
-                        }
-                    }
-                    Node::Region { body, .. } => {
-                        for child in body.iter().rev() {
-                            stack.push(Task::Visit(child));
-                        }
-                    }
-                    _ => {}
+                for body in child_bodies(n).into_iter().rev() {
+                    stack.extend(body.iter().rev().map(Task::Visit));
                 }
             }
             Task::Dispatch(n) => {
@@ -250,28 +211,8 @@ pub fn walk_node_children_default<V: NodeVisitor>(
     node: &Node,
     order: VisitOrder,
 ) -> ControlFlow<V::Break> {
-    match node {
-        Node::If {
-            then, otherwise, ..
-        } => {
-            for child in then {
-                visit_node_with_order(visitor, child, order)?;
-            }
-            for child in otherwise {
-                visit_node_with_order(visitor, child, order)?;
-            }
-        }
-        Node::Loop { body, .. } | Node::Block(body) => {
-            for child in body {
-                visit_node_with_order(visitor, child, order)?;
-            }
-        }
-        Node::Region { body, .. } => {
-            for child in body.iter() {
-                visit_node_with_order(visitor, child, order)?;
-            }
-        }
-        _ => {}
+    for child in child_bodies(node).into_iter().flatten() {
+        visit_node_with_order(visitor, child, order)?;
     }
     ControlFlow::Continue(())
 }

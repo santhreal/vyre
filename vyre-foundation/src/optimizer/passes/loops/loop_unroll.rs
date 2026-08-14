@@ -183,18 +183,34 @@ fn literal_u32(expr: &Expr) -> Option<u32> {
 // `body_contains_assign` below is unroll-specific (any Assign at all is unsafe
 // to duplicate across unrolled copies, not just an assign to the loop var).
 
+/// True when any statement under `nodes` assigns to a binding. Child
+/// enumeration comes from
+/// [`child_bodies`](crate::transform::visit::child_bodies) so a future nesting
+/// variant cannot hide an assignment from the unroll safety check.
 fn body_contains_assign(nodes: &[Node]) -> bool {
-    nodes.iter().any(|node| match node {
-        Node::Assign { .. } => true,
-        Node::If {
-            then, otherwise, ..
-        } => body_contains_assign(then) || body_contains_assign(otherwise),
-        Node::Loop { body, .. } | Node::Block(body) => body_contains_assign(body),
-        Node::Region { body, .. } => body_contains_assign(body),
-        _ => false,
+    nodes.iter().any(|node| {
+        matches!(node, Node::Assign { .. })
+            || crate::transform::visit::child_bodies(node)
+                .into_iter()
+                .any(body_contains_assign)
     })
 }
 
+/// True when unrolling `nodes` would produce a duplicate sibling binding.
+///
+/// The hazard is V032, a duplicate `Let` among siblings in one scope, so what
+/// matters is whether a copy of a binding lands beside the original rather than
+/// whether a binding exists anywhere below. `If` arms, `Block` bodies and
+/// `Loop` bodies each open a scope, so a `Let` inside one is a sibling of the
+/// other copies' equivalents, not of the original; descending into `If` and
+/// `Block` is therefore stricter than V032 requires and stays only because
+/// dropping it would let loops unroll that do not unroll today. `Node::Loop` is
+/// excluded and pinned by `does_not_substitute_shadowed_inner_loop_body`.
+///
+/// `Node::Region` is included because a region body is walked without a fresh
+/// scope frame (`validate::nodes`), so on the reading that its bindings are
+/// siblings of the surrounding sequence, isolation is required. No test
+/// observes a failure without it, so this is conservatism, not a fix.
 fn body_declares_locals(nodes: &[Node]) -> bool {
     nodes.iter().any(|node| match node {
         Node::Let { .. } => true,
@@ -202,6 +218,9 @@ fn body_declares_locals(nodes: &[Node]) -> bool {
             then, otherwise, ..
         } => body_declares_locals(then) || body_declares_locals(otherwise),
         Node::Block(body) => body_declares_locals(body),
+        Node::Region { body, .. } => body_declares_locals(body),
+        // Any other variant either opens its own scope or holds no statements,
+        // so a copy of it cannot introduce a sibling binding at this level.
         _ => false,
     })
 }

@@ -37,50 +37,16 @@ use crate::ir::Node;
 ///
 /// The closure may itself call `map_children` to recurse further; the
 /// helper does not do deep recursion on its own.
+///
+/// Which variants have children is [`map_body`]'s decision, not this
+/// function's: the two used to carry the same variant list and a new container
+/// variant had to be added to both.
 #[must_use]
 pub fn map_children<F>(node: Node, f: &mut F) -> Node
 where
     F: FnMut(Node) -> Node,
 {
-    match node {
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => Node::If {
-            cond,
-            then: then.into_iter().map(&mut *f).collect(),
-            otherwise: otherwise.into_iter().map(&mut *f).collect(),
-        },
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => Node::Loop {
-            var,
-            from,
-            to,
-            body: body.into_iter().map(&mut *f).collect(),
-        },
-        Node::Block(body) => Node::Block(body.into_iter().map(&mut *f).collect()),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let body_vec: Vec<Node> = match Arc::try_unwrap(body) {
-                Ok(v) => v,
-                Err(arc) => (*arc).clone(),
-            };
-            Node::Region {
-                generator,
-                source_region,
-                body: Arc::new(body_vec.into_iter().map(f).collect()),
-            }
-        }
-        other => other,
-    }
+    map_body(node, &mut |body| body.into_iter().map(&mut *f).collect())
 }
 
 /// Rewrite the body sequence of a container node (`If::then`,
@@ -137,54 +103,22 @@ where
     }
 }
 
-/// True iff `pred` matches `node` itself or any descendant. Linear-time
-/// preorder scan preserving the same visitation order as the prior
-/// recursive implementation. Used by passes to short-circuit when
-/// `analyze` can prove there's nothing to rewrite.
+/// True iff `pred` matches `node` itself or any descendant, in preorder.
+/// Used by passes to short-circuit when `analyze` can prove there is nothing
+/// to rewrite.
 ///
-/// Implemented iteratively with a `SmallVec<&Node>` worklist to avoid
-/// stack overflow on deeply nested trees (e.g. 1000+ nested `If`
-/// bodies) AND to avoid the heap allocation entirely on the typical
-/// small-tree case.
+/// This forwards to [`crate::transform::visit::any_descendant`], which owns
+/// both the worklist and the child enumeration. It used to carry its own copy
+/// of each, so the two scans could disagree about which variants nest.
 ///
 /// `VYRE_IR_HOTSPOTS` HIGH: every `analyze_impl` in cleanup/algebraic/loops
-/// calls this once per top-level entry node. The 64-slot inline
-/// `SmallVec` covers the vast majority of program trees in zero
-/// allocations; deeper trees spill to the heap and pay only a couple
-/// of doublings.
+/// calls this once per top-level entry node.
 #[must_use]
 pub fn any_descendant<P>(node: &Node, pred: &mut P) -> bool
 where
     P: FnMut(&Node) -> bool,
 {
-    let mut stack: smallvec::SmallVec<[&Node; 64]> = smallvec::SmallVec::new();
-    stack.push(node);
-    while let Some(current) = stack.pop() {
-        if pred(current) {
-            return true;
-        }
-        match current {
-            Node::If {
-                then, otherwise, ..
-            } => {
-                for child in otherwise.iter().rev().chain(then.iter().rev()) {
-                    stack.push(child);
-                }
-            }
-            Node::Loop { body, .. } | Node::Block(body) => {
-                for child in body.iter().rev() {
-                    stack.push(child);
-                }
-            }
-            Node::Region { body, .. } => {
-                for child in body.iter().rev() {
-                    stack.push(child);
-                }
-            }
-            _ => {}
-        }
-    }
-    false
+    crate::transform::visit::any_descendant(node, pred)
 }
 
 #[cfg(test)]

@@ -8,11 +8,13 @@
 //! avoid producing duplicate / shadowing bindings that the block-scoped IR
 //! validator rejects (V008 / V032).
 //!
-//! Traversal descends into `If`/`Loop`/`Block`/`Region` bodies. Names that
-//! appear only inside expressions (e.g. `Expr::Var`) are *uses*, not bindings,
+//! Traversal descends through `child_bodies`, the exhaustive owner of which
+//! variants nest statements, so a new nesting variant cannot hide a binding.
+//! Names that appear only inside expressions (e.g. `Expr::Var`) are *uses*, not bindings,
 //! and are intentionally skipped.
 
 use crate::ir::{Ident, Node};
+use crate::transform::visit::child_bodies;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Invoke `visit` once for every binding name introduced by `nodes`
@@ -21,19 +23,12 @@ pub(crate) fn for_each_bound_name(nodes: &[Node], visit: &mut impl FnMut(&Ident)
     for node in nodes {
         match node {
             Node::Let { name, .. } => visit(name),
-            Node::Loop { var, body, .. } => {
-                visit(var);
-                for_each_bound_name(body, visit);
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                for_each_bound_name(then, visit);
-                for_each_bound_name(otherwise, visit);
-            }
-            Node::Block(body) => for_each_bound_name(body, visit),
-            Node::Region { body, .. } => for_each_bound_name(body, visit),
+            Node::Loop { var, .. } => visit(var),
+            // Only `Let` and `Loop` introduce a name; descent into every nesting variant happens below through `child_bodies`.
             _ => {}
+        }
+        for body in child_bodies(node) {
+            for_each_bound_name(body, visit);
         }
     }
 }

@@ -13,6 +13,15 @@ keywords = ["vyre", "testing", "harness", "coverage", "registry"]
 categories = ["development-tools::testing"]
 publish = false
 
+[features]
+# Fixtures over the IR statement enum. Opt-in because it pulls vyre-foundation
+# into the dev graph of whichever crate enables it, and most consumers of this
+# crate only want the source-text closure enumerator.
+ir-fixtures = ["dep:vyre-foundation"]
+
+[dependencies]
+vyre-foundation = { workspace = true, optional = true }
+
 [dev-dependencies]
 tempfile.workspace = true
 

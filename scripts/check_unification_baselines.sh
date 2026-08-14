@@ -49,6 +49,11 @@ ROWS=(
     # vyre-foundation::transform::visit::child_bodies, with no catch-all, so
     # adding a Node variant fails to compile there. This row asserts that
     # nothing re-implements it: a second exhaustive child match is a duplicate.
+    # The other half of the property is a test, not a count, because `Node` is
+    # #[non_exhaustive] and no crate outside vyre-foundation can match it
+    # exhaustively: vyre-foundation/tests/node_variant_traversal_closure.rs and
+    # vyre_test_support::ir_variants enumerate NODE_VARIANT_NAMES at run time and
+    # fail until every declared variant has a fixture and a traversal decision.
     "P-DELETE-1__child_bodies_owner@@fn child_bodies\\b@@vyre-foundation/src@@1"
     "P-DELETE-10__buffer_access_auto@@BufferAccess::(infer|auto|derive_from)@@vyre-foundation/src/lower vyre-driver-wgpu/src vyre-runtime/src/megakernel@@0"
     "P-UNIFY-2__cpu_references@@fn cpu_reference\\b@@vyre-foundation/src vyre-reference/src@@0"

@@ -221,8 +221,10 @@ fn rename_var_in_body(body: Vec<Node>, from: &Ident, to: &Ident) -> Vec<Node> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ir::{
+        BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node, NodeExtension, Program,
+    };
     use crate::optimizer::passes::loops::{loop_fission::LoopFission, loop_fusion::LoopFusion};
-    use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node, NodeExtension, Program};
 
     fn sorted(nodes: &[Node]) -> Vec<String> {
         let mut out = FxHashSet::default();
@@ -400,11 +402,7 @@ mod tests {
     }
 
     fn program(entry: Vec<Node>) -> Program {
-        Program::wrapped(
-            vec![buf("a"), buf("b"), buf("c")],
-            [1, 1, 1],
-            entry,
-        )
+        Program::wrapped(vec![buf("a"), buf("b"), buf("c")], [1, 1, 1], entry)
     }
 
     /// Flatten Region/Block wrappers so a test can index the real statements.

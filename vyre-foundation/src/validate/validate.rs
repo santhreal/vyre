@@ -1130,6 +1130,7 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
                 accesses.read_buffers.insert(input.clone());
                 accesses.read_buffers.insert(output.clone());
             }
+            // Only the collective variants above carry a collective to validate.
             _ => {}
         }
         self.report_alias_hazards(&accesses);

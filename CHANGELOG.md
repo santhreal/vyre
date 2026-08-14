@@ -593,6 +593,25 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   generator that can drift from the test it feeds prints pins for programs
   nobody is checking, and the failing assertion already names the value to
   write.
+- Adding an IR `Node` variant can no longer be handled by a catch-all arm
+  nobody chose. The AST registry macro emits `NODE_VARIANT_NAMES` and
+  `node_variant_name` from the declaration site,
+  `vyre_foundation::transform::visit::node_shape` records for every variant
+  whether it nests statements, carries operand expressions, or holds an opaque
+  payload, and `child_bodies` is the one exhaustive owner of child enumeration.
+  Two traversals that re-derived that list were wrong: the reference
+  interpreter's barrier scan claimed an exhaustive match but let `Node::Region`
+  fall into its default, so a barrier inside a region body read as absent; and
+  `walk_exprs` skipped the `offset` and `size` operands of asynchronous copies
+  and the `address` operand of a trap, hiding those buffer references from
+  every analysis built on it. Loop unrolling's local-declaration check now also
+  treats a region body as scope-transparent. Tail duplication's read check now
+  answers yes for a statement form it does not recognise instead of no, so an
+  unfamiliar tail costs a missed duplication rather than code sunk past a live
+  read. The duplicate visitor implementations in `vyre_foundation::visit` now
+  delegate to that owner rather than restating the variant list, and the
+  descendant scan uses an explicit worklist so a deep tree cannot overflow the
+  native stack.
 
 ## [0.7.1] - 2026-08-01
 
