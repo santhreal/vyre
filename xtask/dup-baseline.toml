@@ -72,8 +72,8 @@ total_lines = 2227
 
 [[crate]]
 name = "vyre-driver"
-duplicate_lines = 1047
-total_lines = 36080
+duplicate_lines = 994
+total_lines = 36321
 
 [[crate]]
 name = "vyre-driver-cuda"
@@ -107,8 +107,8 @@ total_lines = 766
 
 [[crate]]
 name = "vyre-emit-naga"
-duplicate_lines = 221
-total_lines = 8993
+duplicate_lines = 155
+total_lines = 8947
 
 [[crate]]
 name = "vyre-emit-ptx"
@@ -167,7 +167,7 @@ total_lines = 101992
 
 [[crate]]
 name = "vyre-reference"
-duplicate_lines = 743
+duplicate_lines = 676
 total_lines = 15256
 
 [[crate]]
