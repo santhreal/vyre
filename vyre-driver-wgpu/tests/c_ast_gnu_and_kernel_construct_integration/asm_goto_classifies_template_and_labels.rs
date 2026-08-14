@@ -136,19 +136,7 @@ pub(crate) fn attribute_aligned_and_section_classify_distinctly() {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn fixture_computed_goto_simple() -> Fixture {
-    void_fn_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("&&", TOK_AND),
-        FixtureToken::new("label", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("label", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("return", TOK_RETURN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("void f ( ) { void * p = && label ; label : return ; }")
 }
 
 #[test]
@@ -281,21 +269,9 @@ pub(crate) fn catalog_builtin_call_classifies_as_intrinsic() {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn fixture_atomic_qualifier() -> Fixture {
-    void_fn_fixture(&[
-        FixtureToken::new("_Atomic", TOK_ATOMIC),
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("void f ( ) { _Atomic int x ; }")
 }
 
 pub(crate) fn fixture_atomic_type_specifier() -> Fixture {
-    void_fn_fixture(&[
-        FixtureToken::new("_Atomic", TOK_ATOMIC),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("y", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("void f ( ) { _Atomic ( int ) y ; }")
 }
