@@ -40,7 +40,7 @@ Hardware: No accelerator is required.
 
 Environment: No environment variables alter CLI behavior.
 
-Configuration: The command reads the enclosing Santh rules/launch and tests/launch_rule_truth trees.
+Configuration: The command reads the rules/launch tree in this repository, resolved from the repository root.
 
 Failure behavior: A missing rules tree or incomplete rule contract returns status 1.
 
@@ -58,7 +58,7 @@ Hardware: No accelerator is required.
 
 Environment: No environment variables alter CLI behavior.
 
-Configuration: The slug selects directories in the enclosing Santh rule and truth-test trees.
+Configuration: The slug names a directory under rules/launch in this repository, resolved from the repository root.
 
 Failure behavior: Missing slugs and filesystem creation failures return non-zero without claiming success.
 

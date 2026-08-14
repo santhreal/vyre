@@ -23,8 +23,14 @@ fn emit_ptx(desc: &KernelDescriptor) -> String {
         .unwrap_or_else(|error| panic!("fixture `{}` failed PTX emission: {error:?}", desc.id))
 }
 
+// `fixtures.rs` is itself loaded by `#[path]`, so an unadorned `mod` here
+// resolves under `nvrtc_compile_gate/fixtures/`, a directory that has never
+// existed: these three declarations named nothing and the target did not build.
+#[path = "scalar_op_fixtures.rs"]
 mod scalar_op_fixtures;
+#[path = "vector_load_fixtures.rs"]
 mod vector_load_fixtures;
+#[path = "vector_store_fixtures.rs"]
 mod vector_store_fixtures;
 
 pub(crate) use scalar_op_fixtures::*;

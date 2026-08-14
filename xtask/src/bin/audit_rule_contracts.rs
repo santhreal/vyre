@@ -1,11 +1,14 @@
-//! Audit `rules/launch/*.toml` rule contracts and report missing or
-//! malformed fields.
+//! Audit every `rules/launch/<slug>` rule contract and report the missing
+//! contract or truth-data directories.
 //!
-//! Run via `cargo xtaskbin audit_rule_contracts`. The binary
-//! exits non-zero when any rule deviates from `rules/SCHEMA.md`.
+//! Run via `cargo run -p xtask --bin audit_rule_contracts`. The binary exits
+//! non-zero when any rule deviates from `rules/SCHEMA.md`. `rule_tree` owns the
+//! layout it audits, so the auditor and `scaffold_rule` cannot disagree.
 
 use std::fs;
-use std::path::Path;
+
+#[path = "rule_tree/mod.rs"]
+mod rule_tree;
 
 fn print_help() {
     println!("Audit launch-rule contracts and truth-test directories.");
@@ -28,9 +31,13 @@ fn main() {
         eprintln!("Fix: unknown argument `{arg}`. Use `audit_rule_contracts --help`.");
         std::process::exit(2);
     }
-    let launch_dir = Path::new("../../../../../rules/launch");
+    let launch_dir = rule_tree::launch_dir();
     if !launch_dir.exists() {
-        eprintln!("Rules directory not found");
+        eprintln!(
+            "Fix: no rule tree at `{}`. Scaffold one with `cargo run -p xtask --bin \
+             scaffold_rule -- <slug>`.",
+            launch_dir.display()
+        );
         std::process::exit(1);
     }
 
@@ -48,11 +55,10 @@ fn main() {
                 failed = true;
             }
 
-            let test_dir = Path::new("../../../../../tests/launch_rule_truth").join(slug);
-            let expected_dirs = ["positives", "negatives", "evasions", "cross_file"];
-            for d in expected_dirs.iter() {
-                if !test_dir.join(d).exists() {
-                    eprintln!("FAIL: Missing test dir {}/{}", slug, d);
+            let truth_dir = rule_tree::truth_dir(slug);
+            for case_class in rule_tree::TRUTH_DIRS {
+                if !truth_dir.join(case_class).exists() {
+                    eprintln!("FAIL: Missing truth directory {slug}/truth/{case_class}");
                     failed = true;
                 }
             }
