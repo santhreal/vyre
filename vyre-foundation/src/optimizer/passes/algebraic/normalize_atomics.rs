@@ -17,6 +17,7 @@
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::rewrite::expr_contains_atomic;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::visit::any_descendant;
 use smallvec::SmallVec;
 
 #[vyre_pass(
@@ -64,21 +65,17 @@ struct RewriteState {
     changed: bool,
 }
 
+/// True when any `If` anywhere under `node` is gated on an atomic expression.
+///
+/// Descent comes from [`any_descendant`], the one owner of which node variants
+/// nest. The hand-written match this replaces ended in `_ => false`, so an
+/// atomic condition inside a fifth body-bearing variant read as absent and the
+/// pass reported SKIP for a program it had work in.
 fn node_has_atomic_condition(node: &Node) -> bool {
-    match node {
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            expr_contains_atomic(cond)
-                || then.iter().any(node_has_atomic_condition)
-                || otherwise.iter().any(node_has_atomic_condition)
-        }
-        Node::Loop { body, .. } | Node::Block(body) => body.iter().any(node_has_atomic_condition),
-        Node::Region { body, .. } => body.iter().any(node_has_atomic_condition),
-        _ => false,
-    }
+    any_descendant(
+        node,
+        &mut |n| matches!(n, Node::If { cond, .. } if expr_contains_atomic(cond)),
+    )
 }
 
 fn rewrite_nodes(nodes: Vec<Node>, state: &mut RewriteState) -> Vec<Node> {

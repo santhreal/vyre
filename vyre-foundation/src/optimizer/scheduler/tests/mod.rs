@@ -285,10 +285,10 @@ impl ProgramPass for ExprOnlyPass {
     }
 
     fn transform(&self, program: Program) -> PassResult {
-        let mut entry = Clone::clone(&program).into_entry_vec();
-        if rewrite_first_store_value(&mut entry) {
+        let mut rewritten = Clone::clone(&program);
+        if rewrite_first_store_value(&mut rewritten) {
             return PassResult {
-                program: program.with_rewritten_entry(entry),
+                program: rewritten,
                 changed: true,
             };
         }
@@ -319,10 +319,10 @@ impl ProgramPass for StoreValueRewritePass {
     }
 
     fn transform(&self, program: Program) -> PassResult {
-        let mut entry = Clone::clone(&program).into_entry_vec();
-        if rewrite_store_values(&mut entry, self.from, self.to) {
+        let mut rewritten = Clone::clone(&program);
+        if rewrite_store_values(&mut rewritten, self.from, self.to) {
             return PassResult {
-                program: program.with_rewritten_entry(entry),
+                program: rewritten,
                 changed: true,
             };
         }

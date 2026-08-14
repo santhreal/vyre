@@ -57,6 +57,7 @@ use super::{collect_touched_buffers, collect_var_reads, legality};
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::visit::for_each_node;
 use rustc_hash::FxHashSet;
 
 /// Fuse adjacent `Node::Loop` siblings under the buffer-disjoint
@@ -246,25 +247,20 @@ fn fusion_collides_bindings(
     })
 }
 
-/// Collect every `Node::Assign` target name in `nodes` (recursively). These are
-/// the scalars a body MUTATES (as opposed to merely binds via `Let` or reads).
+/// Collect every `Node::Assign` target name in `nodes`, at any nesting depth.
+/// These are the scalars a body MUTATES (as opposed to merely binds via `Let`
+/// or reads).
+///
+/// Descent comes from [`for_each_node`], the one owner of which node variants
+/// nest. The hand-written match this replaces ended in `_ => {}`, so an `Assign`
+/// inside a fifth body-bearing variant read as absent and the legality check
+/// fused two loops across a mutation it could not see.
 fn collect_assign_targets(nodes: &[Node], out: &mut FxHashSet<Ident>) {
-    for node in nodes {
-        match node {
-            Node::Assign { name, .. } => {
-                out.insert(name.clone());
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                collect_assign_targets(then, out);
-                collect_assign_targets(otherwise, out);
-            }
-            Node::Loop { body, .. } | Node::Block(body) => collect_assign_targets(body, out),
-            Node::Region { body, .. } => collect_assign_targets(body, out),
-            _ => {}
+    for_each_node(nodes, |node| {
+        if let Node::Assign { name, .. } = node {
+            out.insert(name.clone());
         }
-    }
+    });
 }
 
 /// True iff fusing the two bodies would reorder a cross-loop dependency through

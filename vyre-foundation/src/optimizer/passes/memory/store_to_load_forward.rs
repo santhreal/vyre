@@ -50,6 +50,7 @@ use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::passes::driver;
 use crate::optimizer::passes::expr_is_observably_free_for_reexecution;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::visit::any_descendant;
 use rustc_hash::FxHashSet;
 
 /// `ProgramPass` registration for the store-to-load forwarding rewrite
@@ -72,10 +73,10 @@ impl StoreToLoadForward {
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
         use crate::ir::stats::{NODE_KIND_LET, NODE_KIND_STORE};
-        driver::analyze_candidates(
+        driver::analyze_candidate_bodies(
             program,
             &[NODE_KIND_STORE, NODE_KIND_LET],
-            &mut has_forwardable_pair,
+            &mut body_has_forwardable_pair,
         )
     }
 
@@ -215,20 +216,16 @@ fn collect_value_vars(value: &Expr, out: &mut FxHashSet<Ident>) {
 /// changes between two siblings: loop variables are immutable, and `Let`
 /// cannot rebind an in-scope name (shadowing is rejected). So this is the
 /// complete set of value-invalidating motions for a forwarded expression.
+///
+/// Descent comes from [`any_descendant`], the one owner of which node variants
+/// nest. The hand-written match this replaces ended in `_ => false`, so a
+/// reassignment inside a fifth body-bearing variant read as absent and the pass
+/// forwarded a value the gap had already invalidated.
 fn node_reassigns_any_var(node: &Node, vars: &FxHashSet<Ident>) -> bool {
-    match node {
-        Node::Assign { name, .. } => vars.contains(name),
-        Node::If {
-            then, otherwise, ..
-        } => {
-            then.iter().any(|n| node_reassigns_any_var(n, vars))
-                || otherwise.iter().any(|n| node_reassigns_any_var(n, vars))
-        }
-        Node::Loop { body, .. } => body.iter().any(|n| node_reassigns_any_var(n, vars)),
-        Node::Block(body) => body.iter().any(|n| node_reassigns_any_var(n, vars)),
-        Node::Region { body, .. } => body.iter().any(|n| node_reassigns_any_var(n, vars)),
-        _ => false,
-    }
+    any_descendant(
+        node,
+        &mut |n| matches!(n, Node::Assign { name, .. } if vars.contains(name)),
+    )
 }
 
 /// True if `node` could read or otherwise observe `buffer`'s contents
@@ -303,20 +300,14 @@ fn expr_touches_buffer(expr: &Expr, buffer: &Ident) -> bool {
     super::expr_touches_buffer(expr, buffer, false)
 }
 
-fn has_forwardable_pair(node: &Node) -> bool {
-    let body: &[Node] = match node {
-        Node::If {
-            then, otherwise, ..
-        } => {
-            return body_has_forwardable_pair(then) || body_has_forwardable_pair(otherwise);
-        }
-        Node::Loop { body, .. } | Node::Block(body) => body,
-        Node::Region { body, .. } => body.as_ref(),
-        _ => return false,
-    };
-    body_has_forwardable_pair(body)
-}
-
+/// True when `body` holds a forwardable `Store` / `Let(Load)` pair.
+///
+/// The candidate is a relation between ADJACENT siblings, so it cannot flatten
+/// to a per-node scan. [`driver::analyze_candidate_bodies`] hands this each
+/// enclosing body and takes its slot list from `child_bodies`; the wrapper this
+/// replaces restated the slot list and ended in `_ => return false`, so a
+/// forwardable pair inside a fifth body-bearing variant read as absent and the
+/// pass reported SKIP.
 fn body_has_forwardable_pair(body: &[Node]) -> bool {
     for (idx, node) in body.iter().enumerate() {
         let Node::Let { value, .. } = node else {

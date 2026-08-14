@@ -203,6 +203,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_foundation::transform::visit::any_descendant;
 
     fn entry_region_body(program: &Program) -> &[Node] {
         match &program.entry()[0] {
@@ -211,32 +212,29 @@ mod tests {
         }
     }
 
+    /// True when a grid-wide fence appears anywhere under `nodes`.
+    ///
+    /// Descent comes from `transform::visit::any_descendant`, the one owner of
+    /// which node variants nest. The hand-written match this replaces ended in
+    /// `_ => false`, so a fifth body-bearing variant would have made a program
+    /// with no reachable fence look correctly synchronized.
     fn contains_grid_sync(nodes: &[Node]) -> bool {
-        nodes.iter().any(|node| match node {
-            Node::Barrier {
-                ordering: MemoryOrdering::GridSync,
-            } => true,
-            Node::Block(children) | Node::Loop { body: children, .. } => {
-                contains_grid_sync(children)
-            }
-            Node::If {
-                then, otherwise, ..
-            } => contains_grid_sync(then) || contains_grid_sync(otherwise),
-            Node::Region { body, .. } => contains_grid_sync(body),
-            _ => false,
+        nodes.iter().any(|node| {
+            any_descendant(node, &mut |n| {
+                matches!(
+                    n,
+                    Node::Barrier {
+                        ordering: MemoryOrdering::GridSync
+                    }
+                )
+            })
         })
     }
 
     fn contains_loop(nodes: &[Node]) -> bool {
-        nodes.iter().any(|node| match node {
-            Node::Loop { .. } => true,
-            Node::Block(children) => contains_loop(children),
-            Node::If {
-                then, otherwise, ..
-            } => contains_loop(then) || contains_loop(otherwise),
-            Node::Region { body, .. } => contains_loop(body),
-            _ => false,
-        })
+        nodes
+            .iter()
+            .any(|node| any_descendant(node, &mut |n| matches!(n, Node::Loop { .. })))
     }
 
     #[test]

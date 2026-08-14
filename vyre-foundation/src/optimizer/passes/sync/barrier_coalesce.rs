@@ -35,6 +35,7 @@
 use crate::ir::{Node, Program};
 use crate::memory_model::MemoryOrdering;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::visit::any_body;
 
 /// Coalesce consecutive `Node::Barrier` siblings into the join of their orderings.
 #[derive(Debug, Default)]
@@ -59,9 +60,13 @@ impl BarrierCoalescePass {
         {
             return PassAnalysis::SKIP;
         }
-        if sequence_has_consecutive_barriers(program.entry())
-            || program.entry().iter().any(has_consecutive_barriers)
-        {
+        // `any_body` is the one owner of which node variants nest, so the set of
+        // bodies searched here cannot drift from the set `transform` rewrites.
+        // The hand-written `has_consecutive_barriers` this replaces re-listed
+        // the four body-bearing variants and ended in `_ => false`, so a pair
+        // inside a fifth variant read as absent, the gate returned SKIP, and
+        // the pass never ran on a program it could have coalesced.
+        if any_body(program.entry(), &mut sequence_has_consecutive_barriers) {
             PassAnalysis::RUN
         } else {
             PassAnalysis::SKIP
@@ -155,28 +160,7 @@ fn push_coalesced(out: &mut Vec<Node>, node: Node, changed: &mut bool) {
     }
 }
 
-/// True if `node` (or any of its non-Region descendants) contains an
-/// adjacent-barrier pair at any nesting level. Drives the analyze gate.
-fn has_consecutive_barriers(node: &Node) -> bool {
-    match node {
-        Node::If {
-            then, otherwise, ..
-        } => {
-            sequence_has_consecutive_barriers(then)
-                || sequence_has_consecutive_barriers(otherwise)
-                || then.iter().any(has_consecutive_barriers)
-                || otherwise.iter().any(has_consecutive_barriers)
-        }
-        Node::Loop { body, .. } | Node::Block(body) => {
-            sequence_has_consecutive_barriers(body) || body.iter().any(has_consecutive_barriers)
-        }
-        Node::Region { body, .. } => {
-            sequence_has_consecutive_barriers(body) || body.iter().any(has_consecutive_barriers)
-        }
-        _ => false,
-    }
-}
-
+/// True if any two adjacent siblings in `body` are both barriers.
 fn sequence_has_consecutive_barriers(body: &[Node]) -> bool {
     body.windows(2).any(|pair| {
         matches!(

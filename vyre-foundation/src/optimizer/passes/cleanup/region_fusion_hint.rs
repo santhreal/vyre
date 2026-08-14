@@ -279,6 +279,7 @@ fn has_candidate_pair(node: &Node) -> bool {
 mod tests {
     use super::*;
     use crate::ir::{BufferAccess, BufferDecl, DataType, Ident, Node};
+    use crate::transform::visit::for_each_node;
 
     fn buf() -> BufferDecl {
         BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)
@@ -296,31 +297,20 @@ mod tests {
         Program::wrapped(vec![buf()], [1, 1, 1], entry)
     }
 
+    /// Every region generator name under `nodes`, in source order.
+    ///
+    /// Descent comes from `transform::visit::for_each_node`, the one owner of
+    /// which node variants nest. The hand-written match this replaces ended in
+    /// `_ => {}`, so a region inside a fifth body-bearing variant read as absent
+    /// and the fusion-hint assertions would have passed on a program whose
+    /// nested regions were never rewritten.
     fn region_generators(nodes: &[Node]) -> Vec<String> {
         let mut out = Vec::new();
-        fn walk(nodes: &[Node], out: &mut Vec<String>) {
-            for n in nodes {
-                if let Node::Region {
-                    generator, body, ..
-                } = n
-                {
-                    out.push(generator.as_str().to_owned());
-                    walk(body.as_ref(), out);
-                }
-                match n {
-                    Node::If {
-                        then, otherwise, ..
-                    } => {
-                        walk(then, out);
-                        walk(otherwise, out);
-                    }
-                    Node::Loop { body, .. } => walk(body, out),
-                    Node::Block(body) => walk(body, out),
-                    _ => {}
-                }
+        for_each_node(nodes, |n| {
+            if let Node::Region { generator, .. } = n {
+                out.push(generator.as_str().to_owned());
             }
-        }
-        walk(nodes, &mut out);
+        });
         out
     }
 

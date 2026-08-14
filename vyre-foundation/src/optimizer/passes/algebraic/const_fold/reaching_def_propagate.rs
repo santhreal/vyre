@@ -58,6 +58,7 @@
 use crate::ir::{Expr, Node, Program};
 use crate::optimizer::program_soa::ProgramFacts;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::visit::for_each_node;
 use rustc_hash::FxHashMap;
 
 /// Cross-control-flow literal Let propagation.
@@ -268,43 +269,28 @@ fn collect_propagatable_lets_with_values(
         return FxHashMap::default();
     }
     let mut out: FxHashMap<String, Expr> = FxHashMap::default();
-    for node in program.entry() {
-        scan_for_literal_lets(node, &candidates, &mut out);
-    }
+    scan_for_literal_lets(program.entry(), &candidates, &mut out);
     out
 }
 
+/// Every candidate name in `nodes` bound to a literal, at any nesting depth.
+///
+/// Descent comes from [`for_each_node`], the one owner of which node variants
+/// nest. The hand-written match this replaces ended in `_ => {}`, so a literal
+/// binding inside a fifth body-bearing variant was never recorded and its uses
+/// were never substituted.
 fn scan_for_literal_lets(
-    node: &Node,
+    nodes: &[Node],
     candidates: &rustc_hash::FxHashSet<String>,
     out: &mut FxHashMap<String, Expr>,
 ) {
-    match node {
-        Node::Let { name, value } if candidates.contains(name.as_str()) && is_literal(value) => {
-            out.insert(name.as_str().to_owned(), value.clone());
-        }
-        Node::If {
-            then, otherwise, ..
-        } => {
-            for n in then {
-                scan_for_literal_lets(n, candidates, out);
-            }
-            for n in otherwise {
-                scan_for_literal_lets(n, candidates, out);
+    for_each_node(nodes, |node| {
+        if let Node::Let { name, value } = node {
+            if candidates.contains(name.as_str()) && is_literal(value) {
+                out.insert(name.as_str().to_owned(), value.clone());
             }
         }
-        Node::Loop { body, .. } | Node::Block(body) => {
-            for n in body {
-                scan_for_literal_lets(n, candidates, out);
-            }
-        }
-        Node::Region { body, .. } => {
-            for n in body.iter() {
-                scan_for_literal_lets(n, candidates, out);
-            }
-        }
-        _ => {}
-    }
+    });
 }
 
 fn is_literal(expr: &Expr) -> bool {

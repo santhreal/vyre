@@ -1,59 +1,54 @@
-use super::*;
+//! Support passes for the scheduler tests.
+//!
+//! Every walk here goes through `transform::visit`: the read-only scans through
+//! [`for_each_node`] and the in-place rewrites through [`walk_nodes_mut`], both
+//! of which take their nesting from `child_bodies`. Each of the six helpers used
+//! to carry its own `match node` naming `If`, `Loop`, `Block` and `Region` and
+//! ending in a wildcard, and the rewrite side is the half that matters: a
+//! rewrite that classifies a nesting variant as a leaf descends into nothing and
+//! reports `changed: false`, so the scheduler test it feeds asserts on an
+//! unrewritten program and passes.
+//!
+//! The rewrites take `&mut Program` rather than `&mut [Node]` because
+//! `walk_nodes_mut` is the owner of mutable descent and `Program::entry_mut`
+//! invalidates the cached stats the passes downstream read.
 
-pub(super) fn rewrite_first_store_value(nodes: &mut [Node]) -> bool {
-    for node in nodes {
-        match node {
-            Node::Store { value, .. } => {
-                *value = Expr::u32(43);
-                return true;
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                if rewrite_first_store_value(then) || rewrite_first_store_value(otherwise) {
-                    return true;
-                }
-            }
-            Node::Loop { body, .. } | Node::Block(body) => {
-                if rewrite_first_store_value(body) {
-                    return true;
-                }
-            }
-            Node::Region { body, .. } => {
-                let body_vec: &mut Vec<Node> = Arc::make_mut(body);
-                if rewrite_first_store_value(body_vec.as_mut_slice()) {
-                    return true;
-                }
-            }
-            _ => {}
+use super::*;
+use crate::transform::visit::{for_each_node, walk_nodes_mut};
+
+pub(super) fn rewrite_first_store_value(program: &mut Program) -> bool {
+    let mut done = false;
+    walk_nodes_mut(program, |node| {
+        if done {
+            return;
         }
-    }
-    false
+        if let Node::Store { value, .. } = node {
+            *value = Expr::u32(43);
+            done = true;
+        }
+    });
+    done
 }
 
 pub(super) fn rewrite_matching_stores(
     program: Program,
     batch: Option<&RewriteBatch>,
 ) -> PassResult {
-    let mut entry = Clone::clone(&program).into_entry_vec();
-    let mut changed = false;
-    match batch {
+    let mut rewritten = Clone::clone(&program);
+    let changed = match batch {
         Some(batch) => {
             let selected = batch
                 .items()
                 .iter()
                 .map(|item| item.col as usize)
                 .collect::<Vec<_>>();
-            let mut ordinal = 0usize;
-            changed |= rewrite_selected_store_ordinals(&mut entry, &selected, &mut ordinal);
+            rewrite_selected_store_ordinals(&mut rewritten, &selected)
         }
-        None => {
-            changed |= rewrite_all_matching_stores(&mut entry);
-        }
-    }
+        None => rewrite_all_matching_stores(&mut rewritten),
+    };
     if changed {
         PassResult {
-            program: program.with_rewritten_entry(entry),
+            program: rewritten,
             changed: true,
         }
     } else {
@@ -71,22 +66,11 @@ pub(super) fn rewrite_store_value_if_matches(node: &mut Node, old: u32, new: u32
     }
 }
 
-pub(super) fn rewrite_store_values(nodes: &mut [Node], old: u32, new: u32) -> bool {
+pub(super) fn rewrite_store_values(program: &mut Program, old: u32, new: u32) -> bool {
     let mut changed = false;
-    for node in nodes {
-        changed |= match node {
-            Node::Store { .. } => rewrite_store_value_if_matches(node, old, new),
-            Node::If {
-                then, otherwise, ..
-            } => rewrite_store_values(then, old, new) | rewrite_store_values(otherwise, old, new),
-            Node::Loop { body, .. } | Node::Block(body) => rewrite_store_values(body, old, new),
-            Node::Region { body, .. } => {
-                let body_vec: &mut Vec<Node> = Arc::make_mut(body);
-                rewrite_store_values(body_vec.as_mut_slice(), old, new)
-            }
-            _ => false,
-        };
-    }
+    walk_nodes_mut(program, |node| {
+        changed |= rewrite_store_value_if_matches(node, old, new);
+    });
     changed
 }
 
@@ -95,92 +79,50 @@ pub(super) fn store_value_is(node: &Node, expected: u32) -> bool {
 }
 
 pub(super) fn all_stores_have_value(nodes: &[Node], expected: u32) -> bool {
-    nodes.iter().all(|node| match node {
-        Node::Store { .. } => store_value_is(node, expected),
-        Node::If {
-            then, otherwise, ..
-        } => all_stores_have_value(then, expected) && all_stores_have_value(otherwise, expected),
-        Node::Loop { body, .. } | Node::Block(body) => all_stores_have_value(body, expected),
-        Node::Region { body, .. } => all_stores_have_value(body, expected),
-        _ => true,
-    })
+    let mut all = true;
+    for_each_node(nodes, |node| {
+        if matches!(node, Node::Store { .. }) && !store_value_is(node, expected) {
+            all = false;
+        }
+    });
+    all
 }
 
 pub(super) fn collect_store_candidates(nodes: &[Node], candidates: &mut Vec<RewriteCandidate>) {
-    for node in nodes {
-        match node {
-            Node::Store { value, .. } if *value == Expr::u32(42) => {
-                candidates.push(RewriteCandidate::new(0, candidates.len() as u32));
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                collect_store_candidates(then, candidates);
-                collect_store_candidates(otherwise, candidates);
-            }
-            Node::Loop { body, .. } | Node::Block(body) => {
-                collect_store_candidates(body, candidates);
-            }
-            Node::Region { body, .. } => {
-                collect_store_candidates(body, candidates);
-            }
-            _ => {}
+    for_each_node(nodes, |node| {
+        if matches!(node, Node::Store { value, .. } if *value == Expr::u32(42)) {
+            candidates.push(RewriteCandidate::new(0, candidates.len() as u32));
         }
-    }
+    });
 }
 
-pub(super) fn rewrite_all_matching_stores(nodes: &mut [Node]) -> bool {
+pub(super) fn rewrite_all_matching_stores(program: &mut Program) -> bool {
     let mut changed = false;
-    for node in nodes {
-        changed |= match node {
-            Node::Store { .. } => rewrite_store_value_if_matches(node, 42, 43),
-            Node::If {
-                then, otherwise, ..
-            } => rewrite_all_matching_stores(then) | rewrite_all_matching_stores(otherwise),
-            Node::Loop { body, .. } | Node::Block(body) => rewrite_all_matching_stores(body),
-            Node::Region { body, .. } => {
-                let body_vec: &mut Vec<Node> = Arc::make_mut(body);
-                rewrite_all_matching_stores(body_vec.as_mut_slice())
-            }
-            _ => false,
-        };
-    }
+    walk_nodes_mut(program, |node| {
+        changed |= rewrite_store_value_if_matches(node, 42, 43);
+    });
     changed
 }
 
-pub(super) fn rewrite_selected_store_ordinals(
-    nodes: &mut [Node],
-    selected: &[usize],
-    ordinal: &mut usize,
-) -> bool {
+/// Rewrite only the stores whose document-order ordinal is in `selected`.
+///
+/// The ordinal advances on every `Store`, matched or not, which is the same
+/// numbering [`collect_store_candidates`] hands the batch planner. Both walks
+/// now read their order from `transform::visit`, so the two cannot disagree
+/// about which store a column refers to.
+pub(super) fn rewrite_selected_store_ordinals(program: &mut Program, selected: &[usize]) -> bool {
     let mut changed = false;
-    for node in nodes {
-        changed |= match node {
-            Node::Store { value, .. } => {
-                let current = *ordinal;
-                *ordinal += 1;
-                if *value == Expr::u32(42) && selected.contains(&current) {
-                    rewrite_store_value_if_matches(node, 42, 43)
-                } else {
-                    false
-                }
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                rewrite_selected_store_ordinals(then, selected, ordinal)
-                    | rewrite_selected_store_ordinals(otherwise, selected, ordinal)
-            }
-            Node::Loop { body, .. } | Node::Block(body) => {
-                rewrite_selected_store_ordinals(body, selected, ordinal)
-            }
-            Node::Region { body, .. } => {
-                let body_vec: &mut Vec<Node> = Arc::make_mut(body);
-                rewrite_selected_store_ordinals(body_vec.as_mut_slice(), selected, ordinal)
-            }
-            _ => false,
-        };
-    }
+    let mut ordinal = 0usize;
+    walk_nodes_mut(program, |node| {
+        if !matches!(node, Node::Store { .. }) {
+            return;
+        }
+        let current = ordinal;
+        ordinal += 1;
+        if selected.contains(&current) {
+            changed |= rewrite_store_value_if_matches(node, 42, 43);
+        }
+    });
     changed
 }
 

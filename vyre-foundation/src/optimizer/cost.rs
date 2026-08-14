@@ -420,7 +420,13 @@ mod tests {
     #[test]
 
     fn walker_matches_canonical_on_corpus() {
-        // Kept-inline private old walker for drift-prevention
+        // Kept-inline private old walker for drift-prevention. It stays
+        // hand-written on purpose: it is the differential arm the canonical
+        // walker is checked against, and a reference reading its child list
+        // from the same owner as the implementation cannot disagree with it.
+        // The match is exhaustive with no catch-all, so a new `Node` variant
+        // fails to compile here rather than being classified as a leaf by both
+        // sides at once.
         fn count_divergent_patterns_old(node: &Node, score: &mut u64, visited: &mut Vec<Node>) {
             let mut stack: smallvec::SmallVec<[&Node; 64]> = smallvec::SmallVec::new();
             stack.push(node);
@@ -442,7 +448,22 @@ mod tests {
                         stack.extend(body.iter());
                     }
                     Node::Region { body, .. } => stack.extend(body.iter()),
-                    _ => {}
+                    Node::Let { .. }
+                    | Node::Assign { .. }
+                    | Node::Store { .. }
+                    | Node::Return
+                    | Node::Barrier { .. }
+                    | Node::IndirectDispatch { .. }
+                    | Node::AllReduce { .. }
+                    | Node::AllGather { .. }
+                    | Node::ReduceScatter { .. }
+                    | Node::Broadcast { .. }
+                    | Node::AsyncLoad { .. }
+                    | Node::AsyncStore { .. }
+                    | Node::AsyncWait { .. }
+                    | Node::Trap { .. }
+                    | Node::Resume { .. }
+                    | Node::Opaque(_) => {}
                 }
             }
         }

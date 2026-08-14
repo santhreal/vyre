@@ -716,6 +716,7 @@ pub fn try_cpu_ref_exclusive_into(input: &[u32], out: &mut Vec<u32>) -> Result<(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_foundation::transform::visit::any_descendant;
 
     #[test]
     fn cpu_ref_matches_simple_inclusive_sum() {
@@ -953,26 +954,17 @@ mod tests {
         assert_eq!(compat, fallible);
     }
 
+    /// True when `program` encodes an executable trap anywhere.
+    ///
+    /// Descent comes from `transform::visit::any_descendant`, the one owner of
+    /// which node variants nest. The hand-written match this replaces ended in
+    /// `_ => false`, so a fifth body-bearing variant would have reported no trap
+    /// in a program whose only trap is nested inside it.
     fn program_contains_trap(program: &Program) -> bool {
-        nodes_contain_trap(program.entry())
-    }
-
-    fn nodes_contain_trap(nodes: &[Node]) -> bool {
-        nodes.iter().any(node_contains_trap)
-    }
-
-    fn node_contains_trap(node: &Node) -> bool {
-        match node {
-            Node::Trap { .. } => true,
-            Node::Block(children) | Node::Loop { body: children, .. } => {
-                nodes_contain_trap(children)
-            }
-            Node::If {
-                then, otherwise, ..
-            } => nodes_contain_trap(then) || nodes_contain_trap(otherwise),
-            Node::Region { body, .. } => nodes_contain_trap(body),
-            _ => false,
-        }
+        program
+            .entry()
+            .iter()
+            .any(|node| any_descendant(node, &mut |n| matches!(n, Node::Trap { .. })))
     }
 
     #[test]

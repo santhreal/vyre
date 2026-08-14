@@ -58,6 +58,7 @@ use crate::ir::{BinOp, Expr, Ident, Node, Program};
 use crate::optimizer::passes::driver;
 use crate::optimizer::program_shape_facts::ProgramShapeFacts;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::visit::any_descendant;
 
 /// Fold loop-induction-range-determined `If` conditions.
 #[derive(Debug, Default)]
@@ -340,24 +341,22 @@ fn has_foldable_if(node: &Node, shape_facts: &ProgramShapeFacts) -> bool {
     }
 }
 
+/// True when any `If` anywhere under `node` has a condition this pass can
+/// decide from the loop's range.
+///
+/// Descent comes from [`any_descendant`], the one owner of which node variants
+/// nest. The hand-written match this replaces ended in `_ => false`, so a
+/// foldable guard inside a fifth body-bearing variant read as absent and the
+/// pass reported SKIP for a program it had work in.
 fn body_has_foldable_if(
     node: &Node,
     range: &LoopRange<'_>,
     shape_facts: &ProgramShapeFacts,
 ) -> bool {
-    match node {
-        Node::If { cond, .. } => condition_verdict(cond, range, shape_facts).is_some(),
-        Node::Block(body) => body
-            .iter()
-            .any(|n| body_has_foldable_if(n, range, shape_facts)),
-        Node::Loop { body, .. } => body
-            .iter()
-            .any(|n| body_has_foldable_if(n, range, shape_facts)),
-        Node::Region { body, .. } => body
-            .iter()
-            .any(|n| body_has_foldable_if(n, range, shape_facts)),
-        _ => false,
-    }
+    any_descendant(
+        node,
+        &mut |n| matches!(n, Node::If { cond, .. } if condition_verdict(cond, range, shape_facts).is_some()),
+    )
 }
 
 #[cfg(test)]

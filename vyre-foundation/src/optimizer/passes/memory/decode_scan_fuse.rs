@@ -35,6 +35,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::ir::{BufferAccess, BufferDecl, DataType, Ident, Node, Program};
 use crate::optimizer::{fingerprint_program, vyre_pass, PassAnalysis, PassResult};
+use crate::transform::visit::for_each_node;
 
 /// Conservative ceiling on workgroup-promoted buffer size.
 ///
@@ -96,27 +97,37 @@ fn is_promotable_handoff(buf: &BufferDecl, cross_workgroup: &FxHashSet<Ident>) -
 /// can. (The promotion precondition already excludes externally-observed
 /// buffers; a collective is an in-program cross-workgroup observation the
 /// `pipeline_live_out` flag does not cover.)
+///
+/// Descent comes from [`for_each_node`], the one owner of which node variants
+/// nest. The hand-written match this replaces ended in `_ => {}`, so a
+/// collective inside a fifth body-bearing variant read as absent and the pass
+/// promoted a buffer carrying cross-workgroup dataflow into workgroup memory.
 fn cross_workgroup_buffers(nodes: &[Node], out: &mut FxHashSet<Ident>) {
-    for node in nodes {
-        match node {
-            Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
-                out.insert(buffer.clone());
-            }
-            Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
-                out.insert(input.clone());
-                out.insert(output.clone());
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                cross_workgroup_buffers(then, out);
-                cross_workgroup_buffers(otherwise, out);
-            }
-            Node::Loop { body, .. } | Node::Block(body) => cross_workgroup_buffers(body, out),
-            Node::Region { body, .. } => cross_workgroup_buffers(body, out),
-            _ => {}
+    for_each_node(nodes, |node| match node {
+        Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
+            out.insert(buffer.clone());
         }
-    }
+        Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
+            out.insert(input.clone());
+            out.insert(output.clone());
+        }
+        Node::Let { .. }
+        | Node::Assign { .. }
+        | Node::Store { .. }
+        | Node::If { .. }
+        | Node::Loop { .. }
+        | Node::Block(_)
+        | Node::Region { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AsyncLoad { .. }
+        | Node::AsyncStore { .. }
+        | Node::AsyncWait { .. }
+        | Node::Trap { .. }
+        | Node::Resume { .. }
+        | Node::Opaque(_) => {}
+    });
 }
 
 /// Built-in optimizer pass for in-program decode/scan handoff fusion.

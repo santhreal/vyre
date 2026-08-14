@@ -1,5 +1,7 @@
 use super::*;
 use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node};
+use crate::test_util::count_nodes;
+use crate::transform::visit::for_each_node;
 
 fn buf() -> BufferDecl {
     BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)
@@ -9,38 +11,33 @@ fn program_with_entry(entry: Vec<Node>) -> Program {
     Program::wrapped(vec![buf()], [1, 1, 1], entry)
 }
 
-fn count_ifs(node: &Node) -> usize {
-    match node {
-        Node::If {
-            then, otherwise, ..
-        } => {
-            1 + then.iter().map(count_ifs).sum::<usize>()
-                + otherwise.iter().map(count_ifs).sum::<usize>()
-        }
-        Node::Loop { body, .. } | Node::Block(body) => body.iter().map(count_ifs).sum(),
-        Node::Region { body, .. } => body.iter().map(count_ifs).sum(),
-        _ => 0,
-    }
+/// Every `If` in `nodes`, at any nesting depth.
+///
+/// Counting comes from `test_util::count_nodes`, which descends through
+/// `transform::visit::for_each_node`, the one owner of which node variants
+/// nest. The hand-written match this replaces re-listed the four body-bearing
+/// variants and ended in `_ => 0`, so an `If` inside a fifth nesting variant
+/// went uncounted and the collapse assertions below read a smaller program than
+/// the pass had produced.
+fn count_ifs(nodes: &[Node]) -> usize {
+    count_nodes(nodes, |node| matches!(node, Node::If { .. }))
 }
 
+/// The condition of the first `If` in document order, at any nesting depth.
+///
+/// Descent comes from `transform::visit::for_each_node`, the same owner
+/// `count_ifs` uses, so the node this returns is always one of the nodes that
+/// function counted. The hand-written match this replaces ended in `_ => {}`.
 fn first_if_cond(entry: &[Node]) -> Option<&Expr> {
-    for node in entry {
-        match node {
-            Node::If { cond, .. } => return Some(cond),
-            Node::Region { body, .. } => {
-                if let Some(c) = first_if_cond(body.as_ref()) {
-                    return Some(c);
-                }
+    let mut found = None;
+    for_each_node(entry, |node| {
+        if found.is_none() {
+            if let Node::If { cond, .. } = node {
+                found = Some(cond);
             }
-            Node::Block(body) | Node::Loop { body, .. } => {
-                if let Some(c) = first_if_cond(body) {
-                    return Some(c);
-                }
-            }
-            _ => {}
         }
-    }
-    None
+    });
+    found
 }
 
 #[test]
@@ -55,8 +52,7 @@ fn coalesces_nested_if_with_two_pure_conds() {
     let program = program_with_entry(entry);
     let result = BranchCoalesce::transform(program);
     assert!(result.changed);
-    let entry: Vec<&Node> = result.program.entry().iter().collect();
-    let total: usize = entry.iter().map(|n| count_ifs(n)).sum();
+    let total = count_ifs(result.program.entry());
     assert_eq!(total, 1, "two nested Ifs collapse into one");
     let cond = first_if_cond(result.program.entry()).expect("Fix: must have an If");
     assert_eq!(cond, &Expr::and(Expr::var("c1"), Expr::var("c2")));
@@ -166,7 +162,7 @@ fn coalesces_three_level_nesting_in_one_pass() {
     let program = program_with_entry(entry);
     let result = BranchCoalesce::transform(program);
     assert!(result.changed);
-    let total: usize = result.program.entry().iter().map(|n| count_ifs(n)).sum();
+    let total = count_ifs(result.program.entry());
     assert_eq!(total, 1, "three nested Ifs collapse into one");
     let cond = first_if_cond(result.program.entry()).expect("Fix: must have an If");
     // Order: c2 and c3 join first, then c1 ANDed with that.
@@ -223,7 +219,7 @@ fn coalesces_inside_loop_body() {
     let program = program_with_entry(entry);
     let result = BranchCoalesce::transform(program);
     assert!(result.changed);
-    let total: usize = result.program.entry().iter().map(|n| count_ifs(n)).sum();
+    let total = count_ifs(result.program.entry());
     assert_eq!(total, 1, "nested If inside Loop coalesces");
 }
 
@@ -247,7 +243,7 @@ fn coalesces_when_inner_cond_uses_buflen() {
     let program = program_with_entry(entry);
     let result = BranchCoalesce::transform(program);
     assert!(result.changed, "BufLen-bearing inner cond must coalesce");
-    let total: usize = result.program.entry().iter().map(|n| count_ifs(n)).sum();
+    let total = count_ifs(result.program.entry());
     assert_eq!(total, 1);
 }
 
@@ -272,7 +268,7 @@ fn coalesces_when_inner_cond_uses_fma() {
     let program = program_with_entry(entry);
     let result = BranchCoalesce::transform(program);
     assert!(result.changed, "pure-Fma inner cond must coalesce");
-    let total: usize = result.program.entry().iter().map(|n| count_ifs(n)).sum();
+    let total = count_ifs(result.program.entry());
     assert_eq!(total, 1);
 }
 

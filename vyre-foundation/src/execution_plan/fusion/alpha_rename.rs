@@ -22,6 +22,7 @@ use rustc_hash::FxHashSet;
 
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::transform::rewrite_walk::{self, NodeRewrite};
+use crate::transform::visit::for_each_node;
 
 /// Prefix used to mark a name as arm-qualified by fusion.
 const FUSION_ARM_PREFIX: &str = "__vyre_fuse_a";
@@ -184,9 +185,7 @@ pub(super) fn multiply_declared_names(arm_entries: &[&[Node]]) -> FxHashSet<Iden
     let mut decl_arms: rustc_hash::FxHashMap<Ident, usize> = rustc_hash::FxHashMap::default();
     for entry in arm_entries {
         let mut declared = FxHashSet::default();
-        for node in *entry {
-            collect_declared_names(node, &mut declared);
-        }
+        collect_declared_names(entry, &mut declared);
         for name in declared {
             *decl_arms.entry(name).or_insert(0) += 1;
         }
@@ -197,39 +196,25 @@ pub(super) fn multiply_declared_names(arm_entries: &[&[Node]]) -> FxHashSet<Iden
         .collect()
 }
 
-/// Names bound within this arm: `Let` targets and `Loop` induction vars.
+/// Names bound anywhere in `nodes`: `Let` targets and `Loop` induction vars.
 /// (`Assign` is a mutation of an existing binding, not a new declaration, so
 /// a cross-arm assign target is correctly treated as a reference below.)
-fn collect_declared_names(node: &Node, out: &mut FxHashSet<Ident>) {
-    match node {
+///
+/// Descent comes from `transform::visit::for_each_node`, the one owner of which
+/// node variants nest. The hand-written match this replaces re-listed the four
+/// body-bearing variants and ended in `_ => {}`, so a `Let` inside a fifth
+/// nesting variant read as undeclared, fusion left the name unqualified, and
+/// two arms declaring it collided in the fused program.
+fn collect_declared_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
+    for_each_node(nodes, |node| match node {
         Node::Let { name, .. } => {
             out.insert(name.clone());
         }
-        Node::Loop { var, body, .. } => {
+        Node::Loop { var, .. } => {
             out.insert(var.clone());
-            for n in body {
-                collect_declared_names(n, out);
-            }
-        }
-        Node::If {
-            then, otherwise, ..
-        } => {
-            for n in then.iter().chain(otherwise.iter()) {
-                collect_declared_names(n, out);
-            }
-        }
-        Node::Block(body) => {
-            for n in body {
-                collect_declared_names(n, out);
-            }
-        }
-        Node::Region { body, .. } => {
-            for n in body.iter() {
-                collect_declared_names(n, out);
-            }
         }
         _ => {}
-    }
+    });
 }
 
 #[cfg(test)]

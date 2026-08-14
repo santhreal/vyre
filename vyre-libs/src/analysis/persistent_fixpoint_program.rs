@@ -66,6 +66,7 @@ pub fn persistent_fixpoint_program(
 mod tests {
     use super::persistent_fixpoint_program;
     use vyre_foundation::ir::{Expr, Node, Program};
+    use vyre_foundation::transform::visit::for_each_node;
     use vyre_foundation::MemoryOrdering;
     use vyre_primitives::fixpoint::persistent_fixpoint::{
         persistent_fixpoint, PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
@@ -138,21 +139,25 @@ mod tests {
     }
 
     /// Grid-wide fences in `nodes`, counted through every nesting construct.
+    ///
+    /// Descent comes from `transform::visit::for_each_node`, the one owner of
+    /// which node variants nest. The hand-written match this replaces ended in
+    /// `_ => 0`, so a fifth body-bearing variant would have counted as a leaf
+    /// and the assertion below would have passed on a program that never got
+    /// its per-iteration fence.
     fn count_grid_sync(nodes: &[Node]) -> usize {
-        nodes
-            .iter()
-            .map(|node| match node {
+        let mut count = 0;
+        for_each_node(nodes, |node| {
+            if matches!(
+                node,
                 Node::Barrier {
-                    ordering: MemoryOrdering::GridSync,
-                } => 1,
-                Node::If {
-                    then, otherwise, ..
-                } => count_grid_sync(then) + count_grid_sync(otherwise),
-                Node::Loop { body, .. } | Node::Block(body) => count_grid_sync(body),
-                Node::Region { body, .. } => count_grid_sync(body),
-                _ => 0,
-            })
-            .sum()
+                    ordering: MemoryOrdering::GridSync
+                }
+            ) {
+                count += 1;
+            }
+        });
+        count
     }
 
     /// A transfer body in which lane 0 publishes the value of the LAST element and
