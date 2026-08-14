@@ -11,7 +11,6 @@
     feature = "nn-activation",
     feature = "nn-linear",
     feature = "matching-substring",
-    feature = "crypto-fnv",
 ))]
 
 use vyre::ir::{BufferAccess, MemoryKind, Program};

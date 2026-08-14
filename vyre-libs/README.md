@@ -115,7 +115,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-libs --example check_select1
 
 ### Features
 
-- Manifest features: `bench`, `c-parser`, `cpu-parity`, `crypto`, `crypto-blake3`, `crypto-fnv`, `decode`, `default`, `full`, `go-parser`, `hash`, `intern`, `logical`, `matching`, `matching-dfa`, `matching-nfa`, `matching-regex`, `matching-substring`, `math`, `math-algebra`, `math-broadcast`, `math-linalg`, `math-scan`, `math-succinct`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `parsing`, `python-parser`, `rule`, `security`, `test-fixtures`, `text`, `visual`
+- Manifest features: `bench`, `c-parser`, `cpu-parity`, `crypto`, `crypto-blake3`, `decode`, `default`, `full`, `go-parser`, `hash`, `intern`, `logical`, `matching`, `matching-dfa`, `matching-nfa`, `matching-regex`, `matching-substring`, `math`, `math-algebra`, `math-broadcast`, `math-linalg`, `math-scan`, `math-succinct`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `parsing`, `python-parser`, `rule`, `security`, `test-fixtures`, `text`, `visual`
 - Default feature members: `math-linalg`, `math-scan`, `math-broadcast`, `nn-activation`, `nn-linear`, `nn-norm`, `matching-substring`, `matching-dfa`, `hash`, `decode`
 
 ### Errors and unsupported behavior

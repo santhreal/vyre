@@ -6,7 +6,7 @@ together, then regenerate this file.
 
 ## Workspace dependency graph
 
-The workspace contains 36 crates. An arrow points from a crate to
+The workspace contains 35 crates. An arrow points from a crate to
 an internal normal or build dependency. Development dependencies are excluded.
 
 ```mermaid
@@ -31,34 +31,33 @@ graph TD
   C17["vyre-foundation"]
   C18["vyre-frontend-rust"]
   C19["vyre-grammar-gen"]
-  C20["vyre-intrinsics"]
-  C21["vyre-libs"]
-  C22["vyre-lints"]
-  C23["vyre-lower"]
-  C24["vyre-macros"]
-  C25["vyre-megakernel"]
-  C26["vyre-primitives"]
-  C27["vyre-reference"]
-  C28["vyre-runtime"]
-  C29["vyre-safetensors"]
-  C30["vyre-self-substrate"]
-  C31["vyre-spec"]
-  C32["vyre-test-support"]
-  C33["xtask"]
-  C34["xtask-evidence"]
-  C35["xtask-registry"]
+  C20["vyre-libs"]
+  C21["vyre-lints"]
+  C22["vyre-lower"]
+  C23["vyre-macros"]
+  C24["vyre-megakernel"]
+  C25["vyre-primitives"]
+  C26["vyre-reference"]
+  C27["vyre-runtime"]
+  C28["vyre-safetensors"]
+  C29["vyre-self-substrate"]
+  C30["vyre-spec"]
+  C31["vyre-test-support"]
+  C32["xtask"]
+  C33["xtask-evidence"]
+  C34["xtask-registry"]
   C1 --> C7
   C1 --> C8
   C1 --> C12
   C1 --> C17
-  C1 --> C25
-  C1 --> C28
-  C1 --> C31
+  C1 --> C24
+  C1 --> C27
+  C1 --> C30
   C2 --> C7
   C2 --> C17
+  C2 --> C24
   C2 --> C25
-  C2 --> C26
-  C2 --> C31
+  C2 --> C30
   C3 --> C1
   C3 --> C7
   C3 --> C8
@@ -70,12 +69,11 @@ graph TD
   C3 --> C17
   C3 --> C18
   C3 --> C20
-  C3 --> C21
-  C3 --> C23
+  C3 --> C22
+  C3 --> C25
   C3 --> C26
   C3 --> C27
-  C3 --> C28
-  C3 --> C31
+  C3 --> C30
   C4 --> C1
   C4 --> C5
   C4 --> C7
@@ -85,103 +83,99 @@ graph TD
   C4 --> C12
   C4 --> C17
   C4 --> C20
-  C4 --> C21
+  C4 --> C24
   C4 --> C25
   C4 --> C26
   C4 --> C27
-  C4 --> C28
-  C4 --> C31
-  C5 --> C31
+  C4 --> C30
+  C5 --> C30
   C6 --> C1
   C6 --> C14
   C6 --> C17
-  C6 --> C21
-  C6 --> C23
-  C6 --> C26
+  C6 --> C20
+  C6 --> C22
+  C6 --> C25
   C7 --> C17
+  C7 --> C23
   C7 --> C24
-  C7 --> C25
+  C7 --> C29
   C7 --> C30
-  C7 --> C31
   C8 --> C7
   C8 --> C15
   C8 --> C17
-  C8 --> C23
-  C8 --> C25
+  C8 --> C22
+  C8 --> C24
+  C8 --> C29
   C8 --> C30
-  C8 --> C31
   C9 --> C7
   C9 --> C13
   C9 --> C17
-  C9 --> C23
-  C9 --> C25
+  C9 --> C22
+  C9 --> C24
   C10 --> C7
   C10 --> C17
-  C10 --> C27
+  C10 --> C26
   C11 --> C7
   C11 --> C16
   C11 --> C17
-  C11 --> C23
-  C11 --> C25
-  C11 --> C31
+  C11 --> C22
+  C11 --> C24
+  C11 --> C30
   C12 --> C7
   C12 --> C14
   C12 --> C17
-  C12 --> C23
-  C12 --> C25
+  C12 --> C22
+  C12 --> C24
+  C12 --> C29
   C12 --> C30
-  C12 --> C31
   C13 --> C14
   C13 --> C17
-  C13 --> C23
+  C13 --> C22
   C14 --> C17
-  C14 --> C23
+  C14 --> C22
   C15 --> C17
-  C15 --> C23
+  C15 --> C22
   C16 --> C14
-  C16 --> C23
-  C17 --> C24
-  C17 --> C31
+  C16 --> C22
+  C17 --> C23
+  C17 --> C30
   C18 --> C17
   C20 --> C17
-  C20 --> C26
-  C21 --> C17
-  C21 --> C26
-  C21 --> C31
-  C23 --> C17
+  C20 --> C25
+  C20 --> C30
+  C22 --> C17
+  C24 --> C17
+  C24 --> C22
   C25 --> C17
-  C25 --> C23
+  C25 --> C30
   C26 --> C17
-  C26 --> C31
+  C26 --> C25
+  C26 --> C30
+  C27 --> C7
   C27 --> C17
-  C27 --> C26
-  C27 --> C31
-  C28 --> C7
-  C28 --> C17
-  C28 --> C25
-  C28 --> C30
-  C30 --> C17
-  C30 --> C26
-  C34 --> C3
+  C27 --> C24
+  C27 --> C29
+  C29 --> C17
+  C29 --> C25
+  C33 --> C3
+  C33 --> C7
+  C33 --> C8
+  C33 --> C12
+  C33 --> C32
+  C34 --> C1
   C34 --> C7
   C34 --> C8
+  C34 --> C10
+  C34 --> C11
   C34 --> C12
-  C34 --> C33
-  C35 --> C1
-  C35 --> C7
-  C35 --> C8
-  C35 --> C10
-  C35 --> C11
-  C35 --> C12
-  C35 --> C17
-  C35 --> C20
-  C35 --> C21
-  C35 --> C22
-  C35 --> C25
-  C35 --> C26
-  C35 --> C27
-  C35 --> C31
-  C35 --> C33
+  C34 --> C17
+  C34 --> C20
+  C34 --> C21
+  C34 --> C24
+  C34 --> C25
+  C34 --> C26
+  C34 --> C30
+  C34 --> C32
 ```
 
 ## Dependency contracts
@@ -210,10 +204,9 @@ graph TD
 | `vyre-bench` | `vyre-emit-ptx` | primary binary backend text emission | None | `always` | `normal` | `false` | `true` | `private` | `primary-binary-emitter` |
 | `vyre-bench` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
 | `vyre-bench` | `vyre-frontend-rust` | Rust source lowering | None | `always` | `normal` | `false` | `true` | `private` | `rust-frontend` |
-| `vyre-bench` | `vyre-intrinsics` | hardware-mapped intrinsic builders | None | `always` | `normal` | `false` | `true` | `private` | `hardware-intrinsics` |
 | `vyre-bench` | `vyre-libs` | product operation builders | `c-parser`, `nn-linear-4bit` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `vyre-bench` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
-| `vyre-bench` | `vyre-primitives` | reusable semantic Program builders | `bitset`, `cpu-parity`, `graph` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
+| `vyre-bench` | `vyre-primitives` | reusable semantic Program builders | `bitset`, `cpu-parity`, `graph`, `hardware` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `vyre-bench` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
 | `vyre-bench` | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | None | `always` | `normal` | `false` | `true` | `private` | `runtime` |
 | `vyre-bench` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
@@ -225,10 +218,9 @@ graph TD
 | `vyre-conform` | `vyre-driver-reference` | reference backend adaptation | None | `always` | `normal` | `false` | `true` | `private` | `reference-driver` |
 | `vyre-conform` | `vyre-driver-wgpu` | portable backend execution | None | `always` | `normal` | `true` | `true` | `private` | `portable-driver` |
 | `vyre-conform` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `vyre-conform` | `vyre-intrinsics` | hardware-mapped intrinsic builders | None | `always` | `normal` | `false` | `true` | `private` | `hardware-intrinsics` |
 | `vyre-conform` | `vyre-libs` | product operation builders | `crypto`, `full`, `logical`, `matching`, `math`, `nn`, `nn-moe`, `parsing`, `security`, `visual` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `vyre-conform` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
-| `vyre-conform` | `vyre-primitives` | reusable semantic Program builders | None | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
+| `vyre-conform` | `vyre-primitives` | reusable semantic Program builders | `hardware` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `vyre-conform` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
 | `vyre-conform` | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | None | `always` | `normal` | `false` | `true` | `private` | `runtime` |
 | `vyre-conform` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
@@ -284,8 +276,6 @@ graph TD
 | `vyre-foundation` | `vyre-macros` | compile-time registration generation | None | `always` | `normal` | `false` | `true` | `private` | `registration-macros` |
 | `vyre-foundation` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-frontend-rust` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `vyre-intrinsics` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-intrinsics` | `vyre-primitives` | reusable semantic Program builders | None | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `vyre-libs` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-libs` | `vyre-primitives` | reusable semantic Program builders | `bitset`, `decode`, `fixpoint`, `geom`, `graph`, `hash`, `inventory-registry`, `label`, `matching`, `math`, `nfa`, `nn`, `opt`, `parsing`, `predicate`, `reduce`, `text`, `topology`, `visual` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
 | `vyre-libs` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
@@ -315,11 +305,10 @@ graph TD
 | `xtask-registry` | `vyre-driver-spirv` | SPIR-V backend execution | None | `always` | `normal` | `false` | `true` | `private` | `spirv-driver` |
 | `xtask-registry` | `vyre-driver-wgpu` | portable backend execution | None | `always` | `normal` | `false` | `true` | `private` | `portable-driver` |
 | `xtask-registry` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `xtask-registry` | `vyre-intrinsics` | hardware-mapped intrinsic builders | None | `always` | `normal` | `false` | `true` | `private` | `hardware-intrinsics` |
 | `xtask-registry` | `vyre-libs` | product operation builders | `crypto`, `full`, `logical`, `matching`, `math`, `nn`, `nn-moe`, `parsing`, `security`, `visual` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `xtask-registry` | `vyre-lints` | source policy enforcement | None | `always` | `normal` | `false` | `true` | `private` | `lint-policy` |
 | `xtask-registry` | `vyre-megakernel` | neutral artifact compilation and target payload contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
-| `xtask-registry` | `vyre-primitives` | reusable semantic Program builders | `bitset`, `fixpoint`, `graph`, `hash`, `inventory-registry`, `label`, `matching`, `math`, `nn`, `parsing`, `predicate`, `reduce`, `text` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
+| `xtask-registry` | `vyre-primitives` | reusable semantic Program builders | `bitset`, `fixpoint`, `graph`, `hardware`, `hash`, `inventory-registry`, `label`, `matching`, `math`, `nn`, `parsing`, `predicate`, `reduce`, `text` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `xtask-registry` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
 | `xtask-registry` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
 | `xtask-registry` | `xtask` | subcommand registry, bounded readers, and release manifests | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |

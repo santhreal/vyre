@@ -68,9 +68,6 @@ fn registered_op_ids() -> BTreeSet<String> {
     for entry in vyre_libs::operation_catalog::all_entries() {
         out.insert(entry.id.to_string());
     }
-    for entry in vyre_intrinsics::operation_catalog::all_entries() {
-        out.insert(entry.id.to_string());
-    }
     for entry in vyre_primitives::operation_catalog::all_entries() {
         out.insert(entry.id.to_string());
     }

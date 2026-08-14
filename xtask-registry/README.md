@@ -37,7 +37,7 @@ Own the xtask subcommands that must observe the live operation registry, the pri
 ### Boundaries
 
 The `release-tooling` owner maintains this `tooling` crate at `xtask-registry`.
-Its allowed internal production dependencies are: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-spec`, `xtask`.
+Its allowed internal production dependencies are: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-lints`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-spec`, `xtask`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

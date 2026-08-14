@@ -115,10 +115,6 @@ hardware = "Host parser and lowering tests require no accelerator. Feature-selec
 commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --all-features"]
 hardware = "Backend-neutral runtime tests are host-capable. Device integration tests require the selected concrete backend and treat unavailable requested hardware as an error."
 
-[package.vyre-intrinsics]
-commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-intrinsics --all-features"]
-hardware = "Registration and reference-oracle tests are host-capable. Concrete lowering parity requires the selected backend device and must surface unsupported hardware."
-
 [package.vyre-libs]
 commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --all-features"]
 hardware = "Reference and builder suites are host-capable. Tests that request concrete backend parity require that device and fail visibly when unavailable."

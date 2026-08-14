@@ -5,7 +5,6 @@
     feature = "math-linalg",
     feature = "math-scan",
     feature = "math-broadcast",
-    feature = "crypto-fnv",
 ))]
 
 use proptest::prelude::*;

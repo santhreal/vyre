@@ -24,7 +24,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --all-features
 ## Feature sets
 
 - Default feature members: None
-- Available manifest features: `all-lego`, `bitset`, `cat`, `cpu-parity`, `decode`, `default`, `dnnf`, `effects`, `fixpoint`, `geom`, `gpu`, `graph`, `hash`, `inventory-registry`, `label`, `matching`, `math`, `nfa`, `nn`, `opt`, `parsing`, `predicate`, `reduce`, `text`, `topology`, `types`, `visual`, `vyre-foundation`, `zx`
+- Available manifest features: `all-lego`, `bitset`, `cat`, `cpu-parity`, `decode`, `default`, `dnnf`, `effects`, `fixpoint`, `geom`, `gpu`, `graph`, `hardware`, `hash`, `inventory-registry`, `label`, `matching`, `math`, `nfa`, `nn`, `opt`, `parsing`, `predicate`, `reduce`, `text`, `topology`, `types`, `visual`, `vyre-foundation`, `zx`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
@@ -113,6 +113,8 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --all-features
 | `test` | `dominator_tree_scale_gate` | `vyre-primitives/tests/dominator_tree_scale_gate.rs` | `cpu-parity`, `graph` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test dominator_tree_scale_gate` |
 | `test` | `dp_clip_signed_newton_parity` | `vyre-primitives/tests/dp_clip_signed_newton_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test dp_clip_signed_newton_parity` |
 | `test` | `fmm_program_parity` | `vyre-primitives/tests/fmm_program_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test fmm_program_parity` |
+| `test` | `fnv1a64_u32_lane_parity` | `vyre-primitives/tests/fnv1a64_u32_lane_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test fnv1a64_u32_lane_parity` |
+| `test` | `fnv1a64_u32_lane_parity` | `vyre-primitives/tests/fnv1a64_u32_lane_parity.rs` | `hash` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test fnv1a64_u32_lane_parity` |
 | `test` | `fnv1a_dyn_parity` | `vyre-primitives/tests/fnv1a_dyn_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test fnv1a_dyn_parity` |
 | `test` | `four_russians_dense_matvec_generated` | `vyre-primitives/tests/four_russians_dense_matvec_generated.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test four_russians_dense_matvec_generated` |
 | `test` | `four_russians_dense_matvec_generated` | `vyre-primitives/tests/four_russians_dense_matvec_generated.rs` | `bitset`, `cpu-parity` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test four_russians_dense_matvec_generated` |
@@ -120,11 +122,23 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --all-features
 | `test` | `frontier_load_balancing_policies` | `vyre-primitives/tests/frontier_load_balancing_policies.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test frontier_load_balancing_policies` |
 | `test` | `frontier_to_queue_multi_workgroup_span` | `vyre-primitives/tests/frontier_to_queue_multi_workgroup_span.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test frontier_to_queue_multi_workgroup_span` |
 | `test` | `functor_apply_ir_parity_proptest` | `vyre-primitives/tests/functor_apply_ir_parity_proptest.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test functor_apply_ir_parity_proptest` |
+| `test` | `generated_hardware_f32_matrix` | `vyre-primitives/tests/generated_hardware_f32_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test generated_hardware_f32_matrix` |
+| `test` | `generated_hardware_f32_matrix` | `vyre-primitives/tests/generated_hardware_f32_matrix.rs` | `hardware` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test generated_hardware_f32_matrix` |
+| `test` | `generated_hardware_registry_matrix` | `vyre-primitives/tests/generated_hardware_registry_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test generated_hardware_registry_matrix` |
+| `test` | `generated_hardware_registry_matrix` | `vyre-primitives/tests/generated_hardware_registry_matrix.rs` | `hardware` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test generated_hardware_registry_matrix` |
+| `test` | `generated_hardware_u32_matrix` | `vyre-primitives/tests/generated_hardware_u32_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test generated_hardware_u32_matrix` |
+| `test` | `generated_hardware_u32_matrix` | `vyre-primitives/tests/generated_hardware_u32_matrix.rs` | `hardware` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test generated_hardware_u32_matrix` |
 | `test` | `graph_builders_emit_valid_ir` | `vyre-primitives/tests/graph_builders_emit_valid_ir.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test graph_builders_emit_valid_ir` |
 | `test` | `graph_fixpoint_adversarial_generated` | `vyre-primitives/tests/graph_fixpoint_adversarial_generated.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test graph_fixpoint_adversarial_generated` |
 | `test` | `graph_sweep_support` | `vyre-primitives/tests/graph_sweep_support.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test graph_sweep_support` |
+| `test` | `hardware_conform` | `vyre-primitives/tests/hardware_conform.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test hardware_conform` |
+| `test` | `hardware_conform` | `vyre-primitives/tests/hardware_conform.rs` | `hardware` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test hardware_conform` |
+| `test` | `hardware_registry_contract` | `vyre-primitives/tests/hardware_registry_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test hardware_registry_contract` |
+| `test` | `hardware_registry_contract` | `vyre-primitives/tests/hardware_registry_contract.rs` | `hardware` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test hardware_registry_contract` |
 | `test` | `hash_crc32_ir_parity_proptest` | `vyre-primitives/tests/hash_crc32_ir_parity_proptest.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test hash_crc32_ir_parity_proptest` |
 | `test` | `hash_incremental_adversarial_generated` | `vyre-primitives/tests/hash_incremental_adversarial_generated.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test hash_incremental_adversarial_generated` |
+| `test` | `hash_registration_witnesses` | `vyre-primitives/tests/hash_registration_witnesses.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test hash_registration_witnesses` |
+| `test` | `hash_registration_witnesses` | `vyre-primitives/tests/hash_registration_witnesses.rs` | `hash`, `inventory-registry` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test hash_registration_witnesses` |
 | `test` | `hash_stream_ir_parity_proptest` | `vyre-primitives/tests/hash_stream_ir_parity_proptest.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test hash_stream_ir_parity_proptest` |
 | `test` | `histogram_atomic_scatter_parity` | `vyre-primitives/tests/histogram_atomic_scatter_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test histogram_atomic_scatter_parity` |
 | `test` | `homotopy_euler_signed_parity` | `vyre-primitives/tests/homotopy_euler_signed_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test homotopy_euler_signed_parity` |

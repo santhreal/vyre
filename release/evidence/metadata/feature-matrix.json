@@ -343,7 +343,6 @@
         "cpu-parity",
         "crypto",
         "crypto-blake3",
-        "crypto-fnv",
         "decode",
         "default",
         "full",

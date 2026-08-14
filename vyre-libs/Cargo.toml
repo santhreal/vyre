@@ -38,7 +38,7 @@ full = [
     "matching-substring", "matching-dfa",
     "hash",
     "decode",
-    "crypto-fnv", "crypto-blake3",
+    "crypto-blake3",
 ]
 bench = []
 cpu-parity = ["vyre-primitives/cpu-parity"]
@@ -46,7 +46,7 @@ hash = []
 math = ["math-linalg", "math-scan", "math-broadcast", "math-algebra", "math-succinct"]
 nn = ["nn-activation", "nn-linear", "nn-norm", "nn-attention"]
 matching = ["matching-substring", "matching-dfa"]
-crypto = ["crypto-fnv", "crypto-blake3"]
+crypto = ["crypto-blake3"]
 decode = ["vyre-primitives/cpu-parity"]
 text = []
 logical = ["math-broadcast"]
@@ -69,7 +69,6 @@ rule = ["dep:regex"]
 "matching-nfa" = ["matching-dfa"]
 "matching-regex" = ["matching-nfa", "dep:regex-syntax"]
 "intern" = []
-"crypto-fnv" = ["hash"]
 "crypto-blake3" = ["hash"]
 "visual" = []
 "parsing" = ["c-parser", "go-parser", "python-parser"]

@@ -787,17 +787,6 @@ boundary = "private"
 seam = "foundation-ir"
 
 [[crate.dependency]]
-package = "vyre-intrinsics"
-purpose = "hardware-mapped intrinsic builders"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "hardware-intrinsics"
-
-[[crate.dependency]]
 package = "vyre-libs"
 purpose = "product operation builders"
 features = ["crypto", "full", "logical", "matching", "math", "nn", "nn-moe", "parsing", "security", "visual"]
@@ -822,7 +811,7 @@ seam = "megakernel-compiler"
 [[crate.dependency]]
 package = "vyre-primitives"
 purpose = "reusable semantic Program builders"
-features = []
+features = ["hardware"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
@@ -977,17 +966,6 @@ boundary = "private"
 seam = "portable-driver"
 
 [[crate.dependency]]
-package = "vyre-intrinsics"
-purpose = "hardware-mapped intrinsic builders"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "hardware-intrinsics"
-
-[[crate.dependency]]
 package = "vyre-libs"
 purpose = "product operation builders"
 features = ["crypto", "full", "logical", "matching", "math", "nn", "nn-moe", "parsing", "security", "visual"]
@@ -1012,7 +990,7 @@ seam = "lint-policy"
 [[crate.dependency]]
 package = "vyre-primitives"
 purpose = "reusable semantic Program builders"
-features = ["bitset", "fixpoint", "graph", "hash", "inventory-registry", "label", "matching", "math", "nn", "parsing", "predicate", "reduce", "text"]
+features = ["bitset", "fixpoint", "graph", "hardware", "hash", "inventory-registry", "label", "matching", "math", "nn", "parsing", "predicate", "reduce", "text"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
@@ -1200,35 +1178,6 @@ optional = false
 default_features = true
 boundary = "public"
 seam = "specification"
-
-[[crate]]
-package = "vyre-intrinsics"
-path = "vyre-intrinsics"
-owner = "hardware-intrinsics"
-layer = "intrinsics"
-responsibility = "Own registered hardware-mapped intrinsic contracts and their neutral program builders."
-
-[[crate.dependency]]
-package = "vyre-foundation"
-purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "public"
-seam = "foundation-ir"
-
-[[crate.dependency]]
-package = "vyre-primitives"
-purpose = "reusable semantic Program builders"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = false
-boundary = "private"
-seam = "primitive-library"
 
 [[crate]]
 package = "vyre-aot"
@@ -1428,17 +1377,6 @@ boundary = "private"
 seam = "rust-frontend"
 
 [[crate.dependency]]
-package = "vyre-intrinsics"
-purpose = "hardware-mapped intrinsic builders"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "hardware-intrinsics"
-
-[[crate.dependency]]
 package = "vyre-libs"
 purpose = "product operation builders"
 features = ["c-parser", "nn-linear-4bit"]
@@ -1463,7 +1401,7 @@ seam = "lowering"
 [[crate.dependency]]
 package = "vyre-primitives"
 purpose = "reusable semantic Program builders"
-features = ["bitset", "cpu-parity", "graph"]
+features = ["bitset", "cpu-parity", "graph", "hardware"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false

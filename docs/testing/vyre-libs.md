@@ -24,7 +24,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --all-features
 ## Feature sets
 
 - Default feature members: `math-linalg`, `math-scan`, `math-broadcast`, `nn-activation`, `nn-linear`, `nn-norm`, `matching-substring`, `matching-dfa`, `hash`, `decode`
-- Available manifest features: `bench`, `c-parser`, `cpu-parity`, `crypto`, `crypto-blake3`, `crypto-fnv`, `decode`, `default`, `full`, `go-parser`, `hash`, `intern`, `logical`, `matching`, `matching-dfa`, `matching-nfa`, `matching-regex`, `matching-substring`, `math`, `math-algebra`, `math-broadcast`, `math-linalg`, `math-scan`, `math-succinct`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `parsing`, `python-parser`, `rule`, `security`, `test-fixtures`, `text`, `visual`
+- Available manifest features: `bench`, `c-parser`, `cpu-parity`, `crypto`, `crypto-blake3`, `decode`, `default`, `full`, `go-parser`, `hash`, `intern`, `logical`, `matching`, `matching-dfa`, `matching-nfa`, `matching-regex`, `matching-substring`, `math`, `math-algebra`, `math-broadcast`, `math-linalg`, `math-scan`, `math-succinct`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `parsing`, `python-parser`, `rule`, `security`, `test-fixtures`, `text`, `visual`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
@@ -289,6 +289,8 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --all-features
 | `test` | `sweep_text_utf8_oracle_matrix` | `vyre-libs/tests/sweep_text_utf8_oracle_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test sweep_text_utf8_oracle_matrix` |
 | `test` | `sweep_text_utf8_oracle_matrix` | `vyre-libs/tests/sweep_text_utf8_oracle_matrix.rs` | `text` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test sweep_text_utf8_oracle_matrix` |
 | `test` | `target_instruction_capabilities` | `vyre-libs/tests/target_instruction_capabilities.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test target_instruction_capabilities` |
+| `test` | `typedef_row_phase_witnesses` | `vyre-libs/tests/typedef_row_phase_witnesses.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test typedef_row_phase_witnesses` |
+| `test` | `typedef_row_phase_witnesses` | `vyre-libs/tests/typedef_row_phase_witnesses.rs` | `c-parser` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test typedef_row_phase_witnesses` |
 | `test` | `universal_harness` | `vyre-libs/tests/universal_harness.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test universal_harness` |
 | `test` | `unsafe_ffi_policies` | `vyre-libs/tests/unsafe_ffi_policies.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test unsafe_ffi_policies` |
 | `test` | `url_network_security_policies` | `vyre-libs/tests/url_network_security_policies.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test url_network_security_policies` |

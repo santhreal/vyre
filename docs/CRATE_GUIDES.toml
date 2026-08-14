@@ -92,7 +92,7 @@ owner = 'backend-contract'
 layer = 'backend-neutral'
 owned = 'Define backend-neutral device, capability, dispatch, evidence, and artifact contracts.'
 non_owned = 'Concrete device APIs, shader dialects, product libraries, frontend parsers.'
-allowed_dependencies = ['vyre-foundation', 'vyre-intrinsics', 'vyre-macros', 'vyre-self-substrate', 'vyre-spec']
+allowed_dependencies = ['vyre-foundation', 'vyre-macros', 'vyre-self-substrate', 'vyre-spec']
 profile = 'backend-neutral'
 
 
@@ -215,7 +215,7 @@ owner = 'conformance'
 layer = 'conformance'
 owned = 'Execute production artifacts against independent reference semantics, minimize counterexamples, check algebraic laws, and issue versioned certificates and replay records through one library and thin CLI.'
 non_owned = 'Semantic operation implementations, reference evaluator internals, concrete target compilers and materializers.'
-allowed_dependencies = ['vyre', 'vyre-conform-spec', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-metal', 'vyre-driver-reference', 'vyre-driver-wgpu', 'vyre-foundation', 'vyre-intrinsics', 'vyre-libs', 'vyre-megakernel', 'vyre-primitives', 'vyre-reference', 'vyre-runtime', 'vyre-spec']
+allowed_dependencies = ['vyre', 'vyre-conform-spec', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-metal', 'vyre-driver-reference', 'vyre-driver-wgpu', 'vyre-foundation', 'vyre-libs', 'vyre-megakernel', 'vyre-primitives', 'vyre-reference', 'vyre-runtime', 'vyre-spec']
 profile = 'conformance'
 
 
@@ -236,7 +236,7 @@ owner = 'release-tooling'
 layer = 'tooling'
 owned = 'Own the xtask subcommands that must observe the live operation registry, the primitive catalog behind it, or a linked backend driver.'
 non_owned = 'Gates answerable from source text, benchmark provenance, production library semantics.'
-allowed_dependencies = ['vyre', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-foundation', 'vyre-intrinsics', 'vyre-libs', 'vyre-lints', 'vyre-megakernel', 'vyre-primitives', 'vyre-reference', 'vyre-spec', 'xtask']
+allowed_dependencies = ['vyre', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-foundation', 'vyre-libs', 'vyre-lints', 'vyre-megakernel', 'vyre-primitives', 'vyre-reference', 'vyre-spec', 'xtask']
 profile = 'tooling'
 
 [package.xtask-evidence]
@@ -269,15 +269,6 @@ non_owned = 'Concrete backends, runtime protocol, foundation IR node authorship.
 allowed_dependencies = ['vyre-foundation', 'vyre-primitives', 'vyre-spec']
 profile = 'libraries'
 
-[package.vyre-intrinsics]
-path = 'vyre-intrinsics'
-owner = 'hardware-intrinsics'
-layer = 'intrinsics'
-owned = 'Own registered hardware-mapped intrinsic contracts and their neutral program builders.'
-non_owned = 'Device acquisition, product compositions, runtime queues.'
-allowed_dependencies = ['vyre-foundation', 'vyre-primitives']
-profile = 'intrinsics'
-
 [package.vyre-aot]
 path = 'vyre-aot'
 owner = 'aot-artifacts'
@@ -305,7 +296,7 @@ owner = 'benchmarks'
 layer = 'tooling'
 owned = 'Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark evidence.'
 non_owned = 'Production library semantics, device drivers as libraries.'
-allowed_dependencies = ['vyre', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-metal', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-emit-ptx', 'vyre-foundation', 'vyre-frontend-rust', 'vyre-intrinsics', 'vyre-libs', 'vyre-lower', 'vyre-primitives', 'vyre-reference', 'vyre-runtime', 'vyre-spec']
+allowed_dependencies = ['vyre', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-metal', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-emit-ptx', 'vyre-foundation', 'vyre-frontend-rust', 'vyre-libs', 'vyre-lower', 'vyre-primitives', 'vyre-reference', 'vyre-runtime', 'vyre-spec']
 profile = 'tooling'
 
 [package.vyre-lints]

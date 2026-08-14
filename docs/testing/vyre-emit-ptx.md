@@ -35,6 +35,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --all-features
 | `lib` | `vyre_emit_ptx` | `vyre-emit-ptx/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx` |
 | `test` | `adversarial_emit_program_matrix` | `vyre-emit-ptx/tests/adversarial_emit_program_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test adversarial_emit_program_matrix` |
 | `test` | `cross_emitter_parity` | `vyre-emit-ptx/tests/cross_emitter_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test cross_emitter_parity` |
+| `test` | `emitted_artifact_byte_stability` | `vyre-emit-ptx/tests/emitted_artifact_byte_stability.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test emitted_artifact_byte_stability` |
 | `test` | `grid_sync_loop_refusal` | `vyre-emit-ptx/tests/grid_sync_loop_refusal.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test grid_sync_loop_refusal` |
 | `test` | `nested_return_branch` | `vyre-emit-ptx/tests/nested_return_branch.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test nested_return_branch` |
 | `test` | `nvrtc_compile_gate` | `vyre-emit-ptx/tests/nvrtc_compile_gate.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test nvrtc_compile_gate` |

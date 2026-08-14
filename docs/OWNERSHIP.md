@@ -63,7 +63,7 @@ Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark ev
 - Path: `vyre-bench`
 - Owner: `benchmarks`
 - Layer: `tooling`
-- Internal production dependencies: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-frontend-rust`, `vyre-intrinsics`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec`
+- Internal production dependencies: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-frontend-rust`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -77,7 +77,6 @@ Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark ev
 | `vyre-emit-ptx` | primary binary backend text emission | `private` | `primary-binary-emitter` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `private` | `foundation-ir` |
 | `vyre-frontend-rust` | Rust source lowering | `private` | `rust-frontend` |
-| `vyre-intrinsics` | hardware-mapped intrinsic builders | `private` | `hardware-intrinsics` |
 | `vyre-libs` | product operation builders | `private` | `product-libraries` |
 | `vyre-lower` | verified backend-neutral representation lowering | `private` | `lowering` |
 | `vyre-primitives` | reusable semantic Program builders | `private` | `primitive-library` |
@@ -92,7 +91,7 @@ Execute production artifacts against independent reference semantics, minimize c
 - Path: `conform/vyre-conform`
 - Owner: `conformance`
 - Layer: `conformance`
-- Internal production dependencies: `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec`
+- Internal production dependencies: `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -104,7 +103,6 @@ Execute production artifacts against independent reference semantics, minimize c
 | `vyre-driver-reference` | reference backend adaptation | `private` | `reference-driver` |
 | `vyre-driver-wgpu` | portable backend execution | `private` | `portable-driver` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `private` | `foundation-ir` |
-| `vyre-intrinsics` | hardware-mapped intrinsic builders | `private` | `hardware-intrinsics` |
 | `vyre-libs` | product operation builders | `private` | `product-libraries` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `private` | `megakernel-compiler` |
 | `vyre-primitives` | reusable semantic Program builders | `private` | `primitive-library` |
@@ -341,20 +339,6 @@ Generate host-side grammar tables consumed by frontend and parsing crates.
 - Layer: `tooling`
 - Internal production dependencies: None
 
-### `vyre-intrinsics`
-
-Own registered hardware-mapped intrinsic contracts and their neutral program builders.
-
-- Path: `vyre-intrinsics`
-- Owner: `hardware-intrinsics`
-- Layer: `intrinsics`
-- Internal production dependencies: `vyre-foundation`, `vyre-primitives`
-
-| Dependency | Purpose | Boundary | Owning seam |
-| --- | --- | --- | --- |
-| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
-| `vyre-primitives` | reusable semantic Program builders | `private` | `primitive-library` |
-
 ### `vyre-libs`
 
 Own product-facing Tier 3 program compositions built from neutral primitives and contracts.
@@ -534,7 +518,7 @@ Own the xtask subcommands that must observe the live operation registry, the pri
 - Path: `xtask-registry`
 - Owner: `release-tooling`
 - Layer: `tooling`
-- Internal production dependencies: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-spec`, `xtask`
+- Internal production dependencies: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-lints`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-spec`, `xtask`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -545,7 +529,6 @@ Own the xtask subcommands that must observe the live operation registry, the pri
 | `vyre-driver-spirv` | SPIR-V backend execution | `private` | `spirv-driver` |
 | `vyre-driver-wgpu` | portable backend execution | `private` | `portable-driver` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `private` | `foundation-ir` |
-| `vyre-intrinsics` | hardware-mapped intrinsic builders | `private` | `hardware-intrinsics` |
 | `vyre-libs` | product operation builders | `private` | `product-libraries` |
 | `vyre-lints` | source policy enforcement | `private` | `lint-policy` |
 | `vyre-megakernel` | neutral artifact compilation and target payload contracts | `private` | `megakernel-compiler` |

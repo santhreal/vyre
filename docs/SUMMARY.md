@@ -115,7 +115,6 @@
 - [Testing `vyre-foundation`](testing/vyre-foundation.md)
 - [Testing `vyre-frontend-rust`](testing/vyre-frontend-rust.md)
 - [Testing `vyre-grammar-gen`](testing/vyre-grammar-gen.md)
-- [Testing `vyre-intrinsics`](testing/vyre-intrinsics.md)
 - [Testing `vyre-libs`](testing/vyre-libs.md)
 - [Testing `vyre-lints`](testing/vyre-lints.md)
 - [Testing `vyre-lower`](testing/vyre-lower.md)
@@ -129,6 +128,8 @@
 - [Testing `vyre-spec`](testing/vyre-spec.md)
 - [Testing `vyre-test-support`](testing/vyre-test-support.md)
 - [Testing `vyre`](testing/vyre.md)
+- [Testing `xtask-evidence`](testing/xtask-evidence.md)
+- [Testing `xtask-registry`](testing/xtask-registry.md)
 - [Testing `xtask`](testing/xtask.md)
 
 # Performance and release

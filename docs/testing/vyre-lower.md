@@ -24,7 +24,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-lower --all-features
 ## Feature sets
 
 - Default feature members: None
-- Available manifest features: `test-fixtures`
+- Available manifest features: `default`, `test-fixtures`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets

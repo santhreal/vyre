@@ -29,6 +29,7 @@ This crate declares no Cargo features.
 | `lib` | `vyre_emit_naga` | `vyre-emit-naga/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-naga` |
 | `test` | `adversarial_emit_program_matrix` | `vyre-emit-naga/tests/adversarial_emit_program_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-naga --test adversarial_emit_program_matrix` |
 | `test` | `carrier_scope_regression` | `vyre-emit-naga/tests/carrier_scope_regression.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-naga --test carrier_scope_regression` |
+| `test` | `emitted_artifact_byte_stability` | `vyre-emit-naga/tests/emitted_artifact_byte_stability.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-naga --test emitted_artifact_byte_stability` |
 | `test` | `target_capabilities` | `vyre-emit-naga/tests/target_capabilities.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-naga --test target_capabilities` |
 
 ## Test classes

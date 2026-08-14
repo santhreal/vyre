@@ -39,7 +39,6 @@ This crate declares no Cargo features.
 | `test` | `crate_ownership_registry` | `xtask/tests/crate_ownership_registry.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test crate_ownership_registry` |
 | `test` | `crate_readmes` | `xtask/tests/crate_readmes.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test crate_readmes` |
 | `test` | `docs_references` | `xtask/tests/docs_references.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test docs_references` |
-| `test` | `operation_schema` | `xtask/tests/operation_schema.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test operation_schema` |
 | `test` | `public_api_snapshot_inventory` | `xtask/tests/public_api_snapshot_inventory.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test public_api_snapshot_inventory` |
 | `test` | `relation_import_certificates` | `xtask/tests/relation_import_certificates.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test relation_import_certificates` |
 | `test` | `release_docs` | `xtask/tests/release_docs.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test release_docs` |

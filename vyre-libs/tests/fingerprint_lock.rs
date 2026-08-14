@@ -18,7 +18,6 @@
     feature = "nn-attention",
     feature = "matching-substring",
     feature = "matching-dfa",
-    feature = "crypto-fnv",
     feature = "crypto-blake3",
 ))]
 

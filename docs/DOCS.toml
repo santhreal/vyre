@@ -945,18 +945,6 @@ generation = "manual"
 nav = true
 
 [[page]]
-path = "migration-vyre-ops-to-intrinsics.md"
-title = "Migration  -  `vyre-ops` → `vyre-intrinsics` + library relocation"
-status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
 path = "observability.md"
 title = "vyre observability"
 status = "current"
@@ -1506,19 +1494,6 @@ generator = "../scripts/testing_guides.py"
 nav = true
 
 [[page]]
-path = "testing/vyre-intrinsics.md"
-title = "Testing `vyre-intrinsics`"
-status = "generated"
-audience = "contributor"
-owner = "testing"
-kind = "testing"
-section = "Testing and conformance"
-authority = "testing/TESTING.toml"
-generation = "generated"
-generator = "../scripts/testing_guides.py"
-nav = true
-
-[[page]]
 path = "testing/vyre-libs.md"
 title = "Testing `vyre-libs`"
 status = "generated"
@@ -1690,6 +1665,32 @@ nav = true
 [[page]]
 path = "testing/xtask.md"
 title = "Testing `xtask`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/xtask-evidence.md"
+title = "Testing `xtask-evidence`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
+path = "testing/xtask-registry.md"
+title = "Testing `xtask-registry`"
 status = "generated"
 audience = "contributor"
 owner = "testing"
