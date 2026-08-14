@@ -5,6 +5,7 @@
 //! executes cross-crate invariants without a dedicated workspace test crate.
 
 mod claims_inventory_smoke;
+mod foundation_validate_contract;
 mod public_api_surface;
 mod xtask_help_smoke;
 
