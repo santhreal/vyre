@@ -105,10 +105,12 @@ impl WgpuPendingPersistentDispatch {
         enforce_actual_output_budget(&self.config, outputs.as_slice())?;
         let device_ns = collect_timestamp_profile(self.timestamp_profile, self.timestamp_deadline)?
             .map(|profile| profile.dispatch_ns);
-        let wait_ns = WGPU_NUMERIC.elapsed_nanos_u64(wait_started, "persistent asynchronous wait")?;
+        let wait_ns =
+            WGPU_NUMERIC.elapsed_nanos_u64(wait_started, "persistent asynchronous wait")?;
         Ok(TimedDispatchResult {
             outputs,
-            wall_ns: WGPU_NUMERIC.elapsed_nanos_u64(self.started, "persistent asynchronous dispatch")?,
+            wall_ns: WGPU_NUMERIC
+                .elapsed_nanos_u64(self.started, "persistent asynchronous dispatch")?,
             device_ns,
             enqueue_ns: Some(self.enqueue_ns),
             wait_ns: Some(wait_ns),
@@ -164,7 +166,9 @@ impl WgpuPipeline {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("vyre asynchronous persistent dispatch"),
         });
-        let timestamp_writes = timestamp_recorder.as_ref().map(TimestampRecorder::pass_writes);
+        let timestamp_writes = timestamp_recorder
+            .as_ref()
+            .map(TimestampRecorder::pass_writes);
         self.record_borrowed_persistent_item_with_timestamps(
             device,
             &mut encoder,
@@ -237,15 +241,16 @@ impl WgpuPipeline {
             }
         };
 
-        let enqueue_ns =
-            match WGPU_NUMERIC.elapsed_nanos_u64(enqueue_started, "persistent asynchronous enqueue") {
-                Ok(elapsed) => elapsed,
-                Err(error) => {
-                    let fence = queue.submit(std::iter::empty::<wgpu::CommandBuffer>());
-                    crate::runtime::device::poll_device_wait_for(device, fence)?;
-                    return Err(error);
-                }
-            };
+        let enqueue_ns = match WGPU_NUMERIC
+            .elapsed_nanos_u64(enqueue_started, "persistent asynchronous enqueue")
+        {
+            Ok(elapsed) => elapsed,
+            Err(error) => {
+                let fence = queue.submit(std::iter::empty::<wgpu::CommandBuffer>());
+                crate::runtime::device::poll_device_wait_for(device, fence)?;
+                return Err(error);
+            }
+        };
         Ok(WgpuPendingPersistentDispatch {
             pipeline: Arc::clone(self),
             resolved,
@@ -332,7 +337,9 @@ impl CompiledPipeline for WgpuPipeline {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("vyre timed persistent dispatch"),
         });
-        let timestamp_writes = timestamp_recorder.as_ref().map(TimestampRecorder::pass_writes);
+        let timestamp_writes = timestamp_recorder
+            .as_ref()
+            .map(TimestampRecorder::pass_writes);
         self.record_borrowed_persistent_item_with_timestamps(
             device,
             &mut encoder,
@@ -539,7 +546,8 @@ impl CompiledPipeline for WgpuPipeline {
                     .then_some(self.workgroup_shape),
             },
         )?;
-        let enqueue_ns = WGPU_NUMERIC.elapsed_nanos_u64(enqueue_started, "compiled timed enqueue")?;
+        let enqueue_ns =
+            WGPU_NUMERIC.elapsed_nanos_u64(enqueue_started, "compiled timed enqueue")?;
 
         let wait_started = Instant::now();
         let deadline = config

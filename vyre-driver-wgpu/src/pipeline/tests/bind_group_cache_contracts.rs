@@ -20,7 +20,7 @@ fn bind_group_cache_shared_per_compiled_shader() {
     );
 
     let p1 = harness
-        .compile(&program1, harness.arena(), pool.clone())
+        .compile(&program1, pool.clone())
         .expect("Fix: first compile must succeed; restore this invariant before continuing.");
     assert_eq!(
         layout_cache.len(),
@@ -29,7 +29,7 @@ fn bind_group_cache_shared_per_compiled_shader() {
     );
 
     let p2 = harness
-        .compile(&program1, harness.arena(), pool.clone())
+        .compile(&program1, pool.clone())
         .expect("Fix: second compile of same program must succeed; restore this invariant before continuing.");
     assert_eq!(
         layout_cache.len(),
@@ -69,7 +69,7 @@ fn bind_group_cache_shared_per_compiled_shader() {
         vec![Node::store("out2", Expr::u32(0), Expr::u32(42))],
     );
 
-    let p3 = harness.compile(&program2, harness.arena(), pool).expect(
+    let p3 = harness.compile(&program2, pool).expect(
         "Fix: compile of different program must succeed; restore this invariant before continuing.",
     );
     assert_eq!(

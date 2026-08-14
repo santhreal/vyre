@@ -301,17 +301,7 @@ impl WgpuBackend {
         reject_unserviceable_timeout(config.timeout)?;
 
         let dispatch_arena = self.dispatch_arena_snapshot();
-        let pipeline = crate::pipeline::WgpuPipeline::compile_with_device_queue(
-            program,
-            config,
-            self.adapter_info.clone(),
-            self.enabled_features,
-            self.current_device_queue(),
-            Arc::clone(&dispatch_arena),
-            self.current_persistent_pool(),
-            self.pipeline_cache.clone(),
-            self.bind_group_layout_cache.clone(),
-        )?;
+        let pipeline = self.compile_pipeline(program, config, None)?;
 
         if let Some(deadline) = config.timeout {
             let elapsed = started.elapsed();
@@ -383,17 +373,10 @@ struct PipelinePrefetch {
 
 impl PipelinePrefetch {
     fn run(self) {
-        if let Err(error) = crate::pipeline::WgpuPipeline::compile_with_device_queue(
-            &self.program,
-            &self.config,
-            self.backend.adapter_info.clone(),
-            self.backend.enabled_features,
-            self.backend.current_device_queue(),
-            self.backend.dispatch_arena_snapshot(),
-            self.backend.current_persistent_pool(),
-            self.backend.pipeline_cache.clone(),
-            self.backend.bind_group_layout_cache.clone(),
-        ) {
+        if let Err(error) = self
+            .backend
+            .compile_pipeline(&self.program, &self.config, None)
+        {
             tracing::debug!(
                 target: "vyre.wgpu.pipeline.prefetch",
                 error = %error,

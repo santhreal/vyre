@@ -32,7 +32,6 @@ use crate::pipeline::disk_cache::{
 pub use crate::pipeline::persistent::DispatchItem;
 use crate::runtime;
 use crate::staging_reserve::reserve_backend_vec;
-use crate::DispatchArena;
 use vyre_driver::allocation::reserve_hash_set_to_capacity;
 use vyre_emit_naga::program::TrapTag;
 use vyre_lower::{TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
@@ -48,6 +47,16 @@ pub(crate) type BindGroupLayoutCache = dashmap::DashMap<
     Arc<[Arc<wgpu::BindGroupLayout>]>,
     BuildHasherDefault<rustc_hash::FxHasher>,
 >;
+
+/// Target text that has already been emitted and authenticated for `program`.
+///
+/// Held as one value so a caller cannot supply text without the descriptor it
+/// was emitted from: the descriptor decides the workgroup override the text
+/// was built against.
+pub(crate) struct AuthenticatedTarget<'a> {
+    pub(crate) wgsl: &'a str,
+    pub(crate) descriptor: &'a vyre_lower::KernelDescriptor,
+}
 
 /// GPU pipeline + **all** per-program dispatch metadata co-located for
 /// cache hits. A hit on [`early_pipeline_cache_key`] or the WGSL hash
@@ -268,36 +277,12 @@ impl WgpuPipeline {
         }
     }
 
-    /// Materialize authenticated WGSL using backend-owned device resources.
-    pub(crate) fn compile_target_with_device_queue(
-        program: &Program,
-        wgsl: &str,
-        descriptor: &vyre_lower::KernelDescriptor,
-        config: &DispatchConfig,
-        adapter_info: wgpu::AdapterInfo,
-        enabled_features: crate::runtime::device::EnabledFeatures,
-        device_queue: Arc<(wgpu::Device, wgpu::Queue)>,
-        dispatch_arena: Arc<DispatchArena>,
-        persistent_pool: crate::buffer::BufferPool,
-        pipeline_cache: Arc<runtime::cache::pipeline::LruPipelineCache>,
-        bind_group_layout_cache: Arc<BindGroupLayoutCache>,
-    ) -> Result<Arc<Self>, BackendError> {
-        Self::compile_with_device_queue_source(
-            program,
-            config,
-            adapter_info,
-            enabled_features,
-            device_queue,
-            dispatch_arena,
-            persistent_pool,
-            pipeline_cache,
-            bind_group_layout_cache,
-            Some(wgsl),
-            Some(descriptor),
-        )
-    }
-
-    /// Pre-compile `program` using the supplied backend-owned device and arena.
+    /// Compile `program` using backend-owned device resources.
+    ///
+    /// `target` supplies already authenticated target text and its descriptor;
+    /// `None` lowers and emits from `program`. The two used to be independent
+    /// `Option` arguments reachable through two wrapper entry points, so a
+    /// half-set pair was representable and each wrapper re-listed the wiring.
     ///
     /// # Errors
     ///
@@ -310,40 +295,13 @@ impl WgpuPipeline {
         adapter_info: wgpu::AdapterInfo,
         enabled_features: crate::runtime::device::EnabledFeatures,
         device_queue: Arc<(wgpu::Device, wgpu::Queue)>,
-        _dispatch_arena: Arc<DispatchArena>,
         persistent_pool: crate::buffer::BufferPool,
         pipeline_cache: Arc<runtime::cache::pipeline::LruPipelineCache>,
         bind_group_layout_cache: Arc<BindGroupLayoutCache>,
+        target: Option<AuthenticatedTarget<'_>>,
     ) -> Result<Arc<Self>, BackendError> {
-        Self::compile_with_device_queue_source(
-            program,
-            config,
-            adapter_info,
-            enabled_features,
-            device_queue,
-            _dispatch_arena,
-            persistent_pool,
-            pipeline_cache,
-            bind_group_layout_cache,
-            None,
-            None,
-        )
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn compile_with_device_queue_source(
-        program: &Program,
-        config: &DispatchConfig,
-        adapter_info: wgpu::AdapterInfo,
-        enabled_features: crate::runtime::device::EnabledFeatures,
-        device_queue: Arc<(wgpu::Device, wgpu::Queue)>,
-        _dispatch_arena: Arc<DispatchArena>,
-        persistent_pool: crate::buffer::BufferPool,
-        pipeline_cache: Arc<runtime::cache::pipeline::LruPipelineCache>,
-        bind_group_layout_cache: Arc<BindGroupLayoutCache>,
-        authenticated_wgsl: Option<&str>,
-        authenticated_descriptor: Option<&vyre_lower::KernelDescriptor>,
-    ) -> Result<Arc<Self>, BackendError> {
+        let authenticated_wgsl = target.as_ref().map(|target| target.wgsl);
+        let authenticated_descriptor = target.as_ref().map(|target| target.descriptor);
         let compile_program = program;
         let mut target_config;
         let config = if let Some(descriptor) = authenticated_descriptor {

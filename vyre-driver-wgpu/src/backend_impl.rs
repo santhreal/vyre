@@ -209,6 +209,33 @@ impl WgpuBackend {
         Ok((program_hasher.finish(), config_hasher.finish(), wire.len()))
     }
 
+    /// Compile `program` against this backend's current device, buffer pool and
+    /// caches.
+    ///
+    /// The single place that decides what a compile is wired to. Five call
+    /// paths used to list the device, pool, pipeline cache and bind-group
+    /// layout cache themselves, so adding a cache meant threading it through
+    /// each of them by hand and a path that was missed compiled against
+    /// whatever the old wiring named.
+    pub(crate) fn compile_pipeline(
+        &self,
+        program: &Program,
+        config: &vyre_driver::DispatchConfig,
+        target: Option<crate::pipeline::AuthenticatedTarget<'_>>,
+    ) -> Result<Arc<crate::pipeline::WgpuPipeline>, vyre_driver::BackendError> {
+        crate::pipeline::WgpuPipeline::compile_with_device_queue(
+            program,
+            config,
+            self.adapter_info.clone(),
+            self.enabled_features,
+            self.current_device_queue(),
+            self.current_persistent_pool(),
+            self.pipeline_cache.clone(),
+            self.bind_group_layout_cache.clone(),
+            target,
+        )
+    }
+
     pub(crate) fn compile_resident_pipeline_cached(
         &self,
         program: &Program,
@@ -220,17 +247,7 @@ impl WgpuBackend {
         }
         self.enforce_config_caps(config)?;
         self.validate_with_cache(program)?;
-        let compiled = crate::pipeline::WgpuPipeline::compile_with_device_queue(
-            program,
-            config,
-            self.adapter_info.clone(),
-            self.enabled_features,
-            self.current_device_queue(),
-            self.dispatch_arena_snapshot(),
-            self.current_persistent_pool(),
-            self.pipeline_cache.clone(),
-            self.bind_group_layout_cache.clone(),
-        )?;
+        let compiled = self.compile_pipeline(program, config, None)?;
         match self.resident_pipeline_cache.entry(key) {
             dashmap::mapref::entry::Entry::Occupied(entry) => Ok(entry.get().clone()),
             dashmap::mapref::entry::Entry::Vacant(entry) => {
@@ -486,17 +503,7 @@ impl WgpuBackend {
     {
         self.enforce_config_caps(config)?;
         self.validate_with_cache(program)?;
-        let pipeline = crate::pipeline::WgpuPipeline::compile_with_device_queue(
-            program,
-            config,
-            self.adapter_info.clone(),
-            self.enabled_features,
-            self.current_device_queue(),
-            self.dispatch_arena_snapshot(),
-            self.current_persistent_pool(),
-            self.pipeline_cache.clone(),
-            self.bind_group_layout_cache.clone(),
-        )?;
+        let pipeline = self.compile_pipeline(program, config, None)?;
         if let Some(deadline) = config.timeout {
             let elapsed = started.elapsed();
             if elapsed > deadline {
@@ -684,17 +691,7 @@ impl WgpuBackend {
         config: &vyre_driver::DispatchConfig,
     ) -> Result<Arc<crate::pipeline::WgpuPipeline>, vyre_driver::BackendError> {
         self.enforce_config_caps(config)?;
-        crate::pipeline::WgpuPipeline::compile_with_device_queue(
-            program,
-            config,
-            self.adapter_info.clone(),
-            self.enabled_features,
-            self.current_device_queue(),
-            self.dispatch_arena_snapshot(),
-            self.current_persistent_pool(),
-            self.pipeline_cache.clone(),
-            self.bind_group_layout_cache.clone(),
-        )
+        self.compile_pipeline(program, config, None)
     }
 }
 
