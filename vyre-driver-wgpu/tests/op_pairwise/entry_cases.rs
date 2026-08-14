@@ -900,7 +900,7 @@ fn runtime_sized_input_witness_must_match_upstream_extent() {
 /// See BACKLOG.md R71.
 #[test]
 fn a_self_exclusive_parser_is_not_piped_into_itself() {
-    let entry = entry_named("vyre-libs::parsing::core_delimiter_match");
+    let entry = entry_named("vyre-primitives::parsing::core_delimiter_match");
     let reason = match try_compose(entry, entry) {
         Ok(_) => panic!(
             "Fix: two copies of a self-exclusive region were fused into one kernel; they share scratch storage."

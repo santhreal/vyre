@@ -78,7 +78,7 @@ fn oracle_not(input: &[u32; 4]) -> [u32; 4] {
 
 #[test]
 fn matrix_and_matches_bitwise_oracle() {
-    let program = vyre_libs::logical::and("a", "b", "out", 4);
+    let program = vyre_primitives::bitset::and::bitset_and("a", "b", "out", 4);
     let mut assertions = 0usize;
     for seed in 0..256_u32 {
         let a = hostile_u32x4(seed);
@@ -95,7 +95,7 @@ fn matrix_and_matches_bitwise_oracle() {
 
 #[test]
 fn matrix_or_matches_bitwise_oracle() {
-    let program = vyre_libs::logical::or("a", "b", "out", 4);
+    let program = vyre_primitives::bitset::or::bitset_or("a", "b", "out", 4);
     let mut assertions = 0usize;
     for seed in 0..256_u32 {
         let a = hostile_u32x4(seed ^ 0x0101_0101);
@@ -112,7 +112,7 @@ fn matrix_or_matches_bitwise_oracle() {
 
 #[test]
 fn matrix_xor_matches_bitwise_oracle() {
-    let program = vyre_libs::logical::xor("a", "b", "out", 4);
+    let program = vyre_primitives::bitset::xor::bitset_xor("a", "b", "out", 4);
     let mut assertions = 0usize;
     for seed in 0..256_u32 {
         let a = hostile_u32x4(seed ^ 0x1357_9BDF);

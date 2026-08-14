@@ -155,6 +155,14 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   semantic pass registration generators. Test-only operation registration,
   algebraic-law derive, no-op builder marker, and generated decoder stubs are
   gone.
+- Twelve `vyre-libs` operations that re-registered a `vyre-primitives` kernel
+  under a second identity are gone: `hash::{adler32, crc32, fnv1a32, fnv1a64,
+  multi_hash}`, `logical::{and, or, xor}`, `parsing::{bracket_match,
+  core_delimiter_match}`, `security::path_reconstruct` and
+  `math::succinct::select1_query`. Each wrapper only re-tagged the primitive
+  program, so the kernel keeps one id and callers use the `vyre-primitives`
+  builder directly. `vyre-libs::hash` now holds `blake3_compress` alone and
+  `vyre-libs::logical` holds the synthesized `nand` and `nor`.
 
 ### Fixed
 

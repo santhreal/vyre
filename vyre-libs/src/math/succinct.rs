@@ -7,13 +7,12 @@
 
 use core::fmt;
 
-use crate::region::{tag_program, wrap_anonymous, wrap_child};
+use crate::region::{wrap_anonymous, wrap_child};
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const RANK_SUPERBLOCKS_OP_ID: &str = "vyre-libs::math::succinct::rank1_superblocks";
 const RANK_QUERY_OP_ID: &str = "vyre-libs::math::succinct::rank1_query";
-const SELECT_QUERY_OP_ID: &str = "vyre-libs::math::succinct::select1_query";
 
 /// Build-time errors for succinct bitvector Programs.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -276,54 +275,6 @@ pub fn try_rank1_query(
     ))
 }
 
-/// Answer select1 queries over a packed u32 bitvector.
-///
-/// Each `k_indices[q]` is a one-based rank. The output is the zero-based bit
-/// position of the `k`-th set bit. `k == 0` and `k > total_popcount` trap
-/// loudly so callers cannot silently navigate to a bogus AST or graph node.
-#[must_use]
-pub fn select1_query(
-    bits: &str,
-    k_indices: &str,
-    out: &str,
-    word_count: u32,
-    query_count: u32,
-) -> Program {
-    try_select1_query(bits, k_indices, out, word_count, query_count).unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
-            SELECT_QUERY_OP_ID,
-            out,
-            DataType::U32,
-            format!("{err}"),
-        )
-    })
-}
-
-/// Checked builder for [`select1_query`].
-///
-/// # Errors
-///
-/// Currently this builder has no static failure modes. Runtime queries still
-/// trap when `k == 0` or when `k` exceeds the bitvector popcount.
-pub fn try_select1_query(
-    bits: &str,
-    k_indices: &str,
-    out: &str,
-    word_count: u32,
-    query_count: u32,
-) -> Result<Program, SuccinctBuildError> {
-    Ok(tag_program(
-        SELECT_QUERY_OP_ID,
-        vyre_primitives::bitset::select::select1_query(
-            bits,
-            k_indices,
-            out,
-            word_count,
-            query_count,
-        ),
-    ))
-}
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration {
         semantic_version: 1,
@@ -340,30 +291,6 @@ inventory::submit! {
         }),
         expected_output: Some(|| {
             let expected = [0u32, 4, 20];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
-        }),
-        category: Some("math"),
-    }
-}
-
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: SELECT_QUERY_OP_ID,
-        build: Some(|| select1_query("bits", "queries", "out", 4, 5)),
-        test_inputs: Some(|| {
-            let bits = [0b1011u32, 0x8000_0000, 0xFFFF_0000, 0u32];
-            let queries = [1u32, 2, 3, 4, 5];
-            let to_bytes = vyre_primitives::wire::pack_u32_slice;
-            vec![vec![to_bytes(&bits), to_bytes(&queries)]]
-        }),
-        expected_output: Some(|| {
-            let expected = [0u32, 1, 3, 63, 80];
             let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
             vec![vec![bytes]]
         }),

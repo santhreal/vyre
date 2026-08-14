@@ -53,7 +53,7 @@ pub(crate) fn randomize_buffer(op_id: &str, program: &Program, buffer_idx: usize
             buffer_idx == 4 || buffer_idx == 5
         }
         "vyre-primitives::reduce::segment_reduce_sum" => buffer_idx == 0,
-        "vyre-libs::parsing::bracket_match"
+        "vyre-primitives::matching::bracket_match"
         | "vyre-libs::parsing::ast_shunting_yard"
         | "vyre-libs::parsing::ast_shunting_yard::statement_pass" => false,
         "vyre-libs::nn::attention::quest_paging" => buffer.name() == "q",

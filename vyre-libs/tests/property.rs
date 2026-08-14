@@ -10,7 +10,6 @@
 
 use proptest::prelude::*;
 use vyre::ir::Program;
-use vyre_libs::hash::fnv1a32;
 use vyre_libs::math::broadcast::broadcast;
 use vyre_libs::math::linalg::{dot, matmul};
 use vyre_libs::math::scan::scan_prefix_sum;
@@ -64,17 +63,6 @@ proptest! {
         let p = broadcast(&s, &d, 8);
         prop_assert!(has_single_region(&p));
     }
-
-    #[test]
-    fn fnv1a32_single_workgroup(
-        i in "[a-z][a-z0-9_]*",
-        o in "[a-z][a-z0-9_]*",
-    ) {
-        prop_assume!(i != o);
-        let p = fnv1a32(&i, &o);
-        prop_assert!(has_single_region(&p));
-        prop_assert_eq!(p.workgroup_size(), [1, 1, 1]);
-    }
 }
 
 // Every vyre-libs Program contains one top-level Region; these tests
@@ -91,9 +79,9 @@ fn wire_round_trip_for_dot() {
 
 #[test]
 
-fn wire_round_trip_for_fnv1a32() {
-    let p = fnv1a32("input", "out");
-    let wire = p.to_wire().expect("fnv1a32 program must serialize");
-    let parsed = Program::from_wire(&wire).expect("fnv1a32 wire bytes must decode");
+fn wire_round_trip_for_broadcast() {
+    let p = broadcast("src", "dst", 8);
+    let wire = p.to_wire().expect("broadcast program must serialize");
+    let parsed = Program::from_wire(&wire).expect("broadcast wire bytes must decode");
     assert_eq!(parsed, p);
 }

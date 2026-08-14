@@ -91,8 +91,6 @@ pub const vyre_libs::parsing::core::ast::node::AST_PTR_DEREF: u32
 pub const vyre_libs::parsing::core::ast::node::AST_RET: u32
 pub const vyre_libs::parsing::core::ast::node::AST_SUB: u32
 pub const vyre_libs::parsing::core::ast::node::AST_VAR: u32
-pub const vyre_libs::parsing::core::delimiter::CORE_DELIMITER_OP_ID: &str
-pub const vyre_libs::parsing::core::delimiter::OP_ID: &str
 pub const vyre_libs::parsing::lr_tables::NT_E: u32
 pub const vyre_libs::parsing::lr_tables::NT_F: u32
 pub const vyre_libs::parsing::lr_tables::NT_T: u32
@@ -183,20 +181,8 @@ pub fn vyre_libs::graph::ast_walk_postorder_nodes(nodes: &str, out: &str, node_c
 pub fn vyre_libs::graph::ast_walk_preorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::graph::pack_branching_fixture() -> alloc::vec::Vec<u8>
 pub fn vyre_libs::graph::pack_spine_fixture(node_count: u32) -> (alloc::vec::Vec<u8>, alloc::vec::Vec<u8>)
-pub fn vyre_libs::hash::adler32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::hash::adler32::adler32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::hash::blake3_compress(chaining_in: &str, message: &str, params: &str, chaining_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::hash::blake3_compress::blake3_compress(chaining_in: &str, message: &str, params: &str, chaining_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::hash::crc32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::hash::crc32::crc32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::hash::fnv1a32(input: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::hash::fnv1a32::fnv1a32(input: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::hash::fnv1a32::fnv1a32_n(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::hash::fnv1a64(input: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::hash::fnv1a64::fnv1a64(input: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::hash::fnv1a64::fnv1a64_n(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::hash::multi_hash(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::hash::multi_hash::multi_hash(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::atomic::atomic_add::atomic_add_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::atomic::atomic_add_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::atomic::atomic_and::atomic_and_u32(values: &str, state: &str, trace: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -409,8 +395,6 @@ pub fn vyre_libs::nn::quant::q4_k_unpack(packed: &str, scales: &str, mins: &str,
 pub fn vyre_libs::operation_catalog::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
 pub fn vyre_libs::operation_catalog::convergence_contract(op_id: &str) -> core::option::Option<&'static vyre_libs::operation_catalog::ConvergenceContract>
 pub fn vyre_libs::operation_catalog::fixture_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
-pub fn vyre_libs::parsing::core::delimiter::bracket_match(kinds: &str, stack: &str, match_pairs: &str, n: u32, max_depth: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::parsing::core::delimiter::core_delimiter_match(tok_types: &str, tok_depths: &str, tok_count: u32, open_tok_id: u32, close_tok_id: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::lr_tables::LrTables::action_at(&self, state: u32, token: u32) -> vyre_libs::parsing::lr_tables::Action
 pub fn vyre_libs::parsing::lr_tables::LrTables::goto_at(&self, state: u32, nt: u32) -> u32
 pub fn vyre_libs::parsing::lr_tables::ParseError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -575,12 +559,7 @@ pub mod vyre_libs::descriptor
 pub mod vyre_libs::graph
 pub mod vyre_libs::graph::ast_walk
 pub mod vyre_libs::hash
-pub mod vyre_libs::hash::adler32
 pub mod vyre_libs::hash::blake3_compress
-pub mod vyre_libs::hash::crc32
-pub mod vyre_libs::hash::fnv1a32
-pub mod vyre_libs::hash::fnv1a64
-pub mod vyre_libs::hash::multi_hash
 pub mod vyre_libs::math
 pub mod vyre_libs::math::atomic
 pub mod vyre_libs::math::atomic::atomic_add
@@ -657,7 +636,6 @@ pub mod vyre_libs::parsing
 pub mod vyre_libs::parsing::core
 pub mod vyre_libs::parsing::core::ast
 pub mod vyre_libs::parsing::core::ast::node
-pub mod vyre_libs::parsing::core::delimiter
 pub mod vyre_libs::parsing::lr_tables
 pub mod vyre_libs::parsing::parallel_parse
 pub mod vyre_libs::parsing::source_cache
@@ -727,12 +705,6 @@ pub use vyre_libs::operation_catalog::tag_program
 pub use vyre_libs::operation_catalog::wrap
 pub use vyre_libs::operation_catalog::wrap_anonymous
 pub use vyre_libs::operation_catalog::wrap_child
-pub use vyre_libs::parsing::core::delimiter::CLOSE_BRACE
-pub use vyre_libs::parsing::core::delimiter::MATCH_NONE
-pub use vyre_libs::parsing::core::delimiter::OPEN_BRACE
-pub use vyre_libs::parsing::core::delimiter::OTHER
-pub use vyre_libs::parsing::core::delimiter::cpu_ref
-pub use vyre_libs::parsing::core::delimiter::pack_u32
 pub use vyre_libs::parsing::vast::HEADER_LEN
 pub use vyre_libs::parsing::vast::NODE_STRIDE_U32
 pub use vyre_libs::parsing::vast::SENTINEL

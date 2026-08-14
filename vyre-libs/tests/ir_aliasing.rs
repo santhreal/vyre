@@ -2,13 +2,11 @@
 
 #![cfg(feature = "c-parser")]
 use std::collections::HashSet;
-use std::sync::Arc;
 
-use vyre::ir::{validate, BufferAccess, Node, Program};
-use vyre_foundation::composition::mark_self_exclusive_region;
+use vyre::ir::{validate, BufferAccess, Program};
+use vyre_foundation::composition::tag_program;
 use vyre_libs::decode::{base64_decode, hex_decode, inflate_stored_block};
-use vyre_libs::hash::{adler32, crc32, fnv1a64};
-use vyre_libs::parsing::core::delimiter::core_delimiter_match;
+use vyre_primitives::parsing::core_delimiter_match::core_delimiter_match;
 
 fn rebind_program(program: &Program, binding_base: u32) -> Program {
     let mut next_binding = binding_base;
@@ -65,37 +63,26 @@ fn fused_decode_programs_keep_generic_buffers_disjoint() {
 }
 
 #[test]
-fn fused_hash_programs_keep_generic_buffers_disjoint() {
+fn duplicate_self_exclusive_parser_regions_fail_validation() {
+    let op_id = vyre_primitives::parsing::core_delimiter_match::OP_ID;
+    let scanner = core_delimiter_match("tok_types_a", "tok_depths_a", 8, 12, 13);
+    assert!(
+        scanner.is_non_composable_with_self(),
+        "the delimiter scanner shares scratch depth state; it must advertise self-exclusivity"
+    );
+
+    // A Tier-3 composition boundary carries that flag into the region name, which
+    // is what survives fusion into one program.
     let combined = combine_programs(&[
-        adler32("input", "out", 32),
-        crc32("input", "out", 32),
-        fnv1a64("input", "out"),
+        tag_program(op_id, scanner.clone()),
+        tag_program(op_id, scanner),
     ]);
 
-    assert_unique_buffer_names(&combined);
     let errors = validate(&combined);
-    assert!(errors.is_empty(), "{errors:#?}");
-}
-
-#[test]
-fn duplicate_self_exclusive_parser_regions_fail_validation() {
-    let parser_a = core_delimiter_match("tok_types_a", "tok_depths_a", 8, 12, 13);
-    let parser_b = Program::wrapped(
-        parser_a.buffers().to_vec(),
-        parser_a.workgroup_size(),
-        vec![Node::Region {
-            generator: mark_self_exclusive_region("vyre-libs::parsing::core_delimiter_match")
-                .into(),
-            source_region: None,
-            body: Arc::new(vec![Node::Return]),
-        }],
+    assert!(
+        errors
+            .iter()
+            .any(|error| error.message().contains("marked non-composable with itself")),
+        "{errors:#?}"
     );
-    let combined = combine_programs(&[parser_a, parser_b]);
-
-    let errors = validate(&combined);
-    assert!(errors.iter().any(|error| {
-        error
-            .message()
-            .contains("marked non-composable with itself")
-    }));
 }

@@ -16,7 +16,6 @@
 
 use vyre::ir::{BufferAccess, MemoryKind, Program};
 use vyre_libs::scan::substring_search;
-use vyre_libs::hash::fnv1a32;
 use vyre_libs::math::broadcast::broadcast;
 use vyre_libs::math::linalg::{dot, matmul};
 use vyre_libs::math::scan::scan_prefix_sum;
@@ -122,14 +121,6 @@ fn matching_substring_produces_valid_program() {
 }
 
 #[test]
-fn crypto_fnv1a32_produces_valid_program() {
-    let p = fnv1a32("data", "hash");
-    assert_valid(&p);
-    assert_wrapped_in_region(&p, "vyre-libs::hash::fnv1a32");
-    assert_eq!(p.workgroup_size(), [1, 1, 1]);
-}
-
-#[test]
 fn every_public_fn_returns_program_with_buffers() {
     // Guards against a future refactor that accidentally returns an
     // empty Program from any public function  -  structural smoke test
@@ -141,7 +132,6 @@ fn every_public_fn_returns_program_with_buffers() {
     assert!(linear("x", "w", "b", "o", 2, 2).unwrap().buffers().len() >= 4);
     assert!(relu("i", "o", 8).buffers().len() >= 2);
     assert!(substring_search("h", "n", "m", 8, 1).buffers().len() >= 3);
-    assert!(fnv1a32("d", "h").buffers().len() >= 2);
 }
 
 #[test]

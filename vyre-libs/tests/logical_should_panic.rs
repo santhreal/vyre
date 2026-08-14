@@ -23,17 +23,17 @@ fn assert_size_mismatch_is_result_error(program: vyre::Program) {
 
 #[test]
 fn and_errors_on_output_buffer_size_mismatch() {
-    assert_size_mismatch_is_result_error(vyre_libs::logical::and("a", "b", "out", 4));
+    assert_size_mismatch_is_result_error(vyre_primitives::bitset::and::bitset_and("a", "b", "out", 4));
 }
 
 #[test]
 fn or_errors_on_output_buffer_size_mismatch() {
-    assert_size_mismatch_is_result_error(vyre_libs::logical::or("a", "b", "out", 4));
+    assert_size_mismatch_is_result_error(vyre_primitives::bitset::or::bitset_or("a", "b", "out", 4));
 }
 
 #[test]
 fn xor_errors_on_output_buffer_size_mismatch() {
-    assert_size_mismatch_is_result_error(vyre_libs::logical::xor("a", "b", "out", 4));
+    assert_size_mismatch_is_result_error(vyre_primitives::bitset::xor::bitset_xor("a", "b", "out", 4));
 }
 
 #[test]

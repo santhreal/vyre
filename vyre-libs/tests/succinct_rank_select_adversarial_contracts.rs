@@ -397,7 +397,7 @@ fn select_query_specific_sparse_positions() {
     let bits = [0b1011u32, 0x8000_0000, 0xFFFF_0000, 0u32];
     let queries = [1u32, 2, 3, 4, 5, 20];
     let program =
-        vyre_libs::math::succinct::select1_query("bits", "q", "out", 4, queries.len() as u32);
+        vyre_primitives::bitset::select::select1_query("bits", "q", "out", 4, queries.len() as u32);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -420,7 +420,7 @@ fn select_query_all_ones_is_rank_minus_one() {
     let bits = [0xFFFF_FFFFu32; 2];
     let queries = [1u32, 2, 31, 32, 33, 64];
     let program =
-        vyre_libs::math::succinct::select1_query("bits", "q", "out", 2, queries.len() as u32);
+        vyre_primitives::bitset::select::select1_query("bits", "q", "out", 2, queries.len() as u32);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -439,7 +439,7 @@ fn select_query_all_ones_is_rank_minus_one() {
 
 #[test]
 fn select_query_traps_zero_rank() {
-    let program = vyre_libs::math::succinct::select1_query("bits", "q", "out", 1, 1);
+    let program = vyre_primitives::bitset::select::select1_query("bits", "q", "out", 1, 1);
     let result = vyre_reference::reference_eval(
         &program,
         &[
@@ -458,7 +458,7 @@ fn select_query_traps_zero_rank() {
 
 #[test]
 fn select_query_traps_rank_past_total_popcount() {
-    let program = vyre_libs::math::succinct::select1_query("bits", "q", "out", 1, 1);
+    let program = vyre_primitives::bitset::select::select1_query("bits", "q", "out", 1, 1);
     let result = vyre_reference::reference_eval(
         &program,
         &[

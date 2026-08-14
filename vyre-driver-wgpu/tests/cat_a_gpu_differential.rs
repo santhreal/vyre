@@ -268,12 +268,6 @@ fn diff_fnv1a64_primitive_regression() {
     run_primitive_entry_diff(&primitive_entry_by_id("vyre-primitives::hash::fnv1a64"));
 }
 
-#[test]
-fn diff_fnv1a64_then_primitive_fnv1a64_regression() {
-    run_entry_diff(&entry_by_id("vyre-libs::hash::fnv1a64"));
-    run_primitive_entry_diff(&primitive_entry_by_id("vyre-primitives::hash::fnv1a64"));
-}
-
 /// FINDING-GPU-7 regression. `substring_search` (binding 0 haystack, 1 needle,
 /// 2 matches; body = nested `If`(overflow-safe guard) -> `Loop`(per-needle-byte
 /// equality fold) -> `Store`) once tripped the wgpu validator at

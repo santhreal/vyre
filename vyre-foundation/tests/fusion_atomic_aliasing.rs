@@ -144,13 +144,13 @@ fn delimiter_parser_self_fusion_rejected() {
         [1, 1, 1],
         vec![Node::Return],
     )
-    .with_entry_op_id("vyre-libs::parsing::core_delimiter_match")
+    .with_entry_op_id("vyre-primitives::parsing::core_delimiter_match")
     .with_non_composable_with_self(true);
 
     let result = fuse_programs(&[parser.clone(), parser]);
     match result {
         Err(FusionError::SelfAliasing(FusionSelfAliasingError { op_id, fix })) => {
-            assert_eq!(op_id, "vyre-libs::parsing::core_delimiter_match");
+            assert_eq!(op_id, "vyre-primitives::parsing::core_delimiter_match");
             assert!(
                 fix.contains("rename") || fix.contains("split"),
                 "Fix hint must be actionable"

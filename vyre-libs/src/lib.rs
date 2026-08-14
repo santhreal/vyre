@@ -208,8 +208,9 @@ pub(crate) use math::linalg::{
 };
 
 // vyre-libs::hardware removed (audit 2026-04-21 BLOCKER-1/6).
-// Canonical Cat-C intrinsics live exclusively in the `vyre-intrinsics`
-// crate; library compositions of atomic / clamp / lzcnt / tzcnt ops
+// Canonical Cat-C intrinsics live exclusively in
+// `vyre-primitives::hardware`; library compositions of atomic / clamp /
+// lzcnt / tzcnt ops
 // live in `vyre-libs::math::*` (which uses `Expr::Atomic`, `Expr::min`,
 // `Expr::max`, `Expr::popcount` directly per docs/ARCHITECTURE.md).
 //
@@ -273,10 +274,8 @@ pub mod prelude {
     pub use crate::decode::{base64_decode, hex_decode, inflate, ziftsieve_gpu};
     #[cfg(feature = "crypto-blake3")]
     pub use crate::hash::blake3_compress;
-    #[cfg(feature = "crypto-fnv")]
-    pub use crate::hash::fnv1a32;
     #[cfg(feature = "logical")]
-    pub use crate::logical::{and, nand, nor, or, xor};
+    pub use crate::logical::{nand, nor};
     #[cfg(feature = "math-algebra")]
     pub use crate::math::algebra::{
         bool_semiring_matmul, lattice_join, lattice_meet, semiring_min_plus_mul, sketch_mix,

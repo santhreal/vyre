@@ -193,8 +193,7 @@ round-trip, optimization, conformance, and generated catalog checks.
 | NN attention | `src/nn/attention.rs`, `src/nn/softmax.rs` | `nn-attention` |
 | Substring search | `src/matching/substring.rs` | `matching-substring` |
 | DFA / Aho-Corasick | `src/matching/aho_corasick.rs`, `src/matching/dfa_compile.rs` | `matching-dfa` |
-| FNV hash | `src/crypto/fnv1a.rs` | `crypto-fnv` |
-| BLAKE3 | `src/crypto/blake3.rs` | `crypto-blake3` |
+| BLAKE3 compression | `src/hash/blake3_compress.rs` | `crypto-blake3` |
 
 Add a new dialect by creating `src/<dialect>/mod.rs` + registering a
 feature flag in `Cargo.toml`. Re-export the op from `src/lib.rs`'s

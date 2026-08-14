@@ -242,7 +242,6 @@ define_bitset_and_security_op!(
         distributes: (&[0xFF00, 0x00FF], &[0xFFFF, 0xFFFF]) => vec![0xFF00, 0x00FF];
     }
 );
-pub mod path_reconstruct;
 pub mod predicate_catalog;
 pub mod relation_analyzer;
 pub mod reporter;
@@ -339,7 +338,6 @@ pub use integer_overflow_arith::integer_overflow_arith;
 pub use label_by_family::label_by_family;
 pub use lock_dominates::lock_dominates;
 pub use path_canonical::path_canonical;
-pub use path_reconstruct::path_reconstruct;
 pub use predicate_catalog::{
     security_predicate_row_by_op_id, security_predicate_rows, try_security_predicate_rows,
     SecurityPredicateOperation, SecurityPredicateRow,

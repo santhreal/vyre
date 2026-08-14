@@ -39,7 +39,7 @@ proptest! {
     #[test]
     fn and_matches_bitwise_semantics(a in any::<[u32; 4]>(), b in any::<[u32; 4]>()) {
         prop_assert_eq!(
-            run(&vyre_libs::logical::and("a", "b", "out", 4), &a, &b),
+            run(&vyre_primitives::bitset::and::bitset_and("a", "b", "out", 4), &a, &b),
             op_expected(&a, &b, |lhs, rhs| lhs & rhs)
         );
     }
@@ -47,7 +47,7 @@ proptest! {
     #[test]
     fn or_matches_bitwise_semantics(a in any::<[u32; 4]>(), b in any::<[u32; 4]>()) {
         prop_assert_eq!(
-            run(&vyre_libs::logical::or("a", "b", "out", 4), &a, &b),
+            run(&vyre_primitives::bitset::or::bitset_or("a", "b", "out", 4), &a, &b),
             op_expected(&a, &b, |lhs, rhs| lhs | rhs)
         );
     }
@@ -55,7 +55,7 @@ proptest! {
     #[test]
     fn xor_matches_bitwise_semantics(a in any::<[u32; 4]>(), b in any::<[u32; 4]>()) {
         prop_assert_eq!(
-            run(&vyre_libs::logical::xor("a", "b", "out", 4), &a, &b),
+            run(&vyre_primitives::bitset::xor::bitset_xor("a", "b", "out", 4), &a, &b),
             op_expected(&a, &b, |lhs, rhs| lhs ^ rhs)
         );
     }

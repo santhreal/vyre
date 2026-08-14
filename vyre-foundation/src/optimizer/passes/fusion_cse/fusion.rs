@@ -78,7 +78,7 @@ mod analyze_tests {
     #[test]
     fn analyze_skips_self_exclusive_duplicate_regions() {
         let generator = crate::composition::mark_self_exclusive_region(
-            "vyre-libs::parsing::core_delimiter_match",
+            "vyre-primitives::parsing::core_delimiter_match",
         );
         let program = Program::wrapped(
             Vec::new(),

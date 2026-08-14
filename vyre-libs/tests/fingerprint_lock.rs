@@ -168,15 +168,6 @@ fn fp_aho_corasick() {
     assert_eq!(fingerprint(&p), fingerprint(&p2));
 }
 
-#[cfg(feature = "crypto-fnv")]
-#[test]
-fn fp_fnv1a32() {
-    use vyre_libs::hash::fnv1a32;
-    let p = fnv1a32("in", "out");
-    let p2 = fnv1a32("in", "out");
-    assert_eq!(fingerprint(&p), fingerprint(&p2));
-}
-
 #[cfg(feature = "crypto-blake3")]
 #[test]
 fn fp_blake3_compress() {
