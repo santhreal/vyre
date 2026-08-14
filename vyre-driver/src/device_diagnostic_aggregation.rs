@@ -12,7 +12,8 @@ use crate::accounting::{
 };
 use crate::numeric::BackendNumericPolicy;
 use crate::reservation_policy::{
-    reserved_typed_vec as reserved_vec, ReservationPolicy, ReusableIndexScratch,
+    reserved_typed_vec as reserved_vec, storage_reserve_failure_adapter, ReservationPolicy,
+    ReusableIndexScratch,
 };
 
 const DEVICE_DIAGNOSTIC_AGGREGATION_RESERVATION: ReservationPolicy = ReservationPolicy::new(
@@ -463,17 +464,7 @@ fn reserved_aggregation_vec<T>(
     )
 }
 
-fn storage_reserve_failed(
-    field: &'static str,
-    requested: usize,
-    message: String,
-) -> DiagnosticAggregationError {
-    DiagnosticAggregationError::StorageReserveFailed {
-        field,
-        requested,
-        message,
-    }
-}
+storage_reserve_failure_adapter!(DiagnosticAggregationError);
 
 #[cfg(test)]
 mod tests {

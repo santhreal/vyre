@@ -26,7 +26,8 @@ use crate::megakernel_execution::{
     MegakernelGraphShape, MegakernelMemoryError,
 };
 use crate::reservation_policy::{
-    reserve_typed_vec_to_capacity as reserve_vec_to_capacity, ReservationPolicy,
+    reserve_typed_vec_to_capacity as reserve_vec_to_capacity, storage_reserve_failure_adapter,
+    ReservationPolicy,
 };
 
 const MEGAKERNEL_FRONTIER_RESERVATION: ReservationPolicy = ReservationPolicy::new(
@@ -523,17 +524,7 @@ fn reserve_vec<T>(
     )
 }
 
-fn storage_reserve_failed(
-    field: &'static str,
-    requested: usize,
-    message: String,
-) -> MegakernelFrontierMemoryPlanError {
-    MegakernelFrontierMemoryPlanError::StorageReserveFailed {
-        field,
-        requested,
-        message,
-    }
-}
+storage_reserve_failure_adapter!(MegakernelFrontierMemoryPlanError);
 
 #[cfg(test)]
 mod tests {

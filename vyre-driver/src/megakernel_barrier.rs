@@ -7,7 +7,8 @@
 
 use crate::accounting::{checked_add_usize_count, ArithmeticOverflow};
 use crate::reservation_policy::{
-    reserve_typed_vec_to_capacity as reserve_vec_to_capacity, ReservationPolicy,
+    reserve_typed_vec_to_capacity as reserve_vec_to_capacity, storage_reserve_failure_adapter,
+    ReservationPolicy,
 };
 
 const MEGAKERNEL_BARRIER_RESERVATION: ReservationPolicy = ReservationPolicy::new(
@@ -424,17 +425,7 @@ fn reserve_vec<T>(
     )
 }
 
-fn storage_reserve_failed(
-    field: &'static str,
-    requested: usize,
-    message: String,
-) -> MegakernelBarrierPlanError {
-    MegakernelBarrierPlanError::StorageReserveFailed {
-        field,
-        requested,
-        message,
-    }
-}
+storage_reserve_failure_adapter!(MegakernelBarrierPlanError);
 
 #[cfg(test)]
 mod tests {
