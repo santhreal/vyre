@@ -424,4 +424,3 @@ fn canonical_f32_zero_negative_zero_normalises() {
     assert_eq!(canonical_f32_zero(-0.0).to_bits(), 0);
     assert_eq!(canonical_f32_zero(0.0).to_bits(), 0);
 }
-

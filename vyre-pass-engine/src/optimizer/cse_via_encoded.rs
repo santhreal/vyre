@@ -26,16 +26,16 @@
 //! arenas is ~0.3% per arena. Future versions can promote to 64-bit
 //! for stronger guarantees; the architecture here doesn't change.
 
-use std::sync::Arc;
-
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
+use vyre_foundation::transform::rewrite_walk::{self, NodeRewrite};
 use vyre_primitives::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_mix_word_expr};
 
 use vyre_libs::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 
+use super::arena_cursor::ArenaCursor;
 use super::encode::EncodeError;
 use super::expr_arena::{encode_expr_arena, expr_kind, ExprArenaEncoding};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
@@ -687,104 +687,76 @@ pub fn apply_cse_let_dedupe_with_lookup<C: CanonicalLookup + ?Sized>(
         return program.clone();
     }
     let mut walker = LetDedupeWalker {
+        cursor: ArenaCursor::at_first_real_node(&arena.node_top_level_exprs),
         canonical,
-        node_index: 1, // node_top_level_exprs[0] is the synthetic ROOT
-        node_top_level_exprs: &arena.node_top_level_exprs,
+        scope: FxHashMap::default(),
+        pending: None,
     };
     super::rewrite_program_entry(program, |body| walker.rewrite_scope(body))
 }
 
 struct LetDedupeWalker<'a, C: CanonicalLookup + ?Sized> {
+    cursor: ArenaCursor<'a>,
     canonical: &'a C,
-    /// Mirrors the encoder's `node_top_level_exprs` allocation order.
-    /// Increments by exactly one per `encode_node` call.
-    node_index: usize,
-    node_top_level_exprs: &'a [Vec<u32>],
+    /// Per-scope map: canonical id of a Let's value -> that Let's name. Two
+    /// Let nodes in the SAME scope whose values are CSE-equivalent share a
+    /// canonical id, and the later one is rewritten to read the earlier name.
+    scope: FxHashMap<u32, Ident>,
+    /// The substitution the current node's single operand is owed, decided in
+    /// [`NodeRewrite::enter`] where the Let's name is in hand.
+    pending: Option<Expr>,
 }
 
 impl<C: CanonicalLookup + ?Sized> LetDedupeWalker<'_, C> {
     fn rewrite_scope(&mut self, body: &[Node]) -> Vec<Node> {
         let prefix_len = super::encode::reachable_prefix_len(body);
+        // Entering a scope starts a fresh map, so a duplicate only dedupes
+        // against a sibling binding that is still live where it is read.
+        let enclosing = std::mem::take(&mut self.scope);
         let mut out = Vec::with_capacity(prefix_len);
-        // Per-scope map: expr_id of a Let's value → that Let's name.
-        // Two Let nodes in the SAME scope whose values are CSE-
-        // equivalent will both have canonical[their_value_id] equal
-        // to the earlier one's value id.
-        let mut expr_to_name: rustc_hash::FxHashMap<u32, Ident> = rustc_hash::FxHashMap::default();
         for node in &body[..prefix_len] {
-            out.push(self.rewrite_node(node, &mut expr_to_name));
+            out.push(rewrite_walk::rewrite_node(node, self).unwrap_or_else(|| node.clone()));
         }
+        self.scope = enclosing;
         out
     }
+}
 
-    fn rewrite_node(
-        &mut self,
-        node: &Node,
-        expr_to_name: &mut rustc_hash::FxHashMap<u32, Ident>,
-    ) -> Node {
-        // Allocate this node's slot in lockstep with the encoder.
-        let node_idx = self.node_index;
-        self.node_index += 1;
-
-        let rewritten = match node {
-            Node::Let { name, value: _ } => {
-                let top_id = self
-                    .node_top_level_exprs
-                    .get(node_idx)
-                    .and_then(|v| v.first())
-                    .copied();
-                if let Some(top_id) = top_id {
-                    let canon = self.canonical.canonical_of(top_id);
-                    if canon != top_id {
-                        if let Some(orig_name) = expr_to_name.get(&canon).cloned() {
-                            // Duplicate: replace value with `Var(orig)`.
-                            // Don't update the map  -  `name` is bound to
-                            // the same value, but we keep the original
-                            // canonical mapping for further duplicates.
-                            return Node::let_bind(name.clone(), Expr::var(orig_name));
-                        }
-                    }
-                    // First occurrence of this canonical value at this
-                    // scope. Record the binding so siblings can dedupe.
-                    expr_to_name.insert(canon, name.clone());
-                }
-                node.clone()
-            }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                let new_then = self.rewrite_scope(then);
-                let new_otherwise = self.rewrite_scope(otherwise);
-                Node::if_then_else(cond.clone(), new_then, new_otherwise)
-            }
-            Node::Loop {
-                var,
-                from,
-                to,
-                body,
-            } => {
-                let new_body = self.rewrite_scope(body);
-                Node::loop_for(var.clone(), from.clone(), to.clone(), new_body)
-            }
-            Node::Block(body) => Node::Block(self.rewrite_scope(body)),
-            Node::Region {
-                generator,
-                source_region,
-                body,
-            } => Node::Region {
-                generator: generator.clone(),
-                source_region: source_region.clone(),
-                body: Arc::new(self.rewrite_scope(body.as_slice())),
-            },
-            // No-Expr-payload Nodes pass through. Assign-style Nodes
-            // are intentionally not deduplicated  -  they reassign an
-            // existing binding, so the value substitution would change
-            // observable behaviour at runtime.
-            other => other.clone(),
+impl<C: CanonicalLookup + ?Sized> NodeRewrite for LetDedupeWalker<'_, C> {
+    /// The dedupe decision needs the Let's name, which no single position
+    /// carries, so it is taken here and applied when the value is offered.
+    ///
+    /// `Assign` is deliberately not deduplicated: it reassigns an existing
+    /// binding, so substituting the earlier name would change what the program
+    /// observes at run time.
+    fn enter(&mut self, node: &Node) {
+        let top_ids = self.cursor.take_node();
+        self.pending = None;
+        let Node::Let { name, .. } = node else {
+            return;
         };
-        rewritten
+        let Some(top_id) = top_ids.first().copied() else {
+            return;
+        };
+        let canon = self.canonical.canonical_of(top_id);
+        if canon != top_id {
+            if let Some(original) = self.scope.get(&canon) {
+                // Duplicate. Keep the original canonical mapping so a third
+                // occurrence reads the same binding.
+                self.pending = Some(Expr::var(original.clone()));
+                return;
+            }
+        }
+        // First occurrence of this canonical value in this scope.
+        self.scope.insert(canon, name.clone());
+    }
+
+    fn operand(&mut self, _expr: &Expr) -> Option<Expr> {
+        self.pending.take()
+    }
+
+    fn body(&mut self, _parent: &Node, body: &[Node]) -> Option<Vec<Node>> {
+        Some(self.rewrite_scope(body))
     }
 }
 

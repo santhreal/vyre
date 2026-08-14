@@ -1374,35 +1374,22 @@ mod tests {
     use super::*;
     use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
 
-    struct PatternDispatcher {
-        outputs: Vec<Vec<u8>>,
-    }
+    use super::super::arena_kernel::{
+        single_lit_u32_arena as one_expr_arena, FixedOutputDispatcher, GridExpectation,
+    };
 
-    impl ProgramDispatcher for PatternDispatcher {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            if inputs.len() != 5 {
-                return Err(DispatchError::BadInputs(format!(
-                    "Fix: pattern test dispatcher expected 5 inputs, got {}.",
-                    inputs.len()
-                )));
-            }
-            Ok(self.outputs.clone())
+    fn dispatcher(outputs: Vec<Vec<u8>>) -> FixedOutputDispatcher {
+        FixedOutputDispatcher {
+            pass: "pattern",
+            expected_inputs: 5,
+            grid: GridExpectation::SingleWorkgroup,
+            outputs,
         }
     }
 
-    use super::super::arena_kernel::single_lit_u32_arena as one_expr_arena;
-
     #[test]
     fn kernel_into_decodes_exact_actions_into_reused_buffer() {
-        let dispatcher = PatternDispatcher {
-            outputs: vec![u32_slice_to_le_bytes(&[rewrite_action::NONE])],
-        };
+        let dispatcher = dispatcher(vec![u32_slice_to_le_bytes(&[rewrite_action::NONE])]);
         let mut actions = Vec::with_capacity(4);
         let ptr = actions.as_ptr();
         run_pattern_kernel_into(&one_expr_arena(), &dispatcher, &mut actions)
@@ -1413,9 +1400,7 @@ mod tests {
 
     #[test]
     fn kernel_with_scratch_reuses_dispatch_and_output_storage() {
-        let dispatcher = PatternDispatcher {
-            outputs: vec![u32_slice_to_le_bytes(&[rewrite_action::NONE])],
-        };
+        let dispatcher = dispatcher(vec![u32_slice_to_le_bytes(&[rewrite_action::NONE])]);
         let arena = one_expr_arena();
         let mut scratch = PatternKernelScratch::default();
         let mut actions = Vec::with_capacity(1);
@@ -1439,9 +1424,10 @@ mod tests {
 
     #[test]
     fn kernel_rejects_extra_outputs() {
-        let dispatcher = PatternDispatcher {
-            outputs: vec![u32_slice_to_le_bytes(&[0]), u32_slice_to_le_bytes(&[0])],
-        };
+        let dispatcher = dispatcher(vec![
+            u32_slice_to_le_bytes(&[0]),
+            u32_slice_to_le_bytes(&[0]),
+        ]);
         let mut actions = Vec::new();
         let err = run_pattern_kernel_into(&one_expr_arena(), &dispatcher, &mut actions)
             .expect_err("extra outputs must be rejected");
@@ -1453,9 +1439,7 @@ mod tests {
 
     #[test]
     fn kernel_rejects_trailing_action_bytes() {
-        let dispatcher = PatternDispatcher {
-            outputs: vec![vec![0, 0, 0, 0, 1]],
-        };
+        let dispatcher = dispatcher(vec![vec![0, 0, 0, 0, 1]]);
         let mut actions = Vec::new();
         let err = run_pattern_kernel_into(&one_expr_arena(), &dispatcher, &mut actions)
             .expect_err("trailing bytes must be rejected");

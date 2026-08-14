@@ -24,6 +24,13 @@ pub mod parallelism;
 /// without recursion, preventing stack overflow on deeply nested programs.
 pub mod visit;
 
+/// The one structural `Node` rewrite.
+///
+/// Substitution, fusion alpha-renaming, cache-key canonicalization, and the
+/// pass engine's encoded-order rewrite all drive this walk instead of carrying
+/// their own per-variant match.
+pub mod rewrite_walk;
+
 /// Induction-variable substitution shared by the optimizer loop passes and the
 /// autodiff loop arm. One complete `var -> expr` rewrite over the whole IR.
 pub(crate) mod subst;

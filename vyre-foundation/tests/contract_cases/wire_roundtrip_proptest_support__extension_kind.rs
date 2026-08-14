@@ -12,10 +12,10 @@ use proptest::prelude::*;
 use smallvec::smallvec;
 use std::sync::Arc;
 use vyre_foundation::extension::{OpaqueExprResolver, OpaqueNodeResolver};
-use vyre_foundation::MemoryOrdering;
 use vyre_foundation::ir::{
     AtomicOp, BinOp, BufferDecl, DataType, Expr, ExprNode, Node, NodeExtension, Program, UnOp,
 };
+use vyre_foundation::MemoryOrdering;
 use vyre_spec::data_type::TypeId;
 use vyre_spec::extension::ExtensionDataTypeId;
 

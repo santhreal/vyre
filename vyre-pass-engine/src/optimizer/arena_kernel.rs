@@ -140,3 +140,74 @@ pub(super) fn single_lit_u32_arena() -> super::expr_arena::ExprArenaEncoding {
         ..super::expr_arena::ExprArenaEncoding::default()
     }
 }
+
+/// What grid the orchestrator under test is expected to ask for.
+#[cfg(test)]
+pub(super) enum GridExpectation {
+    /// Exactly one workgroup, the shape every single-dispatch arena pass uses.
+    SingleWorkgroup,
+    /// `[ceil(expr_count / WORKGROUP_X), 1, 1]`, with `expr_count` derived from
+    /// the `arena_kinds` buffer at input slot 0 (one u32 per expr). Asserting a
+    /// literal `[1, 1, 1]` here would only be correct for a one-expr arena.
+    StridedOverArena,
+}
+
+/// A dispatcher that checks the request and hands back canned output bytes.
+///
+/// Every `*_via_encoded` pass proves its decode against the same fake: assert
+/// the grid, reject a wrong input count with a message naming the pass, return
+/// fixed bytes. Four near-copies of it drifted on the grid assertion alone, so
+/// the shape lives here and each pass supplies the facts that differ.
+#[cfg(test)]
+pub(super) struct FixedOutputDispatcher {
+    /// Pass name for the bad-input message.
+    pub(super) pass: &'static str,
+    /// Input buffer count the orchestrator must bind.
+    pub(super) expected_inputs: usize,
+    /// Grid the orchestrator must request.
+    pub(super) grid: GridExpectation,
+    /// Bytes handed back, one entry per output buffer.
+    pub(super) outputs: Vec<Vec<u8>>,
+}
+
+#[cfg(test)]
+impl vyre_foundation::program_dispatch::ProgramDispatcher for FixedOutputDispatcher {
+    fn dispatch(
+        &self,
+        _program: &Program,
+        inputs: &[Vec<u8>],
+        grid_override: Option<[u32; 3]>,
+    ) -> Result<Vec<Vec<u8>>, vyre_foundation::program_dispatch::DispatchError> {
+        match self.grid {
+            GridExpectation::SingleWorkgroup => assert_eq!(
+                grid_override,
+                Some([1, 1, 1]),
+                "{} must dispatch exactly one workgroup",
+                self.pass
+            ),
+            GridExpectation::StridedOverArena => {
+                if let Some(grid) = grid_override {
+                    let expr_count = (inputs[0].len() / 4) as u32;
+                    let expected_x = expr_count.div_ceil(WORKGROUP_X);
+                    assert_eq!(
+                        grid,
+                        [expected_x, 1, 1],
+                        "{} grid must be [ceil(expr_count / WORKGROUP_X), 1, 1]",
+                        self.pass
+                    );
+                }
+            }
+        }
+        if inputs.len() != self.expected_inputs {
+            return Err(vyre_foundation::program_dispatch::DispatchError::BadInputs(
+                format!(
+                    "Fix: {} test dispatcher expected {} inputs, got {}.",
+                    self.pass,
+                    self.expected_inputs,
+                    inputs.len()
+                ),
+            ));
+        }
+        Ok(self.outputs.clone())
+    }
+}

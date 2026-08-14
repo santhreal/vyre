@@ -256,8 +256,7 @@ fn barrier_in_divergent_if_is_rejected() {
     let errors = validate(&program);
     assert!(
         errors.iter().any(|e| e.code().as_str() == "V010"
-            && e
-                .message()
+            && e.message()
                 .contains("barrier may be reached by only part of a workgroup")),
         "barrier inside divergent If must be rejected, got {:?}",
         errors
@@ -417,4 +416,3 @@ fn binop_mixed_numeric_types_is_rejected() {
         errors
     );
 }
-

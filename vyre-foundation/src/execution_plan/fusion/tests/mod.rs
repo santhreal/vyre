@@ -1,7 +1,5 @@
 use super::collectors::collect_buffer_targets;
-use super::fuse::{
-    fuse_programs, fuse_programs_vec, merge_programs_shared, upgrade_buffer_access,
-};
+use super::fuse::{fuse_programs, fuse_programs_vec, merge_programs_shared, upgrade_buffer_access};
 use super::FusionError;
 use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 use rustc_hash::FxHashSet;

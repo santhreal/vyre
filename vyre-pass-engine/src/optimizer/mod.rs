@@ -16,6 +16,7 @@
 //! against `vyre_libs::graph::dispatch::cpu_oracle` under `cpu-parity` and
 //! against a backend dispatcher in production, from the same Program.
 
+mod arena_cursor;
 mod arena_kernel;
 pub mod canonicalize_via_encoded;
 pub mod const_fold_via_encoded;

@@ -1,13 +1,13 @@
 // Tests for `validate.rs`. Split out per audit item #85 to keep the
 // parent file focused on production code.
 
-use std::borrow::Cow;
-use std::collections::BTreeSet;
 use super::*;
 use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use crate::validate::fusion_safety::validate_fusion_alias_hazards;
 use crate::validate::self_composition::validate_self_composition;
 use proptest::prelude::*;
+use std::borrow::Cow;
+use std::collections::BTreeSet;
 
 // ------------------------------------------------------------------
 // Legacy multi-walk validator (copied from pre-refactor code) for
@@ -35,7 +35,13 @@ fn validate_with_options_legacy(
 
     for (axis, &size) in program.workgroup_size.iter().enumerate() {
         if size == 0 {
-            report.errors.push(err("V106", ValidationPhase::Program, ValidationLocation::WorkgroupAxis(axis as u8), format!("workgroup_size[{axis}] is 0"), format!("all workgroup dimensions must be >= 1.")));
+            report.errors.push(err(
+                "V106",
+                ValidationPhase::Program,
+                ValidationLocation::WorkgroupAxis(axis as u8),
+                format!("workgroup_size[{axis}] is 0"),
+                format!("all workgroup dimensions must be >= 1."),
+            ));
         }
     }
 
@@ -43,22 +49,34 @@ fn validate_with_options_legacy(
     let mut seen_bindings = FxHashSet::default();
     for buf in program.buffers() {
         if !seen_names.insert(&buf.name) {
-            report.errors.push(err("V107", ValidationPhase::Program, ValidationLocation::Buffer(Cow::Owned(buf.name.to_string())), format!(
-                    "duplicate buffer name `{}`",
-                    buf.name
-                ), "each buffer must have a unique name"));
+            report.errors.push(err(
+                "V107",
+                ValidationPhase::Program,
+                ValidationLocation::Buffer(Cow::Owned(buf.name.to_string())),
+                format!("duplicate buffer name `{}`", buf.name),
+                "each buffer must have a unique name",
+            ));
         }
         if buf.access != BufferAccess::Workgroup && !seen_bindings.insert(buf.binding) {
-            report.errors.push(err("V108", ValidationPhase::Program, ValidationLocation::Buffer(Cow::Owned(buf.name.to_string())), format!(
+            report.errors.push(err(
+                "V108",
+                ValidationPhase::Program,
+                ValidationLocation::Buffer(Cow::Owned(buf.name.to_string())),
+                format!(
                     "duplicate binding slot {} (buffer `{}`)",
                     buf.binding, buf.name
-                ), "each buffer must have a unique binding"));
+                ),
+                "each buffer must have a unique binding",
+            ));
         }
         if buf.access == BufferAccess::Workgroup && buf.count == 0 {
-            report.errors.push(err("V109", ValidationPhase::Program, ValidationLocation::Buffer(Cow::Owned(buf.name.to_string())), format!(
-                    "workgroup buffer `{}` has count 0",
-                    buf.name
-                ), "declare a positive element count"));
+            report.errors.push(err(
+                "V109",
+                ValidationPhase::Program,
+                ValidationLocation::Buffer(Cow::Owned(buf.name.to_string())),
+                format!("workgroup buffer `{}` has count 0", buf.name),
+                "declare a positive element count",
+            ));
         }
         validate_output_buffer_contract(buf, &mut report.errors);
     }
@@ -331,7 +349,9 @@ fn fma_f32_violations_flags_integer_fma_with_actionable_message() {
             violation.message()
         );
         assert!(
-            violation.message().contains("Fma requires three f32 operands")
+            violation
+                .message()
+                .contains("Fma requires three f32 operands")
                 && violation.message().contains("must be `f32`")
                 && violation.message().contains("Fix:"),
             "V028 message must name the f32 contract and a fix, got: {}",
@@ -404,11 +424,15 @@ fn validate_recognizes_integer_unpack_ops() {
     );
     let errors = validate(&program);
     assert!(
-        !errors.iter().any(|e| e.message().contains("is not recognized")),
+        !errors
+            .iter()
+            .any(|e| e.message().contains("is not recognized")),
         "integer unpack op must be recognized, got: {errors:?}"
     );
     assert!(
-        !errors.iter().any(|e| e.message().contains("unpack ops require")),
+        !errors
+            .iter()
+            .any(|e| e.message().contains("unpack ops require")),
         "a u32 operand is valid for unpack ops, got: {errors:?}"
     );
 }
@@ -429,14 +453,16 @@ fn validate_rejects_non_integer_unpack_operand_on_type_not_existence() {
     );
     let errors = validate(&program);
     assert!(
-        errors.iter().any(|e| e
-            .message()
-            .contains("unpack ops require a 32-bit integer")
-            && e.message().contains("Fix:")),
+        errors.iter().any(
+            |e| e.message().contains("unpack ops require a 32-bit integer")
+                && e.message().contains("Fix:")
+        ),
         "f32 unpack operand must be rejected with the integer-word contract, got: {errors:?}"
     );
     assert!(
-        !errors.iter().any(|e| e.message().contains("is not recognized")),
+        !errors
+            .iter()
+            .any(|e| e.message().contains("is not recognized")),
         "unpack op must be rejected on operand type, not treated as unrecognized, got: {errors:?}"
     );
 }
@@ -476,8 +502,9 @@ fn store_signed_remainder_into_i32_buffer_validates() {
     );
     let errors = validate(&program);
     assert!(
-        !errors.iter().any(|e| e.code().as_str() == "V045"
-            || e.message().contains("value has type")),
+        !errors
+            .iter()
+            .any(|e| e.code().as_str() == "V045" || e.message().contains("value has type")),
         "store of a same-width int (rem result, u32-typed) into an i32 buffer must \
          validate (bit-exact reinterpret), got: {errors:?}"
     );
@@ -503,8 +530,9 @@ fn store_signed_div_into_u32_buffer_validates() {
     );
     let errors = validate(&program);
     assert!(
-        !errors.iter().any(|e| e.code().as_str() == "V045"
-            || e.message().contains("value has type")),
+        !errors
+            .iter()
+            .any(|e| e.code().as_str() == "V045" || e.message().contains("value has type")),
         "store of an i32-typed value into a u32 buffer must validate, got: {errors:?}"
     );
 }
@@ -528,8 +556,9 @@ fn store_float_into_int_buffer_still_rejected() {
     );
     let errors = validate(&program);
     assert!(
-        errors.iter().any(|e| e.message().contains("Node::Store")
-            && e.message().contains("element type")),
+        errors
+            .iter()
+            .any(|e| e.message().contains("Node::Store") && e.message().contains("element type")),
         "storing an f32 value into an i32 buffer must still be rejected (no int/float \
          coercion), got: {errors:?}"
     );
@@ -581,8 +610,9 @@ fn store_bool_comparison_result_into_u32_buffer_validates() {
     );
     let errors = validate(&program);
     assert!(
-        !errors.iter().any(|e| e.code().as_str() == "V045"
-            || e.message().contains("value has type")),
+        !errors
+            .iter()
+            .any(|e| e.code().as_str() == "V045" || e.message().contains("value has type")),
         "storing a bool comparison result into a u32 buffer must validate, got: {errors:?}"
     );
 }

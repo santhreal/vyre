@@ -132,8 +132,8 @@ total_lines = 1146
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 5570
-total_lines = 95212
+duplicate_lines = 5443
+total_lines = 95298
 
 [[crate]]
 name = "vyre-frontend-rust"
@@ -187,8 +187,8 @@ total_lines = 29187
 
 [[crate]]
 name = "vyre-pass-engine"
-duplicate_lines = 395
-total_lines = 58675
+duplicate_lines = 299
+total_lines = 9189
 
 [[crate]]
 name = "vyre-test-support"

@@ -5,8 +5,11 @@
 //! storage-buffer reads, which lets a backend monomorphize shaders for static
 //! LUTs without carrying a runtime binding.
 
-use crate::ir::{Expr, Ident, Node, Program};
+use std::borrow::Cow;
+
+use crate::ir::{Expr, Ident, Program};
 use crate::optimizer::{fingerprint_program, PassResult};
+use crate::transform::rewrite_walk::{self, NodeRewrite};
 
 /// Compile-time-known u32 buffer contents.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -21,12 +24,11 @@ pub struct ConstBuffer {
 #[must_use]
 pub fn fold_const_buffer(program: &Program, constant: &ConstBuffer) -> PassResult {
     let before_fp = fingerprint_program(program);
-    let entry = program
-        .entry()
-        .iter()
-        .map(|node| fold_node(node, constant))
-        .collect();
-    let optimized = program.with_rewritten_entry(entry);
+    let mut fold = ConstBufferFold { constant };
+    let optimized = match rewrite_walk::rewrite_body(program.entry(), &mut fold) {
+        Some(entry) => program.with_rewritten_entry(entry),
+        None => program.clone(),
+    };
     let changed = fingerprint_program(&optimized) != before_fp;
     PassResult {
         program: optimized,
@@ -34,191 +36,47 @@ pub fn fold_const_buffer(program: &Program, constant: &ConstBuffer) -> PassResul
     }
 }
 
-fn fold_node(node: &Node, constant: &ConstBuffer) -> Node {
-    match node {
-        Node::Let { name, value } => Node::let_bind(name.clone(), fold_expr(value, constant)),
-        Node::Assign { name, value } => Node::Assign {
-            name: name.clone(),
-            value: fold_expr(value, constant),
-        },
-        Node::Store {
-            buffer,
-            index,
-            value,
-        } => Node::store(
-            buffer,
-            fold_expr(index, constant),
-            fold_expr(value, constant),
-        ),
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => Node::if_then_else(
-            fold_expr(cond, constant),
-            then.iter().map(|node| fold_node(node, constant)).collect(),
-            otherwise
-                .iter()
-                .map(|node| fold_node(node, constant))
-                .collect(),
-        ),
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => Node::loop_for(
-            var,
-            fold_expr(from, constant),
-            fold_expr(to, constant),
-            body.iter().map(|node| fold_node(node, constant)).collect(),
-        ),
-        Node::Block(nodes) => {
-            Node::block(nodes.iter().map(|node| fold_node(node, constant)).collect())
-        }
-        Node::Return => Node::Return,
-        Node::Barrier { ordering } => Node::barrier_with_ordering(*ordering),
-        Node::IndirectDispatch {
-            count_buffer,
-            count_offset,
-        } => Node::indirect_dispatch(count_buffer.clone(), *count_offset),
-        Node::AsyncLoad {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } => Node::async_load_gpu_driven(
-            source.clone(),
-            destination.clone(),
-            (**offset).clone(),
-            (**size).clone(),
-            tag.clone(),
-        ),
-        Node::AsyncStore {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } => Node::async_store(
-            source.clone(),
-            destination.clone(),
-            (**offset).clone(),
-            (**size).clone(),
-            tag.clone(),
-        ),
-        Node::AsyncWait { tag } => Node::async_wait(tag.clone()),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => Node::Region {
-            generator: generator.clone(),
-            source_region: source_region.clone(),
-            body: std::sync::Arc::clone(body),
-        },
-        Node::Trap { .. }
-        | Node::Resume { .. }
-        | Node::AllReduce { .. }
-        | Node::AllGather { .. }
-        | Node::ReduceScatter { .. }
-        | Node::Broadcast { .. } => node.clone(),
-        Node::Opaque(ext) => Node::Opaque(ext.clone()),
-    }
+struct ConstBufferFold<'a> {
+    constant: &'a ConstBuffer,
 }
 
-fn fold_expr(expr: &Expr, constant: &ConstBuffer) -> Expr {
-    match expr {
-        Expr::Load { buffer, index } if buffer == &constant.name => {
-            let index = fold_expr(index, constant);
-            if let Expr::LitU32(i) = index {
-                if let Some(value) = constant.values.get(i as usize) {
-                    return Expr::u32(*value);
-                }
+impl NodeRewrite for ConstBufferFold<'_> {
+    /// Replace a load from the constant buffer at a literal index with that
+    /// element.
+    ///
+    /// The expression rewrite is bottom-up, so the index is already folded when
+    /// the load is offered, and it descends into every operand position of
+    /// every expression variant. A load nested in a subgroup operand, an atomic
+    /// compare value, or a call argument therefore folds without this pass
+    /// listing those variants: leaving one out left a residual load behind, and
+    /// a caller that then drops the now-immutable binding dangled it.
+    fn operand(&mut self, expr: &Expr) -> Option<Expr> {
+        match crate::optimizer::rewrite::rewrite_expr(expr, &mut |candidate| {
+            let Expr::Load { buffer, index } = candidate else {
+                return None;
+            };
+            if buffer != &self.constant.name {
+                return None;
             }
-            Expr::Load {
-                buffer: buffer.clone(),
-                index: Box::new(index),
-            }
+            let Expr::LitU32(element) = **index else {
+                return None;
+            };
+            self.constant
+                .values
+                .get(element as usize)
+                .copied()
+                .map(Expr::u32)
+        }) {
+            Cow::Borrowed(_) => None,
+            Cow::Owned(folded) => Some(folded),
         }
-        Expr::Load { buffer, index } => Expr::Load {
-            buffer: buffer.clone(),
-            index: Box::new(fold_expr(index, constant)),
-        },
-        Expr::BinOp { op, left, right } => Expr::BinOp {
-            op: *op,
-            left: Box::new(fold_expr(left, constant)),
-            right: Box::new(fold_expr(right, constant)),
-        },
-        Expr::UnOp { op, operand } => Expr::UnOp {
-            op: op.clone(),
-            operand: Box::new(fold_expr(operand, constant)),
-        },
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => Expr::Select {
-            cond: Box::new(fold_expr(cond, constant)),
-            true_val: Box::new(fold_expr(true_val, constant)),
-            false_val: Box::new(fold_expr(false_val, constant)),
-        },
-        Expr::Cast { target, value } => Expr::Cast {
-            target: target.clone(),
-            value: Box::new(fold_expr(value, constant)),
-        },
-        Expr::Fma { a, b, c } => Expr::Fma {
-            a: Box::new(fold_expr(a, constant)),
-            b: Box::new(fold_expr(b, constant)),
-            c: Box::new(fold_expr(c, constant)),
-        },
-        Expr::Atomic {
-            op,
-            buffer,
-            index,
-            expected,
-            value,
-            ordering,
-        } => Expr::Atomic {
-            op: *op,
-            buffer: buffer.clone(),
-            index: Box::new(fold_expr(index, constant)),
-            expected: expected
-                .as_ref()
-                .map(|expected| Box::new(fold_expr(expected, constant))),
-            value: Box::new(fold_expr(value, constant)),
-            ordering: *ordering,
-        },
-        Expr::Call { op_id, args } => Expr::call(
-            op_id,
-            args.iter().map(|arg| fold_expr(arg, constant)).collect(),
-        ),
-        // Subgroup operands are ordinary sub-expressions: a `Load` from the
-        // const buffer nested inside `subgroup_add(load(lut, i))` must fold too.
-        // Leaving it to the `_` catch-all (clone, no descent) would silently
-        // skip the fold, so a caller that drops the now-immutable binding would
-        // dangle the residual load. Reconstruct each variant field-preservingly
-        // (SubgroupReduce keeps `op`).
-        Expr::SubgroupBallot { cond } => Expr::SubgroupBallot {
-            cond: Box::new(fold_expr(cond, constant)),
-        },
-        Expr::SubgroupShuffle { value, lane } => Expr::SubgroupShuffle {
-            value: Box::new(fold_expr(value, constant)),
-            lane: Box::new(fold_expr(lane, constant)),
-        },
-        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
-            op: *op,
-            value: Box::new(fold_expr(value, constant)),
-        },
-        _ => expr.clone(),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::{BufferDecl, DataType};
+    use crate::ir::{BufferDecl, DataType, Node};
 
     #[test]
     fn const_buffer_inlined_when_compile_time_known() {

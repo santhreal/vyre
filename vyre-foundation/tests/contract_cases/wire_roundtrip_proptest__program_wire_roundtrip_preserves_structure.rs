@@ -351,4 +351,3 @@ fn datatype_strategy_enumerates_every_wire_supported_terminal_variant() {
         assert_eq!(decoded, program);
     }
 }
-

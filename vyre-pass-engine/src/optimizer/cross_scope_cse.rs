@@ -17,7 +17,9 @@ use std::sync::Arc;
 
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
+use vyre_foundation::transform::rewrite_walk::{self, NodeRewrite};
 
+use super::arena_cursor::ArenaCursor;
 use super::cse_via_encoded::{has_repeated_top_level_canonical, CanonicalLookup};
 use super::expr_arena::ExprArenaEncoding;
 use super::expr_no_atomic;
@@ -46,23 +48,12 @@ pub fn apply_cross_scope_cse_with_lookup<C: CanonicalLookup + ?Sized>(
     if !has_repeated_top_level_canonical(arena, canonical) {
         return program.clone();
     }
-    let mut walker = CseWalker {
-        arena,
+    let mut hoister = Hoister {
+        cursor: ArenaCursor::at_first_real_node(&arena.node_top_level_exprs),
         canonical,
-        node_index: 1, // index 0 = synthetic ROOT (no Exprs)
         next_let_id: 0,
     };
-    super::rewrite_program_entry(program, |body| walker.rewrite_scope(body))
-}
-
-struct CseWalker<'a, C: CanonicalLookup + ?Sized> {
-    arena: &'a ExprArenaEncoding,
-    canonical: &'a C,
-    /// Mirrors the arena's `node_top_level_exprs` index  -  increments
-    /// by one per Node visited in DFS prefix order.
-    node_index: usize,
-    /// Monotonic suffix for fresh `__cse_N` names.
-    next_let_id: u32,
+    super::rewrite_program_entry(program, |body| hoister.rewrite_scope(body))
 }
 
 /// One top-level Expr position within a single scope's direct
@@ -72,18 +63,36 @@ struct Occurrence {
     expr: Expr,
 }
 
-impl<C: CanonicalLookup + ?Sized> CseWalker<'_, C> {
+struct Hoister<'a, C: CanonicalLookup + ?Sized> {
+    cursor: ArenaCursor<'a>,
+    canonical: &'a C,
+    /// Monotonic suffix for fresh `__cse_N` names.
+    next_let_id: u32,
+}
+
+impl<C: CanonicalLookup + ?Sized> Hoister<'_, C> {
+    /// Hoist within one scope, then recurse into the nested scopes.
+    ///
+    /// Two passes over the same nodes, and they must agree exactly on which
+    /// arena id each operand position carries: a position counted in pass 1
+    /// and skipped in pass 2 leaves a hoisted `let` nobody reads, and the
+    /// reverse substitutes a name that was never bound. Both drive
+    /// [`rewrite_walk::rewrite_node`], so the agreement is structural rather
+    /// than two hand-written matches kept in step by review.
     fn rewrite_scope(&mut self, body: &[Node]) -> Vec<Node> {
         let prefix_len = super::encode::reachable_prefix_len(body);
+        let scope_start = self.cursor.position();
 
-        // ---- Pass 1: collect occurrences for THIS scope's direct
-        // Nodes only. Recurse into nested scopes purely to advance
-        // node_index past their Nodes. -------------------------
-        let saved_index = self.node_index;
-        let mut occurrences: Vec<Occurrence> = Vec::new();
+        let mut collect = CollectOccurrences {
+            hoister: self,
+            top_ids: Vec::new(),
+            slot: 0,
+            occurrences: Vec::new(),
+        };
         for node in &body[..prefix_len] {
-            self.collect_node(node, &mut occurrences);
+            rewrite_walk::rewrite_node(node, &mut collect);
         }
+        let occurrences = collect.occurrences;
 
         // Identify hoist-worthy canonicals (count >= 2, non-trivial,
         // atomic-free).
@@ -98,117 +107,37 @@ impl<C: CanonicalLookup + ?Sized> CseWalker<'_, C> {
                     (1, occ.expr)
                 });
         }
-        let mut hoist_plan: FxHashMap<u32, Ident> = FxHashMap::default();
+        let mut plan: FxHashMap<u32, Ident> = FxHashMap::default();
         let mut hoist_lets: Vec<Node> = Vec::new();
         for canon in &order {
-            let (count, expr) = match counts.get(canon).cloned() {
-                Some(p) => p,
-                None => continue,
+            let Some((count, expr)) = counts.get(canon).cloned() else {
+                continue;
             };
-            if count < 2 {
-                continue;
-            }
-            if !is_hoist_worthy(&expr) {
-                continue;
-            }
-            if !expr_no_atomic(&expr) {
+            if count < 2 || !is_hoist_worthy(&expr) || !expr_no_atomic(&expr) {
                 continue;
             }
             let name = self.fresh_name();
             hoist_lets.push(Node::let_bind(name.clone(), expr));
-            hoist_plan.insert(*canon, name);
+            plan.insert(*canon, name);
         }
 
-        // ---- Pass 2: rewrite, substituting hoisted Vars ----------
-        // Restore node_index to the start of this scope so pass 2
-        // sees identical mappings.
-        self.node_index = saved_index;
+        // Pass 2 restarts the cursor at the top of this scope so it sees the
+        // identical id for every position pass 1 counted.
+        self.cursor.rewind_to(scope_start);
         let mut out: Vec<Node> = Vec::with_capacity(prefix_len + hoist_lets.len());
         out.extend(hoist_lets);
+        let mut substitute = SubstituteHoisted {
+            hoister: self,
+            plan: &plan,
+            top_ids: Vec::new(),
+            slot: 0,
+        };
         for node in &body[..prefix_len] {
-            out.push(self.rewrite_node(node, &hoist_plan));
+            out.push(
+                rewrite_walk::rewrite_node(node, &mut substitute).unwrap_or_else(|| node.clone()),
+            );
         }
         out
-    }
-
-    /// Pass 1: record this Node's top-level Expr canonicals/clones in
-    /// `occs`, then advance `node_index` past nested scopes without
-    /// recording.
-    fn collect_node(&mut self, node: &Node, occs: &mut Vec<Occurrence>) {
-        let idx = self.node_index;
-        self.node_index += 1;
-        let top_ids = self
-            .arena
-            .node_top_level_exprs
-            .get(idx)
-            .cloned()
-            .unwrap_or_default();
-        match node {
-            Node::Let { value, .. } | Node::Assign { value, .. } => {
-                self.record(&top_ids, 0, value, occs);
-            }
-            Node::Store { index, value, .. } => {
-                self.record(&top_ids, 0, index, occs);
-                self.record(&top_ids, 1, value, occs);
-            }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                self.record(&top_ids, 0, cond, occs);
-                self.advance_through_scope(then);
-                self.advance_through_scope(otherwise);
-            }
-            Node::Loop { from, to, body, .. } => {
-                self.record(&top_ids, 0, from, occs);
-                self.record(&top_ids, 1, to, occs);
-                self.advance_through_scope(body);
-            }
-            Node::Block(body) => self.advance_through_scope(body),
-            Node::Region { body, .. } => self.advance_through_scope(body.as_slice()),
-            Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
-                self.record(&top_ids, 0, offset, occs);
-                self.record(&top_ids, 1, size, occs);
-            }
-            Node::Trap { address, .. } => self.record(&top_ids, 0, address, occs),
-            _ => {}
-        }
-    }
-
-    fn record(&self, top_ids: &[u32], slot: usize, expr: &Expr, occs: &mut Vec<Occurrence>) {
-        let arena_id = match top_ids.get(slot).copied() {
-            Some(id) => id,
-            None => return,
-        };
-        let canon = self.canonical.canonical_of(arena_id);
-        occs.push(Occurrence {
-            canon,
-            expr: expr.clone(),
-        });
-    }
-
-    fn advance_through_scope(&mut self, body: &[Node]) {
-        let prefix_len = super::encode::reachable_prefix_len(body);
-        for node in &body[..prefix_len] {
-            self.advance_through_node(node);
-        }
-    }
-
-    fn advance_through_node(&mut self, node: &Node) {
-        self.node_index += 1;
-        match node {
-            Node::If {
-                then, otherwise, ..
-            } => {
-                self.advance_through_scope(then);
-                self.advance_through_scope(otherwise);
-            }
-            Node::Loop { body, .. } => self.advance_through_scope(body),
-            Node::Block(body) => self.advance_through_scope(body),
-            Node::Region { body, .. } => self.advance_through_scope(body.as_slice()),
-            _ => {}
-        }
     }
 
     fn fresh_name(&mut self) -> Ident {
@@ -216,85 +145,67 @@ impl<C: CanonicalLookup + ?Sized> CseWalker<'_, C> {
         self.next_let_id += 1;
         Ident::new(Arc::from(format!("__cse_{id}")))
     }
+}
 
-    fn rewrite_node(&mut self, node: &Node, plan: &FxHashMap<u32, Ident>) -> Node {
-        let idx = self.node_index;
-        self.node_index += 1;
-        let top_ids: Vec<u32> = self
-            .arena
-            .node_top_level_exprs
-            .get(idx)
-            .cloned()
-            .unwrap_or_default();
-        match node {
-            Node::Let { name, value } => {
-                let new_value = self.rewrite_top(&top_ids, 0, value, plan);
-                Node::let_bind(name.clone(), new_value)
-            }
-            Node::Assign { name, value } => {
-                let new_value = self.rewrite_top(&top_ids, 0, value, plan);
-                Node::assign(name.clone(), new_value)
-            }
-            Node::Store {
-                buffer,
-                index,
-                value,
-            } => {
-                let new_index = self.rewrite_top(&top_ids, 0, index, plan);
-                let new_value = self.rewrite_top(&top_ids, 1, value, plan);
-                Node::store(buffer.clone(), new_index, new_value)
-            }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                let new_cond = self.rewrite_top(&top_ids, 0, cond, plan);
-                let new_then = self.rewrite_scope(then);
-                let new_otherwise = self.rewrite_scope(otherwise);
-                Node::if_then_else(new_cond, new_then, new_otherwise)
-            }
-            Node::Loop {
-                var,
-                from,
-                to,
-                body,
-            } => {
-                let new_from = self.rewrite_top(&top_ids, 0, from, plan);
-                let new_to = self.rewrite_top(&top_ids, 1, to, plan);
-                let new_body = self.rewrite_scope(body);
-                Node::loop_for(var.clone(), new_from, new_to, new_body)
-            }
-            Node::Block(body) => Node::Block(self.rewrite_scope(body)),
-            Node::Region {
-                generator,
-                source_region,
-                body,
-            } => Node::Region {
-                generator: generator.clone(),
-                source_region: source_region.clone(),
-                body: Arc::new(self.rewrite_scope(body.as_slice())),
-            },
-            other => other.clone(),
-        }
+/// Pass 1: record each direct operand's canonical id, and advance the cursor
+/// past nested scopes without recording them. A nested scope hoists into its
+/// own start, so its occurrences belong to its own plan.
+struct CollectOccurrences<'h, 'a, C: CanonicalLookup + ?Sized> {
+    hoister: &'h mut Hoister<'a, C>,
+    top_ids: Vec<u32>,
+    slot: usize,
+    occurrences: Vec<Occurrence>,
+}
+
+impl<C: CanonicalLookup + ?Sized> NodeRewrite for CollectOccurrences<'_, '_, C> {
+    fn enter(&mut self, _node: &Node) {
+        self.top_ids = self.hoister.cursor.take_node();
+        self.slot = 0;
     }
 
-    fn rewrite_top(
-        &self,
-        top_ids: &[u32],
-        slot: usize,
-        expr: &Expr,
-        plan: &FxHashMap<u32, Ident>,
-    ) -> Expr {
-        let arena_id = match top_ids.get(slot).copied() {
-            Some(id) => id,
-            None => return expr.clone(),
-        };
-        let canon = self.canonical.canonical_of(arena_id);
-        if let Some(name) = plan.get(&canon) {
-            return Expr::var(name.clone());
+    fn operand(&mut self, expr: &Expr) -> Option<Expr> {
+        let slot = self.slot;
+        self.slot += 1;
+        if let Some(arena_id) = self.top_ids.get(slot).copied() {
+            self.occurrences.push(Occurrence {
+                canon: self.hoister.canonical.canonical_of(arena_id),
+                expr: expr.clone(),
+            });
         }
-        expr.clone()
+        None
+    }
+
+    fn body(&mut self, _parent: &Node, body: &[Node]) -> Option<Vec<Node>> {
+        self.hoister.cursor.skip_body(body);
+        None
+    }
+}
+
+/// Pass 2: replace a planned position with the hoisted `Var`, and hoist the
+/// nested scopes in turn.
+struct SubstituteHoisted<'h, 'a, C: CanonicalLookup + ?Sized> {
+    hoister: &'h mut Hoister<'a, C>,
+    plan: &'h FxHashMap<u32, Ident>,
+    top_ids: Vec<u32>,
+    slot: usize,
+}
+
+impl<C: CanonicalLookup + ?Sized> NodeRewrite for SubstituteHoisted<'_, '_, C> {
+    fn enter(&mut self, _node: &Node) {
+        self.top_ids = self.hoister.cursor.take_node();
+        self.slot = 0;
+    }
+
+    fn operand(&mut self, _expr: &Expr) -> Option<Expr> {
+        let slot = self.slot;
+        self.slot += 1;
+        let arena_id = self.top_ids.get(slot).copied()?;
+        let canon = self.hoister.canonical.canonical_of(arena_id);
+        self.plan.get(&canon).map(|name| Expr::var(name.clone()))
+    }
+
+    fn body(&mut self, _parent: &Node, body: &[Node]) -> Option<Vec<Node>> {
+        Some(self.hoister.rewrite_scope(body))
     }
 }
 

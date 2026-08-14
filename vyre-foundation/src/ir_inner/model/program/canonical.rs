@@ -1,11 +1,9 @@
 use std::borrow::Cow;
-use std::slice;
-use std::sync::Arc;
 
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::spec_types::BinOp;
-use crate::optimizer::rewrite::{rewrite_node_slices, rewrite_nodes_cow};
+use crate::transform::rewrite_walk::{self, NodeRewrite};
 
 use super::{meta::buffer_decl_canonical_key, BufferDecl, Program};
 
@@ -28,14 +26,15 @@ impl Program {
     /// changed rather than rebuilding the whole tree to discover it changed
     /// nothing.
     fn canonical_form(&self) -> Cow<'_, Self> {
+        let mut ctx = CanonicalCtx::default();
         match (
-            canonical_entry(self.entry()),
+            ctx.canonicalize_nodes(self.entry()),
             canonical_buffers(self.buffers()),
         ) {
-            (Cow::Borrowed(_), None) => Cow::Borrowed(self),
-            (Cow::Borrowed(_), Some(buffers)) => Cow::Owned(self.with_rewritten_buffers(buffers)),
-            (Cow::Owned(entry), None) => Cow::Owned(self.with_rewritten_entry(entry)),
-            (Cow::Owned(entry), Some(buffers)) => Cow::Owned(
+            (None, None) => Cow::Borrowed(self),
+            (None, Some(buffers)) => Cow::Owned(self.with_rewritten_buffers(buffers)),
+            (Some(entry), None) => Cow::Owned(self.with_rewritten_entry(entry)),
+            (Some(entry), Some(buffers)) => Cow::Owned(
                 self.with_rewritten_entry(entry)
                     .with_rewritten_buffers(buffers),
             ),
@@ -94,108 +93,6 @@ fn canonical_buffers(buffers: &[BufferDecl]) -> Option<Vec<BufferDecl>> {
     )
 }
 
-/// Canonical entry body: commutative operands normalized, then transparent
-/// `Block` wrappers flattened. Borrowed when neither step changes anything.
-fn canonical_entry(nodes: &[Node]) -> Cow<'_, [Node]> {
-    let mut ctx = CanonicalCtx::default();
-    match rewrite_nodes_cow(nodes, &mut |candidate| {
-        ctx.swap_commutative_operands(candidate)
-    }) {
-        Cow::Borrowed(nodes) => splice_transparent_blocks(nodes),
-        Cow::Owned(nodes) => {
-            let spliced = match splice_transparent_blocks(&nodes) {
-                Cow::Borrowed(_) => None,
-                Cow::Owned(spliced) => Some(spliced),
-            };
-            Cow::Owned(spliced.unwrap_or(nodes))
-        }
-    }
-}
-
-/// Flatten every `Block` that owns no local binding, bottom up. A flattened
-/// block loses its wrapper, so it always reports an owned rewrite.
-fn splice_transparent_blocks(nodes: &[Node]) -> Cow<'_, [Node]> {
-    rewrite_node_slices(nodes, |node| match node {
-        Node::Block(children) => {
-            let children = splice_transparent_blocks(children);
-            if can_splice_block(children.as_ref()) {
-                Cow::Owned(children.into_owned())
-            } else {
-                match children {
-                    Cow::Borrowed(_) => Cow::Borrowed(slice::from_ref(node)),
-                    Cow::Owned(children) => Cow::Owned(vec![Node::Block(children)]),
-                }
-            }
-        }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            let then_body = splice_transparent_blocks(then);
-            let otherwise_body = splice_transparent_blocks(otherwise);
-            if matches!(
-                (&then_body, &otherwise_body),
-                (Cow::Borrowed(_), Cow::Borrowed(_))
-            ) {
-                Cow::Borrowed(slice::from_ref(node))
-            } else {
-                Cow::Owned(vec![Node::if_then_else(
-                    cond.clone(),
-                    then_body.into_owned(),
-                    otherwise_body.into_owned(),
-                )])
-            }
-        }
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => match splice_transparent_blocks(body) {
-            Cow::Borrowed(_) => Cow::Borrowed(slice::from_ref(node)),
-            Cow::Owned(body) => Cow::Owned(vec![Node::loop_for(
-                var.clone(),
-                from.clone(),
-                to.clone(),
-                body,
-            )]),
-        },
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => match splice_transparent_blocks(body) {
-            Cow::Borrowed(_) => Cow::Borrowed(slice::from_ref(node)),
-            Cow::Owned(body) => Cow::Owned(vec![Node::Region {
-                generator: generator.clone(),
-                source_region: source_region.clone(),
-                body: Arc::new(body),
-            }]),
-        },
-        // Every remaining statement carries no nested node list, so there is
-        // nothing to flatten. Listed rather than wildcarded: a new statement
-        // node that owns a body must be routed above, and this match is what
-        // refuses to compile until it is.
-        Node::Let { .. }
-        | Node::Assign { .. }
-        | Node::Store { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncLoad { .. }
-        | Node::AsyncStore { .. }
-        | Node::AsyncWait { .. }
-        | Node::Trap { .. }
-        | Node::Resume { .. }
-        | Node::AllReduce { .. }
-        | Node::AllGather { .. }
-        | Node::ReduceScatter { .. }
-        | Node::Broadcast { .. }
-        | Node::Return
-        | Node::Barrier { .. }
-        | Node::Opaque(_) => Cow::Borrowed(slice::from_ref(node)),
-    })
-}
-
 #[derive(Default)]
 struct CanonicalCtx {
     left_key: Vec<u8>,
@@ -203,21 +100,61 @@ struct CanonicalCtx {
 }
 
 impl CanonicalCtx {
-    /// Normalize one commutative `BinOp` operand pair. `None` leaves the
-    /// expression untouched, which is what keeps an already-canonical subtree
-    /// borrowed instead of cloned.
-    fn swap_commutative_operands(&mut self, candidate: &Expr) -> Option<Expr> {
-        let Expr::BinOp { op, left, right } = candidate else {
-            return None;
-        };
-        if !should_swap_operands(*op, left, right, &mut self.left_key, &mut self.right_key) {
-            return None;
+    /// Canonicalize every node of `nodes`, splicing out `Block` wrappers that
+    /// own no local binding. `None` when the body was already canonical.
+    ///
+    /// This is also the [`NodeRewrite::body`] hook, so the splice applies at
+    /// every depth rather than only at the entry.
+    fn canonicalize_nodes(&mut self, nodes: &[Node]) -> Option<Vec<Node>> {
+        let mut out: Option<Vec<Node>> = None;
+        for (index, node) in nodes.iter().enumerate() {
+            let rewritten = rewrite_walk::rewrite_node(node, self);
+            let splices = matches!(
+                rewritten.as_ref().unwrap_or(node),
+                Node::Block(children) if can_splice_block(children)
+            );
+            if out.is_none() && rewritten.is_none() && !splices {
+                continue;
+            }
+            let sink = out.get_or_insert_with(|| nodes[..index].to_vec());
+            push_canonical_node(sink, rewritten.unwrap_or_else(|| node.clone()));
         }
-        Some(Expr::BinOp {
-            op: *op,
-            left: Box::new((**right).clone()),
-            right: Box::new((**left).clone()),
-        })
+        out
+    }
+}
+
+impl NodeRewrite for CanonicalCtx {
+    /// Normalize commutative operand order. The expression rewrite reports no
+    /// change when nothing swapped, so an already-canonical operand is neither
+    /// rebuilt nor re-encoded.
+    fn operand(&mut self, expr: &Expr) -> Option<Expr> {
+        match crate::optimizer::rewrite::rewrite_expr(expr, &mut |candidate| {
+            let Expr::BinOp { op, left, right } = candidate else {
+                return None;
+            };
+            if !should_swap_operands(*op, left, right, &mut self.left_key, &mut self.right_key) {
+                return None;
+            }
+            Some(Expr::BinOp {
+                op: *op,
+                left: Box::new((**right).clone()),
+                right: Box::new((**left).clone()),
+            })
+        }) {
+            Cow::Borrowed(_) => None,
+            Cow::Owned(rewritten) => Some(rewritten),
+        }
+    }
+
+    fn body(&mut self, _parent: &Node, body: &[Node]) -> Option<Vec<Node>> {
+        self.canonicalize_nodes(body)
+    }
+}
+
+fn push_canonical_node(out: &mut Vec<Node>, node: Node) {
+    match node {
+        Node::Block(children) if can_splice_block(&children) => out.extend(children),
+        other => out.push(other),
     }
 }
 
