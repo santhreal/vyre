@@ -128,12 +128,14 @@ pub(crate) fn try_indexed_move_cpu_ref_into(
 ) -> Result<(), String> {
     match kind {
         IndexedMoveKind::Gather => {
-            crate::hostbuf::reserve_exact_cleared(dst, indices.len()).map_err(|err| {
-                format!(
-                    "gather CPU reference could not reserve {} output words: {err}",
-                    indices.len()
-                )
-            })?;
+            vyre_foundation::allocation::reserve_exact_cleared(dst, indices.len()).map_err(
+                |err| {
+                    format!(
+                        "gather CPU reference could not reserve {} output words: {err}",
+                        indices.len()
+                    )
+                },
+            )?;
             for &idx in indices {
                 let value = usize::try_from(idx)
                     .ok()
@@ -144,7 +146,7 @@ pub(crate) fn try_indexed_move_cpu_ref_into(
             }
         }
         IndexedMoveKind::Scatter => {
-            crate::hostbuf::reserve_exact_cleared(dst, dst_len).map_err(|err| {
+            vyre_foundation::allocation::reserve_exact_cleared(dst, dst_len).map_err(|err| {
                 format!("scatter CPU reference could not reserve {dst_len} output words: {err}")
             })?;
             dst.resize(dst_len, 0);

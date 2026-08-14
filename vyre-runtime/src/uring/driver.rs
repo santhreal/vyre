@@ -694,15 +694,11 @@ fn reserve_ingest_vec_capacity<T>(
     capacity: usize,
     field: &'static str,
 ) -> Result<(), PipelineError> {
-    if vec.capacity() >= capacity {
-        return Ok(());
-    }
-    vec.try_reserve_exact(capacity - vec.capacity())
-        .map_err(|error| {
-            PipelineError::Backend(format!(
-                "io_uring GPU ingest failed to reserve {field} for {capacity} entries: {error}. Fix: reduce ingest slot fan-out or shard the ingest batch."
-            ))
-        })
+    vyre_foundation::allocation::try_reserve_vec_to_capacity(vec, capacity).map_err(|error| {
+        PipelineError::Backend(format!(
+            "io_uring GPU ingest failed to reserve {field} for {capacity} entries: {error}. Fix: reduce ingest slot fan-out or shard the ingest batch."
+        ))
+    })
 }
 
 fn partition_slot_bytes(total_len: usize, slot_count: usize) -> Result<usize, PipelineError> {

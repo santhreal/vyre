@@ -16,6 +16,12 @@
 //!   src/
 //!     lib.rs                  # subsystem table (this file)
 //!     markers.rs              # unit-struct marker types, always on
+//!     hardware/               # feature = "hardware"  (Category C intrinsics)
+//!       mod.rs
+//!       catalog.rs
+//!       region.rs
+//!       fma_f32.rs
+//!       subgroup_add.rs
 //!     text/                   # feature = "text"
 //!       mod.rs
 //!       char_class.rs
@@ -36,13 +42,18 @@
 //!     reduce/                 # feature = "reduce"
 //! ```
 //!
-//! Two kinds of primitive live here:
+//! Three kinds of primitive live here:
 //!
 //! 1. **Marker types** (`markers`, always on, zero deps)  -  unit
 //!    structs the reference interpreter and backend emitters dispatch
 //!    on.
 //!
-//! 2. **Tier 2.5 substrate** (per-domain feature flags)  -  shared
+//! 2. **Category C hardware intrinsics** (`hardware`, feature =
+//!    "hardware")  -  ops that require a dedicated backend emitter arm
+//!    AND a dedicated reference-interpreter arm. Nothing that composes
+//!    over existing IR is admitted.
+//!
+//! 3. **Tier 2.5 substrate** (per-domain feature flags)  -  shared
 //!    `fn(...) -> Program` primitives reused by ≥ 2 Tier-3 dialects.
 //!    Each domain is one folder + one feature flag. Tier 3 crates
 //!    depend on `vyre-primitives` and enable only the domains they
@@ -56,7 +67,6 @@
 //! See `docs/lego-block-rule.md` and `docs/lego-block-rule.md` for
 //! the tier rule, admission criteria, and Gate 1 enforcement.
 
-mod hostbuf;
 #[cfg(feature = "vyre-foundation")]
 pub mod ir_safe;
 mod markers;
@@ -237,6 +247,12 @@ pub mod topology;
 /// reused by higher-level image-processing compositions.
 #[cfg(feature = "visual")]
 pub mod visual;
+
+/// Category C hardware intrinsics. Ops that need a dedicated backend emitter
+/// arm and a dedicated reference-interpreter arm: subgroup collectives,
+/// memory fences, bit instructions, fused multiply-add, inverse square root.
+#[cfg(feature = "hardware")]
+pub mod hardware;
 
 /// Effects-typed pipeline primitives (P-1.0-V1.x).
 /// Pure-data substrate: `EffectRow` bitmask, `Handler` over a row,

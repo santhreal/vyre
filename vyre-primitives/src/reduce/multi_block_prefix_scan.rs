@@ -664,16 +664,12 @@ pub fn cpu_ref_into(input: &[u32], out: &mut Vec<u32>) {
 /// Fallible CPU reference writing into caller-owned output storage.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_cpu_ref_into(input: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
-    if input.len() > out.capacity() {
-        out.try_reserve_exact(input.len() - out.capacity())
-            .map_err(|err| {
-                format!(
-                    "multi-block prefix-scan CPU reference could not reserve {} output words: {err}",
-                    input.len()
-                )
-            })?;
-    }
-    out.clear();
+    vyre_foundation::allocation::reserve_exact_cleared(out, input.len()).map_err(|err| {
+        format!(
+            "multi-block prefix-scan CPU reference could not reserve {} output words: {err}",
+            input.len()
+        )
+    })?;
     let mut acc: u32 = 0;
     for &x in input {
         acc = acc.wrapping_add(x);
@@ -703,16 +699,12 @@ pub fn cpu_ref_exclusive(input: &[u32]) -> Vec<u32> {
 /// Fallible exclusive CPU reference writing into caller-owned output storage.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_cpu_ref_exclusive_into(input: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
-    if input.len() > out.capacity() {
-        out.try_reserve_exact(input.len() - out.capacity())
-            .map_err(|err| {
-                format!(
-                    "multi-block prefix-scan exclusive CPU reference could not reserve {} output words: {err}",
-                    input.len()
-                )
-            })?;
-    }
-    out.clear();
+    vyre_foundation::allocation::reserve_exact_cleared(out, input.len()).map_err(|err| {
+        format!(
+            "multi-block prefix-scan exclusive CPU reference could not reserve {} output words: {err}",
+            input.len()
+        )
+    })?;
     let mut acc: u32 = 0;
     for &x in input {
         out.push(acc);

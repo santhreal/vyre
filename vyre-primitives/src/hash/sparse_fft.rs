@@ -150,7 +150,7 @@ pub fn try_sparse_fft_bin_hash_cpu_into(
     }
     let b_len = usize::try_from(b)
         .map_err(|_| format!("sparse FFT bin count {b} does not fit host usize."))?;
-    crate::hostbuf::reserve_exact_cleared(bins, b_len).map_err(|err| {
+    vyre_foundation::allocation::reserve_exact_cleared(bins, b_len).map_err(|err| {
         format!("sparse FFT bin-hash CPU reference could not reserve {b_len} bins: {err}")
     })?;
     bins.resize(b_len, 0);
@@ -229,7 +229,7 @@ pub fn try_voting_recovery_cpu_into(
             ));
         }
     }
-    crate::hostbuf::reserve_exact_cleared(votes, n_len).map_err(|err| {
+    vyre_foundation::allocation::reserve_exact_cleared(votes, n_len).map_err(|err| {
         format!("sparse FFT voting recovery could not reserve {n_len} vote slots: {err}")
     })?;
     votes.resize(n_len, 0);
@@ -245,7 +245,7 @@ pub fn try_voting_recovery_cpu_into(
             }
         }
     }
-    crate::hostbuf::reserve_exact_cleared(out, n_len).map_err(|err| {
+    vyre_foundation::allocation::reserve_exact_cleared(out, n_len).map_err(|err| {
         format!("sparse FFT voting recovery could not reserve {n_len} output slots: {err}")
     })?;
     for (f, &vote) in votes.iter().enumerate() {

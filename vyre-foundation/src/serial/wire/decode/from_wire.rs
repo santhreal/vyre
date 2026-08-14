@@ -644,15 +644,11 @@ fn reserve_decoded_vec_capacity<T>(
     capacity: usize,
     field: &'static str,
 ) -> Result<(), String> {
-    if vec.capacity() >= capacity {
-        return Ok(());
-    }
-    vec.try_reserve_exact(capacity - vec.capacity())
-        .map_err(|error| {
-            format!(
-                "TruncatedPayload: failed to reserve {field} for {capacity} entries: {error}. Fix: reject this untrusted wire payload or split the Program before serialization."
-            )
-        })
+    crate::allocation::try_reserve_vec_to_capacity(vec, capacity).map_err(|error| {
+        format!(
+            "TruncatedPayload: failed to reserve {field} for {capacity} entries: {error}. Fix: reject this untrusted wire payload or split the Program before serialization."
+        )
+    })
 }
 
 fn hex32(bytes: &[u8; 32]) -> String {

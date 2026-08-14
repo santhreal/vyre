@@ -24,6 +24,44 @@ pub fn try_reserve_vec_to_capacity<T>(
     Ok(())
 }
 
+/// Clear `buf` and ensure it can hold at least `target` elements without
+/// reallocating during a subsequent single fill (`extend`/`resize`/`push`-to-`target`).
+///
+/// ONE-PLACE owner for the "reset a reused output buffer so it can hold exactly
+/// `target` elements without reallocating during the following fill" idiom.
+///
+/// Before this existed, the idiom was hand-rolled across CPU-reference oracles,
+/// driver readback paths, and wire decoders as
+///
+/// ```ignore
+/// out.clear();
+/// if target > out.capacity() {
+///     out.try_reserve(target - out.capacity()).map_err(..)?;
+/// }
+/// ```
+///
+/// which UNDER-reserves on a warm (reused) buffer: after `clear()` the length is
+/// `0`, so `try_reserve(target - capacity)` only guarantees `target - capacity`
+/// free slots, and the subsequent fill reallocates whenever
+/// `0 < capacity < target`. Computing the reservation from the true post-clear
+/// length (`0`), i.e. reserving `target` outright, makes a single fill
+/// allocation-free.
+///
+/// Use [`try_reserve_vec_to_capacity`] instead when the buffer must keep its
+/// current contents; this function is only for the clear-then-refill shape.
+///
+/// # Errors
+///
+/// Returns the raw [`TryReserveError`] on allocation failure so each caller can
+/// map it into its own domain error type and message (the historical sites each
+/// attach a bespoke context string).
+pub fn reserve_exact_cleared<T>(buf: &mut Vec<T>, target: usize) -> Result<(), TryReserveError> {
+    buf.clear();
+    // `buf.len() == 0` here, so `try_reserve_exact(target)` guarantees room for a
+    // full `target`-element fill with no reallocation (the whole point of the fix).
+    buf.try_reserve_exact(target)
+}
+
 /// Ensure a [`String`] can hold `target_capacity` bytes without changing
 /// length.
 ///
@@ -122,10 +160,128 @@ mod tests {
     use smallvec::SmallVec;
 
     use super::{
-        try_reserve_binary_heap_to_capacity, try_reserve_hash_map_to_capacity,
-        try_reserve_hash_set_to_capacity, try_reserve_smallvec_to_capacity,
-        try_reserve_string_to_capacity, try_reserve_vec_to_capacity,
+        reserve_exact_cleared, try_reserve_binary_heap_to_capacity,
+        try_reserve_hash_map_to_capacity, try_reserve_hash_set_to_capacity,
+        try_reserve_smallvec_to_capacity, try_reserve_string_to_capacity,
+        try_reserve_vec_to_capacity,
     };
+
+    /// CLASS GATE. Both `Vec` choke points every migrated reserve site routes
+    /// through must guarantee `capacity >= target` from ANY warm starting
+    /// capacity, and the single fill that follows must not reallocate.
+    ///
+    /// The defect class is `try_reserve*(target - capacity())`: with a warm
+    /// buffer it asks for less than the fill needs and silently leaves capacity
+    /// short. One representative case would not catch it, because the wrong
+    /// form is accidentally sufficient whenever `capacity <= target / 2`. This
+    /// sweeps every warm capacity from `0` to `target` against both owners, so
+    /// any owner that derives `additional` from `capacity()` goes red here.
+    ///
+    /// What it does not catch: allocator-failure paths, non-`Vec` collections
+    /// (covered by the sibling target-capacity test), and callers that reserve
+    /// correctly and then fill past `target`.
+    #[test]
+    fn vec_reservation_owners_reach_target_from_every_warm_capacity() {
+        const TARGET: usize = 512;
+
+        for warm in 0..=TARGET {
+            // Shape A: clear-then-refill sites (`reserve_exact_cleared`).
+            let mut cleared: Vec<u32> = Vec::with_capacity(warm);
+            cleared.extend(0..warm as u32);
+            reserve_exact_cleared(&mut cleared, TARGET)
+                .expect("Fix: cleared-buffer reservation must succeed for a 512-word target");
+            assert!(
+                cleared.is_empty(),
+                "Fix: reserve_exact_cleared must clear the buffer (warm capacity {warm})"
+            );
+            assert!(
+                cleared.capacity() >= TARGET,
+                "Fix: reserve_exact_cleared under-reserved from warm capacity {warm} (got {}, want >= {TARGET})",
+                cleared.capacity()
+            );
+            let cleared_capacity = cleared.capacity();
+            cleared.extend(0..TARGET as u32);
+            assert_eq!(
+                cleared.capacity(),
+                cleared_capacity,
+                "Fix: the fill after reserve_exact_cleared reallocated from warm capacity {warm}"
+            );
+
+            // Shape B: contents-preserving sites (`try_reserve_vec_to_capacity`).
+            let keep_len = warm.min(TARGET / 4);
+            let mut retained: Vec<u32> = Vec::with_capacity(warm);
+            retained.extend(0..keep_len as u32);
+            try_reserve_vec_to_capacity(&mut retained, TARGET)
+                .expect("Fix: retained-buffer reservation must succeed for a 512-word target");
+            assert_eq!(
+                retained.len(),
+                keep_len,
+                "Fix: try_reserve_vec_to_capacity must not change length (warm capacity {warm})"
+            );
+            assert!(
+                retained.capacity() >= TARGET,
+                "Fix: try_reserve_vec_to_capacity under-reserved from warm capacity {warm} (got {}, want >= {TARGET})",
+                retained.capacity()
+            );
+            let retained_capacity = retained.capacity();
+            retained.clear();
+            retained.extend(0..TARGET as u32);
+            assert_eq!(
+                retained.capacity(),
+                retained_capacity,
+                "Fix: the fill after try_reserve_vec_to_capacity reallocated from warm capacity {warm}"
+            );
+        }
+    }
+
+    /// A WARM buffer (existing capacity between `target/2` and `target`) must end
+    /// up with capacity `>= target` so the following fill never reallocates. This
+    /// is exactly the case the old `try_reserve(target - capacity)` form got wrong
+    /// (it left capacity unchanged when `capacity >= target - capacity`).
+    #[test]
+    fn warm_buffer_reaches_target_capacity_without_realloc_during_fill() {
+        let target = 1000usize;
+
+        // Warm the buffer to a partial capacity strictly between target/2 and target.
+        let mut buf: Vec<u32> = Vec::with_capacity(600);
+        buf.extend(0..600);
+        assert!(buf.capacity() >= 600 && buf.capacity() < target);
+
+        reserve_exact_cleared(&mut buf, target).expect("reservation must succeed");
+
+        assert_eq!(buf.len(), 0, "buffer must be cleared");
+        assert!(
+            buf.capacity() >= target,
+            "warm buffer must reach target capacity (got {}, want >= {target})",
+            buf.capacity()
+        );
+
+        // The following fill must not reallocate: capacity stays put.
+        let cap_before_fill = buf.capacity();
+        buf.extend(0..target as u32);
+        assert_eq!(
+            buf.capacity(),
+            cap_before_fill,
+            "a single target-sized fill must not reallocate after reserve_exact_cleared"
+        );
+    }
+
+    /// A COLD buffer (no prior capacity) must also reach `>= target`.
+    #[test]
+    fn cold_buffer_reaches_target_capacity() {
+        let mut buf: Vec<u8> = Vec::new();
+        reserve_exact_cleared(&mut buf, 256).expect("reservation must succeed");
+        assert_eq!(buf.len(), 0);
+        assert!(buf.capacity() >= 256);
+    }
+
+    /// `target == 0` clears without demanding any allocation.
+    #[test]
+    fn zero_target_just_clears() {
+        let mut buf: Vec<u64> = vec![1, 2, 3];
+        reserve_exact_cleared(&mut buf, 0).expect("zero reservation must succeed");
+        assert!(buf.is_empty());
+    }
 
     #[test]
     fn target_capacity_helpers_grow_after_clear_without_mutating_lengths() {

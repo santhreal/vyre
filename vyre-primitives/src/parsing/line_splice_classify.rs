@@ -309,7 +309,7 @@ pub fn try_reference_line_splice_classify_into(
     source: &[u8],
     out: &mut Vec<u32>,
 ) -> Result<(), String> {
-    crate::hostbuf::reserve_exact_cleared(out, source.len()).map_err(|err| {
+    vyre_foundation::allocation::reserve_exact_cleared(out, source.len()).map_err(|err| {
         format!(
             "line-splice classifier reference could not reserve {} output words: {err}",
             source.len()

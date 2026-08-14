@@ -283,15 +283,13 @@ impl PendingGpuBufferReadback {
         if out.len() == visible_len {
             out.copy_from_slice(visible);
         } else {
-            if visible_len > out.capacity() {
-                out.try_reserve_exact(visible_len - out.capacity())
-                    .map_err(|source| {
-                        BackendError::new(format!(
-                            "persistent buffer readback could not reserve {visible_len} output bytes exactly: {source}. Fix: lower max_output_bytes or stream readback in smaller shards."
-                        ))
-                    })?;
-            }
-            out.clear();
+            vyre_foundation::allocation::reserve_exact_cleared(out, visible_len).map_err(
+                |source| {
+                    BackendError::new(format!(
+                        "persistent buffer readback could not reserve {visible_len} output bytes exactly: {source}. Fix: lower max_output_bytes or stream readback in smaller shards."
+                    ))
+                },
+            )?;
             out.extend_from_slice(visible);
         }
         drop(mapped);

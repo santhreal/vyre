@@ -262,13 +262,11 @@ fn copy_materialized_outputs_into(
         .take(existing_slots_to_copy)
         .zip(outputs.iter())
     {
-        if source.len() > target.capacity() {
-            target
-                .try_reserve_exact(source.len() - target.capacity())
-                .map_err(|error| {
-                    materialized_cache_allocation_failed("output destination bytes", error)
-                })?;
-        }
+        // The clear-and-refill happens in the loop below, after `truncate`, so
+        // this pre-pass must not clear: use the contents-preserving owner.
+        vyre_foundation::allocation::try_reserve_vec_to_capacity(target, source.len()).map_err(
+            |error| materialized_cache_allocation_failed("output destination bytes", error),
+        )?;
     }
 
     let mut appended_outputs = Vec::new();

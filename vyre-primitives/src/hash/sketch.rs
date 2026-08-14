@@ -289,7 +289,7 @@ pub fn try_count_sketch_query_cpu_into(
             return Err(CountSketchError::HashOutOfRange { row, col, w });
         }
     }
-    crate::hostbuf::reserve_exact_cleared(estimates, d_len).map_err(|source| {
+    vyre_foundation::allocation::reserve_exact_cleared(estimates, d_len).map_err(|source| {
         CountSketchError::Allocation {
             requested: d_len,
             source: source.to_string(),

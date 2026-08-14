@@ -43,7 +43,7 @@ super::define_cpu_ref_into!(
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_cpu_ref_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
     let len = a.len().min(b.len());
-    crate::hostbuf::reserve_exact_cleared(out, len).map_err(|err| {
+    vyre_foundation::allocation::reserve_exact_cleared(out, len).map_err(|err| {
         format!("stochastic bitstream CPU reference could not reserve {len} words: {err}")
     })?;
     out.extend(a.iter().zip(b.iter()).map(|(left, right)| left & right));
@@ -86,7 +86,7 @@ pub fn try_encode_bitstream_into(
     out: &mut Vec<u32>,
 ) -> Result<(), String> {
     let n_words = (len_bits + 31) / 32;
-    crate::hostbuf::reserve_exact_cleared(out, n_words).map_err(|err| {
+    vyre_foundation::allocation::reserve_exact_cleared(out, n_words).map_err(|err| {
         format!("stochastic bitstream encoder could not reserve {n_words} words: {err}")
     })?;
     out.resize(n_words, 0);

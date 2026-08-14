@@ -118,7 +118,7 @@ pub fn try_cpu_ref_into(
         }
     }
 
-    crate::hostbuf::reserve_exact_cleared(out, num_segments).map_err(|err| {
+    vyre_foundation::allocation::reserve_exact_cleared(out, num_segments).map_err(|err| {
         format!(
             "segment_reduce_sum CPU oracle could not reserve {num_segments} output segments: {err}"
         )

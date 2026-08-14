@@ -255,7 +255,7 @@ pub fn try_reference_whitespace_classify_word_into(
     words_in: &[u32],
     out: &mut Vec<u32>,
 ) -> Result<(), String> {
-    crate::hostbuf::reserve_exact_cleared(out, words_in.len()).map_err(|err| {
+    vyre_foundation::allocation::reserve_exact_cleared(out, words_in.len()).map_err(|err| {
         format!(
             "whitespace word-classifier reference could not reserve {} output words: {err}",
             words_in.len()

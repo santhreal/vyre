@@ -454,7 +454,7 @@ pub(crate) fn materialize_frontier_queue_prefix_into(
 ) -> Result<u32, FrontierError> {
     let expected_words = validate_frontier_shape(node_count, frontier, "input")?;
     let reserve_words = queue_capacity.min(node_count as usize);
-    crate::hostbuf::reserve_exact_cleared(queue, reserve_words).map_err(|source| {
+    vyre_foundation::allocation::reserve_exact_cleared(queue, reserve_words).map_err(|source| {
         FrontierError::Allocation {
             name: "frontier_queue",
             requested_words: reserve_words,
@@ -508,13 +508,13 @@ pub fn materialize_frontier_queue_exact_count_into(
         });
     }
     let required_usize = active_count as usize;
-    crate::hostbuf::reserve_exact_cleared(queue, required_usize).map_err(|source| {
-        FrontierError::Allocation {
+    vyre_foundation::allocation::reserve_exact_cleared(queue, required_usize).map_err(
+        |source| FrontierError::Allocation {
             name: "frontier_queue",
             requested_words: required_usize,
             source: source.to_string(),
-        }
-    })?;
+        },
+    )?;
     let final_word_index = expected_words.saturating_sub(1);
     let final_word_mask = frontier_tail_mask(node_count);
     let mut observed = 0u32;
@@ -568,13 +568,13 @@ pub fn absorb_new_frontier_bits(
 ) -> Result<FrontierAbsorbSummary, FrontierError> {
     let expected_words = validate_frontier_shape(node_count, visited, "visited")?;
     validate_frontier_shape(node_count, neighbors, "neighbors")?;
-    crate::hostbuf::reserve_exact_cleared(next_wave, expected_words).map_err(|source| {
-        FrontierError::Allocation {
+    vyre_foundation::allocation::reserve_exact_cleared(next_wave, expected_words).map_err(
+        |source| FrontierError::Allocation {
             name: "next_wave",
             requested_words: expected_words,
             source: source.to_string(),
-        }
-    })?;
+        },
+    )?;
     next_wave.resize(expected_words, 0);
     let mut summary = FrontierAbsorbSummary::default();
     let last_word_index = expected_words.saturating_sub(1);

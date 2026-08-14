@@ -34,7 +34,10 @@ def main() -> int:
         index = 0
         while index < len(lines):
             line = lines[index]
-            if ".try_reserve" not in line:
+            # A `//`, `///`, or `//!` line is documentation, not a call. The
+            # owner's doc comment quotes the WRONG form on purpose as the thing
+            # being fixed, and that lesson must stay readable.
+            if ".try_reserve" not in line or line.lstrip().startswith("//"):
                 index += 1
                 continue
             uses_capacity, end = reserve_block_uses_capacity(lines, index)

@@ -2634,16 +2634,17 @@ fn reserve_fused_resident_view_outputs(
                 });
             }
         }
-        if view.byte_len > output.capacity() {
-            output
-                .try_reserve_exact(view.byte_len - output.capacity())
-                .map_err(|error| BackendError::InvalidProgram {
-                    fix: format!(
-                        "Fix: Metal resident ranged batch download could not reserve {} output byte(s) for view {view_index}: {error}. Split the resident readback batch before materializing outputs.",
-                        view.byte_len
-                    ),
-                })?;
-        }
+        // This pre-pass only grows the destination; `copy_fused_resident_view_into`
+        // relies on the retained length for its equal-length fast path, so the
+        // contents-preserving owner is required here.
+        vyre_foundation::allocation::try_reserve_vec_to_capacity(output, view.byte_len).map_err(
+            |error| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: Metal resident ranged batch download could not reserve {} output byte(s) for view {view_index}: {error}. Split the resident readback batch before materializing outputs.",
+                    view.byte_len
+                ),
+            },
+        )?;
     }
     Ok(())
 }
@@ -2689,17 +2690,14 @@ fn copy_fused_resident_view_into(
         output.copy_from_slice(bytes);
         return Ok(());
     }
-    if bytes.len() > output.capacity() {
-        output
-            .try_reserve_exact(bytes.len() - output.capacity())
-            .map_err(|error| BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: Metal resident ranged batch download could not reserve {} output byte(s): {error}. Split the resident readback batch before materializing outputs.",
-                    bytes.len()
-                ),
-            })?;
-    }
-    output.clear();
+    vyre_foundation::allocation::reserve_exact_cleared(output, bytes.len()).map_err(|error| {
+        BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: Metal resident ranged batch download could not reserve {} output byte(s): {error}. Split the resident readback batch before materializing outputs.",
+                bytes.len()
+            ),
+        }
+    })?;
     output.extend_from_slice(bytes);
     Ok(())
 }

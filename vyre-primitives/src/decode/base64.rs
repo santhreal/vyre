@@ -177,7 +177,7 @@ pub fn try_decode_standard_packed_reference_into(
     let decoded_words = blocks
         .checked_mul(3)
         .ok_or(Base64DecodeReferenceError::CapacityOverflow { blocks })?;
-    crate::hostbuf::reserve_exact_cleared(out, decoded_words).map_err(|source| {
+    vyre_foundation::allocation::reserve_exact_cleared(out, decoded_words).map_err(|source| {
         Base64DecodeReferenceError::Allocation {
             requested: decoded_words,
             source: source.to_string(),

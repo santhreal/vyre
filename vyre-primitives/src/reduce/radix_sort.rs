@@ -145,7 +145,7 @@ pub fn try_cpu_ref_into(
     scratch: &mut Vec<u32>,
 ) -> Result<(), String> {
     let bits = bits.min(32);
-    crate::hostbuf::reserve_exact_cleared(out, input.len()).map_err(|err| {
+    vyre_foundation::allocation::reserve_exact_cleared(out, input.len()).map_err(|err| {
         format!(
             "radix_sort CPU reference could not reserve {} output keys: {err}",
             input.len()
@@ -157,7 +157,7 @@ pub fn try_cpu_ref_into(
         return Ok(());
     }
 
-    crate::hostbuf::reserve_exact_cleared(scratch, out.len()).map_err(|err| {
+    vyre_foundation::allocation::reserve_exact_cleared(scratch, out.len()).map_err(|err| {
         format!(
             "radix_sort CPU reference could not reserve {} scratch keys: {err}",
             input.len()

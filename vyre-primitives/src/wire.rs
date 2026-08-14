@@ -38,9 +38,17 @@ fn checked_byte_len(count: usize, width: usize, label: &str) -> Result<usize, St
     })
 }
 
+/// Grow `out` so a following clear-and-refill to `target_len` elements does not
+/// reallocate.
+///
+/// `vyre-primitives` takes `vyre-foundation` as an OPTIONAL dependency and this
+/// module is always on, so the shared owner in
+/// `vyre_foundation::allocation` is out of reach here; the arithmetic is
+/// inlined instead. `try_reserve_exact` guarantees `len() + additional`, so the
+/// additional count is measured from the current length, never from capacity.
 fn reserve_exact_len<T>(out: &mut Vec<T>, target_len: usize, label: &str) -> Result<(), String> {
     if target_len > out.capacity() {
-        out.try_reserve_exact(target_len - out.capacity())
+        out.try_reserve_exact(target_len - out.len())
             .map_err(|err| {
                 format!("{label} could not reserve {target_len} elements: {err}. Fix: shard the buffer.")
             })?;

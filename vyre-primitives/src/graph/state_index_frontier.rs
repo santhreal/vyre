@@ -159,14 +159,11 @@ pub fn try_compact_state_index_frontier_into(
             "state-index frontier length cannot fit u32: {source}. Fix: shard graph or automata frontier chunks before compaction."
         )
     })?;
-    if out.capacity() < items.len() {
-        out.try_reserve(items.len() - out.capacity()).map_err(|source| {
-            format!(
-                "state-index frontier output reservation failed: {source}. Fix: reduce resident frontier batch size or spill before compaction."
-            )
-        })?;
-    }
-    out.clear();
+    vyre_foundation::allocation::reserve_exact_cleared(out, items.len()).map_err(|source| {
+        format!(
+            "state-index frontier output reservation failed: {source}. Fix: reduce resident frontier batch size or spill before compaction."
+        )
+    })?;
     out.extend_from_slice(items);
     match duplicate_rule {
         StateIndexDuplicateRule::Preserve => {}

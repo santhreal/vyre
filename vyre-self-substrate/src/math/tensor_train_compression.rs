@@ -199,17 +199,15 @@ pub fn compress_cost_tensor_f32_via_with_scratch_into(
     cores_out[last].clear();
     cores_out[last].extend_from_slice(&scratch.current);
     cores_out.truncate(dims.len());
-    if scratch.current.capacity() < tensor_f32.len() {
-        scratch
-            .current
-            .try_reserve_exact(tensor_f32.len() - scratch.current.capacity())
-            .map_err(|error| {
-                DispatchError::BackendError(format!(
-                    "Fix: compress_cost_tensor_f32_via could not retain current scratch capacity for {} word(s): {error}.",
-                    tensor_f32.len()
-                ))
-            })?;
-    }
+    // Retains the scratch allocation for the next call; contents stay put, so
+    // this is the contents-preserving owner.
+    vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut scratch.current, tensor_f32.len())
+        .map_err(|error| {
+            DispatchError::BackendError(format!(
+                "Fix: compress_cost_tensor_f32_via could not retain current scratch capacity for {} word(s): {error}.",
+                tensor_f32.len()
+            ))
+        })?;
     Ok(())
 }
 

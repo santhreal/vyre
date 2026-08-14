@@ -29,14 +29,14 @@ pub(super) fn write_fill_bytes(
     value: u8,
     context: &str,
 ) -> Result<(), String> {
-    if out.capacity() < byte_len {
-        out.try_reserve_exact(byte_len - out.capacity())
-            .map_err(|e| {
-                format!(
-                    "{context}: could not reserve {byte_len} GPU filter scratch bytes. Fix: reduce batch size or increase host memory: {e}"
-                )
-            })?;
-    }
+    // The buffer keeps its contents until the `resize` below, so this is the
+    // contents-preserving owner, not the clear-then-refill one.
+    vyre_foundation::allocation::try_reserve_vec_to_capacity(out, byte_len)
+        .map_err(|e| {
+            format!(
+                "{context}: could not reserve {byte_len} GPU filter scratch bytes. Fix: reduce batch size or increase host memory: {e}"
+            )
+        })?;
     out.resize(byte_len, value);
     out.fill(value);
     Ok(())

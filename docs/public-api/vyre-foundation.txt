@@ -726,6 +726,7 @@ pub fn vyre_foundation::algebraic_law_registry::has_law<F>(op_id: &str, predicat
 pub fn vyre_foundation::algebraic_law_registry::is_associative(op_id: &str) -> bool
 pub fn vyre_foundation::algebraic_law_registry::is_commutative(op_id: &str) -> bool
 pub fn vyre_foundation::algebraic_law_registry::laws_for_op(op_id: &str) -> &'static [&'static vyre_spec::algebraic_law::AlgebraicLaw]
+pub fn vyre_foundation::allocation::reserve_exact_cleared<T>(buf: &mut alloc::vec::Vec<T>, target: usize) -> core::result::Result<(), alloc::collections::TryReserveError>
 pub fn vyre_foundation::allocation::try_reserve_binary_heap_to_capacity<T>(heap: &mut alloc::collections::binary_heap::BinaryHeap<T>, target_capacity: usize) -> core::result::Result<(), alloc::collections::TryReserveError>
 pub fn vyre_foundation::allocation::try_reserve_hash_map_to_capacity<K, V, S>(map: &mut std::collections::hash::map::HashMap<K, V, S>, target_capacity: usize) -> core::result::Result<(), alloc::collections::TryReserveError> where K: core::cmp::Eq + core::hash::Hash, S: core::hash::BuildHasher
 pub fn vyre_foundation::allocation::try_reserve_hash_set_to_capacity<T, S>(set: &mut std::collections::hash::set::HashSet<T, S>, target_capacity: usize) -> core::result::Result<(), alloc::collections::TryReserveError> where T: core::cmp::Eq + core::hash::Hash, S: core::hash::BuildHasher
@@ -4353,8 +4354,6 @@ pub vyre_foundation::operation::OperationTier::External
 pub vyre_foundation::operation::OperationTier::Foundation
 pub vyre_foundation::operation::OperationTier::Intrinsic
 pub vyre_foundation::operation::OperationTier::Library
-pub vyre_foundation::operation::OperationTier::Primitive
-pub vyre_foundation::operation::OperationTier::Runtime
 pub vyre_foundation::operation::OperationTier::Unknown
 pub vyre_foundation::operation::SemanticOperation::build: core::option::Option<fn() -> vyre_foundation::ir::Program>
 pub vyre_foundation::operation::SemanticOperation::category: core::option::Option<&'static str>

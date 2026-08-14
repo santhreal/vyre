@@ -130,9 +130,11 @@ pub fn pack_dispatch_table_into(
         }
     }
     let len = packed_dispatch_table_len(entries.len());
-    crate::hostbuf::reserve_exact_cleared(out, len).map_err(|source| PackError::Allocation {
-        requested: len,
-        source: source.to_string(),
+    vyre_foundation::allocation::reserve_exact_cleared(out, len).map_err(|source| {
+        PackError::Allocation {
+            requested: len,
+            source: source.to_string(),
+        }
     })?;
     out.extend(entries.iter().map(|entry| {
         let mut packed: u32 = entry.handler_offset & 0x00FF_FFFF;

@@ -224,7 +224,7 @@ pub fn xor_bind_cpu_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_xor_bind_cpu_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
     let dim_words = a.len().min(b.len());
-    crate::hostbuf::reserve_exact_cleared(out, dim_words).map_err(|err| {
+    vyre_foundation::allocation::reserve_exact_cleared(out, dim_words).map_err(|err| {
         format!("hypervector XOR bind could not reserve {dim_words} output words: {err}")
     })?;
     out.extend(a.iter().zip(b.iter()).take(dim_words).map(|(&x, &y)| x ^ y));
@@ -269,7 +269,7 @@ pub fn try_majority_bundle_cpu_into(hvs: &[Vec<u32>], out: &mut Vec<u32>) -> Res
     let k = hvs.len();
     let threshold = k / 2;
 
-    crate::hostbuf::reserve_exact_cleared(out, dim_words).map_err(|err| {
+    vyre_foundation::allocation::reserve_exact_cleared(out, dim_words).map_err(|err| {
         format!("hypervector majority bundle could not reserve {dim_words} output words: {err}")
     })?;
     out.resize(dim_words, 0);
