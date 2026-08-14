@@ -6,6 +6,7 @@ use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::cases::mix32;
 use vyre_frontend_rust::pipeline::{RustPipeline, RustPipelineConfig};
 
+mod lex_columns;
 mod lexer;
 mod lexer_batch;
 
