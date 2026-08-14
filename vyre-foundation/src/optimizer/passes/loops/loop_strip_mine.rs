@@ -256,68 +256,17 @@ fn collect_names(nodes: &[Node], out: &mut Vec<Ident>) {
     }
 }
 
+/// Push every variable `expr` reads, in source order.
+///
+/// Operand positions come from `transform::visit::expr_children`, so a new
+/// operand-carrying `Expr` variant cannot hide a name from the fresh-name
+/// collision check that strip-mining depends on.
 fn collect_names_in_expr(expr: &Expr, out: &mut Vec<Ident>) {
-    match expr {
-        Expr::Var(name) => out.push(name.clone()),
-        Expr::Load { index, .. } | Expr::UnOp { operand: index, .. } => {
-            collect_names_in_expr(index, out);
+    crate::transform::visit::for_each_subexpr(expr, &mut |candidate| {
+        if let Expr::Var(name) = candidate {
+            out.push(name.clone());
         }
-        Expr::BinOp { left, right, .. } => {
-            collect_names_in_expr(left, out);
-            collect_names_in_expr(right, out);
-        }
-        Expr::Call { args, .. } => {
-            for arg in args {
-                collect_names_in_expr(arg, out);
-            }
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            collect_names_in_expr(cond, out);
-            collect_names_in_expr(true_val, out);
-            collect_names_in_expr(false_val, out);
-        }
-        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
-            collect_names_in_expr(value, out);
-        }
-        Expr::Fma { a, b, c } => {
-            collect_names_in_expr(a, out);
-            collect_names_in_expr(b, out);
-            collect_names_in_expr(c, out);
-        }
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            collect_names_in_expr(index, out);
-            if let Some(expected) = expected {
-                collect_names_in_expr(expected, out);
-            }
-            collect_names_in_expr(value, out);
-        }
-        Expr::SubgroupBallot { cond } => collect_names_in_expr(cond, out),
-        Expr::SubgroupShuffle { value, lane } => {
-            collect_names_in_expr(value, out);
-            collect_names_in_expr(lane, out);
-        }
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => {}
-    }
+    });
 }
 
 // `body_writes_loop_var` lives in `super::substitution` (one canonical copy

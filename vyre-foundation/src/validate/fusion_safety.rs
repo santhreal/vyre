@@ -15,7 +15,6 @@ use crate::validate::{err, ValidationError};
 #[cfg(test)]
 use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashSet;
-use smallvec::SmallVec;
 
 #[derive(Debug, Default)]
 pub(crate) struct NodeAccesses {
@@ -210,82 +209,22 @@ fn collect_node_sequence_accesses(nodes: &[Node], accesses: &mut NodeAccesses) {
     }
 }
 
+/// Record every buffer `expr` reads or atomically updates.
+///
+/// Which positions name a buffer, and how, is `visit::visit_expr_buffer_accesses`'s
+/// decision, not this function's. A callee parameter is a read-only or uniform
+/// buffer by declaration, so `Expr::BufferRef` counts as a read there; recording
+/// it as an atomic access would report a phantom hazard against every ordinary
+/// read of the same buffer in the caller.
 pub(crate) fn collect_expr_accesses(expr: &Expr, accesses: &mut NodeAccesses) {
-    let mut stack: SmallVec<[&Expr; 32]> = SmallVec::new();
-    stack.push(expr);
-    while let Some(expr) = stack.pop() {
-        match expr {
-            Expr::Load { buffer, index } => {
-                accesses.read_buffers.insert(buffer.clone());
-                stack.push(index);
-            }
-            Expr::BufLen { buffer } => {
-                accesses.read_buffers.insert(buffer.clone());
-            }
-            // A callee parameter is a read-only or uniform buffer by
-            // declaration, so passing a buffer is a read. Recording it as an
-            // atomic access instead would report a phantom hazard against
-            // every ordinary read of the same buffer in the caller.
-            Expr::BufferRef { buffer } => {
-                accesses.read_buffers.insert(buffer.clone());
-            }
-            Expr::Atomic {
-                buffer,
-                index,
-                expected,
-                value,
-                ..
-            } => {
-                accesses.atomic_buffers.insert(buffer.clone());
-                stack.push(value);
-                if let Some(expected) = expected {
-                    stack.push(expected);
-                }
-                stack.push(index);
-            }
-            Expr::BinOp { left, right, .. } => {
-                stack.push(right);
-                stack.push(left);
-            }
-            Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
-                stack.push(operand);
-            }
-            Expr::Call { args, .. } => {
-                stack.extend(args.iter());
-            }
-            Expr::Fma { a, b, c } => {
-                stack.push(c);
-                stack.push(b);
-                stack.push(a);
-            }
-            Expr::Select {
-                cond,
-                true_val,
-                false_val,
-            } => {
-                stack.push(false_val);
-                stack.push(true_val);
-                stack.push(cond);
-            }
-            Expr::SubgroupBallot { cond } => stack.push(cond),
-            Expr::SubgroupShuffle { value, lane } => {
-                stack.push(lane);
-                stack.push(value);
-            }
-            Expr::SubgroupReduce { value, .. } => stack.push(value),
-            Expr::LitU32(_)
-            | Expr::LitI32(_)
-            | Expr::LitF32(_)
-            | Expr::LitBool(_)
-            | Expr::Var(_)
-            | Expr::InvocationId { .. }
-            | Expr::WorkgroupId { .. }
-            | Expr::LocalId { .. }
-            | Expr::SubgroupLocalId
-            | Expr::SubgroupSize
-            | Expr::Opaque(_) => {}
+    crate::visit::visit_expr_buffer_accesses(expr, |access, buffer| match access {
+        crate::visit::ExprBufferAccess::Load => {
+            accesses.read_buffers.insert(buffer.clone());
         }
-    }
+        crate::visit::ExprBufferAccess::Atomic => {
+            accesses.atomic_buffers.insert(buffer.clone());
+        }
+    });
 }
 
 #[cfg(test)]

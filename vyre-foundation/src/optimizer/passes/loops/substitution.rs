@@ -8,6 +8,7 @@
 pub(super) use crate::transform::subst::{substitute_node, substitute_nodes};
 
 use crate::ir::{Expr, Ident, Node};
+use crate::transform::visit::{any_subexpr, child_bodies};
 
 /// True iff `expr` contains an `Expr::Opaque` anywhere in its tree.
 ///
@@ -19,91 +20,40 @@ use crate::ir::{Expr, Ident, Node};
 /// disjoint, but a buffer access hidden inside an opaque expression is
 /// invisible to that collector, so it would be silently dropped from the
 /// touched set and the disjointness proof would be unsound. Both passes call
-/// this to fail closed: any opaque expression in the body keeps it whole. The
-/// walk is exhaustive over every `Expr` operand position (including
-/// `SubgroupShuffle`'s `lane`, which the buffer collectors elide) so an opaque
-/// payload can never be reordered past a dependent access it cannot see.
+/// this to fail closed: any opaque expression in the body keeps it whole.
+///
+/// Operand positions come from `transform::visit::expr_children`, so every
+/// position is covered, including `SubgroupShuffle`'s `lane`, which the buffer
+/// collectors elide: an opaque payload can never be reordered past a dependent
+/// access it cannot see.
 pub(super) fn expr_contains_opaque(expr: &Expr) -> bool {
-    match expr {
-        Expr::Opaque(_) => true,
-        Expr::Load { index, .. } => expr_contains_opaque(index),
-        Expr::BufLen { .. } | Expr::BufferRef { .. } => false,
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            expr_contains_opaque(index)
-                || expr_contains_opaque(value)
-                || matches!(expected.as_deref(), Some(e) if expr_contains_opaque(e))
-        }
-        Expr::BinOp { left, right, .. } => {
-            expr_contains_opaque(left) || expr_contains_opaque(right)
-        }
-        Expr::UnOp { operand, .. } => expr_contains_opaque(operand),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_contains_opaque(cond)
-                || expr_contains_opaque(true_val)
-                || expr_contains_opaque(false_val)
-        }
-        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
-            expr_contains_opaque(value)
-        }
-        Expr::Fma { a, b, c } => {
-            expr_contains_opaque(a) || expr_contains_opaque(b) || expr_contains_opaque(c)
-        }
-        Expr::Call { args, .. } => args.iter().any(expr_contains_opaque),
-        Expr::SubgroupBallot { cond } => expr_contains_opaque(cond),
-        Expr::SubgroupShuffle { value, lane } => {
-            expr_contains_opaque(value) || expr_contains_opaque(lane)
-        }
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => false,
-    }
+    any_subexpr(expr, &mut |candidate| matches!(candidate, Expr::Opaque(_)))
 }
 
+/// True iff `nodes` rebinds `var`, with `nested_same_name_rebinds` deciding
+/// what a nested `Loop` that reuses the name counts as.
+///
+/// Child bodies come from `transform::visit::child_bodies`, the one exhaustive
+/// owner. The copy this replaces ended in `_ => false`, so a `Node` variant
+/// that gained a body would have read as rebinding nothing and every loop pass
+/// guarded by this would have applied an induction-range fact through a scope
+/// that overwrites the variable.
 fn body_rebinds_var_with_nested_policy(
     nodes: &[Node],
     var: &Ident,
     nested_same_name_rebinds: bool,
 ) -> bool {
-    nodes.iter().any(|node| match node {
-        Node::Let { name, .. } | Node::Assign { name, .. } => name == var,
-        Node::If {
-            then, otherwise, ..
-        } => {
-            body_rebinds_var_with_nested_policy(then, var, nested_same_name_rebinds)
-                || body_rebinds_var_with_nested_policy(otherwise, var, nested_same_name_rebinds)
+    nodes.iter().any(|node| {
+        match node {
+            Node::Let { name, .. } | Node::Assign { name, .. } if name == var => return true,
+            // A nested loop reusing the name opens its own binding scope, so
+            // the caller's policy decides without descending.
+            Node::Loop { var: inner, .. } if inner == var => return nested_same_name_rebinds,
+            _ => {}
         }
-        Node::Loop {
-            var: inner, body, ..
-        } => {
-            if inner == var {
-                nested_same_name_rebinds
-            } else {
-                body_rebinds_var_with_nested_policy(body, var, nested_same_name_rebinds)
-            }
-        }
-        Node::Block(body) => {
-            body_rebinds_var_with_nested_policy(body, var, nested_same_name_rebinds)
-        }
-        Node::Region { body, .. } => {
-            body_rebinds_var_with_nested_policy(body, var, nested_same_name_rebinds)
-        }
-        _ => false,
+        child_bodies(node)
+            .into_iter()
+            .any(|body| body_rebinds_var_with_nested_policy(body, var, nested_same_name_rebinds))
     })
 }
 
