@@ -125,6 +125,15 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   The volume sweep runner had a three-crate list that left one tracked volume
   wave in no shard, and a shard index outside the shard count selected nothing
   and exited 0.
+- Release tooling now has one owner per shared shape. Subcommand dispatch and
+  the agreement check between the assignment table and each delegate crate live
+  in `xtask::subcommands`; the operation table cells shared by the catalog and
+  the operation inventory live in `xtask-registry::docs::schema_cells`; the
+  optimizer catalog row published by both the integration matrix and the corpus
+  pass manifest lives in `xtask-registry::release::optimizer_pass_rows`;
+  bounded file reads route through `xtask::output_arg::read_text_bounded`. The
+  xtask integration tests link as three binaries instead of ten and the
+  registry tests as one instead of two.
 
 ### Removed
 
