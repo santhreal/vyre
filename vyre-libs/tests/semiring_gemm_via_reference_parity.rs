@@ -22,7 +22,7 @@
 #![cfg(feature = "cpu-parity")]
 
 use vyre_primitives::math::semiring_gemm::Semiring;
-use vyre_self_substrate::analysis::dataflow_fixpoint::{
+use vyre_libs::analysis::dataflow_fixpoint::{
     reference_semiring_gemm, semiring_gemm_via_bool_or, semiring_gemm_via_lineage,
     semiring_gemm_via_min_plus,
 };

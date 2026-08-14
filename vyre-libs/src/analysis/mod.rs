@@ -1,4 +1,4 @@
-//! Static-analysis, fixpoint, diagnostics, and verification substrate modules.
+//! Static-analysis, fixpoint, diagnostics, and verification compositions.
 
 pub mod cost_model;
 pub mod dataflow_fixpoint;

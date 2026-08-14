@@ -101,8 +101,6 @@
 //!   onto disjoint sub-trees via planar non-overlapping selection.
 //!   Drops dispatch count from O(N) sequential to O(log N) batched.
 
-#[cfg(feature = "analysis")]
-pub mod analysis;
 #[cfg(feature = "data")]
 pub mod data;
 #[cfg(feature = "graph-solvers")]
@@ -120,13 +118,6 @@ pub mod math;
 /// points, and optimizer contract metadata without descending into
 /// private module paths.
 pub mod optimizer;
-
-#[cfg(feature = "analysis")]
-pub use analysis::{
-    cost_model, dataflow_fixpoint, decision_telemetry, diagnostic_aggregation,
-    effect_signature_check, incremental_invalidation, knowledge_compile_pass_precondition,
-    linear_type_check, persistent_fixpoint_program, shape_smt_check,
-};
 
 #[cfg(feature = "logic")]
 pub use logic::{

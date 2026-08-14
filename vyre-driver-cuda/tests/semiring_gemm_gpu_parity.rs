@@ -5,7 +5,7 @@
 mod common;
 
 use common::with_cuda_optimizer_dispatcher;
-use vyre_self_substrate::dataflow_fixpoint::{
+use vyre_libs::analysis::dataflow_fixpoint::{
     reference_semiring_gemm, semiring_gemm_via, semiring_gemm_via_bool_or,
     semiring_gemm_via_lineage, semiring_gemm_via_min_plus, Semiring,
 };

@@ -23,14 +23,6 @@ workspace = true
 [features]
 default = ["optimizer"]
 optimizer = ["vyre-primitives/graph"]
-analysis = [
-    "optimizer",
-    "vyre-libs/telemetry",
-    "vyre-libs/device",
-    "vyre-primitives/effects",
-    "vyre-primitives/math",
-    "vyre-primitives/types",
-]
 data = [
     "optimizer",
     "vyre-libs/telemetry",
@@ -42,7 +34,8 @@ data = [
 ]
 graph-solvers = ["optimizer", "vyre-libs/telemetry", "vyre-libs/device", "vyre-primitives/math"]
 logic = [
-    "analysis",
+    "optimizer",
+    "vyre-libs/analysis",
     "vyre-primitives/cat",
     "vyre-primitives/dnnf",
     "vyre-primitives/zx",
@@ -55,7 +48,7 @@ math-solvers = [
     "vyre-primitives/topology",
 ]
 all-solvers = [
-    "analysis",
+    "vyre-libs/analysis",
     "data",
     "graph-solvers",
     "logic",
@@ -124,11 +117,6 @@ required-features = ["cpu-parity"]
 [[test]]
 name = "categorical_laws_proptest"
 path = "tests/categorical_laws_proptest.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "cost_model_predict_runtime_via_reference_parity"
-path = "tests/cost_model_predict_runtime_via_reference_parity.rs"
 required-features = ["cpu-parity"]
 
 [[test]]
@@ -224,11 +212,6 @@ required-features = ["cpu-parity"]
 [[test]]
 name = "self_consumer_conform"
 path = "tests/self_consumer_conform.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "semiring_gemm_via_reference_parity"
-path = "tests/semiring_gemm_via_reference_parity.rs"
 required-features = ["cpu-parity"]
 
 [[test]]

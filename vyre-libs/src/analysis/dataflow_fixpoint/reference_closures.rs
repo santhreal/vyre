@@ -33,7 +33,7 @@ pub fn reference_semiring_gemm_into(
     semiring: Semiring,
     c: &mut Vec<u32>,
 ) {
-    use vyre_libs::telemetry::observability::{bump, dataflow_fixpoint_calls};
+    use crate::telemetry::observability::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     foundation_dataflow::semiring_gemm_cpu_into(a, b, m, n, k, semiring, c);
 }

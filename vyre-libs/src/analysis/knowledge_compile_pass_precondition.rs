@@ -47,10 +47,10 @@
 //! by the pass framework that supplies the `nodes`, `children`, and
 //! topological order buffers.
 
-use vyre_libs::dispatch_buffers::{
+use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
-use vyre_libs::device::scratch::reserve_vec_capacity;
+use crate::device::scratch::reserve_vec_capacity;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::knowledge_compile::ddnnf_evaluate;
 #[cfg(test)]
@@ -79,7 +79,7 @@ pub fn reference_pass_applies(
     var_assignments: &[u32],
     topo_order: &[u32],
 ) -> u32 {
-    use vyre_libs::telemetry::observability::{bump, knowledge_compile_pass_precondition_calls};
+    use crate::telemetry::observability::{bump, knowledge_compile_pass_precondition_calls};
     bump(&knowledge_compile_pass_precondition_calls);
     let evals = ddnnf_evaluate_cpu(nodes, node_var, children, var_assignments, topo_order);
     // The root of the topological order is the formula's overall
@@ -176,7 +176,7 @@ pub fn pass_applies_via_with_scratch_into(
     scratch: &mut KnowledgeCompilePassScratch,
     evals_out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, knowledge_compile_pass_precondition_calls};
+    use crate::telemetry::observability::{bump, knowledge_compile_pass_precondition_calls};
     bump(&knowledge_compile_pass_precondition_calls);
 
     if nodes.is_empty() {
@@ -391,7 +391,7 @@ fn validate_waves(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
     use vyre_primitives::graph::knowledge_compile::{AND_NODE, LITERAL_TRUE};
 
@@ -490,13 +490,13 @@ mod tests {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 7);
-            let node_kinds = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
-            let node_var = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
-            let child_offsets = vyre_libs::dispatch_buffers::read_u32s(&inputs[2]);
-            let child_counts = vyre_libs::dispatch_buffers::read_u32s(&inputs[3]);
-            let children = vyre_libs::dispatch_buffers::read_u32s(&inputs[4]);
-            let assignments = vyre_libs::dispatch_buffers::read_u32s(&inputs[5]);
-            let mut out = vyre_libs::dispatch_buffers::read_u32s(&inputs[6]);
+            let node_kinds = crate::dispatch_buffers::read_u32s(&inputs[0]);
+            let node_var = crate::dispatch_buffers::read_u32s(&inputs[1]);
+            let child_offsets = crate::dispatch_buffers::read_u32s(&inputs[2]);
+            let child_counts = crate::dispatch_buffers::read_u32s(&inputs[3]);
+            let children = crate::dispatch_buffers::read_u32s(&inputs[4]);
+            let assignments = crate::dispatch_buffers::read_u32s(&inputs[5]);
+            let mut out = crate::dispatch_buffers::read_u32s(&inputs[6]);
             for node in 0..node_kinds.len() {
                 match node_kinds[node] {
                     LITERAL_TRUE => {

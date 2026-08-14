@@ -56,6 +56,7 @@ rule = ["dep:regex"]
 # crate. Each gates one module tree; `all-solvers` turns on the set.
 telemetry = []
 device = []
+analysis = ["device", "telemetry", "vyre-primitives/effects", "vyre-primitives/math", "vyre-primitives/types"]
 scheduling = ["device", "telemetry", "vyre-primitives/math", "vyre-primitives/parsing"]
 
 "math-linalg" = []
@@ -159,6 +160,16 @@ required-features = ["cpu-parity", "scheduling", "test-fixtures"]
 name = "submodular_retention_via_reference_parity"
 path = "tests/submodular_retention_via_reference_parity.rs"
 required-features = ["cpu-parity", "scheduling", "test-fixtures"]
+
+[[test]]
+name = "cost_model_predict_runtime_via_reference_parity"
+path = "tests/cost_model_predict_runtime_via_reference_parity.rs"
+required-features = ["cpu-parity", "analysis", "test-fixtures"]
+
+[[test]]
+name = "semiring_gemm_via_reference_parity"
+path = "tests/semiring_gemm_via_reference_parity.rs"
+required-features = ["cpu-parity", "analysis", "test-fixtures"]
 
 [[test]]
 name = "sweep_text_utf8_oracle_matrix"

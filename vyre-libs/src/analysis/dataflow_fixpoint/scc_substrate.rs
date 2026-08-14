@@ -6,7 +6,7 @@ use super::reference_closures::reachability_closure_into;
 #[cfg(any(test, feature = "cpu-parity"))]
 use super::DataflowFixpointScratch;
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_libs::device::scratch::reserve_vec_capacity_or_panic;
+use crate::device::scratch::reserve_vec_capacity_or_panic;
 
 #[cfg(any(test, feature = "cpu-parity"))]
 impl DataflowFixpointScratch {
@@ -56,7 +56,7 @@ pub fn forward_backward_bitsets_for_pivot_into(
     n: u32,
     scratch: &mut DataflowFixpointScratch,
 ) {
-    use vyre_libs::telemetry::observability::{bump, dataflow_fixpoint_calls};
+    use crate::telemetry::observability::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     assert!(
         n > 0,
@@ -156,7 +156,7 @@ pub fn reference_scc_components_via_substrate_into(
     components: &mut Vec<u32>,
     scratch: &mut DataflowFixpointScratch,
 ) {
-    use vyre_libs::telemetry::observability::{bump, dataflow_fixpoint_calls};
+    use crate::telemetry::observability::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     components.clear();
     if n == 0 {

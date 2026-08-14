@@ -132,6 +132,10 @@ pub mod device;
 #[cfg(feature = "scheduling")]
 pub mod scheduling;
 
+/// Static-analysis, fixpoint, diagnostics, and verification compositions.
+#[cfg(feature = "analysis")]
+pub mod analysis;
+
 /// Math dialect  -  linear algebra, scans, broadcasting.
 #[cfg(any(
     feature = "math-linalg",

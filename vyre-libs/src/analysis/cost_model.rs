@@ -5,7 +5,7 @@
 //! latency samples. Output feeds #22 megakernel scheduler as soft
 //! constraints.
 
-use vyre_libs::dispatch_buffers::{
+use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
@@ -42,7 +42,7 @@ pub fn reference_predict_runtime(
     historical_residuals: &[u32],
     alpha: f64,
 ) -> (f64, u32) {
-    use vyre_libs::telemetry::observability::{bump, cost_model_calls};
+    use crate::telemetry::observability::{bump, cost_model_calls};
     bump(&cost_model_calls);
     let topo: Vec<u32> = (0..feature_circuit_kinds.len() as u32).collect();
     let result = sum_product_evaluate_cpu(
@@ -115,7 +115,7 @@ pub fn predict_runtime_fixed_via_with_scratch(
     alpha: f64,
     scratch: &mut CostModelGpuScratch,
 ) -> Result<(u32, u32), DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, cost_model_calls};
+    use crate::telemetry::observability::{bump, cost_model_calls};
     bump(&cost_model_calls);
 
     let n_nodes = validate_circuit(
@@ -315,7 +315,7 @@ fn validate_sorted_residuals(residuals: &[u32]) -> Result<(), DispatchError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_primitives::graph::sum_product_circuit::{KIND_LEAF, KIND_PRODUCT, KIND_SUM};
 
     #[test]
@@ -431,13 +431,13 @@ mod tests {
     /// depth-wave harness, a node is computed only after every lower-depth node has
     /// committed, exactly the barrier semantics the real leveled program provides.
     fn dispatch_sum_product(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, DispatchError> {
-        let depths = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
-        let kinds = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
-        let offsets = vyre_libs::dispatch_buffers::read_u32s(&inputs[2]);
-        let counts = vyre_libs::dispatch_buffers::read_u32s(&inputs[3]);
-        let children = vyre_libs::dispatch_buffers::read_u32s(&inputs[4]);
-        let weights = vyre_libs::dispatch_buffers::read_u32s(&inputs[5]);
-        let values = vyre_libs::dispatch_buffers::read_u32s(&inputs[6]);
+        let depths = crate::dispatch_buffers::read_u32s(&inputs[0]);
+        let kinds = crate::dispatch_buffers::read_u32s(&inputs[1]);
+        let offsets = crate::dispatch_buffers::read_u32s(&inputs[2]);
+        let counts = crate::dispatch_buffers::read_u32s(&inputs[3]);
+        let children = crate::dispatch_buffers::read_u32s(&inputs[4]);
+        let weights = crate::dispatch_buffers::read_u32s(&inputs[5]);
+        let values = crate::dispatch_buffers::read_u32s(&inputs[6]);
         let mut out = values.clone();
         let max_depth = depths.iter().copied().max().unwrap_or(0);
         for wave in 0..=max_depth {
@@ -466,7 +466,7 @@ mod tests {
     }
 
     fn dispatch_conformal(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, DispatchError> {
-        let scores = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+        let scores = crate::dispatch_buffers::read_u32s(&inputs[0]);
         let out_len = inputs[1].len() / std::mem::size_of::<u32>();
         if out_len != 1 {
             return Err(DispatchError::BadInputs(format!(

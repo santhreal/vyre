@@ -43,6 +43,7 @@ self-substrate-adapters = [
     "vyre-self-substrate/data",
     "vyre-self-substrate/logic",
     "vyre-libs/telemetry",
+    "vyre-libs/analysis",
 ]
 
 [dependencies]

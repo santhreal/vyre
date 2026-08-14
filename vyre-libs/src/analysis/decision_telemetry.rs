@@ -1,6 +1,6 @@
 //! Substrate-decision telemetry (P-OBS-2).
 //!
-//! Where `vyre_libs::telemetry::observability` tracks *call counts* per substrate
+//! Where `crate::telemetry::observability` tracks *call counts* per substrate
 //! module, this module tracks the *decisions* substrates make: which
 //! pass got reordered, which fusion candidate was picked, which
 //! cache entry got evicted, etc.
