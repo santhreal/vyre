@@ -5,20 +5,11 @@
 //! canonical program or fail with an actionable error. Panics are always bugs.
 
 use proptest::prelude::*;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre::ir::Program;
 
-fn valid_program() -> Program {
-    Program::wrapped(
-        vec![BufferDecl::storage(
-            "out",
-            0,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )],
-        [64, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
-    )
-}
+#[path = "support/mod.rs"]
+mod support;
+use support::one_store_program;
 
 fn assert_decode_result_is_stable(bytes: &[u8]) -> Result<(), TestCaseError> {
     let outcome = std::panic::catch_unwind(|| Program::from_wire(bytes));
@@ -71,7 +62,7 @@ proptest! {
 
 #[test]
 fn every_valid_wire_prefix_is_rejected_or_canonical_without_panic() {
-    let bytes = valid_program()
+    let bytes = one_store_program()
         .to_wire()
         .expect("Fix: adversarial wire fixture must encode");
     assert!(
@@ -89,7 +80,7 @@ fn every_valid_wire_prefix_is_rejected_or_canonical_without_panic() {
 
 #[test]
 fn single_byte_mutations_are_rejected_or_canonical_without_panic() {
-    let bytes = valid_program()
+    let bytes = one_store_program()
         .to_wire()
         .expect("Fix: adversarial wire fixture must encode");
     for index in 0..bytes.len() {

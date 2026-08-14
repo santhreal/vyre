@@ -51,8 +51,8 @@ total_lines = 2298
 
 [[crate]]
 name = "vyre"
-duplicate_lines = 22
-total_lines = 252
+duplicate_lines = 0
+total_lines = 248
 
 [[crate]]
 name = "vyre-aot"
@@ -131,8 +131,8 @@ total_lines = 5179
 
 [[crate]]
 name = "vyre-grammar-gen"
-duplicate_lines = 137
-total_lines = 3393
+duplicate_lines = 119
+total_lines = 3383
 
 [[crate]]
 name = "vyre-libs"

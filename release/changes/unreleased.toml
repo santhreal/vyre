@@ -824,3 +824,8 @@ text = "The three `vyre-debug` descriptor and WGSL suites share one program fixt
 id = "small-crate-dup-pins-lowered"
 category = "Changed"
 text = "Duplication pins for three crates now record the measured tree: vyre-macros 89 to 41, vyre-lints 66 to 0, vyre-debug 54 to 9. Their total line counts are corrected to the measured values, which were already stale before these changes. A no-op test whose body was a comment claiming to pin a test count is deleted, and the two `raw_ir_in_libs` case files, named for a helper and for one of their own tests, are now named for what they hold."
+
+[[fragments]]
+id = "wire-and-lr-fixtures-have-one-owner"
+category = "Changed"
+text = "The `vyre` facade wire suites share one program fixture in `vyre/tests/support/mod.rs`. The round-trip suite proves a valid program survives an encode and a decode byte for byte and the malformed-wire suite proves hostile bytes never decode into one, so two copies of that program let the two halves of the claim drift. In `vyre-grammar-gen` the LR table the wire round trip exercises is the sample grammar `vyre-grammar-gen/src/lr.rs` already owned, not a second copy of it. Pins lowered to the measured tree: vyre 22 to 0, vyre-grammar-gen 137 to 119."
