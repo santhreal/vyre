@@ -40,8 +40,7 @@ pub const CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 #[must_use]
 pub const fn csr_queue_strided_forward_dispatch_grid(queue_capacity: u32) -> [u32; 3] {
     let total_lanes = queue_capacity.saturating_mul(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE);
-    let blocks = total_lanes.div_ceil(CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE[0]);
-    [if blocks == 0 { 1 } else { blocks }, 1, 1]
+    crate::graph::lane_grid(total_lanes, CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE[0])
 }
 
 define_csr_queue_forward_entry_point! {

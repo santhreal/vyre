@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::MemoryOrdering;
 
 /// Canonical op id for an f32 workgroup sum over a scratch buffer.
 pub const SUM_F32_OP_ID: &str = "vyre-primitives::reduce::workgroup_sum_f32";
@@ -393,6 +394,67 @@ inventory::submit! {
         ]]),
         Some(|| vec![vec![fixture_f32(&[9.5])]]),
     )
+}
+
+/// Emit the double-buffered Hillis-Steele inclusive-sum sweep over `lanes`
+/// workgroup lanes, reading the staged per-lane values from `scratch_a` and
+/// leaving the inclusive prefix sums there.
+///
+/// Each round of the sweep copies `scratch_a` into `scratch_b` unconditionally,
+/// so a lane below the current stride keeps its running value, then lanes at or
+/// above the stride add the value `stride` positions back, then `scratch_b` is
+/// copied into `scratch_a` so the next round reads a settled buffer. Barriers
+/// separate the two halves of each round and the rounds from one another.
+///
+/// The stride sequence is a compile-time `1, 2, 4, ...` under `lanes`, so the
+/// sweep unrolls in the emitted IR and the guard constants are folded. The
+/// `lane - stride` index is spelled as a wrapping add of the negated stride and
+/// is only read inside the `stride - 1 < lane` guard, which is where the
+/// subtraction is in range.
+///
+/// Callers differ in how they stage `scratch_a` and how they write the result
+/// out; the sweep between those two steps does not, and was hand-written five
+/// times before this became its owner.
+pub(crate) fn hillis_steele_inclusive_sum_nodes(
+    scratch_a: &str,
+    scratch_b: &str,
+    lane: &Expr,
+    lanes: u32,
+) -> Vec<Node> {
+    let mut nodes = Vec::new();
+    let mut stride = 1_u32;
+    while stride < lanes {
+        nodes.push(Node::store(
+            scratch_b,
+            lane.clone(),
+            Expr::load(scratch_a, lane.clone()),
+        ));
+        let previous_lane = Expr::add(lane.clone(), Expr::u32(0_u32.wrapping_sub(stride)));
+        nodes.push(Node::if_then(
+            Expr::lt(Expr::u32(stride - 1), lane.clone()),
+            vec![Node::store(
+                scratch_b,
+                lane.clone(),
+                Expr::add(
+                    Expr::load(scratch_a, lane.clone()),
+                    Expr::load(scratch_a, previous_lane),
+                ),
+            )],
+        ));
+        nodes.push(Node::Barrier {
+            ordering: MemoryOrdering::SeqCst,
+        });
+        nodes.push(Node::store(
+            scratch_a,
+            lane.clone(),
+            Expr::load(scratch_b, lane.clone()),
+        ));
+        nodes.push(Node::Barrier {
+            ordering: MemoryOrdering::SeqCst,
+        });
+        stride *= 2;
+    }
+    nodes
 }
 
 #[cfg(test)]

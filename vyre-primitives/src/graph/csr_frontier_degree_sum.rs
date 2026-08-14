@@ -26,7 +26,7 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, Expr, Node, Program};
 
-use crate::graph::csr_frontier_step::active_frontier_source_lane;
+use crate::graph::frontier_bits::active_source_lane;
 use crate::graph::program_graph::{
     frontier_buffer, word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_OFFSETS,
 };
@@ -44,15 +44,7 @@ pub const CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// Dispatch grid that covers every source node exactly once.
 #[must_use]
 pub const fn csr_frontier_degree_sum_dispatch_grid(node_count: u32) -> [u32; 3] {
-    let lanes_per_block = CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE[0];
-    let full_blocks = node_count / lanes_per_block;
-    let tail_block = if node_count % lanes_per_block == 0 {
-        0
-    } else {
-        1
-    };
-    let blocks = full_blocks + tail_block;
-    [if blocks == 0 { 1 } else { blocks }, 1, 1]
+    crate::graph::lane_grid(node_count, CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE[0])
 }
 
 /// Build the IR `Program` that computes `degree_sum_out[0]` =
@@ -67,9 +59,10 @@ pub fn csr_frontier_degree_sum(shape: ProgramGraphShape) -> Program {
     let frontier_in = "frontier_in";
     let degree_sum_out = "degree_sum_out";
 
-    let body = vec![active_frontier_source_lane(
+    let body = vec![active_source_lane(
         shape.node_count,
         frontier_in,
+        None,
         Expr::InvocationId { axis: 0 },
         vec![
             Node::let_bind("off_lo", Expr::load(NAME_EDGE_OFFSETS, Expr::var("src"))),

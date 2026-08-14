@@ -1977,6 +1977,21 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   this one. The resolver walks the root manifest's member roster rather than
   joining the package name onto the root, because a member's directory is not
   always its package name.
+- The packed-bitset addressing skeleton, the one-dimensional dispatch grid and
+  the double-buffered workgroup scan sweep each have one owner in
+  `vyre-primitives`: `graph::frontier_bits`, `graph::lane_grid` and
+  `reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes`. Each was
+  hand-written in a dozen or more graph primitives, and the copies disagreed at
+  the zero case. Two dispatch grids returned zero groups for an empty input,
+  which the CUDA launcher rejects outright because it requires every grid axis
+  above zero, and the empty input reaches those grids because their input
+  validators accept it. Three copies of a ceiling division underflowed at zero
+  and were safe only because every caller happened to floor its argument first,
+  and a fourth returned zero groups. A frontier word count multiplied three
+  unsigned factors without saturating, so three large factors wrap to a small
+  allocation. A kernel body restated per primitive drifts where no per-op
+  oracle looks, because an oracle compares evaluated output and never sees the
+  grid or the allocation size.
 
 ## [0.7.1] - 2026-08-01
 

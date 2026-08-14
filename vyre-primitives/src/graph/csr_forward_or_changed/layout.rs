@@ -10,42 +10,22 @@ pub(crate) const CSR_FORWARD_OR_CHANGED_HISTORY_FAST_PATH_MAX_ITERS: u32 = 64;
 /// Dispatch grid for a node-parallel CSR forward-or-changed pass.
 #[must_use]
 pub const fn csr_forward_or_changed_parallel_grid(node_count: u32) -> [u32; 3] {
-    [
-        ceil_div_u32(
-            at_least_one(node_count),
-            CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE[0],
-        ),
-        1,
-        1,
-    ]
+    crate::graph::lane_grid(
+        node_count,
+        CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE[0],
+    )
 }
 
 /// Dispatch grid for a batched node-parallel CSR forward-or-changed pass.
+///
+/// One y group per query, floored at one so a zero-query batch still launches.
 #[must_use]
 pub const fn csr_forward_or_changed_parallel_batch_grid(
     node_count: u32,
     query_count: u32,
 ) -> [u32; 3] {
-    [
-        ceil_div_u32(
-            at_least_one(node_count),
-            CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE[0],
-        ),
-        at_least_one(query_count),
-        1,
-    ]
-}
-
-const fn at_least_one(value: u32) -> u32 {
-    if value == 0 {
-        1
-    } else {
-        value
-    }
-}
-
-const fn ceil_div_u32(value: u32, divisor: u32) -> u32 {
-    ((value - 1) / divisor) + 1
+    let [groups, _, _] = csr_forward_or_changed_parallel_grid(node_count);
+    [groups, if query_count == 0 { 1 } else { query_count }, 1]
 }
 
 /// Validated dispatch layout for the forward-or-changed CSR primitive.

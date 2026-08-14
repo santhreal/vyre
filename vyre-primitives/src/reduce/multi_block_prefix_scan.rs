@@ -296,38 +296,14 @@ fn try_guarded_single_block_scan(input: &str, output: &str, n: u32) -> Result<Pr
         ordering: MemoryOrdering::SeqCst,
     });
 
-    let mut stride = 1_u32;
-    while stride < BLOCK_LANES {
-        scan_body.push(Node::store(
-            &scratch_b,
-            lane.clone(),
-            Expr::load(&scratch_a, lane.clone()),
-        ));
-        let previous_lane = Expr::add(lane.clone(), Expr::u32(0u32.wrapping_sub(stride)));
-        scan_body.push(Node::if_then(
-            Expr::lt(Expr::u32(stride - 1), lane.clone()),
-            vec![Node::store(
-                &scratch_b,
-                lane.clone(),
-                Expr::add(
-                    Expr::load(&scratch_a, lane.clone()),
-                    Expr::load(&scratch_a, previous_lane),
-                ),
-            )],
-        ));
-        scan_body.push(Node::Barrier {
-            ordering: MemoryOrdering::SeqCst,
-        });
-        scan_body.push(Node::store(
+    scan_body.extend(
+        crate::reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes(
             &scratch_a,
-            lane.clone(),
-            Expr::load(&scratch_b, lane.clone()),
-        ));
-        scan_body.push(Node::Barrier {
-            ordering: MemoryOrdering::SeqCst,
-        });
-        stride *= 2;
-    }
+            &scratch_b,
+            &lane,
+            BLOCK_LANES,
+        ),
+    );
 
     scan_body.push(Node::if_then(
         Expr::lt(lane.clone(), Expr::u32(n)),
@@ -436,44 +412,14 @@ fn try_pass_a_local_scan(
         ordering: MemoryOrdering::SeqCst,
     });
 
-    // Hillis-Steele rounds: log2(BLOCK_LANES) iterations.
-    let mut stride = 1_u32;
-    while stride < BLOCK_LANES {
-        // Unconditional A→B copy keeps lanes < stride at their current value.
-        body.push(Node::store(
-            &scratch_b,
-            lane.clone(),
-            Expr::load(&scratch_a, lane.clone()),
-        ));
-        // Lanes ≥ stride: B[lane] = A[lane] + A[lane - stride].
-        // The `lane - stride` is safe inside this guarded branch because
-        // the predicate ensures lane ≥ stride.
-        let previous_lane = Expr::add(lane.clone(), Expr::u32(0u32.wrapping_sub(stride)));
-        body.push(Node::if_then(
-            Expr::lt(Expr::u32(stride - 1), lane.clone()),
-            vec![Node::store(
-                &scratch_b,
-                lane.clone(),
-                Expr::add(
-                    Expr::load(&scratch_a, lane.clone()),
-                    Expr::load(&scratch_a, previous_lane),
-                ),
-            )],
-        ));
-        body.push(Node::Barrier {
-            ordering: MemoryOrdering::SeqCst,
-        });
-        // Copy B→A so the next round reads from A.
-        body.push(Node::store(
+    body.extend(
+        crate::reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes(
             &scratch_a,
-            lane.clone(),
-            Expr::load(&scratch_b, lane.clone()),
-        ));
-        body.push(Node::Barrier {
-            ordering: MemoryOrdering::SeqCst,
-        });
-        stride *= 2;
-    }
+            &scratch_b,
+            &lane,
+            BLOCK_LANES,
+        ),
+    );
 
     // Write per-element partial out (only for lanes whose global id is in range).
     body.push(Node::if_then(

@@ -9,6 +9,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use super::frontier_plan::ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE;
 use super::OP_ID;
 use crate::bitset::bitset_words;
+use crate::graph::frontier_bits::{set_bit, BitAccess};
 
 /// Build the GPU Program for one dense step. Invocation `d`
 /// computes `frontier_out[d] = any bit of (adj_rows[d] &
@@ -73,17 +74,17 @@ pub fn adaptive_dense_step(
         ),
         Node::if_then(
             Expr::ne(Expr::var("hit"), Expr::u32(0)),
-            vec![
-                Node::let_bind("word_idx", Expr::shr(d.clone(), Expr::u32(5))),
-                Node::let_bind(
-                    "bit_mask",
-                    Expr::shl(Expr::u32(1), Expr::bitand(d.clone(), Expr::u32(31))),
-                ),
-                Node::let_bind(
-                    "_",
-                    Expr::atomic_or(frontier_out, Expr::var("word_idx"), Expr::var("bit_mask")),
-                ),
-            ],
+            set_bit(
+                frontier_out,
+                &d,
+                BitAccess {
+                    word: "word_idx",
+                    mask: "bit_mask",
+                    value: "_",
+                },
+                |word| word,
+                Vec::new(),
+            ),
         ),
     ];
 

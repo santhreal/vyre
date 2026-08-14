@@ -445,21 +445,9 @@ pub fn plan_batched_path_reconstruct_dispatch(
         path_words: layout.path_words,
         len_words: target_len,
         max_depth,
-        grid: [
-            ceil_div_u32(layout.target_count, BATCHED_WORKGROUP_SIZE),
-            1,
-            1,
-        ],
+        grid: crate::graph::lane_grid(layout.target_count, BATCHED_WORKGROUP_SIZE),
         layout,
     })
-}
-
-fn ceil_div_u32(value: u32, divisor: u32) -> u32 {
-    if value == 0 {
-        0
-    } else {
-        ((value - 1) / divisor) + 1
-    }
 }
 
 /// Validate the length word returned by a single-target path-reconstruction dispatch.

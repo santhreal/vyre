@@ -54,8 +54,7 @@ pub const fn csr_queue_delta_strided_logical_lanes_per_launch(active_queue_capac
 #[must_use]
 pub const fn csr_queue_delta_strided_dispatch_grid(active_queue_capacity: u32) -> [u32; 3] {
     let total_lanes = csr_queue_delta_strided_logical_lanes_per_launch(active_queue_capacity);
-    let blocks = total_lanes.div_ceil(CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE[0]);
-    [if blocks == 0 { 1 } else { blocks }, 1, 1]
+    crate::graph::lane_grid(total_lanes, CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE[0])
 }
 
 define_csr_queue_delta_entry_point! {
