@@ -104,7 +104,6 @@ vyre.workspace = true
 # own test/bench builds without leaking the oracles into production (resolver 2).
 vyre-primitives = { path = "../vyre-primitives", features = ["cpu-parity"], default-features = false }
 vyre-emit-naga = { path = "../vyre-emit-naga" }
-vyre-intrinsics = { path = "../vyre-intrinsics" }
 vyre-driver-reference = { path = "../vyre-driver-reference" }
 # integration tests/benches assert against these crates' public APIs
 vyre-driver-wgpu = { path = "../vyre-driver-wgpu" }
