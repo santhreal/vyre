@@ -11,7 +11,7 @@
 //! dead. Phase 2: a real DCE rewrite that strips them from the
 //! descriptor (defers to vyre-opt's optimizer pipeline).
 
-use crate::dce_purity::kernel_op_kind_is_dce_pure as is_pure;
+use crate::op_facts::kernel_op_kind_is_dce_pure as is_pure;
 use crate::operand_class::operand_is_result_reference;
 use crate::{KernelBody, KernelDescriptor};
 use rustc_hash::FxHashSet;

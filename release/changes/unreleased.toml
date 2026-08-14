@@ -894,3 +894,18 @@ text = "Region fusion reads which buffers each side touches, and both of the wal
 id = "foundation-duplication-pin-lowered-to-measured"
 category = "Changed"
 text = "The `vyre-foundation` duplication pin sits at what the tree measures, 5125 down to 4350 duplicated lines over 160 files, with the total line count corrected from a stale 95984 to a measured 94924. A pin with room under it hides the next copy."
+
+[[fragments]]
+id = "lower-fixture-scaffolding-has-one-owner"
+category = "Changed"
+text = "Which operand position of a structured kernel op names a child body now has one owner on both sides in `vyre-lower`. `child_body_operands` already owned the reading side, but every test fixture that built a branch spelled the operand vector out by hand, so a moved position could go unnoticed on one side; `if_then`, `if_then_else` and `for_loop` in `vyre-lower/src/descriptor_builder.rs` own the writing side and a new test drives each constructor's output through the reader. The shared-memory and constant-buffer promotion analyses both read their load-count precondition through `vyre-lower/src/analyses/load_counts.rs` instead of each carrying its own recursive walk, and a test pins the two to the same answer on a nested body. The three copies of the lowered-loop locator in the lowering tests collapse onto `vyre-lower/src/lower/loop_site.rs`, and `fixture_builders.rs`, whose module was never imported and whose constructors were a second copy of the descriptor builder's, is deleted."
+
+[[fragments]]
+id = "lower-dup-pin-lowered"
+category = "Changed"
+text = "The duplication baseline pin for vyre-lower records the measured tree: 279 to 205 duplicated lines, with `total_lines` measured at 13187. The header block listing rows pinned below their measurement is gone with its only entry."
+
+[[fragments]]
+id = "kernel-op-kind-has-one-fact-table"
+category = "Changed"
+text = "`KernelOpKind` is enumerated in exactly one place. `vyre-lower/src/op_facts.rs` owns an exhaustive match with no wildcard arm answering both per-kind questions the workspace asks: which operand names the first child body, and whether the op must be kept when its results are unused. `child_body_operands` and the dead-op purity predicate both read it, replacing two separate lists of the same variant universe, and `vyre-emit-ptx/src/patterns/predicated_execution/mod.rs` reads it instead of restating sixteen variant names. What stays in the PTX pass is the judgment that only a plain global or shared store is maskable by a `@%p` instruction predicate. Adding a variant now fails to compile until both facts are stated for it, rather than defaulting to no child body and removable."

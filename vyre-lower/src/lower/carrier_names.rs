@@ -122,7 +122,8 @@ pub(super) fn collect_carrier_names(
 #[cfg(test)]
 mod tests {
     use super::super::lower;
-    use crate::descriptor::{KernelBody, KernelOp, KernelOpKind};
+    use crate::descriptor::{KernelBody, KernelOpKind};
+    use crate::lower::loop_site::find_loop;
     use vyre_foundation::ir::{DataType, Program};
 
     #[test]
@@ -189,15 +190,6 @@ mod tests {
             store.operands[2], carrier_result,
             "sibling after conditional carrier mutation must read the fresh carrier value"
         );
-
-        fn find_loop(body: &KernelBody) -> Option<(&KernelBody, &KernelOp)> {
-            for op in &body.ops {
-                if matches!(op.kind, KernelOpKind::StructuredForLoop { .. }) {
-                    return Some((body, op));
-                }
-            }
-            body.child_bodies.iter().find_map(find_loop)
-        }
     }
 
     /// Region phi-merge: a `Node::Region` whose body reassigns an
@@ -405,14 +397,6 @@ mod tests {
         assert!(crate::verify::verify(&desc).is_ok());
 
         // Locate the StructuredForLoop op and its body.
-        fn find_loop(body: &KernelBody) -> Option<(&KernelBody, &KernelOp)> {
-            for op in &body.ops {
-                if matches!(op.kind, KernelOpKind::StructuredForLoop { .. }) {
-                    return Some((body, op));
-                }
-            }
-            body.child_bodies.iter().find_map(find_loop)
-        }
         let (loop_parent, loop_op) =
             find_loop(&desc.body).expect("Fix: StructuredForLoop must be lowered");
         let loop_body = &loop_parent.child_bodies[loop_op.operands[2] as usize];

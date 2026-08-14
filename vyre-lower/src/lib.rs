@@ -36,7 +36,6 @@ pub mod analyses;
 pub mod artifact_golden;
 pub mod audit;
 mod canonicalize;
-pub(crate) mod dce_purity;
 pub mod descriptor;
 /// Fixture builders for kernel descriptors. Every consumer is a test, so this
 /// is not part of the shipped surface: enable `test-fixtures` to reach it.
@@ -45,6 +44,7 @@ pub mod descriptor_builder;
 pub mod emit_adversarial_corpus;
 pub mod error;
 mod lower;
+pub mod op_facts;
 pub mod operand_class;
 pub mod pattern_audit;
 /// Backend-neutral `Program` corpus shared by byte-stability goldens.
@@ -243,6 +243,7 @@ pub use descriptor::{
     TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
 };
 pub use error::LowerError;
+pub use op_facts::{op_facts, OpFacts};
 pub use target::{
     required_subgroup_capabilities, validate_workgroup_size, EmissionTargetCapabilities,
     SubgroupCapabilities, WorkgroupLimitViolation, WorkgroupLimits,

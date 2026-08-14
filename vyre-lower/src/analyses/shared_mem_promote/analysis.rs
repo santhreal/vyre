@@ -19,8 +19,8 @@
 
 use super::plan::{PromotionCandidate, PromotionPlan};
 use super::DEFAULT_SHARED_BUDGET_BYTES;
-use crate::analyses::child_body_operands;
-use crate::{KernelBody, KernelDescriptor, KernelOpKind};
+use crate::analyses::load_counts::count_global_loads_by_slot;
+use crate::{KernelBody, KernelDescriptor};
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::DataType;
 
@@ -34,8 +34,7 @@ pub fn analyze(desc: &KernelDescriptor) -> PromotionPlan {
 /// shared-memory budget (in bytes).
 #[must_use]
 pub fn analyze_with_budget(desc: &KernelDescriptor, budget_bytes: u32) -> PromotionPlan {
-    let mut access_counts = FxHashMap::<u32, u32>::default();
-    count_loads_in_body(&desc.body, &mut access_counts);
+    let access_counts = access_counts(&desc.body);
 
     let workgroup_size = desc.dispatch.workgroup_size[0].max(1);
     let mut candidates = Vec::new();
@@ -70,19 +69,15 @@ pub fn analyze_with_budget(desc: &KernelDescriptor, budget_bytes: u32) -> Promot
     }
 }
 
-fn count_loads_in_body(body: &KernelBody, counts: &mut FxHashMap<u32, u32>) {
-    for op in &body.ops {
-        if matches!(op.kind, KernelOpKind::LoadGlobal) {
-            if let Some(slot) = op.operands.first() {
-                *counts.entry(*slot).or_insert(0) += 1;
-            }
-        }
-        for child_id in child_body_operands(&op.kind, &op.operands) {
-            if let Some(child) = body.child_bodies.get(child_id as usize) {
-                count_loads_in_body(child, counts);
-            }
-        }
-    }
+/// Load counts for every slot the body reads.
+///
+/// No eligibility filter: a slot the layout does not declare is dropped by the
+/// candidate loop below, which keeps the count and the binding lookup in one
+/// place instead of two.
+fn access_counts(body: &KernelBody) -> FxHashMap<u32, u32> {
+    let mut counts = FxHashMap::default();
+    count_global_loads_by_slot(body, &|_| true, &mut counts);
+    counts
 }
 
 fn bytes_per_element(t: &DataType) -> u32 {
@@ -110,57 +105,48 @@ fn bytes_per_element(t: &DataType) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-        KernelOp, KernelOpKind, LiteralValue, MemoryClass,
+    use crate::analyses::load_counts::fixtures::literal_then_loads;
+    use crate::descriptor_builder::{
+        body, descriptor, effect, for_loop, if_then, lit, load_global, op, store_global,
     };
+    use crate::{BindingSlot, KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
+    use rustc_hash::FxHashMap;
 
-    fn op(kind: KernelOpKind, operands: Vec<u32>, result: Option<u32>) -> KernelOp {
-        KernelOp {
-            kind,
-            operands,
-            result,
-        }
-    }
-
+    /// A read-only global with a runtime element count, the shape the
+    /// precondition reads.
     fn binding(slot: u32, element_type: DataType) -> BindingSlot {
-        BindingSlot {
-            slot,
-            element_type,
-            element_count: None,
-            memory_class: MemoryClass::Global,
-            visibility: BindingVisibility::ReadOnly,
-            name: format!("b{slot}"),
-        }
+        crate::descriptor_builder::global_ro(slot, element_type, &format!("b{slot}"))
     }
 
-    fn k(workgroup_x: u32, slots: Vec<BindingSlot>, ops: Vec<KernelOp>) -> KernelDescriptor {
-        KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots },
-            dispatch: Dispatch::new(workgroup_x, 1, 1),
-            body: KernelBody {
-                ops,
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        }
+    /// A kernel over one binding read `loads` times. The op shape is owned by
+    /// `load_counts`, whose traversal defines what a load site looks like; only
+    /// the workgroup width and the element type vary between cases.
+    fn reads(workgroup_x: u32, element_type: DataType, loads: u32) -> KernelDescriptor {
+        kernel(
+            workgroup_x,
+            vec![binding(0, element_type)],
+            literal_then_loads(loads),
+        )
+    }
+
+    /// A kernel over explicit bindings and an explicit body.
+    fn kernel(
+        workgroup_x: u32,
+        slots: Vec<BindingSlot>,
+        body: impl Into<KernelBody>,
+    ) -> KernelDescriptor {
+        descriptor("k")
+            .slots(slots)
+            .dispatch(workgroup_x, 1, 1)
+            .body(body)
+            .build()
     }
 
     // Positive truth (candidate detected)
 
     #[test]
     fn positive_buffer_read_twice_is_candidate() {
-        let kk = k(
-            64,
-            vec![binding(0, DataType::F32)],
-            vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(2)),
-            ],
-        );
-        let p = analyze(&kk);
+        let p = analyze(&reads(64, DataType::F32, 2));
         assert_eq!(p.candidates.len(), 1);
         assert_eq!(p.candidates[0].binding_slot, 0);
         assert_eq!(p.candidates[0].access_count, 2);
@@ -171,19 +157,18 @@ mod tests {
 
     #[test]
     fn positive_two_buffers_each_read_multiple_times_both_candidates() {
-        let kk = k(
+        let p = analyze(&kernel(
             32,
             vec![binding(0, DataType::F32), binding(1, DataType::U32)],
-            vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(2)),
-                op(KernelOpKind::LoadGlobal, vec![1, 0], Some(3)),
-                op(KernelOpKind::LoadGlobal, vec![1, 0], Some(4)),
-                op(KernelOpKind::LoadGlobal, vec![1, 0], Some(5)),
-            ],
-        );
-        let p = analyze(&kk);
+            body()
+                .op(lit(0, 0))
+                .op(load_global(0, 0, 1))
+                .op(load_global(0, 0, 2))
+                .op(load_global(1, 0, 3))
+                .op(load_global(1, 0, 4))
+                .op(load_global(1, 0, 5))
+                .literal(LiteralValue::U32(0)),
+        ));
         assert_eq!(p.candidates.len(), 2);
         let by_slot: FxHashMap<_, _> = p.candidates.iter().map(|c| (c.binding_slot, c)).collect();
         assert_eq!(by_slot[&0].access_count, 2);
@@ -192,19 +177,7 @@ mod tests {
 
     #[test]
     fn positive_speedup_grows_with_access_count() {
-        let kk = k(
-            32,
-            vec![binding(0, DataType::F32)],
-            vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(2)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(3)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(4)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(5)),
-            ],
-        );
-        let p = analyze(&kk);
+        let p = analyze(&reads(32, DataType::F32, 5));
         // 5 + (5 - 1) * 2 = 13
         assert!((p.candidates[0].estimated_speedup_factor - 13.0).abs() < 1e-5);
     }
@@ -213,118 +186,76 @@ mod tests {
 
     #[test]
     fn negative_buffer_read_only_once_not_a_candidate() {
-        let kk = k(
-            64,
-            vec![binding(0, DataType::F32)],
-            vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-            ],
-        );
-        let p = analyze(&kk);
+        let p = analyze(&reads(64, DataType::F32, 1));
         assert!(p.candidates.is_empty());
     }
 
     #[test]
     fn negative_store_only_buffer_not_a_candidate() {
-        let kk = k(
+        let p = analyze(&kernel(
             64,
             vec![binding(0, DataType::F32)],
-            vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::StoreGlobal, vec![0, 0, 0], None),
-                op(KernelOpKind::StoreGlobal, vec![0, 0, 0], None),
-            ],
-        );
-        let p = analyze(&kk);
+            body()
+                .op(lit(0, 0))
+                .op(store_global(0, 0, 0))
+                .op(store_global(0, 0, 0))
+                .literal(LiteralValue::U32(0)),
+        ));
         assert!(p.candidates.is_empty());
     }
 
     #[test]
     fn negative_no_global_accesses_yields_empty_plan() {
-        let kk = k(
+        let p = analyze(&kernel(
             64,
             vec![binding(0, DataType::F32)],
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add),
-                    vec![0, 1],
-                    Some(2),
-                ),
-            ],
-        );
-        let p = analyze(&kk);
+            body()
+                .op(op(KernelOpKind::LocalInvocationId, [], 0))
+                .op(lit(0, 1))
+                .op(crate::descriptor_builder::binop(
+                    vyre_foundation::ir::BinOp::Add,
+                    0,
+                    1,
+                    2,
+                ))
+                .literal(LiteralValue::U32(0)),
+        ));
         assert!(p.candidates.is_empty());
         assert_eq!(p.total_tile_bytes, 0);
     }
 
     // Adversarial / boundary
 
+    /// Two loads of one binding, in a body a structured op names as its child.
+    fn nested_reads(workgroup_x: u32, parent: impl Into<KernelBody>) -> KernelDescriptor {
+        kernel(workgroup_x, vec![binding(0, DataType::F32)], parent)
+    }
+
     #[test]
     fn adversarial_load_inside_if_body_counted() {
-        let kk = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![binding(0, DataType::F32)],
-            },
-            dispatch: Dispatch::new(32, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    op(KernelOpKind::Literal, vec![0], Some(0)),
-                    op(KernelOpKind::StructuredIfThen, vec![0, 0], None),
-                ],
-                child_bodies: vec![KernelBody {
-                    ops: vec![
-                        op(KernelOpKind::Literal, vec![0], Some(0)),
-                        op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-                        op(KernelOpKind::LoadGlobal, vec![0, 0], Some(2)),
-                    ],
-                    child_bodies: vec![],
-                    literals: vec![LiteralValue::U32(0)],
-                }],
-                literals: vec![LiteralValue::Bool(true)],
-            },
-        };
-        let p = analyze(&kk);
+        let p = analyze(&nested_reads(
+            32,
+            body()
+                .op(lit(0, 0))
+                .op(if_then(0, 0))
+                .child(literal_then_loads(2))
+                .literal(LiteralValue::Bool(true)),
+        ));
         assert_eq!(p.candidates.len(), 1);
         assert_eq!(p.candidates[0].access_count, 2);
     }
 
     #[test]
     fn adversarial_load_inside_loop_body_counted() {
-        let kk = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![binding(0, DataType::F32)],
-            },
-            dispatch: Dispatch::new(16, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    op(KernelOpKind::Literal, vec![0], Some(0)),
-                    op(KernelOpKind::Literal, vec![0], Some(1)),
-                    op(
-                        KernelOpKind::StructuredForLoop {
-                            loop_var: "".into(),
-                        },
-                        vec![0, 1, 0],
-                        None,
-                    ),
-                ],
-                child_bodies: vec![KernelBody {
-                    ops: vec![
-                        op(KernelOpKind::Literal, vec![0], Some(0)),
-                        op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-                        op(KernelOpKind::LoadGlobal, vec![0, 0], Some(2)),
-                    ],
-                    child_bodies: vec![],
-                    literals: vec![LiteralValue::U32(0)],
-                }],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
-        let p = analyze(&kk);
+        let p = analyze(&nested_reads(
+            16,
+            body()
+                .op(lit(0, 0))
+                .op(lit(0, 1))
+                .op(for_loop("", 0, 1, 0))
+                .child(literal_then_loads(2))
+                .literal(LiteralValue::U32(0)),
+        ));
         assert_eq!(p.candidates.len(), 1);
         assert_eq!(p.candidates[0].access_count, 2);
     }
@@ -333,16 +264,7 @@ mod tests {
     fn adversarial_zero_workgroup_size_clamped_to_one() {
         // Defensive: workgroup_size_x = 0 should not crash and not
         // produce zero-byte tile sizes.
-        let kk = k(
-            0,
-            vec![binding(0, DataType::F32)],
-            vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(2)),
-            ],
-        );
-        let p = analyze(&kk);
+        let p = analyze(&reads(0, DataType::F32, 2));
         assert_eq!(p.candidates.len(), 1);
         assert_eq!(p.candidates[0].distinct_indices_per_workgroup, 1);
         assert_eq!(p.candidates[0].tile_bytes, 4);
@@ -350,12 +272,11 @@ mod tests {
 
     #[test]
     fn adversarial_load_with_no_operands_skipped_safely() {
-        let kk = k(
+        let p = analyze(&kernel(
             32,
             vec![binding(0, DataType::F32)],
-            vec![op(KernelOpKind::LoadGlobal, vec![], None)],
-        );
-        let p = analyze(&kk);
+            body().op(effect(KernelOpKind::LoadGlobal, [])),
+        ));
         // No operand → skipped, not counted.
         assert!(p.candidates.is_empty());
     }
@@ -364,31 +285,14 @@ mod tests {
 
     #[test]
     fn fits_in_budget_when_sum_below_limit() {
-        let kk = k(
-            32,
-            vec![binding(0, DataType::F32)],
-            vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(2)),
-            ],
-        );
-        let p = analyze_with_budget(&kk, 4096);
+        let p = analyze_with_budget(&reads(32, DataType::F32, 2), 4096);
         assert!(p.fits_in_budget());
     }
 
     #[test]
     fn does_not_fit_when_sum_exceeds_budget() {
-        let kk = k(
-            1024,
-            vec![binding(0, DataType::F64)], // 8 bpe * 1024 wg = 8192
-            vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(2)),
-            ],
-        );
-        let p = analyze_with_budget(&kk, 4096);
+        // 8 bpe * 1024 wg = 8192
+        let p = analyze_with_budget(&reads(1024, DataType::F64, 2), 4096);
         assert!(!p.fits_in_budget());
     }
 
@@ -418,8 +322,7 @@ mod tests {
 
     #[test]
     fn report_kernel_id_echoes_descriptor_id() {
-        let kk = k(32, vec![], vec![]);
-        let p = analyze(&kk);
+        let p = analyze(&kernel(32, vec![], body()));
         assert_eq!(p.kernel_id, "k");
     }
 }

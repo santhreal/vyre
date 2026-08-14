@@ -86,6 +86,38 @@ pub fn store_global(slot: u32, index: u32, value: u32) -> KernelOp {
     effect(KernelOpKind::StoreGlobal, [slot, index, value])
 }
 
+/// A [`KernelOpKind::StructuredIfThen`] op guarding child body `then_body` on
+/// `cond`.
+///
+/// The three structured constructors below exist because which operand
+/// position names a child body is one decision, and a fixture that spells the
+/// operand vector out by hand states it again. `analyses::child_body_operands`
+/// owns that decision on the reading side; these own it on the writing side.
+#[must_use]
+pub fn if_then(cond: u32, then_body: u32) -> KernelOp {
+    effect(KernelOpKind::StructuredIfThen, [cond, then_body])
+}
+
+/// A [`KernelOpKind::StructuredIfThenElse`] op over two child bodies.
+#[must_use]
+pub fn if_then_else(cond: u32, then_body: u32, otherwise_body: u32) -> KernelOp {
+    effect(
+        KernelOpKind::StructuredIfThenElse,
+        [cond, then_body, otherwise_body],
+    )
+}
+
+/// A [`KernelOpKind::StructuredForLoop`] op over child body `loop_body`.
+#[must_use]
+pub fn for_loop(loop_var: &str, lo: u32, hi: u32, loop_body: u32) -> KernelOp {
+    effect(
+        KernelOpKind::StructuredForLoop {
+            loop_var: loop_var.into(),
+        },
+        [lo, hi, loop_body],
+    )
+}
+
 /// A binding slot with every field named.
 #[must_use]
 pub fn slot(
@@ -448,6 +480,35 @@ mod tests {
         assert_eq!(built.body.child_bodies.len(), 2);
         assert_eq!(built.body.child_bodies[0].ops[0].result, Some(10));
         assert_eq!(built.body.child_bodies[1].ops[0].result, Some(20));
+    }
+
+    /// The child-body operand positions the structured constructors write must
+    /// be the positions `analyses::child_body_operands` reads.
+    ///
+    /// WHY: fixtures used to spell the operand vector out by hand, so the
+    /// answer to "which operand is a child index" lived in every test module
+    /// that built a branch. Moving a child index on one side only produced a
+    /// fixture no analysis descended into, and a test that then proved nothing.
+    /// This goes red if either side moves a position.
+    ///
+    /// It says nothing about kinds no constructor covers; `descent_contract`
+    /// in `analyses` owns those.
+    #[test]
+    fn the_structured_constructors_name_the_child_indices_the_walk_reads() {
+        use crate::analyses::child_body_operands;
+
+        for (op, expected) in [
+            (if_then(7, 3), vec![3]),
+            (if_then_else(7, 3, 4), vec![3, 4]),
+            (for_loop("i", 1, 2, 5), vec![5]),
+        ] {
+            assert_eq!(
+                child_body_operands(&op.kind, &op.operands).collect::<Vec<_>>(),
+                expected,
+                "Fix: {:?} writes its child indices where child_body_operands does not read them.",
+                op.kind
+            );
+        }
     }
 
     #[test]

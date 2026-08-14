@@ -32,7 +32,11 @@ use crate::operand_class::operand_is_result_reference;
 use crate::{KernelBody, KernelOp, KernelOpKind};
 use rustc_hash::FxHashMap;
 
-pub(crate) type ProducerMap<'a> = FxHashMap<u32, &'a KernelOp>;
+/// Result id to the op that produces it, for one body.
+///
+/// Public because it appears in [`structured_walk::StructuredVisitor::visit_op`],
+/// which backends implement.
+pub type ProducerMap<'a> = FxHashMap<u32, &'a KernelOp>;
 
 pub(crate) fn producer_map(body: &KernelBody) -> ProducerMap<'_> {
     let mut producers = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
@@ -105,18 +109,19 @@ pub(crate) fn body_refs_only(body: &KernelBody, produced: &rustc_hash::FxHashSet
 
 /// Child-body indices referenced by a structured control-flow op's operands.
 ///
-/// ONE owner for the per-op-kind child-body start-offset table; every
-/// placement analysis imports this instead of re-deriving the skip offsets.
+/// Every placement analysis and every descriptor walk calls this instead of
+/// re-deriving the skip offsets. The offsets themselves come from
+/// [`crate::op_facts`], which is the crate's only enumeration of
+/// `KernelOpKind` and has no wildcard arm: a new variant that carries a nested
+/// body fails to compile until someone states where its child indices begin,
+/// rather than silently stopping every analysis from descending into it.
 pub fn child_body_operands<'a>(
     kind: &KernelOpKind,
     operands: &'a [u32],
 ) -> impl Iterator<Item = u32> + 'a {
-    let start = match kind {
-        KernelOpKind::StructuredIfThen | KernelOpKind::StructuredIfThenElse => 1,
-        KernelOpKind::StructuredForLoop { .. } => 2,
-        KernelOpKind::StructuredBlock | KernelOpKind::Region { .. } => 0,
-        _ => operands.len(),
-    };
+    let start = crate::op_facts::op_facts(kind)
+        .child_body_start
+        .unwrap_or(operands.len());
     operands.iter().skip(start).copied()
 }
 
@@ -139,37 +144,80 @@ pub use value_range::{analyze as analyze_value_range, IntRange, ValueRangeReport
 pub use workgroup_uniform::{analyze as analyze_workgroup_uniform, WorkgroupUniformReport};
 
 #[cfg(test)]
-mod dedup_guard {
-    use std::path::{Path, PathBuf};
+mod descent_contract {
+    use crate::descriptor_builder::{body, descriptor, effect, global_rw, lit, load_global};
+    use crate::{KernelBody, KernelOpKind, LiteralValue};
+    use vyre_foundation::ir::DataType;
 
-    // Fails if a second `child_body_operands` copy reappears anywhere under
-    // src/analyses/ (the table must live only in this module).
-    #[test]
-    fn child_body_operands_has_single_owner() {
-        let dir =
-            vyre_test_support::monorepo::vyre_workspace_root().join("vyre-lower/src/analyses");
-        let mut hits = Vec::new();
-        visit(&dir, &mut hits);
-        hits.sort();
-        assert_eq!(
-            hits,
-            vec![dir.join("mod.rs")],
-            "Fix: child_body_operands must have exactly ONE owner (analyses/mod.rs); a copy reappeared: {hits:?}"
-        );
+    /// Every op kind that carries a nested body, with the operand layout its
+    /// variant documents and the child indices that layout names.
+    ///
+    /// WHY: `child_body_operands` is exhaustive, so a NEW `KernelOpKind` cannot
+    /// be added without stating where its child indices begin. That says
+    /// nothing about an EXISTING kind filed under the wrong offset, which is
+    /// the same silent skip: every analysis stops descending and every report
+    /// still comes back clean. Moving `Region` into the no-child group left the
+    /// whole suite green before this test existed.
+    ///
+    /// It does not catch a kind that gains a second body operand without a new
+    /// row here; the row count is the coverage.
+    fn child_carrying_kinds() -> Vec<(KernelOpKind, Vec<u32>, usize)> {
+        vec![
+            // [cond, then]
+            (KernelOpKind::StructuredIfThen, vec![0, 0], 1),
+            // [cond, then, otherwise]
+            (KernelOpKind::StructuredIfThenElse, vec![0, 0, 1], 2),
+            // [lo, hi, body]
+            (
+                KernelOpKind::StructuredForLoop {
+                    loop_var: "i".into(),
+                },
+                vec![0, 0, 0],
+                1,
+            ),
+            // [body]
+            (KernelOpKind::StructuredBlock, vec![0], 1),
+            // [body]
+            (
+                KernelOpKind::Region {
+                    generator: "trace".into(),
+                },
+                vec![0],
+                1,
+            ),
+        ]
     }
 
-    fn visit(dir: &Path, hits: &mut Vec<PathBuf>) {
-        for entry in std::fs::read_dir(dir).unwrap() {
-            let path = entry.unwrap().path();
-            if path.is_dir() {
-                visit(&path, hits);
-            } else if path.extension().is_some_and(|e| e == "rs")
-                && std::fs::read_to_string(&path)
-                    .unwrap()
-                    .contains("fn child_body_operands")
-            {
-                hits.push(path);
-            }
+    /// A child body holding one global load, which is what the descent has to
+    /// reach for the access to be reported.
+    fn arm() -> KernelBody {
+        body()
+            .op(lit(0, 10))
+            .op(load_global(0, 10, 11))
+            .literal(LiteralValue::U32(0))
+            .build()
+    }
+
+    #[test]
+    fn every_child_carrying_kind_is_descended_into() {
+        for (kind, operands, arms) in child_carrying_kinds() {
+            let desc = descriptor("k")
+                .slot(global_rw(0, DataType::U32, "buf"))
+                .dispatch(64, 1, 1)
+                .body(
+                    body()
+                        .op(lit(0, 0))
+                        .op(effect(kind.clone(), operands))
+                        .children(std::iter::repeat_with(arm).take(arms))
+                        .literal(LiteralValue::U32(0)),
+                )
+                .build();
+            let report = super::analyze_coalesce(&desc);
+            assert_eq!(
+                report.sites.len(),
+                arms,
+                "Fix: {kind:?} names {arms} child body(ies) at the operand positions its variant documents, so the descent must reach every one of them; child_body_operands filed it under the wrong offset."
+            );
         }
     }
 }

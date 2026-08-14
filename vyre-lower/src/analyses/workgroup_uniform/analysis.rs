@@ -7,7 +7,7 @@
 
 use super::report::{BranchSite, BranchUniformity, WorkgroupUniformReport};
 use crate::analyses::structured_walk::{branch_at, walk_structured, ArmDescent, StructuredVisitor};
-use crate::analyses::{producer_map, ProducerMap};
+use crate::analyses::ProducerMap;
 use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 use rustc_hash::FxHashSet;
 
@@ -23,33 +23,27 @@ pub fn analyze(desc: &KernelDescriptor) -> WorkgroupUniformReport {
 }
 
 /// Classifies each branch against the producer map of the body that holds it.
-///
-/// The map is rebuilt whenever the walk moves to a different body, including
-/// on the way back up out of a child, so a branch is never classified against
-/// a nested body's producers. Consecutive branches in one body reuse it.
+/// The walk owns that map, so this holds only the sites it has judged.
 #[derive(Default)]
-struct BranchCollector<'a> {
-    mapped_body: Option<&'a KernelBody>,
-    producers: ProducerMap<'a>,
+struct BranchCollector {
     branches: Vec<BranchSite>,
 }
 
-impl<'a> StructuredVisitor<'a> for BranchCollector<'a> {
-    fn visit_op(&mut self, body: &'a KernelBody, op_index: usize, op: &'a KernelOp) {
+impl<'a> StructuredVisitor<'a> for BranchCollector {
+    fn visit_op(
+        &mut self,
+        body: &'a KernelBody,
+        producers: &ProducerMap<'a>,
+        op_index: usize,
+        op: &'a KernelOp,
+    ) {
         let Some(branch) = branch_at(body, op) else {
             return;
         };
-        if !self
-            .mapped_body
-            .is_some_and(|held| std::ptr::eq(held, body))
-        {
-            self.mapped_body = Some(body);
-            self.producers = producer_map(body);
-        }
         self.branches.push(BranchSite {
             op_index,
             cond_operand_id: branch.cond_operand_id,
-            uniformity: classify(&self.producers, branch.cond_operand_id),
+            uniformity: classify(producers, branch.cond_operand_id),
         });
     }
 }
@@ -139,7 +133,7 @@ fn visit(producers: &ProducerMap<'_>, operand_id: u32, visited: &mut FxHashSet<u
 mod tests {
     use super::*;
     use crate::descriptor_builder::{
-        binop, body, descriptor, effect, global_ro, lit, load_global, op,
+        binop, body, descriptor, global_ro, if_then, if_then_else, lit, load_global, op,
     };
     use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
     use vyre_foundation::ir::{BinOp, DataType};
@@ -148,11 +142,6 @@ mod tests {
     /// not specifically about a load-derived condition.
     fn kernel(id: &str, body: impl Into<KernelBody>) -> KernelDescriptor {
         descriptor(id).dispatch(64, 1, 1).body(body).build()
-    }
-
-    /// The `StructuredIfThen` op guarding child body 0 on `cond`.
-    fn if_then(cond: u32) -> crate::KernelOp {
-        effect(KernelOpKind::StructuredIfThen, [cond, 0])
     }
 
     #[test]
@@ -167,7 +156,7 @@ mod tests {
             "uniform",
             body()
                 .op(lit(0, 0))
-                .op(if_then(0))
+                .op(if_then(0, 0))
                 .child(body())
                 .literal(LiteralValue::Bool(true)),
         );
@@ -185,7 +174,7 @@ mod tests {
                 .op(op(KernelOpKind::LocalInvocationId, [0], 0))
                 .op(lit(0, 1))
                 .op(binop(BinOp::Lt, 0, 1, 2))
-                .op(if_then(2))
+                .op(if_then(2, 0))
                 .child(body())
                 .literal(LiteralValue::U32(32)),
         );
@@ -204,7 +193,7 @@ mod tests {
                 .op(op(KernelOpKind::WorkgroupId, [0], 0))
                 .op(lit(0, 1))
                 .op(binop(BinOp::Eq, 0, 1, 2))
-                .op(if_then(2))
+                .op(if_then(2, 0))
                 .child(body())
                 .literal(LiteralValue::U32(0)),
         );
@@ -223,7 +212,7 @@ mod tests {
                 .op(binop(BinOp::Add, 0, 1, 2))
                 .op(lit(1, 3))
                 .op(binop(BinOp::Gt, 2, 3, 4))
-                .op(if_then(4))
+                .op(if_then(4, 0))
                 .child(body())
                 .literals([LiteralValue::U32(5), LiteralValue::U32(0)]),
         );
@@ -251,7 +240,7 @@ mod tests {
             "if_else",
             body()
                 .op(lit(0, 0))
-                .op(effect(KernelOpKind::StructuredIfThenElse, [0, 0, 1]))
+                .op(if_then_else(0, 0, 1))
                 .child(body())
                 .child(body())
                 .literal(LiteralValue::Bool(false)),
@@ -273,7 +262,7 @@ mod tests {
                 body()
                     .op(lit(0, 0))
                     .op(load_global(0, 0, 1))
-                    .op(if_then(1))
+                    .op(if_then(1, 0))
                     .child(body())
                     .literal(LiteralValue::U32(0)),
             )

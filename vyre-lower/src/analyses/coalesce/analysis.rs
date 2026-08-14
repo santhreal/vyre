@@ -19,9 +19,8 @@
 //! as `Scattered`, which is the rewrite-safe direction.
 
 use super::report::{AccessPattern, AccessSite, CoalescenceReport};
-use crate::analyses::{
-    child_body_operands, constant_u32_operand, producer_map, AccessKind, ProducerMap,
-};
+use crate::analyses::structured_walk::walk_accesses;
+use crate::analyses::{constant_u32_operand, ProducerMap};
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 use vyre_foundation::ir::BinOp;
 
@@ -29,53 +28,22 @@ use vyre_foundation::ir::BinOp;
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> CoalescenceReport {
     let mut sites = Vec::new();
-    walk_body(&desc.body, &mut sites, 0);
+    walk_accesses(
+        &desc.body,
+        &KernelOpKind::LoadGlobal,
+        &KernelOpKind::StoreGlobal,
+        |access| {
+            sites.push(AccessSite {
+                op_index: access.op_index,
+                kind: access.kind,
+                binding_slot: access.binding_slot,
+                pattern: classify_index(access.body, access.producers, access.index_operand_id),
+            });
+        },
+    );
     CoalescenceReport {
         kernel_id: desc.id.clone(),
         sites,
-    }
-}
-
-fn walk_body(body: &KernelBody, sites: &mut Vec<AccessSite>, op_index_offset: usize) {
-    let producers = producer_map(body);
-    for (local_idx, op) in body.ops.iter().enumerate() {
-        let op_index = op_index_offset + local_idx;
-        let Some((kind, slot_pos, index_pos)) = (match op.kind {
-            KernelOpKind::LoadGlobal => Some((AccessKind::Load, 0, 1)),
-            KernelOpKind::StoreGlobal => Some((AccessKind::Store, 0, 1)),
-            KernelOpKind::StructuredIfThen
-            | KernelOpKind::StructuredIfThenElse
-            | KernelOpKind::StructuredForLoop { .. }
-            | KernelOpKind::StructuredBlock
-            | KernelOpKind::Region { .. } => {
-                for child_id in child_body_operands(&op.kind, &op.operands) {
-                    if let Some(child) = body.child_bodies.get(child_id as usize) {
-                        walk_body(child, sites, op_index_offset + body.ops.len());
-                    }
-                }
-                None
-            }
-            _ => None,
-        }) else {
-            continue;
-        };
-
-        // Bounds check the operand list so a malformed descriptor
-        // doesn't panic the analysis.
-        if op.operands.len() <= index_pos.max(slot_pos) {
-            continue;
-        }
-
-        let binding_slot = op.operands[slot_pos];
-        let index_operand_id = op.operands[index_pos];
-        let pattern = classify_index(body, &producers, index_operand_id);
-
-        sites.push(AccessSite {
-            op_index,
-            kind,
-            binding_slot,
-            pattern,
-        });
     }
 }
 
@@ -173,8 +141,10 @@ fn classify_pool_operand(body: &KernelBody, operand_id: u32) -> AccessPattern {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::analyses::AccessKind;
     use crate::descriptor_builder::{
-        binop, body, descriptor, effect, global_ro, global_rw, lit, load_global, op, store_global,
+        binop, body, descriptor, effect, global_ro, global_rw, if_then, lit, load_global, op,
+        store_global,
     };
     use crate::{KernelBody, KernelDescriptor, KernelOp, LiteralValue};
     use vyre_foundation::ir::{BinOp, DataType};
@@ -436,5 +406,35 @@ mod tests {
     fn report_kernel_id_echoes_descriptor_id() {
         let r = analyze(&one_buffer_kernel(body()));
         assert_eq!(r.kernel_id, "k");
+    }
+
+    /// The walk reports a nested site between its parent's branch and the
+    /// parent's next op, and each site is classified against the producer map
+    /// of the body that owns it. A single map carried across bodies would
+    /// classify the post-branch parent load `Scattered`, because its `Mul`
+    /// producer lives in the parent and not in the arm.
+    #[test]
+    fn a_site_after_a_branch_is_classified_against_the_parent_body() {
+        let r = analyze(&one_buffer_kernel(
+            body()
+                .op(tid([], 0))
+                .op(lit(0, 1))
+                .op(binop(BinOp::Mul, 0, 1, 2))
+                .op(if_then(2, 0))
+                .op(load_global(0, 2, 3))
+                .child(body().op(tid([], 10)).op(load_global(0, 10, 11)))
+                .literal(LiteralValue::U32(4)),
+        ));
+        assert_eq!(
+            r.sites
+                .iter()
+                .map(|site| (site.op_index, site.pattern))
+                .collect::<Vec<_>>(),
+            vec![
+                (6, AccessPattern::CoalescedUnitStride),
+                (4, AccessPattern::Strided { stride: 4 }),
+            ],
+            "Fix: the arm's site must be reported before the parent's next op, and the parent's site must classify against the parent's own producers."
+        );
     }
 }

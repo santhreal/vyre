@@ -1,5 +1,5 @@
 use super::*;
-use crate::descriptor_builder::{effect, lit, op};
+use crate::descriptor_builder::{effect, if_then, lit, op};
 use crate::{
     BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
 };
@@ -95,7 +95,7 @@ fn child_body_index_out_of_range_detected() {
         bindings: BindingLayout { slots: vec![] },
         dispatch: Dispatch::new(1, 1, 1),
         body: KernelBody {
-            ops: vec![lit(0, 0), effect(KernelOpKind::StructuredIfThen, [0, 7])],
+            ops: vec![lit(0, 0), if_then(0, 7)],
             child_bodies: vec![],
             literals: vec![LiteralValue::U32(1)],
         },

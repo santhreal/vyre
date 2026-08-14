@@ -67,8 +67,8 @@ fn compound_lane_count(dtype: &DataType) -> Option<u32> {
 mod tests {
     use super::*;
     use crate::analyses::load_counts::fixtures::kernel;
-    use crate::descriptor_builder::{body, descriptor, effect, global_ro, load_global};
-    use crate::{BindingSlot, KernelOpKind};
+    use crate::descriptor_builder::{body, descriptor, global_ro, if_then_else, load_global};
+    use crate::BindingSlot;
 
     fn vec4_binding(index: u32) -> BindingSlot {
         global_ro(
@@ -115,7 +115,7 @@ mod tests {
             .dispatch(32, 1, 1)
             .body(
                 body()
-                    .op(effect(KernelOpKind::StructuredIfThenElse, [99, 0, 1]))
+                    .op(if_then_else(99, 0, 1))
                     .child(body().op(load_global(0, 0, 1)))
                     .child(body().op(load_global(0, 0, 2))),
             )
