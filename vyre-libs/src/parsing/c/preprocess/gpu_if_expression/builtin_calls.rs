@@ -2,6 +2,7 @@
 
 use vyre_foundation::ir::{Expr, Node};
 
+use super::super::gpu_directive_parse_program::{payload_ws_skip, PayloadWsSkip};
 use super::super::gpu_source_bytes::SourceByteLayout;
 use super::byte_load::safe_load_src_expr;
 use vyre_primitives::hash::fnv1a::{fnv1a32, fnv1a32_initial_expr, fnv1a32_update_byte_expr};
@@ -115,6 +116,22 @@ pub(super) fn push_has_builtin_call_parser(
     let ws3_b = format!("{prefix}_ws3_b");
     let ws3_is_ws = format!("{prefix}_ws3_is_ws");
     let had_close = format!("{prefix}_had_close");
+    // The three whitespace runs of a builtin call are the same bounded loop
+    // over the row, advancing the shared cursor `pos`.
+    let ws_run = |loop_var: &str, done_var: &str, byte_var: &str, flag_var: &str| {
+        payload_ws_skip(
+            &PayloadWsSkip {
+                loop_var,
+                done_var,
+                byte_var,
+                flag_var,
+                pos_var: &pos,
+                end_var: tok_end_var,
+                len_var: tok_len_var,
+            },
+            |addr| safe_load_src_expr(source_layout, addr, source_byte_len.clone()),
+        )
+    };
 
     nodes.push(Node::let_bind(
         &is_builtin,
@@ -163,50 +180,7 @@ pub(super) fn push_has_builtin_call_parser(
                     ),
                 ),
             ));
-            call_nodes.push(Node::let_bind(&ws_done, Expr::u32(0)));
-            call_nodes.push(Node::loop_for(
-                &ws_loop,
-                Expr::u32(0),
-                Expr::var(tok_len_var),
-                vec![Node::if_then(
-                    Expr::and(
-                        Expr::eq(Expr::var(&ws_done), Expr::u32(0)),
-                        Expr::lt(Expr::var(&pos), Expr::var(tok_end_var)),
-                    ),
-                    vec![
-                        Node::let_bind(
-                            &ws_b,
-                            safe_load_src_expr(
-                                source_layout,
-                                Expr::var(&pos),
-                                source_byte_len.clone(),
-                            ),
-                        ),
-                        Node::let_bind(
-                            &ws_is_ws,
-                            Expr::select(
-                                Expr::or(
-                                    Expr::or(
-                                        Expr::eq(Expr::var(&ws_b), Expr::u32(b' ' as u32)),
-                                        Expr::eq(Expr::var(&ws_b), Expr::u32(b'\t' as u32)),
-                                    ),
-                                    Expr::or(
-                                        Expr::eq(Expr::var(&ws_b), Expr::u32(0x0B)),
-                                        Expr::eq(Expr::var(&ws_b), Expr::u32(0x0C)),
-                                    ),
-                                ),
-                                Expr::u32(1),
-                                Expr::u32(0),
-                            ),
-                        ),
-                        Node::if_then_else(
-                            Expr::eq(Expr::var(&ws_is_ws), Expr::u32(1)),
-                            vec![Node::assign(&pos, Expr::add(Expr::var(&pos), Expr::u32(1)))],
-                            vec![Node::assign(&ws_done, Expr::u32(1))],
-                        ),
-                    ],
-                )],
-            ));
+            call_nodes.extend(ws_run(&ws_loop, &ws_done, &ws_b, &ws_is_ws));
             call_nodes.push(Node::let_bind(
                 &had_paren,
                 Expr::select(
@@ -223,56 +197,7 @@ pub(super) fn push_has_builtin_call_parser(
                 {
                     let mut paren_nodes: Vec<Node> = Vec::new();
                     paren_nodes.push(Node::assign(&pos, Expr::add(Expr::var(&pos), Expr::u32(1))));
-                    paren_nodes.push(Node::let_bind(&ws2_done, Expr::u32(0)));
-                    paren_nodes.push(Node::loop_for(
-                        &ws2_loop,
-                        Expr::u32(0),
-                        Expr::var(tok_len_var),
-                        vec![Node::if_then(
-                            Expr::and(
-                                Expr::eq(Expr::var(&ws2_done), Expr::u32(0)),
-                                Expr::lt(Expr::var(&pos), Expr::var(tok_end_var)),
-                            ),
-                            vec![
-                                Node::let_bind(
-                                    &ws2_b,
-                                    safe_load_src_expr(
-                                        source_layout,
-                                        Expr::var(&pos),
-                                        source_byte_len.clone(),
-                                    ),
-                                ),
-                                Node::let_bind(
-                                    &ws2_is_ws,
-                                    Expr::select(
-                                        Expr::or(
-                                            Expr::or(
-                                                Expr::eq(Expr::var(&ws2_b), Expr::u32(b' ' as u32)),
-                                                Expr::eq(
-                                                    Expr::var(&ws2_b),
-                                                    Expr::u32(b'\t' as u32),
-                                                ),
-                                            ),
-                                            Expr::or(
-                                                Expr::eq(Expr::var(&ws2_b), Expr::u32(0x0B)),
-                                                Expr::eq(Expr::var(&ws2_b), Expr::u32(0x0C)),
-                                            ),
-                                        ),
-                                        Expr::u32(1),
-                                        Expr::u32(0),
-                                    ),
-                                ),
-                                Node::if_then_else(
-                                    Expr::eq(Expr::var(&ws2_is_ws), Expr::u32(1)),
-                                    vec![Node::assign(
-                                        &pos,
-                                        Expr::add(Expr::var(&pos), Expr::u32(1)),
-                                    )],
-                                    vec![Node::assign(&ws2_done, Expr::u32(1))],
-                                ),
-                            ],
-                        )],
-                    ));
+                    paren_nodes.extend(ws_run(&ws2_loop, &ws2_done, &ws2_b, &ws2_is_ws));
                     paren_nodes.push(Node::let_bind(
                         &arg_base,
                         Expr::add(Expr::var(&pos), Expr::u32(0)),
@@ -405,56 +330,7 @@ pub(super) fn push_has_builtin_call_parser(
                         Expr::add(Expr::var(&arg_base), Expr::var(&arg_len)),
                     ));
                     push_gnu_builtin_hash_lookup(&mut paren_nodes, prefix, &hash, &known);
-                    paren_nodes.push(Node::let_bind(&ws3_done, Expr::u32(0)));
-                    paren_nodes.push(Node::loop_for(
-                        &ws3_loop,
-                        Expr::u32(0),
-                        Expr::var(tok_len_var),
-                        vec![Node::if_then(
-                            Expr::and(
-                                Expr::eq(Expr::var(&ws3_done), Expr::u32(0)),
-                                Expr::lt(Expr::var(&pos), Expr::var(tok_end_var)),
-                            ),
-                            vec![
-                                Node::let_bind(
-                                    &ws3_b,
-                                    safe_load_src_expr(
-                                        source_layout,
-                                        Expr::var(&pos),
-                                        source_byte_len.clone(),
-                                    ),
-                                ),
-                                Node::let_bind(
-                                    &ws3_is_ws,
-                                    Expr::select(
-                                        Expr::or(
-                                            Expr::or(
-                                                Expr::eq(Expr::var(&ws3_b), Expr::u32(b' ' as u32)),
-                                                Expr::eq(
-                                                    Expr::var(&ws3_b),
-                                                    Expr::u32(b'\t' as u32),
-                                                ),
-                                            ),
-                                            Expr::or(
-                                                Expr::eq(Expr::var(&ws3_b), Expr::u32(0x0B)),
-                                                Expr::eq(Expr::var(&ws3_b), Expr::u32(0x0C)),
-                                            ),
-                                        ),
-                                        Expr::u32(1),
-                                        Expr::u32(0),
-                                    ),
-                                ),
-                                Node::if_then_else(
-                                    Expr::eq(Expr::var(&ws3_is_ws), Expr::u32(1)),
-                                    vec![Node::assign(
-                                        &pos,
-                                        Expr::add(Expr::var(&pos), Expr::u32(1)),
-                                    )],
-                                    vec![Node::assign(&ws3_done, Expr::u32(1))],
-                                ),
-                            ],
-                        )],
-                    ));
+                    paren_nodes.extend(ws_run(&ws3_loop, &ws3_done, &ws3_b, &ws3_is_ws));
                     paren_nodes.push(Node::let_bind(
                         &had_close,
                         Expr::select(
