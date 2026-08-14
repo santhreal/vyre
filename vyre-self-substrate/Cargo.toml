@@ -33,13 +33,6 @@ data = [
     "vyre-primitives/parsing",
 ]
 graph-solvers = ["optimizer", "vyre-libs/telemetry", "vyre-libs/device", "vyre-primitives/math"]
-logic = [
-    "optimizer",
-    "vyre-libs/analysis",
-    "vyre-primitives/cat",
-    "vyre-primitives/dnnf",
-    "vyre-primitives/zx",
-]
 math-solvers = [
     "optimizer",
     "vyre-libs/telemetry",
@@ -51,7 +44,7 @@ all-solvers = [
     "vyre-libs/analysis",
     "data",
     "graph-solvers",
-    "logic",
+    "vyre-libs/reasoning",
     "math-solvers",
     "vyre-libs/scheduling",
     "vyre-libs/telemetry",
@@ -85,11 +78,6 @@ path = "tests/sweep_graph_cpu_oracle_matrix.rs"
 required-features = ["cpu-parity"]
 
 [[test]]
-name = "do_calculus_surgery_via_reference_parity"
-path = "tests/do_calculus_surgery_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
 name = "provenance_closure"
 path = "tests/provenance_closure.rs"
 required-features = ["cpu-parity"]
@@ -115,11 +103,6 @@ path = "tests/bitset_summary_via_reference_parity.rs"
 required-features = ["cpu-parity"]
 
 [[test]]
-name = "categorical_laws_proptest"
-path = "tests/categorical_laws_proptest.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
 name = "fmm_compress_pairwise_via_reference_parity"
 path = "tests/fmm_compress_pairwise_via_reference_parity.rs"
 required-features = ["cpu-parity"]
@@ -127,11 +110,6 @@ required-features = ["cpu-parity"]
 [[test]]
 name = "fmm_polyhedral_via_reference_parity"
 path = "tests/fmm_polyhedral_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "functor_apply_via_reference_parity"
-path = "tests/functor_apply_via_reference_parity.rs"
 required-features = ["cpu-parity"]
 
 [[test]]
@@ -177,11 +155,6 @@ required-features = ["cpu-parity"]
 [[test]]
 name = "optimizer_bfs_and_softmax_parity"
 path = "tests/optimizer_bfs_and_softmax_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "predict_impact_via_reference_parity"
-path = "tests/predict_impact_via_reference_parity.rs"
 required-features = ["cpu-parity"]
 
 [[test]]
@@ -242,11 +215,6 @@ required-features = ["cpu-parity"]
 [[test]]
 name = "softmax_pick_config_via_reference_parity"
 path = "tests/softmax_pick_config_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "string_diagram_via_reference_parity"
-path = "tests/string_diagram_via_reference_parity.rs"
 required-features = ["cpu-parity"]
 
 [[test]]

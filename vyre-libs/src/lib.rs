@@ -136,6 +136,10 @@ pub mod scheduling;
 #[cfg(feature = "analysis")]
 pub mod analysis;
 
+/// Logic, causal reasoning, categorical rewrites, and knowledge compilation.
+#[cfg(feature = "reasoning")]
+pub mod reasoning;
+
 /// Math dialect  -  linear algebra, scans, broadcasting.
 #[cfg(any(
     feature = "math-linalg",

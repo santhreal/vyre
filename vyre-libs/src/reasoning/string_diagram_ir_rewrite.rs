@@ -46,7 +46,7 @@
 //! composition step. The full ZX-calculus rewrite engine ships in
 //! 1.0.
 
-use vyre_libs::dispatch_buffers::{
+use crate::dispatch_buffers::{
     ceil_div_u32, checked_product_count, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
@@ -108,7 +108,7 @@ pub fn reference_compose_ir_arrows_into(
     c: u32,
     out: &mut Vec<f64>,
 ) {
-    use vyre_libs::telemetry::observability::{bump, string_diagram_ir_rewrite_calls};
+    use crate::telemetry::observability::{bump, string_diagram_ir_rewrite_calls};
     bump(&string_diagram_ir_rewrite_calls);
     monoidal_compose_cpu_into(f, g, a, b, c, out);
 }
@@ -190,7 +190,7 @@ pub fn compose_ir_arrows_fixed_via_with_scratch_into(
     scratch: &mut StringDiagramRewriteScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, string_diagram_ir_rewrite_calls};
+    use crate::telemetry::observability::{bump, string_diagram_ir_rewrite_calls};
     bump(&string_diagram_ir_rewrite_calls);
 
     let f_cells = checked_product_count(a, b, "a", "b", "compose_ir_arrows_fixed_via f")?;
@@ -311,7 +311,7 @@ pub fn composition_associates_with_scratch(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     fn approx_eq_vec(a: &[f64], b: &[f64]) -> bool {
@@ -402,8 +402,8 @@ mod tests {
             // Three input-consuming buffers: f RO(0), g RO(1), and the plain-ReadWrite `out`(2) whose
             // zero-init contents the caller supplies (backend does not allocate it).
             assert_eq!(inputs.len(), 3);
-            let f = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
-            let g = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+            let f = crate::dispatch_buffers::read_u32s(&inputs[0]);
+            let g = crate::dispatch_buffers::read_u32s(&inputs[1]);
             assert_eq!(f.len(), 4);
             assert_eq!(g.len(), 4);
             let mut out = vec![0u32; 4];

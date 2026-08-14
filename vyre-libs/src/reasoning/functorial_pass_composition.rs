@@ -39,7 +39,7 @@
 //! Whole-pass migrations compose this primitive with the tree topology
 //! helpers instead of changing this row-level contract.
 
-use vyre_libs::dispatch_buffers::{ceil_div_u32, decode_u32_output_exact, u32_slice_to_le_bytes};
+use crate::dispatch_buffers::{ceil_div_u32, decode_u32_output_exact, u32_slice_to_le_bytes};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::functorial::functor_apply_sized;
 
@@ -65,7 +65,7 @@ pub fn apply_pass_functor_into(
     target_n_cols: u32,
     out: &mut Vec<u32>,
 ) {
-    use vyre_libs::telemetry::observability::{bump, functorial_pass_composition_calls};
+    use crate::telemetry::observability::{bump, functorial_pass_composition_calls};
     bump(&functorial_pass_composition_calls);
     assert_eq!(view_in.len(), column_mapping.len());
     out.clear();
@@ -110,7 +110,7 @@ pub fn apply_pass_functor_via_into(
     target_n_cols: u32,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, functorial_pass_composition_calls};
+    use crate::telemetry::observability::{bump, functorial_pass_composition_calls};
     bump(&functorial_pass_composition_calls);
 
     if target_n_cols == 0 {
@@ -269,8 +269,8 @@ mod tests {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 3);
-            let source = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
-            let mapping = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+            let source = crate::dispatch_buffers::read_u32s(&inputs[0]);
+            let mapping = crate::dispatch_buffers::read_u32s(&inputs[1]);
             let target_n_cols = inputs[2].len() / std::mem::size_of::<u32>();
             assert_eq!(source.len(), mapping.len());
             let out = apply_pass_functor(&source, &mapping, target_n_cols as u32);

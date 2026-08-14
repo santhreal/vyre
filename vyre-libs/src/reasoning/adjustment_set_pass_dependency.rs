@@ -17,7 +17,7 @@ use vyre_foundation::pass_substrate::adjustment_set_pass_dependency as foundatio
 ///
 #[must_use]
 pub fn ordering_is_safe(adj: &[u32], treatment: u32, outcome: u32, n: u32) -> bool {
-    use vyre_libs::telemetry::observability::{adjustment_set_pass_dependency_calls, bump};
+    use crate::telemetry::observability::{adjustment_set_pass_dependency_calls, bump};
     bump(&adjustment_set_pass_dependency_calls);
     foundation_pass_dependency::ordering_is_safe(adj, treatment, outcome, n)
 }
@@ -26,7 +26,7 @@ pub fn ordering_is_safe(adj: &[u32], treatment: u32, outcome: u32, n: u32) -> bo
 /// influence graph.
 #[must_use]
 pub fn pass_descendants(adj: &[u32], n: u32) -> Vec<Vec<u32>> {
-    use vyre_libs::telemetry::observability::{adjustment_set_pass_dependency_calls, bump};
+    use crate::telemetry::observability::{adjustment_set_pass_dependency_calls, bump};
     bump(&adjustment_set_pass_dependency_calls);
     foundation_pass_dependency::pass_descendants(adj, n)
 }

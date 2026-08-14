@@ -105,8 +105,6 @@
 pub mod data;
 #[cfg(feature = "graph-solvers")]
 pub mod graph;
-#[cfg(feature = "logic")]
-pub mod logic;
 #[cfg(feature = "math-solvers")]
 pub mod math;
 
@@ -118,12 +116,6 @@ pub mod math;
 /// points, and optimizer contract metadata without descending into
 /// private module paths.
 pub mod optimizer;
-
-#[cfg(feature = "logic")]
-pub use logic::{
-    adjustment_set_pass_dependency, categorical_check, dnnf_compile, do_calculus_change_impact,
-    functorial_pass_composition, string_diagram_ir_rewrite, zx_rewrite,
-};
 
 #[cfg(feature = "data")]
 pub use data::{

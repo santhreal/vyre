@@ -56,6 +56,7 @@ rule = ["dep:regex"]
 # crate. Each gates one module tree; `all-solvers` turns on the set.
 telemetry = []
 device = []
+reasoning = ["analysis", "vyre-primitives/cat", "vyre-primitives/dnnf", "vyre-primitives/zx"]
 analysis = ["device", "telemetry", "vyre-primitives/effects", "vyre-primitives/math", "vyre-primitives/types"]
 scheduling = ["device", "telemetry", "vyre-primitives/math", "vyre-primitives/parsing"]
 
@@ -170,6 +171,31 @@ required-features = ["cpu-parity", "analysis", "test-fixtures"]
 name = "semiring_gemm_via_reference_parity"
 path = "tests/semiring_gemm_via_reference_parity.rs"
 required-features = ["cpu-parity", "analysis", "test-fixtures"]
+
+[[test]]
+name = "do_calculus_surgery_via_reference_parity"
+path = "tests/do_calculus_surgery_via_reference_parity.rs"
+required-features = ["cpu-parity", "reasoning", "test-fixtures"]
+
+[[test]]
+name = "functor_apply_via_reference_parity"
+path = "tests/functor_apply_via_reference_parity.rs"
+required-features = ["cpu-parity", "reasoning", "test-fixtures"]
+
+[[test]]
+name = "string_diagram_via_reference_parity"
+path = "tests/string_diagram_via_reference_parity.rs"
+required-features = ["cpu-parity", "reasoning", "test-fixtures"]
+
+[[test]]
+name = "categorical_laws_proptest"
+path = "tests/categorical_laws_proptest.rs"
+required-features = ["cpu-parity", "reasoning", "test-fixtures"]
+
+[[test]]
+name = "predict_impact_via_reference_parity"
+path = "tests/predict_impact_via_reference_parity.rs"
+required-features = ["cpu-parity", "reasoning", "test-fixtures"]
 
 [[test]]
 name = "sweep_text_utf8_oracle_matrix"

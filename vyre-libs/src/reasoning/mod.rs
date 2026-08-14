@@ -1,4 +1,4 @@
-//! Logic, causal reasoning, categorical rewrites, and knowledge-compilation substrate modules.
+//! Logic, causal reasoning, categorical rewrites, and knowledge compilation.
 
 pub mod adjustment_set_pass_dependency;
 pub mod categorical_check;

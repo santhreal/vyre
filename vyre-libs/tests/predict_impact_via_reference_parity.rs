@@ -18,7 +18,7 @@
 //! `BUG-reference-eval-indirect-scatter-fixpoint-1round`).
 #![cfg(feature = "cpu-parity")]
 
-use vyre_self_substrate::do_calculus_change_impact::{
+use vyre_libs::reasoning::do_calculus_change_impact::{
     predict_impact, predict_impact_observation_form, predict_impact_observation_form_via,
     predict_impact_via,
 };

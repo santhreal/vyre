@@ -1,10 +1,10 @@
 //! Property tests for categorical laws over functorial pass composition and IR rewrites.
 use proptest::prelude::*;
 use vyre_primitives::graph::sheaf::sheaf_diffusion_step_cpu;
-use vyre_self_substrate::functorial_pass_composition::{
+use vyre_libs::reasoning::functorial_pass_composition::{
     apply_pass_functor, compose_passes, identity_functor,
 };
-use vyre_self_substrate::string_diagram_ir_rewrite::{
+use vyre_libs::reasoning::string_diagram_ir_rewrite::{
     compose_ir_arrows, composition_associates, identity_arrow,
 };
 

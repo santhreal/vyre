@@ -22,7 +22,7 @@ pub fn compile_precondition(
     num_vars: u32,
     max_depth: u32,
 ) -> DnnfDag {
-    use vyre_libs::telemetry::observability::{bump, dataflow_fixpoint_calls};
+    use crate::telemetry::observability::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     primitive_compile(clauses, num_vars, max_depth)
 }
@@ -31,7 +31,7 @@ pub fn compile_precondition(
 /// DAG. Linear in the gate count; saturating at u64::MAX.
 #[must_use]
 pub fn count_models(dag: &DnnfDag) -> u64 {
-    use vyre_libs::telemetry::observability::{bump, dataflow_fixpoint_calls};
+    use crate::telemetry::observability::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     primitive_count(dag)
 }

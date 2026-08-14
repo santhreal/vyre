@@ -7,11 +7,11 @@
 //! This replaces ad-hoc cache invalidation with formal causal analysis.
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_libs::analysis::dataflow_fixpoint::reachability_closure_into;
-use vyre_libs::analysis::dataflow_fixpoint::reachability_closure_via_into;
+use crate::analysis::dataflow_fixpoint::reachability_closure_into;
+use crate::analysis::dataflow_fixpoint::reachability_closure_via_into;
 #[cfg(test)]
-use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
-use vyre_libs::dispatch_buffers::{
+use crate::dispatch_buffers::u32_slice_to_le_bytes;
+use crate::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
@@ -67,7 +67,7 @@ impl DoCalculusImpactScratch {
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn predict_impact(adj: &[u32], intervention_mask: &[u32], n: u32) -> Vec<u32> {
-    use vyre_libs::telemetry::observability::{bump, do_calculus_change_impact_calls};
+    use crate::telemetry::observability::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
     if n == 0 {
         return Vec::new();
@@ -169,7 +169,7 @@ pub fn predict_impact_via_into(
     n: u32,
     scratch: &mut DoCalculusImpactScratch,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, do_calculus_change_impact_calls};
+    use crate::telemetry::observability::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
     if n == 0 {
         scratch.impact_mask.clear();
@@ -205,7 +205,7 @@ pub fn predict_impact_via_into(
 /// Primitive-native dispatcher path for Pearl Rule 1 graph surgery:
 /// remove incoming edges to every intervened node.
 ///
-/// This is the GPU-backed first stage of [`predict_impact`]. Full impact
+/// This is the GPU-backed first stage of `predict_impact`. Full impact
 /// prediction also needs reachability closure; callers that already keep the
 /// closure on-device can compose this output with the closure primitive.
 ///
@@ -279,7 +279,7 @@ fn intervention_delete_incoming_via_into_with_inputs(
 /// Primitive-native dispatcher path for Pearl Rule 2 graph surgery:
 /// reverse incoming edges to every observed/treatment node.
 ///
-/// This is the GPU-backed first stage of [`predict_impact_observation_form`].
+/// This is the GPU-backed first stage of `predict_impact_observation_form`.
 /// Full observation-form impact also needs reachability closure; callers that
 /// keep closure on-device can compose this output directly with the closure
 /// primitive.
@@ -365,7 +365,7 @@ fn dispatch_do_calculus_surgery_into<F>(
 where
     F: FnOnce(&str, &str, &str, u32) -> Program,
 {
-    use vyre_libs::telemetry::observability::{bump, do_calculus_change_impact_calls};
+    use crate::telemetry::observability::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
 
     let cells = checked_square_cells(n, op_name)?;
@@ -483,7 +483,7 @@ fn rule3_subgraph_via_into_with_inputs(
     reduced: &mut Vec<u32>,
     kept: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, do_calculus_change_impact_calls};
+    use crate::telemetry::observability::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
 
     let cells = checked_square_cells(n, "rule3_subgraph_via")?;
@@ -572,7 +572,7 @@ fn rule3_subgraph_via_into_with_inputs(
 }
 
 /// Compute the impacted subgraph: the adjacency restricted to the
-/// nodes [`predict_impact`] flags as stale.
+/// nodes `predict_impact` flags as stale.
 ///
 /// Uses do-calculus Rule 3 (subgraph extraction) on the impact mask.
 /// Returns `(reduced_adjacency, kept_indices)` where `reduced_adjacency`
@@ -587,7 +587,7 @@ fn rule3_subgraph_via_into_with_inputs(
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn impact_subgraph(adj: &[u32], intervention_mask: &[u32], n: u32) -> (Vec<u32>, Vec<u32>) {
-    use vyre_libs::telemetry::observability::{bump, do_calculus_change_impact_calls};
+    use crate::telemetry::observability::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
     if n == 0 {
         return (Vec::new(), Vec::new());
@@ -634,7 +634,7 @@ pub fn reference_impact_subgraph_with_scratch(
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn predict_impact_observation_form(adj: &[u32], observation_mask: &[u32], n: u32) -> Vec<u32> {
-    use vyre_libs::telemetry::observability::{bump, do_calculus_change_impact_calls};
+    use crate::telemetry::observability::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
     if n == 0 {
         return Vec::new();
@@ -712,7 +712,7 @@ pub fn predict_impact_observation_form_via_into(
     n: u32,
     scratch: &mut DoCalculusImpactScratch,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, do_calculus_change_impact_calls};
+    use crate::telemetry::observability::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
     if n == 0 {
         scratch.impact_mask.clear();
@@ -1047,8 +1047,8 @@ mod tests {
             assert_eq!(grid_override, Some([1, 1, 1]));
             // Real-backend contract: adj RO, mask RO, out plain-RW (zero-init slot) = 3 inputs.
             assert_eq!(inputs.len(), 3);
-            let adj = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
-            let mask = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+            let adj = crate::dispatch_buffers::read_u32s(&inputs[0]);
+            let mask = crate::dispatch_buffers::read_u32s(&inputs[1]);
             let n = mask.len();
             let mut out = adj;
             for j in 0..n {
@@ -1089,8 +1089,8 @@ mod tests {
             assert_eq!(grid_override, Some([1, 1, 1]));
             // Real-backend contract: adj RO, mask RO, out plain-RW (zero-init slot) = 3 inputs.
             assert_eq!(inputs.len(), 3);
-            let adj = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
-            let mask = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+            let adj = crate::dispatch_buffers::read_u32s(&inputs[0]);
+            let mask = crate::dispatch_buffers::read_u32s(&inputs[1]);
             let n = mask.len();
             assert_eq!(adj.len(), n * n);
             let mut out = vec![0u32; n * n];

@@ -15,7 +15,7 @@
 //! exact-fixed-point route mz_project / natural_gradient use).
 #![cfg(feature = "cpu-parity")]
 
-use vyre_self_substrate::logic::string_diagram_ir_rewrite::compose_ir_arrows_fixed_via;
+use vyre_libs::reasoning::string_diagram_ir_rewrite::compose_ir_arrows_fixed_via;
 
 use vyre_libs::test_support::fixed_mul;
 use vyre_libs::test_support::ReferenceEvalDispatcher;

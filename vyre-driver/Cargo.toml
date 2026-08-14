@@ -41,7 +41,7 @@ self-substrate-adapters = [
     "dep:vyre-self-substrate",
     "dep:vyre-libs",
     "vyre-self-substrate/data",
-    "vyre-self-substrate/logic",
+    "vyre-libs/reasoning",
     "vyre-libs/telemetry",
     "vyre-libs/analysis",
 ]

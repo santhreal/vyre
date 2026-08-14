@@ -14,7 +14,7 @@
 //! last-wins tie-break and OOB-drop are actually exercised (not a vacuous injective identity).
 #![forbid(unsafe_code)]
 
-use vyre_self_substrate::logic::functorial_pass_composition::{
+use vyre_libs::reasoning::functorial_pass_composition::{
     apply_pass_functor, apply_pass_functor_via,
 };
 
