@@ -28,6 +28,35 @@ fn write_json(path: &Path, value: &Value) {
     fs::write(path, serde_json::to_vec_pretty(value).unwrap()).unwrap();
 }
 
+/// The schema version and tier vocabulary the contract actually enforces.
+///
+/// Both are read from the generated schema this repository ships rather than
+/// restated here. A hardcoded fixture is how these tests went red unnoticed:
+/// the schema version was bumped and two tiers were deleted, and the fixture
+/// kept asserting the retired shape, so every case failed on the coherence
+/// check before reaching the behaviour it names.
+fn enforced_schema_shape() -> (u64, Vec<String>) {
+    let path = workspace_root().join("docs/generated/OP_SCHEMA.json");
+    let text = fs::read_to_string(&path)
+        .unwrap_or_else(|err| panic!("Fix: the generated operation schema must be readable at {path:?}: {err}"));
+    let schema: Value = serde_json::from_str(&text)
+        .unwrap_or_else(|err| panic!("Fix: {path:?} must be valid JSON: {err}"));
+    let version = schema["schema_version"]
+        .as_u64()
+        .expect("Fix: the generated operation schema must carry a numeric schema_version");
+    let tiers: Vec<String> = schema["tier_counts"]
+        .as_object()
+        .expect("Fix: the generated operation schema must carry a tier_counts table")
+        .keys()
+        .cloned()
+        .collect();
+    assert!(
+        !tiers.is_empty(),
+        "Fix: tier_counts must name at least one tier, or the fixture below covers no tier at all"
+    );
+    (version, tiers)
+}
+
 fn current_header(title: &str, body: &str) -> String {
     format!("# {title}\n\nLast verified: 2026-08-04\n\nVyre 0.7.9.\n\n{body}\n")
 }
@@ -51,18 +80,22 @@ fn write_fixture(root: &Path) {
         "schema_version = 2\n\n[[crate]]\npackage = \"vyre-megakernel\"\npath = \"vyre-megakernel\"\nowner = \"megakernel-compiler\"\nlayer = \"compiler-boundary\"\nresponsibility = \"Compile validated ProgramGraph inputs into canonical static and persistent megakernel artifacts without owning admission, execution, or lifecycle policy.\"\n\n[[crate.dependency]]\npackage = \"vyre-foundation\"\npurpose = \"Use typed IR and graph contracts.\"\nfeatures = []\nconditions = [\"always\"]\nkinds = [\"normal\"]\noptional = false\ndefault_features = true\nboundary = \"public\"\nseam = \"foundation-ir\"\n",
     )
     .unwrap();
+    let (schema_version, tiers) = enforced_schema_shape();
+    let operations: Vec<Value> = tiers
+        .iter()
+        .map(|tier| json!({"id": tier, "tier": tier}))
+        .collect();
+    let tier_counts: serde_json::Map<String, Value> = tiers
+        .iter()
+        .map(|tier| (tier.clone(), json!(1)))
+        .collect();
     write_json(
         &root.join("docs/generated/OP_SCHEMA.json"),
         &json!({
-            "schema_version": 3,
-            "operation_count": 4,
-            "tier_counts": {"intrinsic": 1, "primitive": 1, "libs": 1, "runtime": 1},
-            "operations": [
-                {"id": "i", "tier": "intrinsic"},
-                {"id": "p", "tier": "primitive"},
-                {"id": "l", "tier": "libs"},
-                {"id": "r", "tier": "runtime"}
-            ]
+            "schema_version": schema_version,
+            "operation_count": operations.len(),
+            "tier_counts": tier_counts,
+            "operations": operations
         }),
     );
     write_json(
