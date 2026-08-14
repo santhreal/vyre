@@ -59,3 +59,15 @@ jobs:
       # __pycache__ for scripts/check_repo_hygiene.sh to report.
       - name: Documentation manifest validator contracts
         run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_docs_manifest.py
+
+      # A lower bound, not an equality. The earlier version of this script
+      # failed when coverage GREW, demanding a manual floor bump, which is why
+      # it sat unwired: it punished the improvement it exists to encourage.
+      - name: Property-test coverage does not shrink
+        run: bash scripts/check_proptest_coverage.sh
+
+      # The execution queue is a gitignored local file, so its absence is not a
+      # violation and this gate measures tracked files only. The earlier version
+      # asserted the file exists, which no clean checkout can satisfy.
+      - name: One execution queue, no committed parallel plans
+        run: bash scripts/check_single_backlog.sh

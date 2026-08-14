@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
-# Audit-H  -  proptest coverage ratchet.
+# Proptest coverage ratchet.
 #
-# Counts the number of `*.rs` files under workspace src/ + tests/ that
-# import `proptest` and ratchets monotonically upward. Adding a new
-# property test increases the count; deleting one fails the gate. The
-# floor begins at 42 (the count at gate-authoring time, 2026-04-28)
-# and rises to the SQLite/NASA/Linux bar of 200+ over future patches.
+# Counts tracked `*.rs` files that import proptest and enforces a floor.
+# Property tests are first-class regression coverage: they are the cheapest
+# way to expose IR, wire-format and optimizer invariants at scale, and the
+# count must not silently shrink.
 #
-# Doctrine: proptest is the cheapest way to expose IR / wire-format /
-# optimizer invariants at scale. Property tests are first-class
-# regression coverage and must not silently shrink.
+# The gate passes when coverage holds or grows, and fails only when it
+# shrinks. An earlier version also failed when `count > FLOOR`, demanding a
+# manual floor bump, which made the gate punish the improvement it exists to
+# encourage. That is why it was never wired into CI. A ratchet is a lower
+# bound, not an equality.
+#
+# The floor is raised deliberately, in a commit that says why. It is never
+# lowered to match a deletion: restore the test instead.
 #
 # Usage:
 #   scripts/check_proptest_coverage.sh           # enforce
@@ -20,16 +24,20 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-# Ratcheted floor  -  bump upward as new property tests land.
-FLOOR=123
+# Measured floor. 181 tracked files on 2026-08-12.
+FLOOR=181
 # Stretch target tracked for the 0.7 release.
 TARGET=200
 
 mode="${1:-enforce}"
 
-count=$(grep -rlE 'proptest!|use proptest|proptest::|extern crate proptest' --include='*.rs' . 2>/dev/null \
-    | grep -vE '/target/|/target-' \
-    | wc -l | tr -d ' ')
+# Tracked files only. A build artifact under target/ is not coverage, and
+# neither is a sibling worktree that happens to sit inside the tree.
+# `grep -l` exits non-zero for a file with no match, so xargs exits 123; the
+# pipeline status is deliberately discarded rather than tripping `set -e`.
+count=$( { git ls-files '*.rs' \
+    | xargs -r grep -lE 'proptest!|use proptest|proptest::|extern crate proptest' 2>/dev/null \
+    || true; } | wc -l | tr -d ' ')
 
 if [[ "$mode" == "--report" ]]; then
     echo "proptest-coverage: $count files import proptest (floor=$FLOOR, target=$TARGET)"
@@ -37,20 +45,17 @@ if [[ "$mode" == "--report" ]]; then
 fi
 
 if (( count < FLOOR )); then
-    echo "proptest-coverage gate: $count files (floor=$FLOOR)." >&2
-    echo "Fix: a property test was deleted. Either restore it or" >&2
-    echo "lower the FLOOR in scripts/check_proptest_coverage.sh with" >&2
-    echo "an explicit reviewer rationale." >&2
+    echo "proptest-coverage gate: $count files against a floor of $FLOOR." >&2
+    echo "Fix: a property test was deleted. Restore it. Lower FLOOR only" >&2
+    echo "with a stated reason for why the coverage is no longer needed." >&2
     exit 1
 fi
 
 if (( count > FLOOR )); then
-    # New property tests landed  -  bump the floor to lock the gain.
-    echo "proptest-coverage: $count files (floor=$FLOOR, target=$TARGET)" >&2
-    echo "Fix: bump FLOOR in scripts/check_proptest_coverage.sh to" >&2
-    echo "$count to lock the new property-test coverage." >&2
-    exit 1
+    echo "proptest-coverage: $count files, $(( count - FLOOR )) above the floor of $FLOOR (target=$TARGET)."
+    echo "Raise FLOOR to $count to lock the gain."
+    exit 0
 fi
 
-echo "proptest-coverage gate: $count files at the floor (target=$TARGET)."
+echo "proptest-coverage: $count files at the floor (target=$TARGET)."
 exit 0
