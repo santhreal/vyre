@@ -1301,8 +1301,7 @@ mod tests {
             Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
                 names.insert(buffer.clone());
             }
-            Node::AllGather { input, output, .. }
-            | Node::ReduceScatter { input, output, .. } => {
+            Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
                 names.insert(input.clone());
                 names.insert(output.clone());
             }

@@ -241,7 +241,6 @@ impl GridSyncSplitBackend {
     }
 }
 
-
 fn borrowed_inputs_from_owned(inputs: &[Vec<u8>]) -> Result<Vec<&[u8]>, BackendError> {
     let mut borrowed = Vec::new();
     if borrowed.capacity() < inputs.len() {
@@ -411,7 +410,9 @@ mod tests {
             "native-grid-sync-probe"
         }
 
-        reject_owned_dispatch!("owned dispatch should not run for this test. Fix: keep the borrowed path selected.");
+        reject_owned_dispatch!(
+            "owned dispatch should not run for this test. Fix: keep the borrowed path selected."
+        );
 
         fn dispatch_borrowed(
             &self,
@@ -631,7 +632,9 @@ mod tests {
             "grid-sync-split-opt-out-probe"
         }
 
-        reject_owned_dispatch!("owned dispatch should not run for this test. Fix: keep the borrowed path selected.");
+        reject_owned_dispatch!(
+            "owned dispatch should not run for this test. Fix: keep the borrowed path selected."
+        );
 
         fn dispatch_borrowed(
             &self,

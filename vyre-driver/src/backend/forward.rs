@@ -74,7 +74,8 @@ macro_rules! forward_vyre_backend_support {
             dst_offset_bytes: usize,
             bytes: &[u8],
         ) -> Result<(), $crate::backend::BackendError> {
-            self.inner.upload_resident_at(resource, dst_offset_bytes, bytes)
+            self.inner
+                .upload_resident_at(resource, dst_offset_bytes, bytes)
         }
         fn upload_resident_at_many(
             &self,
@@ -101,7 +102,8 @@ macro_rules! forward_vyre_backend_support {
             byte_offset: usize,
             byte_len: usize,
         ) -> Result<Vec<u8>, $crate::backend::BackendError> {
-            self.inner.download_resident_range(resource, byte_offset, byte_len)
+            self.inner
+                .download_resident_range(resource, byte_offset, byte_len)
         }
         fn download_resident_range_into(
             &self,
@@ -110,7 +112,8 @@ macro_rules! forward_vyre_backend_support {
             byte_len: usize,
             out: &mut Vec<u8>,
         ) -> Result<(), $crate::backend::BackendError> {
-            self.inner.download_resident_range_into(resource, byte_offset, byte_len, out)
+            self.inner
+                .download_resident_range_into(resource, byte_offset, byte_len, out)
         }
         fn download_resident_ranges_into(
             &self,
@@ -164,7 +167,8 @@ macro_rules! forward_vyre_backend_support {
             inputs: &[&[u8]],
             config: &$crate::backend::DispatchConfig,
         ) -> Result<bool, $crate::backend::BackendError> {
-            self.inner.cooperative_grid_sync_fits(program, inputs, config)
+            self.inner
+                .cooperative_grid_sync_fits(program, inputs, config)
         }
         fn allows_host_grid_sync_split(&self) -> bool {
             self.inner.allows_host_grid_sync_split()
@@ -278,7 +282,8 @@ macro_rules! forward_vyre_backend_dispatch {
             config: &$crate::backend::DispatchConfig,
             outputs: &mut $crate::backend::OutputBuffers,
         ) -> Result<(), $crate::backend::BackendError> {
-            self.inner.dispatch_borrowed_into(program, inputs, config, outputs)
+            self.inner
+                .dispatch_borrowed_into(program, inputs, config, outputs)
         }
         fn dispatch_resident_timed(
             &self,
@@ -286,7 +291,8 @@ macro_rules! forward_vyre_backend_dispatch {
             resources: &[$crate::backend::Resource],
             config: &$crate::backend::DispatchConfig,
         ) -> Result<$crate::backend::TimedDispatchResult, $crate::backend::BackendError> {
-            self.inner.dispatch_resident_timed(program, resources, config)
+            self.inner
+                .dispatch_resident_timed(program, resources, config)
         }
         fn dispatch_resident_async(
             &self,
@@ -294,7 +300,8 @@ macro_rules! forward_vyre_backend_dispatch {
             resources: &[$crate::backend::Resource],
             config: &$crate::backend::DispatchConfig,
         ) -> Result<Box<dyn $crate::backend::PendingDispatch>, $crate::backend::BackendError> {
-            self.inner.dispatch_resident_async(program, resources, config)
+            self.inner
+                .dispatch_resident_async(program, resources, config)
         }
         fn dispatch_resident_sequence_read_ranges_into(
             &self,
@@ -302,7 +309,8 @@ macro_rules! forward_vyre_backend_dispatch {
             read_ranges: &[$crate::backend::ResidentReadRange<'_>],
             outputs: &mut [&mut Vec<u8>],
         ) -> Result<(), $crate::backend::BackendError> {
-            self.inner.dispatch_resident_sequence_read_ranges_into(steps, read_ranges, outputs)
+            self.inner
+                .dispatch_resident_sequence_read_ranges_into(steps, read_ranges, outputs)
         }
         fn dispatch_resident_sequence_read_ranges_timed_into(
             &self,
@@ -353,11 +361,12 @@ macro_rules! forward_vyre_backend_dispatch {
             outputs: &mut [&mut dyn $crate::backend::DeviceBuffer],
             config: &$crate::backend::DispatchConfig,
         ) -> Result<(), $crate::backend::BackendError> {
-            self.inner.dispatch_with_device_buffers(program, inputs, outputs, config)
+            self.inner
+                .dispatch_with_device_buffers(program, inputs, outputs, config)
         }
     };
 }
 
-pub(crate) use forward_vyre_backend_support;
 #[cfg(test)]
 pub(crate) use forward_vyre_backend_dispatch;
+pub(crate) use forward_vyre_backend_support;

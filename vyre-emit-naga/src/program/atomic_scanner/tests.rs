@@ -49,14 +49,18 @@ fn a_nested_atomic_is_found_through_every_body_bearing_variant() {
     for sample in &samples {
         let targets = scan(&sample.node);
         assert!(
-            targets.atomic.contains(&Ident::from("nested_atomic_target")),
+            targets
+                .atomic
+                .contains(&Ident::from("nested_atomic_target")),
             "{} hides a nested atomic from the scan, so its element type will not wrap in \
              atomic<...>. Fix: descend through vyre_foundation::transform::visit::child_bodies \
              instead of a per-variant match.",
             sample.label()
         );
         assert!(
-            targets.writes.contains(&Ident::from("nested_atomic_target")),
+            targets
+                .writes
+                .contains(&Ident::from("nested_atomic_target")),
             "{} reports a nested atomic target that is not a write target, which emits \
              atomic<u32> inside var<storage, read>. Fix: keep both halves of BufferTargets \
              from one walk.",

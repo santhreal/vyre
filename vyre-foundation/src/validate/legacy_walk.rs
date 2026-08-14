@@ -345,4 +345,3 @@ fn validate_scoped_nested_nodes(
     );
     restore_scope(scope, scope_log);
 }
-

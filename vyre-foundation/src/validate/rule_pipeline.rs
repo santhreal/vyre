@@ -776,13 +776,7 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
     ) -> ControlFlow<Self::Break> {
         let depth = self.current_depth();
         depth::check_limits(&mut self.limits, depth, &mut self.errors);
-        node_rules::check_assign(
-            name,
-            value,
-            &self.buffers,
-            &self.scope,
-            &mut self.errors,
-        );
+        node_rules::check_assign(name, value, &self.buffers, &self.scope, &mut self.errors);
         self.validate_expr(value, 0);
 
         // Reassigning with a divergent rhs taints the binding's

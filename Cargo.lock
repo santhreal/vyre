@@ -3469,6 +3469,7 @@ dependencies = [
  "vyre-registry-link",
  "vyre-runtime",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -3940,6 +3941,7 @@ dependencies = [
 name = "vyre-registry-link"
 version = "0.7.2"
 dependencies = [
+ "structure-gate",
  "toml",
  "vyre-driver",
  "vyre-driver-cuda",
