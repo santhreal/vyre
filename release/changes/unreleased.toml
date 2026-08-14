@@ -909,3 +909,28 @@ text = "The duplication baseline pin for vyre-lower records the measured tree: 2
 id = "kernel-op-kind-has-one-fact-table"
 category = "Changed"
 text = "`KernelOpKind` is enumerated in exactly one place. `vyre-lower/src/op_facts.rs` owns an exhaustive match with no wildcard arm answering both per-kind questions the workspace asks: which operand names the first child body, and whether the op must be kept when its results are unused. `child_body_operands` and the dead-op purity predicate both read it, replacing two separate lists of the same variant universe, and `vyre-emit-ptx/src/patterns/predicated_execution/mod.rs` reads it instead of restating sixteen variant names. What stays in the PTX pass is the judgment that only a plain global or shared store is maskable by a `@%p` instruction predicate. Adding a variant now fails to compile until both facts are stated for it, rather than defaulting to no child body and removable."
+
+[[fragments]]
+id = "spec-op-variant-tables-have-one-owner"
+category = "Changed"
+text = "The frozen `vyre_spec` operator variant space is enumerated in one place, `tests/support/spec_variant_tables.rs`, instead of once per suite. Five suites carried their own list of every `BinOp`, `UnOp`, `AtomicOp` and buffer `DataType`, and the lists had drifted in both directions: the random-IR corpus was missing `WrappingAdd`, `WrappingSub` and `MulHigh`, and the wire round-trip sweep was missing six `UnOp` and six `BinOp` variants, so a variant no list named was a variant no suite exercised. The tables cannot be derived from the types, which are `#[non_exhaustive]` with no variant iterator, so the completeness gate reads the variant set out of the rustdoc public-API snapshot at run time and fails naming any variant a table omits. The xorshift sweep generator the suites had copied verbatim now lives in `tests/support/sweep_rng.rs` and rejects a zero seed, which is a fixed point of xorshift and would emit a constant corpus."
+
+[[fragments]]
+id = "f32-transcendental-classification-has-one-owner"
+category = "Fixed"
+text = "`Log2`, `Exp2`, `Tan`, `Acos`, `Asin` and `Atan` had two different f32 parity windows depending on which gate ran a program. The per-op ULP audit had forked the transcendental classifier behind `f32_ulp_tolerance` and its operator set was a strict superset, so those six got the 128 ULP backend window in the audit and the 4 ULP elementary window everywhere else. `vyre-foundation/src/fp_parity.rs` now classifies the union, which is the correct direction because each lowers to an approximate native instruction, and the fork is gone. `Reciprocal` stays in the elementary window: cuda and wgpu both lower it to a division. A gate enumerates every frozen `UnOp` and fails on one that neither classification table names, so a new variant cannot inherit the elementary window by omission."
+
+[[fragments]]
+id = "witness-input-planning-has-one-owner"
+category = "Changed"
+text = "Every witness input expansion routes through `WitnessInputPlan`. Three copies of the planner existed beside the owner: the per-op ULP audit and the cross-backend parity matrix each carried a full reimplementation differing only in the prefix on each error string, and a rename layer aliased the owner's type and forwarded its functions under the copies' names. The owner gained the two operations only the copies had, `buffer_indices` and `plan_witness_inputs_owned_into`, and each copy's unique test moved to it. Three expansions of one fixture is three chances for a gate to compare against an input stream the dispatcher never saw."
+
+[[fragments]]
+id = "conform-names-the-vyre-libs-dialect-aggregate"
+category = "Changed"
+text = "`vyre-conform` depends on `vyre-libs` with `features = [\"full\"]` rather than restating ten of the aggregate's members by hand. A hand-kept list of aggregate members drifts silently against the aggregate, which is how the same shape on the registry walker's primitives edge lost four dialects and made three operations invisible."
+
+[[fragments]]
+id = "conform-spec-duplication-pins-lowered-to-measured"
+category = "Changed"
+text = "Four duplication pins record what the tree measures: `conform` 765 to 367 duplicated lines, `vyre-spec` 244 to 84, `vyre-foundation` 4342 to 4127, and `vyre-libs` 11446 to 11425, each with `total_lines` measured. A pin with room under it hides the next copy."

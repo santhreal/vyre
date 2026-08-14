@@ -18,7 +18,8 @@ mod spec_variant_tables;
 
 use proptest::collection::vec as prop_vec;
 use proptest::prelude::*;
-use spec_variant_tables::{buffer_data_types, builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
+pub(crate) use spec_variant_tables::buffer_data_types;
+use spec_variant_tables::{builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
 use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_foundation::MemoryOrdering;
 use vyre_spec::data_type::TypeId;
