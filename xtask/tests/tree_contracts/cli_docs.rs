@@ -1,17 +1,9 @@
 //! Executable command-line documentation contract tests.
 
-#![forbid(unsafe_code)]
-
 use std::fs;
-use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: xtask must remain directly under the workspace root")
-        .to_path_buf()
-}
+use super::common::workspace_root;
 
 fn run(executable: &str, args: &[&str]) -> Output {
     Command::new(executable)

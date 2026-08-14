@@ -1,27 +1,15 @@
 //! Current architecture documentation coherence tests.
 
-#![forbid(unsafe_code)]
-
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::path::Path;
+use std::process::Output;
 
 use serde_json::{json, Value};
 
-fn workspace_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("xtask lives under the workspace root")
-        .to_path_buf()
-}
+use super::common::workspace_root;
 
 fn run_checker(root: &Path) -> Output {
-    Command::new("python3")
-        .arg(workspace_root().join("scripts/architecture_docs.py"))
-        .arg(root)
-        .arg("--check")
-        .output()
-        .expect("architecture docs checker must launch")
+    super::common::run_generator("scripts/architecture_docs.py", root, "--check")
 }
 
 fn write_json(path: &Path, value: &Value) {

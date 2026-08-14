@@ -4,8 +4,6 @@
 //! rebuilding its expression tree. Centralizing the predicate keeps every
 //! first-workgroup consumer aligned if the IR representation changes.
 
-#![forbid(unsafe_code)]
-
 use std::fs;
 use std::path::{Path, PathBuf};
 

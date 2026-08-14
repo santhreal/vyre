@@ -2,25 +2,18 @@
 
 #![forbid(unsafe_code)]
 
+mod common;
+
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, Output};
 
 use tempfile::TempDir;
 
-fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: xtask must remain directly under the workspace root")
-        .to_path_buf()
-}
+use common::workspace_root;
 
 fn run_checker(root: &Path) -> Output {
-    Command::new("python3")
-        .arg(workspace_root().join("scripts/check_docs_references.py"))
-        .arg(root)
-        .output()
-        .expect("Fix: documentation reference checker must launch")
+    common::run_python("scripts/check_docs_references.py", &[root.as_os_str()])
 }
 
 fn fixture() -> TempDir {

@@ -2,17 +2,15 @@
 
 #![forbid(unsafe_code)]
 
+mod common;
+
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, Output};
 
-fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: xtask must remain directly under the workspace root")
-        .to_path_buf()
-}
+use common::workspace_root;
 
+/// Run the generator the fixture itself carries, not the checkout's copy.
 fn run_generator(root: &Path, mode: &str) -> Output {
     Command::new("python3")
         .arg(root.join("scripts/release_docs.py"))

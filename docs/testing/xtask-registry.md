@@ -27,8 +27,6 @@ This crate declares no Cargo features.
 | --- | --- | --- | --- | --- |
 | `bin` | `xtask-registry` | `xtask-registry/src/main.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask-registry --bin xtask-registry` |
 | `lib` | `xtask_registry` | `xtask-registry/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask-registry` |
-| `test` | `cli_docs` | `xtask-registry/tests/cli_docs.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask-registry --test cli_docs` |
-| `test` | `operation_schema` | `xtask-registry/tests/operation_schema.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask-registry --test operation_schema` |
 
 ## Test classes
 
