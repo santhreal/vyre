@@ -16,8 +16,6 @@ mod inspect_core;
 mod metrics;
 #[path = "release_benchmarks/optimization.rs"]
 mod optimization;
-#[cfg(test)]
-mod report_fixture;
 #[path = "release_benchmarks/run.rs"]
 mod run;
 #[path = "release_benchmarks/runner.rs"]

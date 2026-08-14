@@ -347,6 +347,7 @@ fn check_cpu_100x_aggregate_case_counts(proof: &serde_json::Value, failures: &mu
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::report_fixture::cpu_sota_case;
 
     #[test]
     fn cpu_100x_gate_rejects_duplicate_source_artifact_count_inflation() {
@@ -474,27 +475,14 @@ mod tests {
             "selected_backend": "cuda",
             "cpu_sota_100x_contract_case_count": 10,
             "cpu_sota_100x_passing_case_count": 10,
-            "cases": [
-                {
-                    "id": "release.condition_eval.1m",
-                    "backend_id": "cuda",
-                    "status": "pass",
-                    "contract": {
-                        "baselines": [
-                            {
-                                "class": "CpuSota",
-                                "backend_ids": ["cuda"],
-                                "min_speedup_x": 100.0
-                            }
-                        ]
-                    },
-                    "metrics": {
-                        "wall_ns": {"p50": 10},
-                        "baseline_wall_ns": {"p50": 2000}
-                    },
-                    "performance": {"contract_passed": true, "speedup_x": 200.0}
-                }
-            ]
+            "cases": [cpu_sota_case(
+                "release.condition_eval.1m",
+                "cuda",
+                "pass",
+                &["cuda"],
+                10,
+                2000,
+            )]
         });
         let mut failures = Vec::new();
 
@@ -520,27 +508,14 @@ mod tests {
             "selected_backend": "cuda",
             "cpu_sota_100x_contract_case_count": 1,
             "cpu_sota_100x_passing_case_count": 1,
-            "cases": [
-                {
-                    "id": "release.condition_eval.1m",
-                    "backend_id": "cuda",
-                    "status": "pass",
-                    "contract": {
-                        "baselines": [
-                            {
-                                "class": "CpuSota",
-                                "backend_ids": ["cuda"],
-                                "min_speedup_x": 100.0
-                            }
-                        ]
-                    },
-                    "metrics": {
-                        "wall_ns": {"p50": 100},
-                        "baseline_wall_ns": {"p50": 1000}
-                    },
-                    "performance": {"contract_passed": true, "speedup_x": 200.0}
-                }
-            ]
+            "cases": [cpu_sota_case(
+                "release.condition_eval.1m",
+                "cuda",
+                "pass",
+                &["cuda"],
+                100,
+                1000,
+            )]
         });
         let mut failures = Vec::new();
 
@@ -560,25 +535,14 @@ mod tests {
             "selected_backend": "cuda",
             "required_cpu_sota_100x_cases": ["release.condition_eval.1m"]
         });
-        let cases = vec![serde_json::json!({
-            "id": "release.condition_eval.1m",
-            "backend_id": "cuda",
-            "status": "fail",
-            "contract": {
-                "baselines": [
-                    {
-                        "class": "CpuSota",
-                        "backend_ids": ["cuda"],
-                        "min_speedup_x": 100.0
-                    }
-                ]
-            },
-            "metrics": {
-                "wall_ns": {"p50": 10},
-                "baseline_wall_ns": {"p50": 2000}
-            },
-            "performance": {"contract_passed": true, "speedup_x": 200.0}
-        })];
+        let cases = vec![cpu_sota_case(
+            "release.condition_eval.1m",
+            "cuda",
+            "fail",
+            &["cuda"],
+            10,
+            2000,
+        )];
         let mut failures = Vec::new();
 
         check_required_cpu_100x_cases(&proof, &cases, &mut failures);

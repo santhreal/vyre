@@ -10,7 +10,7 @@
 //! Default mode: warning. `--strict` exits non-zero  -  the gate.
 
 use std::fs;
-use std::io::{self, Read};
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process;
 
@@ -235,19 +235,7 @@ fn is_workspace_root(path: &Path) -> io::Result<bool> {
 }
 
 fn read_text_bounded(path: &Path) -> io::Result<String> {
-    let mut reader = fs::File::open(path)?.take(MAX_HEURISTIC_AUDIT_SOURCE_BYTES.saturating_add(1));
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > MAX_HEURISTIC_AUDIT_SOURCE_BYTES {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "{} exceeds {MAX_HEURISTIC_AUDIT_SOURCE_BYTES} byte heuristic audit read cap",
-                path.display()
-            ),
-        ));
-    }
-    Ok(text)
+    xtask::output_arg::read_text_bounded(path, MAX_HEURISTIC_AUDIT_SOURCE_BYTES, "heuristic audit")
 }
 
 #[cfg(test)]

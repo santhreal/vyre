@@ -1,7 +1,5 @@
 //! Executable command-line documentation contract tests for the registry binaries.
 
-#![forbid(unsafe_code)]
-
 use std::process::Command;
 
 /// Prevents `vyre_new_op --help` from scaffolding an operation while answering a

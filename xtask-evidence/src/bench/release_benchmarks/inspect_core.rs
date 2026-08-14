@@ -9,7 +9,6 @@
 //! owns the read, the parse, and the fold, and the callers keep only the
 //! wording that is genuinely theirs.
 
-use std::fs;
 use std::path::Path;
 
 use serde_json::Value;
@@ -21,27 +20,7 @@ const MIN_RELEASE_METRIC_SAMPLES: u64 = 30;
 
 /// Read a release benchmark evidence file without trusting its length.
 pub(super) fn read_text_bounded(path: &Path, max_bytes: u64) -> std::io::Result<String> {
-    use std::io::Read as _;
-
-    let mut file = fs::File::open(path)?;
-    let metadata = file.metadata()?;
-    if metadata.len() > max_bytes {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            format!("release benchmark evidence exceeds {max_bytes} byte limit"),
-        ));
-    }
-    let mut text = String::with_capacity(metadata.len() as usize);
-    file.by_ref()
-        .take(max_bytes + 1)
-        .read_to_string(&mut text)?;
-    if text.len() as u64 > max_bytes {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            "release benchmark evidence exceeded bounded read limit",
-        ));
-    }
-    Ok(text)
+    xtask::output_arg::read_text_bounded(path, max_bytes, "release benchmark evidence")
 }
 
 /// Read and parse one benchmark artifact, recording read and parse failures as
@@ -254,6 +233,8 @@ fn record_sample_floor(
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use super::*;
 
     use serde_json::json;

@@ -9,7 +9,7 @@ use std::process::{self, Command};
 
 use toml::Value;
 
-const MAX_MANIFEST_BYTES: u64 = 1_048_576;
+use crate::manifest_walk::MAX_MANIFEST_BYTES;
 
 /// Run the tier-dependency gate.
 pub(crate) fn run(args: &[String]) {
@@ -247,15 +247,10 @@ fn cross_crate_promotion_contract_text_failures(
 }
 
 fn read_bounded(path: &Path) -> String {
-    let meta = fs::metadata(path).unwrap_or_else(|e| {
-        panic!("Fix: cannot read {}: {e}", path.display());
-    });
-    if meta.len() > MAX_MANIFEST_BYTES {
-        panic!("Fix: manifest {} exceeds size cap", path.display());
-    }
-    fs::read_to_string(path).unwrap_or_else(|e| {
-        panic!("Fix: cannot read {}: {e}", path.display());
-    })
+    crate::output_arg::read_text_bounded(path, MAX_MANIFEST_BYTES, "tier dependency manifest")
+        .unwrap_or_else(|error| {
+            panic!("Fix: cannot read {}: {error}", path.display());
+        })
 }
 
 fn parse_toml(path: &Path, text: &str) -> Value {

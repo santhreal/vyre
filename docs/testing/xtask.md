@@ -33,16 +33,8 @@ This crate declares no Cargo features.
 | `bin` | `scaffold_rule` | `xtask/src/bin/scaffold_rule.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --bin scaffold_rule` |
 | `bin` | `xtask` | `xtask/src/main.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --bin xtask` |
 | `lib` | `xtask` | `xtask/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask` |
-| `test` | `architecture_docs` | `xtask/tests/architecture_docs.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test architecture_docs` |
-| `test` | `canonical_first_workgroup_guard` | `xtask/tests/canonical_first_workgroup_guard.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test canonical_first_workgroup_guard` |
-| `test` | `cli_docs` | `xtask/tests/cli_docs.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test cli_docs` |
-| `test` | `crate_ownership_registry` | `xtask/tests/crate_ownership_registry.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test crate_ownership_registry` |
-| `test` | `crate_readmes` | `xtask/tests/crate_readmes.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test crate_readmes` |
 | `test` | `docs_references` | `xtask/tests/docs_references.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test docs_references` |
-| `test` | `public_api_snapshot_inventory` | `xtask/tests/public_api_snapshot_inventory.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test public_api_snapshot_inventory` |
-| `test` | `relation_import_certificates` | `xtask/tests/relation_import_certificates.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test relation_import_certificates` |
 | `test` | `release_docs` | `xtask/tests/release_docs.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test release_docs` |
-| `test` | `testing_guides` | `xtask/tests/testing_guides.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test testing_guides` |
 
 ## Test classes
 

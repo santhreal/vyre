@@ -1,7 +1,7 @@
 //! External relation import certificate compatibility contracts.
 
 const CERTIFICATES: &str =
-    include_str!("../../docs/optimization/EXTERNAL_RELATION_IMPORT_CERTIFICATES.toml");
+    include_str!("../../../docs/optimization/EXTERNAL_RELATION_IMPORT_CERTIFICATES.toml");
 
 /// Relation-import evidence must retain every witness boundary and stable edge identifier.
 /// Removing one makes the generated analyzer evidence impossible to replay across repositories.

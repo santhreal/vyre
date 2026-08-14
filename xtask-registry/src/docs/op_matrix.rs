@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::io::{self, Read};
+use std::io;
 use std::path::Path;
 use std::process;
 
@@ -531,17 +531,5 @@ fn push_array(out: &mut String, key: &str, values: &[String]) {
 }
 
 fn read_text_bounded(path: &Path) -> io::Result<String> {
-    let mut reader = fs::File::open(path)?.take(MAX_OP_MATRIX_TEXT_BYTES.saturating_add(1));
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > MAX_OP_MATRIX_TEXT_BYTES {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "{} exceeds {MAX_OP_MATRIX_TEXT_BYTES} byte op matrix read cap",
-                path.display()
-            ),
-        ));
-    }
-    Ok(text)
+    xtask::output_arg::read_text_bounded(path, MAX_OP_MATRIX_TEXT_BYTES, "op matrix")
 }

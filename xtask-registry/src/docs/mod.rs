@@ -10,3 +10,4 @@ pub mod list_ops;
 pub mod op_matrix;
 pub mod operation_schema;
 pub mod optimization_docs;
+pub mod schema_cells;

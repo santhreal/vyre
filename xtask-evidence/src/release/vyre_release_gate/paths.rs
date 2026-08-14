@@ -1,5 +1,4 @@
-use std::fs;
-use std::io::{self, Read};
+use std::io;
 use std::path::{Component, Path, PathBuf};
 
 use super::gate_inputs::{GateMode, MAX_RELEASE_GATE_TEXT_BYTES};
@@ -57,19 +56,7 @@ pub(super) fn resolve_artifact_path(base_dir: &Path, path: &str) -> PathBuf {
     xtask::output_arg::resolve_release_artifact_path(base_dir, path)
 }
 pub(super) fn read_text_bounded(path: &Path) -> io::Result<String> {
-    let mut reader = fs::File::open(path)?.take(MAX_RELEASE_GATE_TEXT_BYTES.saturating_add(1));
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > MAX_RELEASE_GATE_TEXT_BYTES {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "{} exceeds {MAX_RELEASE_GATE_TEXT_BYTES} byte release gate read cap",
-                path.display()
-            ),
-        ));
-    }
-    Ok(text)
+    xtask::output_arg::read_text_bounded(path, MAX_RELEASE_GATE_TEXT_BYTES, "release gate")
 }
 
 /// Whether a manifest evidence entry resolves outside the repository.

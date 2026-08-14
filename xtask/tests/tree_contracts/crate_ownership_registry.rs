@@ -1,25 +1,13 @@
 //! Workspace crate ownership registry and generated dependency documentation contracts.
 
-#![forbid(unsafe_code)]
-
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::path::Path;
+use std::process::Output;
 
-fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: xtask must remain directly under the workspace root")
-        .to_path_buf()
-}
+use super::common::workspace_root;
 
 fn run_registry(root: &Path, mode: &str) -> Output {
-    Command::new("python3")
-        .arg(workspace_root().join("scripts/crate_ownership.py"))
-        .arg(root)
-        .arg(mode)
-        .output()
-        .expect("Fix: crate ownership generator must launch with python3")
+    super::common::run_generator("scripts/crate_ownership.py", root, mode)
 }
 
 fn write_member(root: &Path, path: &str, package: &str, dependencies: &str) {

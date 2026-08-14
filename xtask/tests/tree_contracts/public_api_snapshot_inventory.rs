@@ -1,18 +1,11 @@
 //! Publishable-crate and public-API snapshot set contracts.
 
-#![forbid(unsafe_code)]
-
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: xtask must remain directly under the workspace root")
-        .to_path_buf()
-}
+use super::common::workspace_root;
 
 fn inventory_script() -> PathBuf {
     workspace_root().join("scripts/public_api_snapshot_inventory.py")

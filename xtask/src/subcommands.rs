@@ -60,6 +60,59 @@ pub fn owned_by(package: &str) -> Vec<&'static str> {
         .collect()
 }
 
+/// One row of a delegate crate's table: the name typed on the command line,
+/// paired with the function that runs it.
+pub type Implemented<'a> = &'a [(&'a str, fn(&[String]))];
+
+/// Run `name` out of a delegate crate's table, reporting whether that table owns
+/// it. A name it does not own runs nothing, so `xtask` stays the only place an
+/// unknown subcommand is reported.
+#[must_use]
+pub fn dispatch(implemented: Implemented<'_>, name: &str, args: &[String]) -> bool {
+    match implemented.iter().find(|(row, _)| *row == name) {
+        Some((_, run)) => {
+            run(args);
+            true
+        }
+        None => false,
+    }
+}
+
+/// Every disagreement between the subcommands this table assigns to `package`
+/// and the table `package` actually implements.
+///
+/// The two are separate declarations that have to agree. A row assigned here
+/// with no entry in the delegate table fails as an unknown subcommand after the
+/// build has already been paid for, and an entry in the delegate table that this
+/// table assigns elsewhere is unreachable. Dispatch resolves by linear search,
+/// so a repeated name would shadow its second entry while both lists still
+/// compared equal. Both sides are derived at call time, so a subcommand added
+/// to one and not the other is reported here.
+#[must_use]
+pub fn delegate_table_problems(package: &str, implemented: Implemented<'_>) -> Vec<String> {
+    let mut problems = Vec::new();
+    let assigned = owned_by(package);
+    let mut names: Vec<&str> = implemented.iter().map(|(name, _)| *name).collect();
+    for name in &assigned {
+        if !names.contains(name) {
+            problems.push(format!("`{package}` is assigned `{name}` but does not implement it"));
+        }
+    }
+    for name in &names {
+        if !assigned.contains(name) {
+            problems.push(format!("`{package}` implements `{name}` but is not assigned it"));
+        }
+    }
+    names.sort_unstable();
+    let before = names.len();
+    names.dedup();
+    if before != names.len() {
+        problems.push(format!("`{package}` lists a subcommand more than once"));
+    }
+    problems.sort_unstable();
+    problems
+}
+
 /// What a subcommand is for, and therefore what CI owes it.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Kind {
@@ -587,5 +640,71 @@ mod tests {
             .filter(|entry| entry.home.package().is_none())
             .count();
         assert_eq!(local + delegated, SUBCOMMANDS.len());
+    }
+
+    fn unreachable_run(_args: &[String]) {
+        panic!("a subcommand outside the table must never run");
+    }
+
+    fn noop(_args: &[String]) {}
+
+    /// WHY: a delegate crate is built only because `xtask` decided a subcommand
+    /// belongs to it, so answering to a name it was not given would run the
+    /// wrong gate under the right name. Dispatch must refuse every registered
+    /// name outside the table, and the panic proves it refuses without running
+    /// anything.
+    #[test]
+    fn dispatch_refuses_every_name_outside_the_table() {
+        let table: [(&str, fn(&[String])); 1] = [("owned", unreachable_run)];
+        for entry in SUBCOMMANDS {
+            assert!(
+                !dispatch(&table, entry.name, &["xtask".to_string()]),
+                "`{}` is not in the table and must not dispatch",
+                entry.name
+            );
+        }
+        assert!(!dispatch(&table, "", &["xtask".to_string()]));
+    }
+
+    /// WHY: the delegate crates check their own tables against this one through
+    /// `delegate_table_problems`, so a checker that reported nothing would let
+    /// every kind of drift through while reading as coverage. Each way the two
+    /// declarations can disagree must be named, and the live assignment is read
+    /// at run time so a new delegated subcommand cannot escape the check.
+    #[test]
+    fn the_delegate_checker_names_every_kind_of_drift() {
+        let package = "xtask-registry";
+        let assigned = owned_by(package);
+        let first = *assigned.first().expect("the registry owns subcommands");
+
+        let unassigned: [(&str, fn(&[String])); 1] = [("dep-drift", noop)];
+        let mut expected = assigned
+            .iter()
+            .map(|name| format!("`{package}` is assigned `{name}` but does not implement it"))
+            .collect::<Vec<_>>();
+        expected.push(format!(
+            "`{package}` implements `dep-drift` but is not assigned it"
+        ));
+        expected.sort_unstable();
+        assert_eq!(delegate_table_problems(package, &unassigned), expected);
+
+        let mut duplicated = assigned
+            .iter()
+            .map(|name| (*name, noop as fn(&[String])))
+            .collect::<Vec<_>>();
+        duplicated.push((first, noop));
+        assert_eq!(
+            delegate_table_problems(package, &duplicated),
+            vec![format!("`{package}` lists a subcommand more than once")]
+        );
+
+        let complete = assigned
+            .iter()
+            .map(|name| (*name, noop as fn(&[String])))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            delegate_table_problems(package, &complete),
+            Vec::<String>::new()
+        );
     }
 }

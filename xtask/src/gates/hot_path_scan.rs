@@ -29,7 +29,7 @@
 //! lines but does NOT skip the rest of the file.
 
 use std::collections::BTreeMap;
-use std::io::{self, Read};
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{self};
 
@@ -456,20 +456,7 @@ fn load_config(path: &Path) -> Result<Vec<HotPathEntry>, String> {
 }
 
 fn read_text_bounded(path: &Path) -> io::Result<String> {
-    let mut reader =
-        std::fs::File::open(path)?.take(MAX_HOT_PATH_SCAN_FILE_BYTES.saturating_add(1));
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > MAX_HOT_PATH_SCAN_FILE_BYTES {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "{} exceeds {MAX_HOT_PATH_SCAN_FILE_BYTES} byte hot-path scan read cap",
-                path.display()
-            ),
-        ));
-    }
-    Ok(text)
+    crate::output_arg::read_text_bounded(path, MAX_HOT_PATH_SCAN_FILE_BYTES, "hot-path scan")
 }
 
 fn write_budget_vx_candidates(path: &Path, candidates: &[BudgetVxCandidate]) -> io::Result<()> {
