@@ -214,14 +214,16 @@ vyre-safetensors = { version = "0.7.2", path = "vyre-safetensors" }
 vyre-libs = { version = "0.7.2", path = "vyre-libs" }
 vyre-self-substrate = { version = "0.7.2", path = "vyre-self-substrate" }
 vyre-aot = { version = "0.7.2", path = "vyre-aot" }
-vyre-bench = { version = "0.7.2", path = "vyre-bench" }
-vyre-conform = { version = "0.7.2", path = "conform/vyre-conform", default-features = false }
+# publish = false, so no version: a version requirement here is one a registry
+# can never satisfy, and any member writing `workspace = true` inherits it.
+vyre-bench = { path = "vyre-bench" }
+vyre-conform = { path = "conform/vyre-conform", default-features = false }
 vyre-lower = { version = "0.7.2", path = "vyre-lower" }
 vyre-emit-naga = { version = "0.7.2", path = "vyre-emit-naga" }
 vyre-emit-ptx = { version = "0.7.2", path = "vyre-emit-ptx" }
 vyre-emit-spirv = { version = "0.7.2", path = "vyre-emit-spirv" }
 vyre-emit-metal = { version = "0.7.2", path = "vyre-emit-metal" }
-vyre-frontend-rust = { version = "0.7.2", path = "vyre-frontend-rust" }
+vyre-frontend-rust = { path = "vyre-frontend-rust" }
 vyre-lints = { version = "0.7.2", path = "vyre-lints" }
 vyre-debug = { version = "0.7.2", path = "vyre-debug" }
 vyre-conform-spec = { path = "conform/vyre-conform-spec" }

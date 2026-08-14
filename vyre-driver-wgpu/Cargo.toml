@@ -92,8 +92,9 @@ vyre-emit-spirv = { path = "../vyre-emit-spirv" }
 # A CPU-reference parity test (`c_ast_expression_support`) compares against vyre-reference.
 vyre-reference = { path = "../vyre-reference" }
 # GPU parity tests consume the canonical conformance library without enabling
-# its optional concrete-backend dependencies.
-vyre-conform = { workspace = true, default-features = false }
+# its optional concrete-backend dependencies. PATH-ONLY keeps this unpublished
+# harness out of the packaged dependency graph.
+vyre-conform = { path = "../conform/vyre-conform", default-features = false }
 tracing-subscriber.workspace = true
 libc.workspace = true
 # PATH-ONLY (package = vyre-grammar-gen): a versioned dev-dep here would pin a
