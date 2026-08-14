@@ -1,6 +1,5 @@
 //! Naga entry and parallel emission contracts.
 use super::*;
-use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit};
 
 #[test]
 fn empty_descriptor_emits_compute_entrypoint() {
@@ -45,20 +44,7 @@ fn emit_many_preserves_input_order_for_independent_descriptors() {
 
 #[test]
 fn scalar_store_descriptor_emits_globals_and_statements() {
-    let desc = descriptor("store")
-        .slots([global_rw(0, DataType::U32, "out")])
-        .dispatch(64, 1, 1)
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    lit(1, 1),
-                    effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
-                ])
-                .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
-        )
-        .build();
-    let module = emit(&desc).unwrap();
+    let module = emit(&single_store_desc("store")).unwrap();
     assert_eq!(module.global_variables.len(), 1);
     assert_eq!(module.entry_points.len(), 1);
     assert!(!module.entry_points[0].function.body.is_empty());

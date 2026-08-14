@@ -1,5 +1,5 @@
 use super::*;
-use naga::{Binding, Block, BuiltIn, Statement, TypeInner};
+use naga::{Binding, BuiltIn, Statement, TypeInner};
 use vyre_foundation::ir::{BinOp, DataType, UnOp};
 use vyre_foundation::memory_model::MemoryOrdering;
 use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, SlotCount};
@@ -88,28 +88,26 @@ fn async_copy_desc(kind: KernelOpKind) -> KernelDescriptor {
         .build()
 }
 
-fn block_has_loop(block: &Block) -> bool {
-    block.iter().any(|statement| match statement {
-        Statement::Loop { .. } => true,
-        Statement::Block(child) => block_has_loop(child),
-        Statement::If { accept, reject, .. } => block_has_loop(accept) || block_has_loop(reject),
-        _ => false,
-    })
+/// One binding, two literals, one `StoreGlobal`: the smallest descriptor that
+/// still emits a global variable and a statement.
+pub(crate) fn single_store_desc(id: &str) -> KernelDescriptor {
+    descriptor(id)
+        .slots([global_rw(0, DataType::U32, "out")])
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
+        )
+        .build()
 }
 
-fn block_has_atomic(block: &Block) -> bool {
-    block.iter().any(|statement| match statement {
-        Statement::Atomic { .. } => true,
-        Statement::Block(child) => block_has_atomic(child),
-        Statement::If { accept, reject, .. } => {
-            block_has_atomic(accept) || block_has_atomic(reject)
-        }
-        Statement::Loop {
-            body, continuing, ..
-        } => block_has_atomic(body) || block_has_atomic(continuing),
-        _ => false,
-    })
-}
+mod naga_block_probe;
+pub(crate) use naga_block_probe::{block_has_atomic, block_has_loop};
 
 mod atomics;
 mod binop;

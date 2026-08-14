@@ -104,9 +104,7 @@ impl std::fmt::Display for NagaAuditReport {
 #[cfg(test)]
 mod audit_tests {
     use super::*;
-    use vyre_foundation::ir::DataType;
-    use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit};
-    use vyre_lower::{KernelOpKind, LiteralValue};
+    use vyre_lower::descriptor_builder::descriptor;
 
     #[test]
     fn empty_kernel_yields_zero_candidates() {
@@ -141,20 +139,7 @@ mod audit_tests {
 
     #[test]
     fn nonempty_kernel_audit_doesnt_panic() {
-        let desc = descriptor("k")
-            .slot(global_rw(0, DataType::U32, "buf"))
-            .dispatch(64, 1, 1)
-            .body(
-                body()
-                    .ops([
-                        lit(0, 0),
-                        lit(1, 1),
-                        effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
-                    ])
-                    .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
-            )
-            .build();
-        let report = audit(&desc);
+        let report = audit(&crate::tests::single_store_desc("k"));
         assert_eq!(report.kernel_id, "k");
         // 3-op, 1-binding kernel sits below every naga pattern threshold
         // (vec_pack needs Load/Store fusion groups, prewarm needs
