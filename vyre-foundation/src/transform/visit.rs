@@ -305,6 +305,42 @@ pub fn for_each_expr<'a>(nodes: &'a [Node], mut f: impl FnMut(&'a Expr)) {
     });
 }
 
+/// Every sub-expression of every node in `nodes`, in source pre-order,
+/// stopping at the first `Break`.
+///
+/// The short-circuiting form of [`for_each_expr`], for a guard that reports the
+/// FIRST expression matching a predicate instead of every one. Node descent is
+/// [`try_for_each_node`], operand positions are [`node_operands`], and
+/// sub-expressions are [`expr_children`], so a guard cannot answer "no such
+/// expression anywhere" for a position it never named. A guard that hand-rolls
+/// the three enumerations instead reports "clean" for the positions it forgot,
+/// which is the failure mode of a fail-closed check: it fails open.
+///
+/// Both walks are explicit worklists, so an adversarially deep program costs
+/// heap rather than native stack.
+pub fn try_for_each_expr<B>(
+    nodes: &[Node],
+    mut f: impl FnMut(&Expr) -> ControlFlow<B>,
+) -> ControlFlow<B> {
+    let mut stopped: Option<B> = None;
+    try_for_each_node(nodes, |node| {
+        for operand in node_operands(node).into_iter().flatten() {
+            let hit = any_subexpr(operand, &mut |expr| match f(expr) {
+                ControlFlow::Continue(()) => false,
+                ControlFlow::Break(value) => {
+                    stopped = Some(value);
+                    true
+                }
+            });
+            if hit {
+                return ControlFlow::Break(());
+            }
+        }
+        ControlFlow::Continue(())
+    });
+    stopped.map_or(ControlFlow::Continue(()), ControlFlow::Break)
+}
+
 /// The buffers a node names directly, split by direction.
 #[derive(Debug, Clone, Copy)]
 pub struct BufferRefs<'a> {
