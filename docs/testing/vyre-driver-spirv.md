@@ -17,9 +17,15 @@ The crate lives at `vyre-driver-spirv`. The `spirv-driver` owner maintains its
 CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv
 ```
 
+```console
+CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --all-features
+```
+
 ## Feature sets
 
-This crate declares no Cargo features.
+- Default feature members: None
+- Available manifest features: `default`, `spirv-val`
+- Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
 
@@ -29,6 +35,7 @@ This crate declares no Cargo features.
 | `lib` | `vyre_driver_spirv` | `vyre-driver-spirv/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv` |
 | `test` | `dispatch` | `vyre-driver-spirv/tests/dispatch.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --test dispatch` |
 | `test` | `spirv_parity` | `vyre-driver-spirv/tests/spirv_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --test spirv_parity` |
+| `test` | `spirv_parity` | `vyre-driver-spirv/tests/spirv_parity.rs` | `spirv-val` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --test spirv_parity` |
 | `test` | `target_payload_admission_contract` | `vyre-driver-spirv/tests/target_payload_admission_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --test target_payload_admission_contract` |
 
 ## Test classes

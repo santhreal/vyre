@@ -236,6 +236,20 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Fixed
 
+- Emitted SPIR-V is validated again. When `spirv-val` was absent the shared
+  assertion fell back to checking that a blob held at least five words and
+  carried a plausible version word, then returned, so every emission passed on a
+  machine without the validator and the gate built on it proved nothing there.
+  The validator is now required, the suite is registered behind the new
+  `spirv-val` feature of `vyre-driver-spirv` so a default `--workspace` run skips
+  the target instead of running the header-only path, and the `spirv-validation`
+  job in `gates.yml` installs the validator and runs it. No device is involved.
+- Every `vyre-driver-cuda` test target is now gated on a real device. Fifty-five
+  `*gpu_parity*` targets were named by no workflow, and the script meant to cover
+  them still named a test file that no longer exists, so it exited at its first
+  target and measured nothing. Its roster is derived from tracked test targets,
+  so a target added later is covered by existing, and the `CUDA parity suite` job
+  in `gpu-parity.yml` runs it with the GPU release gate requiring the result.
 - Documentation builds again. Sixteen intra-doc links resolved to nothing, and
   because the workspace denies `broken_intra_doc_links` that made `cargo doc`
   fail outright for `vyre-driver`, `vyre-foundation`, `vyre-libs`,

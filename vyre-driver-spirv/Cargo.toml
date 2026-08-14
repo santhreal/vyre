@@ -21,6 +21,17 @@ rustdoc-args = ["--cfg", "docsrs"]
 [lints]
 workspace = true
 
+[features]
+default = []
+
+# The spirv_parity suite validates every blob it emits with spirv-val, and a
+# machine without that binary must skip the target rather than compile it and
+# pass without validating anything, which is what it used to do. Registering the
+# target behind a feature is the same remedy the c-parser and oracle-matrix
+# suites use: a default run cleanly skips it, and the gate that enables it fails
+# closed when the validator is missing.
+spirv-val = []
+
 [dependencies]
 vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
@@ -36,3 +47,8 @@ smallvec = { workspace = true }
 # integration tests/benches assert against these crates' public APIs
 vyre-reference = { path = "../vyre-reference" }
 tempfile.workspace = true
+
+[[test]]
+name = "spirv_parity"
+path = "tests/spirv_parity.rs"
+required-features = ["spirv-val"]

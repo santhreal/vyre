@@ -26,32 +26,43 @@ fn assert_spirv_structural_invariants(label: &str, words: &[u32]) {
         "Fix: {label} emitted a SPIR-V blob without the SPIR-V magic header"
     );
 
-    if Command::new("spirv-val").arg("--version").output().is_ok() {
-        let mut file = NamedTempFile::new()
-            .unwrap_or_else(|error| panic!("Fix: create temp SPIR-V file for {label}: {error}"));
-        for word in words {
-            file.write_all(&word.to_le_bytes())
-                .unwrap_or_else(|error| panic!("Fix: write SPIR-V bytes for {label}: {error}"));
-        }
-        let output = Command::new("spirv-val")
-            .arg(file.path())
-            .output()
-            .unwrap_or_else(|error| panic!("Fix: launch spirv-val for {label}: {error}"));
-        assert!(
-            output.status.success(),
-            "Fix: spirv-val rejected {label}: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-    } else {
-        assert!(
-            words.len() >= 5,
-            "Fix: {label} emitted a truncated SPIR-V header fallback snapshot"
-        );
-        assert!(
-            words[1] >= 0x0001_0000,
-            "Fix: {label} emitted an invalid SPIR-V version word in fallback validation"
-        );
+    // spirv-val is the only thing here that can tell valid SPIR-V from a
+    // plausible header. When it was absent this function asserted the blob held
+    // at least five words and carried a version word, then returned, so every
+    // emission passed on a machine without the validator and the gate built on
+    // this function proved nothing there. A missing validator is a
+    // configuration failure, not a clean tree.
+    let probe = Command::new("spirv-val")
+        .arg("--version")
+        .output()
+        .unwrap_or_else(|error| {
+            panic!(
+                "Fix: install spirv-tools so spirv-val is on PATH. SPIR-V emission cannot be \
+                 validated without it, and passing {label} without validating it is the defect \
+                 this check exists to prevent ({error})"
+            )
+        });
+    assert!(
+        probe.status.success(),
+        "Fix: spirv-val is on PATH but did not report a version, so it cannot validate {label}: {}",
+        String::from_utf8_lossy(&probe.stderr)
+    );
+
+    let mut file = NamedTempFile::new()
+        .unwrap_or_else(|error| panic!("Fix: create temp SPIR-V file for {label}: {error}"));
+    for word in words {
+        file.write_all(&word.to_le_bytes())
+            .unwrap_or_else(|error| panic!("Fix: write SPIR-V bytes for {label}: {error}"));
     }
+    let output = Command::new("spirv-val")
+        .arg(file.path())
+        .output()
+        .unwrap_or_else(|error| panic!("Fix: launch spirv-val for {label}: {error}"));
+    assert!(
+        output.status.success(),
+        "Fix: spirv-val rejected {label}: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
 
 fn program() -> Program {

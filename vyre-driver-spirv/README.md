@@ -54,7 +54,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-driver-spirv --example vulkan_probe
 
 ### Features
 
-- Manifest features: None
+- Manifest features: `default`, `spirv-val`
 - Default feature members: None
 
 ### Errors and unsupported behavior

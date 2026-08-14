@@ -247,3 +247,28 @@ jobs:
       # to divide well under a minute of test time.
       - name: Volume oracle matrix waves
         run: bash scripts/run_volume_sweep_shard.sh 0 1
+
+  spirv-validation:
+    name: Emitted SPIR-V is validated, not just shaped
+    runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      # spirv-val is the only thing that can tell a valid module from a blob with
+      # a correct magic word. The suite used to accept the second when the
+      # validator was absent, so every emission passed here and the gate was
+      # decoration. Installing it is what makes the assertion mean anything.
+      - name: Install spirv-val
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y spirv-tools
+
+      # The target is registered behind `spirv-val`, so ci.yml's default
+      # --workspace run skips it and this job is the only thing that runs it. The
+      # gate fails closed when the validator is missing rather than falling back
+      # to a header check. No GPU: SPIR-V emission is pure computation.
+      - name: Validated SPIR-V emission
+        run: bash scripts/check_spirv_parity_perf_gate.sh
