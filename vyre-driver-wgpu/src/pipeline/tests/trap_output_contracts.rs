@@ -2,28 +2,9 @@ use super::*;
 
 #[test]
 fn direct_record_and_readback_trap_with_output_preserves_ring_fast_path() {
-    use std::sync::Arc;
-
-    let ((device, queue), adapter_info, enabled_features) = crate::runtime::init_device()
-        .expect("Fix: GPU required for trap+output readback allocation contract test");
-    let device_queue = Arc::new((device, queue));
-    let config = DispatchConfig::default();
-    let pipeline_cache = Arc::new(crate::runtime::cache::pipeline::LruPipelineCache::new(
-        vyre_driver::pipeline::DEFAULT_PIPELINE_CACHE_ENTRIES as u32,
-    ));
-    let layout_cache = Arc::new(super::BindGroupLayoutCache::with_hasher(
-        std::hash::BuildHasherDefault::<rustc_hash::FxHasher>::default(),
-    ));
-    let with_rings_arena = Arc::new(crate::DispatchArena::new(
-        device_queue.0.clone(),
-        device_queue.1.clone(),
-        &config,
-    ));
-    let without_rings_arena = Arc::new(crate::DispatchArena::new(
-        device_queue.0.clone(),
-        device_queue.1.clone(),
-        &config,
-    ));
+    let harness = PipelineHarness::new("trap+output readback allocation contract test");
+    let with_rings_arena = harness.arena();
+    let without_rings_arena = harness.arena();
     let with_rings_pool = with_rings_arena.pool().clone();
     let without_rings_pool = without_rings_arena.pool().clone();
 
@@ -36,44 +17,19 @@ fn direct_record_and_readback_trap_with_output_preserves_ring_fast_path() {
         ],
     );
 
-    let pipeline = super::WgpuPipeline::compile_with_device_queue(
-        &program,
-        &config,
-        adapter_info,
-        enabled_features,
-        device_queue.clone(),
-        Arc::clone(&with_rings_arena),
-        with_rings_pool.clone(),
-        pipeline_cache,
-        layout_cache,
-    )
-    .expect("Fix: trapped program with output compile must succeed; restore this invariant before continuing.");
-
-    let empty_inputs: [&[u8]; 0] = [];
+    let pipeline = harness
+        .compile_on_arena(&program, &with_rings_arena)
+        .expect("Fix: trapped program with output compile must succeed; restore this invariant before continuing.");
 
     let with_rings_before = with_rings_pool.stats().allocations;
-    let with_rings_error = crate::engine::record_and_readback::record_and_readback(
-        crate::engine::record_and_readback::RecordAndReadback {
-            device_queue: &pipeline.device_queue,
-            pool: with_rings_arena.pool(),
-            readback_rings: Some(with_rings_arena.readback_rings()),
-            pipeline: &pipeline.pipeline,
-            bind_group_layouts: &pipeline.bind_group_layouts,
-            bind_group_cache: Some(pipeline.bind_group_cache.as_ref()),
-            buffer_bindings: &pipeline.buffer_bindings,
-            inputs: &empty_inputs,
-            output_bindings: Arc::clone(&pipeline.output_bindings),
-            trap_tags: &pipeline.trap_tags,
-            workgroup_count: [1, 1, 1],
-            indirect: pipeline.indirect.as_ref(),
-            labels: crate::engine::record_and_readback::DispatchLabels {
-                bind_group: "vyre mixed output ring test bind group",
-                encoder: "vyre mixed output ring test",
-                compute: "vyre mixed output ring test compute",
-            },
-            iterations: 1,
-            timestamp_profile: false,
-            inferred_grid_shape: None,
+    let with_rings_error = record_once(
+        &pipeline,
+        &with_rings_arena,
+        true,
+        DispatchLabels {
+            bind_group: "vyre mixed output ring test bind group",
+            encoder: "vyre mixed output ring test",
+            compute: "vyre mixed output ring test compute",
         },
     )
     .expect_err(
@@ -98,28 +54,14 @@ fn direct_record_and_readback_trap_with_output_preserves_ring_fast_path() {
     );
 
     let without_rings_before = without_rings_pool.stats().allocations;
-    let without_rings_error = crate::engine::record_and_readback::record_and_readback(
-        crate::engine::record_and_readback::RecordAndReadback {
-            device_queue: &pipeline.device_queue,
-            pool: without_rings_arena.pool(),
-            readback_rings: None,
-            pipeline: &pipeline.pipeline,
-            bind_group_layouts: &pipeline.bind_group_layouts,
-            bind_group_cache: Some(pipeline.bind_group_cache.as_ref()),
-            buffer_bindings: &pipeline.buffer_bindings,
-            inputs: &empty_inputs,
-            output_bindings: Arc::clone(&pipeline.output_bindings),
-            trap_tags: &pipeline.trap_tags,
-            workgroup_count: [1, 1, 1],
-            indirect: pipeline.indirect.as_ref(),
-            labels: crate::engine::record_and_readback::DispatchLabels {
-                bind_group: "vyre mixed output no-ring test bind group",
-                encoder: "vyre mixed output no-ring test",
-                compute: "vyre mixed output no-ring test compute",
-            },
-            iterations: 1,
-            timestamp_profile: false,
-            inferred_grid_shape: None,
+    let without_rings_error = record_once(
+        &pipeline,
+        &without_rings_arena,
+        false,
+        DispatchLabels {
+            bind_group: "vyre mixed output no-ring test bind group",
+            encoder: "vyre mixed output no-ring test",
+            compute: "vyre mixed output no-ring test compute",
         },
     )
     .expect_err(

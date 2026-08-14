@@ -13,11 +13,10 @@
 //!   never silently falling back to CPU
 
 mod common;
-use common::acquire_live_backend as live_backend;
+use common::{add_one_program, acquire_live_backend as live_backend};
 
 use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};
-use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::CompiledPipeline;
 use vyre_driver::{DispatchConfig, VyreBackend};
 
@@ -29,31 +28,6 @@ fn hot_path_test_guard() -> MutexGuard<'static, ()> {
             "dispatch hot-path test mutex was poisoned: {error}. Fix: resolve the earlier hot-path panic before trusting latency measurements."
         )
     })
-}
-
-fn add_one_program(words: u32) -> Program {
-    let idx = Expr::gid_x();
-    let in_bounds = Expr::lt(idx.clone(), Expr::u32(words));
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(words),
-            BufferDecl::output("out", 1, DataType::U32)
-                .with_count(words)
-                .with_output_byte_range(0..(words as usize * 4)),
-        ],
-        [64, 1, 1],
-        vec![
-            Node::if_then(
-                in_bounds,
-                vec![Node::store(
-                    "out",
-                    idx.clone(),
-                    Expr::add(Expr::load("input", idx), Expr::u32(1)),
-                )],
-            ),
-            Node::return_(),
-        ],
-    )
 }
 
 // ------------------------------------------------------------------

@@ -1,8 +1,8 @@
 //! End-to-end test: vyre's DCE pass running as a vyre Program on the
 //! GPU through the canonical `WgpuBackend::dispatch` API.
 //!
-//! No CPU fallback. The test wires a `WgpuProgramDispatcher` that
-//! satisfies the `vyre_foundation::program_dispatch::ProgramDispatcher`
+//! No CPU fallback. The test wires a `WgpuOptimizerDispatcher` that
+//! satisfies the `vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher`
 //! trait and calls `gpu_dce`. Result is asserted fingerprint-equal to
 //! the foundation CPU `dce` pass on the same input  -  proving the
 //! self-hosted GPU pass is semantically identical, with the substrate
@@ -12,48 +12,18 @@
 
 mod common;
 use common::acquire_live_backend as live_backend;
+use common::self_optimizer::{WgpuOptimizerDispatcher, wrapped};
 
-use vyre::ir::{Expr, Node, Program};
-use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_driver_wgpu::WgpuBackend;
+use vyre::ir::{Expr, Node};
 use vyre_foundation::optimizer::fingerprint_program;
 use vyre_foundation::optimizer::passes::fusion_cse::dce::engine::dce as cpu_dce_oracle;
 use vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
-/// Wraps a live `WgpuBackend` and adapts its `dispatch` API to the
-/// `ProgramDispatcher` trait the self-hosted optimizer expects.
-struct WgpuProgramDispatcher<'a> {
-    backend: &'a WgpuBackend,
-}
 
-impl<'a> WgpuProgramDispatcher<'a> {
-    fn new(backend: &'a WgpuBackend) -> Self {
-        Self { backend }
-    }
-}
-
-impl<'a> ProgramDispatcher for WgpuProgramDispatcher<'a> {
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        let mut config = DispatchConfig::default();
-        config.grid_override = grid_override;
-        VyreBackend::dispatch(self.backend, program, inputs, &config)
-            .map_err(|err| DispatchError::BackendError(err.to_string()))
-    }
-}
-
-fn wrapped(entry: Vec<Node>) -> Program {
-    Program::wrapped(Vec::new(), [1, 1, 1], entry)
-}
 
 fn assert_gpu_dce_matches_cpu_oracle(entry: Vec<Node>) {
     let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher::new(&backend);
+    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
 
     let oracle_in = wrapped(entry.clone());
     let test_in = wrapped(entry);

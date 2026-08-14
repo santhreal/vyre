@@ -9,7 +9,7 @@
 //! - Backend max_workgroup_size is nonzero on any real GPU
 
 mod common;
-use common::shared_live_backend as live_backend;
+use common::{add_one_program, shared_live_backend as live_backend};
 
 use std::time::{Duration, Instant};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -201,31 +201,6 @@ fn bf16_rejected_at_capability_gate_before_lowering() {
 // ------------------------------------------------------------------
 // 4. Async dispatch / pending dispatch is NOT synchronous under the hood
 // ------------------------------------------------------------------
-
-fn add_one_program(words: u32) -> Program {
-    let idx = Expr::gid_x();
-    let in_bounds = Expr::lt(idx.clone(), Expr::u32(words));
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(words),
-            BufferDecl::output("out", 1, DataType::U32)
-                .with_count(words)
-                .with_output_byte_range(0..(words as usize * 4)),
-        ],
-        [64, 1, 1],
-        vec![
-            Node::if_then(
-                in_bounds,
-                vec![Node::store(
-                    "out",
-                    idx.clone(),
-                    Expr::add(Expr::load("input", idx), Expr::u32(1)),
-                )],
-            ),
-            Node::return_(),
-        ],
-    )
-}
 
 /// Build a program that takes measurably longer on the GPU than on the host.
 fn long_running_program() -> Program {

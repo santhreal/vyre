@@ -10,49 +10,18 @@
 
 mod common;
 use common::acquire_live_backend as live_backend;
+use common::self_optimizer::{WgpuOptimizerDispatcher, first_let_value, wrapped};
 
-use vyre::ir::{BinOp, Expr, Node, Program};
-use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_driver_wgpu::WgpuBackend;
+use vyre::ir::{BinOp, Expr, Node};
 use vyre_self_substrate::optimizer::canonicalize_via_encoded::gpu_canonicalize;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
-struct WgpuProgramDispatcher<'a> {
-    backend: &'a WgpuBackend,
-}
 
-impl<'a> ProgramDispatcher for WgpuProgramDispatcher<'a> {
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        let mut config = DispatchConfig::default();
-        config.grid_override = grid_override;
-        VyreBackend::dispatch(self.backend, program, inputs, &config)
-            .map_err(|err| DispatchError::BackendError(err.to_string()))
-    }
-}
 
-fn wrapped(entry: Vec<Node>) -> Program {
-    Program::wrapped(Vec::new(), [1, 1, 1], entry)
-}
-
-fn first_let_value(p: &Program) -> Expr {
-    match p.entry() {
-        [Node::Region { body, .. }] => match body.as_slice() {
-            [Node::Let { value, .. }] => value.clone(),
-            _ => panic!("expected single Let in body, got {:?}", body),
-        },
-        _ => panic!("expected wrapped Program with single Region"),
-    }
-}
 
 #[test]
 fn canonicalize_lit_plus_var_swaps_to_var_plus_lit_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher { backend: &backend };
+    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
 
     // let x = 1 + a   →   let x = a + 1   (literal on right)
     let p = wrapped(vec![Node::let_bind(
@@ -80,7 +49,7 @@ fn canonicalize_lit_plus_var_swaps_to_var_plus_lit_on_real_gpu() {
 #[test]
 fn canonicalize_var_plus_lit_unchanged_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher { backend: &backend };
+    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
 
     // let x = a + 1   →   unchanged (already canonical)
     let p = wrapped(vec![Node::let_bind(
@@ -101,7 +70,7 @@ fn canonicalize_var_plus_lit_unchanged_on_real_gpu() {
 #[test]
 fn canonicalize_two_lits_unchanged_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher { backend: &backend };
+    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
 
     // Both literals  -  no swap (CPU canonicalize also leaves these
     // alone for non-tie-breaking ops).
@@ -123,7 +92,7 @@ fn canonicalize_two_lits_unchanged_on_real_gpu() {
 #[test]
 fn canonicalize_two_vars_unchanged_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher { backend: &backend };
+    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
 
     // V1 doesn't tie-break non-literals → unchanged.
     let p = wrapped(vec![Node::let_bind(
@@ -144,7 +113,7 @@ fn canonicalize_two_vars_unchanged_on_real_gpu() {
 #[test]
 fn canonicalize_lit_times_var_swaps_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher { backend: &backend };
+    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
 
     // let x = 5 * a   →   let x = a * 5
     let p = wrapped(vec![Node::let_bind(
@@ -166,7 +135,7 @@ fn canonicalize_lit_times_var_swaps_on_real_gpu() {
 #[test]
 fn canonicalize_non_commutative_div_unchanged_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher { backend: &backend };
+    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
 
     // Div is NOT commutative  -  must NEVER swap regardless of operands.
     let p = wrapped(vec![Node::let_bind(
