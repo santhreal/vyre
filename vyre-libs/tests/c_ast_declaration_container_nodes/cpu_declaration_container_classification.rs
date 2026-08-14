@@ -1,7 +1,7 @@
 // Integration test module for the containing Vyre package.
 
-use super::fixtures::*;
-use super::support::{typed_indices, word_at, VAST_STRIDE_U32};
+use super::declaration_container_nodes::*;
+use crate::c_frontend::rows::{row_indices as typed_indices, word_at, VAST_STRIDE_U32};
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_build_vast_nodes, reference_c11_classify_vast_node_kinds,
     C_AST_KIND_BIT_FIELD_DECL, C_AST_KIND_ENUM_DECL, C_AST_KIND_FUNCTION_DEFINITION,

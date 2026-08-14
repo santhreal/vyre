@@ -1,6 +1,11 @@
-// Integration test module for the containing Vyre package.
+//! Token fixtures for C declaration container nodes: struct, union, enum, typedef, function,
+//! bitfield, and static assert declarations.
+//!
+//! The CPU contracts in `vyre-libs/tests` and the backend parity arm in the
+//! driver crate build the same token streams, so the fixtures have one owner
+//! here rather than a copy per crate.
 
-use super::support::starts_for_lens;
+use crate::c_frontend::rows::starts_for_lens;
 use vyre_libs::parsing::c::lex::tokens::*;
 
 /// ```c

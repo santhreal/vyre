@@ -650,3 +650,13 @@ required-features = ["c-parser"]
 name = "gemini_c_ast_contracts"
 path = "tests/gemini_c_ast_contracts.rs"
 required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_declaration_container_nodes"
+path = "tests/c_ast_declaration_container_nodes.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_expression_shape_gaps_e2e"
+path = "tests/c_ast_expression_shape_gaps_e2e.rs"
+required-features = ["c-parser"]

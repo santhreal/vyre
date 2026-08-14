@@ -1,10 +1,10 @@
 // Integration test module for the containing Vyre package.
 
-use super::fixtures::*;
-use super::support::{
-    assert_pg_links_match_vast, assert_pg_preserves_row, assert_shape_row, row_indices,
-    run_pipeline, word_at, SENTINEL, VAST_STRIDE_U32,
+use super::expression_shape_gap_constructs::*;
+use crate::c_frontend::expression_pipeline::{
+    assert_pg_links_match_vast, assert_pg_preserves_row, assert_shape_row, run_pipeline,
 };
+use crate::c_frontend::rows::{row_indices_by_stride as row_indices, word_at, SENTINEL, VAST_STRIDE_U32};
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_ARRAY_DECL, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR, C_AST_KIND_ASSIGN_EXPR,

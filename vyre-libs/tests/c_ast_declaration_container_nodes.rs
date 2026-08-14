@@ -6,7 +6,5 @@
 mod c_frontend;
 #[path = "../../tests/support/c_frontend/fixtures/declaration_container_nodes.rs"]
 mod declaration_container_nodes;
-#[path = "c_ast_declaration_container_nodes/gpu.rs"]
-mod gpu;
-#[path = "c_ast_declaration_container_nodes/support.rs"]
-mod support;
+#[path = "c_ast_declaration_container_nodes/cpu_declaration_container_classification.rs"]
+mod cpu_declaration_container_classification;

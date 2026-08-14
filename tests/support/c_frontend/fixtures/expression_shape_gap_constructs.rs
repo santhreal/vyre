@@ -1,4 +1,9 @@
-// Integration test module for the containing Vyre package.
+//! Token fixtures for expression-shape gaps: prefix and postfix unary operators, casts, member
+//! access, subscripts, designators, and GNU case ranges.
+//!
+//! The CPU contracts in `vyre-libs/tests` and the backend parity arm in the
+//! driver crate build the same token streams, so the fixtures have one owner
+//! here rather than a copy per crate.
 
 use vyre_libs::parsing::c::lex::tokens::*;
 

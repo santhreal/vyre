@@ -1,4 +1,5 @@
-// Integration test module for the containing Vyre package.
+// Backend dispatch for the declaration-container parity arm. The row
+// accessors it builds on are owned by `tests/support/c_frontend/rows.rs`.
 
 use std::sync::OnceLock;
 
@@ -10,45 +11,11 @@ use vyre_libs::parsing::c::parse::vast::{
     reference_c11_classify_vast_node_kinds,
 };
 
-pub(crate) const VAST_STRIDE_U32: usize = 10;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-pub(crate) fn bytes(words: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(words)
-}
-
-pub(crate) fn word_at(buf: &[u8], word: usize) -> u32 {
-    let off = word * 4;
-    u32::from_le_bytes(buf[off..off + 4].try_into().unwrap())
-}
-
-pub(crate) fn starts_for_lens(lens: &[u32]) -> Vec<u32> {
-    let mut cursor = 0u32;
-    lens.iter()
-        .map(|len| {
-            let start = cursor;
-            cursor = cursor.saturating_add(*len).saturating_add(1);
-            start
-        })
-        .collect()
-}
-
-pub(crate) fn typed_indices(rows: &[u8], kind: u32) -> Vec<usize> {
-    rows.chunks_exact(VAST_STRIDE_U32 * 4)
-        .enumerate()
-        .filter_map(|(idx, row)| {
-            let row_kind = u32::from_le_bytes(row[0..4].try_into().unwrap());
-            (row_kind == kind).then_some(idx)
-        })
-        .collect()
-}
-
-pub(crate) fn node_count_from_vast(vast_bytes: &[u8]) -> u32 {
-    (vast_bytes.len() / (VAST_STRIDE_U32 * 4)) as u32
-}
+#[allow(unused_imports)]
+pub(crate) use crate::c_frontend::rows::{
+    bytes, node_count_from_vast, row_indices as typed_indices, starts_for_lens, word_at,
+    VAST_STRIDE_U32,
+};
 
 pub(crate) fn gpu_backend() -> &'static WgpuBackend {
     static BACKEND: OnceLock<WgpuBackend> = OnceLock::new();
