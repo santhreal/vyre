@@ -52,6 +52,42 @@ pub(crate) fn copied_borrowed_handle_refs<'a>(
     refs
 }
 
+/// Diagnostics that distinguish one persistent recording path from another.
+///
+/// The direct and pre-recorded paths build bind groups and record the compute
+/// pass identically; only the wgpu debug labels and the text of the errors
+/// they raise differ. This record carries that difference so the mechanics
+/// have one spelling.
+pub(crate) struct DispatchNaming {
+    /// Path name that opens most errors: `persistent` or `pre-recorded`.
+    pub path: &'static str,
+    /// Completes "Fix: split bind-group resources before {action}.".
+    pub action: &'static str,
+    /// wgpu debug label for a bind group created by this path.
+    pub bind_group_label: &'static str,
+    /// Label for the padding applied to a bind-group cache key entry.
+    pub key_size_label: &'static str,
+    /// Label for the padding applied to a binding's bound size.
+    pub bind_size_label: &'static str,
+    /// Pads a byte length up to wgpu's 4-byte binding alignment.
+    pub pad: fn(u64, &'static str) -> Result<u64, BackendError>,
+    /// wgpu debug label for the compute pass this path records.
+    pub compute_label: &'static str,
+    /// Raised when a bind-group index does not fit `u32`.
+    pub index_overflow: &'static str,
+}
+
+pub(crate) const PERSISTENT_DISPATCH: DispatchNaming = DispatchNaming {
+    path: "persistent",
+    action: "caching",
+    bind_group_label: "vyre persistent bind group",
+    key_size_label: "persistent bind-group cache key byte length",
+    bind_size_label: "persistent bind-group binding size",
+    pad: padded_wgpu_u64,
+    compute_label: "vyre persistent compute",
+    index_overflow: "persistent pipeline bind group index exceeds u32::MAX. Fix: reduce bind group fanout before WGPU dispatch.",
+};
+
 impl WgpuPipeline {
     /// Dispatch using caller-owned GPU-resident buffers.
     ///
@@ -211,33 +247,55 @@ impl WgpuPipeline {
         let bound = self.bound_borrowed_handles(item)?;
         let bind_groups = self.cached_bind_groups(device, &bound)?;
         self.clear_outputs(encoder, &bound)?;
+        self.record_compute_pass(
+            encoder,
+            &bind_groups,
+            &bound,
+            item.workgroups,
+            timestamp_writes,
+            &PERSISTENT_DISPATCH,
+        )
+    }
+
+    /// Record pipeline binding and the workgroup dispatch into `encoder`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a backend error when a bind-group index does not fit `u32`, or
+    /// when an indirect count buffer is missing from `bound`.
+    pub(crate) fn record_compute_pass(
+        &self,
+        encoder: &mut wgpu::CommandEncoder,
+        bind_groups: &[Arc<wgpu::BindGroup>],
+        bound: &[(&BufferBindingInfo, &GpuBufferHandle)],
+        workgroups: [u32; 3],
+        timestamp_writes: Option<wgpu::ComputePassTimestampWrites<'_>>,
+        naming: &DispatchNaming,
+    ) -> Result<(), BackendError> {
         let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: Some("vyre persistent compute"),
+            label: Some(naming.compute_label),
             timestamp_writes,
         });
         pass.set_pipeline(&self.pipeline);
         for (i, bg) in bind_groups.iter().enumerate() {
-            let bind_group_index = u32::try_from(i).map_err(|_| {
-                BackendError::new(
-                    "persistent pipeline bind group index exceeds u32::MAX. Fix: reduce bind group fanout before WGPU dispatch.",
-                )
-            })?;
+            let bind_group_index =
+                u32::try_from(i).map_err(|_| BackendError::new(naming.index_overflow))?;
             pass.set_bind_group(bind_group_index, bg.as_ref(), &[]);
         }
         if let Some(indirect) = &self.indirect {
             let indirect_handle = bound
                 .iter()
                 .find(|(info, _)| info.name.as_ref() == indirect.count_buffer.as_str())
-                .map(|(_, handle)| handle)
+                .map(|(_, handle)| *handle)
                 .ok_or_else(|| {
                     BackendError::new(format!(
-                        "indirect dispatch count buffer `{}` not bound in persistent dispatch. Fix: supply the declared buffer handle.",
-                        indirect.count_buffer
+                        "indirect dispatch count buffer `{}` not bound in {} dispatch. Fix: supply the declared buffer handle.",
+                        indirect.count_buffer, naming.path
                     ))
                 })?;
             pass.dispatch_workgroups_indirect(indirect_handle.buffer(), indirect.count_offset);
         } else {
-            pass.dispatch_workgroups(item.workgroups[0], item.workgroups[1], item.workgroups[2]);
+            pass.dispatch_workgroups(workgroups[0], workgroups[1], workgroups[2]);
         }
         Ok(())
     }
@@ -424,6 +482,24 @@ impl WgpuPipeline {
         device: &wgpu::Device,
         bound: &[(&BufferBindingInfo, &GpuBufferHandle)],
     ) -> Result<Arc<[Arc<wgpu::BindGroup>]>, BackendError> {
+        Ok(self
+            .cached_bind_groups_named(device, bound, &PERSISTENT_DISPATCH)?
+            .into())
+    }
+
+    /// Group `bound` by bind-group index and resolve each group through the
+    /// bind-group cache, creating only the groups that miss.
+    ///
+    /// # Errors
+    ///
+    /// Returns a backend error when reflection metadata disagrees with the
+    /// compiled bind-group layouts or a reservation fails.
+    pub(crate) fn cached_bind_groups_named(
+        &self,
+        device: &wgpu::Device,
+        bound: &[(&BufferBindingInfo, &GpuBufferHandle)],
+        naming: &DispatchNaming,
+    ) -> Result<Vec<Arc<wgpu::BindGroup>>, BackendError> {
         let mut grouped_bound: Vec<
             smallvec::SmallVec<[(&BufferBindingInfo, &GpuBufferHandle); 16]>,
         > = Vec::new();
@@ -433,21 +509,24 @@ impl WgpuPipeline {
         )
         .map_err(|source| {
             BackendError::new(format!(
-                "persistent bind-group staging could not reserve {} group slot(s): {source}. Fix: split bind-group resources before caching.",
-                self.bind_group_layouts.len()
+                "{} bind-group staging could not reserve {} group slot(s): {source}. Fix: split bind-group resources before {}.",
+                naming.path,
+                self.bind_group_layouts.len(),
+                naming.action
             ))
         })?;
         grouped_bound.resize_with(self.bind_group_layouts.len(), smallvec::SmallVec::new);
         for (info, handle) in bound {
             let group = usize::try_from(info.group).map_err(|source| {
                 BackendError::new(format!(
-                    "persistent bind group {} cannot fit usize: {source}. Fix: keep group indices representable on this host.",
-                    info.group
+                    "{} bind group {} cannot fit usize: {source}. Fix: keep group indices representable on this host.",
+                    naming.path, info.group
                 ))
             })?;
             let Some(slot) = grouped_bound.get_mut(group) else {
                 return Err(BackendError::new(format!(
-                    "persistent binding {} (`{}`) targets group {}, but the pipeline only has {} bind-group layouts. Fix: keep reflection metadata synchronized with bind-group layouts.",
+                    "{} binding {} (`{}`) targets group {}, but the pipeline only has {} bind-group layouts. Fix: keep reflection metadata synchronized with bind-group layouts.",
+                    naming.path,
                     info.binding,
                     info.name,
                     info.group,
@@ -463,16 +542,19 @@ impl WgpuPipeline {
         )
         .map_err(|source| {
             BackendError::new(format!(
-                "persistent bind-group cache result could not reserve {} group slot(s): {source}. Fix: split bind-group resources before caching.",
-                self.bind_group_layouts.len()
+                "{} bind-group cache result could not reserve {} group slot(s): {source}. Fix: split bind-group resources before {}.",
+                naming.path,
+                self.bind_group_layouts.len(),
+                naming.action
             ))
         })?;
         for (group_index, layout) in self.bind_group_layouts.iter().enumerate() {
             let group_bound = &grouped_bound[group_index];
             let handle_id_capacity = group_bound.len().checked_mul(2).ok_or_else(|| {
-                BackendError::new(
-                    "persistent bind group handle-id count overflowed usize. Fix: split bind-group resources before caching.",
-                )
+                BackendError::new(format!(
+                    "{} bind group handle-id count overflowed usize. Fix: split bind-group resources before {}.",
+                    naming.path, naming.action
+                ))
             })?;
             let mut handle_ids: smallvec::SmallVec<[u64; 16]> = smallvec::SmallVec::new();
             vyre_foundation::allocation::try_reserve_smallvec_to_capacity(
@@ -481,7 +563,8 @@ impl WgpuPipeline {
             )
             .map_err(|source| {
                 BackendError::new(format!(
-                    "persistent bind-group handle-id cache key could not reserve {handle_id_capacity} word slot(s): {source}. Fix: split bind-group resources before caching."
+                    "{} bind-group handle-id cache key could not reserve {handle_id_capacity} word slot(s): {source}. Fix: split bind-group resources before {}.",
+                    naming.path, naming.action
                 ))
             })?;
             let mut checked_bound: smallvec::SmallVec<
@@ -493,23 +576,22 @@ impl WgpuPipeline {
             )
             .map_err(|source| {
                 BackendError::new(format!(
-                    "persistent bind-group checked binding staging could not reserve {} binding slot(s): {source}. Fix: split bind-group resources before caching.",
-                    group_bound.len()
+                    "{} bind-group checked binding staging could not reserve {} binding slot(s): {source}. Fix: split bind-group resources before {}.",
+                    naming.path,
+                    group_bound.len(),
+                    naming.action
                 ))
             })?;
             for (_, handle) in group_bound {
                 handle_ids.push(handle.allocation_identity());
-                let bind_size = padded_wgpu_u64(
-                    handle.byte_len(),
-                    "persistent bind-group cache key byte length",
-                )?;
+                let bind_size = (naming.pad)(handle.byte_len(), naming.key_size_label)?;
                 handle_ids.push(bind_size);
             }
             for (info, handle) in group_bound {
                 checked_bound.push((
                     info,
                     handle,
-                    padded_wgpu_u64(handle.byte_len(), "persistent bind-group binding size")?,
+                    (naming.pad)(handle.byte_len(), naming.bind_size_label)?,
                 ));
             }
             let layout_id = Arc::as_ptr(layout).addr();
@@ -531,14 +613,14 @@ impl WgpuPipeline {
                         }
                     }));
                     device.create_bind_group(&wgpu::BindGroupDescriptor {
-                        label: Some("vyre persistent bind group"),
+                        label: Some(naming.bind_group_label),
                         layout,
                         entries: &entries,
                     })
                 });
             bind_groups.push(bg);
         }
-        Ok(bind_groups.into())
+        Ok(bind_groups)
     }
 }
 

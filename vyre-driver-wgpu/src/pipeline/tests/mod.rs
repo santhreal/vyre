@@ -127,6 +127,8 @@ fn record_once(
 mod bind_group_cache_contracts;
 #[path = "layout_config_contracts.rs"]
 mod layout_config_contracts;
+#[path = "prerecorded_contracts.rs"]
+mod prerecorded_contracts;
 #[path = "readback_ring_contracts.rs"]
 mod readback_ring_contracts;
 #[path = "trap_output_contracts.rs"]
