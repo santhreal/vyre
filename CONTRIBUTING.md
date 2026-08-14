@@ -91,6 +91,15 @@ Repository discipline, CI, review metadata, or community files:
 bash scripts/check_repo_hygiene.sh
 ```
 
+## Manual Tools
+
+These are run by hand. No workflow invokes them, and none is a merge gate.
+
+- `bash scripts/bench_smoke.sh` runs the canonical vyre-bench smoke suite and prints JSON.
+- `bash scripts/run_sweep_oracle_matrix.sh` runs every `sweep_*_oracle_matrix` integration test with the features its crate requires.
+- `bash scripts/run_volume_sweep_shard.sh [shard] [count]` runs one shard of the 16k-case `sweep_*_volume_oracle_matrix` targets across vyre-foundation, vyre-primitives, and vyre-reference.
+- `bash scripts/install_wire_precommit_hook.sh` installs `scripts/wire_ci_local.sh` as the pre-push hook, which blocks a push when the wire-surface fmt, clippy, check, or test steps fail.
+
 ## LEGO Block Rules
 
 Vyre code should be built from small reusable primitives:

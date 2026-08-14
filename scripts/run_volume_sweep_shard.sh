@@ -17,11 +17,19 @@ vyre_select_cargo_runner
 SHARD="${1:-${VYRE_VOLUME_SHARD:-0}}"
 SHARDS="${2:-${VYRE_VOLUME_SHARDS:-4}}"
 
-mapfile -t ALL_TARGETS < <(
-    rg -l 'volume_oracle_matrix' vyre-primitives/tests vyre-reference/tests vyre-foundation/tests 2>/dev/null \
-        | sed -E 's#.*/([^/]+)\.rs$#\1#' \
-        | sort -u
-)
+# Targets live in three crates. Keep each one with its owning crate: passing a
+# vyre-reference target to `-p vyre-primitives` fails with "no test target".
+CRATE_FEATURES_vyre_primitives='cpu-parity,bitset,graph,reduce,hash,predicate,text'
+
+ALL_TARGETS=()
+shopt -s nullglob
+for crate in vyre-foundation vyre-primitives vyre-reference; do
+    for path in "$crate"/tests/*volume_oracle_matrix*.rs; do
+        target="${path##*/}"
+        ALL_TARGETS+=("$crate:${target%.rs}")
+    done
+done
+shopt -u nullglob
 
 if ((${#ALL_TARGETS[@]} == 0)); then
     echo "no volume oracle matrix targets found" >&2
@@ -37,10 +45,18 @@ done
 
 echo "volume shard ${SHARD}/${SHARDS}: ${#SELECTED[@]} of ${#ALL_TARGETS[@]} targets"
 
-FEATURES='cpu-parity,bitset,graph,reduce,hash,predicate,text'
-args=()
-for t in "${SELECTED[@]}"; do
-    args+=(--test "$t")
+for crate in vyre-foundation vyre-primitives vyre-reference; do
+    args=()
+    for entry in "${SELECTED[@]}"; do
+        [[ "$entry" == "$crate:"* ]] && args+=(--test "${entry#*:}")
+    done
+    ((${#args[@]} == 0)) && continue
+    features_var="CRATE_FEATURES_${crate//-/_}"
+    features="${!features_var:-}"
+    echo "  $crate: $(( ${#args[@]} / 2 )) target(s)"
+    if [[ -n "$features" ]]; then
+        "$CARGO_RUNNER" test -p "$crate" --features "$features" "${args[@]}" -q
+    else
+        "$CARGO_RUNNER" test -p "$crate" "${args[@]}" -q
+    fi
 done
-
-"$CARGO_RUNNER" test -p vyre-primitives --features "$FEATURES" "${args[@]}" -q

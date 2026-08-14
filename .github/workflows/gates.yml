@@ -26,3 +26,36 @@ jobs:
       # so they live in a crate that depends on no vyre crate.
       - name: Workspace structure
         run: ./cargo_full run -p structure-gate
+
+  tree-rules:
+    name: Rules that need no build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Every Cargo.toml on disk is a [workspace.members] entry or declares its
+      # own [workspace]. structure-gate checks the roster against the members
+      # list in both directions but never walks the filesystem, so a crate
+      # directory that no manifest lists is only visible here.
+      - name: No orphan crate directories
+        run: bash scripts/check_workspace_filesystem.sh
+
+      # `missing_docs = "deny"` in [workspace.lints.rust] is the floor every
+      # member inherits. A crate-root #![allow(missing_docs)] silently removes
+      # it for that whole crate; a module-scoped allow stays permitted.
+      - name: No crate-root missing_docs override
+        run: bash scripts/check_no_missing_docs_override.sh
+
+      # ci.yml must keep the three-OS by two-toolchain matrix, must not carry a
+      # no-GPU escape hatch, and gpu-parity.yml must still exist to own the
+      # parity lane.
+      - name: CI matrix is intact
+        run: bash scripts/check_ci_matrix.sh
+
+      # docs_manifest.py is the documentation authority validator that
+      # `xtask docs-check` runs. These are its own behavior contracts, so a
+      # change that weakens the validator fails here rather than passing
+      # docs-check vacuously. Bytecode stays off so the run leaves no
+      # __pycache__ for scripts/check_repo_hygiene.sh to report.
+      - name: Documentation manifest validator contracts
+        run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_docs_manifest.py
