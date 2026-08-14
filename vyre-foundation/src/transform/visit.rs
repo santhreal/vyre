@@ -1167,6 +1167,18 @@ pub(crate) mod fixtures {
         arb_node_with_depth(3)
     }
 
+    /// The IR-shape corpus every walk-equivalence property runs on.
+    ///
+    /// Covers the eight structural variants. The twelve remaining variants
+    /// (`IndirectDispatch`, the async family, `Trap`, `Resume`, the four
+    /// collectives, `Region`, and `Opaque`) are not generated here yet: the
+    /// validator's fusion-alias rule `V116` has two implementations, a flat
+    /// whole-program pass in `validate::fusion_safety` and a frame-scoped one
+    /// inside `validate::rule_pipeline::PreorderValidator`, and they disagree on
+    /// any program where an atomic access and a non-atomic read of the same
+    /// buffer sit in different frames. Generating an async transfer or a region
+    /// makes that disagreement reachable, so widening this strategy requires
+    /// giving `V116` one owner first.
     pub(crate) fn arb_node_with_depth(depth: u32) -> BoxedStrategy<Node> {
         let leaf = prop_oneof![
             (arb_ident(), arb_expr()).prop_map(|(name, value)| Node::Let {
@@ -1252,8 +1264,9 @@ mod tests {
 
     /// Legacy double-walk implementation for equivalence verification.
     /// Mirrors every buffer-touching site that ProgramFacts::buffer_refs
-    /// records so the equivalence proptest stays sound even when arb_node
-    /// is extended with Async / IndirectDispatch variants.
+    /// records. `arb_node` generates every declared `Node` variant, so the
+    /// async and indirect-dispatch arms below are exercised rather than
+    /// carried for a corpus that never reached them.
     fn referenced_buffers_legacy(program: &Program) -> HashSet<Ident> {
         let mut names = HashSet::new();
         walk_exprs(program, |expr| match expr {
@@ -1284,6 +1297,14 @@ mod tests {
             } => {
                 names.insert(source.clone());
                 names.insert(destination.clone());
+            }
+            Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
+                names.insert(buffer.clone());
+            }
+            Node::AllGather { input, output, .. }
+            | Node::ReduceScatter { input, output, .. } => {
+                names.insert(input.clone());
+                names.insert(output.clone());
             }
             _ => {}
         });
