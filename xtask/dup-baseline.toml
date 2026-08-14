@@ -4,7 +4,7 @@
 # also appears in another file. More than the pin fails; less is reported so
 # the owning dedup PR can lower it here as part of its own diff.
 #
-# A pin is never raised. Four rows are currently below what the crate measures,
+# A pin is never raised. Three rows are currently below what the crate measures,
 # and each is failing on purpose until the work that closes it lands:
 #
 #   tests            8      the C-frontend fixture streams under
@@ -15,11 +15,6 @@
 #                           assertions per case.
 #   vyre-primitives  8454   the CRC and graph oracle matrices still restate
 #                           src/hash/crc32.rs and src/graph/motif.rs.
-#   vyre-driver-metal 282   ninety of metal's lines are duplicated only because
-#                           cuda, spirv and wgpu hold copies of the Submission
-#                           and Completion materializer body. The single owner is
-#                           vyre-driver/src/materialize.rs and the collector is
-#                           not written yet; metal alone plus spirv can reach 351.
 
 [[crate]]
 name = "conform"
@@ -68,13 +63,13 @@ total_lines = 35288
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 5787
-total_lines = 70380
+duplicate_lines = 5742
+total_lines = 70183
 
 [[crate]]
 name = "vyre-driver-metal"
-duplicate_lines = 282
-total_lines = 4854
+duplicate_lines = 279
+total_lines = 4735
 
 [[crate]]
 name = "vyre-driver-reference"
@@ -83,13 +78,13 @@ total_lines = 641
 
 [[crate]]
 name = "vyre-driver-spirv"
-duplicate_lines = 310
-total_lines = 2070
+duplicate_lines = 223
+total_lines = 1974
 
 [[crate]]
 name = "vyre-driver-wgpu"
-duplicate_lines = 12608
-total_lines = 74342
+duplicate_lines = 7708
+total_lines = 61762
 
 [[crate]]
 name = "vyre-emit-metal"
