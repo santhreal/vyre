@@ -677,6 +677,28 @@ owner = "test-support"
 layer = "test-tooling"
 responsibility = "Provide shared deterministic fixtures and assertions for workspace tests."
 
+[[crate.dependency]]
+package = "structure-gate"
+purpose = "resolve the checkout a gate reports on from the working directory at run time"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "release-tooling"
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "IR statement fixtures for the run-time variant enumeration, behind the ir-fixtures feature"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "foundation-ir"
+
 [[crate]]
 package = "vyre-pass-engine"
 path = "vyre-pass-engine"

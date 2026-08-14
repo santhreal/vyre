@@ -489,7 +489,12 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 - Path: `vyre-test-support`
 - Owner: `test-support`
 - Layer: `test-tooling`
-- Internal production dependencies: None
+- Internal production dependencies: `structure-gate`, `vyre-foundation`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `structure-gate` | resolve the checkout a gate reports on from the working directory at run time | `private` | `release-tooling` |
+| `vyre-foundation` | IR statement fixtures for the run-time variant enumeration, behind the ir-fixtures feature | `private` | `foundation-ir` |
 
 ### `xtask`
 
