@@ -24,9 +24,9 @@
 //! A missing GPU adapter is a configuration failure, never a silent skip.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/fixtures/declarator_matrix_constructs.rs"]
 mod declarator_matrix_constructs;
 

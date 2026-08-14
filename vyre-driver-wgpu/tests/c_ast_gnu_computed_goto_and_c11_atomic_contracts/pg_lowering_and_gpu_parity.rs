@@ -16,8 +16,8 @@ fn pg_lower_preserves_computed_goto_rows() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
     let pg = reference_ast_to_pg_nodes(&typed);
 
-    assert_pg_preserves_row(&typed, &pg, &fix, 9, C_AST_KIND_GNU_LABEL_ADDRESS_EXPR);
-    assert_pg_preserves_row(&typed, &pg, &fix, 12, C_AST_KIND_LABEL_STMT);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 9, C_AST_KIND_GNU_LABEL_ADDRESS_EXPR);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 12, C_AST_KIND_LABEL_STMT);
 }
 
 #[test]
@@ -28,7 +28,7 @@ fn pg_lower_preserves_for_with_declaration_rows() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
     let pg = reference_ast_to_pg_nodes(&typed);
 
-    assert_pg_preserves_row(&typed, &pg, &fix, 7, C_AST_KIND_FOR_STMT);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 7, C_AST_KIND_FOR_STMT);
 }
 
 #[test]

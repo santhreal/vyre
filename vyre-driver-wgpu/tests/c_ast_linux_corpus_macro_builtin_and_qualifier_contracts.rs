@@ -13,9 +13,9 @@
 //! A missing GPU adapter is a configuration failure  -  tests panic loudly.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/fixtures/linux_macro_builtin_qualifier.rs"]
 mod linux_macro_builtin_qualifier;
 
@@ -29,9 +29,9 @@ use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_ALIGNOF_EXPR, C_AST_KIND_BUILTIN_EXPECT_EXPR,
-    C_AST_KIND_FUNCTION_DEFINITION, C_AST_KIND_GNU_ATTRIBUTE, C_AST_KIND_GOTO_STMT,
-    C_AST_KIND_IF_STMT, C_AST_KIND_LABEL_STMT, C_AST_KIND_MEMBER_ACCESS_EXPR,
+    reference_c11_classify_vast_node_kinds, C_AST_KIND_ALIGNOF_EXPR,
+    C_AST_KIND_BUILTIN_EXPECT_EXPR, C_AST_KIND_FUNCTION_DEFINITION, C_AST_KIND_GNU_ATTRIBUTE,
+    C_AST_KIND_GOTO_STMT, C_AST_KIND_IF_STMT, C_AST_KIND_LABEL_STMT, C_AST_KIND_MEMBER_ACCESS_EXPR,
     C_AST_KIND_POINTER_DECL, C_AST_KIND_RETURN_STMT,
 };
 use vyre_primitives::predicate::node_kind;

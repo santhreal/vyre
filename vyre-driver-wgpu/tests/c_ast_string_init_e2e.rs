@@ -14,12 +14,12 @@ use vyre_primitives::predicate::node_kind;
 
 const PG_STRIDE_U32: usize = 6;
 
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 use c_ast_gpu_parity_support::{
-    run_gpu_classifier, run_gpu_pg_lower, run_gpu_vast_builder_from_parts, starts_for_lens,
-    word_at, VAST_STRIDE_U32,
+    pg_word_at, run_gpu_classifier, run_gpu_pg_lower, run_gpu_vast_builder_from_parts,
+    starts_for_lens, word_at, VAST_STRIDE_U32,
 };
 
 struct PipelineRows {
@@ -41,10 +41,6 @@ fn typed_indices(rows: &[u8], kind: u32) -> Vec<usize> {
 
 fn vast_word_at(rows: &[u8], idx: usize, field: usize) -> u32 {
     word_at(rows, idx * VAST_STRIDE_U32 + field)
-}
-
-fn pg_word_at(rows: &[u8], idx: usize, field: usize) -> u32 {
-    word_at(rows, idx * PG_STRIDE_U32 + field)
 }
 
 fn run_pipeline(tok_types: &[u32], tok_lens: &[u32]) -> PipelineRows {

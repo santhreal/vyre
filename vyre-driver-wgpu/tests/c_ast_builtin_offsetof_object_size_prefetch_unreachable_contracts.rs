@@ -9,13 +9,14 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, fixture_builtin_unreachable, row_indices,
-    run_gpu_pg_lower, word_at, Fixture, FixtureToken, VAST_STRIDE_U32,
+    assert_full_pipeline_parity, assert_pg_preserves_fixture_row, build_fixture, classify,
+    fixture_builtin_unreachable, row_indices, run_gpu_pg_lower, word_at, Fixture, FixtureToken,
+    VAST_STRIDE_U32,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
@@ -28,55 +29,6 @@ use vyre_libs::parsing::c::parse::vast::{
 use vyre_primitives::predicate::node_kind;
 
 const PG_STRIDE_U32: usize = 6;
-
-fn classify(fix: &Fixture) -> Vec<u8> {
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    reference_c11_classify_vast_node_kinds(&annotated)
-}
-
-fn pg_word_at(buf: &[u8], idx: usize, field: usize) -> u32 {
-    word_at(buf, idx * PG_STRIDE_U32 + field)
-}
-
-fn assert_pg_preserves_row(
-    typed_vast: &[u8],
-    pg: &[u8],
-    fix: &Fixture,
-    idx: usize,
-    expected_kind: u32,
-) {
-    assert_eq!(
-        pg_word_at(pg, idx, 0),
-        expected_kind,
-        "PG kind mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 1),
-        fix.tok_starts[idx],
-        "PG span_start mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 2),
-        fix.tok_starts[idx] + fix.tok_lens[idx],
-        "PG span_end mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 3),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 1),
-        "PG parent mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 4),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 2),
-        "PG first_child mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 5),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 3),
-        "PG next_sibling mismatch at row {idx}"
-    );
-}
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -230,7 +182,7 @@ fn pg_lower_preserves_builtin_offsetof() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
     let pg = reference_ast_to_pg_nodes(&typed);
 
-    assert_pg_preserves_row(&typed, &pg, &fix, 5, C_AST_KIND_BUILTIN_OFFSETOF_EXPR);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 5, C_AST_KIND_BUILTIN_OFFSETOF_EXPR);
 }
 
 #[test]
@@ -241,7 +193,7 @@ fn pg_lower_preserves_builtin_object_size() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
     let pg = reference_ast_to_pg_nodes(&typed);
 
-    assert_pg_preserves_row(&typed, &pg, &fix, 5, C_AST_KIND_BUILTIN_OBJECT_SIZE_EXPR);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 5, C_AST_KIND_BUILTIN_OBJECT_SIZE_EXPR);
 }
 
 #[test]
@@ -252,7 +204,7 @@ fn pg_lower_preserves_builtin_prefetch() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
     let pg = reference_ast_to_pg_nodes(&typed);
 
-    assert_pg_preserves_row(&typed, &pg, &fix, 5, C_AST_KIND_BUILTIN_PREFETCH_EXPR);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 5, C_AST_KIND_BUILTIN_PREFETCH_EXPR);
 }
 
 #[test]
@@ -263,7 +215,7 @@ fn pg_lower_preserves_builtin_unreachable() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
     let pg = reference_ast_to_pg_nodes(&typed);
 
-    assert_pg_preserves_row(&typed, &pg, &fix, 5, C_AST_KIND_BUILTIN_UNREACHABLE_STMT);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 5, C_AST_KIND_BUILTIN_UNREACHABLE_STMT);
 }
 
 // ---------------------------------------------------------------------------

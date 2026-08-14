@@ -3,10 +3,10 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-#[path = "../../tests/support/c_frontend/mod.rs"]
-mod c_frontend;
 #[path = "c_ast_gpu_parity_support/mod.rs"]
 mod c_ast_gpu_parity_support;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 
 use c_ast_gpu_parity_support::{
     run_gpu_classifier_with_count, run_gpu_vast_builder_from_parts, starts_for_lens,

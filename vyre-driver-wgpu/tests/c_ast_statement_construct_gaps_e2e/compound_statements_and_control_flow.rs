@@ -47,7 +47,7 @@ fn pg_lower_preserves_statement_control_flow_rows() {
         (27, C_AST_KIND_BREAK_STMT),
         (30, C_AST_KIND_RETURN_STMT),
     ] {
-        assert_pg_preserves_row(&typed, &expected, &fix, idx, kind);
+        assert_pg_preserves_fixture_row(&typed, &expected, &fix, idx, kind);
     }
 }
 
@@ -69,6 +69,6 @@ fn pg_lower_preserves_label_and_goto_rows() {
         (20, C_AST_KIND_GOTO_STMT),
         (24, C_AST_KIND_LABEL_STMT),
     ] {
-        assert_pg_preserves_row(&typed, &expected, &fix, idx, kind);
+        assert_pg_preserves_fixture_row(&typed, &expected, &fix, idx, kind);
     }
 }

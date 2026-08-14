@@ -46,11 +46,7 @@ fn ro(name: &str, binding: u32, element: DataType) -> BufferDecl {
 }
 
 /// Store one expression per lane, built from the lane index.
-fn per_lane(
-    buffers: Vec<BufferDecl>,
-    workgroup: [u32; 3],
-    values: Vec<Expr>,
-) -> Program {
+fn per_lane(buffers: Vec<BufferDecl>, workgroup: [u32; 3], values: Vec<Expr>) -> Program {
     let body = values
         .into_iter()
         .enumerate()
@@ -354,10 +350,7 @@ fn nested_loop_in_branch() -> Program {
                         Expr::u32(2),
                         vec![Node::assign(
                             "acc",
-                            Expr::add(
-                                Expr::var("acc"),
-                                Expr::mul(Expr::var("i"), Expr::var("j")),
-                            ),
+                            Expr::add(Expr::var("acc"), Expr::mul(Expr::var("i"), Expr::var("j"))),
                         )],
                     )],
                 )],
@@ -525,10 +518,9 @@ fn render_corpus() -> String {
     let sections: Vec<(&str, String)> = cases
         .iter()
         .map(|(id, program, config)| {
-            let wgsl = vyre_driver_wgpu::emit::lower_with_config(program, config)
-                .unwrap_or_else(|error| {
-                    panic!("Fix: corpus program `{id}` must lower to WGSL: {error:?}")
-                });
+            let wgsl = vyre_driver_wgpu::emit::lower_with_config(program, config).unwrap_or_else(
+                |error| panic!("Fix: corpus program `{id}` must lower to WGSL: {error:?}"),
+            );
             (*id, wgsl)
         })
         .collect();

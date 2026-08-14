@@ -99,6 +99,6 @@ fn pg_lower_preserves_nested_conditional_preproc_rows() {
     let pg = reference_ast_to_pg_nodes(&typed);
 
     for idx in [0usize, 4, 8, 12, 13, 17, 21] {
-        assert_pg_preserves_row(&typed, &pg, &fix, idx, 0);
+        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, 0);
     }
 }

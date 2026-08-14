@@ -14,9 +14,10 @@ use vyre_libs::parsing::c::parse::vast::{
     reference_c11_build_vast_nodes, reference_c11_classify_vast_node_kinds,
 };
 
+pub(crate) use crate::c_ast_gpu_parity_support::node_count_from_vast;
 use crate::c_ast_gpu_parity_support::{
     run_gpu_classifier_with_count as run_gpu_classifier, run_gpu_full_typedef_annotation,
-    starts_for_lens, VAST_STRIDE_U32,
+    starts_for_lens,
 };
 
 pub(crate) const TYPEDEF_FLAGS_FIELD: usize = 7;
@@ -25,10 +26,6 @@ pub(crate) const ORDINARY_FLAG_DECL: u32 = 1 << 2;
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-pub(crate) fn node_count_from_vast(vast_bytes: &[u8]) -> u32 {
-    (vast_bytes.len() / (VAST_STRIDE_U32 * 4)) as u32
-}
 
 pub(crate) fn run_gpu_annotate(raw_vast: &[u8], haystack: &[u8], _node_count: u32) -> Vec<u8> {
     run_gpu_full_typedef_annotation(haystack, raw_vast)

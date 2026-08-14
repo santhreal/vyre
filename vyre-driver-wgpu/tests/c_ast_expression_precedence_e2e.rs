@@ -7,9 +7,9 @@
 #![cfg(feature = "c-parser")]
 #![allow(clippy::too_many_arguments, clippy::erasing_op)]
 #![allow(deprecated)]
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/fixtures/expression_precedence_e2e.rs"]
 mod expression_precedence_e2e;
 

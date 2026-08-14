@@ -146,7 +146,7 @@ fn pg_lower_preserves_member_access_rows() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
     let pg = reference_ast_to_pg_nodes(&typed);
 
-    assert_pg_preserves_row(&typed, &pg, &fix, 6, C_AST_KIND_MEMBER_ACCESS_EXPR);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 6, C_AST_KIND_MEMBER_ACCESS_EXPR);
 }
 
 #[test]
@@ -157,7 +157,7 @@ fn pg_lower_preserves_ptr_member_access_rows() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
     let pg = reference_ast_to_pg_nodes(&typed);
 
-    assert_pg_preserves_row(&typed, &pg, &fix, 6, C_AST_KIND_MEMBER_ACCESS_EXPR);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 6, C_AST_KIND_MEMBER_ACCESS_EXPR);
 }
 
 #[test]
@@ -168,7 +168,7 @@ fn pg_lower_preserves_cast_expr_rows() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
     let pg = reference_ast_to_pg_nodes(&typed);
 
-    assert_pg_preserves_row(&typed, &pg, &fix, 5, C_AST_KIND_CAST_EXPR);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 5, C_AST_KIND_CAST_EXPR);
 }
 
 #[test]
@@ -179,8 +179,8 @@ fn pg_lower_preserves_nested_conditional_rows() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
     let pg = reference_ast_to_pg_nodes(&typed);
 
-    assert_pg_preserves_row(&typed, &pg, &fix, 6, C_AST_KIND_CONDITIONAL_EXPR);
-    assert_pg_preserves_row(&typed, &pg, &fix, 8, C_AST_KIND_CONDITIONAL_EXPR);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 6, C_AST_KIND_CONDITIONAL_EXPR);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 8, C_AST_KIND_CONDITIONAL_EXPR);
 }
 
 #[test]
@@ -191,7 +191,7 @@ fn pg_lower_preserves_array_compound_literal_rows() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
     let pg = reference_ast_to_pg_nodes(&typed);
 
-    assert_pg_preserves_row(&typed, &pg, &fix, 9, C_AST_KIND_COMPOUND_LITERAL_EXPR);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 9, C_AST_KIND_COMPOUND_LITERAL_EXPR);
 }
 
 // ---------------------------------------------------------------------------

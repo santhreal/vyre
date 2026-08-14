@@ -27,10 +27,12 @@ use vyre_libs::parsing::c::parse::vast::{
 use vyre_primitives::predicate::node_kind;
 use vyre_reference::value::Value;
 
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
-use c_ast_gpu_parity_support::{run_gpu_expr_shape, run_gpu_pg_lower};
+use c_ast_gpu_parity_support::{
+    bytes, node_count_from_vast, run_gpu_expr_shape, run_gpu_pg_lower, starts_for_lens, word_at,
+};
 
 const VAST_STRIDE_U32: usize = 10;
 const PG_STRIDE_U32: usize = 6;
@@ -42,30 +44,6 @@ struct PipelineRows {
     typed_vast: Vec<u8>,
     expr_shape: Vec<u8>,
     pg_nodes: Vec<u8>,
-}
-
-fn bytes(words: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(words)
-}
-
-fn starts_for_lens(lens: &[u32]) -> Vec<u32> {
-    let mut cursor = 0u32;
-    lens.iter()
-        .map(|len| {
-            let start = cursor;
-            cursor = cursor.saturating_add(*len).saturating_add(1);
-            start
-        })
-        .collect()
-}
-
-fn word_at(bytes: &[u8], word: usize) -> u32 {
-    let offset = word * 4;
-    u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap())
-}
-
-fn node_count_from_vast(vast: &[u8]) -> u32 {
-    u32::try_from(vast.len() / (VAST_STRIDE_U32 * 4)).unwrap_or_default()
 }
 
 fn run_reference_pg_lower(typed_vast: &[u8]) -> Vec<u8> {

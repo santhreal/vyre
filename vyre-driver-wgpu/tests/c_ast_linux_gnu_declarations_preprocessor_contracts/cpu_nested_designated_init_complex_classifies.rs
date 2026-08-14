@@ -44,16 +44,16 @@ pub(crate) fn pg_lower_preserves_nested_designated_init_complex() {
     let pg = reference_ast_to_pg_nodes(&typed);
 
     for idx in row_indices(&typed, C_AST_KIND_INITIALIZER_LIST) {
-        assert_pg_preserves_row(&typed, &pg, &fix, idx, C_AST_KIND_INITIALIZER_LIST);
+        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, C_AST_KIND_INITIALIZER_LIST);
     }
     for idx in row_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR) {
-        assert_pg_preserves_row(&typed, &pg, &fix, idx, C_AST_KIND_MEMBER_ACCESS_EXPR);
+        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, C_AST_KIND_MEMBER_ACCESS_EXPR);
     }
     for idx in row_indices(&typed, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR) {
-        assert_pg_preserves_row(&typed, &pg, &fix, idx, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR);
+        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR);
     }
     for idx in row_indices(&typed, C_AST_KIND_RANGE_DESIGNATOR_EXPR) {
-        assert_pg_preserves_row(&typed, &pg, &fix, idx, C_AST_KIND_RANGE_DESIGNATOR_EXPR);
+        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, C_AST_KIND_RANGE_DESIGNATOR_EXPR);
     }
 }
 

@@ -11,68 +11,19 @@
 // A missing GPU adapter is a configuration failure; tests do not skip.
 
 use crate::c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, row_indices, word_at, Fixture, FixtureToken,
-    VAST_STRIDE_U32,
+    assert_full_pipeline_parity, build_fixture, row_indices, Fixture, FixtureToken,
+};
+pub(crate) use crate::c_ast_gpu_parity_support::{
+    assert_pg_preserves_fixture_row, classify, pg_word_at,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_ASSIGN_EXPR, C_AST_KIND_CAST_EXPR,
-    C_AST_KIND_FOR_STMT, C_AST_KIND_GNU_LABEL_ADDRESS_EXPR, C_AST_KIND_GOTO_STMT,
-    C_AST_KIND_LABEL_STMT,
+    C_AST_KIND_ASSIGN_EXPR, C_AST_KIND_CAST_EXPR, C_AST_KIND_FOR_STMT,
+    C_AST_KIND_GNU_LABEL_ADDRESS_EXPR, C_AST_KIND_GOTO_STMT, C_AST_KIND_LABEL_STMT,
 };
 use vyre_primitives::predicate::node_kind;
 
 pub(crate) const PG_STRIDE_U32: usize = 6;
-
-pub(crate) fn classify(fix: &Fixture) -> Vec<u8> {
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    reference_c11_classify_vast_node_kinds(&annotated)
-}
-
-pub(crate) fn pg_word_at(buf: &[u8], idx: usize, field: usize) -> u32 {
-    word_at(buf, idx * PG_STRIDE_U32 + field)
-}
-
-pub(crate) fn assert_pg_preserves_row(
-    typed_vast: &[u8],
-    pg: &[u8],
-    fix: &Fixture,
-    idx: usize,
-    expected_kind: u32,
-) {
-    assert_eq!(
-        pg_word_at(pg, idx, 0),
-        expected_kind,
-        "PG kind mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 1),
-        fix.tok_starts[idx],
-        "PG span_start mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 2),
-        fix.tok_starts[idx] + fix.tok_lens[idx],
-        "PG span_end mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 3),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 1),
-        "PG parent mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 4),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 2),
-        "PG first_child mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 5),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 3),
-        "PG next_sibling mismatch at row {idx}"
-    );
-}
 
 // ---------------------------------------------------------------------------
 // Fixtures – computed goto

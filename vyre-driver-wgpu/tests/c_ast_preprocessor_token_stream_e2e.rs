@@ -5,10 +5,10 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-#[path = "../../tests/support/c_frontend/mod.rs"]
-mod c_frontend;
 #[path = "c_ast_gpu_parity_support/mod.rs"]
 mod c_ast_gpu_parity_support;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 mod c_token_support;
 
 use c_grammar_gen::lex_c11_max_munch_kinds;
@@ -24,7 +24,8 @@ use vyre_primitives::predicate::node_kind;
 use vyre_reference::value::Value;
 
 use c_ast_gpu_parity_support::{
-    run_gpu_classifier, run_gpu_expr_shape, run_gpu_pg_lower, word_at, VAST_STRIDE_U32,
+    node_count_from_vast, run_gpu_classifier, run_gpu_expr_shape, run_gpu_pg_lower, word_at,
+    VAST_STRIDE_U32,
 };
 use c_token_support::{assemble, assert_pg_row, find_row_for_lexeme, row_typed_kind, Assembled};
 
@@ -40,10 +41,6 @@ fn assert_lex_matches_non_ws(assembled: &Assembled) {
         filtered, assembled.raw_kinds,
         "hand-built fixture must match max-munch lexer (no fake tokenization)"
     );
-}
-
-fn node_count_from_vast(vast: &[u8]) -> u32 {
-    u32::try_from(vast.len() / (VAST_STRIDE_U32 * 4)).unwrap_or_default()
 }
 
 fn run_reference_pg_lower(typed_vast: &[u8]) -> Vec<u8> {

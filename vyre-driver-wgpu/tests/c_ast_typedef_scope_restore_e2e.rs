@@ -2,13 +2,14 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-#[path = "../../tests/support/c_frontend/mod.rs"]
-mod c_frontend;
 #[path = "c_ast_gpu_parity_support/mod.rs"]
 mod c_ast_gpu_parity_support;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 
 use c_ast_gpu_parity_support::{
-    run_gpu_classifier_with_count, run_gpu_full_typedef_annotation, word_at, VAST_STRIDE_U32,
+    kind_at, run_gpu_classifier_with_count, run_gpu_full_typedef_annotation, word_at,
+    VAST_STRIDE_U32,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
@@ -126,10 +127,6 @@ fn assert_words_eq(actual: &[u8], expected: &[u8]) {
             expected.len()
         );
     }
-}
-
-fn kind_at(rows: &[u8], idx: usize) -> u32 {
-    word_at(rows, idx * VAST_STRIDE_U32)
 }
 
 fn flags_at(rows: &[u8], idx: usize) -> u32 {

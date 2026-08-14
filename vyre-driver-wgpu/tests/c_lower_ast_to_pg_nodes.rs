@@ -35,7 +35,9 @@ use vyre_reference::value::Value;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
 
-use c_frontend::rows::{bytes, row_indices_by_stride as row_indices, starts_for_lens, word_at};
+use c_frontend::rows::{
+    bytes, node_count_from_vast, row_indices_by_stride as row_indices, starts_for_lens, word_at,
+};
 use c_frontend::token_fixture::FixtureToken;
 
 const VAST_STRIDE_U32: u32 = 10;
@@ -370,9 +372,6 @@ fn run_reference_eval(program: &Program, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
         .into_iter()
         .map(|value| value.to_bytes())
         .collect()
-}
-fn node_count_from_vast(bytes: &[u8]) -> u32 {
-    u32::try_from(bytes.len() / VAST_STRIDE_BYTES).unwrap_or_default()
 }
 fn emit_wgsl(program: &Program) -> String {
     let module = naga_emit::emit_module(program, TEST_WORKGROUP_SIZE)

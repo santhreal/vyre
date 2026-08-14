@@ -4,10 +4,10 @@
 #![cfg(feature = "c-parser")]
 #![allow(clippy::same_item_push)]
 #![allow(deprecated)]
-#[path = "../../tests/support/c_frontend/mod.rs"]
-mod c_frontend;
 #[path = "c_ast_gpu_parity_support/mod.rs"]
 mod c_ast_gpu_parity_support;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 
 use c_ast_gpu_parity_support::{run_gpu_vast_builder_from_parts, starts_for_lens, word_at};
 use proptest::prelude::*;

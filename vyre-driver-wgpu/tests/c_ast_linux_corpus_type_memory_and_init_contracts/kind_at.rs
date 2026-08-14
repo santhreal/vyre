@@ -16,6 +16,9 @@ use crate::c_ast_gpu_parity_support::{
     run_gpu_pg_lower_with_count as run_gpu_pg_lower, word_at, Fixture, FixtureToken,
     VAST_STRIDE_U32,
 };
+pub(crate) use crate::c_ast_gpu_parity_support::{
+    kind_at, lexeme_indices, node_count_from_vast, pg_word_at,
+};
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
@@ -29,18 +32,6 @@ pub(crate) const PG_STRIDE_U32: usize = 6;
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-pub(crate) fn kind_at(rows: &[u8], idx: usize) -> u32 {
-    word_at(rows, idx * VAST_STRIDE_U32)
-}
-
-pub(crate) fn pg_word_at(pg: &[u8], idx: usize, field: usize) -> u32 {
-    word_at(pg, idx * PG_STRIDE_U32 + field)
-}
-
-pub(crate) fn node_count_from_vast(vast: &[u8]) -> u32 {
-    (vast.len() / (VAST_STRIDE_U32 * 4)) as u32
-}
 
 pub(crate) fn assert_pg_preserves_row(
     typed_vast: &[u8],
@@ -80,19 +71,6 @@ pub(crate) fn assert_pg_preserves_row(
         word_at(typed_vast, idx * VAST_STRIDE_U32 + 3),
         "PG next_sibling mismatch at row {idx}"
     );
-}
-
-pub(crate) fn lexeme_indices(fix: &Fixture, lexeme: &str) -> Vec<usize> {
-    fix.tok_starts
-        .iter()
-        .zip(&fix.tok_lens)
-        .enumerate()
-        .filter_map(|(idx, (start, len))| {
-            let s = *start as usize;
-            let e = s.saturating_add(*len as usize);
-            (fix.source.as_bytes().get(s..e) == Some(lexeme.as_bytes())).then_some(idx)
-        })
-        .collect()
 }
 
 // ---------------------------------------------------------------------------

@@ -13,14 +13,15 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, assert_semantic_node, build_fixture, fixture_builtin_unreachable,
-    row_indices, run_gpu_semantic_pg_lower as run_gpu_semantic_lower, word_at, Fixture,
-    FixtureToken, VAST_STRIDE_U32,
+    assert_full_pipeline_parity, assert_semantic_edge, assert_semantic_node, build_fixture,
+    classify, fixture_builtin_unreachable, node_count_from_vast, row_indices,
+    run_gpu_semantic_pg_lower as run_gpu_semantic_lower, semantic_edge_word, semantic_node_word,
+    vast_word, Fixture, FixtureToken,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::{
@@ -31,62 +32,10 @@ use vyre_libs::parsing::c::lower::{
     C_AST_PG_ROLE_SWITCH, C_AST_PG_ROLE_UNREACHABLE, C_AST_PG_SEMANTIC_NODE_STRIDE_U32,
 };
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_BUILTIN_UNREACHABLE_STMT,
-    C_AST_KIND_CASE_STMT, C_AST_KIND_DEFAULT_STMT, C_AST_KIND_FOR_STMT, C_AST_KIND_LABEL_STMT,
-    C_AST_KIND_MEMBER_ACCESS_EXPR, C_AST_KIND_SWITCH_STMT,
+    C_AST_KIND_BUILTIN_UNREACHABLE_STMT, C_AST_KIND_CASE_STMT, C_AST_KIND_DEFAULT_STMT,
+    C_AST_KIND_FOR_STMT, C_AST_KIND_LABEL_STMT, C_AST_KIND_MEMBER_ACCESS_EXPR,
+    C_AST_KIND_SWITCH_STMT,
 };
-
-fn classify(fix: &Fixture) -> Vec<u8> {
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    reference_c11_classify_vast_node_kinds(&annotated)
-}
-
-fn node_count_from_vast(vast: &[u8]) -> u32 {
-    (vast.len() / (VAST_STRIDE_U32 * 4)) as u32
-}
-
-fn semantic_node_word(nodes: &[u8], idx: usize, field: usize) -> u32 {
-    word_at(
-        nodes,
-        idx * C_AST_PG_SEMANTIC_NODE_STRIDE_U32 as usize + field,
-    )
-}
-
-fn semantic_edge_word(edges: &[u8], node_idx: usize, edge_slot: usize, field: usize) -> u32 {
-    let edge_idx = node_idx * C_AST_PG_EDGE_ROWS_PER_NODE as usize + edge_slot;
-    word_at(edges, edge_idx * C_AST_PG_EDGE_STRIDE_U32 as usize + field)
-}
-
-fn vast_word(rows: &[u8], idx: usize, field: usize) -> u32 {
-    word_at(rows, idx * VAST_STRIDE_U32 + field)
-}
-
-fn assert_semantic_edge(
-    edges: &[u8],
-    node_idx: usize,
-    edge_slot: usize,
-    edge_kind: u32,
-    src_idx: u32,
-    dst_idx: u32,
-) {
-    assert_eq!(
-        semantic_edge_word(edges, node_idx, edge_slot, 0),
-        edge_kind,
-        "semantic edge kind node={node_idx} slot={edge_slot}"
-    );
-    assert_eq!(
-        semantic_edge_word(edges, node_idx, edge_slot, 1),
-        src_idx,
-        "semantic edge src node={node_idx} slot={edge_slot}"
-    );
-    assert_eq!(
-        semantic_edge_word(edges, node_idx, edge_slot, 2),
-        dst_idx,
-        "semantic edge dst node={node_idx} slot={edge_slot}"
-    );
-}
 
 // ---------------------------------------------------------------------------
 // Fixtures
