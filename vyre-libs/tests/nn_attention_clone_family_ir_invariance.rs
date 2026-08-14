@@ -110,6 +110,18 @@ fn entry_points() -> Vec<(&'static str, Program)> {
 
 /// Canonical wire fingerprints recorded on the pre-merge tree, before any
 /// clone family was collapsed.
+///
+/// `softmax` and `layer_norm` were re-pinned when the shared reduce-family
+/// child regions were renamed from `vyre-libs::substrate::*` to
+/// `vyre-libs::builder::*`. A generator identity is part of the wire encoding,
+/// so that rename moves the fingerprint of every program embedding it. It was
+/// proved to be the whole difference by rewriting only those identity strings
+/// back in the built programs, which reproduced the previous two digests
+/// exactly (`08fde137..fc37373` and `54e9357e..3a643b7a9a6`); no node, buffer,
+/// expression, or workgroup value moved. The other six entry points do not
+/// embed a shared child region and were unaffected.
+/// `clone_family_entry_points_carry_the_pinned_region_identities` now names
+/// such a rename directly instead of leaving it as an opaque digest change.
 const EXPECTED: [(&str, &str); 8] = [
     (
         "recurrent_gated_delta/f32",
@@ -137,11 +149,11 @@ const EXPECTED: [(&str, &str); 8] = [
     ),
     (
         "softmax",
-        "08fde137ddbc772f6c226786603cb5634079a1dbd3cf401f101eaf401fc37373",
+        "1ac237e7b2a89e3e2738346c6a41246e967e739a726ab0a44c09e927dbc19d8e",
     ),
     (
         "layer_norm",
-        "54e9357ea14f91fd3ec159d84053e6bde84b6c2b7eb64078d980c3a643b7a9a6",
+        "5cc4d4c537072eb8f99ff971606ef940de385fc9b817b9700cb2d56105ec4b33",
     ),
 ];
 
@@ -250,5 +262,141 @@ fn mla_and_flash_attention_2_share_the_online_softmax_skeleton() {
         mla_tile.last(),
         flash_tile.last(),
         "running-max carry drifted"
+    );
+}
+
+/// Every distinct region-generator identity reachable from a program's entry,
+/// sorted and deduplicated.
+fn region_identities(program: &Program) -> Vec<String> {
+    fn walk(node: &Node, out: &mut Vec<String>) {
+        match node {
+            Node::Region { generator, body, .. } => {
+                out.push(generator.as_str().to_string());
+                body.iter().for_each(|child| walk(child, out));
+            }
+            Node::Block(body) => body.iter().for_each(|child| walk(child, out)),
+            Node::Loop { body, .. } => body.iter().for_each(|child| walk(child, out)),
+            Node::If { then, otherwise, .. } => {
+                then.iter().for_each(|child| walk(child, out));
+                otherwise.iter().for_each(|child| walk(child, out));
+            }
+            _ => {}
+        }
+    }
+    let mut out = Vec::new();
+    program.entry().iter().for_each(|node| walk(node, &mut out));
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// Region-generator identities each entry point is expected to carry.
+///
+/// The first six entry points inline everything into their own region; only
+/// the two reduce-family builders embed shared child regions, and those child
+/// identities are the collapse contract: `strided_accumulate` and
+/// `strided_writeback` exist so `softmax` and `layer_norm` stop carrying
+/// private copies of the same loop.
+const EXPECTED_IDENTITIES: [(&str, &[&str]); 8] = [
+    (
+        "recurrent_gated_delta/f32",
+        &["vyre-libs::nn::recurrent_gated_delta"],
+    ),
+    (
+        "recurrent_gated_delta/f16",
+        &["vyre-libs::nn::recurrent_gated_delta"],
+    ),
+    (
+        "chunked_gated_delta/f32",
+        &["vyre-libs::nn::chunked_gated_delta"],
+    ),
+    (
+        "chunked_gated_delta/f16",
+        &["vyre-libs::nn::chunked_gated_delta"],
+    ),
+    ("mla_decode", &["vyre-libs::nn::mla_decode"]),
+    ("flash_attention_2", &["vyre-libs::nn::flash_attention_2"]),
+    (
+        "softmax",
+        &[
+            "anonymous::vyre-libs::builder::strided_writeback",
+            "vyre-libs::builder::strided_accumulate",
+            "vyre-libs::nn::softmax",
+            "vyre-primitives::reduce::workgroup_max_f32",
+            "vyre-primitives::reduce::workgroup_sum_f32",
+        ],
+    ),
+    (
+        "layer_norm",
+        &[
+            "vyre-libs::builder::strided_accumulate",
+            "vyre-libs::nn::layer_norm",
+            "vyre-primitives::reduce::workgroup_sum_f32",
+        ],
+    ),
+];
+
+/// A generator identity is part of the wire encoding, so renaming one moves
+/// every fingerprint that embeds it. `clone_family_entry_points_emit_the_pinned_ir`
+/// sees that as an opaque 32-byte difference and cannot say whether the IR or
+/// only a name moved. This rule answers that question by name.
+///
+/// It also pins which entry points share a child region: an owner that stops
+/// being reused, or a builder that reacquires a private copy of a collapsed
+/// loop, changes this set even when the emitted work is equivalent.
+///
+/// What this does not catch: an IR change that keeps every identity, which is
+/// what the fingerprint pin is for. The two rules are complements.
+#[test]
+fn clone_family_entry_points_carry_the_pinned_region_identities() {
+    let observed: Vec<(&'static str, Vec<String>)> = entry_points()
+        .iter()
+        .map(|(name, program)| (*name, region_identities(program)))
+        .collect();
+
+    assert_eq!(
+        observed.len(),
+        EXPECTED_IDENTITIES.len(),
+        "fixture count drifted from the pinned identity table"
+    );
+
+    // Floor: a walker that stopped descending, or a builder that stopped
+    // wrapping its entry in a region, would otherwise pass this vacuously.
+    let mut union: Vec<&str> = Vec::new();
+    for (name, identities) in &observed {
+        assert!(
+            !identities.is_empty(),
+            "{name} emitted no region at all, so the identity walk proved nothing"
+        );
+        union.extend(identities.iter().map(String::as_str));
+    }
+    union.sort_unstable();
+    union.dedup();
+    assert!(
+        union.len() >= 10,
+        "the eight entry points reach only {} distinct region identities; the \
+         walk is no longer descending into child regions",
+        union.len()
+    );
+
+    for ((name, got), (pinned_name, pinned)) in observed.iter().zip(EXPECTED_IDENTITIES.iter()) {
+        assert_eq!(name, pinned_name, "fixture order drifted from the table");
+        let got: Vec<&str> = got.iter().map(String::as_str).collect();
+        assert_eq!(
+            got, *pinned,
+            "{name} no longer carries the pinned region identities"
+        );
+    }
+
+    // The collapse contract: the reduce-family owner is reused, not copied.
+    let shared = "vyre-libs::builder::strided_accumulate";
+    let consumers = observed
+        .iter()
+        .filter(|(_, ids)| ids.iter().any(|id| id == shared))
+        .count();
+    assert!(
+        consumers >= 2,
+        "{shared} is embedded by {consumers} entry point(s); a shared owner \
+         reached by one caller has been cloned back apart"
     );
 }
