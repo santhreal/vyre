@@ -255,8 +255,8 @@ pub const SUBCOMMANDS: &[Subcommand] = &[
     },
     Subcommand {
         name: "feature-isolation",
-        usage: "[--list] [--sweep [--write]] [--member NAME]",
-        help: "Hold every (member, feature) pair to its recorded compile-alone outcome",
+        usage: "[--list] [--sweep [--write] [--only-unrecorded]] [--member NAME]",
+        help: "Hold every feature selection the manifests declare to its recorded compile outcome",
         kind: Kind::Gate,
         ci_args: &[],
         home: Home::Local(feature_isolation::run),

@@ -17,7 +17,8 @@ use std::fs;
 use std::path::Path;
 
 use xtask::gates::feature_isolation::{
-    agreement_failures, derive_pairs, first_error, load_rows, Pair, Row, BASELINE,
+    agreement_failures, derive_pairs, first_error, load_rows, render, Observation, Pair, Row,
+    BASELINE, DEFAULTS,
 };
 
 use super::common::workspace_root;
@@ -38,13 +39,13 @@ fn pair(member: &str, feature: &str) -> Pair {
     }
 }
 
-fn fixture(root: &Path, directory: &str, package: &str, features: &str) {
+fn fixture(root: &Path, directory: &str, package: &str, tables: &str) {
     let path = root.join(directory);
     fs::create_dir_all(&path).expect("Fix: fixture crate directory must be creatable");
     fs::write(
         path.join("Cargo.toml"),
         format!(
-            "[package]\nname = \"{package}\"\nversion = \"0.1.0\"\nedition = \"2021\"\n{features}"
+            "[package]\nname = \"{package}\"\nversion = \"0.1.0\"\nedition = \"2021\"\n{tables}"
         ),
     )
     .expect("Fix: fixture crate manifest must be writable");
@@ -69,9 +70,13 @@ fn fixture_workspace(members: &[&str]) -> tempfile::TempDir {
 /// construction; written down it is complete until someone adds a feature. The
 /// per-member `--no-default-features` probe is part of the axis because a
 /// member with no features at all still has to build without them, and because
-/// it is what makes a NEW MEMBER red rather than merely unjudged.
+/// it is what makes a NEW MEMBER red rather than merely unjudged. The plain
+/// default build is part of it because that is what `cargo check -p <member>`
+/// resolves, and neither the baseline probe nor any single-feature probe is that
+/// selection: `vyre-aot` and `vyre-pass-engine` both stopped compiling under it
+/// while every recorded row stayed green.
 #[test]
-fn the_axis_is_every_declared_feature_plus_a_baseline_per_member() {
+fn the_axis_is_every_declared_feature_plus_a_baseline_and_default_build_per_member() {
     let workspace = fixture_workspace(&["quiet", "loud"]);
     let root = workspace.path();
     fixture(root, "quiet", "quiet-crate", "");
@@ -87,12 +92,58 @@ fn the_axis_is_every_declared_feature_plus_a_baseline_per_member() {
     assert_eq!(
         derived,
         vec![
+            pair("loud-crate", DEFAULTS),
             pair("loud-crate", BASELINE),
             pair("loud-crate", "alpha"),
             pair("loud-crate", "beta"),
+            pair("quiet-crate", DEFAULTS),
             pair("quiet-crate", BASELINE),
         ],
-        "the axis must be every non-default feature plus one baseline per member"
+        "the axis must be every non-default feature plus a baseline and a default build per member"
+    );
+}
+
+/// WHY: the one-feature-at-a-time axis judges what a consumer could write, not
+/// what this workspace does write. `vyre-libs` asks `vyre-primitives` for
+/// `graph`, `inventory-registry` and `text` together, and no single-feature
+/// probe covers that combination: cargo unifies features across a build, so a
+/// whole-workspace check hides a break inside it behind whichever unrelated
+/// member enables the missing piece. The spelling is canonical so two edges
+/// asking for the same set in a different order are one judged point.
+#[test]
+fn every_selection_a_workspace_edge_asks_for_joins_the_axis() {
+    let workspace = fixture_workspace(&["host", "dep", "tool"]);
+    let root = workspace.path();
+    fixture(
+        root,
+        "dep",
+        "dep-crate",
+        "[features]\ndefault = [\"alpha\"]\nalpha = []\nbeta = []\ngamma = []\n",
+    );
+    fixture(
+        root,
+        "host",
+        "host-crate",
+        "[dependencies]\n\
+         dep-crate = { path = \"../dep\", default-features = false, features = [\"gamma\", \"beta\"] }\n\
+         [dev-dependencies]\n\
+         tool-crate = { path = \"../tool\", features = [\"delta\"] }\n",
+    );
+    fixture(root, "tool", "tool-crate", "[features]\ndelta = []\n");
+
+    let derived = derive_pairs(root).expect("Fix: the fixture workspace must derive an axis");
+
+    assert!(
+        derived.contains(&pair("dep-crate", "beta,gamma")),
+        "the edge's own combination must be judged, spelled in sorted order: {derived:?}"
+    );
+    assert!(
+        !derived.contains(&pair("dep-crate", "gamma,beta")),
+        "one selection must have one spelling, or the same combination is judged twice: {derived:?}"
+    );
+    assert!(
+        derived.contains(&pair("tool-crate", "(default),delta")),
+        "a dev-dependency edge keeping defaults must be judged, and keeping defaults is part of the selection: {derived:?}"
     );
 }
 
@@ -114,6 +165,7 @@ fn an_optional_dependency_with_no_dep_prefix_joins_the_axis() {
     assert_eq!(
         derive_pairs(bare.path()).expect("Fix: the fixture workspace must derive an axis"),
         vec![
+            pair("bare-crate", DEFAULTS),
             pair("bare-crate", BASELINE),
             pair("bare-crate", "remote"),
             pair("bare-crate", "ureq"),
@@ -131,6 +183,7 @@ fn an_optional_dependency_with_no_dep_prefix_joins_the_axis() {
     assert_eq!(
         derive_pairs(prefixed.path()).expect("Fix: the fixture workspace must derive an axis"),
         vec![
+            pair("prefixed-crate", DEFAULTS),
             pair("prefixed-crate", BASELINE),
             pair("prefixed-crate", "remote"),
         ],
@@ -155,6 +208,120 @@ fn a_pair_with_no_recorded_decision_names_itself_and_fails() {
             && failures[0].contains("no row in xtask/feature-isolation.toml"),
         "the failure must name the unjudged pair: {}",
         failures[0]
+    );
+}
+
+/// WHY: one column spells four different cargo selections, so the column is
+/// only readable if the mapping is exact. Getting it wrong does not fail loudly:
+/// a `(default)` row that silently swept `--no-default-features` would record an
+/// outcome for a selection nobody asked about, and every row would still look
+/// judged.
+#[test]
+fn the_selection_column_spells_the_cargo_flags_it_stands_for() {
+    let flags = |feature: &str| pair("crate-a", feature).cargo_flags();
+
+    assert_eq!(flags(BASELINE), vec!["--no-default-features"]);
+    assert!(
+        flags(DEFAULTS).is_empty(),
+        "the default build is the selection with no feature flags at all"
+    );
+    assert_eq!(
+        flags("gpu"),
+        vec!["--no-default-features", "--features", "gpu"]
+    );
+    assert_eq!(
+        flags("alpha,beta"),
+        vec!["--no-default-features", "--features", "alpha,beta"]
+    );
+    assert_eq!(
+        flags("(default),alpha,beta"),
+        vec!["--features", "alpha,beta"],
+        "an edge that keeps defaults must not be swept with them off"
+    );
+}
+
+/// WHY: the fail-by-default message is what a reader acts on, and the four kinds
+/// need different actions. A missing default build means the crate does not
+/// build the way a consumer builds it; a missing edge selection means this
+/// workspace asks for a combination nothing judges. Reporting both as "a new
+/// feature" sends the reader to the feature table, which is neither.
+#[test]
+fn an_unjudged_selection_names_which_kind_it_is() {
+    let pairs = vec![
+        pair("crate-a", BASELINE),
+        pair("crate-a", DEFAULTS),
+        pair("crate-a", "alpha,beta"),
+    ];
+
+    let failures = agreement_failures(&pairs, &[]);
+
+    assert_eq!(failures.len(), 3, "{failures:?}");
+    assert!(
+        failures.iter().any(|failure| failure.contains("a new member is unjudged")),
+        "{failures:?}"
+    );
+    assert!(
+        failures
+            .iter()
+            .any(|failure| failure.contains("a new default build is unjudged")),
+        "{failures:?}"
+    );
+    assert!(
+        failures
+            .iter()
+            .any(|failure| failure.contains("a new edge selection is unjudged")),
+        "{failures:?}"
+    );
+}
+
+/// WHY: recording one new selection used to mean re-observing every other, so
+/// the data went stale rather than pay a multi-hour sweep, which is how a row
+/// recorded `compiles` outlived the code that made it true. A write that merges
+/// must keep a reviewed decision it did not re-observe, must drop a row for a
+/// selection the manifests no longer declare, and must never invent a `compiles`
+/// for a selection nobody observed.
+#[test]
+fn a_write_merges_observations_over_recorded_rows_and_drops_stale_ones() {
+    let axis = vec![
+        pair("crate-a", DEFAULTS),
+        pair("crate-a", "gpu"),
+        pair("crate-a", "fresh"),
+    ];
+    let observed = vec![(
+        pair("crate-a", DEFAULTS),
+        Observation {
+            compiles: true,
+            first_error: None,
+        },
+    )];
+    let previous = vec![
+        row("crate-a", DEFAULTS, "blocked", Some("stale explanation")),
+        row(
+            "crate-a",
+            "gpu",
+            "blocked",
+            Some("the CUDA driver API is not linkable on this runner"),
+        ),
+        row("crate-a", "renamed-away", "compiles", None),
+    ];
+
+    let rendered = render(&axis, &observed, &previous);
+
+    assert!(
+        rendered.contains("feature = \"gpu\"\noutcome = \"blocked\"\nreason = \"the CUDA driver API is not linkable on this runner\""),
+        "an unobserved row keeps its reviewed decision verbatim: {rendered}"
+    );
+    assert!(
+        !rendered.contains("stale explanation"),
+        "an observation that now compiles must replace the recorded reason: {rendered}"
+    );
+    assert!(
+        !rendered.contains("renamed-away"),
+        "a row for a selection off the axis must not survive a write: {rendered}"
+    );
+    assert!(
+        rendered.contains("feature = \"fresh\"\noutcome = \"blocked\"\nreason = \"UNREVIEWED: never observed\""),
+        "a selection with neither an observation nor a row must be written as unreviewed, not as passing: {rendered}"
     );
 }
 
@@ -314,6 +481,6 @@ fn the_checked_in_declaration_agrees_with_the_tracked_manifests() {
     assert_eq!(
         agreement_failures(&pairs, &rows),
         Vec::<String>::new(),
-        "run `cargo run -p xtask -- feature-isolation --sweep --write` and record a decision for each new pair"
+        "run `cargo run -p xtask --bin xtask -- feature-isolation --sweep --write --only-unrecorded` and record a decision for each new selection"
     );
 }

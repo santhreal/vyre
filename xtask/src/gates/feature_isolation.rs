@@ -8,12 +8,18 @@
 //! manifest is the only one who sees the break, and they see it as a compile
 //! error in a crate they did not write.
 //!
-//! The judged axis is every (workspace member, feature) pair plus one
-//! `--no-default-features` probe per member, derived from the tracked manifests
-//! at run time. Nothing here names a member or a feature: a new member or a new
-//! feature joins the axis on the commit that declares it and turns this gate red
-//! until `xtask/feature-isolation.toml` records a decision for it. A hardcoded
-//! roster would go stale in silence, which is the same failure as having no gate.
+//! The judged axis is derived from the tracked manifests at run time and has
+//! four kinds of point. Every (workspace member, feature) pair, one feature on
+//! its own. One `--no-default-features` probe per member. One plain default
+//! build per member, which is the selection a consumer writing
+//! `cargo check -p <member>` gets and the one every other probe skips past. And
+//! every selection a workspace edge actually asks of a sibling, because a break
+//! in a combination this workspace itself requests stops a build nobody had to
+//! opt into. Nothing here names a member or a feature: a new member, feature or
+//! edge selection joins the axis on the commit that declares it and turns this
+//! gate red until `xtask/feature-isolation.toml` records a decision for it. A
+//! hardcoded roster would go stale in silence, which is the same failure as
+//! having no gate.
 //!
 //! Two modes, because the two costs are three orders of magnitude apart:
 //!
@@ -21,11 +27,14 @@
 //!     file and fails on a missing row, a stale row, a duplicate row, or a
 //!     `blocked` row without a real technical reason. No cargo, so the sweep
 //!     runs on every change.
-//!   - `--sweep`: compiles every pair and fails when an outcome disagrees with
-//!     the recorded one. This is the expensive half and CI owns it. `--member
-//!     NAME` narrows the compiling to one package for the developer who just
-//!     added a feature; the agreement half still judges the whole axis, because
-//!     a per-member view of a completeness check is not one.
+//!   - `--sweep`: compiles every selection and fails when an outcome disagrees
+//!     with the recorded one. This is the expensive half and CI owns it.
+//!     `--member NAME` narrows the compiling to one package and
+//!     `--only-unrecorded` to the selections that have no row yet, for the
+//!     developer who just added a feature or an edge; the agreement half still
+//!     judges the whole axis, because a per-member view of a completeness check
+//!     is not one. `--write` merges what this run observed over the rows already
+//!     recorded, so adding one row does not cost a full sweep.
 //!
 //! A pair recorded `blocked` must carry a reason that names the technical
 //! constraint. `--sweep --write` records a newly failing pair as
@@ -45,6 +54,13 @@ use serde::Deserialize;
 /// Cargo restricts a feature name to alphanumerics plus `-`, `_`, `+` and `.`,
 /// so parentheses cannot collide with a declared feature.
 pub const BASELINE: &str = "(none)";
+
+/// Selection element standing for the crate's own default features.
+///
+/// `(default)` alone is the plain `cargo check -p <member>` build. Leading a
+/// comma-joined list, it is an edge that keeps defaults and adds features on
+/// top, which is what `default-features` left unset means in a manifest.
+pub const DEFAULTS: &str = "(default)";
 
 /// Prefix `--write` gives a newly failing pair, rejected by the agreement check.
 const UNREVIEWED: &str = "UNREVIEWED";
@@ -68,16 +84,63 @@ pub struct Pair {
 }
 
 impl Pair {
+    /// The cargo feature flags this selection stands for.
+    ///
+    /// One column spells every kind the axis judges, so a row is readable
+    /// without knowing which kind produced it: `(none)` is
+    /// `--no-default-features`, `(default)` is no feature flags at all, a bare
+    /// name is that one feature alone, and a comma-joined list is those features
+    /// together, with defaults kept when the list opens with `(default)`.
+    #[must_use]
+    pub fn cargo_flags(&self) -> Vec<String> {
+        if self.feature == BASELINE {
+            return vec!["--no-default-features".to_string()];
+        }
+        let mut defaults = false;
+        let mut requested = Vec::new();
+        for element in self.feature.split(',') {
+            if element == DEFAULTS {
+                defaults = true;
+            } else {
+                requested.push(element);
+            }
+        }
+        let mut flags = Vec::new();
+        if !defaults {
+            flags.push("--no-default-features".to_string());
+        }
+        if !requested.is_empty() {
+            flags.push("--features".to_string());
+            flags.push(requested.join(","));
+        }
+        flags
+    }
+
     /// The cargo selection this pair stands for, as a reader would type it.
     #[must_use]
     pub fn label(&self) -> String {
-        if self.feature == BASELINE {
-            format!("{} --no-default-features", self.member)
+        let flags = self.cargo_flags();
+        if flags.is_empty() {
+            format!("{} (default features)", self.member)
         } else {
-            format!(
-                "{} --no-default-features --features {}",
-                self.member, self.feature
-            )
+            format!("{} {}", self.member, flags.join(" "))
+        }
+    }
+
+    /// Canonical spelling of one selection, so two edges asking for the same
+    /// thing in a different order are one judged point rather than two.
+    #[must_use]
+    fn spelled(defaults: bool, features: &BTreeSet<String>) -> String {
+        let joined = features
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>()
+            .join(",");
+        match (defaults, joined.is_empty()) {
+            (true, true) => DEFAULTS.to_string(),
+            (false, true) => BASELINE.to_string(),
+            (true, false) => format!("{DEFAULTS},{joined}"),
+            (false, false) => joined,
         }
     }
 }
@@ -107,7 +170,7 @@ fn data_path(root: &Path) -> PathBuf {
     root.join("xtask/feature-isolation.toml")
 }
 
-/// Every (member, feature) pair the tracked manifests declare right now.
+/// Every selection the tracked manifests put on the axis right now.
 ///
 /// # Errors
 ///
@@ -129,7 +192,7 @@ pub fn derive_pairs(root: &Path) -> Result<Vec<Pair>, String> {
         ));
     }
 
-    let mut pairs = Vec::new();
+    let mut manifests = BTreeMap::new();
     for member in members {
         let directory = member
             .as_str()
@@ -147,20 +210,104 @@ pub fn derive_pairs(root: &Path) -> Result<Vec<Pair>, String> {
                     "{} has no [package].name, so no cargo selection names it",
                     member_manifest.display()
                 )
-            })?;
-        pairs.push(Pair {
-            member: name.to_string(),
+            })?
+            .to_string();
+        manifests.insert(name, member_parsed);
+    }
+
+    let mut selections: BTreeSet<Pair> = BTreeSet::new();
+    for (name, member_parsed) in &manifests {
+        selections.insert(Pair {
+            member: name.clone(),
             feature: BASELINE.to_string(),
         });
-        for feature in enable_able_features(&member_parsed) {
-            pairs.push(Pair {
-                member: name.to_string(),
+        selections.insert(Pair {
+            member: name.clone(),
+            feature: DEFAULTS.to_string(),
+        });
+        for feature in enable_able_features(member_parsed) {
+            selections.insert(Pair {
+                member: name.clone(),
                 feature,
             });
         }
     }
+    selections.extend(edge_selections(&manifests));
+
+    let mut pairs = selections.into_iter().collect::<Vec<_>>();
     pairs.sort();
     Ok(pairs)
+}
+
+/// Every selection one workspace member asks of another.
+///
+/// The one-feature-at-a-time axis judges what a consumer could write. It does
+/// not judge what this workspace does write, and the two are different
+/// questions: `vyre-libs` asking `vyre-primitives` for `graph`,
+/// `inventory-registry` and `text` together is a selection no single-feature
+/// probe covers, and a break inside it stops every build that resolves that edge
+/// without a wider one unifying the missing feature back in. Cargo unifies
+/// features across a build, so a whole-workspace `cargo check` hides such a
+/// break behind whichever unrelated member happened to enable the rest.
+///
+/// Dev-dependency edges count. The layer gate exempts them because a test may
+/// depend upward, but a dev selection that does not compile stops
+/// `cargo test -p` exactly as hard as a normal one.
+fn edge_selections(manifests: &BTreeMap<String, toml::Value>) -> BTreeSet<Pair> {
+    let mut selections = BTreeSet::new();
+    for member_parsed in manifests.values() {
+        for table in dependency_tables(member_parsed) {
+            for (key, spec) in table {
+                let Some(spec) = spec.as_table() else {
+                    continue;
+                };
+                let package = spec
+                    .get("package")
+                    .and_then(toml::Value::as_str)
+                    .unwrap_or(key);
+                if !manifests.contains_key(package) {
+                    continue;
+                }
+                let features: BTreeSet<String> = spec
+                    .get("features")
+                    .and_then(toml::Value::as_array)
+                    .into_iter()
+                    .flatten()
+                    .filter_map(toml::Value::as_str)
+                    .map(str::to_string)
+                    .collect();
+                let defaults = spec
+                    .get("default-features")
+                    .and_then(toml::Value::as_bool)
+                    .unwrap_or(true);
+                selections.insert(Pair {
+                    member: package.to_string(),
+                    feature: Pair::spelled(defaults, &features),
+                });
+            }
+        }
+    }
+    selections
+}
+
+/// Every dependency table of one manifest, including per-target and dev tables.
+fn dependency_tables(manifest: &toml::Value) -> Vec<&toml::value::Table> {
+    let sections = ["dependencies", "build-dependencies", "dev-dependencies"];
+    let mut tables = Vec::new();
+    for section in sections {
+        tables.extend(manifest.get(section).and_then(toml::Value::as_table));
+    }
+    for platform in manifest
+        .get("target")
+        .and_then(toml::Value::as_table)
+        .into_iter()
+        .flat_map(toml::value::Table::values)
+    {
+        for section in sections {
+            tables.extend(platform.get(section).and_then(toml::Value::as_table));
+        }
+    }
+    tables
 }
 
 /// Every feature name `--features` accepts for one member, `default` excluded.
@@ -203,24 +350,10 @@ fn enable_able_features(manifest: &toml::Value) -> BTreeSet<String> {
 /// Keys of every `optional = true` dependency that can carry an implicit feature.
 ///
 /// The key is what names the feature, not the `package` field, so a renamed
-/// dependency contributes the rename. Dev-dependencies cannot be optional, so
-/// only the normal, build and target tables are read.
+/// dependency contributes the rename. Cargo rejects `optional` on a
+/// dev-dependency, so reading the dev tables here adds nothing and costs nothing.
 fn optional_dependencies(manifest: &toml::Value) -> BTreeSet<String> {
-    let mut tables = Vec::new();
-    for section in ["dependencies", "build-dependencies"] {
-        tables.extend(manifest.get(section).and_then(toml::Value::as_table));
-    }
-    for platform in manifest
-        .get("target")
-        .and_then(toml::Value::as_table)
-        .into_iter()
-        .flat_map(toml::value::Table::values)
-    {
-        for section in ["dependencies", "build-dependencies"] {
-            tables.extend(platform.get(section).and_then(toml::Value::as_table));
-        }
-    }
-    tables
+    dependency_tables(manifest)
         .into_iter()
         .flatten()
         .filter(|(_, value)| {
@@ -346,10 +479,11 @@ pub fn agreement_failures(pairs: &[Pair], rows: &[Row]) -> Vec<String> {
             failures.push(format!(
                 "`{}` has no row in xtask/feature-isolation.toml; a new {} is unjudged until one is recorded",
                 pair.label(),
-                if pair.feature == BASELINE {
-                    "member"
-                } else {
-                    "feature"
+                match pair.feature.as_str() {
+                    BASELINE => "member",
+                    DEFAULTS => "default build",
+                    feature if feature.contains(',') => "edge selection",
+                    _ => "feature",
                 }
             ));
         }
@@ -430,17 +564,11 @@ pub fn first_error(stdout: &str) -> Option<String> {
 /// Compile one pair once.
 fn check_once(root: &Path, cargo: &str, pair: &Pair) -> Observation {
     let mut command = Command::new(cargo);
-    command.current_dir(root).args([
-        "check",
-        "--locked",
-        "-p",
-        &pair.member,
-        "--no-default-features",
-    ]);
-    if pair.feature != BASELINE {
-        command.args(["--features", &pair.feature]);
-    }
-    command.args(["--all-targets", "--message-format=json"]);
+    command
+        .current_dir(root)
+        .args(["check", "--locked", "-p", &pair.member])
+        .args(pair.cargo_flags())
+        .args(["--all-targets", "--message-format=json"]);
     let output = command.output().unwrap_or_else(|error| {
         eprintln!(
             "Fix: cannot run `{cargo} check` for `{}`: {error}",
@@ -476,17 +604,28 @@ fn compile(root: &Path, cargo: &str, pair: &Pair) -> Observation {
     check_once(root, cargo, pair)
 }
 
-/// Render the data file from observed outcomes, keeping reviewed reasons.
+/// Render the data file for the whole axis, from observations where this run has
+/// them and the previously recorded row otherwise.
+///
+/// Merging is what makes recording one new selection affordable. A write that
+/// only kept what it just observed forced a full sweep to add a single row, and
+/// a gate whose data costs hours to touch is a gate whose data goes stale, which
+/// is the failure this whole axis exists to prevent. Iterating the derived axis
+/// rather than the rows also drops a row for a selection no manifest declares any
+/// more, so a write cannot leave a stale row behind.
 #[must_use]
-fn render(observed: &[(Pair, Observation)], previous: &[Row]) -> String {
+pub fn render(axis: &[Pair], observed: &[(Pair, Observation)], previous: &[Row]) -> String {
     let mut text = String::from(
-        "# Recorded compile-alone outcome of every (workspace member, feature) pair.\n\
+        "# Recorded compile outcome of every feature selection this workspace judges.\n\
          #\n\
          # The axis is derived from the tracked manifests at run time, never from this\n\
-         # file: `feature = \"(none)\"` is the per-member `--no-default-features` probe,\n\
-         # and every other row is one declared feature enabled on its own. A pair with\n\
-         # no row here, a row naming a pair no manifest declares, and a row whose\n\
-         # outcome disagrees with the sweep are each a failure.\n\
+         # file. The `feature` column spells the selection: `(none)` is the per-member\n\
+         # `--no-default-features` probe, `(default)` is the plain `cargo check -p`\n\
+         # build, a bare name is that one feature enabled alone, and a comma-joined\n\
+         # list is a selection a workspace edge asks of a sibling, with defaults kept\n\
+         # when the list opens with `(default)`. A selection with no row here, a row\n\
+         # naming a selection no manifest declares, and a row whose outcome disagrees\n\
+         # with the sweep are each a failure.\n\
          #\n\
          # `outcome = \"blocked\"` needs a one-line technical constraint in `reason`.\n\
          # A feature that merely needs another feature is not blocked: give it the\n\
@@ -495,20 +634,47 @@ fn render(observed: &[(Pair, Observation)], previous: &[Row]) -> String {
          # this sweep.\n\
          #\n\
          # Regenerate: `cargo run -p xtask --bin xtask -- feature-isolation --sweep --write`.\n\
+         # Record only what has no row yet: add `--only-unrecorded`.\n\
          # Check agreement: `cargo run -p xtask --bin xtask -- feature-isolation`.\n",
     );
-    for (pair, observation) in observed {
+    for pair in axis {
+        let recorded = previous
+            .iter()
+            .find(|row| row.member == pair.member && row.feature == pair.feature);
         text.push_str("\n[[pair]]\n");
         text.push_str(&format!("member = \"{}\"\n", pair.member));
         text.push_str(&format!("feature = \"{}\"\n", pair.feature));
+        let Some(observation) = observed
+            .iter()
+            .find(|(observed_pair, _)| observed_pair == pair)
+            .map(|(_, observation)| observation)
+        else {
+            match recorded {
+                Some(row) if row.outcome == COMPILES => {
+                    text.push_str(&format!("outcome = \"{COMPILES}\"\n"));
+                }
+                Some(row) => {
+                    text.push_str(&format!("outcome = \"{}\"\n", row.outcome));
+                    if let Some(reason) = row.reason.as_deref() {
+                        text.push_str(&format!("reason = {}\n", toml_string(reason)));
+                    }
+                }
+                None => {
+                    text.push_str(&format!("outcome = \"{BLOCKED}\"\n"));
+                    text.push_str(&format!(
+                        "reason = {}\n",
+                        toml_string(&format!("{UNREVIEWED}: never observed"))
+                    ));
+                }
+            }
+            continue;
+        };
         if observation.compiles {
             text.push_str(&format!("outcome = \"{COMPILES}\"\n"));
             continue;
         }
         text.push_str(&format!("outcome = \"{BLOCKED}\"\n"));
-        let kept = previous
-            .iter()
-            .find(|row| row.member == pair.member && row.feature == pair.feature)
+        let kept = recorded
             .and_then(|row| row.reason.clone())
             .filter(|reason| is_real_reason(reason));
         let reason = kept.unwrap_or_else(|| {
@@ -591,11 +757,12 @@ pub fn run(args: &[String]) {
     let list = flags.contains(&"--list");
     let sweep = flags.contains(&"--sweep");
     let write = flags.contains(&"--write");
+    let only_unrecorded = flags.contains(&"--only-unrecorded");
     let mut member = None;
     let mut rest = flags.iter();
     while let Some(argument) = rest.next() {
         match *argument {
-            "--list" | "--sweep" | "--write" => {}
+            "--list" | "--sweep" | "--write" | "--only-unrecorded" => {}
             "--member" => {
                 member = rest.next().copied();
                 if member.is_none() {
@@ -605,7 +772,7 @@ pub fn run(args: &[String]) {
             }
             other => {
                 eprintln!(
-                    "Fix: `feature-isolation` takes [--list] [--sweep [--write]] [--member NAME]; `{other}` is not one of them."
+                    "Fix: `feature-isolation` takes [--list] [--sweep [--write] [--only-unrecorded]] [--member NAME]; `{other}` is not one of them."
                 );
                 process::exit(1);
             }
@@ -617,9 +784,9 @@ pub fn run(args: &[String]) {
         );
         process::exit(1);
     }
-    if write && member.is_some() {
+    if only_unrecorded && !sweep {
         eprintln!(
-            "Fix: `--write` rewrites the whole file, so it cannot run from one member's observations; drop `--member`."
+            "Fix: `--only-unrecorded` narrows what the sweep compiles, so it needs `--sweep`."
         );
         process::exit(1);
     }
@@ -631,7 +798,7 @@ pub fn run(args: &[String]) {
 
     // The agreement half always judges the whole axis: it costs milliseconds,
     // and a per-member view of a completeness check is not a completeness check.
-    let selected = match member {
+    let mut selected = match member {
         None => pairs.clone(),
         Some(name) => {
             let selected = pairs
@@ -646,6 +813,18 @@ pub fn run(args: &[String]) {
             selected
         }
     };
+    if only_unrecorded {
+        let recorded = load_rows(&root).unwrap_or_default();
+        selected.retain(|pair| {
+            !recorded
+                .iter()
+                .any(|row| row.member == pair.member && row.feature == pair.feature)
+        });
+        if selected.is_empty() {
+            println!("feature-isolation: every selection on the axis already has a row");
+            return;
+        }
+    }
 
     if list {
         for pair in &selected {
@@ -662,7 +841,7 @@ pub fn run(args: &[String]) {
         let previous = load_rows(&root).unwrap_or_default();
         let observed = observe(&root, &selected);
         let path = data_path(&root);
-        fs::write(&path, render(&observed, &previous)).unwrap_or_else(|error| {
+        fs::write(&path, render(&pairs, &observed, &previous)).unwrap_or_else(|error| {
             eprintln!("Fix: cannot write {}: {error}", path.display());
             process::exit(1);
         });
@@ -676,7 +855,7 @@ pub fn run(args: &[String]) {
     });
     report(
         &agreement_failures(&pairs, &rows),
-        "record a row for every derived pair in xtask/feature-isolation.toml and delete every row no manifest declares; `cargo run -p xtask --bin xtask -- feature-isolation --sweep --write` regenerates it from an observed sweep.",
+        "record a row for every derived selection in xtask/feature-isolation.toml and delete every row no manifest declares; `cargo run -p xtask --bin xtask -- feature-isolation --sweep --write --only-unrecorded` observes just the selections that have none.",
     );
 
     if !sweep {

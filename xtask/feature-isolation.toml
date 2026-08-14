@@ -1,10 +1,13 @@
-# Recorded compile-alone outcome of every (workspace member, feature) pair.
+# Recorded compile outcome of every feature selection this workspace judges.
 #
 # The axis is derived from the tracked manifests at run time, never from this
-# file: `feature = "(none)"` is the per-member `--no-default-features` probe,
-# and every other row is one declared feature enabled on its own. A pair with
-# no row here, a row naming a pair no manifest declares, and a row whose
-# outcome disagrees with the sweep are each a failure.
+# file. The `feature` column spells the selection: `(none)` is the per-member
+# `--no-default-features` probe, `(default)` is the plain `cargo check -p`
+# build, a bare name is that one feature enabled alone, and a comma-joined
+# list is a selection a workspace edge asks of a sibling, with defaults kept
+# when the list opens with `(default)`. A selection with no row here, a row
+# naming a selection no manifest declares, and a row whose outcome disagrees
+# with the sweep are each a failure.
 #
 # `outcome = "blocked"` needs a one-line technical constraint in `reason`.
 # A feature that merely needs another feature is not blocked: give it the
@@ -13,11 +16,22 @@
 # this sweep.
 #
 # Regenerate: `cargo run -p xtask --bin xtask -- feature-isolation --sweep --write`.
+# Record only what has no row yet: add `--only-unrecorded`.
 # Check agreement: `cargo run -p xtask --bin xtask -- feature-isolation`.
 
 [[pair]]
 member = "structure-gate"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "structure-gate"
 feature = "(none)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre"
+feature = "(default)"
 outcome = "compiles"
 
 [[pair]]
@@ -42,12 +56,23 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-aot"
+feature = "(default)"
+outcome = "blocked"
+reason = "UNREVIEWED: E0432 at vyre-primitives/src/graph/csr_forward_traverse.rs:20"
+
+[[pair]]
+member = "vyre-aot"
 feature = "(none)"
 outcome = "compiles"
 
 [[pair]]
 member = "vyre-aot"
 feature = "ptx"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-bench"
+feature = "(default)"
 outcome = "compiles"
 
 [[pair]]
@@ -62,6 +87,11 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-conform"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-conform"
 feature = "(none)"
 outcome = "compiles"
 
@@ -72,12 +102,37 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-conform-spec"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-conform-spec"
 feature = "(none)"
 outcome = "compiles"
 
 [[pair]]
 member = "vyre-debug"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-debug"
 feature = "(none)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-driver"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-driver"
+feature = "(default),self-substrate-adapters"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-driver"
+feature = "(default),test-fixtures"
 outcome = "compiles"
 
 [[pair]]
@@ -97,6 +152,11 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-cuda"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-driver-cuda"
 feature = "(none)"
 outcome = "compiles"
 
@@ -107,12 +167,27 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-metal"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-driver-metal"
 feature = "(none)"
 outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver-reference"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-driver-reference"
 feature = "(none)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-driver-spirv"
+feature = "(default)"
 outcome = "compiles"
 
 [[pair]]
@@ -123,6 +198,11 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-driver-spirv"
 feature = "spirv-val"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-driver-wgpu"
+feature = "(default)"
 outcome = "compiles"
 
 [[pair]]
@@ -177,12 +257,27 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-emit-metal"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-emit-metal"
 feature = "(none)"
 outcome = "compiles"
 
 [[pair]]
 member = "vyre-emit-naga"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-emit-naga"
 feature = "(none)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-emit-ptx"
+feature = "(default)"
 outcome = "compiles"
 
 [[pair]]
@@ -197,7 +292,22 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-emit-spirv"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-emit-spirv"
 feature = "(none)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-foundation"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-foundation"
+feature = "(default),serde"
 outcome = "compiles"
 
 [[pair]]
@@ -212,12 +322,67 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-frontend-rust"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-frontend-rust"
 feature = "(none)"
 outcome = "compiles"
 
 [[pair]]
 member = "vyre-grammar-gen"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-grammar-gen"
 feature = "(none)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),analysis,c-parser,cpu-parity,full"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),c-parser"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),c-parser,cpu-parity,crypto-blake3,matching,nn-attention,parsing"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),c-parser,nn-linear-4bit"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),crypto,full,logical,matching,math,nn,nn-moe,parsing,security,visual"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),device,graph-dispatch,scheduling"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),graph-dispatch,test-fixtures"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),reasoning"
 outcome = "compiles"
 
 [[pair]]
@@ -452,7 +617,22 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-lints"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-lints"
 feature = "(none)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-lower"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-lower"
+feature = "(default),test-fixtures"
 outcome = "compiles"
 
 [[pair]]
@@ -467,12 +647,32 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-macros"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-macros"
 feature = "(none)"
 outcome = "compiles"
 
 [[pair]]
 member = "vyre-megakernel"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-megakernel"
 feature = "(none)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-pass-engine"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-pass-engine"
+feature = "(default),cpu-parity"
 outcome = "compiles"
 
 [[pair]]
@@ -497,6 +697,41 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
+feature = "(default)"
+outcome = "blocked"
+reason = "UNREVIEWED: E0433 at vyre-primitives/tests/resolve_family_ir_parity_proptest.rs:18"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "(default),bitset,cpu-parity,graph,hardware"
+outcome = "blocked"
+reason = "UNREVIEWED: E0433 at vyre-primitives/tests/resolve_family_ir_parity_proptest.rs:18"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "(default),bitset,fixpoint,graph,hardware,hash,inventory-registry,label,matching,math,nn,parsing,predicate,reduce,text"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "(default),graph,inventory-registry,text"
+outcome = "blocked"
+reason = "UNREVIEWED: E0433 at vyre-primitives/tests/resolve_family_ir_parity_proptest.rs:18"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "(default),hardware"
+outcome = "blocked"
+reason = "UNREVIEWED: E0433 at vyre-primitives/tests/resolve_family_ir_parity_proptest.rs:18"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "(default),hash,matching"
+outcome = "blocked"
+reason = "UNREVIEWED: E0433 at vyre-primitives/tests/resolve_family_ir_parity_proptest.rs:18"
+
+[[pair]]
+member = "vyre-primitives"
 feature = "(none)"
 outcome = "compiles"
 
@@ -507,8 +742,20 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
+feature = "all-lego,cpu-parity"
+outcome = "blocked"
+reason = "UNREVIEWED: never observed"
+
+[[pair]]
+member = "vyre-primitives"
 feature = "bitset"
 outcome = "compiles"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "bitset,fixpoint,graph,inventory-registry,math,reduce"
+outcome = "blocked"
+reason = "UNREVIEWED: E0433 at vyre-primitives/tests/resolve_family_ir_parity_proptest.rs:18"
 
 [[pair]]
 member = "vyre-primitives"
@@ -519,6 +766,12 @@ outcome = "compiles"
 member = "vyre-primitives"
 feature = "cpu-parity"
 outcome = "compiles"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "cpu-parity,hardware"
+outcome = "blocked"
+reason = "UNREVIEWED: E0433 at vyre-primitives/tests/resolve_family_ir_parity_proptest.rs:18"
 
 [[pair]]
 member = "vyre-primitives"
@@ -564,6 +817,12 @@ outcome = "compiles"
 member = "vyre-primitives"
 feature = "hash"
 outcome = "compiles"
+
+[[pair]]
+member = "vyre-primitives"
+feature = "hash,inventory-registry,parsing"
+outcome = "blocked"
+reason = "UNREVIEWED: E0433 at vyre-primitives/tests/resolve_family_ir_parity_proptest.rs:18"
 
 [[pair]]
 member = "vyre-primitives"
@@ -647,12 +906,37 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-reference"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-reference"
 feature = "(none)"
 outcome = "compiles"
 
 [[pair]]
 member = "vyre-reference"
 feature = "subgroup-ops"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "(default),cuda,metal,reference,spirv,wgpu"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "(default),cuda,operations,reference,spirv,wgpu"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-registry-link"
+feature = "(default),operations,reference"
 outcome = "compiles"
 
 [[pair]]
@@ -692,6 +976,11 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-runtime"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-runtime"
 feature = "(none)"
 outcome = "compiles"
 
@@ -722,12 +1011,32 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-safetensors"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-safetensors"
 feature = "(none)"
 outcome = "compiles"
 
 [[pair]]
 member = "vyre-spec"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-spec"
 feature = "(none)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default),ir-fixtures"
 outcome = "compiles"
 
 [[pair]]
@@ -742,12 +1051,27 @@ outcome = "compiles"
 
 [[pair]]
 member = "xtask"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "xtask"
 feature = "(none)"
 outcome = "compiles"
 
 [[pair]]
 member = "xtask-evidence"
+feature = "(default)"
+outcome = "compiles"
+
+[[pair]]
+member = "xtask-evidence"
 feature = "(none)"
+outcome = "compiles"
+
+[[pair]]
+member = "xtask-registry"
+feature = "(default)"
 outcome = "compiles"
 
 [[pair]]

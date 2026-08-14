@@ -381,7 +381,7 @@ SUBCOMMANDS:
   dep-drift                                                                               Fail if a manifest pins a workspace-managed dependency to a different version
   docs-check                                                                              Validate manifest-backed documentation lifecycle and generated navigation
   dup-scan [--write-baseline] [--report [CRATE]]                                          Measure cross-file duplicate source blocks against the pinned per-crate baseline
-  feature-isolation [--list] [--sweep [--write]] [--member NAME]                          Hold every (member, feature) pair to its recorded compile-alone outcome
+  feature-isolation [--list] [--sweep [--write] [--only-unrecorded]] [--member NAME]      Hold every feature selection the manifests declare to its recorded compile outcome
   feature-matrix [--output PATH]                                                          Generate crate feature evidence matrix
   gate1                                                                                   Enforce Gate 1 complexity budget
   gates [--list]                                                                          Run every registered gate and hold it to the pinned baseline
