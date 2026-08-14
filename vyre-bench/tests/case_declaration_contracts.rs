@@ -250,6 +250,45 @@ fn no_nanosecond_count_is_narrowed_by_a_truncating_cast() {
     );
 }
 
+/// `api::case` is the only place a failed payload downcast is worded.
+///
+/// Sixteen cases reached into `PreparedCase` themselves, each repeating the same
+/// `ok_or_else` block with its own name spliced into the message, and the
+/// messages had drifted into three unrelated sentences for one condition. The
+/// read-only and mutable flavours were also collapsed at different times, so
+/// nine copies outlived the first pass. `prepared_as` and `prepared_as_mut` own
+/// both flavours and the wording.
+///
+/// An `Option`-returning downcast is a different operation and is not matched: a
+/// `bytes_touched` accessor that falls back to a declared constant has no error
+/// to word. The class is the downcast whose failure becomes a `BenchError`, so
+/// the pattern is the downcast immediately followed by `ok_or_else`.
+#[test]
+fn only_the_case_api_words_a_failed_payload_downcast() {
+    let owner = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/api/case.rs");
+    let offenders: Vec<String> = crate_source_files()
+        .into_iter()
+        .filter(|path| *path != owner)
+        .filter(|path| {
+            let code = stripped_code(path);
+            ["downcast_ref", "downcast_mut"].iter().any(|call| {
+                code.match_indices(call).any(|(at, _)| {
+                    code[at..].find(">()").is_some_and(|close| {
+                        code[at + close + ">()".len()..].starts_with(".ok_or_else(")
+                    })
+                })
+            })
+        })
+        .map(|path| path.display().to_string())
+        .collect();
+
+    assert!(
+        offenders.is_empty(),
+        "Fix: borrow a prepared payload through api::case::prepared_as or \
+         prepared_as_mut, which own the mismatch wording: {offenders:?}"
+    );
+}
+
 /// A source file with comments removed and all whitespace collapsed away, so a
 /// spelling split across lines matches the same as a single-line one.
 fn stripped_code(path: &Path) -> String {

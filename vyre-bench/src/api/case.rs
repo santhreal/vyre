@@ -645,6 +645,20 @@ pub fn prepared_as<'a, T: 'static>(
     })
 }
 
+/// Borrow a case's prepared payload mutably as its own type.
+///
+/// The mutable half of `prepared_as`. Splitting the two is what left five
+/// cases still hand-rolling the downcast after the read-only ones were
+/// collapsed, so both flavours are named here and the wording is shared.
+pub fn prepared_as_mut<'a, T: 'static>(
+    prepared: &'a mut PreparedCase,
+    case: &str,
+) -> Result<&'a mut T, BenchError> {
+    prepared.downcast_mut::<T>().ok_or_else(|| {
+        BenchError::ExecutionFailed(format!("{case} prepared payload type mismatch"))
+    })
+}
+
 fn first_output_difference(outputs: &[Vec<u8>], baseline: &[Vec<u8>]) -> String {
     if outputs.len() != baseline.len() {
         return format!(

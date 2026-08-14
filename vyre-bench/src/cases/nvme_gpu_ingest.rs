@@ -1,8 +1,8 @@
 use std::time::Instant;
 
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use vyre_runtime::uring::{NativeReadPath, NvmeGpuIngestTelemetry};
@@ -271,14 +271,7 @@ fn bench_case_requirements(spec: NvmeGpuIngestWorkloadSpec) -> BenchRequirements
 }
 
 fn prepared_ingest_spec(prepared: &PreparedCase) -> Result<NvmeGpuIngestWorkloadSpec, BenchError> {
-    prepared
-        .downcast_ref::<NvmeGpuIngestWorkloadSpec>()
-        .copied()
-        .ok_or_else(|| {
-            BenchError::ExecutionFailed(
-                "prepared benchmark payload was not an NvmeGpuIngestWorkloadSpec".to_string(),
-            )
-        })
+    prepared_as::<NvmeGpuIngestWorkloadSpec>(prepared, "NVMe GPU ingest").copied()
 }
 
 fn run_ingest_accounting(prepared: &PreparedCase) -> Result<BenchRun, BenchError> {

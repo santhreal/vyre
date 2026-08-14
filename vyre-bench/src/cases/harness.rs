@@ -8,8 +8,9 @@
 //! per case.
 
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    prepared_as, prepared_as_mut, BenchCase, BenchContext, BenchError, BenchId, BenchLayer,
+    BenchMetadata, BenchRequirements, BenchRun, Correctness, DeterminismClass, PerformanceContract,
+    PreparedCase, WorkloadClass,
 };
 use crate::api::suite::SuiteKind;
 use vyre_foundation::ir::Program;
@@ -67,21 +68,12 @@ pub(crate) struct HarnessCase<P: 'static> {
 
 impl<P: 'static> HarnessCase<P> {
     fn payload<'a>(&self, prepared: &'a PreparedCase) -> Result<&'a P, BenchError> {
-        prepared.downcast_ref::<P>().ok_or_else(|| {
-            BenchError::ExecutionFailed(format!(
-                "prepared payload for `{}` had the wrong type. Fix: keep the case build and measure steps on one payload type.",
-                self.workload.id
-            ))
-        })
+        prepared_as::<P>(prepared, self.workload.id)
     }
 
     fn payload_mut<'a>(&self, prepared: &'a mut PreparedCase) -> Result<&'a mut P, BenchError> {
         let id = self.workload.id;
-        prepared.downcast_mut::<P>().ok_or_else(|| {
-            BenchError::ExecutionFailed(format!(
-                "prepared payload for `{id}` had the wrong type. Fix: keep the case build and measure steps on one payload type."
-            ))
-        })
+        prepared_as_mut::<P>(prepared, id)
     }
 }
 

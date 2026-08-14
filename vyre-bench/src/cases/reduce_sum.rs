@@ -1,6 +1,7 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase,
+    WorkloadClass,
 };
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use vyre::ir::Program;
@@ -109,13 +110,7 @@ impl BenchCase for ReduceSumBench {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<ReduceSumPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "reduce-sum crossover prepared payload type mismatch".to_string(),
-                )
-            })?;
+        let prepared = prepared_as::<ReduceSumPrepared>(prepared, "reduce-sum crossover")?;
 
         let small = measure_size(ctx, &prepared.small, "small")?;
         let large = measure_size(ctx, &prepared.large, "large")?;

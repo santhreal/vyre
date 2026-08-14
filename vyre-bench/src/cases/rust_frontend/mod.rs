@@ -1,6 +1,6 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::cases::mix32;
@@ -126,13 +126,7 @@ impl BenchCase for RustRangeLoopPipeline {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<RustRangePrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "Rust range-loop prepared payload type mismatch".to_string(),
-                )
-            })?;
+        let prepared = prepared_as::<RustRangePrepared>(prepared, "Rust range-loop")?;
 
         let lower_start = std::time::Instant::now();
         let lowered = lower_rust_source(prepared.source)?;

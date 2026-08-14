@@ -1,6 +1,6 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::resident::{
@@ -83,13 +83,7 @@ impl BenchCase for GraphFrontierStep {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<GraphFrontierPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "prepared graph frontier payload had the wrong type".to_string(),
-                )
-            })?;
+        let prepared = prepared_as::<GraphFrontierPrepared>(prepared, "graph frontier")?;
 
         let dispatch = dispatch_program_timed(
             ctx,

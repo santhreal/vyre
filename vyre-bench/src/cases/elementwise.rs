@@ -1,6 +1,6 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRun, Correctness,
-    DeterminismClass, PreparedCase, WorkloadClass,
+    prepared_as_mut, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::resident::{input_bytes_total, transfer_accounting, ResidentInputSet};
@@ -116,13 +116,7 @@ impl BenchCase for ElementwiseBench {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_mut::<ElementwisePrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "elementwise prepared payload type mismatch".to_string(),
-                )
-            })?;
+        let prepared = prepared_as_mut::<ElementwisePrepared>(prepared, "elementwise")?;
         let size = 1_000_000;
 
         let timed = if let Some(resident) = &prepared.resident {

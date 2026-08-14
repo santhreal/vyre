@@ -4,8 +4,9 @@
 //! cardinality-only kernel. Both take their sample through [`super::sample`].
 
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase,
+    WorkloadClass,
 };
 use crate::api::metric::elapsed_ns;
 use crate::api::resident::{input_bytes_total, u32_counter_reset_program, ResidentInputSet};
@@ -148,13 +149,7 @@ impl BenchCase for ScanAcIrregularLiterals {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<ScanAcIrregularPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "prepared irregular AC scan payload had the wrong type".to_string(),
-                )
-            })?;
+        let prepared = prepared_as::<ScanAcIrregularPrepared>(prepared, "irregular AC scan")?;
         let ctx: &BenchContext = ctx;
 
         let resident_sequence = prepared.resident.as_ref().map(|resident| {

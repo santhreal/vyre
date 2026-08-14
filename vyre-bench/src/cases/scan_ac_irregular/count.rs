@@ -2,8 +2,9 @@ use crate::api::metric::elapsed_ns;
 use std::time::Instant;
 
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase,
+    WorkloadClass,
 };
 use crate::api::resident::{input_bytes_total, u32_counter_reset_program, ResidentInputSet};
 use crate::api::suite::SuiteKind;
@@ -138,13 +139,7 @@ impl BenchCase for ScanAcIrregularCount {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<ScanAcIrregularCountPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "prepared irregular AC count payload had the wrong type".to_string(),
-                )
-            })?;
+        let prepared = prepared_as::<ScanAcIrregularCountPrepared>(prepared, "irregular AC count")?;
         let ctx: &BenchContext = ctx;
 
         let resident_sequence = prepared.resident.as_ref().map(|resident| {

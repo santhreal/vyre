@@ -16,8 +16,9 @@ use super::synthetic_programs::{
     build_synthetic_release_program, string_bitmap_scatter_release_program,
 };
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase,
+    WorkloadClass,
 };
 use crate::api::metric::{elapsed_ns, MetricPoint};
 use crate::api::resident::{dispatch_program_timed, input_bytes_total, ResidentInputSet};
@@ -228,13 +229,7 @@ impl BenchCase for SyntheticCountWorkload {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<SyntheticCountPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "synthetic release prepared payload type mismatch".to_string(),
-                )
-            })?;
+        let prepared = prepared_as::<SyntheticCountPrepared>(prepared, "synthetic release")?;
         let mut dispatch_config = ctx.dispatch_config.clone();
         if self.pattern == SyntheticPattern::StringBitmapScatter {
             dispatch_config.grid_override = Some(

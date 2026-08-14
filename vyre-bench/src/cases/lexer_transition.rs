@@ -2,8 +2,8 @@ use std::hint::black_box;
 use std::time::Instant;
 
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::suite::SuiteKind;
@@ -158,13 +158,7 @@ impl BenchCase for LexerSmallStateTransition {
         _ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<LexerTransitionPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "prepared lexer transition payload had the wrong type".to_string(),
-                )
-            })?;
+        let prepared = prepared_as::<LexerTransitionPrepared>(prepared, "lexer transition")?;
 
         let baseline_start = Instant::now();
         let baseline_tokens = sparse_reference_tokens(&prepared.source);
