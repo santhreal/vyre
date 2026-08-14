@@ -1,0 +1,176 @@
+//! The operand namespace of a lowered kernel op.
+//!
+//! A `KernelOp` operand list is a flat `Vec<u32>`, but a position can be an
+//! SSA result reference, an index into the body's literal pool, an index into
+//! its child-body table, or a plain number such as a binding slot or an axis.
+//! This module is the one owner of that table. Every analysis, rewrite,
+//! verifier, and emitter that must tell those apart asks here instead of
+//! re-deriving per-kind skip offsets, because two copies drift and a copy
+//! that treats metadata as an SSA value miscompiles in silence.
+
+use crate::KernelOpKind;
+
+/// Semantic class assigned to one operation operand.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OperandClass {
+    /// Reference to a previously produced result.
+    ResultRef,
+    /// Index into the current body's child-body table.
+    ChildBodyIdx,
+    /// Index into the current body's literal pool.
+    LiteralPoolIdx,
+    /// Binding-slot literal, opaque tag, etc.  -  not validated structurally.
+    Other,
+}
+
+/// Classify one operand position for structural verification.
+pub fn classify_operand(kind: &KernelOpKind, pos: usize) -> OperandClass {
+    use KernelOpKind::*;
+    match kind {
+        Literal => {
+            if pos == 0 {
+                OperandClass::LiteralPoolIdx
+            } else {
+                OperandClass::Other
+            }
+        }
+        LocalInvocationId | GlobalInvocationId | WorkgroupId => OperandClass::Other,
+        SubgroupLocalId | SubgroupSize => OperandClass::Other,
+        LoopIndex { .. } => OperandClass::Other,
+        BufferLength => OperandClass::Other,
+        LoadGlobal | LoadShared | LoadConstant => {
+            if pos == 0 {
+                OperandClass::Other
+            } else {
+                OperandClass::ResultRef
+            }
+        }
+        StoreGlobal | StoreShared => {
+            if pos == 0 {
+                OperandClass::Other
+            } else {
+                OperandClass::ResultRef
+            }
+        }
+        Copy | BinOpKind(_) | UnOpKind(_) | Fma | MatrixMma { .. } | Select | Cast { .. } => {
+            OperandClass::ResultRef
+        }
+        Atomic { .. } => {
+            if pos == 0 {
+                OperandClass::Other
+            } else {
+                OperandClass::ResultRef
+            }
+        }
+        SubgroupBallot | SubgroupShuffle | SubgroupBroadcast | SubgroupReduce { .. } => {
+            OperandClass::ResultRef
+        }
+        StructuredIfThen => {
+            if pos == 0 {
+                OperandClass::ResultRef
+            } else if pos == 1 {
+                OperandClass::ChildBodyIdx
+            } else {
+                OperandClass::Other
+            }
+        }
+        StructuredIfThenElse => {
+            if pos == 0 {
+                OperandClass::ResultRef
+            } else if pos == 1 || pos == 2 {
+                OperandClass::ChildBodyIdx
+            } else {
+                OperandClass::Other
+            }
+        }
+        StructuredForLoop { .. } => {
+            if pos == 0 || pos == 1 {
+                OperandClass::ResultRef
+            } else if pos == 2 {
+                OperandClass::ChildBodyIdx
+            } else {
+                OperandClass::Other
+            }
+        }
+        StructuredBlock => {
+            if pos == 0 {
+                OperandClass::ChildBodyIdx
+            } else {
+                OperandClass::Other
+            }
+        }
+        Region { .. } => {
+            if pos == 0 {
+                OperandClass::ChildBodyIdx
+            } else {
+                OperandClass::Other
+            }
+        }
+        Return | Barrier { .. } => OperandClass::Other,
+        AsyncLoad { .. } | AsyncStore { .. } => {
+            if pos < 2 {
+                OperandClass::Other
+            } else {
+                OperandClass::ResultRef
+            }
+        }
+        AsyncWait { .. } => OperandClass::Other,
+        Trap { .. } => {
+            if pos == 0 {
+                OperandClass::ResultRef
+            } else {
+                OperandClass::Other
+            }
+        }
+        Resume { .. } => OperandClass::Other,
+        IndirectDispatch { .. } => OperandClass::Other,
+        Call { .. } => OperandClass::ResultRef,
+        OpaqueExpr(..) | OpaqueNode(..) => OperandClass::ResultRef,
+        LoopCarrierInit { .. } | LoopCarrier { .. } | LoopCarrierEnd { .. } => {
+            OperandClass::ResultRef
+        }
+    }
+}
+
+/// True when `kind.operands[pos]` is a result-id reference in the lowered
+/// kernel SSA namespace.
+///
+/// A shorthand for the [`OperandClass::ResultRef`] case of
+/// [`classify_operand`], for callers that only need data dependencies and
+/// have no use for the literal-pool and child-body distinctions.
+#[must_use]
+pub fn operand_is_result_reference(kind: &KernelOpKind, pos: usize) -> bool {
+    matches!(classify_operand(kind, pos), OperandClass::ResultRef)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn operand_classifier_separates_indices_from_result_ids() {
+        assert!(!operand_is_result_reference(&KernelOpKind::Literal, 0));
+        assert!(!operand_is_result_reference(&KernelOpKind::LoadGlobal, 0));
+        assert!(operand_is_result_reference(&KernelOpKind::LoadGlobal, 1));
+        assert!(!operand_is_result_reference(
+            &KernelOpKind::StructuredForLoop {
+                loop_var: "i".into(),
+            },
+            2,
+        ));
+        assert!(operand_is_result_reference(
+            &KernelOpKind::StructuredForLoop {
+                loop_var: "i".into(),
+            },
+            1,
+        ));
+        assert!(operand_is_result_reference(
+            &KernelOpKind::AsyncStore { tag: "copy".into() },
+            2,
+        ));
+        assert!(!operand_is_result_reference(
+            &KernelOpKind::IndirectDispatch { count_offset: 0 },
+            0,
+        ));
+    }
+}

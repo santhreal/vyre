@@ -36,6 +36,7 @@ pub mod audit;
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod artifact_golden;
 mod canonicalize;
+pub(crate) mod dce_purity;
 pub mod descriptor;
 /// Fixture builders for kernel descriptors. Every consumer is a test, so this
 /// is not part of the shipped surface: enable `test-fixtures` to reach it.
@@ -44,10 +45,10 @@ pub mod descriptor_builder;
 pub mod emit_adversarial_corpus;
 pub mod error;
 mod lower;
-pub(crate) mod op_properties;
-pub mod operand_semantics;
+pub mod operand_class;
 pub mod pattern_audit;
-mod pre_emit;
+pub(crate) mod result_id_remap;
+mod verified_lowering;
 /// Backend-neutral `Program` corpus shared by byte-stability goldens.
 /// Test-only, like `descriptor_builder`: enable `test-fixtures` to reach it.
 #[cfg(any(test, feature = "test-fixtures"))]
@@ -242,11 +243,11 @@ pub use descriptor::{
     TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
 };
 pub use error::LowerError;
-pub use pre_emit::{lower_verified, LowerVerifiedError, VerifiedLowering};
 pub use target::{
     required_subgroup_capabilities, validate_workgroup_size, EmissionTargetCapabilities,
     SubgroupCapabilities, WorkgroupLimitViolation, WorkgroupLimits,
 };
+pub use verified_lowering::{lower_verified, LowerVerifiedError, VerifiedLowering};
 /// Re-exported so consumers matching/constructing `KernelOpKind::SubgroupReduce`
 /// can name the reduction operator without depending on `vyre-foundation`.
 pub use vyre_foundation::ir::SubgroupReduceOp;
