@@ -23,6 +23,15 @@
 # vyre-primitives and vyre-libs sit at their measured values but not at a floor:
 # the iterative-solver and CSR traversal builders in vyre-primitives duplicate
 # against their vyre-libs dispatch partners, and neither side owns the shape yet.
+#
+# Eleven of vyre-primitives' lines are deliberate and cannot be collapsed.
+# `vyre_primitives::types::linear_check::LinearDiscipline` and
+# `vyre_foundation::ir::LinearType` declare the same four substructural
+# disciplines and the same `forbids_drop` / `forbids_reuse` predicates. The
+# primitive layer builds with no IR dependency at all, since the
+# `vyre-foundation` edge is optional and absent under `--no-default-features`,
+# and a foundation-layer crate cannot import from the primitives layer, so
+# neither direction has a legal owner. The pair is pinned, not fixed.
 
 [[crate]]
 name = "conform"
@@ -121,8 +130,8 @@ total_lines = 1139
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 4350
-total_lines = 94924
+duplicate_lines = 4342
+total_lines = 95039
 
 [[crate]]
 name = "vyre-frontend-rust"
@@ -136,7 +145,7 @@ total_lines = 3383
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 11475
+duplicate_lines = 11451
 total_lines = 187477
 
 [[crate]]
@@ -161,7 +170,7 @@ total_lines = 3599
 
 [[crate]]
 name = "vyre-primitives"
-duplicate_lines = 7000
+duplicate_lines = 7008
 total_lines = 102012
 
 [[crate]]
