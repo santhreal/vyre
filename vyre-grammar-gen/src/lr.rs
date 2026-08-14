@@ -144,8 +144,11 @@ impl LrBuilder {
     }
 }
 
+/// The one test grammar for the table pack/decode contract: `S -> A B` over
+/// terminals A=0, B=1, EOF=2. Shared so a wire round trip and a table
+/// validation cannot disagree about the table they exercise.
 #[cfg(test)]
-fn sample_alternating_grammar() -> LrTable {
+pub(crate) fn sample_alternating_grammar() -> LrTable {
     // `S -> A B` over terminals A=0, B=1, EOF=2. This test-only grammar keeps
     // the table pack/decode contract exercised without pretending to be C11.
     let mut b = LrBuilder::new(4, 3, 1);

@@ -167,9 +167,7 @@ fn release_runbook_exemption_does_not_leak_to_neighbouring_docs() {
 #[test]
 fn release_runbook_exemption_never_covers_rust_source() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir
-        .path()
-        .join("vyre-pass-engine/src/integration/release");
+    let src = dir.path().join("vyre-pass-engine/src/integration/release");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("launch.rs"),

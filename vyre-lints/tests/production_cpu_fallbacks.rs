@@ -52,20 +52,50 @@ fn cli_rejects_missing_production_root() {
     );
 }
 
+/// Default roots the CLI declares for `flag`, asked of the binary rather than
+/// restated here. A copy of the list would pass while naming roots the CLI no
+/// longer scans.
+fn declared_default_roots(flag: &str) -> Vec<String> {
+    let output = Command::new(env!("CARGO_BIN_EXE_vyre-lints"))
+        .arg(flag)
+        .arg("--print-default-roots")
+        .output()
+        .expect("run vyre-lints");
+    assert!(
+        output.status.success(),
+        "printing default roots must not scan or fail: stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
 #[test]
 fn cli_default_production_roots_are_vyre_owned_only() {
+    let roots = declared_default_roots("--check-production-cpu-fallbacks");
+    assert!(
+        !roots.is_empty(),
+        "a lint that declares no default root scans nothing"
+    );
+
+    for root in &roots {
+        let crate_dir = root
+            .split('/')
+            .next()
+            .expect("a root always has a first component");
+        assert!(
+            crate_dir == "vyre" || crate_dir.starts_with("vyre-"),
+            "default production root `{root}` sits outside the Vyre workspace, so a \
+             default scan would need an external consumer checkout"
+        );
+    }
+
     let dir = tempfile::tempdir().expect("tempdir");
-    for root in [
-        "vyre-aot/src",
-        "vyre/src",
-        "vyre-driver/src",
-        "vyre-driver-cuda/src",
-        "vyre-driver-wgpu/src",
-        "vyre-libs/src",
-        "vyre-lower/src",
-        "vyre-runtime/src",
-        "vyre-pass-engine/src",
-    ] {
+    for root in &roots {
         fs::create_dir_all(dir.path().join(root)).expect("create default production root");
     }
 
@@ -78,7 +108,7 @@ fn cli_default_production_roots_are_vyre_owned_only() {
 
     assert!(
         output.status.success(),
-        "Vyre default production roots must not require external consumer checkouts: stderr={}",
+        "the roots the CLI declares must be exactly the roots it requires: stderr={}",
         String::from_utf8_lossy(&output.stderr)
     );
     assert_eq!(

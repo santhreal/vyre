@@ -1,20 +1,9 @@
 //! Test: descriptor diff tests.
 use vyre_debug::descriptor_diff::diff_descriptors;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
-fn minimal_program() -> Program {
-    let buffer =
-        BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(16);
-    Program::wrapped(
-        vec![buffer],
-        [64, 1, 1],
-        vec![Node::Store {
-            buffer: Ident::from("out"),
-            index: Expr::InvocationId { axis: 0 },
-            value: Expr::LitU32(7),
-        }],
-    )
-}
+#[path = "support/mod.rs"]
+mod support;
+use support::minimal_program;
 
 #[test]
 fn diff_descriptors_identical_returns_empty_diff() {

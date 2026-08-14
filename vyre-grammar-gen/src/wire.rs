@@ -305,18 +305,7 @@ fn blake3_128(payload: &[u8]) -> [u8; 16] {
 mod tests {
     use super::*;
     use crate::dfa::DfaBuilder;
-    use crate::lr::{Action, LrBuilder};
-
-    fn test_lr_table() -> LrTable {
-        let mut b = LrBuilder::new(4, 3, 1);
-        let prod_unit = b.add_production(0, 2);
-        b.set_action(0, 0, Action::Shift(1));
-        b.set_action(0, 2, Action::Accept);
-        b.set_action(1, 1, Action::Shift(2));
-        b.set_action(2, 0, Action::Reduce(prod_unit));
-        b.set_action(2, 2, Action::Reduce(prod_unit));
-        b.build()
-    }
+    use crate::lr::sample_alternating_grammar as test_lr_table;
 
     #[test]
     fn lexer_blob_starts_with_magic_and_kind() {

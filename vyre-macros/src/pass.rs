@@ -98,88 +98,115 @@ impl Parse for PassArgs {
     }
 }
 
-pub(crate) fn pass_phase_tokens(value: Option<&LitStr>) -> syn::Result<proc_macro2::TokenStream> {
-    let variant = match value.map(LitStr::value).as_deref() {
-        None | Some("unclassified") => quote! { Unclassified },
-        Some("canonicalization") => quote! { Canonicalization },
-        Some("scalar_algebra") => quote! { ScalarAlgebra },
-        Some("loop") => quote! { Loop },
-        Some("memory") => quote! { Memory },
-        Some("fusion_cse") => quote! { FusionCse },
-        Some("sync") => quote! { Sync },
-        Some("specialization") => quote! { Specialization },
-        Some("cleanup") => quote! { Cleanup },
-        Some("dataflow") => quote! { Dataflow },
-        Some("megakernel") => quote! { Megakernel },
-        Some(_) => {
-            let Some(value) = value else {
-                return Err(syn::Error::new(
-                    proc_macro2::Span::call_site(),
-                    "unsupported pass phase. Fix: pass a string literal phase or omit the attribute.",
-                ));
-            };
-            return Err(syn::Error::new_spanned(
-                value,
-                "unsupported pass phase. Fix: use unclassified, canonicalization, scalar_algebra, loop, memory, fusion_cse, sync, specialization, cleanup, dataflow, or megakernel.",
-            ));
-        }
-    };
-    Ok(quote! { ::vyre::optimizer::PassPhase::#variant })
+/// One pass metadata enum the attribute lowers a string literal into.
+///
+/// The accepted strings, the variants they produce, and the diagnostic that
+/// lists them are one datum. Three hand-written copies of that list used to
+/// exist per enum (the match arms, the error text, and the unit-test case
+/// table), so a new variant could be accepted by the macro and never named by
+/// the diagnostic or reached by a test.
+pub(crate) struct MetadataEnum {
+    /// `vyre_pass` argument this enum is written as.
+    pub(crate) argument: &'static str,
+    /// Enum type name under `::vyre::optimizer`.
+    pub(crate) type_name: &'static str,
+    /// Accepted attribute strings paired with the variant each lowers to. The
+    /// first row is what an omitted argument produces.
+    pub(crate) rows: &'static [(&'static str, &'static str)],
 }
 
-pub(crate) fn boundary_class_tokens(
-    value: Option<&LitStr>,
-) -> syn::Result<proc_macro2::TokenStream> {
-    let variant = match value.map(LitStr::value).as_deref() {
-        None | Some("unknown") => quote! { Unknown },
-        Some("abi_preserving") => quote! { AbiPreserving },
-        Some("abi_changing") => quote! { AbiChanging },
-        Some("backend_aware") => quote! { BackendAware },
-        Some("runtime_aware") => quote! { RuntimeAware },
-        Some("domain_specific") => quote! { DomainSpecific },
-        Some(_) => {
-            let Some(value) = value else {
-                return Err(syn::Error::new(
-                    proc_macro2::Span::call_site(),
-                    "unsupported pass boundary_class. Fix: pass a string literal boundary_class or omit the attribute.",
-                ));
-            };
-            return Err(syn::Error::new_spanned(
-                value,
-                "unsupported pass boundary_class. Fix: use unknown, abi_preserving, abi_changing, backend_aware, runtime_aware, or domain_specific.",
-            ));
+impl MetadataEnum {
+    /// Variant this enum lowers `value` to, or a diagnostic naming every
+    /// accepted string.
+    pub(crate) fn tokens(&self, value: Option<&LitStr>) -> syn::Result<proc_macro2::TokenStream> {
+        let variant = match value {
+            None => self.rows[0].1,
+            Some(literal) => {
+                let text = literal.value();
+                let found = self
+                    .rows
+                    .iter()
+                    .find(|(accepted, _)| *accepted == text)
+                    .map(|(_, variant)| *variant);
+                let Some(variant) = found else {
+                    return Err(syn::Error::new_spanned(
+                        literal,
+                        format!(
+                            "unsupported pass {}. Fix: use {}.",
+                            self.argument,
+                            self.accepted_list()
+                        ),
+                    ));
+                };
+                variant
+            }
+        };
+        let type_ident = syn::Ident::new(self.type_name, proc_macro2::Span::call_site());
+        let variant_ident = syn::Ident::new(variant, proc_macro2::Span::call_site());
+        Ok(quote! { ::vyre::optimizer::#type_ident::#variant_ident })
+    }
+
+    /// Accepted strings in declaration order, as prose for a diagnostic.
+    fn accepted_list(&self) -> String {
+        let mut list = String::new();
+        for (index, (accepted, _)) in self.rows.iter().enumerate() {
+            if index > 0 {
+                list.push_str(", ");
+            }
+            if index + 1 == self.rows.len() && self.rows.len() > 1 {
+                list.push_str("or ");
+            }
+            list.push_str(accepted);
         }
-    };
-    Ok(quote! { ::vyre::optimizer::PassBoundaryClass::#variant })
+        list
+    }
 }
 
-pub(crate) fn cost_model_family_tokens(
-    value: Option<&LitStr>,
-) -> syn::Result<proc_macro2::TokenStream> {
-    let variant = match value.map(LitStr::value).as_deref() {
-        None | Some("unknown") => quote! { Unknown },
-        Some("scalar") => quote! { Scalar },
-        Some("loop") => quote! { Loop },
-        Some("memory") => quote! { Memory },
-        Some("fusion") => quote! { Fusion },
-        Some("sync") => quote! { Sync },
-        Some("dataflow") => quote! { Dataflow },
-        Some("megakernel") => quote! { Megakernel },
-        Some(_) => {
-            let Some(value) = value else {
-                return Err(syn::Error::new(
-                    proc_macro2::Span::call_site(),
-                    "unsupported pass cost_model_family. Fix: pass a string literal cost_model_family or omit the attribute.",
-                ));
-            };
-            return Err(syn::Error::new_spanned(
-                value,
-                "unsupported pass cost_model_family. Fix: use unknown, scalar, loop, memory, fusion, sync, dataflow, or megakernel.",
-            ));
-        }
-    };
-    Ok(quote! { ::vyre::optimizer::CostModelFamily::#variant })
-}
+pub(crate) const PASS_PHASE: MetadataEnum = MetadataEnum {
+    argument: "phase",
+    type_name: "PassPhase",
+    rows: &[
+        ("unclassified", "Unclassified"),
+        ("canonicalization", "Canonicalization"),
+        ("scalar_algebra", "ScalarAlgebra"),
+        ("loop", "Loop"),
+        ("memory", "Memory"),
+        ("fusion_cse", "FusionCse"),
+        ("sync", "Sync"),
+        ("specialization", "Specialization"),
+        ("cleanup", "Cleanup"),
+        ("dataflow", "Dataflow"),
+        ("megakernel", "Megakernel"),
+    ],
+};
+
+pub(crate) const PASS_BOUNDARY_CLASS: MetadataEnum = MetadataEnum {
+    argument: "boundary_class",
+    type_name: "PassBoundaryClass",
+    rows: &[
+        ("unknown", "Unknown"),
+        ("abi_preserving", "AbiPreserving"),
+        ("abi_changing", "AbiChanging"),
+        ("backend_aware", "BackendAware"),
+        ("runtime_aware", "RuntimeAware"),
+        ("domain_specific", "DomainSpecific"),
+    ],
+};
+
+pub(crate) const PASS_COST_MODEL_FAMILY: MetadataEnum = MetadataEnum {
+    argument: "cost_model_family",
+    type_name: "CostModelFamily",
+    rows: &[
+        ("unknown", "Unknown"),
+        ("scalar", "Scalar"),
+        ("loop", "Loop"),
+        ("memory", "Memory"),
+        ("fusion", "Fusion"),
+        ("sync", "Sync"),
+        ("dataflow", "Dataflow"),
+        ("megakernel", "Megakernel"),
+    ],
+};
 
 fn validate_unique_string_literals(field: &str, values: &[LitStr]) -> syn::Result<()> {
     let mut seen = std::collections::BTreeSet::new();
@@ -262,15 +289,15 @@ pub(crate) fn vyre_pass_impl(args: TokenStream, item: TokenStream) -> TokenStrea
     let requires = args.requires;
     let invalidates = args.invalidates;
     let requires_caps = args.requires_caps;
-    let phase = match pass_phase_tokens(args.phase.as_ref()) {
+    let phase = match PASS_PHASE.tokens(args.phase.as_ref()) {
         Ok(tokens) => tokens,
         Err(error) => return error.to_compile_error().into(),
     };
-    let boundary_class = match boundary_class_tokens(args.boundary_class.as_ref()) {
+    let boundary_class = match PASS_BOUNDARY_CLASS.tokens(args.boundary_class.as_ref()) {
         Ok(tokens) => tokens,
         Err(error) => return error.to_compile_error().into(),
     };
-    let cost_model_family = match cost_model_family_tokens(args.cost_model_family.as_ref()) {
+    let cost_model_family = match PASS_COST_MODEL_FAMILY.tokens(args.cost_model_family.as_ref()) {
         Ok(tokens) => tokens,
         Err(error) => return error.to_compile_error().into(),
     };

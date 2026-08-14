@@ -1,40 +1,40 @@
+// Evasion cases for the `raw_ir_in_libs` lint: renames, aliases, cfg tricks,
+// and module names that must not buy an exemption, plus allowlist and
+// determinism behaviour.
+
 use super::*;
 
 #[test]
 fn adversarial_module_named_tests_inside_a_real_module() {
-    let dir = tempfile::tempdir().unwrap();
-    write_lib_file(
-        dir.path(),
+    let v = lint_one(
         "nn/op.rs",
         r#"
-        mod inner {
-            fn build() {
-                let _ = Node::let_bind("a", val());
-            }
-            mod tests {
-                fn t() {
-                    let _ = Node::let_bind("b", val());
-                }
+    mod inner {
+        fn build() {
+            let _ = Node::let_bind("a", val());
+        }
+        mod tests {
+            fn t() {
+                let _ = Node::let_bind("b", val());
             }
         }
-        "#,
+    }
+    "#,
     );
-    let v = lint(dir.path());
-    assert_eq!(v.len(), 2, "module names alone cannot create test exemptions: {v:?}");
+    assert_eq!(
+        v.len(),
+        2,
+        "module names alone cannot create test exemptions: {v:?}"
+    );
 }
-
 
 /// Renaming `Node` at an import site must not hide raw IR construction.
 #[test]
 fn renamed_node_import_is_tracked() {
-    let dir = tempfile::tempdir().unwrap();
-    write_lib_file(
-        dir.path(),
+    let violations = lint_one(
         "nn/renamed.rs",
         "use vyre::ir::Node as N;\nfn build() { let _ = N::let_bind(\"x\", value()); }\n",
     );
-
-    let violations = lint(dir.path());
     assert_eq!(violations.len(), 1);
     assert_eq!(violations[0].kind, ViolationKind::RawNodeConstruction);
 }
@@ -42,14 +42,10 @@ fn renamed_node_import_is_tracked() {
 /// A local type alias must retain the underlying raw IR type identity.
 #[test]
 fn type_alias_for_expr_is_tracked() {
-    let dir = tempfile::tempdir().unwrap();
-    write_lib_file(
-        dir.path(),
+    let violations = lint_one(
         "math/alias.rs",
         "type E = Expr;\nfn build() { let _ = E::u32(7); }\n",
     );
-
-    let violations = lint(dir.path());
     assert_eq!(violations.len(), 1);
     assert_eq!(violations[0].kind, ViolationKind::RawExprConstruction);
 }
@@ -57,30 +53,26 @@ fn type_alias_for_expr_is_tracked() {
 /// A mixed `cfg(any(...))` remains production-reachable and cannot exempt raw IR.
 #[test]
 fn mixed_any_cfg_does_not_create_test_exemption() {
-    let dir = tempfile::tempdir().unwrap();
-    write_lib_file(
-        dir.path(),
-        "nn/mixed_cfg.rs",
-        "#[cfg(any(test, target_os = \"linux\"))]\nfn build() { let _ = Node::let_bind(\"x\", value()); }\n",
+    let violations = lint_one(
+    "nn/mixed_cfg.rs",
+    "#[cfg(any(test, target_os = \"linux\"))]\nfn build() { let _ = Node::let_bind(\"x\", value()); }\n",
     );
-
-    let violations = lint(dir.path());
     assert_eq!(violations.len(), 1);
 }
 
 /// A macro pattern that only reads an IR variant must remain permitted.
 #[test]
 fn macro_pattern_without_construction_is_not_flagged() {
-    let dir = tempfile::tempdir().unwrap();
-    write_lib_file(
-        dir.path(),
+    let violations = lint_one(
         "nn/pattern.rs",
         "macro_rules! classify { (Node::Store { .. }) => { 1 }; }\n",
     );
-
-    let violations = lint(dir.path());
-    assert!(violations.is_empty(), "macro patterns only read IR: {violations:?}");
+    assert!(
+        violations.is_empty(),
+        "macro patterns only read IR: {violations:?}"
+    );
 }
+
 // ============== Allowlist behavior ==============
 
 #[test]
@@ -135,18 +127,4 @@ fn idempotent_two_runs_same_violations() {
     let v1 = lint(dir.path());
     let v2 = lint(dir.path());
     assert_eq!(v1, v2);
-}
-
-#[test]
-fn coverage_assertion_minimum_test_count() {
-    // Per the SEPARATION_AUDIT S0 + adversarial-tests-mandatory bar:
-    // any lint we ship has positive + negative + adversarial coverage.
-    // This test pins the count so removing tests requires explicit
-    // intent.
-    //
-    // 8 positive, 6 negative, 6 adversarial, 1 allowlist, 1 idempotence
-    // = 22 minimum (not counting this self-counter).
-    //
-    // If you rename a test, update this comment.
-    // see other tests in this file
 }

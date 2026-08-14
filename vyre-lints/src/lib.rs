@@ -23,6 +23,7 @@ pub mod module_forks;
 mod paths;
 pub mod production_cpu_fallbacks;
 pub mod raw_ir_in_libs;
+mod scan;
 
 use anyhow::{Context, Result};
 use std::io::Read;
@@ -97,6 +98,68 @@ pub enum ViolationKind {
     GpuSkipGuard,
 }
 
+impl ViolationKind {
+    /// Every kind this crate can report.
+    ///
+    /// The CLI walks this to prove each kind is reported by a registered lint,
+    /// so a kind missing from the list would hide a lint the driver cannot
+    /// reach. [`ViolationKind::position`] is what keeps the list complete: it
+    /// is an exhaustive match, so a new variant does not compile until it is
+    /// listed here too.
+    pub const ALL: &'static [Self] = &[
+        Self::RawNodeConstruction,
+        Self::RawExprConstruction,
+        Self::ProductionCpuFallback,
+        Self::ConsumerCoupling,
+        Self::ModuleFork,
+        Self::GpuSkipGuard,
+    ];
+
+    /// Index of this kind in [`ViolationKind::ALL`].
+    #[must_use]
+    pub fn position(&self) -> usize {
+        match self {
+            Self::RawNodeConstruction => 0,
+            Self::RawExprConstruction => 1,
+            Self::ProductionCpuFallback => 2,
+            Self::ConsumerCoupling => 3,
+            Self::ModuleFork => 4,
+            Self::GpuSkipGuard => 5,
+        }
+    }
+
+    /// Stable machine-readable name used by the CLI's JSON output.
+    #[must_use]
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::RawNodeConstruction => "raw_node_construction",
+            Self::RawExprConstruction => "raw_expr_construction",
+            Self::ProductionCpuFallback => "production_cpu_fallback",
+            Self::ConsumerCoupling => "consumer_coupling",
+            Self::ModuleFork => "module_fork",
+            Self::GpuSkipGuard => "gpu_skip_guard",
+        }
+    }
+}
+
+/// Concatenate one lint's findings over several roots, in source order.
+///
+/// Every `run_*` entry point below repeats this: walk the roots, extend, and
+/// sort by `(file, line)`. Comparing without cloning matters here because the
+/// old form cloned two strings per comparison on a sort that fires on every
+/// audit.
+fn run_over_roots(
+    roots: &[&Path],
+    scan_tree: impl Fn(&Path) -> Result<Vec<Violation>>,
+) -> Result<Vec<Violation>> {
+    let mut all = Vec::new();
+    for root in roots {
+        all.extend(scan_tree(root)?);
+    }
+    all.sort_by(|a, b| a.file.cmp(&b.file).then(a.line.cmp(&b.line)));
+    Ok(all)
+}
+
 /// Run the `raw_ir_in_libs` lint over a directory tree.
 ///
 /// `roots` are crate-root paths (e.g. `vyre-libs/src/`). The allowlist
@@ -111,16 +174,7 @@ pub fn run_raw_ir_in_libs(
         Some(path) => allowlist::load(path)?,
         None => allowlist::Allowlist::empty(),
     };
-    let mut all = Vec::new();
-    for root in roots {
-        all.extend(raw_ir_in_libs::scan_tree(root, &allow)?);
-    }
-    // Compare by (file, line) without cloning either field  -  the old
-    // `(a.file.clone(), a.line).cmp(&(b.file.clone(), b.line))` cloned
-    // two strings per compare (O(N log N) × 2 clones) which is wasted
-    // work on a sort that fires on every audit.
-    all.sort_by(|a, b| a.file.cmp(&b.file).then(a.line.cmp(&b.line)));
-    Ok(all)
+    run_over_roots(roots, |root| raw_ir_in_libs::scan_tree(root, &allow))
 }
 
 /// Run the production CPU fallback guard over selected crate roots.
@@ -129,35 +183,46 @@ pub fn run_raw_ir_in_libs(
 /// execution is allowed in explicit oracle crates and tests, but not in
 /// production dispatch paths.
 pub fn run_production_cpu_fallbacks(roots: &[&Path]) -> Result<Vec<Violation>> {
-    let mut all = Vec::new();
-    for root in roots {
-        all.extend(production_cpu_fallbacks::scan_tree(root)?);
-    }
-    all.sort_by(|a, b| a.file.cmp(&b.file).then(a.line.cmp(&b.line)));
-    Ok(all)
+    run_over_roots(roots, production_cpu_fallbacks::scan_tree)
 }
 
 /// Run the consumer-name coupling guard over platform source/doc roots.
 pub fn run_consumer_coupling(roots: &[&Path]) -> Result<Vec<Violation>> {
-    let mut all = Vec::new();
-    for root in roots {
-        all.extend(consumer_coupling::scan_tree(root)?);
-    }
-    all.sort_by(|a, b| a.file.cmp(&b.file).then(a.line.cmp(&b.line)));
-    Ok(all)
+    run_over_roots(roots, consumer_coupling::scan_tree)
 }
 
 /// Run the same-name module fork scanner over selected authority roots.
+///
+/// Unlike every other lint this one compares roots against each other rather
+/// than scanning each independently, so it cannot go through
+/// [`run_over_roots`]: a fork is only visible when two roots are in scope at
+/// once.
 pub fn run_module_forks(roots: &[&Path]) -> Result<Vec<Violation>> {
     module_forks::scan_roots(roots)
 }
 
 /// Run the GPU skip guard over CUDA/WGPU/runtime source and test roots.
 pub fn run_gpu_skip_guards(roots: &[&Path]) -> Result<Vec<Violation>> {
-    let mut all = Vec::new();
-    for root in roots {
-        all.extend(gpu_skip_guards::scan_tree(root)?);
+    run_over_roots(roots, gpu_skip_guards::scan_tree)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ViolationKind;
+
+    #[test]
+    fn all_lists_every_violation_kind_exactly_once_in_position_order() {
+        for (index, kind) in ViolationKind::ALL.iter().enumerate() {
+            assert_eq!(kind.position(), index, "{kind:?}");
+        }
     }
-    all.sort_by(|a, b| a.file.cmp(&b.file).then(a.line.cmp(&b.line)));
-    Ok(all)
+
+    #[test]
+    fn every_violation_kind_has_a_distinct_machine_name() {
+        let names: std::collections::BTreeSet<_> = ViolationKind::ALL
+            .iter()
+            .map(ViolationKind::as_str)
+            .collect();
+        assert_eq!(names.len(), ViolationKind::ALL.len());
+    }
 }

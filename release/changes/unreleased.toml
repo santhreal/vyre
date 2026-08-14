@@ -839,3 +839,23 @@ text = "The release publish order is derived from the manifests instead of liste
 id = "evidence-path-gate-reads-every-citation"
 category = "Fixed"
 text = "The release-evidence path gate reads every citation in a document rather than one key. It matched the key `path`, which named 629 of the 3418 filesystem paths those artifacts cite; the rest sit under `manifest`, `artifact`, `evidence_link`, `source_artifact`, `workflow` and bare array members, and nine were dead, all naming one crate's manifest after that crate had been folded into another. A citation is now any string with no whitespace whose last component carries an extension the tree itself uses, so the vocabulary extends with the first file of a new kind and never needs an edit here, and version strings, operation ids and schema ids stay out. Reported locations carry the key that holds the citation. The hand-written duplication consolidation scan records the exact command behind each of its findings and was re-measured: `CpuOp` moved to `cpu_op.rs`, and the `Target` it named is no longer in the scanned set."
+
+[[fragments]]
+id = "small-crate-lint-and-fixture-owners"
+category = "Changed"
+text = "The five `vyre-lints` scans share one source walk in `vyre-lints/src/scan.rs`, and the CLI reads a lint registry instead of four near-identical entry points. `ViolationKind` gains `ALL`, `position` and `as_str` so the CLI and the JSON writer read the enum rather than restating it, and a kind that reaches no lint now fails the suite. The CLI reports its declared scan scope under `--print-default-roots`, so the production-root test asserts the property those roots must satisfy instead of restating the list. `raw_ir_in_libs` kept a second workspace-relative path function that disagreed with `vyre-lints/src/paths.rs` on the vyre-libs prefix; it is gone."
+
+[[fragments]]
+id = "small-crate-test-fixture-owners"
+category = "Changed"
+text = "The three `vyre-debug` descriptor and WGSL suites share one program fixture in `vyre-debug/tests/support/mod.rs`. The descriptor a dump renders, the descriptor a diff compares and the WGSL a backend emits are only comparable while their fixtures agree, and the fixture was previously copied byte for byte into each target. `vyre-macros` pass metadata is a table in `vyre-macros/src/pass.rs` rather than three parallel token functions, and the macro test suites take their pass bodies from `vyre-macros/tests/support/mod.rs`."
+
+[[fragments]]
+id = "small-crate-dup-pins-lowered"
+category = "Changed"
+text = "Duplication pins for three crates now record the measured tree: vyre-macros 89 to 41, vyre-lints 66 to 0, vyre-debug 54 to 9. Their total line counts are corrected to the measured values, which were already stale before these changes. A no-op test whose body was a comment claiming to pin a test count is deleted, and the two `raw_ir_in_libs` case files, named for a helper and for one of their own tests, are now named for what they hold."
+
+[[fragments]]
+id = "wire-and-lr-fixtures-have-one-owner"
+category = "Changed"
+text = "The `vyre` facade wire suites share one program fixture in `vyre/tests/support/mod.rs`. The round-trip suite proves a valid program survives an encode and a decode byte for byte and the malformed-wire suite proves hostile bytes never decode into one, so two copies of that program let the two halves of the claim drift. In `vyre-grammar-gen` the LR table the wire round trip exercises is the sample grammar `vyre-grammar-gen/src/lr.rs` already owned, not a second copy of it. Pins lowered to the measured tree: vyre 22 to 0, vyre-grammar-gen 137 to 119."
