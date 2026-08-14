@@ -1,21 +1,20 @@
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 use std::sync::LazyLock;
 
 use vyre_aot::{
     ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile,
     TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, ValueContract,
-    ValueLifetime,
-};
+use vyre_foundation::ir::{BufferAccess, DataType, Program, ValueLifetime};
 use vyre_megakernel::target::{
     compile_selected_modules, EmittedTargetModule, TargetModuleBundle, TargetModuleImage,
 };
-use vyre_megakernel::{
-    compile, CompileRequest, Digest, ExternalFacts, SearchBudget, TargetCompileError,
-    TargetCompiler,
-};
+use vyre_megakernel::{TargetCompileError, TargetCompiler};
+
+#[path = "../../../tests/support/artifact_fixtures.rs"]
+mod artifact_fixtures;
+
+use artifact_fixtures::{compile_graph, contract, graph_over};
 
 pub(crate) const FIXTURE_TARGET_ID: vyre_aot::TargetId =
     vyre_aot::TargetId::expect_valid("fixture-target");
@@ -101,53 +100,33 @@ pub(crate) fn compiled_artifact() -> ArtifactEnvelope {
 }
 
 pub(crate) fn compiled_artifact_with_grid(grid_size: [u32; 3]) -> ArtifactEnvelope {
-    let mut graph = ProgramGraph::new();
-    graph
-        .add_external_value(
-            "params",
-            ValueContract {
-                dtype: DataType::U32,
-                shape: vec![ShapeDim::Known(256)],
-                access: BufferAccess::ReadOnly,
-                lifetime: ValueLifetime::Invocation,
-            },
-        )
-        .unwrap();
-    graph
-        .add_external_value(
-            "out",
-            ValueContract {
-                dtype: DataType::U32,
-                shape: vec![ShapeDim::Known(64)],
-                access: BufferAccess::WriteOnly,
-                lifetime: ValueLifetime::Output,
-            },
-        )
-        .unwrap();
-    graph
-        .add_node(
+    let neutral = compile_graph(
+        graph_over(
             "main",
-            Program::wrapped(
-                vec![
-                    BufferDecl::read("params", 0, DataType::U32).with_count(256),
-                    BufferDecl::output("out", 1, DataType::U32).with_count(64),
-                ],
-                [64, 1, 1],
-                Vec::new(),
-            ),
-            Vec::new(),
-            Vec::new(),
-        )
-        .unwrap();
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
-        1_000_000,
-    )
-    .validate()
-    .unwrap();
-    let neutral = compile(&request).unwrap();
+            [64, 1, 1],
+            &[
+                (
+                    "params",
+                    contract(
+                        DataType::U32,
+                        256,
+                        BufferAccess::ReadOnly,
+                        ValueLifetime::Invocation,
+                    ),
+                ),
+                (
+                    "out",
+                    contract(
+                        DataType::U32,
+                        64,
+                        BufferAccess::WriteOnly,
+                        ValueLifetime::Output,
+                    ),
+                ),
+            ],
+        ),
+        0,
+    );
     let node = neutral.nodes()[0].id;
     let params = neutral
         .resources()

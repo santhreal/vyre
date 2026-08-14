@@ -12,13 +12,12 @@ use vyre_driver::{
 };
 use vyre_foundation::diagnostics::DiagnosticStage;
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, ValueContract,
-    ValueLifetime,
+    BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
-    compile, Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileRequest, Digest,
-    ExternalFacts, SearchBudget, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
-    TargetProfile, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+    Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, Digest, TargetEntryPoint,
+    TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess,
+    TargetResourceBinding, TargetResourceMemory,
 };
 use vyre_runtime::{
     admit_artifact, admit_cached_artifact, admit_envelope, classify_backend_error,
@@ -27,90 +26,28 @@ use vyre_runtime::{
     RetainedArtifactSession, RetryClass,
 };
 
+#[path = "../../tests/support/artifact_fixtures.rs"]
+mod artifact_fixtures;
+
+use artifact_fixtures::{compile_graph, contract, entry_point, graph_over, neutral_artifact};
+
 const FRAME_HEADER_BYTES: usize = 10;
 const FRAME_DIGEST_BYTES: usize = 32;
 const ENVELOPE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-envelope-v2\0";
 const TARGET_PAYLOAD_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-target-payload-v3\0";
 
-fn neutral_artifact(workgroup_size: [u32; 3]) -> Artifact {
-    let mut graph = ProgramGraph::new();
-    graph
-        .add_external_value(
-            "input",
-            ValueContract {
-                dtype: DataType::U32,
-                shape: vec![ShapeDim::Known(8)],
-                access: BufferAccess::ReadOnly,
-                lifetime: ValueLifetime::Invocation,
-            },
-        )
-        .expect("fixture resource must be valid");
-    graph
-        .add_node(
-            "entry",
-            Program::wrapped(
-                vec![BufferDecl::read("input", 0, DataType::U32).with_count(8)],
-                workgroup_size,
-                Vec::new(),
-            ),
-            Vec::new(),
-            Vec::new(),
-        )
-        .expect("fixture node must be valid");
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
-        1_000_000,
-    )
-    .validate()
-    .expect("fixture request must validate");
-    compile(&request).expect("fixture request must compile")
-}
-
 fn resident_queue_artifact() -> Artifact {
-    let mut graph = ProgramGraph::new();
-    let buffers = ["control", "ring_buffer", "debug_log", "io_queue"];
-    for name in buffers {
-        graph
-            .add_external_value(
-                name,
-                ValueContract {
-                    dtype: DataType::U32,
-                    shape: vec![ShapeDim::Known(4)],
-                    access: BufferAccess::ReadWrite,
-                    lifetime: ValueLifetime::Retained,
-                },
-            )
-            .unwrap();
-    }
-    graph
-        .add_node(
-            "queue",
-            Program::wrapped(
-                buffers
-                    .into_iter()
-                    .enumerate()
-                    .map(|(slot, name)| {
-                        BufferDecl::read_write(name, slot as u32, DataType::U32).with_count(4)
-                    })
-                    .collect(),
-                [1, 1, 1],
-                Vec::new(),
-            ),
-            Vec::new(),
-            Vec::new(),
-        )
-        .unwrap();
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
-        1_000_000,
-    )
-    .validate()
-    .unwrap();
-    compile(&request).unwrap()
+    let retained = contract(
+        DataType::U32,
+        4,
+        BufferAccess::ReadWrite,
+        ValueLifetime::Retained,
+    );
+    let values: Vec<(&str, ValueContract)> = ["control", "ring_buffer", "debug_log", "io_queue"]
+        .into_iter()
+        .map(|name| (name, retained.clone()))
+        .collect();
+    compile_graph(graph_over("queue", [1, 1, 1], &values), 0)
 }
 
 fn resident_projection_artifact() -> Artifact {
@@ -125,15 +62,7 @@ fn resident_projection_artifact() -> Artifact {
     );
     let graph = ProgramGraph::from_program("resident-projection", program)
         .expect("resident projection graph must be valid");
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
-        1_000_000,
-    )
-    .validate()
-    .expect("resident projection request must validate");
-    compile(&request).expect("resident projection request must compile")
+    compile_graph(graph, 0)
 }
 
 fn resident_projection_payload(neutral: &Artifact) -> TargetPayload {
@@ -220,23 +149,6 @@ fn profile(identity: &str, generation: u64) -> TargetProfile {
         .expect("fixture profile must be valid")
 }
 
-fn entry() -> TargetEntryPoint {
-    TargetEntryPoint {
-        name: "entry".into(),
-        node: ArtifactNodeId(0),
-        workgroup_size: [8, 1, 1],
-        grid_size: [4, 1, 1],
-        dynamic_shared_bytes: 64,
-        resource_bindings: vec![TargetResourceBinding {
-            resource: ArtifactValueId(0),
-            group: 0,
-            slot: 3,
-            memory: TargetResourceMemory::Global,
-            access: TargetResourceAccess::ReadOnly,
-        }],
-    }
-}
-
 fn payload(neutral: &Artifact, payload_format: TargetPayloadFormat, bytes: &[u8]) -> TargetPayload {
     let generation = u64::from(payload_format.version());
     let profile = profile(payload_format.identity(), generation);
@@ -244,7 +156,7 @@ fn payload(neutral: &Artifact, payload_format: TargetPayloadFormat, bytes: &[u8]
         neutral,
         payload_format,
         profile,
-        vec![entry()],
+        vec![entry_point()],
         bytes.to_vec(),
     )
     .expect("fixture payload must be valid")

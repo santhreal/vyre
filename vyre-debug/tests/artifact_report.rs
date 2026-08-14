@@ -1,51 +1,32 @@
 //! Compiler artifact diagnostics preserve authoritative identities and planning evidence.
 
-use std::collections::BTreeMap;
-
-use vyre::compiler::{
-    compile, ArtifactEnvelope, CompileRequest, Digest, ExternalFacts, SearchBudget,
-};
-use vyre::ir::{
-    BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, ValueContract,
-    ValueLifetime,
-};
+use vyre::compiler::ArtifactEnvelope;
 use vyre_debug::ArtifactReport;
+use vyre_foundation::ir::{BufferAccess, DataType, ValueLifetime};
+
+#[path = "../../tests/support/artifact_fixtures.rs"]
+mod artifact_fixtures;
+
+use artifact_fixtures::{compile_graph, contract, graph_over};
 
 #[test]
 fn report_round_trips_compiler_owned_identity_plan_and_abi() {
-    let mut graph = ProgramGraph::new();
-    graph
-        .add_external_value(
-            "out",
-            ValueContract {
-                dtype: DataType::U32,
-                shape: vec![ShapeDim::Known(4)],
-                access: BufferAccess::WriteOnly,
-                lifetime: ValueLifetime::Output,
-            },
-        )
-        .unwrap();
-    graph
-        .add_node(
+    let artifact = compile_graph(
+        graph_over(
             "main",
-            Program::wrapped(
-                vec![BufferDecl::output("out", 0, DataType::U32).with_count(4)],
-                [4, 1, 1],
-                Vec::new(),
-            ),
-            Vec::new(),
-            Vec::new(),
-        )
-        .unwrap();
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([7; 32]), BTreeMap::new()),
-        SearchBudget::new(1, 1, 1, 0, 1_000_000),
-        1_000_000,
-    )
-    .validate()
-    .unwrap();
-    let artifact = compile(&request).unwrap();
+            [4, 1, 1],
+            &[(
+                "out",
+                contract(
+                    DataType::U32,
+                    4,
+                    BufferAccess::WriteOnly,
+                    ValueLifetime::Output,
+                ),
+            )],
+        ),
+        7,
+    );
     let envelope = ArtifactEnvelope::new(artifact.clone());
     let bytes = envelope.to_bytes().unwrap();
 
