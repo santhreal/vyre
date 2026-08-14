@@ -809,3 +809,23 @@ text = "The duplication baseline pins for vyre-reference and vyre-spec now recor
 id = "duplication-pins-lowered-to-the-merged-tree"
 category = "Changed"
 text = "Twelve duplication pins now sit at what the merged tree measures rather than at what each lane measured in isolation: vyre 40 to 22, vyre-aot 54 to 31, vyre-debug 71 to 54, vyre-driver-cuda 3252 to 3238, vyre-driver-wgpu 4229 to 4017, vyre-foundation 5125 to 5117, vyre-libs 11759 to 11539, vyre-megakernel 60 to 8, vyre-primitives 7145 to 7038, vyre-runtime 412 to 345, vyre-pass-engine 299 to 288. Duplication is measured across files, so collapsing a copy in one crate moves every crate that shared it: vyre-megakernel lost 52 lines it never edited, and vyre-primitives lost 107. A pin left at the isolated measurement would have carried that slack as headroom for the next copy. `total_lines` is measured too, not carried forward, because a stale total makes the ratio it exists to report meaningless."
+
+[[fragments]]
+id = "bench-megakernel-resident-queue-has-one-owner"
+category = "Changed"
+text = "The resident work-queue buffer set the megakernel benchmark cases dispatch over has one owner, `vyre-bench/src/cases/resident_queue.rs`. Each of the three cases carried its own copy of the four-buffer control/ring/debug/io encoding, its own post-dispatch transfer accounting and its own resident-pool metric point. Each case keeps what it measures: its own ring builder, its own CPU reference, and its own grid override, because the latency case drains a single workgroup while the condition case drives the full grid and that difference is the measurement."
+
+[[fragments]]
+id = "bench-timed-cpu-reference-has-one-owner"
+category = "Fixed"
+text = "The timed CPU reference in `vyre-bench` has one owner, `vyre-bench/src/cases/reference_sample.rs`, and it saturates. Eleven cases hand-rolled the same timer and seven of them cast `Duration::as_nanos()` straight to `u64`, so a reference slower than roughly 18 seconds was reported as a small number instead of a large one, inverting the speedup it was compared against."
+
+[[fragments]]
+id = "bench-foundation-micro-cases-have-one-owner"
+category = "Changed"
+text = "The seven `foundation.*` micro benchmark cases are rows on one owner, `vyre-bench/src/cases/micro.rs`, which states the program, fixture, reference and work accounting each case differs in and nothing else. `gpu_case.rs` is absorbed into it, and its metric sweep now covers both work-accounting arms across every lane rather than one."
+
+[[fragments]]
+id = "bench-dup-pin-lowered"
+category = "Changed"
+text = "The vyre-bench duplication pin records the measured tree: 2485 to 2179 duplicated lines, with total_lines corrected from 37430 to the measured 37504."
