@@ -12,32 +12,16 @@
 //! output words) was never executed. A missing `allow_mask` gate, a dropped
 //! `dst < node_count` bound, or a non-atomic OR (lost bit when two source lanes
 //! set the same output word) all diverge here.
-//!
-//! Grid note: the interpreter infers its grid from the largest buffer; the
-//! node-indexed lanes must all fire, so we pass a `node_count` dispatch FLOOR
-//! (the `pg_edge_offsets` buffer is always `node_count + 1` and already forces
-//! this, the floor makes it explicit and robust to sparse graphs). The
-//! per-lane `src < node_count` guard drops any over-fire.
 #![forbid(unsafe_code)]
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
 
+mod graph_sweep_support;
+use graph_sweep_support::{bitset_words, frontier_step_out, generated_csr_multi_source_frontier};
+
 use proptest::prelude::*;
 use vyre_primitives::graph::csr_forward_traverse::{cpu_ref, csr_forward_traverse};
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
-use vyre_reference::value::Value;
 
-fn bitset_words(node_count: u32) -> usize {
-    vyre_primitives::bitset::bitset_words(node_count) as usize
-}
-
-/// Drive the real forward-step IR through `reference_eval` and return the
-/// `frontier_out` word bitset.
-///
-/// Buffer binding order (all non-workgroup): pg_nodes(0), pg_edge_offsets(1),
-/// pg_edge_targets(2), pg_edge_kind_mask(3), pg_node_tags(4), frontier_in(5),
-/// frontier_out(6, the only ReadWrite buffer, fed a zeroed slot). The single
-/// returned writable buffer is frontier_out.
+/// Drive the real forward-step IR and return the `frontier_out` word bitset.
 fn gpu_forward_step(
     node_count: u32,
     edge_offsets: &[u32],
@@ -46,75 +30,14 @@ fn gpu_forward_step(
     frontier_in: &[u32],
     allow_mask: u32,
 ) -> Vec<u32> {
-    let edge_count = *edge_offsets
-        .last()
-        .expect("offsets has node_count+1 entries");
-    let program = csr_forward_traverse(
-        ProgramGraphShape::new(node_count, edge_count),
-        "frontier_in",
-        "frontier_out",
+    frontier_step_out(
+        csr_forward_traverse,
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_in,
         allow_mask,
-    );
-    let padded_edges = edge_count.max(1) as usize;
-    let mut targets = edge_targets.to_vec();
-    targets.resize(padded_edges, 0);
-    let mut kind_mask = edge_kind_mask.to_vec();
-    kind_mask.resize(padded_edges, 0);
-    let node_tags = vec![0u32; node_count as usize];
-    let nodes = vec![0u32; node_count as usize];
-    let words = bitset_words(node_count);
-
-    let outputs = vyre_reference::reference_eval_with_dispatch(
-        &program,
-        &[
-            Value::from(pack(&nodes)),             // pg_nodes
-            Value::from(pack(edge_offsets)),       // pg_edge_offsets
-            Value::from(pack(&targets)),           // pg_edge_targets
-            Value::from(pack(&kind_mask)),         // pg_edge_kind_mask
-            Value::from(pack(&node_tags)),         // pg_node_tags
-            Value::from(pack(frontier_in)),        // frontier_in
-            Value::from(pack(&vec![0u32; words])), // frontier_out
-        ],
-        node_count, // dispatch floor: one lane per source node
-    )
-    .expect("csr_forward_traverse reference evaluation must succeed");
-    unpack(&outputs[0].to_bytes())
-}
-
-/// Random monotonic CSR layout, random per-edge kind masks, a random multi-node
-/// frontier, and a random allow_mask so the kind-intersect branch fires both
-/// ways.
-fn generated_case(seed: u64) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>, u32) {
-    let mut rng = seed;
-    let mut next = || {
-        rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1);
-        (rng >> 32) as u32
-    };
-    let node_count = 1 + next() % 96;
-    let mut offsets = Vec::with_capacity(node_count as usize + 1);
-    let mut targets = Vec::new();
-    let mut kind_mask = Vec::new();
-    offsets.push(0u32);
-    for _ in 0..node_count {
-        let degree = next() % 7;
-        for _ in 0..degree {
-            targets.push(next() % node_count);
-            kind_mask.push(1u32 << (next() % 5)); // one of 5 edge kinds
-        }
-        offsets.push(targets.len() as u32);
-    }
-    let words = bitset_words(node_count);
-    let mut frontier = vec![0u32; words];
-    for src in 0..node_count {
-        if next() & 1 == 0 {
-            frontier[(src / 32) as usize] |= 1u32 << (src % 32);
-        }
-    }
-    // allow_mask drawn to sometimes filter a subset of kinds (never trivially 0,
-    // which would empty every frontier and make the test vacuous).
-    let allow_mask = 1u32 << (next() % 5) | 1u32 << (next() % 5);
-    (
-        node_count, offsets, targets, kind_mask, frontier, allow_mask,
     )
 }
 
@@ -123,7 +46,8 @@ proptest! {
 
     #[test]
     fn ir_matches_cpu_ref_over_random_graphs(seed in any::<u64>()) {
-        let (node_count, offsets, targets, kind_mask, frontier, allow_mask) = generated_case(seed);
+        let (node_count, offsets, targets, kind_mask, frontier, allow_mask) =
+            generated_csr_multi_source_frontier(seed);
         let expected = cpu_ref(node_count, &offsets, &targets, &kind_mask, &frontier, allow_mask);
         let got = gpu_forward_step(node_count, &offsets, &targets, &kind_mask, &frontier, allow_mask);
         prop_assert_eq!(
