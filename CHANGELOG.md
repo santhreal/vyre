@@ -96,6 +96,14 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Changed
 
+- The three emitter pattern-audit reports no longer carry inherent copies of
+  the `PatternAudit` methods they already inherit. `NagaAuditReport` and
+  `PtxAuditReport` drop `total_candidates`, `has_any`, `format_short`, and
+  `is_clean`; `SpirvAuditReport` drops `total_findings`, `requires_action`,
+  `format_short`, and `is_clean`. Each forwarded to the trait, and the three
+  that shared a name with the trait method shadowed it. Callers import
+  `vyre_lower::pattern_audit::PatternAudit` and use `finding_count` and
+  `has_any`.
 - Public API snapshots for `vyre-debug`, `vyre-driver`, `vyre-driver-cuda`,
   `vyre-emit-naga`, `vyre-emit-ptx`, `vyre-emit-spirv`, and `vyre-libs` now
   match their live surfaces. `vyre-debug` drops the `scan_explain` report,

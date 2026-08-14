@@ -12,12 +12,8 @@ pub fn vyre_emit_spirv::emit_from_naga_module(module: &naga::ir::Module) -> core
 pub fn vyre_emit_spirv::emit_with_capabilities(desc: &vyre_lower::descriptor::KernelDescriptor, target: &vyre_lower::target::EmissionTargetCapabilities) -> core::result::Result<alloc::vec::Vec<u32>, vyre_emit_spirv::EmitError>
 pub fn vyre_emit_spirv::patterns::SpirvAuditReport::finding_count(&self) -> usize
 pub fn vyre_emit_spirv::patterns::SpirvAuditReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_emit_spirv::patterns::SpirvAuditReport::format_short(&self) -> alloc::string::String
-pub fn vyre_emit_spirv::patterns::SpirvAuditReport::is_clean(&self) -> bool
 pub fn vyre_emit_spirv::patterns::SpirvAuditReport::kernel_id(&self) -> &str
 pub fn vyre_emit_spirv::patterns::SpirvAuditReport::merge(&mut self, other: vyre_emit_spirv::patterns::SpirvAuditReport)
-pub fn vyre_emit_spirv::patterns::SpirvAuditReport::requires_action(&self) -> bool
-pub fn vyre_emit_spirv::patterns::SpirvAuditReport::total_findings(&self) -> usize
 pub fn vyre_emit_spirv::patterns::SpirvAuditReport::write_breakdown(&self, out: &mut dyn core::fmt::Write) -> core::fmt::Result
 pub fn vyre_emit_spirv::patterns::SpirvAuditReport::write_target_tag(&self, out: &mut dyn core::fmt::Write) -> core::fmt::Result
 pub fn vyre_emit_spirv::patterns::SpirvAuditReport::zero() -> Self

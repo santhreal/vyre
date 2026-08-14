@@ -33,12 +33,8 @@ pub fn vyre_emit_ptx::emit_with_options(desc: &vyre_lower::descriptor::KernelDes
 pub fn vyre_emit_ptx::emit_with_target(desc: &vyre_lower::descriptor::KernelDescriptor, target: vyre_emit_ptx::ComputeCapability) -> core::result::Result<alloc::string::String, vyre_emit_ptx::EmitError>
 pub fn vyre_emit_ptx::patterns::PtxAuditReport::finding_count(&self) -> usize
 pub fn vyre_emit_ptx::patterns::PtxAuditReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_emit_ptx::patterns::PtxAuditReport::format_short(&self) -> alloc::string::String
-pub fn vyre_emit_ptx::patterns::PtxAuditReport::has_any(&self) -> bool
-pub fn vyre_emit_ptx::patterns::PtxAuditReport::is_clean(&self) -> bool
 pub fn vyre_emit_ptx::patterns::PtxAuditReport::kernel_id(&self) -> &str
 pub fn vyre_emit_ptx::patterns::PtxAuditReport::merge(&mut self, other: vyre_emit_ptx::patterns::PtxAuditReport)
-pub fn vyre_emit_ptx::patterns::PtxAuditReport::total_candidates(&self) -> usize
 pub fn vyre_emit_ptx::patterns::PtxAuditReport::write_breakdown(&self, out: &mut dyn core::fmt::Write) -> core::fmt::Result
 pub fn vyre_emit_ptx::patterns::PtxAuditReport::write_target_tag(&self, out: &mut dyn core::fmt::Write) -> core::fmt::Result
 pub fn vyre_emit_ptx::patterns::PtxAuditReport::zero() -> Self

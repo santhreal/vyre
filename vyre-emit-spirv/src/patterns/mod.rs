@@ -16,6 +16,9 @@ use vyre_lower::{KernelDescriptor, SubgroupCapabilities};
 /// Unified SPIR-V-side pattern audit. Runs every shipped SPIR-V
 /// pattern against the descriptor and bundles the reports. Mirror of
 /// `vyre_emit_naga::patterns::audit` and `vyre_emit_ptx::patterns::audit`.
+///
+/// Finding totals, the clean/any predicates, and the one-line summary come
+/// from [`PatternAudit`]; import that trait to reach them.
 #[must_use]
 pub fn audit(desc: &KernelDescriptor) -> SpirvAuditReport {
     SpirvAuditReport {
@@ -69,29 +72,6 @@ impl SpirvAuditReport {
             + usize::from(caps.ballot)
             + usize::from(caps.shuffle)
             + usize::from(caps.arithmetic)
-    }
-
-    /// True iff at least one subgroup capability needs to be enabled
-    /// OR at least one workgroup-size violation must be addressed.
-    /// Both signals matter for pipeline construction.
-    pub fn requires_action(&self) -> bool {
-        PatternAudit::has_any(self)
-    }
-
-    /// Number of distinct findings across both patterns.
-    pub fn total_findings(&self) -> usize {
-        PatternAudit::finding_count(self)
-    }
-
-    /// One-line human-readable summary suitable for log lines.
-    pub fn format_short(&self) -> String {
-        PatternAudit::format_short(self)
-    }
-
-    /// True iff no SPIR-V-specific findings  -  no required capabilities,
-    /// no workgroup-size violations.
-    pub fn is_clean(&self) -> bool {
-        PatternAudit::is_clean(self)
     }
 
     /// Identity element for `merge`  -  no required caps, no
@@ -151,15 +131,15 @@ mod audit_tests {
         let desc = descriptor("empty").dispatch(64, 1, 1).build();
         let report = audit(&desc);
         assert_eq!(report.kernel_id, "empty");
-        assert_eq!(report.total_findings(), 0);
-        assert!(!report.requires_action());
+        assert_eq!(report.finding_count(), 0);
+        assert!(!report.has_any());
     }
 
     #[test]
     fn oversized_workgroup_shows_in_audit() {
         let desc = descriptor("huge").dispatch(2048, 1, 1).build();
         let report = audit(&desc);
-        assert!(report.requires_action());
+        assert!(report.has_any());
         assert!(!report.workgroup_validation.violations.is_empty());
     }
 
@@ -193,7 +173,7 @@ mod audit_tests {
             .body(body().op(op(KernelOpKind::SubgroupBallot, [0], 0)))
             .build();
         let report = audit(&desc);
-        assert!(report.requires_action());
+        assert!(report.has_any());
         assert!(report.subgroup.capabilities.ballot);
     }
 }

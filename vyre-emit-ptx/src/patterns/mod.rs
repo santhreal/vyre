@@ -27,6 +27,9 @@ use crate::ComputeCapability;
 ///
 /// `target` controls capability-gated patterns (tensor cores require
 /// sm_70+; ldmatrix.cp.async requires sm_80+).
+///
+/// Finding totals, the clean/any predicates, and the one-line summary come
+/// from [`PatternAudit`]; import that trait to reach them.
 #[must_use]
 pub fn audit(desc: &KernelDescriptor, target: ComputeCapability) -> PtxAuditReport {
     PtxAuditReport {
@@ -43,8 +46,8 @@ pub fn audit(desc: &KernelDescriptor, target: ComputeCapability) -> PtxAuditRepo
 
 /// Combined PTX-pattern report. One `pub` field per shipped pattern.
 /// Callers can drill into individual reports for details, or use
-/// `total_candidates()` for a single-number "is anything actionable"
-/// signal.
+/// `PatternAudit::finding_count` for a single-number "is anything
+/// actionable" signal.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PtxAuditReport {
     /// Stable kernel identifier.
@@ -100,27 +103,6 @@ impl PatternAudit for PtxAuditReport {
 }
 
 impl PtxAuditReport {
-    /// Sum of actionable findings across all patterns. `0` means no
-    /// PTX-specific optimizations apply to this kernel.
-    pub fn total_candidates(&self) -> usize {
-        PatternAudit::finding_count(self)
-    }
-
-    /// Whether any pattern fired.
-    pub fn has_any(&self) -> bool {
-        PatternAudit::has_any(self)
-    }
-
-    /// One-line human-readable summary suitable for log lines.
-    pub fn format_short(&self) -> String {
-        PatternAudit::format_short(self)
-    }
-
-    /// True iff no PTX-specific optimization opportunities found.
-    pub fn is_clean(&self) -> bool {
-        PatternAudit::is_clean(self)
-    }
-
     /// Identity element for [`Self::merge`]  -  empty report. The `target`
     /// defaults to SM_70 (the broadest-compatibility floor); merging
     /// reports with different targets is allowed but the aggregate
@@ -197,7 +179,7 @@ mod tests {
         let desc = descriptor("empty").build();
         let report = audit(&desc, ComputeCapability::SM_70);
         assert_eq!(report.kernel_id, "empty");
-        assert_eq!(report.total_candidates(), 0);
+        assert_eq!(report.finding_count(), 0);
         assert!(!report.has_any());
     }
 
@@ -220,7 +202,7 @@ mod tests {
         let report = audit(&desc, ComputeCapability::SM_70);
         assert!(report.has_any());
         assert_eq!(report.vec_load.candidates.len(), 1);
-        assert_eq!(report.total_candidates(), 1);
+        assert_eq!(report.finding_count(), 1);
     }
 
     #[test]
@@ -231,7 +213,7 @@ mod tests {
         let desc = descriptor("k").dispatch(64, 1, 1).build();
         acc.merge(audit(&desc, ComputeCapability::SM_70));
         acc.merge(audit(&desc, ComputeCapability::SM_70));
-        assert_eq!(acc.total_candidates(), 0);
+        assert_eq!(acc.finding_count(), 0);
     }
 
     #[test]

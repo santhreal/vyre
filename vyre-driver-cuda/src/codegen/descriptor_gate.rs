@@ -1,6 +1,7 @@
 //! Descriptor-level validation and analysis before concrete CUDA PTX emission.
 
 use vyre_foundation::ir::Program;
+use vyre_lower::pattern_audit::PatternAudit;
 
 pub(crate) fn validate_and_analyze(
     program: &Program,
