@@ -37,6 +37,9 @@ use vyre_primitives::matching::CompiledDfa;
 
 use crate::region::wrap_anonymous;
 use crate::scan::builders::append_match;
+use crate::scan::classic_ac::bounded_ranges::{
+    output_record_loop_node, pattern_bitset_or_node, presence_bit_write_node,
+};
 #[cfg(test)]
 use crate::scan::regex_anchored_window::canonicalize_leftmost_longest;
 use crate::scan::regex_anchored_window::AnchoredWindowValidator;
@@ -141,27 +144,10 @@ pub fn fused_region_evidence_program(
     max_pattern_len: u32,
     log2_max_regions: u32,
 ) -> Program {
-    let presence_word = Expr::add(
-        Expr::var("rs_base"),
-        Expr::shr(Expr::var("pattern_id"), Expr::u32(5)),
-    );
-    let presence_bit = Expr::shl(
-        Expr::u32(1),
-        Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
-    );
-    let emit_loop = Node::loop_for(
-        "out_idx",
-        Expr::var("out_begin"),
-        Expr::var("out_end"),
+    let emit_loop = output_record_loop_node(
+        output_records,
         vec![
-            Node::let_bind(
-                "pattern_id",
-                Expr::load(output_records, Expr::var("out_idx")),
-            ),
-            Node::let_bind(
-                "_vyre_presence_prev",
-                Expr::atomic_or(presence, presence_word.clone(), presence_bit.clone()),
-            ),
+            presence_bit_write_node(presence, Some("rs_base")),
             Node::if_then(
                 Expr::ne(
                     Expr::load(position_mask, Expr::var("pattern_id")),
@@ -180,9 +166,10 @@ pub fn fused_region_evidence_program(
                     Expr::load(admission_mask, Expr::var("pattern_id")),
                     Expr::u32(0),
                 ),
-                vec![Node::let_bind(
+                vec![pattern_bitset_or_node(
+                    admission,
+                    Some("rs_base"),
                     "_vyre_admission_prev",
-                    Expr::atomic_or(admission, presence_word, presence_bit),
                 )],
             ),
         ],

@@ -34,7 +34,7 @@ use vyre_primitives::matching::CompiledDfa;
 use crate::region::wrap_anonymous;
 use crate::scan::classic_ac::bounded_ranges::{
     ac_output_span_nodes, ac_transition_step_nodes, classic_ac_dfa_buffer_decls,
-    region_search_prologue_nodes,
+    output_record_loop_node, presence_bit_write_node, region_search_prologue_nodes,
 };
 use crate::scan::regex_anchored_window::AnchoredWindowValidator;
 
@@ -216,30 +216,9 @@ pub fn regex_admission_by_region_program(
     max_pattern_len: u32,
     log2_max_regions: u32,
 ) -> Program {
-    let emit_loop = Node::loop_for(
-        "out_idx",
-        Expr::var("out_begin"),
-        Expr::var("out_end"),
-        vec![
-            Node::let_bind(
-                "pattern_id",
-                Expr::load(output_records, Expr::var("out_idx")),
-            ),
-            Node::let_bind(
-                "_vyre_presence_prev",
-                Expr::atomic_or(
-                    presence,
-                    Expr::add(
-                        Expr::var("rs_base"),
-                        Expr::shr(Expr::var("pattern_id"), Expr::u32(5)),
-                    ),
-                    Expr::shl(
-                        Expr::u32(1),
-                        Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
-                    ),
-                ),
-            ),
-        ],
+    let emit_loop = output_record_loop_node(
+        output_records,
+        vec![presence_bit_write_node(presence, Some("rs_base"))],
     );
     let walk_body = anchored_region_walk_body(
         AnchoredRegionWalk {

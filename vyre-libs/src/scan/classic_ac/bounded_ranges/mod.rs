@@ -384,52 +384,28 @@ fn bounded_ranges_scan_nodes(
     max_pattern_len: u32,
     use_subgroup_coalesce: bool,
 ) -> Vec<Node> {
+    let mut per_record = match_span_start_nodes(pattern_lengths);
+    if use_subgroup_coalesce {
+        per_record.extend(append_match_subgroup(
+            matches,
+            match_count,
+            Expr::var("pattern_id"),
+            Expr::var("match_start"),
+            Expr::var("scan_end"),
+            Expr::bool(true),
+        ));
+    } else {
+        per_record.push(append_match(
+            matches,
+            match_count,
+            Expr::var("pattern_id"),
+            Expr::var("match_start"),
+            Expr::var("scan_end"),
+        ));
+    }
     let mut nodes =
         bounded_walk_prologue_nodes(haystack, transitions, output_offsets, max_pattern_len);
-    nodes.push(Node::loop_for(
-        "out_idx",
-        Expr::var("out_begin"),
-        Expr::var("out_end"),
-        {
-            let mut body = vec![
-                Node::let_bind(
-                    "pattern_id",
-                    Expr::load(output_records, Expr::var("out_idx")),
-                ),
-                Node::let_bind(
-                    "pat_len",
-                    Expr::load(pattern_lengths, Expr::var("pattern_id")),
-                ),
-                Node::let_bind(
-                    "match_start",
-                    Expr::select(
-                        Expr::lt(Expr::var("scan_end"), Expr::var("pat_len")),
-                        Expr::u32(0),
-                        Expr::sub(Expr::var("scan_end"), Expr::var("pat_len")),
-                    ),
-                ),
-            ];
-            if use_subgroup_coalesce {
-                body.extend(append_match_subgroup(
-                    matches,
-                    match_count,
-                    Expr::var("pattern_id"),
-                    Expr::var("match_start"),
-                    Expr::var("scan_end"),
-                    Expr::bool(true),
-                ));
-            } else {
-                body.push(append_match(
-                    matches,
-                    match_count,
-                    Expr::var("pattern_id"),
-                    Expr::var("match_start"),
-                    Expr::var("scan_end"),
-                ));
-            }
-            body
-        },
-    ));
+    nodes.push(output_record_loop_node(output_records, per_record));
     nodes
 }
 
@@ -456,31 +432,9 @@ fn bounded_ranges_presence_nodes(
 ) -> Vec<Node> {
     let mut nodes =
         bounded_walk_prologue_nodes(haystack, transitions, output_offsets, max_pattern_len);
-    nodes.push(Node::loop_for(
-        "out_idx",
-        Expr::var("out_begin"),
-        Expr::var("out_end"),
-        vec![
-            Node::let_bind(
-                "pattern_id",
-                Expr::load(output_records, Expr::var("out_idx")),
-            ),
-            // presence[pattern_id >> 5] |= 1u32 << (pattern_id & 31).
-            // Bind the (discarded) previous value so the atomic RMW is emitted
-            // as a side-effecting statement (same idiom as `append_match`'s
-            // `_vyre_match_slot`).
-            Node::let_bind(
-                "_vyre_presence_prev",
-                Expr::atomic_or(
-                    presence,
-                    Expr::shr(Expr::var("pattern_id"), Expr::u32(5)),
-                    Expr::shl(
-                        Expr::u32(1),
-                        Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
-                    ),
-                ),
-            ),
-        ],
+    nodes.push(output_record_loop_node(
+        output_records,
+        vec![presence_bit_write_node(presence, None)],
     ));
     nodes
 }
@@ -521,51 +475,25 @@ fn bounded_ranges_presence_by_region_nodes(
     presence_words: u32,
     log2_max_regions: u32,
 ) -> Vec<Node> {
-    // Region lookup + presence writes, run ONLY when this candidate has matches
-    // (`out_begin < out_end`). `region = largest r with region_starts[r] <= pos`
-    // where `pos = i + region_base` is the GLOBAL byte position: a sharded
-    // dispatch scans a slice with local positions `i` but attributes against the
-    // whole batch's `region_starts` by adding the shard's base offset (0 for the
-    // single-dispatch path). The binary search is fixed-iteration; `select`
-    // evaluates both arms, so the `rs_mid - 1` arm can underflow to u32::MAX on
-    // the rejected branch, it is discarded (rs_mid == 0 only when rs_lo == rs_hi
-    // == 0, where region_starts[0] == 0 <= pos forces the `cond` arm), harmless.
+    // Region lookup + presence writes, gated on this candidate having matches.
+    // `region = largest r with region_starts[r] <= pos` where `pos = i +
+    // region_base` is the GLOBAL byte position: a sharded dispatch scans a slice
+    // with local positions `i` but attributes against the whole batch's
+    // `region_starts` by adding the shard's base offset (0 for the
+    // single-dispatch path).
     let mut region_and_emit =
         region_search_prologue_nodes(region_starts, region_base, presence_words, log2_max_regions);
-    region_and_emit.push(Node::loop_for(
-        "out_idx",
-        Expr::var("out_begin"),
-        Expr::var("out_end"),
-        vec![
-            Node::let_bind(
-                "pattern_id",
-                Expr::load(output_records, Expr::var("out_idx")),
-            ),
-            // presence[rs_base + (pattern_id >> 5)] |= 1u32 << (pattern_id & 31).
-            Node::let_bind(
-                "_vyre_presence_prev",
-                Expr::atomic_or(
-                    presence,
-                    Expr::add(
-                        Expr::var("rs_base"),
-                        Expr::shr(Expr::var("pattern_id"), Expr::u32(5)),
-                    ),
-                    Expr::shl(
-                        Expr::u32(1),
-                        Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
-                    ),
-                ),
-            ),
-        ],
+    region_and_emit.push(output_record_loop_node(
+        output_records,
+        vec![presence_bit_write_node(presence, Some("rs_base"))],
     ));
-
-    let mut nodes =
-        bounded_walk_prologue_nodes(haystack, transitions, output_offsets, max_pattern_len);
-    nodes.push(Node::if_then(
-        Expr::lt(Expr::var("out_begin"), Expr::var("out_end")),
+    bounded_walk_matched_nodes(
+        haystack,
+        transitions,
+        output_offsets,
+        max_pattern_len,
         region_and_emit,
-    ));
-    nodes
+    )
 }
 
 /// The region binary-search PROLOGUE shared by every region-attributed walk in
@@ -651,6 +579,109 @@ pub(in crate::scan) fn region_search_prologue_nodes(
     ]
 }
 
+/// Walk the flat `output_records` span bound by [`ac_output_span_nodes`],
+/// binding `pattern_id` for each record before running `per_record`.
+///
+/// Every AC emit path iterates this one span identically and differs only in
+/// what it does with `pattern_id`, so the record layout is read in one place.
+pub(in crate::scan) fn output_record_loop_node(
+    output_records: &str,
+    per_record: Vec<Node>,
+) -> Node {
+    let mut body = vec![Node::let_bind(
+        "pattern_id",
+        Expr::load(output_records, Expr::var("out_idx")),
+    )];
+    body.extend(per_record);
+    Node::loop_for(
+        "out_idx",
+        Expr::var("out_begin"),
+        Expr::var("out_end"),
+        body,
+    )
+}
+
+/// Set this pattern's bit in a per-pattern bitset:
+/// `bitset[row_base + (pattern_id >> 5)] |= 1u32 << (pattern_id & 31)`.
+///
+/// `row_base` names the per-region row offset bound by
+/// [`region_search_prologue_nodes`]; `None` writes a single batch-wide bitmap.
+/// `prev_binding` receives the previous value, discarded, so the atomic
+/// read-modify-write is emitted as a side-effecting statement, the same idiom as
+/// `append_match`'s `_vyre_match_slot`. Setting the bit is idempotent, which is
+/// what lets concurrent lanes hitting one pattern skip the counter and the
+/// per-hit serialization the triple-append path pays.
+pub(in crate::scan) fn pattern_bitset_or_node(
+    bitset: &str,
+    row_base: Option<&str>,
+    prev_binding: &str,
+) -> Node {
+    let word = Expr::shr(Expr::var("pattern_id"), Expr::u32(5));
+    let word = match row_base {
+        Some(base) => Expr::add(Expr::var(base), word),
+        None => word,
+    };
+    Node::let_bind(
+        prev_binding,
+        Expr::atomic_or(
+            bitset,
+            word,
+            Expr::shl(
+                Expr::u32(1),
+                Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
+            ),
+        ),
+    )
+}
+
+/// [`pattern_bitset_or_node`] into the presence bitmap, under the binding name
+/// every presence builder in `scan/` emits.
+pub(in crate::scan) fn presence_bit_write_node(presence: &str, row_base: Option<&str>) -> Node {
+    pattern_bitset_or_node(presence, row_base, "_vyre_presence_prev")
+}
+
+/// Bind `pat_len` and the match start for the pattern accepted at `scan_end`.
+///
+/// The subtraction is floored at zero: a pattern longer than the window walked
+/// so far would wrap, and the emitted span has to stay inside the haystack.
+pub(in crate::scan) fn match_span_start_nodes(pattern_lengths: &str) -> Vec<Node> {
+    vec![
+        Node::let_bind(
+            "pat_len",
+            Expr::load(pattern_lengths, Expr::var("pattern_id")),
+        ),
+        Node::let_bind(
+            "match_start",
+            Expr::select(
+                Expr::lt(Expr::var("scan_end"), Expr::var("pat_len")),
+                Expr::u32(0),
+                Expr::sub(Expr::var("scan_end"), Expr::var("pat_len")),
+            ),
+        ),
+    ]
+}
+
+/// Bounded walk whose `matched` nodes run only for candidates that accept
+/// (`out_begin < out_end`), so a miss pays the walk and nothing else.
+///
+/// The region-attributed builders gate on this because the region binary search
+/// is pure overhead for a position with no records.
+pub(in crate::scan) fn bounded_walk_matched_nodes(
+    haystack: &str,
+    transitions: &str,
+    output_offsets: &str,
+    max_pattern_len: u32,
+    matched: Vec<Node>,
+) -> Vec<Node> {
+    let mut nodes =
+        bounded_walk_prologue_nodes(haystack, transitions, output_offsets, max_pattern_len);
+    nodes.push(Node::if_then(
+        Expr::lt(Expr::var("out_begin"), Expr::var("out_end")),
+        matched,
+    ));
+    nodes
+}
+
 /// FUSED presence-AND-positions region replay: one bounded-window DFA walk that, at
 /// each accepted candidate, emits BOTH the per-region presence bit (idempotent
 /// `atomic_or`, exactly as [`bounded_ranges_presence_by_region_nodes`]) AND the
@@ -685,79 +716,41 @@ fn bounded_ranges_presence_and_positions_by_region_nodes(
     log2_max_regions: u32,
     first_positioned_pattern_id: u32,
 ) -> Vec<Node> {
-    // Region binary search (identical to the presence-only builder), then ONE
-    // `output_records` loop that emits the region presence bit AND the match triple
-    // per accepted pattern. `pos = i + region_base` is the GLOBAL byte position so a
-    // sharded dispatch attributes against the whole-batch region table; see
-    // [`bounded_ranges_presence_by_region_nodes`] for the underflow-on-rejected-arm
-    // soundness note.
+    // Region binary search, then ONE `output_records` loop that emits the region
+    // presence bit AND the match triple per accepted pattern.
+    let mut positioned = match_span_start_nodes(pattern_lengths);
+    positioned.push(append_match(
+        matches,
+        match_count,
+        Expr::var("pattern_id"),
+        Expr::var("match_start"),
+        Expr::var("scan_end"),
+    ));
     let mut region_and_emit =
         region_search_prologue_nodes(region_starts, region_base, presence_words, log2_max_regions);
-    region_and_emit.push(Node::loop_for(
-        "out_idx",
-        Expr::var("out_begin"),
-        Expr::var("out_end"),
+    region_and_emit.push(output_record_loop_node(
+        output_records,
         vec![
-            Node::let_bind(
-                "pattern_id",
-                Expr::load(output_records, Expr::var("out_idx")),
-            ),
-            // presence[rs_base + (pattern_id >> 5)] |= 1u32 << (pattern_id & 31).
-            Node::let_bind(
-                "_vyre_presence_prev",
-                Expr::atomic_or(
-                    presence,
-                    Expr::add(
-                        Expr::var("rs_base"),
-                        Expr::shr(Expr::var("pattern_id"), Expr::u32(5)),
-                    ),
-                    Expr::shl(
-                        Expr::u32(1),
-                        Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
-                    ),
-                ),
-            ),
-            // (pattern_id, match_start, scan_end) triple append (same format as
-            // the match-emitting scan). No subgroup coalesce: the CUDA backend
-            // can't lower subgroup ops and the dense-hit benefit is the presence
+            presence_bit_write_node(presence, Some("rs_base")),
+            // No subgroup coalesce on the triple append: the CUDA backend cannot
+            // lower subgroup ops and the dense-hit benefit is the presence
             // bitmap's job, not this fused path's.
             Node::if_then(
                 Expr::ge(
                     Expr::var("pattern_id"),
                     Expr::u32(first_positioned_pattern_id),
                 ),
-                vec![
-                    Node::let_bind(
-                        "pat_len",
-                        Expr::load(pattern_lengths, Expr::var("pattern_id")),
-                    ),
-                    Node::let_bind(
-                        "match_start",
-                        Expr::select(
-                            Expr::lt(Expr::var("scan_end"), Expr::var("pat_len")),
-                            Expr::u32(0),
-                            Expr::sub(Expr::var("scan_end"), Expr::var("pat_len")),
-                        ),
-                    ),
-                    append_match(
-                        matches,
-                        match_count,
-                        Expr::var("pattern_id"),
-                        Expr::var("match_start"),
-                        Expr::var("scan_end"),
-                    ),
-                ],
+                positioned,
             ),
         ],
     ));
-
-    let mut nodes =
-        bounded_walk_prologue_nodes(haystack, transitions, output_offsets, max_pattern_len);
-    nodes.push(Node::if_then(
-        Expr::lt(Expr::var("out_begin"), Expr::var("out_end")),
+    bounded_walk_matched_nodes(
+        haystack,
+        transitions,
+        output_offsets,
+        max_pattern_len,
         region_and_emit,
-    ));
-    nodes
+    )
 }
 
 /// Build the dispatch Program for a bounded-ranges AC scan over an

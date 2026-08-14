@@ -34,7 +34,9 @@ use vyre_primitives::matching::CompiledDfa;
 
 use crate::region::wrap_anonymous;
 use crate::scan::builders::append_match;
-use crate::scan::classic_ac::bounded_ranges::{ac_output_span_nodes, ac_transition_step_nodes};
+use crate::scan::classic_ac::bounded_ranges::{
+    ac_output_span_nodes, ac_transition_step_nodes, output_record_loop_node,
+};
 
 /// Collapse raw accepting ends to one longest match per `(start, pattern_id)`.
 ///
@@ -304,23 +306,15 @@ pub fn anchored_window_extract_program(
     // starting at the anchored `origin`.
     let mut walk_step = ac_transition_step_nodes(haystack, transitions, Expr::var("step"));
     walk_step.extend(ac_output_span_nodes(output_offsets));
-    walk_step.push(Node::loop_for(
-        "out_idx",
-        Expr::var("out_begin"),
-        Expr::var("out_end"),
-        vec![
-            Node::let_bind(
-                "pattern_id",
-                Expr::load(output_records, Expr::var("out_idx")),
-            ),
-            append_match(
-                matches,
-                match_count,
-                Expr::var("pattern_id"),
-                Expr::var("origin"),
-                Expr::add(Expr::var("step"), Expr::u32(1)),
-            ),
-        ],
+    walk_step.push(output_record_loop_node(
+        output_records,
+        vec![append_match(
+            matches,
+            match_count,
+            Expr::var("pattern_id"),
+            Expr::var("origin"),
+            Expr::add(Expr::var("step"), Expr::u32(1)),
+        )],
     ));
 
     // For one candidate: bound the forward window at

@@ -88,10 +88,6 @@ __pycache__/
 **/GEMINI_HANDOFF_*.md
 **/.audits/
 
-# Local generated adversarial registry closure scratch. Real adversarial tests
-# should be committed under crate-owned test names with specific assertions.
-**/tests/adversarial_registry_closure.rs
-
 # Single private execution queue (STANDARD.md)
 /BACKLOG.md
 

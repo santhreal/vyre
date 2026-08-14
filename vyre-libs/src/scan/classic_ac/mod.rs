@@ -199,15 +199,9 @@ pub fn classic_ac_program(
         ),
     ];
     per_position.extend(ac_output_span_nodes(output_offsets));
-    per_position.push(Node::loop_for(
-        "out_idx",
-        Expr::var("out_begin"),
-        Expr::var("out_end"),
+    per_position.push(bounded_ranges::output_record_loop_node(
+        output_records,
         vec![
-            Node::let_bind(
-                "pattern_id",
-                Expr::load(output_records, Expr::var("out_idx")),
-            ),
             Node::let_bind(
                 "slot",
                 Expr::atomic_add(match_count, Expr::u32(0), Expr::u32(1)),
