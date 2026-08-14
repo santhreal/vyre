@@ -3769,6 +3769,7 @@ dependencies = [
  "thiserror 2.0.19",
  "vyre-foundation",
  "vyre-reference",
+ "vyre-test-support",
 ]
 
 [[package]]

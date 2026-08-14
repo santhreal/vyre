@@ -23,6 +23,7 @@ vyre-reference = { path = "../vyre-reference" }
 # CPU oracle: the official rustc lexer. Test-only differential against the
 # reusable Rust lexer substrate; not a runtime dependency of the frontend.
 rustc_lexer = { workspace = true }
+vyre-test-support = { workspace = true }
 
 [lints]
 workspace = true
