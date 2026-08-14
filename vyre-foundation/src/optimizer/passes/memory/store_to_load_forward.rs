@@ -255,6 +255,7 @@ fn node_reassigns_any_var(node: &Node, vars: &FxHashSet<Ident>) -> bool {
         Node::Loop { body, .. } => body.iter().any(|n| node_reassigns_any_var(n, vars)),
         Node::Block(body) => body.iter().any(|n| node_reassigns_any_var(n, vars)),
         Node::Region { body, .. } => body.iter().any(|n| node_reassigns_any_var(n, vars)),
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => false,
     }
 }
@@ -340,6 +341,7 @@ fn has_forwardable_pair(node: &Node) -> bool {
         }
         Node::Loop { body, .. } | Node::Block(body) => body,
         Node::Region { body, .. } => body.as_ref(),
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => return false,
     };
     body_has_forwardable_pair(body)

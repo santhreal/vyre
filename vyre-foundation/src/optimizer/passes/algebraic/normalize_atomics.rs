@@ -77,6 +77,7 @@ fn node_has_atomic_condition(node: &Node) -> bool {
         }
         Node::Loop { body, .. } | Node::Block(body) => body.iter().any(node_has_atomic_condition),
         Node::Region { body, .. } => body.iter().any(node_has_atomic_condition),
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => false,
     }
 }
@@ -126,6 +127,7 @@ fn rewrite_nodes(nodes: Vec<Node>, state: &mut RewriteState) -> Vec<Node> {
                     body: std::sync::Arc::new(rewrite_nodes(body_vec, state)),
                 });
             }
+            // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
             other => out.push(other),
         }
     }

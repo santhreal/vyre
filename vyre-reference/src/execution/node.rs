@@ -224,6 +224,7 @@ fn execute_node<'a>(
             extension.extension_kind(),
             extension.debug_identity()
         ))),
+        // Unknown variant is refused rather than assumed harmless.
         _ => Err(crate::ReferenceError::new(
             "reference interpreter encountered an unknown Node variant. Fix: update vyre-reference before executing this IR.",
         )),

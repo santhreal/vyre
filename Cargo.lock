@@ -3990,6 +3990,7 @@ name = "vyre-test-support"
 version = "0.7.2"
 dependencies = [
  "tempfile",
+ "vyre-foundation",
 ]
 
 [[package]]

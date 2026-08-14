@@ -215,6 +215,7 @@ fn filter_node(node: &Node, live: &LiveBufferSet<'_>) -> Option<Node> {
             filter_nodes(body, live),
         )),
         Node::Block(nodes) => Some(Node::block(filter_nodes(nodes, live))),
+        // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
         other => Some(other.clone()),
     }
 }

@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use vyre_foundation::ir::{Ident, Node, Program};
 use vyre_foundation::memory_model::MemoryOrdering;
+use vyre_foundation::transform::visit::any_descendant;
 
 use super::let_propagation::propagate_let_bindings;
 use super::reserve_grid_sync_vec;
@@ -43,6 +44,11 @@ fn peel_entry_wrappers(program: &Program) -> (Vec<EntryWrapper>, &[Node]) {
                     entry = body.as_slice();
                     continue;
                 }
+                // A genuine default over an open set: `Region` and `Block` are
+                // the only wrappers `wrap_split_segment` can rebuild, so
+                // peeling anything else would lose structure the segments must
+                // be re-wrapped in. Stopping here leaves the node in the entry
+                // sequence, where the split still sees it.
                 _ => {}
             }
         }
@@ -56,13 +62,18 @@ pub(super) fn entry_sequence(program: &Program) -> &[Node] {
 }
 
 /// Whether `program` contains any `Node::Barrier { ordering: GridSync }`
-/// in its dispatch-level entry sequence (peeled past any synthetic
+/// anywhere under its dispatch-level entry sequence (peeled past any synthetic
 /// outer Region).
 ///
-/// The check is intentionally shallow: nested grid-sync barriers
-/// inside `Node::Loop` or inner `Node::Region` bodies are a contract
-/// violation (`validate::barrier` rejects them) and never reach this
-/// path. The split operates at the dispatch-level granularity.
+/// The walk is DEEP and must stay deep. `validate::barrier` rejects only a
+/// barrier in divergent control flow, so a fence inside a uniform `If` or a
+/// counted `Loop` is a legal program that reaches here, and
+/// `tests/grid_sync_nested_fence_survives_split.rs` pins one. Detection and
+/// hoisting have deliberately different depths: this reports the fence, while
+/// `hoist_grid_sync_barriers` promotes only the ones it can promote legally, and
+/// the emitter refuses the rest. Answering "no fence" for a nested one would
+/// route the program down the ordinary dispatch path, where the fence lowers to
+/// a workgroup barrier and the kernel silently runs unsynchronized.
 #[must_use]
 pub fn contains_grid_sync(program: &Program) -> bool {
     // O(1) negative gate: if the cached ProgramStats bitset records no
@@ -80,19 +91,31 @@ fn node_slice_contains_grid_sync(nodes: &[Node]) -> bool {
     nodes.iter().any(node_contains_grid_sync)
 }
 
+/// True when `node` or anything under it is a grid-sync fence.
+///
+/// Delegates to [`any_descendant`], which enumerates children through
+/// `vyre_foundation::transform::visit::child_bodies`, the one exhaustive owner
+/// of "which `Node` variants contain other nodes". This function used to run its
+/// own `match node` over `If`, `Loop`, `Block`, and `Region` ending in
+/// `_ => false`.
+///
+/// A false negative here is the worst outcome in this file. [`contains_grid_sync`]
+/// is the gate every dispatch path consults before routing a program to the host
+/// split, the cooperative launch, or an outright refusal. Reading a nested fence
+/// as absent sends the program down the ORDINARY path, where the fence lowers to
+/// a workgroup barrier and the kernel runs with no cross-block synchronization at
+/// all: no error, no split, wrong answers. Compare the fence that IS detected but
+/// cannot be hoisted, which reaches the emitter and is refused loudly.
 fn node_contains_grid_sync(node: &Node) -> bool {
-    match node {
-        Node::Barrier {
-            ordering: MemoryOrdering::GridSync,
-            ..
-        } => true,
-        Node::If {
-            then, otherwise, ..
-        } => node_slice_contains_grid_sync(then) || node_slice_contains_grid_sync(otherwise),
-        Node::Loop { body, .. } | Node::Block(body) => node_slice_contains_grid_sync(body),
-        Node::Region { body, .. } => node_slice_contains_grid_sync(body),
-        _ => false,
-    }
+    any_descendant(node, &mut |candidate| {
+        matches!(
+            candidate,
+            Node::Barrier {
+                ordering: MemoryOrdering::GridSync,
+                ..
+            }
+        )
+    })
 }
 
 /// Split `program` at every top-level `Node::Barrier { GridSync }`.
@@ -112,11 +135,13 @@ pub fn split_on_grid_sync(program: &Program) -> Vec<Program> {
     try_split_on_grid_sync(program).unwrap_or_default()
 }
 
-/// Fallible variant of [`split_on_grid_sync`] for production dispatch paths.
+/// Lift grid-sync fences out of unconditional `Block` and `Region` bodies so the
+/// dispatch-level split can see them.
 ///
-/// # Errors
-/// Returns an actionable [`BackendError`] if segment storage cannot be
-/// reserved or if split accounting overflows.
+/// The returned sequence contains the same nodes in the same order, with each
+/// hoistable fence promoted to a sibling of the container it came from and the
+/// container split around it. A fence that cannot be hoisted is preserved
+/// verbatim; see the catch-all arm below.
 fn hoist_grid_sync_barriers(nodes: &[Node]) -> Vec<Node> {
     let mut new_nodes = Vec::new();
     for node in nodes {
@@ -201,6 +226,17 @@ fn hoist_grid_sync_barriers(nodes: &[Node]) -> Vec<Node> {
                     });
                 }
             }
+            // KEPT, and load-bearing. Hoisting lifts a fence to the top of the
+            // entry sequence, which is legal only where the enclosing body
+            // executes unconditionally and in order, so only `Block` and
+            // `Region` qualify. A fence under `If` or `Loop` executes
+            // conditionally, and moving it out would change which invocations
+            // reach it, so it is copied verbatim instead. That is not a silent
+            // drop: `contains_grid_sync` still reports the program as grid-sync,
+            // the fence survives into a segment, and the emitter refuses the
+            // shape (pinned by
+            // tests/grid_sync_nested_fence_survives_split.rs). A new
+            // body-carrying variant inherits the same conservative answer.
             other => {
                 new_nodes.push(other.clone());
             }
@@ -261,6 +297,11 @@ pub fn try_split_on_grid_sync(program: &Program) -> Result<Vec<Program>, Backend
                 let entry = std::mem::replace(&mut current, next);
                 raw_segments.push(entry);
             }
+            // A genuine default over an open set. The only question asked here is
+            // "is this node the launch boundary", and everything that is not one
+            // belongs to the segment being accumulated. A new variant is carried
+            // into the segment unchanged, which is the only correct answer: a
+            // node dropped here would vanish from the program.
             other => {
                 current.push(other.clone());
             }

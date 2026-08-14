@@ -108,6 +108,7 @@ fn eliminate_node(node: Node, changed: &mut bool) -> Node {
             *changed = true;
             Node::Block(otherwise)
         }
+        // Only `If` has a constant branch to eliminate; children are already rewritten by the caller, so any other variant, known or not, is returned as it stands.
         other => other,
     }
 }

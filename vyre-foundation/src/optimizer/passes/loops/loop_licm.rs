@@ -166,6 +166,7 @@ fn hoist_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
                     body: std::sync::Arc::new(body_vec),
                 });
             }
+            // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
             other => out.push(other),
         }
     }
@@ -248,6 +249,7 @@ fn collect_mutated_names(nodes: &[Node], out: &mut FxHashSet<Ident>, include_let
             Node::Region { body, .. } => {
                 collect_mutated_names(body, out, include_let_bindings);
             }
+            // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
             _ => {}
         }
     }
@@ -339,6 +341,7 @@ fn has_hoistable_let_in_any_loop(node: &Node) -> bool {
         }
         Node::Block(body) => body.iter().any(has_hoistable_let_in_any_loop),
         Node::Region { body, .. } => body.iter().any(has_hoistable_let_in_any_loop),
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => false,
     }
 }

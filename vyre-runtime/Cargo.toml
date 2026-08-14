@@ -52,7 +52,7 @@ dashmap.workspace = true
 libc.workspace = true
 
 [dev-dependencies]
-vyre-test-support.workspace = true
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 vyre-driver-reference = { path = "../vyre-driver-reference" }
 tempfile.workspace = true
 serde_json.workspace = true

@@ -294,6 +294,7 @@ fn collect_assign_targets(nodes: &[Node], out: &mut FxHashSet<Ident>) {
             }
             Node::Loop { body, .. } | Node::Block(body) => collect_assign_targets(body, out),
             Node::Region { body, .. } => collect_assign_targets(body, out),
+            // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
             _ => {}
         }
     }
@@ -339,6 +340,7 @@ fn has_fusable_pair(node: &Node) -> bool {
         }
         Node::Loop { body, .. } | Node::Block(body) => body,
         Node::Region { body, .. } => body.as_ref(),
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => return false,
     };
     body_has_fusable_pair(body)

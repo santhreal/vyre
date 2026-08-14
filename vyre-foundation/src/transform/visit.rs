@@ -29,6 +29,96 @@ pub trait ExprVisitor {
     fn visit_expr(&mut self, expr: &Expr);
 }
 
+/// What a [`Node`] variant carries, and therefore what a traversal owes it.
+///
+/// This is the RECORDED DECISION for every variant, and it exists because
+/// `Node` is `#[non_exhaustive]`: no crate other than this one can write an
+/// exhaustive match, so every traversal downstream ends in a catch-all arm and
+/// a new variant lands in that arm without anybody choosing it. The match in
+/// [`node_shape`] is the one place where adding a variant is a compile error,
+/// so the decision has to be made once, here, in the same patch that adds it.
+///
+/// The run-time half of the same property is
+/// [`NODE_VARIANT_NAMES`](crate::ir::NODE_VARIANT_NAMES): a test can enumerate
+/// every declared variant, ask for its shape, and refuse to pass until a
+/// fixture and a traversal decision exist for each one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NodeShape {
+    /// The variant nests child node bodies, enumerated by [`child_bodies`].
+    ///
+    /// A recursive traversal MUST descend. Treating one of these as a leaf
+    /// skips a whole subtree, and a barrier, store, or early exit inside that
+    /// subtree then reads as absent rather than as unknown.
+    pub nests_nodes: bool,
+    /// The variant owns operand expressions reachable from [`walk_exprs`].
+    ///
+    /// An analysis that collects buffer reads, variable uses, or literal
+    /// operands must visit them or it under-reports the node's effects.
+    pub carries_operands: bool,
+    /// The payload is an out-of-tree extension whose contents core cannot
+    /// enumerate, so an analysis must treat it as unknown rather than as empty.
+    pub opaque_payload: bool,
+}
+
+impl NodeShape {
+    const INERT: Self = Self {
+        nests_nodes: false,
+        carries_operands: false,
+        opaque_payload: false,
+    };
+    const OPERANDS: Self = Self {
+        nests_nodes: false,
+        carries_operands: true,
+        opaque_payload: false,
+    };
+    const BODIES: Self = Self {
+        nests_nodes: true,
+        carries_operands: false,
+        opaque_payload: false,
+    };
+    const BODIES_AND_OPERANDS: Self = Self {
+        nests_nodes: true,
+        carries_operands: true,
+        opaque_payload: false,
+    };
+    const OPAQUE: Self = Self {
+        nests_nodes: false,
+        carries_operands: false,
+        opaque_payload: true,
+    };
+}
+
+/// The recorded traversal decision for the variant `node` holds.
+///
+/// Exhaustive with no catch-all arm, deliberately. Adding a `Node` variant
+/// fails to compile here, and that failure is the point: it forces the author
+/// to say whether the new variant nests bodies, owns operands, or is opaque,
+/// before any traversal downstream can silently classify it as a leaf.
+#[inline]
+#[must_use]
+pub fn node_shape(node: &Node) -> NodeShape {
+    match node {
+        Node::If { .. } | Node::Loop { .. } => NodeShape::BODIES_AND_OPERANDS,
+        Node::Block(_) | Node::Region { .. } => NodeShape::BODIES,
+        Node::Let { .. }
+        | Node::Assign { .. }
+        | Node::Store { .. }
+        | Node::AsyncLoad { .. }
+        | Node::AsyncStore { .. }
+        | Node::Trap { .. } => NodeShape::OPERANDS,
+        Node::Return
+        | Node::Barrier { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AsyncWait { .. }
+        | Node::Resume { .. }
+        | Node::AllReduce { .. }
+        | Node::AllGather { .. }
+        | Node::ReduceScatter { .. }
+        | Node::Broadcast { .. } => NodeShape::INERT,
+        Node::Opaque(_) => NodeShape::OPAQUE,
+    }
+}
+
 /// Every child node body of `node`, in source order.
 ///
 /// This is the ONE owner of the question "which node variants contain other
@@ -74,17 +164,27 @@ pub fn child_bodies(node: &Node) -> [&[Node]; 2] {
 
 /// True when `node` or any descendant satisfies `pred`.
 ///
-/// Recurses through [`child_bodies`], so a new nesting variant is covered
+/// Children come from [`child_bodies`], so a new nesting variant is covered
 /// without touching this function.
-#[inline]
+///
+/// The walk uses an explicit worklist, not the native stack: this is the
+/// short-circuiting scan every barrier, fence, and effect detector in the
+/// workspace calls, and a recursive version overflows on an adversarially deep
+/// tree. The 64-slot inline `SmallVec` covers ordinary programs without
+/// allocating.
+#[must_use]
 pub fn any_descendant(node: &Node, pred: &mut impl FnMut(&Node) -> bool) -> bool {
-    if pred(node) {
-        return true;
+    let mut stack: SmallVec<[&Node; 64]> = SmallVec::new();
+    stack.push(node);
+    while let Some(current) = stack.pop() {
+        if pred(current) {
+            return true;
+        }
+        for body in child_bodies(current).into_iter().rev() {
+            stack.extend(body.iter().rev());
+        }
     }
-    child_bodies(node)
-        .into_iter()
-        .flatten()
-        .any(|child| any_descendant(child, pred))
+    false
 }
 
 /// Walk all nodes in a program, calling `f` on each.
@@ -159,6 +259,13 @@ fn push_node_children_and_exprs<'a>(
             expr_stack.push(to);
             expr_stack.push(from);
         }
+        Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
+            expr_stack.push(size);
+            expr_stack.push(offset);
+        }
+        Node::Trap { address, .. } => {
+            expr_stack.push(address);
+        }
         Node::Block(_)
         | Node::Region { .. }
         | Node::Return
@@ -168,10 +275,7 @@ fn push_node_children_and_exprs<'a>(
         | Node::AllGather { .. }
         | Node::ReduceScatter { .. }
         | Node::Broadcast { .. }
-        | Node::AsyncLoad { .. }
-        | Node::AsyncStore { .. }
         | Node::AsyncWait { .. }
-        | Node::Trap { .. }
         | Node::Resume { .. }
         | Node::Opaque(_) => {}
     }

@@ -189,6 +189,7 @@ impl<C: CanonicalLookup + ?Sized> CseWalker<'_, C> {
                 self.record(&top_ids, 1, size, occs);
             }
             Node::Trap { address, .. } => self.record(&top_ids, 0, address, occs),
+            // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
             _ => {}
         }
     }
@@ -224,6 +225,7 @@ impl<C: CanonicalLookup + ?Sized> CseWalker<'_, C> {
             Node::Loop { body, .. } => self.advance_through_scope(body),
             Node::Block(body) => self.advance_through_scope(body),
             Node::Region { body, .. } => self.advance_through_scope(body.as_slice()),
+            // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
             _ => {}
         }
     }
@@ -292,6 +294,7 @@ impl<C: CanonicalLookup + ?Sized> CseWalker<'_, C> {
                 source_region: source_region.clone(),
                 body: Arc::new(self.rewrite_scope(body.as_slice())),
             },
+            // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
             other => other.clone(),
         }
     }

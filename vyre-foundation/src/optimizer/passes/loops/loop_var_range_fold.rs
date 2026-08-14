@@ -220,6 +220,7 @@ fn recurse(
                 ),
             }
         }
+        // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
         other => other,
     }
 }
@@ -363,6 +364,7 @@ fn body_has_foldable_if(
         Node::Region { body, .. } => body
             .iter()
             .any(|n| body_has_foldable_if(n, range, shape_facts)),
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => false,
     }
 }

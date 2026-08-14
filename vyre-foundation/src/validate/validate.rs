@@ -429,6 +429,7 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                             let divergent = self.current_divergent();
                             push_nested_sequence(&mut stack, body, divergent, depth + 1, None);
                         }
+                        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
                         _ => {}
                     }
                     for issue in &mut self.errors[first_new_error..] {
@@ -1130,6 +1131,7 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
                 accesses.read_buffers.insert(input.clone());
                 accesses.read_buffers.insert(output.clone());
             }
+            // Only the collective variants above carry a collective to validate.
             _ => {}
         }
         self.report_alias_hazards(&accesses);

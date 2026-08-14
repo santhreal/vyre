@@ -129,6 +129,7 @@ fn coalesce_node(node: Node, changed: &mut bool) -> Node {
                 body: std::sync::Arc::new(body_vec),
             }
         }
+        // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
         other => other,
     }
 }
@@ -173,6 +174,7 @@ fn has_consecutive_barriers(node: &Node) -> bool {
         Node::Region { body, .. } => {
             sequence_has_consecutive_barriers(body) || body.iter().any(has_consecutive_barriers)
         }
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => false,
     }
 }

@@ -158,6 +158,7 @@ fn rewrite_node_multi(node: Node, changed: &mut bool) -> Vec<Node> {
             address: Box::new(rewrite_expr(*address, changed)),
             tag,
         }],
+        // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
         other => vec![other],
     }
 }
@@ -454,6 +455,7 @@ fn scan_node_for_identity(node: &Node, found: &mut bool) {
         }
         Node::Block(body) => scan_for_identity_candidate(body, found),
         Node::Region { body, .. } => scan_for_identity_candidate(body, found),
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => {}
     }
 }

@@ -160,14 +160,17 @@ fn try_extract_tail(then: &[Node], otherwise: &[Node]) -> Option<(Vec<Node>, Vec
     Some((new_then, new_otherwise, tail))
 }
 
-/// True iff `node` reads (via an `Expr::Var`) any name in `names`. `node` is
-/// an observably-free tail (a pure `Let`, or a `Block` of such), so only the
-/// pure expression forms can appear; effectful forms are handled defensively.
+/// True iff `node` may read (via an `Expr::Var`) any name in `names`.
+///
+/// This is a safety veto: `true` refuses the sink. The recognised forms are the
+/// pure ones a duplicable tail is built from (a `Let`, or a `Block` of such);
+/// every other form answers `true`, so an unrecognised statement costs one
+/// missed duplication instead of sinking code past a read of an arm-bound name.
 fn node_reads_any(node: &Node, names: &FxHashSet<Ident>) -> bool {
     match node {
         Node::Let { value, .. } => expr_reads_any(value, names),
         Node::Block(body) => body.iter().any(|n| node_reads_any(n, names)),
-        _ => false,
+        _ => true,
     }
 }
 

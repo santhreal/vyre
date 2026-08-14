@@ -232,6 +232,7 @@ fn substitute_node(node: Node, propagations: &FxHashMap<String, Expr>, changed: 
             address: Box::new(substitute_expr(*address, propagations, changed)),
             tag,
         },
+        // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
         other => other,
     }
 }
@@ -303,6 +304,7 @@ fn scan_for_literal_lets(
                 scan_for_literal_lets(n, candidates, out);
             }
         }
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => {}
     }
 }

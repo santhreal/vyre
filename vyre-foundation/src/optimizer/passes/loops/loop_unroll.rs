@@ -130,6 +130,7 @@ fn rewrite_node(node: &Node) -> Cow<'_, [Node]> {
                 body: Arc::new(body),
             }]),
         },
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => Cow::Borrowed(std::slice::from_ref(node)),
     }
 }
@@ -183,26 +184,32 @@ fn literal_u32(expr: &Expr) -> Option<u32> {
 // `body_contains_assign` below is unroll-specific (any Assign at all is unsafe
 // to duplicate across unrolled copies, not just an assign to the loop var).
 
+/// True when any statement under `nodes` assigns to a binding. Child
+/// enumeration comes from
+/// [`child_bodies`](crate::transform::visit::child_bodies) so a future nesting
+/// variant cannot hide an assignment from the unroll safety check.
 fn body_contains_assign(nodes: &[Node]) -> bool {
-    nodes.iter().any(|node| match node {
-        Node::Assign { .. } => true,
-        Node::If {
-            then, otherwise, ..
-        } => body_contains_assign(then) || body_contains_assign(otherwise),
-        Node::Loop { body, .. } | Node::Block(body) => body_contains_assign(body),
-        Node::Region { body, .. } => body_contains_assign(body),
-        _ => false,
+    nodes.iter().any(|node| {
+        matches!(node, Node::Assign { .. })
+            || crate::transform::visit::child_bodies(node)
+                .into_iter()
+                .any(body_contains_assign)
     })
 }
 
+/// True when any statement under `nodes` declares a local binding.
+///
+/// Child enumeration comes from
+/// [`child_bodies`](crate::transform::visit::child_bodies), the exhaustive
+/// owner. This used to name `If` and `Block` only, so a `Let` inside a nested
+/// `Loop` or `Region` body read as absent and unrolling duplicated the
+/// declaration into every copy.
 fn body_declares_locals(nodes: &[Node]) -> bool {
-    nodes.iter().any(|node| match node {
-        Node::Let { .. } => true,
-        Node::If {
-            then, otherwise, ..
-        } => body_declares_locals(then) || body_declares_locals(otherwise),
-        Node::Block(body) => body_declares_locals(body),
-        _ => false,
+    nodes.iter().any(|node| {
+        matches!(node, Node::Let { .. })
+            || crate::transform::visit::child_bodies(node)
+                .into_iter()
+                .any(body_declares_locals)
     })
 }
 

@@ -137,6 +137,7 @@ fn canonicalize_node(node: Node) -> Node {
                 body: std::sync::Arc::new(canonicalize_nodes(body_vec)),
             }
         }
+        // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
         other => other,
     }
 }

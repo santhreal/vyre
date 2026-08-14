@@ -176,6 +176,7 @@ fn rewrite_node(node: Node, facts: &ProgramFacts, changed: &mut bool) -> Vec<Nod
                 ),
             }]
         }
+        // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
         other => vec![other],
     }
 }
@@ -393,6 +394,7 @@ fn node_has_pipelinable_loop(node: &Node, facts: &ProgramFacts) -> bool {
         }
         Node::Block(body) => body.iter().any(|n| node_has_pipelinable_loop(n, facts)),
         Node::Region { body, .. } => body.iter().any(|n| node_has_pipelinable_loop(n, facts)),
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => false,
     }
 }

@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use smallvec::SmallVec;
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
+use vyre_foundation::transform::visit::any_descendant;
 
 /// Report returned by [`elide_value_flow_barriers`].
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -50,16 +51,20 @@ fn nodes_have_barrier(nodes: &[Node]) -> bool {
     nodes.iter().any(node_has_barrier)
 }
 
+/// True when `node` or anything under it is a barrier.
+///
+/// Delegates to [`any_descendant`], which enumerates children through
+/// `vyre_foundation::transform::visit::child_bodies`, the one exhaustive owner
+/// of "which `Node` variants contain other nodes". This function used to run its
+/// own `match node` over `If`, `Loop`, `Block`, and `Region` ending in
+/// `_ => false`. That listed every nesting variant that exists today and would
+/// classify the next one as a leaf, which turns the whole elision pass into a
+/// no-op for any program using it: `elide_value_flow_barriers` and
+/// `rewrite_nodes` both return early when this reports no barrier.
 fn node_has_barrier(node: &Node) -> bool {
-    match node {
-        Node::Barrier { .. } => true,
-        Node::If {
-            then, otherwise, ..
-        } => nodes_have_barrier(then) || nodes_have_barrier(otherwise),
-        Node::Loop { body, .. } | Node::Block(body) => nodes_have_barrier(body),
-        Node::Region { body, .. } => nodes_have_barrier(body),
-        _ => false,
-    }
+    any_descendant(node, &mut |candidate| {
+        matches!(candidate, Node::Barrier { .. })
+    })
 }
 
 fn rewrite_nodes(nodes: Vec<Node>, report: &mut BarrierElisionReport) -> Vec<Node> {
@@ -115,6 +120,10 @@ fn rewrite_node(node: Node, report: &mut BarrierElisionReport) -> Node {
                 }
             }
         }
+        // Every variant that nests node bodies is rewritten above; a variant
+        // that reaches here owns no body to rewrite, so returning it untouched
+        // is the complete answer. `elides_a_barrier_inside_every_body_slot`
+        // fails if a nesting variant ever lands in this arm.
         other => other,
     }
 }
@@ -264,6 +273,12 @@ fn collect_node_access<'a>(node: &'a Node, out: &mut AccessSet<'a>) {
         Node::Block(body) => collect_nodes_access(body, out),
         Node::Region { body, .. } => collect_nodes_access(body, out),
         Node::Opaque(_) => out.unknown = true,
+        // Fail closed. An unenumerated variant may read or write any buffer, so
+        // it marks the arm unknown and `arms_are_independent` then refuses to
+        // elide anything across it. This is the one catch-all here that must
+        // stay: a future variant added without touching this file costs a
+        // missed elision, never an elided barrier that was load-bearing. The
+        // collectives above the `Trap` arm reach it today for that reason.
         _ => out.unknown = true,
     }
 }

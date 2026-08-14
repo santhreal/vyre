@@ -192,6 +192,7 @@ fn recurse(node: Node, changed: &mut bool) -> Node {
                 body: Arc::new(fuse_in_body(body_vec, changed)),
             }
         }
+        // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
         other => other,
     }
 }
@@ -271,6 +272,7 @@ fn has_candidate_pair(node: &Node) -> bool {
             }
             body.iter().any(has_candidate_pair)
         }
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => false,
     }
 }

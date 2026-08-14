@@ -11,8 +11,8 @@ use crate::execution::expr_cast::spec_output_value;
 use crate::ReferenceError;
 use crate::{oob, value::Value, workgroup::Frame};
 use vyre_foundation::ir::{DataType, Expr, Node};
-use vyre_foundation::TypedParam;
 use vyre_foundation::operation::OperationRegistry;
+use vyre_foundation::TypedParam;
 
 const MAX_CALL_INPUT_BYTES: usize = 64 * 1024 * 1024;
 
@@ -254,6 +254,7 @@ pub(crate) fn step_nodes_frame<'a>(
                 extension.debug_identity()
             )));
         }
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => {
             return Err(ReferenceError::new("hashmap reference interpreter encountered an unknown node variant. Fix: add explicit reference semantics for the new Node before dispatch."));
         }

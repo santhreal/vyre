@@ -340,6 +340,7 @@ fn collect_declared_names(node: &Node, out: &mut FxHashSet<Ident>) {
                 collect_declared_names(n, out);
             }
         }
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => {}
     }
 }

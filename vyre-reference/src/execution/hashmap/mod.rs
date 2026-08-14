@@ -73,6 +73,7 @@ fn contains_grid_sync(nodes: &[Node]) -> bool {
     nodes.iter().any(|node| match node {
         Node::Block(inner) => contains_grid_sync(inner),
         Node::Region { body, .. } => contains_grid_sync(body),
+        // Deliberate: a fence under an `If` or `Loop` is not treated as a scope boundary here, because the resident hashmap only flattens unconditional wrappers.
         other => is_grid_sync_barrier(other),
     })
 }
@@ -93,6 +94,7 @@ fn flatten_grid_sync_scopes(nodes: &[Node], out: &mut Vec<Node>) {
             Node::Region { body, .. } if contains_grid_sync(body) => {
                 flatten_grid_sync_scopes(body, out);
             }
+            // Deliberate: only unconditional wrappers flatten, so any other statement is emitted as one opaque step.
             other => out.push(other.clone()),
         }
     }

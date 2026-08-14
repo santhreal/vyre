@@ -326,6 +326,7 @@ fn collect_segment_buffer_targets(
         | Node::Trap { .. }
         | Node::Resume { .. }
         | Node::Opaque(_) => {}
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => {}
     }
 }

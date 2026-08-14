@@ -160,9 +160,11 @@ impl SparseArenaDeltas {
         for record in record_words.chunks_exact(5) {
             let id = record[0];
             if id >= expr_count {
-                return Err(vyre_foundation::program_dispatch::DispatchError::BadInputs(format!(
+                return Err(vyre_foundation::program_dispatch::DispatchError::BadInputs(
+                    format!(
                     "Fix: {context} compact arena record id {id} exceeds expr_count {expr_count}."
-                )));
+                ),
+                ));
             }
             let delta = ArenaDeltaRecord {
                 swap_mask: record[1],
@@ -174,9 +176,9 @@ impl SparseArenaDeltas {
                 continue;
             }
             if overrides.insert(id, delta).is_some() {
-                return Err(vyre_foundation::program_dispatch::DispatchError::BadInputs(format!(
-                    "Fix: {context} compact arena emitted duplicate expr id {id}."
-                )));
+                return Err(vyre_foundation::program_dispatch::DispatchError::BadInputs(
+                    format!("Fix: {context} compact arena emitted duplicate expr id {id}."),
+                ));
             }
         }
 
@@ -549,6 +551,7 @@ fn rewrite_node<D: ArenaDeltaLookup + ?Sized>(node: &Node, deltas: &D, counter: 
         | Node::AsyncWait { .. }
         | Node::Resume { .. }
         | Node::Opaque(_) => node.clone(),
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => node.clone(),
     }
 }
@@ -765,7 +768,10 @@ mod tests {
         )
         .expect_err("compact arena record count must match record words exactly");
         assert!(
-            matches!(err, vyre_foundation::program_dispatch::DispatchError::BadInputs(_)),
+            matches!(
+                err,
+                vyre_foundation::program_dispatch::DispatchError::BadInputs(_)
+            ),
             "unexpected error: {err:?}"
         );
     }

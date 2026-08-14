@@ -27,6 +27,8 @@
 #![forbid(unsafe_code)]
 
 pub mod consumer_boundary;
+#[cfg(feature = "ir-fixtures")]
+pub mod ir_variants;
 pub mod monorepo;
 
 use std::collections::BTreeSet;

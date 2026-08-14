@@ -81,6 +81,7 @@ fn print_node(node: &Node, depth: usize) {
                 print_node(child, depth);
             }
         }
+        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => {
             // Leaf node (Let, Assign, Store, Barrier, Return, …)  -  no
             // composition below. We only print at Region boundaries and
