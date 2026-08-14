@@ -145,13 +145,11 @@ fn workspace_member_src_dirs(root: &Path) -> Vec<PathBuf> {
 /// formatting, and inspection matches cannot hide or fabricate a violation.
 #[test]
 fn workspace_sources_reject_raw_first_workgroup_predicates() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: xtask must remain directly under the workspace root");
+    let root = super::common::workspace_root();
     let canonical_path = root.join(CANONICAL_BUILDER);
     let mut violations = Vec::new();
 
-    for src_dir in workspace_member_src_dirs(root) {
+    for src_dir in workspace_member_src_dirs(&root) {
         for entry in walkdir::WalkDir::new(src_dir) {
             let entry = entry.expect("Fix: every workspace source path must be readable");
             let path = entry.path();
@@ -176,7 +174,7 @@ fn workspace_sources_reject_raw_first_workgroup_predicates() {
             for location in locations {
                 violations.push(format!(
                     "{}:{}:{}",
-                    path.strip_prefix(root).unwrap_or(path).display(),
+                    path.strip_prefix(&root).unwrap_or(path).display(),
                     location.line,
                     location.column + 1
                 ));

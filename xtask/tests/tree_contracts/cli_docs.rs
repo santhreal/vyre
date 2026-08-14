@@ -108,9 +108,7 @@ fn scaffold_help_is_side_effect_free() {
         1,
         "help must not write anything anywhere near the working directory"
     );
-    let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: the xtask manifest directory always has a parent");
+    let repo_root = workspace_root();
     assert!(!repo_root.join("rules/launch/--help").exists());
 }
 

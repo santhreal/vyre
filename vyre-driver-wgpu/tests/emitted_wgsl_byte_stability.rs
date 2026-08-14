@@ -32,7 +32,8 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use vyre_lower::artifact_golden;
 
 fn golden_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/golden/emitted_wgsl.txt")
+    vyre_test_support::monorepo::vyre_workspace_root()
+        .join("vyre-driver-wgpu/tests/golden/emitted_wgsl.txt")
 }
 
 const LANES: u32 = 8;

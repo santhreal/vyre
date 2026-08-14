@@ -20,7 +20,8 @@ use naga::valid::{Capabilities, ValidationFlags, Validator};
 use vyre_lower::artifact_golden;
 
 fn golden_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/golden/success_corpus.wgsl")
+    vyre_test_support::monorepo::vyre_workspace_root()
+        .join("vyre-emit-naga/tests/golden/success_corpus.wgsl")
 }
 
 fn render_corpus() -> String {

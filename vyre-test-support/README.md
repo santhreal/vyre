@@ -18,6 +18,11 @@ fn every_program_builder_is_tested_registered_or_explicitly_waived() {
 }
 ```
 
+Resolve the crate directory at run time. Every checkout of this repository shares
+one cargo target directory and cargo hands one checkout a binary another built,
+so a directory fixed at compile time names whichever tree built last and the gate
+then enumerates that tree while reporting on this one.
+
 The helper source-enumerates every `pub fn NAME(...) -> Program` builder under the crate's
 `src/` (excluding `&self` methods and `Program`-first-param transform passes) and asserts
 each is registered in an `inventory::submit!` block, pinned by a parity test,

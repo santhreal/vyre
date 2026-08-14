@@ -24,10 +24,7 @@ mod thesis_axes;
 use vyre_bench::api::suite::SuiteKind;
 
 fn workspace_root() -> std::path::PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: vyre-bench must live under the workspace root.")
-        .to_path_buf()
+    vyre_test_support::monorepo::vyre_workspace_root()
 }
 
 fn bench_targets_manifest() -> toml::Value {

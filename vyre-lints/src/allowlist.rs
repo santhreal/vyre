@@ -38,7 +38,10 @@ pub struct Allowlist {
 impl Default for Allowlist {
     fn default() -> Self {
         Self {
-            roots: DEFAULT_MEASURED_ROOTS.iter().map(|r| r.to_string()).collect(),
+            roots: DEFAULT_MEASURED_ROOTS
+                .iter()
+                .map(|r| r.to_string())
+                .collect(),
             paths: HashSet::new(),
         }
     }
@@ -79,7 +82,10 @@ pub fn load(path: &Path) -> Result<Allowlist> {
         toml::from_str(&bytes).with_context(|| format!("parse allowlist {}", path.display()))?;
     Ok(Allowlist {
         roots: if parsed.measured_roots.is_empty() {
-            DEFAULT_MEASURED_ROOTS.iter().map(|r| r.to_string()).collect()
+            DEFAULT_MEASURED_ROOTS
+                .iter()
+                .map(|r| r.to_string())
+                .collect()
         } else {
             parsed.measured_roots
         },
@@ -131,7 +137,10 @@ mod tests {
 
         let a = load(&path).unwrap();
 
-        assert_eq!(a.measured_roots(), ["vyre-libs/src", "vyre-primitives/src/math"]);
+        assert_eq!(
+            a.measured_roots(),
+            ["vyre-libs/src", "vyre-primitives/src/math"]
+        );
     }
 
     /// An omitted list falls back to the compositions crate rather than to
@@ -153,7 +162,8 @@ mod tests {
     /// against, so assert it directly rather than trusting a future edit.
     #[test]
     fn the_shipped_configuration_declares_its_measured_roots() {
-        let shipped = Path::new(env!("CARGO_MANIFEST_DIR")).join("allowlist.toml");
+        let shipped =
+            vyre_test_support::monorepo::vyre_workspace_root().join("vyre-lints/allowlist.toml");
 
         let a = load(&shipped).expect("shipped allowlist loads");
 

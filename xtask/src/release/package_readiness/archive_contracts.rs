@@ -2,17 +2,23 @@ use super::{
     cargo_package_patch_args, inspect_package_file_list, package_path_is_forbidden, PublishStep,
 };
 
-const STEP: PublishStep = PublishStep {
-    package: "vyre-example",
-    version: "0.7.0",
-    manifest: "vyre-example/Cargo.toml",
-};
+fn step(package: &str, version: &'static str, manifest: &str) -> PublishStep {
+    PublishStep {
+        package: package.to_string(),
+        version,
+        manifest: manifest.to_string(),
+    }
+}
+
+fn example_step() -> PublishStep {
+    step("vyre-example", "0.7.0", "vyre-example/Cargo.toml")
+}
 
 /// A complete crates.io file list must retain metadata and Rust sources without archive blockers.
 #[test]
 fn complete_package_file_list_passes_archive_contract() {
     let check = inspect_package_file_list(
-        &STEP,
+        &example_step(),
         "Cargo.toml\nCargo.toml.orig\nLICENSE-APACHE\nLICENSE-MIT\nREADME.md\nexamples/basic.rs\nsrc/lib.rs\n",
     );
 
@@ -30,11 +36,11 @@ fn complete_package_file_list_passes_archive_contract() {
 #[test]
 fn package_file_list_digest_is_order_and_duplicate_stable() {
     let first = inspect_package_file_list(
-        &STEP,
+        &example_step(),
         "Cargo.toml\nCargo.toml.orig\nLICENSE-APACHE\nLICENSE-MIT\nREADME.md\nexamples/basic.rs\nsrc/lib.rs\n",
     );
     let reordered = inspect_package_file_list(
-        &STEP,
+        &example_step(),
         "src/lib.rs\nREADME.md\nCargo.toml\nexamples/basic.rs\nLICENSE-MIT\nCargo.toml.orig\nLICENSE-APACHE\nsrc/lib.rs\n",
     );
 
@@ -80,7 +86,7 @@ fn internal_and_unsafe_package_paths_are_rejected() {
 /// Missing license/readme metadata, source, and internal instructions must report every independent blocker together.
 #[test]
 fn incomplete_package_file_list_reports_all_archive_gaps() {
-    let check = inspect_package_file_list(&STEP, "Cargo.toml\ntests/SKILL.md\n");
+    let check = inspect_package_file_list(&example_step(), "Cargo.toml\ntests/SKILL.md\n");
 
     assert_eq!(
         check.missing_required_files,
@@ -258,21 +264,9 @@ vyre = { version = "0.7.2", path = "../vyre" }
     .expect("Fix: write consumer package manifest");
 
     let order = [
-        PublishStep {
-            package: "vyre",
-            version: "0.7.2",
-            manifest: "vyre/Cargo.toml",
-        },
-        PublishStep {
-            package: "vyre-driver-wgpu",
-            version: "0.7.2",
-            manifest: "vyre-driver-wgpu/Cargo.toml",
-        },
-        PublishStep {
-            package: "consumer",
-            version: "0.1.0",
-            manifest: "consumer/Cargo.toml",
-        },
+        step("vyre", "0.7.2", "vyre/Cargo.toml"),
+        step("vyre-driver-wgpu", "0.7.2", "vyre-driver-wgpu/Cargo.toml"),
+        step("consumer", "0.1.0", "consumer/Cargo.toml"),
     ];
 
     let actual = cargo_package_patch_args(temp.path(), &order[2], &order)
@@ -316,16 +310,8 @@ vyre = { path = "../vyre" }
     )
     .expect("Fix: write path-only dependency fixture");
     let order = [
-        PublishStep {
-            package: "vyre",
-            version: "0.7.2",
-            manifest: "vyre/Cargo.toml",
-        },
-        PublishStep {
-            package: "consumer",
-            version: "0.1.0",
-            manifest: "consumer/Cargo.toml",
-        },
+        step("vyre", "0.7.2", "vyre/Cargo.toml"),
+        step("consumer", "0.1.0", "consumer/Cargo.toml"),
     ];
 
     assert!(
@@ -347,16 +333,227 @@ fn archive_check_rejects_malformed_manifest_before_launch() {
         "[package\nname = \"consumer\"\n",
     )
     .expect("Fix: write malformed consumer manifest");
-    let step = PublishStep {
-        package: "consumer",
-        version: "0.1.0",
-        manifest: "consumer/Cargo.toml",
-    };
+    let order = [step("consumer", "0.1.0", "consumer/Cargo.toml")];
 
-    let error = cargo_package_patch_args(temp.path(), &step, &[step])
+    let error = cargo_package_patch_args(temp.path(), &order[0], &order)
         .expect_err("Fix: malformed package manifests must fail closed");
     assert!(
         error.contains("failed to parse") && error.contains("consumer/Cargo.toml"),
         "Fix: parse failure must name the malformed manifest; error={error}"
     );
+}
+
+/// The publish order must come out of the manifests, in dependency order.
+///
+/// WHY THIS EXISTS. The order used to be a hardcoded `vec![]` of 26 steps. Moving
+/// library code into `vyre-libs` gave it new consumers, and because the table
+/// still held it near the end, the recorded evidence certified an order that
+/// publishes consumers against a version crates.io does not have yet, with
+/// `blockers: []` throughout. A member table cannot see a new edge. This fixture
+/// is the previous defect in miniature: `consumer` sorts before `lib`
+/// alphabetically, and only reading the dependency inverts them. Against the old
+/// hardcoded order this assertion could not even be written, because the order
+/// did not depend on the tree.
+#[test]
+fn publish_order_follows_manifest_dependencies_not_crate_names() {
+    let fixture = OrderFixture::new("derived-order");
+    fixture.crate_manifest("lib", &[]);
+    fixture.crate_manifest("consumer", &["lib"]);
+    fixture.metadata(&["consumer", "lib"]);
+
+    let (order, domain) = fixture.publish_order();
+
+    assert_eq!(
+        order
+            .iter()
+            .map(|step| step.package.as_str())
+            .collect::<Vec<_>>(),
+        vec!["lib", "consumer"],
+        "Fix: a dependency must publish before its consumer"
+    );
+    assert_eq!(
+        domain,
+        ["consumer".to_string(), "lib".to_string()]
+            .into_iter()
+            .collect(),
+        "Fix: the sort domain must be every publishable crate the metadata matrix names"
+    );
+    assert!(
+        fixture.blockers().is_empty(),
+        "Fix: an orderable set must produce no blockers; blockers={:?}",
+        fixture.blockers()
+    );
+}
+
+/// A dependency cycle among publishable crates must be reported, never ordered around.
+///
+/// Fail-closed is the whole point of deriving: picking some order for a set that
+/// has none would publish a broken train and record it as ready. Both members
+/// must still reach the artifact so a reader can see what the cycle was.
+#[test]
+fn publish_order_reports_a_cycle_instead_of_choosing_an_order() {
+    let fixture = OrderFixture::new("cyclic-order");
+    fixture.crate_manifest("left", &["right"]);
+    fixture.crate_manifest("right", &["left"]);
+    fixture.metadata(&["left", "right"]);
+
+    let (order, _) = fixture.publish_order();
+    let blockers = fixture.blockers();
+
+    assert_eq!(
+        order.len(),
+        2,
+        "Fix: a cycle must still record both members so the artifact names them"
+    );
+    for package in ["left", "right"] {
+        assert!(
+            blockers.iter().any(|blocker| {
+                blocker.contains(&format!("publish order cannot be derived for `{package}`"))
+                    && blocker.contains("dependency cycle")
+            }),
+            "Fix: the cycle must be reported for `{package}`; blockers={blockers:?}"
+        );
+    }
+}
+
+/// A crate the metadata matrix calls publishable but disk does not carry must block.
+///
+/// Dropping it instead would take it out of the order and out of every check
+/// keyed on the order, so a deleted or renamed crate would read as a shorter,
+/// still-green release. This is the exact rot that left nine evidence citations
+/// pointing at one crate's `Cargo.toml` after it had been folded into another.
+#[test]
+fn publish_order_blocks_a_publishable_crate_whose_manifest_is_absent() {
+    let fixture = OrderFixture::new("absent-manifest");
+    fixture.crate_manifest("present", &[]);
+    fixture.metadata(&["absent", "present"]);
+
+    let (order, _) = fixture.publish_order();
+    let blockers = fixture.blockers();
+
+    assert_eq!(
+        order
+            .iter()
+            .map(|step| step.package.as_str())
+            .collect::<Vec<_>>(),
+        vec!["present"],
+        "Fix: a crate with no manifest cannot be ordered"
+    );
+    assert!(
+        blockers.iter().any(|blocker| {
+            blocker.contains("publishable crate `absent`")
+                && blocker.contains("absent/Cargo.toml")
+                && blocker.contains("not on disk")
+        }),
+        "Fix: the missing manifest must be named with its path; blockers={blockers:?}"
+    );
+}
+
+/// A path-only dev-dependency must not constrain publish order.
+///
+/// Cargo strips a dev-dependency carrying no version from the published
+/// manifest, so it never reaches a downstream consumer and cannot fail a
+/// publish. Several in this workspace are deliberately path-only to break a
+/// cycle, so treating one as an edge would report a cycle that does not exist.
+#[test]
+fn publish_order_ignores_path_only_dev_dependencies() {
+    let fixture = OrderFixture::new("dev-dependency-order");
+    fixture.write(
+        "left/Cargo.toml",
+        "[package]\nname = \"left\"\nversion = \"0.7.0\"\n\n[dev-dependencies]\nright = { path = \"../right\" }\n",
+    );
+    fixture.write(
+        "right/Cargo.toml",
+        "[package]\nname = \"right\"\nversion = \"0.7.0\"\n\n[dev-dependencies]\nleft = { path = \"../left\" }\n",
+    );
+    fixture.metadata(&["left", "right"]);
+
+    let (order, _) = fixture.publish_order();
+
+    assert_eq!(
+        order
+            .iter()
+            .map(|step| step.package.as_str())
+            .collect::<Vec<_>>(),
+        vec!["left", "right"],
+        "Fix: path-only dev-dependencies are not publish-order edges"
+    );
+    assert!(
+        fixture.blockers().is_empty(),
+        "Fix: path-only dev-dependencies must not report a cycle; blockers={:?}",
+        fixture.blockers()
+    );
+}
+
+/// A checkout carrying a metadata matrix, used to drive the derivation directly.
+struct OrderFixture {
+    dir: tempfile::TempDir,
+    blockers: std::cell::RefCell<Vec<String>>,
+}
+
+impl OrderFixture {
+    fn new(name: &str) -> Self {
+        let dir = tempfile::Builder::new()
+            .prefix(name)
+            .tempdir()
+            .expect("Fix: create publish order fixture directory");
+        Self {
+            dir,
+            blockers: std::cell::RefCell::new(Vec::new()),
+        }
+    }
+
+    fn write(&self, relative: &str, contents: &str) {
+        let path = self.dir.path().join(relative);
+        std::fs::create_dir_all(path.parent().expect("Fix: fixture path needs a parent"))
+            .expect("Fix: create fixture parent directory");
+        std::fs::write(&path, contents).expect("Fix: write fixture file");
+    }
+
+    /// One crate manifest whose in-workspace dependencies carry both a path and a version.
+    fn crate_manifest(&self, package: &str, dependencies: &[&str]) {
+        let mut manifest = format!("[package]\nname = \"{package}\"\nversion = \"0.7.0\"\n");
+        if !dependencies.is_empty() {
+            manifest.push_str("\n[dependencies]\n");
+            for dependency in dependencies {
+                manifest.push_str(&format!(
+                    "{dependency} = {{ version = \"0.7.0\", path = \"../{dependency}\" }}\n"
+                ));
+            }
+        }
+        self.write(&format!("{package}/Cargo.toml"), &manifest);
+    }
+
+    fn metadata(&self, packages: &[&str]) {
+        let entries = packages
+            .iter()
+            .map(|package| {
+                serde_json::json!({
+                    "name": package,
+                    "manifest": format!("{package}/Cargo.toml"),
+                    "release_kind": "publishable-crate",
+                })
+            })
+            .collect::<Vec<_>>();
+        self.write(
+            "release/evidence/metadata/metadata-matrix.json",
+            &serde_json::json!({ "packages": entries }).to_string(),
+        );
+    }
+
+    fn publish_order(&self) -> (Vec<PublishStep>, std::collections::BTreeSet<String>) {
+        let metadata_path = self
+            .dir
+            .path()
+            .join("release/evidence/metadata/metadata-matrix.json");
+        super::publish_order(
+            self.dir.path(),
+            &metadata_path,
+            &mut self.blockers.borrow_mut(),
+        )
+    }
+
+    fn blockers(&self) -> Vec<String> {
+        self.blockers.borrow().clone()
+    }
 }

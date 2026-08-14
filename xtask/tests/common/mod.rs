@@ -10,12 +10,13 @@ use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-/// The checkout root, resolved from this crate's manifest directory.
+/// The checkout root, resolved from the working directory at run time.
+///
+/// Delegates to the one owner of that answer. A root fixed at compile time names
+/// whichever checkout built the binary, and every checkout here shares one cargo
+/// target directory, so these contracts would judge another tree's files.
 pub(crate) fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: xtask must remain directly under the workspace root")
-        .to_path_buf()
+    structure_gate::workspace_root()
 }
 
 /// Run a repository script under `python3` and capture its output.

@@ -40,7 +40,8 @@ const FACET_SEEDS: [u32; 8] = [
 ];
 
 fn golden_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/golden/reference_outputs.txt")
+    vyre_test_support::monorepo::vyre_workspace_root()
+        .join("vyre-reference/tests/golden/reference_outputs.txt")
 }
 
 /// Widen one seed into the byte input a dual facet consumes.

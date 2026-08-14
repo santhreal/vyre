@@ -57,8 +57,7 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-aot"
 feature = "(default)"
-outcome = "blocked"
-reason = "UNREVIEWED: E0432 at vyre-primitives/src/graph/csr_forward_traverse.rs:20"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-aot"
@@ -698,14 +697,12 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-primitives"
 feature = "(default)"
-outcome = "blocked"
-reason = "UNREVIEWED: E0433 at vyre-primitives/tests/resolve_family_ir_parity_proptest.rs:18"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
 feature = "(default),bitset,cpu-parity,graph,hardware"
-outcome = "blocked"
-reason = "UNREVIEWED: E0433 at vyre-primitives/tests/resolve_family_ir_parity_proptest.rs:18"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
@@ -715,20 +712,17 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-primitives"
 feature = "(default),graph,inventory-registry,text"
-outcome = "blocked"
-reason = "UNREVIEWED: E0433 at vyre-primitives/tests/resolve_family_ir_parity_proptest.rs:18"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
 feature = "(default),hardware"
-outcome = "blocked"
-reason = "UNREVIEWED: E0433 at vyre-primitives/tests/resolve_family_ir_parity_proptest.rs:18"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
 feature = "(default),hash,matching"
-outcome = "blocked"
-reason = "UNREVIEWED: E0433 at vyre-primitives/tests/resolve_family_ir_parity_proptest.rs:18"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
@@ -743,8 +737,7 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-primitives"
 feature = "all-lego,cpu-parity"
-outcome = "blocked"
-reason = "UNREVIEWED: never observed"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
@@ -754,8 +747,7 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-primitives"
 feature = "bitset,fixpoint,graph,inventory-registry,math,reduce"
-outcome = "blocked"
-reason = "UNREVIEWED: E0433 at vyre-primitives/tests/resolve_family_ir_parity_proptest.rs:18"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
@@ -770,8 +762,7 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-primitives"
 feature = "cpu-parity,hardware"
-outcome = "blocked"
-reason = "UNREVIEWED: E0433 at vyre-primitives/tests/resolve_family_ir_parity_proptest.rs:18"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
@@ -821,8 +812,7 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-primitives"
 feature = "hash,inventory-registry,parsing"
-outcome = "blocked"
-reason = "UNREVIEWED: E0433 at vyre-primitives/tests/resolve_family_ir_parity_proptest.rs:18"
+outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"

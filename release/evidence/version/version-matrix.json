@@ -167,13 +167,6 @@
       "publishable": true
     },
     {
-      "package": "vyre-intrinsics",
-      "version": "0.7.2",
-      "manifest": "vyre-intrinsics/Cargo.toml",
-      "release_group": "vyre",
-      "publishable": true
-    },
-    {
       "package": "vyre-libs",
       "version": "0.7.2",
       "manifest": "vyre-libs/Cargo.toml",
@@ -209,6 +202,13 @@
       "publishable": true
     },
     {
+      "package": "vyre-pass-engine",
+      "version": "0.7.2",
+      "manifest": "vyre-pass-engine/Cargo.toml",
+      "release_group": "vyre",
+      "publishable": true
+    },
+    {
       "package": "vyre-primitives",
       "version": "0.7.2",
       "manifest": "vyre-primitives/Cargo.toml",
@@ -237,13 +237,6 @@
       "publishable": true
     },
     {
-      "package": "vyre-pass-engine",
-      "version": "0.7.2",
-      "manifest": "vyre-pass-engine/Cargo.toml",
-      "release_group": "vyre",
-      "publishable": true
-    },
-    {
       "package": "vyre-spec",
       "version": "0.7.2",
       "manifest": "vyre-spec/Cargo.toml",
@@ -261,6 +254,20 @@
       "package": "xtask",
       "version": "0.1.0",
       "manifest": "xtask/Cargo.toml",
+      "release_group": "vyre",
+      "publishable": false
+    },
+    {
+      "package": "xtask-evidence",
+      "version": "0.1.0",
+      "manifest": "xtask-evidence/Cargo.toml",
+      "release_group": "vyre",
+      "publishable": false
+    },
+    {
+      "package": "xtask-registry",
+      "version": "0.1.0",
+      "manifest": "xtask-registry/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     }
@@ -366,20 +373,6 @@
     },
     {
       "manifest": "Cargo.toml",
-      "dependency": "vyre-frontend-rust",
-      "version": "0.7.2",
-      "expected": "0.7.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "Cargo.toml",
-      "dependency": "vyre-intrinsics",
-      "version": "0.7.2",
-      "expected": "0.7.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "Cargo.toml",
       "dependency": "vyre-libs",
       "version": "0.7.2",
       "expected": "0.7.2",
@@ -415,6 +408,13 @@
     },
     {
       "manifest": "Cargo.toml",
+      "dependency": "vyre-pass-engine",
+      "version": "0.7.2",
+      "expected": "0.7.2",
+      "release_group": "vyre"
+    },
+    {
+      "manifest": "Cargo.toml",
       "dependency": "vyre-primitives",
       "version": "0.7.2",
       "expected": "0.7.2",
@@ -437,13 +437,6 @@
     {
       "manifest": "Cargo.toml",
       "dependency": "vyre-safetensors",
-      "version": "0.7.2",
-      "expected": "0.7.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "Cargo.toml",
-      "dependency": "vyre-pass-engine",
       "version": "0.7.2",
       "expected": "0.7.2",
       "release_group": "vyre"
@@ -578,13 +571,6 @@
     },
     {
       "lockfile": "Cargo.lock",
-      "package": "vyre-intrinsics",
-      "version": "0.7.2",
-      "expected": "0.7.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "Cargo.lock",
       "package": "vyre-libs",
       "version": "0.7.2",
       "expected": "0.7.2",
@@ -620,6 +606,13 @@
     },
     {
       "lockfile": "Cargo.lock",
+      "package": "vyre-pass-engine",
+      "version": "0.7.2",
+      "expected": "0.7.2",
+      "release_group": "vyre"
+    },
+    {
+      "lockfile": "Cargo.lock",
       "package": "vyre-primitives",
       "version": "0.7.2",
       "expected": "0.7.2",
@@ -642,13 +635,6 @@
     {
       "lockfile": "Cargo.lock",
       "package": "vyre-safetensors",
-      "version": "0.7.2",
-      "expected": "0.7.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "Cargo.lock",
-      "package": "vyre-pass-engine",
       "version": "0.7.2",
       "expected": "0.7.2",
       "release_group": "vyre"

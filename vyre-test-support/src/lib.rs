@@ -215,6 +215,7 @@ fn read_source_file_with_cap(path: &Path, max_bytes: u64) -> std::io::Result<Str
 ///
 /// # Panics
 /// Panics (i.e. fails the test) on any guard violation, or if a source/test file is unreadable.
+
 pub fn assert_registry_closure(crate_dir: impl AsRef<Path>, waiver: &[&str], floor: usize) {
     let crate_dir = crate_dir.as_ref();
     let crate_name = crate_dir

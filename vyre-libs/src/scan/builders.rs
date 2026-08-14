@@ -240,8 +240,7 @@ mod packed_byte_dedup_lock {
     use std::path::{Path, PathBuf};
 
     fn vyre_libs_src() -> PathBuf {
-        let crate_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        crate_root.join("src")
+        vyre_test_support::monorepo::vyre_workspace_root().join("vyre-libs/src")
     }
 
     fn walk(dir: &Path, out: &mut Vec<PathBuf>) {

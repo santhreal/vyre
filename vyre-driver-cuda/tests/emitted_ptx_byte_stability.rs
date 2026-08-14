@@ -32,7 +32,8 @@ use vyre_megakernel::{
 };
 
 fn golden_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/golden/emitted_ptx_corpus.ptx")
+    vyre_test_support::monorepo::vyre_workspace_root()
+        .join("vyre-driver-cuda/tests/golden/emitted_ptx_corpus.ptx")
 }
 
 /// Wrap one corpus program in the single-node graph the artifact route expects.

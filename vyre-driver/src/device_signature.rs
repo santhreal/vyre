@@ -472,7 +472,7 @@ bank_width_bytes = 4
 
     #[test]
     fn repository_device_signatures_load() {
-        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../devices");
+        let dir = vyre_test_support::monorepo::vyre_workspace_root().join("devices");
         let table = DeviceSignatureTable::load_dir(dir).unwrap();
 
         assert!(table.get("blackwell_120").is_some());

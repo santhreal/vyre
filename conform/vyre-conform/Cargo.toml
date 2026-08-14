@@ -65,4 +65,7 @@ vyre-runtime = { workspace = true }
 vyre-spec = { workspace = true }
 
 [dev-dependencies]
+# Run-time checkout root, so a contract binary reused across checkouts still
+# reports on the tree cargo was invoked in. publish = false on both sides.
+structure-gate = { path = "../../structure-gate" }
 toml = { workspace = true }

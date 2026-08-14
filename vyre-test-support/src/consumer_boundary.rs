@@ -24,7 +24,7 @@
 //! fn driver_source_does_not_name_downstream_consumers() {
 //!     let crate_dir = vyre_test_support::monorepo::vyre_workspace_root().join("vyre-driver");
 //!     vyre_test_support::consumer_boundary::assert_source_does_not_name_downstream_consumers(
-//!         ConsumerBoundaryScan::for_crate("vyre-driver", crate_dir)
+//!         ConsumerBoundaryScan::for_crate("vyre-driver", vyre_workspace_root().join("vyre-driver"))
 //!             .with_rationale("vyre-driver is a platform crate"),
 //!     );
 //! }

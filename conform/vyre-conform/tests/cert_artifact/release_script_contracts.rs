@@ -1,9 +1,6 @@
 #[test]
 fn release_scripts_make_sharded_conformance_certificate_load_bearing() {
-    let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .nth(2)
-        .expect("Fix: test manifest must live under conform/vyre-conform");
+    let repo = structure_gate::workspace_root();
     let prove = std::fs::read_to_string(repo.join("scripts/prove-release-shards.sh"))
         .expect("Fix: sharded release proof helper must be readable");
     assert!(

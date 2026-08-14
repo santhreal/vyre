@@ -57,13 +57,16 @@ const SANTH_ROOT_MARKER: &str = "tools/vyrec/src";
 /// Path, relative to the monorepo root, holding the dataflow crates.
 const DATAFLOW_RELATIVE: &str = "libs/dataflow";
 
-/// Root of the vyre cargo workspace.
+/// Root of the vyre cargo workspace, resolved from the working directory.
 ///
-/// Resolved from the working directory at run time by
-/// [`structure_gate::workspace_root`], the one owner of that question. A path
-/// baked in at compile time answers for whichever checkout built the binary,
-/// which is not the checkout the command ran in whenever a target directory is
-/// shared.
+/// Delegates to [`structure_gate::workspace_root`], the one owner of "which
+/// checkout am I reporting on". Never compiled in: every checkout of this
+/// repository shares one cargo target directory, cargo hashes a member by its
+/// path relative to the workspace root and checks freshness by mtime, so two
+/// checkouts compute the same unit hash and hand each other compiled binaries.
+/// A path fixed at compile time then names whichever tree built last, and a
+/// test that reads docs, pins, fixtures or golden files through it audits that
+/// tree while claiming to describe this one.
 ///
 /// # Panics
 ///

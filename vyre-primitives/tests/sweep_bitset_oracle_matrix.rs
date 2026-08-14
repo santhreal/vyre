@@ -357,9 +357,7 @@ fn bitset_registry_is_fully_covered() {
                 .is_some(),
             "Fix: exempted bitset operation {id} is no longer registered. Drop the exemption, or restore the registration {owner} proves."
         );
-        let owner_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("..")
-            .join(owner);
+        let owner_path = vyre_test_support::monorepo::vyre_workspace_root().join(owner);
         assert!(
             owner_path.is_file(),
             "Fix: bitset operation {id} is exempted to {owner}, which is not a file in this workspace. Name the suite that actually proves it."

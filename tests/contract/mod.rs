@@ -11,8 +11,5 @@ mod xtask_help_smoke;
 
 /// Workspace root (`vyre/` directory).
 pub(crate) fn workspace_root() -> std::path::PathBuf {
-    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("contract tests are included from vyre-foundation under the workspace root")
-        .to_path_buf()
+    vyre_test_support::monorepo::vyre_workspace_root()
 }

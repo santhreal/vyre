@@ -22,19 +22,25 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 175,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: xtask must live under the vyre workspace root.\")"
+      "line": 208,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 427,
+      "line": 210,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "structure-gate/src/lib.rs",
+      "line": 471,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 429,
+      "line": 473,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
     },
@@ -51,16 +57,82 @@
       "text": ".expect(\"canonical target payload validation guarantees resource association\");"
     },
     {
+      "path": "vyre-driver/src/resident_transfer_fixtures.rs",
+      "line": 309,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: generated resident upload fusion must not overflow accounting\");"
+    },
+    {
       "path": "vyre-driver/src/subgroup.rs",
       "line": 115,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"vyre-driver reduction offsets generation failed: {error}\");"
     },
     {
+      "path": "vyre-driver/src/hostile_input_closure.rs",
+      "line": 99,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"Fix: {label} must reject extra trailing input buffers instead of ignoring them.\")"
+    },
+    {
+      "path": "vyre-driver/src/hostile_input_closure.rs",
+      "line": 115,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"Fix: {label} must reject a zero workgroup dimension before dispatch.\")"
+    },
+    {
+      "path": "vyre-driver/src/parity_harness/mod.rs",
+      "line": 131,
+      "pattern": "documented_panic_contract",
+      "text": "let binding = u32::try_from(offset + 1).expect(\"parity programs declare few buffers\");"
+    },
+    {
+      "path": "vyre-driver/src/parity_harness/mod.rs",
+      "line": 187,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"Fix: the backend must dispatch `{label}`: {error}\"));"
+    },
+    {
+      "path": "vyre-driver/src/parity_harness/mod.rs",
+      "line": 200,
+      "pattern": "documented_panic_contract",
+      "text": "outputs.into_iter().next().expect(\"length asserted above\")"
+    },
+    {
+      "path": "vyre-driver/src/parity_harness/mod.rs",
+      "line": 220,
+      "pattern": "expect_call",
+      "text": "let count = u32::try_from(pairs.len()).expect(\"parity gates use small operand tables\");"
+    },
+    {
+      "path": "vyre-libs/src/scheduling/megakernel_schedule.rs",
+      "line": 167,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-pass-engine homotopy schedule generation failed: {error}\");"
+    },
+    {
       "path": "vyre-libs/src/graph/ast_walk.rs",
       "line": 47,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\")),"
+    },
+    {
+      "path": "vyre-libs/src/graph/dispatch/vast_tree_walk/builders.rs",
+      "line": 96,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"trusted VAST preorder walk shape was not prevalidated: {error}\")"
+    },
+    {
+      "path": "vyre-libs/src/graph/dispatch/vast_tree_walk/builders.rs",
+      "line": 123,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"trusted VAST postorder walk shape was not prevalidated: {error}\")"
+    },
+    {
+      "path": "vyre-libs/src/device/scratch.rs",
+      "line": 73,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
     },
     {
       "path": "vyre-libs/src/scan/classic_ac/bounded_ranges/prefilter/suffix3.rs",
@@ -219,30 +291,6 @@
       "text": ".expect(\"Fix: cols * rows overflows u32\");"
     },
     {
-      "path": "vyre-pass-engine/src/scheduling/megakernel_schedule.rs",
-      "line": 167,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"vyre-pass-engine homotopy schedule generation failed: {error}\");"
-    },
-    {
-      "path": "vyre-pass-engine/src/hardware/scratch.rs",
-      "line": 61,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
-    },
-    {
-      "path": "vyre-pass-engine/src/graph/vast_tree_walk/builders.rs",
-      "line": 96,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"trusted VAST preorder walk shape was not prevalidated: {error}\")"
-    },
-    {
-      "path": "vyre-pass-engine/src/graph/vast_tree_walk/builders.rs",
-      "line": 123,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"trusted VAST postorder walk shape was not prevalidated: {error}\")"
-    },
-    {
       "path": "vyre-foundation/src/analysis/graph_view.rs",
       "line": 314,
       "pattern": "documented_panic_contract",
@@ -256,13 +304,13 @@
     },
     {
       "path": "vyre-foundation/src/operation.rs",
-      "line": 421,
+      "line": 417,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"invalid semantic operation registry: {error}\"))"
     },
     {
       "path": "vyre-foundation/src/operation.rs",
-      "line": 484,
+      "line": 480,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"target identity must be non-empty and contain no surrounding whitespace\");"
     },
@@ -280,49 +328,43 @@
     },
     {
       "path": "vyre-test-support/src/consumer_boundary.rs",
-      "line": 131,
+      "line": 135,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "vyre-test-support/src/consumer_boundary.rs",
-      "line": 162,
+      "line": 166,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "vyre-test-support/src/consumer_boundary.rs",
-      "line": 171,
+      "line": 175,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "vyre-test-support/src/consumer_boundary.rs",
-      "line": 179,
+      "line": 183,
       "pattern": "panic_macro",
       "text": "panic!("
-    },
-    {
-      "path": "vyre-test-support/src/monorepo.rs",
-      "line": 66,
-      "pattern": "expect_call",
-      "text": ".expect(\"vyre-test-support must live directly under the vyre workspace root\")"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 107,
+      "line": 117,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 130,
+      "line": 140,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"{crate_name} test file {path:?} must be readable: {e}\")"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 204,
+      "line": 214,
       "pattern": "documented_panic_contract",
       "text": "let path = entry.expect(\"source entry must be readable\").path();"
     },
@@ -421,6 +463,12 @@
       "line": 537,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"));"
+    },
+    {
+      "path": "vyre-primitives/src/hardware/subgroup_shuffle.rs",
+      "line": 56,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
     },
     {
       "path": "vyre-primitives/src/graph/vast_tree_walk.rs",
@@ -550,33 +598,57 @@
     },
     {
       "path": "vyre-primitives/src/wire.rs",
-      "line": 196,
+      "line": 204,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"vyre-primitives u32 wire pack failed: {error}\");"
     },
     {
       "path": "vyre-primitives/src/wire.rs",
-      "line": 265,
+      "line": 273,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!(\"vyre-primitives byte-lane wire pack failed: {error}\"),"
     },
     {
       "path": "vyre-primitives/src/wire.rs",
-      "line": 275,
+      "line": 283,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"vyre-primitives byte-lane wire pack failed: {error}\");"
     },
     {
       "path": "vyre-primitives/src/wire.rs",
-      "line": 349,
+      "line": 357,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"vyre-primitives f32 wire pack failed: {error}\");"
     },
     {
-      "path": "vyre-intrinsics/src/hardware/subgroup_shuffle/subgroup_shuffle.rs",
-      "line": 56,
+      "path": "vyre-lower/src/artifact_golden.rs",
+      "line": 84,
       "pattern": "documented_panic_contract",
       "text": "panic!("
+    },
+    {
+      "path": "vyre-lower/src/artifact_golden.rs",
+      "line": 120,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "vyre-lower/src/artifact_golden.rs",
+      "line": 128,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "vyre-lower/src/artifact_golden.rs",
+      "line": 148,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"Fix: cannot create {}: {error}\", parent.display());"
+    },
+    {
+      "path": "vyre-lower/src/artifact_golden.rs",
+      "line": 152,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"Fix: cannot write {}: {error}\", path.display());"
     },
     {
       "path": "vyre-runtime/src/megakernel/protocol/codec/debug_log.rs",
@@ -681,20 +753,20 @@
       "text": ".expect(\"Fix: conformance operation must provide a neutral builder\");"
     },
     {
-      "path": "conform/vyre-conform/src/main.rs",
-      "line": 992,
+      "path": "conform/vyre-conform/src/reference_parity.rs",
+      "line": 98,
       "pattern": "expect_call",
       "text": ".expect(\"production session initialized\")"
     },
     {
-      "path": "xtask/src/release/conformance_matrix.rs",
-      "line": 193,
+      "path": "xtask-registry/src/release/conformance_matrix.rs",
+      "line": 185,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"backend registry startup failed: {error}\"));"
     },
     {
-      "path": "xtask/src/release/conformance_matrix.rs",
-      "line": 197,
+      "path": "xtask-registry/src/release/conformance_matrix.rs",
+      "line": 189,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"backend registry startup failed: {error}\"))"
     }

@@ -540,10 +540,10 @@ const CLASSIFIED_VAST_KINDS: usize = 80;
 ///
 /// Scanned rather than listed so the sweep cannot go stale behind a new kind.
 fn declared_vast_kinds() -> Vec<(String, u32)> {
-    let source = std::fs::read_to_string(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/src/parsing/c/parse/vast_kinds.rs"
-    ))
+    let source = std::fs::read_to_string(
+        vyre_test_support::monorepo::vyre_workspace_root()
+            .join("vyre-libs/src/parsing/c/parse/vast_kinds.rs"),
+    )
     .expect("the parser's VAST kind constants must be readable");
     let mut kinds: Vec<(String, u32)> = source
         .lines()

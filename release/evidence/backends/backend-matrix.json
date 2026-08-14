@@ -28,7 +28,7 @@
       "path": "vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 9796,
+      "source_bytes": 8960,
       "implementation_tokens": [
         "mma",
         "fragment"
@@ -42,7 +42,7 @@
       "path": "vyre-emit-ptx/src/patterns/ldmatrix_cp_async/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 11270,
+      "source_bytes": 8179,
       "implementation_tokens": [
         "ldmatrix",
         "cp.async"
@@ -56,7 +56,7 @@
       "path": "vyre-emit-ptx/src/patterns/predicated_execution/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 18643,
+      "source_bytes": 12508,
       "implementation_tokens": [
         "predicate",
         "predicated"
@@ -70,7 +70,7 @@
       "path": "vyre-emit-ptx/src/patterns/instruction_scheduling/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 8366,
+      "source_bytes": 6826,
       "implementation_tokens": [
         "schedule",
         "latency"
@@ -84,7 +84,7 @@
       "path": "vyre-emit-ptx/src/emitter/body.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 17549,
+      "source_bytes": 17590,
       "implementation_tokens": [
         "vector-load gap",
         "find_latency_filler_avoiding_results"
@@ -113,7 +113,7 @@
       "path": "vyre-emit-ptx/src/emitter/vector.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 15265,
+      "source_bytes": 15316,
       "implementation_tokens": [
         "ld.global",
         "v4"
@@ -127,7 +127,7 @@
       "path": "vyre-emit-ptx/src/emitter/vector.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 15265,
+      "source_bytes": 15316,
       "implementation_tokens": [
         "st.global",
         "v4"
@@ -169,7 +169,7 @@
       "path": "vyre-driver-cuda/src/backend/resident_dispatch.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 789,
+      "source_bytes": 1671,
       "implementation_tokens": [
         "dispatch_resident",
         "ptx"
@@ -209,10 +209,10 @@
     },
     {
       "id": "cuda-module-cache",
-      "path": "vyre-driver-cuda/src/backend/module_cache.rs",
+      "path": "vyre-driver-cuda/src/backend/module_cache/module_registry.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 63116,
+      "source_bytes": 19114,
       "implementation_tokens": [
         "function_for_ptx",
         "ptx_target_sm"
@@ -223,10 +223,10 @@
     },
     {
       "id": "cuda-ptx-source-cache",
-      "path": "vyre-driver-cuda/src/backend/module_cache.rs",
+      "path": "vyre-driver-cuda/src/backend/module_cache/ptx_source_cache.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 63116,
+      "source_bytes": 22429,
       "implementation_tokens": [
         "CudaPtxSourceCache",
         "CudaPtxSourceCacheSnapshot",
@@ -258,7 +258,7 @@
       "path": "vyre-runtime/src/megakernel/speculation.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 9398,
+      "source_bytes": 9396,
       "implementation_tokens": [
         "PairedSpeculationWindow",
         "record_sample",
@@ -276,7 +276,7 @@
       "path": "vyre-driver-wgpu/src/materializer.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 21315,
+      "source_bytes": 14637,
       "implementation_tokens": [
         "impl ArtifactMaterializer",
         "fn materialize",
@@ -347,7 +347,7 @@
       "path": "vyre-driver-wgpu/src/pipeline/disk_cache.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 23860,
+      "source_bytes": 23345,
       "implementation_tokens": [
         "cache",
         "pipeline",
@@ -377,7 +377,7 @@
       "path": "vyre-runtime/src/megakernel/speculation.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 9398,
+      "source_bytes": 9396,
       "implementation_tokens": [
         "PairedSpeculationWindow",
         "record_sample",
