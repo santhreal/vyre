@@ -34,7 +34,7 @@
 //! assert_eq!(desc.body.ops.len(), 4);
 //! ```
 
-use vyre_foundation::ir::DataType;
+use vyre_foundation::ir::{BinOp, DataType};
 
 use crate::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, EmissionTargetCapabilities, KernelBody,
@@ -66,6 +66,24 @@ pub fn effect(kind: KernelOpKind, operands: impl Into<Vec<u32>>) -> KernelOp {
 #[must_use]
 pub fn lit(pool_index: u32, result: u32) -> KernelOp {
     op(KernelOpKind::Literal, [pool_index], result)
+}
+
+/// A binary-arithmetic op over two value ids.
+#[must_use]
+pub fn binop(kind: BinOp, lhs: u32, rhs: u32, result: u32) -> KernelOp {
+    op(KernelOpKind::BinOpKind(kind), [lhs, rhs], result)
+}
+
+/// A load of `slot` at element `index`.
+#[must_use]
+pub fn load_global(slot: u32, index: u32, result: u32) -> KernelOp {
+    op(KernelOpKind::LoadGlobal, [slot, index], result)
+}
+
+/// A store of `value` into `slot` at element `index`.
+#[must_use]
+pub fn store_global(slot: u32, index: u32, value: u32) -> KernelOp {
+    effect(KernelOpKind::StoreGlobal, [slot, index, value])
 }
 
 /// A binding slot with every field named.
