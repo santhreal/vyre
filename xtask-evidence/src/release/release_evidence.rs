@@ -389,24 +389,11 @@ mod tests {
         );
 
         let blockers = &statuses[0].blockers;
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("repositories_public")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("private Santh path")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("outside the release train")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("credential-looking")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("visibility mutation")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("VYRE_RELEASE_REPOS")));
+        assert_eq!(
+            xtask::release::repo_boundary::missing_public_artifact_boundary_markers(blockers),
+            Vec::<&str>::new(),
+            "Fix: the inspector must preserve every boundary finding the primitive reports; got {blockers:?}"
+        );
     }
 
     #[test]
@@ -480,24 +467,11 @@ mod tests {
         );
 
         let blockers = &statuses[0].blockers;
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("schema_version=2")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("generator_command")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("family[0].family_id")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("family[0].detector")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("left.fingerprint")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("right.fingerprint")));
+        assert_eq!(
+            xtask::gates::dedup_report::missing_duplicate_family_blocker_markers(blockers),
+            Vec::<&str>::new(),
+            "Fix: the inspector must preserve every drift blocker the validator reports; got {blockers:?}"
+        );
     }
 
     #[test]

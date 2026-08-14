@@ -243,6 +243,32 @@ pub fn validate_duplicate_family_report_artifact(
     blockers
 }
 
+/// A distinguishing substring of every blocker
+/// [`validate_duplicate_family_report_artifact`] can emit for a single drifted
+/// family.
+///
+/// The validator is asserted twice: here, against itself, and in xtask-evidence,
+/// against the artifact inspector that routes through it. The two lists were
+/// written by hand and had already drifted apart, so one caller judged the
+/// missing `detector` field and the other did not.
+const DUPLICATE_FAMILY_BLOCKER_MARKERS: [&str; 6] = [
+    "schema_version=2",
+    "generator_command",
+    "family[0].family_id",
+    "family[0].detector",
+    "left.fingerprint",
+    "right.fingerprint",
+];
+
+/// Which duplicate-family findings the given blockers fail to report.
+#[must_use]
+pub fn missing_duplicate_family_blocker_markers(blockers: &[String]) -> Vec<&'static str> {
+    DUPLICATE_FAMILY_BLOCKER_MARKERS
+        .into_iter()
+        .filter(|marker| !blockers.iter().any(|blocker| blocker.contains(marker)))
+        .collect()
+}
+
 fn duplicate_subject_fingerprint_is_supported(fingerprint: &str) -> bool {
     fingerprint.starts_with("registered-op-ir-fingerprint:v1:")
 }
@@ -549,21 +575,11 @@ mod tests {
             "xtask whats-similar --all --duplicate-report-json release/evidence/dedup/registered-op-duplicates.json",
         );
 
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("schema_version=2")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("generator_command")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("family[0].family_id")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("left.fingerprint")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("right.fingerprint")));
+        assert_eq!(
+            missing_duplicate_family_blocker_markers(&blockers),
+            Vec::<&str>::new(),
+            "Fix: every drifted field must stay a visible blocker; got {blockers:?}"
+        );
     }
 
     #[test]

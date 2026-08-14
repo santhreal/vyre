@@ -106,6 +106,37 @@ pub fn public_artifact_boundary_blockers(artifact: &str, bytes: &[u8]) -> Vec<St
     blockers
 }
 
+/// A distinguishing substring of every blocker
+/// [`public_artifact_boundary_blockers`] can emit.
+///
+/// The boundary is checked in two places: here, against the primitive, and in
+/// xtask-evidence, against the artifact inspector that routes through it. Both
+/// asked for the same six findings by hand, so a new finding was reported by one
+/// caller and unnoticed by the other. Name them once and let a caller ask which
+/// are missing.
+const PUBLIC_ARTIFACT_BOUNDARY_MARKERS: [&str; 6] = [
+    "repositories_public",
+    "private Santh path",
+    "outside the release train",
+    "credential-looking",
+    "visibility mutation",
+    "VYRE_RELEASE_REPOS",
+];
+
+/// Which boundary findings the given blockers fail to report.
+///
+/// An empty result is the contract: an artifact that names a private repository,
+/// a private path, a credential, a visibility mutation and the legacy plural
+/// variable must produce all six, and a caller that reports five of them has a
+/// hole rather than a smaller answer.
+#[must_use]
+pub fn missing_public_artifact_boundary_markers(blockers: &[String]) -> Vec<&'static str> {
+    PUBLIC_ARTIFACT_BOUNDARY_MARKERS
+        .into_iter()
+        .filter(|marker| !blockers.iter().any(|blocker| blocker.contains(marker)))
+        .collect()
+}
+
 fn inspect_public_artifact_text(
     artifact: &str,
     text: &str,
@@ -261,7 +292,7 @@ fn github_repo_refs(lower: &str) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::public_artifact_boundary_blockers;
+    use super::{missing_public_artifact_boundary_markers, public_artifact_boundary_blockers};
 
     /// Plural ownership, private-tree citations, credentials, and visibility
     /// mutation commands must all remain visible release blockers.
@@ -271,24 +302,11 @@ mod tests {
             "release/evidence/final/public-launch-state.json",
             br#"{"repositories_public":["santhreal/vyre"],"public_repository":"santhreal/Santh","path":"/mnt/shared/SanthData/Santh/private.json","command":"gh repo edit Santh --visibility public","env":"VYRE_RELEASE_REPOS=santhreal/vyre","provenance":"token=abc"}"#,
         );
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("repositories_public")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("private Santh path")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("outside the release train")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("credential-looking")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("visibility mutation")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("VYRE_RELEASE_REPOS")));
+        assert_eq!(
+            missing_public_artifact_boundary_markers(&blockers),
+            Vec::<&str>::new(),
+            "Fix: every boundary finding must stay a visible release blocker; got {blockers:?}"
+        );
     }
 
     /// Vyre release evidence may cite only the Vyre public repository.
