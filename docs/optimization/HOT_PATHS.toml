@@ -79,7 +79,7 @@ max_panic_findings = 0
 
 # Canonical lower/emit boundary.
 [[hot_path]]
-file = "vyre-lower/src/pre_emit.rs"
+file = "vyre-lower/src/verified_lowering.rs"
 reason = "Program-to-KernelDescriptor production boundary; every concrete backend emission enters through this path."
 max_findings = 8
 max_allocation_findings = 7

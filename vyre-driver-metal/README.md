@@ -9,7 +9,7 @@ Execution path:
 
 ```text
 Program
-  -> vyre-lower::pre_emit
+  -> vyre-lower::lower_verified
   -> vyre-emit-metal
   -> Metal Shading Language
   -> MTLComputePipelineState
