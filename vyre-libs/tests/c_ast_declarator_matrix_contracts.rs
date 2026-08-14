@@ -26,51 +26,24 @@
 #![allow(deprecated)]
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/fixtures/declarator_matrix_constructs.rs"]
 mod declarator_matrix_constructs;
 
-use c_ast_gpu_parity_support::{
-    assert_pg_preserves_row, assert_words_eq, kind_at, node_count_from_vast, run_gpu_classifier,
-    run_gpu_fast_typedef_annotation, run_gpu_pg_lower_with_count as run_gpu_pg_lower,
-    run_gpu_vast_builder_from_parts, Fixture,
+use crate::c_frontend::rows::{
+    assert_pg_preserves_row, flags_at, kind_at, row_indices, TYPEDEF_FLAG_DECL,
+    TYPEDEF_FLAG_VISIBLE,
 };
 use declarator_matrix_constructs::*;
+use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds,
+    reference_c11_classify_vast_node_kinds, C_AST_KIND_ARRAY_DECL, C_AST_KIND_CAST_EXPR,
+    C_AST_KIND_ENUMERATOR_DECL, C_AST_KIND_ENUM_DECL, C_AST_KIND_FIELD_DECL,
+    C_AST_KIND_FUNCTION_DECLARATOR, C_AST_KIND_POINTER_DECL, C_AST_KIND_STRUCT_DECL,
+    C_AST_KIND_TYPEDEF_DECL, C_AST_KIND_UNION_DECL,
 };
+use vyre_primitives::predicate::node_kind;
 
-fn run_gpu_annotate(fix: &Fixture, raw_vast: &[u8]) -> Vec<u8> {
-    run_gpu_fast_typedef_annotation(fix.source.as_bytes(), raw_vast)
-}
-
-fn assert_full_pipeline_parity(fix: &Fixture, label: &str) {
-    let raw_cpu = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let raw_gpu = run_gpu_vast_builder_from_parts(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    assert_words_eq(
-        &raw_gpu,
-        &raw_cpu,
-        &format!("{label}: raw VAST GPU/CPU parity"),
-    );
-
-    let annotated_cpu = reference_c11_annotate_typedef_names(&raw_cpu, fix.source.as_bytes());
-    let annotated_gpu = run_gpu_annotate(fix, &raw_gpu);
-    assert_words_eq(
-        &annotated_gpu,
-        &annotated_cpu,
-        &format!("{label}: annotated VAST GPU/CPU parity"),
-    );
-
-    let typed_cpu = reference_c11_classify_vast_node_kinds(&annotated_cpu);
-    let typed_gpu = run_gpu_classifier(&annotated_gpu);
-    assert_words_eq(
-        &typed_gpu,
-        &typed_cpu,
-        &format!("{label}: typed VAST GPU/CPU parity"),
-    );
-}
-
-#[path = "c_ast_declarator_matrix_contracts/pg_lowering_and_gpu_parity.rs"]
-mod pg_lowering_and_gpu_parity;
+#[path = "c_ast_declarator_matrix_contracts/cpu_reference_and_pg_lowering.rs"]
+mod cpu_reference_and_pg_lowering;

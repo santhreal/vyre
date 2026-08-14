@@ -675,3 +675,13 @@ required-features = ["c-parser"]
 name = "c_ast_linux_corpus_macro_builtin_and_qualifier_contracts"
 path = "tests/c_ast_linux_corpus_macro_builtin_and_qualifier_contracts.rs"
 required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_declaration_advanced_contracts"
+path = "tests/c_ast_declaration_advanced_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_declarator_matrix_contracts"
+path = "tests/c_ast_declarator_matrix_contracts.rs"
+required-features = ["c-parser"]
