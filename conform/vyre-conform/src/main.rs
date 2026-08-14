@@ -19,7 +19,6 @@ use crate::dispatch_command::dispatch_pairs;
 use crate::proof_plan::emit_plan;
 use crate::prove_command::{prove, DEFAULT_CERTIFICATE_DIR, DEFAULT_CERTIFICATE_FILE};
 
-
 fn main() {
     let mut args = std::env::args();
     let _binary = args.next();

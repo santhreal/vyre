@@ -92,6 +92,19 @@ impl WitnessInputPlan {
     pub fn zeroed_input_count(&self) -> usize {
         self.zeroed_inputs.len()
     }
+
+    /// Program buffer index behind each planned input slice, in stream order.
+    ///
+    /// The adversarial ULP companions rewrite one input at a time and need the
+    /// buffer declaration behind each slice to know its element type. The plan
+    /// skips outputs, shared memory and pipeline live-outs, so a stream
+    /// position is not a `Program::buffers` position.
+    pub fn buffer_indices(&self) -> impl Iterator<Item = usize> + '_ {
+        self.sources.iter().map(|source| match source {
+            WitnessInputSource::Fixture { buffer_index, .. }
+            | WitnessInputSource::ReadWriteOrZero { buffer_index, .. } => *buffer_index,
+        })
+    }
 }
 
 fn fixture_backed_byte_len(buffer: &BufferDecl, role: &str) -> Result<Option<usize>, String> {
@@ -175,6 +188,24 @@ pub fn plan_witness_inputs_into<'a>(
     Ok(())
 }
 
+/// Expand logical fixture bytes into owned copies of the planned input stream.
+///
+/// A caller that mutates the stream cannot borrow it from the fixture. The ULP
+/// adversarial companions overwrite every f32 input in place, so they need one
+/// owned buffer per planned slice.
+pub fn plan_witness_inputs_owned_into(
+    fixture_inputs: &[Vec<u8>],
+    plan: &WitnessInputPlan,
+    owned_inputs: &mut Vec<Vec<u8>>,
+) -> Result<(), String> {
+    let mut borrowed = Vec::with_capacity(plan.sources.len());
+    plan_witness_inputs_into(fixture_inputs, plan, &mut borrowed)?;
+    owned_inputs.clear();
+    owned_inputs.reserve(borrowed.len());
+    owned_inputs.extend(borrowed.into_iter().map(<[u8]>::to_vec));
+    Ok(())
+}
+
 fn matching_fixture_bytes<'a>(
     fixture_inputs: &'a [Vec<u8>],
     buffer_index: usize,
@@ -204,6 +235,93 @@ fn matching_fixture_bytes<'a>(
 mod tests {
     use super::*;
     use vyre::ir::{BufferDecl, DataType, Node};
+
+    #[test]
+    fn witness_input_plan_accepts_logical_fixture_order_after_output_buffer() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::output("out", 0, DataType::U32).with_count(1),
+                BufferDecl::storage("input", 1, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(2),
+            ],
+            [1, 1, 1],
+            Vec::<Node>::new(),
+        );
+        let plan = WitnessInputPlan::for_program(&program)
+            .expect("Fix: logical input planning must succeed when an output is declared first.");
+        let case = vec![vec![1, 0, 0, 0, 2, 0, 0, 0]];
+        let mut backend_inputs = Vec::new();
+
+        plan_witness_inputs_into(&case, &plan, &mut backend_inputs)
+            .expect("Fix: logical fixture bytes must route even when outputs precede inputs.");
+
+        assert_eq!(
+            backend_inputs,
+            vec![case[0].as_slice()],
+            "Fix: the plan must use logical fixture order, not raw Program::buffers indices."
+        );
+        assert_eq!(
+            plan.buffer_indices().collect::<Vec<_>>(),
+            vec![1],
+            "Fix: buffer_indices must report the Program::buffers position behind each planned \
+             slice, so a caller that rewrites one input reads the right declaration."
+        );
+    }
+
+    #[test]
+    fn owned_expansion_matches_the_borrowed_stream_byte_for_byte() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(1),
+                BufferDecl::storage("scratch", 1, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(1),
+            ],
+            [1, 1, 1],
+            Vec::<Node>::new(),
+        );
+        let plan = WitnessInputPlan::for_program(&program)
+            .expect("Fix: static read-write zero-fill planning must succeed.");
+        let case = vec![7u32.to_le_bytes().to_vec()];
+        let mut borrowed = Vec::new();
+        let mut owned = Vec::new();
+
+        plan_witness_inputs_into(&case, &plan, &mut borrowed)
+            .expect("Fix: borrowed expansion must succeed for a zero-fillable read-write buffer.");
+        plan_witness_inputs_owned_into(&case, &plan, &mut owned)
+            .expect("Fix: owned expansion must succeed wherever the borrowed one does.");
+
+        assert_eq!(
+            owned.iter().map(Vec::as_slice).collect::<Vec<_>>(),
+            borrowed,
+            "Fix: the owned expansion must copy the planned stream, not reorder or resynthesize it."
+        );
+    }
+
+    #[test]
+    fn owned_expansion_reports_the_same_rejection_as_the_borrowed_one() {
+        let program = Program::wrapped(
+            vec![BufferDecl::storage(
+                "scratch",
+                0,
+                BufferAccess::ReadWrite,
+                DataType::U32,
+            )],
+            [1, 1, 1],
+            Vec::<Node>::new(),
+        );
+        let plan = WitnessInputPlan::for_program(&program)
+            .expect("Fix: dynamic read-write buffers may be fixture-backed per case.");
+        let mut owned = Vec::new();
+
+        let error = plan_witness_inputs_owned_into(&[], &plan, &mut owned)
+            .expect_err("Fix: the owned expansion must not zero-fill a runtime-sized buffer.");
+
+        assert!(
+            error.contains("runtime-sized read-write buffer"),
+            "Fix: the owned expansion must surface the borrowed expansion's diagnosis, got: {error}"
+        );
+    }
 
     #[test]
     fn witness_input_plan_accepts_fixture_backed_runtime_sized_read_input() {

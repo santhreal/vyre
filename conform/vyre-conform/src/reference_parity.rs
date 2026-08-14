@@ -4,8 +4,8 @@
 use crate::operation_selection::PreparedEntry;
 use crate::proof_scheduler::panic_message;
 use crate::replay_capsule::build_replay_capsule;
-use crate::witness_fixtures::backend_dispatch_inputs_with_plan_into;
 use vyre_conform::fp_parity::{compare_output_buffers, BufferParity};
+use vyre_conform::witness_plan::plan_witness_inputs_into;
 use vyre_conform::{convergence_lens, ProductionSession};
 use vyre_conform_spec::ConformanceResult;
 
@@ -79,11 +79,9 @@ pub(crate) fn compare_backend_against_reference(
                 };
             }
         } else {
-            if let Err(error) = backend_dispatch_inputs_with_plan_into(
-                inputs,
-                &prepared.input_plan,
-                &mut backend_inputs,
-            ) {
+            if let Err(error) =
+                plan_witness_inputs_into(inputs, &prepared.input_plan, &mut backend_inputs)
+            {
                 return ConformanceResult {
                     op_id: prepared.id.into(),
                     backend_id: backend_id.clone(),
