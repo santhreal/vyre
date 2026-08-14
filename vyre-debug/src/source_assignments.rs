@@ -1,3 +1,10 @@
+//! Source-level assignment discovery.
+//!
+//! Owns the traversal that reports every assignment in a `Program` together
+//! with the loop path enclosing it, which is what the loop-carrier diagnostic
+//! needs to tell a mutation that escapes its loop from one that does not. It
+//! renders nothing and judges nothing.
+
 use vyre_foundation::ir::{Node, Program};
 
 #[derive(Clone)]

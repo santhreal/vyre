@@ -17,9 +17,9 @@
     clippy::explicit_counter_loop
 )]
 //! Inspection and diagnostic helpers for Vyre IR and lowered kernel descriptors.
-///
 /// Canonical compiler artifact and selected-plan diagnostics.
 pub mod artifact_report;
+pub(crate) mod body_path_map;
 /// Loop-carrier diagnostics.
 pub mod carriers;
 /// Dangling descriptor-reference diagnostics.
@@ -34,9 +34,8 @@ pub mod fixtures;
 pub mod naga_dump;
 /// Naga validation and binding failure traces.
 pub mod naga_trace;
-pub(crate) mod path_map_serde;
 /// Source-level assignment traversal.
-pub mod source_walker;
+pub mod source_assignments;
 /// WGSL emission and source-line mapping.
 pub mod wgsl;
 
