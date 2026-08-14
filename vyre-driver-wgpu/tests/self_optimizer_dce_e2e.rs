@@ -1,8 +1,8 @@
 //! End-to-end test: vyre's DCE pass running as a vyre Program on the
 //! GPU through the canonical `WgpuBackend::dispatch` API.
 //!
-//! No CPU fallback. The test wires a `WgpuOptimizerDispatcher` that
-//! satisfies the `vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher`
+//! No CPU fallback. The test wires a `WgpuProgramDispatcher` that
+//! satisfies the `vyre_foundation::program_dispatch::ProgramDispatcher`
 //! trait and calls `gpu_dce`. Result is asserted fingerprint-equal to
 //! the foundation CPU `dce` pass on the same input  -  proving the
 //! self-hosted GPU pass is semantically identical, with the substrate

@@ -69,7 +69,7 @@ use vyre_reference::value::Value;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// The one canonical `ProgramDispatcher` that actually EXECUTES a vyre Program (rather than
-/// hand-writing a per-op CPU oracle like `optimizer::dispatcher::oracle::CpuOracleDispatcher`,
+/// hand-writing a per-op CPU oracle like `optimizer::cpu_oracle::CpuOracleDispatcher`,
 /// which only recognizes `persistent_bfs` / `exploded`). Backing the dispatch boundary with
 /// `vyre_reference::reference_eval` lets every `*_via` production entry point be tested end to end
 /// against its `_cpu` oracle without a GPU backend, the "reference dispatcher" the

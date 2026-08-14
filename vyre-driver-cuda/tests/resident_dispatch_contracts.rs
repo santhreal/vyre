@@ -21,10 +21,10 @@ mod sequence_readback_contracts;
 use common::{bytes_u32, u32_bytes};
 
 use vyre_driver::{DispatchConfig, Resource, VyreBackend};
-use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration, CudaOptimizerDispatcher};
+use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration, CudaProgramDispatcher};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_self_substrate::optimizer::dispatcher::{
-    OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
+use vyre_foundation::program_dispatch::{
+    ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
 
 fn cuda_resident_borrowed_fallback_active() -> bool {
