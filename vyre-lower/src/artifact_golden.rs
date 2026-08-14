@@ -35,6 +35,38 @@ const HEADER: &str = "\
 # a change here is a change in what the backend emits.
 ";
 
+/// Render one `(case id, section text)` sequence into a golden corpus.
+///
+/// A corpus is a header plus one marked section per case, and a caller that
+/// restates that framing is one edit away from a golden the shared comparison
+/// cannot locate a differing case in. Callers whose cases are not descriptors
+/// go through here; [`render_success_corpus`] is the descriptor-shaped wrapper.
+#[must_use]
+pub fn render_sections<I, S>(sections: I) -> String
+where
+    I: IntoIterator<Item = (S, String)>,
+    S: AsRef<str>,
+{
+    let mut out = String::from(HEADER);
+    for (id, rendered) in sections {
+        let _ = writeln!(out, "{CASE_MARKER}{}", id.as_ref());
+        out.push_str(&rendered);
+        if !rendered.ends_with('\n') {
+            out.push('\n');
+        }
+    }
+    out
+}
+
+/// Whether a rendered corpus contains a section for `case_id`.
+///
+/// A pinned corpus that stopped naming a case silently stopped covering it, and
+/// the marker framing that decides the answer is owned here.
+#[must_use]
+pub fn contains_case(corpus: &str, case_id: &str) -> bool {
+    corpus.contains(&format!("{CASE_MARKER}{case_id}\n"))
+}
+
 /// Render every shared success-corpus case through `render`, in corpus order.
 ///
 /// Each descriptor is verified first, so the rendered artifact is the one a
@@ -47,22 +79,15 @@ const HEADER: &str = "\
 /// changed.
 #[must_use]
 pub fn render_success_corpus(render: impl Fn(&KernelDescriptor) -> String) -> String {
-    let mut out = String::from(HEADER);
-    for case in emit_adversarial_corpus::success_cases() {
+    render_sections(emit_adversarial_corpus::success_cases().iter().map(|case| {
         let descriptor = crate::verify_descriptor(&case.descriptor).unwrap_or_else(|failure| {
             panic!(
                 "Fix: success-corpus case `{}` must pass descriptor verification: {failure:?}",
                 case.id
             )
         });
-        let _ = writeln!(out, "{CASE_MARKER}{}", case.id);
-        let rendered = render(&descriptor);
-        out.push_str(&rendered);
-        if !rendered.ends_with('\n') {
-            out.push('\n');
-        }
-    }
-    out
+        (case.id, render(&descriptor))
+    }))
 }
 
 /// Render bytes as fixed-width hex words, eight per line.

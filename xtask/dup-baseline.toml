@@ -141,8 +141,8 @@ total_lines = 100036
 
 [[crate]]
 name = "vyre-reference"
-duplicate_lines = 1322
-total_lines = 15426
+duplicate_lines = 971
+total_lines = 15205
 
 [[crate]]
 name = "vyre-runtime"

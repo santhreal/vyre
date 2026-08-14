@@ -48,6 +48,10 @@ pub(crate) mod op_properties;
 pub mod operand_semantics;
 pub mod pattern_audit;
 mod pre_emit;
+/// Backend-neutral `Program` corpus shared by byte-stability goldens.
+/// Test-only, like `descriptor_builder`: enable `test-fixtures` to reach it.
+#[cfg(any(test, feature = "test-fixtures"))]
+pub mod program_stability_corpus;
 pub mod target;
 pub mod verify;
 
