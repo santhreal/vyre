@@ -8,7 +8,9 @@ use vyre_driver::resident_transfer_fusion::{
     fuse_resident_transfer_intervals, FusedResidentTransfers, ResidentTransferInterval,
     ResidentTransferView,
 };
-use vyre_driver::BackendError;
+use vyre_driver::{BackendError, ResidentHandle};
+
+use super::resident::ResidentBufferView;
 
 /// One validated device-to-host readback request.
 pub(crate) type ResidentReadbackCopy = ResidentTransferInterval;
@@ -24,6 +26,78 @@ pub(crate) fn fuse_resident_readback_copies(
     requested: &[ResidentReadbackCopy],
 ) -> Result<FusedResidentReadbacks, BackendError> {
     fuse_resident_transfer_intervals(requested)
+}
+
+/// Validate one requested readback against its resident view and produce the
+/// copy the fusion plan consumes.
+///
+/// Four resident readback paths (compact, batched, ranged download, fused
+/// sequence) each proved the same two facts about the same descriptor:
+/// `byte_offset..byte_offset + byte_len` lies inside the resident allocation,
+/// and `view.ptr + byte_offset` stays inside `CUdeviceptr` arithmetic. `role`
+/// was the only difference between them and it only ever reached the error
+/// text. A bounds check spelled four times is a bounds check that gets
+/// corrected in one place and left wrong in three, so the check lives here and
+/// the caller supplies the phrase that names its path.
+///
+/// An empty range yields a null source pointer without pointer arithmetic:
+/// `view.ptr + byte_offset` is not required to be a valid address when no
+/// bytes are copied, and a zero-length allocation has no valid address to
+/// offset from.
+pub(crate) fn resident_readback_copy(
+    role: &str,
+    handle: ResidentHandle,
+    view: ResidentBufferView,
+    byte_offset: usize,
+    byte_len: usize,
+) -> Result<ResidentReadbackCopy, BackendError> {
+    vyre_driver::accounting::checked_usize_byte_range_end_lazy(
+        byte_offset,
+        byte_len,
+        view.byte_len,
+        || {
+            BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA {role} for handle {handle} overflows usize at offset {byte_offset} len {byte_len}."
+            ),
+        }
+        },
+        |end| {
+            BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA {role} for handle {handle} requested bytes [{byte_offset}..{end}) but buffer has {} bytes.",
+                view.byte_len
+            ),
+        }
+        },
+    )?;
+    let src = if byte_len == 0 {
+        0
+    } else {
+        vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
+            view.ptr,
+            byte_offset,
+            || {
+                BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA {role} device offset {byte_offset} does not fit CUdeviceptr arithmetic for handle {handle}."
+                ),
+            }
+            },
+            || {
+                BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA {role} pointer arithmetic overflowed for handle {handle} at offset {byte_offset}."
+                ),
+            }
+            },
+        )?
+    };
+    Ok(ResidentReadbackCopy {
+        handle_id: handle.id(),
+        src,
+        byte_len,
+    })
 }
 
 pub(crate) fn validate_fused_resident_readbacks(
