@@ -632,4 +632,50 @@ mod tests {
             "product_dogfood"
         );
     }
+
+    /// WHY: the severity bands are exact `>=` comparisons, and every duplicate
+    /// finding is triaged by the band rather than the score. An off-by-one-epsilon
+    /// boundary silently downgrades a duplicate to `very_similar`, which is the
+    /// difference between a release blocker and a note. Pin each edge and the
+    /// value just below it.
+    #[test]
+    fn severity_bands_are_closed_at_their_lower_edge() {
+        for (score, expected) in [
+            (1.0, "duplicate"),
+            (0.95, "duplicate"),
+            (0.949_999, "very_similar"),
+            (0.86, "very_similar"),
+            (0.859_999, "similar"),
+            (0.50, "similar"),
+            (0.499_999, "related"),
+            (0.0, "related"),
+        ] {
+            assert_eq!(
+                duplicate_severity(score),
+                expected,
+                "score {score} must be `{expected}`"
+            );
+        }
+    }
+
+    /// WHY: an inverted comparison would still pass a per-band spot check while
+    /// reporting the least similar pairs as duplicates. Severity must never fall
+    /// as the score rises.
+    #[test]
+    fn severity_never_weakens_as_the_score_rises() {
+        let rank = |band| match band {
+            "related" => 0,
+            "similar" => 1,
+            "very_similar" => 2,
+            "duplicate" => 3,
+            other => panic!("unclassified severity band `{other}`"),
+        };
+        let mut previous = 0;
+        for step in 0..=100 {
+            let current = rank(duplicate_severity(f64::from(step) / 100.0));
+            assert!(current >= previous, "severity fell at score {step}/100");
+            previous = current;
+        }
+        assert_eq!(previous, 3);
+    }
 }

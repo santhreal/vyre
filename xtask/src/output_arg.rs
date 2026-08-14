@@ -245,4 +245,44 @@ mod tests {
             r#"{"path":"../../../../tools/vyrec/README.md","root":"../../../.."}"#
         );
     }
+
+    /// WHY: a release artifact path is written relative to the workspace root but
+    /// resolved by a crate whose base directory is one level down, so the two
+    /// resolvers must disagree on exactly the `release/` prefix and agree
+    /// everywhere else. Resolving a release path against the crate directory
+    /// writes evidence into `xtask/release/`, where no reader looks.
+    #[test]
+    fn only_release_prefixed_relative_paths_climb_to_the_workspace_root() {
+        let base = Path::new("/w/xtask");
+        assert_eq!(
+            resolve_release_artifact_path(base, "release/evidence/a.json"),
+            PathBuf::from("/w/release/evidence/a.json")
+        );
+        assert_eq!(
+            resolve_path(base, "release/evidence/a.json"),
+            PathBuf::from("/w/xtask/release/evidence/a.json")
+        );
+        for path in ["docs/a.md", "releases/a.json", "not-release/a.json"] {
+            assert_eq!(
+                resolve_release_artifact_path(base, path),
+                resolve_path(base, path),
+                "`{path}` does not carry the release prefix and must not climb"
+            );
+        }
+    }
+
+    /// WHY: an absolute path is already resolved, and joining a base onto it
+    /// silently produces the base again on Unix. Both resolvers must return it
+    /// unchanged.
+    #[test]
+    fn an_absolute_path_is_returned_unchanged_by_both_resolvers() {
+        let base = Path::new("/w/xtask");
+        for path in ["/tmp/a.json", "/w/release/evidence/a.json"] {
+            assert_eq!(resolve_path(base, path), PathBuf::from(path));
+            assert_eq!(
+                resolve_release_artifact_path(base, path),
+                PathBuf::from(path)
+            );
+        }
+    }
 }
