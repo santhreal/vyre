@@ -1,16 +1,18 @@
+//! Two-slot dispatch program cache shared by the dispatch wrappers.
+
 /// Two-slot primitive dispatch program cache.
 ///
-/// Self-substrate wrappers specialize primitive `Program`s for launch shape,
+/// Dispatch wrappers specialize primitive `Program`s for launch shape,
 /// backend feature key, or layout. Rebuilding those programs in hot loops adds
 /// host allocation and descriptor work to paths that should be dominated by GPU
 /// execution. This cache keeps the common single-shape fast path cheap and the
 /// common two-shape alternating path resident without heap allocation across
-/// graph, math, optimizer, and data wrappers.
+/// graph, math, and data wrappers.
 #[derive(Debug)]
-pub(crate) struct ProgramCache<K, V> {
+pub struct ProgramCache<K, V> {
     hot: Option<ProgramCacheEntry<K, V>>,
     warm: Option<ProgramCacheEntry<K, V>>,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-fixtures"))]
     builds: usize,
 }
 
@@ -25,14 +27,15 @@ impl<K, V> Default for ProgramCache<K, V> {
         Self {
             hot: None,
             warm: None,
-            #[cfg(test)]
+            #[cfg(any(test, feature = "test-fixtures"))]
             builds: 0,
         }
     }
 }
 
 impl<K: Eq, V> ProgramCache<K, V> {
-    pub(crate) fn get_or_insert_with(&mut self, key: K, build: impl FnOnce() -> V) -> &V {
+    /// Return the cached value for `key`, building and inserting it on a miss.
+    pub fn get_or_insert_with(&mut self, key: K, build: impl FnOnce() -> V) -> &V {
         if self.hot_matches(&key) {
             return self.hot_value();
         }
@@ -45,7 +48,11 @@ impl<K: Eq, V> ProgramCache<K, V> {
         self.hot_value()
     }
 
-    pub(crate) fn get_or_try_insert_with<E>(
+    /// Return the cached value for `key`, building it on a miss.
+    ///
+    /// # Errors
+    /// Propagates the error `build` returns; nothing is cached in that case.
+    pub fn get_or_try_insert_with<E>(
         &mut self,
         key: K,
         build: impl FnOnce() -> Result<V, E>,
@@ -78,7 +85,7 @@ impl<K: Eq, V> ProgramCache<K, V> {
     fn insert_hot(&mut self, key: K, value: V) {
         self.warm = self.hot.take();
         self.hot = Some(ProgramCacheEntry { key, value });
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-fixtures"))]
         {
             self.builds += 1;
         }
@@ -93,8 +100,10 @@ impl<K: Eq, V> ProgramCache<K, V> {
         }
     }
 
-    #[cfg(test)]
-    pub(crate) const fn builds(&self) -> usize {
+    /// Number of times `build` ran, i.e. cache misses since construction.
+    #[cfg(any(test, feature = "test-fixtures"))]
+    #[must_use]
+    pub const fn builds(&self) -> usize {
         self.builds
     }
 }

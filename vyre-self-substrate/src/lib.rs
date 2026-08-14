@@ -107,8 +107,6 @@ pub mod analysis;
 pub mod data;
 #[cfg(feature = "graph-solvers")]
 pub mod graph;
-#[cfg(feature = "optimizer")]
-pub mod hardware;
 #[cfg(feature = "logic")]
 pub mod logic;
 #[cfg(feature = "math-solvers")]
@@ -168,9 +166,4 @@ pub use math::{
     sheaf_heterophilic_dispatch, sheaf_spectral_clustering, sinkhorn_dispatch_clustering,
     sinkhorn_full_clustering, tensor_network_fusion_order, tensor_train_chain_fusion,
     tensor_train_compression,
-};
-
-#[cfg(feature = "optimizer")]
-pub use hardware::{
-    device_resident_token_fact_graph, gpu_probe_contract, memory_ownership_contract,
 };

@@ -26,6 +26,7 @@ optimizer = ["vyre-primitives/graph"]
 analysis = [
     "optimizer",
     "vyre-libs/telemetry",
+    "vyre-libs/device",
     "vyre-primitives/effects",
     "vyre-primitives/math",
     "vyre-primitives/types",
@@ -33,12 +34,13 @@ analysis = [
 data = [
     "optimizer",
     "vyre-libs/telemetry",
+    "vyre-libs/device",
     "vyre-primitives/matching",
     "vyre-primitives/math",
     "vyre-primitives/nn",
     "vyre-primitives/parsing",
 ]
-graph-solvers = ["optimizer", "vyre-libs/telemetry", "vyre-primitives/math"]
+graph-solvers = ["optimizer", "vyre-libs/telemetry", "vyre-libs/device", "vyre-primitives/math"]
 logic = [
     "analysis",
     "vyre-primitives/cat",
@@ -48,12 +50,14 @@ logic = [
 math-solvers = [
     "optimizer",
     "vyre-libs/telemetry",
+    "vyre-libs/device",
     "vyre-primitives/math",
     "vyre-primitives/topology",
 ]
 scheduling = [
     "optimizer",
     "vyre-libs/telemetry",
+    "vyre-libs/device",
     "vyre-primitives/math",
     "vyre-primitives/parsing",
 ]

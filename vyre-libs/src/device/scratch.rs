@@ -1,14 +1,18 @@
-//! Shared fallible scratch allocation helpers for self-substrate release paths.
+//! Shared fallible scratch allocation helpers for dispatch release paths.
 //!
-//! Dispatch wrappers in this crate reuse caller-owned buffers heavily. Keeping
-//! reservation policy here prevents each domain from growing its own unchecked
+//! Dispatch wrappers reuse caller-owned buffers heavily. Keeping reservation
+//! policy here prevents each domain from growing its own unchecked
 //! `Vec::reserve` variant and keeps allocation failures actionable.
 
 use vyre_foundation::program_dispatch::DispatchError;
 use std::collections::HashSet;
 use std::hash::{BuildHasher, Hash};
 
-pub(crate) fn try_reserve_vec_capacity<T>(
+/// Grow `buffer` to hold at least `capacity` items.
+///
+/// # Errors
+/// Returns the allocator's refusal rendered as a message.
+pub fn try_reserve_vec_capacity<T>(
     buffer: &mut Vec<T>,
     capacity: usize,
 ) -> Result<(), String> {
@@ -16,7 +20,11 @@ pub(crate) fn try_reserve_vec_capacity<T>(
         .map_err(|error| error.to_string())
 }
 
-pub(crate) fn reserve_vec<T>(
+/// Reserve room for `additional` more items in `buffer`.
+///
+/// # Errors
+/// Returns a [`DispatchError::BackendError`] naming `context` and the count.
+pub fn reserve_vec<T>(
     buffer: &mut Vec<T>,
     additional: usize,
     context: &'static str,
@@ -31,7 +39,11 @@ pub(crate) fn reserve_vec<T>(
     })
 }
 
-pub(crate) fn reserve_vec_capacity<T>(
+/// Grow `buffer` to hold at least `capacity` items.
+///
+/// # Errors
+/// Returns a [`DispatchError::BackendError`] naming `context` and the capacity.
+pub fn reserve_vec_capacity<T>(
     buffer: &mut Vec<T>,
     capacity: usize,
     context: &'static str,
@@ -48,7 +60,7 @@ pub(crate) fn reserve_vec_capacity<T>(
 /// # Panics
 /// Panics when the reservation fails. Continuing with a short buffer would let a pass
 /// write past the scratch it believes it owns.
-pub(crate) fn reserve_vec_capacity_or_panic<T>(
+pub fn reserve_vec_capacity_or_panic<T>(
     buffer: &mut Vec<T>,
     capacity: usize,
     context: &'static str,
@@ -62,7 +74,12 @@ pub(crate) fn reserve_vec_capacity_or_panic<T>(
     }
 }
 
-pub(crate) fn reserve_hash_set<T, S>(
+/// Reserve room for `additional` more entries in `set`.
+///
+/// # Errors
+/// Returns a [`DispatchError::BackendError`] when the target capacity overflows
+/// or the allocator refuses it.
+pub fn reserve_hash_set<T, S>(
     set: &mut HashSet<T, S>,
     additional: usize,
     context: &'static str,
@@ -87,7 +104,12 @@ where
 }
 
 #[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn reserve_hash_set_capacity_or_panic<T, S>(
+/// Reserve `capacity` entries in `set`, failing closed when refused.
+///
+/// # Panics
+/// Panics when the reservation fails. A short hash scratch would silently drop
+/// facts the analysis believes it recorded.
+pub fn reserve_hash_set_capacity_or_panic<T, S>(
     set: &mut HashSet<T, S>,
     capacity: usize,
     context: &'static str,

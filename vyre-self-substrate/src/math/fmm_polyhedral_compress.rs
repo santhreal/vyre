@@ -46,7 +46,7 @@ use vyre_libs::dispatch_buffers::{
     write_u32_slice_le_bytes, write_zero_bytes,
 };
 #[cfg(test)]
-use crate::hardware::scratch::reserve_vec_capacity_or_panic;
+use vyre_libs::device::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::math::fmm::{l2p_zeroth_f32_step, m2l_zeroth_f32_step, p2m_zeroth_f32_step};
 

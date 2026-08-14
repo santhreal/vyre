@@ -50,7 +50,7 @@ use vyre_libs::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, u32_slice_to_le_bytes,
 };
 #[cfg(any(test, feature = "cpu-parity"))]
-use crate::hardware::scratch::reserve_vec_capacity_or_panic;
+use vyre_libs::device::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_primitives::topology::vietoris_rips::extract_edges_cpu;

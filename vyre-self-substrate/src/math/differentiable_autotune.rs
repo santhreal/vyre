@@ -13,7 +13,7 @@ use vyre_libs::dispatch_buffers::{
     write_zero_bytes,
 };
 #[cfg(test)]
-use crate::hardware::scratch::reserve_vec_capacity_or_panic;
+use vyre_libs::device::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::math::differentiable::softmax_step;
 #[cfg(test)]

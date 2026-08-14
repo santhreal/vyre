@@ -124,6 +124,10 @@ pub mod operation_catalog;
 #[cfg(feature = "telemetry")]
 pub mod telemetry;
 
+/// Device-boundary contracts and dispatch scratch.
+#[cfg(feature = "device")]
+pub mod device;
+
 /// Math dialect  -  linear algebra, scans, broadcasting.
 #[cfg(any(
     feature = "math-linalg",

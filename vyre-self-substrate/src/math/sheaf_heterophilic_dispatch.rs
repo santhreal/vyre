@@ -59,7 +59,7 @@ use vyre_libs::dispatch_buffers::{
     ceil_div_u32, checked_product_count, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-use crate::hardware::scratch::reserve_vec_capacity_or_panic;
+use vyre_libs::device::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::sheaf::sheaf_diffusion_step;
 #[cfg(any(test, feature = "cpu-parity"))]

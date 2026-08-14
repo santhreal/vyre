@@ -8,7 +8,7 @@ use crate::graph::dispatch_bridge::{
     dispatch_two_u32_outputs_from_prepared_into, refresh_keyed_dispatch_inputs,
     write_dispatch_input, CachedProgram, DispatchInput, ProgramCache,
 };
-use crate::hardware::scratch::reserve_vec as reserve_graph_vec;
+use vyre_libs::device::scratch::reserve_vec as reserve_graph_vec;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned GPU dispatch scratch for `csr_forward_or_changed` fixpoint loops.

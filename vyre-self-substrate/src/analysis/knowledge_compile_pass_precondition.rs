@@ -50,7 +50,7 @@
 use vyre_libs::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
-use crate::hardware::scratch::reserve_vec_capacity;
+use vyre_libs::device::scratch::reserve_vec_capacity;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::knowledge_compile::ddnnf_evaluate;
 #[cfg(test)]

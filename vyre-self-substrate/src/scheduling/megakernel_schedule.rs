@@ -7,7 +7,7 @@
 //! pressure. The solver is deterministic, allocation-reusable, and rejects
 //! malformed cost vectors through the `try_` entry points.
 
-use crate::hardware::scratch::try_reserve_vec_capacity;
+use vyre_libs::device::scratch::try_reserve_vec_capacity;
 
 /// Input-shape or numeric error from the homotopy megakernel scheduler.
 #[derive(Debug, Clone, PartialEq)]

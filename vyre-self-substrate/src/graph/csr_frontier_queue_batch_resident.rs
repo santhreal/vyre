@@ -16,7 +16,7 @@ use vyre_foundation::ir::Program;
 
 use crate::graph::csr_frontier_queue_scratch::ResidentCsrQueueMaterializer;
 use crate::graph::resident_handles::free_unique_resident_handles;
-use crate::hardware::scratch::reserve_vec as reserve_graph_vec;
+use vyre_libs::device::scratch::reserve_vec as reserve_graph_vec;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentReadRange};
 
 /// Reusable resident scratch for batched CSR queue traversal queries.

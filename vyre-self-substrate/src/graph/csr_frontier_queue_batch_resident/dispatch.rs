@@ -21,7 +21,7 @@ use crate::graph::csr_frontier_queue_scratch::{
     ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind,
 };
 use crate::graph::dispatch_bridge::alloc_resident_buffers;
-use crate::hardware::scratch::reserve_vec as reserve_graph_vec;
+use vyre_libs::device::scratch::reserve_vec as reserve_graph_vec;
 use vyre_foundation::program_dispatch::{
     DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };

@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use crate::hardware::scratch::reserve_hash_set as reserve_graph_hash_set;
+use vyre_libs::device::scratch::reserve_hash_set as reserve_graph_hash_set;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Free each resident handle at most once while still attempting every unique
