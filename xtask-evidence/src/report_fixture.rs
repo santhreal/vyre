@@ -13,7 +13,11 @@
 //! semantic readers and the release gate checks parse only the class, the
 //! backends and the demanded speedup.
 
+use std::fs;
+use std::path::Path;
+
 use serde_json::{json, Value};
+use tempfile::TempDir;
 
 /// A single-case run summary in the long form the artifact readers require.
 pub(crate) fn case_summary(passed: u64, failed: u64) -> Value {
@@ -209,6 +213,151 @@ pub(crate) fn host_environment(
         "nvidia_driver_version": nvidia_driver_version,
         "nvidia_cuda_version": nvidia_cuda_version
     })
+}
+
+/// A temporary workspace root holding release benchmark evidence, plus the two
+/// source fingerprints an artifact written into it must carry to read as
+/// current.
+///
+/// The provenance readers resolve a workspace root by walking up from the
+/// evidence path to a `Cargo.toml`, and then recompute the fingerprints of that
+/// root to decide whether the evidence is stale. A fixture for any of them has
+/// to lay down the manifest, the `release/evidence/benchmarks` directory and the
+/// current fingerprints before it writes a single report, in that order, because
+/// the tree fingerprint is taken over the tree as it stands. Eleven fixtures
+/// carried that opening and each one named it differently, so a reader that
+/// changed where it looks for the root would have been corrected in one of them.
+pub(crate) struct EvidenceWorkspace {
+    root: TempDir,
+    source_fingerprint: String,
+    source_tree_fingerprint: String,
+}
+
+impl EvidenceWorkspace {
+    pub(crate) fn new() -> Self {
+        let root = TempDir::new().expect("Fix: create temp workspace for evidence fixture.");
+        fs::write(root.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temp workspace manifest.");
+        fs::create_dir_all(root.path().join("release/evidence/benchmarks"))
+            .expect("Fix: create temp benchmark evidence directory.");
+        let git = vyre_bench::probes::capture_git_info_at(root.path());
+        let source_fingerprint = vyre_bench::probes::source_fingerprint(&git);
+        let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(root.path());
+        Self {
+            root,
+            source_fingerprint,
+            source_tree_fingerprint,
+        }
+    }
+
+    /// The workspace root a checker is pointed at.
+    pub(crate) fn path(&self) -> &Path {
+        self.root.path()
+    }
+
+    /// The git fingerprint of this root, as evidence measured on it would carry.
+    pub(crate) fn source_fingerprint(&self) -> &str {
+        &self.source_fingerprint
+    }
+
+    /// The source tree fingerprint of this root, as evidence measured on it
+    /// would carry.
+    pub(crate) fn source_tree_fingerprint(&self) -> &str {
+        &self.source_tree_fingerprint
+    }
+
+    /// Write one report under `release/evidence/benchmarks` and return the
+    /// workspace-relative path the axes and suite arrays name it by.
+    pub(crate) fn write_report(&self, file_name: &str, report: &Value) -> String {
+        let relative = format!("release/evidence/benchmarks/{file_name}");
+        fs::write(
+            self.root.path().join(&relative),
+            serde_json::to_string_pretty(report).expect("Fix: serialize evidence report fixture."),
+        )
+        .expect("Fix: write evidence report fixture.");
+        relative
+    }
+
+    /// Write one current CUDA artifact carrying exactly `cases`, and return the
+    /// path the axes and suite arrays name it by.
+    ///
+    /// A fixture about one defect in one case still has to satisfy every check
+    /// that runs before the one it is about: the artifact must claim CUDA, name
+    /// the source it was measured on, and agree with its own summary. Those four
+    /// keys are the same in every such fixture, so only the cases are a caller's
+    /// business, and the summary is derived from them rather than restated.
+    pub(crate) fn write_cuda_release_artifact(&self, file_name: &str, cases: Value) -> String {
+        let total_cases = cases
+            .as_array()
+            .expect("Fix: pass a cases array to write_cuda_release_artifact.")
+            .len();
+        self.write_report(
+            file_name,
+            &json!({
+                "selected_backend": "cuda",
+                "source_fingerprint": self.source_fingerprint(),
+                "source_tree_fingerprint": self.source_tree_fingerprint(),
+                "summary": {"total_cases": total_cases, "passed": total_cases, "failed": 0},
+                "cases": cases
+            }),
+        )
+    }
+
+    /// The CUDA release suite that lists exactly `artifacts` and claims CUDA.
+    ///
+    /// The suite is cross-checked against the axes for artifacts either side
+    /// omits, so a fixture about anything else has to make the two agree.
+    pub(crate) fn cuda_release_suite(artifacts: &[&str]) -> Value {
+        json!({
+            "backend": "cuda",
+            "artifacts": artifacts
+        })
+    }
+
+    /// The twelve current CUDA workload artifacts a release axis needs cited
+    /// before it will compute a scalar at all, returned in the order the axes and
+    /// suite arrays list them.
+    ///
+    /// Each one proves every axis: a warm wall time, a cold build time, a scan
+    /// throughput, the device memory the memory axis reads, and the ULP drift the
+    /// correctness axis takes its maximum over. `case_prefix` keeps the case ids
+    /// of one fixture distinct from another's, and `max_observed_ulp` is the only
+    /// measurement a caller normally varies.
+    pub(crate) fn cuda_release_axis_artifacts(
+        &self,
+        case_prefix: &str,
+        max_observed_ulp: u64,
+    ) -> Vec<String> {
+        (1..=12)
+            .map(|index| {
+                self.write_report(
+                    &format!("workload-{index:02}.json"),
+                    &json!({
+                        "selected_backend": "cuda",
+                        "source_fingerprint": self.source_fingerprint(),
+                        "source_tree_fingerprint": self.source_tree_fingerprint(),
+                        "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                        "environment": gpu_memory_environment(24576),
+                        "cases": [
+                            {
+                                "id": format!("{case_prefix}.{index}"),
+                                "backend_id": "cuda",
+                                "status": "pass",
+                                "metrics": {
+                                    "wall_ns": {"p50": 17_000},
+                                    "cold_compile_ns": {"p50": 2_000_000},
+                                    "wall_gb_s_x1000": {"p50": 4_000}
+                                },
+                                "correctness": {
+                                    "Toleranced": {"max_observed_ulp": max_observed_ulp}
+                                }
+                            }
+                        ]
+                    }),
+                )
+            })
+            .collect()
+    }
 }
 
 #[cfg(test)]
