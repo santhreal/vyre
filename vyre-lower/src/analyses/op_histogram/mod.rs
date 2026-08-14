@@ -200,6 +200,7 @@ fn bump(kind: &KernelOpKind, h: &mut OpHistogram) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::descriptor_builder::{effect, lit, op};
     use crate::{
         BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
         KernelOp, KernelOpKind, LiteralValue, MemoryClass,
@@ -355,21 +356,9 @@ mod tests {
     fn literal_and_binop_counted_separately() {
         let h = analyze(&build(
             vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
+                lit(0, 0),
+                lit(0, 1),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 2),
             ],
             vec![],
         ));
@@ -381,17 +370,9 @@ mod tests {
     #[test]
     fn memory_bound_when_loads_dominate() {
         // 5 loads, 1 lit  -  memory > everything else (1 lit).
-        let mut ops = vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![0],
-            result: Some(0),
-        }];
+        let mut ops = vec![lit(0, 0)];
         for i in 0..5 {
-            ops.push(KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 0],
-                result: Some(1 + i),
-            });
+            ops.push(op(KernelOpKind::LoadGlobal, [0, 0], 1 + i));
         }
         let h = analyze(&build(ops, vec![]));
         assert_eq!(h.memory, 5);
@@ -402,24 +383,9 @@ mod tests {
 
     #[test]
     fn arithmetic_bound_when_binops_dominate() {
-        let mut ops = vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(1),
-            },
-        ];
+        let mut ops = vec![lit(0, 0), lit(0, 1)];
         for i in 0..5 {
-            ops.push(KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![0, 1],
-                result: Some(2 + i),
-            });
+            ops.push(op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 2 + i));
         }
         let h = analyze(&build(ops, vec![]));
         assert_eq!(h.arithmetic, 5);
@@ -430,13 +396,12 @@ mod tests {
     #[test]
     fn control_flow_includes_barrier() {
         let h = analyze(&build(
-            vec![KernelOp {
-                kind: KernelOpKind::Barrier {
+            vec![effect(
+                KernelOpKind::Barrier {
                     ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
                 },
-                operands: vec![],
-                result: None,
-            }],
+                [],
+            )],
             vec![],
         ));
         assert_eq!(h.control_flow, 1);
@@ -445,11 +410,7 @@ mod tests {
     #[test]
     fn subgroup_ops_categorized() {
         let h = analyze(&build(
-            vec![KernelOp {
-                kind: KernelOpKind::SubgroupBallot,
-                operands: vec![0],
-                result: Some(0),
-            }],
+            vec![op(KernelOpKind::SubgroupBallot, [0], 0)],
             vec![],
         ));
         assert_eq!(h.subgroup, 1);
@@ -459,16 +420,8 @@ mod tests {
     fn builtin_ops_categorized() {
         let h = analyze(&build(
             vec![
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::WorkgroupId,
-                    operands: vec![0],
-                    result: Some(1),
-                },
+                op(KernelOpKind::LocalInvocationId, [0], 0),
+                op(KernelOpKind::WorkgroupId, [0], 1),
             ],
             vec![],
         ));
@@ -479,28 +432,13 @@ mod tests {
     fn child_body_ops_recursively_counted() {
         let child = KernelBody {
             ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![0, 0],
-                    result: Some(1),
-                },
+                lit(0, 0),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 0], 1),
             ],
             child_bodies: vec![],
             literals: vec![LiteralValue::U32(3)],
         };
-        let h = analyze(&build(
-            vec![KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            }],
-            vec![child],
-        ));
+        let h = analyze(&build(vec![lit(0, 0)], vec![child]));
         // 2 literals (1 parent + 1 child), 1 arithmetic (child Add).
         assert_eq!(h.literal, 2);
         assert_eq!(h.arithmetic, 1);

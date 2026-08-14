@@ -19,6 +19,8 @@ impl core::hash::Hash for vyre_lower::descriptor::LiteralValue
 impl vyre_lower::FullReport
 impl vyre_lower::LowerVerifiedError
 impl vyre_lower::VerifyFailure
+impl vyre_lower::analyses::IntRange
+impl vyre_lower::analyses::ValueRangeReport
 impl vyre_lower::analyses::alias_facts::AliasFactSet
 impl vyre_lower::analyses::bank_conflict::report::BankConflictKind
 impl vyre_lower::analyses::bank_conflict::report::BankConflictReport
@@ -30,8 +32,6 @@ impl vyre_lower::analyses::dead_op::DeadOpReport
 impl vyre_lower::analyses::op_histogram::OpHistogram
 impl vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet
 impl vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan
-impl vyre_lower::analyses::value_range::IntRange
-impl vyre_lower::analyses::value_range::ValueRangeReport
 impl vyre_lower::analyses::vec_pack::VecPackChain
 impl vyre_lower::analyses::vec_pack::VecPackReport
 impl vyre_lower::analyses::workgroup_uniform::report::WorkgroupUniformReport
@@ -122,8 +122,8 @@ pub enum vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend
 pub enum vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily
 pub enum vyre_lower::emit_adversarial_corpus::EmitOutcome
 pub enum vyre_lower::error::LowerError
+pub enum vyre_lower::operand_class::OperandClass
 pub enum vyre_lower::target::WorkgroupLimitViolation
-pub enum vyre_lower::verify::OperandClass
 pub enum vyre_lower::verify::VerifyErrorKind
 pub fn vyre_lower::FullReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_lower::FullReport::format_long(&self) -> alloc::string::String
@@ -131,7 +131,18 @@ pub fn vyre_lower::FullReport::format_short(&self) -> alloc::string::String
 pub fn vyre_lower::FullReport::verify_status(&self) -> &'static str
 pub fn vyre_lower::LowerVerifiedError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_lower::LowerVerifiedError::message(&self) -> &str
-pub fn vyre_lower::VerifyFailure::errors(&self) -> &[vyre_lower::verify::VerifyError]
+pub fn vyre_lower::VerifyFailure::errors(&self) -> &[vyre_lower::VerifyError]
+pub fn vyre_lower::analyses::IntRange::contains(&self, v: i64) -> bool
+pub fn vyre_lower::analyses::IntRange::is_singleton(&self) -> bool
+pub fn vyre_lower::analyses::IntRange::singleton(v: i64) -> Self
+pub fn vyre_lower::analyses::IntRange::union(self, other: Self) -> Self
+pub fn vyre_lower::analyses::ValueRangeReport::as_constant(&self, result_id: u32) -> core::option::Option<i64>
+pub fn vyre_lower::analyses::ValueRangeReport::get(&self, result_id: u32) -> core::option::Option<vyre_lower::analyses::IntRange>
+pub fn vyre_lower::analyses::ValueRangeReport::get_at(&self, result_id: u32, op_index: usize) -> core::option::Option<vyre_lower::analyses::IntRange>
+pub fn vyre_lower::analyses::ValueRangeReport::is_definitely(&self, result_id: u32, target: i64) -> core::option::Option<bool>
+pub fn vyre_lower::analyses::ValueRangeReport::is_definitely_at_least(&self, result_id: u32, target: i64) -> core::option::Option<bool>
+pub fn vyre_lower::analyses::ValueRangeReport::is_definitely_below(&self, result_id: u32, target: i64) -> core::option::Option<bool>
+pub fn vyre_lower::analyses::ValueRangeReport::known_count(&self) -> usize
 pub fn vyre_lower::analyses::alias_facts::AliasFactSet::insert_no_alias(&mut self, fact: vyre_lower::analyses::alias_facts::NoAliasFact)
 pub fn vyre_lower::analyses::alias_facts::AliasFactSet::is_empty(&self) -> bool
 pub fn vyre_lower::analyses::alias_facts::AliasFactSet::len(&self) -> usize
@@ -146,7 +157,7 @@ pub fn vyre_lower::analyses::analyze_layout_aos_to_soa(desc: &vyre_lower::descri
 pub fn vyre_lower::analyses::analyze_op_histogram(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::op_histogram::OpHistogram
 pub fn vyre_lower::analyses::analyze_shared_mem_promote(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan
 pub fn vyre_lower::analyses::analyze_texture_promote(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::texture_promote::plan::TexturePromotionPlan
-pub fn vyre_lower::analyses::analyze_value_range(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::value_range::ValueRangeReport
+pub fn vyre_lower::analyses::analyze_value_range(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::ValueRangeReport
 pub fn vyre_lower::analyses::analyze_workgroup_uniform(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::workgroup_uniform::report::WorkgroupUniformReport
 pub fn vyre_lower::analyses::bank_conflict::analysis::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::bank_conflict::report::BankConflictReport
 pub fn vyre_lower::analyses::bank_conflict::analysis::analyze_with_bank_count(desc: &vyre_lower::descriptor::KernelDescriptor, bank_count: u32) -> vyre_lower::analyses::bank_conflict::report::BankConflictReport
@@ -209,19 +220,8 @@ pub fn vyre_lower::analyses::structured_walk::branch_at<'a>(body: &'a vyre_lower
 pub fn vyre_lower::analyses::structured_walk::walk_structured<'a, V>(root: &'a vyre_lower::descriptor::KernelBody, arms: vyre_lower::analyses::structured_walk::ArmDescent, visitor: &mut V) where V: vyre_lower::analyses::structured_walk::StructuredVisitor<'a>
 pub fn vyre_lower::analyses::texture_promote::analysis::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::texture_promote::plan::TexturePromotionPlan
 pub fn vyre_lower::analyses::texture_promote::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::texture_promote::plan::TexturePromotionPlan
-pub fn vyre_lower::analyses::value_range::IntRange::contains(&self, v: i64) -> bool
-pub fn vyre_lower::analyses::value_range::IntRange::is_singleton(&self) -> bool
-pub fn vyre_lower::analyses::value_range::IntRange::singleton(v: i64) -> Self
-pub fn vyre_lower::analyses::value_range::IntRange::union(self, other: Self) -> Self
-pub fn vyre_lower::analyses::value_range::ValueRangeReport::as_constant(&self, result_id: u32) -> core::option::Option<i64>
-pub fn vyre_lower::analyses::value_range::ValueRangeReport::get(&self, result_id: u32) -> core::option::Option<vyre_lower::analyses::value_range::IntRange>
-pub fn vyre_lower::analyses::value_range::ValueRangeReport::get_at(&self, result_id: u32, op_index: usize) -> core::option::Option<vyre_lower::analyses::value_range::IntRange>
-pub fn vyre_lower::analyses::value_range::ValueRangeReport::is_definitely(&self, result_id: u32, target: i64) -> core::option::Option<bool>
-pub fn vyre_lower::analyses::value_range::ValueRangeReport::is_definitely_at_least(&self, result_id: u32, target: i64) -> core::option::Option<bool>
-pub fn vyre_lower::analyses::value_range::ValueRangeReport::is_definitely_below(&self, result_id: u32, target: i64) -> core::option::Option<bool>
-pub fn vyre_lower::analyses::value_range::ValueRangeReport::known_count(&self) -> usize
-pub fn vyre_lower::analyses::value_range::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::value_range::ValueRangeReport
-pub fn vyre_lower::analyses::value_range::analyze_body(body: &vyre_lower::descriptor::KernelBody) -> vyre_lower::analyses::value_range::ValueRangeReport
+pub fn vyre_lower::analyses::value_range::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::ValueRangeReport
+pub fn vyre_lower::analyses::value_range::analyze_body(body: &vyre_lower::descriptor::KernelBody) -> vyre_lower::analyses::ValueRangeReport
 pub fn vyre_lower::analyses::vec_pack::VecPackChain::pack_width(&self) -> u32
 pub fn vyre_lower::analyses::vec_pack::VecPackReport::has_chains(&self) -> bool
 pub fn vyre_lower::analyses::vec_pack::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::vec_pack::VecPackReport
@@ -280,7 +280,8 @@ pub fn vyre_lower::emit_adversarial_corpus::required_backends() -> &'static [vyr
 pub fn vyre_lower::emit_adversarial_corpus::success_cases() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
 pub fn vyre_lower::full_report(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::FullReport
 pub fn vyre_lower::lower_verified(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_lower::VerifiedLowering, vyre_lower::LowerVerifiedError>
-pub fn vyre_lower::operand_semantics::operand_is_result_reference(kind: &vyre_lower::descriptor::KernelOpKind, pos: usize) -> bool
+pub fn vyre_lower::operand_class::classify_operand(kind: &vyre_lower::descriptor::KernelOpKind, pos: usize) -> vyre_lower::operand_class::OperandClass
+pub fn vyre_lower::operand_class::operand_is_result_reference(kind: &vyre_lower::descriptor::KernelOpKind, pos: usize) -> bool
 pub fn vyre_lower::pattern_audit::PatternAudit::finding_count(&self) -> usize
 pub fn vyre_lower::pattern_audit::PatternAudit::format_short(&self) -> alloc::string::String
 pub fn vyre_lower::pattern_audit::PatternAudit::has_any(&self) -> bool
@@ -296,10 +297,9 @@ pub fn vyre_lower::target::WorkgroupLimitViolation::fmt(&self, formatter: &mut c
 pub fn vyre_lower::target::required_subgroup_capabilities(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::target::SubgroupCapabilities
 pub fn vyre_lower::target::validate_workgroup_size(workgroup_size: [u32; 3], limits: vyre_lower::target::WorkgroupLimits) -> alloc::vec::Vec<vyre_lower::target::WorkgroupLimitViolation>
 pub fn vyre_lower::validate_workgroup_size(workgroup_size: [u32; 3], limits: vyre_lower::target::WorkgroupLimits) -> alloc::vec::Vec<vyre_lower::target::WorkgroupLimitViolation>
-pub fn vyre_lower::verify(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::verify::VerifyResult
-pub fn vyre_lower::verify::classify_operand(kind: &vyre_lower::descriptor::KernelOpKind, pos: usize) -> vyre_lower::verify::OperandClass
-pub fn vyre_lower::verify::format_verify_errors(errors: &[vyre_lower::verify::VerifyError]) -> alloc::string::String
-pub fn vyre_lower::verify::verify(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::verify::VerifyResult
+pub fn vyre_lower::verify(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::VerifyResult
+pub fn vyre_lower::verify::format_verify_errors(errors: &[vyre_lower::VerifyError]) -> alloc::string::String
+pub fn vyre_lower::verify::verify(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::VerifyResult
 pub fn vyre_lower::verify_descriptor(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<vyre_lower::descriptor::KernelDescriptor, vyre_lower::VerifyFailure>
 pub mod vyre_lower
 pub mod vyre_lower::analyses
@@ -339,7 +339,7 @@ pub mod vyre_lower::audit
 pub mod vyre_lower::descriptor
 pub mod vyre_lower::emit_adversarial_corpus
 pub mod vyre_lower::error
-pub mod vyre_lower::operand_semantics
+pub mod vyre_lower::operand_class
 pub mod vyre_lower::pattern_audit
 pub mod vyre_lower::target
 pub mod vyre_lower::verify
@@ -444,7 +444,7 @@ pub struct vyre_lower::target::WorkgroupLimits
 pub struct vyre_lower::verify::VerifyError
 pub trait vyre_lower::analyses::structured_walk::StructuredVisitor<'a>
 pub trait vyre_lower::pattern_audit::PatternAudit
-pub type vyre_lower::VerifyResult = core::result::Result<(), alloc::vec::Vec<vyre_lower::verify::VerifyError>>
+pub type vyre_lower::VerifyResult = core::result::Result<(), alloc::vec::Vec<vyre_lower::VerifyError>>
 pub type vyre_lower::analyses::LayoutTransformPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::layout_aos_to_soa::plan::LayoutCandidate>
 pub type vyre_lower::analyses::TexturePromotionPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::texture_promote::plan::TextureCandidate>
 pub type vyre_lower::analyses::layout_aos_to_soa::LayoutTransformPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::layout_aos_to_soa::plan::LayoutCandidate>
@@ -453,7 +453,7 @@ pub type vyre_lower::analyses::texture_promote::TexturePromotionPlan = vyre_lowe
 pub type vyre_lower::analyses::texture_promote::plan::TexturePromotionPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::texture_promote::plan::TextureCandidate>
 pub type vyre_lower::descriptor::KernelOpsIter<'a>::Item = &'a vyre_lower::descriptor::KernelOp
 pub type vyre_lower::descriptor::Name = alloc::sync::Arc<str>
-pub type vyre_lower::verify::VerifyResult = core::result::Result<(), alloc::vec::Vec<vyre_lower::verify::VerifyError>>
+pub type vyre_lower::verify::VerifyResult = core::result::Result<(), alloc::vec::Vec<vyre_lower::VerifyError>>
 pub use vyre_lower::SubgroupReduceOp
 pub vyre_lower::BindingLayout::slots: alloc::vec::Vec<vyre_lower::descriptor::BindingSlot>
 pub vyre_lower::BindingSlot::element_count: core::option::Option<u32>
@@ -517,7 +517,7 @@ pub vyre_lower::FullReport::fix_text: alloc::string::String
 pub vyre_lower::FullReport::histogram: vyre_lower::analyses::op_histogram::OpHistogram
 pub vyre_lower::FullReport::perf: vyre_lower::audit::PerfAuditReport
 pub vyre_lower::FullReport::summary: alloc::string::String
-pub vyre_lower::FullReport::verify: vyre_lower::verify::VerifyResult
+pub vyre_lower::FullReport::verify: vyre_lower::VerifyResult
 pub vyre_lower::IntentAnnotatedDescriptor::descriptor: vyre_lower::descriptor::KernelDescriptor
 pub vyre_lower::IntentAnnotatedDescriptor::intents: vyre_lower::descriptor::DescriptorIntentSet
 pub vyre_lower::KernelBody::child_bodies: alloc::vec::Vec<vyre_lower::descriptor::KernelBody>
@@ -654,7 +654,7 @@ pub vyre_lower::SubgroupCapabilities::shuffle: bool
 pub vyre_lower::VerifiedLowering::descriptor: vyre_lower::descriptor::KernelDescriptor
 pub vyre_lower::VerifiedLowering::program: vyre_foundation::ir_inner::model::program::definition::Program
 pub vyre_lower::VerifyError::body_path: alloc::vec::Vec<usize>
-pub vyre_lower::VerifyError::kind: vyre_lower::verify::VerifyErrorKind
+pub vyre_lower::VerifyError::kind: vyre_lower::VerifyErrorKind
 pub vyre_lower::VerifyError::op_index: usize
 pub vyre_lower::VerifyErrorKind::ChildBodyIndexOutOfRange
 pub vyre_lower::VerifyErrorKind::ChildBodyIndexOutOfRange::body_idx: u32
@@ -683,8 +683,8 @@ pub vyre_lower::VerifyErrorKind::ResultIdReusedAcrossBodies::first_body_path: al
 pub vyre_lower::VerifyErrorKind::ResultIdReusedAcrossBodies::result: u32
 pub vyre_lower::VerifyErrorKind::WorkgroupBindingInHostRange
 pub vyre_lower::VerifyErrorKind::WorkgroupBindingInHostRange::slot: u32
-pub vyre_lower::VerifyFailure::Input(alloc::vec::Vec<vyre_lower::verify::VerifyError>)
-pub vyre_lower::VerifyFailure::Output(alloc::vec::Vec<vyre_lower::verify::VerifyError>)
+pub vyre_lower::VerifyFailure::Input(alloc::vec::Vec<vyre_lower::VerifyError>)
+pub vyre_lower::VerifyFailure::Output(alloc::vec::Vec<vyre_lower::VerifyError>)
 pub vyre_lower::WorkgroupLimitViolation::DimensionExceeded
 pub vyre_lower::WorkgroupLimitViolation::DimensionExceeded::actual: u32
 pub vyre_lower::WorkgroupLimitViolation::DimensionExceeded::axis: u8
@@ -734,7 +734,7 @@ pub vyre_lower::analyses::UseSite::body_path: alloc::vec::Vec<usize>
 pub vyre_lower::analyses::UseSite::op_index: usize
 pub vyre_lower::analyses::UseSite::operand_pos: usize
 pub vyre_lower::analyses::ValueRangeReport::invalidated_from: rustc_hash::FxHashMap<u32, usize>
-pub vyre_lower::analyses::ValueRangeReport::ranges: rustc_hash::FxHashMap<u32, vyre_lower::analyses::value_range::IntRange>
+pub vyre_lower::analyses::ValueRangeReport::ranges: rustc_hash::FxHashMap<u32, vyre_lower::analyses::IntRange>
 pub vyre_lower::analyses::WorkgroupUniformReport::branches: alloc::vec::Vec<vyre_lower::analyses::workgroup_uniform::report::BranchSite>
 pub vyre_lower::analyses::WorkgroupUniformReport::kernel_id: alloc::string::String
 pub vyre_lower::analyses::access_kind::AccessKind::Load
@@ -886,7 +886,7 @@ pub vyre_lower::analyses::texture_promote::plan::TextureCandidate::load_count: u
 pub vyre_lower::analyses::value_range::IntRange::max: i64
 pub vyre_lower::analyses::value_range::IntRange::min: i64
 pub vyre_lower::analyses::value_range::ValueRangeReport::invalidated_from: rustc_hash::FxHashMap<u32, usize>
-pub vyre_lower::analyses::value_range::ValueRangeReport::ranges: rustc_hash::FxHashMap<u32, vyre_lower::analyses::value_range::IntRange>
+pub vyre_lower::analyses::value_range::ValueRangeReport::ranges: rustc_hash::FxHashMap<u32, vyre_lower::analyses::IntRange>
 pub vyre_lower::analyses::vec_pack::VecPackChain::op_indices: alloc::vec::Vec<usize>
 pub vyre_lower::analyses::vec_pack::VecPackChain::slot: u32
 pub vyre_lower::analyses::vec_pack::VecPackChain::start_index: u32
@@ -1122,6 +1122,10 @@ pub vyre_lower::error::LowerError::NestingTooDeep(usize)
 pub vyre_lower::error::LowerError::OperandIdOverflow
 pub vyre_lower::error::LowerError::UndeclaredBuffer(alloc::string::String)
 pub vyre_lower::error::LowerError::UnsupportedConstruct(alloc::string::String)
+pub vyre_lower::operand_class::OperandClass::ChildBodyIdx
+pub vyre_lower::operand_class::OperandClass::LiteralPoolIdx
+pub vyre_lower::operand_class::OperandClass::Other
+pub vyre_lower::operand_class::OperandClass::ResultRef
 pub vyre_lower::target::EmissionTargetCapabilities::subgroup: vyre_lower::target::SubgroupCapabilities
 pub vyre_lower::target::EmissionTargetCapabilities::workgroup: vyre_lower::target::WorkgroupLimits
 pub vyre_lower::target::SubgroupCapabilities::arithmetic: bool
@@ -1139,12 +1143,8 @@ pub vyre_lower::target::WorkgroupLimitViolation::ZeroDimension
 pub vyre_lower::target::WorkgroupLimitViolation::ZeroDimension::axis: u8
 pub vyre_lower::target::WorkgroupLimits::max_invocations: u32
 pub vyre_lower::target::WorkgroupLimits::max_size: [u32; 3]
-pub vyre_lower::verify::OperandClass::ChildBodyIdx
-pub vyre_lower::verify::OperandClass::LiteralPoolIdx
-pub vyre_lower::verify::OperandClass::Other
-pub vyre_lower::verify::OperandClass::ResultRef
 pub vyre_lower::verify::VerifyError::body_path: alloc::vec::Vec<usize>
-pub vyre_lower::verify::VerifyError::kind: vyre_lower::verify::VerifyErrorKind
+pub vyre_lower::verify::VerifyError::kind: vyre_lower::VerifyErrorKind
 pub vyre_lower::verify::VerifyError::op_index: usize
 pub vyre_lower::verify::VerifyErrorKind::ChildBodyIndexOutOfRange
 pub vyre_lower::verify::VerifyErrorKind::ChildBodyIndexOutOfRange::body_idx: u32

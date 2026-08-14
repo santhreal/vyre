@@ -4,7 +4,7 @@
 //! the canonical LEGO path:
 //!
 //! ```text
-//! Program -> vyre-lower::pre_emit -> KernelDescriptor
+//! Program -> vyre-lower::lower_verified -> KernelDescriptor
 //! KernelDescriptor -> vyre-emit-naga -> naga::Module
 //! naga::Module -> naga::back::msl -> MSL native_module artifact
 //! ```
@@ -84,7 +84,7 @@ pub enum EmitError {
     #[error("Metal native_module JSON serialization failed: {0}. Fix: keep artifact metadata serde-compatible and deterministic.")]
     ArtifactSerialization(String),
     /// Program pre-emission lowering failed.
-    #[error("Program pre-emission lowering failed before Metal artifact emission: {0}. Fix: route through vyre-lower::pre_emit and repair the neutral descriptor mapping.")]
+    #[error("Program pre-emission lowering failed before Metal artifact emission: {0}. Fix: route through vyre-lower::lower_verified and repair the neutral descriptor mapping.")]
     PreEmit(String),
 }
 

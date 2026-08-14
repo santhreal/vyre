@@ -4,12 +4,13 @@ use smallvec::SmallVec;
 use vyre_foundation::ir::DataType;
 use vyre_lower::{KernelBody, KernelOpKind};
 
-use super::facts::EmitFacts;
-use super::format::{is_ptx_vectorizable_dtype, write_reg_tuple};
-use super::operands::{read_store_operands, read_two_operands};
+use crate::index_facts::IndexFacts;
+use super::type_suffix::is_ptx_vectorizable_dtype;
+use super::operand_decode::{read_store_operands, read_two_operands};
 use super::schedule::{is_schedulable_pure_op, is_scheduling_fence};
-use super::{body_descendants_read_operand, BodyCtx};
-use crate::reg::PtxType;
+use super::operand_use_scan::body_descendants_read_operand;
+use super::BodyCtx;
+use crate::reg::{write_reg_tuple, PtxType};
 use crate::EmitError;
 
 type VectorChain = SmallVec<[usize; 4]>;
@@ -22,7 +23,7 @@ impl BodyCtx<'_> {
     pub(super) fn collect_vec_load_chain(
         &self,
         body: &KernelBody,
-        facts: &EmitFacts,
+        facts: &IndexFacts,
         start_idx: usize,
     ) -> Result<Option<VectorChain>, EmitError> {
         let op = &body.ops[start_idx];
@@ -81,7 +82,7 @@ impl BodyCtx<'_> {
     pub(super) fn collect_vec_store_chain(
         &self,
         body: &KernelBody,
-        facts: &EmitFacts,
+        facts: &IndexFacts,
         skipped: &[bool],
         start_idx: usize,
     ) -> Result<Option<VectorChain>, EmitError> {
@@ -152,7 +153,7 @@ impl BodyCtx<'_> {
     fn store_chain_values_are_vector_safe(
         &self,
         body: &KernelBody,
-        facts: &EmitFacts,
+        facts: &IndexFacts,
         chain: &[usize],
     ) -> Result<bool, EmitError> {
         let mut load_producers: SmallVec<[usize; 4]> = SmallVec::new();
@@ -272,7 +273,7 @@ impl BodyCtx<'_> {
     pub(super) fn mark_dead_vec_index_ops(
         &self,
         body: &KernelBody,
-        facts: &EmitFacts,
+        facts: &IndexFacts,
         chain: &[usize],
         skip: &mut [bool],
     ) -> Result<(), EmitError> {
@@ -331,7 +332,7 @@ fn truncate_vector_chain(mut chain: VectorChain) -> Result<Option<VectorChain>, 
 
 fn align_vector_chain(
     body: &KernelBody,
-    facts: &EmitFacts,
+    facts: &IndexFacts,
     base_idx_id: u32,
     chain: VectorChain,
 ) -> Result<Option<VectorChain>, EmitError> {
@@ -357,7 +358,7 @@ fn align_vector_chain(
 
 fn index_may_be_aligned_for_vector_width(
     body: &KernelBody,
-    facts: &EmitFacts,
+    facts: &IndexFacts,
     base_idx_id: u32,
     width: u32,
 ) -> bool {

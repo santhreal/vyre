@@ -30,12 +30,13 @@
 //! `vyre-foundation`; target strategy belongs in concrete emitters and drivers.
 
 pub mod analyses;
-pub mod audit;
 /// Byte-stability harness for emitted backend artifacts. Test-only, like
 /// `descriptor_builder`: enable `test-fixtures` to reach it.
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod artifact_golden;
+pub mod audit;
 mod canonicalize;
+pub(crate) mod dce_purity;
 pub mod descriptor;
 /// Fixture builders for kernel descriptors. Every consumer is a test, so this
 /// is not part of the shipped surface: enable `test-fixtures` to reach it.
@@ -44,15 +45,15 @@ pub mod descriptor_builder;
 pub mod emit_adversarial_corpus;
 pub mod error;
 mod lower;
-pub(crate) mod op_properties;
-pub mod operand_semantics;
+pub mod operand_class;
 pub mod pattern_audit;
-mod pre_emit;
 /// Backend-neutral `Program` corpus shared by byte-stability goldens.
 /// Test-only, like `descriptor_builder`: enable `test-fixtures` to reach it.
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod program_stability_corpus;
+pub(crate) mod result_id_remap;
 pub mod target;
+mod verified_lowering;
 pub mod verify;
 
 pub use audit::{
@@ -242,11 +243,11 @@ pub use descriptor::{
     TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
 };
 pub use error::LowerError;
-pub use pre_emit::{lower_verified, LowerVerifiedError, VerifiedLowering};
 pub use target::{
     required_subgroup_capabilities, validate_workgroup_size, EmissionTargetCapabilities,
     SubgroupCapabilities, WorkgroupLimitViolation, WorkgroupLimits,
 };
+pub use verified_lowering::{lower_verified, LowerVerifiedError, VerifiedLowering};
 /// Re-exported so consumers matching/constructing `KernelOpKind::SubgroupReduce`
 /// can name the reduction operator without depending on `vyre-foundation`.
 pub use vyre_foundation::ir::SubgroupReduceOp;
@@ -254,6 +255,7 @@ pub use vyre_foundation::ir::SubgroupReduceOp;
 #[cfg(test)]
 mod verify_descriptor_tests {
     use super::*;
+    use crate::descriptor_builder::lit;
 
     #[test]
     fn valid_input_returns_descriptor_directly() {
@@ -262,11 +264,7 @@ mod verify_descriptor_tests {
             bindings: BindingLayout { slots: vec![] },
             dispatch: Dispatch::new(64, 1, 1),
             body: KernelBody {
-                ops: vec![KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                }],
+                ops: vec![lit(0, 0)],
                 child_bodies: vec![],
                 literals: vec![LiteralValue::U32(7)],
             },
@@ -299,18 +297,7 @@ mod verify_descriptor_tests {
             bindings: BindingLayout { slots: vec![] },
             dispatch: Dispatch::new(64, 1, 1),
             body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(1),
-                    },
-                ],
+                ops: vec![lit(0, 0), lit(0, 1)],
                 child_bodies: vec![],
                 literals: vec![LiteralValue::U32(7)],
             },
@@ -336,11 +323,7 @@ mod verify_descriptor_tests {
             bindings: BindingLayout { slots: vec![] },
             dispatch: Dispatch::new(64, 1, 1),
             body: KernelBody {
-                ops: vec![KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                }],
+                ops: vec![lit(0, 0)],
                 child_bodies: vec![],
                 literals: vec![LiteralValue::U32(7)],
             },
@@ -366,11 +349,7 @@ mod verify_descriptor_tests {
             bindings: BindingLayout { slots: vec![] },
             dispatch: Dispatch::new(64, 1, 1),
             body: KernelBody {
-                ops: vec![KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                }],
+                ops: vec![lit(0, 0)],
                 child_bodies: vec![],
                 literals: vec![LiteralValue::U32(7)],
             },

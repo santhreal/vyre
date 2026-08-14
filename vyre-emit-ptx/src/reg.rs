@@ -1,5 +1,6 @@
 use crate::EmitError;
 use std::fmt;
+use std::fmt::Write as _;
 use vyre_foundation::ir::DataType;
 
 /// PTX scalar register classes.
@@ -78,4 +79,16 @@ impl fmt::Display for Reg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "%{}{}", self.0.reg_prefix(), self.1)
     }
+}
+
+/// Write a brace-delimited PTX register tuple: `{%r1, %r2}`.
+pub(crate) fn write_reg_tuple(out: &mut String, regs: &[Reg]) {
+    out.push('{');
+    for (idx, reg) in regs.iter().enumerate() {
+        if idx > 0 {
+            out.push_str(", ");
+        }
+        let _ = write!(out, "{reg}");
+    }
+    out.push('}');
 }

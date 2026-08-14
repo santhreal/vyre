@@ -59,12 +59,8 @@ where
     walk_body(root, arms, 0, visitor);
 }
 
-fn walk_body<'a, V>(
-    body: &'a KernelBody,
-    arms: ArmDescent,
-    op_index_offset: usize,
-    visitor: &mut V,
-) where
+fn walk_body<'a, V>(body: &'a KernelBody, arms: ArmDescent, op_index_offset: usize, visitor: &mut V)
+where
     V: StructuredVisitor<'a>,
 {
     visitor.enter_body(body, op_index_offset);

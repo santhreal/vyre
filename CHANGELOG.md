@@ -363,6 +363,16 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   over-fire, and a cross-lane write-write race, three failures for one wrong
   buffer. Both now name the output `out` and declare only the three input
   buffers, matching the other packed-INT4 registrations.
+- The operand namespace table of a lowered kernel op has one owner again,
+  `vyre_lower::operand_class`. Structural verification and data-dependency
+  queries answered from two tables that disagreed on a structured loop operand
+  past the body index: one called it metadata, the other an SSA reference. The
+  merged table keeps the reference, because a use that is not counted makes a
+  live value look dead to elimination and hoisting.
+  `vyre_lower::operand_semantics` and `vyre_lower::verify::classify_operand`
+  are gone; `vyre_debug::source_walker` is now
+  `vyre_debug::source_assignments`, and the value-range report types are
+  reachable from `vyre_lower::analyses`.
 
 ## [0.7.1] - 2026-08-01
 

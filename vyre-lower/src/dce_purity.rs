@@ -1,4 +1,10 @@
-//! Shared `KernelOpKind` policy predicates.
+//! Which op kinds a dead-code pass may remove.
+//!
+//! Owns the one predicate that answers whether an op whose results are all
+//! unused can be dropped. It is stricter than "has side effects": an op whose
+//! nested bodies or backend contract carry observable behavior is kept even
+//! when it exposes no used result id. Descriptor-level side-effect reporting
+//! is a different question and lives on `KernelDescriptor`.
 
 use crate::KernelOpKind;
 

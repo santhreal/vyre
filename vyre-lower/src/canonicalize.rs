@@ -7,7 +7,7 @@
 
 use rustc_hash::FxHashMap;
 
-use crate::verify::{classify_operand, OperandClass};
+use crate::operand_class::{classify_operand, OperandClass};
 use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 
 /// Canonicalize representation constraints required by every emitter.

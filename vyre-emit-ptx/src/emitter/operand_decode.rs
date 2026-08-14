@@ -1,3 +1,10 @@
+//! Positional operand decoding for lowered kernel ops.
+//!
+//! Owns the reads that turn a `KernelOp`'s flat `Vec<u32>` operand list into
+//! the named tuple an emission path expects, and the structured error when a
+//! position is missing. It owns no operand classification: which positions
+//! are SSA references is `vyre_lower::operand_class`.
+
 use crate::EmitError;
 use vyre_lower::KernelOp;
 

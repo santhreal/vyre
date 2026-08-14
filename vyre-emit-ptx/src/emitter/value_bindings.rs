@@ -1,4 +1,10 @@
-use std::fmt::Write as _;
+//! Descriptor operand id to PTX register bindings.
+//!
+//! Owns the map between a descriptor's SSA namespace and the registers that
+//! hold those values: allocating a register for a literal, resolving an
+//! operand id to the register that carries it, and recording the register a
+//! result id now names. It emits no instruction other than the literal
+//! materialization it must allocate for.
 
 use vyre_lower::{KernelOp, LiteralValue};
 
@@ -7,20 +13,6 @@ use crate::reg::{PtxType, Reg};
 use crate::EmitError;
 
 impl BodyCtx<'_> {
-    pub(super) fn finish_with_return(&mut self) {
-        if !self.pending_cp_async_tags.is_empty() {
-            let _ = writeln!(
-                self.text,
-                "    // implicit cp.async drain for descriptors missing AsyncWait"
-            );
-            let _ = writeln!(self.text, "    cp.async.wait_group 0;");
-            let _ = writeln!(self.text, "    membar.cta;");
-            self.pending_cp_async_tags.clear();
-        }
-        self.text.push_str("$L_exit:\n");
-        self.text.push_str("    ret;\n");
-    }
-
     pub(super) fn alloc_literal(&mut self, lit: &LiteralValue) -> (Reg, String) {
         match lit {
             LiteralValue::U32(v) => {

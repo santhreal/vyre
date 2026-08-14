@@ -5,7 +5,7 @@ use vyre_lower::{
     BindingLayout, BindingSlot, KernelDescriptor, KernelOpKind, MemoryClass, TRAP_SIDECAR_NAME,
 };
 
-use super::names::sanitize_param_name;
+use super::param_identifier::sanitize_param_name;
 use super::BodyCtx;
 use crate::reg::{PtxType, Reg};
 use crate::{EmitError, PtxEmitOptions};

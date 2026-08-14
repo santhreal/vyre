@@ -337,6 +337,22 @@ impl BodyCtx<'_> {
         })?;
         self.bind_result(op, reg)
     }
+
+    /// Close the kernel: drain any cp.async group the descriptor never
+    /// waited on, then land the single exit label and `ret`.
+    pub(super) fn finish_with_return(&mut self) {
+        if !self.pending_cp_async_tags.is_empty() {
+            let _ = writeln!(
+                self.text,
+                "    // implicit cp.async drain for descriptors missing AsyncWait"
+            );
+            let _ = writeln!(self.text, "    cp.async.wait_group 0;");
+            let _ = writeln!(self.text, "    membar.cta;");
+            self.pending_cp_async_tags.clear();
+        }
+        self.text.push_str("$L_exit:\n");
+        self.text.push_str("    ret;\n");
+    }
 }
 
 fn predicated_store_body_supported(body: &KernelBody) -> bool {

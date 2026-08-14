@@ -246,23 +246,34 @@ fn priority_for_speedup(speedup: f32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-        KernelOp, KernelOpKind, LiteralValue, MemoryClass,
+    use crate::descriptor_builder::{
+        binop, body, descriptor, global_ro, lit, load_global, op, shared_rw,
     };
+    use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
     use vyre_foundation::ir::{BinOp, DataType};
 
+    /// A 64-thread kernel with no bindings and no ops.
+    fn empty_kernel_named(id: &str) -> KernelDescriptor {
+        descriptor(id).dispatch(64, 1, 1).build()
+    }
+
     fn empty_kernel() -> KernelDescriptor {
-        KernelDescriptor {
-            id: "empty".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        }
+        empty_kernel_named("empty")
+    }
+
+    /// A kernel over a single read-only `f32` global named `buf`.
+    fn one_buffer_kernel(id: &str, threads: u32, body: impl Into<KernelBody>) -> KernelDescriptor {
+        descriptor(id)
+            .slot(global_ro(0, DataType::F32, "buf"))
+            .dispatch(threads, 1, 1)
+            .body(body)
+            .build()
+    }
+
+    fn empty_report_with_recs(recs: Vec<Recommendation>) -> PerfAuditReport {
+        let mut r = audit(&empty_kernel_named("k"));
+        r.recommendations = recs;
+        r
     }
 
     #[test]
@@ -276,36 +287,13 @@ mod tests {
     #[test]
     fn coalesced_kernel_has_zero_waste() {
         // Single coalesced load  -  perfect.
-        let kk = KernelDescriptor {
-            id: "perfect".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::F32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "buf".into(),
-                }],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::LocalInvocationId,
-                        operands: vec![],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(1),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let kk = one_buffer_kernel(
+            "perfect",
+            64,
+            body()
+                .op(op(KernelOpKind::LocalInvocationId, [], 0))
+                .op(load_global(0, 0, 1)),
+        );
         let r = audit(&kk);
         assert!((r.waste_score - 0.0).abs() < 1e-6);
         assert!(r.recommendations.is_empty());
@@ -314,46 +302,16 @@ mod tests {
     #[test]
     fn strided_kernel_produces_coalesce_recommendation() {
         // load(buf, 4 * tid)
-        let kk = KernelDescriptor {
-            id: "strided".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::F32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "buf".into(),
-                }],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::LocalInvocationId,
-                        operands: vec![],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                        operands: vec![1, 0],
-                        result: Some(2),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 2],
-                        result: Some(3),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(4)],
-            },
-        };
+        let kk = one_buffer_kernel(
+            "strided",
+            64,
+            body()
+                .op(op(KernelOpKind::LocalInvocationId, [], 0))
+                .op(lit(0, 1))
+                .op(binop(BinOp::Mul, 1, 0, 2))
+                .op(load_global(0, 2, 3))
+                .literal(LiteralValue::U32(4)),
+        );
         let r = audit(&kk);
         assert!(r.waste_score > 0.0);
         assert_eq!(r.recommendations.len(), 1);
@@ -367,41 +325,15 @@ mod tests {
     #[test]
     fn shared_mem_promotion_candidate_appears_in_recommendations() {
         // Two LoadGlobal of same slot  -  promotion candidate.
-        let kk = KernelDescriptor {
-            id: "promote".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::F32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "buf".into(),
-                }],
-            },
-            dispatch: Dispatch::new(32, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(2),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
+        let kk = one_buffer_kernel(
+            "promote",
+            32,
+            body()
+                .op(lit(0, 0))
+                .op(load_global(0, 0, 1))
+                .op(load_global(0, 0, 2))
+                .literal(LiteralValue::U32(0)),
+        );
         let r = audit(&kk);
         assert!(
             r.recommendations
@@ -415,73 +347,26 @@ mod tests {
     #[test]
     fn recommendations_sorted_by_priority_then_speedup() {
         // Build a kernel with mixed problems to verify ordering.
-        let kk = KernelDescriptor {
-            id: "mixed".into(),
-            bindings: BindingLayout {
-                slots: vec![
-                    BindingSlot {
-                        slot: 0,
-                        element_type: DataType::F32,
-                        element_count: None,
-                        memory_class: MemoryClass::Global,
-                        visibility: BindingVisibility::ReadOnly,
-                        name: "g".into(),
-                    },
-                    BindingSlot {
-                        slot: 1,
-                        element_type: DataType::F32,
-                        element_count: Some(64),
-                        memory_class: MemoryClass::Shared,
-                        visibility: BindingVisibility::ReadWrite,
-                        name: "s".into(),
-                    },
-                ],
-            },
-            dispatch: Dispatch::new(32, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    // Strided global load (4× speedup)
-                    KernelOp {
-                        kind: KernelOpKind::LocalInvocationId,
-                        operands: vec![],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                        operands: vec![1, 0],
-                        result: Some(2),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 2],
-                        result: Some(3),
-                    },
-                    // 32-way bank conflict on shared (32× speedup, critical)
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(4),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                        operands: vec![0, 4],
-                        result: Some(5),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadShared,
-                        operands: vec![1, 5],
-                        result: Some(6),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(4), LiteralValue::U32(32)],
-            },
-        };
+        let kk = descriptor("mixed")
+            .slots([
+                global_ro(0, DataType::F32, "g"),
+                shared_rw(1, DataType::F32, 64, "s"),
+            ])
+            .dispatch(32, 1, 1)
+            .body(
+                body()
+                    // Strided global load (4x speedup)
+                    .op(op(KernelOpKind::LocalInvocationId, [], 0))
+                    .op(lit(0, 1))
+                    .op(binop(BinOp::Mul, 1, 0, 2))
+                    .op(load_global(0, 2, 3))
+                    // 32-way bank conflict on shared (32x speedup, critical)
+                    .op(lit(1, 4))
+                    .op(binop(BinOp::Mul, 0, 4, 5))
+                    .op(op(KernelOpKind::LoadShared, [1, 5], 6))
+                    .literals([LiteralValue::U32(4), LiteralValue::U32(32)]),
+            )
+            .build();
         let r = audit(&kk);
         assert!(r.recommendations.len() >= 2);
         // Critical bank conflict (priority 0) must come before strided
@@ -515,18 +400,7 @@ mod tests {
 
     #[test]
     fn format_short_clean_kernel_says_clean() {
-        use crate::{BindingLayout, Dispatch, KernelBody, KernelDescriptor};
-        let desc = KernelDescriptor {
-            id: "named".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
-        let r = audit(&desc);
+        let r = audit(&empty_kernel_named("named"));
         let s = r.format_short();
         assert!(s.contains("named:"));
         assert!(s.contains("clean") || s.contains("recommendations"));
@@ -534,53 +408,13 @@ mod tests {
 
     #[test]
     fn format_short_unnamed_uses_unnamed_label() {
-        use crate::{BindingLayout, Dispatch, KernelBody, KernelDescriptor};
-        let mut desc = KernelDescriptor {
-            id: String::new(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
-        desc.id = String::new();
-        let r = audit(&desc);
+        let r = audit(&empty_kernel_named(""));
         assert!(r.format_short().contains("<unnamed>"));
     }
 
     #[test]
     fn is_clean_on_empty_kernel() {
-        use crate::{BindingLayout, Dispatch, KernelBody, KernelDescriptor};
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
-        assert!(audit(&desc).is_clean());
-    }
-
-    fn empty_report_with_recs(recs: Vec<Recommendation>) -> PerfAuditReport {
-        use crate::{BindingLayout, Dispatch, KernelBody, KernelDescriptor};
-        let empty = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
-        let mut r = audit(&empty);
-        r.recommendations = recs;
-        r
+        assert!(audit(&empty_kernel_named("k")).is_clean());
     }
 
     #[test]
@@ -640,30 +474,15 @@ mod tests {
 
     #[test]
     fn audit_with_histogram_returns_both() {
-        use crate::{
-            BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind,
-        };
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(1),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![crate::LiteralValue::U32(7)],
-            },
-        };
+        let desc = descriptor("k")
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .op(lit(0, 0))
+                    .op(lit(0, 1))
+                    .literal(LiteralValue::U32(7)),
+            )
+            .build();
         let (report, hist) = audit_with_histogram(&desc);
         assert_eq!(report.kernel_id, "k");
         assert_eq!(hist.literal, 2);

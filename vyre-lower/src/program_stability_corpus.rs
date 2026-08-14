@@ -199,7 +199,13 @@ pub fn cases() -> Vec<StabilityCase> {
         ));
     }
     for (id, build) in u32_unary {
-        cases.push(unary(id, DataType::U32, DataType::U32, build, u32_in.clone()));
+        cases.push(unary(
+            id,
+            DataType::U32,
+            DataType::U32,
+            build,
+            u32_in.clone(),
+        ));
     }
     for (id, build) in f32_binary {
         cases.push(binary(

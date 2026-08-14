@@ -18,7 +18,7 @@ use rustc_hash::FxHashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::operand_semantics::operand_is_result_reference;
+use crate::operand_class::operand_is_result_reference;
 use crate::{KernelBody, KernelDescriptor};
 
 /// Where in the descriptor a result-id is referenced.

@@ -28,7 +28,7 @@ pub mod value_range;
 pub mod vec_pack;
 pub mod workgroup_uniform;
 
-use crate::operand_semantics::operand_is_result_reference;
+use crate::operand_class::operand_is_result_reference;
 use crate::{KernelBody, KernelOp, KernelOpKind};
 use rustc_hash::FxHashMap;
 

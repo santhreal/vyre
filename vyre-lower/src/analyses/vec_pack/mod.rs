@@ -200,9 +200,10 @@ fn load_with_index_expr(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::descriptor_builder::{effect, lit, op};
     use crate::{
         BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-        KernelOp, KernelOpKind, MemoryClass,
+        KernelOpKind, MemoryClass,
     };
     use vyre_foundation::ir::DataType;
 
@@ -223,18 +224,10 @@ mod tests {
         let mut literals = Vec::new();
         for i in 0..n {
             literals.push(LiteralValue::U32(i));
-            ops.push(KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![i],
-                result: Some(i),
-            });
+            ops.push(op(KernelOpKind::Literal, [i], i));
         }
         for i in 0..n {
-            ops.push(KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![slot, i],
-                result: Some(n + i),
-            });
+            ops.push(op(KernelOpKind::LoadGlobal, [slot, i], n + i));
         }
         KernelBody {
             ops,
@@ -317,26 +310,12 @@ mod tests {
         let lit_b = body.literals.len() as u32 - 1;
         let result_a = body.ops.len() as u32 + 100;
         let result_b = result_a + 1;
-        body.ops.push(KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![lit_a],
-            result: Some(result_a),
-        });
-        body.ops.push(KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![lit_b],
-            result: Some(result_b),
-        });
-        body.ops.push(KernelOp {
-            kind: KernelOpKind::LoadGlobal,
-            operands: vec![1, result_a],
-            result: Some(200),
-        });
-        body.ops.push(KernelOp {
-            kind: KernelOpKind::LoadGlobal,
-            operands: vec![1, result_b],
-            result: Some(201),
-        });
+        body.ops.push(op(KernelOpKind::Literal, [lit_a], result_a));
+        body.ops.push(op(KernelOpKind::Literal, [lit_b], result_b));
+        body.ops
+            .push(op(KernelOpKind::LoadGlobal, [1, result_a], 200));
+        body.ops
+            .push(op(KernelOpKind::LoadGlobal, [1, result_b], 201));
         let mut desc = desc_with_body(body);
         desc.bindings.slots.push(input_slot(1, "in2"));
         let report = analyze(&desc);
@@ -362,18 +341,15 @@ mod tests {
             ],
         };
         for (i, _) in [0, 1, 3].iter().enumerate() {
-            body.ops.push(KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![i as u32],
-                result: Some(i as u32),
-            });
+            body.ops
+                .push(op(KernelOpKind::Literal, [i as u32], i as u32));
         }
         for (offset, lit_id) in [0, 1, 2].iter().enumerate() {
-            body.ops.push(KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, *lit_id as u32],
-                result: Some(10 + offset as u32),
-            });
+            body.ops.push(op(
+                KernelOpKind::LoadGlobal,
+                [0, *lit_id as u32],
+                10 + offset as u32,
+            ));
         }
         let report = analyze(&desc_with_body(body));
         // Only 0, 1 form a chain (length 2). Index 3 is a singleton.
@@ -386,81 +362,21 @@ mod tests {
     fn dynamic_base_plus_adjacent_offsets_forms_chain() {
         let body = KernelBody {
             ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![2],
-                    result: Some(4),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![3],
-                    result: Some(5),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![4],
-                    result: Some(6),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![2, 3],
-                    result: Some(7),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![2, 4],
-                    result: Some(8),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![2, 5],
-                    result: Some(9),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![2, 6],
-                    result: Some(10),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 7],
-                    result: Some(11),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 8],
-                    result: Some(12),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 9],
-                    result: Some(13),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 10],
-                    result: Some(14),
-                },
+                op(KernelOpKind::LocalInvocationId, [0], 0),
+                lit(0, 1),
+                op(KernelOpKind::BinOpKind(BinOp::Mul), [0, 1], 2),
+                lit(1, 3),
+                lit(2, 4),
+                lit(3, 5),
+                lit(4, 6),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [2, 3], 7),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [2, 4], 8),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [2, 5], 9),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [2, 6], 10),
+                op(KernelOpKind::LoadGlobal, [0, 7], 11),
+                op(KernelOpKind::LoadGlobal, [0, 8], 12),
+                op(KernelOpKind::LoadGlobal, [0, 9], 13),
+                op(KernelOpKind::LoadGlobal, [0, 10], 14),
             ],
             child_bodies: vec![],
             literals: vec![
@@ -483,51 +399,15 @@ mod tests {
     fn adjacent_offsets_from_different_dynamic_bases_do_not_chain() {
         let body = KernelBody {
             ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                    operands: vec![0, 1],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                    operands: vec![0, 2],
-                    result: Some(4),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![3, 1],
-                    result: Some(5),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![4, 2],
-                    result: Some(6),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 5],
-                    result: Some(7),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 6],
-                    result: Some(8),
-                },
+                op(KernelOpKind::LocalInvocationId, [0], 0),
+                lit(0, 1),
+                lit(1, 2),
+                op(KernelOpKind::BinOpKind(BinOp::Mul), [0, 1], 3),
+                op(KernelOpKind::BinOpKind(BinOp::Mul), [0, 2], 4),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [3, 1], 5),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [4, 2], 6),
+                op(KernelOpKind::LoadGlobal, [0, 5], 7),
+                op(KernelOpKind::LoadGlobal, [0, 6], 8),
             ],
             child_bodies: vec![],
             literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
@@ -541,26 +421,14 @@ mod tests {
     fn singleton_computed_index_is_not_chainable() {
         let body = KernelBody {
             ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add),
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 2],
-                    result: Some(3),
-                },
+                lit(0, 0),
+                op(KernelOpKind::LocalInvocationId, [0], 1),
+                op(
+                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add),
+                    [0, 1],
+                    2,
+                ),
+                op(KernelOpKind::LoadGlobal, [0, 2], 3),
             ],
             child_bodies: vec![],
             literals: vec![LiteralValue::U32(0)],
@@ -573,11 +441,7 @@ mod tests {
     fn chains_in_child_bodies_are_detected_too() {
         let child = linear_load_body(0, 3);
         let parent = KernelBody {
-            ops: vec![KernelOp {
-                kind: KernelOpKind::StructuredBlock,
-                operands: vec![0],
-                result: None,
-            }],
+            ops: vec![effect(KernelOpKind::StructuredBlock, [0])],
             child_bodies: vec![child],
             literals: vec![],
         };

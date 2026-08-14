@@ -28,8 +28,8 @@ pub struct DescriptorDump {
     /// Rendered descriptor text.
     pub text: String,
     #[serde(
-        serialize_with = "crate::path_map_serde::serialize_usize",
-        deserialize_with = "crate::path_map_serde::deserialize_usize"
+        serialize_with = "crate::body_path_map::serialize",
+        deserialize_with = "crate::body_path_map::deserialize"
     )]
     /// Operation count for every rendered child-body path.
     pub op_counts_by_path: BTreeMap<Vec<usize>, usize>,

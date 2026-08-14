@@ -244,46 +244,46 @@ fn gcd_u32(a: u32, b: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-        KernelOp, KernelOpKind, LiteralValue, MemoryClass,
+    use crate::descriptor_builder::{
+        binop, body, descriptor, effect, global_ro, lit, op, shared_rw,
     };
-    use vyre_foundation::ir::DataType;
-
-    fn op(kind: KernelOpKind, operands: Vec<u32>, result: Option<u32>) -> KernelOp {
-        KernelOp {
-            kind,
-            operands,
-            result,
-        }
-    }
+    use crate::{BindingSlot, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
+    use vyre_foundation::ir::{BinOp, DataType};
 
     fn shared_binding(slot: u32) -> BindingSlot {
-        BindingSlot {
-            slot,
-            element_type: DataType::F32,
-            element_count: Some(1024),
-            memory_class: MemoryClass::Shared,
-            visibility: BindingVisibility::ReadWrite,
-            name: format!("shared{slot}"),
-        }
+        shared_rw(slot, DataType::F32, 1024, &format!("shared{slot}"))
     }
 
-    fn k(
-        slots: Vec<BindingSlot>,
-        ops: Vec<KernelOp>,
-        literals: Vec<LiteralValue>,
-    ) -> KernelDescriptor {
-        KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots },
-            dispatch: Dispatch::new(32, 1, 1),
-            body: KernelBody {
-                ops,
-                child_bodies: vec![],
-                literals,
-            },
-        }
+    /// `LocalInvocationId` on the given axis.
+    fn tid(axis: impl Into<Vec<u32>>, result: u32) -> KernelOp {
+        op(KernelOpKind::LocalInvocationId, axis, result)
+    }
+
+    /// A 32-thread kernel over one shared binding.
+    fn k(slots: Vec<BindingSlot>, body: impl Into<KernelBody>) -> KernelDescriptor {
+        descriptor("k")
+            .slots(slots)
+            .dispatch(32, 1, 1)
+            .body(body)
+            .build()
+    }
+
+    /// The canonical strided access `shared[tid * stride]`, which is the
+    /// only shape that distinguishes the conflict classifications below.
+    fn strided_load(stride: u32) -> KernelDescriptor {
+        k(
+            vec![shared_binding(0)],
+            body()
+                .op(tid([], 0))
+                .op(lit(0, 1))
+                .op(binop(BinOp::Mul, 0, 1, 2))
+                .op(op(KernelOpKind::LoadShared, [0, 2], 3))
+                .literal(LiteralValue::U32(stride)),
+        )
+    }
+
+    fn conflict_of(stride: u32) -> BankConflictKind {
+        analyze(&strided_load(stride)).sites[0].conflict
     }
 
     // Positive truth (no conflict detected)
@@ -292,11 +292,9 @@ mod tests {
     fn positive_load_at_tid_no_conflict() {
         let kk = k(
             vec![shared_binding(0)],
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::LoadShared, vec![0, 0], Some(1)),
-            ],
-            vec![],
+            body()
+                .op(tid([], 0))
+                .op(op(KernelOpKind::LoadShared, [0, 0], 1)),
         );
         let r = analyze(&kk);
         assert_eq!(r.sites.len(), 1);
@@ -307,11 +305,9 @@ mod tests {
     fn local_invocation_y_axis_is_unknown_not_x_lane_no_conflict() {
         let kk = k(
             vec![shared_binding(0)],
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![1], Some(0)),
-                op(KernelOpKind::LoadShared, vec![0, 0], Some(1)),
-            ],
-            vec![],
+            body()
+                .op(tid([1], 0))
+                .op(op(KernelOpKind::LoadShared, [0, 0], 1)),
         );
         let r = analyze(&kk);
         assert_eq!(r.sites.len(), 1);
@@ -322,17 +318,12 @@ mod tests {
     fn positive_load_at_tid_plus_const_no_conflict() {
         let kk = k(
             vec![shared_binding(0)],
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add),
-                    vec![0, 1],
-                    Some(2),
-                ),
-                op(KernelOpKind::LoadShared, vec![0, 2], Some(3)),
-            ],
-            vec![LiteralValue::U32(99)],
+            body()
+                .op(tid([], 0))
+                .op(lit(0, 1))
+                .op(binop(BinOp::Add, 0, 1, 2))
+                .op(op(KernelOpKind::LoadShared, [0, 2], 3))
+                .literal(LiteralValue::U32(99)),
         );
         let r = analyze(&kk);
         assert_eq!(r.sites[0].conflict, BankConflictKind::NoConflict);
@@ -342,11 +333,10 @@ mod tests {
     fn positive_constant_index_is_broadcast_safe() {
         let kk = k(
             vec![shared_binding(0)],
-            vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::LoadShared, vec![0, 0], Some(1)),
-            ],
-            vec![LiteralValue::U32(0)],
+            body()
+                .op(lit(0, 0))
+                .op(op(KernelOpKind::LoadShared, [0, 0], 1))
+                .literal(LiteralValue::U32(0)),
         );
         let r = analyze(&kk);
         assert_eq!(r.sites[0].conflict, BankConflictKind::BroadcastSafe);
@@ -356,73 +346,22 @@ mod tests {
 
     #[test]
     fn conflict_stride_2_is_2_way() {
-        let kk = k(
-            vec![shared_binding(0)],
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Mul),
-                    vec![0, 1],
-                    Some(2),
-                ),
-                op(KernelOpKind::LoadShared, vec![0, 2], Some(3)),
-            ],
-            vec![LiteralValue::U32(2)],
-        );
-        let r = analyze(&kk);
-        assert_eq!(
-            r.sites[0].conflict,
-            BankConflictKind::Conflict { way_count: 2 }
-        );
+        assert_eq!(conflict_of(2), BankConflictKind::Conflict { way_count: 2 });
     }
 
     #[test]
     fn conflict_stride_4_is_4_way() {
-        let kk = k(
-            vec![shared_binding(0)],
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Mul),
-                    vec![0, 1],
-                    Some(2),
-                ),
-                op(KernelOpKind::LoadShared, vec![0, 2], Some(3)),
-            ],
-            vec![LiteralValue::U32(4)],
-        );
-        let r = analyze(&kk);
-        assert_eq!(
-            r.sites[0].conflict,
-            BankConflictKind::Conflict { way_count: 4 }
-        );
+        assert_eq!(conflict_of(4), BankConflictKind::Conflict { way_count: 4 });
     }
 
     #[test]
     fn conflict_stride_32_is_32_way_critical() {
         // The classic shared-mem matmul column-major worst case.
-        let kk = k(
-            vec![shared_binding(0)],
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Mul),
-                    vec![0, 1],
-                    Some(2),
-                ),
-                op(KernelOpKind::LoadShared, vec![0, 2], Some(3)),
-            ],
-            vec![LiteralValue::U32(32)],
-        );
-        let r = analyze(&kk);
+        let r = analyze(&strided_load(32));
         assert_eq!(
             r.sites[0].conflict,
             BankConflictKind::Conflict { way_count: 32 }
         );
-
         assert_eq!(r.problematic_count(), 1);
         assert_eq!(r.critical_count(), 1);
     }
@@ -430,63 +369,18 @@ mod tests {
     #[test]
     fn no_conflict_for_stride_coprime_to_bank_count() {
         // gcd(3, 32) == 1 → no conflict.
-        let kk = k(
-            vec![shared_binding(0)],
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Mul),
-                    vec![0, 1],
-                    Some(2),
-                ),
-                op(KernelOpKind::LoadShared, vec![0, 2], Some(3)),
-            ],
-            vec![LiteralValue::U32(3)],
-        );
-        let r = analyze(&kk);
-        assert_eq!(r.sites[0].conflict, BankConflictKind::NoConflict);
+        assert_eq!(conflict_of(3), BankConflictKind::NoConflict);
     }
 
     #[test]
     fn stride_1_is_no_conflict() {
         // gcd(1, 32) == 1.
-        let kk = k(
-            vec![shared_binding(0)],
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Mul),
-                    vec![0, 1],
-                    Some(2),
-                ),
-                op(KernelOpKind::LoadShared, vec![0, 2], Some(3)),
-            ],
-            vec![LiteralValue::U32(1)],
-        );
-        let r = analyze(&kk);
-        assert_eq!(r.sites[0].conflict, BankConflictKind::NoConflict);
+        assert_eq!(conflict_of(1), BankConflictKind::NoConflict);
     }
 
     #[test]
     fn stride_0_is_broadcast_safe() {
-        let kk = k(
-            vec![shared_binding(0)],
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Mul),
-                    vec![0, 1],
-                    Some(2),
-                ),
-                op(KernelOpKind::LoadShared, vec![0, 2], Some(3)),
-            ],
-            vec![LiteralValue::U32(0)],
-        );
-        let r = analyze(&kk);
-        assert_eq!(r.sites[0].conflict, BankConflictKind::BroadcastSafe);
+        assert_eq!(conflict_of(0), BankConflictKind::BroadcastSafe);
     }
 
     // Negative precision (rule does NOT fire)
@@ -495,28 +389,12 @@ mod tests {
     fn negative_global_load_not_analyzed() {
         // LoadGlobal  -  not LoadShared. Bank-conflict analysis is
         // only for shared memory.
-        let kk = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::F32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "buf".into(),
-                }],
-            },
-            dispatch: Dispatch::new(32, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                    op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-                ],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let kk = k(
+            vec![global_ro(0, DataType::F32, "buf")],
+            body()
+                .op(tid([], 0))
+                .op(op(KernelOpKind::LoadGlobal, [0, 0], 1)),
+        );
         let r = analyze(&kk);
         assert!(r.sites.is_empty());
     }
@@ -526,28 +404,12 @@ mod tests {
         // Robustness: an emitter bug that emits LoadShared against a
         // Global-class binding shouldn't be analyzed as bank conflict.
         // We skip it.
-        let kk = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::F32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "buf".into(),
-                }],
-            },
-            dispatch: Dispatch::new(32, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                    op(KernelOpKind::LoadShared, vec![0, 0], Some(1)),
-                ],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let kk = k(
+            vec![global_ro(0, DataType::F32, "buf")],
+            body()
+                .op(tid([], 0))
+                .op(op(KernelOpKind::LoadShared, [0, 0], 1)),
+        );
         let r = analyze(&kk);
         assert!(r.sites.is_empty());
     }
@@ -556,41 +418,27 @@ mod tests {
 
     #[test]
     fn adversarial_load_inside_loop_body_counted() {
-        let kk = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![shared_binding(0)],
-            },
-            dispatch: Dispatch::new(32, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    op(KernelOpKind::Literal, vec![0], Some(0)),
-                    op(KernelOpKind::Literal, vec![0], Some(1)),
-                    op(
-                        KernelOpKind::StructuredForLoop {
-                            loop_var: "".into(),
-                        },
-                        vec![0, 1, 0],
-                        None,
-                    ),
-                ],
-                child_bodies: vec![KernelBody {
-                    ops: vec![
-                        op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                        op(KernelOpKind::Literal, vec![0], Some(1)),
-                        op(
-                            KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Mul),
-                            vec![0, 1],
-                            Some(2),
-                        ),
-                        op(KernelOpKind::LoadShared, vec![0, 2], Some(3)),
-                    ],
-                    child_bodies: vec![],
-                    literals: vec![LiteralValue::U32(8)],
-                }],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
+        let kk = k(
+            vec![shared_binding(0)],
+            body()
+                .op(lit(0, 0))
+                .op(lit(0, 1))
+                .op(effect(
+                    KernelOpKind::StructuredForLoop {
+                        loop_var: "".into(),
+                    },
+                    [0, 1, 0],
+                ))
+                .child(
+                    body()
+                        .op(tid([], 0))
+                        .op(lit(0, 1))
+                        .op(binop(BinOp::Mul, 0, 1, 2))
+                        .op(op(KernelOpKind::LoadShared, [0, 2], 3))
+                        .literal(LiteralValue::U32(8)),
+                )
+                .literal(LiteralValue::U32(0)),
+        );
         let r = analyze(&kk);
         // gcd(8, 32) == 8 → 8-way conflict.
         assert_eq!(r.sites.len(), 1);
@@ -604,16 +452,11 @@ mod tests {
     fn adversarial_unrecognized_index_pattern_is_unknown() {
         let kk = k(
             vec![shared_binding(0)],
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Sub),
-                    vec![0, 0],
-                    Some(1),
-                ),
-                op(KernelOpKind::LoadShared, vec![0, 1], Some(2)),
-            ],
-            vec![],
+            body().op(tid([], 0)).op(binop(BinOp::Sub, 0, 0, 1)).op(op(
+                KernelOpKind::LoadShared,
+                [0, 1],
+                2,
+            )),
         );
         let r = analyze(&kk);
         assert_eq!(r.sites[0].conflict, BankConflictKind::Unknown);
@@ -623,8 +466,7 @@ mod tests {
     fn adversarial_malformed_load_shared_skipped_safely() {
         let kk = k(
             vec![shared_binding(0)],
-            vec![op(KernelOpKind::LoadShared, vec![], None)],
-            vec![],
+            body().op(effect(KernelOpKind::LoadShared, [])),
         );
         let r = analyze(&kk);
         assert!(r.sites.is_empty());
@@ -634,27 +476,9 @@ mod tests {
 
     #[test]
     fn analyze_with_16_banks_changes_classification() {
-        // Stride 16 with 16 banks → 16-way critical.
-        // Stride 16 with 32 banks → 16-way (gcd(16,32)=16) → still 16.
-        // To show the override matters, use stride 4 with 4 banks
-        // (gcd(4,4)=4 → 4-way) vs stride 4 with 32 banks
-        // (gcd(4,32)=4 → 4-way). They happen to match. Use a better
-        // example: stride 3 with 32 banks (gcd=1, no conflict) vs
-        // stride 3 with 6 banks (gcd=3, 3-way).
-        let kk = k(
-            vec![shared_binding(0)],
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Mul),
-                    vec![0, 1],
-                    Some(2),
-                ),
-                op(KernelOpKind::LoadShared, vec![0, 2], Some(3)),
-            ],
-            vec![LiteralValue::U32(3)],
-        );
+        // Stride 3 is coprime with 32 banks but shares a factor of 3 with
+        // 6, so the bank count decides the classification.
+        let kk = strided_load(3);
         let r32 = analyze_with_bank_count(&kk, 32);
         assert_eq!(r32.sites[0].conflict, BankConflictKind::NoConflict);
         let r6 = analyze_with_bank_count(&kk, 6);

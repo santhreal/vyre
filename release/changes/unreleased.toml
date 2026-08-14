@@ -354,3 +354,8 @@ text = "The generated bitset and reduce sweeps are two parameterized matrices in
 id = "release-tooling-single-owners"
 category = "Changed"
 text = "Release tooling now has one owner per shared shape. Subcommand dispatch and the agreement check between the assignment table and each delegate crate live in `xtask::subcommands`; the operation table cells shared by the catalog and the operation inventory live in `xtask-registry::docs::schema_cells`; the optimizer catalog row published by both the integration matrix and the corpus pass manifest lives in `xtask-registry::release::optimizer_pass_rows`; bounded file reads route through `xtask::output_arg::read_text_bounded`. The xtask integration tests link as three binaries instead of ten and the registry tests as one instead of two."
+
+[[fragments]]
+id = "operand-class-single-owner"
+category = "Fixed"
+text = "The operand namespace table of a lowered kernel op has one owner again, `vyre_lower::operand_class`. Structural verification and data-dependency queries answered from two tables that disagreed on a structured loop operand past the body index: one called it metadata, the other an SSA reference. The merged table keeps the reference, because a use that is not counted makes a live value look dead to elimination and hoisting. `vyre_lower::operand_semantics` and `vyre_lower::verify::classify_operand` are gone; `vyre_debug::source_walker` is now `vyre_debug::source_assignments`, and the value-range report types are reachable from `vyre_lower::analyses`."

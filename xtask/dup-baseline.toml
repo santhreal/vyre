@@ -72,7 +72,7 @@ total_lines = 37846
 [[crate]]
 name = "vyre-debug"
 duplicate_lines = 71
-total_lines = 2274
+total_lines = 2258
 
 [[crate]]
 name = "vyre-driver"
@@ -116,8 +116,8 @@ total_lines = 9105
 
 [[crate]]
 name = "vyre-emit-ptx"
-duplicate_lines = 363
-total_lines = 11183
+duplicate_lines = 295
+total_lines = 11118
 
 [[crate]]
 name = "vyre-emit-spirv"
@@ -151,8 +151,8 @@ total_lines = 3443
 
 [[crate]]
 name = "vyre-lower"
-duplicate_lines = 1636
-total_lines = 14828
+duplicate_lines = 413
+total_lines = 13273
 
 [[crate]]
 name = "vyre-macros"
