@@ -742,7 +742,7 @@ inventory::submit! {
 
 // Cross-backend parity fixture for the DEPTH-LEVELED evaluator. The single-pass
 // `sum_product_evaluate` above is registered; the leveled variant is now a production
-// path (vyre-self-substrate's cost model dispatches it), so it must be walked by the
+// path (vyre-pass-engine's cost model dispatches it), so it must be walked by the
 // conformance matrix too. A genuine DEPTH-2 circuit (a PRODUCT reading an internal SUM)
 // exercises the barrier the single-pass form lacks:
 //   n0=LEAF 2.0, n1=LEAF 3.0        (depth 0)

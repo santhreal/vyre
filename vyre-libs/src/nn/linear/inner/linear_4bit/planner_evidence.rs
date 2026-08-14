@@ -13,7 +13,8 @@ use crate::{
     MatmulKernelPath, MatmulKernelPlan, MatrixShape,
 };
 
-/// Build planner evidence for [`linear_4bit_affine_grouped_typed`].
+/// Build planner evidence for
+/// [`linear_4bit_affine_grouped_typed`](super::linear_4bit_affine_grouped_typed).
 ///
 /// # Errors
 /// Returns `Err` when quantized metadata or dimensions are invalid.

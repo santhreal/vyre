@@ -104,7 +104,7 @@ Define backend-neutral device, target compiler registration, artifact materializ
 ### Boundaries
 
 The `backend-contract` owner maintains this `backend-neutral` crate at `vyre-driver`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-macros`, `vyre-megakernel`, `vyre-self-substrate`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre-foundation`, `vyre-libs`, `vyre-macros`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

@@ -1,6 +1,6 @@
 //! Self-substrate wrappers for reduction-oriented primitive dispatch.
 //!
-//! These helpers keep reduction planning in `vyre-self-substrate` while the
+//! These helpers keep reduction planning in `vyre-pass-engine` while the
 //! executable IR and reference contracts stay in `vyre-primitives`.
 
 use vyre_foundation::ir::{Node, Program};
@@ -271,7 +271,7 @@ mod tests {
 
     #[test]
     fn child_builders_keep_parent_region_context() {
-        let parent = "vyre-self-substrate::data::reduce_dispatch_pipeline";
+        let parent = "vyre-pass-engine::data::reduce_dispatch_pipeline";
         assert_eq!(
             region_generator(&child_sum_f32_stage(parent, 8, "scratch")),
             "vyre-primitives::reduce::workgroup_sum_f32"

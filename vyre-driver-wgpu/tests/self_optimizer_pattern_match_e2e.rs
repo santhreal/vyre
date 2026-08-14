@@ -12,7 +12,7 @@ use vyre::ir::{BinOp, Expr, Node, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_self_substrate::optimizer::pattern_match_via_encoded::gpu_algebraic_identities;
+use vyre_pass_engine::optimizer::pattern_match_via_encoded::gpu_algebraic_identities;
 
 struct WgpuProgramDispatcher<'a> {
     backend: &'a WgpuBackend,

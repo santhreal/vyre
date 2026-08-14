@@ -36,11 +36,11 @@ graph TD
   C22["vyre-lower"]
   C23["vyre-macros"]
   C24["vyre-megakernel"]
-  C25["vyre-primitives"]
-  C26["vyre-reference"]
-  C27["vyre-runtime"]
-  C28["vyre-safetensors"]
-  C29["vyre-self-substrate"]
+  C25["vyre-pass-engine"]
+  C26["vyre-primitives"]
+  C27["vyre-reference"]
+  C28["vyre-runtime"]
+  C29["vyre-safetensors"]
   C30["vyre-spec"]
   C31["vyre-test-support"]
   C32["xtask"]
@@ -51,12 +51,12 @@ graph TD
   C1 --> C12
   C1 --> C17
   C1 --> C24
-  C1 --> C27
+  C1 --> C28
   C1 --> C30
   C2 --> C7
   C2 --> C17
   C2 --> C24
-  C2 --> C25
+  C2 --> C26
   C2 --> C30
   C3 --> C1
   C3 --> C7
@@ -70,9 +70,9 @@ graph TD
   C3 --> C18
   C3 --> C20
   C3 --> C22
-  C3 --> C25
   C3 --> C26
   C3 --> C27
+  C3 --> C28
   C3 --> C30
   C4 --> C1
   C4 --> C5
@@ -84,9 +84,9 @@ graph TD
   C4 --> C17
   C4 --> C20
   C4 --> C24
-  C4 --> C25
   C4 --> C26
   C4 --> C27
+  C4 --> C28
   C4 --> C30
   C5 --> C30
   C6 --> C1
@@ -94,18 +94,20 @@ graph TD
   C6 --> C17
   C6 --> C20
   C6 --> C22
-  C6 --> C25
+  C6 --> C26
   C7 --> C17
+  C7 --> C20
   C7 --> C23
   C7 --> C24
-  C7 --> C29
+  C7 --> C25
   C7 --> C30
   C8 --> C7
   C8 --> C15
   C8 --> C17
+  C8 --> C20
   C8 --> C22
   C8 --> C24
-  C8 --> C29
+  C8 --> C25
   C8 --> C30
   C9 --> C7
   C9 --> C13
@@ -114,7 +116,7 @@ graph TD
   C9 --> C24
   C10 --> C7
   C10 --> C17
-  C10 --> C26
+  C10 --> C27
   C11 --> C7
   C11 --> C16
   C11 --> C17
@@ -124,9 +126,10 @@ graph TD
   C12 --> C7
   C12 --> C14
   C12 --> C17
+  C12 --> C20
   C12 --> C22
   C12 --> C24
-  C12 --> C29
+  C12 --> C25
   C12 --> C30
   C13 --> C14
   C13 --> C17
@@ -141,23 +144,25 @@ graph TD
   C17 --> C30
   C18 --> C17
   C20 --> C17
-  C20 --> C25
+  C20 --> C26
+  C20 --> C27
   C20 --> C30
   C22 --> C17
   C24 --> C17
   C24 --> C22
   C25 --> C17
-  C25 --> C30
+  C25 --> C20
+  C25 --> C26
   C26 --> C17
-  C26 --> C25
   C26 --> C30
-  C27 --> C7
   C27 --> C17
-  C27 --> C24
-  C27 --> C29
-  C29 --> C17
-  C29 --> C20
-  C29 --> C25
+  C27 --> C26
+  C27 --> C30
+  C28 --> C7
+  C28 --> C17
+  C28 --> C20
+  C28 --> C24
+  C28 --> C25
   C33 --> C3
   C33 --> C7
   C33 --> C8
@@ -173,8 +178,8 @@ graph TD
   C34 --> C20
   C34 --> C21
   C34 --> C24
-  C34 --> C25
   C34 --> C26
+  C34 --> C27
   C34 --> C30
   C34 --> C32
 ```
@@ -233,16 +238,18 @@ graph TD
 | `vyre-debug` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
 | `vyre-debug` | `vyre-primitives` | reusable semantic Program builders | None | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `vyre-driver` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
+| `vyre-driver` | `vyre-libs` | composition library the driver adapters plan against | None | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |
 | `vyre-driver` | `vyre-macros` | compile-time registration generation | None | `always` | `normal` | `false` | `true` | `private` | `registration-macros` |
 | `vyre-driver` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-driver` | `vyre-self-substrate` | optional scheduler and analysis substrate | None | `always` | `normal` | `true` | `true` | `private` | `self-substrate` |
+| `vyre-driver` | `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | None | `always` | `normal` | `true` | `true` | `private` | `pass-engine` |
 | `vyre-driver` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-driver-cuda` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
 | `vyre-driver-cuda` | `vyre-emit-ptx` | primary binary backend text emission | None | `always` | `normal` | `false` | `true` | `private` | `primary-binary-emitter` |
 | `vyre-driver-cuda` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
+| `vyre-driver-cuda` | `vyre-libs` | composition trees the CUDA adapters plan against | `device`, `graph-dispatch`, `scheduling` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `vyre-driver-cuda` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
 | `vyre-driver-cuda` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
-| `vyre-driver-cuda` | `vyre-self-substrate` | optional scheduler and analysis substrate | `graph-solvers`, `scheduling` | `always` | `normal` | `false` | `true` | `public` | `self-substrate` |
+| `vyre-driver-cuda` | `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | None | `always` | `normal` | `false` | `true` | `public` | `pass-engine` |
 | `vyre-driver-cuda` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
 | `vyre-driver-metal` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
 | `vyre-driver-metal` | `vyre-emit-metal` | native Apple source emission | None | `always` | `normal` | `false` | `true` | `private` | `metal-emitter` |
@@ -261,9 +268,10 @@ graph TD
 | `vyre-driver-wgpu` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `self-substrate-adapters` | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
 | `vyre-driver-wgpu` | `vyre-emit-naga` | primary text and related binary emission | None | `always` | `normal` | `false` | `true` | `private` | `primary-text-emitter` |
 | `vyre-driver-wgpu` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
+| `vyre-driver-wgpu` | `vyre-libs` | composition trees the portable adapters plan against | `reasoning` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `vyre-driver-wgpu` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
 | `vyre-driver-wgpu` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
-| `vyre-driver-wgpu` | `vyre-self-substrate` | optional scheduler and analysis substrate | `logic` | `always` | `normal` | `false` | `true` | `public` | `self-substrate` |
+| `vyre-driver-wgpu` | `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | None | `always` | `normal` | `false` | `true` | `public` | `pass-engine` |
 | `vyre-driver-wgpu` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-emit-metal` | `vyre-emit-naga` | primary text and related binary emission | None | `always` | `normal` | `false` | `true` | `private` | `primary-text-emitter` |
 | `vyre-emit-metal` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
@@ -279,10 +287,14 @@ graph TD
 | `vyre-frontend-rust` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
 | `vyre-libs` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-libs` | `vyre-primitives` | reusable semantic Program builders | `bitset`, `decode`, `fixpoint`, `geom`, `graph`, `hash`, `inventory-registry`, `label`, `matching`, `math`, `nfa`, `nn`, `opt`, `parsing`, `predicate`, `reduce`, `text`, `topology`, `visual` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
+| `vyre-libs` | `vyre-reference` | reference interpreter behind the test-fixtures dispatcher | None | `always` | `normal` | `true` | `true` | `private` | `reference-semantics` |
 | `vyre-libs` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-lower` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-megakernel` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-megakernel` | `vyre-lower` | single verified selected-module representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
+| `vyre-pass-engine` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
+| `vyre-pass-engine` | `vyre-libs` | product operation builders | None | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
+| `vyre-pass-engine` | `vyre-primitives` | reusable semantic Program builders | None | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
 | `vyre-primitives` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `true` | `true` | `private` | `foundation-ir` |
 | `vyre-primitives` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
 | `vyre-reference` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
@@ -290,11 +302,9 @@ graph TD
 | `vyre-reference` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-runtime` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
 | `vyre-runtime` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
+| `vyre-runtime` | `vyre-libs` | composition trees the megakernel planner plans against | None | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |
 | `vyre-runtime` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-runtime` | `vyre-self-substrate` | optional scheduler and analysis substrate | None | `always` | `normal` | `true` | `true` | `private` | `self-substrate` |
-| `vyre-self-substrate` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-self-substrate` | `vyre-libs` | product operation builders | None | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
-| `vyre-self-substrate` | `vyre-primitives` | reusable semantic Program builders | None | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
+| `vyre-runtime` | `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | None | `always` | `normal` | `true` | `true` | `private` | `pass-engine` |
 | `xtask-evidence` | `vyre-bench` | benchmark workloads and evidence | None | `always` | `normal` | `false` | `true` | `private` | `benchmarks` |
 | `xtask-evidence` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
 | `xtask-evidence` | `vyre-driver-cuda` | native accelerator backend execution | None | `always` | `normal` | `false` | `true` | `private` | `cuda-driver` |

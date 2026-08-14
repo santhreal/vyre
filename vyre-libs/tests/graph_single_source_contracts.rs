@@ -1,5 +1,5 @@
 //! Contracts for graph-domain single-sourcing between `vyre-primitives` and
-//! `vyre-self-substrate`.
+//! `vyre-pass-engine`.
 //!
 //! The primitive crate owns graph algorithms and validation. Self-substrate
 //! may add dispatch scratch, batching, plan-cache, and backend wiring, but it

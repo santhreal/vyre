@@ -3,7 +3,7 @@
 
 use vyre_foundation::pass_substrate::dataflow_fixpoint as foundation_dataflow;
 
-use super::scc_substrate::write_pivot_bitsets;
+use super::scc_decomposition::write_pivot_bitsets;
 use super::{SccComponentsGpuScratch, Semiring, SemiringGemmGpuScratch};
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,

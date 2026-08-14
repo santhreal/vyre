@@ -17,7 +17,7 @@ use std::sync::Arc;
 
 use vyre_foundation::ir::{validate, Expr, Node, Program};
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_self_substrate::optimizer::dce_program::{
+use vyre_pass_engine::optimizer::dce_program::{
     build_dce_bfs_program, build_persistent_bfs_program,
 };
 

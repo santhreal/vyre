@@ -3,7 +3,7 @@
 //! One parameterized sweep over generated hostile CSR shapes, covering both
 //! layers of the graph stack against independent bitset oracles: the
 //! `vyre-primitives` CPU references that own graph semantics, and the
-//! `vyre-self-substrate` reference wrappers built on them. The shape stream,
+//! `vyre-pass-engine` reference wrappers built on them. The shape stream,
 //! the bitset helpers and the successor/closure oracles exist once here and
 //! every family draws from them, so no two families can disagree about what a
 //! given seed means. CPU reference paths only - no mock dispatchers.

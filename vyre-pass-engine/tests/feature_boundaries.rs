@@ -8,7 +8,7 @@ use std::process::{Command, Output};
 
 fn fixture_root() -> PathBuf {
     std::env::temp_dir().join(format!(
-        "vyre-self-substrate-feature-boundaries-{}",
+        "vyre-pass-engine-feature-boundaries-{}",
         std::process::id()
     ))
 }
@@ -24,7 +24,7 @@ fn write_fixture(root: &Path, source: &str) {
     fs::write(
         root.join("Cargo.toml"),
         format!(
-            "[package]\nname = \"self-substrate-feature-fixture\"\nversion = \"0.0.0\"\nedition = \"2021\"\n\n[dependencies]\nvyre-self-substrate = {{ path = {:?}, default-features = false, features = [\"optimizer\"] }}\nvyre-foundation = {{ path = {:?} }}\n",
+            "[package]\nname = \"self-substrate-feature-fixture\"\nversion = \"0.0.0\"\nedition = \"2021\"\n\n[dependencies]\nvyre-pass-engine = {{ path = {:?}, default-features = false, features = [\"optimizer\"] }}\nvyre-foundation = {{ path = {:?} }}\n",
             substrate, foundation
         ),
     )
@@ -54,7 +54,7 @@ fn optimizer_feature_is_standalone_and_excludes_unrequested_solver_domains() {
     let root = fixture_root();
     write_fixture(
         &root,
-        "fn accepts(_: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) {}\nfn main() { let _ = vyre_self_substrate::optimizer::dce_program::OP_ID; }\n",
+        "fn accepts(_: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) {}\nfn main() { let _ = vyre_pass_engine::optimizer::dce_program::OP_ID; }\n",
     );
     let success = cargo(&root, &["check", "--quiet"]);
     assert!(
@@ -82,7 +82,7 @@ fn optimizer_feature_is_standalone_and_excludes_unrequested_solver_domains() {
 
     write_fixture(
         &root,
-        "use vyre_self_substrate::solvers::tensor_train_compression;\nfn main() { let _ = tensor_train_compression::TT_MAX_RANK; }\n",
+        "use vyre_pass_engine::solvers::tensor_train_compression;\nfn main() { let _ = tensor_train_compression::TT_MAX_RANK; }\n",
     );
     let rejected = cargo(&root, &["check", "--quiet"]);
     assert!(
@@ -91,7 +91,7 @@ fn optimizer_feature_is_standalone_and_excludes_unrequested_solver_domains() {
     );
     let stderr = String::from_utf8_lossy(&rejected.stderr);
     assert!(
-        stderr.contains("could not find `solvers` in `vyre_self_substrate`"),
+        stderr.contains("could not find `solvers` in `vyre_pass_engine`"),
         "rejection must identify the unavailable public family:\n{stderr}"
     );
 

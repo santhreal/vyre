@@ -56,7 +56,7 @@ mod numeric;
 /// into `AutotuneStore` (I3) so subsequent dispatches reuse the choice.
 pub mod occupancy;
 /// Self-hosted optimizer GPU dispatcher  -  runs the
-/// `vyre-self-substrate::optimizer` passes (DCE, CSE, const-fold,
+/// `vyre-pass-engine::optimizer` passes (DCE, CSE, const-fold,
 /// validator) on CUDA. External parity tests reach in via the
 /// `CudaProgramDispatcher` re-export below.
 pub mod optimizer;

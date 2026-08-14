@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn cuda_resident_adaptive_sparse_queue_path_uses_self_substrate_api() {
+fn cuda_resident_adaptive_sparse_queue_path_uses_program_dispatcher_api() {
     let backend = live_dispatcher();
     let dispatcher = vyre_driver_cuda::CudaProgramDispatcher::new(&backend);
     let node_count = 8u32;

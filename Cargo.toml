@@ -20,11 +20,9 @@ members = [
     # feature-gated per domain. See docs/lego-block-rule.md.
     "vyre-primitives",
     "vyre-test-support",
-    # Recursion-thesis layer: vyre using its own primitives on its own
-    # scheduler problems. Sits between vyre-primitives and vyre-driver.
-    # Extracted from `vyre-driver/src/self_substrate/` in audit cleanup
-    # A10 (2026-04-30).
-    "vyre-self-substrate",
+    # Executes the optimizer's own passes as Vyre Programs. Sits between
+    # vyre-primitives and vyre-driver.
+    "vyre-pass-engine",
     "conform/vyre-conform-spec",
     "conform/vyre-conform",
     "xtask",
@@ -218,7 +216,7 @@ vyre-test-support = { path = "vyre-test-support" }
 vyre-runtime = { version = "0.7.2", path = "vyre-runtime" }
 vyre-safetensors = { version = "0.7.2", path = "vyre-safetensors" }
 vyre-libs = { version = "0.7.2", path = "vyre-libs" }
-vyre-self-substrate = { version = "0.7.2", path = "vyre-self-substrate" }
+vyre-pass-engine = { version = "0.7.2", path = "vyre-pass-engine" }
 vyre-aot = { version = "0.7.2", path = "vyre-aot" }
 # publish = false, so no version: a version requirement here is one a registry
 # can never satisfy, and any member writing `workspace = true` inherits it.

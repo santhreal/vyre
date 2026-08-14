@@ -118,7 +118,7 @@ Own compile-to-materialize orchestration, artifact sessions, recovery, persisten
 ### Boundaries
 
 The `runtime` owner maintains this `runtime` crate at `vyre-runtime`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-self-substrate`.
+Its allowed internal production dependencies are: `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-pass-engine`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

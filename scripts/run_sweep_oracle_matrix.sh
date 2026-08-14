@@ -58,8 +58,8 @@ step "vyre-libs sweep oracle matrices (logical, hash, decode, text)"
     --test sweep_decode_hex_oracle_matrix \
     --test sweep_text_utf8_oracle_matrix
 
-step "vyre-self-substrate sweep_graph_cpu_oracle_matrix"
-"$CARGO_RUNNER" test -p vyre-self-substrate --features cpu-parity \
+step "vyre-libs sweep_graph_cpu_oracle_matrix"
+"$CARGO_RUNNER" test -p vyre-libs --features cpu-parity,graph-dispatch,test-fixtures \
     --test sweep_graph_cpu_oracle_matrix
 
 step "vyre-driver sweep oracle matrices"

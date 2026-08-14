@@ -1301,9 +1301,10 @@ dependencies = [
  "toml",
  "tracing",
  "vyre-foundation",
+ "vyre-libs",
  "vyre-macros",
  "vyre-megakernel",
- "vyre-self-substrate",
+ "vyre-pass-engine",
  "vyre-spec",
 ]
 
@@ -1324,9 +1325,10 @@ dependencies = [
  "vyre-driver",
  "vyre-emit-ptx",
  "vyre-foundation",
+ "vyre-libs",
  "vyre-lower",
  "vyre-megakernel",
- "vyre-self-substrate",
+ "vyre-pass-engine",
  "vyre-spec",
 ]
 
@@ -1358,9 +1360,10 @@ dependencies = [
  "vyre-driver",
  "vyre-emit-naga",
  "vyre-foundation",
+ "vyre-libs",
  "vyre-lower",
  "vyre-megakernel",
- "vyre-self-substrate",
+ "vyre-pass-engine",
  "vyre-spec",
  "wgpu",
 ]
@@ -1420,6 +1423,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "vyre-libs"
+version = "0.7.2"
+dependencies = [
+ "blake3",
+ "bytemuck",
+ "inventory",
+ "libm",
+ "rayon",
+ "rustc-hash 2.1.3",
+ "serde",
+ "serde_json",
+ "smallvec",
+ "thiserror 2.0.19",
+ "tracing",
+ "vyre-foundation",
+ "vyre-primitives",
+ "vyre-spec",
+]
+
+[[package]]
 name = "vyre-lower"
 version = "0.7.2"
 dependencies = [
@@ -1453,10 +1476,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "vyre-pass-engine"
+version = "0.7.2"
+dependencies = [
+ "rustc-hash 2.1.3",
+ "tracing",
+ "vyre-foundation",
+ "vyre-libs",
+ "vyre-primitives",
+]
+
+[[package]]
 name = "vyre-primitives"
 version = "0.7.2"
 dependencies = [
  "bytemuck",
+ "inventory",
  "vyre-foundation",
  "vyre-spec",
 ]
@@ -1494,16 +1529,6 @@ dependencies = [
  "vyre-driver",
  "vyre-foundation",
  "vyre-megakernel",
-]
-
-[[package]]
-name = "vyre-self-substrate"
-version = "0.7.2"
-dependencies = [
- "rustc-hash 2.1.3",
- "tracing",
- "vyre-foundation",
- "vyre-primitives",
 ]
 
 [[package]]

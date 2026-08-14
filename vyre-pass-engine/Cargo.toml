@@ -1,5 +1,5 @@
 [package]
-name = "vyre-self-substrate"
+name = "vyre-pass-engine"
 version = "0.7.2"
 edition.workspace = true
 rust-version.workspace = true
@@ -7,11 +7,11 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Vyre self-substrate: vyre using its own primitives on its own scheduler problems. The recursion-thesis layer between vyre-primitives and vyre-driver."
+description = "Vyre pass engine: executes the optimizer's own passes as Vyre Programs, dispatched through the ProgramDispatcher seam."
 readme = "README.md"
-keywords = ["gpu", "compiler", "scheduler", "vyre"]
+keywords = ["compiler", "optimizer", "dispatch", "vyre"]
 categories = ["compilers", "algorithms"]
-documentation = "https://docs.rs/vyre-self-substrate"
+documentation = "https://docs.rs/vyre-pass-engine"
 
 [package.metadata.docs.rs]
 all-features = true

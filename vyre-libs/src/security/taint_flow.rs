@@ -5,7 +5,7 @@
 //! Downstream analyzer's predicate lowering routes both `taint_flow` and
 //! `flows_to` through `BinaryGraphKind::FlowsToForward`; there is no semantic
 //! difference. Both build from
-//! [`crate::security::flow_composition::security_flow_program`] with the same
+//! `crate::security::flow_composition::security_flow_program` with the same
 //! [`FLOWS_TO_MASK`] predicate, so the only thing that can differ is the op id
 //! the region carries.
 

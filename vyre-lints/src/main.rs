@@ -316,7 +316,7 @@ fn default_production_roots(workspace_root: &std::path::Path) -> Vec<PathBuf> {
         "vyre-libs/src",
         "vyre-lower/src",
         "vyre-runtime/src",
-        "vyre-self-substrate/src",
+        "vyre-pass-engine/src",
     ]
     .into_iter()
     .map(|root| workspace_root.join(root))
@@ -335,7 +335,7 @@ fn default_consumer_coupling_roots(workspace_root: &std::path::Path) -> Vec<Path
         "vyre-lower/src",
         "vyre-primitives/src",
         "vyre-runtime/src",
-        "vyre-self-substrate/src",
+        "vyre-pass-engine/src",
     ]
     .into_iter()
     .map(|root| workspace_root.join(root))
@@ -345,7 +345,6 @@ fn default_consumer_coupling_roots(workspace_root: &std::path::Path) -> Vec<Path
 fn default_module_fork_roots(workspace_root: &std::path::Path) -> Vec<PathBuf> {
     [
         "vyre-primitives/src/graph",
-        "vyre-self-substrate/src/graph",
         "vyre-libs/src/graph",
     ]
     .into_iter()

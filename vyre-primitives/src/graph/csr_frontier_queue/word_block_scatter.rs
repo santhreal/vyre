@@ -17,7 +17,7 @@ use crate::bitset::bitset_words;
 
 /// Build the deterministic scatter pass for packed-frontier queue materialization.
 ///
-/// `word_partials` must come from [`frontier_word_counts_scan_pass_a`], and
+/// `word_partials` must come from [`frontier_word_counts_scan_pass_a`](super::frontier_word_counts_scan_pass_a), and
 /// `block_totals` must be the block-total output from that same pass. The
 /// scatter computes the tiny block prefix locally, preserving source-node order
 /// without an additional block-scan dispatch. It writes `queue_len` as the full
@@ -48,7 +48,7 @@ pub fn frontier_word_block_prefix_to_queue_parallel(
 /// Build the deterministic scatter pass using precomputed per-block offsets.
 ///
 /// `block_offsets` must be the in-place output of
-/// [`frontier_word_block_offsets_in_place`]. This keeps scatter work O(words)
+/// [`frontier_word_block_offsets_in_place`](super::frontier_word_block_offsets_in_place). This keeps scatter work O(words)
 /// for multi-block frontiers by replacing the per-word previous-block loop with
 /// one block-offset load.
 #[must_use]

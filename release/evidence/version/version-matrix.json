@@ -237,9 +237,9 @@
       "publishable": true
     },
     {
-      "package": "vyre-self-substrate",
+      "package": "vyre-pass-engine",
       "version": "0.7.2",
-      "manifest": "vyre-self-substrate/Cargo.toml",
+      "manifest": "vyre-pass-engine/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
@@ -443,7 +443,7 @@
     },
     {
       "manifest": "Cargo.toml",
-      "dependency": "vyre-self-substrate",
+      "dependency": "vyre-pass-engine",
       "version": "0.7.2",
       "expected": "0.7.2",
       "release_group": "vyre"
@@ -648,7 +648,7 @@
     },
     {
       "lockfile": "Cargo.lock",
-      "package": "vyre-self-substrate",
+      "package": "vyre-pass-engine",
       "version": "0.7.2",
       "expected": "0.7.2",
       "release_group": "vyre"

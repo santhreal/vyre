@@ -5,14 +5,14 @@
 //! pin the OBSERVABLE behavior through the CPU reference interpreter, asserting exact bytes
 //! (never `!is_empty`: Testing Contract).
 //!
-//! Drains the vyre-self-substrate slice of BACKLOG.md WIRING-tautology-closure-25crates.
+//! Drains the vyre-pass-engine slice of BACKLOG.md WIRING-tautology-closure-25crates.
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_reference::value::Value;
 use vyre_libs::solvers::dataflow_compaction_pipeline::dispatch_softmax;
-use vyre_self_substrate::optimizer::dce_program::{
+use vyre_pass_engine::optimizer::dce_program::{
     build_dce_bfs_program, build_persistent_bfs_program,
 };
 

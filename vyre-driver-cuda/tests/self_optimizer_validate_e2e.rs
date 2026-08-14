@@ -10,7 +10,7 @@ mod common;
 use common::live_backend;
 use vyre::ir::{Expr, Node, Program};
 use vyre_driver_cuda::CudaProgramDispatcher;
-use vyre_self_substrate::optimizer::validate_via_encoded::{
+use vyre_pass_engine::optimizer::validate_via_encoded::{
     gpu_validate_limits, DEFAULT_MAX_EXPR_DEPTH,
 };
 

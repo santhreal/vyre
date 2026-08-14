@@ -22,7 +22,7 @@ default = []
 megakernel-batch = []
 subgroup-ops = []
 self-substrate-adapters = [
-    "dep:vyre-self-substrate",
+    "dep:vyre-pass-engine",
     "dep:vyre-libs",
     "vyre-libs/analysis",
     "vyre-libs/encoding",
@@ -34,7 +34,7 @@ uring-cmd-nvme = []
 
 [dependencies]
 vyre-driver.workspace = true
-vyre-self-substrate = { workspace = true, optional = true }
+vyre-pass-engine = { workspace = true, optional = true }
 vyre-libs = { workspace = true, optional = true }
 vyre-foundation.workspace = true
 vyre-megakernel.workspace = true

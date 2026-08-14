@@ -3,7 +3,7 @@
 //! Exact duplicate hashes miss the common architectural failure mode:
 //! two crates keep files with the same domain name and drift independently.
 //! This scanner is intentionally root-scoped so callers can compare domain
-//! roots such as `vyre-primitives/src/graph` and `vyre-self-substrate/src`
+//! roots such as `vyre-primitives/src/graph` and `vyre-pass-engine/src`
 //! without flagging every generic `mod.rs` or `tests.rs` in the workspace.
 
 use crate::{paths::workspace_relative, Violation, ViolationKind};

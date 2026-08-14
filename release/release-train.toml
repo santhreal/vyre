@@ -61,7 +61,7 @@ packages = [
   "vyre-reference",
   "vyre-runtime",
   "vyre-safetensors",
-  "vyre-self-substrate",
+  "vyre-pass-engine",
   "vyre-spec",
 ]
 

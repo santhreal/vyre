@@ -1,21 +1,20 @@
-//! Self-hosted optimizer keystone.
+//! The optimizer's passes, executed as dispatched vyre Programs.
 //!
 //! The encoder turns a `vyre_foundation::ir::Program` into the canonical
 //! 5-buffer `ProgramGraph` ABI shared by every Tier 2.5 graph primitive.
 //! Once the IR lives in that shape, optimizer passes are *graph primitives
 //! reused as compiler passes*: DCE is `persistent_bfs` reachability, CSE is
 //! `union_find` over a structural-hash key, const-fold is `level_wave`
-//! bottom-up evaluation. The compiler runs on the same substrate it
-//! ships to users.
+//! bottom-up evaluation. The compiler runs on the primitives it ships.
 //!
-//! V1 scope: flat-entry Programs only (no nested `If`/`Loop`/`Block`/
-//! `Region` scoping) and DCE only. Nested scopes and the CSE/const-fold
-//! passes land in V2 against the same encoding.
+//! Nested scopes are in scope: the encoder walks `If`, `Loop`, `Block`, and
+//! `Region` bodies in prefix DFS, each with its own scope frame, and gives
+//! every visited Node a graph-node id.
 //!
-//! GPU dispatch sits one layer above this crate (driver layer). V1 uses
-//! `vyre_primitives::graph::persistent_bfs::cpu_ref` so the encoding can
-//! be proven sound against the existing `vyre_foundation` DCE pass before
-//! any backend is wired.
+//! Dispatch belongs to the caller. Every `*_via_encoded` entry point takes a
+//! `vyre_foundation::program_dispatch::ProgramDispatcher`, so one pass runs
+//! against `vyre_libs::graph::dispatch::cpu_oracle` under `cpu-parity` and
+//! against a backend dispatcher in production, from the same Program.
 
 pub mod canonicalize_via_encoded;
 pub mod const_fold_via_encoded;

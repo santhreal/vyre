@@ -57,12 +57,12 @@ const CATEGORY_C_CRATE: &str = "vyre-primitives";
 
 /// Directory that owns every module named `*substrate*`.
 ///
-/// `vyre_foundation::pass_substrate` is exempt because it owns the CPU pass
-/// math outright: the GPU crate imports those functions and wraps them in
-/// dispatch rather than reimplementing them. The exemption is about the name
-/// only, and it retires when the three `*substrate*` concepts are renamed.
-const SUBSTRATE_HOME: &str = "vyre-self-substrate/src/optimizer";
-const SUBSTRATE_EXCEPTIONS: &[&str] = &["vyre-foundation/src/pass_substrate"];
+/// `vyre_foundation::pass_substrate` owns the CPU pass math outright: the pass
+/// engine imports those functions and wraps them in dispatch rather than
+/// reimplementing them. Renaming the pass-engine crate retired the second and
+/// third homes for the name, so foundation is the only one left and the
+/// exemption list it used to need is gone.
+const SUBSTRATE_HOME: &str = "vyre-foundation/src/pass_substrate";
 
 /// Closed workspace roster. A new member is a reviewable change here first.
 const ALLOWED_MEMBERS: &[&str] = &[
@@ -94,9 +94,8 @@ const ALLOWED_MEMBERS: &[&str] = &[
     "vyre-reference",
     "vyre-runtime",
     "vyre-safetensors",
-    // Narrows to the GPU pass engine and is renamed at migration; the roster
-    // moves with the rename.
-    "vyre-self-substrate",
+    // Narrowed to the optimizer pass engine and renamed with that narrowing.
+    "vyre-pass-engine",
     "vyre-spec",
     "vyre-test-support",
     "structure-gate",
@@ -334,18 +333,12 @@ pub fn category_home_failures(registrations: &[Registration]) -> Vec<String> {
 
 /// Reject a second home for the substrate concept.
 ///
-/// The GPU pass engine owns the name. `SUBSTRATE_EXCEPTIONS` carries the
-/// duplications `docs/ARCHITECTURE.md` sanctions by name; anything else is a
-/// second home.
+/// `vyre-foundation` owns the name, as `docs/ARCHITECTURE.md` states; anything
+/// else is a second home.
 pub fn substrate_home_failures(paths: &[String]) -> Vec<String> {
     paths
         .iter()
         .filter(|path| !path.starts_with(SUBSTRATE_HOME))
-        .filter(|path| {
-            !SUBSTRATE_EXCEPTIONS
-                .iter()
-                .any(|exception| path.starts_with(exception))
-        })
         .map(|path| {
             format!(
                 "`{path}` names the substrate concept outside {SUBSTRATE_HOME}; one concept gets one home"
@@ -1073,13 +1066,13 @@ mod tests {
     #[test]
     fn a_third_registering_crate_is_rejected() {
         let failures = registration_owner_failures(&[registration(
-            "vyre-self-substrate",
-            "vyre-self-substrate::graph::toposort",
+            "vyre-pass-engine",
+            "vyre-pass-engine::graph::toposort",
             Some("Library"),
         )]);
 
         assert_eq!(failures.len(), 1);
-        assert!(failures[0].contains("vyre-self-substrate"));
+        assert!(failures[0].contains("vyre-pass-engine"));
     }
 
     #[test]
@@ -1181,23 +1174,24 @@ mod tests {
         // (`vyre-libs/src/substrate_catalog.rs`, `vyre-driver/src/speculation_substrate.rs`)
         // have been renamed, so the fixture keeps the shape rather than a path.
         let failures = substrate_home_failures(&[
-            "vyre-self-substrate/src/optimizer/dispatcher.rs".to_string(),
-            "vyre-self-substrate/src/scheduling/homotopy_ilp.rs".to_string(),
+            "vyre-foundation/src/pass_substrate/dataflow_fixpoint.rs".to_string(),
+            "vyre-driver/src/speculation_substrate.rs".to_string(),
             "vyre-libs/src/matmul_substrate.rs".to_string(),
         ]);
 
         assert_eq!(failures.len(), 2, "{failures:?}");
-        assert!(failures.iter().any(|f| f.contains("scheduling")));
+        assert!(failures.iter().any(|f| f.contains("speculation_substrate")));
         assert!(failures.iter().any(|f| f.contains("matmul_substrate")));
     }
 
     #[test]
-    fn the_sanctioned_foundation_pass_substrate_is_accepted() {
-        // ARCHITECTURE.md: foundation owns the CPU pass math and the GPU crate
-        // imports it, so this name is exempt. Every other second home stays a
-        // failure.
+    fn the_foundation_pass_substrate_home_is_accepted() {
+        // ARCHITECTURE.md: foundation owns the CPU pass math and the pass engine
+        // imports it, so this is the one home the name has. Every other home
+        // stays a failure.
         let failures = substrate_home_failures(&[
             "vyre-foundation/src/pass_substrate/dataflow_fixpoint.rs".to_string(),
+            "vyre-foundation/src/pass_substrate/mod.rs".to_string(),
         ]);
 
         assert!(failures.is_empty(), "{failures:?}");

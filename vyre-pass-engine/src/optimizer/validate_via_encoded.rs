@@ -352,7 +352,7 @@ pub fn build_validate_limits_program(expr_count: u32) -> Program {
         buffers,
         [VALIDATOR_WORKGROUP_X, 1, 1],
         vec![Node::Region {
-            generator: Ident::from("vyre-self-substrate::optimizer::validate_via_encoded"),
+            generator: Ident::from("vyre-pass-engine::optimizer::validate_via_encoded"),
             source_region: None,
             body: Arc::new(body),
         }],

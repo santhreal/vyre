@@ -17,7 +17,7 @@ use crate::region::wrap_anonymous;
 /// This keeps weights packed, applies per-group quantization metadata inside
 /// the dot-product loop, and avoids a separate dequantize materialization
 /// dispatch. `w_packed` stores 8 4-bit weights per u32 using the same
-/// column-interleaved layout as [`linear_4bit`]. `scale` is f32, `zero_point`
+/// column-interleaved layout as [`linear_4bit`](super::linear_4bit). `scale` is f32, `zero_point`
 /// is u32 with values expected in `0..=15`, and both sidecar buffers are
 /// indexed as `group * out_dim + i`.
 ///

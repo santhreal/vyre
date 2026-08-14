@@ -1,6 +1,6 @@
 //! Bundle-level conformance certificate.
 //!
-//! The per-op [`Certificate`](crate::cert::Certificate) proves that a
+//! The per-op [`Certificate`](vyre_conform_spec::Certificate) proves that a
 //! single op behaves identically on a backend and on the reference
 //! backend. A bundle cert widens that guarantee to a whole fused
 //! document: every rule Program, dispatched over a named corpus,

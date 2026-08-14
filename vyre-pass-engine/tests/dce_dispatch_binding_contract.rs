@@ -21,7 +21,7 @@
 use std::cell::RefCell;
 
 use vyre_foundation::ir::{BufferAccess, Expr, MemoryKind, Node, Program};
-use vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce;
+use vyre_pass_engine::optimizer::dce_via_encoded::gpu_dce;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Number of dispatch input slots a program declares.
@@ -112,7 +112,7 @@ fn gpu_dce_fills_every_input_slot_its_analysis_program_declares() {
             supplied, declared,
             "Fix: gpu_dce dispatch {index} supplied {supplied} input slot(s) for an analysis \
              program declaring {declared}. Update the slot filler in \
-             vyre-self-substrate/src/optimizer/dce_via_encoded.rs to match the program."
+             vyre-pass-engine/src/optimizer/dce_via_encoded.rs to match the program."
         );
     }
 }

@@ -75,8 +75,23 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Changed
 
-- "Substrate" now names one thing: the GPU pass engine. Four modules that
-  borrowed the word for unrelated concepts are renamed to what they are.
+- `vyre-self-substrate` is `vyre-pass-engine` (crate path `vyre_pass_engine`).
+  The crate is narrowed to `src/lib.rs` plus `src/optimizer/`, so the name now
+  states the job: it executes the optimizer's own passes as Vyre Programs
+  through `vyre_foundation::program_dispatch::ProgramDispatcher`. The name
+  carries no hardware tier, because which device runs a pass is the
+  dispatcher's answer: the crate's parity tests run against the CPU
+  dispatcher `vyre_libs::graph::dispatch::cpu_oracle` and production runs the
+  identical Program against a backend dispatcher. The nine module trees that
+  used to live in the crate are `vyre-libs` modules, and
+  `vyre-libs`' `analysis::dataflow_fixpoint::scc_substrate` file is
+  `scc_decomposition`, which leaves `vyre_foundation::pass_substrate` as the
+  one home for the substrate name. `structure-gate` enforces that directly
+  and no longer carries an exception list.
+
+- "Substrate" now names one thing: the CPU pass math in `vyre-foundation`. Four
+  modules that borrowed the word for unrelated concepts are renamed to what
+  they are.
   `vyre_driver::speculation_substrate` is `vyre_driver::speculation_verdict`.
   `vyre_foundation::optimizer::fact_substrate::FactSubstrate` is
   `fact_cache::FactCache`, and the scheduler metrics it feeds are

@@ -2,10 +2,10 @@
 //! `Program` and a backend that can run one.
 //!
 //! A caller encodes its own data into buffers, builds a `Program` that computes
-//! the answer, and asks a [`ProgramDispatcher`] to run it. The returned bytes
+//! the answer, and asks a [`ProgramDispatcher`](crate::program_dispatch::ProgramDispatcher) to run it. The returned bytes
 //! are the result. Foundation owns the seam because it is stated entirely in
-//! `Program` and buffer terms and because every layer above needs it: the GPU
-//! pass engine replays optimizer passes through it, the composition library
+//! `Program` and buffer terms and because every layer above needs it: the pass
+//! engine replays optimizer passes through it, the composition library
 //! runs its device-resident solvers through it, and each concrete backend
 //! implements it.
 //!
@@ -17,7 +17,7 @@
 
 use crate::ir::{BufferAccess, BufferDecl, Program};
 
-/// The buffers an [`ProgramDispatcher`] returns, in declared order.
+/// The buffers a [`ProgramDispatcher`] returns, in declared order.
 ///
 /// The trait contract is "the declared outputs in the same canonical order", which
 /// means every writable storage buffer. Workgroup scratch is never a dispatch

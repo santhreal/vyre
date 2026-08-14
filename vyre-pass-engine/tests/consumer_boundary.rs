@@ -10,10 +10,10 @@ use vyre_test_support::consumer_boundary::{
 };
 
 #[test]
-fn self_substrate_source_does_not_name_downstream_consumers() {
+fn pass_engine_source_does_not_name_downstream_consumers() {
     assert_source_does_not_name_downstream_consumers(
-        ConsumerBoundaryScan::for_crate("vyre-self-substrate", env!("CARGO_MANIFEST_DIR"))
+        ConsumerBoundaryScan::for_crate("vyre-pass-engine", env!("CARGO_MANIFEST_DIR"))
             .skipping_directories(&["archive", "release"])
-            .with_rationale("vyre-self-substrate is a platform substrate crate"),
+            .with_rationale("vyre-pass-engine is a platform substrate crate"),
     );
 }

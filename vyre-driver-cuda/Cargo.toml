@@ -34,7 +34,7 @@ vyre-emit-ptx.workspace = true
 # `optimizer` module dispatches the self-hosted optimizer passes
 # (DCE/CSE/const-fold) on CUDA. Lives in [dependencies] (not dev-deps)
 # because src/optimizer.rs is shipped lib code.
-vyre-self-substrate = { workspace = true }
+vyre-pass-engine = { workspace = true }
 # Device-boundary contracts and the composition trees the CUDA adapters plan
 # against, now owned by the composition crate.
 vyre-libs = { workspace = true, features = ["device", "scheduling", "graph-dispatch"] }
@@ -74,7 +74,7 @@ vyre-primitives = { path = "../vyre-primitives", features = ["cpu-parity"], defa
 # Required by tests/union_find_gpu_parity.rs, which imports the CPU union-find
 # reference oracles `union_find_emit::{canonicalize_parent_to_roots,
 # reference_union_find_alias}`. Those are `#[cfg(any(test, feature = "cpu-parity"))]`
-# in vyre-self-substrate, so a downstream test build must enable `cpu-parity`
+# in vyre-pass-engine, so a downstream test build must enable `cpu-parity`
 # explicitly (the `test` cfg only applies to that crate's own tests, not ours).
 # Dev-dep only -> gated out of the production lib build keyhog links.
-vyre-self-substrate = { path = "../vyre-self-substrate", features = ["cpu-parity"] }
+vyre-pass-engine = { path = "../vyre-pass-engine", features = ["cpu-parity"] }

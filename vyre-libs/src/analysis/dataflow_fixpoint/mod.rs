@@ -18,7 +18,7 @@
 //! `reference_closures` owns the host closures, `dense_matrix` the shared
 //! adjacency shape checks, `fixpoint_comparison` the three-engine reachability
 //! comparison, `delta_maintenance` the incremental relation update,
-//! `scc_substrate` the strongly-connected-component driver, and `gpu_dispatch`
+//! `scc_decomposition` the strongly-connected-component driver, and `gpu_dispatch`
 //! every dispatcher-backed wrapper. The public types stay declared here so
 //! their rendered documentation paths do not move.
 
@@ -29,7 +29,7 @@ mod dense_matrix;
 mod fixpoint_comparison;
 mod gpu_dispatch;
 mod reference_closures;
-mod scc_substrate;
+mod scc_decomposition;
 
 pub use delta_maintenance::compare_delta_maintained_reachability;
 pub use fixpoint_comparison::compare_static_analysis_reachability_fixpoints;
@@ -48,7 +48,7 @@ pub use reference_closures::{
 };
 pub use reference_closures::{reachability_closure, reachability_closure_into};
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use scc_substrate::{
+pub use scc_decomposition::{
     forward_backward_bitsets_for_pivot, forward_backward_bitsets_for_pivot_into,
     reference_scc_components_via_substrate_into, scc_components_via_substrate,
 };

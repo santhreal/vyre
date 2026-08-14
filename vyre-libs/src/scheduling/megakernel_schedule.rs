@@ -164,7 +164,7 @@ pub fn schedule_via_homotopy_into(
     // megakernel then runs no scheduled work with no signal (Law 10). Fail
     // loud; callers use try_schedule_via_homotopy_into.
     if let Err(error) = try_schedule_via_homotopy_into(costs, n, n_steps, dt, out) {
-        panic!("vyre-self-substrate homotopy schedule generation failed: {error}");
+        panic!("vyre-pass-engine homotopy schedule generation failed: {error}");
     }
 }
 

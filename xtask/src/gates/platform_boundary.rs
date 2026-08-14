@@ -14,7 +14,7 @@ const PLATFORM_ROOTS: &[&str] = &[
     "vyre-libs",
     "vyre-driver",
     "vyre-runtime",
-    "vyre-self-substrate",
+    "vyre-pass-engine",
 ];
 
 const FORBIDDEN_CONSUMERS: &[&str] = &["surgec", "weir", "gossan", "keyhog"];

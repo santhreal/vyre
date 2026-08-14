@@ -71,7 +71,7 @@ fn dispatch_programs_emit_expected_graph_primitives() {
 #[test]
 fn child_regions_preserve_parent_context() {
     let shape = ProgramGraphShape::new(4, 4);
-    let parent = "vyre-self-substrate::graph::traversal_dispatch_pipeline";
+    let parent = "vyre-pass-engine::graph::traversal_dispatch_pipeline";
     assert_eq!(
         region_generator(&child_csr_forward_stage(
             parent, shape, "frontier", "changed", 1

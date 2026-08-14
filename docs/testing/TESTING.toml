@@ -24,8 +24,8 @@ test_classes = ["Reference execution semantics", "Exact oracle and witness contr
 [profile.primitives]
 test_classes = ["Primitive builder semantics", "Reference and backend parity", "Boundary, property, and composition contracts"]
 
-[profile.scheduler]
-test_classes = ["Scheduler and graph semantics", "Self-consumer composition contracts", "Determinism and boundary tests"]
+[profile.pass-engine]
+test_classes = ["Encoded-pass Program semantics", "Reference-parity of every dispatched pass", "Determinism and boundary tests"]
 
 [profile.conformance]
 test_classes = ["Case and certificate schema contracts", "Generator determinism", "Cross-backend semantic conformance"]

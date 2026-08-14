@@ -12,7 +12,7 @@
 //! Earlier lowering paths emitted this composition
 //! inline at every call site (~25 lines of boilerplate per call,
 //! plus a fresh accumulator buffer per invocation). Centralising it
-//! in [`crate::security::flow_composition`] as one fused Region:
+//! in `crate::security::flow_composition` as one fused Region:
 //!
 //! * cuts per-call lowering surface from ~5 sub-programs
 //!   merged via `merge_programs` to one helper invocation;
@@ -23,7 +23,7 @@
 //!   `flows_to_not_via` silently shared the same emitted Program.
 //!
 //! Soundness: identical to the one BFS step `flows_to` provides  -
-//! [`MayOver`](super::super::dataflow::Soundness::MayOver) on a single
+//! [`MayOver`](vyre_spec::soundness::Soundness::MayOver) on a single
 //! step, `Exact` when iterated to fixpoint with sanitizer gating.
 
 use vyre_foundation::ir::Program;

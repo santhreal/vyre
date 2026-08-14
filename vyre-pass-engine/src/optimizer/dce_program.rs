@@ -30,7 +30,7 @@ use vyre_primitives::graph::program_graph::{
 };
 
 /// Canonical op id for the optimizer's DCE program.
-pub const OP_ID: &str = "vyre-self-substrate::optimizer::dce_program";
+pub const OP_ID: &str = "vyre-pass-engine::optimizer::dce_program";
 
 /// Workgroup size for the DCE BFS kernels.
 ///

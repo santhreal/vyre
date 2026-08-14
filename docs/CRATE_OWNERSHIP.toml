@@ -190,15 +190,26 @@ boundary = "public"
 seam = "megakernel-compiler"
 
 [[crate.dependency]]
-package = "vyre-self-substrate"
-purpose = "optional scheduler and analysis substrate"
+package = "vyre-libs"
+purpose = "composition library the driver adapters plan against"
 features = []
 conditions = ["always"]
 kinds = ["normal"]
 optional = true
 default_features = true
 boundary = "private"
-seam = "self-substrate"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-pass-engine"
+purpose = "optimizer pass execution as dispatched Vyre Programs"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "pass-engine"
 
 [[crate.dependency]]
 package = "vyre-spec"
@@ -281,6 +292,17 @@ layer = "concrete-backend"
 responsibility = "Own pure WGSL target compilation, portable GPU acquisition, materialization, dispatch, graph execution, and backend evidence."
 
 [[crate.dependency]]
+package = "vyre-libs"
+purpose = "composition trees the portable adapters plan against"
+features = ["reasoning"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "product-libraries"
+
+[[crate.dependency]]
 package = "vyre-driver"
 purpose = "backend-neutral target, materialization, submission, and completion contracts"
 features = ["self-substrate-adapters"]
@@ -336,15 +358,15 @@ boundary = "private"
 seam = "megakernel-compiler"
 
 [[crate.dependency]]
-package = "vyre-self-substrate"
-purpose = "optional scheduler and analysis substrate"
-features = ["logic"]
+package = "vyre-pass-engine"
+purpose = "optimizer pass execution as dispatched Vyre Programs"
+features = []
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
 default_features = true
 boundary = "public"
-seam = "self-substrate"
+seam = "pass-engine"
 
 [[crate.dependency]]
 package = "vyre-spec"
@@ -438,6 +460,17 @@ layer = "concrete-backend"
 responsibility = "Own pure PTX target compilation, native device acquisition, materialization, dispatch, graphs, and release-path evidence."
 
 [[crate.dependency]]
+package = "vyre-libs"
+purpose = "composition trees the CUDA adapters plan against"
+features = ["device", "graph-dispatch", "scheduling"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "product-libraries"
+
+[[crate.dependency]]
 package = "vyre-driver"
 purpose = "backend-neutral target, materialization, submission, and completion contracts"
 features = []
@@ -493,15 +526,15 @@ boundary = "private"
 seam = "megakernel-compiler"
 
 [[crate.dependency]]
-package = "vyre-self-substrate"
-purpose = "optional scheduler and analysis substrate"
-features = ["graph-solvers", "scheduling"]
+package = "vyre-pass-engine"
+purpose = "optimizer pass execution as dispatched Vyre Programs"
+features = []
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
 default_features = true
 boundary = "public"
-seam = "self-substrate"
+seam = "pass-engine"
 
 [[crate.dependency]]
 package = "vyre-spec"
@@ -645,11 +678,11 @@ layer = "test-tooling"
 responsibility = "Provide shared deterministic fixtures and assertions for workspace tests."
 
 [[crate]]
-package = "vyre-self-substrate"
-path = "vyre-self-substrate"
-owner = "self-substrate"
-layer = "scheduler"
-responsibility = "Use Vyre primitives to implement scheduler, graph, coverage, and optimization support."
+package = "vyre-pass-engine"
+path = "vyre-pass-engine"
+owner = "pass-engine"
+layer = "pass-engine"
+responsibility = "Execute the optimizer's own passes as Vyre Programs, dispatched through the ProgramDispatcher seam."
 
 [[crate.dependency]]
 package = "vyre-foundation"
@@ -1100,6 +1133,17 @@ layer = "runtime"
 responsibility = "Own compile-to-materialize orchestration, artifact sessions, recovery, persistence, residency, scheduling, caches, telemetry, readback, and IO."
 
 [[crate.dependency]]
+package = "vyre-libs"
+purpose = "composition trees the megakernel planner plans against"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "product-libraries"
+
+[[crate.dependency]]
 package = "vyre-driver"
 purpose = "backend-neutral target, materialization, submission, and completion contracts"
 features = []
@@ -1133,15 +1177,15 @@ boundary = "public"
 seam = "megakernel-compiler"
 
 [[crate.dependency]]
-package = "vyre-self-substrate"
-purpose = "optional scheduler and analysis substrate"
+package = "vyre-pass-engine"
+purpose = "optimizer pass execution as dispatched Vyre Programs"
 features = []
 conditions = ["always"]
 kinds = ["normal"]
 optional = true
 default_features = true
 boundary = "private"
-seam = "self-substrate"
+seam = "pass-engine"
 
 [[crate]]
 package = "vyre-safetensors"
@@ -1156,6 +1200,17 @@ path = "vyre-libs"
 owner = "product-libraries"
 layer = "libraries"
 responsibility = "Own product-facing Tier 3 program compositions built from neutral primitives and contracts."
+
+[[crate.dependency]]
+package = "vyre-reference"
+purpose = "reference interpreter behind the test-fixtures dispatcher"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "reference-semantics"
 
 [[crate.dependency]]
 package = "vyre-foundation"

@@ -118,7 +118,7 @@ fn crate_tier(member_path: &str) -> u32 {
     match name {
         "vyre-foundation" | "vyre-spec" | "vyre" | "vyre-macros" => 10,
         "vyre-primitives" => 25,
-        "vyre-self-substrate" => 28,
+        "vyre-pass-engine" => 28,
         "vyre-libs" => 30,
         "vyre-reference" | "vyre-lower" | "vyre-emit-naga" | "vyre-emit-ptx"
         | "vyre-emit-spirv" => 35,

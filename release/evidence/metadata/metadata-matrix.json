@@ -540,10 +540,10 @@
       "blockers": []
     },
     {
-      "name": "vyre-self-substrate",
-      "manifest": "vyre-self-substrate/Cargo.toml",
+      "name": "vyre-pass-engine",
+      "manifest": "vyre-pass-engine/Cargo.toml",
       "version": "0.7.2",
-      "description": "Vyre self-substrate: vyre using its own primitives on its own scheduler problems. The recursion-thesis layer between vyre-primitives and vyre-driver.",
+      "description": "Vyre pass engine: executes the optimizer's own passes as Vyre Programs, dispatched through the ProgramDispatcher seam.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",

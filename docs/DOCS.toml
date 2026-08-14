@@ -1572,8 +1572,8 @@ generator = "../scripts/testing_guides.py"
 nav = true
 
 [[page]]
-path = "testing/vyre-self-substrate.md"
-title = "Testing `vyre-self-substrate`"
+path = "testing/vyre-pass-engine.md"
+title = "Testing `vyre-pass-engine`"
 status = "generated"
 audience = "contributor"
 owner = "testing"

@@ -13,7 +13,7 @@ use std::{thread, time::Instant};
 
 use vyre::ir::{Expr, Node, Program};
 use vyre_driver_cuda::CudaProgramDispatcher;
-use vyre_self_substrate::optimizer::pipeline_resident::gpu_pipeline_resident;
+use vyre_pass_engine::optimizer::pipeline_resident::gpu_pipeline_resident;
 
 fn synthetic_chain_program(n: usize) -> Program {
     let mut entry: Vec<Node> = Vec::with_capacity(n + 1);

@@ -136,9 +136,9 @@ fn publish_order() -> Vec<PublishStep> {
             "vyre-reference/Cargo.toml",
         ),
         step(
-            "vyre-self-substrate",
+            "vyre-pass-engine",
             release_train::vyre_version(),
-            "vyre-self-substrate/Cargo.toml",
+            "vyre-pass-engine/Cargo.toml",
         ),
         step(
             "vyre-driver",
