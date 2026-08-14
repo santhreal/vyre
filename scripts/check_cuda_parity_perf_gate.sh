@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
 # check_cuda_parity_perf_gate.sh
-# CUDA parity/performance gate (contract + full *gpu_parity* integration suite).
-# VYRE-TASK-000006: gate must exercise documented gpu_parity tests, not a narrow subset.
-# VYRE-TASK-000005: packed INT4 extension ops are covered by int4_quantized_gpu_parity
-# (all six quant.int4.* harness ids: dot i32/scaled, matvec, batched matvec/matmul/top1).
+# Runs the vyre-driver-cuda test suite on a live NVIDIA device.
+#
+# The roster is derived from tracked test targets, not listed here. Two
+# hardcoded lists used to decide what ran, and both rotted: the contract list
+# still named cuda_device_contract after 8a66e4b65b deleted it, so the gate
+# exited at its first target and measured nothing at all, and the other list
+# matched only *gpu_parity*, which left the crate's remaining targets ungated on
+# the one runner that has a device.
+#
+# Deriving it also means a parity target added later is covered by being a test
+# target, which is how the packed INT4 extension ops arrive through
+# int4_quantized_gpu_parity rather than through an entry in this file.
 
 set -euo pipefail
 
@@ -19,30 +27,39 @@ fi
 source scripts/lib/cargo_runner.sh
 vyre_select_cargo_runner
 
-CONTRACT_TESTS=(
-    capability_contracts
-    cuda_device_contract
-    target_compiler
-    gpu_elementwise_conformance
-    megakernel_scale_scheduler_contracts
-    module_cache_contracts
+# Tracked files only, and only the crate's own test directory: a stray .rs left
+# in the working tree is not a target, and a nested support module is not one
+# either.
+mapfile -t TARGETS < <(
+    git ls-files -- 'vyre-driver-cuda/tests/*.rs' \
+        | awk -F/ 'NF == 3 { sub(/\.rs$/, "", $3); print $3 }' \
+        | sort -u
 )
 
-mapfile -t PARITY_TESTS < <(
-    find vyre-driver-cuda/tests -maxdepth 1 -name '*gpu_parity*.rs' -printf '%f\n' \
-        | sed 's/\.rs$//' | sort -u
-)
+if [ "${#TARGETS[@]}" -eq 0 ]; then
+    echo "CUDA gate found no tracked test target under vyre-driver-cuda/tests." >&2
+    echo "Fix: this gate must run something. Reporting a clean device with nothing to run is the defect it guards." >&2
+    exit 1
+fi
 
-echo "CUDA parity gate: ${#CONTRACT_TESTS[@]} contract tests, ${#PARITY_TESTS[@]} gpu_parity integration tests"
-
-for test in "${CONTRACT_TESTS[@]}"; do
-    echo "==> contract: $test"
-    "$CARGO_RUNNER" test -p vyre-driver-cuda --test "$test" -- --nocapture
+PARITY_COUNT=0
+for target in "${TARGETS[@]}"; do
+    case "$target" in
+        *gpu_parity*) PARITY_COUNT=$((PARITY_COUNT + 1)) ;;
+    esac
 done
 
-for test in "${PARITY_TESTS[@]}"; do
-    echo "==> gpu_parity: $test"
-    "$CARGO_RUNNER" test -p vyre-driver-cuda --test "$test" -- --nocapture
-done
+if [ "$PARITY_COUNT" -eq 0 ]; then
+    echo "CUDA gate found no *gpu_parity* target among ${#TARGETS[@]} test targets." >&2
+    echo "Fix: reference parity against the live device is the evidence this gate exists to produce." >&2
+    exit 1
+fi
 
-echo "CUDA parity gate: all ${#PARITY_TESTS[@]} gpu_parity tests and ${#CONTRACT_TESTS[@]} contract tests passed"
+echo "CUDA gate: ${#TARGETS[@]} tracked test targets, ${PARITY_COUNT} of them gpu_parity, on:"
+nvidia-smi --query-gpu=name,driver_version --format=csv,noheader
+
+# The crate's documented test command, so the gate and docs/testing cannot
+# disagree about what proving this backend means.
+"$CARGO_RUNNER" test -p vyre-driver-cuda -- --nocapture
+
+echo "CUDA gate: all ${#TARGETS[@]} vyre-driver-cuda test targets passed on the live device."

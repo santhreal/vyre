@@ -94,6 +94,26 @@ jobs:
       - name: div/mod-by-zero sentinel + oversized-shift-mask oracle parity on real CUDA
         run: ./cargo_full test -p vyre-driver-cuda --features cuda --test div_zero_shift_mask_cuda_parity -- --test-threads=1 --nocapture
 
+  cuda-parity-suite:
+    name: CUDA parity suite
+    needs: gpu-adapter-probe
+    runs-on: [self-hosted, gpu-5090]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      # Every step above names its targets one by one, so a parity test added
+      # later is gated by nothing, which is how fifty-five of them came to run
+      # in no workflow at all while the four named here did. This roster is
+      # derived from the tree instead: each vyre-driver-cuda/tests/*gpu_parity*
+      # target plus the six backend contract suites, so target fifty-six is
+      # covered without editing this file. The gate fails when nvidia-smi does,
+      # so a runner that lost its device cannot report a clean tree.
+      - name: Every derived CUDA parity target on the real device
+        run: bash scripts/check_cuda_parity_perf_gate.sh
+
   composition-parity-gpu:
     name: Composition parity on real GPU
     needs: gpu-adapter-probe
@@ -206,6 +226,7 @@ jobs:
     needs:
       - driver-contracts
       - cuda-driver-contracts
+      - cuda-parity-suite
       - composition-parity-gpu
       - determinism-stress-gpu
       - mandatory-gpu-enforcer
@@ -222,6 +243,7 @@ jobs:
         run: |
           if [ "${{ needs.driver-contracts.result }}" != "success" ] \
             || [ "${{ needs.cuda-driver-contracts.result }}" != "success" ] \
+            || [ "${{ needs.cuda-parity-suite.result }}" != "success" ] \
             || [ "${{ needs.composition-parity-gpu.result }}" != "success" ] \
             || [ "${{ needs.determinism-stress-gpu.result }}" != "success" ] \
             || [ "${{ needs.mandatory-gpu-enforcer.result }}" != "success" ] \
