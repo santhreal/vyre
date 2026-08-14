@@ -37,7 +37,16 @@ pub(crate) fn star_binary_is_binary_and_unary_is_unary() {
     );
     assert_shape_rows(
         &rows.expr_shape,
-        &[(1, C_EXPR_SHAPE_BINARY, TOK_STAR, 13, C_EXPR_ASSOC_LEFT, 0, 2, SENTINEL)],
+        &[(
+            1,
+            C_EXPR_SHAPE_BINARY,
+            TOK_STAR,
+            13,
+            C_EXPR_ASSOC_LEFT,
+            0,
+            2,
+            SENTINEL,
+        )],
     );
     assert_pg_preserves_row(&rows, 1, node_kind::BINARY);
     assert_pg_links_match_vast(&rows, 1);
@@ -66,7 +75,16 @@ pub(crate) fn amp_binary_is_binary_and_unary_is_unary() {
     );
     assert_shape_rows(
         &rows.expr_shape,
-        &[(1, C_EXPR_SHAPE_BINARY, TOK_AMP, 8, C_EXPR_ASSOC_LEFT, 0, 2, SENTINEL)],
+        &[(
+            1,
+            C_EXPR_SHAPE_BINARY,
+            TOK_AMP,
+            8,
+            C_EXPR_ASSOC_LEFT,
+            0,
+            2,
+            SENTINEL,
+        )],
     );
     assert_pg_preserves_row(&rows, 1, node_kind::BINARY);
     assert_pg_links_match_vast(&rows, 1);

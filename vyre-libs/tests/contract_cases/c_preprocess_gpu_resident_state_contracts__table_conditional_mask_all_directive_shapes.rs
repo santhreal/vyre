@@ -217,4 +217,3 @@ fn table_named_macro_function_like_shapes() {
         );
     }
 }
-

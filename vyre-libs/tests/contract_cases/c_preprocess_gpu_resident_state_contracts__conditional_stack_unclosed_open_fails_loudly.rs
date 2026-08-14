@@ -11,10 +11,10 @@ fn conditional_stack_unclosed_open_fails_loudly() {
     }));
     let eval = result.expect("unclosed conditional must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
-        assert!(
-            err.to_string().contains("reference dispatch trapped"),
-            "unexpected error: {err}"
-        );
+    assert!(
+        err.to_string().contains("reference dispatch trapped"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
@@ -28,10 +28,10 @@ fn conditional_stack_elif_without_open_fails_loudly() {
     }));
     let eval = result.expect("elif-without-open must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
-        assert!(
-            err.to_string().contains("reference dispatch trapped"),
-            "unexpected error: {err}"
-        );
+    assert!(
+        err.to_string().contains("reference dispatch trapped"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
@@ -45,9 +45,8 @@ fn conditional_stack_else_without_open_fails_loudly() {
     }));
     let eval = result.expect("else-without-open must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
-        assert!(
-            err.to_string().contains("reference dispatch trapped"),
-            "unexpected error: {err}"
-        );
+    assert!(
+        err.to_string().contains("reference dispatch trapped"),
+        "unexpected error: {err}"
+    );
 }
-

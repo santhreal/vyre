@@ -19,10 +19,19 @@ fn sparse_lexer_emits_single_preproc_row_for_directive_line() {
     let source = b"#include <x.h>\nint x;";
     let (types, starts, lens, flags) = run_sparse_c11_lexer_positions(source);
 
-    assert_eq!(types[0], TOK_PREPROC, "line-start # must become TOK_PREPROC");
+    assert_eq!(
+        types[0], TOK_PREPROC,
+        "line-start # must become TOK_PREPROC"
+    );
     assert_eq!(starts[0], 0, "preproc row starts at the directive hash");
-    assert_eq!(lens[0], 14, "preproc row spans the directive payload without newline");
-    assert_eq!(flags[0], 1, "preproc row must be visible to sparse compaction");
+    assert_eq!(
+        lens[0], 14,
+        "preproc row spans the directive payload without newline"
+    );
+    assert_eq!(
+        flags[0], 1,
+        "preproc row must be visible to sparse compaction"
+    );
 
     assert!(
         types[1..14].iter().all(|kind| *kind == 0),

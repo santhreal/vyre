@@ -34,9 +34,9 @@
 //! all end to end through the circuit→conformal composite.
 #![cfg(feature = "cpu-parity")]
 
+use vyre_libs::analysis::cost_model::predict_runtime_fixed_via;
 use vyre_primitives::graph::sum_product_circuit::{KIND_LEAF, KIND_PRODUCT, KIND_SUM};
 use vyre_primitives::math::conformal::conformal_threshold_cpu;
-use vyre_libs::analysis::cost_model::predict_runtime_fixed_via;
 
 use vyre_libs::test_support::fixed_mul as fixed_mul_16_16;
 use vyre_libs::test_support::ReferenceEvalDispatcher;

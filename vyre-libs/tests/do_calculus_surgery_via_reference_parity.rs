@@ -20,11 +20,11 @@
 #![forbid(unsafe_code)]
 #![cfg(feature = "cpu-parity")]
 
-use vyre_primitives::graph::do_calculus::{
-    do_intervention_delete_incoming_cpu, do_rule2_reverse_incoming_cpu, do_rule3_subgraph_cpu,
-};
 use vyre_libs::reasoning::do_calculus_change_impact::{
     intervention_delete_incoming_via, rule2_reverse_incoming_via, rule3_subgraph_via,
+};
+use vyre_primitives::graph::do_calculus::{
+    do_intervention_delete_incoming_cpu, do_rule2_reverse_incoming_cpu, do_rule3_subgraph_cpu,
 };
 
 use vyre_libs::test_support::ReferenceEvalDispatcher;

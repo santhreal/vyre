@@ -17,10 +17,10 @@ fn macro_replacement_range_must_be_inside_table_bounds() {
     }));
     let eval = result.expect("out-of-bounds replacement must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
-        assert!(
-            err.to_string().contains("reference dispatch trapped"),
-            "unexpected error: {err}"
-        );
+    assert!(
+        err.to_string().contains("reference dispatch trapped"),
+        "unexpected error: {err}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -40,7 +40,8 @@ fn function_like_macro_arg_arena_bounds_are_zero_initialised() {
     let mut fixture = NamedMacroFixture::empty();
     fixture.insert(b"F", 512, C_MACRO_KIND_FUNCTION_LIKE, 0, &[]);
 
-    let outputs = run_named_macro_expansion(&stream, &fixture, 8).expect("zero-arg call must succeed");
+    let outputs =
+        run_named_macro_expansion(&stream, &fixture, 8).expect("zero-arg call must succeed");
     let out = decode_u32_words(&outputs[0].to_bytes());
     let count = decode_u32_words(&outputs[1].to_bytes());
     assert_eq!(count, vec![0]);
@@ -72,7 +73,8 @@ fn function_like_macro_arg_arena_tracks_multiple_args() {
         &[(0, 0), (TOK_PLUS, C_MACRO_REPLACEMENT_LITERAL), (0, 1)],
     );
 
-    let outputs = run_named_macro_expansion(&stream, &fixture, 8).expect("two-arg call must succeed");
+    let outputs =
+        run_named_macro_expansion(&stream, &fixture, 8).expect("two-arg call must succeed");
     let out = decode_u32_words(&outputs[0].to_bytes());
     let count = decode_u32_words(&outputs[1].to_bytes());
     assert_eq!(count, vec![3]);

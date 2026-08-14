@@ -14,11 +14,11 @@
 //! authoritative oracles; values are integer witnesses / bool / counts → BIT-EXACT (no tolerance).
 #![cfg(feature = "cpu-parity")]
 
-use vyre_primitives::graph::motif::MotifEdge;
 use vyre_libs::graph::dispatch::motif::{
     match_motif, match_motif_via, motif_matches, motif_matches_via, motif_participation_count,
     motif_participation_count_via,
 };
+use vyre_primitives::graph::motif::MotifEdge;
 
 use vyre_libs::test_support::ReferenceEvalDispatcher;
 

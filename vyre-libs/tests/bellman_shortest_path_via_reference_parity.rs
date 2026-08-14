@@ -25,9 +25,9 @@
 //! authoritative CPU reference. Values are exact integers → BIT-EXACT (no tolerance).
 #![cfg(feature = "cpu-parity")]
 
-use vyre_primitives::math::bellman_shortest_path::cpu_ref;
-use vyre_libs::solvers::bellman_tn_order::bellman_tn_order_via;
 use vyre_foundation::program_dispatch::DispatchError;
+use vyre_libs::solvers::bellman_tn_order::bellman_tn_order_via;
+use vyre_primitives::math::bellman_shortest_path::cpu_ref;
 
 use vyre_libs::test_support::ReferenceEvalDispatcher;
 

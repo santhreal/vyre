@@ -4,12 +4,12 @@
 //! self-substrate exposes it as a reusable transform for graph/dataflow
 //! schedulers. This test keeps that wiring broad and deterministic.
 
-use vyre_libs::test_support::u32_bytes;
-use vyre_reference::value::Value;
 use vyre_libs::encoding::bitset_transform_pipeline::{
     dense_boolean_matvec_lut, dense_matvec_frontier_words, dense_matvec_lut_words,
     four_russians_dense_matvec_program,
 };
+use vyre_libs::test_support::u32_bytes;
+use vyre_reference::value::Value;
 
 const BYTE_TILE_WIDTH: u32 = 8;
 

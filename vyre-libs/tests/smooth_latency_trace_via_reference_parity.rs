@@ -17,8 +17,8 @@
 //! reproduces `cpu_conv1d` (mul/accumulate order AND the clamp-to-edge boundary handling).
 #![cfg(feature = "cpu-parity")]
 
-use vyre_primitives::math::conv1d::{cpu_conv1d, gaussian_weights};
 use vyre_libs::solvers::conv1d_latency_smoothing::smooth_latency_trace_via;
+use vyre_primitives::math::conv1d::{cpu_conv1d, gaussian_weights};
 
 use vyre_libs::test_support::ReferenceEvalDispatcher;
 

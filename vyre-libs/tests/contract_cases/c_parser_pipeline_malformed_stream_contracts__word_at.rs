@@ -31,7 +31,6 @@ use vyre_reference::value::Value;
 // Helpers
 // ---------------------------------------------------------------------------
 
-
 const VAST_STRIDE_U32: usize = 10;
 const PG_STRIDE_U32: usize = 6;
 const SENTINEL: u32 = u32::MAX;
@@ -174,7 +173,18 @@ fn vast_reference_oracles_panic_on_malformed_public_input() {
 
 #[test]
 fn expr_shape_reference_rejects_mismatched_raw_and_typed_rows() {
-    let raw = u32_bytes(&[TOK_IDENTIFIER, SENTINEL, SENTINEL, SENTINEL, SENTINEL, 0, 1, 0, 0, 0]);
+    let raw = u32_bytes(&[
+        TOK_IDENTIFIER,
+        SENTINEL,
+        SENTINEL,
+        SENTINEL,
+        SENTINEL,
+        0,
+        1,
+        0,
+        0,
+        0,
+    ]);
     let result = try_reference_c11_build_expression_shape_nodes(&raw, &[]);
     assert_eq!(
         result,

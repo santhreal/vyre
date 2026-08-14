@@ -4,7 +4,7 @@
 #![allow(deprecated)]
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-#[path = "../../tests/support/c_frontend/fixtures/pg_lowering_deep_constructs.rs"]
-mod pg_lowering_deep_constructs;
 #[path = "c_ast_pg_lowering_deep_contracts/cpu_semantic_node_and_edge_shapes.rs"]
 mod cpu_semantic_node_and_edge_shapes;
+#[path = "../../tests/support/c_frontend/fixtures/pg_lowering_deep_constructs.rs"]
+mod pg_lowering_deep_constructs;

@@ -21,13 +21,15 @@ fn overflow_named_macro_expansion_output_capacity() {
         ],
     );
 
-    let result = catch_unwind(AssertUnwindSafe(|| run_named_macro_expansion(&stream, &fixture, 2)));
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        run_named_macro_expansion(&stream, &fixture, 2)
+    }));
     let eval = result.expect("output overflow must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
-        assert!(
-            err.to_string().contains("reference dispatch trapped"),
-            "unexpected error: {err}"
-        );
+    assert!(
+        err.to_string().contains("reference dispatch trapped"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
@@ -40,10 +42,10 @@ fn overflow_dynamic_macro_expansion_output_capacity() {
     }));
     let eval = result.expect("dynamic output overflow must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
-        assert!(
-            err.to_string().contains("reference dispatch trapped"),
-            "unexpected error: {err}"
-        );
+    assert!(
+        err.to_string().contains("reference dispatch trapped"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
@@ -60,4 +62,3 @@ fn overflow_conditional_mask_empty_stream() {
         "empty conditional-mask failure must identify the parser pipeline boundary"
     );
 }
-

@@ -21,11 +21,11 @@
 //! `u32::MAX` (∞ / no-edge) to exercise the guarded branch and the `min` accumulate against ∞.
 #![cfg(feature = "cpu-parity")]
 
-use vyre_primitives::math::semiring_gemm::Semiring;
 use vyre_libs::analysis::dataflow_fixpoint::{
     reference_semiring_gemm, semiring_gemm_via_bool_or, semiring_gemm_via_lineage,
     semiring_gemm_via_min_plus,
 };
+use vyre_primitives::math::semiring_gemm::Semiring;
 
 use vyre_libs::test_support::ReferenceEvalDispatcher;
 

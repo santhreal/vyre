@@ -15,8 +15,8 @@ use vyre_libs::scan::classic_ac::{
     classic_ac_compile, presence_bitmap_words,
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
-use vyre_libs::scan::{pack_haystack_u32};
-use vyre_primitives::wire::{pack_u32_slice};
+use vyre_libs::scan::pack_haystack_u32;
+use vyre_primitives::wire::pack_u32_slice;
 
 struct Lcg(u64);
 impl Lcg {

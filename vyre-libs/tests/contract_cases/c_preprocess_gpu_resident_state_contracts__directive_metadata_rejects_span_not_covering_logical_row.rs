@@ -54,4 +54,3 @@ fn expansion_queue_emits_source_ordered_tokens() {
         &[TOK_INTEGER, TOK_STAR, TOK_PLUS, TOK_INTEGER, TOK_STAR]
     );
 }
-

@@ -76,7 +76,11 @@ fn full_pipeline_on_mismatched_delimiters_produces_non_empty_output() {
     // shorter than the typed VAST stream. Three input rows -> three expr-shape
     // rows of 8 words each. (The old `shape.len() == typed.len()` wrongly
     // assumed the two streams share a stride.)
-    assert_eq!(shape.len(), 3 * 8 * 4, "three expr-shape rows of 8 u32 words each");
+    assert_eq!(
+        shape.len(),
+        3 * 8 * 4,
+        "three expr-shape rows of 8 u32 words each"
+    );
     let pg = run_reference_pg_lower(&typed);
     assert_eq!(pg.len(), 3 * PG_STRIDE_U32 * 4);
 }

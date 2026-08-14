@@ -10,9 +10,9 @@
 mod support;
 
 use support::preprocess_stream::{build_token_stream, unpack_u32};
-use vyre_primitives::wire::pack_u32_slice as pack_u32_le;
 use vyre_libs::parsing::c::preprocess::gpu_define_parse::gpu_define_parse;
 use vyre_libs::parsing::c::preprocess::gpu_directive_metadata::gpu_directive_metadata;
+use vyre_primitives::wire::pack_u32_slice as pack_u32_le;
 use vyre_reference::value::Value;
 
 #[derive(Debug, PartialEq, Eq)]

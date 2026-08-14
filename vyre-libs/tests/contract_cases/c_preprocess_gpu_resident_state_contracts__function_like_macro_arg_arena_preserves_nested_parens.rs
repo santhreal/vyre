@@ -20,7 +20,8 @@ fn function_like_macro_arg_arena_preserves_nested_parens() {
     let mut fixture = NamedMacroFixture::empty();
     fixture.insert(b"F", 512, C_MACRO_KIND_FUNCTION_LIKE, 2, &[(0, 0), (0, 1)]);
 
-    let outputs = run_named_macro_expansion(&stream, &fixture, 8).expect("nested-paren arg must succeed");
+    let outputs =
+        run_named_macro_expansion(&stream, &fixture, 8).expect("nested-paren arg must succeed");
     let out = decode_u32_words(&outputs[0].to_bytes());
     let count = decode_u32_words(&outputs[1].to_bytes());
     assert_eq!(count, vec![4]);
@@ -42,13 +43,15 @@ fn function_like_macro_arg_count_mismatch_fails_loudly() {
     let mut fixture = NamedMacroFixture::empty();
     fixture.insert(b"MAX", 512, C_MACRO_KIND_FUNCTION_LIKE, 2, &[(0, 0)]);
 
-    let result = catch_unwind(AssertUnwindSafe(|| run_named_macro_expansion(&stream, &fixture, 8)));
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        run_named_macro_expansion(&stream, &fixture, 8)
+    }));
     let eval = result.expect("arg-count mismatch must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
-        assert!(
-            err.to_string().contains("reference dispatch trapped"),
-            "unexpected error: {err}"
-        );
+    assert!(
+        err.to_string().contains("reference dispatch trapped"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
@@ -63,12 +66,13 @@ fn function_like_macro_replacement_parameter_out_of_range_fails_loudly() {
     // Param index 5 exceeds param_count 1
     fixture.insert(b"F", 512, C_MACRO_KIND_FUNCTION_LIKE, 1, &[(0, 5)]);
 
-    let result = catch_unwind(AssertUnwindSafe(|| run_named_macro_expansion(&stream, &fixture, 8)));
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        run_named_macro_expansion(&stream, &fixture, 8)
+    }));
     let eval = result.expect("out-of-range param must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
-        assert!(
-            err.to_string().contains("reference dispatch trapped"),
-            "unexpected error: {err}"
-        );
+    assert!(
+        err.to_string().contains("reference dispatch trapped"),
+        "unexpected error: {err}"
+    );
 }
-

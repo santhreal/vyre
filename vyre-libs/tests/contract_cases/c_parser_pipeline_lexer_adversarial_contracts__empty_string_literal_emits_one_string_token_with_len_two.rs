@@ -417,4 +417,3 @@ fn directive_at_column_zero_after_newline_is_preproc_not_operator() {
     assert_eq!(types[0], TOK_IDENTIFIER, "a");
     assert_eq!(types[1], TOK_PREPROC, "# at start of line must be preproc");
 }
-

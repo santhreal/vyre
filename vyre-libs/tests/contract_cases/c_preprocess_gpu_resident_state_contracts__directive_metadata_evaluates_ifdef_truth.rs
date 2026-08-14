@@ -45,4 +45,3 @@ fn directive_metadata_rejects_mismatched_stream_lengths() {
         "Fix: token type/start/length streams must have identical lengths"
     );
 }
-

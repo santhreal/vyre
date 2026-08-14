@@ -69,7 +69,9 @@ fn loops<'a>(nodes: &'a [Node], var: &str, out: &mut Vec<&'a Node>) {
                 }
                 loops(body, var, out);
             }
-            Node::If { then, otherwise, .. } => {
+            Node::If {
+                then, otherwise, ..
+            } => {
                 loops(then, var, out);
                 loops(otherwise, var, out);
             }
@@ -108,7 +110,9 @@ fn lets<'a>(nodes: &'a [Node], name: &str, out: &mut Vec<&'a Node>) {
                     out.push(node);
                 }
             }
-            Node::If { then, otherwise, .. } => {
+            Node::If {
+                then, otherwise, ..
+            } => {
                 lets(then, name, out);
                 lets(otherwise, name, out);
             }
@@ -464,9 +468,7 @@ fn c_semantic_classification_has_one_owner() {
         .enumerate()
         .flat_map(|(i, &(_, kind))| {
             let i = i as u32;
-            [
-                kind, SENTINEL, SENTINEL, SENTINEL, SENTINEL, i, 1, i, 0, 0,
-            ]
+            [kind, SENTINEL, SENTINEL, SENTINEL, SENTINEL, i, 1, i, 0, 0]
         })
         .collect();
     let n = kinds.len();
@@ -629,9 +631,9 @@ fn go_brace_span_scan_has_one_owner() {
 fn assignments_to(nodes: &[Node], target: &str) -> bool {
     nodes.iter().any(|node| match node {
         Node::Assign { name, .. } => name.as_str() == target,
-        Node::If { then, otherwise, .. } => {
-            assignments_to(then, target) || assignments_to(otherwise, target)
-        }
+        Node::If {
+            then, otherwise, ..
+        } => assignments_to(then, target) || assignments_to(otherwise, target),
         Node::Loop { body, .. } => assignments_to(body, target),
         Node::Block(children) => assignments_to(children, target),
         Node::Region { body, .. } => assignments_to(body, target),

@@ -20,13 +20,15 @@ fn collision_safe_macro_name_long_name_exceeds_pool_bounds_fails_loudly() {
     fixture.sizes[512] = 1;
     fixture.vals[512] = TOK_INTEGER;
 
-    let result = catch_unwind(AssertUnwindSafe(|| run_named_macro_expansion(&stream, &fixture, 4)));
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        run_named_macro_expansion(&stream, &fixture, 4)
+    }));
     let eval = result.expect("name-pool overflow must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
-        assert!(
-            err.to_string().contains("reference dispatch trapped"),
-            "unexpected error: {err}"
-        );
+    assert!(
+        err.to_string().contains("reference dispatch trapped"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
@@ -52,13 +54,15 @@ fn collision_safe_macro_name_source_span_out_of_bounds_fails_loudly() {
     fixture.sizes[512] = 1;
     fixture.vals[512] = TOK_INTEGER;
 
-    let result = catch_unwind(AssertUnwindSafe(|| run_named_macro_expansion(&short_stream, &fixture, 4)));
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        run_named_macro_expansion(&short_stream, &fixture, 4)
+    }));
     let eval = result.expect("source-span out-of-bounds must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
-        assert!(
-            err.to_string().contains("reference dispatch trapped"),
-            "unexpected error: {err}"
-        );
+    assert!(
+        err.to_string().contains("reference dispatch trapped"),
+        "unexpected error: {err}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -93,4 +97,3 @@ fn table_directive_metadata_kind_roundtrip() {
         );
     }
 }
-

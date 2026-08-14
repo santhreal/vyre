@@ -187,8 +187,12 @@ mod glyph_grid {
         let grid = Grid {
             shape,
             glyphs: (0..80).map(|n| n % glyph_count).collect(),
-            fg: (0..80).map(|n: u32| 0xFF00_0000 | n.wrapping_mul(2_654_435_761) >> 8).collect(),
-            bg: (0..80).map(|n: u32| 0xFF00_0000 | n.wrapping_mul(40_503) >> 8).collect(),
+            fg: (0..80)
+                .map(|n: u32| 0xFF00_0000 | n.wrapping_mul(2_654_435_761) >> 8)
+                .collect(),
+            bg: (0..80)
+                .map(|n: u32| 0xFF00_0000 | n.wrapping_mul(40_503) >> 8)
+                .collect(),
             atlas,
             glyph_count,
         };

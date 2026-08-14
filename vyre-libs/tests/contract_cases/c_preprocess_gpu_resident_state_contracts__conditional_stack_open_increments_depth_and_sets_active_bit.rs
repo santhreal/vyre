@@ -44,4 +44,3 @@ fn conditional_stack_elif_selects_next_branch() {
     // directives stay live; first body dead; elif body live; second body dead
     assert_eq!(mask, vec![1, 0, 1, 1, 1]);
 }
-

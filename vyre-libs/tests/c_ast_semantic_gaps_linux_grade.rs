@@ -4,7 +4,7 @@
 #![allow(deprecated)]
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-#[path = "../../tests/support/c_frontend/fixtures/semantic_gap_constructs.rs"]
-mod semantic_gap_constructs;
 #[path = "c_ast_semantic_gaps_linux_grade/cpu_semantic_gap_classification.rs"]
 mod cpu_semantic_gap_classification;
+#[path = "../../tests/support/c_frontend/fixtures/semantic_gap_constructs.rs"]
+mod semantic_gap_constructs;

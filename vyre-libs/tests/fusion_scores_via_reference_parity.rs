@@ -19,8 +19,8 @@
 //! EXACTLY. So the u32 GPU output equals the f32 reference cast to integer, bit-for-bit.
 #![cfg(feature = "cpu-parity")]
 
-use vyre_primitives::graph::chebyshev_filter::chebyshev_filter_cpu;
 use vyre_libs::scheduling::spectral_schedule::fusion_scores_fixed_via;
+use vyre_primitives::graph::chebyshev_filter::chebyshev_filter_cpu;
 
 use vyre_libs::test_support::ReferenceEvalDispatcher;
 

@@ -24,13 +24,14 @@
 
 mod support;
 
-use support::preprocess_stream::{build_token_stream_with, pack_defined_macros, unpack_u32, LineEnds};
+use support::preprocess_stream::{
+    build_token_stream_with, pack_defined_macros, unpack_u32, LineEnds,
+};
 use vyre_foundation::ir::{Expr, Program};
 use vyre_libs::parsing::c::lex::tokens::{TOK_PP_ELIF, TOK_PP_IF, TOK_PP_IFDEF, TOK_PP_IFNDEF};
 use vyre_libs::parsing::c::parse::gnu_builtins::gpu_builtin_hash_table_words;
 use vyre_libs::parsing::c::preprocess::expansion::{
-    opt_dynamic_macro_expansion, opt_named_macro_expansion,
-    opt_named_macro_expansion_materialized,
+    opt_dynamic_macro_expansion, opt_named_macro_expansion, opt_named_macro_expansion_materialized,
 };
 use vyre_libs::parsing::c::preprocess::gpu_define_parse::{gpu_define_parse, gpu_define_parse_u8};
 use vyre_libs::parsing::c::preprocess::gpu_directive_metadata::{
@@ -174,14 +175,8 @@ fn run_family(source: &[u8], defined: &[&[u8]], layout: Layout) -> FamilyRun {
 
 fn cpu_oracle(source: &[u8], defined: &[&[u8]]) -> (Vec<u32>, Vec<u32>) {
     let (tok_types, tok_starts, tok_lens) = build_token_stream_with(source, LineEnds::Tokenized);
-    reference_c_preprocessor_directive_metadata(
-        &tok_types,
-        &tok_starts,
-        &tok_lens,
-        source,
-        defined,
-    )
-    .expect("CPU directive oracle")
+    reference_c_preprocessor_directive_metadata(&tok_types, &tok_starts, &tok_lens, source, defined)
+        .expect("CPU directive oracle")
 }
 
 fn masked(kinds: &[u32], values: &[u32], wanted: &[u32]) -> Vec<u32> {
@@ -303,10 +298,7 @@ fn out_of_contract_rows_are_pinned() {
             let run = run_family(source.as_bytes(), &defined, Layout::Packed);
             (
                 format!("{source:?}"),
-                format!(
-                    "{:?}/{:?}/{:?}",
-                    run.kinds, run.ifdef_values, run.if_values
-                ),
+                format!("{:?}/{:?}/{:?}", run.kinds, run.ifdef_values, run.if_values),
             )
         })
         .collect();
@@ -343,7 +335,10 @@ fn directive_family_fingerprints() -> Vec<(String, String)> {
                 gpu_if_expression_u8(tokens, source_len),
             ),
             ("gpu_define_parse", gpu_define_parse(tokens, source_len)),
-            ("gpu_define_parse_u8", gpu_define_parse_u8(tokens, source_len)),
+            (
+                "gpu_define_parse_u8",
+                gpu_define_parse_u8(tokens, source_len),
+            ),
             ("gpu_undef_parse", gpu_undef_parse(tokens, source_len)),
             ("gpu_undef_parse_u8", gpu_undef_parse_u8(tokens, source_len)),
             ("gpu_include_parse", gpu_include_parse(tokens, source_len)),
@@ -480,67 +475,238 @@ fn assert_pinned(actual: &[(String, String)], pinned: &[(&str, &str)]) {
 ///
 /// A merge that only rehomes code leaves every one of these untouched.
 const DIRECTIVE_FAMILY_PINS: &[(&str, &str)] = &[
-    ("gpu_directive_metadata(0,0)", "c11dd4784353b2f5bb86cccb9b878f7714e488ee7f6d4f1f3ba9144bc556fcfb"),
-    ("gpu_directive_metadata_u8(0,0)", "c76fe2279df7eaf499be620c032fa119ffb9e362b96ca6f4fc76aee8a1db3c04"),
-    ("gpu_ifdef_value(0,0)", "d86aa2c50c54095045cd7b8bec3b37019eb7165fa5bea2d80cb02e69d9a0f190"),
-    ("gpu_ifdef_value_u8(0,0)", "9e79a0c4d35e279f403a48ea8981ab33b08da820f3b939d591c5a4a43e8a54ab"),
-    ("gpu_if_expression(0,0)", "c51a5457d074b293d7dd3f75a0d9c1e2b5415592ae1ca4e812141e4bcec88088"),
-    ("gpu_if_expression_u8(0,0)", "7ce9503db2ade7eeffd8e3d8ea578660ad0c741e6e8dae76aa570853464d92e4"),
-    ("gpu_define_parse(0,0)", "1e9a9b2c7e17e694932bc68549f8f5f2c5bbaa967d1ee2185951bb8166397413"),
-    ("gpu_define_parse_u8(0,0)", "47969df8f1e1f572fef70ffb0cc0462b451f46ada7f4128cf50223821c57d315"),
-    ("gpu_undef_parse(0,0)", "de4e1a78239a2ac1a6131c6e830fef1fe1d554ed8787f620065acaf1b28a7b59"),
-    ("gpu_undef_parse_u8(0,0)", "f381b89a3dd99a84d825778e64acb26969975c85c538f75111eafd08a430e13d"),
-    ("gpu_include_parse(0,0)", "d9a71b7ea6886fa79509c594d84f4490ea2f5c683e630837bdb4e67c3882ae85"),
-    ("gpu_include_parse_u8(0,0)", "5ded0e9b2fd01a5a111f58634ee9845ce9378054d65660c2fa551596ab48f54d"),
-    ("gpu_directive_metadata(1,1)", "c11dd4784353b2f5bb86cccb9b878f7714e488ee7f6d4f1f3ba9144bc556fcfb"),
-    ("gpu_directive_metadata_u8(1,1)", "c76fe2279df7eaf499be620c032fa119ffb9e362b96ca6f4fc76aee8a1db3c04"),
-    ("gpu_ifdef_value(1,1)", "c93336417a926d1add11b9e99b2b4dab596b69fd85a3d421c2f15a0056d7793d"),
-    ("gpu_ifdef_value_u8(1,1)", "72862072cdc9e63c56e3948bc21fbf6eecbc58530170db24939f277c249cbf3f"),
-    ("gpu_if_expression(1,1)", "d70fa8c9c9cc611ffb3427a31d2516ff4c99625fc9eeb2d8c27f23ae9918dc44"),
-    ("gpu_if_expression_u8(1,1)", "0e0a29ae745bc65440cb8daa49a1685cf2523af3316f47faf11f2b7790f652d4"),
-    ("gpu_define_parse(1,1)", "1e9a9b2c7e17e694932bc68549f8f5f2c5bbaa967d1ee2185951bb8166397413"),
-    ("gpu_define_parse_u8(1,1)", "47969df8f1e1f572fef70ffb0cc0462b451f46ada7f4128cf50223821c57d315"),
-    ("gpu_undef_parse(1,1)", "de4e1a78239a2ac1a6131c6e830fef1fe1d554ed8787f620065acaf1b28a7b59"),
-    ("gpu_undef_parse_u8(1,1)", "f381b89a3dd99a84d825778e64acb26969975c85c538f75111eafd08a430e13d"),
-    ("gpu_include_parse(1,1)", "d9a71b7ea6886fa79509c594d84f4490ea2f5c683e630837bdb4e67c3882ae85"),
-    ("gpu_include_parse_u8(1,1)", "5ded0e9b2fd01a5a111f58634ee9845ce9378054d65660c2fa551596ab48f54d"),
-    ("gpu_directive_metadata(3,16)", "772d8e3b34eea5fe1e9bf813e55c3f691ffa20da694abdc2d41fcdf73aa92119"),
-    ("gpu_directive_metadata_u8(3,16)", "a0e0f44e7e0ec55609abcb32bc57846768899a6c1ea103fd0bc0e081e82303d8"),
-    ("gpu_ifdef_value(3,16)", "c987f702a6c005f2c37e1695ef3127926030c27c3574d250ff5325bfdcb150c5"),
-    ("gpu_ifdef_value_u8(3,16)", "0d2ecda362d77f08c330d226cf3ee74e2e01d25416211fd0f89c921b6964987f"),
-    ("gpu_if_expression(3,16)", "9aac34e69e9e1d6f61c5f2416ffe83aec42ff73a1f73c56d03517af14f0ad937"),
-    ("gpu_if_expression_u8(3,16)", "9f17ac6b28830b79f897e68c2d094e5f56d2f4013525fb5074577b5b108f7ef9"),
-    ("gpu_define_parse(3,16)", "e8554936dcfa7a5d6196858a0f67cdb1f2b98fac9f78961ebf8569b4cebca78c"),
-    ("gpu_define_parse_u8(3,16)", "671d0f21f97e6f75d516330616f01562083d15d34b83b0bc060c00621d9b1623"),
-    ("gpu_undef_parse(3,16)", "75f93ae7a0721e7e1f9bac15021e9b7d52817b92f264c4d085f401288aa5818e"),
-    ("gpu_undef_parse_u8(3,16)", "d4fbbb36aaf256e1f8306d835135e622e64ad719a5381a571259100b05dcda53"),
-    ("gpu_include_parse(3,16)", "fd333af13f6e4f2bda0eaa786fafd9c21d10ee76ff22516be7d91201c28c2626"),
-    ("gpu_include_parse_u8(3,16)", "247e179eb69bb215f717cbbdbdb9963a35d52de30da40236b60e0d83a9115d4e"),
-    ("gpu_directive_metadata(64,4096)", "9a3becb9e8e074cd24f82e07daf2bb0fadb50554485a071e1aa71f22dae55e17"),
-    ("gpu_directive_metadata_u8(64,4096)", "11b744c079652e64fe375bb62aeccc31e865fcfaa30f7d4694853bf906485843"),
-    ("gpu_ifdef_value(64,4096)", "484252505e8a635fec505c277a4cabc8b333f0f1a5e3fd571ce72170f84b5d38"),
-    ("gpu_ifdef_value_u8(64,4096)", "05f6ed003012cbc3c532b8993044b9563101a591d88d1738afd485a9e3f5354a"),
-    ("gpu_if_expression(64,4096)", "2cc32318a202fabce958e0dfef2446ecd3bb75ebbc6cd959feef78957dd5e70e"),
-    ("gpu_if_expression_u8(64,4096)", "1f933a49c9fb43ceb4f4d27c0654f7842004d67189ebca8f27cdc59dc8a515c4"),
-    ("gpu_define_parse(64,4096)", "6d245c5de6c62da2c6c9564e271c3260ea7199d4e2f717923409cf39576f6e67"),
-    ("gpu_define_parse_u8(64,4096)", "a1ef258950664e677f2ceef60b0ff0d776ac50c2381db324f3e2516c1d0003a2"),
-    ("gpu_undef_parse(64,4096)", "8ea3107048e8e51be8ffe53e7e51d23dbdf285ef6044973d36bbda23b627e58c"),
-    ("gpu_undef_parse_u8(64,4096)", "a41adc9cb6ee6c2a3f01c2e75c29c2a1a54caf67f2c1e1162fbab4bf7af7350d"),
-    ("gpu_include_parse(64,4096)", "df1624f421b1332e7d897596094c8b65a9291bc6ce70c179a2e5809898a4e5a0"),
-    ("gpu_include_parse_u8(64,4096)", "a58ad9768c847266d40ca275050c85fdf18c5533a7a3af468470ab473db95a92"),
+    (
+        "gpu_directive_metadata(0,0)",
+        "c11dd4784353b2f5bb86cccb9b878f7714e488ee7f6d4f1f3ba9144bc556fcfb",
+    ),
+    (
+        "gpu_directive_metadata_u8(0,0)",
+        "c76fe2279df7eaf499be620c032fa119ffb9e362b96ca6f4fc76aee8a1db3c04",
+    ),
+    (
+        "gpu_ifdef_value(0,0)",
+        "d86aa2c50c54095045cd7b8bec3b37019eb7165fa5bea2d80cb02e69d9a0f190",
+    ),
+    (
+        "gpu_ifdef_value_u8(0,0)",
+        "9e79a0c4d35e279f403a48ea8981ab33b08da820f3b939d591c5a4a43e8a54ab",
+    ),
+    (
+        "gpu_if_expression(0,0)",
+        "c51a5457d074b293d7dd3f75a0d9c1e2b5415592ae1ca4e812141e4bcec88088",
+    ),
+    (
+        "gpu_if_expression_u8(0,0)",
+        "7ce9503db2ade7eeffd8e3d8ea578660ad0c741e6e8dae76aa570853464d92e4",
+    ),
+    (
+        "gpu_define_parse(0,0)",
+        "1e9a9b2c7e17e694932bc68549f8f5f2c5bbaa967d1ee2185951bb8166397413",
+    ),
+    (
+        "gpu_define_parse_u8(0,0)",
+        "47969df8f1e1f572fef70ffb0cc0462b451f46ada7f4128cf50223821c57d315",
+    ),
+    (
+        "gpu_undef_parse(0,0)",
+        "de4e1a78239a2ac1a6131c6e830fef1fe1d554ed8787f620065acaf1b28a7b59",
+    ),
+    (
+        "gpu_undef_parse_u8(0,0)",
+        "f381b89a3dd99a84d825778e64acb26969975c85c538f75111eafd08a430e13d",
+    ),
+    (
+        "gpu_include_parse(0,0)",
+        "d9a71b7ea6886fa79509c594d84f4490ea2f5c683e630837bdb4e67c3882ae85",
+    ),
+    (
+        "gpu_include_parse_u8(0,0)",
+        "5ded0e9b2fd01a5a111f58634ee9845ce9378054d65660c2fa551596ab48f54d",
+    ),
+    (
+        "gpu_directive_metadata(1,1)",
+        "c11dd4784353b2f5bb86cccb9b878f7714e488ee7f6d4f1f3ba9144bc556fcfb",
+    ),
+    (
+        "gpu_directive_metadata_u8(1,1)",
+        "c76fe2279df7eaf499be620c032fa119ffb9e362b96ca6f4fc76aee8a1db3c04",
+    ),
+    (
+        "gpu_ifdef_value(1,1)",
+        "c93336417a926d1add11b9e99b2b4dab596b69fd85a3d421c2f15a0056d7793d",
+    ),
+    (
+        "gpu_ifdef_value_u8(1,1)",
+        "72862072cdc9e63c56e3948bc21fbf6eecbc58530170db24939f277c249cbf3f",
+    ),
+    (
+        "gpu_if_expression(1,1)",
+        "d70fa8c9c9cc611ffb3427a31d2516ff4c99625fc9eeb2d8c27f23ae9918dc44",
+    ),
+    (
+        "gpu_if_expression_u8(1,1)",
+        "0e0a29ae745bc65440cb8daa49a1685cf2523af3316f47faf11f2b7790f652d4",
+    ),
+    (
+        "gpu_define_parse(1,1)",
+        "1e9a9b2c7e17e694932bc68549f8f5f2c5bbaa967d1ee2185951bb8166397413",
+    ),
+    (
+        "gpu_define_parse_u8(1,1)",
+        "47969df8f1e1f572fef70ffb0cc0462b451f46ada7f4128cf50223821c57d315",
+    ),
+    (
+        "gpu_undef_parse(1,1)",
+        "de4e1a78239a2ac1a6131c6e830fef1fe1d554ed8787f620065acaf1b28a7b59",
+    ),
+    (
+        "gpu_undef_parse_u8(1,1)",
+        "f381b89a3dd99a84d825778e64acb26969975c85c538f75111eafd08a430e13d",
+    ),
+    (
+        "gpu_include_parse(1,1)",
+        "d9a71b7ea6886fa79509c594d84f4490ea2f5c683e630837bdb4e67c3882ae85",
+    ),
+    (
+        "gpu_include_parse_u8(1,1)",
+        "5ded0e9b2fd01a5a111f58634ee9845ce9378054d65660c2fa551596ab48f54d",
+    ),
+    (
+        "gpu_directive_metadata(3,16)",
+        "772d8e3b34eea5fe1e9bf813e55c3f691ffa20da694abdc2d41fcdf73aa92119",
+    ),
+    (
+        "gpu_directive_metadata_u8(3,16)",
+        "a0e0f44e7e0ec55609abcb32bc57846768899a6c1ea103fd0bc0e081e82303d8",
+    ),
+    (
+        "gpu_ifdef_value(3,16)",
+        "c987f702a6c005f2c37e1695ef3127926030c27c3574d250ff5325bfdcb150c5",
+    ),
+    (
+        "gpu_ifdef_value_u8(3,16)",
+        "0d2ecda362d77f08c330d226cf3ee74e2e01d25416211fd0f89c921b6964987f",
+    ),
+    (
+        "gpu_if_expression(3,16)",
+        "9aac34e69e9e1d6f61c5f2416ffe83aec42ff73a1f73c56d03517af14f0ad937",
+    ),
+    (
+        "gpu_if_expression_u8(3,16)",
+        "9f17ac6b28830b79f897e68c2d094e5f56d2f4013525fb5074577b5b108f7ef9",
+    ),
+    (
+        "gpu_define_parse(3,16)",
+        "e8554936dcfa7a5d6196858a0f67cdb1f2b98fac9f78961ebf8569b4cebca78c",
+    ),
+    (
+        "gpu_define_parse_u8(3,16)",
+        "671d0f21f97e6f75d516330616f01562083d15d34b83b0bc060c00621d9b1623",
+    ),
+    (
+        "gpu_undef_parse(3,16)",
+        "75f93ae7a0721e7e1f9bac15021e9b7d52817b92f264c4d085f401288aa5818e",
+    ),
+    (
+        "gpu_undef_parse_u8(3,16)",
+        "d4fbbb36aaf256e1f8306d835135e622e64ad719a5381a571259100b05dcda53",
+    ),
+    (
+        "gpu_include_parse(3,16)",
+        "fd333af13f6e4f2bda0eaa786fafd9c21d10ee76ff22516be7d91201c28c2626",
+    ),
+    (
+        "gpu_include_parse_u8(3,16)",
+        "247e179eb69bb215f717cbbdbdb9963a35d52de30da40236b60e0d83a9115d4e",
+    ),
+    (
+        "gpu_directive_metadata(64,4096)",
+        "9a3becb9e8e074cd24f82e07daf2bb0fadb50554485a071e1aa71f22dae55e17",
+    ),
+    (
+        "gpu_directive_metadata_u8(64,4096)",
+        "11b744c079652e64fe375bb62aeccc31e865fcfaa30f7d4694853bf906485843",
+    ),
+    (
+        "gpu_ifdef_value(64,4096)",
+        "484252505e8a635fec505c277a4cabc8b333f0f1a5e3fd571ce72170f84b5d38",
+    ),
+    (
+        "gpu_ifdef_value_u8(64,4096)",
+        "05f6ed003012cbc3c532b8993044b9563101a591d88d1738afd485a9e3f5354a",
+    ),
+    (
+        "gpu_if_expression(64,4096)",
+        "2cc32318a202fabce958e0dfef2446ecd3bb75ebbc6cd959feef78957dd5e70e",
+    ),
+    (
+        "gpu_if_expression_u8(64,4096)",
+        "1f933a49c9fb43ceb4f4d27c0654f7842004d67189ebca8f27cdc59dc8a515c4",
+    ),
+    (
+        "gpu_define_parse(64,4096)",
+        "6d245c5de6c62da2c6c9564e271c3260ea7199d4e2f717923409cf39576f6e67",
+    ),
+    (
+        "gpu_define_parse_u8(64,4096)",
+        "a1ef258950664e677f2ceef60b0ff0d776ac50c2381db324f3e2516c1d0003a2",
+    ),
+    (
+        "gpu_undef_parse(64,4096)",
+        "8ea3107048e8e51be8ffe53e7e51d23dbdf285ef6044973d36bbda23b627e58c",
+    ),
+    (
+        "gpu_undef_parse_u8(64,4096)",
+        "a41adc9cb6ee6c2a3f01c2e75c29c2a1a54caf67f2c1e1162fbab4bf7af7350d",
+    ),
+    (
+        "gpu_include_parse(64,4096)",
+        "df1624f421b1332e7d897596094c8b65a9291bc6ce70c179a2e5809898a4e5a0",
+    ),
+    (
+        "gpu_include_parse_u8(64,4096)",
+        "a58ad9768c847266d40ca275050c85fdf18c5533a7a3af468470ab473db95a92",
+    ),
 ];
 
 /// Pinned from the pre-merge tree at 8cf10543e0.
 const EXPANSION_FAMILY_PINS: &[(&str, &str)] = &[
-    ("opt_named_macro_expansion(1)", "6d3044945b37acb29c68753ae6317bbd137553250b3bb51ea28f87e37b86007f"),
-    ("opt_named_macro_expansion_materialized(1)", "7013c9a6bdb444ea5c1430b876faaa17d04848a130b3c8d15001301a380aef58"),
-    ("opt_dynamic_macro_expansion(1)", "d347fa4d1270d0065141c336226b8b29e81f2b8141783680beddc0747e24106b"),
-    ("opt_named_macro_expansion(8)", "69b6044eb228d4d23477654f93ac6e5490c108dfffefe608b06ed3822898123a"),
-    ("opt_named_macro_expansion_materialized(8)", "d95bc85499bcdfd51a5493f04b298c400cdc692b62fb23bc2f3e7e6dcc881b54"),
-    ("opt_dynamic_macro_expansion(8)", "4fb1f4adff1e2ab172a55383baa9fe1c5ac64343a76236e580834d094ac0eb42"),
-    ("opt_named_macro_expansion(64)", "70be92365700558f450620725b02df1a809e7529ce654bef248d2b6fa36bd191"),
-    ("opt_named_macro_expansion_materialized(64)", "ba0304c5f8655a266366d8cd5993fa6398c0f4ed6296c919f83afa740ba3dce3"),
-    ("opt_dynamic_macro_expansion(64)", "f881d9703c99c685a1e0d9888f39e7405725a8dae8b2fb95ee2a9c7d3762f59a"),
+    (
+        "opt_named_macro_expansion(1)",
+        "6d3044945b37acb29c68753ae6317bbd137553250b3bb51ea28f87e37b86007f",
+    ),
+    (
+        "opt_named_macro_expansion_materialized(1)",
+        "7013c9a6bdb444ea5c1430b876faaa17d04848a130b3c8d15001301a380aef58",
+    ),
+    (
+        "opt_dynamic_macro_expansion(1)",
+        "d347fa4d1270d0065141c336226b8b29e81f2b8141783680beddc0747e24106b",
+    ),
+    (
+        "opt_named_macro_expansion(8)",
+        "69b6044eb228d4d23477654f93ac6e5490c108dfffefe608b06ed3822898123a",
+    ),
+    (
+        "opt_named_macro_expansion_materialized(8)",
+        "d95bc85499bcdfd51a5493f04b298c400cdc692b62fb23bc2f3e7e6dcc881b54",
+    ),
+    (
+        "opt_dynamic_macro_expansion(8)",
+        "4fb1f4adff1e2ab172a55383baa9fe1c5ac64343a76236e580834d094ac0eb42",
+    ),
+    (
+        "opt_named_macro_expansion(64)",
+        "70be92365700558f450620725b02df1a809e7529ce654bef248d2b6fa36bd191",
+    ),
+    (
+        "opt_named_macro_expansion_materialized(64)",
+        "ba0304c5f8655a266366d8cd5993fa6398c0f4ed6296c919f83afa740ba3dce3",
+    ),
+    (
+        "opt_dynamic_macro_expansion(64)",
+        "f881d9703c99c685a1e0d9888f39e7405725a8dae8b2fb95ee2a9c7d3762f59a",
+    ),
 ];
 
 /// `kinds/ifdef_values/if_values` per out-of-contract row, pinned from the

@@ -17,13 +17,15 @@ fn overflow_function_like_macro_missing_rparen() {
     let mut fixture = NamedMacroFixture::empty();
     fixture.insert(b"F", 512, C_MACRO_KIND_FUNCTION_LIKE, 2, &[(0, 0)]);
 
-    let result = catch_unwind(AssertUnwindSafe(|| run_named_macro_expansion(&stream, &fixture, 8)));
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        run_named_macro_expansion(&stream, &fixture, 8)
+    }));
     let eval = result.expect("missing-rparen must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
-        assert!(
-            err.to_string().contains("reference dispatch trapped"),
-            "unexpected error: {err}"
-        );
+    assert!(
+        err.to_string().contains("reference dispatch trapped"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
@@ -45,13 +47,15 @@ fn overflow_object_like_macro_replacement_cannot_reference_parameters() {
         &[(TOK_INTEGER, 0)], // param 0 instead of LITERAL
     );
 
-    let result = catch_unwind(AssertUnwindSafe(|| run_named_macro_expansion(&stream, &fixture, 8)));
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        run_named_macro_expansion(&stream, &fixture, 8)
+    }));
     let eval = result.expect("object-like param ref must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
-        assert!(
-            err.to_string().contains("reference dispatch trapped"),
-            "unexpected error: {err}"
-        );
+    assert!(
+        err.to_string().contains("reference dispatch trapped"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
@@ -73,13 +77,15 @@ fn overflow_named_macro_replacement_range_out_of_bounds() {
     fixture.kinds[slot] = C_MACRO_KIND_OBJECT_LIKE;
     fixture.sizes[macro_idx] = 2; // repl_size crosses the table boundary.
 
-    let result = catch_unwind(AssertUnwindSafe(|| run_named_macro_expansion(&stream, &fixture, 8)));
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        run_named_macro_expansion(&stream, &fixture, 8)
+    }));
     let eval = result.expect("replacement range overflow must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
-        assert!(
-            err.to_string().contains("reference dispatch trapped"),
-            "unexpected error: {err}"
-        );
+    assert!(
+        err.to_string().contains("reference dispatch trapped"),
+        "unexpected error: {err}"
+    );
 }
 
 // ---------------------------------------------------------------------------

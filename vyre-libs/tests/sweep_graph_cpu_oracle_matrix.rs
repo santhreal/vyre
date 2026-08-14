@@ -10,19 +10,19 @@
 
 #![forbid(unsafe_code)]
 
+use vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher;
+use vyre_libs::graph::dispatch::csr_bidirectional::reference_bidirectional_step;
+use vyre_libs::graph::dispatch::csr_forward_or_changed::reference_forward_step_with_change_flag;
+use vyre_libs::graph::dispatch::exploded::{
+    build_ifds_csr_via, reference_build_ifds_csr, reference_canonicalize_csr_within_rows,
+};
+use vyre_libs::graph::dispatch::persistent_bfs::bfs_expand;
 use vyre_primitives::graph::csr_backward_or_changed;
 use vyre_primitives::graph::csr_forward_or_changed;
 use vyre_primitives::graph::exploded::build_cpu_reference;
 use vyre_primitives::graph::motif::{self, MotifEdge};
 use vyre_primitives::graph::path_reconstruct;
 use vyre_primitives::graph::persistent_bfs;
-use vyre_libs::graph::dispatch::exploded::{
-    build_ifds_csr_via, reference_build_ifds_csr, reference_canonicalize_csr_within_rows,
-};
-use vyre_libs::graph::dispatch::csr_bidirectional::reference_bidirectional_step;
-use vyre_libs::graph::dispatch::csr_forward_or_changed::reference_forward_step_with_change_flag;
-use vyre_libs::graph::dispatch::persistent_bfs::bfs_expand;
-use vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher;
 
 /// Shapes per substrate-wrapper family. The wrappers delegate to the primitive
 /// references swept below, so they need breadth, not depth.
@@ -120,7 +120,9 @@ fn csr_cases(cases: u64, seed: u64, stride: u64) -> impl Iterator<Item = CsrCase
     (0..cases).map(move |case| {
         let (node_count, offsets, targets, masks, frontier, allow_mask) =
             generated_csr(seed ^ case.wrapping_mul(stride));
-        (case, node_count, offsets, targets, masks, frontier, allow_mask)
+        (
+            case, node_count, offsets, targets, masks, frontier, allow_mask,
+        )
     })
 }
 
@@ -391,8 +393,17 @@ fn generated_ifds_rules(seed: u64) -> GeneratedIfdsRules {
 }
 
 /// Deterministic IFDS rule-set stream for one sweep family.
-fn ifds_cases(cases: u64, seed: u64, stride: u64) -> impl Iterator<Item = (u64, GeneratedIfdsRules)> {
-    (0..cases).map(move |index| (index, generated_ifds_rules(seed ^ index.wrapping_mul(stride))))
+fn ifds_cases(
+    cases: u64,
+    seed: u64,
+    stride: u64,
+) -> impl Iterator<Item = (u64, GeneratedIfdsRules)> {
+    (0..cases).map(move |index| {
+        (
+            index,
+            generated_ifds_rules(seed ^ index.wrapping_mul(stride)),
+        )
+    })
 }
 
 fn generated_parent(seed: u64) -> (Vec<u32>, Vec<u32>, u32) {

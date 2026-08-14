@@ -17,8 +17,8 @@
 //! asserts BOTH the direct u32 min oracle AND agreement with the importable `mp_edge_clip_cpu`.
 #![cfg(feature = "cpu-parity")]
 
-use vyre_primitives::math::spectral_shape::mp_edge_clip_cpu;
 use vyre_libs::scheduling::spectral_schedule::shape_spectrum_fixed_via;
+use vyre_primitives::math::spectral_shape::mp_edge_clip_cpu;
 
 use vyre_libs::test_support::ReferenceEvalDispatcher;
 

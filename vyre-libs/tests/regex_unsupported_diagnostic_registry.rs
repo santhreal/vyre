@@ -101,7 +101,7 @@ fn regex_unsupported_diagnostic_registry_records_operator_fields() {
 #[cfg(feature = "matching-regex")]
 #[test]
 fn frontend_emits_registry_diagnostic_codes_from_real_patterns() {
-    use vyre_libs::scan::{RegexConstruct, compile_regex_set};
+    use vyre_libs::scan::{compile_regex_set, RegexConstruct};
 
     // Compile-error constructs -> RegexCompileError::diagnostic_code().
     let cases: &[(&str, &str)] = &[

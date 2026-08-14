@@ -37,8 +37,9 @@ use vyre_libs::scan::classic_ac::{
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
 use vyre_libs::scan::{
-    aho_corasick, anchored_window_extract_program, build_regex_dfa_pipeline_with_policy_and_subgroup_coalesce,
-    fused_region_evidence_program, regex_admission_by_region_program, RegexReplayPolicy,
+    aho_corasick, anchored_window_extract_program,
+    build_regex_dfa_pipeline_with_policy_and_subgroup_coalesce, fused_region_evidence_program,
+    regex_admission_by_region_program, RegexReplayPolicy,
 };
 use vyre_primitives::matching::CompiledDfa;
 
@@ -433,9 +434,7 @@ fn unpacked_walks_share_the_transition_shape() {
                 Node::Assign { name, value } if *name == "state" => transition_shape(value),
                 _ => None,
             })
-            .unwrap_or_else(|| {
-                panic!("{name} must emit a `state = transitions[...]` step")
-            });
+            .unwrap_or_else(|| panic!("{name} must emit a `state = transitions[...]` step"));
 
         // An unpacked walk differs from the bounded family in exactly ONE way:
         // it indexes the haystack buffer directly instead of unpacking a u32
@@ -549,7 +548,10 @@ fn walk_extraction_sees_the_constructs_it_claims_to_compare() {
                         ),
                     ),
                 ),
-                Node::let_bind("out_begin", Expr::load("output_offsets", Expr::var("state"))),
+                Node::let_bind(
+                    "out_begin",
+                    Expr::load("output_offsets", Expr::var("state")),
+                ),
                 Node::let_bind("out_end", Expr::load("output_offsets", Expr::var("state"))),
                 Node::loop_for(
                     "rs_step",
@@ -562,10 +564,7 @@ fn walk_extraction_sees_the_constructs_it_claims_to_compare() {
         )],
     );
     assert!(transition_step(&program).is_some());
-    assert_eq!(
-        output_link_span(&program).expect("span").lines().count(),
-        2
-    );
+    assert_eq!(output_link_span(&program).expect("span").lines().count(), 2);
     assert_eq!(region_search(&program).expect("search").lines().count(), 2);
 
     let step = all_nodes(&program)

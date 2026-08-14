@@ -22,8 +22,8 @@ use vyre_libs::scan::classic_ac::{
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
 };
-use vyre_libs::scan::{pack_haystack_u32};
-use vyre_primitives::wire::{pack_u32_slice};
+use vyre_libs::scan::pack_haystack_u32;
+use vyre_primitives::wire::pack_u32_slice;
 
 struct Lcg(u64);
 impl Lcg {
@@ -179,13 +179,14 @@ fn fused_presence_and_positions_equals_separate_scans_high_volume() {
         // subgroup ops, and this is the exact non-subgroup form the production consumer's position
         // scan uses (`try_build_literal_set_program`). The fused program likewise
         // uses plain `append_match`, so both append paths match bit-for-bit.
-        let sep_positions_program = try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
-            &ac.dfa,
-            pattern_count,
-            MAX_MATCHES,
-            false,
-        )
-        .expect("separate positions program builds");
+        let sep_positions_program =
+            try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
+                &ac.dfa,
+                pattern_count,
+                MAX_MATCHES,
+                false,
+            )
+            .expect("separate positions program builds");
         let sep_positions_inputs = vec![
             val(haystack_packed.clone()),
             val(transitions.clone()),

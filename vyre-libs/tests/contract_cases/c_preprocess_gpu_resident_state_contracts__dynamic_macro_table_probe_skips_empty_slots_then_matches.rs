@@ -44,9 +44,8 @@ fn dynamic_macro_table_full_without_empty_slot_fails_loudly() {
     }));
     let eval = result.expect("full-table probe must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
-        assert!(
-            err.to_string().contains("reference dispatch trapped"),
-            "unexpected error: {err}"
-        );
+    assert!(
+        err.to_string().contains("reference dispatch trapped"),
+        "unexpected error: {err}"
+    );
 }
-

@@ -171,7 +171,9 @@ fn clone_family_entry_points_emit_the_pinned_ir() {
         if got != pinned {
             drifted = true;
         }
-        report.push_str(&format!("    (\n        \"{name}\",\n        \"{got}\",\n    ),\n"));
+        report.push_str(&format!(
+            "    (\n        \"{name}\",\n        \"{got}\",\n    ),\n"
+        ));
     }
     assert!(
         !drifted,
@@ -227,7 +229,11 @@ fn mla_and_flash_attention_2_share_the_online_softmax_skeleton() {
     );
     // 0 is the query load (buffer name and item variable differ); 4 is the
     // tile loop, compared separately below.
-    assert_eq!(mla_item[1..4], flash_item[1..4], "m / l / o_acc init drifted");
+    assert_eq!(
+        mla_item[1..4],
+        flash_item[1..4],
+        "m / l / o_acc init drifted"
+    );
     assert_eq!(mla_item[5], flash_item[5], "denominator guard drifted");
 
     let mla_tile = tile_loop_body(&mla_item);

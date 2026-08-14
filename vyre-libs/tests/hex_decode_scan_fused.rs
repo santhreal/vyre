@@ -4,9 +4,9 @@
 #![allow(deprecated)]
 mod common;
 use common::{decode_u32_words, u32_bytes};
-use vyre_libs::scan::{aho_corasick};
-use vyre_primitives::matching::{dfa_compile};
 use vyre_libs::decode::{hex_decode, hex_decode_table, hex_decode_then_aho_corasick};
+use vyre_libs::scan::aho_corasick;
+use vyre_primitives::matching::dfa_compile;
 use vyre_reference::value::Value;
 
 fn hex_encode(bytes: &[u8]) -> Vec<u8> {

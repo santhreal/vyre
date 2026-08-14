@@ -13,8 +13,8 @@
 //! even cyclic parent arrays terminate (both the GPU IR and `cpu_ref` bound-walk identically).
 #![cfg(feature = "cpu-parity")]
 
-use vyre_primitives::graph::path_reconstruct::cpu_ref;
 use vyre_libs::graph::dispatch::path_reconstruct::reconstruct_path_via;
+use vyre_primitives::graph::path_reconstruct::cpu_ref;
 
 use vyre_libs::test_support::ReferenceEvalDispatcher;
 

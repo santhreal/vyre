@@ -8,8 +8,8 @@ mod c_frontend;
 #[path = "../../tests/support/c_frontend/fixtures/complete_construct_corpus.rs"]
 mod complete_construct_corpus;
 
-use complete_construct_corpus::*;
 use crate::c_frontend::rows::{row_indices as typed_indices, word_at, VAST_STRIDE_U32};
+use complete_construct_corpus::*;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_build_vast_nodes, reference_c11_classify_vast_node_kinds, C_AST_KIND_ARRAY_DECL,
     C_AST_KIND_ARRAY_SUBSCRIPT_EXPR, C_AST_KIND_ASSIGN_EXPR, C_AST_KIND_CONDITIONAL_EXPR,

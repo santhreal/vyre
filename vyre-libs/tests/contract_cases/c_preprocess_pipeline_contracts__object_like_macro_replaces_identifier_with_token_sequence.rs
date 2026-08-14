@@ -407,4 +407,3 @@ fn directive_metadata_rejects_pre_splice_preproc_span() {
 // ---------------------------------------------------------------------------
 // 6. Directive-position hash vs operator hash
 // ---------------------------------------------------------------------------
-

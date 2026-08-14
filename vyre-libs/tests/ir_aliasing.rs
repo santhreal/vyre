@@ -80,9 +80,9 @@ fn duplicate_self_exclusive_parser_regions_fail_validation() {
 
     let errors = validate(&combined);
     assert!(
-        errors
-            .iter()
-            .any(|error| error.message().contains("marked non-composable with itself")),
+        errors.iter().any(|error| error
+            .message()
+            .contains("marked non-composable with itself")),
         "{errors:#?}"
     );
 }

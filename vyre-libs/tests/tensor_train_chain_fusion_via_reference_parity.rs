@@ -15,9 +15,7 @@
 //! product of the nonzero ranks (an independent mathematical oracle the IR must reproduce).
 #![cfg(feature = "cpu-parity")]
 
-use vyre_libs::solvers::tensor_train_chain_fusion::{
-    fusion_pressure_via, should_fuse_chain_via,
-};
+use vyre_libs::solvers::tensor_train_chain_fusion::{fusion_pressure_via, should_fuse_chain_via};
 
 use vyre_libs::test_support::ReferenceEvalDispatcher;
 

@@ -20,8 +20,8 @@
 #![cfg(feature = "matching-regex")]
 
 use proptest::prelude::*;
-use vyre_libs::scan::{AnchoredWindowValidator, build_regex_dfa_pipeline};
 use vyre_foundation::match_result::ByteRange;
+use vyre_libs::scan::{build_regex_dfa_pipeline, AnchoredWindowValidator};
 
 /// Build the anchored DFA for one pattern and return its validator-ready DFA.
 fn dfa_for(pattern: &str) -> vyre_libs::scan::regex_dfa::RegexDfaPipeline {

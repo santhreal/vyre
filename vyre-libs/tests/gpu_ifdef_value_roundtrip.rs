@@ -10,11 +10,11 @@
 mod support;
 
 use support::preprocess_stream::{build_token_stream, pack_defined_macros, unpack_u32};
-use vyre_primitives::wire::pack_u32_slice as pack_u32_le;
 use vyre_libs::parsing::c::lex::tokens::{TOK_PP_IFDEF, TOK_PP_IFNDEF};
 use vyre_libs::parsing::c::preprocess::gpu_directive_metadata::gpu_directive_metadata;
 use vyre_libs::parsing::c::preprocess::gpu_ifdef_value::gpu_ifdef_value;
 use vyre_libs::parsing::c::preprocess::reference_c_preprocessor_directive_metadata;
+use vyre_primitives::wire::pack_u32_slice as pack_u32_le;
 use vyre_reference::value::Value;
 
 fn run_full_pipeline(source: &[u8], defined_macros: &[&[u8]]) -> (Vec<u32>, Vec<u32>) {

@@ -7,7 +7,7 @@
 
 #![cfg(feature = "matching-regex")]
 
-use vyre_libs::scan::{RegexCompileError, compile_regex_set};
+use vyre_libs::scan::{compile_regex_set, RegexCompileError};
 
 const STATE_CAP: usize = vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP * 32;
 

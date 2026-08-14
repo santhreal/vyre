@@ -11,10 +11,10 @@ fn conditional_stack_endif_without_open_fails_loudly() {
     }));
     let eval = result.expect("endif-without-open must return an error, not panic");
     let err = eval.expect_err("expected reference evaluation failure");
-        assert!(
-            err.to_string().contains("reference dispatch trapped"),
-            "unexpected error: {err}"
-        );
+    assert!(
+        err.to_string().contains("reference dispatch trapped"),
+        "unexpected error: {err}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -65,4 +65,3 @@ ine FOO 1\n";
     assert_eq!(kinds, vec![TOK_PP_DEFINE]);
     assert_eq!(values, vec![0]);
 }
-

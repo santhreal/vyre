@@ -29,8 +29,8 @@ use vyre_libs::scan::classic_ac::{
     classic_ac_candidate_suffix3_bloom_words, classic_ac_compile, presence_by_region_words,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
 };
-use vyre_libs::scan::{pack_haystack_u32};
-use vyre_primitives::wire::{pack_u32_slice};
+use vyre_libs::scan::pack_haystack_u32;
+use vyre_primitives::wire::pack_u32_slice;
 
 fn decode_u32(bytes: &[u8]) -> Vec<u32> {
     bytes
