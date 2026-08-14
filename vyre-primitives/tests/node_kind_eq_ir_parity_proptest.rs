@@ -11,8 +11,6 @@
 //! workgroup) with kinds drawn from a SMALL alphabet so matches are dense and multiple lanes hit the
 //! same output word concurrently (the exact case a non-atomic OR corrupts). Asserts the full packed
 //! NodeSet bit-exact vs `cpu_ref`, plus deterministic all-match / no-match / word-boundary anchors.
-#![cfg(feature = "cpu-parity")]
-
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 

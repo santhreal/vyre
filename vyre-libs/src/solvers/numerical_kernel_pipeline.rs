@@ -12,7 +12,7 @@ use vyre_primitives::math::{
     },
     preconditioner::{newton_schulz_poly5_f32, newton_schulz_y_step},
     randomized_svd::randomized_projection_step,
-    sinkhorn_iterate::sinkhorn_iterate,
+    sinkhorn_iterate::{sinkhorn_iterate, SinkhornBuffers, SinkhornExtents},
 };
 
 #[cfg(any(test, feature = "cpu-parity"))]
@@ -59,38 +59,16 @@ pub fn dispatch_newton_schulz_poly5_f32(mat: &str, output: &str, rows: u32, cols
 }
 
 /// Build a quantized Sinkhorn fixed-point dispatch.
+///
+/// A dispatch facade adds nothing to the primitive here: it forwards the same
+/// binding record and the same extents, so it takes them rather than restating
+/// the ten names and three dimensions as its own parameter list.
 #[must_use]
-#[allow(clippy::too_many_arguments)]
 pub fn dispatch_sinkhorn_iterate(
-    k: &str,
-    k_t: &str,
-    a: &str,
-    b: &str,
-    u_curr: &str,
-    u_next: &str,
-    v: &str,
-    kv: &str,
-    ktu: &str,
-    changed: &str,
-    m: u32,
-    n: u32,
-    max_iterations: u32,
+    buffers: SinkhornBuffers<'_>,
+    extents: SinkhornExtents,
 ) -> Program {
-    sinkhorn_iterate(
-        k,
-        k_t,
-        a,
-        b,
-        u_curr,
-        u_next,
-        v,
-        kv,
-        ktu,
-        changed,
-        m,
-        n,
-        max_iterations,
-    )
+    sinkhorn_iterate(buffers, extents)
 }
 
 /// Build a Gaussian RDP per-step dispatch.
@@ -344,6 +322,44 @@ mod tests {
         generator.as_str()
     }
 
+    /// The binding names the Sinkhorn dispatch tests build against, with each
+    /// field named once.
+    const SINKHORN_FIXTURE: SinkhornBuffers<'static> = SinkhornBuffers {
+        k: "k",
+        k_t: "kt",
+        a: "a",
+        b: "b",
+        u_curr: "uc",
+        u_next: "un",
+        v: "v",
+        kv: "kv",
+        ktu: "ktu",
+        changed: "changed",
+    };
+
+    /// The dispatch facade must emit exactly the primitive's program.
+    ///
+    /// It forwards the record and the extents and adds nothing, so the two
+    /// emissions must be byte-identical on the wire. Compared on the wire
+    /// encoding rather than a debug string, which would compare formatting.
+    #[test]
+    fn sinkhorn_dispatch_emits_the_primitive_program_unchanged() {
+        let extents = SinkhornExtents {
+            m: 17,
+            n: 17,
+            max_iterations: 4,
+        };
+        let encode = |program: &vyre_foundation::ir::Program| {
+            vyre_foundation::serial::wire::encode::to_wire(program)
+                .expect("Fix: a sinkhorn program must encode to the wire form.")
+        };
+        assert_eq!(
+            encode(&dispatch_sinkhorn_iterate(SINKHORN_FIXTURE, extents)),
+            encode(&sinkhorn_iterate(SINKHORN_FIXTURE, extents)),
+            "Fix: dispatch_sinkhorn_iterate must forward to the primitive, not restate its program."
+        );
+    }
+
     #[test]
     fn program_builders_emit_expected_numerical_primitives() {
         assert_eq!(
@@ -360,7 +376,12 @@ mod tests {
         );
         assert_eq!(
             program_generator(&dispatch_sinkhorn_iterate(
-                "k", "kt", "a", "b", "uc", "un", "v", "kv", "ktu", "changed", 2, 2, 3
+                SINKHORN_FIXTURE,
+                SinkhornExtents {
+                    m: 2,
+                    n: 2,
+                    max_iterations: 3,
+                },
             )),
             "vyre-primitives::math::sinkhorn_iterate"
         );

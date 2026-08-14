@@ -15,22 +15,60 @@ use crate::math::sinkhorn::sinkhorn_scale;
 /// Stable registry id for the iterative Sinkhorn primitive.
 pub const OP_ID: &str = "vyre-primitives::math::sinkhorn_iterate";
 
+/// The ten buffer bindings one iterative-Sinkhorn program declares.
+///
+/// Every one of them is a `&str`, so a positional call of the ten accepted any
+/// permutation of them, and one caller took that offer: the crate's own IR
+/// parity test passed the names in BINDING order rather than parameter order,
+/// so the emitted program named its kernel matrix `u_curr`, its `u` ping-pong
+/// half `k_t`, and its convergence flag `kv`. Nothing noticed, because that
+/// test feeds `reference_eval` by binding index, where a name is only a label.
+/// A consumer that binds by name reads the scaling vector as the kernel.
+/// Naming each binding at the construction site is what makes a transposition a
+/// diff instead of a silent argument swap.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SinkhornBuffers<'a> {
+    /// `m x n` kernel matrix.
+    pub k: &'a str,
+    /// `n x m` transposed kernel matrix.
+    pub k_t: &'a str,
+    /// `m` target marginals.
+    pub a: &'a str,
+    /// `n` target marginals.
+    pub b: &'a str,
+    /// `m` elements, current half of the `u` ping-pong.
+    pub u_curr: &'a str,
+    /// `m` elements, next half of the `u` ping-pong.
+    pub u_next: &'a str,
+    /// `n` elements, current state for `v`.
+    pub v: &'a str,
+    /// `m` elements of `K v` scratch.
+    pub kv: &'a str,
+    /// `n` elements of `K_T u` scratch.
+    pub ktu: &'a str,
+    /// Convergence flag. One element on the single-workgroup form,
+    /// `max_iterations` elements on the grid form; see the form note on
+    /// [`sinkhorn_iterate`].
+    pub changed: &'a str,
+}
+
+/// The problem extents and iteration cap one iterative-Sinkhorn program is
+/// built for.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SinkhornExtents {
+    /// Row count of the kernel matrix, and the length of `a`, `u_curr`,
+    /// `u_next` and `kv`.
+    pub m: u32,
+    /// Column count of the kernel matrix, and the length of `b`, `v` and `ktu`.
+    pub n: u32,
+    /// Hard cap on iterations.
+    pub max_iterations: u32,
+}
+
 /// Sinkhorn full iteration.
 ///
-/// Runs Sinkhorn matrix-scaling iterations to convergence.
-///
-/// # Buffers
-/// - `k`: `m x n` kernel matrix.
-/// - `k_t`: `n x m` transposed kernel matrix.
-/// - `a`: `m` target marginals.
-/// - `b`: `n` target marginals.
-/// - `u_curr`: `m` elements, ping-pong state for u.
-/// - `u_next`: `m` elements, ping-pong state for u.
-/// - `v`: `n` elements, current state for v.
-/// - `kv`: `m` elements scratch.
-/// - `ktu`: `n` elements scratch.
-/// - `changed`: convergence flag. One element on the single-workgroup form,
-///   `max_iterations` elements on the grid form; see below.
+/// Runs Sinkhorn matrix-scaling iterations to convergence over the bindings
+/// [`SinkhornBuffers`] names, at the extents [`SinkhornExtents`] fixes.
 ///
 /// # Convergence-flag form
 ///
@@ -59,26 +97,16 @@ pub const OP_ID: &str = "vyre-primitives::math::sinkhorn_iterate";
 /// A `17 x 17` problem is already 289 cells, so this threshold is crossed at
 /// modest sizes with both extents far under one workgroup width.
 #[must_use]
-#[allow(clippy::too_many_arguments)]
-pub fn sinkhorn_iterate(
-    k: &str,
-    k_t: &str,
-    a: &str,
-    b: &str,
-    u_curr: &str,
-    u_next: &str,
-    v: &str,
-    kv: &str,
-    ktu: &str,
-    changed: &str,
-    m: u32,
-    n: u32,
-    max_iterations: u32,
-) -> Program {
+pub fn sinkhorn_iterate(buffers: SinkhornBuffers<'_>, extents: SinkhornExtents) -> Program {
+    let SinkhornExtents {
+        m,
+        n,
+        max_iterations,
+    } = extents;
     if m == 0 {
         return crate::invalid_output_program(
             OP_ID,
-            u_curr,
+            buffers.u_curr,
             DataType::U32,
             "Fix: sinkhorn_iterate requires m > 0, got 0.".to_string(),
         );
@@ -86,7 +114,7 @@ pub fn sinkhorn_iterate(
     if n == 0 {
         return crate::invalid_output_program(
             OP_ID,
-            u_curr,
+            buffers.u_curr,
             DataType::U32,
             "Fix: sinkhorn_iterate requires n > 0, got 0.".to_string(),
         );
@@ -94,13 +122,13 @@ pub fn sinkhorn_iterate(
     let Some(matrix_cells) = m.checked_mul(n) else {
         return crate::invalid_output_program(
             OP_ID,
-            u_curr,
+            buffers.u_curr,
             DataType::U32,
             format!("Fix: sinkhorn_iterate m*n overflows u32: {m}*{n}."),
         );
     };
 
-    let transfer_body = sinkhorn_transfer_body(k, k_t, a, b, u_next, v, kv, ktu, m, n);
+    let transfer_body = sinkhorn_transfer_body(buffers, extents);
 
     // `m` alone does NOT decide the harness: see the form note above. `k` and
     // `k_t` are `m * n` long, which dominates `m` and `n` for any non-zero
@@ -109,9 +137,23 @@ pub fn sinkhorn_iterate(
     let needs_grid_sync = matrix_cells > PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];
 
     let inner = if needs_grid_sync {
-        persistent_fixpoint_grid(transfer_body, u_curr, u_next, changed, m, max_iterations)
+        persistent_fixpoint_grid(
+            transfer_body,
+            buffers.u_curr,
+            buffers.u_next,
+            buffers.changed,
+            m,
+            max_iterations,
+        )
     } else {
-        persistent_fixpoint(transfer_body, u_curr, u_next, changed, m, max_iterations)
+        persistent_fixpoint(
+            transfer_body,
+            buffers.u_curr,
+            buffers.u_next,
+            buffers.changed,
+            m,
+            max_iterations,
+        )
     };
 
     // Mirrors the count the chosen harness declares for `changed`: one
@@ -123,23 +165,7 @@ pub fn sinkhorn_iterate(
         1
     };
 
-    sinkhorn_wrap(
-        &inner,
-        k,
-        k_t,
-        a,
-        b,
-        u_curr,
-        u_next,
-        v,
-        kv,
-        ktu,
-        changed,
-        m,
-        n,
-        matrix_cells,
-        changed_words,
-    )
+    sinkhorn_wrap(&inner, buffers, extents, matrix_cells, changed_words)
 }
 
 /// One full Sinkhorn sweep: `Kv`, then `u`, then `Ktu`, then `v`.
@@ -151,19 +177,23 @@ pub fn sinkhorn_iterate(
 /// above 0 own any state. It is NOT `m * n`: nothing walks the kernel matrices
 /// one cell per lane, so a launch made multi-workgroup only by the size of `k`
 /// and `k_t` leaves every gate inside group 0.
-#[allow(clippy::too_many_arguments)]
-fn sinkhorn_transfer_body(
-    k: &str,
-    k_t: &str,
-    a: &str,
-    b: &str,
-    u_next: &str,
-    v: &str,
-    kv: &str,
-    ktu: &str,
-    m: u32,
-    n: u32,
-) -> Vec<Node> {
+///
+/// Takes the whole binding record even though the sweep never reads `u_curr` or
+/// `changed`: those two belong to the convergence harness, and forwarding the
+/// record is what keeps the sweep from restating a second copy of the list.
+fn sinkhorn_transfer_body(buffers: SinkhornBuffers<'_>, extents: SinkhornExtents) -> Vec<Node> {
+    let SinkhornBuffers {
+        k,
+        k_t,
+        a,
+        b,
+        u_next,
+        v,
+        kv,
+        ktu,
+        ..
+    } = buffers;
+    let SinkhornExtents { m, n, .. } = extents;
     let extract_body = |p: Program| -> Vec<Node> {
         let mut body = Vec::new();
         for node in p.entry() {
@@ -222,24 +252,26 @@ fn sinkhorn_transfer_body(
 /// Single owner of those ten declarations, so the two routed forms and the
 /// single-word form the divergence test builds cannot drift apart in binding
 /// order, counts, or access modes.
-#[allow(clippy::too_many_arguments)]
 fn sinkhorn_wrap(
     inner: &Program,
-    k: &str,
-    k_t: &str,
-    a: &str,
-    b: &str,
-    u_curr: &str,
-    u_next: &str,
-    v: &str,
-    kv: &str,
-    ktu: &str,
-    changed: &str,
-    m: u32,
-    n: u32,
+    buffers: SinkhornBuffers<'_>,
+    extents: SinkhornExtents,
     matrix_cells: u32,
     changed_words: u32,
 ) -> Program {
+    let SinkhornBuffers {
+        k,
+        k_t,
+        a,
+        b,
+        u_curr,
+        u_next,
+        v,
+        kv,
+        ktu,
+        changed,
+    } = buffers;
+    let SinkhornExtents { m, n, .. } = extents;
     super::wrap_fixpoint_program(
         OP_ID,
         inner,
@@ -269,44 +301,21 @@ fn sinkhorn_wrap(
 /// produces above one workgroup. Production code must never take this path above
 /// one workgroup width.
 #[cfg(test)]
-#[allow(clippy::too_many_arguments)]
-fn sinkhorn_single_word_harness(
-    k: &str,
-    k_t: &str,
-    a: &str,
-    b: &str,
-    u_curr: &str,
-    u_next: &str,
-    v: &str,
-    kv: &str,
-    ktu: &str,
-    changed: &str,
-    m: u32,
-    n: u32,
-    max_iterations: u32,
-) -> Program {
-    let matrix_cells = m
-        .checked_mul(n)
+fn sinkhorn_single_word_harness(buffers: SinkhornBuffers<'_>, extents: SinkhornExtents) -> Program {
+    let matrix_cells = extents
+        .m
+        .checked_mul(extents.n)
         .expect("Fix: the divergence fixture must use non-overflowing extents.");
-    let transfer_body = sinkhorn_transfer_body(k, k_t, a, b, u_next, v, kv, ktu, m, n);
-    let inner = persistent_fixpoint(transfer_body, u_curr, u_next, changed, m, max_iterations);
-    sinkhorn_wrap(
-        &inner,
-        k,
-        k_t,
-        a,
-        b,
-        u_curr,
-        u_next,
-        v,
-        kv,
-        ktu,
-        changed,
-        m,
-        n,
-        matrix_cells,
-        1,
-    )
+    let transfer_body = sinkhorn_transfer_body(buffers, extents);
+    let inner = persistent_fixpoint(
+        transfer_body,
+        buffers.u_curr,
+        buffers.u_next,
+        buffers.changed,
+        extents.m,
+        extents.max_iterations,
+    );
+    sinkhorn_wrap(&inner, buffers, extents, matrix_cells, 1)
 }
 
 /// CPU reference for iterative Sinkhorn.
@@ -520,7 +529,27 @@ crate::graph::scratch::define_reserve_graph_capacity!(
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
-        || sinkhorn_iterate("k", "kt", "a", "b", "uc", "un", "v", "kv", "ktu", "c", 2, 2, 5),
+        || {
+            sinkhorn_iterate(
+                SinkhornBuffers {
+                    k: "k",
+                    k_t: "kt",
+                    a: "a",
+                    b: "b",
+                    u_curr: "uc",
+                    u_next: "un",
+                    v: "v",
+                    kv: "kv",
+                    ktu: "ktu",
+                    changed: "c",
+                },
+                SinkhornExtents {
+                    m: 2,
+                    n: 2,
+                    max_iterations: 5,
+                },
+            )
+        },
         Some(|| {
             let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
             vec![vec![
