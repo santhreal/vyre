@@ -13,7 +13,8 @@ const COVERAGE_WAIVER: &[&str] = &[/* builder, // reason */];
 
 #[test]
 fn every_program_builder_is_tested_registered_or_explicitly_waived() {
-    vyre_test_support::assert_registry_closure(env!("CARGO_MANIFEST_DIR"), COVERAGE_WAIVER, 4);
+    let crate_dir = vyre_test_support::monorepo::vyre_workspace_root().join("vyre-libs");
+    vyre_test_support::assert_registry_closure(crate_dir, COVERAGE_WAIVER, 4);
 }
 ```
 

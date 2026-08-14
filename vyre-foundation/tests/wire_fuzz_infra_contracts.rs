@@ -4,13 +4,11 @@
 //! libFuzzer target, corpus layout, and nightly release hook from drifting.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+use vyre_test_support::monorepo::vyre_workspace_root;
 
 fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: vyre-foundation must live under the workspace root.")
-        .to_path_buf()
+    vyre_workspace_root()
 }
 
 #[test]

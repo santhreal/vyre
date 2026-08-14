@@ -13,6 +13,11 @@ keywords = ["vyre", "testing", "harness", "coverage", "registry"]
 categories = ["development-tools::testing"]
 publish = false
 
+# The one owner of "which checkout am I reporting on". Resolved from the working
+# directory at run time, never compiled in.
+[dependencies]
+structure-gate = { path = "../structure-gate" }
+
 [dev-dependencies]
 tempfile.workspace = true
 

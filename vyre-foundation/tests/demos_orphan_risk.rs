@@ -6,12 +6,11 @@
 //! references in the root Cargo.toml.
 
 use std::collections::HashSet;
-use std::path::PathBuf;
+use vyre_test_support::monorepo::vyre_workspace_root;
 
 #[test]
 fn examples_are_in_workspace_or_standalone() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest.parent().unwrap();
+    let workspace_root = vyre_workspace_root();
     let examples_dir = workspace_root.join("examples");
     if !examples_dir.is_dir() {
         return;
@@ -61,8 +60,7 @@ fn examples_are_in_workspace_or_standalone() {
 
 #[test]
 fn examples_have_tests_or_are_exempt() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest.parent().unwrap();
+    let workspace_root = vyre_workspace_root();
     let examples_dir = workspace_root.join("examples");
     if !examples_dir.is_dir() {
         return;
@@ -102,8 +100,7 @@ fn examples_have_tests_or_are_exempt() {
 
 #[test]
 fn no_stale_demo_references_in_workspace_toml() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest.parent().unwrap();
+    let workspace_root = vyre_workspace_root();
     let root_toml = std::fs::read_to_string(workspace_root.join("Cargo.toml")).unwrap();
 
     // Stale references to removed demo directories should not persist forever.
