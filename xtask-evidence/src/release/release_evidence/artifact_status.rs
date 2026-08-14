@@ -134,7 +134,8 @@ fn artifact_semantic_blockers(
     expected_generator_command: &str,
     command_mode: &str,
 ) -> Vec<String> {
-    let mut blockers = xtask::release::repo_boundary::public_artifact_boundary_blockers(artifact, bytes);
+    let mut blockers =
+        xtask::release::repo_boundary::public_artifact_boundary_blockers(artifact, bytes);
     if artifact.starts_with("release/evidence/dedup/") {
         blockers.extend(validate_duplicate_family_report_artifact(
             bytes,
@@ -158,8 +159,9 @@ fn artifact_semantic_blockers(
                 "external benchmark artifact `{artifact}` is not valid JSON: {error}"
             )),
         }
-        blockers
-            .extend(crate::bench::release_benchmarks::validate_frontier_leaderboard_artifact_bytes(bytes));
+        blockers.extend(
+            crate::bench::release_benchmarks::validate_frontier_leaderboard_artifact_bytes(bytes),
+        );
         return blockers;
     }
     if is_release_benchmark_semantic_artifact(artifact) {

@@ -148,8 +148,9 @@ fn artifact_contracts_for_command(
             command_mode: command_mode.to_string(),
             command_required,
             schema_version: crate::bench::release_benchmarks::FRONTIER_LEADERBOARD_SCHEMA_VERSION,
-            semantic_validator: crate::bench::release_benchmarks::FRONTIER_LEADERBOARD_SEMANTIC_VALIDATOR
-                .to_string(),
+            semantic_validator:
+                crate::bench::release_benchmarks::FRONTIER_LEADERBOARD_SEMANTIC_VALIDATOR
+                    .to_string(),
             required_fields:
                 crate::bench::release_benchmarks::frontier_leaderboard_required_artifact_fields()
                     .iter()

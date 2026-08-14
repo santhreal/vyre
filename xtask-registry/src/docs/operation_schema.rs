@@ -288,7 +288,7 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
         Err(error) => errors.push(format!("target facet registry startup failed: {error}")),
     }
 
-    let live = crate::live_registry::live_operation_registry()
+    let live = vyre_registry_link::operation::live_operation_registry()
         .iter()
         .map(|entry| LiveEntry {
             id: entry.id,

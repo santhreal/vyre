@@ -72,7 +72,7 @@ pub(crate) fn select_entries(
 }
 
 pub(crate) fn unified_entries() -> Vec<UnifiedEntry> {
-    vyre_foundation::operation::OperationRegistry::global()
+    vyre_registry_link::operation::live_operation_registry()
         .iter()
         .map(|entry| UnifiedEntry {
             id: entry.id,

@@ -5,9 +5,13 @@ use serde_json::Value;
 
 use super::args::{parse_args, Config};
 use super::cpu_sota_proof::write_cpu_100x_proof;
+use super::evidence_schema::{
+    BackendSuiteArtifactInput, ReleaseWorkloadFamily, ReleaseWorkloadMatrix,
+};
 use super::frontier_leaderboard::write_frontier_leaderboard;
 use super::inspect_core::read_text_bounded;
 use super::optimization::{write_optimization_benchmark_manifest, write_release_axes};
+use super::release_thresholds::{MAX_RELEASE_BENCHMARK_TEXT_BYTES, REQUIRED_CPU_SOTA_100X_CASES};
 use super::runner::{
     benchmark_artifact_is_reusable, copy_artifact, run_command, run_named_benchmark_if_needed,
 };
@@ -15,8 +19,6 @@ use super::suite_inspect::{
     backend_suite_output_path, prefixed_benchmark_artifact, run_workload_benchmark,
     write_backend_suite_with_extra_blockers,
 };
-use super::release_thresholds::{MAX_RELEASE_BENCHMARK_TEXT_BYTES, REQUIRED_CPU_SOTA_100X_CASES};
-use super::evidence_schema::{BackendSuiteArtifactInput, ReleaseWorkloadFamily, ReleaseWorkloadMatrix};
 
 pub(crate) fn run(args: &[String]) {
     let config = match parse_args(args) {
@@ -403,7 +405,9 @@ fn generated_benchmark_evidence_blockers(workspace_root: &Path, paths: &[String]
             }
         };
         blockers.extend(
-            crate::bench::benchmark_evidence_semantics::benchmark_evidence_blocker_issues(path, &value),
+            crate::bench::benchmark_evidence_semantics::benchmark_evidence_blocker_issues(
+                path, &value,
+            ),
         );
     }
     blockers

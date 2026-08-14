@@ -194,7 +194,7 @@ fn schema_rows_cover_every_required_operation_contract() {
 #[test]
 fn every_registered_operation_id_namespaces_its_owning_crate() {
     let members = workspace_members();
-    let registry = xtask_registry::live_registry::live_operation_registry();
+    let registry = vyre_registry_link::operation::live_operation_registry();
 
     assert!(
         registry.iter().len() > 100,

@@ -59,7 +59,7 @@ Own the xtask subcommands that decide whether a recorded benchmark or release me
 ### Boundaries
 
 The `release-tooling` owner maintains this `tooling` crate at `xtask-evidence`.
-Its allowed internal production dependencies are: `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `xtask`.
+Its allowed internal production dependencies are: `vyre-bench`, `vyre-driver`, `vyre-registry-link`, `xtask`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

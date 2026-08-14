@@ -8,6 +8,8 @@
 mod args;
 #[path = "release_benchmarks/cpu_sota_proof.rs"]
 mod cpu_sota_proof;
+#[path = "release_benchmarks/evidence_schema.rs"]
+mod evidence_schema;
 #[path = "release_benchmarks/frontier_leaderboard.rs"]
 mod frontier_leaderboard;
 #[path = "release_benchmarks/inspect_core.rs"]
@@ -16,16 +18,14 @@ mod inspect_core;
 mod metrics;
 #[path = "release_benchmarks/optimization.rs"]
 mod optimization;
+#[path = "release_benchmarks/release_thresholds.rs"]
+mod release_thresholds;
 #[path = "release_benchmarks/run.rs"]
 mod run;
 #[path = "release_benchmarks/runner.rs"]
 mod runner;
 #[path = "release_benchmarks/suite_inspect.rs"]
 mod suite_inspect;
-#[path = "release_benchmarks/evidence_schema.rs"]
-mod evidence_schema;
-#[path = "release_benchmarks/release_thresholds.rs"]
-mod release_thresholds;
 
 pub(crate) use frontier_leaderboard::{
     frontier_leaderboard_required_artifact_fields, validate_frontier_leaderboard_artifact_bytes,

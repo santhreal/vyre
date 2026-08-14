@@ -80,7 +80,7 @@ pub fn capture_environment() -> std::io::Result<EnvironmentData> {
     {
         features.push("gpu.nvidia_smi.compute_capability".to_string());
     }
-    let registered_backends = vyre_driver::backend::registered_backends_by_precedence_slice()
+    let registered_backends = vyre_registry_link::backend::live_backend_registry_by_precedence()
         .map_err(|error| {
             std::io::Error::other(format!("backend registry startup failed: {error}"))
         })?;

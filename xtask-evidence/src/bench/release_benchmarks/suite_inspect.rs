@@ -4,14 +4,20 @@ use std::path::Path;
 
 use serde_json::{json, Value};
 
+use super::evidence_schema::{
+    BackendSuiteArtifact, BackendSuiteArtifactInput, BackendSuiteEvidence, HardwareDigestField,
+    HardwareUnavailableReason,
+};
 use super::inspect_core::{
-    first_metric_p50, read_benchmark_report, read_text_bounded,
-    record_observed_metric_percentile, record_required_metric_percentile, WallClockMinima,
+    first_metric_p50, read_benchmark_report, read_text_bounded, record_observed_metric_percentile,
+    record_required_metric_percentile, WallClockMinima,
 };
 use super::metrics::write_json;
+use super::release_thresholds::{
+    MAX_RELEASE_BENCHMARK_TEXT_BYTES, MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MAJOR,
+    MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MINOR, MIN_CUDA_RELEASE_MEMORY_MIB,
+};
 use super::runner::run_command_status;
-use super::release_thresholds::{MAX_RELEASE_BENCHMARK_TEXT_BYTES, MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MAJOR, MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MINOR, MIN_CUDA_RELEASE_MEMORY_MIB};
-use super::evidence_schema::{BackendSuiteArtifact, BackendSuiteArtifactInput, BackendSuiteEvidence, HardwareDigestField, HardwareUnavailableReason};
 
 pub(super) fn run_workload_benchmark(
     workspace_root: &Path,
@@ -609,8 +615,10 @@ pub(super) fn inspect_backend_suite_artifact(
     }
     match &source_fingerprint {
         Some(fingerprint)
-            if !crate::bench::benchmark_evidence_semantics::source_fingerprint_issues(fingerprint)
-                .is_empty() =>
+            if !crate::bench::benchmark_evidence_semantics::source_fingerprint_issues(
+                fingerprint,
+            )
+            .is_empty() =>
         {
             blockers.push(format!(
                 "source_fingerprint `{fingerprint}` is not release-grade provenance"
@@ -800,7 +808,12 @@ pub(super) fn inspect_backend_suite_artifact(
             nonmatching_case_backend_count += 1;
         }
         let metrics = case.get("metrics").and_then(Value::as_object);
-        minima.record_case(case_id, &format!("case `{case_id}`"), metrics, &mut blockers);
+        minima.record_case(
+            case_id,
+            &format!("case `{case_id}`"),
+            metrics,
+            &mut blockers,
+        );
         if matches!(backend, "cuda" | "wgpu") {
             record_required_metric_percentile(
                 &mut min_kernel_launches,

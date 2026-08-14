@@ -22,9 +22,6 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process;
 
-use vyre_driver_cuda as _;
-use vyre_driver_spirv as _;
-use vyre_driver_wgpu as _;
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_megakernel::{
     Artifact, CompileRequest, Digest, ExternalFacts, SearchBudget, TargetPayload,
@@ -154,7 +151,7 @@ fn compile_registered_target(
     artifact: &Artifact,
     target_id: &str,
 ) -> Result<TargetPayload, String> {
-    let registration = vyre_driver::backend::registered_backends()
+    let registration = vyre_registry_link::backend::live_backend_registry()
         .map_err(|error| format!("Fix: backend registry startup failed: {error}"))?
         .iter()
         .find(|registration| registration.target_id.as_str() == target_id)
@@ -209,7 +206,7 @@ mod tests {
             vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
         );
         let artifact = compile_neutral(program).expect("neutral fixture artifact");
-        let registration = vyre_driver::backend::registered_backends()
+        let registration = vyre_registry_link::backend::live_backend_registry()
             .expect("valid backend registry")
             .iter()
             .find(|registration| registration.target_compiler.is_some())

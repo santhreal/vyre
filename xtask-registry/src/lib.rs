@@ -3,14 +3,14 @@
 //! A subcommand belongs here when it must observe something that does not exist
 //! in source text: which operations are actually registered, which primitives
 //! they compose from, or which rewrite proofs the optimizer submitted. That is
-//! why this crate links the compiler and the drivers, and why the subcommands
-//! that answer their question from source text stay in `xtask`, which links
-//! neither.
+//! why this crate links the compiler, and why the subcommands that answer their
+//! question from source text stay in `xtask`, which links neither. The crates
+//! that submit into a registry are linked through `vyre-registry-link`, which
+//! owns those anchors and the floor per source.
 
 pub mod compile;
 pub mod docs;
 pub mod gates;
-pub mod live_registry;
 pub mod print_composition;
 pub mod release;
 pub mod trace_f32;

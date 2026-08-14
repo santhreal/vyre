@@ -441,7 +441,7 @@ fn no_kernel_is_registered_under_two_crate_namespaces() {
 }
 
 fn registered_ops() -> Vec<RegisteredOp> {
-    vyre_foundation::operation::OperationRegistry::global()
+    vyre_registry_link::operation::live_operation_registry()
         .iter()
         .map(|entry| RegisteredOp {
             id: entry.id.to_string(),

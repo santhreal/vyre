@@ -9,7 +9,11 @@ use std::process;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    if args.iter().skip(1).any(|arg| arg == "--help" || arg == "-h") {
+    if args
+        .iter()
+        .skip(1)
+        .any(|arg| arg == "--help" || arg == "-h")
+    {
         xtask::delegate::print_dispatch_help(
             "xtask-evidence",
             "`xtask` assigns these subcommands here because each one reads recorded benchmark or release evidence.",

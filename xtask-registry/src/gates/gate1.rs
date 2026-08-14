@@ -64,7 +64,7 @@ impl Verdict {
 /// Entry point for the `gate1` subcommand.
 pub(crate) fn run(_args: &[String]) {
     let mut verdicts: Vec<Verdict> = Vec::new();
-    for entry in crate::live_registry::live_operation_registry().iter() {
+    for entry in vyre_registry_link::operation::live_operation_registry().iter() {
         let program = entry.program().unwrap_or_else(|| {
             panic!(
                 "Fix: canonical operation `{}` provides no neutral builder; register one or remove the registration",

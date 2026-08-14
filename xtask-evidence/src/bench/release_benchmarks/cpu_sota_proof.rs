@@ -13,8 +13,10 @@ use serde_json::{json, Value};
 
 use super::inspect_core::{first_metric_p50, read_text_bounded, WallClockMinima};
 use super::metrics::write_json;
+use super::release_thresholds::{
+    MAX_RELEASE_BENCHMARK_TEXT_BYTES, MIN_CPU_SOTA_100X_RELEASE_CASES, REQUIRED_CPU_SOTA_100X_CASES,
+};
 use super::suite_inspect::nonblank_str;
-use super::release_thresholds::{MAX_RELEASE_BENCHMARK_TEXT_BYTES, MIN_CPU_SOTA_100X_RELEASE_CASES, REQUIRED_CPU_SOTA_100X_CASES};
 
 pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) {
     let mut cases = Vec::new();
@@ -126,10 +128,12 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
                 &path, &report,
             ),
         ) {
-            for issue in crate::bench::benchmark_evidence_semantics::source_fingerprint_freshness_issues(
-                freshness_fingerprint,
-                &current_freshness_fingerprint,
-            ) {
+            for issue in
+                crate::bench::benchmark_evidence_semantics::source_fingerprint_freshness_issues(
+                    freshness_fingerprint,
+                    &current_freshness_fingerprint,
+                )
+            {
                 match issue {
                     crate::bench::benchmark_evidence_semantics::SourceFingerprintFreshnessIssue::Mismatch {
                         source_fingerprint,

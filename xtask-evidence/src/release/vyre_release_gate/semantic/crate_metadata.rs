@@ -55,7 +55,6 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         ));
     }
     if let Some(entries) = matrix.get("packages").and_then(serde_json::Value::as_array) {
-
         for (package_name, backend_surface) in [
             ("vyre-driver-cuda", "cuda-backend"),
             ("vyre-driver-wgpu", "wgpu-backend"),
@@ -278,7 +277,9 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             ));
         }
     }
-    for issue in xtask::release::package_readiness::package_content_evidence_issues(&package_readiness) {
+    for issue in
+        xtask::release::package_readiness::package_content_evidence_issues(&package_readiness)
+    {
         failures.push(format!(
             "requirement `crate-metadata` package readiness {issue}"
         ));

@@ -220,7 +220,7 @@ fn tier_of(op_id: &str) -> Tier {
 }
 
 pub(crate) fn collect_ops() -> Vec<OpInfo> {
-    crate::live_registry::live_operation_registry()
+    vyre_registry_link::operation::live_operation_registry()
         .iter()
         .filter_map(|entry| entry.program().map(|program| build_info(entry.id, program)))
         .collect()
@@ -1656,7 +1656,7 @@ mod dedup_contract_tests {
     /// only ever fail.
     #[test]
     fn ir_duplicate_analysis_judges_exactly_the_operations_that_carry_a_program() {
-        let registry = crate::live_registry::live_operation_registry();
+        let registry = vyre_registry_link::operation::live_operation_registry();
         let mut expected: Vec<&str> = registry
             .iter()
             .filter(|entry| entry.program().is_some())

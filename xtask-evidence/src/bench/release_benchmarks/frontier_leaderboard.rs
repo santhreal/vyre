@@ -6,14 +6,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use xtask::artifact_paths::FRONTIER_LEADERBOARD_ARTIFACT;
-use xtask::hash::sha256_hex;
 use xtask::docs::research_key::is_research_key;
 use xtask::docs::research_source_ledger::embedded_research_source_keys;
+use xtask::hash::sha256_hex;
 
 use super::inspect_core::read_text_bounded;
 use super::metrics::write_json;
-use super::suite_inspect::backend_suite_output_path;
 use super::release_thresholds::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
+use super::suite_inspect::backend_suite_output_path;
 
 pub(crate) const FRONTIER_LEADERBOARD_SCHEMA_VERSION: u32 = 1;
 pub(crate) const FRONTIER_LEADERBOARD_SEMANTIC_VALIDATOR: &str =

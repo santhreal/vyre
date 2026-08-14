@@ -19,15 +19,6 @@ use vyre_conform::fp_parity::{f32_ulp_tolerance, ulp_distance};
 use vyre_conform::production::ProductionSession;
 use vyre_reference::value::Value;
 
-#[cfg(feature = "gpu")]
-use vyre_driver_cuda as _;
-#[cfg(feature = "gpu")]
-use vyre_driver_metal as _;
-#[cfg(feature = "gpu")]
-use vyre_driver_wgpu as _;
-use vyre_libs as _;
-use vyre_primitives as _;
-
 type FixtureCases = Vec<Vec<Vec<u8>>>;
 type FixtureFn = fn() -> FixtureCases;
 
@@ -52,7 +43,7 @@ impl UnifiedEntry {
 }
 
 fn all_entries() -> Vec<UnifiedEntry> {
-    vyre_foundation::operation::OperationRegistry::global()
+    vyre_registry_link::operation::live_operation_registry()
         .iter()
         .map(|entry| UnifiedEntry {
             id: entry.id,
@@ -301,16 +292,18 @@ fn adversarial_value_requires_ulp(value: f32) -> bool {
 }
 
 fn build_registered_backend() -> &'static vyre_driver::BackendRegistration {
-    force_link_backend_inventory();
     let selected = std::env::var("VYRE_BACKEND")
         .ok()
         .filter(|value| !value.trim().is_empty());
-    vyre_driver::backend::registered_backends()
+    vyre_registry_link::backend::live_backend_registry()
         .expect("valid backend registry")
         .iter()
         .find(|registration| {
-            vyre_driver::backend::backend_dispatches(registration.id)
-                .expect("valid backend registry")
+            // The reference oracle is what the audit compares against, so
+            // auditing it against itself would measure zero ULP for every op.
+            !registration.reference_oracle
+                && vyre_driver::backend::backend_dispatches(registration.id)
+                    .expect("valid backend registry")
                 && selected
                     .as_deref()
                     .is_none_or(|backend| registration.id == backend)
@@ -319,13 +312,6 @@ fn build_registered_backend() -> &'static vyre_driver::BackendRegistration {
             "Fix: a dispatch-capable backend must be registered for ULP audit. \
              Link a concrete driver crate into the test binary.",
         )
-}
-
-fn force_link_backend_inventory() {
-    #[cfg(feature = "gpu")]
-    {
-        std::hint::black_box(vyre_driver_metal::METAL_BACKEND_ID);
-    }
 }
 
 // ULP audit dispatches every registered op through a real dispatch-capable
