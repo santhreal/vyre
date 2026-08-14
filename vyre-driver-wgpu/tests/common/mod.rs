@@ -5,6 +5,7 @@
 #[allow(deprecated)]
 pub(crate) mod c_fixture;
 pub(crate) mod every_op_random_inputs;
+pub(crate) mod self_optimizer;
 
 use std::time::{Duration, Instant};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};

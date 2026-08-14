@@ -16,35 +16,20 @@
 
 #![cfg(test)]
 
+mod common;
+use common::self_optimizer::WgpuOptimizerDispatcher;
+
 use std::time::Instant;
 
 use vyre::ir::{Expr, Node, Program};
-use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_self_substrate::optimizer::canonicalize_via_encoded::gpu_canonicalize;
 use vyre_self_substrate::optimizer::const_fold_via_encoded::gpu_const_fold;
 use vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce;
-use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher;
 
 const CPU_ORACLE_STACK_BYTES: usize = 64 * 1024 * 1024;
 
-struct WgpuOptimizerDispatcher<'a> {
-    backend: &'a WgpuBackend,
-}
-
-impl<'a> OptimizerDispatcher for WgpuOptimizerDispatcher<'a> {
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        let mut config = DispatchConfig::default();
-        config.grid_override = grid_override;
-        VyreBackend::dispatch(self.backend, program, inputs, &config)
-            .map_err(|err| DispatchError::BackendError(err.to_string()))
-    }
-}
 
 /// Build a synthetic chain Program with `n` `let`s, each computing
 /// `(prev + small_lit) * other_small_lit`. Linear dependency between
@@ -173,7 +158,7 @@ fn bench_one(
 #[test]
 fn scaling_bench_gpu_vs_cpu_pipeline() {
     let backend = WgpuBackend::acquire().expect("WgpuBackend acquire");
-    let dispatcher = WgpuOptimizerDispatcher { backend: &backend };
+    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
 
     bench_one(
         "wgpu chain fixture (depth-bound, worst case for parallelism)",

@@ -9,41 +9,19 @@
 
 mod common;
 use common::acquire_live_backend as live_backend;
+use common::self_optimizer::{WgpuOptimizerDispatcher, wrapped};
 
-use vyre::ir::{BinOp, Expr, Node, Program};
-use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_driver_wgpu::WgpuBackend;
+use vyre::ir::{BinOp, Expr, Node};
 use vyre_self_substrate::optimizer::canonicalize_via_encoded::gpu_canonicalize;
 use vyre_self_substrate::optimizer::const_fold_via_encoded::gpu_const_fold;
 use vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce;
-use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 
-struct WgpuOptimizerDispatcher<'a> {
-    backend: &'a WgpuBackend,
-}
 
-impl<'a> OptimizerDispatcher for WgpuOptimizerDispatcher<'a> {
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        let mut config = DispatchConfig::default();
-        config.grid_override = grid_override;
-        VyreBackend::dispatch(self.backend, program, inputs, &config)
-            .map_err(|err| DispatchError::BackendError(err.to_string()))
-    }
-}
-
-fn wrapped(entry: Vec<Node>) -> Program {
-    Program::wrapped(Vec::new(), [1, 1, 1], entry)
-}
 
 #[test]
 fn full_pipeline_canonicalize_then_const_fold_then_dce_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher { backend: &backend };
+    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
 
     // Input program:
     //   let dead = 99;          (dead  -  no use)
@@ -113,7 +91,7 @@ fn full_pipeline_canonicalize_then_const_fold_then_dce_on_real_gpu() {
 #[test]
 fn pipeline_collapses_unused_compute_chain_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher { backend: &backend };
+    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
 
     // let a = 5 + 7;          (foldable to 12)
     // let b = a * 2;          (foldable to 24)
