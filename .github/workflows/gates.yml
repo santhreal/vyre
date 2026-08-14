@@ -71,3 +71,10 @@ jobs:
       # asserted the file exists, which no clean checkout can satisfy.
       - name: One execution queue, no committed parallel plans
         run: bash scripts/check_single_backlog.sh
+
+      # Each row pins a cross-crate unification that has already landed. A
+      # declared search path that no longer exists fails as UNMEASURABLE rather
+      # than scoring 0 and passing, which is how three of these rows spent
+      # months reporting success while scanning deleted trees.
+      - name: Unification baselines hold
+        run: bash scripts/check_unification_baselines.sh

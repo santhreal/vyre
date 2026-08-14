@@ -38,7 +38,18 @@ mode="${1:-enforce}"
 # cpu_references.rs` and `vyre-driver/src/self_substrate` had all been moved,
 # and the rows reading them passed by measuring nothing.
 ROWS=(
-    "P-DELETE-1__match_on_Node@@^[[:space:]]*match node[[:space:]]+\\{@@vyre-foundation/src/validate vyre-foundation/src/transform@@18"
+    # P-DELETE-1 used to live here as a count of `match node {` occurrences in
+    # validate/ and transform/, pinned at 18 against an actual 22. It is gone
+    # because it measured the wrong thing: 22 distinct traversals over one enum
+    # is not duplication, and `match node {}` is the only idiom Rust offers for
+    # dispatching on a variant. The property it tracked by coincidence was that
+    # exactly 4 of those blocks carried a catch-all `_ =>` arm, and 22 - 4 = 18.
+    #
+    # Child enumeration now has one public owner,
+    # vyre-foundation::transform::visit::child_bodies, with no catch-all, so
+    # adding a Node variant fails to compile there. This row asserts that
+    # nothing re-implements it: a second exhaustive child match is a duplicate.
+    "P-DELETE-1__child_bodies_owner@@fn child_bodies\\b@@vyre-foundation/src@@1"
     "P-DELETE-10__buffer_access_auto@@BufferAccess::(infer|auto|derive_from)@@vyre-foundation/src/lower vyre-driver-wgpu/src vyre-runtime/src/megakernel@@0"
     "P-UNIFY-2__cpu_references@@fn cpu_reference\\b@@vyre-foundation/src vyre-reference/src@@0"
     # Floor 1, not 0: the unification this row tracks is ACHIEVED. There is
