@@ -200,34 +200,10 @@ fn bump(kind: &KernelOpKind, h: &mut OpHistogram) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::descriptor::test_descriptors::build;
     use crate::descriptor_builder::{effect, lit, op};
-    use crate::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-        KernelOp, KernelOpKind, LiteralValue, MemoryClass,
-    };
-    use vyre_foundation::ir::{BinOp, DataType};
-
-    fn build(ops: Vec<KernelOp>, child_bodies: Vec<KernelBody>) -> KernelDescriptor {
-        KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "buf".into(),
-                }],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops,
-                child_bodies,
-                literals: vec![LiteralValue::U32(7)],
-            },
-        }
-    }
+    use crate::{KernelBody, KernelOpKind, LiteralValue};
+    use vyre_foundation::ir::BinOp;
 
     #[test]
     fn histogram_merge_is_associative() {

@@ -25,8 +25,9 @@
 
 use super::report::{BankAccessSite, BankConflictKind, BankConflictReport};
 use super::DEFAULT_BANK_COUNT;
+use crate::analyses::constant_u32_operand;
 use crate::analyses::{child_body_operands, producer_map, AccessKind, ProducerMap};
-use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue, MemoryClass};
+use crate::{KernelBody, KernelDescriptor, KernelOpKind, MemoryClass};
 use vyre_foundation::ir::BinOp;
 
 /// Run bank-conflict analysis using the default 32-bank layout.
@@ -192,18 +193,7 @@ fn classify_mul(
         _ => return BankConflictKind::Unknown,
     };
 
-    let stride = match producers.get(&const_operand).copied() {
-        Some(producer) if producer.kind == KernelOpKind::Literal => {
-            producer.operands.first().and_then(|i| {
-                body.literals.get(*i as usize).and_then(|op| match op {
-                    LiteralValue::U32(v) => Some(*v),
-                    _ => None,
-                })
-            })
-        }
-        _ => None,
-    }
-    .or_else(|| literal_operand_u32(body, const_operand));
+    let stride = constant_u32_operand(body, producers, const_operand);
 
     let stride = match stride {
         Some(s) => s,
@@ -220,15 +210,6 @@ fn classify_mul(
     } else {
         BankConflictKind::Conflict { way_count: g }
     }
-}
-
-fn literal_operand_u32(body: &KernelBody, operand_id: u32) -> Option<u32> {
-    body.literals
-        .get(operand_id as usize)
-        .and_then(|literal| match literal {
-            LiteralValue::U32(value) => Some(*value),
-            _ => None,
-        })
 }
 
 fn gcd_u32(a: u32, b: u32) -> u32 {

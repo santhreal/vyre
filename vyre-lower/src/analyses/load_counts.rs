@@ -33,6 +33,38 @@ pub(crate) fn count_global_loads_by_slot<F>(
     }
 }
 
+/// Descriptor fixtures for the analyses whose precondition is a load count.
+///
+/// WHY: texture promotion and AoS-to-SoA layout each wrote out the same two
+/// helpers, doc comment included, so the op shape this traversal reads was
+/// stated twice and could drift on one side only. The shape belongs with the
+/// traversal that defines it.
+#[cfg(test)]
+pub(crate) mod fixtures {
+    use crate::descriptor_builder::{body, descriptor, lit, load_global};
+    use crate::{BindingSlot, KernelBody, KernelDescriptor, LiteralValue};
+
+    /// One literal at pool index 0 followed by `count` loads of slot 0. This is
+    /// the whole op shape the precondition reads, so every eligibility case
+    /// differs only in its binding and its load count.
+    pub(crate) fn literal_then_loads(count: u32) -> KernelBody {
+        body()
+            .op(lit(0, 0))
+            .ops((1..=count).map(|result| load_global(0, 0, result)))
+            .literal(LiteralValue::U32(0))
+            .build()
+    }
+
+    /// A 32-thread kernel over one binding, loaded `load_count` times.
+    pub(crate) fn kernel(binding: BindingSlot, load_count: u32) -> KernelDescriptor {
+        descriptor("k")
+            .slot(binding)
+            .dispatch(32, 1, 1)
+            .body(literal_then_loads(load_count))
+            .build()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rustc_hash::FxHashMap;

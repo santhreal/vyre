@@ -151,8 +151,8 @@ total_lines = 3443
 
 [[crate]]
 name = "vyre-lower"
-duplicate_lines = 413
-total_lines = 13273
+duplicate_lines = 279
+total_lines = 13195
 
 [[crate]]
 name = "vyre-macros"

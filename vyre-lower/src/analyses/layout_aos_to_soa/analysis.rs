@@ -66,8 +66,9 @@ fn compound_lane_count(dtype: &DataType) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::descriptor_builder::{body, descriptor, effect, global_ro, lit, load_global};
-    use crate::{BindingSlot, KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
+    use crate::analyses::load_counts::fixtures::kernel;
+    use crate::descriptor_builder::{body, descriptor, effect, global_ro, load_global};
+    use crate::{BindingSlot, KernelOpKind};
 
     fn vec4_binding(index: u32) -> BindingSlot {
         global_ro(
@@ -78,25 +79,6 @@ mod tests {
             },
             &format!("v{index}"),
         )
-    }
-
-    /// One literal at pool index 0 followed by `count` loads of slot 0. This
-    /// is the whole op shape the precondition reads, so every eligibility
-    /// case differs only in its binding and its load count.
-    fn literal_then_loads(count: u32) -> KernelBody {
-        body()
-            .op(lit(0, 0))
-            .ops((1..=count).map(|result| load_global(0, 0, result)))
-            .literal(LiteralValue::U32(0))
-            .build()
-    }
-
-    fn kernel(binding: BindingSlot, load_count: u32) -> KernelDescriptor {
-        descriptor("k")
-            .slot(binding)
-            .dispatch(32, 1, 1)
-            .body(literal_then_loads(load_count))
-            .build()
     }
 
     #[test]

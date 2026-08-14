@@ -51,33 +51,15 @@ pub fn analyze(desc: &KernelDescriptor) -> TexturePromotionPlan {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::analyses::load_counts::fixtures::kernel;
     use crate::descriptor_builder::{
         body, descriptor, global_ro, global_rw, lit, load_global, slot, SlotCount,
     };
-    use crate::{BindingSlot, KernelBody, KernelDescriptor, LiteralValue};
+    use crate::{BindingSlot, LiteralValue};
     use vyre_foundation::ir::DataType;
 
     fn ro_binding(index: u32) -> BindingSlot {
         global_ro(index, DataType::F32, &format!("ro{index}"))
-    }
-
-    /// One literal at pool index 0 followed by `count` loads of slot 0. This
-    /// is the whole op shape the precondition reads, so every eligibility
-    /// case differs only in its binding and its load count.
-    fn literal_then_loads(count: u32) -> KernelBody {
-        body()
-            .op(lit(0, 0))
-            .ops((1..=count).map(|result| load_global(0, 0, result)))
-            .literal(LiteralValue::U32(0))
-            .build()
-    }
-
-    fn kernel(binding: BindingSlot, load_count: u32) -> KernelDescriptor {
-        descriptor("k")
-            .slot(binding)
-            .dispatch(32, 1, 1)
-            .body(literal_then_loads(load_count))
-            .build()
     }
 
     #[test]

@@ -44,6 +44,43 @@ pub(crate) fn producer_map(body: &KernelBody) -> ProducerMap<'_> {
     producers
 }
 
+/// The `u32` a `Literal` op publishes, read through its pool index.
+fn literal_op_u32(body: &KernelBody, producer: &KernelOp) -> Option<u32> {
+    if producer.kind != KernelOpKind::Literal {
+        return None;
+    }
+    producer
+        .operands
+        .first()
+        .and_then(|index| pool_entry_u32(body, *index))
+}
+
+/// The `u32` at a literal-pool index, or `None` for another literal type.
+pub(crate) fn pool_entry_u32(body: &KernelBody, pool_index: u32) -> Option<u32> {
+    match body.literals.get(pool_index as usize) {
+        Some(crate::LiteralValue::U32(value)) => Some(*value),
+        _ => None,
+    }
+}
+
+/// The constant `u32` behind an operand, however it was written.
+///
+/// WHY: an index operand carries a constant in one of two encodings. Either a
+/// `Literal` op produced it, in which case that op's first operand is the pool
+/// index, or the operand id is itself a pool index. Bank-conflict and coalescing
+/// classification each resolved both encodings with its own copy of this, so a
+/// third encoding would have had to be added twice.
+pub(crate) fn constant_u32_operand(
+    body: &KernelBody,
+    producers: &ProducerMap<'_>,
+    operand_id: u32,
+) -> Option<u32> {
+    producers
+        .get(&operand_id)
+        .and_then(|producer| literal_op_u32(body, producer))
+        .or_else(|| pool_entry_u32(body, operand_id))
+}
+
 pub(crate) fn body_result_ids(body: &KernelBody) -> rustc_hash::FxHashSet<u32> {
     let mut results = rustc_hash::FxHashSet::default();
     for op in &body.ops {

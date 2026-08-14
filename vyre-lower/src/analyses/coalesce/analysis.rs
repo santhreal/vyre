@@ -19,7 +19,9 @@
 //! as `Scattered`, which is the rewrite-safe direction.
 
 use super::report::{AccessPattern, AccessSite, CoalescenceReport};
-use crate::analyses::{child_body_operands, producer_map, AccessKind, ProducerMap};
+use crate::analyses::{
+    child_body_operands, constant_u32_operand, producer_map, AccessKind, ProducerMap,
+};
 use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
 use vyre_foundation::ir::BinOp;
 
@@ -150,19 +152,7 @@ fn classify_mul(body: &KernelBody, producers: &ProducerMap<'_>, operands: &[u32]
         }
     };
 
-    let stride = match producers.get(&const_operand).copied() {
-        Some(producer) if producer.kind == KernelOpKind::Literal => {
-            // The producer's operand[0] is an index into the literal pool.
-            producer.operands.first().and_then(|i| {
-                body.literals.get(*i as usize).and_then(|op| match op {
-                    LiteralValue::U32(v) => Some(*v),
-                    _ => None,
-                })
-            })
-        }
-        _ => None,
-    }
-    .or_else(|| literal_operand_u32(body, const_operand));
+    let stride = constant_u32_operand(body, producers, const_operand);
 
     match stride {
         Some(0) => AccessPattern::Broadcast,
@@ -178,15 +168,6 @@ fn classify_pool_operand(body: &KernelBody, operand_id: u32) -> AccessPattern {
     } else {
         AccessPattern::Scattered
     }
-}
-
-fn literal_operand_u32(body: &KernelBody, operand_id: u32) -> Option<u32> {
-    body.literals
-        .get(operand_id as usize)
-        .and_then(|literal| match literal {
-            LiteralValue::U32(value) => Some(*value),
-            _ => None,
-        })
 }
 
 #[cfg(test)]

@@ -40,7 +40,7 @@ mod intent;
 mod kernel;
 mod kernel_op;
 #[cfg(test)]
-mod test_descriptors;
+pub(crate) mod test_descriptors;
 
 pub use binding_layout::{TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
 pub use intent::{
