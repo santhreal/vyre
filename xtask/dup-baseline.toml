@@ -43,12 +43,12 @@ total_lines = 106
 [[crate]]
 name = "structure-gate"
 duplicate_lines = 0
-total_lines = 1943
+total_lines = 1947
 
 [[crate]]
 name = "tests"
 duplicate_lines = 8
-total_lines = 2857
+total_lines = 3185
 
 [[crate]]
 name = "vyre"
@@ -72,18 +72,18 @@ total_lines = 2227
 
 [[crate]]
 name = "vyre-driver"
-duplicate_lines = 1047
-total_lines = 36080
+duplicate_lines = 1030
+total_lines = 36010
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 3145
-total_lines = 67711
+duplicate_lines = 2658
+total_lines = 67275
 
 [[crate]]
 name = "vyre-driver-metal"
-duplicate_lines = 175
-total_lines = 4706
+duplicate_lines = 162
+total_lines = 4697
 
 [[crate]]
 name = "vyre-driver-reference"
@@ -92,13 +92,13 @@ total_lines = 655
 
 [[crate]]
 name = "vyre-driver-spirv"
-duplicate_lines = 168
-total_lines = 1938
+duplicate_lines = 96
+total_lines = 1900
 
 [[crate]]
 name = "vyre-driver-wgpu"
-duplicate_lines = 3974
-total_lines = 56975
+duplicate_lines = 3015
+total_lines = 55943
 
 [[crate]]
 name = "vyre-emit-metal"
@@ -122,8 +122,8 @@ total_lines = 1139
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 4127
-total_lines = 94879
+duplicate_lines = 4037
+total_lines = 94408
 
 [[crate]]
 name = "vyre-frontend-rust"
@@ -137,8 +137,8 @@ total_lines = 3276
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 11425
-total_lines = 187461
+duplicate_lines = 10710
+total_lines = 187199
 
 [[crate]]
 name = "vyre-lints"
@@ -158,12 +158,12 @@ total_lines = 2070
 [[crate]]
 name = "vyre-megakernel"
 duplicate_lines = 8
-total_lines = 3599
+total_lines = 3605
 
 [[crate]]
 name = "vyre-primitives"
-duplicate_lines = 6981
-total_lines = 101992
+duplicate_lines = 6612
+total_lines = 101988
 
 [[crate]]
 name = "vyre-reference"
@@ -172,23 +172,23 @@ total_lines = 15256
 
 [[crate]]
 name = "vyre-runtime"
-duplicate_lines = 314
-total_lines = 29113
+duplicate_lines = 294
+total_lines = 29041
 
 [[crate]]
 name = "vyre-pass-engine"
-duplicate_lines = 257
+duplicate_lines = 223
 total_lines = 9082
 
 [[crate]]
 name = "vyre-test-support"
 duplicate_lines = 11
-total_lines = 1115
+total_lines = 1758
 
 [[crate]]
 name = "vyre-spec"
 duplicate_lines = 84
-total_lines = 9165
+total_lines = 9706
 
 [[crate]]
 name = "xtask"

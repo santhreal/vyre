@@ -19,8 +19,8 @@
 //!
 //! The branch traversal is `vyre_lower::analyses::structured_walk`, not a
 //! copy of it, and which op kinds carry a retained effect comes from
-//! `vyre_lower::op_facts`, which is that crate's only enumeration of
-//! `KernelOpKind`. What stays here is the PTX judgment: [`is_predicatable`]
+//! `vyre_lower::op_facts::facts_for`, which is that crate's only enumeration of
+//! `KernelOpKind`. What stays here is the PTX judgment: `is_predicatable`
 //! names the retained effects a `@%p` instruction predicate can still guard,
 //! which is a property of the predication encoding and has no meaning on a
 //! target without per-instruction predicates. The walk enters loop, block, and
@@ -145,7 +145,7 @@ fn has_global_store(body: &KernelBody) -> bool {
 fn has_unsafe_predicated_effect(body: &KernelBody) -> bool {
     body.ops
         .iter()
-        .any(|op| vyre_lower::op_facts(&op.kind).retained_effect && !is_predicatable(&op.kind))
+        .any(|op| vyre_lower::facts_for(&op.kind).retained_effect && !is_predicatable(&op.kind))
 }
 
 /// The retained effects a `@%p` predicate can still guard.
@@ -369,7 +369,7 @@ mod tests {
             (KernelOpKind::Call { op_id: "f".into() }, true),
         ] {
             assert!(
-                vyre_lower::op_facts(&kind).retained_effect,
+                vyre_lower::facts_for(&kind).retained_effect,
                 "Fix: {kind:?} must be a retained effect for this case to say anything."
             );
             let arm = body().op(effect(kind.clone(), [])).build();

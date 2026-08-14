@@ -195,7 +195,7 @@ pub fn run_consumer_coupling(roots: &[&Path]) -> Result<Vec<Violation>> {
 ///
 /// Unlike every other lint this one compares roots against each other rather
 /// than scanning each independently, so it cannot go through
-/// [`run_over_roots`]: a fork is only visible when two roots are in scope at
+/// `run_over_roots`: a fork is only visible when two roots are in scope at
 /// once.
 pub fn run_module_forks(roots: &[&Path]) -> Result<Vec<Violation>> {
     module_forks::scan_roots(roots)

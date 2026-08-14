@@ -278,10 +278,10 @@ pub fn vyre_lower::emit_adversarial_corpus::corpus() -> alloc::vec::Vec<vyre_low
 pub fn vyre_lower::emit_adversarial_corpus::rejection_cases() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
 pub fn vyre_lower::emit_adversarial_corpus::required_backends() -> &'static [vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend]
 pub fn vyre_lower::emit_adversarial_corpus::success_cases() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
+pub fn vyre_lower::facts_for(kind: &vyre_lower::descriptor::KernelOpKind) -> vyre_lower::op_facts::OpFacts
 pub fn vyre_lower::full_report(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::FullReport
 pub fn vyre_lower::lower_verified(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_lower::VerifiedLowering, vyre_lower::LowerVerifiedError>
-pub fn vyre_lower::op_facts(kind: &vyre_lower::descriptor::KernelOpKind) -> vyre_lower::op_facts::OpFacts
-pub fn vyre_lower::op_facts::op_facts(kind: &vyre_lower::descriptor::KernelOpKind) -> vyre_lower::op_facts::OpFacts
+pub fn vyre_lower::op_facts::facts_for(kind: &vyre_lower::descriptor::KernelOpKind) -> vyre_lower::op_facts::OpFacts
 pub fn vyre_lower::operand_class::classify_operand(kind: &vyre_lower::descriptor::KernelOpKind, pos: usize) -> vyre_lower::operand_class::OperandClass
 pub fn vyre_lower::operand_class::operand_is_result_reference(kind: &vyre_lower::descriptor::KernelOpKind, pos: usize) -> bool
 pub fn vyre_lower::pattern_audit::PatternAudit::finding_count(&self) -> usize

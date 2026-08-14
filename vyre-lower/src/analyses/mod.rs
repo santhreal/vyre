@@ -111,7 +111,7 @@ pub(crate) fn body_refs_only(body: &KernelBody, produced: &rustc_hash::FxHashSet
 ///
 /// Every placement analysis and every descriptor walk calls this instead of
 /// re-deriving the skip offsets. The offsets themselves come from
-/// [`crate::op_facts`], which is the crate's only enumeration of
+/// [`crate::op_facts::facts_for`], which is the crate's only enumeration of
 /// `KernelOpKind` and has no wildcard arm: a new variant that carries a nested
 /// body fails to compile until someone states where its child indices begin,
 /// rather than silently stopping every analysis from descending into it.
@@ -119,7 +119,7 @@ pub fn child_body_operands<'a>(
     kind: &KernelOpKind,
     operands: &'a [u32],
 ) -> impl Iterator<Item = u32> + 'a {
-    let start = crate::op_facts::op_facts(kind)
+    let start = crate::op_facts::facts_for(kind)
         .child_body_start
         .unwrap_or(operands.len());
     operands.iter().skip(start).copied()

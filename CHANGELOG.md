@@ -6,15 +6,6 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Added
 
-- `vyre_driver::materialize` now owns the submission routing, the timed
-  multi-module execution loop, the resident single-module guard and completion,
-  and the artifact-instance identity forwarding each concrete materializer
-  repeated. `InstanceCore::route_submission`, `InstanceCore::execute_modules`,
-  `InstanceCore::single_resident_module`, `InstanceCore::resident_completion`,
-  the `ExecutableModule` trait, the `unbound_input` default rejection, and the
-  `artifact_instance_identity!` macro are additive. A backend whose rejection
-  text differs still passes its own function or `InstanceMessages` record, so no
-  message changed.
 - Grouped affine INT4 linear now provides a typed batched program builder that
   dequantizes each immutable weight tile once and reuses it across independent
   resident batch rows. Release evidence measures normalized per-inference
@@ -162,16 +153,6 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   runtime-sized storage buffer.
 
 ### Changed
-
-- Token numbering has one owner. `vyre-spec` now declares the C11, Go, Python
-  and LR(1) expression token ids in `c11_token`, `go_token`, `python_token` and
-  `c11_expr_token`; `vyre-grammar-gen` and `vyre-libs::parsing` re-export them,
-  so every published `TOK_*` path still resolves and no value changed. The C11
-  ids are the wire contract between the tables the generator emits and the GPU
-  parser that decodes them, and they were declared twice. A contract test in
-  `vyre-spec` walks the checkout and fails when any file outside it declares a
-  `TOK_`-prefixed constant, replacing the parity suite that could only report
-  drift after both copies existed.
 
 - The standalone `vyre-harness` package is gone. Semantic operation identity,
   tier classification, and registration now live in `vyre-foundation`; library
@@ -1116,6 +1097,42 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   its extra input at the index its own module documents as the output frontier.
   `bitset_words` had three spellings; the two forwarding shims are gone and
   every caller reads `bitset::bitset_words`.
+- The frozen `vyre_spec` operator variant space is enumerated in one place,
+  `tests/support/spec_variant_tables.rs`, instead of once per suite. Five
+  suites carried their own list of every `BinOp`, `UnOp`, `AtomicOp` and buffer
+  `DataType`, and the lists had drifted in both directions: the random-IR
+  corpus was missing `WrappingAdd`, `WrappingSub` and `MulHigh`, and the wire
+  round-trip sweep was missing six `UnOp` and six `BinOp` variants, so a
+  variant no list named was a variant no suite exercised. The tables cannot be
+  derived from the types, which are `#[non_exhaustive]` with no variant
+  iterator, so the completeness gate reads the variant set out of the rustdoc
+  public-API snapshot at run time and fails naming any variant a table omits.
+  The xorshift sweep generator the suites had copied verbatim now lives in
+  `tests/support/sweep_rng.rs` and rejects a zero seed, which is a fixed point
+  of xorshift and would emit a constant corpus.
+- Every witness input expansion routes through `WitnessInputPlan`. Three copies
+  of the planner existed beside the owner: the per-op ULP audit and the
+  cross-backend parity matrix each carried a full reimplementation differing
+  only in the prefix on each error string, and a rename layer aliased the
+  owner's type and forwarded its functions under the copies' names. The owner
+  gained the two operations only the copies had, `buffer_indices` and
+  `plan_witness_inputs_owned_into`, and each copy's unique test moved to it.
+  Three expansions of one fixture is three chances for a gate to compare
+  against an input stream the dispatcher never saw.
+- `vyre-conform` depends on `vyre-libs` with `features = ["full"]` rather than
+  restating ten of the aggregate's members by hand. A hand-kept list of
+  aggregate members drifts silently against the aggregate, which is how the
+  same shape on the registry walker's primitives edge lost four dialects and
+  made three operations invisible.
+- Four duplication pins record what the tree measures: `conform` 765 to 367
+  duplicated lines, `vyre-spec` 244 to 84, `vyre-foundation` 4342 to 4127, and
+  `vyre-libs` 11446 to 11425, each with `total_lines` measured. A pin with room
+  under it hides the next copy.
+- `vyre_lower::op_facts` was both a module and a function inside it, so a doc
+  link to either was ambiguous and `crate::op_facts` resolved to whichever
+  rustdoc preferred. The function is `facts_for`, reached as
+  `vyre_lower::facts_for` or `vyre_lower::op_facts::facts_for`. Five call sites
+  and the crate root re-export name the new spelling.
 
 ### Removed
 
@@ -1772,6 +1789,31 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   under-fenced program pass its own structure test. The grid-fence builder, the
   launch-width reader, and the declared-flag-width reader also had three copies
   each.
+- `Log2`, `Exp2`, `Tan`, `Acos`, `Asin` and `Atan` had two different f32 parity
+  windows depending on which gate ran a program. The per-op ULP audit had
+  forked the transcendental classifier behind `f32_ulp_tolerance` and its
+  operator set was a strict superset, so those six got the 128 ULP backend
+  window in the audit and the 4 ULP elementary window everywhere else.
+  `vyre-foundation/src/fp_parity.rs` now classifies the union, which is the
+  correct direction because each lowers to an approximate native instruction,
+  and the fork is gone. `Reciprocal` stays in the elementary window: cuda and
+  wgpu both lower it to a division. A gate enumerates every frozen `UnOp` and
+  fails on one that neither classification table names, so a new variant cannot
+  inherit the elementary window by omission.
+- `vyre-primitives` feature `graph` enables `fixpoint`.
+  `graph::persistent_bfs::program` reads
+  `fixpoint::persistent_fixpoint::grid_sync_barrier`, the single owner of the
+  grid-wide fence node, so the crate did not compile with `graph` alone.
+  Nothing was red because every aggregate that exercises graph also turns
+  `fixpoint` on.
+- Six intra-doc links were unresolved or pointed at a private item, and each
+  was reported only by the public-API gate's rustdoc pass rather than by a
+  build. A module carrying both an outer doc comment on its `mod` declaration
+  and an inner `//!` header has the two merged and resolved in the PARENT
+  scope, which is why `vyre-driver`'s `TargetDialect` link failed from inside
+  the module that defines it; that one is now fully qualified. The five links
+  naming a private item are plain code spans, because a link to an item a
+  reader cannot reach is not a link.
 
 ## [0.7.1] - 2026-08-01
 

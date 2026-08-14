@@ -802,6 +802,9 @@ pub fn vyre_driver::dispatch_policy::select_primary_execution_mode(persistent: v
 pub fn vyre_driver::dispatch_shape::borrowed_input_batch_shapes_match(batches: &[&[&[u8]]]) -> bool
 pub fn vyre_driver::dispatch_shape::borrowed_input_shapes_match(left: &[&[u8]], right: &[&[u8]]) -> bool
 pub fn vyre_driver::dispatch_shape::dispatch_configs_share_launch_shape(compiled: &vyre_driver::DispatchConfig, runtime: &vyre_driver::DispatchConfig) -> bool
+pub fn vyre_driver::durable_fanout::for_each_bounded<T, E>(items: &[T], task: impl core::ops::function::Fn(&T) -> core::result::Result<(), E> + core::marker::Sync, on_panic: impl core::ops::function::Fn() -> E, on_reserve_failure: impl core::ops::function::Fn(usize, alloc::collections::TryReserveError) -> E) -> core::result::Result<(), E> where T: core::marker::Sync, E: core::marker::Send
+pub fn vyre_driver::durable_fanout::parent_directories<E>(paths: &[std::path::PathBuf], reserve: impl core::ops::function::FnOnce(&mut alloc::vec::Vec<std::path::PathBuf>, usize) -> core::result::Result<(), E>) -> core::result::Result<alloc::vec::Vec<std::path::PathBuf>, E>
+pub fn vyre_driver::durable_fanout::worker_count() -> usize
 pub fn vyre_driver::dynamic_element_count_from_bytes(element: &vyre_spec::data_type::DataType, byte_len: usize) -> core::option::Option<u32>
 pub fn vyre_driver::element_size_bytes(data_type: &vyre_spec::data_type::DataType) -> core::result::Result<usize, vyre_driver::BackendError>
 pub fn vyre_driver::enforce_actual_output_budget(config: &vyre_driver::DispatchConfig, outputs: &[alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::BackendError>
@@ -1302,6 +1305,7 @@ pub mod vyre_driver::device_work_queue
 pub mod vyre_driver::diagnostics
 pub mod vyre_driver::dispatch_policy
 pub mod vyre_driver::dispatch_shape
+pub mod vyre_driver::durable_fanout
 pub mod vyre_driver::extraction_cost
 pub mod vyre_driver::fixpoint_iterations
 pub mod vyre_driver::fusion

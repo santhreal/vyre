@@ -156,8 +156,8 @@ pub fn build_ac_bounded_ranges_prefilter_program(
 /// match-append coalescing selector.
 ///
 /// # Panics
-/// Panics when the prefilter program exceeds the GPU ABI limits, through
-/// [`ac_ranges_program_or_fail_closed`]. Callers that must recover use
+/// Panics when the prefilter program exceeds the GPU ABI limits, through the
+/// crate's shared fail-closed wrapper. Callers that must recover use
 /// [`try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce`].
 #[must_use]
 pub fn build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(

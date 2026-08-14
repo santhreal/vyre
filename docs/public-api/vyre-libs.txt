@@ -128,7 +128,9 @@ pub fn vyre_libs::builder::BuildOptions::new() -> Self
 pub fn vyre_libs::builder::BuildOptions::with_region_generator(self, name: &'static str) -> Self
 pub fn vyre_libs::builder::BuildOptions::with_tenant_id(self, tenant_id: u32) -> Self
 pub fn vyre_libs::builder::BuildOptions::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs::builder::check_same_shape(op: &'static str, input: &vyre_libs::tensor_ref::TensorRef, output: &vyre_libs::tensor_ref::TensorRef) -> core::result::Result<(), vyre_libs::tensor_ref::TensorRefError>
 pub fn vyre_libs::builder::check_tensors(op: &'static str, tensors: &[(&vyre_libs::tensor_ref::TensorRef, vyre_spec::data_type::DataType)]) -> core::result::Result<(), vyre_libs::tensor_ref::TensorRefError>
+pub fn vyre_libs::builder::checked_element_count(op: &'static str, input: &vyre_libs::tensor_ref::TensorRef) -> core::result::Result<u32, vyre_libs::tensor_ref::TensorRefError>
 pub fn vyre_libs::check_dtype(r: &vyre_libs::tensor_ref::TensorRef, expected: vyre_spec::data_type::DataType, op: &'static str) -> core::result::Result<(), vyre_libs::tensor_ref::TensorRefError>
 pub fn vyre_libs::check_shape(r: &vyre_libs::tensor_ref::TensorRef, expected: &[u32], op: &'static str) -> core::result::Result<(), vyre_libs::tensor_ref::TensorRefError>
 pub fn vyre_libs::check_tensors(op: &'static str, tensors: &[(&vyre_libs::tensor_ref::TensorRef, vyre_spec::data_type::DataType)]) -> core::result::Result<(), vyre_libs::tensor_ref::TensorRefError>

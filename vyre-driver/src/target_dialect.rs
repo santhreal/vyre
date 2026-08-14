@@ -8,7 +8,8 @@
 //! error strings, so `dup-scan` counted twenty-nine of spirv's seventy-six
 //! target-compiler lines as duplicated against cuda, metal and wgpu.
 //!
-//! A backend now declares a [`TargetDialect`] and gets the shell. What it still
+//! A backend now declares a [`TargetDialect`](crate::target_dialect::TargetDialect)
+//! and gets the shell. What it still
 //! owns is the emit function and the numbers in the profile, which are facts
 //! about the device, not plumbing.
 

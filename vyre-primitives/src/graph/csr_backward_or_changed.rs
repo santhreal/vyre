@@ -5,6 +5,7 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{Expr, Node, Program};
 
+#[cfg(any(test, feature = "cpu-parity"))]
 use crate::bitset::bitset_words;
 use crate::graph::program_graph::{
     push_frontier_changed_buffers, ProgramGraphShape, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS,

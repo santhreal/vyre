@@ -30,7 +30,7 @@ pub struct OpFacts {
 
 /// The facts for one op kind.
 #[must_use]
-pub fn op_facts(kind: &KernelOpKind) -> OpFacts {
+pub fn facts_for(kind: &KernelOpKind) -> OpFacts {
     let (child_body_start, retained_effect) = match kind {
         // Structured control flow: child indices follow the condition or the
         // loop bounds, and the nested body is the observable behavior.
@@ -99,7 +99,7 @@ pub fn op_facts(kind: &KernelOpKind) -> OpFacts {
 /// question and lives on `KernelDescriptor`.
 #[must_use]
 pub(crate) fn kernel_op_kind_is_dce_pure(kind: &KernelOpKind) -> bool {
-    !op_facts(kind).retained_effect
+    !facts_for(kind).retained_effect
 }
 
 #[cfg(test)]
@@ -165,7 +165,7 @@ mod tests {
                 generator: "g".into(),
             },
         ] {
-            let facts = op_facts(&kind);
+            let facts = facts_for(&kind);
             assert!(
                 facts.child_body_start.is_some() && facts.retained_effect,
                 "Fix: {kind:?} carries a child body, so it must report both a child-body start and a retained effect."

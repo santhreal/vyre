@@ -243,7 +243,7 @@ pub use descriptor::{
     TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
 };
 pub use error::LowerError;
-pub use op_facts::{op_facts, OpFacts};
+pub use op_facts::{facts_for, OpFacts};
 pub use target::{
     required_subgroup_capabilities, validate_workgroup_size, EmissionTargetCapabilities,
     SubgroupCapabilities, WorkgroupLimitViolation, WorkgroupLimits,

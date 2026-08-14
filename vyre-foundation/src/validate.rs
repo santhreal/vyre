@@ -81,7 +81,7 @@ pub(crate) use err::err;
 pub use options::{BackendCapabilities, BackendValidationCapabilities, ValidationOptions};
 pub use report::{ValidationReport, ValidationWarning};
 /// Re-export of the focused `Fma` f32-operand check emit backends run
-/// before lowering (see [`validate::fma_f32_violations`]).
+/// before lowering (see [`rule_pipeline::fma_f32_violations`]).
 pub use rule_pipeline::fma_f32_violations;
 /// Re-export of the top-level validation function.
 ///
