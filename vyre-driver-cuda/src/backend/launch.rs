@@ -483,16 +483,21 @@ impl CudaBackend {
     /// Enqueue the resolved kernel `prepared.fixpoint_iterations` times on one
     /// stream, resetting the grid barrier ahead of every launch.
     ///
-    /// Host, resident and resident-batch dispatch each replayed this sequence
-    /// themselves, and the reset is the part that must not drift: it belongs
-    /// inside the iteration and ahead of the launch, because the counter is
-    /// per-launch and a kernel that waits on a stale target hangs instead of
-    /// failing.
+    /// Every launch path replayed this sequence itself, and the pairing is the
+    /// part that must not drift: the reset belongs inside the iteration and
+    /// ahead of the launch, because the counter is per-launch. A launch that
+    /// starts from a stale counter finds every barrier already satisfied, so
+    /// the kernel returns success, the driver reports no error, and the only
+    /// symptom is wrong data.
     ///
     /// CUDA serializes kernels within one stream, so each iteration observes the
     /// previous iteration's writes. That is the persistent-state contract a
     /// fixpoint program converges under, and it is why the iterations are
     /// enqueued back to back on the same stream rather than fanned out.
+    ///
+    /// The lease is borrowed rather than consumed because ending it is a
+    /// separate ordered step that [`GridBarrierLease::launch_then_release`]
+    /// owns; call this from inside that closure.
     pub(crate) fn replay_fixpoint_launches(
         &self,
         grid_barrier: &GridBarrierLease,

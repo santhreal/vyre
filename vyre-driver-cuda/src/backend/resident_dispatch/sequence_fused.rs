@@ -428,23 +428,13 @@ impl CudaBackend {
                     stream.raw(),
                     "resident sequence grid-sync launch",
                     |grid_barrier| {
-                        for _ in 0..step.prepared.fixpoint_iterations {
-                            // SAFETY: the sequence stream is live for these
-                            // launches and the memset is enqueued ahead of each
-                            // launch on it.
-                            unsafe {
-                                grid_barrier.enqueue_reset(stream.raw())?;
-                            }
-                            self.launch_prevalidated_function(
-                                resolved.func,
-                                &mut kernel_args,
-                                &step.prepared.launch,
-                                stream.raw(),
-                                false,
-                                step.prepared.cooperative,
-                            )?;
-                        }
-                        Ok(())
+                        self.replay_fixpoint_launches(
+                            grid_barrier,
+                            resolved.func,
+                            &mut kernel_args,
+                            &step.prepared,
+                            stream.raw(),
+                        )
                     },
                 )?;
                 Ok(())

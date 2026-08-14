@@ -7,7 +7,7 @@ use vyre_driver::{
     Device, DeviceIdentity, DispatchConfig, ResidentOwner, Submission,
 };
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{Artifact, ArtifactValueId, Digest, TargetPayload, TargetPayloadFormat};
+use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
 
 use crate::{vulkan, SPIRV_BACKEND_ID};
 
@@ -38,16 +38,6 @@ const MESSAGES: InstanceMessages = InstanceMessages {
         fix: "Fix: consume each Submission completion exactly once.".to_string(),
     },
 };
-
-/// Rejection for a declared input whose canonical value was never bound.
-fn unbound_input(value: ArtifactValueId, name: &str) -> BackendError {
-    BackendError::InvalidProgram {
-        fix: format!(
-            "Fix: bind canonical artifact value {} for Program buffer `{name}` before submission.",
-            value.0
-        ),
-    }
-}
 
 /// First word of every well-formed SPIR-V module.
 const SPIRV_MAGIC: u32 = 0x0723_0203;
@@ -114,17 +104,7 @@ struct SpirvArtifactInstance {
 }
 
 impl ArtifactInstance for SpirvArtifactInstance {
-    fn artifact(&self) -> Digest {
-        self.core.artifact
-    }
-
-    fn payload(&self) -> Digest {
-        self.core.payload
-    }
-
-    fn device(&self) -> &DeviceIdentity {
-        &self.core.device
-    }
+    vyre_driver::artifact_instance_identity!();
 
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
         self.core.accept(&bindings)?;
@@ -148,9 +128,12 @@ impl SpirvArtifactInstance {
             let mut config = module.config.clone();
             materialize::override_grid(&mut config, invocation_grid);
             let plan = BindingPlan::build(&module.program)?;
-            let inputs = self
-                .core
-                .gather_inputs(&plan, &module.program, &state, unbound_input)?;
+            let inputs = self.core.gather_inputs(
+                &plan,
+                &module.program,
+                &state,
+                materialize::unbound_input,
+            )?;
             // SAFETY: `native` owns a live Vulkan device for the entire instance;
             // words were validated as aligned SPIR-V and Program metadata came
             // from the authenticated neutral artifact.

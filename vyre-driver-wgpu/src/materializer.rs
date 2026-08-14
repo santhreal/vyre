@@ -2,14 +2,16 @@ use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use vyre_driver::materialize::{self, InstanceCore, MaterializerDevice};
+use vyre_driver::materialize::{
+    self, ExecutableModule, InstanceCore, InstanceMessages, MaterializerDevice,
+};
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet,
     CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig, ResidentOwner,
     Submission,
 };
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{Artifact, ArtifactValueId, Digest, TargetPayload, TargetPayloadFormat};
+use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
 
 use crate::descriptor_mapping::descriptor_bind_group;
 use crate::pipeline::WgpuPipeline;
@@ -33,23 +35,24 @@ fn omitted_resident_output(output_index: usize, name: &str) -> BackendError {
     ))
 }
 
-/// Rejection for an unproduced output value on the resident path, which names
-/// the value without its lifetime class.
-fn unproduced_resident_value(value: ArtifactValueId) -> BackendError {
-    materialize::invalid_module(&format!(
-        "selected execution did not produce canonical value {}",
-        value.0
-    ))
-}
-
-/// Rejection for an unpreserved retained value on the resident path, which
-/// names the value without its lifetime class.
-fn unpreserved_resident_value(value: ArtifactValueId) -> BackendError {
-    materialize::invalid_module(&format!(
-        "selected execution did not preserve canonical value {}",
-        value.0
-    ))
-}
+/// Resident-path rejection text. This backend names an unproduced or
+/// unpreserved resident value without its lifetime class, where the host path
+/// names the class; every other rejection is the neutral wording.
+const RESIDENT_MESSAGES: InstanceMessages = InstanceMessages {
+    missing_output_value: |value| {
+        materialize::invalid_module(&format!(
+            "selected execution did not produce canonical value {}",
+            value.0
+        ))
+    },
+    missing_retained_value: |value| {
+        materialize::invalid_module(&format!(
+            "selected execution did not preserve canonical value {}",
+            value.0
+        ))
+    },
+    ..materialize::NEUTRAL_MESSAGES
+};
 
 pub(crate) struct WgpuMaterializer {
     backend: WgpuBackend,
@@ -188,86 +191,84 @@ struct WgpuArtifactInstance {
     modules: Vec<WgpuExecutableModule>,
 }
 
+impl ExecutableModule for WgpuExecutableModule {
+    fn program(&self) -> &Program {
+        &self.program
+    }
+
+    fn config(&self) -> &DispatchConfig {
+        &self.config
+    }
+}
+
 impl ArtifactInstance for WgpuArtifactInstance {
-    fn artifact(&self) -> Digest {
-        self.core.artifact
-    }
-
-    fn payload(&self) -> Digest {
-        self.core.payload
-    }
-
-    fn device(&self) -> &DeviceIdentity {
-        &self.core.device
-    }
+    vyre_driver::artifact_instance_identity!();
 
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
         if self.lost.load(Ordering::Acquire) {
             return Err(device_lost_error(&self.core.device));
         }
-        self.core.accept(&bindings)?;
-        let invocation_grid = bindings.invocation_grid();
-        let bound = materialize::partition_bindings(&bindings);
-        if !bound.host.is_empty() && !bound.resident.is_empty() {
-            return Err(materialize::invalid_module(
-                "WGPU artifact submission cannot mix host and resident resources",
-            ));
-        }
-        let result = if bound.resident.is_empty() {
-            self.execute(bound.host, invocation_grid)
-        } else {
-            self.execute_resident(&bound.resident, invocation_grid)
-        };
-        Ok(self.core.ready(result))
+        self.core.route_submission(
+            &bindings,
+            || {
+                materialize::invalid_module(
+                    "WGPU artifact submission cannot mix host and resident resources",
+                )
+            },
+            |state, invocation_grid| self.execute(state, invocation_grid),
+            |resources, invocation_grid| self.execute_resident(resources, invocation_grid),
+        )
     }
 }
 
 impl WgpuArtifactInstance {
     fn execute(
         &self,
-        mut state: BTreeMap<ArtifactValueId, Vec<u8>>,
+        state: BTreeMap<ArtifactValueId, Vec<u8>>,
         invocation_grid: Option<[u32; 3]>,
     ) -> Result<Completion, BackendError> {
-        let mut device_ns = 0_u64;
-        let mut has_device_timing = false;
-        for module in &self.modules {
-            let mut config = module.config.clone();
-            materialize::override_grid(&mut config, invocation_grid);
-            let plan = BindingPlan::build(&module.program)?;
-            let mut inputs = Vec::with_capacity(module.input_slots.len());
-            for slot in &module.input_slots {
-                let value = self.core.value_for_buffer(&slot.name)?;
-                match state.get(&value) {
-                    Some(bytes) => inputs.push(bytes.as_slice()),
-                    None if !slot.required => inputs.push(&[]),
-                    None => {
-                        return Err(materialize::invalid_module(&format!(
-                            "canonical artifact value {} for target binding `{}` is unbound",
-                            value.0, slot.name
-                        )));
+        self.core.execute_modules(
+            &self.modules,
+            state,
+            invocation_grid,
+            omitted_output,
+            |module, _plan, config, state| {
+                let inputs = self.gather_slot_inputs(module, state)?;
+                match module.pipeline.dispatch_borrowed_timed(&inputs, config) {
+                    Err(_) if self.lost.load(Ordering::Acquire) => {
+                        Err(device_lost_error(&self.core.device))
                     }
+                    result => result,
+                }
+            },
+        )
+    }
+
+    /// Borrow bound bytes into the order this backend's target bindings declare.
+    ///
+    /// The input order comes from the emitted descriptor slots rather than the
+    /// binding plan, because a slot the target module declares but the plan does
+    /// not require is bound empty instead of rejected.
+    fn gather_slot_inputs<'state>(
+        &self,
+        module: &WgpuExecutableModule,
+        state: &'state BTreeMap<ArtifactValueId, Vec<u8>>,
+    ) -> Result<Vec<&'state [u8]>, BackendError> {
+        let mut inputs = Vec::with_capacity(module.input_slots.len());
+        for slot in &module.input_slots {
+            let value = self.core.value_for_buffer(&slot.name)?;
+            match state.get(&value) {
+                Some(bytes) => inputs.push(bytes.as_slice()),
+                None if !slot.required => inputs.push(&[]),
+                None => {
+                    return Err(materialize::invalid_module(&format!(
+                        "canonical artifact value {} for target binding `{}` is unbound",
+                        value.0, slot.name
+                    )));
                 }
             }
-            let dispatched = match module.pipeline.dispatch_borrowed_timed(&inputs, &config) {
-                Err(_) if self.lost.load(Ordering::Acquire) => {
-                    return Err(device_lost_error(&self.core.device));
-                }
-                result => result?,
-            };
-            if let Some(ns) = dispatched.device_ns {
-                device_ns = device_ns.saturating_add(ns);
-                has_device_timing = true;
-            }
-            self.core.absorb_outputs(
-                &plan,
-                &module.program,
-                &dispatched.outputs,
-                &mut state,
-                omitted_output,
-            )?;
         }
-        self.core
-            .completion(&state, has_device_timing.then_some(device_ns))
+        Ok(inputs)
     }
 
     fn execute_resident(
@@ -275,13 +276,10 @@ impl WgpuArtifactInstance {
         resources: &BTreeMap<ArtifactValueId, vyre_driver::Resource>,
         invocation_grid: Option<[u32; 3]>,
     ) -> Result<Completion, BackendError> {
-        if self.modules.len() != 1 {
-            return Err(BackendError::UnsupportedFeature {
-                name: "WGPU resident submission for multi-module artifacts".to_string(),
-                backend: WGPU_BACKEND_ID.to_string(),
-            });
-        }
-        let module = &self.modules[0];
+        let module = self.core.single_resident_module(
+            &self.modules,
+            "WGPU resident submission for multi-module artifacts",
+        )?;
         let mut ordered = Vec::with_capacity(module.resident_slots.len());
         for name in &module.resident_slots {
             let value = self.core.value_for_buffer(name)?;
@@ -299,24 +297,13 @@ impl WgpuArtifactInstance {
             .pipeline
             .dispatch_persistent_handles_timed(&ordered, &config)?;
         let plan = BindingPlan::build(&module.program)?;
-        let mut state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
-        self.core.absorb_outputs(
+        self.core.resident_completion(
             &plan,
             &module.program,
-            &dispatched.outputs,
-            &mut state,
+            &dispatched,
             omitted_resident_output,
-        )?;
-        Ok(Completion {
-            artifact: self.core.artifact,
-            outputs: self
-                .core
-                .project(&self.core.outputs, &state, unproduced_resident_value)?,
-            retained: self
-                .core
-                .project(&self.core.retained, &state, unpreserved_resident_value)?,
-            device_ns: dispatched.device_ns,
-        })
+            &RESIDENT_MESSAGES,
+        )
     }
 }
 
@@ -362,6 +349,7 @@ pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, Ba
 mod tests {
     use super::*;
     use std::collections::BTreeSet;
+    use vyre_megakernel::Digest;
 
     /// WHY: runtime recovery must receive a stable device-loss class, never text to parse.
     #[test]

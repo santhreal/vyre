@@ -1,14 +1,16 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use vyre_driver::materialize::{self, InstanceCore, InstanceMessages, MaterializerDevice};
+use vyre_driver::materialize::{
+    self, ExecutableModule, InstanceCore, InstanceMessages, MaterializerDevice,
+};
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingRole, BindingSet,
     CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig, ResidentOwner,
     Submission,
 };
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{Artifact, ArtifactValueId, Digest, TargetPayload, TargetPayloadFormat};
+use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
 
 use crate::backend::CudaBackend;
 use crate::pipeline::CudaCompiledPipeline;
@@ -30,16 +32,6 @@ const MESSAGES: InstanceMessages = InstanceMessages {
     },
     ..materialize::NEUTRAL_MESSAGES
 };
-
-/// Rejection for a declared input whose canonical value was never bound.
-fn unbound_input(value: ArtifactValueId, name: &str) -> BackendError {
-    BackendError::InvalidProgram {
-        fix: format!(
-            "Fix: bind canonical artifact value {} for Program buffer `{name}` before submission.",
-            value.0
-        ),
-    }
-}
 
 /// Rejection for a host dispatch that skipped a declared output slot.
 fn omitted_output(output_index: usize, name: &str) -> BackendError {
@@ -149,67 +141,54 @@ struct CudaArtifactInstance {
     modules: Vec<CudaExecutableModule>,
 }
 
+impl ExecutableModule for CudaExecutableModule {
+    fn program(&self) -> &Program {
+        &self.program
+    }
+
+    fn config(&self) -> &DispatchConfig {
+        &self.config
+    }
+}
+
 impl ArtifactInstance for CudaArtifactInstance {
-    fn artifact(&self) -> Digest {
-        self.core.artifact
-    }
-
-    fn payload(&self) -> Digest {
-        self.core.payload
-    }
-
-    fn device(&self) -> &DeviceIdentity {
-        &self.core.device
-    }
+    vyre_driver::artifact_instance_identity!();
 
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
-        self.core.accept(&bindings)?;
-        let invocation_grid = bindings.invocation_grid();
-        let bound = materialize::partition_bindings(&bindings);
-        if !bound.host.is_empty() && !bound.resident.is_empty() {
-            return Err(materialize::invalid_module(
-                "CUDA artifact submission cannot mix host and resident resources",
-            ));
-        }
-        let result = if bound.resident.is_empty() {
-            self.execute(bound.host, invocation_grid)
-        } else {
-            self.execute_resident(&bound.resident, invocation_grid)
-        };
-        Ok(self.core.ready(result))
+        self.core.route_submission(
+            &bindings,
+            || {
+                materialize::invalid_module(
+                    "CUDA artifact submission cannot mix host and resident resources",
+                )
+            },
+            |state, invocation_grid| self.execute(state, invocation_grid),
+            |resources, invocation_grid| self.execute_resident(resources, invocation_grid),
+        )
     }
 }
 
 impl CudaArtifactInstance {
     fn execute(
         &self,
-        mut state: BTreeMap<ArtifactValueId, Vec<u8>>,
+        state: BTreeMap<ArtifactValueId, Vec<u8>>,
         invocation_grid: Option<[u32; 3]>,
     ) -> Result<Completion, BackendError> {
-        let mut device_ns = 0_u64;
-        let mut has_device_timing = false;
-        for module in &self.modules {
-            let mut config = module.config.clone();
-            materialize::override_grid(&mut config, invocation_grid);
-            let plan = BindingPlan::build(&module.program)?;
-            let inputs = self
-                .core
-                .gather_inputs(&plan, &module.program, &state, unbound_input)?;
-            let dispatched = module.pipeline.dispatch_borrowed_timed(&inputs, &config)?;
-            if let Some(ns) = dispatched.device_ns {
-                device_ns = device_ns.saturating_add(ns);
-                has_device_timing = true;
-            }
-            self.core.absorb_outputs(
-                &plan,
-                &module.program,
-                &dispatched.outputs,
-                &mut state,
-                omitted_output,
-            )?;
-        }
-        self.core
-            .completion(&state, has_device_timing.then_some(device_ns))
+        self.core.execute_modules(
+            &self.modules,
+            state,
+            invocation_grid,
+            omitted_output,
+            |module, plan, config, state| {
+                let inputs = self.core.gather_inputs(
+                    plan,
+                    &module.program,
+                    state,
+                    materialize::unbound_input,
+                )?;
+                module.pipeline.dispatch_borrowed_timed(&inputs, config)
+            },
+        )
     }
 
     fn execute_resident(
@@ -217,13 +196,10 @@ impl CudaArtifactInstance {
         resources: &BTreeMap<ArtifactValueId, vyre_driver::Resource>,
         invocation_grid: Option<[u32; 3]>,
     ) -> Result<Completion, BackendError> {
-        if self.modules.len() != 1 {
-            return Err(BackendError::UnsupportedFeature {
-                name: "CUDA resident submission for multi-module artifacts".to_string(),
-                backend: CUDA_BACKEND_ID.to_string(),
-            });
-        }
-        let module = &self.modules[0];
+        let module = self.core.single_resident_module(
+            &self.modules,
+            "CUDA resident submission for multi-module artifacts",
+        )?;
         let plan = BindingPlan::build(&module.program)?;
         let mut ordered = Vec::with_capacity(plan.bindings.len());
         for binding in resident_resource_bindings(&plan) {
@@ -243,15 +219,13 @@ impl CudaArtifactInstance {
         let dispatched = module
             .pipeline
             .dispatch_artifact_resident_timed(&ordered, invocation_grid)?;
-        let mut state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
-        self.core.absorb_outputs(
+        self.core.resident_completion(
             &plan,
             &module.program,
-            &dispatched.outputs,
-            &mut state,
+            &dispatched,
             omitted_resident_output,
-        )?;
-        self.core.completion(&state, dispatched.device_ns)
+            &self.core.messages,
+        )
     }
 }
 
