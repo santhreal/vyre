@@ -489,3 +489,8 @@ text = "The cross-emitter parity suite states the audit contract once. Three tes
 id = "naga-expression-probes-have-one-owner"
 category = "Changed"
 text = "Asking whether the emitted WGSL entry point contains a given operation is one probe. Three tests each opened the entry point's expression arena, iterated it and hand-matched a `naga::Expression::Unary` or `Expression::Binary` variant with the operator pinned in the pattern and the rest wildcarded, which is a shape that silently stops matching when naga adds a field to either variant: the assertion then reports the operation as absent rather than failing to compile. `entry_has_unary` and `entry_has_binary` sit beside the block probes in `src/tests/naga_probe.rs`, renamed from `naga_block_probe.rs` now that it probes statements and expressions rather than blocks alone."
+
+[[fragments]]
+id = "emitter-duplication-pins-lowered-to-measured"
+category = "Changed"
+text = "The duplication pins for the four emitter crates now sit at what the tree measures: vyre-emit-metal 29 to 22, vyre-emit-naga 404 to 221, vyre-emit-ptx 295 to 105, vyre-emit-spirv 49 to 43. A pin that passes with room under it hides the next copy, so each is lowered to the measurement rather than left as headroom. vyre-megakernel stays at 60: both of its duplicated files partner only with crates outside the emitter boundary, so nothing there could be collapsed from this side."
