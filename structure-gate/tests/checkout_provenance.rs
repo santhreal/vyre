@@ -55,13 +55,20 @@ fn the_gate_binary_was_compiled_by_the_checkout_it_runs_in() {
 }
 
 /// Every gate binary that resolves a path inside the checkout declares the
-/// input that tells two checkouts apart.
+/// input that tells two checkouts apart, and no published binary bakes it.
 ///
-/// A gate binary is a member that ships an executable and locates files in the
-/// tree: its whole output is a claim about that tree, so being handed another
-/// checkout's binary makes the claim describe the wrong tree. The set is
-/// derived from the member list at run time, so a new gate turns this red
-/// instead of silently inheriting a binary from whichever tree compiled last.
+/// A gate binary is a member that ships an executable, locates files in the
+/// tree, and is not published: its whole output is a claim about that tree, so
+/// being handed another checkout's binary makes the claim describe the wrong
+/// tree. The set is derived from the member list at run time, so a new gate
+/// turns this red instead of silently inheriting a binary from whichever tree
+/// compiled last.
+///
+/// A published binary is held to the opposite rule. A checkout path recorded
+/// when the crate was built means nothing on the machine that runs it, and
+/// reading one with `env!` makes the crate uncompilable anywhere that does not
+/// carry this repository's cargo config, which would break the crate for every
+/// consumer. Such a binary takes its root as an argument instead.
 ///
 /// Library members are deliberately out of scope. Cross-checkout reuse is what
 /// makes a shared target directory worth having, and opting `vyre-libs` or
@@ -74,6 +81,7 @@ fn every_gate_binary_that_resolves_checkout_paths_declares_the_fingerprint_input
     let members = structure_gate::scan(&root).members;
 
     let mut missing = Vec::new();
+    let mut baked_into_published = Vec::new();
     for member in &members {
         let crate_dir = root.join(member);
         if !ships_a_binary(&crate_dir) {
@@ -81,10 +89,16 @@ fn every_gate_binary_that_resolves_checkout_paths_declares_the_fingerprint_input
         }
         let source = member_sources(&crate_dir.join("src"));
         let resolves_paths = source.iter().any(|text| text.contains("CARGO_MANIFEST_DIR"));
-        let declares_input = source
+        let bakes_input = source
             .iter()
-            .any(|text| text.contains("VYRE_CHECKOUT_ROOT") || text.contains("checkout_root()"));
-        if resolves_paths && !declares_input {
+            .any(|text| text.contains("env!(\"VYRE_CHECKOUT_ROOT\""));
+        let declares_input =
+            bakes_input || source.iter().any(|text| text.contains("checkout_root()"));
+        if is_published(&crate_dir) {
+            if bakes_input {
+                baked_into_published.push(member.clone());
+            }
+        } else if resolves_paths && !declares_input {
             missing.push(member.clone());
         }
     }
@@ -97,6 +111,20 @@ fn every_gate_binary_that_resolves_checkout_paths_declares_the_fingerprint_input
          directory. Fix: resolve the root through a `checkout_root()` that reads \
          `env!(\"VYRE_CHECKOUT_ROOT\")`."
     );
+    assert!(
+        baked_into_published.is_empty(),
+        "{baked_into_published:?} are published and bake a checkout path in with \
+         `env!(\"VYRE_CHECKOUT_ROOT\")`. The path names the machine that built the \
+         crate, and the crate cannot compile at all without this repository's cargo \
+         config, so every consumer's build breaks. Fix: take the root as an argument \
+         and read the variable at run time if it is set."
+    );
+}
+
+/// Whether a member is published, so a compiled-in checkout path would ship.
+fn is_published(crate_dir: &Path) -> bool {
+    std::fs::read_to_string(crate_dir.join("Cargo.toml"))
+        .is_ok_and(|manifest| !manifest.contains("publish = false"))
 }
 
 /// Whether a member produces an executable.

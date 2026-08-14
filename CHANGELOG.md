@@ -249,15 +249,22 @@ own source produced 209, and `dup-scan` read 11811 duplicate lines for
 `vyre-libs` against a true 13406.
 
 `.cargo/config.toml` now declares `VYRE_CHECKOUT_ROOT` as a checkout-relative
-path, so its value is the absolute path of the checkout. Every crate whose
-output describes the tree reads it with `env!`, which records the value in that
-crate's dep-info; cargo rebuilds instead of reusing when it changes. The 46
-hand-rolled derivations of the workspace root from `CARGO_MANIFEST_DIR` across
-those crates are now three `checkout_root()` owners.
+path, so its value is the absolute path of the checkout. Every unpublished gate
+binary whose output describes the tree reads it with `env!`, which records the
+value in that crate's dep-info; cargo rebuilds instead of reusing when it
+changes. The 46 hand-rolled derivations of the workspace root from
+`CARGO_MANIFEST_DIR` across those crates are now three `checkout_root()` owners.
 
 A gate binary compiled outside the checkout, where `.cargo/config.toml` does not
 apply, now fails to compile with a `Fix:` message rather than baking a foreign
 root.
+
+`vyre-lints` is published, so it is held to the opposite rule: it resolves the
+root from its own `--workspace-root` argument, reads `VYRE_CHECKOUT_ROOT` only
+when the environment sets it at run time, and bakes nothing. A recorded build
+path would name the machine that compiled the crate, and requiring the variable
+at compile time would break every consumer's build. `structure-gate` enforces
+both directions.
 
 ### Fixed
 

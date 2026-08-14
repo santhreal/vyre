@@ -1,30 +1,27 @@
 use std::path::{Component, Path, PathBuf};
 
-/// Absolute root of the checkout that compiled this binary.
+/// Absolute root of the checkout being linted, when the environment names one.
 ///
-/// `VYRE_CHECKOUT_ROOT` is declared in `.cargo/config.toml` as a checkout-
-/// relative path, so reading it with `env!` records this checkout's absolute
-/// location in the crate's dep-info. Without that input, a target directory
-/// shared by several checkouts hands one checkout the lint binary another one
-/// compiled, and the report then describes the wrong tree.
-pub(crate) fn compiled_checkout_root() -> PathBuf {
-    PathBuf::from(env!(
-        "VYRE_CHECKOUT_ROOT",
-        "Fix: run cargo from inside the vyre checkout so its .cargo/config.toml applies."
-    ))
-}
-
-/// Absolute root of the checkout this tool was invoked in.
-pub(crate) fn checkout_root() -> PathBuf {
-    std::env::var_os("VYRE_CHECKOUT_ROOT")
-        .map(PathBuf::from)
-        .unwrap_or_else(compiled_checkout_root)
+/// This crate is published, so the root must not be baked in at compile time.
+/// A path recorded on the machine that built the binary means nothing on the
+/// machine that runs it, and reading it with `env!` would make the crate
+/// uncompilable anywhere that does not carry this repository's cargo config.
+///
+/// There is also no need to bake it. `vyre-lints` takes `--workspace-root`, and
+/// every root it scans is derived from that argument, so the root already has
+/// one owner and this function only supplies the prefix used to shorten a path
+/// for display. When cargo exports `VYRE_CHECKOUT_ROOT` it is used; otherwise
+/// `workspace_relative` falls back to the crate-directory suffix, which yields
+/// the same text for any path inside the workspace.
+pub(crate) fn checkout_root() -> Option<PathBuf> {
+    std::env::var_os("VYRE_CHECKOUT_ROOT").map(PathBuf::from)
 }
 
 pub(crate) fn workspace_relative(path: &Path) -> String {
-    let workspace_root = checkout_root();
-    if let Ok(relative) = path.strip_prefix(workspace_root) {
-        return normalized_path(relative);
+    if let Some(root) = checkout_root() {
+        if let Ok(relative) = path.strip_prefix(&root) {
+            return normalized_path(relative);
+        }
     }
 
     let mut components = path.components();
