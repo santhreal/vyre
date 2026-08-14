@@ -11,9 +11,10 @@ use crate::api::case::{
 use crate::api::suite::SuiteKind;
 use crate::cases::frontier_step::{
     dispatch_frontier_step, frontier_step, frontier_step_bytes_touched, frontier_step_run,
-    timed_baseline, FrontierStep, StepGrid,
+    FrontierStep, StepGrid,
 };
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
+use crate::cases::reference_sample::timed_reference;
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
@@ -122,7 +123,7 @@ fn prepare_ifds_skewed_step(
     let shape = ProgramGraphShape::new(fixture.stats.nodes, fixture.stats.edges);
     let program = csr_forward_traverse(shape, "frontier_in", "frontier_out", IFDS_REACH_MASK);
 
-    let (oracle, baseline_wall_ns) = timed_baseline(|| ifds_skewed_cpu_oracle(&fixture));
+    let (oracle, baseline_wall_ns) = timed_reference(|| ifds_skewed_cpu_oracle(&fixture));
     let mut stats = fixture.stats;
     stats.allowed_edges_from_active = oracle.allowed_edges_from_active;
     stats.filtered_edges_from_active = oracle.filtered_edges_from_active;

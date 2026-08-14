@@ -94,6 +94,7 @@ pub(crate) mod queue_materialize;
 pub(crate) mod queue_stage;
 pub(crate) mod queue_traverse_plan;
 pub mod reduce_sum;
+pub(crate) mod reference_sample;
 pub mod regex_bt;
 pub mod release_workloads;
 pub(crate) mod resident_queue;

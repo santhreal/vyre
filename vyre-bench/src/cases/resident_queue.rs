@@ -1,24 +1,22 @@
-//! The resident work-queue buffer set and reference reporting the megakernel
-//! cases share.
+//! The resident work-queue buffer set the megakernel cases share.
 //!
 //! All three megakernel cases publish a ring into the same four-buffer resident
 //! work queue: control, ring, debug log, io queue. Each carried its own copy of
-//! that encoding, its own post-dispatch accounting, and its own reference-sample
-//! metrics, so a change to the buffer layout had to be made three times.
+//! that encoding and its own post-dispatch accounting, so a change to the buffer
+//! layout had to be made three times.
 //!
 //! What is deliberately not here is the timed dispatch. The latency case drains
 //! a single workgroup and the condition case drives the full grid, and that grid
 //! override is precisely what each one measures, so each case keeps its own
 //! `grid_override` and its own `dispatch_artifact_timed` call. Nothing in this
-//! module reads a clock except [`timed_reference`], which times a closure the
-//! caller supplies and never chooses what that closure computes.
+//! module reads a clock at all: `account` is arithmetic over timings the
+//! dispatch already returned.
 
 use crate::api::case::{BenchContext, BenchError};
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::MetricPoint;
 use crate::api::resident::{
     input_bytes_total, transfer_accounting, ResidentDispatch, ResidentInputPool, TransferAccounting,
 };
-use std::time::Instant;
 use vyre_runtime::resident_work_queue;
 
 /// The four resident work-queue buffers a megakernel case dispatches over.
@@ -95,17 +93,6 @@ pub(crate) fn account(dispatch: ResidentDispatch, input_bytes_total: u64) -> Que
     }
 }
 
-/// Time a CPU reference and report its wall nanoseconds.
-///
-/// The closure is the caller's reference implementation, which is the arm the
-/// dispatched outputs are compared against and is never shared between cases.
-pub(crate) fn timed_reference<T>(reference: impl FnOnce() -> T) -> (T, u64) {
-    let started = Instant::now();
-    let value = reference();
-    let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
-    (value, wall_ns)
-}
-
 /// How many resident input-buffer sets the measured sample rotated through.
 ///
 /// Zero means the backend did not support residency and the sample fell back to
@@ -117,30 +104,9 @@ pub(crate) fn resident_pool_sets_metric(resident_used: bool, sample_sets: usize)
     }
 }
 
-/// Metrics for the CPU reference sample a megakernel case is reported against.
-///
-/// The reference rewrites host buffers, so it reads the whole input set and
-/// writes whatever it produced; it never dispatches, so it carries no device
-/// time.
-pub(crate) fn reference_metrics(
-    wall_ns: u64,
-    input_bytes_total: u64,
-    output_bytes: u64,
-) -> BenchMetrics {
-    BenchMetrics {
-        wall_ns: Some(wall_ns),
-        input_bytes: Some(input_bytes_total),
-        output_bytes: Some(output_bytes),
-        bytes_touched: Some(input_bytes_total.saturating_add(output_bytes)),
-        bytes_read: Some(input_bytes_total),
-        bytes_written: Some(output_bytes),
-        ..Default::default()
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{account, reference_metrics, resident_pool_sets_metric};
+    use super::{account, resident_pool_sets_metric};
     use crate::api::resident::ResidentDispatch;
     use vyre_driver::TimedDispatchResult;
 
@@ -209,19 +175,5 @@ mod tests {
             );
             assert_eq!(resident_pool_sets_metric(false, sample_sets).value, 0);
         }
-    }
-
-    /// The reference sample touches its inputs and its outputs and nothing else.
-    #[test]
-    fn reference_metrics_account_both_directions() {
-        let metrics = reference_metrics(77, 1_024, 16);
-
-        assert_eq!(metrics.wall_ns, Some(77));
-        assert_eq!(metrics.dispatch_ns, None);
-        assert_eq!(metrics.input_bytes, Some(1_024));
-        assert_eq!(metrics.output_bytes, Some(16));
-        assert_eq!(metrics.bytes_read, Some(1_024));
-        assert_eq!(metrics.bytes_written, Some(16));
-        assert_eq!(metrics.bytes_touched, Some(1_040));
     }
 }

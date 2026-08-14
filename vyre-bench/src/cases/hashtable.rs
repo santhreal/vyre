@@ -17,6 +17,7 @@ use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
 };
 use crate::api::suite::SuiteKind;
+use crate::cases::reference_sample::timed_reference;
 use hashbrown::HashMap;
 use rand::{RngExt, SeedableRng};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -245,20 +246,20 @@ impl BenchCase for HashtableProbe {
         let timed = dispatch.timed;
         let outputs = timed.outputs;
 
-        let start_ref = std::time::Instant::now();
-        let cpu_results: Vec<u8> = prepared
-            .probe_keys
-            .iter()
-            .flat_map(|key| {
-                prepared
-                    .cpu_table
-                    .get(key)
-                    .copied()
-                    .unwrap_or(0)
-                    .to_le_bytes()
-            })
-            .collect();
-        let elapsed_ref = start_ref.elapsed().as_nanos() as u64;
+        let (cpu_results, elapsed_ref) = timed_reference(|| {
+            prepared
+                .probe_keys
+                .iter()
+                .flat_map(|key| {
+                    prepared
+                        .cpu_table
+                        .get(key)
+                        .copied()
+                        .unwrap_or(0)
+                        .to_le_bytes()
+                })
+                .collect::<Vec<u8>>()
+        });
         let output_bytes = outputs.iter().map(Vec::len).sum::<usize>() as u64;
         let accounting =
             transfer_accounting(prepared.input_bytes_total, output_bytes, resident_used);

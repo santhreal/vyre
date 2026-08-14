@@ -10,6 +10,7 @@ use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
 };
 use crate::api::suite::SuiteKind;
+use crate::cases::reference_sample::timed_reference;
 use rayon::prelude::*;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -220,9 +221,8 @@ impl BenchCase for BinarySearchU32 {
         let timed = dispatch.timed;
         let outputs = timed.outputs;
 
-        let start_ref = std::time::Instant::now();
-        let baseline = cpu_binary_search_results(&prepared.keys, &prepared.queries);
-        let elapsed_ref = start_ref.elapsed().as_nanos() as u64;
+        let (baseline, elapsed_ref) =
+            timed_reference(|| cpu_binary_search_results(&prepared.keys, &prepared.queries));
         let input_bytes = prepared.input_bytes_total;
         let output_bytes = outputs.iter().map(Vec::len).sum::<usize>() as u64;
         let accounting = transfer_accounting(input_bytes, output_bytes, resident_used);

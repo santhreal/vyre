@@ -16,6 +16,7 @@ use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
 };
 use crate::api::suite::SuiteKind;
+use crate::cases::reference_sample::timed_reference;
 use openssl::symm::{Cipher, Crypter, Mode};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::wire::pack_u32_iter;
@@ -192,10 +193,9 @@ impl BenchCase for AesCtrEncrypt {
         let timed = dispatch.timed;
         let outputs = timed.outputs;
 
-        // CPU baseline
-        let start_ref = std::time::Instant::now();
-        let cpu_result = cpu_openssl_aes_ctr(&prepared.plaintext_bytes, &prepared.key_bytes)?;
-        let elapsed_ref = start_ref.elapsed().as_nanos() as u64;
+        let (cpu_result, elapsed_ref) =
+            timed_reference(|| cpu_openssl_aes_ctr(&prepared.plaintext_bytes, &prepared.key_bytes));
+        let cpu_result = cpu_result?;
         let input_bytes = prepared.input_bytes_total;
         let output_bytes = outputs.iter().map(Vec::len).sum::<usize>() as u64;
         let accounting = transfer_accounting(input_bytes, output_bytes, resident_used);

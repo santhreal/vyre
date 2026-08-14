@@ -5,9 +5,8 @@ use crate::api::case::{
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{dispatch_artifact_timed, ResidentInputPool};
-use crate::cases::resident_queue::{
-    account, queue_buffers, reference_metrics, resident_pool_sets_metric, timed_reference,
-};
+use crate::cases::reference_sample::{reference_metrics, timed_reference};
+use crate::cases::resident_queue::{account, queue_buffers, resident_pool_sets_metric};
 use vyre_driver::autotune_store::{AutotuneRecord, AutotuneStore};
 use vyre_driver::specialization::SpecCacheKey;
 use vyre_driver::speculate::SpeculativeVariantKeys;

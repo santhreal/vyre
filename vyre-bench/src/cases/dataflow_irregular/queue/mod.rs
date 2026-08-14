@@ -10,11 +10,11 @@ use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
 };
 use crate::cases::frontier_step::{
-    dispatch_frontier_step, frontier_step, frontier_step_run, timed_baseline, FrontierStep,
-    StepGrid,
+    dispatch_frontier_step, frontier_step, frontier_step_run, FrontierStep, StepGrid,
 };
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
 use crate::cases::queue_traverse_plan::{single_queue_traverse, traverse_logical_lanes};
+use crate::cases::reference_sample::timed_reference;
 use crate::cases::skewed_graph::sparse_queue_capacity;
 use vyre_foundation::ir::Program;
 
@@ -167,7 +167,7 @@ pub(super) fn prepare_ifds_skewed_active_queue_step(
         IFDS_REACH_MASK,
     );
 
-    let (oracle, baseline_wall_ns) = timed_baseline(|| ifds_skewed_cpu_oracle(&fixture));
+    let (oracle, baseline_wall_ns) = timed_reference(|| ifds_skewed_cpu_oracle(&fixture));
     let mut stats = fixture.stats;
     stats.allowed_edges_from_active = oracle.allowed_edges_from_active;
     stats.filtered_edges_from_active = oracle.filtered_edges_from_active;
