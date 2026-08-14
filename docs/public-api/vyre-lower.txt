@@ -215,7 +215,7 @@ pub fn vyre_lower::analyses::shared_mem_promote::analyze(desc: &vyre_lower::desc
 pub fn vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan::fits_in_budget(&self) -> bool
 pub fn vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan::sorted_by_speedup(&self) -> alloc::vec::Vec<&vyre_lower::analyses::shared_mem_promote::plan::PromotionCandidate>
 pub fn vyre_lower::analyses::structured_walk::StructuredVisitor::enter_body(&mut self, body: &'a vyre_lower::descriptor::KernelBody, op_index_offset: usize)
-pub fn vyre_lower::analyses::structured_walk::StructuredVisitor::visit_op(&mut self, body: &'a vyre_lower::descriptor::KernelBody, producers: &rustc_hash::FxHashMap<u32, &'a vyre_lower::descriptor::KernelOp>, op_index: usize, op: &'a vyre_lower::descriptor::KernelOp)
+pub fn vyre_lower::analyses::structured_walk::StructuredVisitor::visit_op(&mut self, body: &'a vyre_lower::descriptor::KernelBody, producers: &vyre_lower::analyses::ProducerMap<'a>, op_index: usize, op: &'a vyre_lower::descriptor::KernelOp)
 pub fn vyre_lower::analyses::structured_walk::branch_at<'a>(body: &'a vyre_lower::descriptor::KernelBody, op: &vyre_lower::descriptor::KernelOp) -> core::option::Option<vyre_lower::analyses::structured_walk::StructuredBranch<'a>>
 pub fn vyre_lower::analyses::structured_walk::walk_structured<'a, V>(root: &'a vyre_lower::descriptor::KernelBody, arms: vyre_lower::analyses::structured_walk::ArmDescent, visitor: &mut V) where V: vyre_lower::analyses::structured_walk::StructuredVisitor<'a>
 pub fn vyre_lower::analyses::texture_promote::analysis::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::texture_promote::plan::TexturePromotionPlan
@@ -280,6 +280,8 @@ pub fn vyre_lower::emit_adversarial_corpus::required_backends() -> &'static [vyr
 pub fn vyre_lower::emit_adversarial_corpus::success_cases() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
 pub fn vyre_lower::full_report(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::FullReport
 pub fn vyre_lower::lower_verified(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_lower::VerifiedLowering, vyre_lower::LowerVerifiedError>
+pub fn vyre_lower::op_facts(kind: &vyre_lower::descriptor::KernelOpKind) -> vyre_lower::op_facts::OpFacts
+pub fn vyre_lower::op_facts::op_facts(kind: &vyre_lower::descriptor::KernelOpKind) -> vyre_lower::op_facts::OpFacts
 pub fn vyre_lower::operand_class::classify_operand(kind: &vyre_lower::descriptor::KernelOpKind, pos: usize) -> vyre_lower::operand_class::OperandClass
 pub fn vyre_lower::operand_class::operand_is_result_reference(kind: &vyre_lower::descriptor::KernelOpKind, pos: usize) -> bool
 pub fn vyre_lower::pattern_audit::PatternAudit::finding_count(&self) -> usize
@@ -339,6 +341,7 @@ pub mod vyre_lower::audit
 pub mod vyre_lower::descriptor
 pub mod vyre_lower::emit_adversarial_corpus
 pub mod vyre_lower::error
+pub mod vyre_lower::op_facts
 pub mod vyre_lower::operand_class
 pub mod vyre_lower::pattern_audit
 pub mod vyre_lower::target
@@ -356,6 +359,7 @@ pub struct vyre_lower::KernelBody
 pub struct vyre_lower::KernelDescriptor
 pub struct vyre_lower::KernelOp
 pub struct vyre_lower::LowerVerifiedError
+pub struct vyre_lower::OpFacts
 pub struct vyre_lower::OpaqueExprData
 pub struct vyre_lower::OpaqueNodeData
 pub struct vyre_lower::PerfAuditReport
@@ -438,6 +442,7 @@ pub struct vyre_lower::descriptor::OpaqueExprData
 pub struct vyre_lower::descriptor::OpaqueNodeData
 pub struct vyre_lower::descriptor::ScanConstructIntentMapping
 pub struct vyre_lower::emit_adversarial_corpus::EmitAdversarialCase
+pub struct vyre_lower::op_facts::OpFacts
 pub struct vyre_lower::target::EmissionTargetCapabilities
 pub struct vyre_lower::target::SubgroupCapabilities
 pub struct vyre_lower::target::WorkgroupLimits
@@ -446,6 +451,7 @@ pub trait vyre_lower::analyses::structured_walk::StructuredVisitor<'a>
 pub trait vyre_lower::pattern_audit::PatternAudit
 pub type vyre_lower::VerifyResult = core::result::Result<(), alloc::vec::Vec<vyre_lower::VerifyError>>
 pub type vyre_lower::analyses::LayoutTransformPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::layout_aos_to_soa::plan::LayoutCandidate>
+pub type vyre_lower::analyses::ProducerMap<'a> = rustc_hash::FxHashMap<u32, &'a vyre_lower::descriptor::KernelOp>
 pub type vyre_lower::analyses::TexturePromotionPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::texture_promote::plan::TextureCandidate>
 pub type vyre_lower::analyses::layout_aos_to_soa::LayoutTransformPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::layout_aos_to_soa::plan::LayoutCandidate>
 pub type vyre_lower::analyses::layout_aos_to_soa::plan::LayoutTransformPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::layout_aos_to_soa::plan::LayoutCandidate>
@@ -619,6 +625,8 @@ pub vyre_lower::MemoryClass::Global
 pub vyre_lower::MemoryClass::Scratch
 pub vyre_lower::MemoryClass::Shared
 pub vyre_lower::MemoryClass::Uniform
+pub vyre_lower::OpFacts::child_body_start: core::option::Option<usize>
+pub vyre_lower::OpFacts::retained_effect: bool
 pub vyre_lower::OpaqueExprData::extension_id: u32
 pub vyre_lower::OpaqueExprData::extension_kind: alloc::string::String
 pub vyre_lower::OpaqueExprData::payload: alloc::vec::Vec<u8>
@@ -1122,6 +1130,8 @@ pub vyre_lower::error::LowerError::NestingTooDeep(usize)
 pub vyre_lower::error::LowerError::OperandIdOverflow
 pub vyre_lower::error::LowerError::UndeclaredBuffer(alloc::string::String)
 pub vyre_lower::error::LowerError::UnsupportedConstruct(alloc::string::String)
+pub vyre_lower::op_facts::OpFacts::child_body_start: core::option::Option<usize>
+pub vyre_lower::op_facts::OpFacts::retained_effect: bool
 pub vyre_lower::operand_class::OperandClass::ChildBodyIdx
 pub vyre_lower::operand_class::OperandClass::LiteralPoolIdx
 pub vyre_lower::operand_class::OperandClass::Other

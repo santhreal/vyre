@@ -32,7 +32,11 @@ use crate::operand_class::operand_is_result_reference;
 use crate::{KernelBody, KernelOp, KernelOpKind};
 use rustc_hash::FxHashMap;
 
-pub(crate) type ProducerMap<'a> = FxHashMap<u32, &'a KernelOp>;
+/// Result id to the op that produces it, for one body.
+///
+/// Public because it appears in [`structured_walk::StructuredVisitor::visit_op`],
+/// which backends implement.
+pub type ProducerMap<'a> = FxHashMap<u32, &'a KernelOp>;
 
 pub(crate) fn producer_map(body: &KernelBody) -> ProducerMap<'_> {
     let mut producers = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
@@ -105,67 +109,19 @@ pub(crate) fn body_refs_only(body: &KernelBody, produced: &rustc_hash::FxHashSet
 
 /// Child-body indices referenced by a structured control-flow op's operands.
 ///
-/// ONE owner for the per-op-kind child-body start-offset table; every
-/// placement analysis and every descriptor walk imports this instead of
-/// re-deriving the skip offsets.
-///
-/// The match is exhaustive on purpose. A `_` arm here reads as "this op names
-/// no child body", which is the wrong default: a new `KernelOpKind` that
-/// carries a nested body would silently stop every analysis from descending
-/// into it, and the analyses would still report clean. Adding a variant now
-/// fails to compile until someone states where its child indices begin.
+/// Every placement analysis and every descriptor walk calls this instead of
+/// re-deriving the skip offsets. The offsets themselves come from
+/// [`crate::op_facts`], which is the crate's only enumeration of
+/// `KernelOpKind` and has no wildcard arm: a new variant that carries a nested
+/// body fails to compile until someone states where its child indices begin,
+/// rather than silently stopping every analysis from descending into it.
 pub fn child_body_operands<'a>(
     kind: &KernelOpKind,
     operands: &'a [u32],
 ) -> impl Iterator<Item = u32> + 'a {
-    let start = match kind {
-        // Structured control flow: child indices follow the condition or the
-        // loop bounds.
-        KernelOpKind::StructuredIfThen | KernelOpKind::StructuredIfThenElse => 1,
-        KernelOpKind::StructuredForLoop { .. } => 2,
-        KernelOpKind::StructuredBlock | KernelOpKind::Region { .. } => 0,
-        // Every other kind names no child body, so no operand of it is a
-        // child index.
-        KernelOpKind::Literal
-        | KernelOpKind::Copy
-        | KernelOpKind::LocalInvocationId
-        | KernelOpKind::GlobalInvocationId
-        | KernelOpKind::WorkgroupId
-        | KernelOpKind::SubgroupLocalId
-        | KernelOpKind::SubgroupSize
-        | KernelOpKind::LoopIndex { .. }
-        | KernelOpKind::LoopCarrierInit { .. }
-        | KernelOpKind::LoopCarrier { .. }
-        | KernelOpKind::LoopCarrierEnd { .. }
-        | KernelOpKind::LoadGlobal
-        | KernelOpKind::LoadShared
-        | KernelOpKind::LoadConstant
-        | KernelOpKind::BufferLength
-        | KernelOpKind::StoreGlobal
-        | KernelOpKind::StoreShared
-        | KernelOpKind::BinOpKind(_)
-        | KernelOpKind::UnOpKind(_)
-        | KernelOpKind::Fma
-        | KernelOpKind::MatrixMma { .. }
-        | KernelOpKind::Select
-        | KernelOpKind::Cast { .. }
-        | KernelOpKind::Atomic { .. }
-        | KernelOpKind::SubgroupBallot
-        | KernelOpKind::SubgroupShuffle
-        | KernelOpKind::SubgroupBroadcast
-        | KernelOpKind::SubgroupReduce { .. }
-        | KernelOpKind::Return
-        | KernelOpKind::Barrier { .. }
-        | KernelOpKind::AsyncLoad { .. }
-        | KernelOpKind::AsyncStore { .. }
-        | KernelOpKind::AsyncWait { .. }
-        | KernelOpKind::Trap { .. }
-        | KernelOpKind::Resume { .. }
-        | KernelOpKind::IndirectDispatch { .. }
-        | KernelOpKind::Call { .. }
-        | KernelOpKind::OpaqueExpr(_)
-        | KernelOpKind::OpaqueNode(_) => operands.len(),
-    };
+    let start = crate::op_facts::op_facts(kind)
+        .child_body_start
+        .unwrap_or(operands.len());
     operands.iter().skip(start).copied()
 }
 

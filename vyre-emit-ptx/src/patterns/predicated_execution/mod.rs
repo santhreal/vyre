@@ -18,18 +18,21 @@
 //! the fast path for the exact branch shape this pass is meant to find.
 //!
 //! The branch traversal is `vyre_lower::analyses::structured_walk`, not a
-//! copy of it. What stays here is the PTX judgment:
-//! [`has_unsafe_predicated_effect`] enumerates the ops that a PTX instruction
-//! predicate cannot guard, which is a property of the `@%p` predication
-//! encoding and has no meaning on a target without per-instruction
-//! predicates. The walk enters loop, block, and region bodies but NOT branch
-//! arms, because this pass judges an arm as one predicable unit; a site
-//! inside an arm is already accounted for by that arm's unsafe-effect flag.
+//! copy of it, and which op kinds carry a retained effect comes from
+//! `vyre_lower::op_facts`, which is that crate's only enumeration of
+//! `KernelOpKind`. What stays here is the PTX judgment: [`is_predicatable`]
+//! names the retained effects a `@%p` instruction predicate can still guard,
+//! which is a property of the predication encoding and has no meaning on a
+//! target without per-instruction predicates. The walk enters loop, block, and
+//! region bodies but NOT branch arms, because this pass judges an arm as one
+//! predicable unit; a site inside an arm is already accounted for by that
+//! arm's unsafe-effect flag.
 
 use serde::{Deserialize, Serialize};
 use vyre_lower::analyses::structured_walk::{
     branch_at, walk_structured, ArmDescent, BranchForm, StructuredVisitor,
 };
+use vyre_lower::analyses::ProducerMap;
 use vyre_lower::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 
 /// One short structured branch eligible for predicated execution.
@@ -91,7 +94,13 @@ struct CandidateCollector {
 }
 
 impl<'a> StructuredVisitor<'a> for CandidateCollector {
-    fn visit_op(&mut self, body: &'a KernelBody, op_index: usize, op: &'a KernelOp) {
+    fn visit_op(
+        &mut self,
+        body: &'a KernelBody,
+        _producers: &ProducerMap<'a>,
+        op_index: usize,
+        op: &'a KernelOp,
+    ) {
         let Some(branch) = branch_at(body, op) else {
             return;
         };
@@ -134,28 +143,20 @@ fn has_global_store(body: &KernelBody) -> bool {
 }
 
 fn has_unsafe_predicated_effect(body: &KernelBody) -> bool {
-    body.ops.iter().any(|op| {
-        matches!(
-            op.kind,
-            KernelOpKind::Atomic { .. }
-                | KernelOpKind::Barrier { .. }
-                | KernelOpKind::AsyncLoad { .. }
-                | KernelOpKind::AsyncStore { .. }
-                | KernelOpKind::AsyncWait { .. }
-                | KernelOpKind::Trap { .. }
-                | KernelOpKind::Resume { .. }
-                | KernelOpKind::IndirectDispatch { .. }
-                | KernelOpKind::Call { .. }
-                | KernelOpKind::OpaqueExpr(..)
-                | KernelOpKind::OpaqueNode(..)
-                | KernelOpKind::StructuredIfThen
-                | KernelOpKind::StructuredIfThenElse
-                | KernelOpKind::StructuredForLoop { .. }
-                | KernelOpKind::StructuredBlock
-                | KernelOpKind::Region { .. }
-                | KernelOpKind::Return
-        )
-    })
+    body.ops
+        .iter()
+        .any(|op| vyre_lower::op_facts(&op.kind).retained_effect && !is_predicatable(&op.kind))
+}
+
+/// The retained effects a `@%p` predicate can still guard.
+///
+/// A predicated store is masked per thread, which is exactly the semantics an
+/// arm needs, so an ordinary global or shared store does not disqualify one.
+/// Every other retained effect does: a barrier, an atomic, an async protocol
+/// step, a call, a trap, a return and an opaque body all either synchronize
+/// across threads or run code this backend cannot mask.
+fn is_predicatable(kind: &KernelOpKind) -> bool {
+    matches!(kind, KernelOpKind::StoreGlobal | KernelOpKind::StoreShared)
 }
 
 #[cfg(test)]
@@ -339,5 +340,52 @@ mod tests {
             .build();
         let p = analyze(&desc);
         assert!(p.candidates.is_empty());
+    }
+
+    /// Every retained effect is unsafe under a predicate except a plain store.
+    ///
+    /// WHY: this pass used to carry its own list of the unsafe kinds, so the
+    /// `KernelOpKind` universe was enumerated here and in vyre-lower. A kind
+    /// added to the enum and to vyre-lower but not to the copy here read as
+    /// ordinary arithmetic, and a branch arm containing it would have been
+    /// flagged predicable. The judgment that stays local is only which retained
+    /// effects a `@%p` predicate can still guard; the set of retained effects
+    /// comes from `vyre_lower::op_facts`.
+    ///
+    /// The expected answer is written out rather than read back from
+    /// `is_predicatable`, or the case would move with the code it checks.
+    #[test]
+    fn a_retained_effect_other_than_a_store_disqualifies_an_arm() {
+        for (kind, expected_unsafe) in [
+            (KernelOpKind::StoreGlobal, false),
+            (KernelOpKind::StoreShared, false),
+            (
+                KernelOpKind::Barrier {
+                    ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+                },
+                true,
+            ),
+            (KernelOpKind::Return, true),
+            (KernelOpKind::Call { op_id: "f".into() }, true),
+        ] {
+            assert!(
+                vyre_lower::op_facts(&kind).retained_effect,
+                "Fix: {kind:?} must be a retained effect for this case to say anything."
+            );
+            let arm = body().op(effect(kind.clone(), [])).build();
+            assert_eq!(
+                has_unsafe_predicated_effect(&arm),
+                expected_unsafe,
+                "Fix: a `@%p` predicate masks a plain store per thread and nothing else, so {kind:?} must be judged unsafe: {expected_unsafe}."
+            );
+        }
+    }
+
+    /// A pure op never disqualifies an arm, which is the whole point of the
+    /// pass: the short arithmetic arms are the ones worth predicating.
+    #[test]
+    fn a_pure_op_does_not_disqualify_an_arm() {
+        let arm = body().op(lit(0, 0)).literal(LiteralValue::U32(1)).build();
+        assert!(!has_unsafe_predicated_effect(&arm));
     }
 }

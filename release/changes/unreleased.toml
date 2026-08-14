@@ -819,3 +819,8 @@ text = "Which operand position of a structured kernel op names a child body now 
 id = "lower-dup-pin-lowered"
 category = "Changed"
 text = "The duplication baseline pin for vyre-lower records the measured tree: 279 to 205 duplicated lines, with `total_lines` measured at 13187. The header block listing rows pinned below their measurement is gone with its only entry."
+
+[[fragments]]
+id = "kernel-op-kind-has-one-fact-table"
+category = "Changed"
+text = "`KernelOpKind` is enumerated in exactly one place. `vyre-lower/src/op_facts.rs` owns an exhaustive match with no wildcard arm answering both per-kind questions the workspace asks: which operand names the first child body, and whether the op must be kept when its results are unused. `child_body_operands` and the dead-op purity predicate both read it, replacing two separate lists of the same variant universe, and `vyre-emit-ptx/src/patterns/predicated_execution/mod.rs` reads it instead of restating sixteen variant names. What stays in the PTX pass is the judgment that only a plain global or shared store is maskable by a `@%p` instruction predicate. Adding a variant now fails to compile until both facts are stated for it, rather than defaulting to no child body and removable."

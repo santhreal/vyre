@@ -101,7 +101,7 @@ total_lines = 8992
 [[crate]]
 name = "vyre-emit-ptx"
 duplicate_lines = 105
-total_lines = 10935
+total_lines = 10957
 
 [[crate]]
 name = "vyre-emit-spirv"
@@ -135,8 +135,8 @@ total_lines = 3443
 
 [[crate]]
 name = "vyre-lower"
-duplicate_lines = 205
-total_lines = 13187
+duplicate_lines = 197
+total_lines = 13204
 
 [[crate]]
 name = "vyre-macros"
