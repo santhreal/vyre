@@ -7,6 +7,62 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 
+/// The script a workflow line invokes, relative to `scripts/`, or `None` when
+/// the line invokes nothing.
+///
+/// A YAML comment is documentation, not a reference: prose that ends a sentence
+/// with `source_scan.sh.` names no file, and reporting it as a missing script
+/// makes the contract fail on its own explanatory text.
+fn referenced_script(line: &str) -> Option<&str> {
+    let command = strip_yaml_comment(line.trim());
+    let index = command.find("scripts/")?;
+    let rest = &command[index + "scripts/".len()..];
+    let name = rest.split_whitespace().next().unwrap_or(rest);
+    let name = name.trim_end_matches(['"', '\'', ';', ')']);
+    (!name.is_empty()).then_some(name)
+}
+
+/// Everything before a trailing YAML comment. `#` opens one at the start of a
+/// line or after whitespace.
+fn strip_yaml_comment(line: &str) -> &str {
+    if line.starts_with('#') {
+        return "";
+    }
+    match line.find(" #") {
+        Some(index) => &line[..index],
+        None => line,
+    }
+}
+
+#[test]
+fn script_references_come_from_commands_not_prose() {
+    assert_eq!(
+        referenced_script("        run: bash scripts/check_unsafe_budget.sh"),
+        Some("check_unsafe_budget.sh")
+    );
+    assert_eq!(
+        referenced_script("        run: bash scripts/lib/source_scan.sh --strict"),
+        Some("lib/source_scan.sh")
+    );
+    assert_eq!(
+        referenced_script("        run: bash \"scripts/check_public_api.sh\";"),
+        Some("check_public_api.sh")
+    );
+    assert_eq!(
+        referenced_script("      # all on scripts/lib/source_scan.sh."),
+        None
+    );
+    assert_eq!(
+        referenced_script("        run: bash scripts/gate.sh # see scripts/other.sh."),
+        Some("gate.sh")
+    );
+    assert_eq!(referenced_script("        run: cargo test"), None);
+    assert_eq!(
+        referenced_script("        run: bash scripts/check_*.sh"),
+        Some("check_*.sh")
+    );
+}
+
 #[test]
 fn ci_workflows_reference_existing_scripts() {
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -31,34 +87,27 @@ fn ci_workflows_reference_existing_scripts() {
         }
         let content = std::fs::read_to_string(&path).unwrap();
         for (line_no, line) in content.lines().enumerate() {
-            if line.contains("scripts/") && line.contains(".sh") {
-                let trimmed = line.trim();
-                // Extract the script name after scripts/
-                if let Some(idx) = trimmed.find("scripts/") {
-                    let rest = &trimmed[idx + 8..];
-                    let script_name = rest.split_whitespace().next().unwrap_or(rest);
-                    let script_name = script_name.trim_end_matches('"').trim_end_matches('\'');
-                    if script_name.contains('*') {
-                        if !known_wildcards.contains(&format!("scripts/{}", script_name)) {
-                            violations.push(format!(
-                                "{}:{} unknown wildcard script reference: scripts/{}",
-                                path.file_name().unwrap().to_string_lossy(),
-                                line_no + 1,
-                                script_name
-                            ));
-                        }
-                        continue;
-                    }
-                    let script_path = scripts_dir.join(script_name);
-                    if !script_path.exists() {
-                        violations.push(format!(
-                            "{}:{} missing script: scripts/{}",
-                            path.file_name().unwrap().to_string_lossy(),
-                            line_no + 1,
-                            script_name
-                        ));
-                    }
+            let Some(script_name) = referenced_script(line) else {
+                continue;
+            };
+            if script_name.contains('*') {
+                if !known_wildcards.contains(&format!("scripts/{script_name}")) {
+                    violations.push(format!(
+                        "{}:{} unknown wildcard script reference: scripts/{}",
+                        path.file_name().unwrap().to_string_lossy(),
+                        line_no + 1,
+                        script_name
+                    ));
                 }
+                continue;
+            }
+            if !scripts_dir.join(script_name).exists() {
+                violations.push(format!(
+                    "{}:{} missing script: scripts/{}",
+                    path.file_name().unwrap().to_string_lossy(),
+                    line_no + 1,
+                    script_name
+                ));
             }
         }
     }
