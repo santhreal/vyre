@@ -13,11 +13,9 @@ use vyre_reference::value::Value;
 
 /// Run a u32-lane FNV-1a64 program and recombine its two output words.
 fn hash_out(program: &vyre_foundation::ir::Program, input: Vec<u8>) -> u64 {
-    let outputs = vyre_reference::reference_eval(
-        program,
-        &[Value::from(input), Value::from(vec![0u8; 8])],
-    )
-    .expect("fnv1a64 u32-lane reference evaluation must succeed");
+    let outputs =
+        vyre_reference::reference_eval(program, &[Value::from(input), Value::from(vec![0u8; 8])])
+            .expect("fnv1a64 u32-lane reference evaluation must succeed");
     let bytes = outputs[0].to_bytes();
     assert_eq!(bytes.len(), 8, "fnv1a64 writes exactly two u32 words");
     let lo = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);

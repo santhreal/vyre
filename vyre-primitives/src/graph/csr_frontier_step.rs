@@ -1,10 +1,16 @@
-//! Shared CSR frontier-step Program builder.
+//! Shared CSR frontier-step Program builder and CPU reference.
 //!
 //! Forward and reverse traversals use the same ProgramGraph ABI,
 //! frontier buffers, edge-kind mask filtering, and packed-NodeSet
 //! output writes. The only semantic difference is whether the input
 //! frontier is tested at `src` before walking outgoing edges or at
 //! `dst` while scanning a source row.
+//!
+//! [`csr_frontier_step_cpu_ref_into`] walks the same two directions on the
+//! host. It is written from the CSR arrays alone and never reads the emitted
+//! `Program`, so it stays able to disagree with the program it checks; the
+//! direction is its argument because the row scan and the edge-kind filter are
+//! one walk, not two.
 
 use std::sync::Arc;
 
@@ -41,6 +47,190 @@ pub(crate) enum CsrFrontierStepKind {
     /// If any allowed `dst` is active, emit `src`.
     Backward,
 }
+
+/// Bit test at a node index in a caller-supplied frontier bitset.
+///
+/// A frontier shorter than the graph reads as inactive rather than panicking:
+/// callers stage frontier words independently of `node_count`, and a short
+/// frontier must not turn a layout mistake into an out-of-bounds host read.
+#[cfg(any(test, feature = "cpu-parity"))]
+fn frontier_bit_is_set(frontier: &[u32], node: u32) -> bool {
+    frontier
+        .get((node / 32) as usize)
+        .is_some_and(|word| (word & (1_u32 << (node % 32))) != 0)
+}
+
+/// Set the bit for an in-range node in a node-indexed output bitset.
+#[cfg(any(test, feature = "cpu-parity"))]
+fn set_node_bit(out: &mut [u32], node_count: u32, node: u32) {
+    if node < node_count {
+        out[(node / 32) as usize] |= 1_u32 << (node % 32);
+    }
+}
+
+/// Validate the CSR buffers a host frontier step reads.
+///
+/// The CPU oracle is used as GPU parity evidence, so malformed graph layouts
+/// must fail loudly instead of producing an empty frontier that can mask
+/// upstream object corruption. Returns the logical edge count.
+#[cfg(any(test, feature = "cpu-parity"))]
+pub(crate) fn validate_csr_frontier_step_cpu_inputs(
+    label: &str,
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+) -> usize {
+    let expected_offsets = node_count as usize + 1;
+    assert_eq!(
+        edge_offsets.len(),
+        expected_offsets,
+        "{label} CPU oracle received {} row offsets for node_count={node_count}; Fix: pass exactly node_count + 1 CSR offsets.",
+        edge_offsets.len()
+    );
+    let edge_count = edge_offsets[expected_offsets - 1] as usize;
+    assert!(
+        edge_targets.len() >= edge_count && edge_kind_mask.len() >= edge_count,
+        "{label} CPU oracle received edge_count={edge_count} but targets_len={} kind_mask_len={}. Fix: pass complete CSR edge buffers.",
+        edge_targets.len(),
+        edge_kind_mask.len()
+    );
+    for (index, pair) in edge_offsets.windows(2).enumerate() {
+        assert!(
+            pair[0] <= pair[1],
+            "{label} CPU oracle received non-monotonic CSR offsets at row {index}: {} > {}. Fix: rebuild CSR row pointers before parity comparison.",
+            pair[0],
+            pair[1]
+        );
+    }
+    edge_count
+}
+
+/// CPU reference for one CSR frontier step in either edge direction.
+///
+/// Both directions scan every CSR row and filter edges by `allow_mask`. `kind`
+/// decides which endpoint of an allowed edge is read from `frontier_in` and
+/// which endpoint is written to `out`: forward reads `src` and writes `dst`,
+/// backward reads `dst` and writes `src`. Forward hoists its read out of the
+/// edge loop because the read endpoint is constant across a row, and backward
+/// stops a row at its first active destination because the write is idempotent.
+///
+/// `out` is resized to the bitset width for `node_count` and fully overwritten.
+#[allow(clippy::too_many_arguments)]
+#[cfg(any(test, feature = "cpu-parity"))]
+pub(crate) fn csr_frontier_step_cpu_ref_into(
+    kind: CsrFrontierStepKind,
+    label: &str,
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    frontier_in: &[u32],
+    allow_mask: u32,
+    out: &mut Vec<u32>,
+) {
+    out.clear();
+    out.resize(crate::bitset::bitset_words(node_count) as usize, 0);
+    validate_csr_frontier_step_cpu_inputs(
+        label,
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+    );
+    for src in 0..node_count {
+        if kind == CsrFrontierStepKind::Forward && !frontier_bit_is_set(frontier_in, src) {
+            continue;
+        }
+        let row_start = edge_offsets[src as usize] as usize;
+        let row_end = edge_offsets[src as usize + 1] as usize;
+        for edge in row_start..row_end {
+            if (edge_kind_mask[edge] & allow_mask) == 0 {
+                continue;
+            }
+            let dst = edge_targets[edge];
+            match kind {
+                CsrFrontierStepKind::Forward => set_node_bit(out, node_count, dst),
+                CsrFrontierStepKind::Backward => {
+                    if frontier_bit_is_set(frontier_in, dst) {
+                        set_node_bit(out, node_count, src);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Publish one op's CPU reference for a CSR frontier step.
+///
+/// Every op that is one masked CSR step republishes the same reference under
+/// its own name: the two traversal primitives and each predicate that fixes an
+/// edge-kind mask. The pair of entry points, their inputs, and the buffer-reuse
+/// contract are stated here once; each op supplies its direction, the label its
+/// diagnostics carry, and its own documentation.
+#[cfg(any(test, feature = "cpu-parity"))]
+macro_rules! define_csr_frontier_step_cpu_ref {
+    (
+        direction: $direction:expr,
+        label: $label:literal,
+        $(#[$owned_meta:meta])*
+        $owned_vis:vis fn $owned:ident,
+        $(#[$into_meta:meta])*
+        $into_vis:vis fn $into:ident,
+    ) => {
+        $(#[$owned_meta])*
+        #[must_use]
+        #[cfg(any(test, feature = "cpu-parity"))]
+        $owned_vis fn $owned(
+            node_count: u32,
+            edge_offsets: &[u32],
+            edge_targets: &[u32],
+            edge_kind_mask: &[u32],
+            frontier_in: &[u32],
+            allow_mask: u32,
+        ) -> Vec<u32> {
+            let mut out = Vec::new();
+            $into(
+                node_count,
+                edge_offsets,
+                edge_targets,
+                edge_kind_mask,
+                frontier_in,
+                allow_mask,
+                &mut out,
+            );
+            out
+        }
+
+        $(#[$into_meta])*
+        #[cfg(any(test, feature = "cpu-parity"))]
+        $into_vis fn $into(
+            node_count: u32,
+            edge_offsets: &[u32],
+            edge_targets: &[u32],
+            edge_kind_mask: &[u32],
+            frontier_in: &[u32],
+            allow_mask: u32,
+            out: &mut Vec<u32>,
+        ) {
+            $crate::graph::csr_frontier_step::csr_frontier_step_cpu_ref_into(
+                $direction,
+                $label,
+                node_count,
+                edge_offsets,
+                edge_targets,
+                edge_kind_mask,
+                frontier_in,
+                allow_mask,
+                out,
+            );
+        }
+    };
+}
+
+#[cfg(any(test, feature = "cpu-parity"))]
+pub(crate) use define_csr_frontier_step_cpu_ref;
 
 /// Build a one-step CSR frontier traversal under a caller-owned op id.
 #[must_use]
@@ -723,11 +913,7 @@ fn csr_queue_active_lane_nodes(
 
 /// Split a flat lane index into the queue slot it serves and its lane within
 /// that slot's team. `logical` names the variable holding the flat index.
-fn csr_queue_team_lane_split(
-    spec: &CsrQueueStepSpec<'_>,
-    lanes: u32,
-    logical: &str,
-) -> Vec<Node> {
+fn csr_queue_team_lane_split(spec: &CsrQueueStepSpec<'_>, lanes: u32, logical: &str) -> Vec<Node> {
     vec![
         Node::let_bind(
             spec.var("queue_idx"),
@@ -823,10 +1009,7 @@ fn csr_queue_scalar_row_nodes(spec: &CsrQueueStepSpec<'_>) -> Vec<Node> {
                 ),
             ));
             nodes.push(Node::if_then_else(
-                Expr::ge(
-                    Expr::var(degree.as_str()),
-                    Expr::u32(high_degree_threshold),
-                ),
+                Expr::ge(Expr::var(degree.as_str()), Expr::u32(high_degree_threshold)),
                 vec![
                     Node::let_bind(
                         high_slot.as_str(),
@@ -906,10 +1089,7 @@ fn csr_queue_team_row_nodes(spec: &CsrQueueStepSpec<'_>, lanes: u32) -> Vec<Node
                     ),
                 ),
                 Node::if_then(
-                    Expr::lt(
-                        Expr::var(edge_offset.as_str()),
-                        Expr::var(degree.as_str()),
-                    ),
+                    Expr::lt(Expr::var(edge_offset.as_str()), Expr::var(degree.as_str())),
                     {
                         let mut body = vec![Node::let_bind(
                             edge.as_str(),
@@ -953,23 +1133,26 @@ fn csr_queue_edge_guard_nodes(spec: &CsrQueueStepSpec<'_>) -> Vec<Node> {
                         dst.as_str(),
                         Expr::load(spec.inputs.edge_targets, Expr::var(edge.as_str())),
                     ),
-                    Node::if_then(Expr::lt(Expr::var(dst.as_str()), Expr::u32(spec.node_count)), {
-                        let mut body = vec![
-                            Node::let_bind(
-                                dst_word.as_str(),
-                                Expr::shr(Expr::var(dst.as_str()), Expr::u32(5)),
-                            ),
-                            Node::let_bind(
-                                dst_bit.as_str(),
-                                Expr::shl(
-                                    Expr::u32(1),
-                                    Expr::bitand(Expr::var(dst.as_str()), Expr::u32(31)),
+                    Node::if_then(
+                        Expr::lt(Expr::var(dst.as_str()), Expr::u32(spec.node_count)),
+                        {
+                            let mut body = vec![
+                                Node::let_bind(
+                                    dst_word.as_str(),
+                                    Expr::shr(Expr::var(dst.as_str()), Expr::u32(5)),
                                 ),
-                            ),
-                        ];
-                        body.extend(csr_queue_emit_nodes(spec, &dst, &dst_word, &dst_bit));
-                        body
-                    }),
+                                Node::let_bind(
+                                    dst_bit.as_str(),
+                                    Expr::shl(
+                                        Expr::u32(1),
+                                        Expr::bitand(Expr::var(dst.as_str()), Expr::u32(31)),
+                                    ),
+                                ),
+                            ];
+                            body.extend(csr_queue_emit_nodes(spec, &dst, &dst_word, &dst_bit));
+                            body
+                        },
+                    ),
                 ],
             ),
         ],

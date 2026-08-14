@@ -7,6 +7,10 @@ use vyre_foundation::execution_plan::fusion::fuse_programs;
 use vyre_foundation::ir::{DataType, Program};
 
 use crate::graph::csr_backward_traverse::csr_backward_traverse;
+#[cfg(any(test, feature = "cpu-parity"))]
+use crate::graph::csr_closure_entry_points::{
+    define_panicking_csr_closure_entry_points, define_try_csr_closure_entry_points,
+};
 use crate::graph::csr_forward_traverse::{bitset_words, csr_forward_traverse};
 use crate::graph::csr_frontier_step::csr_frontier_step_dispatch_grid;
 use crate::graph::program_graph::ProgramGraphShape;
@@ -776,156 +780,36 @@ mod dispatch_plan_tests {
     }
 }
 
-/// CPU reference: iterate bidirectional one-step reach to fixpoint or `max_iters`.
-///
-/// This computes the connected-neighborhood closure of `seed` under
-/// `allow_mask` using the same one-step oracle as [`cpu_ref`]. It lives in
-/// primitives so consumers do not fork fixpoint semantics.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_closure(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
-) -> Vec<u32> {
-    try_cpu_ref_closure(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        seed,
-        allow_mask,
-        max_iters,
-    )
-    .unwrap_or_else(|err| {
-        panic!("csr_bidirectional closure CPU oracle received malformed input. {err}")
-    })
+define_try_csr_closure_entry_points! {
+    allocating: try_cpu_ref_closure {
+        /// Fallible CPU reference: bidirectional closure to fixpoint or `max_iters`.
+    },
+    borrowing: try_cpu_ref_closure_into {
+        /// Fallible CPU reference: closure into caller-owned buffers.
+    },
+    hooked: try_cpu_ref_closure_into_with_step_hook,
+    step_hook: || {},
 }
 
-/// Fallible CPU reference: bidirectional closure to fixpoint or `max_iters`.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_closure(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
-) -> Result<Vec<u32>, String> {
-    let mut current = Vec::new();
-    let mut next = Vec::new();
-    try_cpu_ref_closure_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        seed,
-        allow_mask,
-        max_iters,
-        &mut current,
-        &mut next,
-    )?;
-    Ok(current)
-}
-
-/// CPU reference: closure into caller-owned buffers.
-#[allow(clippy::too_many_arguments)]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_closure_into(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
-    current: &mut Vec<u32>,
-    next: &mut Vec<u32>,
-) {
-    try_cpu_ref_closure_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        seed,
-        allow_mask,
-        max_iters,
-        current,
-        next,
-    )
-    .unwrap_or_else(|err| {
-        panic!("csr_bidirectional closure CPU oracle received malformed input. {err}")
-    });
-}
-
-/// Fallible CPU reference: closure into caller-owned buffers.
-#[allow(clippy::too_many_arguments)]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_closure_into(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
-    current: &mut Vec<u32>,
-    next: &mut Vec<u32>,
-) -> Result<(), String> {
-    try_cpu_ref_closure_into_with_step_hook(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        seed,
-        allow_mask,
-        max_iters,
-        current,
-        next,
-        || {},
-    )
-}
-
-/// CPU reference: closure into caller-owned buffers with a per-step hook.
-///
-/// Consumers use `on_step` for telemetry only; closure semantics remain owned
-/// by this primitive module.
-#[allow(clippy::too_many_arguments)]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_closure_into_with_step_hook<F>(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
-    current: &mut Vec<u32>,
-    next: &mut Vec<u32>,
-    mut on_step: F,
-) where
-    F: FnMut(),
-{
-    try_cpu_ref_closure_into_with_step_hook(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        seed,
-        allow_mask,
-        max_iters,
-        current,
-        next,
-        &mut on_step,
-    )
-    .unwrap_or_else(|err| {
-        panic!("csr_bidirectional closure CPU oracle received malformed input. {err}")
-    });
+define_panicking_csr_closure_entry_points! {
+    allocating: cpu_ref_closure from try_cpu_ref_closure {
+        /// CPU reference: iterate bidirectional one-step reach to fixpoint or `max_iters`.
+        ///
+        /// This computes the connected-neighborhood closure of `seed` under
+        /// `allow_mask` using the same one-step oracle as [`cpu_ref`]. It lives in
+        /// primitives so consumers do not fork fixpoint semantics.
+    },
+    borrowing: cpu_ref_closure_into from try_cpu_ref_closure_into {
+        /// CPU reference: closure into caller-owned buffers.
+    },
+    hooked: cpu_ref_closure_into_with_step_hook from try_cpu_ref_closure_into_with_step_hook {
+        /// CPU reference: closure into caller-owned buffers with a per-step hook.
+        ///
+        /// Consumers use `on_step` for telemetry only; closure semantics remain
+        /// owned by this primitive module.
+    },
+    diagnostic: "csr_bidirectional closure CPU oracle received malformed input.",
+    hook_bound: FnMut()
 }
 
 /// Fallible CPU reference: closure into caller-owned buffers with a per-step hook.

@@ -17,18 +17,14 @@
 //! one-lane-per-source kernel for low-degree graphs and select this path only
 //! when row skew is large enough to amortize the extra lanes.
 
-use vyre_foundation::ir::{DataType, Program};
+use vyre_foundation::ir::Program;
 
 #[cfg(test)]
 use crate::bitset::bitset_words;
-#[cfg(any(test, feature = "cpu-parity"))]
 use crate::graph::csr_frontier_queue::{
-    try_csr_queue_forward_traverse_cpu, try_csr_queue_forward_traverse_cpu_into,
+    define_csr_queue_forward_entry_point, CsrQueueForwardTraverseParams,
 };
-use crate::graph::csr_frontier_step::{
-    csr_queue_step_program, CsrQueueEmit, CsrQueueInputs, CsrQueueLanes, CsrQueueRowPlan,
-    CsrQueueStepSpec,
-};
+use crate::graph::csr_frontier_step::{csr_queue_step_program, CsrQueueLanes};
 
 /// Canonical op id for row-strided queue-driven CSR expansion.
 pub const CSR_QUEUE_STRIDED_FORWARD_OP_ID: &str =
@@ -48,185 +44,47 @@ pub const fn csr_queue_strided_forward_dispatch_grid(queue_capacity: u32) -> [u3
     [if blocks == 0 { 1 } else { blocks }, 1, 1]
 }
 
-/// Positional inputs for [`csr_queue_strided_forward_traverse`].
-#[derive(Clone, Copy, Debug)]
-pub struct CsrQueueStridedForwardParams<'a> {
-    /// Compacted queue of active source nodes.
-    pub active_queue: &'a str,
-    /// Single-element resident length of `active_queue`.
-    pub queue_len: &'a str,
-    /// CSR row pointers, `node_count + 1` entries.
-    pub edge_offsets: &'a str,
-    /// CSR edge destinations.
-    pub edge_targets: &'a str,
-    /// Per-edge kind bits tested against `allow_mask`.
-    pub edge_kind_mask: &'a str,
-    /// Packed bitset the reached destinations are ORed into.
-    pub frontier_out: &'a str,
-    /// Node count the CSR row pointers and destination bounds are sized by.
-    pub node_count: u32,
-    /// Logical edge count the edge-slot bound check uses.
-    pub edge_count: u32,
-    /// Static capacity of `active_queue`.
-    pub queue_capacity: u32,
-    /// Edge kinds this traversal is allowed to follow.
-    pub allow_mask: u32,
-}
-
-/// Build a GPU program that expands queued CSR source rows with a fixed lane
-/// team per row.
-#[must_use]
-#[allow(clippy::too_many_arguments)]
-pub fn csr_queue_strided_forward_traverse(
-    active_queue: &str,
-    queue_len: &str,
-    edge_offsets: &str,
-    edge_targets: &str,
-    edge_kind_mask: &str,
-    frontier_out: &str,
-    node_count: u32,
-    edge_count: u32,
-    queue_capacity: u32,
-    allow_mask: u32,
-) -> Program {
-    csr_queue_strided_forward_traverse_with(CsrQueueStridedForwardParams {
-        active_queue,
-        queue_len,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_out,
-        node_count,
-        edge_count,
-        queue_capacity,
-        allow_mask,
-    })
+define_csr_queue_forward_entry_point! {
+    /// Build a GPU program that expands queued CSR source rows with a fixed lane
+    /// team per row.
+    csr_queue_strided_forward_traverse -> csr_queue_strided_forward_traverse_with
 }
 
 /// Build a GPU program that expands queued CSR source rows with a fixed lane
 /// team per row.
 #[must_use]
 pub fn csr_queue_strided_forward_traverse_with(
-    params: CsrQueueStridedForwardParams<'_>,
+    params: CsrQueueForwardTraverseParams<'_>,
 ) -> Program {
-    let CsrQueueStridedForwardParams {
-        active_queue,
-        queue_len,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_out,
-        node_count,
-        edge_count,
-        queue_capacity,
-        allow_mask,
-    } = params;
-    if node_count == 0 || queue_capacity == 0 {
-        return crate::invalid_output_program(CSR_QUEUE_STRIDED_FORWARD_OP_ID,
-        frontier_out,
-        DataType::U32,
-        format!(
-            "Fix: csr_queue_strided_forward_traverse requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
-        ),);
+    if let Some(program) = params.empty_shape_program(
+        CSR_QUEUE_STRIDED_FORWARD_OP_ID,
+        "csr_queue_strided_forward_traverse",
+    ) {
+        return program;
     }
-    csr_queue_step_program(&CsrQueueStepSpec {
-        op_id: CSR_QUEUE_STRIDED_FORWARD_OP_ID,
-        builder_name: "csr_queue_strided_forward_traverse",
-        prefix: "qs",
-        workgroup_size: CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE,
-        inputs: CsrQueueInputs {
-            active_queue,
-            queue_len,
-            edge_offsets,
-            edge_targets,
-            edge_kind_mask,
-        },
-        lanes: CsrQueueLanes::Team {
+    csr_queue_step_program(&params.spec(
+        CSR_QUEUE_STRIDED_FORWARD_OP_ID,
+        "csr_queue_strided_forward_traverse",
+        "qs",
+        CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE,
+        CsrQueueLanes::Team {
             lanes: CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE,
         },
-        row_plan: CsrQueueRowPlan::ExpandAll,
-        emit: CsrQueueEmit::Frontier { frontier_out },
-        node_count,
-        edge_count,
-        queue_capacity,
-        allow_mask,
-    })
+    ))
 }
 
 /// CPU reference for the row-strided queue traversal.
-#[must_use]
+///
+/// Row-striding decides which lane walks which edge slot and nothing else, so
+/// this op has no traversal semantics of its own to check: the queue-driven
+/// reference is published here under the strided names. A second hand-written
+/// copy could only drift away from the walk it is supposed to check.
 #[cfg(any(test, feature = "cpu-parity"))]
-#[allow(clippy::too_many_arguments)]
-pub fn csr_queue_strided_forward_traverse_cpu(
-    active_queue: &[u32],
-    queue_len: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    node_count: u32,
-    allow_mask: u32,
-) -> Vec<u32> {
-    try_csr_queue_strided_forward_traverse_cpu(
-        active_queue,
-        queue_len,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        node_count,
-        allow_mask,
-    )
-    .unwrap_or_else(|err| {
-        panic!("csr_queue_strided_forward_traverse CPU oracle received malformed input. {err}")
-    })
-}
-
-/// Fallible CPU reference for the row-strided queue traversal.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[allow(clippy::too_many_arguments)]
-pub fn try_csr_queue_strided_forward_traverse_cpu(
-    active_queue: &[u32],
-    queue_len: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    node_count: u32,
-    allow_mask: u32,
-) -> Result<Vec<u32>, String> {
-    try_csr_queue_forward_traverse_cpu(
-        active_queue,
-        queue_len,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        node_count,
-        allow_mask,
-    )
-}
-
-/// Fallible CPU reference into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[allow(clippy::too_many_arguments)]
-pub fn try_csr_queue_strided_forward_traverse_cpu_into(
-    active_queue: &[u32],
-    queue_len: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    node_count: u32,
-    allow_mask: u32,
-    out: &mut Vec<u32>,
-) -> Result<(), String> {
-    try_csr_queue_forward_traverse_cpu_into(
-        active_queue,
-        queue_len,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        node_count,
-        allow_mask,
-        out,
-    )
-}
+pub use crate::graph::csr_frontier_queue::{
+    csr_queue_forward_traverse_cpu as csr_queue_strided_forward_traverse_cpu,
+    try_csr_queue_forward_traverse_cpu as try_csr_queue_strided_forward_traverse_cpu,
+    try_csr_queue_forward_traverse_cpu_into as try_csr_queue_strided_forward_traverse_cpu_into,
+};
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
@@ -265,6 +123,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::graph::csr_frontier_queue::assert_offset_overflow_traps;
 
     fn scalar_queue_forward(
         active_queue: &[u32],
@@ -371,31 +230,9 @@ mod tests {
 
     #[test]
     fn offset_count_overflow_returns_trap_program_without_panic() {
-        let result = std::panic::catch_unwind(|| {
-            csr_queue_strided_forward_traverse(
-                "queue",
-                "len",
-                "offsets",
-                "targets",
-                "kinds",
-                "out",
-                u32::MAX,
-                0,
-                1,
-                1,
-            )
-        });
-
-        assert!(
-            result.is_ok(),
-            "CSR queue strided builder must reject offset-count overflow without panicking"
-        );
-        let program = result.unwrap();
-        assert!(program.stats().trap());
-        let entry = format!("{:?}", program.entry());
-        assert!(
-            entry.contains("node_count + 1 overflows u32"),
-            "Fix: trap must retain the CSR offset-count overflow diagnostic, got: {entry}"
+        assert_offset_overflow_traps(
+            csr_queue_strided_forward_traverse,
+            "csr_queue_strided_forward_traverse",
         );
     }
 }

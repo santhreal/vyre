@@ -287,7 +287,8 @@ fn in_place_unary_bitset_updates_match_independent_oracles() {
             let mut updated = target.clone();
             actual(&mut updated);
             assert_eq!(
-                updated, expected_out,
+                updated,
+                expected_out,
                 "Fix: {name} case {case_idx} len={} must leave the specified buffer state.",
                 target.len()
             );
@@ -425,8 +426,7 @@ fn expect_subset_of(lhs: &[u32], rhs: &[u32]) -> u32 {
 fn expect_bit_at(buf: &[u32], index: u32) -> u32 {
     let word = (index / 32) as usize;
     let offset = index % 32;
-    buf.get(word)
-        .map_or(0, |value| (value >> offset) & 1)
+    buf.get(word).map_or(0, |value| (value >> offset) & 1)
 }
 
 fn expect_zeroed(target: &[u32]) -> Vec<u32> {
@@ -464,18 +464,16 @@ fn expect_bit_cleared(target: &[u32], index: u32) -> Vec<u32> {
 /// Per-word map over the shared prefix of two bitsets.
 fn zip_words(lhs: &[u32], rhs: &[u32], combine: impl Fn(u32, u32) -> u32) -> Vec<u32> {
     let shared = lhs.len().min(rhs.len());
-    (0..shared).map(|word| combine(lhs[word], rhs[word])).collect()
+    (0..shared)
+        .map(|word| combine(lhs[word], rhs[word]))
+        .collect()
 }
 
 /// `target` after an in-place update over its shared prefix with `operand`.
 ///
 /// Words past the shared prefix keep their original value: an in-place bitset
 /// op is specified to touch only the words both buffers address.
-fn overwrite_words(
-    target: &[u32],
-    operand: &[u32],
-    combine: impl Fn(u32, u32) -> u32,
-) -> Vec<u32> {
+fn overwrite_words(target: &[u32], operand: &[u32], combine: impl Fn(u32, u32) -> u32) -> Vec<u32> {
     let shared = target.len().min(operand.len());
     target
         .iter()

@@ -7,7 +7,9 @@
 
 use vyre_foundation::ir::Program;
 
-use crate::graph::csr_frontier_step::{csr_frontier_step_program, CsrFrontierStepKind};
+use crate::graph::csr_frontier_step::{
+    csr_frontier_step_program, define_csr_frontier_step_cpu_ref, CsrFrontierStepKind,
+};
 use crate::graph::program_graph::ProgramGraphShape;
 
 /// Canonical op id.
@@ -29,23 +31,8 @@ pub fn csr_backward_traverse(
     frontier_out: &str,
     allow_mask: u32,
 ) -> Program {
-    csr_backward_traverse_with_op_id(OP_ID, shape, frontier_in, frontier_out, allow_mask)
-}
-
-/// Build the same reverse traversal kernel under a caller-owned op id.
-///
-/// Predicate wrappers use this to preserve their semantic operation identity
-/// without forking the reverse CSR traversal body.
-#[must_use]
-pub(crate) fn csr_backward_traverse_with_op_id(
-    op_id: &'static str,
-    shape: ProgramGraphShape,
-    frontier_in: &str,
-    frontier_out: &str,
-    allow_mask: u32,
-) -> Program {
     csr_frontier_step_program(
-        op_id,
+        OP_ID,
         CsrFrontierStepKind::Backward,
         shape,
         frontier_in,
@@ -54,78 +41,15 @@ pub(crate) fn csr_backward_traverse_with_op_id(
     )
 }
 
-/// CPU reference: one reverse step. Returns a bitset where bit `u`
-/// is set iff there exists an edge `u → v` with `allow_mask`-matching
-/// kind AND `v` is set in `frontier_in`.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-) -> Vec<u32> {
-    let mut out = Vec::new();
-    cpu_ref_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-        &mut out,
-    );
-    out
-}
-
-/// CPU reference using caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-    out: &mut Vec<u32>,
-) {
-    let words = crate::graph::csr_forward_traverse::bitset_words(node_count) as usize;
-    out.clear();
-    out.resize(words, 0);
-    crate::graph::csr_forward_traverse::validate_csr_frontier_step_cpu_inputs(
-        "csr_backward_traverse",
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-    );
-    for src in 0..node_count {
-        let edge_start = edge_offsets[src as usize] as usize;
-        let edge_end = edge_offsets[src as usize + 1] as usize;
-        let mut hit = false;
-        for e in edge_start..edge_end {
-            let kind = edge_kind_mask[e];
-            if (kind & allow_mask) == 0 {
-                continue;
-            }
-            let dst = edge_targets[e];
-            let dst_word = (dst / 32) as usize;
-            let dst_bit = 1u32 << (dst % 32);
-            if dst_word < frontier_in.len() && (frontier_in[dst_word] & dst_bit) != 0 {
-                hit = true;
-                break;
-            }
-        }
-        if hit {
-            let src_word = (src / 32) as usize;
-            let src_bit = 1u32 << (src % 32);
-            if src_word < out.len() {
-                out[src_word] |= src_bit;
-            }
-        }
-    }
+define_csr_frontier_step_cpu_ref! {
+    direction: CsrFrontierStepKind::Backward,
+    label: "csr_backward_traverse",
+    /// CPU reference: one reverse step. Returns a bitset where bit `u`
+    /// is set iff there exists an edge `u → v` with `allow_mask`-matching
+    /// kind AND `v` is set in `frontier_in`.
+    pub fn cpu_ref,
+    /// CPU reference using caller-owned output storage.
+    pub fn cpu_ref_into,
 }
 
 #[cfg(feature = "inventory-registry")]

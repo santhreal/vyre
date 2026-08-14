@@ -54,10 +54,7 @@ const CRC32_CHECK_VECTORS: &[(&[u8], u32)] = &[
         b"12345678901234567890123456789012345678901234567890123456789012345678901234567890",
         0x7CA9_4A72,
     ),
-    (
-        b"The quick brown fox jumps over the lazy dog",
-        0x414F_A339,
-    ),
+    (b"The quick brown fox jumps over the lazy dog", 0x414F_A339),
 ];
 
 /// Published FNV-1a 32-bit check values.

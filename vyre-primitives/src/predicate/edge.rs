@@ -7,11 +7,9 @@
 use vyre_foundation::ir::Program;
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use crate::graph::csr_forward_traverse::cpu_ref as csr_forward_cpu_ref;
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::graph::csr_forward_traverse::cpu_ref_into as csr_forward_cpu_ref_into;
-use crate::graph::csr_forward_traverse::csr_forward_traverse_with_op_id;
+use crate::graph::csr_frontier_step::{define_csr_frontier_step_cpu_ref, CsrFrontierStepKind};
 use crate::graph::program_graph::ProgramGraphShape;
+use crate::predicate::traversal::forward_edge_program;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::predicate::edge";
@@ -27,56 +25,22 @@ pub fn edge(
     frontier_out: &str,
     edge_kind_mask: u32,
 ) -> Program {
-    csr_forward_traverse_with_op_id(OP_ID, shape, frontier_in, frontier_out, edge_kind_mask)
+    forward_edge_program(OP_ID, shape, frontier_in, frontier_out, edge_kind_mask)
 }
 
-/// CPU reference  -  delegates to `csr_forward_traverse::cpu_ref`.
-///
-/// AUDIT_2026-04-24 F-PE-01: the inventory fixture used to ship
-/// without a `cpu_ref`, leaving the conform harness unable to
-/// byte-compare GPU output against a reference. `edge` is a thin
-/// alias for forward traversal, so forwarding to the delegate's
-/// cpu_ref is the exact semantic match.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-) -> Vec<u32> {
-    csr_forward_cpu_ref(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-    )
-}
-
-/// CPU reference using caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-    out: &mut Vec<u32>,
-) {
-    csr_forward_cpu_ref_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-        out,
-    );
+define_csr_frontier_step_cpu_ref! {
+    direction: CsrFrontierStepKind::Forward,
+    label: "predicate::edge",
+    /// CPU reference for the `edge` predicate.
+    ///
+    /// AUDIT_2026-04-24 F-PE-01: the inventory fixture used to ship
+    /// without a `cpu_ref`, leaving the conform harness unable to
+    /// byte-compare GPU output against a reference. `edge` is a thin
+    /// alias for forward traversal, so publishing the same forward step
+    /// under this op id is the exact semantic match.
+    pub fn cpu_ref,
+    /// CPU reference using caller-owned output storage.
+    pub fn cpu_ref_into,
 }
 
 #[cfg(test)]

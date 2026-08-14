@@ -60,45 +60,64 @@ pub struct CsrQueueDeltaEnqueueParams<'a> {
     pub allow_mask: u32,
 }
 
-/// Build a GPU program that expands queued CSR rows and enqueues only new nodes.
+/// Publish one queue-to-queue delta expansion entry point.
 ///
-/// `accumulator` is the monotone reachability bitset. When an allowed edge
-/// reaches a destination whose bit was absent, the destination is appended to
-/// `next_queue` and `next_len` is incremented. The observed next length can
-/// exceed `next_queue_capacity`; stores are clamped so callers can detect
-/// overflow pressure without corrupting resident memory.
-#[must_use]
-#[allow(clippy::too_many_arguments)]
-pub fn csr_queue_delta_enqueue(
-    active_queue: &str,
-    active_len: &str,
-    edge_offsets: &str,
-    edge_targets: &str,
-    edge_kind_mask: &str,
-    accumulator: &str,
-    next_queue: &str,
-    next_len: &str,
-    node_count: u32,
-    edge_count: u32,
-    active_queue_capacity: u32,
-    next_queue_capacity: u32,
-    allow_mask: u32,
-) -> Program {
-    csr_queue_delta_enqueue_with(CsrQueueDeltaEnqueueParams {
-        active_queue,
-        active_len,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        accumulator,
-        next_queue,
-        next_len,
-        node_count,
-        edge_count,
-        active_queue_capacity,
-        next_queue_capacity,
-        allow_mask,
-    })
+/// Both delta variants take the same resident buffer ABI and forward to their
+/// `_with` form, so the positional argument list is stated once here instead of
+/// once per lane strategy.
+macro_rules! define_csr_queue_delta_entry_point {
+    (
+        $(#[$attr:meta])*
+        $name:ident -> $with:ident
+    ) => {
+        $(#[$attr])*
+        #[must_use]
+        #[allow(clippy::too_many_arguments)]
+        pub fn $name(
+            active_queue: &str,
+            active_len: &str,
+            edge_offsets: &str,
+            edge_targets: &str,
+            edge_kind_mask: &str,
+            accumulator: &str,
+            next_queue: &str,
+            next_len: &str,
+            node_count: u32,
+            edge_count: u32,
+            active_queue_capacity: u32,
+            next_queue_capacity: u32,
+            allow_mask: u32,
+        ) -> vyre_foundation::ir::Program {
+            $with($crate::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams {
+                active_queue,
+                active_len,
+                edge_offsets,
+                edge_targets,
+                edge_kind_mask,
+                accumulator,
+                next_queue,
+                next_len,
+                node_count,
+                edge_count,
+                active_queue_capacity,
+                next_queue_capacity,
+                allow_mask,
+            })
+        }
+    };
+}
+
+pub(crate) use define_csr_queue_delta_entry_point;
+
+define_csr_queue_delta_entry_point! {
+    /// Build a GPU program that expands queued CSR rows and enqueues only new nodes.
+    ///
+    /// `accumulator` is the monotone reachability bitset. When an allowed edge
+    /// reaches a destination whose bit was absent, the destination is appended to
+    /// `next_queue` and `next_len` is incremented. The observed next length can
+    /// exceed `next_queue_capacity`; stores are clamped so callers can detect
+    /// overflow pressure without corrupting resident memory.
+    csr_queue_delta_enqueue -> csr_queue_delta_enqueue_with
 }
 
 /// Build a GPU program that expands queued CSR rows and enqueues only new nodes.
@@ -273,9 +292,19 @@ pub fn try_csr_queue_delta_enqueue_cpu_into(
 mod tests {
     use super::*;
 
-    #[test]
-    fn emitted_program_has_stable_delta_queue_shape() {
-        let program = csr_queue_delta_enqueue(
+    /// One positional delta entry point under test.
+    pub(super) type DeltaEnqueueBuilder =
+        fn(&str, &str, &str, &str, &str, &str, &str, &str, u32, u32, u32, u32, u32) -> Program;
+
+    /// Build a delta program over the canonical buffer names. Both entry points
+    /// carry one ABI, so the argument list is stated here and not once per test.
+    pub(super) fn delta_program(
+        build: DeltaEnqueueBuilder,
+        node_count: u32,
+        edge_count: u32,
+        active_queue_capacity: u32,
+    ) -> Program {
+        build(
             "active_queue",
             "active_len",
             "edge_offsets",
@@ -284,12 +313,35 @@ mod tests {
             "accumulator",
             "next_queue",
             "next_len",
-            64,
-            7,
-            8,
+            node_count,
+            edge_count,
+            active_queue_capacity,
             16,
             1,
+        )
+    }
+
+    /// Every delta entry point owes the caller a trap program, not a panic, when
+    /// `node_count + 1` overflows the CSR offset count.
+    pub(super) fn assert_offset_overflow_traps(build: DeltaEnqueueBuilder, label: &str) {
+        let result = std::panic::catch_unwind(|| delta_program(build, u32::MAX, 0, 1));
+
+        assert!(
+            result.is_ok(),
+            "{label} must reject offset-count overflow without panicking"
         );
+        let program = result.unwrap();
+        assert!(program.stats().trap());
+        let entry = format!("{:?}", program.entry());
+        assert!(
+            entry.contains("node_count + 1 overflows u32"),
+            "Fix: trap must retain the CSR offset-count overflow diagnostic, got: {entry}"
+        );
+    }
+
+    #[test]
+    fn emitted_program_has_stable_delta_queue_shape() {
+        let program = delta_program(csr_queue_delta_enqueue, 64, 7, 8);
 
         assert_eq!(
             program.workgroup_size,
@@ -300,35 +352,7 @@ mod tests {
 
     #[test]
     fn delta_enqueue_rejects_offset_count_overflow_without_panic() {
-        let result = std::panic::catch_unwind(|| {
-            csr_queue_delta_enqueue(
-                "active_queue",
-                "active_len",
-                "edge_offsets",
-                "edge_targets",
-                "edge_kind_mask",
-                "accumulator",
-                "next_queue",
-                "next_len",
-                u32::MAX,
-                0,
-                1,
-                1,
-                1,
-            )
-        });
-
-        assert!(
-            result.is_ok(),
-            "CSR queue delta builder must reject offset-count overflow without panicking"
-        );
-        let program = result.unwrap();
-        assert!(program.stats().trap());
-        let entry = format!("{:?}", program.entry());
-        assert!(
-            entry.contains("node_count + 1 overflows u32"),
-            "Fix: trap must retain the CSR offset-count overflow diagnostic, got: {entry}"
-        );
+        assert_offset_overflow_traps(csr_queue_delta_enqueue, "CSR queue delta builder");
     }
 
     #[test]

@@ -284,10 +284,7 @@ fn hand_checked_gram_spectrum_is_reproduced_exactly() {
     assert_eigen_contract(&g, &out, 2, "hand-checked 4x2");
     assert_truncation_contract(&g, &out, 4, 2, 2, "hand-checked 4x2");
 
-    let mut spectrum = [
-        f64::from(out.rotated[0]),
-        f64::from(out.rotated[3]),
-    ];
+    let mut spectrum = [f64::from(out.rotated[0]), f64::from(out.rotated[3])];
     spectrum.sort_by(|left, right| right.partial_cmp(left).expect("finite"));
     assert!(
         (spectrum[0] - 203.607_09).abs() < 1.0e-2,

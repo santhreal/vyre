@@ -94,8 +94,7 @@ fn generated_fma_f32_matrix_matches_mul_add_bits() {
         let a = generated_finite(len, 0x0f1a_a011 ^ len as u32);
         let b = generated_finite(len, 0x0f1a_a012 ^ len as u32);
         let c = generated_finite(len, 0x0f1a_a013 ^ len as u32);
-        let program =
-            vyre_primitives::hardware::fma_f32::fma_f32("a", "b", "c", "out", len as u32);
+        let program = vyre_primitives::hardware::fma_f32::fma_f32("a", "b", "c", "out", len as u32);
         let got = run(
             &program,
             vec![pack(&a), pack(&b), pack(&c), vec![0u8; len.max(1) * 4]],
@@ -120,10 +119,9 @@ fn generated_inverse_sqrt_f32_matrix_matches_clamped_host_semantics() {
 
     for &len in &lengths {
         let input = generated_inverse_sqrt_inputs(len, 0x0f1a_b005 ^ len as u32);
-        let program =
-            vyre_primitives::hardware::inverse_sqrt_f32::inverse_sqrt_f32(
-                "input", "out", len as u32,
-            );
+        let program = vyre_primitives::hardware::inverse_sqrt_f32::inverse_sqrt_f32(
+            "input", "out", len as u32,
+        );
         let got = run(&program, vec![pack(&input), vec![0u8; len.max(1) * 4]]);
         let expected = input
             .iter()

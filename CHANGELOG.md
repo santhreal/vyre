@@ -326,6 +326,63 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   payload instead of a hand-written `BenchCase` impl. Case ids, metric names,
   error strings, and readback ranges are unchanged. The `vyre-bench`
   duplication pin drops from 3397 to 2491 lines.
+- One CSR frontier step is stated once. `graph::csr_frontier_step` already
+  owned the Program builder for both edge directions, but the host reference
+  was written twice: `csr_forward_traverse` scattered into the destination bit
+  and `csr_backward_traverse` gathered from it, each with its own row scan, its
+  own edge-kind filter, its own bitset-word arithmetic, and its own copy of the
+  CSR input validator, which the reverse walk reached across a sibling module
+  to call. The walk is now one function whose argument is the direction, so the
+  read endpoint and the write endpoint of an allowed edge are the only thing
+  that varies, and the two published entry points every step op republishes
+  under its own name (`cpu_ref` and `cpu_ref_into`, plus the predicate-level
+  pairs for a masked step) come from `define_csr_frontier_step_cpu_ref` instead
+  of six hand-copied parameter lists. `csr_forward_traverse_with_op_id` and
+  `csr_backward_traverse_with_op_id` are gone: they differed only in the
+  direction constant they passed, and `predicate::edge` and
+  `predicate::size_argument_of` now build through the predicate program
+  builders that already existed for that purpose. A missed copy is why a bounds
+  guard can hold on one direction and not the other: the forward walk
+  range-checked its destination against `node_count` while the reverse walk
+  range-checked only against the frontier length, and a reference that is wrong
+  in one direction blesses a wrong program in that direction. Emitted IR is
+  unchanged, and the 2048-case hostile sweep in `csr_frontier_step` still
+  compares both directions against two scalar walks written independently of
+  the primitive.
+- One queued-row CSR expansion ABI, one owner. Five entry points build the same
+  queue-driven traversal and differ only in how lanes are assigned to a queued
+  row, yet each restated the whole surface: `csr_queue_strided` declared
+  `CsrQueueStridedForwardParams`, a field-for-field second name for
+  `csr_frontier_queue::CsrQueueForwardTraverseParams`, then destructured it,
+  repeated the zero-node and zero-capacity refusal with its own diagnostic, and
+  reassembled the step spec; the delta pair repeated its thirteen-argument
+  positional list in both files. A second name for one buffer contract is how a
+  field added for one lane strategy silently misses the others, and the strided
+  path also carried a hand-written CPU reference that only forwarded to the
+  queue reference it is checked against. The queued-row ABI now owns its
+  refusal rule and its step spec, one macro states the positional argument list
+  per family, the strided op publishes the queue reference under its own names
+  instead of copying it, and the offset-count overflow contract is one
+  assertion both forward entry points run against the invalid-output program
+  shape.
+- A CSR closure states its call shapes once. Iterating a one-step CSR traversal
+  to a fixpoint is one algorithm with several call shapes: allocate the two
+  frontier buffers or borrow the caller-owned pair, observe each attempted step
+  or not, report a malformed graph or panic on it. `csr_bidirectional`
+  published six of those shapes and `csr_forward_or_changed` three, each
+  retyping the same seven to ten argument names above a body that only
+  forwarded them, and the `vyre-libs` reference facades for both ops retyped
+  the pair again to add a dispatch-call count. Plumbing repeated per op is how
+  one shape keeps a `#[must_use]`, a clippy allowance, or a fix the siblings
+  never receive, and a facade with a hand-written body is one edit away from
+  being a second implementation of a fixpoint it is only supposed to count.
+  `graph::csr_closure_entry_points` now owns the argument list and generates
+  the allocating, borrowing and panicking shapes above the hooked driver that
+  carries the semantics; each op supplies its own documentation and its own
+  diagnostic. The infallible shape is exported, so the composition facades in
+  `vyre-libs` pass a counting hook to the primitive driver instead of restating
+  it, and the traversal pipeline reference, which counted nothing at all, is
+  now the primitive shape published under the pipeline name.
 
 ### Removed
 
@@ -356,6 +413,19 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   required a repository-root `rules/` tree that does not exist here, and its
   second rule scanned a directory that does not exist behind a suppressed
   error.
+- Three `vyre-primitives` graph shapes are gone, all behind the `graph`
+  feature. `CsrQueueStridedForwardParams` is deleted: the row-strided queue
+  expansion takes the same inputs as the scalar one, so
+  `csr_queue_strided_forward_traverse_with` now accepts
+  `CsrQueueForwardTraverseParams`, whose fields carry the same names.
+  `csr_forward_traverse_with_op_id` and `csr_backward_traverse_with_op_id` are
+  deleted; the direction-parameterized frontier-step reference covers what they
+  were for and nothing called them. Every other CSR closure and queue entry
+  point keeps its exact name, arity and argument order even where it is now
+  generated from a macro or published as a re-export, so a caller that used one
+  of those needs no edit. The default-feature public-API snapshots for
+  `vyre-primitives` and `vyre-libs` are unaffected, since `graph` is not a
+  default feature.
 
 ### Fixed
 

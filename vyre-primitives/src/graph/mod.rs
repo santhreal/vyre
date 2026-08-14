@@ -53,6 +53,9 @@ pub(crate) fn padded_u32_slice_fingerprint(values: &[u32], padded_words: usize) 
     hash
 }
 
+/// The published call shapes of a CSR closure, stated once for every op that
+/// iterates a one-step traversal to a fixpoint.
+pub(crate) mod csr_closure_entry_points;
 /// One BFS step that accumulates into frontier_out and reports changes.
 pub mod csr_forward_or_changed;
 /// One BFS frontier step over ProgramGraph CSR.
@@ -81,7 +84,9 @@ pub mod csr_frontier_queue;
 /// device shards by vertex ownership and OR-merge the per-shard outputs (W3-5
 /// graph-frontier-device-shards), exactly reproducing a single-device expansion.
 pub mod csr_frontier_shard;
-mod csr_frontier_step;
+/// The one CSR frontier step: the Program builder for either edge direction and
+/// the host reference that walks the same two directions.
+pub(crate) mod csr_frontier_step;
 /// Queue-to-queue sparse CSR delta expansion for GPU-resident fixpoint waves.
 pub mod csr_queue_delta;
 /// Mixed queue traversal that keeps low-degree rows scalar and sends only hubs

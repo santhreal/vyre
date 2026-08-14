@@ -16,7 +16,8 @@
 use vyre_foundation::ir::Program;
 
 use crate::graph::csr_frontier_step::{
-    csr_forward_step_excluding_program, csr_frontier_step_program, CsrFrontierStepKind,
+    csr_forward_step_excluding_program, csr_frontier_step_program,
+    define_csr_frontier_step_cpu_ref, CsrFrontierStepKind,
 };
 use crate::graph::program_graph::ProgramGraphShape;
 
@@ -62,8 +63,16 @@ pub fn csr_forward_traverse(
     frontier_out: &str,
     allow_mask: u32,
 ) -> Program {
-    csr_forward_traverse_with_op_id(OP_ID, shape, frontier_in, frontier_out, allow_mask)
+    csr_frontier_step_program(
+        OP_ID,
+        CsrFrontierStepKind::Forward,
+        shape,
+        frontier_in,
+        frontier_out,
+        allow_mask,
+    )
 }
+
 /// Build one CSR forward step while excluding source nodes selected by a bitset.
 ///
 /// Destination nodes remain observable when reached. Exclusion applies only
@@ -86,138 +95,19 @@ pub fn csr_forward_traverse_excluding(
     )
 }
 
-/// Build a CSR forward step under a caller-owned op id.
-#[must_use]
-pub(crate) fn csr_forward_traverse_with_op_id(
-    op_id: &'static str,
-    shape: ProgramGraphShape,
-    frontier_in: &str,
-    frontier_out: &str,
-    allow_mask: u32,
-) -> Program {
-    csr_frontier_step_program(
-        op_id,
-        CsrFrontierStepKind::Forward,
-        shape,
-        frontier_in,
-        frontier_out,
-        allow_mask,
-    )
-}
-
-/// CPU reference: one forward step. Returns a fresh bitset where bit
-/// `v` is set iff any predecessor `u` with `frontier_in` bit set has
-/// an edge `u → v` whose `edge_kind_mask[e] & allow_mask != 0`.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-) -> Vec<u32> {
-    let mut out = Vec::new();
-    cpu_ref_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-        &mut out,
-    );
-    out
-}
-
-/// Validate CSR buffers shared by forward and backward CPU references.
-///
-/// The CPU oracle is used as GPU parity evidence, so malformed graph layouts
-/// must fail loudly instead of producing an empty frontier that can mask
-/// upstream object corruption.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn validate_csr_frontier_step_cpu_inputs(
-    label: &str,
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-) -> usize {
-    let expected_offsets = node_count as usize + 1;
-    assert_eq!(
-        edge_offsets.len(),
-        expected_offsets,
-        "{label} CPU oracle received {} row offsets for node_count={node_count}; Fix: pass exactly node_count + 1 CSR offsets.",
-        edge_offsets.len()
-    );
-    let edge_count = edge_offsets[expected_offsets - 1] as usize;
-    assert!(
-        edge_targets.len() >= edge_count && edge_kind_mask.len() >= edge_count,
-        "{label} CPU oracle received edge_count={edge_count} but targets_len={} kind_mask_len={}. Fix: pass complete CSR edge buffers.",
-        edge_targets.len(),
-        edge_kind_mask.len()
-    );
-    for (index, pair) in edge_offsets.windows(2).enumerate() {
-        assert!(
-            pair[0] <= pair[1],
-            "{label} CPU oracle received non-monotonic CSR offsets at row {index}: {} > {}. Fix: rebuild CSR row pointers before parity comparison.",
-            pair[0],
-            pair[1]
-        );
-    }
-    edge_count
-}
-
-/// CPU reference using caller-owned output storage.
-///
-/// Malformed CSR inputs fail loudly. GPU parity evidence must not turn a
-/// truncated row pointer or edge table into an all-zero frontier because that
-/// would bless corrupted graph inputs as valid dataflow results.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-    out: &mut Vec<u32>,
-) {
-    let words = bitset_words(node_count) as usize;
-    out.clear();
-    out.resize(words, 0);
-    validate_csr_frontier_step_cpu_inputs(
-        "csr_forward_traverse",
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-    );
-    for src in 0..node_count {
-        let word_idx = (src / 32) as usize;
-        let bit_mask = 1u32 << (src % 32);
-        if word_idx >= frontier_in.len() {
-            continue;
-        }
-        if (frontier_in[word_idx] & bit_mask) == 0 {
-            continue;
-        }
-        let edge_start = edge_offsets[src as usize] as usize;
-        let edge_end = edge_offsets[src as usize + 1] as usize;
-        for e in edge_start..edge_end {
-            let kind = edge_kind_mask[e];
-            if (kind & allow_mask) == 0 {
-                continue;
-            }
-            let dst = edge_targets[e];
-            if dst < node_count {
-                let dst_word = (dst / 32) as usize;
-                let dst_bit = 1u32 << (dst % 32);
-                out[dst_word] |= dst_bit;
-            }
-        }
-    }
+define_csr_frontier_step_cpu_ref! {
+    direction: CsrFrontierStepKind::Forward,
+    label: "csr_forward_traverse",
+    /// CPU reference: one forward step. Returns a fresh bitset where bit
+    /// `v` is set iff any predecessor `u` with `frontier_in` bit set has
+    /// an edge `u → v` whose `edge_kind_mask[e] & allow_mask != 0`.
+    pub fn cpu_ref,
+    /// CPU reference using caller-owned output storage.
+    ///
+    /// Malformed CSR inputs fail loudly. GPU parity evidence must not turn a
+    /// truncated row pointer or edge table into an all-zero frontier because that
+    /// would bless corrupted graph inputs as valid dataflow results.
+    pub fn cpu_ref_into,
 }
 
 #[cfg(feature = "inventory-registry")]

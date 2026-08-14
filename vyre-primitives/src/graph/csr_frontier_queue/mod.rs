@@ -15,6 +15,12 @@
 //!
 //! The queue length can exceed queue capacity to expose overflow pressure; the
 //! traversal consumes only the first `queue_capacity` entries.
+use vyre_foundation::ir::{DataType, Program};
+
+use crate::graph::csr_frontier_step::{
+    CsrQueueEmit, CsrQueueInputs, CsrQueueLanes, CsrQueueRowPlan, CsrQueueStepSpec,
+};
+
 mod cpu_reference;
 mod graph_validation;
 mod packed_word_compaction;
@@ -111,6 +117,150 @@ pub struct CsrQueueForwardTraverseParams<'a> {
     pub queue_capacity: u32,
     /// Edge kinds this traversal is allowed to follow.
     pub allow_mask: u32,
+}
+
+impl<'a> CsrQueueForwardTraverseParams<'a> {
+    /// Refuse a shape that cannot address one queue slot. `builder_name` is the
+    /// entry point named in the diagnostic the caller reads.
+    pub(crate) fn empty_shape_program(
+        &self,
+        op_id: &'static str,
+        builder_name: &str,
+    ) -> Option<Program> {
+        let node_count = self.node_count;
+        let queue_capacity = self.queue_capacity;
+        if node_count != 0 && queue_capacity != 0 {
+            return None;
+        }
+        Some(crate::invalid_output_program(
+            op_id,
+            self.frontier_out,
+            DataType::U32,
+            format!(
+                "Fix: {builder_name} requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
+            ),
+        ))
+    }
+
+    /// Point these inputs at the shared queue-step builder. The queued-row
+    /// forward entry points differ only in op id, variable prefix, workgroup
+    /// shape, and how lanes are assigned to a queued row.
+    pub(crate) fn spec(
+        &self,
+        op_id: &'static str,
+        builder_name: &'static str,
+        prefix: &'a str,
+        workgroup_size: [u32; 3],
+        lanes: CsrQueueLanes,
+    ) -> CsrQueueStepSpec<'a> {
+        CsrQueueStepSpec {
+            op_id,
+            builder_name,
+            prefix,
+            workgroup_size,
+            inputs: CsrQueueInputs {
+                active_queue: self.active_queue,
+                queue_len: self.queue_len,
+                edge_offsets: self.edge_offsets,
+                edge_targets: self.edge_targets,
+                edge_kind_mask: self.edge_kind_mask,
+            },
+            lanes,
+            row_plan: CsrQueueRowPlan::ExpandAll,
+            emit: CsrQueueEmit::Frontier {
+                frontier_out: self.frontier_out,
+            },
+            node_count: self.node_count,
+            edge_count: self.edge_count,
+            queue_capacity: self.queue_capacity,
+            allow_mask: self.allow_mask,
+        }
+    }
+}
+
+/// Publish one queued-row forward expansion entry point.
+///
+/// Every variant of this family takes the same resident buffer ABI and forwards
+/// to its `_with` form, so the positional argument list is stated once here
+/// instead of once per lane strategy.
+macro_rules! define_csr_queue_forward_entry_point {
+    (
+        $(#[$attr:meta])*
+        $name:ident -> $with:ident
+    ) => {
+        $(#[$attr])*
+        #[must_use]
+        #[allow(clippy::too_many_arguments)]
+        pub fn $name(
+            active_queue: &str,
+            queue_len: &str,
+            edge_offsets: &str,
+            edge_targets: &str,
+            edge_kind_mask: &str,
+            frontier_out: &str,
+            node_count: u32,
+            edge_count: u32,
+            queue_capacity: u32,
+            allow_mask: u32,
+        ) -> vyre_foundation::ir::Program {
+            $with(
+                $crate::graph::csr_frontier_queue::CsrQueueForwardTraverseParams {
+                    active_queue,
+                    queue_len,
+                    edge_offsets,
+                    edge_targets,
+                    edge_kind_mask,
+                    frontier_out,
+                    node_count,
+                    edge_count,
+                    queue_capacity,
+                    allow_mask,
+                },
+            )
+        }
+    };
+}
+
+pub(crate) use define_csr_queue_forward_entry_point;
+
+/// One positional queued-row forward entry point under test.
+#[cfg(test)]
+pub(crate) type CsrQueueForwardBuilder =
+    fn(&str, &str, &str, &str, &str, &str, u32, u32, u32, u32) -> Program;
+
+/// Every queued-row forward entry point owes the caller an invalid-output
+/// program, not a panic, when `node_count + 1` overflows the CSR offset count.
+#[cfg(test)]
+pub(crate) fn assert_offset_overflow_traps(build: CsrQueueForwardBuilder, builder_name: &str) {
+    let result = std::panic::catch_unwind(|| {
+        build(
+            "queue",
+            "len",
+            "offsets",
+            "targets",
+            "kinds",
+            "out",
+            u32::MAX,
+            0,
+            1,
+            1,
+        )
+    });
+
+    assert!(
+        result.is_ok(),
+        "{builder_name} must emit an invalid program instead of panicking"
+    );
+    let program = result.unwrap();
+    assert_eq!(program.workgroup_size, [1, 1, 1]);
+    assert_eq!(program.buffers.len(), 1);
+    assert_eq!(program.buffers[0].name.as_ref(), "out");
+    assert!(program.stats().trap());
+    let entry = format!("{:?}", program.entry());
+    assert!(
+        entry.contains("node_count + 1 overflows u32"),
+        "Fix: {builder_name} must preserve the CSR offset overflow diagnostic, got: {entry}"
+    );
 }
 
 /// Validated resident graph layout for queue-driven sparse traversal.
