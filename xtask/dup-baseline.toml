@@ -1,38 +1,44 @@
-# Duplicated source lines per crate, written by `xtask dup-scan --write-baseline`.
+# Duplicated source lines per crate.
 #
 # A line counts as duplicated when an 8-line normalized shingle covering it
 # also appears in another file. More than the pin fails; less is reported so
 # the owning dedup PR can lower it here as part of its own diff.
 #
-# A pin is never raised. Eight rows are currently below what the crate
-# measures, and each is failing on purpose until the work that closes it lands.
-# `--write-baseline` rewrites every row from the current tree and drops this
-# block, so it must not be used to record one crate's progress; edit that
-# crate's row by hand.
+# A pin is never raised. `--write-baseline` rewrites every row from the current
+# tree and drops this block, so it must not be used to record one crate's
+# progress; edit that crate's row by hand. A crate with duplication and no row
+# fails, so a new crate cannot arrive unmeasured.
+#
+# Rows currently pinned below what the crate measures, each failing on purpose
+# until the work that closes it lands:
 #
 #   tests            8      the C-frontend fixture streams under
 #                           tests/support/c_frontend/fixtures are still spelled
 #                           one FixtureToken per line.
-#   vyre-libs        11805  measures 16069. Two causes. The migrated
+#   vyre-libs        11805  measures 13605. Two causes. The migrated
 #                           c_ast_sema_scope_* and c_parser_hostile_* suites
 #                           still repeat their row assertions per case, and the
-#                           crate absorbed the six trees the pass engine gave up:
-#                           vyre-pass-engine fell 4711 to 834 in the same change.
-#                           Across the pair that is 16516 pinned against 16903
-#                           measured, so the move itself cost 387 lines by
-#                           placing those trees beside code they resemble. The
+#                           crate absorbed the six trees the pass engine gave up
+#                           when the engine narrowed to pass execution, which
+#                           placed those trees beside code they resemble. The
 #                           pin is not raised to meet it; the vyre-libs dedup
 #                           owes the difference.
-#   vyre-primitives  7709   the remaining rows are the CSR traversal and
-#                           iterative-solver program builders, which duplicate
-#                           against their vyre-libs dispatch partners rather
-#                           than against each other.
-
+#   vyre-pass-engine 395    measures 403. The IR rewriting walk exists three
+#                           times: rewrite_walk.rs here against
+#                           vyre-foundation's transform/subst.rs and
+#                           execution_plan/fusion/alpha_rename.rs. An IR-to-IR
+#                           rewrite is Layer 1 and belongs in vyre-foundation.
+#   xtask-evidence   949    measures 967, and xtask-registry 126 measures 136.
+#                           The release conformance matrix is computed twice,
+#                           once in xtask-registry/src/release/conformance_matrix.rs
+#                           and once in xtask/src/release/release_conformance.rs,
+#                           which share 23 shingles of catalog coverage, release
+#                           backend rows and op-matrix blocker logic.
 
 [[crate]]
 name = "conform"
-duplicate_lines = 946
-total_lines = 10518
+duplicate_lines = 765
+total_lines = 10305
 
 [[crate]]
 name = "examples"
