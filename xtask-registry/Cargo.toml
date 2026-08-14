@@ -38,9 +38,12 @@ vyre-reference.workspace = true
 vyre-spec.workspace = true
 # `lego-audit` is the release catalog gate. It must link every shipped Tier-3
 # consumer so primitive coverage is measured against the real composition
-# surface, not a feature-narrow slice.
-vyre-libs = { workspace = true, features = ["full", "logical", "nn-moe", "security", "visual", "parsing", "math", "nn", "matching", "crypto"] }
-vyre-primitives = { workspace = true, features = ["text", "matching", "math", "nn", "hash", "parsing", "graph", "bitset", "reduce", "label", "predicate", "fixpoint", "inventory-registry", "hardware"] }
+# surface, not a feature-narrow slice. Each edge names that crate's own
+# aggregate rather than a list kept by hand here: a hand-kept list is what let
+# `geom`, `opt`, `decode` and `visual` fall out of the primitives edge while
+# every generated document still agreed with the narrowed registry.
+vyre-libs = { workspace = true, features = ["full"] }
+vyre-primitives = { workspace = true, features = ["all-lego"] }
 inventory.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true

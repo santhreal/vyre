@@ -29,16 +29,24 @@ default = [
     "hash",
     "decode",
 ]
-# `full` aggregates everything that used to be in default + crypto +
-# the algebra/succinct/attention extras. Consumers that previously
-# relied on the wide default flip to `full` (no behavior change).
+# `full` is every dialect this crate ships: every domain that submits an
+# `OperationRegistration`. It is the selection a consumer names to get the whole
+# composition surface, and the selection the registry walker names to see every
+# registration. It stops short of the compiler's own self-use composition
+# domains (`solvers`, `encoding`, `analysis`, `scheduling`, `graph-dispatch`,
+# `reasoning`), which submit nothing and exist for this workspace rather than
+# for a library consumer.
 full = [
     "math-linalg", "math-scan", "math-broadcast", "math-algebra", "math-succinct",
     "nn-activation", "nn-linear", "nn-linear-4bit", "nn-norm", "nn-attention", "nn-moe", "nn-inference",
-    "matching-substring", "matching-dfa",
+    "matching-substring", "matching-dfa", "matching-nfa",
     "hash",
     "decode",
     "crypto-blake3",
+    "logical",
+    "visual",
+    "security",
+    "parsing",
 ]
 bench = []
 cpu-parity = ["vyre-primitives/cpu-parity"]

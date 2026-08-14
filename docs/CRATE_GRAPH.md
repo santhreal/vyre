@@ -329,10 +329,10 @@ graph TD
 | `xtask-registry` | `vyre` | public lifecycle facade | None | `always` | `normal` | `false` | `false` | `private` | `public-facade` |
 | `xtask-registry` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
 | `xtask-registry` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `xtask-registry` | `vyre-libs` | product operation builders | `crypto`, `full`, `logical`, `matching`, `math`, `nn`, `nn-moe`, `parsing`, `security`, `visual` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
+| `xtask-registry` | `vyre-libs` | product operation builders | `full` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `xtask-registry` | `vyre-lints` | source policy enforcement | None | `always` | `normal` | `false` | `true` | `private` | `lint-policy` |
 | `xtask-registry` | `vyre-megakernel` | neutral artifact compilation and target payload contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
-| `xtask-registry` | `vyre-primitives` | reusable semantic Program builders | `bitset`, `fixpoint`, `graph`, `hardware`, `hash`, `inventory-registry`, `label`, `matching`, `math`, `nn`, `parsing`, `predicate`, `reduce`, `text` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
+| `xtask-registry` | `vyre-primitives` | reusable semantic Program builders | `all-lego` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `xtask-registry` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
 | `xtask-registry` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `cuda`, `operations`, `reference`, `spirv`, `wgpu` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
 | `xtask-registry` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |

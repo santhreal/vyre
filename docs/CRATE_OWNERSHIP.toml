@@ -1095,7 +1095,7 @@ seam = "backend-contract"
 [[crate.dependency]]
 package = "vyre-libs"
 purpose = "product operation builders"
-features = ["crypto", "full", "logical", "matching", "math", "nn", "nn-moe", "parsing", "security", "visual"]
+features = ["full"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
@@ -1117,7 +1117,7 @@ seam = "lint-policy"
 [[crate.dependency]]
 package = "vyre-primitives"
 purpose = "reusable semantic Program builders"
-features = ["bitset", "fixpoint", "graph", "hardware", "hash", "inventory-registry", "label", "matching", "math", "nn", "parsing", "predicate", "reduce", "text"]
+features = ["all-lego"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false

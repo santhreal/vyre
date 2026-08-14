@@ -9,3 +9,4 @@
 
 mod cli_docs;
 mod operation_schema;
+mod registration_visibility;

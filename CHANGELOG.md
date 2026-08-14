@@ -136,6 +136,15 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   a failure, so a new member or feature is red until a decision is recorded for
   it. The declaration half runs inside the gate sweep; the compile half is
   `--sweep` and CI owns it.
+- A registration behind a feature the registry walker does not enable is
+  invisible rather than absent, so nothing was red when one fell out. Two rules
+  in `xtask-registry` close that class, both derived from the tree at run time
+  rather than from a list: every file that submits a registration is reachable
+  through the walker's declared feature selection, resolved transitively
+  through the source crate's own feature table, and every feature that gates a
+  registration is one the source crate's widest aggregate turns on. A new
+  domain feature carrying registrations turns both red until the aggregate
+  covers it, and a consumer naming the aggregate then needs no change.
 
 ### Changed
 
@@ -1016,6 +1025,12 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   that only a plain global or shared store is maskable by a `@%p` instruction
   predicate. Adding a variant now fails to compile until both facts are stated
   for it, rather than defaulting to no child body and removable.
+- `vyre-libs` feature `full` is every dialect the crate ships, meaning every
+  domain that submits an operation registration: it gains `logical`, `visual`,
+  `security`, `parsing` and `matching-nfa`. It stops short of the compiler's
+  own self-use composition domains, which submit nothing. Before this, `full`
+  was a subset and two consumers each carried the same ten-name list to reach
+  the rest.
 
 ### Removed
 
@@ -1652,6 +1667,19 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   declines the fusion instead of guessing at it. The test that should have
   caught this compared two inline copies of the walk against each other and
   never called the production one.
+- The tool that generates every operation document from the live registry now
+  links every crate feature that gates a registration. Its dependency edge on
+  `vyre-primitives` named fourteen domain features by hand, and `geom`, `opt`,
+  `decode` and `visual` had fallen out of that list long after the documents
+  were generated with them on, so nine files of registrations were invisible:
+  the walker reported a smaller registry, and every generated document agreed
+  with it. Nothing was red except three backend matrix rows reporting `no live
+  registration` for `clifford2_geometric_product`, `tfn_scalar_mix` and
+  `homotopy_euler_predictor`, which also took down the inventory contract in
+  `vyre-foundation`. Both edges now name the source crate's own aggregate
+  feature instead of a list kept by hand, and the regenerated documents are
+  byte-identical, which is the proof that the documents were right and the edge
+  was wrong.
 
 ## [0.7.1] - 2026-08-01
 
