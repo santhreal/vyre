@@ -1,32 +1,37 @@
-//! The one encoded-order IR rewrite walk.
+//! Encoder-order IR rewriting for the passes driven by a GPU analysis kernel.
 //!
 //! Every pass that consumes a per-Expr verdict from a GPU analysis kernel has
 //! to revisit the IR in exactly the order `expr_arena` encoded it, because the
 //! verdict is indexed by the encoder's post-order Expr id. That walk is
 //! identical for const-fold, canonicalize, pattern-match, and the fused
-//! resident decode; only the decision taken at each id differs. The walk is
-//! here and each pass supplies the decision.
-
-use std::sync::Arc;
+//! resident decode; only the decision taken at each id differs. This module
+//! supplies the encoder-specific part of that walk and each pass supplies the
+//! decision.
+//!
+//! Which positions of a `Node` a rewrite must visit is not decided here. That
+//! is IR structure, owned by [`vyre_foundation::transform::rewrite_walk`], and
+//! this module is a [`NodeRewrite`] policy over it. Two things are genuinely
+//! the encoder's and stay here: the post-order Expr counter, which must advance
+//! exactly as `expr_arena::encode_expr` did, and the scope truncation at the
+//! first `Return`, which is what the encoder emitted a node for.
 
 use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_foundation::transform::rewrite_walk::{self, NodeRewrite};
 
 /// Rewrite every Expr in `program` in encoder order.
 ///
 /// `rewrite_expr` receives each Expr and the running post-order counter, and is
 /// responsible for advancing that counter exactly as the encoder did. Use
 /// [`rewrite_simple_expr_postorder`] inside it to get that for free.
-pub(super) fn rewrite_program_with_expr_rewriter<F>(
-    program: &Program,
-    mut rewrite_expr: F,
-) -> Program
+pub(super) fn rewrite_program_with_expr_rewriter<F>(program: &Program, rewrite_expr: F) -> Program
 where
     F: FnMut(&Expr, &mut u32) -> Expr,
 {
-    let mut counter = 0u32;
-    super::rewrite_program_entry(program, |body| {
-        rewrite_scope(body, &mut rewrite_expr, &mut counter)
-    })
+    let mut walk = EncodedOrder {
+        rewrite_expr,
+        counter: 0,
+    };
+    super::rewrite_program_entry(program, |body| walk.scope(body))
 }
 
 /// Rebuild `expr` bottom-up, then hand the rebuilt Expr and its arena id to
@@ -89,100 +94,43 @@ where
     transform(rebuilt, id)
 }
 
-fn rewrite_scope<F>(body: &[Node], rewrite_expr: &mut F, counter: &mut u32) -> Vec<Node>
-where
-    F: FnMut(&Expr, &mut u32) -> Expr,
-{
-    let prefix_len = super::encode::reachable_prefix_len(body);
-    let mut out = Vec::with_capacity(prefix_len);
-    for node in &body[..prefix_len] {
-        out.push(rewrite_node(node, rewrite_expr, counter));
-    }
-    out
+/// Drives the shared node walk in the encoder's order.
+struct EncodedOrder<F> {
+    rewrite_expr: F,
+    counter: u32,
 }
 
-fn rewrite_node<F>(node: &Node, rewrite_expr: &mut F, counter: &mut u32) -> Node
+impl<F> EncodedOrder<F>
 where
     F: FnMut(&Expr, &mut u32) -> Expr,
 {
-    match node {
-        Node::Let { name, value } => Node::let_bind(name.clone(), rewrite_expr(value, counter)),
-        Node::Assign { name, value } => Node::assign(name.clone(), rewrite_expr(value, counter)),
-        Node::Store {
-            buffer,
-            index,
-            value,
-        } => Node::store(
-            buffer.clone(),
-            rewrite_expr(index, counter),
-            rewrite_expr(value, counter),
-        ),
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => Node::if_then_else(
-            rewrite_expr(cond, counter),
-            rewrite_scope(then, rewrite_expr, counter),
-            rewrite_scope(otherwise, rewrite_expr, counter),
-        ),
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => Node::loop_for(
-            var.clone(),
-            rewrite_expr(from, counter),
-            rewrite_expr(to, counter),
-            rewrite_scope(body, rewrite_expr, counter),
-        ),
-        Node::AsyncLoad {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } => Node::AsyncLoad {
-            source: source.clone(),
-            destination: destination.clone(),
-            offset: Box::new(rewrite_expr(offset, counter)),
-            size: Box::new(rewrite_expr(size, counter)),
-            tag: tag.clone(),
-        },
-        Node::AsyncStore {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } => Node::AsyncStore {
-            source: source.clone(),
-            destination: destination.clone(),
-            offset: Box::new(rewrite_expr(offset, counter)),
-            size: Box::new(rewrite_expr(size, counter)),
-            tag: tag.clone(),
-        },
-        Node::Trap { address, tag } => Node::Trap {
-            address: Box::new(rewrite_expr(address, counter)),
-            tag: tag.clone(),
-        },
-        Node::Block(body) => Node::Block(rewrite_scope(body, rewrite_expr, counter)),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => Node::Region {
-            generator: generator.clone(),
-            source_region: source_region.clone(),
-            body: Arc::new(rewrite_scope(body.as_slice(), rewrite_expr, counter)),
-        },
-        Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncWait { .. }
-        | Node::Resume { .. }
-        | Node::Opaque(_) => node.clone(),
-        _ => node.clone(),
+    /// One scope, truncated where the encoder truncated it.
+    ///
+    /// Nodes after the first `Return` were never encoded, so no verdict is
+    /// indexed for them and they are dropped rather than carried through with
+    /// stale ids.
+    fn scope(&mut self, body: &[Node]) -> Vec<Node> {
+        let prefix_len = super::encode::reachable_prefix_len(body);
+        let mut out = Vec::with_capacity(prefix_len);
+        for node in &body[..prefix_len] {
+            out.push(rewrite_walk::rewrite_node(node, self).unwrap_or_else(|| node.clone()));
+        }
+        out
+    }
+}
+
+impl<F> NodeRewrite for EncodedOrder<F>
+where
+    F: FnMut(&Expr, &mut u32) -> Expr,
+{
+    /// The shared walk offers operands in source order before child bodies,
+    /// which is the order `expr_arena::encode_node` allocated ids in, so the
+    /// counter stays aligned with the verdict buffer.
+    fn operand(&mut self, expr: &Expr) -> Option<Expr> {
+        Some((self.rewrite_expr)(expr, &mut self.counter))
+    }
+
+    fn body(&mut self, _parent: &Node, body: &[Node]) -> Option<Vec<Node>> {
+        Some(self.scope(body))
     }
 }

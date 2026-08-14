@@ -2390,6 +2390,12 @@ pub fn vyre_foundation::transform::inline::inline_composite_calls(program: &vyre
 pub fn vyre_foundation::transform::inline::output_buffer<'a>(op_id: &str, program: &'a vyre_foundation::ir::Program) -> vyre_foundation::error::IrResult<&'a vyre_foundation::ir::BufferDecl>
 pub fn vyre_foundation::transform::inline::zero_value(ty: &vyre_spec::data_type::DataType) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::transform::parallelism::detect_parallelism(nodes: &[vyre_foundation::ir::Node]) -> alloc::vec::Vec<vyre_foundation::transform::parallelism::DispatchGroup>
+pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::body(&mut self, parent: &vyre_foundation::ir::Node, body: &[vyre_foundation::ir::Node]) -> core::option::Option<alloc::vec::Vec<vyre_foundation::ir::Node>> where Self: core::marker::Sized
+pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::enter(&mut self, node: &vyre_foundation::ir::Node)
+pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::ident(&mut self, name: &vyre_foundation::ir::Ident) -> core::option::Option<vyre_foundation::ir::Ident>
+pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::operand(&mut self, expr: &vyre_foundation::ir::Expr) -> core::option::Option<vyre_foundation::ir::Expr>
+pub fn vyre_foundation::transform::rewrite_walk::rewrite_body<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R) -> core::option::Option<alloc::vec::Vec<vyre_foundation::ir::Node>>
+pub fn vyre_foundation::transform::rewrite_walk::rewrite_node<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(node: &vyre_foundation::ir::Node, rewrite: &mut R) -> core::option::Option<vyre_foundation::ir::Node>
 pub fn vyre_foundation::transform::visit::ExprVisitor::visit_expr(&mut self, expr: &vyre_foundation::ir::Expr)
 pub fn vyre_foundation::transform::visit::NodeVisitor::visit_node(&mut self, node: &vyre_foundation::ir::Node)
 pub fn vyre_foundation::transform::visit::any_descendant(node: &vyre_foundation::ir::Node, pred: &mut impl core::ops::function::FnMut(&vyre_foundation::ir::Node) -> bool) -> bool
@@ -2808,6 +2814,7 @@ pub mod vyre_foundation::transform::compiler::typed_arena
 pub mod vyre_foundation::transform::compiler::visitor_walk
 pub mod vyre_foundation::transform::inline
 pub mod vyre_foundation::transform::parallelism
+pub mod vyre_foundation::transform::rewrite_walk
 pub mod vyre_foundation::transform::visit
 pub mod vyre_foundation::validate
 pub mod vyre_foundation::validate::binding
@@ -3139,6 +3146,7 @@ pub trait vyre_foundation::optimizer::eqsat::Rule<L: vyre_foundation::optimizer:
 pub trait vyre_foundation::optimizer::eqsat_toml::OpIdNode
 pub trait vyre_foundation::program_dispatch::ProgramDispatcher
 pub trait vyre_foundation::serial::envelope::test_helpers::WireRoundTrip: core::marker::Sized
+pub trait vyre_foundation::transform::rewrite_walk::NodeRewrite
 pub trait vyre_foundation::transform::visit::ExprVisitor
 pub trait vyre_foundation::transform::visit::NodeVisitor
 pub trait vyre_foundation::validate::BackendValidationCapabilities
