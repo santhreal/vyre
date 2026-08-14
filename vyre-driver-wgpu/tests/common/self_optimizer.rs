@@ -5,7 +5,7 @@
 //! [`ProgramDispatcher`]. Satisfying that trait from a live `WgpuBackend` is one
 //! implementation, not one per suite.
 
-use vyre::ir::{Expr, Node, Program};
+use vyre::ir::Program;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
@@ -36,26 +36,7 @@ impl ProgramDispatcher for WgpuProgramDispatcher<'_> {
     }
 }
 
-/// A buffer-free program holding just `entry`, the shape every optimizer pass
-/// suite feeds in.
-pub(crate) fn wrapped(entry: Vec<Node>) -> Program {
-    Program::wrapped(Vec::new(), [1, 1, 1], entry)
-}
-
-/// Peel the `Region` wrapper `Program::wrapped` adds and read the single
-/// let-bound value.
-///
-/// # Panics
-///
-/// Panics when the program is not a single `Region` holding a single `Let`,
-/// which means the pass under test changed the node shape rather than the
-/// value.
-pub(crate) fn first_let_value(p: &Program) -> Expr {
-    match p.entry() {
-        [Node::Region { body, .. }] => match body.as_slice() {
-            [Node::Let { value, .. }] => value.clone(),
-            _ => panic!("expected single Let in body, got {body:?}"),
-        },
-        _ => panic!("expected wrapped Program with single Region"),
-    }
-}
+/// The program shape every optimizer pass suite feeds in, and the reader that
+/// peels the `Region` wrapper back off. Owned by `vyre-test-support` so the wgpu
+/// and CUDA suites cannot disagree about either.
+pub(crate) use vyre_test_support::pass_programs::{first_let_value, wrapped};

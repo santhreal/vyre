@@ -146,10 +146,15 @@ macro_rules! test_node_extension {
     };
 }
 
+#[cfg(feature = "ir-fixtures")]
+pub mod binop_parity;
+pub mod cast_parity;
 pub mod consumer_boundary;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_variants;
 pub mod monorepo;
+#[cfg(feature = "ir-fixtures")]
+pub mod pass_programs;
 
 use std::collections::BTreeSet;
 use std::fs;

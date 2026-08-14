@@ -31,3 +31,9 @@ tempfile.workspace = true
 
 [lints]
 workspace = true
+
+# The binop parity tables live behind `ir-fixtures`, so their well-formedness
+# gate compiles only when that feature selects them.
+[[test]]
+name = "binop_parity_tables"
+required-features = ["ir-fixtures"]
