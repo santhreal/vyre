@@ -1,5 +1,8 @@
 use super::classify::*;
-use crate::c_ast_gpu_parity_support::{assert_full_pipeline_parity, row_indices, run_gpu_pg_lower};
+use crate::c_ast_gpu_parity_support::{
+    assert_full_pipeline_parity, assert_pg_preserves_fixture_row, classify, row_indices,
+    run_gpu_pg_lower,
+};
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_BREAK_STMT, C_AST_KIND_CASE_STMT, C_AST_KIND_CONTINUE_STMT, C_AST_KIND_DEFAULT_STMT,
@@ -47,7 +50,7 @@ fn pg_lower_preserves_statement_control_flow_rows() {
         (27, C_AST_KIND_BREAK_STMT),
         (30, C_AST_KIND_RETURN_STMT),
     ] {
-        assert_pg_preserves_row(&typed, &expected, &fix, idx, kind);
+        assert_pg_preserves_fixture_row(&typed, &expected, &fix, idx, kind);
     }
 }
 
@@ -69,6 +72,6 @@ fn pg_lower_preserves_label_and_goto_rows() {
         (20, C_AST_KIND_GOTO_STMT),
         (24, C_AST_KIND_LABEL_STMT),
     ] {
-        assert_pg_preserves_row(&typed, &expected, &fix, idx, kind);
+        assert_pg_preserves_fixture_row(&typed, &expected, &fix, idx, kind);
     }
 }

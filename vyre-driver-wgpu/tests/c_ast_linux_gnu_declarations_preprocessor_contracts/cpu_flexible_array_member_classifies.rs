@@ -6,7 +6,7 @@ use super::*;
 #[test]
 pub(crate) fn cpu_flexible_array_member_classifies() {
     let fix = fixture_flexible_array_member();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
 
     assert_eq!(
         row_indices(&typed, C_AST_KIND_STRUCT_DECL),
@@ -65,7 +65,7 @@ pub(crate) fn fixture_signal_function() -> Fixture {
 #[test]
 pub(crate) fn cpu_signal_function_classifies() {
     let fix = fixture_signal_function();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
 
     assert_eq!(
         row_indices(&typed, C_AST_KIND_POINTER_DECL),

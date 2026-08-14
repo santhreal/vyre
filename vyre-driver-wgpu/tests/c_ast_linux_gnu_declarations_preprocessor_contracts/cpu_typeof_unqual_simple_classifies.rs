@@ -6,7 +6,7 @@ use super::*;
 #[test]
 pub(crate) fn cpu_typeof_unqual_simple_classifies() {
     let fix = fixture_typeof_unqual_simple();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
 
     assert_eq!(
         fix.tok_types[0], TOK_GNU_TYPEOF_UNQUAL,
@@ -22,7 +22,7 @@ pub(crate) fn cpu_typeof_unqual_simple_classifies() {
 #[test]
 pub(crate) fn cpu_typeof_array_declarator_classifies() {
     let fix = fixture_typeof_array_declarator();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
 
     assert_eq!(fix.tok_types[0], TOK_GNU_TYPEOF, "typeof must promote");
     assert_eq!(

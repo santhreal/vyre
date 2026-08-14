@@ -36,7 +36,7 @@ pub(crate) fn fixture_cast_abstract_function_pointer() -> Fixture {
 #[test]
 pub(crate) fn cpu_cast_abstract_function_pointer_classifies() {
     let fix = fixture_cast_abstract_function_pointer();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
 
     assert_eq!(
         word_at(&typed, 2 * VAST_STRIDE_U32),

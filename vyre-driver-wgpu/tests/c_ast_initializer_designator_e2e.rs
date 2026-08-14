@@ -27,9 +27,8 @@ mod c_frontend;
 mod c_ast_gpu_parity_support;
 use c_ast_gpu_parity_support::{run_gpu_pg_lower, starts_for_lens};
 
-#[path = "support/c_ast_initializer_designator.rs"]
-mod c_ast_initializer_designator_support;
-use c_ast_initializer_designator_support::*;
+use c_frontend::expression_pipeline::run_reference_pg_lower;
+use c_frontend::rows::{assert_pg_preserves_row_and_kind, row_indices};
 
 // ---------------------------------------------------------------------------
 // Fixtures

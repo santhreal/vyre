@@ -6,7 +6,7 @@ use super::*;
 #[test]
 pub(crate) fn cpu_macro_shaped_declaration_list_head_classifies() {
     let fix = fixture_macro_shaped_declaration_list_head();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
 
     assert_eq!(
         row_indices(&typed, node_kind::CALL),

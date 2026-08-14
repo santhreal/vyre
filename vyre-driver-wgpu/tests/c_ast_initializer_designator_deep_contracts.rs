@@ -34,9 +34,8 @@ use c_ast_gpu_parity_support::{
     starts_for_lens,
 };
 
-#[path = "support/c_ast_initializer_designator.rs"]
-mod c_ast_initializer_designator_support;
-use c_ast_initializer_designator_support::*;
+use c_frontend::expression_pipeline::run_reference_pg_lower;
+use c_frontend::rows::{assert_pg_preserves_row, kind_at, row_indices};
 
 fn assert_full_pipeline_parity(
     tok_types: &[u32],

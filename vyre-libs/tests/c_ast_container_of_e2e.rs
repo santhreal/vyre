@@ -2,98 +2,26 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::tokens::*;
-use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes};
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_build_expression_shape_nodes, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_CAST_EXPR, C_AST_KIND_MEMBER_ACCESS_EXPR,
-    C_AST_KIND_POINTER_DECL, C_EXPR_ASSOC_LEFT, C_EXPR_SHAPE_BINARY, C_EXPR_SHAPE_NONE,
-    C_EXPR_SHAPE_STRIDE_U32,
+    C_AST_KIND_CAST_EXPR, C_AST_KIND_MEMBER_ACCESS_EXPR, C_AST_KIND_POINTER_DECL,
+    C_EXPR_ASSOC_LEFT, C_EXPR_SHAPE_BINARY, C_EXPR_SHAPE_NONE, C_EXPR_SHAPE_STRIDE_U32,
 };
 use vyre_primitives::predicate::node_kind;
-use vyre_reference::value::Value;
 
-const VAST_STRIDE_U32: usize = 10;
-const PG_STRIDE_U32: usize = 6;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 
-struct PipelineRows {
-    tok_starts: Vec<u32>,
-    tok_lens: Vec<u32>,
-    typed_vast: Vec<u8>,
-    expr_shape: Vec<u8>,
-    pg_nodes: Vec<u8>,
-}
+use c_frontend::expression_pipeline::{
+    assert_kind, assert_pg_links_match_vast, assert_pg_preserves_row, run_pipeline, PipelineRows,
+};
+use c_frontend::rows::{row_indices_by_stride as row_indices, word_at, VAST_STRIDE_U32};
 
-fn starts_for_lens(lens: &[u32]) -> Vec<u32> {
-    let mut cursor = 0u32;
-    lens.iter()
-        .map(|len| {
-            let start = cursor;
-            cursor = cursor.saturating_add(*len).saturating_add(1);
-            start
-        })
-        .collect()
-}
-
-fn word_at(bytes: &[u8], word: usize) -> u32 {
-    let offset = word * 4;
-    u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap())
-}
-
-fn node_count_from_vast(vast: &[u8]) -> u32 {
-    u32::try_from(vast.len() / (VAST_STRIDE_U32 * 4)).unwrap_or_default()
-}
-
-fn row_indices(rows: &[u8], stride_words: usize, kind: u32) -> Vec<usize> {
-    rows.chunks_exact(stride_words * 4)
-        .enumerate()
-        .filter_map(|(idx, row)| {
-            let row_kind = u32::from_le_bytes(row[0..4].try_into().unwrap());
-            (row_kind == kind).then_some(idx)
-        })
-        .collect()
-}
-
-fn run_reference_pg_lower(typed_vast: &[u8]) -> Vec<u8> {
-    let num_nodes = node_count_from_vast(typed_vast);
-    let program = c_lower_ast_to_pg_nodes("vast_nodes", Expr::u32(num_nodes), "pg_nodes");
-    let output_len = num_nodes.saturating_mul(PG_STRIDE_U32 as u32).max(1) as usize * 4;
-    let values = [
-        Value::from(typed_vast.to_vec()),
-        Value::from(vec![0; output_len]),
-    ];
-    let outputs = vyre_reference::reference_eval(&program, &values)
-        .unwrap_or_else(|error| panic!("Fix: C AST PG lowerer must execute on CPU: {error}"));
-    assert_eq!(outputs.len(), 1, "Fix: PG lowerer must emit one buffer");
-    outputs[0].to_bytes()
-}
-
-fn run_pipeline(tok_types: &[u32], tok_lens: &[u32]) -> PipelineRows {
-    let tok_starts = starts_for_lens(tok_lens);
-    let raw_vast = reference_c11_build_vast_nodes(tok_types, &tok_starts, tok_lens);
-    let typed_vast = reference_c11_classify_vast_node_kinds(&raw_vast);
-    let expr_shape = reference_c11_build_expression_shape_nodes(&raw_vast, &typed_vast);
-    let pg_nodes = run_reference_pg_lower(&typed_vast);
-    assert_eq!(
-        pg_nodes,
-        reference_ast_to_pg_nodes(&typed_vast),
-        "Fix: executable PG lowerer must match the byte oracle"
-    );
-
-    PipelineRows {
-        tok_starts,
-        tok_lens: tok_lens.to_vec(),
-        typed_vast,
-        expr_shape,
-        pg_nodes,
-    }
-}
-
-fn assert_kind(rows: &[u8], idx: usize, stride_words: usize, kind: u32) {
-    assert_eq!(word_at(rows, idx * stride_words), kind, "kind[{idx}]");
-}
-
+/// Assert the typed VAST row at `idx` carries the token's own source span.
+///
+/// [`assert_pg_preserves_row`] pins the lowered property-graph span; this pins
+/// the span the classifier wrote, which is where a cast that swallowed its
+/// operand's span would show up first.
 fn assert_vast_span(rows: &PipelineRows, idx: usize) {
     assert_eq!(
         word_at(&rows.typed_vast, idx * VAST_STRIDE_U32 + 5),
@@ -104,36 +32,6 @@ fn assert_vast_span(rows: &PipelineRows, idx: usize) {
         word_at(&rows.typed_vast, idx * VAST_STRIDE_U32 + 6),
         rows.tok_lens[idx],
         "typed VAST span_len[{idx}]"
-    );
-}
-
-fn assert_pg_preserves_row(rows: &PipelineRows, idx: usize, kind: u32) {
-    assert_kind(&rows.typed_vast, idx, VAST_STRIDE_U32, kind);
-    assert_kind(&rows.pg_nodes, idx, PG_STRIDE_U32, kind);
-    assert_eq!(
-        word_at(&rows.pg_nodes, idx * PG_STRIDE_U32 + 1),
-        rows.tok_starts[idx],
-        "PG span_start[{idx}]"
-    );
-    assert_eq!(
-        word_at(&rows.pg_nodes, idx * PG_STRIDE_U32 + 2),
-        rows.tok_starts[idx] + rows.tok_lens[idx],
-        "PG span_end[{idx}]"
-    );
-    assert_eq!(
-        word_at(&rows.pg_nodes, idx * PG_STRIDE_U32 + 3),
-        word_at(&rows.typed_vast, idx * VAST_STRIDE_U32 + 1),
-        "PG parent[{idx}]"
-    );
-    assert_eq!(
-        word_at(&rows.pg_nodes, idx * PG_STRIDE_U32 + 4),
-        word_at(&rows.typed_vast, idx * VAST_STRIDE_U32 + 2),
-        "PG first_child[{idx}]"
-    );
-    assert_eq!(
-        word_at(&rows.pg_nodes, idx * PG_STRIDE_U32 + 5),
-        word_at(&rows.typed_vast, idx * VAST_STRIDE_U32 + 3),
-        "PG next_sibling[{idx}]"
     );
 }
 
@@ -253,6 +151,7 @@ fn cast_to_pointer_then_arrow_is_cast_pointer_decl_and_member_access() {
     ] {
         assert_vast_span(&rows, idx);
         assert_pg_preserves_row(&rows, idx, kind);
+        assert_pg_links_match_vast(&rows, idx);
         assert_eq!(
             word_at(&rows.expr_shape, idx * C_EXPR_SHAPE_STRIDE_U32 as usize),
             C_EXPR_SHAPE_NONE,
@@ -307,6 +206,7 @@ fn nested_char_pointer_cast_subtraction_preserves_casts_binary_and_arrow() {
     ] {
         assert_vast_span(&rows, idx);
         assert_pg_preserves_row(&rows, idx, kind);
+        assert_pg_links_match_vast(&rows, idx);
     }
 
     assert_eq!(tok_types[6], TOK_MINUS);

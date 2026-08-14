@@ -4,312 +4,75 @@
 //! driver crate build the same token streams, so the fixtures have one owner
 //! here rather than a copy per crate.
 
-use crate::c_frontend::rows::starts_for_lens;
-use vyre_libs::parsing::c::lex::tokens::*;
 
+
+use crate::c_frontend::spelling::c_rows;
 pub(crate) fn fixture_macro_shaped_decl_after_preproc() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_PREPROC,
-        TOK_GNU_ATTRIBUTE,
-        TOK_LPAREN,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_LPAREN,
-        TOK_STRING,
-        TOK_RPAREN,
-        TOK_RPAREN,
-        TOK_RPAREN,
-        TOK_INT,
-        TOK_STAR,
-        TOK_IDENTIFIER,
-        TOK_LPAREN,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![7, 13, 1, 1, 10, 1, 10, 1, 1, 1, 3, 1, 5, 1, 3, 2, 1, 1];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "PREPROC:7 GNU_ATTRIBUTE:13 LPAREN LPAREN IDENTIFIER:10 LPAREN STRING:10 RPAREN \
+         RPAREN RPAREN INT:3 STAR IDENTIFIER:5 LPAREN INT:3 IDENTIFIER:2 RPAREN SEMICOLON",
+    )
 }
 
 pub(crate) fn fixture_nested_anonymous_aggregates() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_LBRACE,
-        TOK_STRUCT,
-        TOK_LBRACE,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_UNION,
-        TOK_LBRACE,
-        TOK_FLOAT_KW,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_ENUM,
-        TOK_LBRACE,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_IDENTIFIER,
-        TOK_RBRACE,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_LPAREN,
-        TOK_STAR,
-        TOK_IDENTIFIER,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_RPAREN,
-        TOK_LPAREN,
-        TOK_INT,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "STRUCT IDENTIFIER LBRACE STRUCT LBRACE INT IDENTIFIER SEMICOLON RBRACE \
+         IDENTIFIER SEMICOLON UNION LBRACE FLOAT_KW IDENTIFIER SEMICOLON INT IDENTIFIER \
+         SEMICOLON RBRACE IDENTIFIER SEMICOLON ENUM LBRACE IDENTIFIER ASSIGN INTEGER \
+         COMMA IDENTIFIER RBRACE IDENTIFIER SEMICOLON INT LPAREN STAR IDENTIFIER LBRACKET \
+         INTEGER RBRACKET RPAREN LPAREN INT RPAREN SEMICOLON RBRACE SEMICOLON",
+    )
 }
 
 pub(crate) fn fixture_function_pointer_array() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_STATIC,
-        TOK_INT,
-        TOK_LPAREN,
-        TOK_STAR,
-        TOK_CONST,
-        TOK_IDENTIFIER,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_RPAREN,
-        TOK_LPAREN,
-        TOK_VOID,
-        TOK_STAR,
-        TOK_IDENTIFIER,
-        TOK_COMMA,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "STATIC INT LPAREN STAR CONST IDENTIFIER LBRACKET INTEGER RBRACKET RPAREN LPAREN \
+         VOID STAR IDENTIFIER COMMA INT IDENTIFIER RPAREN SEMICOLON",
+    )
 }
 
 pub(crate) fn fixture_nested_designated_init() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_LBRACE,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_STRING,
-        TOK_COMMA,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_LBRACE,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_ASSIGN,
-        TOK_LBRACE,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_RBRACE,
-        TOK_RBRACE,
-        TOK_COMMA,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "STRUCT IDENTIFIER IDENTIFIER ASSIGN LBRACE DOT IDENTIFIER ASSIGN STRING COMMA \
+         DOT IDENTIFIER ASSIGN LBRACE LBRACKET INTEGER RBRACKET ASSIGN INTEGER COMMA \
+         LBRACKET INTEGER RBRACKET ASSIGN LBRACE DOT IDENTIFIER ASSIGN INTEGER COMMA DOT \
+         IDENTIFIER ASSIGN INTEGER RBRACE RBRACE COMMA DOT IDENTIFIER LBRACKET INTEGER \
+         RBRACKET ASSIGN INTEGER COMMA RBRACE SEMICOLON",
+    )
 }
 
 pub(crate) fn fixture_attribute_and_asm() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_GNU_ATTRIBUTE,
-        TOK_LPAREN,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_RPAREN,
-        TOK_VOID,
-        TOK_IDENTIFIER,
-        TOK_LPAREN,
-        TOK_VOID,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_GNU_ASM,
-        TOK_VOLATILE,
-        TOK_LPAREN,
-        TOK_STRING,
-        TOK_COLON,
-        TOK_COLON,
-        TOK_COLON,
-        TOK_STRING,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-        TOK_RETURN,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "GNU_ATTRIBUTE LPAREN LPAREN IDENTIFIER RPAREN RPAREN VOID IDENTIFIER LPAREN VOID \
+         RPAREN LBRACE GNU_ASM VOLATILE LPAREN STRING COLON COLON COLON STRING RPAREN \
+         SEMICOLON RETURN SEMICOLON RBRACE",
+    )
 }
 
 pub(crate) fn fixture_enum_values() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_ENUM,
-        TOK_IDENTIFIER,
-        TOK_LBRACE,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_IDENTIFIER,
-        TOK_COMMA,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_IDENTIFIER,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "ENUM IDENTIFIER LBRACE IDENTIFIER ASSIGN INTEGER COMMA IDENTIFIER ASSIGN INTEGER \
+         COMMA IDENTIFIER COMMA IDENTIFIER ASSIGN INTEGER COMMA IDENTIFIER RBRACE \
+         SEMICOLON",
+    )
 }
 
 pub(crate) fn fixture_sizeof_type_vs_expr() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_VOID,
-        TOK_IDENTIFIER,
-        TOK_LPAREN,
-        TOK_VOID,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_SIZEOF,
-        TOK_LPAREN,
-        TOK_INT,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_SIZEOF,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_SIZEOF,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_PLUS,
-        TOK_INTEGER,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "VOID IDENTIFIER LPAREN VOID RPAREN LBRACE INT IDENTIFIER ASSIGN SIZEOF LPAREN \
+         INT RPAREN SEMICOLON INT IDENTIFIER ASSIGN SIZEOF LPAREN IDENTIFIER RPAREN \
+         SEMICOLON INT IDENTIFIER ASSIGN SIZEOF LPAREN IDENTIFIER PLUS INTEGER RPAREN \
+         SEMICOLON RBRACE",
+    )
 }
 
 pub(crate) fn fixture_stmt_expr_nesting() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_LPAREN,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_RETURN,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_GT,
-        TOK_INTEGER,
-        TOK_RPAREN,
-        TOK_QUESTION,
-        TOK_LPAREN,
-        TOK_LBRACE,
-        TOK_IF,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_GT,
-        TOK_INTEGER,
-        TOK_RPAREN,
-        TOK_RETURN,
-        TOK_INTEGER,
-        TOK_SEMICOLON,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-        TOK_RPAREN,
-        TOK_COLON,
-        TOK_INTEGER,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "INT IDENTIFIER LPAREN INT IDENTIFIER RPAREN LBRACE RETURN LPAREN IDENTIFIER GT \
+         INTEGER RPAREN QUESTION LPAREN LBRACE IF LPAREN IDENTIFIER GT INTEGER RPAREN \
+         RETURN INTEGER SEMICOLON IDENTIFIER SEMICOLON RBRACE RPAREN COLON INTEGER \
+         SEMICOLON RBRACE",
+    )
 }
 
 pub(crate) struct CorpusCase {

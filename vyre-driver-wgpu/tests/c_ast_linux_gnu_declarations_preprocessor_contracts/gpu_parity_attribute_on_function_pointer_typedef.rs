@@ -27,7 +27,7 @@ pub(crate) fn fixture_auto_type_pointer_init() -> Fixture {
 #[test]
 pub(crate) fn cpu_auto_type_pointer_init_classifies() {
     let fix = fixture_auto_type_pointer_init();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
 
     assert_eq!(
         fix.tok_types[0], TOK_GNU_AUTO_TYPE,

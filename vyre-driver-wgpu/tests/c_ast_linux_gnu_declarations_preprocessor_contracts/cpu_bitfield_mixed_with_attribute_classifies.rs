@@ -6,7 +6,7 @@ use super::*;
 #[test]
 pub(crate) fn cpu_bitfield_mixed_with_attribute_classifies() {
     let fix = fixture_bitfield_mixed_with_attribute();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
 
     assert_eq!(
         row_indices(&typed, C_AST_KIND_BIT_FIELD_DECL),
@@ -33,14 +33,14 @@ pub(crate) fn cpu_bitfield_mixed_with_attribute_classifies() {
 #[test]
 pub(crate) fn pg_lower_preserves_bitfield_mixed_with_attribute() {
     let fix = fixture_bitfield_mixed_with_attribute();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
     let pg = reference_ast_to_pg_nodes(&typed);
 
     for idx in row_indices(&typed, C_AST_KIND_BIT_FIELD_DECL) {
-        assert_pg_preserves_row(&typed, &pg, &fix, idx, C_AST_KIND_BIT_FIELD_DECL);
+        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, C_AST_KIND_BIT_FIELD_DECL);
     }
     for idx in row_indices(&typed, C_AST_KIND_GNU_ATTRIBUTE) {
-        assert_pg_preserves_row(&typed, &pg, &fix, idx, C_AST_KIND_GNU_ATTRIBUTE);
+        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, C_AST_KIND_GNU_ATTRIBUTE);
     }
 }
 

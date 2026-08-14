@@ -4,6 +4,7 @@
 //! driver crate build the same token streams, so the fixtures have one owner
 //! here rather than a copy per crate.
 
+use crate::c_frontend::spelling::c_tokens;
 use crate::c_frontend::token_fixture::{build_fixture, Fixture, FixtureToken};
 use vyre_libs::parsing::c::lex::tokens::*;
 
@@ -47,19 +48,7 @@ pub(crate) fn fixture_asm_multiple_output_input_operands() -> Fixture {
 /// asm ("" : : : "memory", "cc");
 /// ```
 pub(crate) fn fixture_asm_memory_and_cc_clobbers() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("asm", TOK_GNU_ASM),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"memory\"", TOK_STRING),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("\"cc\"", TOK_STRING),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("asm ( \"\" : : : \"memory\" , \"cc\" ) ;")
 }
 
 /// ```c
@@ -118,40 +107,12 @@ pub(crate) fn fixture_asm_symbolic_names_and_earlyclobber() -> Fixture {
 /// __asm__ __volatile__ ("rdtsc" : "=A" (ticks));
 /// ```
 pub(crate) fn fixture_asm_extended_output_only() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__asm__", TOK_GNU_ASM),
-        FixtureToken::new("__volatile__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"rdtsc\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"=A\"", TOK_STRING),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("ticks", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("__asm__ __volatile__ ( \"rdtsc\" : \"=A\" ( ticks ) ) ;")
 }
 
 /// ```c
 /// asm goto ("" :::: label1, label2, label3);
 /// ```
 pub(crate) fn fixture_asm_goto_three_labels() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("asm", TOK_GNU_ASM),
-        FixtureToken::new("goto", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("label1", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("label2", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("label3", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("asm goto ( \"\" : : : : label1 , label2 , label3 ) ;")
 }

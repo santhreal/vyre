@@ -174,6 +174,28 @@ pub(crate) fn assert_pg_preserves_row(
     );
 }
 
+/// [`assert_pg_preserves_row`] plus agreement between the PG kind and the
+/// classified VAST kind.
+///
+/// `expected_kind` alone cannot catch a lowerer that ignores the row it was
+/// handed and still emits the kind the test asked for; pinning the VAST row to
+/// the same kind does.
+pub(crate) fn assert_pg_preserves_row_and_kind(
+    typed_vast: &[u8],
+    pg: &[u8],
+    tok_starts: &[u32],
+    tok_lens: &[u32],
+    idx: usize,
+    expected_kind: u32,
+) {
+    assert_pg_preserves_row(typed_vast, pg, tok_starts, tok_lens, idx, expected_kind);
+    assert_eq!(
+        kind_at(typed_vast, idx),
+        expected_kind,
+        "PG/VAST kind drift at row {idx}"
+    );
+}
+
 /// [`assert_pg_preserves_row`] against the spans a [`Fixture`] already carries.
 pub(crate) fn assert_pg_preserves_fixture_row(
     typed_vast: &[u8],

@@ -76,7 +76,7 @@ fn cpu_nested_conditional_preproc_mask_contract() {
 fn cpu_nested_conditional_preproc_vast_survives() {
     let fix = fixture_nested_conditional_preproc();
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
 
     for idx in [0usize, 4, 8, 12, 13, 17, 21] {
         assert_eq!(
@@ -95,10 +95,10 @@ fn cpu_nested_conditional_preproc_vast_survives() {
 #[test]
 fn pg_lower_preserves_nested_conditional_preproc_rows() {
     let fix = fixture_nested_conditional_preproc();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
     let pg = reference_ast_to_pg_nodes(&typed);
 
     for idx in [0usize, 4, 8, 12, 13, 17, 21] {
-        assert_pg_preserves_row(&typed, &pg, &fix, idx, 0);
+        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, 0);
     }
 }

@@ -5,8 +5,6 @@
 //! driver crate build the same token streams, so the fixtures have one owner
 //! here rather than a copy per crate.
 
-use crate::c_frontend::rows::starts_for_lens;
-use vyre_libs::parsing::c::lex::tokens::*;
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -17,35 +15,14 @@ use vyre_libs::parsing::c::lex::tokens::*;
 ///   (T)*p;   -- cast expression: T is a typedef name
 ///   (x)*p;   -- multiplication: x is a variable, not a type
 /// }
+
+use crate::c_frontend::spelling::c_rows;
 pub(crate) fn fixture_typedef_cast_vs_expr_multiply() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_TYPEDEF,
-        TOK_INT,
-        TOK_IDENTIFIER, // T
-        TOK_SEMICOLON,
-        TOK_VOID,
-        TOK_IDENTIFIER, // f
-        TOK_LPAREN,
-        TOK_VOID,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_LPAREN,     // (T)
-        TOK_IDENTIFIER, // T
-        TOK_RPAREN,
-        TOK_STAR,
-        TOK_IDENTIFIER, // p
-        TOK_SEMICOLON,
-        TOK_LPAREN,     // (x)
-        TOK_IDENTIFIER, // x
-        TOK_RPAREN,
-        TOK_STAR,
-        TOK_IDENTIFIER, // p
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "TYPEDEF INT IDENTIFIER SEMICOLON VOID IDENTIFIER LPAREN VOID RPAREN LBRACE \
+         LPAREN IDENTIFIER RPAREN STAR IDENTIFIER SEMICOLON LPAREN IDENTIFIER RPAREN STAR \
+         IDENTIFIER SEMICOLON RBRACE",
+    )
 }
 
 /// typedef int T;
@@ -56,31 +33,11 @@ pub(crate) fn fixture_typedef_cast_vs_expr_multiply() -> (Vec<u32>, Vec<u32>, Ve
 ///   }
 /// }
 pub(crate) fn fixture_typedef_shadowing_nested() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_TYPEDEF,
-        TOK_INT,
-        TOK_IDENTIFIER, // T
-        TOK_SEMICOLON,
-        TOK_VOID,
-        TOK_IDENTIFIER, // f
-        TOK_LPAREN,
-        TOK_VOID,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_LBRACE,
-        TOK_INT,
-        TOK_IDENTIFIER, // T (variable)
-        TOK_SEMICOLON,
-        TOK_IDENTIFIER, // T
-        TOK_STAR,
-        TOK_IDENTIFIER, // b
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-        TOK_RBRACE,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "TYPEDEF INT IDENTIFIER SEMICOLON VOID IDENTIFIER LPAREN VOID RPAREN LBRACE \
+         LBRACE INT IDENTIFIER SEMICOLON IDENTIFIER STAR IDENTIFIER SEMICOLON RBRACE \
+         RBRACE",
+    )
 }
 
 /// struct S { int x; };
@@ -90,40 +47,12 @@ pub(crate) fn fixture_typedef_shadowing_nested() -> (Vec<u32>, Vec<u32>, Vec<u32
 ///   S *b;          -- typedef name in declaration
 /// }
 pub(crate) fn fixture_struct_tag_vs_typedef() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_STRUCT,
-        TOK_IDENTIFIER, // S
-        TOK_LBRACE,
-        TOK_INT,
-        TOK_IDENTIFIER, // x
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-        TOK_TYPEDEF,
-        TOK_STRUCT,
-        TOK_IDENTIFIER, // S
-        TOK_IDENTIFIER, // S
-        TOK_SEMICOLON,
-        TOK_VOID,
-        TOK_IDENTIFIER, // f
-        TOK_LPAREN,
-        TOK_VOID,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_STRUCT,
-        TOK_IDENTIFIER, // S (tag)
-        TOK_STAR,
-        TOK_IDENTIFIER, // a
-        TOK_SEMICOLON,
-        TOK_IDENTIFIER, // S (typedef)
-        TOK_STAR,
-        TOK_IDENTIFIER, // b
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "STRUCT IDENTIFIER LBRACE INT IDENTIFIER SEMICOLON RBRACE SEMICOLON TYPEDEF \
+         STRUCT IDENTIFIER IDENTIFIER SEMICOLON VOID IDENTIFIER LPAREN VOID RPAREN LBRACE \
+         STRUCT IDENTIFIER STAR IDENTIFIER SEMICOLON IDENTIFIER STAR IDENTIFIER SEMICOLON \
+         RBRACE",
+    )
 }
 
 /// void f(void) {
@@ -133,48 +62,10 @@ pub(crate) fn fixture_struct_tag_vs_typedef() -> (Vec<u32>, Vec<u32>, Vec<u32>) 
 ///   int (*f)(int);   -- pointer to function
 /// }
 pub(crate) fn fixture_declarator_contexts() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_VOID,
-        TOK_IDENTIFIER, // f
-        TOK_LPAREN,
-        TOK_VOID,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_INT,
-        TOK_STAR,
-        TOK_IDENTIFIER, // a
-        TOK_LBRACKET,
-        TOK_INTEGER, // 10
-        TOK_RBRACKET,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_LPAREN,
-        TOK_STAR,
-        TOK_IDENTIFIER, // a
-        TOK_RPAREN,
-        TOK_LBRACKET,
-        TOK_INTEGER, // 10
-        TOK_RBRACKET,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_STAR,
-        TOK_IDENTIFIER, // f
-        TOK_LPAREN,
-        TOK_INT,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_LPAREN,
-        TOK_STAR,
-        TOK_IDENTIFIER, // f
-        TOK_RPAREN,
-        TOK_LPAREN,
-        TOK_INT,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-    ];
-    let tok_lens = vec![1; tok_types.len()];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "VOID IDENTIFIER LPAREN VOID RPAREN LBRACE INT STAR IDENTIFIER LBRACKET INTEGER \
+         RBRACKET SEMICOLON INT LPAREN STAR IDENTIFIER RPAREN LBRACKET INTEGER RBRACKET \
+         SEMICOLON INT STAR IDENTIFIER LPAREN INT RPAREN SEMICOLON INT LPAREN STAR \
+         IDENTIFIER RPAREN LPAREN INT RPAREN SEMICOLON RBRACE",
+    )
 }
