@@ -51,7 +51,9 @@ fn run(pre_exp: &[u32]) -> Vec<u32> {
 
 fn sole_region(program: &Program) -> (&str, &[Node]) {
     match program.entry() {
-        [Node::Region { generator, body, .. }] => (generator.as_str(), body.as_ref().as_slice()),
+        [Node::Region {
+            generator, body, ..
+        }] => (generator.as_str(), body.as_ref().as_slice()),
         entry => panic!("Fix: expected one wrapping region, got {entry:?}"),
     }
 }

@@ -20,10 +20,10 @@
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_libs::rule::builder::RULE_SET_OP_ID;
 use vyre_libs::rule::condition_op::{
     condition_program, file_size, pattern_count, pattern_state, threshold, WORKGROUP_SIZE,
 };
-use vyre_libs::rule::builder::RULE_SET_OP_ID;
 use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
 use vyre_reference::value::Value;
 
@@ -99,7 +99,10 @@ fn the_condition_frame_declares_six_arguments_and_one_verdict() {
 #[test]
 fn the_condition_frame_wraps_one_store_in_a_region_named_by_the_op_id() {
     let program = condition_program(TEST_OP_ID, || Expr::u32(1));
-    let Some(Node::Region { generator, body, .. }) = program.entry().first() else {
+    let Some(Node::Region {
+        generator, body, ..
+    }) = program.entry().first()
+    else {
         panic!("Fix: a condition program must be one wrapping region");
     };
     assert_eq!(program.entry().len(), 1);
@@ -201,7 +204,10 @@ fn every_generated_leaf_carries_the_shared_frame_under_its_own_op_id() {
             "{op_id} must declare the shared condition frame"
         );
         assert_eq!(program.workgroup_size(), WORKGROUP_SIZE, "{op_id}");
-        let Some(Node::Region { generator, body, .. }) = program.entry().first() else {
+        let Some(Node::Region {
+            generator, body, ..
+        }) = program.entry().first()
+        else {
             panic!("Fix: {op_id} must be one wrapping region");
         };
         assert_eq!(generator.as_str(), *op_id);
@@ -248,7 +254,9 @@ fn the_leaf_table_covers_every_rule_operation_declared_in_the_tree() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/rule");
     let mut sources = vec![root.with_extension("rs")];
     for entry in std::fs::read_dir(&root).expect("Fix: vyre-libs/src/rule must be readable") {
-        let path = entry.expect("Fix: a rule source entry must be readable").path();
+        let path = entry
+            .expect("Fix: a rule source entry must be readable")
+            .path();
         if path.extension().is_some_and(|ext| ext == "rs") {
             sources.push(path);
         }

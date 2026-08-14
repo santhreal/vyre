@@ -2,7 +2,9 @@
 //! backends in parallel.
 
 use crate::operation_selection::{prepare_entry, PreparedEntry, UnifiedEntry};
-use crate::proof_timing::{emit_backend_proof_timing, emit_pair_proof_start, emit_pair_proof_timing};
+use crate::proof_timing::{
+    emit_backend_proof_timing, emit_pair_proof_start, emit_pair_proof_timing,
+};
 use crate::reference_parity::compare_backend_against_reference;
 use vyre_conform_spec::ConformanceResult;
 

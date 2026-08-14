@@ -19,8 +19,8 @@
 #![forbid(unsafe_code)]
 
 use vyre_libs::scan::{
-    compact_hits, compact_hits_with_layout, emit_hit, emit_hit_with_layout,
-    HIT_BUFFER_LIVE_LENGTH, HIT_BUFFER_OVERFLOW_COUNT,
+    compact_hits, compact_hits_with_layout, emit_hit, emit_hit_with_layout, HIT_BUFFER_LIVE_LENGTH,
+    HIT_BUFFER_OVERFLOW_COUNT,
 };
 use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
 use vyre_reference::value::Value;
@@ -114,14 +114,9 @@ fn run_compact(hit_capacity: u32, max_capacity: u32, supplied_hits: u32, cursor:
 #[test]
 fn default_wrappers_are_the_owners_at_the_documented_default_layout() {
     assert_eq!(
-        emit_hit(
-            RULE_ID, FILE_ID, SPAN_START, SPAN_LEN, OUT_HITS, OUT_CURSOR
-        )
-        .fingerprint(),
-        emit_hit_with_layout(
-            RULE_ID, FILE_ID, SPAN_START, SPAN_LEN, OUT_HITS, OUT_CURSOR, 4, 4,
-        )
-        .fingerprint(),
+        emit_hit(RULE_ID, FILE_ID, SPAN_START, SPAN_LEN, OUT_HITS, OUT_CURSOR).fingerprint(),
+        emit_hit_with_layout(RULE_ID, FILE_ID, SPAN_START, SPAN_LEN, OUT_HITS, OUT_CURSOR, 4, 4,)
+            .fingerprint(),
         "emit_hit must be emit_hit_with_layout at four lanes and four hits"
     );
     assert_eq!(
@@ -206,7 +201,10 @@ fn compact_separates_the_backing_capacity_from_the_live_length_clamp() {
     assert_eq!(declared_count(&program, OUT_CURSOR), 1);
     assert_eq!(declared_count(&program, HIT_BUFFER_LIVE_LENGTH), 1);
     assert_eq!(
-        declared_count(&compact_hits_with_layout(OUT_HITS, OUT_CURSOR, 2, 8), OUT_HITS),
+        declared_count(
+            &compact_hits_with_layout(OUT_HITS, OUT_CURSOR, 2, 8),
+            OUT_HITS
+        ),
         8,
         "the live-length clamp must not size the backing buffer"
     );

@@ -26,8 +26,8 @@ use vyre_driver_metal as _;
 use vyre_driver_reference as _;
 #[cfg(feature = "gpu")]
 use vyre_driver_wgpu as _;
-use vyre_primitives as _;
 use vyre_libs as _;
+use vyre_primitives as _;
 
 fn main() {
     let mut args = std::env::args();

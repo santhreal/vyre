@@ -422,4 +422,3 @@ fn mix(h: &mut u64, v: u64) {
     *h ^= v;
     *h = h.wrapping_mul(0x100000001b3);
 }
-

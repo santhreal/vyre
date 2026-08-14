@@ -270,13 +270,17 @@ fn mla_and_flash_attention_2_share_the_online_softmax_skeleton() {
 fn region_identities(program: &Program) -> Vec<String> {
     fn walk(node: &Node, out: &mut Vec<String>) {
         match node {
-            Node::Region { generator, body, .. } => {
+            Node::Region {
+                generator, body, ..
+            } => {
                 out.push(generator.as_str().to_string());
                 body.iter().for_each(|child| walk(child, out));
             }
             Node::Block(body) => body.iter().for_each(|child| walk(child, out)),
             Node::Loop { body, .. } => body.iter().for_each(|child| walk(child, out)),
-            Node::If { then, otherwise, .. } => {
+            Node::If {
+                then, otherwise, ..
+            } => {
                 then.iter().for_each(|child| walk(child, out));
                 otherwise.iter().for_each(|child| walk(child, out));
             }

@@ -737,10 +737,12 @@ fn backend_runners(summary: &mut Summary) -> Vec<BackendRunner> {
 }
 
 fn build_backend_runner(registration: &'static BackendRegistration) -> Option<BackendRunner> {
-    backend_dispatches(registration.id).expect("valid backend registry").then_some(BackendRunner {
-        id: registration.id,
-        kind: BackendKind::Registered(registration),
-    })
+    backend_dispatches(registration.id)
+        .expect("valid backend registry")
+        .then_some(BackendRunner {
+            id: registration.id,
+            kind: BackendKind::Registered(registration),
+        })
 }
 
 fn force_link_backend_inventory() {
