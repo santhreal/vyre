@@ -72,8 +72,8 @@ Every confirmed vulnerability:
    register that exists today; a crate that needs one creates it beside its
    manifest under the same name.
 2. Has the minimized input that reproduces it committed as a fixture the
-   regression test reads, in the owning crate's `tests/fixtures/` directory.
-3. Has a regression test in the owning crate's `tests/` directory, named for
+   regression test reads, under `<crate>/tests/fixtures/`.
+3. Has a regression test under `<crate>/tests/`, named for
    the class it closes, that fails on the pre-fix commit and passes on the
    post-fix commit.
 4. Has a fragment in `release/changes/unreleased.toml`, which is what the

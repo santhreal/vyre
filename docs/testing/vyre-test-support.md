@@ -17,15 +17,22 @@ The crate lives at `vyre-test-support`. The `test-support` owner maintains its
 CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support
 ```
 
+```console
+CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --all-features
+```
+
 ## Feature sets
 
-This crate declares no Cargo features.
+- Default feature members: None
+- Available manifest features: `ir-fixtures`
+- Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
 | `lib` | `vyre_test_support` | `vyre-test-support/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support` |
+| `test` | `workspace_root_follows_the_working_directory` | `vyre-test-support/tests/workspace_root_follows_the_working_directory.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --test workspace_root_follows_the_working_directory` |
 
 ## Test classes
 

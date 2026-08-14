@@ -36,8 +36,8 @@ test_classes = ["Execution planning and cache contracts", "Persistent runtime st
 [profile.libraries]
 test_classes = ["Product-library exact behavior", "Primitive-to-library composition", "Reference and backend parity"]
 
-[profile.intrinsics]
-test_classes = ["Intrinsic registration and contract semantics", "Reference oracle parity", "Backend lowering and algebraic laws"]
+[profile.registry-link]
+test_classes = ["Link-anchor and registration-source contracts", "Per-source floors derived from the tree", "Registry closure against a partial link"]
 
 [profile.packaging]
 test_classes = ["Artifact planning and serialization", "Package compatibility", "Invalid artifact and boundary rejection"]
@@ -53,6 +53,9 @@ test_classes = ["Target artifact emission", "Instruction and layout lowering", "
 
 [profile.tooling]
 test_classes = ["Command and policy behavior", "Evidence schema and regeneration contracts", "Failure diagnostics and repository boundaries"]
+
+[profile.standalone-tooling]
+test_classes = ["Repository contract scans", "Checkout resolution and path boundaries", "Failure diagnostics that name the correction"]
 
 [profile.test-tooling]
 test_classes = ["Fixture determinism", "Harness execution and comparison behavior", "Failure propagation and diagnostic contracts"]

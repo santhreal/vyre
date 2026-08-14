@@ -9,7 +9,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-registry-link
 Own every inventory registry link anchor, report which sources a build links, and assert that each linked source reached the registry it submits into.
 
 The crate lives at `vyre-registry-link`. The `registry-link` owner maintains its
-`tooling` testing contract.
+`registry-link` testing contract.
 
 ## Commands
 
@@ -36,9 +36,9 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-registry-link --all-features
 
 ## Test classes
 
-- Command and policy behavior
-- Evidence schema and regeneration contracts
-- Failure diagnostics and repository boundaries
+- Link-anchor and registration-source contracts
+- Per-source floors derived from the tree
+- Registry closure against a partial link
 
 ## Hardware requirements
 

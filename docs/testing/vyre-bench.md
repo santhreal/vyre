@@ -70,6 +70,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full run --bin xtask -- release-benchmarks --backend 
 | `test` | `regex_cpu_gpu_partition_registry` | `vyre-bench/tests/regex_cpu_gpu_partition_registry.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test regex_cpu_gpu_partition_registry` |
 | `test` | `regex_engine_comparator_registry` | `vyre-bench/tests/regex_engine_comparator_registry.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test regex_engine_comparator_registry` |
 | `test` | `regex_external_accelerator_routes` | `vyre-bench/tests/regex_external_accelerator_routes.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test regex_external_accelerator_routes` |
+| `test` | `registry_closure` | `vyre-bench/tests/registry_closure.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test registry_closure` |
 | `test` | `relation_engine_comparators` | `vyre-bench/tests/relation_engine_comparators.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test relation_engine_comparators` |
 | `test` | `release_bench_release_macro` | `vyre-bench/tests/release_bench_release_macro.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test release_bench_release_macro` |
 | `test` | `release_macro_cuda_live` | `vyre-bench/tests/release_macro_cuda_live.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test release_macro_cuda_live` |

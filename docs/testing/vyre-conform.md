@@ -38,7 +38,6 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --all-features -- --ignored
 | `bin` | `vyre-conform` | `conform/vyre-conform/src/main.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --bin vyre-conform` |
 | `example` | `vyre_conform_runner_release_surface` | `conform/vyre-conform/examples/vyre_conform_runner_release_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --example vyre_conform_runner_release_surface` |
 | `lib` | `vyre_conform` | `conform/vyre-conform/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform` |
-| `test` | `_compute_pins` | `conform/vyre-conform/tests/_compute_pins.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --test _compute_pins` |
 | `test` | `cert_artifact` | `conform/vyre-conform/tests/cert_artifact.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --test cert_artifact` |
 | `test` | `cert_regression_pin` | `conform/vyre-conform/tests/cert_regression_pin.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --test cert_regression_pin` |
 | `test` | `composition_discipline` | `conform/vyre-conform/tests/composition_discipline.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform --test composition_discipline` |

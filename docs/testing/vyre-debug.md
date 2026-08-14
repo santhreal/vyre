@@ -36,6 +36,7 @@ This crate declares no Cargo features.
 | `test` | `descriptor_diff_tests` | `vyre-debug/tests/descriptor_diff_tests.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test descriptor_diff_tests` |
 | `test` | `descriptor_dump_tests` | `vyre-debug/tests/descriptor_dump_tests.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test descriptor_dump_tests` |
 | `test` | `generated_descriptor_diff_matrix` | `vyre-debug/tests/generated_descriptor_diff_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test generated_descriptor_diff_matrix` |
+| `test` | `registry_closure` | `vyre-debug/tests/registry_closure.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test registry_closure` |
 | `test` | `well_formed_lowering_contracts` | `vyre-debug/tests/well_formed_lowering_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test well_formed_lowering_contracts` |
 | `test` | `wgsl_tests` | `vyre-debug/tests/wgsl_tests.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test wgsl_tests` |
 

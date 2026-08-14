@@ -9,7 +9,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p structure-gate
 Enforce the crate roster, one operation identity per semantic operation, and one home per concept. Depends on no vyre crate so it keeps running while the workspace does not compile.
 
 The crate lives at `structure-gate`. The `release-tooling` owner maintains its
-`tooling` testing contract.
+`standalone-tooling` testing contract.
 
 ## Commands
 
@@ -33,9 +33,9 @@ This crate declares no Cargo features.
 
 ## Test classes
 
-- Command and policy behavior
-- Evidence schema and regeneration contracts
-- Failure diagnostics and repository boundaries
+- Repository contract scans
+- Checkout resolution and path boundaries
+- Failure diagnostics that name the correction
 
 ## Hardware requirements
 

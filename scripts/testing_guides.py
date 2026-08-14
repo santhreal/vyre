@@ -361,6 +361,14 @@ def run(root: Path, write: bool) -> None:
     unknown_overrides = sorted(set(overrides) - {record.package for record in records})
     if unknown_overrides:
         raise ContractError(f"testing metadata has unknown package overrides: {unknown_overrides}")
+    # Both directions of the profile contract, because only the first was
+    # checked: a profile whose layer no crate occupies survived a crate
+    # absorption and went on describing a layer that no longer existed.
+    orphan_profiles = sorted(set(profiles) - {record.layer for record in records})
+    if orphan_profiles:
+        raise ContractError(
+            f"testing metadata has profiles for layers no crate uses: {orphan_profiles}"
+        )
 
     expected: dict[Path, str] = {}
     for record in records:

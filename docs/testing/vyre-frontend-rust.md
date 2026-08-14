@@ -30,6 +30,7 @@ This crate declares no Cargo features.
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
 | `lib` | `vyre_frontend_rust` | `vyre-frontend-rust/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust` |
+| `test` | `adversarial_lexer_oracle` | `vyre-frontend-rust/tests/adversarial_lexer_oracle.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust --test adversarial_lexer_oracle` |
 | `test` | `adversarial_parse_depth` | `vyre-frontend-rust/tests/adversarial_parse_depth.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust --test adversarial_parse_depth` |
 | `test` | `borrow` | `vyre-frontend-rust/tests/borrow.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust --test borrow` |
 | `test` | `borrowck_engine` | `vyre-frontend-rust/tests/borrowck_engine.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust --test borrowck_engine` |
@@ -40,6 +41,7 @@ This crate declares no Cargo features.
 | `test` | `lexer_oracle` | `vyre-frontend-rust/tests/lexer_oracle.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust --test lexer_oracle` |
 | `test` | `lower_exec` | `vyre-frontend-rust/tests/lower_exec.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust --test lower_exec` |
 | `test` | `proptest_robustness` | `vyre-frontend-rust/tests/proptest_robustness.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust --test proptest_robustness` |
+| `test` | `registry_closure` | `vyre-frontend-rust/tests/registry_closure.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust --test registry_closure` |
 | `test` | `resolve` | `vyre-frontend-rust/tests/resolve.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust --test resolve` |
 | `test` | `rust_borrow_fact_delta_registry` | `vyre-frontend-rust/tests/rust_borrow_fact_delta_registry.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust --test rust_borrow_fact_delta_registry` |
 | `test` | `rustc_differential` | `vyre-frontend-rust/tests/rustc_differential.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust --test rustc_differential` |

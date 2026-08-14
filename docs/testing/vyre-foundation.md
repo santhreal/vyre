@@ -31,6 +31,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --all-features
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
+| `bench` | `optimizer_pipeline` | `vyre-foundation/benches/optimizer_pipeline.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --bench optimizer_pipeline` |
 | `example` | `vyre_foundation_release_surface` | `vyre-foundation/examples/vyre_foundation_release_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --example vyre_foundation_release_surface` |
 | `lib` | `vyre_foundation` | `vyre-foundation/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation` |
 | `test` | `adversarial_graph_canonical_laws` | `vyre-foundation/tests/adversarial_graph_canonical_laws.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test adversarial_graph_canonical_laws` |
@@ -46,6 +47,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --all-features
 | `test` | `buffer_decl_with_count` | `vyre-foundation/tests/buffer_decl_with_count.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test buffer_decl_with_count` |
 | `test` | `buffer_layout_proptest` | `vyre-foundation/tests/buffer_layout_proptest.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test buffer_layout_proptest` |
 | `test` | `canonical_determinism` | `vyre-foundation/tests/canonical_determinism.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test canonical_determinism` |
+| `test` | `canonicalization_corpus_contracts` | `vyre-foundation/tests/canonicalization_corpus_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test canonicalization_corpus_contracts` |
 | `test` | `capability_contracts` | `vyre-foundation/tests/capability_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test capability_contracts` |
 | `test` | `ci_script_frozen_contract_coupling` | `vyre-foundation/tests/ci_script_frozen_contract_coupling.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test ci_script_frozen_contract_coupling` |
 | `test` | `collective_ir_contracts` | `vyre-foundation/tests/collective_ir_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test collective_ir_contracts` |
@@ -86,6 +88,8 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --all-features
 | `test` | `memo_key_completeness` | `vyre-foundation/tests/memo_key_completeness.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test memo_key_completeness` |
 | `test` | `memory_ordering` | `vyre-foundation/tests/memory_ordering.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test memory_ordering` |
 | `test` | `memory_ordering_adversarial` | `vyre-foundation/tests/memory_ordering_adversarial.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test memory_ordering_adversarial` |
+| `test` | `node_rewrite_walk_closure` | `vyre-foundation/tests/node_rewrite_walk_closure.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test node_rewrite_walk_closure` |
+| `test` | `node_variant_traversal_closure` | `vyre-foundation/tests/node_variant_traversal_closure.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test node_variant_traversal_closure` |
 | `test` | `opaque_payload_endian` | `vyre-foundation/tests/opaque_payload_endian.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test opaque_payload_endian` |
 | `test` | `opaque_wire_round_trip` | `vyre-foundation/tests/opaque_wire_round_trip.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test opaque_wire_round_trip` |
 | `test` | `operation_registry` | `vyre-foundation/tests/operation_registry.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test operation_registry` |
@@ -115,6 +119,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --all-features
 | `test` | `region_chain_adversarial` | `vyre-foundation/tests/region_chain_adversarial.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test region_chain_adversarial` |
 | `test` | `region_inline_invalidates` | `vyre-foundation/tests/region_inline_invalidates.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test region_inline_invalidates` |
 | `test` | `region_inline_scope` | `vyre-foundation/tests/region_inline_scope.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test region_inline_scope` |
+| `test` | `registry_closure` | `vyre-foundation/tests/registry_closure.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test registry_closure` |
 | `test` | `resource_exhaustion_adversarial` | `vyre-foundation/tests/resource_exhaustion_adversarial.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test resource_exhaustion_adversarial` |
 | `test` | `rewrite_driver_descends_into_async_offset` | `vyre-foundation/tests/rewrite_driver_descends_into_async_offset.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test rewrite_driver_descends_into_async_offset` |
 | `test` | `scope_cow` | `vyre-foundation/tests/scope_cow.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test scope_cow` |
