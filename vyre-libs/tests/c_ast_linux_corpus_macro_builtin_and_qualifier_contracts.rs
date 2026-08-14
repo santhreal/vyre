@@ -15,26 +15,17 @@
 #![allow(deprecated)]
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/fixtures/linux_macro_builtin_qualifier.rs"]
 mod linux_macro_builtin_qualifier;
 
-use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, assert_pg_preserves_row, kind_at, lexeme_indices,
-    node_count_from_vast, row_indices, run_gpu_pg_lower_with_count as run_gpu_pg_lower,
-    token_indices_containing,
-};
+use crate::c_frontend::rows::{assert_pg_preserves_row, row_indices};
 use linux_macro_builtin_qualifier::*;
-use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_ALIGNOF_EXPR, C_AST_KIND_BUILTIN_EXPECT_EXPR,
-    C_AST_KIND_FUNCTION_DEFINITION, C_AST_KIND_GNU_ATTRIBUTE, C_AST_KIND_GOTO_STMT,
-    C_AST_KIND_IF_STMT, C_AST_KIND_LABEL_STMT, C_AST_KIND_MEMBER_ACCESS_EXPR,
-    C_AST_KIND_POINTER_DECL, C_AST_KIND_RETURN_STMT,
+    reference_c11_classify_vast_node_kinds, C_AST_KIND_GOTO_STMT, C_AST_KIND_IF_STMT,
+    C_AST_KIND_RETURN_STMT,
 };
-use vyre_primitives::predicate::node_kind;
 
-#[path = "c_ast_linux_corpus_macro_builtin_and_qualifier_contracts/kernel_macros_builtins_and_qualifiers.rs"]
-mod kernel_macros_builtins_and_qualifiers;
+#[path = "c_ast_linux_corpus_macro_builtin_and_qualifier_contracts/error_label_control_flow_rows.rs"]
+mod error_label_control_flow_rows;

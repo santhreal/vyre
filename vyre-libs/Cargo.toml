@@ -660,3 +660,18 @@ required-features = ["c-parser"]
 name = "c_ast_expression_shape_gaps_e2e"
 path = "tests/c_ast_expression_shape_gaps_e2e.rs"
 required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_expression_operator_precedence_contracts"
+path = "tests/c_ast_expression_operator_precedence_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_expression_precedence_e2e"
+path = "tests/c_ast_expression_precedence_e2e.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_linux_corpus_macro_builtin_and_qualifier_contracts"
+path = "tests/c_ast_linux_corpus_macro_builtin_and_qualifier_contracts.rs"
+required-features = ["c-parser"]
