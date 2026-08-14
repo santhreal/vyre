@@ -17,8 +17,7 @@ use crate::{
 use im::HashMap;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
-use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_foundation::operation::SemanticOperation;
+use vyre_foundation::ir::{Node, Program};
 
 #[doc = " Local variable environment backed by persistent maps for O(1) subgroup snapshots."]
 pub(crate) struct HashmapLocals {
@@ -119,7 +118,7 @@ pub(crate) struct HashmapInvocation<'a> {
     pub(crate) uniform_checks: Vec<(usize, bool)>,
     pub(crate) frames: Vec<Frame<'a>>,
     pub(crate) pending_async: FxHashMap<Arc<str>, HashmapAsyncTransfer>,
-    pub(crate) op_cache: FxHashMap<*const Expr, HashmapResolvedCall>,
+    pub(crate) op_cache: crate::execution::call::OpCache,
 }
 
 pub(crate) enum HashmapAsyncTransfer {
@@ -128,11 +127,6 @@ pub(crate) enum HashmapAsyncTransfer {
         start: usize,
         payload: Vec<u8>,
     },
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct HashmapResolvedCall {
-    pub(crate) operation: SemanticOperation,
 }
 
 impl<'a> HashmapInvocation<'a> {

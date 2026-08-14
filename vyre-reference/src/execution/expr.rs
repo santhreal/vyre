@@ -13,8 +13,28 @@ use vyre_foundation::ir::{
 use crate::ReferenceError;
 use smallvec::SmallVec;
 
+use crate::execution::call::{callable_signature, invoke_signature, resolve_call};
 use crate::execution::expr_cast::cast_value;
 use crate::{atomics, oob, value::Value, workgroup::Invocation, workgroup::Memory};
+
+/// Evaluate an `Expr::Call` through the shared call ABI.
+///
+/// The statement evaluator owns only argument evaluation; resolution, arity,
+/// encoding and output decode live in [`crate::execution::call`].
+fn eval_call(
+    call_expr: *const Expr,
+    op_id: &str,
+    args: &[Expr],
+    invocation: &mut Invocation<'_>,
+    memory: &mut Memory,
+    program: &Program,
+) -> Result<Value, ReferenceError> {
+    let resolved = resolve_call(call_expr, op_id, &mut invocation.op_cache)?;
+    let signature = callable_signature(op_id, &resolved.operation)?;
+    invoke_signature(op_id, signature, args, |arg| {
+        eval(arg, invocation, memory, program)
+    })
+}
 
 /// Re-export the OOB-guarded buffer type used by storage operations.
 pub use crate::oob::Buffer;
@@ -157,7 +177,7 @@ pub(crate) fn eval_frame_oracle(
                     frames.push(Frame::Expr(index));
                 }
                 Expr::Call { op_id, args } => {
-                    let val = crate::execution::call::eval_call(
+                    let val = eval_call(
                         expr as *const Expr,
                         op_id,
                         args,

@@ -15,7 +15,6 @@ use vyre_foundation::ir::model::expr::GeneratorRef;
 #[cfg(test)]
 use vyre_foundation::ir::BufferAccess;
 use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::visit::{visit_node_preorder, visit_preorder, ExprVisitor, NodeVisitor};
 
 use crate::ReferenceError;
@@ -424,12 +423,7 @@ pub struct Invocation<'a> {
     /// Async transfers started by `AsyncLoad`/`AsyncStore` and pending
     /// observation by `AsyncWait`.
     pub(crate) pending_async: FxHashMap<Arc<str>, AsyncTransfer>,
-    pub(crate) op_cache: FxHashMap<*const Expr, ResolvedCall>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct ResolvedCall {
-    pub(crate) operation: SemanticOperation,
+    pub(crate) op_cache: crate::execution::call::OpCache,
 }
 
 /// Interpreter continuation stack.

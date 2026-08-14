@@ -609,3 +609,8 @@ text = "Persistent, finite and JIT megakernel lane bodies now share one assembly
 id = "runtime-driver-dup-pins-lowered"
 category = "Changed"
 text = "The duplication baseline pins for vyre-driver and vyre-runtime now record the measured tree: 1463 to 1112 and 520 to 412 duplicated lines. The vyre-lower total line count is corrected to the measured value."
+
+[[fragments]]
+id = "reference-call-abi-has-one-owner"
+category = "Changed"
+text = "The `Expr::Call` ABI in `vyre-reference` has one owner, `vyre-reference/src/execution/call.rs`. Callee resolution and its per-call-site cache, the arity check, the declared byte width of an argument, the 64 MiB input budget, the CPU-reference lookup and the output decode were each written twice, once for the statement evaluator in `expr.rs` and once for the hashmap interpreter in `node_step.rs`, and the two copies had already drifted in how they sized the output buffer and spelled the output type match. Both arms now bind that one ABI and supply only their own argument evaluator, and `ResolvedCall` replaces the two identical resolved-callee structs. A copy missed while changing the ABI would have made one reference execution path encode a call differently from the other while both still reported success, so the oracle would disagree with itself depending on which entry point a test used. The width table gained a registry-derived gate: `signature_param_spellings_all_have_a_declared_width` walks every registered callable signature at run time and fails when a parameter spelling has no declared width, instead of letting it fall through to the one-byte default and truncate an oracle input."
