@@ -1,5 +1,6 @@
 //! CPU references for queue materialization and queue-driven CSR expansion.
 
+#[cfg(any(test, feature = "cpu-parity"))]
 use super::validate_csr_queue_graph;
 
 /// CPU reference for queue materialization.
