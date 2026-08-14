@@ -1,4 +1,5 @@
 use super::*;
+use crate::fixpoint::persistent_fixpoint::{count_grid_sync, declared_words, required_workgroups};
 use std::sync::Arc;
 
 /// The binding names every program test in this module builds against.
@@ -97,6 +98,54 @@ fn transposing_two_binding_names_changes_the_wire_encoding() {
 fn to_wire(program: &Program) -> Vec<u8> {
     vyre_foundation::serial::wire::encode::to_wire(program)
         .expect("Fix: a sinkhorn program must encode to the wire form.")
+}
+
+/// Routing through the shared fixpoint owner must not change the emission.
+///
+/// This op used to re-derive the harness selection and the matching `changed`
+/// width itself. Both sides of the routing threshold, and the flag width each
+/// side needs, are pinned here on the wire encoding so the delegation is provably
+/// behavior-preserving rather than plausibly so.
+#[test]
+fn routing_matches_the_shared_fixpoint_owner_on_both_sides_of_the_threshold() {
+    let width = PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];
+
+    for (m, n, max_iterations) in [(2, 2, 5), (16, 16, 8), (17, 17, 8), (width, 1, 4)] {
+        let extents = extents(m, n, max_iterations);
+        let matrix_cells = m * n;
+        let route = fixpoint_route(matrix_cells, max_iterations);
+        let program = sinkhorn_iterate(FIXTURE, extents);
+
+        assert_eq!(
+            binding(&program, 2).1,
+            route.changed_words,
+            "Fix: the declared convergence-flag width must be the width the routed harness indexes."
+        );
+
+        let expected = sinkhorn_wrap(
+            &routed_persistent_fixpoint(
+                sinkhorn_transfer_body(FIXTURE, extents),
+                FixpointState {
+                    current: FIXTURE.u_curr,
+                    next: FIXTURE.u_next,
+                    changed: FIXTURE.changed,
+                    words: m,
+                    max_iterations,
+                },
+                matrix_cells,
+            )
+            .0,
+            FIXTURE,
+            extents,
+            matrix_cells,
+            route.changed_words,
+        );
+        assert_eq!(
+            to_wire(&program),
+            to_wire(&expected),
+            "Fix: sinkhorn_iterate must emit exactly what the routed harness plus its own wrapper produce."
+        );
+    }
 }
 
 #[test]
@@ -274,33 +323,6 @@ fn program_declares_ten_buffers() {
     assert_eq!(p.buffers().len(), 10);
 }
 
-/// Workgroups a host must launch to cover `program`.
-///
-/// `sinkhorn_iterate` emits the convergence flag's `atomic_or`, and for an
-/// atomic-carrying program `vyre-driver`'s `dispatch_element_count_for_program`
-/// spans the LARGEST declared buffer rather than just the output buffer. The
-/// widest buffers here are the `m * n` kernel matrices `k` and `k_t`, so the
-/// launch width is `m * n` rounded up to whole workgroups, not `m`.
-fn required_workgroups(program: &Program) -> u32 {
-    let elements = program
-        .buffers()
-        .iter()
-        .map(|buffer| buffer.count())
-        .max()
-        .unwrap_or(1);
-    elements.div_ceil(program.workgroup_size()[0])
-}
-
-/// Declared word count of the convergence-flag buffer (always named `"c"` here).
-fn changed_words(program: &Program) -> u32 {
-    program
-        .buffers()
-        .iter()
-        .find(|buffer| buffer.name() == "c")
-        .expect("Fix: sinkhorn_iterate must declare its convergence-flag buffer.")
-        .count()
-}
-
 /// Locks out the multi-workgroup convergence-flag race.
 ///
 /// `persistent_fixpoint` keeps ONE `changed[0]` word, clears it from global lane 0
@@ -321,30 +343,10 @@ fn multi_workgroup_sinkhorn_never_shares_one_cleared_convergence_word() {
         "Fix: a 257-element scaling vector over a 256-wide workgroup must need two workgroups."
     );
     assert_eq!(
-        changed_words(&program),
+        declared_words(&program, FIXTURE.changed),
         8,
         "Fix: a multi-workgroup sinkhorn dispatch must use the per-iteration convergence-word protocol, not one shared cleared word."
     );
-}
-
-/// Grid-wide fences in `nodes`, counted through every nesting construct. The
-/// transfer body's own `MemoryOrdering::SeqCst` barriers are workgroup scope and
-/// deliberately not counted here.
-fn count_grid_sync(nodes: &[Node]) -> usize {
-    nodes
-        .iter()
-        .map(|node| match node {
-            Node::Barrier {
-                ordering: vyre_foundation::MemoryOrdering::GridSync,
-            } => 1,
-            Node::If {
-                then, otherwise, ..
-            } => count_grid_sync(then) + count_grid_sync(otherwise),
-            Node::Loop { body, .. } | Node::Block(body) => count_grid_sync(body),
-            Node::Region { body, .. } => count_grid_sync(body),
-            _ => 0,
-        })
-        .sum()
 }
 
 /// Pins the routing threshold to the declared workgroup width.
@@ -366,7 +368,7 @@ fn routing_threshold_is_the_declared_workgroup_width() {
     );
     assert_eq!(required_workgroups(&at_width), 1);
     assert_eq!(
-        changed_words(&at_width),
+        declared_words(&at_width, FIXTURE.changed),
         1,
         "Fix: a single-workgroup launch must keep the compact one-word convergence flag."
     );
@@ -374,7 +376,7 @@ fn routing_threshold_is_the_declared_workgroup_width() {
     let past_width = sinkhorn_iterate(FIXTURE, extents(width + 1, 1, 8));
     assert_eq!(required_workgroups(&past_width), 2);
     assert_eq!(
-        changed_words(&past_width),
+        declared_words(&past_width, FIXTURE.changed),
         8,
         "Fix: one cell past the workgroup width already needs the per-iteration convergence words."
     );
@@ -407,7 +409,7 @@ fn modest_square_matrix_with_tiny_extents_still_routes_to_the_grid_form() {
         "Fix: 289 kernel cells over a 256-wide workgroup must need two workgroups."
     );
     assert_eq!(
-        changed_words(&program),
+        declared_words(&program, FIXTURE.changed),
         8,
         "Fix: the routing threshold must be the dispatch span (max declared buffer), not m."
     );
@@ -464,13 +466,13 @@ fn grid_route_sizes_changed_to_one_word_per_iteration() {
         let harness = persistent_fixpoint_grid(Vec::new(), "uc", "un", "c", 17, max_iterations);
 
         assert_eq!(
-            changed_words(&program),
+            declared_words(&program, FIXTURE.changed),
             max_iterations,
             "Fix: the grid route needs one convergence word per iteration; {max_iterations} iterations need {max_iterations} words."
         );
         assert_eq!(
-            changed_words(&program),
-            changed_words(&harness),
+            declared_words(&program, FIXTURE.changed),
+            declared_words(&harness, FIXTURE.changed),
             "Fix: this wrapper's `changed` declaration must match persistent_fixpoint_grid's own."
         );
     }
@@ -613,7 +615,7 @@ fn grid_routed_sinkhorn_is_order_independent_where_single_word_diverges() {
     let (expected_u, _, _) = cpu_ref(&k, &k, &a, &b, &u_curr, &v, m, n, max_iterations);
     let routed = sinkhorn_iterate(FIXTURE, extents(m, n, max_iterations));
     assert_eq!(
-        changed_words(&routed),
+        declared_words(&routed, FIXTURE.changed),
         max_iterations,
         "Fix: this size must route to the grid harness."
     );

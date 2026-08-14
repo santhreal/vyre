@@ -1,4 +1,5 @@
 use super::*;
+use crate::fixpoint::persistent_fixpoint::count_grid_sync;
 
 #[test]
 fn large_persistent_bfs_program_uses_grid_sync_parallel_steps() {
@@ -60,23 +61,6 @@ fn contains_grid_sync(nodes: &[Node]) -> bool {
         Node::Region { body, .. } => contains_grid_sync(body),
         _ => false,
     })
-}
-
-fn count_grid_sync(nodes: &[Node]) -> usize {
-    nodes
-        .iter()
-        .map(|node| match node {
-            Node::Barrier {
-                ordering: MemoryOrdering::GridSync,
-            } => 1,
-            Node::If {
-                then, otherwise, ..
-            } => count_grid_sync(then) + count_grid_sync(otherwise),
-            Node::Loop { body, .. } | Node::Block(body) => count_grid_sync(body),
-            Node::Region { body, .. } => count_grid_sync(body),
-            _ => 0,
-        })
-        .sum()
 }
 
 fn contains_loop_named(nodes: &[Node], needle: &str) -> bool {

@@ -11,7 +11,9 @@
 //! globally optimal sequence of pairwise fusions.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::math::bellman_shortest_path::bellman_shortest_path;
+use vyre_primitives::math::bellman_shortest_path::{
+    bellman_shortest_path, BellmanBuffers, BellmanExtents,
+};
 
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
@@ -32,37 +34,34 @@ pub struct BellmanTnOrderGpuScratch {
 /// Compile a Program that finds the optimal tensor-network contraction
 /// order by running Bellman-Ford over the state space of contractions.
 ///
-/// `n_nodes` is the number of possible contraction states (e.g. `2^N` for N tensors).
-/// `n_edges` is the number of valid contraction transitions.
-/// The output `dist` buffer will contain the minimum cost to reach each state.
+/// `n_nodes` is the number of possible contraction states (e.g. `2^N` for N
+/// tensors) and `n_edges` the number of valid contraction transitions, both named
+/// by [`BellmanExtents`]. The output `dist` buffer will contain the minimum cost
+/// to reach each state.
+///
+/// The composition it adds is the telemetry counter; the program is the
+/// primitive's, over the caller's binding record and extents unchanged.
 #[must_use]
-#[allow(clippy::too_many_arguments)]
-pub fn bellman_tn_order_program(
-    src: &str,
-    dst: &str,
-    weight: &str,
-    dist: &str,
-    next_dist: &str,
-    changed: &str,
-    n_nodes: u32,
-    n_edges: u32,
-    max_iterations: u32,
-) -> Program {
+pub fn bellman_tn_order_program(buffers: BellmanBuffers<'_>, extents: BellmanExtents) -> Program {
     use crate::telemetry::observability::{bellman_tn_order_calls, bump};
     bump(&bellman_tn_order_calls);
-    // Composes the tier-2.5 primitive directly.
-    bellman_shortest_path(
-        src,
-        dst,
-        weight,
-        dist,
-        next_dist,
-        changed,
-        n_nodes,
-        n_edges,
-        max_iterations,
-    )
+    bellman_shortest_path(buffers, extents)
 }
+
+/// The binding names this crate's own GPU dispatch wrapper uses.
+///
+/// The dispatch uploads and reads back by binding index, so these names are only
+/// labels to it. It still names each field, because the convergence-flag width
+/// below is looked up by `changed`, and a program whose flag is labelled
+/// something else would silently fall back to a one-word upload.
+const DISPATCH_BINDINGS: BellmanBuffers<'static> = BellmanBuffers {
+    src: "src",
+    dst: "dst",
+    weight: "weight",
+    dist: "dist",
+    next_dist: "next_dist",
+    changed: "changed",
+};
 
 /// GPU dispatch wrapper for the Bellman-Ford-based contraction-order
 /// solver. Returns the converged minimum-distance vector.
@@ -198,15 +197,12 @@ pub fn bellman_tn_order_via_with_scratch_into(
         return Ok(());
     }
     let program = bellman_tn_order_program(
-        "src",
-        "dst",
-        "weight",
-        "dist",
-        "next_dist",
-        "changed",
-        n_nodes,
-        n_edges,
-        max_iterations,
+        DISPATCH_BINDINGS,
+        BellmanExtents {
+            n_nodes,
+            n_edges,
+            max_iterations,
+        },
     );
     // Size the convergence-flag upload from what the program DECLARES, never
     // from an assumed single word. Above one workgroup width
@@ -216,7 +212,7 @@ pub fn bellman_tn_order_via_with_scratch_into(
     let changed_words = program
         .buffers()
         .iter()
-        .find(|buffer| buffer.name() == "changed")
+        .find(|buffer| buffer.name() == DISPATCH_BINDINGS.changed)
         .map_or(1, vyre_foundation::ir::BufferDecl::count)
         .max(1) as usize;
     scratch.changed.clear();
@@ -252,6 +248,65 @@ mod tests {
     use crate::test_support::NeverDispatches;
     use vyre_primitives::math::bellman_shortest_path::cpu_ref;
 
+    /// Terse binding names, for the tests that only care about the program.
+    const FIXTURE: BellmanBuffers<'static> = BellmanBuffers {
+        src: "s",
+        dst: "d",
+        weight: "w",
+        dist: "di",
+        next_dist: "nd",
+        changed: "c",
+    };
+
+    /// The dispatch wrapper's own names, for the tests that compare against it.
+    const VERBOSE_FIXTURE: BellmanBuffers<'static> = DISPATCH_BINDINGS;
+
+    fn extents(n_nodes: u32, n_edges: u32, max_iterations: u32) -> BellmanExtents {
+        BellmanExtents {
+            n_nodes,
+            n_edges,
+            max_iterations,
+        }
+    }
+
+    /// One refinement stage over the shared edge buffers.
+    ///
+    /// The stages differ only in their per-stage state buffers. Sharing the edge
+    /// names is the point of the multi-region test: three regions read one graph
+    /// and refine three separate distance vectors.
+    fn stage<'a>(dist: &'a str, next_dist: &'a str, changed: &'a str) -> BellmanBuffers<'a> {
+        BellmanBuffers {
+            src: FIXTURE.src,
+            dst: FIXTURE.dst,
+            weight: FIXTURE.weight,
+            dist,
+            next_dist,
+            changed,
+        }
+    }
+
+    /// The composition must emit the primitive's program, byte for byte.
+    ///
+    /// `bellman_tn_order_program` adds a telemetry counter and nothing else. This
+    /// pins that on the wire encoding, on both sides of the fixpoint routing
+    /// threshold, so a re-derivation creeping back into the forwarder fails here
+    /// rather than at a GPU parity test on one shape.
+    #[test]
+    fn composition_emits_the_primitive_program_unchanged() {
+        for (n_nodes, n_edges, max_iterations) in [(4, 4, 10), (300, 4, 6), (8, 12, 5)] {
+            let extents = extents(n_nodes, n_edges, max_iterations);
+            let wire = |program: &Program| {
+                vyre_foundation::serial::wire::encode::to_wire(program)
+                    .expect("Fix: a bellman program must encode to the wire form.")
+            };
+            assert_eq!(
+                wire(&bellman_tn_order_program(FIXTURE, extents)),
+                wire(&bellman_shortest_path(FIXTURE, extents)),
+                "Fix: the tensor-order composition must forward to the primitive unchanged."
+            );
+        }
+    }
+
     struct BellmanDispatcher;
 
     impl ProgramDispatcher for BellmanDispatcher {
@@ -282,15 +337,35 @@ mod tests {
         }
     }
 
+    /// Every name the caller supplies must reach a declared buffer.
+    ///
+    /// The old form asserted the literal `"dist"` was present, which passes for any
+    /// program that happens to declare that name and says nothing about the other
+    /// five. Reading the names out of the record instead means a field that stops
+    /// being forwarded fails here.
     #[test]
-    fn test_tn_order_program_structure() {
-        let p = bellman_tn_order_program("s", "d", "w", "dist", "nd", "c", 8, 12, 5);
+    fn every_supplied_binding_name_is_declared() {
+        let program = bellman_tn_order_program(FIXTURE, extents(8, 12, 5));
+        let declared: Vec<&str> = program.buffers().iter().map(|b| b.name()).collect();
+
+        for name in [
+            FIXTURE.dist,
+            FIXTURE.next_dist,
+            FIXTURE.changed,
+            FIXTURE.src,
+            FIXTURE.dst,
+            FIXTURE.weight,
+        ] {
+            assert!(
+                declared.contains(&name),
+                "Fix: the program must declare the buffer named `{name}`; it declared {declared:?}."
+            );
+        }
         assert_eq!(
-            p.buffers().len(),
+            declared.len(),
             6,
-            "Must expose 6 buffers for Bellman-Ford"
+            "Fix: bellman_tn_order_program must expose exactly the six bindings it is given."
         );
-        assert!(p.buffers().iter().any(|b| b.name() == "dist"));
     }
 
     /// The consumer must upload a convergence-flag buffer as wide as the routed
@@ -340,17 +415,8 @@ mod tests {
         let mut dist_init = vec![u32::MAX; n_nodes as usize];
         dist_init[0] = 0;
 
-        let declared = bellman_tn_order_program(
-            "src",
-            "dst",
-            "weight",
-            "dist",
-            "next_dist",
-            "changed",
-            n_nodes,
-            4,
-            max_iterations,
-        );
+        let declared =
+            bellman_tn_order_program(VERBOSE_FIXTURE, extents(n_nodes, 4, max_iterations));
         let declared_changed = declared
             .buffers()
             .iter()
@@ -445,9 +511,9 @@ mod tests {
     #[test]
     fn test_multi_stage_order_refining() {
         // Build a Program with 3 separate Bellman regions.
-        let p1 = bellman_tn_order_program("s", "d", "w", "dist1", "nd1", "c1", 4, 4, 5);
-        let p2 = bellman_tn_order_program("s", "d", "w", "dist2", "nd2", "c2", 4, 4, 5);
-        let p3 = bellman_tn_order_program("s", "d", "w", "dist3", "nd3", "c3", 4, 4, 5);
+        let p1 = bellman_tn_order_program(stage("dist1", "nd1", "c1"), extents(4, 4, 5));
+        let p2 = bellman_tn_order_program(stage("dist2", "nd2", "c2"), extents(4, 4, 5));
+        let p3 = bellman_tn_order_program(stage("dist3", "nd3", "c3"), extents(4, 4, 5));
 
         let final_p = crate::test_support::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
         // Assert we have at least 3 regions
@@ -467,7 +533,7 @@ mod tests {
         let weight = vec![10, 20, 30, 100];
         let dist_init = vec![0, u32::MAX, u32::MAX, u32::MAX];
 
-        let p = bellman_tn_order_program("s", "d", "w", "dist", "nd", "c", 4, 4, 10);
+        let p = bellman_tn_order_program(FIXTURE, extents(4, 4, 10));
 
         let (expected_dist, _) = cpu_ref(&src, &dst, &weight, &dist_init, 4, 10);
 

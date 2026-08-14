@@ -316,8 +316,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::Node;
-    use vyre_foundation::MemoryOrdering;
+    use crate::fixpoint::persistent_fixpoint::count_grid_sync;
 
     #[test]
     fn cpu_ref_one_step_join() {
@@ -451,22 +450,5 @@ mod tests {
     fn rejects_zero_max_iterations_with_trap() {
         let p = scallop_join("s", "n", "j", "c", 2, 0);
         assert!(p.stats().trap());
-    }
-
-    fn count_grid_sync(nodes: &[Node]) -> usize {
-        nodes
-            .iter()
-            .map(|node| match node {
-                Node::Barrier {
-                    ordering: MemoryOrdering::GridSync,
-                } => 1,
-                Node::If {
-                    then, otherwise, ..
-                } => count_grid_sync(then) + count_grid_sync(otherwise),
-                Node::Loop { body, .. } | Node::Block(body) => count_grid_sync(body),
-                Node::Region { body, .. } => count_grid_sync(body),
-                _ => 0,
-            })
-            .sum()
     }
 }

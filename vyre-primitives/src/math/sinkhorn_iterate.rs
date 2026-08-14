@@ -6,9 +6,12 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
+#[cfg(test)]
 use crate::fixpoint::persistent_fixpoint::{
-    persistent_fixpoint, persistent_fixpoint_grid, PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
+    fixpoint_route, persistent_fixpoint, persistent_fixpoint_grid,
+    PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
 };
+use crate::fixpoint::persistent_fixpoint::{routed_persistent_fixpoint, FixpointState};
 use crate::math::semiring_gemm::{semiring_gemm, Semiring};
 use crate::math::sinkhorn::sinkhorn_scale;
 
@@ -155,38 +158,19 @@ pub fn sinkhorn_iterate(buffers: SinkhornBuffers<'_>, extents: SinkhornExtents) 
     // `k_t` are `m * n` long, which dominates `m` and `n` for any non-zero
     // extents, so the launch spans `matrix_cells` lanes and a modest matrix
     // makes the dispatch multi-workgroup while both extents still fit one group.
-    let needs_grid_sync = matrix_cells > PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];
-
-    let inner = if needs_grid_sync {
-        persistent_fixpoint_grid(
-            transfer_body,
-            buffers.u_curr,
-            buffers.u_next,
-            buffers.changed,
-            m,
+    let (inner, route) = routed_persistent_fixpoint(
+        transfer_body,
+        FixpointState {
+            current: buffers.u_curr,
+            next: buffers.u_next,
+            changed: buffers.changed,
+            words: m,
             max_iterations,
-        )
-    } else {
-        persistent_fixpoint(
-            transfer_body,
-            buffers.u_curr,
-            buffers.u_next,
-            buffers.changed,
-            m,
-            max_iterations,
-        )
-    };
+        },
+        matrix_cells,
+    );
 
-    // Mirrors the count the chosen harness declares for `changed`: one
-    // never-cleared word per iteration for the grid form, which indexes
-    // `changed[iteration]`, and one shared word for the single-workgroup form.
-    let changed_words = if needs_grid_sync {
-        max_iterations.max(1)
-    } else {
-        1
-    };
-
-    sinkhorn_wrap(&inner, buffers, extents, matrix_cells, changed_words)
+    sinkhorn_wrap(&inner, buffers, extents, matrix_cells, route.changed_words)
 }
 
 /// One full Sinkhorn sweep: `Kv`, then `u`, then `Ktu`, then `v`.

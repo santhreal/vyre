@@ -1,6 +1,7 @@
 use super::super::*;
+use crate::fixpoint::persistent_fixpoint::count_grid_sync;
 use crate::graph::program_graph::ProgramGraphShape;
-use vyre_foundation::{ir::Node, MemoryOrdering};
+use vyre_foundation::ir::Node;
 
 #[test]
 fn reusable_batch_frontier_validation_accepts_empty_and_canonical_batches() {
@@ -308,21 +309,4 @@ fn contains_loop_named(nodes: &[Node], needle: &str) -> bool {
         Node::Region { body, .. } => contains_loop_named(body, needle),
         _ => false,
     })
-}
-
-fn count_grid_sync(nodes: &[Node]) -> usize {
-    nodes
-        .iter()
-        .map(|node| match node {
-            Node::Barrier {
-                ordering: MemoryOrdering::GridSync,
-            } => 1,
-            Node::If {
-                then, otherwise, ..
-            } => count_grid_sync(then) + count_grid_sync(otherwise),
-            Node::Loop { body, .. } | Node::Block(body) => count_grid_sync(body),
-            Node::Region { body, .. } => count_grid_sync(body),
-            _ => 0,
-        })
-        .sum()
 }

@@ -1,3 +1,4 @@
+use crate::fixpoint::persistent_fixpoint::grid_sync_barrier;
 use vyre_foundation::ir::{Expr, Node};
 use vyre_foundation::MemoryOrdering;
 
@@ -461,11 +462,5 @@ pub(crate) fn wide_lineage_grid_sync_body(
 fn workgroup_barrier() -> Node {
     Node::Barrier {
         ordering: MemoryOrdering::SeqCst,
-    }
-}
-
-fn grid_sync_barrier() -> Node {
-    Node::Barrier {
-        ordering: MemoryOrdering::GridSync,
     }
 }

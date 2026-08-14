@@ -3,8 +3,7 @@ use std::sync::Arc;
 use super::scallop_join_wide::{
     cpu_ref, cpu_ref_into, scallop_join_wide, scallop_join_wide_dispatch_grid,
 };
-use vyre_foundation::ir::Node;
-use vyre_foundation::MemoryOrdering;
+use crate::fixpoint::persistent_fixpoint::count_grid_sync;
 
 #[test]
 fn cpu_ref_1x1_trivial() {
@@ -144,21 +143,4 @@ fn dispatch_grid_scales_large_wide_relations_into_blocks() {
 fn large_program_uses_split_visible_grid_sync() {
     let p = scallop_join_wide("s", "nx", "j", "c", 17, 2, 4);
     assert_eq!(count_grid_sync(p.entry()), 7);
-}
-
-fn count_grid_sync(nodes: &[Node]) -> usize {
-    nodes
-        .iter()
-        .map(|node| match node {
-            Node::Barrier {
-                ordering: MemoryOrdering::GridSync,
-            } => 1,
-            Node::If {
-                then, otherwise, ..
-            } => count_grid_sync(then) + count_grid_sync(otherwise),
-            Node::Loop { body, .. } | Node::Block(body) => count_grid_sync(body),
-            Node::Region { body, .. } => count_grid_sync(body),
-            _ => 0,
-        })
-        .sum()
 }
