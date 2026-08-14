@@ -16,7 +16,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use crate::region::wrap_anonymous;
 use vyre_primitives::matching::{dfa_compile, CompiledDfa};
 
-mod bounded_ranges;
+/// THE Aho-Corasick walk. Scan-level builders reach it directly rather than
+/// through a second re-export path in this module.
+pub(in crate::scan) mod bounded_ranges;
 mod count_program;
 
 #[cfg(test)]

@@ -34,7 +34,7 @@ use vyre_primitives::matching::CompiledDfa;
 
 use crate::region::wrap_anonymous;
 use crate::scan::builders::append_match;
-use crate::scan::classic_ac::{ac_output_span_nodes, ac_transition_step_nodes};
+use crate::scan::classic_ac::bounded_ranges::{ac_output_span_nodes, ac_transition_step_nodes};
 
 /// Collapse raw accepting ends to one longest match per `(start, pattern_id)`.
 ///

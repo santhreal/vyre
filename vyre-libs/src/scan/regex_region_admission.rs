@@ -32,7 +32,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use vyre_primitives::matching::CompiledDfa;
 
 use crate::region::wrap_anonymous;
-use crate::scan::classic_ac::{
+use crate::scan::classic_ac::bounded_ranges::{
     ac_output_span_nodes, ac_transition_step_nodes, classic_ac_dfa_buffer_decls,
     region_search_prologue_nodes,
 };

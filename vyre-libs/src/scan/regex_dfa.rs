@@ -23,8 +23,9 @@ use vyre_foundation::ir::Program;
 
 use vyre_primitives::matching::{nfa_to_dfa, CompiledDfa, NfaTables, NfaToDfaError};
 
+use crate::scan::classic_ac::bounded_ranges::AcInputBindings;
 use crate::scan::classic_ac::{
-    regex_exact_ranges_program, try_build_ac_bounded_ranges_program_with_subgroup_coalesce, AcInputBindings,
+    regex_exact_ranges_program, try_build_ac_bounded_ranges_program_with_subgroup_coalesce,
 };
 use crate::scan::regex_compile::{
     compile_regex_set, compile_regex_set_with_policy, CompiledRegexSet, RegexCompileError,
