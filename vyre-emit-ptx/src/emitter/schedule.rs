@@ -70,7 +70,7 @@ pub(super) fn op_reads_operand(op: &KernelOp, operand: u32) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_lower::{MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape};
+    use crate::tests::f16_mma_kind;
 
     fn op(kind: KernelOpKind, operands: Vec<u32>, result: Option<u32>) -> KernelOp {
         KernelOp {
@@ -88,14 +88,7 @@ mod tests {
             Some(4)
         )));
         assert!(is_schedulable_pure_op(&op(
-            KernelOpKind::MatrixMma {
-                shape: MatrixMmaShape::M16N8K16,
-                a_layout: MatrixMmaLayout::RowMajor,
-                b_layout: MatrixMmaLayout::ColMajor,
-                a_type: MatrixMmaElement::F16,
-                b_type: MatrixMmaElement::F16,
-                accum_type: MatrixMmaElement::F32,
-            },
+            f16_mma_kind(),
             vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             Some(11)
         )));

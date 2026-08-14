@@ -347,10 +347,9 @@ fn symbolic_affine_root(op: &KernelOp, result_id: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::f16_mma_kind;
     use vyre_lower::descriptor_builder::{body, effect, lit, op};
-    use vyre_lower::{
-        KernelBody, KernelOp, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape,
-    };
+    use vyre_lower::{KernelBody, KernelOp, LiteralValue};
 
     fn body_with_add(
         operands: Vec<u32>,
@@ -463,18 +462,7 @@ mod tests {
     fn matrix_mma_consecutive_fragment_results_are_producers() {
         let body = body()
             .ops([
-                op(
-                    KernelOpKind::MatrixMma {
-                        shape: MatrixMmaShape::M16N8K16,
-                        a_layout: MatrixMmaLayout::RowMajor,
-                        b_layout: MatrixMmaLayout::ColMajor,
-                        a_type: MatrixMmaElement::F16,
-                        b_type: MatrixMmaElement::F16,
-                        accum_type: MatrixMmaElement::F32,
-                    },
-                    [0; 10],
-                    10,
-                ),
+                op(f16_mma_kind(), [0; 10], 10),
                 op(KernelOpKind::Copy, [12], 20),
             ])
             .build();
@@ -577,19 +565,7 @@ mod tests {
     /// restating how wide the tuple is.
     #[test]
     fn mma_fragment_ids_resolve_to_the_producing_op() {
-        use vyre_lower::{MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape};
-        let mma = op(
-            KernelOpKind::MatrixMma {
-                shape: MatrixMmaShape::M16N8K16,
-                a_layout: MatrixMmaLayout::RowMajor,
-                b_layout: MatrixMmaLayout::ColMajor,
-                a_type: MatrixMmaElement::F16,
-                b_type: MatrixMmaElement::F16,
-                accum_type: MatrixMmaElement::F32,
-            },
-            [],
-            10,
-        );
+        let mma = op(f16_mma_kind(), [], 10);
         let expected: Vec<u32> = mma.result_ids().collect();
         assert_eq!(expected, vec![10, 11, 12, 13]);
         let body = body().op(mma).build();

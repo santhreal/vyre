@@ -48,6 +48,39 @@ fn empty_child_body() -> KernelBody {
     body().build()
 }
 
+/// The one MMA shape every test uses: `m16n8k16`, row-major A, column-major B,
+/// f16 inputs accumulating in f32. Six coupled fields that only mean anything
+/// together, so one copy states them.
+pub(crate) fn f16_mma_kind() -> KernelOpKind {
+    KernelOpKind::MatrixMma {
+        shape: MatrixMmaShape::M16N8K16,
+        a_layout: MatrixMmaLayout::RowMajor,
+        b_layout: MatrixMmaLayout::ColMajor,
+        a_type: MatrixMmaElement::F16,
+        b_type: MatrixMmaElement::F16,
+        accum_type: MatrixMmaElement::F32,
+    }
+}
+
+/// The op chain a four-way vector load fuses from: literal 0 is the base index
+/// and literal 1 the stride, then four loads land on result ids 2, 4, 6 and 8,
+/// each preceded by the add that steps the index. `load` selects the load kind,
+/// so the `LoadConstant` shape `const_buffer_promote` leaves behind is the same
+/// chain. Callers append their own tail ops.
+pub(crate) fn four_load_chain(load: KernelOpKind) -> Vec<KernelOp> {
+    vec![
+        lit(0, 0),
+        lit(1, 1),
+        op(load.clone(), [0, 0], 2),
+        op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 3),
+        op(load.clone(), [0, 3], 4),
+        op(KernelOpKind::BinOpKind(BinOp::Add), [3, 1], 5),
+        op(load.clone(), [0, 5], 6),
+        op(KernelOpKind::BinOpKind(BinOp::Add), [5, 1], 7),
+        op(load, [0, 7], 8),
+    ]
+}
+
 /// One-slot atomic RMW kernel: `slot` is the only binding, addressed by the
 /// literal index 0 and combined with the literal `value`.
 fn atomic_kernel(
