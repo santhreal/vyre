@@ -2,7 +2,7 @@
 
 use vyre_foundation::ir::{Node, Program};
 use vyre_primitives::fixpoint::persistent_fixpoint::{
-    persistent_fixpoint, persistent_fixpoint_grid, PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
+    fixpoint_route, routed_persistent_fixpoint, FixpointRoute, FixpointState,
 };
 
 /// Build a persistent-fixpoint Program around a caller-supplied transfer body.
@@ -14,28 +14,17 @@ use vyre_primitives::fixpoint::persistent_fixpoint::{
 ///
 /// # Convergence-flag form
 ///
-/// `words` sizes the widest buffer this wrapper declares, and
-/// `dispatch_element_count_for_program`
-/// (`vyre-driver/src/program_walks/dispatch_params.rs:19`) sizes an
-/// atomic-carrying program's launch from its widest declared buffer, so `words`
-/// is the launch span and it selects the harness:
+/// `words` sizes the widest buffer this wrapper declares, so `words` is also the
+/// launch span here and it selects the harness. The selection and the `changed`
+/// width that goes with it belong to
+/// [`vyre_primitives::fixpoint::persistent_fixpoint::routed_persistent_fixpoint`],
+/// which owns both halves; see [`FixpointRoute`] for why they cannot be chosen
+/// separately.
 ///
-/// - `words <= PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0]`: one workgroup covers the
-///   launch, so `persistent_fixpoint` runs with its single shared `changed[0]`
-///   word and stops when that word reads zero. The word is cleared by a plain
-///   store fenced only by a workgroup-scope barrier; with one group the fence is
-///   incidentally grid-wide, so the clear cannot race the `atomic_or` that sets
-///   the flag.
-/// - `words` above that width: `persistent_fixpoint_grid`, which never clears
-///   the flag, gives each iteration its own `changed` word, and separates waves
-///   with `MemoryOrdering::GridSync`. The single-word form is limited to one
-///   workgroup precisely because its clear and its set are unordered across
-///   groups: group 0's clear can erase another group's set, that group then
-///   reads zero and returns early with unconverged state, and the flag the host
-///   reads afterwards reports a convergence no group agreed to.
-///
-/// The caller supplies `changed`, so it must be `max_iterations` zero-filled
-/// words once `words` exceeds one workgroup width and one word at or below it.
+/// The caller supplies `changed`, so it must be
+/// [`FixpointRoute::changed_words`] zero-filled words for its `words` and
+/// `max_iterations`. Use [`persistent_fixpoint_program_route`] to read that
+/// width rather than re-deriving the threshold.
 ///
 /// This wrapper can only see the buffers the harness declares. A caller whose
 /// `transfer_body` reads buffers wider than `words`, or that widens the launch
@@ -49,24 +38,39 @@ pub fn persistent_fixpoint_program(
     words: u32,
     max_iterations: u32,
 ) -> Program {
-    if words > PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0] {
-        return persistent_fixpoint_grid(
-            transfer_body,
+    routed_persistent_fixpoint(
+        transfer_body,
+        FixpointState {
             current,
             next,
             changed,
             words,
             max_iterations,
-        );
-    }
-    persistent_fixpoint(transfer_body, current, next, changed, words, max_iterations)
+        },
+        words,
+    )
+    .0
+}
+
+/// The harness and `changed` width [`persistent_fixpoint_program`] selects for
+/// `words` and `max_iterations`.
+///
+/// A caller allocates `changed` before it has a program, so it needs the width
+/// without building one. Reading it here rather than comparing `words` against
+/// the workgroup constant is what keeps the flag width and the harness in
+/// agreement.
+#[must_use]
+pub fn persistent_fixpoint_program_route(words: u32, max_iterations: u32) -> FixpointRoute {
+    fixpoint_route(words, max_iterations)
 }
 
 #[cfg(test)]
 mod tests {
     use super::persistent_fixpoint_program;
     use vyre_foundation::ir::{Expr, Node, Program};
-    use vyre_foundation::MemoryOrdering;
+    use vyre_primitives::fixpoint::persistent_fixpoint::{
+        count_grid_sync, declared_words, required_workgroups,
+    };
     use vyre_primitives::fixpoint::persistent_fixpoint::{
         persistent_fixpoint, PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
     };
@@ -77,26 +81,7 @@ mod tests {
     /// atomic-carrying program `vyre-driver`'s `dispatch_element_count_for_program`
     /// spans the LARGEST declared buffer, so the launch width is `words` rounded up
     /// to whole workgroups.
-    fn required_workgroups(program: &Program) -> u32 {
-        let elements = program
-            .buffers()
-            .iter()
-            .map(|buffer| buffer.count())
-            .max()
-            .unwrap_or(1);
-        elements.div_ceil(program.workgroup_size()[0])
-    }
-
     /// Declared word count of the convergence-flag buffer.
-    fn changed_words(program: &Program) -> u32 {
-        program
-            .buffers()
-            .iter()
-            .find(|buffer| buffer.name() == "changed")
-            .expect("Fix: persistent_fixpoint_program must declare its convergence-flag buffer.")
-            .count()
-    }
-
     #[test]
     fn builds_program_with_caller_buffers() {
         let program = persistent_fixpoint_program(Vec::new(), "current", "next", "changed", 4, 8);
@@ -131,30 +116,13 @@ mod tests {
             "Fix: 257 words over a 256-wide workgroup must need two workgroups."
         );
         assert_eq!(
-            changed_words(&program),
+            declared_words(&program, "changed"),
             8,
             "Fix: a multi-workgroup fixpoint dispatch must use the per-iteration convergence-word protocol, not one shared cleared word."
         );
     }
 
     /// Grid-wide fences in `nodes`, counted through every nesting construct.
-    fn count_grid_sync(nodes: &[Node]) -> usize {
-        nodes
-            .iter()
-            .map(|node| match node {
-                Node::Barrier {
-                    ordering: MemoryOrdering::GridSync,
-                } => 1,
-                Node::If {
-                    then, otherwise, ..
-                } => count_grid_sync(then) + count_grid_sync(otherwise),
-                Node::Loop { body, .. } | Node::Block(body) => count_grid_sync(body),
-                Node::Region { body, .. } => count_grid_sync(body),
-                _ => 0,
-            })
-            .sum()
-    }
-
     /// A transfer body in which lane 0 publishes the value of the LAST element and
     /// nothing else writes: `if t == 0 { next[last] = 9 }`.
     ///
@@ -230,7 +198,7 @@ mod tests {
         );
         assert_eq!(required_workgroups(&at_width), 1);
         assert_eq!(
-            changed_words(&at_width),
+            declared_words(&at_width, "changed"),
             1,
             "Fix: a single-workgroup launch must keep the compact one-word convergence flag."
         );
@@ -239,7 +207,7 @@ mod tests {
             persistent_fixpoint_program(Vec::new(), "current", "next", "changed", width + 1, 8);
         assert_eq!(required_workgroups(&past_width), 2);
         assert_eq!(
-            changed_words(&past_width),
+            declared_words(&past_width, "changed"),
             8,
             "Fix: one word past the workgroup width already needs the per-iteration convergence words."
         );
@@ -288,7 +256,7 @@ mod tests {
                 max_iterations,
             );
             assert_eq!(
-                changed_words(&program),
+                declared_words(&program, "changed"),
                 max_iterations,
                 "Fix: the grid route needs one convergence word per iteration; {max_iterations} iterations need {max_iterations} words."
             );
@@ -323,7 +291,7 @@ mod tests {
             max_iterations,
         );
         assert_eq!(
-            changed_words(&unsound),
+            declared_words(&unsound, "changed"),
             1,
             "Fix: this fixture must exercise the single shared convergence word."
         );
@@ -367,7 +335,7 @@ mod tests {
             max_iterations,
         );
         assert_eq!(
-            changed_words(&routed),
+            declared_words(&routed, "changed"),
             max_iterations,
             "Fix: this size must route to the grid harness."
         );

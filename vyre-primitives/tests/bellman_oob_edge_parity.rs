@@ -12,7 +12,9 @@
 //! parity class. Pins the fix against `reference_eval`.
 #![cfg(all(feature = "math", feature = "cpu-parity"))]
 
-use vyre_primitives::math::bellman_shortest_path::{bellman_shortest_path, cpu_ref};
+use vyre_primitives::math::bellman_shortest_path::{
+    bellman_shortest_path, cpu_ref, BellmanBuffers, BellmanExtents,
+};
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
 use vyre_reference::value::Value;
 
@@ -27,15 +29,19 @@ fn gpu_dist(
     max_iterations: u32,
 ) -> Vec<u32> {
     let program = bellman_shortest_path(
-        "src",
-        "dst",
-        "weight",
-        "dist",
-        "next_dist",
-        "changed",
-        n_nodes,
-        src.len() as u32,
-        max_iterations,
+        BellmanBuffers {
+            src: "src",
+            dst: "dst",
+            weight: "weight",
+            dist: "dist",
+            next_dist: "next_dist",
+            changed: "changed",
+        },
+        BellmanExtents {
+            n_nodes,
+            n_edges: src.len() as u32,
+            max_iterations,
+        },
     );
     // Buffer binding order: dist(0), next_dist(1), changed(2), src(3), dst(4), weight(5).
     let outputs = vyre_reference::reference_eval(

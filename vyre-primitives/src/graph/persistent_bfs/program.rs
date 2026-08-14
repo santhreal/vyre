@@ -4,12 +4,12 @@ use super::layout::{
     BATCH_OP_ID, BINDING_CHANGED, BINDING_CONVERGED, BINDING_DENSITY_ACTIVE, BINDING_FRONTIER_IN,
     BINDING_FRONTIER_OUT, OP_ID, PERSISTENT_BFS_WORKGROUP_SIZE,
 };
+use crate::fixpoint::persistent_fixpoint::grid_sync_barrier;
 use crate::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_snapshot_child_prefixed_with_active;
 use crate::graph::persistent_bfs_step::persistent_bfs_step_child_prefixed_with_active;
 use crate::graph::program_graph::ProgramGraphShape;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
 
 /// Words needed to hold a bitset over `node_count` nodes.
 #[must_use]
@@ -545,10 +545,6 @@ fn persistent_bfs_grid_sync_parallel(
             body: Arc::new(entry),
         }],
     )
-}
-
-fn grid_sync_barrier() -> Node {
-    Node::barrier_with_ordering(MemoryOrdering::GridSync)
 }
 
 /// Build a batched persistent-BFS Program.

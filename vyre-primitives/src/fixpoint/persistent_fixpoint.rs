@@ -553,6 +553,96 @@ pub fn persistent_fixpoint_grid(
     )
 }
 
+/// The ping-pong state and iteration budget a convergence harness is built over.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FixpointState<'a> {
+    /// Ping-pong buffer holding the state read by the transfer body, and the
+    /// output after the dispatch returns.
+    pub current: &'a str,
+    /// Ping-pong buffer the transfer body writes.
+    pub next: &'a str,
+    /// Convergence-flag buffer. Its declared width is
+    /// [`FixpointRoute::changed_words`], not a caller's choice.
+    pub changed: &'a str,
+    /// Element count of `current` and `next`, and the bound the compare and
+    /// copy steps are gated on.
+    pub words: u32,
+    /// Hard upper bound on iterations, and the wave count of the grid form.
+    pub max_iterations: u32,
+}
+
+/// Which convergence harness a launch span requires, and the `changed` width
+/// that harness indexes.
+///
+/// Selecting the harness and sizing the flag are ONE decision, not two.
+/// [`persistent_fixpoint_grid`] indexes `changed[iteration]`, so a caller that
+/// routes to it and keeps a one-word flag writes out of bounds on iteration 1,
+/// and a caller that stays on [`persistent_fixpoint`] but declares
+/// `max_iterations` words has a flag whose tail is never read. Returning both
+/// together is what stops a caller taking one half.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FixpointRoute {
+    /// Whether the span needs [`persistent_fixpoint_grid`] and its
+    /// `MemoryOrdering::GridSync` waves.
+    pub needs_grid_sync: bool,
+    /// Words the `changed` buffer must declare for the chosen harness.
+    pub changed_words: u32,
+}
+
+/// Route a launch of `dispatch_span` lanes to a convergence harness.
+///
+/// `dispatch_span` is the LAUNCH width, which is not the same number as
+/// [`FixpointState::words`]. `dispatch_element_count_for_program`
+/// (`vyre-driver/src/program_walks/dispatch_params.rs:19`) sizes an
+/// atomic-carrying program's launch from its WIDEST declared buffer, and both
+/// harnesses carry an `atomic_or`, so an op that declares buffers wider than its
+/// ping-pong state is launched over those wider buffers. A kernel matrix of
+/// `m * n` cells or an edge list of `n_edges` entries therefore makes the
+/// dispatch multi-workgroup while the state still fits one group, and routing on
+/// the state width leaves such a launch on the racing single-word flag. Passing
+/// the span separately is what keeps the two numbers from being confused.
+#[must_use]
+pub fn fixpoint_route(dispatch_span: u32, max_iterations: u32) -> FixpointRoute {
+    let needs_grid_sync = dispatch_span > PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];
+    FixpointRoute {
+        needs_grid_sync,
+        changed_words: if needs_grid_sync {
+            max_iterations.max(1)
+        } else {
+            1
+        },
+    }
+}
+
+/// Build the convergence harness a launch of `dispatch_span` lanes requires,
+/// with the route it selected.
+///
+/// The only correct way to choose between the two harnesses. A caller that
+/// re-derives the comparison, or the flag width that goes with it, owns a second
+/// copy of a decision whose two halves must agree; see [`FixpointRoute`].
+#[must_use]
+pub fn routed_persistent_fixpoint(
+    transfer_body: Vec<Node>,
+    state: FixpointState<'_>,
+    dispatch_span: u32,
+) -> (Program, FixpointRoute) {
+    let route = fixpoint_route(dispatch_span, state.max_iterations);
+    let build = if route.needs_grid_sync {
+        persistent_fixpoint_grid
+    } else {
+        persistent_fixpoint
+    };
+    let program = build(
+        transfer_body,
+        state.current,
+        state.next,
+        state.changed,
+        state.words,
+        state.max_iterations,
+    );
+    (program, route)
+}
+
 /// The grid-wide fence separating two waves.
 ///
 /// `MemoryOrdering::GridSync` is the ordering the driver lowers either
@@ -560,8 +650,93 @@ pub fn persistent_fixpoint_grid(
 /// `MemoryOrdering::SeqCst` is workgroup scope and would order nothing
 /// between groups, which is the whole defect this builder exists to
 /// avoid.
-fn grid_sync_barrier() -> Node {
+///
+/// Public because [`count_grid_sync`] is the matching reader and every op that
+/// emits one of these fences pins its wave structure by counting them. An op
+/// that builds the barrier itself and an assertion that recognises a different
+/// ordering are the same drift in two places.
+#[must_use]
+pub fn grid_sync_barrier() -> Node {
     Node::barrier_with_ordering(vyre_foundation::MemoryOrdering::GridSync)
+}
+
+/// Grid-wide fences in `nodes`, counted through every nesting construct.
+///
+/// This is the ONE reader of [`grid_sync_barrier`]. Nesting comes from
+/// `vyre_foundation::transform::visit::child_bodies`, the workspace's single
+/// exhaustive owner of "which node variants contain other nodes", so a new
+/// nesting variant fails to compile there rather than being counted as a leaf
+/// here.
+///
+/// Every wave-structure assertion in the workspace used to restate this walk
+/// with its own `match node` ending in `_ => 0`, which classifies an
+/// unrecognised nesting variant as containing no fences. A fence hidden inside
+/// such a variant makes an under-fenced program's structure test pass.
+#[must_use]
+pub fn count_grid_sync(nodes: &[Node]) -> usize {
+    let mut total = 0;
+    let mut stack: Vec<&Node> = nodes.iter().collect();
+    while let Some(node) = stack.pop() {
+        if matches!(
+            node,
+            Node::Barrier {
+                ordering: vyre_foundation::MemoryOrdering::GridSync
+            }
+        ) {
+            total += 1;
+        }
+        for body in vyre_foundation::transform::visit::child_bodies(node) {
+            stack.extend(body);
+        }
+    }
+    total
+}
+
+/// The dispatch span [`fixpoint_route`] keys on, read back from a built program.
+///
+/// Every harness this module emits carries an `atomic_or` on its convergence
+/// flag, and for an atomic-carrying program `vyre-driver`'s
+/// `dispatch_element_count_for_program` spans the LARGEST declared buffer rather
+/// than just the output. So the span a caller must pass to `fixpoint_route` is
+/// recoverable from the program's own declarations, which is what lets a test
+/// confirm the routing decision against the emission instead of against a
+/// restatement of the rule.
+#[must_use]
+pub fn declared_dispatch_span(program: &Program) -> u32 {
+    program
+        .buffers()
+        .iter()
+        .map(BufferDecl::count)
+        .max()
+        .unwrap_or(1)
+}
+
+/// Workgroups a host must launch to cover `program`.
+///
+/// [`declared_dispatch_span`] over the program's own declared workgroup width, so
+/// neither half can be pinned to a stale constant.
+#[must_use]
+pub fn required_workgroups(program: &Program) -> u32 {
+    declared_dispatch_span(program).div_ceil(program.workgroup_size()[0])
+}
+
+/// Declared word count of the buffer named `buffer`.
+///
+/// The convergence-flag width is the contract a caller has to satisfy when it
+/// uploads that buffer, and it differs by route: one shared word below the
+/// routing threshold, one word per iteration above it. Panics when the name is
+/// absent, because a program that does not declare the buffer a test is asking
+/// about is a defect in the emission rather than a zero-width buffer.
+#[must_use]
+pub fn declared_words(program: &Program, buffer: &str) -> u32 {
+    program
+        .buffers()
+        .iter()
+        .find(|declared| declared.name() == buffer)
+        .unwrap_or_else(|| {
+            panic!("Fix: the program must declare a buffer named `{buffer}`.");
+        })
+        .count()
 }
 
 fn compare_and_copy_node(
