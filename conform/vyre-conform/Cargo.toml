@@ -52,7 +52,7 @@ vyre-driver = { workspace = true }
 vyre-driver-cuda = { workspace = true, optional = true }
 vyre-driver-wgpu = { workspace = true, optional = true }
 vyre-foundation = { workspace = true }
-vyre-libs = { workspace = true, features = ["full", "logical", "nn-moe", "security", "visual", "parsing", "math", "nn", "matching", "crypto"] }
+vyre-libs = { workspace = true, features = ["full"] }
 vyre-megakernel = { workspace = true }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }

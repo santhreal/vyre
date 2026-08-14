@@ -228,7 +228,7 @@ graph TD
 | `vyre-conform` | `vyre-driver-cuda` | native accelerator backend execution | None | `always` | `normal` | `true` | `true` | `private` | `cuda-driver` |
 | `vyre-conform` | `vyre-driver-wgpu` | portable backend execution | None | `always` | `normal` | `true` | `true` | `private` | `portable-driver` |
 | `vyre-conform` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `vyre-conform` | `vyre-libs` | product operation builders | `crypto`, `full`, `logical`, `matching`, `math`, `nn`, `nn-moe`, `parsing`, `security`, `visual` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
+| `vyre-conform` | `vyre-libs` | product operation builders | `full` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `vyre-conform` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
 | `vyre-conform` | `vyre-primitives` | reusable semantic Program builders | `hardware` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `vyre-conform` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
