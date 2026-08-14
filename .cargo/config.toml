@@ -3,23 +3,17 @@ jobs = 16
 
 [env]
 PROPTEST_DISABLE_FAILURE_PERSISTENCE = "1"
-# Absolute path of this checkout, and the one cache-key input that tells two
-# checkouts apart.
-#
-# Cargo hashes a workspace member by its path *relative* to the workspace root
-# and checks freshness by mtime, so two checkouts of this repository that share
-# one target directory compute the same unit hash, address the same artifacts,
-# and hand each other compiled logic whenever the reader's files are older than
-# the last build. A gate crate reads the working tree and reports a number, so
-# a reused gate binary reports another checkout's tree with no sign that it did.
-#
-# `relative = true` resolves the value against the directory holding this file,
-# giving a different absolute path per checkout. Every crate whose output
-# describes the tree reads it with `env!`, which records the value in that
-# crate's dep-info: cargo then rebuilds instead of reusing across checkouts.
-# `force = true` keeps a value inherited from a cargo running in a different
-# checkout from winning over this one.
-VYRE_CHECKOUT_ROOT = { value = "", relative = true, force = true }
+
+# No checkout-identifying variable is declared here on purpose. Cargo hashes a
+# workspace member by its path relative to the workspace root and checks
+# freshness by mtime, so two checkouts sharing one target directory compute the
+# same unit hash and hand each other compiled binaries. A `VYRE_CHECKOUT_ROOT`
+# with `relative = true` was supposed to break that tie through `env!` and each
+# crate's dep-info, and it did not: cargo does not export such a variable to the
+# process it runs, so every gate fell through to its compiled-in value and the
+# shared `xtask` binary reported a worktree's numbers as this tree's. The gates
+# resolve the root from the working directory at run time instead, which is
+# correct whichever binary cargo reuses.
 
 [alias]
 xtask = "run -p xtask --bin xtask --"

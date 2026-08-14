@@ -190,32 +190,43 @@ pub fn violations(root: &Path) -> Vec<String> {
     failures
 }
 
-/// Absolute root of the checkout that compiled this binary.
+/// Workspace root, resolved from the directory the gate was invoked in.
 ///
-/// `VYRE_CHECKOUT_ROOT` is declared in `.cargo/config.toml` as a checkout-
-/// relative path, so reading it with `env!` records this checkout's absolute
-/// location in the crate's dep-info. That recorded value is what keeps a target
-/// directory shared by several checkouts from handing this gate a binary
-/// compiled somewhere else: the value differs, so cargo rebuilds.
-#[must_use]
-pub fn compiled_checkout_root() -> PathBuf {
-    PathBuf::from(env!(
-        "VYRE_CHECKOUT_ROOT",
-        "Fix: run cargo from inside the vyre checkout so its .cargo/config.toml applies."
-    ))
-}
-
-/// Workspace root, resolved from the checkout the gate was invoked in.
+/// Never compiled in. A target directory shared by several checkouts computes the
+/// same unit hash for all of them, so cargo hands one checkout a binary another
+/// one built; a path baked into that binary then names the wrong tree, and
+/// `VYRE_CHECKOUT_ROOT` did not prevent it, because cargo does not export a
+/// `relative = true` config variable to the process it runs. The tree the
+/// operator invoked cargo in is the tree the gate must answer for.
 ///
-/// Read from the environment at run time, with the compiled-in value as the
-/// fallback for a binary invoked outside cargo. Both name the same checkout now
-/// that the compiled-in value is a fingerprint input; before it was, a worktree
-/// run reported the main checkout's tree and hid the worktree's own findings.
+/// # Panics
+///
+/// Panics when no ancestor of the working directory declares a `[workspace]`.
 #[must_use]
 pub fn workspace_root() -> PathBuf {
-    std::env::var_os("VYRE_CHECKOUT_ROOT")
-        .map(PathBuf::from)
-        .unwrap_or_else(compiled_checkout_root)
+    let start = std::env::current_dir()
+        .expect("Fix: the working directory must be readable to locate the vyre checkout");
+    workspace_root_from(&start).unwrap_or_else(|| {
+        panic!(
+            "Fix: run this from inside the vyre checkout; no ancestor of `{}` has a Cargo.toml \
+             declaring [workspace].",
+            start.display()
+        )
+    })
+}
+
+/// The nearest ancestor of `start`, inclusive, whose manifest declares a workspace.
+#[must_use]
+pub fn workspace_root_from(start: &Path) -> Option<PathBuf> {
+    start
+        .ancestors()
+        .find(|directory| {
+            std::fs::read_to_string(directory.join("Cargo.toml")).is_ok_and(|text| {
+                text.lines()
+                    .any(|line| line.trim_start().starts_with("[workspace]"))
+            })
+        })
+        .map(Path::to_path_buf)
 }
 
 /// Run the crate-structure gate.
@@ -533,7 +544,7 @@ const CONSTRUCTOR_TIERS: &[(&str, Option<&str>)] = &[
     ("::new(", None),
 ];
 
-/// Remove every `#[cfg(test)]`-gated item before the registration scan.
+/// Remove every `#[cfg(test)]`-gated item before a production-code scan.
 ///
 /// A test module registers fixture operations - `test::reference_echo`,
 /// `test::call_u32` and friends - that exist in no production build. Counting
@@ -542,7 +553,7 @@ const CONSTRUCTOR_TIERS: &[(&str, Option<&str>)] = &[
 ///
 /// The predicate is tokenized with string literals removed first, so
 /// `#[cfg(feature = "test-utils")]` is not mistaken for a test gate.
-fn strip_cfg_test_items(text: &str) -> Cow<'_, str> {
+pub fn strip_cfg_test_items(text: &str) -> Cow<'_, str> {
     const ATTR: &str = "#[cfg(";
     let mut out: Option<String> = None;
     // Text not yet copied into `out`, and where the next attribute is looked

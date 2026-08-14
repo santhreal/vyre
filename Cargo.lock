@@ -4665,6 +4665,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.11.0",
+ "structure-gate",
  "syn 2.0.117",
  "tempfile",
  "toml",

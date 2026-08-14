@@ -1,18 +1,30 @@
-//! The gate must report the checkout it was invoked in.
+//! A gate must report the checkout it was invoked in.
 //!
-//! WHY: every checkout of this repository shares one cargo target directory,
-//! and cargo hashes a workspace member by its path *relative* to the workspace
-//! root, then checks freshness by mtime. Two checkouts therefore compute the
-//! same unit hash, address the same artifacts, and hand each other compiled
-//! logic whenever the reader's files are older than the last build. The gate
-//! read the live tree with another checkout's rules and reported that tree as
-//! judged: 208 violations from one worktree while its own source said 209, and
-//! `dup-scan` read 11811 duplicate lines for `vyre-libs` against a true 13406.
-//! Nothing failed, which is why it survived.
+//! WHY: every checkout of this repository shares one cargo target directory, and
+//! cargo hashes a workspace member by its path *relative* to the workspace root,
+//! then checks freshness by mtime. Two checkouts therefore compute the same unit
+//! hash, address the same artifacts, and hand each other compiled binaries. A
+//! gate that resolves the tree from anything fixed at compile time then answers
+//! for whichever tree built last: measured twice, once as 208 violations from a
+//! worktree whose own source said 209, and once as `dup-scan` reporting this
+//! tree's `xtask` at 473 duplicated lines against a pin of 465 while this tree's
+//! `xtask/dup-baseline.toml` said 411, because the shared binary carried a
+//! worktree's path and read that worktree's baseline file.
 //!
-//! What these do NOT catch: a stale binary for a crate outside the gate set.
-//! Cross-checkout reuse is still how a library crate builds in one second, and
-//! only the crates whose output describes the tree opt out of it.
+//! The first attempt at closing this was a `VYRE_CHECKOUT_ROOT` in
+//! `.cargo/config.toml` read with `env!`, on the theory that recording the value
+//! in each crate's dep-info would force a per-checkout rebuild. It did not hold,
+//! and it failed silently, which is worse than the bug: cargo does not export a
+//! `relative = true` config variable to the process it runs, so the run-time
+//! lookup always fell through to the compiled-in value. These tests assert the
+//! property instead of that mechanism.
+//!
+//! What these do NOT catch: a stale *test* binary for a crate outside the gate
+//! set, or a test fixture resolved from `CARGO_MANIFEST_DIR`. Cross-checkout
+//! reuse is what makes a shared target directory worth having, and only code
+//! whose output describes the tree opts out of it. For those, the exposure is a
+//! stale assertion rather than a published number, and `cargo clean -p <crate>`
+//! is the cure.
 
 #![forbid(unsafe_code)]
 
@@ -20,111 +32,124 @@ use std::path::{Path, PathBuf};
 
 /// Canonical form, so a symlinked or trailing-slash path compares by identity.
 fn canonical(path: &Path) -> PathBuf {
-    path.canonicalize()
-        .unwrap_or_else(|error| panic!("Fix: {} must exist: {error}", path.display()))
+    path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
 }
 
-/// The compiled gate belongs to the checkout it is judging.
+/// The root the gate resolves contains the directory the gate was invoked in.
 ///
-/// `CARGO_MANIFEST_DIR` is set by cargo for this run and names the checkout the
-/// gate was invoked in. `compiled_checkout_root` is baked in by whichever
-/// checkout compiled the crate. They disagree exactly when the shared target
-/// directory has handed this run a foreign binary.
+/// This is the property the mechanism was supposed to deliver, stated without
+/// reference to the mechanism. A binary compiled by another checkout returns
+/// that checkout's root, which cannot be an ancestor of this run's working
+/// directory, so the reuse this file exists for turns it red.
 #[test]
-fn the_gate_binary_was_compiled_by_the_checkout_it_runs_in() {
-    let invoked_crate = PathBuf::from(
-        std::env::var_os("CARGO_MANIFEST_DIR")
-            .expect("Fix: cargo sets CARGO_MANIFEST_DIR for every test run."),
+fn the_resolved_root_is_the_tree_this_run_is_inside() {
+    let resolved = canonical(&structure_gate::workspace_root());
+    let invoked_in = canonical(
+        &std::env::current_dir().expect("Fix: the working directory must be readable"),
     );
-    let invoked = invoked_crate
-        .parent()
-        .expect("Fix: structure-gate must live under the vyre workspace root.");
-    let compiled = structure_gate::compiled_checkout_root();
+
+    assert!(
+        invoked_in.starts_with(&resolved),
+        "the gate resolved `{}` as the checkout root, which does not contain `{}`, the directory \
+         this run was invoked in. A target directory shared by several checkouts handed this run \
+         a binary built from another tree, so every number it reports describes that tree.",
+        resolved.display(),
+        invoked_in.display()
+    );
+    assert!(
+        declares_workspace(&resolved.join("Cargo.toml")),
+        "the gate resolved `{}`, whose Cargo.toml does not declare a [workspace]",
+        resolved.display()
+    );
+}
+
+/// The root is resolved by walking, so a member directory yields the workspace.
+///
+/// Cargo sets the working directory to a member crate for `cargo test`, so the
+/// walk is what makes the property above hold in the common case.
+#[test]
+fn a_member_directory_resolves_to_the_workspace_above_it() {
+    let root = canonical(&structure_gate::workspace_root());
+    let member = root.join("structure-gate");
+    assert!(
+        member.join("Cargo.toml").is_file(),
+        "fixture manifest moved: {}",
+        member.display()
+    );
+
+    let resolved = structure_gate::workspace_root_from(&member).map(|path| canonical(&path));
 
     assert_eq!(
-        canonical(&compiled),
-        canonical(invoked),
-        "this gate was compiled by {} and run in {}. A target directory shared by \
-         several checkouts handed this run a binary built from another tree, so every \
-         number it reports describes that tree. Fix: keep VYRE_CHECKOUT_ROOT in \
-         .cargo/config.toml and keep this crate reading it, or run \
-         `cargo clean -p structure-gate` before trusting the run.",
-        compiled.display(),
-        invoked.display()
+        resolved.as_deref(),
+        Some(root.as_path()),
+        "a member directory must resolve to the workspace root above it"
     );
 }
 
-/// Every gate binary that resolves a path inside the checkout declares the
-/// input that tells two checkouts apart, and no published binary bakes it.
+/// No shipped gate resolves the checkout from a value fixed at compile time.
 ///
-/// A gate binary is a member that ships an executable, locates files in the
-/// tree, and is not published: its whole output is a claim about that tree, so
-/// being handed another checkout's binary makes the claim describe the wrong
-/// tree. The set is derived from the member list at run time, so a new gate
-/// turns this red instead of silently inheriting a binary from whichever tree
-/// compiled last.
-///
-/// A published binary is held to the opposite rule. A checkout path recorded
-/// when the crate was built means nothing on the machine that runs it, and
-/// reading one with `env!` makes the crate uncompilable anywhere that does not
-/// carry this repository's cargo config, which would break the crate for every
-/// consumer. Such a binary takes its root as an argument instead.
-///
-/// Library members are deliberately out of scope. Cross-checkout reuse is what
-/// makes a shared target directory worth having, and opting `vyre-libs` or
-/// `vyre-driver` out of it would rebuild most of the workspace every time work
-/// moved between two checkouts. Their exposure is a stale test binary, not a
-/// wrong published number, and `cargo clean -p <crate>` is the cure.
+/// The member list is read at run time, so a new gate binary that bakes a path
+/// in turns this red instead of inheriting the defect in silence. Both spellings
+/// are named: `CARGO_MANIFEST_DIR` is the one that caused this, and
+/// `VYRE_CHECKOUT_ROOT` is the fix that did not work and must not come back.
 #[test]
-fn every_gate_binary_that_resolves_checkout_paths_declares_the_fingerprint_input() {
+fn no_shipped_gate_resolves_the_checkout_from_a_compiled_in_path() {
     let root = structure_gate::workspace_root();
-    let members = structure_gate::scan(&root).members;
+    let mut offenders = Vec::new();
 
-    let mut missing = Vec::new();
-    let mut baked_into_published = Vec::new();
-    for member in &members {
-        let crate_dir = root.join(member);
+    for member in members(&root) {
+        let crate_dir = root.join(&member);
         if !ships_a_binary(&crate_dir) {
             continue;
         }
-        let source = member_sources(&crate_dir.join("src"));
-        let resolves_paths = source.iter().any(|text| text.contains("CARGO_MANIFEST_DIR"));
-        let bakes_input = source
-            .iter()
-            .any(|text| text.contains("env!(\"VYRE_CHECKOUT_ROOT\""));
-        let declares_input =
-            bakes_input || source.iter().any(|text| text.contains("checkout_root()"));
-        if is_published(&crate_dir) {
-            if bakes_input {
-                baked_into_published.push(member.clone());
+        for source in member_sources(&crate_dir.join("src")) {
+            // Production code only: a fixture path in a `#[cfg(test)]` module is
+            // a stale assertion at worst, which this file's header puts out of
+            // scope, and the stripper has one owner in the gate itself.
+            let production = structure_gate::strip_cfg_test_items(&source);
+            if production.contains("env!(\"CARGO_MANIFEST_DIR\")")
+                || production.contains("env!(\"VYRE_CHECKOUT_ROOT\"")
+            {
+                offenders.push(member.clone());
+                break;
             }
-        } else if resolves_paths && !declares_input {
-            missing.push(member.clone());
         }
     }
 
     assert!(
-        missing.is_empty(),
-        "{missing:?} ship a binary that resolves paths inside the checkout from a \
-         compiled-in manifest directory but read no VYRE_CHECKOUT_ROOT, so cargo may \
-         hand them a binary compiled by another checkout that shares the target \
-         directory. Fix: resolve the root through a `checkout_root()` that reads \
-         `env!(\"VYRE_CHECKOUT_ROOT\")`."
-    );
-    assert!(
-        baked_into_published.is_empty(),
-        "{baked_into_published:?} are published and bake a checkout path in with \
-         `env!(\"VYRE_CHECKOUT_ROOT\")`. The path names the machine that built the \
-         crate, and the crate cannot compile at all without this repository's cargo \
-         config, so every consumer's build breaks. Fix: take the root as an argument \
-         and read the variable at run time if it is set."
+        offenders.is_empty(),
+        "{offenders:?} ship a binary that resolves a repository path from a compiled-in value. \
+         Cargo reuses a binary across checkouts that share a target directory, so that value \
+         names whichever tree built last. Fix: resolve the root from the working directory at \
+         run time, as xtask::checkout and structure_gate::workspace_root do."
     );
 }
 
-/// Whether a member is published, so a compiled-in checkout path would ship.
-fn is_published(crate_dir: &Path) -> bool {
-    std::fs::read_to_string(crate_dir.join("Cargo.toml"))
-        .is_ok_and(|manifest| !manifest.contains("publish = false"))
+fn declares_workspace(manifest: &Path) -> bool {
+    std::fs::read_to_string(manifest).is_ok_and(|text| {
+        text.lines()
+            .any(|line| line.trim_start().starts_with("[workspace]"))
+    })
+}
+
+/// Workspace members, as declared by the root manifest.
+fn members(root: &Path) -> Vec<String> {
+    let text = std::fs::read_to_string(root.join("Cargo.toml"))
+        .expect("Fix: the workspace manifest must be readable");
+    let value = toml::from_str::<toml::Value>(&text)
+        .expect("Fix: the workspace manifest must parse as TOML");
+    value
+        .get("workspace")
+        .and_then(|workspace| workspace.get("members"))
+        .and_then(toml::Value::as_array)
+        .map(|members| {
+            members
+                .iter()
+                .filter_map(toml::Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// Whether a member produces an executable.
@@ -133,15 +158,27 @@ fn ships_a_binary(crate_dir: &Path) -> bool {
         return true;
     }
     std::fs::read_to_string(crate_dir.join("Cargo.toml"))
-        .is_ok_and(|manifest| manifest.contains("[[bin]]"))
+        .is_ok_and(|text| text.contains("[[bin]]"))
 }
 
 /// Every `.rs` file under a crate's `src`, as text.
 fn member_sources(src: &Path) -> Vec<String> {
-    walkdir::WalkDir::new(src)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "rs"))
-        .filter_map(|entry| std::fs::read_to_string(entry.path()).ok())
-        .collect()
+    let mut sources = Vec::new();
+    let mut pending = vec![src.to_path_buf()];
+    while let Some(directory) = pending.pop() {
+        let Ok(entries) = std::fs::read_dir(&directory) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                pending.push(path);
+            } else if path.extension().is_some_and(|extension| extension == "rs") {
+                if let Ok(text) = std::fs::read_to_string(&path) {
+                    sources.push(text);
+                }
+            }
+        }
+    }
+    sources
 }

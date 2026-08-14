@@ -141,7 +141,8 @@ CPU passes, never a second implementation of a pass: the pass semantics
 are foundation's, the pass engine replays them.
 
 `vyre-pass-engine` is narrowed to exactly that pass engine, landed
-2026-08-13. It holds `src/lib.rs` and `optimizer/`: the pass pipeline,
+2026-08-13. It holds `vyre-pass-engine/src/lib.rs` and
+`vyre-pass-engine/src/optimizer/`: the pass pipeline,
 the resident pipeline, and the `*_via_encoded` execution paths. Nine
 module trees moved out, all of them to `vyre-libs`:
 

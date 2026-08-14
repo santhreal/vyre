@@ -309,3 +309,8 @@ text = "The `check_warning_budget` gate script is gone: its baseline lived at a 
 id = "docs-reference-absolute-paths"
 category = "Fixed"
 text = "The documentation reference rule read an absolute path in a code span as workspace-relative, so a document mentioning `/dev/null` was reported as claiming a missing `dev/null` in this repository. An absolute path outside the checkout is no longer treated as a claim this repository can satisfy; one inside the checkout is still checked. The feature matrix for `vyre-libs` also named nine scan modules by a path that resolved nowhere, and one of them, the regex compiler, has been a directory rather than a file since it was split."
+
+[[fragments]]
+id = "gate-checkout-provenance-runtime"
+category = "Fixed"
+text = "Every gate now resolves the checkout it reports on from the working directory at run time. Two checkouts of this repository that share one cargo target directory compute the same unit hash for a member, so cargo hands one checkout a binary compiled by another; a `VYRE_CHECKOUT_ROOT` declared in `.cargo/config.toml` and read with `env!` was supposed to make the value a fingerprint input and did not, because cargo does not export a `relative = true` config variable to the process it runs. The shared `xtask` binary baked a worktree's path and `dup-scan` therefore read that worktree's pins, reporting this tree's `xtask` at 473 duplicated lines against a pin of 465 while this tree's own file said 411. The variable is gone, the walk has one owner in `structure-gate`, and the contract asserts the property rather than the mechanism: the resolved root must contain the directory the run was invoked in."

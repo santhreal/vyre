@@ -52,23 +52,24 @@ target directory address the same artifacts. The checkout whose files are older
 than the last build receives the other one's compiled binary, with no warning
 and no rebuild.
 
-`.cargo/config.toml` declares `VYRE_CHECKOUT_ROOT`, the absolute path of the
-checkout. `structure-gate`, `xtask`, `xtask-registry`, `xtask-evidence` and
-`vyre-lints` read it, cargo records the value in each crate's dep-info, and a
-gate therefore reports the tree it ran in.
-`structure-gate/tests/checkout_provenance.rs` fails when that stops holding.
+Every gate resolves the tree it reports on from the working directory at run
+time: the nearest ancestor whose `Cargo.toml` declares a `[workspace]`. That
+answer is correct whichever binary cargo reuses, so a shared artifact reports
+your tree's numbers. The walk has one owner, `structure_gate::workspace_root`,
+and `structure-gate/tests/checkout_provenance.rs` fails if a gate goes back to
+resolving a repository path from a compiled-in value.
 
-Two consequences. A checkout that predates that declaration overwrites the
-shared record with one that names no root, and a gate binary built there is then
-accepted as fresh; run `cargo clean -p <crate>` before trusting a number
-measured beside such a checkout. Crates outside that list still share artifacts
-across checkouts, which is what makes the shared directory worth having; the
-same `cargo clean -p <crate>` is the cure when a test result looks like another
-tree's.
+A `VYRE_CHECKOUT_ROOT` in `.cargo/config.toml` read with `env!` was tried first
+and did not work: cargo does not export a `relative = true` config variable to
+the process it runs, so every gate fell through to the compiled-in value and the
+shared `xtask` binary reported a worktree's pins as this tree's.
 
-Running cargo from outside the checkout root skips `.cargo/config.toml`, and the
-gate crates then fail to compile with a `Fix:` message instead of baking a
-foreign root.
+What remains is code staleness, not wrong data. A gate binary compiled from
+another checkout runs that checkout's logic against your tree, and a library or
+test artifact is shared the same way, which is what makes one target directory
+worth having. `cargo clean -p <crate>` is the cure when a result looks like
+another tree's, and note that cargo can consider a unit fresh against the other
+checkout's source paths, so an edit of your own may not rebuild until you do.
 
 ### SCCache Support
 

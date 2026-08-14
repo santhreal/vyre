@@ -37,12 +37,13 @@ pub(crate) const TRUTH_FILES: [&str; 4] = [
     "e2e_cli.toml",
 ];
 
-/// Repository root: the parent of the xtask manifest directory.
+/// Repository root, resolved from the directory this ran in.
+///
+/// Not from `CARGO_MANIFEST_DIR`: several checkouts share one target directory
+/// and cargo reuses a binary across them, so a compiled-in path names whichever
+/// tree built last. See `xtask::checkout`.
 pub(crate) fn repo_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: the xtask manifest directory always has a parent")
-        .to_path_buf()
+    xtask::checkout::checkout_root()
 }
 
 /// Directory holding every launch rule.

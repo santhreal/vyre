@@ -13,9 +13,16 @@
 #   tests            8      the C-frontend fixture streams under
 #                           tests/support/c_frontend/fixtures are still spelled
 #                           one FixtureToken per line.
-#   vyre-libs        11805  the migrated c_ast_sema_scope_* and
-#                           c_parser_hostile_* suites still repeat their row
-#                           assertions per case.
+#   vyre-libs        11805  measures 16069. Two causes. The migrated
+#                           c_ast_sema_scope_* and c_parser_hostile_* suites
+#                           still repeat their row assertions per case, and the
+#                           crate absorbed the six trees the pass engine gave up:
+#                           vyre-pass-engine fell 4711 to 834 in the same change.
+#                           Across the pair that is 16516 pinned against 16903
+#                           measured, so the move itself cost 387 lines by
+#                           placing those trees beside code they resemble. The
+#                           pin is not raised to meet it; the vyre-libs dedup
+#                           owes the difference.
 #   vyre-primitives  8454   the CRC and graph oracle matrices still restate
 #                           src/hash/crc32.rs and src/graph/motif.rs.
 #   vyre-driver-metal 282   ninety of metal's lines are duplicated only because
@@ -48,7 +55,7 @@ total_lines = 106
 
 [[crate]]
 name = "structure-gate"
-duplicate_lines = 8
+duplicate_lines = 0
 total_lines = 1631
 
 [[crate]]
@@ -183,7 +190,7 @@ total_lines = 29205
 
 [[crate]]
 name = "vyre-pass-engine"
-duplicate_lines = 4711
+duplicate_lines = 834
 total_lines = 58675
 
 [[crate]]
@@ -193,7 +200,7 @@ total_lines = 9439
 
 [[crate]]
 name = "xtask"
-duplicate_lines = 411
+duplicate_lines = 403
 total_lines = 15387
 
 [[crate]]
