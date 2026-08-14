@@ -13,7 +13,7 @@ mod manual_sequence_contracts;
 mod resident_graph_contracts;
 
 use common::{bytes_u32, live_backend, pack_nodes, u32_bytes};
-use vyre_driver_cuda::CudaOptimizerDispatcher;
+use vyre_driver_cuda::CudaProgramDispatcher;
 use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::csr_frontier_queue::{
     csr_queue_forward_traverse, csr_queue_forward_traverse_cpu, frontier_to_queue,
@@ -31,8 +31,8 @@ use vyre_self_substrate::csr_frontier_queue_batch_resident::{
 use vyre_self_substrate::csr_frontier_queue_resident::{
     run_resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
 };
-use vyre_self_substrate::optimizer::dispatcher::{
-    OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
+use vyre_foundation::program_dispatch::{
+    ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
 
 fn skewed_high_degree_graph(node_count: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>) {

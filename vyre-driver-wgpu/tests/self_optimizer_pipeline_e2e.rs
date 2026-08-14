@@ -16,13 +16,13 @@ use vyre_driver_wgpu::WgpuBackend;
 use vyre_self_substrate::optimizer::canonicalize_via_encoded::gpu_canonicalize;
 use vyre_self_substrate::optimizer::const_fold_via_encoded::gpu_const_fold;
 use vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce;
-use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
-struct WgpuOptimizerDispatcher<'a> {
+struct WgpuProgramDispatcher<'a> {
     backend: &'a WgpuBackend,
 }
 
-impl<'a> OptimizerDispatcher for WgpuOptimizerDispatcher<'a> {
+impl<'a> ProgramDispatcher for WgpuProgramDispatcher<'a> {
     fn dispatch(
         &self,
         program: &Program,
@@ -43,7 +43,7 @@ fn wrapped(entry: Vec<Node>) -> Program {
 #[test]
 fn full_pipeline_canonicalize_then_const_fold_then_dce_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher { backend: &backend };
+    let dispatcher = WgpuProgramDispatcher { backend: &backend };
 
     // Input program:
     //   let dead = 99;          (dead  -  no use)
@@ -113,7 +113,7 @@ fn full_pipeline_canonicalize_then_const_fold_then_dce_on_real_gpu() {
 #[test]
 fn pipeline_collapses_unused_compute_chain_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher { backend: &backend };
+    let dispatcher = WgpuProgramDispatcher { backend: &backend };
 
     // let a = 5 + 7;          (foldable to 12)
     // let b = a * 2;          (foldable to 24)

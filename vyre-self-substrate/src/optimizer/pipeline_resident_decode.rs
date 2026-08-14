@@ -137,15 +137,15 @@ impl SparseArenaDeltas {
         record_count: u32,
         record_words: &[u32],
         context: &str,
-    ) -> Result<Self, super::dispatcher::DispatchError> {
+    ) -> Result<Self, vyre_foundation::program_dispatch::DispatchError> {
         let count = record_count as usize;
         let expected_words = count.checked_mul(5).ok_or_else(|| {
-            super::dispatcher::DispatchError::BadInputs(format!(
+            vyre_foundation::program_dispatch::DispatchError::BadInputs(format!(
                 "Fix: {context} compact arena record count overflows usize: {record_count}."
             ))
         })?;
         if record_words.len() != expected_words {
-            return Err(super::dispatcher::DispatchError::BadInputs(format!(
+            return Err(vyre_foundation::program_dispatch::DispatchError::BadInputs(format!(
                 "Fix: {context} compact arena expected {expected_words} record word(s) for {record_count} record(s), got {}.",
                 record_words.len()
             )));
@@ -153,14 +153,14 @@ impl SparseArenaDeltas {
 
         let mut overrides = FxHashMap::default();
         overrides.try_reserve(count).map_err(|error| {
-            super::dispatcher::DispatchError::BackendError(format!(
+            vyre_foundation::program_dispatch::DispatchError::BackendError(format!(
                 "Fix: reserve {context} compact arena map for {count} record(s): {error}."
             ))
         })?;
         for record in record_words.chunks_exact(5) {
             let id = record[0];
             if id >= expr_count {
-                return Err(super::dispatcher::DispatchError::BadInputs(format!(
+                return Err(vyre_foundation::program_dispatch::DispatchError::BadInputs(format!(
                     "Fix: {context} compact arena record id {id} exceeds expr_count {expr_count}."
                 )));
             }
@@ -174,7 +174,7 @@ impl SparseArenaDeltas {
                 continue;
             }
             if overrides.insert(id, delta).is_some() {
-                return Err(super::dispatcher::DispatchError::BadInputs(format!(
+                return Err(vyre_foundation::program_dispatch::DispatchError::BadInputs(format!(
                     "Fix: {context} compact arena emitted duplicate expr id {id}."
                 )));
             }
@@ -765,7 +765,7 @@ mod tests {
         )
         .expect_err("compact arena record count must match record words exactly");
         assert!(
-            matches!(err, super::super::dispatcher::DispatchError::BadInputs(_)),
+            matches!(err, vyre_foundation::program_dispatch::DispatchError::BadInputs(_)),
             "unexpected error: {err:?}"
         );
     }

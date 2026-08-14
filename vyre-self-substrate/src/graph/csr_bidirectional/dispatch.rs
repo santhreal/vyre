@@ -9,7 +9,7 @@ use vyre_primitives::graph::csr_bidirectional::{
 use crate::graph::dispatch_bridge::{
     dispatch_single_u32_output_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Dispatcher-backed bidirectional CSR step.
 ///
@@ -18,7 +18,7 @@ use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 /// Propagates dispatch failures and rejects malformed CSR/frontier
 /// shapes or truncated readback.
 pub fn bidirectional_step_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -43,7 +43,7 @@ pub fn bidirectional_step_via(
 /// Dispatcher-backed bidirectional CSR step into caller-owned storage.
 #[allow(clippy::too_many_arguments)]
 pub fn bidirectional_step_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -69,7 +69,7 @@ pub fn bidirectional_step_via_into(
 /// Dispatcher-backed bidirectional CSR step with caller-owned scratch.
 #[allow(clippy::too_many_arguments)]
 pub fn bidirectional_step_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -124,7 +124,7 @@ pub fn bidirectional_step_via_with_scratch_into(
 }
 
 pub(super) fn bidirectional_step_dispatch_prepared_inputs_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     plan: &CsrBidirectionalDispatchPlan,
     program: &Program,
     inputs: &[Vec<u8>],

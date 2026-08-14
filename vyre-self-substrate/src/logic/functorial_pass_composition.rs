@@ -39,8 +39,8 @@
 //! Whole-pass migrations compose this primitive with the tree topology
 //! helpers instead of changing this row-level contract.
 
-use crate::dispatch_buffers::{ceil_div_u32, decode_u32_output_exact, u32_slice_to_le_bytes};
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_libs::dispatch_buffers::{ceil_div_u32, decode_u32_output_exact, u32_slice_to_le_bytes};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::functorial::functor_apply_sized;
 
 /// Apply a functor to a row of IR-view data. `view_in[i]` is the
@@ -88,7 +88,7 @@ pub fn apply_pass_functor_into(
 /// Returns [`DispatchError`] when shapes are invalid or backend output is
 /// malformed.
 pub fn apply_pass_functor_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     view_in: &[u32],
     column_mapping: &[u32],
     target_n_cols: u32,
@@ -104,7 +104,7 @@ pub fn apply_pass_functor_via(
 ///
 /// Returns [`DispatchError`] when validation or backend execution fails.
 pub fn apply_pass_functor_via_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     view_in: &[u32],
     column_mapping: &[u32],
     target_n_cols: u32,
@@ -260,7 +260,7 @@ mod tests {
 
     struct FunctorDispatcher;
 
-    impl OptimizerDispatcher for FunctorDispatcher {
+    impl ProgramDispatcher for FunctorDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -269,8 +269,8 @@ mod tests {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 3);
-            let source = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-            let mapping = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
+            let source = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let mapping = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
             let target_n_cols = inputs[2].len() / std::mem::size_of::<u32>();
             assert_eq!(source.len(), mapping.len());
             let out = apply_pass_functor(&source, &mapping, target_n_cols as u32);

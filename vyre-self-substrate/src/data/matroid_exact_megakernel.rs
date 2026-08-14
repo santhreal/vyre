@@ -29,13 +29,13 @@
 //! exists. Each augmentation strictly grows the independent set.
 
 #[cfg(test)]
-use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+use vyre_libs::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::hardware::scratch::{reserve_hash_set_capacity_or_panic, reserve_vec_capacity_or_panic};
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
 use rustc_hash::FxHashSet;
 #[cfg(any(test, feature = "cpu-parity"))]
@@ -245,7 +245,7 @@ fn validate_full_for_dispatch(
 /// malformed output.
 #[allow(clippy::too_many_arguments)]
 pub fn select_optimal_subset_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     exchange_adj: &[u32],
     sources: &[u32],
     sinks: &[u32],
@@ -275,7 +275,7 @@ pub fn select_optimal_subset_via(
 /// Returns [`DispatchError`] when validation or backend execution fails.
 #[allow(clippy::too_many_arguments)]
 pub fn select_optimal_subset_via_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     exchange_adj: &[u32],
     sources: &[u32],
     sinks: &[u32],
@@ -310,7 +310,7 @@ pub fn select_optimal_subset_via_into(
 /// Returns [`DispatchError`] when validation or backend execution fails.
 #[allow(clippy::too_many_arguments)]
 pub fn select_optimal_subset_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     exchange_adj: &[u32],
     sources: &[u32],
     sinks: &[u32],
@@ -684,7 +684,7 @@ mod tests {
 
     struct MatroidDispatcher;
 
-    impl OptimizerDispatcher for MatroidDispatcher {
+    impl ProgramDispatcher for MatroidDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -693,10 +693,10 @@ mod tests {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 12);
-            let exchange_adj = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-            let sources = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
-            let sinks = crate::hardware::dispatch_buffers::read_u32s(&inputs[2]);
-            let seed_x = crate::hardware::dispatch_buffers::read_u32s(&inputs[3]);
+            let exchange_adj = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let sources = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+            let sinks = vyre_libs::dispatch_buffers::read_u32s(&inputs[2]);
+            let seed_x = vyre_libs::dispatch_buffers::read_u32s(&inputs[3]);
             let n = seed_x.len();
             assert_eq!(exchange_adj.len(), n * n);
             assert_eq!(sources.len(), n);

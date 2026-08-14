@@ -1,7 +1,7 @@
 //! Dead-code elimination as a dispatched vyre Program.
 //!
 //! The encoder turns the user's `Program` into the canonical 5-buffer
-//! ProgramGraph CSR; we ask an `OptimizerDispatcher` to run the optimizer
+//! ProgramGraph CSR; we ask an `ProgramDispatcher` to run the optimizer
 //! DCE BFS program against those buffers; the
 //! returned live-frontier bitset drives a structural rewrite of the
 //! input Program. There is no host-reference escape in production. If the
@@ -18,12 +18,12 @@ use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::persistent_bfs::validate_persistent_bfs_converged_flag;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 
 use super::dce_program::build_dce_bfs_program;
-use super::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use super::encode::{apply_live_mask, encode_program, EncodeError, EncodedProgram, ROOT_GRAPH_ID};
 
 #[derive(Debug, Default)]
@@ -62,7 +62,7 @@ impl std::error::Error for DceError {}
 /// the live-mask the dispatcher returns.
 pub fn gpu_dce(
     program: Program,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
 ) -> Result<Program, DceError> {
     let encoded = encode_program(&program).map_err(DceError::Encode)?;
     let mut scratch = DceKernelScratch::default();
@@ -74,7 +74,7 @@ pub fn gpu_dce(
 
 fn compute_live_mask_with_scratch_into(
     encoded: &EncodedProgram,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scratch: &mut DceKernelScratch,
     live: &mut Vec<bool>,
 ) -> Result<(), DispatchError> {
@@ -201,9 +201,9 @@ fn write_padded_one_u32_bytes(out: &mut Vec<u8>, buf: &[u32]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use crate::optimizer::dispatcher::oracle::CpuOracleDispatcher;
-    use crate::optimizer::dispatcher::DispatchError;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::optimizer::cpu_oracle::CpuOracleDispatcher;
+    use vyre_foundation::program_dispatch::DispatchError;
     use vyre_foundation::ir::{Expr, Node, Program};
     use vyre_foundation::optimizer::fingerprint_program;
     use vyre_foundation::optimizer::passes::fusion_cse::dce::engine::dce as oracle_cpu_dce;
@@ -232,7 +232,7 @@ mod tests {
         outputs: Vec<Vec<u8>>,
     }
 
-    impl OptimizerDispatcher for MalformedDispatcher {
+    impl ProgramDispatcher for MalformedDispatcher {
         fn dispatch(
             &self,
             _program: &Program,

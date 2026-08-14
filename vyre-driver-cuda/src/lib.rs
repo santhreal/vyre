@@ -58,7 +58,7 @@ pub mod occupancy;
 /// Self-hosted optimizer GPU dispatcher  -  runs the
 /// `vyre-self-substrate::optimizer` passes (DCE, CSE, const-fold,
 /// validator) on CUDA. External parity tests reach in via the
-/// `CudaOptimizerDispatcher` re-export below.
+/// `CudaProgramDispatcher` re-export below.
 pub mod optimizer;
 mod pipeline;
 /// CUDA profiler range integration for Nsight/NVTX without mandatory NVTX linkage.
@@ -154,7 +154,7 @@ pub use megakernel_speedup_gate::{
     CudaMegakernelSpeedupGateError, CudaMegakernelSpeedupProof, CudaMegakernelSpeedupSample,
     MEGAKERNEL_SPEEDUP_EVIDENCE_CSV_HEADER,
 };
-pub use optimizer::CudaOptimizerDispatcher;
+pub use optimizer::CudaProgramDispatcher;
 pub use regex_hardware_comparison::{
     cuda_regex_hardware_comparison_evidence, cuda_regex_software_fallback_comparison_evidence,
     CudaRegexHardwareComparisonEvidence, CUDA_REGEX_HARDWARE_COMPARISON_SCHEMA_VERSION,

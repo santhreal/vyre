@@ -31,7 +31,7 @@ use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::persistent_bfs::validate_persistent_bfs_converged_flag;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
-use crate::dispatch_buffers::{decode_u32_output_exact, u32_slice_to_le_bytes};
+use vyre_libs::dispatch_buffers::{decode_u32_output_exact, u32_slice_to_le_bytes};
 
 use super::canonicalize_via_encoded::build_canonicalize_program;
 use super::const_fold_via_encoded::build_const_fold_program_fused;
@@ -40,8 +40,8 @@ use super::cse_via_encoded::{
     CANONICAL_TABLE_MULT,
 };
 use super::dce_program::build_dce_bfs_program;
-use super::dispatcher::{
-    DispatchError, OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
+use vyre_foundation::program_dispatch::{
+    DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
     ResidentStaticBufferSet,
 };
 use super::encode::{apply_live_bitset_mask, encode_program, ROOT_GRAPH_ID};
@@ -89,7 +89,7 @@ impl std::error::Error for PipelineError {}
 /// returns `DispatchError::Rejected` from the first persistent call.
 pub fn gpu_pipeline_resident(
     program: Program,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
 ) -> Result<Program, PipelineError> {
     let arena = encode_expr_arena(&program).map_err(PipelineError::Encode)?;
     let preflight_node_count = u32::try_from(arena.node_top_level_exprs.len()).map_err(|_| {
@@ -465,7 +465,7 @@ pub fn gpu_pipeline_resident(
 }
 
 fn alloc_many_lens(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     byte_lens: &[usize],
 ) -> Result<Vec<u64>, PipelineError> {
     dispatcher
@@ -475,7 +475,7 @@ fn alloc_many_lens(
 
 fn run_dce_resident(
     program: Program,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
 ) -> Result<Program, DispatchError> {
     let encoded = encode_program(&program).map_err(|err| {
         DispatchError::Rejected(format!(
@@ -634,7 +634,7 @@ fn run_dce_resident(
 }
 
 fn alloc_many_d(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     payloads: &[&[u8]],
 ) -> Result<Vec<u64>, DispatchError> {
     let mut byte_lens = Vec::new();
@@ -651,7 +651,7 @@ fn alloc_many_d(
 }
 
 fn acquire_static_uploads(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     cache_domain: u64,
     payloads: &[&[u8]],
     context: &str,
@@ -673,7 +673,7 @@ fn acquire_static_uploads(
 
 #[cfg(test)]
 fn read_resident_u32_exact(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     handle: u64,
     expected_words: usize,
     context: &str,
@@ -684,7 +684,7 @@ fn read_resident_u32_exact(
 }
 
 fn upload_resident_sequence_read_u32_many_exact(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     fills: &[(u64, usize, u8)],
     uploads: &[(u64, &[u8])],
     steps: &[ResidentDispatchStep<'_>],
@@ -728,7 +728,7 @@ fn upload_resident_sequence_read_u32_many_exact(
 }
 
 fn upload_resident_sequence_read_u32_ranges_exact(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     fills: &[(u64, usize, u8)],
     uploads: &[(u64, &[u8])],
     steps: &[ResidentDispatchStep<'_>],
@@ -796,7 +796,7 @@ mod tests {
         bytes: Vec<u8>,
     }
 
-    impl OptimizerDispatcher for ReadbackDispatcher {
+    impl ProgramDispatcher for ReadbackDispatcher {
         fn dispatch(
             &self,
             _program: &Program,

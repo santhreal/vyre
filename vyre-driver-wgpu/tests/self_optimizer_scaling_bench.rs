@@ -24,15 +24,15 @@ use vyre_driver_wgpu::WgpuBackend;
 use vyre_self_substrate::optimizer::canonicalize_via_encoded::gpu_canonicalize;
 use vyre_self_substrate::optimizer::const_fold_via_encoded::gpu_const_fold;
 use vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce;
-use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 const CPU_ORACLE_STACK_BYTES: usize = 64 * 1024 * 1024;
 
-struct WgpuOptimizerDispatcher<'a> {
+struct WgpuProgramDispatcher<'a> {
     backend: &'a WgpuBackend,
 }
 
-impl<'a> OptimizerDispatcher for WgpuOptimizerDispatcher<'a> {
+impl<'a> ProgramDispatcher for WgpuProgramDispatcher<'a> {
     fn dispatch(
         &self,
         program: &Program,
@@ -93,7 +93,7 @@ fn synthetic_wide_program(n: usize) -> Program {
     Program::wrapped(Vec::new(), [1, 1, 1], entry)
 }
 
-fn run_gpu_pipeline(p: Program, dispatcher: &dyn OptimizerDispatcher) -> Program {
+fn run_gpu_pipeline(p: Program, dispatcher: &dyn ProgramDispatcher) -> Program {
     let p = gpu_canonicalize(p, dispatcher).expect("canonicalize");
     let p = gpu_const_fold(p, dispatcher).expect("const-fold");
     gpu_dce(p, dispatcher).expect("dce")
@@ -138,7 +138,7 @@ fn bench_one(
     label: &str,
     fixtures: &[usize],
     build: impl Fn(usize) -> Program,
-    dispatcher: &WgpuOptimizerDispatcher<'_>,
+    dispatcher: &WgpuProgramDispatcher<'_>,
 ) {
     println!("\n=== {label} ===");
     println!(
@@ -173,7 +173,7 @@ fn bench_one(
 #[test]
 fn scaling_bench_gpu_vs_cpu_pipeline() {
     let backend = WgpuBackend::acquire().expect("WgpuBackend acquire");
-    let dispatcher = WgpuOptimizerDispatcher { backend: &backend };
+    let dispatcher = WgpuProgramDispatcher { backend: &backend };
 
     bench_one(
         "wgpu chain fixture (depth-bound, worst case for parallelism)",

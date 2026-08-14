@@ -2,7 +2,7 @@
 //! vyre Programs on real CUDA hardware via `CudaBackend::dispatch`.
 //!
 //! Mirrors the wgpu E2E suites (DCE, const-fold, canonicalize,
-//! pipeline). Confirms the OptimizerDispatcher abstraction is
+//! pipeline). Confirms the ProgramDispatcher abstraction is
 //! backend-agnostic  -  the same encoder + analysis Programs run
 //! unchanged on both CUDA and wgpu paths.
 
@@ -10,7 +10,7 @@
 
 mod common;
 
-use common::{live_backend, CudaOptimizerDispatcher};
+use common::{live_backend, CudaProgramDispatcher};
 use vyre::ir::{BinOp, Expr, Node, Program};
 use vyre_foundation::optimizer::fingerprint_program;
 use vyre_foundation::optimizer::passes::fusion_cse::dce::engine::dce as cpu_dce_oracle;
@@ -36,7 +36,7 @@ fn first_let_value(p: &Program) -> Expr {
 
 fn assert_dce_matches_cpu_oracle_cuda(entry: Vec<Node>) {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
 
     let oracle_in = wrapped(entry.clone());
     let test_in = wrapped(entry);
@@ -90,7 +90,7 @@ fn cuda_dce_loop_with_induction_var() {
 #[test]
 fn cuda_const_fold_two_plus_three_yields_lit_five() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
 
     let p = wrapped(vec![Node::let_bind(
         "x",
@@ -107,7 +107,7 @@ fn cuda_const_fold_two_plus_three_yields_lit_five() {
 #[test]
 fn cuda_const_fold_chained_arithmetic() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
 
     let p = wrapped(vec![Node::let_bind(
         "x",
@@ -121,7 +121,7 @@ fn cuda_const_fold_chained_arithmetic() {
 #[test]
 fn cuda_const_fold_bitwise_ops() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
 
     let p = wrapped(vec![Node::let_bind(
         "x",
@@ -138,7 +138,7 @@ fn cuda_const_fold_bitwise_ops() {
 #[test]
 fn cuda_const_fold_unfoldable_var_passes_through() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
 
     let p = wrapped(vec![Node::let_bind(
         "x",
@@ -157,7 +157,7 @@ fn cuda_const_fold_unfoldable_var_passes_through() {
 #[test]
 fn cuda_canonicalize_lit_plus_var_swaps_to_var_plus_lit() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
 
     let p = wrapped(vec![Node::let_bind(
         "x",
@@ -178,7 +178,7 @@ fn cuda_canonicalize_lit_plus_var_swaps_to_var_plus_lit() {
 #[test]
 fn cuda_canonicalize_var_plus_lit_unchanged() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
 
     let p = wrapped(vec![Node::let_bind(
         "x",
@@ -198,7 +198,7 @@ fn cuda_canonicalize_var_plus_lit_unchanged() {
 #[test]
 fn cuda_canonicalize_non_commutative_div_unchanged() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
 
     let p = wrapped(vec![Node::let_bind(
         "x",
@@ -221,7 +221,7 @@ fn cuda_canonicalize_non_commutative_div_unchanged() {
 #[test]
 fn cuda_full_pipeline_canonicalize_then_const_fold_then_dce() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
 
     let p = wrapped(vec![
         Node::let_bind("dead", Expr::u32(99)),
@@ -266,7 +266,7 @@ fn cuda_full_pipeline_canonicalize_then_const_fold_then_dce() {
 #[test]
 fn cuda_pipeline_collapses_unused_compute_chain() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
 
     let p = wrapped(vec![
         Node::let_bind("a", Expr::add(Expr::u32(5), Expr::u32(7))),

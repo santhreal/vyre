@@ -55,12 +55,12 @@
 //! substrate to model dispatch graphs as the heterophilic
 //! structures they actually are. Paradigm shift, not optimization.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, checked_product_count, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::hardware::scratch::reserve_vec_capacity_or_panic;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::sheaf::sheaf_diffusion_step;
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_primitives::graph::sheaf::{sheaf_diffusion_step_cpu, sheaf_diffusion_step_cpu_into};
@@ -116,7 +116,7 @@ pub fn reference_diffuse_dispatch_stalks_into(
 /// Returns [`DispatchError`] when shapes are invalid, the primitive lane
 /// space is exceeded, or the backend returns a malformed output buffer.
 pub fn diffuse_dispatch_stalks_fixed_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     stalks_fixed: &[u32],
     restriction_diag_fixed: &[u32],
     damping_fixed: u32,
@@ -142,7 +142,7 @@ pub fn diffuse_dispatch_stalks_fixed_via(
 ///
 /// Returns [`DispatchError`] when shape checks or backend execution fail.
 pub fn diffuse_dispatch_stalks_fixed_via_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     stalks_fixed: &[u32],
     restriction_diag_fixed: &[u32],
     damping_fixed: u32,
@@ -169,7 +169,7 @@ pub fn diffuse_dispatch_stalks_fixed_via_into(
 ///
 /// Returns [`DispatchError`] when shape checks or backend execution fail.
 pub fn diffuse_dispatch_stalks_fixed_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     stalks_fixed: &[u32],
     restriction_diag_fixed: &[u32],
     damping_fixed: u32,
@@ -341,7 +341,7 @@ pub fn flag_fusion_incompatible_into(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     fn approx_eq(a: f64, b: f64) -> bool {
@@ -407,7 +407,7 @@ mod tests {
 
     struct SheafDispatcher;
 
-    impl OptimizerDispatcher for SheafDispatcher {
+    impl ProgramDispatcher for SheafDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -416,9 +416,9 @@ mod tests {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 4);
-            let stalks = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-            let restrictions = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
-            let damping = crate::hardware::dispatch_buffers::read_u32s(&inputs[2])[0];
+            let stalks = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let restrictions = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+            let damping = vyre_libs::dispatch_buffers::read_u32s(&inputs[2])[0];
             assert_eq!(inputs[3].len(), stalks.len() * std::mem::size_of::<u32>());
             let out: Vec<u32> = stalks
                 .iter()

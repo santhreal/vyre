@@ -8,13 +8,13 @@
 use super::natural_gradient_autotuner::{
     precondition_autotune_gradient_fixed_via_with_scratch_into, NaturalGradientGpuScratch,
 };
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
 #[cfg(test)]
 use crate::hardware::scratch::reserve_vec_capacity_or_panic;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::math::differentiable::softmax_step;
 #[cfg(test)]
 use vyre_primitives::math::differentiable::{differentiable_argmax_cpu_into, softmax_cpu_into};
@@ -46,7 +46,7 @@ pub struct NaturalDifferentiableAutotuneGpuScratch {
 /// cannot be represented by the primitive, or the backend returns malformed
 /// output.
 pub fn pick_config_pre_exp_fixed_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     pre_exp_fixed: &[u32],
 ) -> Result<Vec<u32>, DispatchError> {
     let mut scratch = DifferentiableAutotuneGpuScratch::default();
@@ -68,7 +68,7 @@ pub fn pick_config_pre_exp_fixed_via(
 /// cannot be represented by the primitive, or the backend returns malformed
 /// output.
 pub fn pick_config_pre_exp_fixed_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     pre_exp_fixed: &[u32],
     scratch: &mut DifferentiableAutotuneGpuScratch,
     out: &mut Vec<u32>,
@@ -128,7 +128,7 @@ pub fn pick_config_pre_exp_fixed_via_with_scratch_into(
 /// Returns [`DispatchError`] under the same conditions as
 /// [`pick_config_pre_exp_fixed_via`].
 pub fn config_gradient_magnitude_pre_exp_fixed_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     pre_exp_fixed: &[u32],
 ) -> Result<Vec<u32>, DispatchError> {
     pick_config_pre_exp_fixed_via(dispatcher, pre_exp_fixed)
@@ -141,7 +141,7 @@ pub fn config_gradient_magnitude_pre_exp_fixed_via(
 /// Returns [`DispatchError`] under the same conditions as
 /// [`pick_config_pre_exp_fixed_via_with_scratch_into`].
 pub fn config_gradient_magnitude_pre_exp_fixed_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     pre_exp_fixed: &[u32],
     scratch: &mut DifferentiableAutotuneGpuScratch,
     out: &mut Vec<u32>,
@@ -164,7 +164,7 @@ pub fn config_gradient_magnitude_pre_exp_fixed_via_with_scratch_into(
 /// Returns [`DispatchError`] when candidate counts overflow, the Fisher block
 /// has the wrong shape, or backend execution/readback fails.
 pub fn natural_config_gradient_magnitude_pre_exp_fixed_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     pre_exp_fixed: &[u32],
     m_inv_sqrt_fixed: &[u32],
 ) -> Result<Vec<u32>, DispatchError> {
@@ -187,7 +187,7 @@ pub fn natural_config_gradient_magnitude_pre_exp_fixed_via(
 ///
 /// Returns [`DispatchError`] when validation or backend execution fails.
 pub fn natural_config_gradient_magnitude_pre_exp_fixed_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     pre_exp_fixed: &[u32],
     m_inv_sqrt_fixed: &[u32],
     scratch: &mut NaturalDifferentiableAutotuneGpuScratch,
@@ -316,7 +316,7 @@ mod tests {
 
     struct DifferentiableDispatcher;
 
-    impl OptimizerDispatcher for DifferentiableDispatcher {
+    impl ProgramDispatcher for DifferentiableDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -326,8 +326,8 @@ mod tests {
             assert_eq!(grid_override, Some([1, 1, 1]));
             match inputs.len() {
                 2 => {
-                    let pre_exp = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-                    let output_seed = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
+                    let pre_exp = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+                    let output_seed = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
                     assert_eq!(output_seed, vec![0; pre_exp.len()]);
                     let sum: u64 = pre_exp.iter().map(|&value| u64::from(value)).sum();
                     let sum = sum.max(1);
@@ -338,8 +338,8 @@ mod tests {
                     Ok(vec![u32_slice_to_le_bytes(&probabilities)])
                 }
                 3 => {
-                    let matrix = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-                    let grad = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
+                    let matrix = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+                    let grad = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
                     assert_eq!(inputs[2].len(), grad.len() * std::mem::size_of::<u32>());
                     let n = grad.len();
                     assert_eq!(matrix.len(), n * n);

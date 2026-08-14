@@ -7,10 +7,10 @@
 //! in each optimizer pass.
 
 use super::decode_first_output;
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::bitset::{
     and::bitset_and, clear_bit::bitset_clear_bit, contains::bitset_contains, equal::bitset_equal,
     not::bitset_not, or::bitset_or, set_bit::bitset_set_bit, subset_of::bitset_subset_of,
@@ -50,7 +50,7 @@ pub enum BitsetMaskBinaryOp {
 /// Returns [`DispatchError`] when input lengths differ, word count exceeds the
 /// primitive index space, dispatch fails, or readback is malformed.
 pub fn mask_binary_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     op: BitsetMaskBinaryOp,
     lhs: &[u32],
     rhs: &[u32],
@@ -66,7 +66,7 @@ pub fn mask_binary_via(
 ///
 /// Returns [`DispatchError`] when validation, dispatch, or readback fails.
 pub fn mask_binary_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     op: BitsetMaskBinaryOp,
     lhs: &[u32],
     rhs: &[u32],
@@ -82,7 +82,7 @@ pub fn mask_binary_via_into(
 ///
 /// Returns [`DispatchError`] when validation, dispatch, or readback fails.
 pub fn mask_binary_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     op: BitsetMaskBinaryOp,
     lhs: &[u32],
     rhs: &[u32],
@@ -130,7 +130,7 @@ pub fn mask_binary_via_with_scratch_into(
 ///
 /// Returns [`DispatchError`] when validation, dispatch, or readback fails.
 pub fn mask_and_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     lhs: &[u32],
     rhs: &[u32],
 ) -> Result<Vec<u32>, DispatchError> {
@@ -143,7 +143,7 @@ pub fn mask_and_via(
 ///
 /// Returns [`DispatchError`] when validation, dispatch, or readback fails.
 pub fn mask_or_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     lhs: &[u32],
     rhs: &[u32],
 ) -> Result<Vec<u32>, DispatchError> {
@@ -156,7 +156,7 @@ pub fn mask_or_via(
 ///
 /// Returns [`DispatchError`] when validation, dispatch, or readback fails.
 pub fn mask_xor_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     lhs: &[u32],
     rhs: &[u32],
 ) -> Result<Vec<u32>, DispatchError> {
@@ -170,7 +170,7 @@ pub fn mask_xor_via(
 /// Returns [`DispatchError`] when word count exceeds the primitive index space,
 /// dispatch fails, or readback is malformed.
 pub fn mask_not_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     input: &[u32],
 ) -> Result<Vec<u32>, DispatchError> {
     let mut scratch = BitsetMaskAlgebraGpuScratch::default();
@@ -185,7 +185,7 @@ pub fn mask_not_via(
 ///
 /// Returns [`DispatchError`] when validation, dispatch, or readback fails.
 pub fn mask_not_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     input: &[u32],
     scratch: &mut BitsetMaskAlgebraGpuScratch,
     out: &mut Vec<u32>,
@@ -219,7 +219,7 @@ pub fn mask_not_via_with_scratch_into(
 ///
 /// Returns [`DispatchError`] when validation, dispatch, or scalar readback fails.
 pub fn mask_equal_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     lhs: &[u32],
     rhs: &[u32],
 ) -> Result<bool, DispatchError> {
@@ -232,7 +232,7 @@ pub fn mask_equal_via(
 ///
 /// Returns [`DispatchError`] when validation, dispatch, or scalar readback fails.
 pub fn mask_subset_of_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     lhs: &[u32],
     rhs: &[u32],
 ) -> Result<bool, DispatchError> {
@@ -246,7 +246,7 @@ pub fn mask_subset_of_via(
 /// Returns [`DispatchError`] when word count exceeds primitive limits, dispatch
 /// fails, or scalar readback is malformed.
 pub fn mask_contains_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     input: &[u32],
     bit_idx: u32,
 ) -> Result<bool, DispatchError> {
@@ -270,7 +270,7 @@ pub fn mask_contains_via(
 ///
 /// Returns [`DispatchError`] when dispatch fails or scalar readback is malformed.
 pub fn mask_test_bit_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     input: &[u32],
     bit_idx: u32,
 ) -> Result<bool, DispatchError> {
@@ -296,7 +296,7 @@ pub fn mask_test_bit_via(
 /// Returns [`DispatchError`] when word count exceeds primitive limits, dispatch
 /// fails, or readback is malformed.
 pub fn mask_set_bit_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     target: &[u32],
     bit_idx: u32,
 ) -> Result<Vec<u32>, DispatchError> {
@@ -316,7 +316,7 @@ pub fn mask_set_bit_via(
 /// Returns [`DispatchError`] when word count exceeds primitive limits, dispatch
 /// fails, or readback is malformed.
 pub fn mask_clear_bit_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     target: &[u32],
     bit_idx: u32,
 ) -> Result<Vec<u32>, DispatchError> {
@@ -404,7 +404,7 @@ pub fn reference_mask_clear_bit(target: &[u32], bit_idx: u32) -> Vec<u32> {
 }
 
 fn scalar_binary_predicate_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     context: &'static str,
     lhs: &[u32],
     rhs: &[u32],
@@ -432,7 +432,7 @@ fn scalar_binary_predicate_via(
 }
 
 fn scalar_mutate_bit_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     context: &'static str,
     target: &[u32],
     bit_idx: u32,
@@ -472,12 +472,12 @@ fn decode_scalar_bool(outputs: &[Vec<u8>], context: &'static str) -> Result<bool
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     struct MaskDispatcher;
 
-    impl OptimizerDispatcher for MaskDispatcher {
+    impl ProgramDispatcher for MaskDispatcher {
         fn dispatch(
             &self,
             program: &Program,
@@ -507,28 +507,28 @@ mod tests {
                 }
                 vyre_primitives::bitset::not::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let input = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
+                    let input = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
                     Ok(vec![u32_slice_to_le_bytes(
                         &input.iter().map(|word| !word).collect::<Vec<_>>(),
                     )])
                 }
                 vyre_primitives::bitset::equal::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let lhs = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-                    let rhs = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
+                    let lhs = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+                    let rhs = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
                     Ok(vec![u32_slice_to_le_bytes(&[u32::from(lhs == rhs)])])
                 }
                 vyre_primitives::bitset::subset_of::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let lhs = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-                    let rhs = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
+                    let lhs = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+                    let rhs = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
                     let ok = lhs.iter().zip(rhs.iter()).all(|(a, b)| (a & !b) == 0);
                     Ok(vec![u32_slice_to_le_bytes(&[u32::from(ok)])])
                 }
                 vyre_primitives::bitset::contains::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let input = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-                    let index = crate::hardware::dispatch_buffers::read_u32s(&inputs[1])[0];
+                    let input = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+                    let index = vyre_libs::dispatch_buffers::read_u32s(&inputs[1])[0];
                     Ok(vec![u32_slice_to_le_bytes(&[primitive_contains(
                         &input, index,
                     )])])
@@ -539,13 +539,13 @@ mod tests {
                 }
                 vyre_primitives::bitset::set_bit::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let mut target = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
+                    let mut target = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
                     primitive_set_bit(&mut target, 1);
                     Ok(vec![u32_slice_to_le_bytes(&target)])
                 }
                 vyre_primitives::bitset::clear_bit::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let mut target = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
+                    let mut target = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
                     primitive_clear_bit(&mut target, 1);
                     Ok(vec![u32_slice_to_le_bytes(&target)])
                 }
@@ -558,8 +558,8 @@ mod tests {
         inputs: &[Vec<u8>],
         op: impl Fn(u32, u32) -> u32,
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        let lhs = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-        let rhs = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
+        let lhs = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+        let rhs = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
         let out = lhs
             .iter()
             .zip(rhs.iter())

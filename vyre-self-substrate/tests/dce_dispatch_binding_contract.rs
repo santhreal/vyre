@@ -22,7 +22,7 @@ use std::cell::RefCell;
 
 use vyre_foundation::ir::{BufferAccess, Expr, MemoryKind, Node, Program};
 use vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce;
-use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Number of dispatch input slots a program declares.
 ///
@@ -60,7 +60,7 @@ struct RecordingDispatcher {
     grids: RefCell<Vec<Option<[u32; 3]>>>,
 }
 
-impl OptimizerDispatcher for RecordingDispatcher {
+impl ProgramDispatcher for RecordingDispatcher {
     fn dispatch(
         &self,
         program: &Program,

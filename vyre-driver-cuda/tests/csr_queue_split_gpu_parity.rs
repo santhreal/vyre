@@ -5,7 +5,7 @@
 mod common;
 
 use common::{bytes_u32, live_backend, u32_bytes};
-use vyre_driver_cuda::CudaOptimizerDispatcher;
+use vyre_driver_cuda::CudaProgramDispatcher;
 use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::csr_queue_split::{
     csr_queue_split_low_dispatch_grid, csr_queue_split_low_forward_traverse,
@@ -14,14 +14,14 @@ use vyre_primitives::graph::csr_queue_split::{
 use vyre_primitives::graph::csr_queue_strided::{
     csr_queue_strided_forward_dispatch_grid, csr_queue_strided_forward_traverse,
 };
-use vyre_self_substrate::optimizer::dispatcher::{
-    OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
+use vyre_foundation::program_dispatch::{
+    ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
 
 #[test]
 fn cuda_resident_csr_queue_split_low_then_high_matches_scalar_on_overflowing_hubs() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 2048_u32;
     let queue_capacity = 10_u32;
     let high_queue_capacity = 2_u32;

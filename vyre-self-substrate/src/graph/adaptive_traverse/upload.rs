@@ -6,7 +6,7 @@ use super::{
 
 use crate::graph::csr_frontier_queue_scratch::resident_csr_queue_high_degree_source_count;
 use crate::graph::dispatch_bridge::{upload_resident_dispatch_inputs, DispatchInput};
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::adaptive_traverse::{
     adaptive_sparse_queue_graph_content_hash as adaptive_sparse_queue_layout_hash,
@@ -21,7 +21,7 @@ use vyre_primitives::graph::csr_frontier_queue::validate_csr_queue_graph;
 ///
 /// Rejects malformed graph layouts or dispatchers without resident support.
 pub fn upload_resident_adaptive_traversal_graph(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -80,7 +80,7 @@ pub fn upload_resident_adaptive_traversal_graph(
 ///
 /// Rejects malformed CSR graph layouts or dispatchers without resident support.
 pub fn upload_resident_adaptive_sparse_queue_graph(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -131,7 +131,7 @@ pub fn upload_resident_adaptive_sparse_queue_graph(
 /// Rejects malformed dense reverse-adjacency rows or dispatchers without
 /// resident support.
 pub fn upload_resident_adaptive_four_russians_dense_graph(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     adj_rows_dense: &[u32],
 ) -> Result<ResidentAdaptiveFourRussiansDenseGraph, DispatchError> {

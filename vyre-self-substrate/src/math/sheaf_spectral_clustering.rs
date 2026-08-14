@@ -20,12 +20,12 @@
 //! to spectral cluster suggestions for tie-breaking.
 
 #[cfg(test)]
-use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, checked_product_count, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_primitives::math::sheaf_laplacian_eigenvalue::cpu_ref_into;
 use vyre_primitives::math::sheaf_laplacian_eigenvalue::sheaf_laplacian_eigenvalue;
@@ -144,7 +144,7 @@ pub fn reference_dominant_spectrum_into(
 /// Returns [`DispatchError`] when shape checks fail, the primitive lane space
 /// is exceeded, or the backend returns malformed output buffers.
 pub fn dominant_spectrum_fixed_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     restriction_diag_fixed: &[u32],
     v_init_fixed: &[u32],
     n_nodes: u32,
@@ -176,7 +176,7 @@ pub fn dominant_spectrum_fixed_via(
 ///
 /// Returns [`DispatchError`] when shape checks or backend execution fail.
 pub fn dominant_spectrum_fixed_via_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     restriction_diag_fixed: &[u32],
     v_init_fixed: &[u32],
     n_nodes: u32,
@@ -203,7 +203,7 @@ pub fn dominant_spectrum_fixed_via_into(
 ///
 /// Returns [`DispatchError`] when shape checks or backend execution fail.
 pub fn dominant_spectrum_fixed_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     restriction_diag_fixed: &[u32],
     v_init_fixed: &[u32],
     n_nodes: u32,
@@ -425,7 +425,7 @@ mod tests {
 
     struct SpectrumDispatcher;
 
-    impl OptimizerDispatcher for SpectrumDispatcher {
+    impl ProgramDispatcher for SpectrumDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -438,8 +438,8 @@ mod tests {
             // e_argmax) (so this double stays truthful to the IR under test (Law 6)).
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 4);
-            let restriction = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-            let one_fp = crate::hardware::dispatch_buffers::read_u32s(&inputs[3])[0];
+            let restriction = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let one_fp = vyre_libs::dispatch_buffers::read_u32s(&inputs[3])[0];
             assert_eq!(one_fp, 1u32 << 16);
             let mut max_r = 0u32;
             let mut argmax = 0usize;
@@ -461,7 +461,7 @@ mod tests {
 
     struct ExtraSpectrumDispatcher;
 
-    impl OptimizerDispatcher for ExtraSpectrumDispatcher {
+    impl ProgramDispatcher for ExtraSpectrumDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -478,7 +478,7 @@ mod tests {
 
     struct TrailingLambdaDispatcher;
 
-    impl OptimizerDispatcher for TrailingLambdaDispatcher {
+    impl ProgramDispatcher for TrailingLambdaDispatcher {
         fn dispatch(
             &self,
             _program: &Program,

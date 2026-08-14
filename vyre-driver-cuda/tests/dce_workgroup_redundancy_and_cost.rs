@@ -28,13 +28,13 @@ mod common;
 
 use std::time::Instant;
 
-use common::{live_backend, CudaOptimizerDispatcher};
+use common::{live_backend, CudaProgramDispatcher};
 use vyre::ir::Program;
 use vyre_primitives::graph::program_graph::{
     ProgramGraphShape, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS, NAME_EDGE_TARGETS,
 };
 use vyre_self_substrate::optimizer::dce_program::build_dce_bfs_program;
-use vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher;
+use vyre_foundation::program_dispatch::ProgramDispatcher;
 
 const EDGE_KIND: u32 = 1;
 
@@ -119,7 +119,7 @@ fn star(node_count: u32) -> (Vec<u32>, Vec<u32>) {
 /// One dispatch, timed. Returns the live node count, the converged word, and the
 /// wall time of the dispatch alone.
 fn dispatch_timed(
-    dispatcher: &CudaOptimizerDispatcher<'_>,
+    dispatcher: &CudaProgramDispatcher<'_>,
     program: &Program,
     node_count: u32,
     inputs: &[Vec<u8>],
@@ -154,7 +154,7 @@ fn dispatch_timed(
 #[test]
 fn dce_single_dispatch_reaches_full_closure_on_live_cuda() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
     let node_count = 2000_u32;
     let program = build_dce_bfs_program(
         ProgramGraphShape::new(node_count, node_count - 1),
@@ -222,7 +222,7 @@ fn seed(node_count: u32) -> Vec<u32> {
 #[test]
 fn one_workgroup_computes_the_complete_closure_by_itself() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
     let node_count = 2000_u32;
     let (offsets, targets) = chain(node_count);
     let program = build_dce_bfs_program(
@@ -285,7 +285,7 @@ fn one_workgroup_computes_the_complete_closure_by_itself() {
 #[test]
 fn the_persistent_loop_exits_at_the_fixpoint_rather_than_burning_its_budget() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
     let node_count = 2000_u32;
     let (offsets, targets) = star(node_count);
     let shape = ProgramGraphShape::new(node_count, node_count - 1);

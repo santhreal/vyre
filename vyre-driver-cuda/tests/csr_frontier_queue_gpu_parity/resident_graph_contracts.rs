@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn cuda_resident_frontier_queue_reuses_static_graph_across_queries() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 8u32;
     let queue_capacity = 8u32;
     let edge_offsets = vec![0, 2, 2, 2, 5, 5, 5, 5, 5];
@@ -161,7 +161,7 @@ fn cuda_resident_frontier_queue_reuses_static_graph_across_queries() {
 #[test]
 fn cuda_resident_csr_queue_api_reuses_graph_and_scratch() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 8u32;
     let queue_capacity = 8u32;
     let edge_offsets = vec![0, 2, 2, 2, 5, 5, 5, 5, 5];
@@ -240,7 +240,7 @@ fn cuda_resident_csr_queue_api_reuses_graph_and_scratch() {
 #[test]
 fn cuda_resident_csr_queue_uses_atomic_word_scan_for_large_sparse_frontier() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 9_000u32;
     let queue_capacity = 16u32;
     let mut edge_offsets = Vec::with_capacity(node_count as usize + 1);
@@ -313,7 +313,7 @@ fn cuda_resident_csr_queue_uses_atomic_word_scan_for_large_sparse_frontier() {
 #[test]
 fn cuda_resident_csr_queue_api_splits_skewed_high_degree_rows() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 64u32;
     let queue_capacity = 1024u32;
     let (edge_offsets, edge_targets, edge_kind_mask) = skewed_high_degree_graph(node_count);

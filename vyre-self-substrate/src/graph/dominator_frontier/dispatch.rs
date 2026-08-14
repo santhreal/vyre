@@ -4,7 +4,7 @@ use super::{
 use crate::graph::dispatch_bridge::{
     dispatch_single_u32_output_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::dominator_frontier::{
     plan_dominator_frontier_launch, DominatorFrontierLaunchPlan,
 };
@@ -17,7 +17,7 @@ use vyre_primitives::graph::dominator_frontier::{
 /// predecessor CSR inputs.
 #[allow(clippy::too_many_arguments)]
 pub fn compute_dominance_frontier_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     dom_offsets: &[u32],
     dom_targets: &[u32],
@@ -42,7 +42,7 @@ pub fn compute_dominance_frontier_via(
 /// Dispatcher-backed dominance-frontier query into caller-owned storage.
 #[allow(clippy::too_many_arguments)]
 pub fn compute_dominance_frontier_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     dom_offsets: &[u32],
     dom_targets: &[u32],
@@ -68,7 +68,7 @@ pub fn compute_dominance_frontier_via_into(
 /// Dispatcher-backed dominance-frontier query with caller-owned scratch.
 #[allow(clippy::too_many_arguments)]
 pub fn compute_dominance_frontier_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     dom_offsets: &[u32],
     dom_targets: &[u32],

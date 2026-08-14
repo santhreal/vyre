@@ -4,7 +4,7 @@ use super::{
     ResidentAdaptiveSparseQueueGraph, ResidentAdaptiveTraversalGraph,
 };
 
-use crate::dispatch_buffers::{u32_word_bytes, write_u32_slice_le_bytes};
+use vyre_libs::dispatch_buffers::{u32_word_bytes, write_u32_slice_le_bytes};
 use crate::graph::csr_frontier_queue_programs::{
     resident_csr_queue_atomic_word_scan_program, resident_csr_queue_block_offsets_program,
     resident_csr_queue_clear_frontier_out_program, resident_csr_queue_len_init_program,
@@ -23,8 +23,8 @@ use crate::graph::dispatch_bridge::{
     alloc_resident_buffers, resident_sequence_single_u32_output_into,
 };
 use crate::graph::resident_handles::free_unique_resident_handles;
-use crate::optimizer::dispatcher::{
-    DispatchError, OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
+use vyre_foundation::program_dispatch::{
+    DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
 use vyre_primitives::bitset::zero::bitset_zero;
 use vyre_primitives::graph::adaptive_traverse::{
@@ -81,7 +81,7 @@ impl AdaptiveSparseQueueGraphView {
 /// Propagates resident dispatch failures and malformed frontier/readback shapes.
 #[allow(clippy::too_many_arguments)]
 pub fn adaptive_traverse_resident_graph_step_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     graph: &ResidentAdaptiveTraversalGraph,
     frontier_in: &[u32],
     allow_mask: u32,
@@ -198,7 +198,7 @@ pub fn adaptive_traverse_resident_graph_step_with_scratch_into(
 ///
 /// Propagates resident dispatch failures and malformed frontier/readback shapes.
 pub fn adaptive_traverse_resident_graph_four_russians_dense_step_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     graph: &ResidentAdaptiveFourRussiansDenseGraph,
     frontier_in: &[u32],
     scratch: &mut AdaptiveTraversalResidentScratch,
@@ -265,7 +265,7 @@ pub fn adaptive_traverse_resident_graph_four_russians_dense_step_with_scratch_in
 /// Propagates resident dispatch failures and malformed frontier/readback shapes.
 #[allow(clippy::too_many_arguments)]
 pub fn adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     graph: &ResidentAdaptiveTraversalGraph,
     frontier_in: &[u32],
     allow_mask: u32,
@@ -293,7 +293,7 @@ pub fn adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
 /// Propagates resident dispatch failures and malformed frontier/readback shapes.
 #[allow(clippy::too_many_arguments)]
 pub fn adaptive_traverse_resident_sparse_queue_step_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     graph: &ResidentAdaptiveSparseQueueGraph,
     frontier_in: &[u32],
     allow_mask: u32,
@@ -312,7 +312,7 @@ pub fn adaptive_traverse_resident_sparse_queue_step_with_scratch_into(
 
 #[allow(clippy::too_many_arguments)]
 fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     graph: AdaptiveSparseQueueGraphView,
     frontier_in: &[u32],
     allow_mask: u32,
@@ -747,7 +747,7 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
 /// Propagates resident dispatch failures and malformed frontier/readback shapes.
 #[allow(clippy::too_many_arguments)]
 pub fn adaptive_traverse_resident_graph_auto_step_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     graph: &ResidentAdaptiveTraversalGraph,
     frontier_in: &[u32],
     allow_mask: u32,
@@ -799,7 +799,7 @@ fn write_zero_frontier_result(words: usize, frontier_out: &mut Vec<u32>) {
 }
 
 fn ensure_frontier_handles(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scratch: &mut AdaptiveTraversalResidentScratch,
     plan: &AdaptiveResidentFrontierPlan,
 ) -> Result<[u64; 3], DispatchError> {
@@ -821,7 +821,7 @@ fn ensure_frontier_handles(
 }
 
 fn ensure_queue_handle(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scratch: &mut AdaptiveTraversalResidentScratch,
     queue_bytes: usize,
 ) -> Result<u64, DispatchError> {
@@ -844,7 +844,7 @@ fn ensure_queue_handle(
 }
 
 fn ensure_high_queue_handles(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scratch: &mut AdaptiveTraversalResidentScratch,
     high_queue_capacity: u32,
 ) -> Result<[u64; 2], DispatchError> {
@@ -870,7 +870,7 @@ fn ensure_high_queue_handles(
 }
 
 fn free_high_queue_handles(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scratch: &mut AdaptiveTraversalResidentScratch,
 ) -> Result<(), DispatchError> {
     let mut handles = [0_u64; 2];
@@ -895,7 +895,7 @@ fn free_high_queue_handles(
 }
 
 fn ensure_word_prefix_handles(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scratch: &mut AdaptiveTraversalResidentScratch,
     word_prefix: &FrontierWordPrefixScratch,
 ) -> Result<[u64; 2], DispatchError> {
@@ -926,7 +926,7 @@ fn ensure_word_prefix_handles(
 }
 
 fn free_word_prefix_handles(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scratch: &mut AdaptiveTraversalResidentScratch,
 ) -> Result<(), DispatchError> {
     let mut handles = [0_u64; 2];

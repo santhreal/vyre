@@ -9,7 +9,7 @@ use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::memory_model::MemoryOrdering;
 use vyre_reference::value::Value;
-use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Default generated-matrix lane count for live CUDA/reference differential tests.
 pub(crate) const GENERATED_LANE_COUNT: usize = 512;
@@ -27,12 +27,12 @@ pub(crate) fn pack_nodes(nodes: &[u32], node_count: u32) -> Vec<u32> {
 }
 
 /// CUDA-backed optimizer dispatcher used by parity and self-optimizer tests.
-pub(crate) struct CudaOptimizerDispatcher<'a> {
+pub(crate) struct CudaProgramDispatcher<'a> {
     /// Live CUDA backend borrowed for the duration of one test.
     pub(crate) backend: &'a CudaBackend,
 }
 
-impl<'a> OptimizerDispatcher for CudaOptimizerDispatcher<'a> {
+impl<'a> ProgramDispatcher for CudaProgramDispatcher<'a> {
     fn dispatch(
         &self,
         program: &Program,
@@ -72,10 +72,10 @@ pub(crate) fn with_live_backend<R>(_test_name: &str, run: impl FnOnce(&CudaBacke
 /// acquisition/lifetime pattern used by CUDA self-substrate parity tests.
 pub(crate) fn with_cuda_optimizer_dispatcher<R>(
     _test_name: &str,
-    run: impl FnOnce(&CudaOptimizerDispatcher<'_>) -> R,
+    run: impl FnOnce(&CudaProgramDispatcher<'_>) -> R,
 ) -> R {
     let backend = live_dispatcher();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
     run(&dispatcher)
 }
 

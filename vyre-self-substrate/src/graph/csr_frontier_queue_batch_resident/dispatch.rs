@@ -6,7 +6,7 @@ use vyre_primitives::graph::csr_frontier_queue::validate_frontier_queue_batch;
 
 use crate::csr_frontier_queue_batch_memory::ResidentCsrQueueBatchMemoryPlan;
 use crate::csr_frontier_queue_resident::ResidentCsrQueueGraph;
-use crate::dispatch_buffers::u32_word_bytes;
+use vyre_libs::dispatch_buffers::u32_word_bytes;
 use crate::graph::csr_frontier_queue_programs::{
     resident_csr_queue_len_init_program, resident_csr_queue_materializer_programs,
     resident_csr_queue_split_low_program, resident_csr_queue_traverse_program,
@@ -22,13 +22,13 @@ use crate::graph::csr_frontier_queue_scratch::{
 };
 use crate::graph::dispatch_bridge::alloc_resident_buffers;
 use crate::hardware::scratch::reserve_vec as reserve_graph_vec;
-use crate::optimizer::dispatcher::{
-    DispatchError, OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
+use vyre_foundation::program_dispatch::{
+    DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
 
 /// Run many sparse frontier queries over one resident CSR graph.
 pub fn run_resident_csr_queue_batch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     graph: &ResidentCsrQueueGraph,
     scratch: &mut ResidentCsrQueueBatchScratch,
     frontiers: &[&[u32]],
@@ -261,7 +261,7 @@ pub fn run_resident_csr_queue_batch_into(
 
 /// Run many sparse frontier queries, sharded by resident scratch budget.
 pub fn run_resident_csr_queue_batch_budgeted_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     graph: &ResidentCsrQueueGraph,
     scratch: &mut ResidentCsrQueueBatchScratch,
     frontiers: &[&[u32]],
@@ -663,7 +663,7 @@ fn prepare_batch_sequence_tables(
 }
 
 fn ensure_batch_scratch(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     graph: &ResidentCsrQueueGraph,
     scratch: &mut ResidentCsrQueueBatchScratch,
     batch_len: usize,

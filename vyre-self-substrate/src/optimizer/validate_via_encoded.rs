@@ -29,9 +29,9 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::dispatch_buffers::{decode_u32_output_exact, u32_slice_to_le_bytes};
+use vyre_libs::dispatch_buffers::{decode_u32_output_exact, u32_slice_to_le_bytes};
 
-use super::dispatcher::{DispatchError, OptimizerDispatcher, ResidentDispatchStep};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentDispatchStep};
 use super::encode::{encode_program, EncodeError};
 use super::expr_arena::{encode_expr_arena, ExprArenaEncoding};
 
@@ -88,7 +88,7 @@ impl std::error::Error for ValidateError {}
 /// means the program is within bounds for the migrated checks.
 pub fn gpu_validate_limits(
     program: &Program,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
 ) -> Result<[bool; 2], ValidateError> {
     let arena = encode_expr_arena(program).map_err(ValidateError::Encode)?;
     let encoded = encode_program(program).map_err(ValidateError::Encode)?;
@@ -103,7 +103,7 @@ pub fn gpu_validate_limits(
 pub fn gpu_validate_limits_from_encoding(
     arena: &ExprArenaEncoding,
     node_count: u32,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
 ) -> Result<[bool; 2], ValidateError> {
     // Empty programs trivially pass both checks.
     if arena.expr_count == 0 && node_count == 0 {
@@ -169,7 +169,7 @@ pub fn gpu_validate_limits_from_encoding(
 }
 
 fn dispatch_validate_limits_resident(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     program: &Program,
     static_payloads: &[&[u8]],
     violations_bytes: &[u8],
@@ -367,7 +367,7 @@ mod tests {
         outputs: Vec<Vec<u8>>,
     }
 
-    impl OptimizerDispatcher for ValidateDispatcher {
+    impl ProgramDispatcher for ValidateDispatcher {
         fn dispatch(
             &self,
             _program: &Program,

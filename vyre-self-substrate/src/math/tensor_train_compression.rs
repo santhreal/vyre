@@ -15,10 +15,10 @@
 //! - The cost-model self-consumer: TT-compressed cost lookup is O(1)
 //!   per query vs O(n) for raw tensor traversal.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::math::tensor_train_decompose::tensor_train_decompose_step;
 
 /// Compressed cost tensor in tensor-train form.
@@ -61,7 +61,7 @@ pub struct TensorTrainCompressionGpuScratch {
 /// non-final mode and stores the final remainder as the last core. It is the GPU-dispatchable
 /// production path; [`reference_compress_cost_tensor`] remains the f64 CPU reference TT-SVD.
 pub fn compress_cost_tensor_f32_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     tensor_f32: &[f32],
     dims: &[u32],
     target_ranks: &[u32],
@@ -77,7 +77,7 @@ pub fn compress_cost_tensor_f32_via(
 
 /// Compress an f32 cost tensor through dispatchable TT-SVD steps into caller-owned core storage.
 pub fn compress_cost_tensor_f32_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     tensor_f32: &[f32],
     dims: &[u32],
     target_ranks: &[u32],
@@ -97,7 +97,7 @@ pub fn compress_cost_tensor_f32_via_into(
 /// Compress an f32 cost tensor through dispatchable TT-SVD steps into
 /// caller-owned dispatch scratch and core storage.
 pub fn compress_cost_tensor_f32_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     tensor_f32: &[f32],
     dims: &[u32],
     target_ranks: &[u32],

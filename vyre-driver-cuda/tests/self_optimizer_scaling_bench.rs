@@ -6,7 +6,7 @@
 
 mod common;
 
-use common::CudaOptimizerDispatcher;
+use common::CudaProgramDispatcher;
 use std::{thread, time::Instant};
 
 use vyre::ir::{Expr, Node, Program};
@@ -14,7 +14,7 @@ use vyre_driver_cuda::CudaBackend;
 use vyre_self_substrate::optimizer::canonicalize_via_encoded::gpu_canonicalize;
 use vyre_self_substrate::optimizer::const_fold_via_encoded::gpu_const_fold;
 use vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce;
-use vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher;
+use vyre_foundation::program_dispatch::ProgramDispatcher;
 
 fn synthetic_program(n: usize) -> Program {
     let mut entry: Vec<Node> = Vec::with_capacity(n + 1);
@@ -32,7 +32,7 @@ fn synthetic_program(n: usize) -> Program {
     Program::wrapped(Vec::new(), [1, 1, 1], entry)
 }
 
-fn run_gpu_pipeline(p: Program, dispatcher: &dyn OptimizerDispatcher) -> Program {
+fn run_gpu_pipeline(p: Program, dispatcher: &dyn ProgramDispatcher) -> Program {
     let p = gpu_canonicalize(p, dispatcher).expect("canonicalize");
     let p = gpu_const_fold(p, dispatcher).expect("const-fold");
     gpu_dce(p, dispatcher).expect("dce")
@@ -59,7 +59,7 @@ fn cuda_scaling_bench_gpu_vs_cpu_pipeline() {
 
 fn cuda_scaling_bench_gpu_vs_cpu_pipeline_body() {
     let backend = CudaBackend::acquire().expect("CudaBackend acquire");
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
 
     println!("\n=== self-hosted CUDA optimizer scaling vs CPU pipeline ===");
     println!(

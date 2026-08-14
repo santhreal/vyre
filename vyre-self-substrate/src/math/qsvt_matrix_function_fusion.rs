@@ -48,12 +48,12 @@
 //! random  -  none capture this. QSVT-via-Chebyshev makes the
 //! Wasserstein-distance computation tractable at 1M+ Regions.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::hardware::scratch::reserve_vec_capacity_or_panic;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::chebyshev_filter::{chebyshev_filter, MAX_K as CHEBYSHEV_MAX_K};
 #[cfg(test)]
 use vyre_primitives::math::qsvt::{qsvt_apply_cpu_into, qsvt_block_encode_cpu_into};
@@ -193,7 +193,7 @@ pub fn reference_transport_residual_into(
 /// Returns [`DispatchError`] for invalid shapes, unsupported polynomial order,
 /// dispatch failure, or malformed backend output.
 pub fn transport_residual_fixed_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     dispatch_cost_scaled_fixed: &[u32],
     weights_fixed: &[u32],
     coeffs_fixed: &[u32],
@@ -222,7 +222,7 @@ pub fn transport_residual_fixed_via(
 /// Returns [`DispatchError`] for invalid shapes, unsupported polynomial order,
 /// dispatch failure, or malformed backend output.
 pub fn transport_residual_fixed_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     dispatch_cost_scaled_fixed: &[u32],
     weights_fixed: &[u32],
     coeffs_fixed: &[u32],
@@ -319,7 +319,7 @@ pub fn fusion_affinity_into(transport_residual: &[f64], out: &mut Vec<f64>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-3 * (1.0 + a.abs() + b.abs())
@@ -327,7 +327,7 @@ mod tests {
 
     struct QsvtDispatcher;
 
-    impl OptimizerDispatcher for QsvtDispatcher {
+    impl ProgramDispatcher for QsvtDispatcher {
         fn dispatch(
             &self,
             _program: &vyre_foundation::ir::Program,
@@ -337,9 +337,9 @@ mod tests {
             assert_eq!(grid_override, Some([1, 1, 1]));
             // chebyshev_filter: 3 RO (cost/weights/coeffs) + plain-RW output(3)+scratch(4) = 5.
             assert_eq!(inputs.len(), 5);
-            let matrix = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-            let weights = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
-            let coeffs = crate::hardware::dispatch_buffers::read_u32s(&inputs[2]);
+            let matrix = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let weights = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+            let coeffs = vyre_libs::dispatch_buffers::read_u32s(&inputs[2]);
             assert_eq!(matrix, vec![1, 0, 0, 1]);
             assert_eq!(coeffs, vec![1, 0]);
             Ok(vec![u32_slice_to_le_bytes(&weights)])

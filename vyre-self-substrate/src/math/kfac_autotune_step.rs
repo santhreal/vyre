@@ -11,11 +11,11 @@
 use vyre_foundation::ir::Program;
 use vyre_primitives::math::kfac_block_inverse::kfac_block_inverse;
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes,
     write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Canonical op ID for the autotune step.
 pub const OP_ID: &str = "vyre-libs::self_substrate::kfac_autotune_step";
@@ -51,7 +51,7 @@ pub fn kfac_autotune_step_program(
 ///
 /// Propagates dispatch failures and rejects malformed dimensions or readback.
 pub fn kfac_autotune_step_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     blocks_in: &[f32],
     num_blocks: u32,
     n: u32,
@@ -68,7 +68,7 @@ pub fn kfac_autotune_step_via(
 ///
 /// Propagates dispatch failures and rejects malformed dimensions or readback.
 pub fn kfac_autotune_step_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     blocks_in: &[f32],
     num_blocks: u32,
     n: u32,
@@ -92,7 +92,7 @@ pub fn kfac_autotune_step_via_into(
 ///
 /// Propagates dispatch failures and rejects malformed dimensions or readback.
 pub fn kfac_autotune_step_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     blocks_in: &[f32],
     num_blocks: u32,
     n: u32,
@@ -147,12 +147,12 @@ pub fn kfac_autotune_step_via_with_scratch_into(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::f32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::f32_slice_to_le_bytes;
     use vyre_primitives::math::kfac_block_inverse::cpu_ref;
 
     struct KfacDispatcher;
 
-    impl OptimizerDispatcher for KfacDispatcher {
+    impl ProgramDispatcher for KfacDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -163,7 +163,7 @@ mod tests {
             assert_eq!(inputs.len(), 3);
             assert_eq!(inputs[0].len(), inputs[1].len());
             assert_eq!(inputs[2].len(), inputs[1].len());
-            let blocks_in = crate::hardware::dispatch_buffers::read_f32s(&inputs[1]);
+            let blocks_in = vyre_libs::dispatch_buffers::read_f32s(&inputs[1]);
             let out = cpu_ref(&blocks_in, 1, 2);
             Ok(vec![f32_slice_to_le_bytes(&out)])
         }

@@ -11,14 +11,14 @@ use common::acquire_live_backend as live_backend;
 use vyre::ir::{BinOp, Expr, Node, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_self_substrate::optimizer::pattern_match_via_encoded::gpu_algebraic_identities;
 
-struct WgpuOptimizerDispatcher<'a> {
+struct WgpuProgramDispatcher<'a> {
     backend: &'a WgpuBackend,
 }
 
-impl<'a> OptimizerDispatcher for WgpuOptimizerDispatcher<'a> {
+impl<'a> ProgramDispatcher for WgpuProgramDispatcher<'a> {
     fn dispatch(
         &self,
         program: &Program,
@@ -49,7 +49,7 @@ fn first_let_value(p: &Program) -> Expr {
 #[test]
 fn add_zero_left_collapses_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher { backend: &backend };
+    let dispatcher = WgpuProgramDispatcher { backend: &backend };
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::add(Expr::u32(0), Expr::var("a")),
@@ -65,7 +65,7 @@ fn add_zero_left_collapses_on_real_gpu() {
 #[test]
 fn add_zero_right_collapses_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher { backend: &backend };
+    let dispatcher = WgpuProgramDispatcher { backend: &backend };
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::add(Expr::var("a"), Expr::u32(0)),
@@ -78,7 +78,7 @@ fn add_zero_right_collapses_on_real_gpu() {
 #[test]
 fn mul_one_collapses_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher { backend: &backend };
+    let dispatcher = WgpuProgramDispatcher { backend: &backend };
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::mul(Expr::u32(1), Expr::var("a")),
@@ -91,7 +91,7 @@ fn mul_one_collapses_on_real_gpu() {
 #[test]
 fn mul_zero_absorbs_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher { backend: &backend };
+    let dispatcher = WgpuProgramDispatcher { backend: &backend };
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::mul(Expr::u32(0), Expr::var("a")),
@@ -104,7 +104,7 @@ fn mul_zero_absorbs_on_real_gpu() {
 #[test]
 fn mul_zero_right_absorbs_on_real_gpu() {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher { backend: &backend };
+    let dispatcher = WgpuProgramDispatcher { backend: &backend };
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::mul(Expr::var("a"), Expr::u32(0)),
@@ -118,7 +118,7 @@ fn mul_zero_right_absorbs_on_real_gpu() {
 fn unrelated_binop_stays_on_real_gpu() {
     // a - 1 has no algebraic identity; must pass through unchanged.
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher { backend: &backend };
+    let dispatcher = WgpuProgramDispatcher { backend: &backend };
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::sub(Expr::var("a"), Expr::u32(1)),
@@ -141,7 +141,7 @@ fn add_two_lits_unchanged_on_real_gpu() {
     // matching-zero literal alongside a non-literal. (Actual folding
     // is the const-fold pass's job.)
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher { backend: &backend };
+    let dispatcher = WgpuProgramDispatcher { backend: &backend };
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::add(Expr::u32(2), Expr::u32(3)),

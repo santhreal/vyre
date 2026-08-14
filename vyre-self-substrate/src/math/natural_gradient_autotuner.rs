@@ -38,11 +38,11 @@
 //! the Fisher block they want to use, whether estimated on the host,
 //! read from telemetry, or produced by another registered primitive.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::math::natural_gradient::natural_gradient_block_apply;
 #[cfg(test)]
 use vyre_primitives::math::natural_gradient::{
@@ -102,7 +102,7 @@ pub fn reference_precondition_autotune_gradient_into(
 /// Returns [`DispatchError`] when shapes are invalid or backend readback is
 /// malformed.
 pub fn precondition_autotune_gradient_fixed_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     m_inv_sqrt_fixed: &[u32],
     grad_fixed: &[u32],
     n: u32,
@@ -125,7 +125,7 @@ pub fn precondition_autotune_gradient_fixed_via(
 ///
 /// Returns [`DispatchError`] when validation or backend execution fails.
 pub fn precondition_autotune_gradient_fixed_via_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     m_inv_sqrt_fixed: &[u32],
     grad_fixed: &[u32],
     n: u32,
@@ -149,7 +149,7 @@ pub fn precondition_autotune_gradient_fixed_via_into(
 ///
 /// Returns [`DispatchError`] when validation or backend execution fails.
 pub fn precondition_autotune_gradient_fixed_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     m_inv_sqrt_fixed: &[u32],
     grad_fixed: &[u32],
     n: u32,
@@ -261,7 +261,7 @@ pub fn identity_fisher_block_into(n: u32, out: &mut Vec<f64>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     fn approx_eq(a: f64, b: f64) -> bool {
@@ -270,7 +270,7 @@ mod tests {
 
     struct NaturalGradientDispatcher;
 
-    impl OptimizerDispatcher for NaturalGradientDispatcher {
+    impl ProgramDispatcher for NaturalGradientDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -279,8 +279,8 @@ mod tests {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 3);
-            let matrix = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-            let grad = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
+            let matrix = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let grad = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
             assert_eq!(inputs[2].len(), grad.len() * std::mem::size_of::<u32>());
             let n = grad.len();
             assert_eq!(matrix.len(), n * n);

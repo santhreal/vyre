@@ -1,34 +1,23 @@
-//! Dispatcher trait  -  the seam between the self-hosted optimizer and
-//! a backend that can actually run vyre Programs.
+//! Program dispatch seam - the boundary between code that builds a vyre
+//! `Program` and a backend that can run one.
 //!
-//! The optimizer encodes the user's Program into ProgramGraph buffers,
-//! builds a vyre Program that does the analysis (e.g. `persistent_bfs`),
-//! and asks an `OptimizerDispatcher` to run that analysis Program. The
-//! returned bytes drive the rewrite.
+//! A caller encodes its own data into buffers, builds a `Program` that computes
+//! the answer, and asks a [`ProgramDispatcher`] to run it. The returned bytes
+//! are the result. Foundation owns the seam because it is stated entirely in
+//! `Program` and buffer terms and because every layer above needs it: the GPU
+//! pass engine replays optimizer passes through it, the composition library
+//! runs its device-resident solvers through it, and each concrete backend
+//! implements it.
 //!
-//! `vyre-self-substrate` cannot depend on a concrete backend  -  it sits
-//! below the driver layer. The trait inverts that dependency: the
-//! orchestrator code stays in self-substrate, and a backend crate
-//! (e.g. `vyre-driver-wgpu` or a runtime wrapper) provides the impl.
-//!
-//! Test code in this crate uses `oracle::CpuOracleDispatcher` so the
-//! encoder can be proven sound against the existing primitive oracles
-//! before any GPU backend is wired. The CPU oracle is gated to tests
-//! only  -  it is never on a production code path.
+//! The seam lived in the pass engine, which put it above the composition
+//! library that also needed it. Nothing there was engine-specific, so the whole
+//! contract moves down rather than being spelled a second time. The host-side
+//! byte marshalling that goes with it is `vyre_libs::dispatch_buffers`, which
+//! cannot live here because it delegates to `vyre_primitives::wire`.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, Program};
+use crate::ir::{BufferAccess, BufferDecl, Program};
 
-type IfdsIntraRule = (u32, u32, u32);
-type IfdsInterRule = (u32, u32, u32, u32);
-type IfdsFactRule = (u32, u32, u32);
-type ParsedIfdsRules = (
-    Vec<IfdsIntraRule>,
-    Vec<IfdsInterRule>,
-    Vec<IfdsFactRule>,
-    Vec<IfdsFactRule>,
-);
-
-/// The buffers an [`OptimizerDispatcher`] returns, in declared order.
+/// The buffers an [`ProgramDispatcher`] returns, in declared order.
 ///
 /// The trait contract is "the declared outputs in the same canonical order", which
 /// means every writable storage buffer. Workgroup scratch is never a dispatch
@@ -79,7 +68,7 @@ pub struct ResidentReadRange {
 ///
 /// `retained_by_dispatcher` means the dispatcher owns the handles after the
 /// caller is done with the current launch sequence. Call
-/// [`OptimizerDispatcher::release_resident_static_uploads`] instead of
+/// [`ProgramDispatcher::release_resident_static_uploads`] instead of
 /// `free_resident` so CUDA can keep read-only graph/arena buffers hot while
 /// portable dispatchers free them immediately.
 #[derive(Debug)]
@@ -127,7 +116,7 @@ impl std::error::Error for DispatchError {}
 /// This is the canonical dispatch boundary. Production impls go
 /// through `vyre-driver-wgpu` or `vyre-driver-cuda`; test impls use
 /// CPU oracles (gated to test-only builds).
-pub trait OptimizerDispatcher {
+pub trait ProgramDispatcher {
     /// Dispatch `program` with the given byte inputs (one `Vec<u8>`
     /// per declared input buffer in canonical buffer order). Returns
     /// the declared outputs in the same canonical order.
@@ -651,7 +640,7 @@ pub trait OptimizerDispatcher {
     }
 }
 
-fn free_resident_handles<D: OptimizerDispatcher + ?Sized>(
+fn free_resident_handles<D: ProgramDispatcher + ?Sized>(
     dispatcher: &D,
     handles: &[u64],
     context: &str,
@@ -701,459 +690,6 @@ fn with_staged_fill_uploads<R>(
 
     run(&combined_uploads)
 }
-
-#[cfg(any(test, feature = "cpu-parity"))]
-pub mod oracle {
-    //! CPU oracle dispatcher for tests and explicit CPU-parity builds. Maps a small allowlist of
-    //! self-hosted-optimizer Programs onto their `vyre_primitives`
-    //! `cpu_ref` reference implementations and reproduces the
-    //! dispatch byte contract.
-    //!
-    //! This module exists to prove the encoder/decoder are sound
-    //! against the same numerical contract the production GPU path
-    //! must honor. It is not compiled unless tests or `cpu-parity` are enabled.
-    //!
-    //! Adding a Program here means the oracle hand-writes the byte
-    //! marshalling that the WgpuBackend dispatcher infers from
-    //! `BufferDecl`s. That duplication is acceptable for tests; a
-    //! production dispatcher reflectively reads BufferDecls.
-    //!
-    //! For now we cover the Programs the orchestrator currently
-    //! invokes (DCE → `persistent_bfs`). When CSE / const-fold land
-    //! they each add a small case here.
-
-    use super::{DispatchError, OptimizerDispatcher, ParsedIfdsRules};
-    use vyre_foundation::ir::Program;
-
-    /// CPU oracle dispatcher. Recognizes only the optimizer's own
-    /// canonical Programs by matching the wrapping Region's generator
-    /// op-id and the declared buffer set.
-    pub struct CpuOracleDispatcher;
-
-    impl CpuOracleDispatcher {
-        /// Construct the oracle dispatcher. Cheap; does no backend
-        /// probing.
-        #[must_use]
-        pub fn new() -> Self {
-            Self
-        }
-    }
-
-    impl Default for CpuOracleDispatcher {
-        fn default() -> Self {
-            Self::new()
-        }
-    }
-
-    impl OptimizerDispatcher for CpuOracleDispatcher {
-        fn dispatch(
-            &self,
-            program: &Program,
-            inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            // Identify the optimizer Program by its top-level Region
-            // generator. Self-hosted Programs all wrap their bodies
-            // in a Region with a known op-id.
-            let generator = top_level_region_generator(program).ok_or_else(|| {
-                DispatchError::Rejected(
-                    "Fix: oracle dispatcher only accepts canonical \
-                     graph-primitive Programs whose entry is a single \
-                     wrapping Region with a generator id."
-                        .to_string(),
-                )
-            })?;
-
-            match generator {
-                vyre_primitives::graph::persistent_bfs::OP_ID => {
-                    persistent_bfs_oracle(program, inputs)
-                }
-                crate::optimizer::dce_program::OP_ID => persistent_bfs_oracle(program, inputs),
-                vyre_primitives::graph::exploded::OP_ID => {
-                    exploded_ifds_csr_oracle(program, inputs)
-                }
-                other => Err(DispatchError::Rejected(format!(
-                    "Fix: oracle dispatcher does not recognize generator \
-                     `{other}`. Wire the oracle for this primitive or \
-                     dispatch through the production backend."
-                ))),
-            }
-        }
-    }
-
-    fn top_level_region_generator(program: &Program) -> Option<&str> {
-        match program.entry() {
-            [vyre_foundation::ir::Node::Region { generator, .. }] => Some(generator.as_str()),
-            _ => None,
-        }
-    }
-
-    fn persistent_bfs_oracle(
-        program: &Program,
-        inputs: &[Vec<u8>],
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        // Buffer order (per `persistent_bfs.rs::persistent_bfs`):
-        //   0 pg_nodes (RO)
-        //   1 pg_edge_offsets (RO)
-        //   2 pg_edge_targets (RO)
-        //   3 pg_edge_kind_mask (RO)
-        //   4 pg_node_tags (RO)
-        //   5 frontier_in (RO)
-        //   6 frontier_out (RW)
-        //   7 changed (RW)
-        //   8 converged (RW)
-        //   9 wg_scratch (workgroup)   -  not an input
-        if inputs.len() < 6 {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: persistent_bfs oracle expects ≥ 6 input buffers, got {}",
-                inputs.len()
-            )));
-        }
-        let nodes = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-        let edge_offsets = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
-        let edge_targets_raw = crate::hardware::dispatch_buffers::read_u32s(&inputs[2]);
-        let edge_kind_mask_raw = crate::hardware::dispatch_buffers::read_u32s(&inputs[3]);
-        let _node_tags = crate::hardware::dispatch_buffers::read_u32s(&inputs[4]);
-        let frontier_in = crate::hardware::dispatch_buffers::read_u32s(&inputs[5]);
-
-        // The Region carries the shape and max_iters in its body
-        // structure; rather than re-derive that from IR walks, the
-        // oracle re-computes via cpu_ref using the buffers' lengths.
-        let node_count = nodes.len() as u32;
-
-        // Iteration cap: if the caller declared `frontier_in` of length L
-        // (= bitset_words(node_count)) the oracle uses `node_count` as
-        // the saturation budget  -  same default the Program builder uses
-        // when callers want closure.
-        let max_iters = node_count.max(1);
-
-        let allow_mask = u32::MAX;
-        let edge_count = declared_edge_count(&edge_offsets)?;
-        let edge_targets = trim_padded_edge_buffer("edge_targets", &edge_targets_raw, edge_count)?;
-        let edge_kind_mask =
-            trim_padded_edge_buffer("edge_kind_mask", &edge_kind_mask_raw, edge_count)?;
-
-        let (frontier_out, convergence) =
-            vyre_primitives::graph::persistent_bfs::try_cpu_ref_converged(
-                node_count,
-                &edge_offsets,
-                edge_targets,
-                edge_kind_mask,
-                &frontier_in,
-                allow_mask,
-                max_iters,
-            )
-            .map_err(DispatchError::BadInputs)?;
-
-        // Emit one buffer per DECLARED writable output, in declared order, rather
-        // than a hardcoded list. The oracle stands in for a device backend, so it
-        // must return exactly the layout the program declares; a pasted list goes
-        // stale the moment a buffer is added and then reports a shape the program
-        // does not have. The converged word matches the device readback
-        // bit-for-bit (proven in vyre-primitives converged_device_parity), so the
-        // oracle is a faithful stand-in for the real GPU signal.
-        let declared = super::declared_dispatch_outputs(program);
-        let mut outputs = Vec::with_capacity(declared.len());
-        for decl in declared {
-            let words = match decl.name() {
-                "frontier_out" => frontier_out.clone(),
-                "changed" => changed_words_for(decl.count(), &convergence)?,
-                "converged" => vec![u32::from(convergence.converged)],
-                other => {
-                    return Err(DispatchError::Rejected(format!(
-                        concat!(
-                            "Fix: persistent_bfs oracle has no value for declared output ",
-                            "buffer `{other}`. Teach the oracle to produce it or stop ",
-                            "declaring it; returning a short output list would silently ",
-                            "shift every later output index."
-                        ),
-                        other = other
-                    )))
-                }
-            };
-            outputs.push(u32_buffer_to_bytes(&words));
-        }
-        Ok(outputs)
-    }
-
-    /// Reconstruct the `changed` buffer the kernel would leave behind, sized to the
-    /// program's declared element count.
-    ///
-    /// The two BFS variants give slot 0 different meanings, and the declared count is
-    /// what distinguishes them, so deriving from it keeps the oracle honest for both:
-    ///
-    /// - count 1 (the DCE variant): slot 0 is the LAST iteration's progress, because
-    ///   the kernel zeroes it every iteration to drive its early exit. On a real
-    ///   fixpoint that leaves 0; on an exhausted budget the final iteration grew, so
-    ///   it leaves 1.
-    /// - count 2 (the sticky variant): slot 0 is that same per-iteration flag and
-    ///   slot 1 is the sticky OR across all iterations, which is what `cpu_ref`
-    ///   reports as `changed`.
-    ///
-    /// # Errors
-    /// Rejects any other declared count rather than guessing, since a wrong guess
-    /// here is a silently misread flag rather than a visible failure.
-    fn changed_words_for(
-        count: u32,
-        convergence: &vyre_primitives::graph::persistent_bfs::PersistentBfsConvergence,
-    ) -> Result<Vec<u32>, DispatchError> {
-        let per_iteration = u32::from(!convergence.converged);
-        match count {
-            1 => Ok(vec![per_iteration]),
-            2 => Ok(vec![per_iteration, convergence.changed]),
-            other => Err(DispatchError::Rejected(format!(
-                concat!(
-                    "Fix: persistent_bfs oracle understands a `changed` buffer of 1 ",
-                    "element (per-iteration) or 2 (per-iteration plus sticky), not ",
-                    "{other}. Declare one of those or teach the oracle what the extra ",
-                    "slots mean."
-                ),
-                other = other
-            ))),
-        }
-    }
-
-    #[cfg(test)]
-    #[allow(clippy::items_after_test_module)]
-    mod changed_words_tests {
-        use super::changed_words_for;
-        use vyre_primitives::graph::persistent_bfs::PersistentBfsConvergence;
-
-        fn convergence(changed: u32, converged: bool) -> PersistentBfsConvergence {
-            PersistentBfsConvergence {
-                changed,
-                converged,
-                stop_iter: 0,
-            }
-        }
-
-        /// The DCE variant declares one `changed` word holding the LAST iteration's
-        /// progress, because the kernel zeroes it every iteration to drive the early
-        /// exit. Reaching a fixpoint means that final compare saw zero, even when
-        /// earlier iterations did grow the frontier.
-        #[test]
-        fn a_single_changed_word_reports_the_last_iterations_progress() {
-            assert_eq!(
-                changed_words_for(1, &convergence(1, true)).expect("count 1 is supported"),
-                vec![0],
-                "a converged run exits on a zero compare, so the per-iteration flag is 0"
-            );
-            assert_eq!(
-                changed_words_for(1, &convergence(1, false)).expect("count 1 is supported"),
-                vec![1],
-                "an exhausted budget means the final iteration still grew the frontier"
-            );
-        }
-
-        /// The sticky variant declares two words: the same per-iteration flag, then the
-        /// OR across every iteration. Collapsing them would make a converged run look
-        /// like it never grew at all.
-        #[test]
-        fn two_changed_words_keep_the_per_iteration_and_sticky_flags_distinct() {
-            assert_eq!(
-                changed_words_for(2, &convergence(1, true)).expect("count 2 is supported"),
-                vec![0, 1],
-                "slot 0 is the final compare, slot 1 latched because earlier steps grew"
-            );
-            assert_eq!(
-                changed_words_for(2, &convergence(0, true)).expect("count 2 is supported"),
-                vec![0, 0],
-                "a traversal that never grew converges immediately with nothing latched"
-            );
-        }
-
-        /// An unrecognized count is refused rather than guessed. Guessing would hand a
-        /// consumer a flag read from the wrong slot, which looks like valid data.
-        #[test]
-        fn an_unrecognized_changed_count_is_refused() {
-            let err = changed_words_for(3, &convergence(1, true))
-                .expect_err("an unknown changed layout must not be guessed");
-            assert!(
-                format!("{err}").contains("not 3"),
-                "the refusal must name the count it saw, got: {err}"
-            );
-        }
-    }
-
-    fn exploded_ifds_csr_oracle(
-        program: &Program,
-        inputs: &[Vec<u8>],
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        if inputs.len() != 18 {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: exploded IFDS oracle expected 18 input buffers, got {}.",
-                inputs.len()
-            )));
-        }
-
-        let key = vyre_primitives::graph::exploded::ifds_program_cache_key_from_program(program)
-            .map_err(DispatchError::BackendError)?;
-        let (intra_edges, inter_edges, flow_gen, flow_kill) = parse_ifds_rule_inputs(&key, inputs)?;
-
-        let (row_ptr, col_idx) = vyre_primitives::graph::exploded::build_cpu_reference(
-            key.num_procs,
-            key.blocks_per_proc,
-            key.facts_per_proc,
-            &intra_edges,
-            &inter_edges,
-            &flow_gen,
-            &flow_kill,
-        );
-
-        let col_len = u32::try_from(col_idx.len()).map_err(|error| {
-            DispatchError::BackendError(format!(
-                "Fix: exploded IFDS oracle col_idx length does not fit u32: {error}."
-            ))
-        })?;
-        let col_idx_words = program
-            .buffer("col_idx")
-            .map(|buffer| buffer.count() as usize)
-            .unwrap_or(1);
-        let mut col_idx_padded = vec![0u32; col_idx_words];
-        if col_idx.len() > col_idx_words {
-            return Err(DispatchError::BackendError(format!(
-                "Fix: exploded IFDS oracle emitted {} columns but program allocates {col_idx_words}."
-                ,
-                col_idx.len()
-            )));
-        }
-        col_idx_padded[..col_idx.len()].copy_from_slice(&col_idx);
-
-        let row_cursor_words = program
-            .buffer("row_cursor")
-            .map(|buffer| buffer.count() as usize)
-            .unwrap_or(1);
-        let row_cursor = vec![0u32; row_cursor_words];
-
-        Ok(vec![
-            u32_buffer_to_bytes(&row_ptr),
-            u32_buffer_to_bytes(&row_cursor),
-            u32_buffer_to_bytes(&col_idx_padded),
-            u32_buffer_to_bytes(&[col_len]),
-        ])
-    }
-
-    fn parse_ifds_rule_inputs(
-        key: &vyre_primitives::graph::exploded::IfdsCsrProgramCacheKey,
-        inputs: &[Vec<u8>],
-    ) -> Result<ParsedIfdsRules, DispatchError> {
-        let intra_proc = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-        let intra_src_block = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
-        let intra_dst_block = crate::hardware::dispatch_buffers::read_u32s(&inputs[2]);
-        let inter_src_proc = crate::hardware::dispatch_buffers::read_u32s(&inputs[3]);
-        let inter_src_block = crate::hardware::dispatch_buffers::read_u32s(&inputs[4]);
-        let inter_dst_proc = crate::hardware::dispatch_buffers::read_u32s(&inputs[5]);
-        let inter_dst_block = crate::hardware::dispatch_buffers::read_u32s(&inputs[6]);
-        let gen_proc = crate::hardware::dispatch_buffers::read_u32s(&inputs[7]);
-        let gen_block = crate::hardware::dispatch_buffers::read_u32s(&inputs[8]);
-        let gen_fact = crate::hardware::dispatch_buffers::read_u32s(&inputs[9]);
-        let kill_proc = crate::hardware::dispatch_buffers::read_u32s(&inputs[10]);
-        let kill_block = crate::hardware::dispatch_buffers::read_u32s(&inputs[11]);
-        let kill_fact = crate::hardware::dispatch_buffers::read_u32s(&inputs[12]);
-
-        let intra_edges = read_ifds_triples(
-            "intra",
-            key.intra_count,
-            &intra_proc,
-            &intra_src_block,
-            &intra_dst_block,
-        )?;
-        let inter_edges = read_ifds_quads(
-            "inter",
-            key.inter_count,
-            &inter_src_proc,
-            &inter_src_block,
-            &inter_dst_proc,
-            &inter_dst_block,
-        )?;
-        let flow_gen = read_ifds_triples("GEN", key.gen_count, &gen_proc, &gen_block, &gen_fact)?;
-        let flow_kill =
-            read_ifds_triples("KILL", key.kill_count, &kill_proc, &kill_block, &kill_fact)?;
-
-        Ok((intra_edges, inter_edges, flow_gen, flow_kill))
-    }
-
-    fn read_ifds_triples(
-        kind: &str,
-        count: u32,
-        proc: &[u32],
-        a: &[u32],
-        b: &[u32],
-    ) -> Result<Vec<(u32, u32, u32)>, DispatchError> {
-        let count = count as usize;
-        for (name, column) in [("proc", proc), ("a", a), ("b", b)] {
-            if column.len() < count {
-                return Err(DispatchError::BadInputs(format!(
-                    "Fix: exploded IFDS oracle {kind} {name} column has {} word(s), expected {count}."
-                    ,
-                    column.len()
-                )));
-            }
-        }
-        Ok((0..count)
-            .map(|index| (proc[index], a[index], b[index]))
-            .collect())
-    }
-
-    fn read_ifds_quads(
-        kind: &str,
-        count: u32,
-        a: &[u32],
-        b: &[u32],
-        c: &[u32],
-        d: &[u32],
-    ) -> Result<Vec<(u32, u32, u32, u32)>, DispatchError> {
-        let count = count as usize;
-        for (name, column) in [
-            ("src_proc", a),
-            ("src_block", b),
-            ("dst_proc", c),
-            ("dst_block", d),
-        ] {
-            if column.len() < count {
-                return Err(DispatchError::BadInputs(format!(
-                    "Fix: exploded IFDS oracle {kind} {name} column has {} word(s), expected {count}."
-                    ,
-                    column.len()
-                )));
-            }
-        }
-        Ok((0..count)
-            .map(|index| (a[index], b[index], c[index], d[index]))
-            .collect())
-    }
-
-    fn declared_edge_count(edge_offsets: &[u32]) -> Result<usize, DispatchError> {
-        edge_offsets
-            .last()
-            .copied()
-            .map(|edge_count| edge_count as usize)
-            .ok_or_else(|| {
-                DispatchError::BadInputs(
-                    "Fix: persistent_bfs oracle requires a CSR offset sentinel.".to_string(),
-                )
-            })
-    }
-
-    fn trim_padded_edge_buffer<'a>(
-        name: &str,
-        buffer: &'a [u32],
-        edge_count: usize,
-    ) -> Result<&'a [u32], DispatchError> {
-        if buffer.len() < edge_count {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: persistent_bfs oracle {name} has {} words but CSR declares {edge_count} edges.",
-                buffer.len()
-            )));
-        }
-        Ok(&buffer[..edge_count])
-    }
-
-    fn u32_buffer_to_bytes(words: &[u32]) -> Vec<u8> {
-        vyre_primitives::wire::pack_u32_slice(words)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1165,7 +701,7 @@ mod tests {
         batched_handles: RefCell<Vec<u64>>,
     }
 
-    impl OptimizerDispatcher for RangedReadDispatcher {
+    impl ProgramDispatcher for RangedReadDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -1217,7 +753,7 @@ mod tests {
         }
     }
 
-    impl OptimizerDispatcher for FailingAllocDispatcher {
+    impl ProgramDispatcher for FailingAllocDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -1399,7 +935,7 @@ mod tests {
     /// output index by one without any visible error.
     #[test]
     fn declared_dispatch_outputs_are_the_writable_storage_buffers_in_order() {
-        use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType};
+        use crate::ir::{BufferAccess, BufferDecl, DataType};
 
         let program = Program::wrapped(
             vec![
@@ -1428,7 +964,7 @@ mod tests {
     /// this derivation exists to prevent.
     #[test]
     fn declared_dispatch_outputs_is_empty_when_nothing_is_writable() {
-        use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType};
+        use crate::ir::{BufferAccess, BufferDecl, DataType};
 
         let program = Program::wrapped(
             vec![

@@ -17,13 +17,13 @@
 //! overhead is amortized across shard groups, not per function and not per loan,
 //! which is what makes a crate-scale borrow check GPU-fast. [`analyze_batched`]
 //! is the single-function case. Both are backend-agnostic: the caller supplies
-//! an [`OptimizerDispatcher`], which on the fleet is the CUDA backend.
+//! an [`ProgramDispatcher`], which on the fleet is the CUDA backend.
 //!
 //! Memory scales as `total_loans * ceil(total_points / 32)` words; for very
 //! large crates the function list is sharded into groups before dispatch.
 
 use vyre_primitives::graph::persistent_bfs::PERSISTENT_BFS_WORKGROUP_SIZE;
-use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_self_substrate::persistent_bfs::{
     bfs_expand_resident_graph_batch_with_scratch_into, upload_resident_bfs_graph,
     PersistentBfsResidentScratch,
@@ -85,7 +85,7 @@ fn build_csr(n: u32, edges: &[(u32, u32)], reverse: bool) -> (Vec<u32>, Vec<u32>
 ///
 /// Returns [`DispatchError`] if a device upload or batch dispatch fails.
 pub(crate) fn analyze_crate_batched(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     functions: &[BorrowFacts],
 ) -> Result<Vec<Vec<Conflict>>, DispatchError> {
     analyze_crate_batched_with_shard_cap(dispatcher, functions, DEFAULT_SHARD_WORDS)
@@ -108,7 +108,7 @@ const MAX_GRID_SYNC_FREE_SHARD_POINTS: u32 = PERSISTENT_BFS_WORKGROUP_SIZE[0];
 ///
 /// Returns [`DispatchError`] if a device upload or batch dispatch fails.
 pub(crate) fn analyze_crate_batched_with_shard_cap(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     functions: &[BorrowFacts],
     max_shard_words: usize,
 ) -> Result<Vec<Vec<Conflict>>, DispatchError> {
@@ -165,7 +165,7 @@ fn enforce_borrow_closures_converged(
 /// loans through two dispatches. Caller bounds the shard size; this is where the
 /// device work happens.
 fn batch_shard(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     functions: &[BorrowFacts],
 ) -> Result<Vec<Vec<Conflict>>, DispatchError> {
     let empty = || functions.iter().map(|_| Vec::new()).collect::<Vec<_>>();
@@ -359,7 +359,7 @@ fn batch_shard(
 ///
 /// Returns [`DispatchError`] if a device upload or batch dispatch fails.
 pub(super) fn analyze_batched(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     facts: &BorrowFacts,
 ) -> Result<Vec<Conflict>, DispatchError> {
     let mut per_function = analyze_crate_batched(dispatcher, std::slice::from_ref(facts))?;

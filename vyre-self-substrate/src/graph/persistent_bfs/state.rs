@@ -1,6 +1,6 @@
 use crate::graph::plan_cache::GraphPlanCache;
 use crate::graph::resident_handles::free_unique_resident_handles;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::persistent_bfs::{
     copy_persistent_bfs_batch_seed_and_clear_changed_into, copy_persistent_bfs_seed_frontier_into,
     PersistentBfsPlanCacheKey, PersistentBfsStaticInputKey,
@@ -64,7 +64,7 @@ impl ResidentBfsGraph {
     /// # Errors
     ///
     /// Returns the first backend free failure, after attempting every handle.
-    pub fn free(self, dispatcher: &dyn OptimizerDispatcher) -> Result<(), DispatchError> {
+    pub fn free(self, dispatcher: &dyn ProgramDispatcher) -> Result<(), DispatchError> {
         free_unique_resident_handles(dispatcher, &self.handles, "resident BFS graph")
     }
 }
@@ -98,7 +98,7 @@ impl PersistentBfsResidentScratch {
     /// # Errors
     ///
     /// Returns the first backend free failure, after attempting every handle.
-    pub fn free(&mut self, dispatcher: &dyn OptimizerDispatcher) -> Result<(), DispatchError> {
+    pub fn free(&mut self, dispatcher: &dyn ProgramDispatcher) -> Result<(), DispatchError> {
         let Some(handles) = self.frontier_handles.take() else {
             return Ok(());
         };

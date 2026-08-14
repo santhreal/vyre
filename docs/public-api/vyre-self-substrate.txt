@@ -5,7 +5,6 @@ impl core::error::Error for vyre_self_substrate::optimizer::canonicalize_via_enc
 impl core::error::Error for vyre_self_substrate::optimizer::const_fold_via_encoded::ConstFoldError
 impl core::error::Error for vyre_self_substrate::optimizer::cse_via_encoded::CseError
 impl core::error::Error for vyre_self_substrate::optimizer::dce_via_encoded::DceError
-impl core::error::Error for vyre_self_substrate::optimizer::dispatcher::DispatchError
 impl core::error::Error for vyre_self_substrate::optimizer::pattern_match_via_encoded::PatternMatchError
 impl core::error::Error for vyre_self_substrate::optimizer::pipeline::GpuOptimizeError
 impl core::error::Error for vyre_self_substrate::optimizer::pipeline_resident::PipelineError
@@ -17,7 +16,6 @@ impl core::fmt::Display for vyre_self_substrate::optimizer::canonicalize_via_enc
 impl core::fmt::Display for vyre_self_substrate::optimizer::const_fold_via_encoded::ConstFoldError
 impl core::fmt::Display for vyre_self_substrate::optimizer::cse_via_encoded::CseError
 impl core::fmt::Display for vyre_self_substrate::optimizer::dce_via_encoded::DceError
-impl core::fmt::Display for vyre_self_substrate::optimizer::dispatcher::DispatchError
 impl core::fmt::Display for vyre_self_substrate::optimizer::pattern_match_via_encoded::PatternMatchError
 impl core::fmt::Display for vyre_self_substrate::optimizer::pipeline::GpuOptimizeError
 impl core::fmt::Display for vyre_self_substrate::optimizer::pipeline_resident::PipelineError
@@ -85,7 +83,6 @@ pub enum vyre_self_substrate::optimizer::canonicalize_via_encoded::CanonicalizeE
 pub enum vyre_self_substrate::optimizer::const_fold_via_encoded::ConstFoldError
 pub enum vyre_self_substrate::optimizer::cse_via_encoded::CseError
 pub enum vyre_self_substrate::optimizer::dce_via_encoded::DceError
-pub enum vyre_self_substrate::optimizer::dispatcher::DispatchError
 pub enum vyre_self_substrate::optimizer::encode::EncodeError
 pub enum vyre_self_substrate::optimizer::pattern_match_via_encoded::PatternMatchError
 pub enum vyre_self_substrate::optimizer::pipeline::GpuOptimizeError
@@ -107,11 +104,11 @@ pub fn vyre_self_substrate::hardware::memory_ownership_contract::validate_memory
 pub fn vyre_self_substrate::memory_ownership_contract::validate_memory_ownership_contract(records: &[vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipRecord<'_>]) -> core::result::Result<vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipProof, vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError>
 pub fn vyre_self_substrate::optimizer::canonicalize_via_encoded::CanonicalizeError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_self_substrate::optimizer::canonicalize_via_encoded::build_canonicalize_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_self_substrate::optimizer::canonicalize_via_encoded::gpu_canonicalize(program: vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_self_substrate::optimizer::canonicalize_via_encoded::CanonicalizeError>
+pub fn vyre_self_substrate::optimizer::canonicalize_via_encoded::gpu_canonicalize(program: vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_self_substrate::optimizer::canonicalize_via_encoded::CanonicalizeError>
 pub fn vyre_self_substrate::optimizer::const_fold_via_encoded::ConstFoldError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_self_substrate::optimizer::const_fold_via_encoded::build_const_fold_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_self_substrate::optimizer::const_fold_via_encoded::build_const_fold_program_fused(expr_count: u32, max_depth_iter_cap: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_self_substrate::optimizer::const_fold_via_encoded::gpu_const_fold(program: vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_self_substrate::optimizer::const_fold_via_encoded::ConstFoldError>
+pub fn vyre_self_substrate::optimizer::const_fold_via_encoded::gpu_const_fold(program: vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_self_substrate::optimizer::const_fold_via_encoded::ConstFoldError>
 pub fn vyre_self_substrate::optimizer::const_prop::apply_const_prop(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_self_substrate::optimizer::cross_scope_cse::apply_cross_scope_cse(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_self_substrate::optimizer::expr_arena::ExprArenaEncoding, canonical: &[u32]) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_self_substrate::optimizer::cross_scope_cse::apply_cross_scope_cse_with_lookup<C: vyre_self_substrate::optimizer::cse_via_encoded::CanonicalLookup + ?core::marker::Sized>(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_self_substrate::optimizer::expr_arena::ExprArenaEncoding, canonical: &C) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -119,7 +116,7 @@ pub fn vyre_self_substrate::optimizer::cse_via_encoded::CanonicalLookup::canonic
 pub fn vyre_self_substrate::optimizer::cse_via_encoded::CanonicalLookup::is_empty(&self) -> bool
 pub fn vyre_self_substrate::optimizer::cse_via_encoded::CseError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_self_substrate::optimizer::cse_via_encoded::SparseCanonicalMap::canonical_of(&self, id: u32) -> u32
-pub fn vyre_self_substrate::optimizer::cse_via_encoded::SparseCanonicalMap::from_compacted_pair_words(expr_count: u32, pair_count: u32, pair_words: &[u32], context: &str) -> core::result::Result<Self, vyre_self_substrate::optimizer::dispatcher::DispatchError>
+pub fn vyre_self_substrate::optimizer::cse_via_encoded::SparseCanonicalMap::from_compacted_pair_words(expr_count: u32, pair_count: u32, pair_words: &[u32], context: &str) -> core::result::Result<Self, vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_self_substrate::optimizer::cse_via_encoded::SparseCanonicalMap::is_empty(&self) -> bool
 pub fn vyre_self_substrate::optimizer::cse_via_encoded::SparseCanonicalMap::override_count(&self) -> usize
 pub fn vyre_self_substrate::optimizer::cse_via_encoded::apply_cse_canonicals(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_self_substrate::optimizer::expr_arena::ExprArenaEncoding, canonical: &[u32]) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -128,39 +125,12 @@ pub fn vyre_self_substrate::optimizer::cse_via_encoded::apply_cse_let_dedupe_wit
 pub fn vyre_self_substrate::optimizer::cse_via_encoded::build_canonical_delta_compact_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_self_substrate::optimizer::cse_via_encoded::build_canonical_id_program(expr_count: u32, capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_self_substrate::optimizer::cse_via_encoded::build_structural_hash_program(expr_count: u32, max_depth_iter_cap: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_self_substrate::optimizer::cse_via_encoded::gpu_cse_canonicals(program: &vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher) -> core::result::Result<(vyre_self_substrate::optimizer::expr_arena::ExprArenaEncoding, alloc::vec::Vec<u32>), vyre_self_substrate::optimizer::cse_via_encoded::CseError>
+pub fn vyre_self_substrate::optimizer::cse_via_encoded::gpu_cse_canonicals(program: &vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) -> core::result::Result<(vyre_self_substrate::optimizer::expr_arena::ExprArenaEncoding, alloc::vec::Vec<u32>), vyre_self_substrate::optimizer::cse_via_encoded::CseError>
 pub fn vyre_self_substrate::optimizer::dce_program::build_dce_bfs_program(shape: vyre_primitives::graph::program_graph::ProgramGraphShape, max_iters: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_self_substrate::optimizer::dce_program::build_persistent_bfs_program(shape: vyre_primitives::graph::program_graph::ProgramGraphShape, max_iters: u32, allow_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_self_substrate::optimizer::dce_via_encoded::DceError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce(program: vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_self_substrate::optimizer::dce_via_encoded::DceError>
+pub fn vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce(program: vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_self_substrate::optimizer::dce_via_encoded::DceError>
 pub fn vyre_self_substrate::optimizer::dead_branch::apply_dead_branch(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_self_substrate::optimizer::dispatcher::DispatchError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::acquire_resident_static_uploads(&self, _cache_domain: u64, payloads: &[&[u8]]) -> core::result::Result<vyre_self_substrate::optimizer::dispatcher::ResidentStaticBufferSet, vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::alloc_resident(&self, _byte_len: usize) -> core::result::Result<u64, vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::alloc_resident_many(&self, byte_lens: &[usize]) -> core::result::Result<alloc::vec::Vec<u64>, vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::clear_upload_resident_many_sequence_read_many_into(&self, clears: &[(u64, usize)], uploads: &[(u64, &[u8])], steps: &[vyre_self_substrate::optimizer::dispatcher::ResidentDispatchStep<'_>], read_handles: &[u64], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::device_feature_cache_key(&self) -> u64
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::dispatch(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], grid_override: core::option::Option<[u32; 3]>) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::dispatch_resident(&self, _program: &vyre_foundation::ir_inner::model::program::definition::Program, _handles: &[u64], _grid_override: core::option::Option<[u32; 3]>) -> core::result::Result<(), vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::dispatch_resident_sequence(&self, steps: &[vyre_self_substrate::optimizer::dispatcher::ResidentDispatchStep<'_>]) -> core::result::Result<(), vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::dispatch_resident_sequence_read_many(&self, steps: &[vyre_self_substrate::optimizer::dispatcher::ResidentDispatchStep<'_>], read_handles: &[u64]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::dispatch_resident_sequence_read_ranges(&self, steps: &[vyre_self_substrate::optimizer::dispatcher::ResidentDispatchStep<'_>], read_ranges: &[vyre_self_substrate::optimizer::dispatcher::ResidentReadRange]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::fill_upload_resident_many_sequence_read_many_into(&self, fills: &[(u64, usize, u8)], uploads: &[(u64, &[u8])], steps: &[vyre_self_substrate::optimizer::dispatcher::ResidentDispatchStep<'_>], read_handles: &[u64], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::fill_upload_resident_many_sequence_read_ranges_into(&self, fills: &[(u64, usize, u8)], uploads: &[(u64, &[u8])], steps: &[vyre_self_substrate::optimizer::dispatcher::ResidentDispatchStep<'_>], read_ranges: &[vyre_self_substrate::optimizer::dispatcher::ResidentReadRange], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::free_resident(&self, _handle: u64) -> core::result::Result<(), vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::read_resident(&self, _handle: u64) -> core::result::Result<alloc::vec::Vec<u8>, vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::read_resident_many(&self, handles: &[u64]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::read_resident_ranges(&self, ranges: &[vyre_self_substrate::optimizer::dispatcher::ResidentReadRange]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::read_resident_ranges_into(&self, ranges: &[vyre_self_substrate::optimizer::dispatcher::ResidentReadRange], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::release_resident_static_uploads(&self, set: vyre_self_substrate::optimizer::dispatcher::ResidentStaticBufferSet) -> core::result::Result<(), vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::supports_persistent(&self) -> bool
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::upload_resident(&self, _handle: u64, _bytes: &[u8]) -> core::result::Result<(), vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::upload_resident_many(&self, uploads: &[(u64, &[u8])]) -> core::result::Result<(), vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::upload_resident_many_sequence_read_many(&self, uploads: &[(u64, &[u8])], steps: &[vyre_self_substrate::optimizer::dispatcher::ResidentDispatchStep<'_>], read_handles: &[u64]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::upload_resident_many_sequence_read_many_into(&self, uploads: &[(u64, &[u8])], steps: &[vyre_self_substrate::optimizer::dispatcher::ResidentDispatchStep<'_>], read_handles: &[u64], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::upload_resident_many_sequence_read_ranges(&self, uploads: &[(u64, &[u8])], steps: &[vyre_self_substrate::optimizer::dispatcher::ResidentDispatchStep<'_>], read_ranges: &[vyre_self_substrate::optimizer::dispatcher::ResidentReadRange]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher::upload_resident_many_sequence_read_ranges_into(&self, uploads: &[(u64, &[u8])], steps: &[vyre_self_substrate::optimizer::dispatcher::ResidentDispatchStep<'_>], read_ranges: &[vyre_self_substrate::optimizer::dispatcher::ResidentReadRange], outputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_self_substrate::optimizer::dispatcher::DispatchError>
-pub fn vyre_self_substrate::optimizer::dispatcher::declared_dispatch_outputs(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> alloc::vec::Vec<&vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>
 pub fn vyre_self_substrate::optimizer::encode::apply_live_bitset_mask(program: &vyre_foundation::ir_inner::model::program::definition::Program, encoded: &vyre_self_substrate::optimizer::encode::EncodedProgram, live_words: &[u32]) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_self_substrate::optimizer::encode::apply_live_mask(program: &vyre_foundation::ir_inner::model::program::definition::Program, encoded: &vyre_self_substrate::optimizer::encode::EncodedProgram, live: &[bool]) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_self_substrate::optimizer::encode::collect_expr_var_refs(expr: &vyre_foundation::ir_inner::model::generated::Expr, out: &mut alloc::vec::Vec<vyre_foundation::ir_inner::model::expr::Ident>)
@@ -174,11 +144,11 @@ pub fn vyre_self_substrate::optimizer::licm::apply_licm(program: &vyre_foundatio
 pub fn vyre_self_substrate::optimizer::pattern_match_via_encoded::PatternMatchError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_self_substrate::optimizer::pattern_match_via_encoded::build_pattern_match_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_self_substrate::optimizer::pattern_match_via_encoded::build_pattern_match_program_with_cse(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_self_substrate::optimizer::pattern_match_via_encoded::gpu_algebraic_identities(program: vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_self_substrate::optimizer::pattern_match_via_encoded::PatternMatchError>
+pub fn vyre_self_substrate::optimizer::pattern_match_via_encoded::gpu_algebraic_identities(program: vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_self_substrate::optimizer::pattern_match_via_encoded::PatternMatchError>
 pub fn vyre_self_substrate::optimizer::pipeline::GpuOptimizeError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_self_substrate::optimizer::pipeline::gpu_optimize(program: vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_self_substrate::optimizer::pipeline::GpuOptimizeError>
+pub fn vyre_self_substrate::optimizer::pipeline::gpu_optimize(program: vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_self_substrate::optimizer::pipeline::GpuOptimizeError>
 pub fn vyre_self_substrate::optimizer::pipeline_resident::PipelineError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_self_substrate::optimizer::pipeline_resident::gpu_pipeline_resident(program: vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_self_substrate::optimizer::pipeline_resident::PipelineError>
+pub fn vyre_self_substrate::optimizer::pipeline_resident::gpu_pipeline_resident(program: vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_self_substrate::optimizer::pipeline_resident::PipelineError>
 pub fn vyre_self_substrate::optimizer::pipeline_resident_decode::ArenaDeltaLookup::foldable(&self, id: usize) -> u32
 pub fn vyre_self_substrate::optimizer::pipeline_resident_decode::ArenaDeltaLookup::rewrite_action(&self, id: usize) -> u32
 pub fn vyre_self_substrate::optimizer::pipeline_resident_decode::ArenaDeltaLookup::swap_mask(&self, id: usize) -> u32
@@ -189,7 +159,7 @@ pub fn vyre_self_substrate::optimizer::pipeline_resident_decode::BitsetArenaDelt
 pub fn vyre_self_substrate::optimizer::pipeline_resident_decode::BitsetArenaDeltas<'_>::value(&self, id: usize) -> u32
 pub fn vyre_self_substrate::optimizer::pipeline_resident_decode::BitsetArenaDeltas<'a>::new(swap_bits: &'a [u32], fold_bits: &'a [u32], value: &'a [u32], rewrite_action: &'a [u32]) -> Self
 pub fn vyre_self_substrate::optimizer::pipeline_resident_decode::SparseArenaDeltas::foldable(&self, id: usize) -> u32
-pub fn vyre_self_substrate::optimizer::pipeline_resident_decode::SparseArenaDeltas::from_compacted_record_words(expr_count: u32, record_count: u32, record_words: &[u32], context: &str) -> core::result::Result<Self, vyre_self_substrate::optimizer::dispatcher::DispatchError>
+pub fn vyre_self_substrate::optimizer::pipeline_resident_decode::SparseArenaDeltas::from_compacted_record_words(expr_count: u32, record_count: u32, record_words: &[u32], context: &str) -> core::result::Result<Self, vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_self_substrate::optimizer::pipeline_resident_decode::SparseArenaDeltas::override_count(&self) -> usize
 pub fn vyre_self_substrate::optimizer::pipeline_resident_decode::SparseArenaDeltas::rewrite_action(&self, id: usize) -> u32
 pub fn vyre_self_substrate::optimizer::pipeline_resident_decode::SparseArenaDeltas::swap_mask(&self, id: usize) -> u32
@@ -201,8 +171,8 @@ pub fn vyre_self_substrate::optimizer::pipeline_resident_decode::build_resident_
 pub fn vyre_self_substrate::optimizer::pipeline_resident_decode::build_resident_delta_compact_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_self_substrate::optimizer::validate_via_encoded::ValidateError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_self_substrate::optimizer::validate_via_encoded::build_validate_limits_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_self_substrate::optimizer::validate_via_encoded::gpu_validate_limits(program: &vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher) -> core::result::Result<[bool; 2], vyre_self_substrate::optimizer::validate_via_encoded::ValidateError>
-pub fn vyre_self_substrate::optimizer::validate_via_encoded::gpu_validate_limits_from_encoding(arena: &vyre_self_substrate::optimizer::expr_arena::ExprArenaEncoding, node_count: u32, dispatcher: &dyn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher) -> core::result::Result<[bool; 2], vyre_self_substrate::optimizer::validate_via_encoded::ValidateError>
+pub fn vyre_self_substrate::optimizer::validate_via_encoded::gpu_validate_limits(program: &vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) -> core::result::Result<[bool; 2], vyre_self_substrate::optimizer::validate_via_encoded::ValidateError>
+pub fn vyre_self_substrate::optimizer::validate_via_encoded::gpu_validate_limits_from_encoding(arena: &vyre_self_substrate::optimizer::expr_arena::ExprArenaEncoding, node_count: u32, dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) -> core::result::Result<[bool; 2], vyre_self_substrate::optimizer::validate_via_encoded::ValidateError>
 pub mod vyre_self_substrate
 pub mod vyre_self_substrate::device_resident_token_fact_graph
 pub mod vyre_self_substrate::gpu_probe_contract
@@ -220,7 +190,6 @@ pub mod vyre_self_substrate::optimizer::cse_via_encoded
 pub mod vyre_self_substrate::optimizer::dce_program
 pub mod vyre_self_substrate::optimizer::dce_via_encoded
 pub mod vyre_self_substrate::optimizer::dead_branch
-pub mod vyre_self_substrate::optimizer::dispatcher
 pub mod vyre_self_substrate::optimizer::encode
 pub mod vyre_self_substrate::optimizer::encode::edge_kind
 pub mod vyre_self_substrate::optimizer::encode::node_tag
@@ -250,16 +219,12 @@ pub struct vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwner
 pub struct vyre_self_substrate::memory_ownership_contract::MemoryOwnershipProof
 pub struct vyre_self_substrate::memory_ownership_contract::MemoryOwnershipRecord<'a>
 pub struct vyre_self_substrate::optimizer::cse_via_encoded::SparseCanonicalMap
-pub struct vyre_self_substrate::optimizer::dispatcher::ResidentDispatchStep<'a>
-pub struct vyre_self_substrate::optimizer::dispatcher::ResidentReadRange
-pub struct vyre_self_substrate::optimizer::dispatcher::ResidentStaticBufferSet
 pub struct vyre_self_substrate::optimizer::encode::EncodedProgram
 pub struct vyre_self_substrate::optimizer::encode::WrappingRegion
 pub struct vyre_self_substrate::optimizer::expr_arena::ExprArenaEncoding
 pub struct vyre_self_substrate::optimizer::pipeline_resident_decode::BitsetArenaDeltas<'a>
 pub struct vyre_self_substrate::optimizer::pipeline_resident_decode::SparseArenaDeltas
 pub trait vyre_self_substrate::optimizer::cse_via_encoded::CanonicalLookup
-pub trait vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher
 pub trait vyre_self_substrate::optimizer::pipeline_resident_decode::ArenaDeltaLookup
 pub vyre_self_substrate::device_resident_token_fact_graph::DeviceResidentTokenFactGraph::column_indices: alloc::vec::Vec<u32>
 pub vyre_self_substrate::device_resident_token_fact_graph::DeviceResidentTokenFactGraph::edge_kinds: alloc::vec::Vec<vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactEdgeKind>
@@ -411,26 +376,14 @@ pub vyre_self_substrate::memory_ownership_contract::MemoryOwnershipRecord::owner
 pub vyre_self_substrate::memory_ownership_contract::MemoryOwnershipRecord::production: bool
 pub vyre_self_substrate::memory_ownership_contract::MemoryOwnershipRecord::resource: &'a str
 pub vyre_self_substrate::memory_ownership_contract::MemoryOwnershipRecord::subsystem: &'a str
-pub vyre_self_substrate::optimizer::canonicalize_via_encoded::CanonicalizeError::Dispatch(vyre_self_substrate::optimizer::dispatcher::DispatchError)
+pub vyre_self_substrate::optimizer::canonicalize_via_encoded::CanonicalizeError::Dispatch(vyre_foundation::program_dispatch::DispatchError)
 pub vyre_self_substrate::optimizer::canonicalize_via_encoded::CanonicalizeError::Encode(vyre_self_substrate::optimizer::encode::EncodeError)
-pub vyre_self_substrate::optimizer::const_fold_via_encoded::ConstFoldError::Dispatch(vyre_self_substrate::optimizer::dispatcher::DispatchError)
+pub vyre_self_substrate::optimizer::const_fold_via_encoded::ConstFoldError::Dispatch(vyre_foundation::program_dispatch::DispatchError)
 pub vyre_self_substrate::optimizer::const_fold_via_encoded::ConstFoldError::Encode(vyre_self_substrate::optimizer::encode::EncodeError)
-pub vyre_self_substrate::optimizer::cse_via_encoded::CseError::Dispatch(vyre_self_substrate::optimizer::dispatcher::DispatchError)
+pub vyre_self_substrate::optimizer::cse_via_encoded::CseError::Dispatch(vyre_foundation::program_dispatch::DispatchError)
 pub vyre_self_substrate::optimizer::cse_via_encoded::CseError::Encode(vyre_self_substrate::optimizer::encode::EncodeError)
-pub vyre_self_substrate::optimizer::dce_via_encoded::DceError::Dispatch(vyre_self_substrate::optimizer::dispatcher::DispatchError)
+pub vyre_self_substrate::optimizer::dce_via_encoded::DceError::Dispatch(vyre_foundation::program_dispatch::DispatchError)
 pub vyre_self_substrate::optimizer::dce_via_encoded::DceError::Encode(vyre_self_substrate::optimizer::encode::EncodeError)
-pub vyre_self_substrate::optimizer::dispatcher::DispatchError::BackendError(alloc::string::String)
-pub vyre_self_substrate::optimizer::dispatcher::DispatchError::BadInputs(alloc::string::String)
-pub vyre_self_substrate::optimizer::dispatcher::DispatchError::Rejected(alloc::string::String)
-pub vyre_self_substrate::optimizer::dispatcher::ResidentDispatchStep::grid_override: core::option::Option<[u32; 3]>
-pub vyre_self_substrate::optimizer::dispatcher::ResidentDispatchStep::handle_ids: &'a [u64]
-pub vyre_self_substrate::optimizer::dispatcher::ResidentDispatchStep::program: &'a vyre_foundation::ir_inner::model::program::definition::Program
-pub vyre_self_substrate::optimizer::dispatcher::ResidentReadRange::byte_len: usize
-pub vyre_self_substrate::optimizer::dispatcher::ResidentReadRange::byte_offset: usize
-pub vyre_self_substrate::optimizer::dispatcher::ResidentReadRange::handle_id: u64
-pub vyre_self_substrate::optimizer::dispatcher::ResidentStaticBufferSet::cache_hit: bool
-pub vyre_self_substrate::optimizer::dispatcher::ResidentStaticBufferSet::handles: alloc::vec::Vec<u64>
-pub vyre_self_substrate::optimizer::dispatcher::ResidentStaticBufferSet::retained_by_dispatcher: bool
 pub vyre_self_substrate::optimizer::encode::EncodeError::Unsupported(&'static str)
 pub vyre_self_substrate::optimizer::encode::EncodedProgram::edge_count: u32
 pub vyre_self_substrate::optimizer::encode::EncodedProgram::edge_kind_mask: alloc::vec::Vec<u32>
@@ -452,15 +405,15 @@ pub vyre_self_substrate::optimizer::expr_arena::ExprArenaEncoding::kinds: alloc:
 pub vyre_self_substrate::optimizer::expr_arena::ExprArenaEncoding::max_depth: u32
 pub vyre_self_substrate::optimizer::expr_arena::ExprArenaEncoding::node_top_level_exprs: alloc::vec::Vec<alloc::vec::Vec<u32>>
 pub vyre_self_substrate::optimizer::expr_arena::ExprArenaEncoding::post_order: alloc::vec::Vec<u32>
-pub vyre_self_substrate::optimizer::pattern_match_via_encoded::PatternMatchError::Dispatch(vyre_self_substrate::optimizer::dispatcher::DispatchError)
+pub vyre_self_substrate::optimizer::pattern_match_via_encoded::PatternMatchError::Dispatch(vyre_foundation::program_dispatch::DispatchError)
 pub vyre_self_substrate::optimizer::pattern_match_via_encoded::PatternMatchError::Encode(vyre_self_substrate::optimizer::encode::EncodeError)
 pub vyre_self_substrate::optimizer::pipeline::GpuOptimizeError::Canonicalize(vyre_self_substrate::optimizer::canonicalize_via_encoded::CanonicalizeError)
 pub vyre_self_substrate::optimizer::pipeline::GpuOptimizeError::ConstFold(vyre_self_substrate::optimizer::const_fold_via_encoded::ConstFoldError)
 pub vyre_self_substrate::optimizer::pipeline::GpuOptimizeError::Dce(vyre_self_substrate::optimizer::dce_via_encoded::DceError)
 pub vyre_self_substrate::optimizer::pipeline::GpuOptimizeError::PatternMatch(vyre_self_substrate::optimizer::pattern_match_via_encoded::PatternMatchError)
 pub vyre_self_substrate::optimizer::pipeline::GpuOptimizeError::Persistent(vyre_self_substrate::optimizer::pipeline_resident::PipelineError)
-pub vyre_self_substrate::optimizer::pipeline_resident::PipelineError::Dispatch(vyre_self_substrate::optimizer::dispatcher::DispatchError)
+pub vyre_self_substrate::optimizer::pipeline_resident::PipelineError::Dispatch(vyre_foundation::program_dispatch::DispatchError)
 pub vyre_self_substrate::optimizer::pipeline_resident::PipelineError::Encode(vyre_self_substrate::optimizer::encode::EncodeError)
 pub vyre_self_substrate::optimizer::pipeline_resident::PipelineError::LimitViolation([bool; 2])
-pub vyre_self_substrate::optimizer::validate_via_encoded::ValidateError::Dispatch(vyre_self_substrate::optimizer::dispatcher::DispatchError)
+pub vyre_self_substrate::optimizer::validate_via_encoded::ValidateError::Dispatch(vyre_foundation::program_dispatch::DispatchError)
 pub vyre_self_substrate::optimizer::validate_via_encoded::ValidateError::Encode(vyre_self_substrate::optimizer::encode::EncodeError)

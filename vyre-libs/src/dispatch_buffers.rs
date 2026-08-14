@@ -1,21 +1,24 @@
-//! Shared byte-buffer helpers for self-substrate dispatcher calls.
+//! Byte-buffer helpers for `ProgramDispatcher` calls.
 //!
-//! Production self-substrate paths build primitive Programs and cross the
-//! backend boundary through [`crate::optimizer::dispatcher::OptimizerDispatcher`].
-//! Keeping shape checks and little-endian u32 marshalling here prevents every
-//! module from growing its own subtly different host-side contract.
+//! A caller builds a `Program` and crosses the backend boundary with byte
+//! buffers. Keeping the shape checks and the little-endian u32 marshalling here
+//! stops every caller from growing its own subtly different host-side contract.
+//!
+//! The marshalling delegates to `vyre_primitives::wire`, which is why this sits
+//! here rather than beside the seam in `vyre-foundation`: foundation is below
+//! `vyre-primitives` and cannot reach the packing it would have to duplicate.
 
-use crate::optimizer::dispatcher::DispatchError;
+use vyre_foundation::program_dispatch::DispatchError;
 
 /// Compute `ceil(n / d)` for dispatch-grid sizing.
 #[must_use]
-pub(crate) fn ceil_div_u32(n: u32, d: u32) -> u32 {
+pub fn ceil_div_u32(n: u32, d: u32) -> u32 {
     n.div_ceil(d).max(1)
 }
 
 /// Return `n * n` as `usize`, rejecting zero and overflow with an actionable
 /// dispatcher error.
-pub(crate) fn checked_square_cells(n: u32, context: &str) -> Result<usize, DispatchError> {
+pub fn checked_square_cells(n: u32, context: &str) -> Result<usize, DispatchError> {
     if n == 0 {
         return Err(DispatchError::BadInputs(format!(
             "Fix: {context} requires n > 0."
@@ -29,7 +32,7 @@ pub(crate) fn checked_square_cells(n: u32, context: &str) -> Result<usize, Dispa
 
 /// Return `left * right` as `usize`, rejecting zeros and overflow with an
 /// actionable dispatcher error.
-pub(crate) fn checked_product_count(
+pub fn checked_product_count(
     left: u32,
     right: u32,
     left_name: &str,
@@ -57,7 +60,7 @@ pub(crate) fn checked_product_count(
 /// Dispatcher input-buffer encoding now matches every other GPU upload
 /// path's throughput floor instead of running its own scalar `extend`
 /// loop.
-pub(crate) use vyre_primitives::wire::pack_u32_slice as u32_slice_to_le_bytes;
+pub use vyre_primitives::wire::pack_u32_slice as u32_slice_to_le_bytes;
 
 /// Ensure a dispatcher input-vector shell has exactly `count` reusable slots.
 ///
@@ -65,7 +68,7 @@ pub(crate) use vyre_primitives::wire::pack_u32_slice as u32_slice_to_le_bytes;
 /// a scratch object moves from a wider primitive to a narrower primitive silently
 /// changes the backend ABI and can force needless uploads. Active slots keep
 /// their allocation; inactive slots are dropped instead of being passed on.
-pub(crate) fn ensure_input_slots(inputs: &mut Vec<Vec<u8>>, count: usize) {
+pub fn ensure_input_slots(inputs: &mut Vec<Vec<u8>>, count: usize) {
     if inputs.len() < count {
         inputs.resize_with(count, Vec::new);
     } else if inputs.len() > count {
@@ -75,7 +78,7 @@ pub(crate) fn ensure_input_slots(inputs: &mut Vec<Vec<u8>>, count: usize) {
 
 /// Fill a reusable dispatcher byte buffer with zeros without replacing the
 /// allocation.
-pub(crate) fn write_zero_bytes(out: &mut Vec<u8>, len: usize) {
+pub fn write_zero_bytes(out: &mut Vec<u8>, len: usize) {
     if out.len() == len {
         if out.iter().any(|&byte| byte != 0) {
             out.fill(0);
@@ -87,7 +90,7 @@ pub(crate) fn write_zero_bytes(out: &mut Vec<u8>, len: usize) {
 }
 
 /// Return the exact byte count needed for `count` u32 words.
-pub(crate) fn u32_word_bytes(count: usize, context: &str) -> Result<usize, DispatchError> {
+pub fn u32_word_bytes(count: usize, context: &str) -> Result<usize, DispatchError> {
     count
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
@@ -98,7 +101,7 @@ pub(crate) fn u32_word_bytes(count: usize, context: &str) -> Result<usize, Dispa
 }
 
 /// Fill a reusable dispatcher byte buffer with `count` zeroed u32 words.
-pub(crate) fn write_zero_u32_words(
+pub fn write_zero_u32_words(
     out: &mut Vec<u8>,
     count: usize,
     context: &str,
@@ -112,20 +115,18 @@ pub(crate) fn write_zero_u32_words(
 /// input storage. Routes through `vyre-primitives::wire::pack_u32_slice_into`
 /// so dispatcher writes use the same LE-host `bytemuck::cast_slice` fast
 /// path as every other GPU-upload site.
-pub(crate) fn write_u32_slice_le_bytes(out: &mut Vec<u8>, values: &[u32]) {
+pub fn write_u32_slice_le_bytes(out: &mut Vec<u8>, values: &[u32]) {
     vyre_primitives::wire::pack_u32_slice_into(values, out);
 }
 
 /// Encode an f32 slice as little-endian bytes for dispatcher input buffers.
 #[must_use]
-#[cfg(test)]
-pub(crate) fn f32_slice_to_le_bytes(values: &[f32]) -> Vec<u8> {
+pub fn f32_slice_to_le_bytes(values: &[f32]) -> Vec<u8> {
     vyre_primitives::wire::pack_f32_slice(values)
 }
 
-/// Decode an aligned u32 input buffer for test dispatchers.
-#[cfg(test)]
-pub(crate) fn decode_u32_input_aligned(
+/// Decode an aligned u32 input buffer for a CPU-parity dispatcher.
+pub fn decode_u32_input_aligned(
     bytes: &[u8],
     context: &str,
 ) -> Result<Vec<u32>, DispatchError> {
@@ -138,9 +139,8 @@ pub(crate) fn decode_u32_input_aligned(
     Ok(vyre_primitives::wire::decode_u32_le_bytes_all(bytes))
 }
 
-/// Decode an aligned f32 input buffer for test dispatchers.
-#[cfg(test)]
-pub(crate) fn decode_f32_input_aligned(
+/// Decode an aligned f32 input buffer for a CPU-parity dispatcher.
+pub fn decode_f32_input_aligned(
     bytes: &[u8],
     context: &str,
 ) -> Result<Vec<f32>, DispatchError> {
@@ -153,30 +153,28 @@ pub(crate) fn decode_f32_input_aligned(
     Ok(vyre_primitives::wire::decode_f32_le_bytes_all(bytes))
 }
 
-/// Decode a u32 byte buffer for tests and explicit CPU-parity dispatchers that
-/// intentionally validate through the same lenient scalar oracle used before centralization.
-#[cfg(any(test, feature = "cpu-parity"))]
+/// Decode a u32 byte buffer for a CPU-parity dispatcher that intentionally
+/// validates through the same lenient scalar oracle used before centralization.
 #[must_use]
-pub(crate) fn read_u32s(bytes: &[u8]) -> Vec<u32> {
+pub fn read_u32s(bytes: &[u8]) -> Vec<u32> {
     vyre_primitives::wire::decode_u32_le_bytes_all(bytes)
 }
 
-/// Decode an f32 byte buffer for tests that intentionally validate through the
-/// same lenient scalar oracle used before centralization.
-#[cfg(test)]
+/// Decode an f32 byte buffer for a CPU-parity dispatcher that intentionally
+/// validates through the same lenient scalar oracle used before centralization.
 #[must_use]
-pub(crate) fn read_f32s(bytes: &[u8]) -> Vec<f32> {
+pub fn read_f32s(bytes: &[u8]) -> Vec<f32> {
     vyre_primitives::wire::decode_f32_le_bytes_all(bytes)
 }
 
 /// Encode an f32 slice as little-endian bytes into caller-owned dispatcher
 /// input storage.
-pub(crate) fn write_f32_slice_le_bytes(out: &mut Vec<u8>, values: &[f32]) {
+pub fn write_f32_slice_le_bytes(out: &mut Vec<u8>, values: &[f32]) {
     vyre_primitives::wire::pack_f32_slice_into(values, out);
 }
 
 /// Decode a dispatcher u32 output buffer with exact byte-count validation.
-pub(crate) fn decode_u32_output_exact(
+pub fn decode_u32_output_exact(
     bytes: &[u8],
     expected_words: usize,
     context: &str,
@@ -201,7 +199,7 @@ pub(crate) fn decode_u32_output_exact(
 }
 
 /// Decode a dispatcher i32 output buffer with exact byte-count validation.
-pub(crate) fn decode_i32_output_exact(
+pub fn decode_i32_output_exact(
     bytes: &[u8],
     expected_words: usize,
     context: &str,
@@ -228,7 +226,7 @@ pub(crate) fn decode_i32_output_exact(
 }
 
 /// Decode a dispatcher f32 output buffer with exact byte-count validation.
-pub(crate) fn decode_f32_output_exact(
+pub fn decode_f32_output_exact(
     bytes: &[u8],
     expected_words: usize,
     context: &str,

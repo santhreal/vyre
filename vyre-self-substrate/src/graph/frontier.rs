@@ -4,7 +4,7 @@
 //! Primitive traversal semantics stay in `vyre-primitives`.
 
 #[cfg(test)]
-use crate::optimizer::dispatcher::DispatchError;
+use vyre_foundation::program_dispatch::DispatchError;
 #[cfg(test)]
 use vyre_primitives::bitset::bitset_words;
 #[cfg(test)]

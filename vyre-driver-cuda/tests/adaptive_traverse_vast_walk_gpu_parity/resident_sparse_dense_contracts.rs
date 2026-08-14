@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn cuda_resident_adaptive_sparse_dense_keeps_selector_on_device_sparse_branch() {
     let backend = live_dispatcher();
-    let dispatcher = vyre_driver_cuda::CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = vyre_driver_cuda::CudaProgramDispatcher::new(&backend);
     let node_count = 8u32;
     let edge_offsets = vec![0, 1, 1, 1, 1, 1, 1, 1, 1];
     let edge_targets = vec![1];
@@ -70,7 +70,7 @@ fn cuda_resident_adaptive_sparse_dense_keeps_selector_on_device_sparse_branch() 
 #[test]
 fn cuda_resident_adaptive_sparse_dense_keeps_selector_on_device_dense_branch() {
     let backend = live_dispatcher();
-    let dispatcher = vyre_driver_cuda::CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = vyre_driver_cuda::CudaProgramDispatcher::new(&backend);
     let node_count = 8u32;
     let edge_offsets = vec![0, 1, 1, 1, 1, 1, 1, 1, 1];
     let edge_targets = vec![1];

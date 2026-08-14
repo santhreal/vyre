@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn cuda_resident_frontier_queue_drives_sparse_csr_without_selector_readback() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 8u32;
     let queue_capacity = 8u32;
     let frontier = pack_nodes(&[0, 3], node_count);
@@ -152,7 +152,7 @@ fn cuda_resident_frontier_queue_drives_sparse_csr_without_selector_readback() {
 #[test]
 fn cuda_resident_parallel_frontier_queue_scans_large_sparse_bitset() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 1024u32;
     let queue_capacity = 16u32;
     let frontier = pack_nodes(&[0, 3, 511, 700], node_count);

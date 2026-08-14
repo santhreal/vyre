@@ -112,6 +112,9 @@ pub mod buffer_names;
 /// `ProgramDescriptor`  -  introspection surface for Cat-A Programs.
 pub mod descriptor;
 
+/// Host-side byte marshalling for `ProgramDispatcher` calls.
+pub mod dispatch_buffers;
+
 pub use descriptor::{BufferDescriptor, ProgramDescriptor};
 
 /// Derived view over canonical library operation registrations.

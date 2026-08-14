@@ -17,7 +17,7 @@ use vyre_foundation::ir::Program;
 use crate::graph::csr_frontier_queue_scratch::ResidentCsrQueueMaterializer;
 use crate::graph::resident_handles::free_unique_resident_handles;
 use crate::hardware::scratch::reserve_vec as reserve_graph_vec;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher, ResidentReadRange};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentReadRange};
 
 /// Reusable resident scratch for batched CSR queue traversal queries.
 #[derive(Debug, Default)]
@@ -63,7 +63,7 @@ impl ResidentCsrQueueBatchScratch {
     }
 
     /// Free all batch scratch resident buffers.
-    pub fn free(&mut self, dispatcher: &dyn OptimizerDispatcher) -> Result<(), DispatchError> {
+    pub fn free(&mut self, dispatcher: &dyn ProgramDispatcher) -> Result<(), DispatchError> {
         let handle_slots = self.handles.len().checked_mul(8).ok_or_else(|| {
             DispatchError::BackendError(
                 "Fix: resident CSR queue batch scratch free handle count overflowed.".to_string(),

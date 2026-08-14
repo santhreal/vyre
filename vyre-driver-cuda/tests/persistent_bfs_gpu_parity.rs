@@ -9,8 +9,8 @@
 
 mod common;
 
-use common::{with_live_backend, CudaOptimizerDispatcher};
-use vyre_driver_cuda::CudaOptimizerDispatcher as CudaResidentOptimizerDispatcher;
+use common::{with_live_backend, CudaProgramDispatcher};
+use vyre_driver_cuda::CudaProgramDispatcher as CudaResidentProgramDispatcher;
 use vyre_self_substrate::persistent_bfs::{
     bfs_expand as reference_bfs_expand, bfs_expand_resident_graph_batch_with_scratch_into,
     bfs_expand_resident_graph_with_scratch_into, bfs_expand_via, try_bfs_expand_converged,
@@ -38,7 +38,7 @@ fn linear_chain(n: u32) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>) {
 #[test]
 fn cuda_bfs_expand_via_matches_reference_chain() {
     with_live_backend("cuda_bfs_expand_via_matches_reference_chain", |backend| {
-        let dispatcher = CudaOptimizerDispatcher { backend };
+        let dispatcher = CudaProgramDispatcher { backend };
         let (n, off, tgt, msk) = linear_chain(8);
         let seed = vec![0b0000_0001u32]; // node 0 only
         let (gpu_out, gpu_changed, gpu_converged) =
@@ -68,7 +68,7 @@ fn cuda_bfs_expand_via_respects_allow_mask() {
     // A graph with mixed edge kinds. allow_mask filters which edges
     // to follow.
     with_live_backend("cuda_bfs_expand_via_respects_allow_mask", |backend| {
-        let dispatcher = CudaOptimizerDispatcher { backend };
+        let dispatcher = CudaProgramDispatcher { backend };
         // 0 -[k=1]-> 1, 0 -[k=2]-> 2, 1 -[k=1]-> 3
         let n = 4;
         let off = vec![0u32, 2, 3, 3, 3];
@@ -101,7 +101,7 @@ fn cuda_bfs_expand_via_saturated_seed_reports_no_change() {
     with_live_backend(
         "cuda_bfs_expand_via_saturated_seed_reports_no_change",
         |backend| {
-            let dispatcher = CudaOptimizerDispatcher { backend };
+            let dispatcher = CudaProgramDispatcher { backend };
             let (n, off, tgt, msk) = linear_chain(4);
             // Seed = full chain already.
             let seed = vec![0b1111u32];
@@ -127,7 +127,7 @@ fn cuda_resident_bfs_graph_matches_reference_across_repeated_queries() {
     with_live_backend(
         "cuda_resident_bfs_graph_matches_reference_across_repeated_queries",
         |backend| {
-            let dispatcher = CudaResidentOptimizerDispatcher::new(backend);
+            let dispatcher = CudaResidentProgramDispatcher::new(backend);
             let (n, off, tgt, msk) = linear_chain(8);
             let graph = upload_resident_bfs_graph(&dispatcher, n, &off, &tgt, &msk)
                 .expect("resident graph upload");
@@ -180,7 +180,7 @@ fn cuda_resident_bfs_graph_batch_matches_reference() {
     with_live_backend(
         "cuda_resident_bfs_graph_batch_matches_reference",
         |backend| {
-            let dispatcher = CudaResidentOptimizerDispatcher::new(backend);
+            let dispatcher = CudaResidentProgramDispatcher::new(backend);
             let (n, off, tgt, msk) = linear_chain(8);
             let graph = upload_resident_bfs_graph(&dispatcher, n, &off, &tgt, &msk)
                 .expect("resident graph upload");

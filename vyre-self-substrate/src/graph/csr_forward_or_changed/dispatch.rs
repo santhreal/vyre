@@ -9,7 +9,7 @@ use crate::graph::dispatch_bridge::{
     write_dispatch_input, CachedProgram, DispatchInput, ProgramCache,
 };
 use crate::hardware::scratch::reserve_vec as reserve_graph_vec;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned GPU dispatch scratch for `csr_forward_or_changed` fixpoint loops.
 #[derive(Debug, Default)]
@@ -56,7 +56,7 @@ impl ForwardChangedGpuScratch {
 /// Terminates when no new bits land in the frontier or after `max_iters`.
 /// Returns the saturated frontier.
 ///
-/// Uses the supplied `OptimizerDispatcher` so callers can swap CUDA /
+/// Uses the supplied `ProgramDispatcher` so callers can swap CUDA /
 /// WGPU / reference backends without touching this layer.
 ///
 /// # Errors
@@ -64,7 +64,7 @@ impl ForwardChangedGpuScratch {
 /// Propagates any [`DispatchError`] surfaced by the dispatcher.
 #[allow(clippy::too_many_arguments)]
 pub fn forward_closure_via_change_flag_gpu(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -91,7 +91,7 @@ pub fn forward_closure_via_change_flag_gpu(
 /// Dispatcher-backed closure into caller-owned storage.
 #[allow(clippy::too_many_arguments)]
 pub fn forward_closure_via_change_flag_gpu_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -120,7 +120,7 @@ pub fn forward_closure_via_change_flag_gpu_into(
 /// input slots and changed flag.
 #[allow(clippy::too_many_arguments)]
 pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],

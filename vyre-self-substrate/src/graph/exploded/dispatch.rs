@@ -11,9 +11,9 @@ use vyre_primitives::graph::exploded::{
     IFDS_CSR_KILL_PROC_BUFFER, IFDS_CSR_ROW_CURSOR_BUFFER, IFDS_CSR_ROW_PTR_BUFFER,
 };
 
-use crate::dispatch_buffers::{decode_u32_output_exact, u32_word_bytes};
+use vyre_libs::dispatch_buffers::{decode_u32_output_exact, u32_word_bytes};
 use crate::graph::dispatch_bridge::{refresh_keyed_dispatch_inputs, DispatchInput};
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// GPU dispatch wrapper around the `reference_build_ifds_csr` CPU oracle.
 ///
@@ -27,7 +27,7 @@ use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 /// shapes that cannot represent an exploded CSR safely.
 #[allow(clippy::too_many_arguments)]
 pub fn build_ifds_csr_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     num_procs: u32,
     blocks_per_proc: u32,
     facts_per_proc: u32,
@@ -56,7 +56,7 @@ pub fn build_ifds_csr_via(
 /// GPU dispatch wrapper around the `reference_build_ifds_csr` CPU oracle into caller-owned CSR buffers.
 #[allow(clippy::too_many_arguments)]
 pub fn build_ifds_csr_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     num_procs: u32,
     blocks_per_proc: u32,
     facts_per_proc: u32,
@@ -87,7 +87,7 @@ pub fn build_ifds_csr_via_into(
 /// dispatch scratch and CSR buffers.
 #[allow(clippy::too_many_arguments)]
 pub fn build_ifds_csr_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     num_procs: u32,
     blocks_per_proc: u32,
     facts_per_proc: u32,
@@ -246,7 +246,7 @@ pub fn build_ifds_csr_via_with_scratch_into(
 
 #[allow(clippy::too_many_arguments)]
 fn dispatch_ifds_csr_outputs_from_prepared_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     program: &vyre_foundation::ir::Program,
     scratch_inputs: &[Vec<u8>],
     plan: &IfdsCsrDispatchPlan,

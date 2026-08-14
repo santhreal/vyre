@@ -46,11 +46,11 @@
 //! kernel. Combined with #51 FMM hierarchical compression on the
 //! coarse system, full workspace analysis stays tractable.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::math::mori_zwanzig::mz_project_step;
 #[cfg(test)]
 use vyre_primitives::math::mori_zwanzig::mz_project_step_cpu_into;
@@ -184,7 +184,7 @@ pub fn reference_coarsen_region_state_into(
 /// Returns [`DispatchError`] when shapes are invalid, lane counts overflow,
 /// or the backend returns malformed output.
 pub fn coarsen_region_state_fixed_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     p_matrix_fixed: &[u32],
     state_fixed: &[u32],
     n: u32,
@@ -201,7 +201,7 @@ pub fn coarsen_region_state_fixed_via(
 ///
 /// Returns [`DispatchError`] when shape checks or backend execution fail.
 pub fn coarsen_region_state_fixed_via_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     p_matrix_fixed: &[u32],
     state_fixed: &[u32],
     n: u32,
@@ -225,7 +225,7 @@ pub fn coarsen_region_state_fixed_via_into(
 ///
 /// Returns [`DispatchError`] when shape checks or backend execution fail.
 pub fn coarsen_region_state_fixed_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     p_matrix_fixed: &[u32],
     state_fixed: &[u32],
     n: u32,
@@ -322,7 +322,7 @@ pub fn reference_coarsen_via_clustering_into<'a>(
 mod tests {
     #![allow(clippy::identity_op, clippy::erasing_op)]
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     fn approx_eq(a: f64, b: f64) -> bool {
@@ -408,7 +408,7 @@ mod tests {
 
     struct MoriDispatcher;
 
-    impl OptimizerDispatcher for MoriDispatcher {
+    impl ProgramDispatcher for MoriDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -417,8 +417,8 @@ mod tests {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 3);
-            let p = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-            let state = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
+            let p = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let state = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
             assert_eq!(inputs[2].len(), state.len() * std::mem::size_of::<u32>());
             let n = state.len();
             let mut out = vec![0u32; n];

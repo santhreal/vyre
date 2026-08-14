@@ -47,11 +47,11 @@
 //! by the pass framework that supplies the `nodes`, `children`, and
 //! topological order buffers.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
 use crate::hardware::scratch::reserve_vec_capacity;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::knowledge_compile::ddnnf_evaluate;
 #[cfg(test)]
 use vyre_primitives::graph::knowledge_compile::ddnnf_evaluate_cpu;
@@ -107,7 +107,7 @@ pub fn reference_pass_applies(
 /// Returns [`DispatchError`] when circuit shape validation fails, wave ordering
 /// is invalid, or a backend dispatch/output contract is malformed.
 pub fn pass_applies_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     nodes: &[(u32, u32, u32)],
     node_var: &[u32],
     children: &[u32],
@@ -139,7 +139,7 @@ pub fn pass_applies_via(
 ///
 /// Returns [`DispatchError`] when validation or backend execution fails.
 pub fn pass_applies_via_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     nodes: &[(u32, u32, u32)],
     node_var: &[u32],
     children: &[u32],
@@ -167,7 +167,7 @@ pub fn pass_applies_via_into(
 ///
 /// Returns [`DispatchError`] when validation or backend execution fails.
 pub fn pass_applies_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     nodes: &[(u32, u32, u32)],
     node_var: &[u32],
     children: &[u32],
@@ -330,7 +330,7 @@ pub fn pass_conflicts(
 /// Returns [`DispatchError`] when circuit validation or backend execution
 /// fails.
 pub fn pass_conflicts_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     nodes: &[(u32, u32, u32)],
     node_var: &[u32],
     children: &[u32],
@@ -391,7 +391,7 @@ fn validate_waves(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
     use vyre_primitives::graph::knowledge_compile::{AND_NODE, LITERAL_TRUE};
 
@@ -481,7 +481,7 @@ mod tests {
 
     struct DdnnfDispatcher;
 
-    impl OptimizerDispatcher for DdnnfDispatcher {
+    impl ProgramDispatcher for DdnnfDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -490,13 +490,13 @@ mod tests {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 7);
-            let node_kinds = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-            let node_var = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
-            let child_offsets = crate::hardware::dispatch_buffers::read_u32s(&inputs[2]);
-            let child_counts = crate::hardware::dispatch_buffers::read_u32s(&inputs[3]);
-            let children = crate::hardware::dispatch_buffers::read_u32s(&inputs[4]);
-            let assignments = crate::hardware::dispatch_buffers::read_u32s(&inputs[5]);
-            let mut out = crate::hardware::dispatch_buffers::read_u32s(&inputs[6]);
+            let node_kinds = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let node_var = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+            let child_offsets = vyre_libs::dispatch_buffers::read_u32s(&inputs[2]);
+            let child_counts = vyre_libs::dispatch_buffers::read_u32s(&inputs[3]);
+            let children = vyre_libs::dispatch_buffers::read_u32s(&inputs[4]);
+            let assignments = vyre_libs::dispatch_buffers::read_u32s(&inputs[5]);
+            let mut out = vyre_libs::dispatch_buffers::read_u32s(&inputs[6]);
             for node in 0..node_kinds.len() {
                 match node_kinds[node] {
                     LITERAL_TRUE => {

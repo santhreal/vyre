@@ -2,13 +2,13 @@
 //!
 //! The `*_via` functions in `logic::do_calculus_change_impact` are the GPU/IR production entry
 //! points for do-calculus graph surgery: they pack inputs into LE bytes, build the primitive
-//! Program, dispatch it through an `OptimizerDispatcher`, and decode the declared outputs. Until
+//! Program, dispatch it through an `ProgramDispatcher`, and decode the declared outputs. Until
 //! now they had NO end-to-end test, the crate's only concrete dispatcher (`oracle::
 //! CpuOracleDispatcher`) hand-writes oracles for just `persistent_bfs` / `exploded` and rejects
 //! every other generator, so the surgery `_via` plumbing (input order, grid override, multi-output
 //! decode) was never exercised against a real IR execution.
 //!
-//! This test wires a `ReferenceEvalDispatcher`: a faithful `OptimizerDispatcher` backed by
+//! This test wires a `ReferenceEvalDispatcher`: a faithful `ProgramDispatcher` backed by
 //! `vyre_reference::reference_eval` (the trait doc explicitly anticipates such a "reference
 //! dispatcher"; `reference_eval` returns the declared outputs in exactly the writable-buffer
 //! binding order the trait promises), and proves each surgery `_via` reproduces its CPU oracle:

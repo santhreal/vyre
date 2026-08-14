@@ -10,12 +10,12 @@
 use crate::dataflow_fixpoint::reachability_closure_into;
 use crate::dataflow_fixpoint::reachability_closure_via_into;
 #[cfg(test)]
-use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::do_calculus::{
     do_intervention_delete_incoming, do_rule2_reverse_incoming, do_rule3_subgraph,
@@ -147,7 +147,7 @@ fn impact_mask_from_closure(
 /// needed by cache invalidation callers.
 #[must_use = "GPU impact prediction returns a mask or dispatch error that must be handled"]
 pub fn predict_impact_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     intervention_mask: &[u32],
     n: u32,
@@ -163,7 +163,7 @@ pub fn predict_impact_via(
 ///
 /// Returns [`DispatchError`] when validation or backend execution fails.
 pub fn predict_impact_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     intervention_mask: &[u32],
     n: u32,
@@ -214,7 +214,7 @@ pub fn predict_impact_via_into(
 /// Returns [`DispatchError`] when shapes are invalid, lane counts overflow,
 /// or the backend returns malformed output.
 pub fn intervention_delete_incoming_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     intervention_mask: &[u32],
     n: u32,
@@ -238,7 +238,7 @@ pub fn intervention_delete_incoming_via(
 ///
 /// Returns [`DispatchError`] when validation or backend execution fails.
 pub fn intervention_delete_incoming_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     intervention_mask: &[u32],
     n: u32,
@@ -256,7 +256,7 @@ pub fn intervention_delete_incoming_via_into(
 }
 
 fn intervention_delete_incoming_via_into_with_inputs(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     intervention_mask: &[u32],
     n: u32,
@@ -289,7 +289,7 @@ fn intervention_delete_incoming_via_into_with_inputs(
 /// Returns [`DispatchError`] when shapes are invalid, lane counts overflow, or
 /// the backend returns malformed output.
 pub fn rule2_reverse_incoming_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     treatment_mask: &[u32],
     n: u32,
@@ -313,7 +313,7 @@ pub fn rule2_reverse_incoming_via(
 ///
 /// Returns [`DispatchError`] when validation or backend execution fails.
 pub fn rule2_reverse_incoming_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     treatment_mask: &[u32],
     n: u32,
@@ -331,7 +331,7 @@ pub fn rule2_reverse_incoming_via_into(
 }
 
 fn rule2_reverse_incoming_via_into_with_inputs(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     treatment_mask: &[u32],
     n: u32,
@@ -352,7 +352,7 @@ fn rule2_reverse_incoming_via_into_with_inputs(
 }
 
 fn dispatch_do_calculus_surgery_into<F>(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     mask: &[u32],
     n: u32,
@@ -437,7 +437,7 @@ where
 /// limit, or the backend returns fewer than three output buffers or an
 /// impossible `kept_len`.
 pub fn rule3_subgraph_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     keep_mask: &[u32],
     n: u32,
@@ -463,7 +463,7 @@ pub fn rule3_subgraph_via(
 ///
 /// Returns [`DispatchError`] when validation or backend execution fails.
 pub fn rule3_subgraph_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     keep_mask: &[u32],
     n: u32,
@@ -475,7 +475,7 @@ pub fn rule3_subgraph_via_into(
 }
 
 fn rule3_subgraph_via_into_with_inputs(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     keep_mask: &[u32],
     n: u32,
@@ -690,7 +690,7 @@ pub fn reference_predict_impact_observation_form_into(
 /// mask required by cache invalidation and diagnostics.
 #[must_use = "GPU observation-form impact prediction returns a mask or dispatch error that must be handled"]
 pub fn predict_impact_observation_form_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     observation_mask: &[u32],
     n: u32,
@@ -706,7 +706,7 @@ pub fn predict_impact_observation_form_via(
 ///
 /// Returns [`DispatchError`] when validation or backend execution fails.
 pub fn predict_impact_observation_form_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     observation_mask: &[u32],
     n: u32,
@@ -1037,7 +1037,7 @@ mod tests {
 
     struct InterventionDispatcher;
 
-    impl OptimizerDispatcher for InterventionDispatcher {
+    impl ProgramDispatcher for InterventionDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -1047,8 +1047,8 @@ mod tests {
             assert_eq!(grid_override, Some([1, 1, 1]));
             // Real-backend contract: adj RO, mask RO, out plain-RW (zero-init slot) = 3 inputs.
             assert_eq!(inputs.len(), 3);
-            let adj = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-            let mask = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
+            let adj = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let mask = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
             let n = mask.len();
             let mut out = adj;
             for j in 0..n {
@@ -1079,7 +1079,7 @@ mod tests {
 
     struct Rule2Dispatcher;
 
-    impl OptimizerDispatcher for Rule2Dispatcher {
+    impl ProgramDispatcher for Rule2Dispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -1089,8 +1089,8 @@ mod tests {
             assert_eq!(grid_override, Some([1, 1, 1]));
             // Real-backend contract: adj RO, mask RO, out plain-RW (zero-init slot) = 3 inputs.
             assert_eq!(inputs.len(), 3);
-            let adj = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-            let mask = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
+            let adj = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let mask = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
             let n = mask.len();
             assert_eq!(adj.len(), n * n);
             let mut out = vec![0u32; n * n];

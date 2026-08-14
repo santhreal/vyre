@@ -2,7 +2,7 @@ use super::{BidirectionalGpuScratch, CachedBidirectionalProgram};
 use crate::graph::csr_bidirectional::dispatch::{
     bidirectional_step_dispatch_prepared_inputs_into, refresh_bidirectional_step_inputs,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::csr_bidirectional::{
     plan_csr_bidirectional_step, run_csr_bidirectional_closure_plan_with_step,
 };
@@ -14,7 +14,7 @@ use vyre_primitives::graph::csr_bidirectional::{
 /// Propagates dispatch failures from each bidirectional step.
 #[allow(clippy::too_many_arguments)]
 pub fn bidirectional_closure_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -43,7 +43,7 @@ pub fn bidirectional_closure_via(
 /// Dispatcher-backed bidirectional closure using caller-owned buffers.
 #[allow(clippy::too_many_arguments)]
 pub fn bidirectional_closure_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -73,7 +73,7 @@ pub fn bidirectional_closure_via_into(
 /// Dispatcher-backed bidirectional closure with caller-owned dispatch scratch.
 #[allow(clippy::too_many_arguments)]
 pub fn bidirectional_closure_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],

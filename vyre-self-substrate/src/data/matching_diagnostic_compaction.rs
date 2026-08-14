@@ -5,12 +5,12 @@
 //! compile the DFA once, match brackets on-device, sort region triples, then
 //! emit dedup survivor flags for stream compaction.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
 use crate::hardware::scratch::reserve_vec_capacity;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::matching::bracket_match::{
     bracket_match, bracket_match_dispatch_grid, pack_u32, CLOSE_BRACE, OPEN_BRACE, OTHER,
 };
@@ -135,7 +135,7 @@ pub fn pack_diagnostic_u32(words: &[u32]) -> Vec<u8> {
 /// Returns [`DispatchError`] when `kinds.len()` or `max_depth` exceeds the
 /// primitive index space, dispatch fails, or readback is malformed.
 pub fn bracket_pairs_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     kinds: &[u32],
     max_depth: u32,
 ) -> Result<Vec<u32>, DispatchError> {
@@ -152,7 +152,7 @@ pub fn bracket_pairs_via(
 ///
 /// Returns [`DispatchError`] when validation, dispatch, or readback fails.
 pub fn bracket_pairs_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     kinds: &[u32],
     max_depth: u32,
     scratch: &mut MatchingDiagnosticCompactionGpuScratch,
@@ -195,7 +195,7 @@ pub fn bracket_pairs_via_with_scratch_into(
 /// Returns [`DispatchError`] when the region count is zero or too large,
 /// dispatch fails, or readback is malformed.
 pub fn sort_regions_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     regions: &[RegionTriple],
 ) -> Result<Vec<RegionTriple>, DispatchError> {
     let mut scratch = MatchingDiagnosticCompactionGpuScratch::default();
@@ -212,7 +212,7 @@ pub fn sort_regions_via(
 /// Returns [`DispatchError`] when the region count is zero or too large,
 /// dispatch fails, or readback is malformed.
 pub fn sort_regions_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     regions: &[RegionTriple],
     scratch: &mut MatchingDiagnosticCompactionGpuScratch,
     out: &mut Vec<RegionTriple>,
@@ -261,7 +261,7 @@ pub fn sort_regions_via_with_scratch_into(
 /// Returns [`DispatchError`] when the region count is too large, dispatch
 /// fails, or readback is malformed.
 pub fn dedup_region_survivor_flags_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     sorted_regions: &[RegionTriple],
 ) -> Result<Vec<u32>, DispatchError> {
     let mut scratch = MatchingDiagnosticCompactionGpuScratch::default();
@@ -282,7 +282,7 @@ pub fn dedup_region_survivor_flags_via(
 /// Returns [`DispatchError`] when the region count is too large, dispatch
 /// fails, or readback is malformed.
 pub fn dedup_region_survivor_flags_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     sorted_regions: &[RegionTriple],
     scratch: &mut MatchingDiagnosticCompactionGpuScratch,
     out: &mut Vec<u32>,
@@ -469,12 +469,12 @@ fn decode_output_at(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     struct MatchingDispatcher;
 
-    impl OptimizerDispatcher for MatchingDispatcher {
+    impl ProgramDispatcher for MatchingDispatcher {
         fn dispatch(
             &self,
             program: &Program,
@@ -498,7 +498,7 @@ mod tests {
                         2,
                         "Fix: bracket_pairs_via must pass exactly the two input-consuming buffers (kinds, stack); match_pairs is backend-allocated."
                     );
-                    let kinds = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
+                    let kinds = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
                     let depth_words = inputs[1].len() / std::mem::size_of::<u32>();
                     assert_eq!(
                         grid_override,
@@ -522,9 +522,9 @@ mod tests {
                         "Fix: sort_regions_via must pass all six input-consuming buffers (3 RO + 3 plain-RW outputs)."
                     );
                     let regions = join_regions(
-                        &crate::hardware::dispatch_buffers::read_u32s(&inputs[0]),
-                        &crate::hardware::dispatch_buffers::read_u32s(&inputs[1]),
-                        &crate::hardware::dispatch_buffers::read_u32s(&inputs[2]),
+                        &vyre_libs::dispatch_buffers::read_u32s(&inputs[0]),
+                        &vyre_libs::dispatch_buffers::read_u32s(&inputs[1]),
+                        &vyre_libs::dispatch_buffers::read_u32s(&inputs[2]),
                     );
                     assert_eq!(
                         grid_override,
@@ -548,9 +548,9 @@ mod tests {
                         "Fix: dedup_region_survivor_flags_via must pass exactly the three RO buffers; survivors is backend-allocated."
                     );
                     let regions = join_regions(
-                        &crate::hardware::dispatch_buffers::read_u32s(&inputs[0]),
-                        &crate::hardware::dispatch_buffers::read_u32s(&inputs[1]),
-                        &crate::hardware::dispatch_buffers::read_u32s(&inputs[2]),
+                        &vyre_libs::dispatch_buffers::read_u32s(&inputs[0]),
+                        &vyre_libs::dispatch_buffers::read_u32s(&inputs[1]),
+                        &vyre_libs::dispatch_buffers::read_u32s(&inputs[2]),
                     );
                     assert_eq!(
                         grid_override,

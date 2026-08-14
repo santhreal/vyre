@@ -32,11 +32,11 @@ use rustc_hash::FxHashMap;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 use vyre_primitives::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_mix_word_expr};
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 
-use super::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use super::encode::EncodeError;
 use super::expr_arena::{encode_expr_arena, expr_kind, ExprArenaEncoding};
 
@@ -221,7 +221,7 @@ impl CanonicalLookup for SparseCanonicalMap {
 /// Program.
 pub fn gpu_cse_canonicals(
     program: &Program,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
 ) -> Result<(ExprArenaEncoding, Vec<u32>), CseError> {
     let arena = encode_expr_arena(program).map_err(CseError::Encode)?;
     let n = arena.expr_count;
@@ -238,7 +238,7 @@ pub fn gpu_cse_canonicals(
 #[cfg(test)]
 fn run_cse_kernels_into(
     arena: &ExprArenaEncoding,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     canonical: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
     let mut scratch = CseKernelScratch::default();
@@ -247,7 +247,7 @@ fn run_cse_kernels_into(
 
 fn run_cse_kernels_with_scratch_into(
     arena: &ExprArenaEncoding,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scratch: &mut CseKernelScratch,
     canonical: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
@@ -869,14 +869,14 @@ impl<C: CanonicalLookup + ?Sized> LetDedupeWalker<'_, C> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use std::cell::RefCell;
 
     struct CseDispatcher {
         outputs: RefCell<Vec<Vec<Vec<u8>>>>,
     }
 
-    impl OptimizerDispatcher for CseDispatcher {
+    impl ProgramDispatcher for CseDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -1100,7 +1100,7 @@ mod tests {
             canonical_input_count: Cell<usize>,
             call: Cell<usize>,
         }
-        impl OptimizerDispatcher for InputCountDispatcher {
+        impl ProgramDispatcher for InputCountDispatcher {
             fn dispatch(
                 &self,
                 _program: &Program,

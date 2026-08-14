@@ -11,7 +11,7 @@ use super::*;
 /// Returns [`DispatchError`] when lane count is zero, packed input shape is
 /// wrong, dispatch fails, or backend readback is malformed.
 pub fn i4x8_dot_f32_scaled_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     lhs_packed: &[u32],
     rhs_packed: &[u32],
     lhs_scale: f32,
@@ -42,7 +42,7 @@ pub fn i4x8_dot_f32_scaled_via(
 /// Returns [`DispatchError`] under the same conditions as
 /// [`i4x8_dot_f32_scaled_via`].
 pub fn i4x8_dot_f32_scaled_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     lhs_packed: &[u32],
     rhs_packed: &[u32],
     lhs_scale: f32,

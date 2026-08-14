@@ -26,11 +26,11 @@
 //! Returns the smoothed flow vector. Used by callers that want
 //! provably-tight bounds on the matroid LP relaxation residual.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, checked_product_count, checked_square_cells, decode_u32_output_exact,
     ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::math::amg_v_cycle::amg_v_cycle;
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_primitives::math::amg_v_cycle::{cpu_ref, cpu_ref_into, AmgVcycleScratch};
@@ -172,7 +172,7 @@ pub fn reference_smooth_matroid_flow_into(
 /// overflow, or the backend returns malformed output.
 #[allow(clippy::too_many_arguments)]
 pub fn smooth_matroid_flow_fixed_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     a_fixed: &[u32],
     b_fixed: &[u32],
     x_fixed: &[u32],
@@ -205,7 +205,7 @@ pub fn smooth_matroid_flow_fixed_via(
 /// Returns [`DispatchError`] when shape checks or backend execution fail.
 #[allow(clippy::too_many_arguments)]
 pub fn smooth_matroid_flow_fixed_via_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     a_fixed: &[u32],
     b_fixed: &[u32],
     x_fixed: &[u32],
@@ -239,7 +239,7 @@ pub fn smooth_matroid_flow_fixed_via_into(
 /// Returns [`DispatchError`] when shape checks or backend execution fail.
 #[allow(clippy::too_many_arguments)]
 pub fn smooth_matroid_flow_fixed_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     a_fixed: &[u32],
     b_fixed: &[u32],
     x_fixed: &[u32],
@@ -452,7 +452,7 @@ pub fn solve_to_tolerance_into(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     fn approx_eq(a: f64, b: f64) -> bool {
@@ -556,7 +556,7 @@ mod tests {
 
     struct AmgDispatcher;
 
-    impl OptimizerDispatcher for AmgDispatcher {
+    impl ProgramDispatcher for AmgDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -565,10 +565,10 @@ mod tests {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 11);
-            let b = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
-            let x = crate::hardware::dispatch_buffers::read_u32s(&inputs[2]);
+            let b = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+            let x = vyre_libs::dispatch_buffers::read_u32s(&inputs[2]);
             assert_eq!(
-                crate::hardware::dispatch_buffers::read_u32s(&inputs[6])[0],
+                vyre_libs::dispatch_buffers::read_u32s(&inputs[6])[0],
                 DEFAULT_OMEGA_FIXED
             );
             let out: Vec<u32> = x

@@ -12,7 +12,7 @@ use super::*;
 /// Returns [`DispatchError`] when dimensions are zero, input shapes are wrong,
 /// dispatch fails, or backend readback is malformed.
 pub fn i4x8_batched_matvec_f32_scaled_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     weights_packed: &[u32],
     x_batches: &[f32],
     row_scales: &[f32],
@@ -45,7 +45,7 @@ pub fn i4x8_batched_matvec_f32_scaled_via(
 /// Returns [`DispatchError`] under the same conditions as
 /// [`i4x8_batched_matvec_f32_scaled_via`].
 pub fn i4x8_batched_matvec_f32_scaled_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     weights_packed: &[u32],
     x_batches: &[f32],
     row_scales: &[f32],

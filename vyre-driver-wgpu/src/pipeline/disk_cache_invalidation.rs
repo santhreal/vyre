@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
 pub(crate) fn invalidate_impacted(
-    dispatcher: &dyn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher,
+    dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher,
     intervention_mask: &[u32],
     rule_adj: &[u32],
     state: &[u32],

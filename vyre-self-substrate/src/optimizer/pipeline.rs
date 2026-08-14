@@ -15,7 +15,7 @@ use vyre_foundation::ir::Program;
 use super::canonicalize_via_encoded::{gpu_canonicalize, CanonicalizeError};
 use super::const_fold_via_encoded::{gpu_const_fold, ConstFoldError};
 use super::dce_via_encoded::{gpu_dce, DceError};
-use super::dispatcher::OptimizerDispatcher;
+use vyre_foundation::program_dispatch::ProgramDispatcher;
 use super::pattern_match_via_encoded::{gpu_algebraic_identities, PatternMatchError};
 use super::pipeline_resident::{gpu_pipeline_resident, PipelineError};
 
@@ -53,7 +53,7 @@ impl std::error::Error for GpuOptimizeError {}
 /// the per-pass borrowed path is used.
 pub fn gpu_optimize(
     program: Program,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
 ) -> Result<Program, GpuOptimizeError> {
     if dispatcher.supports_persistent() {
         return gpu_pipeline_resident(program, dispatcher).map_err(GpuOptimizeError::Persistent);

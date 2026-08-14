@@ -17,7 +17,7 @@ use vyre_foundation::ir::Program;
 
 use crate::graph::csr_frontier_queue_scratch::ResidentCsrQueueMaterializer;
 use crate::graph::resident_handles::free_unique_resident_handles;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Device-resident CSR graph for queue-driven sparse traversal.
 #[derive(Debug, Clone)]
@@ -82,7 +82,7 @@ impl ResidentCsrQueueGraph {
     }
 
     /// Free graph-resident buffers.
-    pub fn free(self, dispatcher: &dyn OptimizerDispatcher) -> Result<(), DispatchError> {
+    pub fn free(self, dispatcher: &dyn ProgramDispatcher) -> Result<(), DispatchError> {
         free_unique_resident_handles(
             dispatcher,
             &[
@@ -114,7 +114,7 @@ pub struct ResidentCsrQueueScratch {
 
 impl ResidentCsrQueueScratch {
     /// Free scratch-resident buffers.
-    pub fn free(&mut self, dispatcher: &dyn OptimizerDispatcher) -> Result<(), DispatchError> {
+    pub fn free(&mut self, dispatcher: &dyn ProgramDispatcher) -> Result<(), DispatchError> {
         let Some(handles) = self.handles.take() else {
             return Ok(());
         };

@@ -71,6 +71,9 @@ cpu-parity = ["all-solvers", "vyre-primitives/cpu-parity"]
 
 [dependencies]
 vyre-foundation.workspace = true
+# Host-side dispatch byte marshalling (`vyre_libs::dispatch_buffers`). The
+# target DAG puts the composition library below the pass engine.
+vyre-libs.workspace = true
 vyre-primitives = { workspace = true }
 tracing.workspace = true
 rustc-hash.workspace = true

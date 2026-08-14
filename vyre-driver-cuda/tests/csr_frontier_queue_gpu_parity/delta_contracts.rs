@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn cuda_resident_queue_delta_enqueues_only_new_discoveries() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 16u32;
     let active_queue_capacity = 8u32;
     let next_queue_capacity = 8u32;
@@ -164,7 +164,7 @@ fn cuda_resident_queue_delta_enqueues_only_new_discoveries() {
 #[test]
 fn cuda_resident_strided_queue_delta_matches_cpu_on_skewed_rows_and_pressure() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 4096u32;
     let active_queue_capacity = 5u32;
     let active_queue = vec![0u32, 17, 2047, 0, 0];

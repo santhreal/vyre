@@ -20,11 +20,11 @@ pub(crate) fn decode_first_output(
     words: usize,
     context: &'static str,
     out: &mut Vec<u32>,
-) -> Result<(), crate::optimizer::dispatcher::DispatchError> {
+) -> Result<(), vyre_foundation::program_dispatch::DispatchError> {
     if outputs.is_empty() {
-        return Err(crate::optimizer::dispatcher::DispatchError::BackendError(
+        return Err(vyre_foundation::program_dispatch::DispatchError::BackendError(
             format!("Fix: {context} expected at least one output buffer, got 0."),
         ));
     }
-    crate::dispatch_buffers::decode_u32_output_exact(&outputs[0], words, context, out)
+    vyre_libs::dispatch_buffers::decode_u32_output_exact(&outputs[0], words, context, out)
 }

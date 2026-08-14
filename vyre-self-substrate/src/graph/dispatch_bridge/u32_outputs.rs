@@ -1,10 +1,10 @@
-use crate::dispatch_buffers::decode_u32_output_exact;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_libs::dispatch_buffers::decode_u32_output_exact;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_foundation::ir::Program;
 
 /// Dispatch already-prepared inputs and decode exactly one u32 output buffer
 /// into `out`.
-pub(crate) fn dispatch_single_u32_output_from_prepared_into<D: OptimizerDispatcher + ?Sized>(
+pub(crate) fn dispatch_single_u32_output_from_prepared_into<D: ProgramDispatcher + ?Sized>(
     dispatcher: &D,
     program: &Program,
     scratch_inputs: &[Vec<u8>],
@@ -25,7 +25,7 @@ pub(crate) fn dispatch_single_u32_output_from_prepared_into<D: OptimizerDispatch
 
 /// Dispatch already-prepared inputs and decode exactly two u32 output buffers.
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn dispatch_two_u32_outputs_from_prepared_into<D: OptimizerDispatcher + ?Sized>(
+pub(crate) fn dispatch_two_u32_outputs_from_prepared_into<D: ProgramDispatcher + ?Sized>(
     dispatcher: &D,
     program: &Program,
     scratch_inputs: &[Vec<u8>],

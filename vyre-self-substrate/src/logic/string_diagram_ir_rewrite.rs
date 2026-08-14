@@ -46,11 +46,11 @@
 //! composition step. The full ZX-calculus rewrite engine ships in
 //! 1.0.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, checked_product_count, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::string_diagram::monoidal_compose;
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_primitives::graph::string_diagram::monoidal_compose_cpu_into;
@@ -125,7 +125,7 @@ pub fn reference_compose_ir_arrows_into(
 /// Returns [`DispatchError`] when shape validation fails, lane counts overflow,
 /// or the backend returns malformed output.
 pub fn compose_ir_arrows_fixed_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     f_fixed: &[u32],
     g_fixed: &[u32],
     a: u32,
@@ -153,7 +153,7 @@ pub fn compose_ir_arrows_fixed_via(
 ///
 /// Returns [`DispatchError`] when validation or backend execution fails.
 pub fn compose_ir_arrows_fixed_via_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     f_fixed: &[u32],
     g_fixed: &[u32],
     a: u32,
@@ -181,7 +181,7 @@ pub fn compose_ir_arrows_fixed_via_into(
 ///
 /// Returns [`DispatchError`] when validation or backend execution fails.
 pub fn compose_ir_arrows_fixed_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     f_fixed: &[u32],
     g_fixed: &[u32],
     a: u32,
@@ -311,7 +311,7 @@ pub fn composition_associates_with_scratch(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     fn approx_eq_vec(a: &[f64], b: &[f64]) -> bool {
@@ -391,7 +391,7 @@ mod tests {
 
     struct ComposeDispatcher;
 
-    impl OptimizerDispatcher for ComposeDispatcher {
+    impl ProgramDispatcher for ComposeDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -402,8 +402,8 @@ mod tests {
             // Three input-consuming buffers: f RO(0), g RO(1), and the plain-ReadWrite `out`(2) whose
             // zero-init contents the caller supplies (backend does not allocate it).
             assert_eq!(inputs.len(), 3);
-            let f = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-            let g = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
+            let f = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let g = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
             assert_eq!(f.len(), 4);
             assert_eq!(g.len(), 4);
             let mut out = vec![0u32; 4];

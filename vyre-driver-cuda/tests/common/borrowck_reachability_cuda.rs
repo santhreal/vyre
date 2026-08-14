@@ -1,6 +1,6 @@
 use vyre_frontend_rust::borrowck::{BorrowFacts, Conflict, ConflictKind, LoanKind};
 use vyre_self_substrate::csr_forward_or_changed::forward_closure_via_change_flag_gpu;
-use vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher;
+use vyre_foundation::program_dispatch::ProgramDispatcher;
 #[path = "borrowck_batched_cuda.rs"]
 mod batched;
 pub(crate) mod gpu {
@@ -46,7 +46,7 @@ fn build_csr(n: u32, edges: &[(u32, u32)], reverse: bool) -> (Vec<u32>, Vec<u32>
 /// The CUDA borrow checker: same conflict construction as the CPU engine, but
 /// live ranges computed via GPU iterated closures.
 pub(crate) fn cuda_conflicts(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     facts: &BorrowFacts,
 ) -> Vec<Conflict> {
     let n = facts.point_count;
@@ -217,7 +217,7 @@ pub(crate) fn corpus() -> Vec<(&'static str, BorrowFacts)> {
 
 /// Batched CUDA adapter owned by this upper integration harness.
 pub(crate) fn cuda_conflicts_batched(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     facts: &BorrowFacts,
 ) -> Vec<Conflict> {
     batched::analyze_batched(dispatcher, facts)

@@ -5,20 +5,20 @@
 mod common;
 
 use common::{bytes_u32, live_backend, u32_bytes};
-use vyre_driver_cuda::CudaOptimizerDispatcher;
+use vyre_driver_cuda::CudaProgramDispatcher;
 use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::csr_queue_strided::{
     csr_queue_strided_forward_dispatch_grid, csr_queue_strided_forward_traverse,
     csr_queue_strided_forward_traverse_cpu,
 };
-use vyre_self_substrate::optimizer::dispatcher::{
-    OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
+use vyre_foundation::program_dispatch::{
+    ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
 
 #[test]
 fn cuda_csr_queue_strided_forward_matches_cpu_on_skewed_row() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 1024u32;
     let queue_capacity = 9u32;
     let active_queue = vec![0, 7, 1023, 0, 0, 0, 0, 0, 0];

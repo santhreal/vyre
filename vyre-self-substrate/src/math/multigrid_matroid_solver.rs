@@ -45,11 +45,11 @@
 //! full V-cycle composes this step with explicit restriction and
 //! prolongation primitives.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(test)]
 use vyre_foundation::pass_substrate::multigrid_matroid_solver as foundation_multigrid;
 use vyre_primitives::math::multigrid::jacobi_smooth_step;
@@ -115,7 +115,7 @@ pub fn reference_matroid_solve_step_into(
 /// Returns [`DispatchError`] when shapes are invalid, lane counts exceed the
 /// primitive range, or the backend returns malformed output.
 pub fn matroid_solve_step_fixed_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     a_fixed: &[u32],
     b_fixed: &[u32],
     x_in_fixed: &[u32],
@@ -141,7 +141,7 @@ pub fn matroid_solve_step_fixed_via(
 ///
 /// Returns [`DispatchError`] when shape checks or backend execution fail.
 pub fn matroid_solve_step_fixed_via_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     a_fixed: &[u32],
     b_fixed: &[u32],
     x_in_fixed: &[u32],
@@ -168,7 +168,7 @@ pub fn matroid_solve_step_fixed_via_into(
 ///
 /// Returns [`DispatchError`] when shape checks or backend execution fail.
 pub fn matroid_solve_step_fixed_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     a_fixed: &[u32],
     b_fixed: &[u32],
     x_in_fixed: &[u32],
@@ -304,7 +304,7 @@ pub fn solve_to_tolerance_into(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     fn approx_eq(a: f64, b: f64) -> bool {
@@ -427,7 +427,7 @@ mod tests {
 
     struct JacobiDispatcher;
 
-    impl OptimizerDispatcher for JacobiDispatcher {
+    impl ProgramDispatcher for JacobiDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -436,10 +436,10 @@ mod tests {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 5);
-            let a = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-            let b = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
-            let x_in = crate::hardware::dispatch_buffers::read_u32s(&inputs[2]);
-            let omega = crate::hardware::dispatch_buffers::read_u32s(&inputs[3])[0];
+            let a = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let b = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+            let x_in = vyre_libs::dispatch_buffers::read_u32s(&inputs[2]);
+            let omega = vyre_libs::dispatch_buffers::read_u32s(&inputs[3])[0];
             assert_eq!(inputs[4].len(), b.len() * std::mem::size_of::<u32>());
             let n = b.len();
             let mut out = Vec::with_capacity(n);
@@ -480,14 +480,14 @@ mod tests {
     // test can never see the waste. This asserts the grid the consumer actually requests.
     struct GridAssertDispatcher;
 
-    impl OptimizerDispatcher for GridAssertDispatcher {
+    impl ProgramDispatcher for GridAssertDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
             inputs: &[Vec<u8>],
             grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            let n = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]).len() as u32;
+            let n = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]).len() as u32;
             let expected = ceil_div_u32(n, 256);
             assert_eq!(
                 grid_override,

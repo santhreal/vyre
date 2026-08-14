@@ -1,12 +1,12 @@
 use super::*;
-use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use std::sync::Mutex;
 use vyre_primitives::graph::path_reconstruct::try_cpu_ref_batched;
 
 struct PathDispatcher;
 
-impl OptimizerDispatcher for PathDispatcher {
+impl ProgramDispatcher for PathDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -14,8 +14,8 @@ impl OptimizerDispatcher for PathDispatcher {
         grid_override: Option<[u32; 3]>,
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
         assert_eq!(inputs.len(), 4);
-        let parent = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-        let targets = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
+        let parent = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+        let targets = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
         let out_words = inputs[2].len() / std::mem::size_of::<u32>();
         let max_depth = out_words / targets.len().max(1);
         if targets.len() == 1 {
@@ -39,7 +39,7 @@ struct RecordingPathDispatcher {
     parents: Mutex<Vec<Vec<u32>>>,
 }
 
-impl OptimizerDispatcher for RecordingPathDispatcher {
+impl ProgramDispatcher for RecordingPathDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -49,7 +49,7 @@ impl OptimizerDispatcher for RecordingPathDispatcher {
         self.parents
             .lock()
             .expect("Fix: path parent recorder mutex should not be poisoned")
-            .push(crate::hardware::dispatch_buffers::read_u32s(&inputs[0]));
+            .push(vyre_libs::dispatch_buffers::read_u32s(&inputs[0]));
         Ok(self.outputs.clone())
     }
 }
