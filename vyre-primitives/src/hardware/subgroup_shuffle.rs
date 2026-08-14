@@ -9,22 +9,48 @@ use crate::hardware::MAP_WORKGROUP;
 pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_shuffle";
 
 /// Build a Program that maps `out[i] = values[lanes[i]]` across the subgroup.
+///
+/// Both operands of a shuffle are evaluated at EVERY lane index in the subgroup, not
+/// only at the indices a store guard admits, because every lane publishes a value its
+/// peers may select. Writing `load(values, idx)` and `load(lanes, idx)` as the operands
+/// therefore reads both buffers at the index of every lane in the subgroup, past the
+/// end of them for a dispatch wider than the buffers, no matter what branch the
+/// collective sits in. The operands are control-flow-guarded per-lane locals instead,
+/// and the collective itself sits in uniform control flow, where a subgroup
+/// collective's participating-lane set is well defined rather than dependent on the
+/// active mask of a divergent branch.
 #[must_use]
 pub fn subgroup_shuffle(values: &str, lanes: &str, out: &str, n: u32) -> Program {
     let body = vec![crate::hardware::region::wrap_anonymous(
         OP_ID,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
+            Node::let_bind("lane_value", Expr::u32(0)),
+            Node::let_bind("src_lane", Expr::u32(0)),
+            Node::if_then(
+                Expr::lt(Expr::var("idx"), Expr::buf_len(values)),
+                vec![Node::assign(
+                    "lane_value",
+                    Expr::load(values, Expr::var("idx")),
+                )],
+            ),
+            Node::if_then(
+                Expr::lt(Expr::var("idx"), Expr::buf_len(lanes)),
+                vec![Node::assign(
+                    "src_lane",
+                    Expr::load(lanes, Expr::var("idx")),
+                )],
+            ),
+            Node::let_bind(
+                "shuffled",
+                Expr::SubgroupShuffle {
+                    value: Box::new(Expr::var("lane_value")),
+                    lane: Box::new(Expr::var("src_lane")),
+                },
+            ),
             Node::if_then(
                 Expr::lt(Expr::var("idx"), Expr::buf_len(out)),
-                vec![Node::store(
-                    out,
-                    Expr::var("idx"),
-                    Expr::SubgroupShuffle {
-                        value: Box::new(Expr::load(values, Expr::var("idx"))),
-                        lane: Box::new(Expr::load(lanes, Expr::var("idx"))),
-                    },
-                )],
+                vec![Node::store(out, Expr::var("idx"), Expr::var("shuffled"))],
             ),
         ],
     )];

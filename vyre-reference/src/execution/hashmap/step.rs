@@ -134,18 +134,30 @@ pub(crate) fn eval_expr_snapshot(
     super::eval_expr(expr, &mut invocation, &mut snapshot_memory, snapshots)
 }
 
+/// Capture every lane's locals for cross-lane collective evaluation, INDEXED BY LANE.
+///
+/// `subgroup_slice` carves a lane window out of this vector POSITIONALLY, and
+/// `eval_subgroup_shuffle` addresses a lane inside that window by its
+/// `linear_local_index % subgroup_width`, so position in this vector IS lane identity.
+/// `invocations` is in STEP order, which a non-`Forward` `LaneOrder` permutes, so
+/// capturing in iteration order made every subgroup collective read the wrong lanes
+/// under a permuted schedule: a ballot returned the mask of a different subgroup and a
+/// shuffle sourced a different lane, which is a change in RESULT, not in scheduling.
+/// Sorting by lane index restores the invariant the readers assume for every schedule.
 #[cfg(feature = "subgroup-ops")]
 fn capture_invocation_snapshots(
     invocations: &[HashmapInvocation<'_>],
 ) -> Vec<HashmapInvocationSnapshot> {
-    invocations
+    let mut snapshots: Vec<HashmapInvocationSnapshot> = invocations
         .iter()
         .map(|invocation| HashmapInvocationSnapshot {
             ids: invocation.ids,
             linear_local_index: invocation.linear_local_index,
             locals: invocation.locals.snapshot(),
         })
-        .collect()
+        .collect();
+    snapshots.sort_unstable_by_key(|snapshot| snapshot.linear_local_index);
+    snapshots
 }
 
 #[cfg(all(test, feature = "subgroup-ops"))]

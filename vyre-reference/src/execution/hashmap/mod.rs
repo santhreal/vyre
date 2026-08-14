@@ -49,6 +49,31 @@ pub(crate) enum LaneOrder {
     /// Workgroups and intra-workgroup invocations both stepped in reverse. Only the
     /// STEPPING order changes; every invocation keeps its true global/local ids.
     Reversed,
+    /// Workgroups and intra-workgroup invocations both stepped starting `by` positions
+    /// in, wrapping around. Only the STEPPING order changes; every invocation keeps its
+    /// true global/local ids.
+    ///
+    /// Reversal alone is a symmetric permutation, so a defect that maps lane identity
+    /// onto step position survives any "reverse it back" repair and stays invisible to a
+    /// forward-vs-reversed comparison of a reversal-symmetric program. A rotation is
+    /// asymmetric, so it separates lane identity from step position for real.
+    Rotated(u32),
+}
+
+/// Permute a dispatch-order list in place according to `lane_order`.
+///
+/// One home for the permutation so the workgroup list and the per-workgroup
+/// invocation list cannot drift into stepping different orders.
+fn apply_step_order<T>(items: &mut [T], lane_order: LaneOrder) {
+    match lane_order {
+        LaneOrder::Forward => {}
+        LaneOrder::Reversed => items.reverse(),
+        LaneOrder::Rotated(by) => {
+            if !items.is_empty() {
+                items.rotate_left(by as usize % items.len());
+            }
+        }
+    }
 }
 
 /// A `MemoryOrdering::GridSync` barrier, the grid-wide fence `fuse_programs` inserts
@@ -365,11 +390,11 @@ pub(crate) fn run_hashmap_reference(
     } else {
         vec![entry]
     };
-    // Canonical workgroup dispatch order (z,y,x-nested). `LaneOrder::Reversed`
-    // steps this list, and the invocations within each workgroup, back to front
-    // to flip the deterministic last-writer of any non-atomic same-slot store, so a
-    // forward-vs-reversed output comparison surfaces a hidden cross-lane race (see
-    // [`LaneOrder`]). Forward keeps the exact original nested-loop order.
+    // Canonical workgroup dispatch order (z,y,x-nested). A non-`Forward`
+    // [`LaneOrder`] permutes this list, and the invocations within each workgroup, to
+    // flip the deterministic last-writer of any non-atomic same-slot store, so an
+    // output comparison against `Forward` surfaces a hidden cross-lane race. Forward
+    // keeps the exact original nested-loop order.
     let mut wg_coords: Vec<[u32; 3]> = Vec::new();
     for wg_z in 0..workgroup_count_z {
         for wg_y in 0..workgroup_count_y {
@@ -378,20 +403,16 @@ pub(crate) fn run_hashmap_reference(
             }
         }
     }
-    if lane_order == LaneOrder::Reversed {
-        wg_coords.reverse();
-    }
+    apply_step_order(&mut wg_coords, lane_order);
     let mut memory = HashmapMemory::new(storage);
     for &segment in &segments {
         for &wg in &wg_coords {
             memory.reset_workgroup(program)?;
             let mut invocations = create_invocations(program, wg, segment)?;
-            if lane_order == LaneOrder::Reversed {
-                // Reverse the STEP order only; each invocation retains its true
-                // global/local ids and linear_local_index (fields move with the
-                // element), so semantics are unchanged for a race-free program.
-                invocations.reverse();
-            }
+            // Permute the STEP order only; each invocation retains its true
+            // global/local ids and linear_local_index (fields move with the
+            // element), so semantics are unchanged for a race-free program.
+            apply_step_order(&mut invocations, lane_order);
             run_invocations(
                 &mut memory,
                 &mut invocations,

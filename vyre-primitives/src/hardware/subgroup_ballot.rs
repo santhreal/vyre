@@ -11,24 +11,38 @@ pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_ballot";
 
 /// Build a Program that collects the per-lane boolean predicate into a u32
 /// bitmask broadcast to every lane.
+///
+/// Every lane of the subgroup contributes one predicate bit, so the ballot's operand
+/// is evaluated at EVERY lane index, not only at the indices a store guard admits.
+/// Writing `load(cond_input, idx)` as the operand therefore reads `cond_input` at the
+/// index of every lane in the subgroup, past the end of the buffer for a dispatch
+/// wider than the buffer, no matter what branch the collective sits in. The operand is
+/// a control-flow-guarded per-lane local instead, and the collective itself sits in
+/// uniform control flow, where a subgroup collective's participating-lane set is
+/// well defined rather than dependent on the active mask of a divergent branch.
 #[must_use]
 pub fn subgroup_ballot(cond_input: &str, out: &str, n: u32) -> Program {
     let body = vec![crate::hardware::region::wrap_anonymous(
         OP_ID,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
+            Node::let_bind("pred", Expr::u32(0)),
+            Node::if_then(
+                Expr::lt(Expr::var("idx"), Expr::buf_len(cond_input)),
+                vec![Node::assign(
+                    "pred",
+                    Expr::load(cond_input, Expr::var("idx")),
+                )],
+            ),
+            Node::let_bind(
+                "mask",
+                Expr::SubgroupBallot {
+                    cond: Box::new(Expr::eq(Expr::var("pred"), Expr::u32(1))),
+                },
+            ),
             Node::if_then(
                 Expr::lt(Expr::var("idx"), Expr::buf_len(out)),
-                vec![Node::store(
-                    out,
-                    Expr::var("idx"),
-                    Expr::SubgroupBallot {
-                        cond: Box::new(Expr::eq(
-                            Expr::load(cond_input, Expr::var("idx")),
-                            Expr::u32(1),
-                        )),
-                    },
-                )],
+                vec![Node::store(out, Expr::var("idx"), Expr::var("mask"))],
             ),
         ],
     )];

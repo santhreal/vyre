@@ -558,7 +558,7 @@ impl<'a> Invocation<'a> {
     ///
     /// ```rust,no_run
     /// use vyre_reference::{value::Value, workgroup::{Invocation, InvocationIds}};
-    /// fn main() -> Result<(), crate::ReferenceError> {
+    /// fn main() -> Result<(), vyre_reference::ReferenceError> {
     ///     let mut invocation = Invocation::new(InvocationIds::ZERO, &[]);
     ///     invocation.bind("example", Value::U32(1))?;
     ///     Ok(())
@@ -587,7 +587,7 @@ impl<'a> Invocation<'a> {
     ///
     /// ```rust,no_run
     /// use vyre_reference::{value::Value, workgroup::{Invocation, InvocationIds}};
-    /// fn main() -> Result<(), crate::ReferenceError> {
+    /// fn main() -> Result<(), vyre_reference::ReferenceError> {
     ///     let mut invocation = Invocation::new(InvocationIds::ZERO, &[]);
     ///     invocation.bind_loop_var("example", Value::U32(1))?;
     ///     Ok(())
