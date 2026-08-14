@@ -1,4 +1,5 @@
-use super::{ReleaseMacroFamily, SyntheticCountWorkload, SyntheticPattern};
+use super::macro_registry::ReleaseMacroFamily;
+use super::synthetic_count::{SyntheticCountWorkload, SyntheticPattern};
 
 pub(super) static CONDITION_EVAL_BATCH: SyntheticCountWorkload = SyntheticCountWorkload {
     id: "release.condition_eval.1m",
