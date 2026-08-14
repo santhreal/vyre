@@ -6,6 +6,10 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Added
 
+- `xtask dup-scan --report [CRATE]` attributes duplicated lines to individual
+  files and names the files each one shares shingles with. The gate could report
+  that a crate exceeded its pin but not which copy to collapse, so a failure
+  named a crate and left the search manual.
 - Grouped affine INT4 linear now provides a typed batched program builder that
   dequantizes each immutable weight tile once and reuses it across independent
   resident batch rows. Release evidence measures normalized per-inference
@@ -236,6 +240,14 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Fixed
 
+- `xtask-registry --help` and `xtask-evidence --help` exit 0 and list the
+  subcommands each binary dispatches, derived from its `IMPLEMENTED` table. Both
+  treated `--help` as an unknown subcommand and exited 1.
+- The `structure-gate` binary is registered in `docs/CLI.toml`. It is the
+  program `.github/workflows/gates.yml` runs for the workspace structure check,
+  and it was the only workspace binary absent from the CLI contract.
+- `xtask dup-scan` no longer advertises an `--output PATH` option. No such
+  option was ever implemented.
 - Emitted SPIR-V is validated again. When `spirv-val` was absent the shared
   assertion fell back to checking that a blob held at least five words and
   carried a plausible version word, then returned, so every emission passed on a

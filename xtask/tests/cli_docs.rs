@@ -33,10 +33,40 @@ fn workspace_cli_documentation_is_current() {
         "Fix: regenerate or repair CLI contracts: {}",
         String::from_utf8_lossy(&output.stderr)
     );
-    assert_eq!(
-        String::from_utf8(output.stdout).expect("Fix: generator output must be UTF-8"),
-        "cli-docs: verified 10 binaries and 73 subcommands\n"
+    let summary = String::from_utf8(output.stdout).expect("Fix: generator output must be UTF-8");
+    let root = workspace_root();
+    let manifest =
+        fs::read_to_string(root.join("docs/CLI.toml")).expect("Fix: docs/CLI.toml must be readable");
+    let declared = manifest
+        .lines()
+        .filter(|line| line.trim() == "[[binary]]")
+        .count();
+    let documented = fs::read_to_string(root.join("docs/CLI.md"))
+        .expect("Fix: docs/CLI.md must be readable");
+    let expected = format!(
+        "cli-docs: verified {declared} binaries and {} subcommands\n",
+        documented_subcommand_count(&documented)
     );
+    assert_eq!(
+        summary, expected,
+        "Fix: the generator must verify every binary declared in docs/CLI.toml and every \
+         subcommand it wrote into docs/CLI.md"
+    );
+}
+
+/// Total subcommands the generated summary table attributes to the binaries.
+///
+/// The count is read back out of the artifact rather than written here, so
+/// registering a binary or adding a subcommand does not need this test edited,
+/// and a generator that stopped verifying one of them cannot stay green.
+fn documented_subcommand_count(doc: &str) -> usize {
+    doc.lines()
+        .filter(|line| line.starts_with("| `"))
+        .filter_map(|line| line.split('|').nth(4))
+        .map(str::trim)
+        .filter(|cell| !cell.is_empty() && *cell != "none")
+        .map(|cell| cell.split(',').count())
+        .sum()
 }
 
 /// Prevents internal helper binaries from running audits or writes when a reader asks for help.

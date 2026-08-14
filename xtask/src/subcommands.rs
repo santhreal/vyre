@@ -190,7 +190,7 @@ pub const SUBCOMMANDS: &[Subcommand] = &[
     },
     Subcommand {
         name: "dup-scan",
-        usage: "[--write-baseline] [--output PATH]",
+        usage: "[--write-baseline] [--report [CRATE]]",
         help: "Measure cross-file duplicate source blocks against the pinned per-crate baseline",
         kind: Kind::Gate,
         ci_args: &[],

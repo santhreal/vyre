@@ -2,6 +2,30 @@
 
 Use this crate through the contract and checked-in example below.
 
+<!-- BEGIN GENERATED CLI CONTRACT -->
+## Command-line interface
+
+This section is generated from `docs/CLI.toml` and executable help output.
+
+### `structure-gate`
+
+```console
+./cargo_full run -p structure-gate --bin structure-gate -- --help
+```
+
+Commands: none.
+
+Hardware: No accelerator is required.
+
+Environment: No environment variables alter CLI behavior.
+
+Configuration: The command reads the workspace manifests and Rust sources under the repository root. It takes no arguments other than help.
+
+Failure behavior: A workspace member outside the reviewed roster, an operation identity registered more than once, or a concept with more than one home returns status 1 with the offending paths.
+
+Exit codes: 0 when the structure is clean or on help, 1 on a structural finding.
+<!-- END GENERATED CLI CONTRACT -->
+
 <!-- BEGIN GENERATED CRATE CONTRACT -->
 ## Crate contract
 

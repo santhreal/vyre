@@ -64,31 +64,13 @@ Failure behavior: Missing slugs and filesystem creation failures return non-zero
 
 Exit codes: 0 on scaffold creation or help, 1 on filesystem failure, 2 on invalid arguments.
 
-### `vyre_new_op`
-
-```console
-./cargo_full run -p xtask --bin vyre_new_op -- --help
-```
-
-Commands: `new-op`.
-
-Hardware: No accelerator is required.
-
-Environment: VYRE_SPEC_MAINTAINER=1 permits reserved internal. and test. operation identifiers.
-
-Configuration: Operation id, archetype, display name, summary, and category are explicit arguments.
-
-Failure behavior: Invalid identifiers, archetypes, categories, collisions, and write failures return non-zero.
-
-Exit codes: 0 on scaffold creation or help, 1 on validation or write failure, 2 on invalid arguments.
-
 ### `xtask`
 
 ```console
 ./cargo_full run -p xtask --bin xtask -- --help
 ```
 
-Commands: `abstraction-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-cat-a`, `check-tier-deps`, `compile`, `conformance-matrix`, `dep-drift`, `docs-check`, `feature-matrix`, `gate1`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-docs`, `optimization-matrix`, `package-readiness`, `platform-boundary`, `primitive-admission-gate`, `print-composition`, `release-benchmarks`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `shrink`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `whats-similar`.
+Commands: `abstraction-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-cat-a`, `check-tier-deps`, `compile`, `conformance-matrix`, `dep-drift`, `docs-check`, `dup-scan`, `feature-matrix`, `gate1`, `gates`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-docs`, `optimization-matrix`, `package-readiness`, `platform-boundary`, `primitive-admission-gate`, `print-composition`, `release-benchmarks`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `shrink`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `whats-similar`.
 
 Hardware: Requirements are command specific. Backend, conformance, and benchmark commands require their declared devices.
 

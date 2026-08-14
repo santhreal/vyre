@@ -141,6 +141,142 @@ pub(crate) fn measure(root: &Path) -> BTreeMap<String, CrateCount> {
     counts
 }
 
+/// Files a shingle was seen in, held inline so the index allocates nothing.
+///
+/// Four is enough to name a copy's partners in a report. Truncation cannot
+/// change any count: a file missing from a full list is a file the list already
+/// proved shares with four others.
+const OCCUPANT_CAP: usize = 4;
+
+#[derive(Clone, Copy)]
+struct Occupants {
+    files: [u32; OCCUPANT_CAP],
+    len: u8,
+}
+
+impl Occupants {
+    fn new(file: u32) -> Self {
+        let mut files = [0; OCCUPANT_CAP];
+        files[0] = file;
+        Self { files, len: 1 }
+    }
+
+    fn insert(&mut self, file: u32) {
+        let len = usize::from(self.len);
+        if len == OCCUPANT_CAP || self.files[..len].contains(&file) {
+            return;
+        }
+        self.files[len] = file;
+        self.len += 1;
+    }
+
+    fn files(&self) -> &[u32] {
+        &self.files[..usize::from(self.len)]
+    }
+}
+
+/// One file's share of the duplication, and what it duplicates against.
+#[derive(Debug, Clone)]
+pub(crate) struct FileReport {
+    /// Workspace-relative path.
+    pub(crate) path: String,
+    /// Normalized lines covered by a shingle that also appears in another file.
+    pub(crate) duplicate_lines: usize,
+    /// Normalized lines in the file.
+    pub(crate) total_lines: usize,
+    /// Files sharing the most shingles with this one, highest first.
+    pub(crate) partners: Vec<(String, usize)>,
+}
+
+/// Attribute a crate's duplication to individual files and their partners.
+///
+/// `measure` answers whether a crate regressed. It cannot answer which copy to
+/// collapse, which is the only question a failing pin actually raises. The
+/// per-file totals here sum to the same crate figure `measure` reports.
+#[must_use]
+pub(crate) fn report(root: &Path, only: Option<&str>) -> Vec<FileReport> {
+    let mut normalized: Vec<(String, String, Vec<String>)> = Vec::new();
+    for path in source_files(root) {
+        let Ok(text) = fs::read_to_string(&path) else {
+            continue;
+        };
+        let Some(owner) = crate_of(root, &path) else {
+            continue;
+        };
+        let relative = path
+            .strip_prefix(root)
+            .unwrap_or(&path)
+            .to_string_lossy()
+            .into_owned();
+        normalized.push((owner, relative, normalize(&text)));
+    }
+
+    let mut index: HashMap<u64, Occupants> = HashMap::new();
+    for (position, (_, _, lines)) in normalized.iter().enumerate() {
+        let id = u32::try_from(position).unwrap_or(u32::MAX);
+        for window in lines.windows(SHINGLE) {
+            index
+                .entry(hash(window))
+                .and_modify(|occupants| occupants.insert(id))
+                .or_insert_with(|| Occupants::new(id));
+        }
+    }
+
+    let mut reports: Vec<FileReport> = Vec::new();
+    for (position, (owner, relative, lines)) in normalized.iter().enumerate() {
+        if only.is_some_and(|name| name != owner) {
+            continue;
+        }
+        let id = u32::try_from(position).unwrap_or(u32::MAX);
+        let mut duplicated: HashSet<usize> = HashSet::new();
+        let mut partners: HashMap<u32, usize> = HashMap::new();
+        for (start, window) in lines.windows(SHINGLE).enumerate() {
+            let Some(occupants) = index.get(&hash(window)) else {
+                continue;
+            };
+            let mut shared = false;
+            for other in occupants.files() {
+                if *other != id {
+                    shared = true;
+                    *partners.entry(*other).or_default() += 1;
+                }
+            }
+            if shared {
+                for offset in 0..SHINGLE {
+                    duplicated.insert(start + offset);
+                }
+            }
+        }
+        if duplicated.is_empty() {
+            continue;
+        }
+        let mut ranked: Vec<(String, usize)> = partners
+            .into_iter()
+            .map(|(other, shared)| {
+                let path = normalized
+                    .get(other as usize)
+                    .map_or_else(String::new, |entry| entry.1.clone());
+                (path, shared)
+            })
+            .collect();
+        ranked.sort_by(|left, right| right.1.cmp(&left.1).then_with(|| left.0.cmp(&right.0)));
+        ranked.truncate(3);
+        reports.push(FileReport {
+            path: relative.clone(),
+            duplicate_lines: duplicated.len(),
+            total_lines: lines.len(),
+            partners: ranked,
+        });
+    }
+    reports.sort_by(|left, right| {
+        right
+            .duplicate_lines
+            .cmp(&left.duplicate_lines)
+            .then_with(|| left.path.cmp(&right.path))
+    });
+    reports
+}
+
 fn hash(window: &[String]) -> u64 {
     let mut hasher = blake3::Hasher::new();
     for line in window {
@@ -174,6 +310,31 @@ fn render(counts: &BTreeMap<String, CrateCount>) -> String {
 /// Run the duplicate scan.
 pub(crate) fn run(args: &[String]) {
     let root = workspace_root();
+
+    if let Some(position) = args.iter().position(|argument| argument == "--report") {
+        let only = args
+            .get(position + 1)
+            .filter(|value| !value.starts_with("--"))
+            .map(String::as_str);
+        let reports = report(&root, only);
+        let scope = only.unwrap_or("the workspace");
+        let total: usize = reports.iter().map(|entry| entry.duplicate_lines).sum();
+        println!(
+            "dup-scan report: {total} duplicated lines across {} file(s) in {scope}",
+            reports.len()
+        );
+        for entry in reports.iter().take(40) {
+            println!(
+                "  {:>6} of {:>6} lines  {}",
+                entry.duplicate_lines, entry.total_lines, entry.path
+            );
+            for (partner, shared) in &entry.partners {
+                println!("           shares {shared} shingle(s) with {partner}");
+            }
+        }
+        return;
+    }
+
     let counts = measure(&root);
 
     if args.iter().any(|argument| argument == "--write-baseline") {
@@ -303,6 +464,54 @@ mod tests {
 
         let counts = measure(&dir);
         assert_eq!(counts["crate-a"].duplicate_lines, 0);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// WHY: a failing pin is only actionable if the report names the other file,
+    /// so the partner path is the contract, not the count beside it.
+    #[test]
+    fn the_report_names_the_file_a_copy_was_made_from() {
+        let dir = std::env::temp_dir().join("vyre-dup-scan-report");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
+        fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
+        let block: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
+        fs::write(dir.join("crate-a/src/lib.rs"), &block).expect("write");
+        fs::write(dir.join("crate-b/src/lib.rs"), &block).expect("write");
+
+        let reports = report(&dir, Some("crate-a"));
+        assert_eq!(reports.len(), 1, "only the filtered crate is reported");
+        assert_eq!(reports[0].path, "crate-a/src/lib.rs");
+        assert_eq!(reports[0].duplicate_lines, SHINGLE);
+        assert_eq!(
+            reports[0].partners,
+            vec![("crate-b/src/lib.rs".to_string(), 1)],
+            "the report must name where the copy lives"
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// WHY: the report exists to explain a `measure` failure. If the two
+    /// disagree it sends the owner at the wrong file, so they are pinned to each
+    /// other rather than each being checked alone.
+    #[test]
+    fn per_file_duplication_sums_to_the_crate_measure() {
+        let dir = std::env::temp_dir().join("vyre-dup-scan-agree");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
+        fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
+        let shared: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
+        let unique: String = (0..SHINGLE).map(|n| format!("let u{n} = {n};\n")).collect();
+        fs::write(dir.join("crate-a/src/one.rs"), &shared).expect("write");
+        fs::write(dir.join("crate-a/src/two.rs"), format!("{unique}{shared}")).expect("write");
+        fs::write(dir.join("crate-b/src/lib.rs"), &shared).expect("write");
+
+        let measured = measure(&dir)["crate-a"].duplicate_lines;
+        let reported: usize = report(&dir, Some("crate-a"))
+            .iter()
+            .map(|entry| entry.duplicate_lines)
+            .sum();
+        assert_eq!(reported, measured, "report must explain the measured figure");
         let _ = fs::remove_dir_all(&dir);
     }
 }

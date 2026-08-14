@@ -21,7 +21,47 @@ A gate here has to observe something that does not exist in source text: which o
 `xtask-registry/src/lib.rs` holds the dispatch table, which is checked against the
 subcommands `xtask` assigns to this package. `xtask-registry/src/main.rs` is the
 binary `xtask` runs.
+
 <!-- BEGIN GENERATED CLI CONTRACT -->
+## Command-line interface
+
+This section is generated from `docs/CLI.toml` and executable help output.
+
+### `vyre_new_op`
+
+```console
+./cargo_full run -p xtask-registry --bin vyre_new_op -- --help
+```
+
+Commands: `new-op`.
+
+Hardware: No accelerator is required.
+
+Environment: VYRE_SPEC_MAINTAINER=1 permits reserved internal. and test. operation identifiers.
+
+Configuration: Operation id, archetype, display name, summary, and category are explicit arguments.
+
+Failure behavior: Invalid identifiers, archetypes, categories, collisions, and write failures return non-zero.
+
+Exit codes: 0 on scaffold creation or help, 1 on validation or write failure, 2 on invalid arguments.
+
+### `xtask-registry`
+
+```console
+./cargo_full run -p xtask-registry --bin xtask-registry -- --help
+```
+
+Commands: `abstraction-gate`, `catalog`, `compile`, `conformance-matrix`, `gate1`, `heuristic-audit`, `lego-audit`, `lego-quick`, `list-ops`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-docs`, `optimization-matrix`, `primitive-admission-gate`, `print-composition`, `trace-f32`, `verify-rewrite-proofs`, `whats-similar`.
+
+Hardware: No accelerator is required; a missing device is reported, not assumed.
+
+Environment: No environment variables alter CLI behavior.
+
+Configuration: The command reads the same repository manifests the dispatched subcommand reads.
+
+Failure behavior: A subcommand this crate does not implement returns status 1 with a Fix: message.
+
+Exit codes: 0 on success, 1 on a gate finding or an unowned subcommand, 2 on invalid arguments.
 <!-- END GENERATED CLI CONTRACT -->
 
 <!-- BEGIN GENERATED CRATE CONTRACT -->

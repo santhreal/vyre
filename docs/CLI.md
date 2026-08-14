@@ -13,11 +13,14 @@ rebuild every binary, execute every help route, and reject drift.
 | `vyre-conform` | `vyre-conform` | internal | `dispatch`, `merge`, `plan`, `prove` | [`conform/vyre-conform/README.md`](../conform/vyre-conform/README.md) |
 | `xtask` | `audit_rule_contracts` | internal | none | [`xtask/README.md`](../xtask/README.md) |
 | `xtask` | `scaffold_rule` | internal | none | [`xtask/README.md`](../xtask/README.md) |
-| `xtask` | `vyre_new_op` | internal | `new-op` | [`xtask/README.md`](../xtask/README.md) |
-| `xtask` | `xtask` | internal | `abstraction-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-cat-a`, `check-tier-deps`, `compile`, `conformance-matrix`, `dep-drift`, `docs-check`, `feature-matrix`, `gate1`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-docs`, `optimization-matrix`, `package-readiness`, `platform-boundary`, `primitive-admission-gate`, `print-composition`, `release-benchmarks`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `shrink`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `whats-similar` | [`xtask/README.md`](../xtask/README.md) |
+| `xtask-registry` | `vyre_new_op` | internal | `new-op` | [`xtask-registry/README.md`](../xtask-registry/README.md) |
+| `xtask-registry` | `xtask-registry` | internal | `abstraction-gate`, `catalog`, `compile`, `conformance-matrix`, `gate1`, `heuristic-audit`, `lego-audit`, `lego-quick`, `list-ops`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-docs`, `optimization-matrix`, `primitive-admission-gate`, `print-composition`, `trace-f32`, `verify-rewrite-proofs`, `whats-similar` | [`xtask-registry/README.md`](../xtask-registry/README.md) |
+| `xtask-evidence` | `xtask-evidence` | internal | `backend-matrix`, `bench-crossback`, `bench-release`, `release-benchmarks`, `release-evidence`, `vyre-release-gate` | [`xtask-evidence/README.md`](../xtask-evidence/README.md) |
+| `xtask` | `xtask` | internal | `abstraction-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-cat-a`, `check-tier-deps`, `compile`, `conformance-matrix`, `dep-drift`, `docs-check`, `dup-scan`, `feature-matrix`, `gate1`, `gates`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-docs`, `optimization-matrix`, `package-readiness`, `platform-boundary`, `primitive-admission-gate`, `print-composition`, `release-benchmarks`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `shrink`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `whats-similar` | [`xtask/README.md`](../xtask/README.md) |
 | `vyre-bench` | `vyre-bench` | internal | `compare`, `dashboard`, `evolve-server`, `explain`, `list`, `release-matrix`, `run`, `snapshot-diff`, `validate-benchmark-bundle`, `validate-comparison`, `validate-report` | [`vyre-bench/README.md`](../vyre-bench/README.md) |
 | `vyre-debug` | `vyre-dbg` | public | `artifact-report`, `carrier-summary`, `diff-descriptors`, `diff-emit`, `dump-descriptor`, `dump-wgsl`, `emit-replay`, `failure-trace`, `find-dangling`, `find-uncarriered`, `pipeline-cache-clear` | [`vyre-debug/README.md`](../vyre-debug/README.md) |
 | `vyre-lints` | `vyre-lints` | public | none | [`vyre-lints/README.md`](../vyre-lints/README.md) |
+| `structure-gate` | `structure-gate` | internal | none | [`structure-gate/README.md`](../structure-gate/README.md) |
 
 ## `vyre-grammar-gen`
 
@@ -238,7 +241,7 @@ Exit codes:
 
 ## `vyre_new_op`
 
-Package: `xtask`. Audience: internal.
+Package: `xtask-registry`. Audience: internal.
 
 Hardware: No accelerator is required.
 
@@ -262,6 +265,85 @@ Examples:
 Reserved prefixes 'internal.' and 'test.' require VYRE_SPEC_MAINTAINER=1.
 ```
 
+## `xtask-registry`
+
+Package: `xtask-registry`. Audience: internal.
+
+Hardware: No accelerator is required; a missing device is reported, not assumed.
+
+Environment: No environment variables alter CLI behavior.
+
+Configuration: The command reads the same repository manifests the dispatched subcommand reads.
+
+Failure behavior: A subcommand this crate does not implement returns status 1 with a Fix: message.
+
+Exit codes: 0 on success, 1 on a gate finding or an unowned subcommand, 2 on invalid arguments.
+
+### Top-level help
+
+```text
+USAGE
+  cargo run -p xtask-registry -- <subcommand> [options]
+
+`xtask` assigns these subcommands to this crate because each one reads the live
+operation registry. Run `cargo xtask --help` for every workspace command, and
+`cargo xtask <subcommand> --help` for one command's options.
+
+SUBCOMMANDS:
+  abstraction-gate
+  catalog
+  compile
+  conformance-matrix
+  gate1
+  heuristic-audit
+  lego-audit
+  lego-quick
+  list-ops
+  op-matrix
+  operation-schema
+  optimization-corpus
+  optimization-docs
+  optimization-matrix
+  primitive-admission-gate
+  print-composition
+  trace-f32
+  verify-rewrite-proofs
+  whats-similar
+```
+
+## `xtask-evidence`
+
+Package: `xtask-evidence`. Audience: internal.
+
+Hardware: No accelerator is required; a missing device is reported, not assumed.
+
+Environment: No environment variables alter CLI behavior.
+
+Configuration: The command reads recorded evidence under release/evidence/ and the release manifests.
+
+Failure behavior: A subcommand this crate does not implement returns status 1 with a Fix: message.
+
+Exit codes: 0 on success, 1 on a gate finding or an unowned subcommand, 2 on invalid arguments.
+
+### Top-level help
+
+```text
+USAGE
+  cargo run -p xtask-evidence -- <subcommand> [options]
+
+`xtask` assigns these subcommands to this crate because each one reads recorded
+benchmark or release evidence. Run `cargo xtask --help` for every workspace
+command, and `cargo xtask <subcommand> --help` for one command's options.
+
+SUBCOMMANDS:
+  backend-matrix
+  bench-crossback
+  bench-release
+  release-benchmarks
+  release-evidence
+  vyre-release-gate
+```
+
 ## `xtask`
 
 Package: `xtask`. Audience: internal.
@@ -282,52 +364,53 @@ Exit codes: 0 on help or command success, 1 on command failure or unknown subcom
 vyre xtask runner
 
 USAGE:
-cargo_full run --bin xtask -- <subcommand> [options]
+  cargo run --bin xtask -- <subcommand> [options]
 
 SUBCOMMANDS:
-abstraction-gate                     Enforce registered building-block boundaries
-bench-crossback [program]           Cross-backend perf table
-backend-matrix [--output PATH]      Probe linked CUDA/WGPU backend release policy
-bench-release [--backend all]        Run the legacy cross-backend release benchmark coordinator
-shrink <file.vir> <oracle.sh>       Delta-debug a crashing vyre wire formulation down to a minimal reproducer
-check-cat-a                         Run every Cat-A pre-merge gate
-check-tier-deps                     Reject upward tier path dependencies (T4→T1 only)
-compile <program.vir> --to TARGET   Emit authenticated payloads through linked target compiler facets
-conformance-matrix [--check] [--output PATH] Enumerate/check release op/backend conformance coverage
-dep-drift                           Fail if any repo manifest pins a workspace-managed dependency to a different version
-docs-check                           Validate manifest-backed documentation lifecycle and generated navigation
-feature-matrix [--output PATH]      Generate Vyre crate feature evidence matrix
-print-composition <op_id>           Walk an op's Region tree and print its decomposition chain
-trace-f32 <op_id>                   Run an op's test_inputs through vyre-reference and dump expected_output literal
-gate1                               Enforce Gate 1 complexity budget (CI floor)
-launch-state [--output PATH]       Generate public launch completion state evidence
-list-ops [--write PATH|--check]     Render or check the schema-derived operation inventory
-metadata-matrix [--output PATH]     Generate Vyre crate metadata evidence
-operation-schema [--output PATH] [--check] [--validate PATH]  Generate or verify the canonical live operation contract schema
-op-matrix [--output PATH]           Generate operation/backend coverage evidence
-optimization-matrix [--output PATH] Generate release optimization integration evidence
-package-readiness [--output PATH]  Generate pre-publish package order evidence
-optimization-corpus [--output PATH]  Generate release optimization corpus manifest
-optimization-docs [--output PATH] [--check] Generate/check the source-owned optimizer pass reference
-platform-boundary                  Fail on consumer names in platform crate docs/comments
-version-matrix [--output PATH]      Generate Vyre manifest version matrix
-catalog [--out DIR] [--check]       Emit one markdown table per subsystem under docs/catalog; --check gates drift
-release-gate                        Pre-publish sanity checks (catalog + gate1 + Cargo.lock clean)
-release-workload-matrix [--output PATH]  Generate cheap release workload family evidence
-release-benchmarks [--backend cuda] Generate long-running release benchmark artifacts
-release-conformance [--backend all] Generate real backend conformance artifacts
-release-evidence                    Generate cheap structural release evidence artifacts
-vyre-release-gate [--prepublish] [--manifest PATH]  Enforce final or prepublication evidence closure
-primitive-admission-gate             Enforce canonical LEGO primitive adoption and exceptions
-heuristic-audit [--strict]          Surface hand-rolled heuristics that should be self-consumer calls
-verify-rewrite-proofs               Verify optimizer rewrite proof fixtures
-hygiene-matrix [--output PATH]      Scan Vyre source hygiene release blockers
-lego-audit [--report-only|--with-repo|--write-baseline] [--duplicate-report-json PATH] Deeper LEGO-block enforcement and composition baseline management
-lego-quick [--all]                  Fast pre-commit boundary checks
-whats-similar (--op-id <id>|--all) [--duplicate-report-json PATH] Pre-write/all-pairs duplicate query by IR shape
-hot-path-scan [--strict]            Scan files in HOT_PATHS.toml for clone/alloc/lock patterns
-
---help                              Print this message
+  abstraction-gate                                                                        Enforce registered building-block boundaries
+  backend-matrix [--output PATH]                                                          Probe linked backend release policy
+  bench-crossback [program]                                                               Cross-backend perf table
+  bench-release [--backend all]                                                           Run the cross-backend release benchmark coordinator
+  catalog [--out DIR] [--check]                                                           Emit one markdown table per subsystem under docs/catalog; --check gates drift
+  check-cat-a                                                                             Run every Cat-A pre-merge gate
+  check-tier-deps                                                                         Reject upward tier path dependencies
+  compile <program.vir> --to TARGET                                                       Emit authenticated payloads through linked target compiler facets
+  conformance-matrix [--check] [--output PATH]                                            Enumerate or check release op/backend conformance coverage
+  dep-drift                                                                               Fail if a manifest pins a workspace-managed dependency to a different version
+  docs-check                                                                              Validate manifest-backed documentation lifecycle and generated navigation
+  dup-scan [--write-baseline] [--report [CRATE]]                                          Measure cross-file duplicate source blocks against the pinned per-crate baseline
+  feature-matrix [--output PATH]                                                          Generate crate feature evidence matrix
+  gate1                                                                                   Enforce Gate 1 complexity budget
+  gates [--list]                                                                          Run every registered gate and hold it to the pinned baseline
+  heuristic-audit [--strict]                                                              Surface hand-rolled heuristics that should be self-consumer calls
+  hot-path-scan [--strict]                                                                Scan files in HOT_PATHS.toml for clone/alloc/lock patterns
+  hygiene-matrix [--output PATH]                                                          Scan source hygiene release blockers
+  launch-state [--output PATH]                                                            Generate public launch completion state evidence
+  lego-audit [--report-only|--with-repo|--write-baseline] [--duplicate-report-json PATH]  Deeper LEGO-block enforcement and composition baseline management
+  lego-quick [--all]                                                                      Fast pre-commit boundary checks
+  list-ops [--write PATH|--check]                                                         Render or check the schema-derived operation inventory
+  metadata-matrix [--output PATH]                                                         Generate crate metadata evidence
+  op-matrix [--output PATH]                                                               Generate operation/backend coverage evidence
+  operation-schema [--output PATH] [--check] [--validate PATH]                            Generate or verify the canonical live operation contract schema
+  optimization-corpus [--output PATH]                                                     Generate release optimization corpus manifest
+  optimization-docs [--output PATH] [--check]                                             Generate or check the source-owned optimizer pass reference
+  optimization-matrix [--output PATH]                                                     Generate release optimization integration evidence
+  package-readiness [--output PATH]                                                       Generate pre-publish package order evidence
+  platform-boundary                                                                       Fail on consumer names in platform crate docs and comments
+  primitive-admission-gate                                                                Enforce canonical LEGO primitive adoption and exceptions
+  print-composition <op_id>                                                               Walk an op's Region tree and print its decomposition chain
+  release-benchmarks [--backend cuda]                                                     Generate long-running release benchmark artifacts
+  release-conformance [--backend all]                                                     Generate real backend conformance artifacts
+  release-evidence                                                                        Generate cheap structural release evidence artifacts
+  release-gate                                                                            Pre-publish sanity checks
+  release-workload-matrix [--output PATH]                                                 Generate cheap release workload family evidence
+  shrink <file.vir> <oracle.sh>                                                           Delta-debug a crashing wire formulation down to a minimal reproducer
+  trace-f32 <op_id>                                                                       Run an op's test inputs through the reference and dump the expected output
+  verify-rewrite-proofs                                                                   Verify optimizer rewrite proof fixtures
+  version-matrix [--output PATH]                                                          Generate manifest version matrix
+  vyre-release-gate [--prepublish] [--manifest PATH]                                      Enforce final or prepublication evidence closure
+  whats-similar (--op-id <id>|--all) [--duplicate-report-json PATH]                       Duplicate query by IR shape
+  --help                                                                                  Print this message
 ```
 
 ## `vyre-bench`
@@ -583,4 +666,27 @@ Options:
           Print help
   -V, --version
           Print version
+```
+
+## `structure-gate`
+
+Package: `structure-gate`. Audience: internal.
+
+Hardware: No accelerator is required.
+
+Environment: No environment variables alter CLI behavior.
+
+Configuration: The command reads the workspace manifests and Rust sources under the repository root. It takes no arguments other than help.
+
+Failure behavior: A workspace member outside the reviewed roster, an operation identity registered more than once, or a concept with more than one home returns status 1 with the offending paths.
+
+Exit codes: 0 when the structure is clean or on help, 1 on a structural finding.
+
+### Top-level help
+
+```text
+USAGE:
+  cargo run -p structure-gate
+
+Fails when a crate outside vyre-foundation (Category A) or vyre-libs (Category C) registers an operation, when one semantic operation is registered under two identities, when a concept has more than one home, or when the workspace roster drifts.
 ```

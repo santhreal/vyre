@@ -21,7 +21,29 @@ A recorded measurement only describes the tree it was taken on. Deciding whether
 `xtask-evidence/src/lib.rs` holds the dispatch table, which is checked against the
 subcommands `xtask` assigns to this package. `xtask-evidence/src/main.rs` is the
 binary `xtask` runs.
+
 <!-- BEGIN GENERATED CLI CONTRACT -->
+## Command-line interface
+
+This section is generated from `docs/CLI.toml` and executable help output.
+
+### `xtask-evidence`
+
+```console
+./cargo_full run -p xtask-evidence --bin xtask-evidence -- --help
+```
+
+Commands: `backend-matrix`, `bench-crossback`, `bench-release`, `release-benchmarks`, `release-evidence`, `vyre-release-gate`.
+
+Hardware: No accelerator is required; a missing device is reported, not assumed.
+
+Environment: No environment variables alter CLI behavior.
+
+Configuration: The command reads recorded evidence under release/evidence/ and the release manifests.
+
+Failure behavior: A subcommand this crate does not implement returns status 1 with a Fix: message.
+
+Exit codes: 0 on success, 1 on a gate finding or an unowned subcommand, 2 on invalid arguments.
 <!-- END GENERATED CLI CONTRACT -->
 
 <!-- BEGIN GENERATED CRATE CONTRACT -->
