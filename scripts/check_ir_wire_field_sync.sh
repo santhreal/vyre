@@ -6,13 +6,27 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CORE="${ROOT}/vyre-foundation/src/ir_inner/model/program/core.rs"
-ENC="${ROOT}/vyre-foundation/src/serial/wire/encode/to_wire.rs"
-DEC="${ROOT}/vyre-foundation/src/serial/wire/decode/from_wire.rs"
+cd "$ROOT"
+source scripts/lib/source_scan.sh
 
-for path in "$CORE" "$ENC" "$DEC"; do
+# Locate the declaration rather than hardcoding its path. This named
+# ir_inner/model/program/core.rs, which no longer exists: core.rs is a banned
+# dumping-ground name and the file became definition.rs. The gate then failed on
+# the missing path, which is why nobody could wire it.
+CORE="$(vyre_scan_tracked 'pub struct Program[[:space:]]*\{' '/tests?/' vyre-foundation/src | head -n 1)"
+CORE="${CORE%%:*}"
+if [[ -z "$CORE" ]]; then
+  echo "check_ir_wire_field_sync: no file declares 'pub struct Program'." >&2
+  echo "Fix: the IR program type was renamed or removed; repoint this gate." >&2
+  exit 1
+fi
+ENC="vyre-foundation/src/serial/wire/encode/to_wire.rs"
+DEC="vyre-foundation/src/serial/wire/decode/from_wire.rs"
+
+for path in "$ENC" "$DEC"; do
   if [[ ! -f "$path" ]]; then
     echo "check_ir_wire_field_sync: missing $path" >&2
+    echo "Fix: repoint this gate at the wire encode/decode entry points." >&2
     exit 1
   fi
 done
