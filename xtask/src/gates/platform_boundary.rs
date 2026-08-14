@@ -85,10 +85,7 @@ pub(crate) fn run(args: &[String]) {
 }
 
 fn vyre_workspace_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(PathBuf::from)
-        .expect("Fix: xtask must live directly under the Vyre workspace root.")
+    crate::checkout::checkout_root()
 }
 
 fn scan_tree(root: &Path, workspace: &Path, findings: &mut Vec<Finding>, errors: &mut Vec<String>) {

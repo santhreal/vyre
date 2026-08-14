@@ -740,10 +740,7 @@ fn read_manifest_features(
 }
 
 fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("xtask must remain under the workspace root")
-        .to_path_buf()
+    xtask::checkout::checkout_root()
 }
 
 fn parse_args(args: &[String]) -> Result<(PathBuf, bool, Option<PathBuf>), String> {
@@ -804,10 +801,7 @@ mod tests {
     #[test]
     fn the_python_contract_pins_the_same_operation_schema_version() {
         let script = std::fs::read_to_string(
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .parent()
-                .expect("Fix: xtask must remain under the workspace root")
-                .join("scripts/architecture_docs.py"),
+            xtask::checkout::checkout_root().join("scripts/architecture_docs.py"),
         )
         .expect("Fix: scripts/architecture_docs.py must be readable");
 

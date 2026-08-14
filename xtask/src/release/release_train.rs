@@ -113,14 +113,12 @@ pub(crate) fn release_group_version(group: &str) -> Option<&'static str> {
 }
 #[cfg(test)]
 mod tests {
-    use std::{path::Path, process::Command};
+    use std::process::Command;
 
     /// The shell launch path must load the same RC and final tags as the Rust release contract.
     #[test]
     fn shell_release_loader_matches_canonical_tag_creation_order() {
-        let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("Fix: xtask must live directly under the Vyre workspace.");
+        let workspace = crate::checkout::checkout_root();
         let output = Command::new("bash")
             .arg("-c")
             .arg(

@@ -230,10 +230,7 @@ pub(crate) fn run(args: &[String]) {
             std::process::exit(2);
         }
     };
-    let vyre_root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| PathBuf::from("."));
+    let vyre_root = crate::checkout::checkout_root();
     let metadata_path = vyre_root.join("release/evidence/metadata/metadata-matrix.json");
     let mut blockers = Vec::new();
     let metadata_packages = metadata_publishable_packages(&metadata_path, &mut blockers);
@@ -1003,10 +1000,7 @@ fn parse_output(args: &[String]) -> Result<PathBuf, String> {
 }
 
 fn default_output() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(|path| path.join("release/evidence/package/publish-readiness.json"))
-        .unwrap_or_else(|| PathBuf::from("release/evidence/package/publish-readiness.json"))
+    crate::checkout::checkout_root().join("release/evidence/package/publish-readiness.json")
 }
 
 #[cfg(test)]

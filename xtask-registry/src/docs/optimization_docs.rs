@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use vyre_foundation::optimizer::pass_catalog::{
     optimization_catalog, OptimizationCatalogEntryKind,
@@ -74,10 +74,7 @@ fn parse_args(args: &[String]) -> (Option<PathBuf>, bool) {
 }
 
 fn default_path() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("xtask must remain under the workspace root")
-        .join("docs/optimization/PASSES.md")
+    xtask::checkout::checkout_root().join("docs/optimization/PASSES.md")
 }
 
 fn join(values: &[&str]) -> String {

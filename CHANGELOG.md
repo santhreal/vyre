@@ -234,6 +234,27 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   builder directly. `vyre-libs::hash` now holds `blake3_compress` alone and
   `vyre-libs::logical` holds the synthesized `nand` and `nor`.
 
+### Fixed: a gate could report the checkout that last compiled it (`structure-gate`, `xtask`, `xtask-registry`, `xtask-evidence`, `vyre-lints`)
+
+Cargo hashes a workspace member by its path relative to the workspace root and
+decides freshness by mtime, so two checkouts sharing a target directory compute
+the same unit hash and address the same artifacts. The checkout whose files were
+older than the last build silently ran the other one's compiled logic:
+`cargo run -p structure-gate` in one checkout reported 208 violations while its
+own source produced 209, and `dup-scan` read 11811 duplicate lines for
+`vyre-libs` against a true 13406.
+
+`.cargo/config.toml` now declares `VYRE_CHECKOUT_ROOT` as a checkout-relative
+path, so its value is the absolute path of the checkout. Every crate whose
+output describes the tree reads it with `env!`, which records the value in that
+crate's dep-info; cargo rebuilds instead of reusing when it changes. The 46
+hand-rolled derivations of the workspace root from `CARGO_MANIFEST_DIR` across
+those crates are now three `checkout_root()` owners.
+
+A gate binary compiled outside the checkout, where `.cargo/config.toml` does not
+apply, now fails to compile with a `Fix:` message rather than baking a foreign
+root.
+
 ### Fixed
 
 - Driver decorators now preserve the concrete backend device profile, including

@@ -42,7 +42,7 @@ fn default_out_dir() -> PathBuf {
     if let Ok(cwd) = std::env::current_dir() {
         starts.push(cwd);
     }
-    starts.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")));
+    starts.push(xtask::checkout::checkout_root());
     for start in &starts {
         if let Some(root) = find_workspace_root(start) {
             return root.join("docs/catalog");

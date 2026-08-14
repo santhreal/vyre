@@ -99,10 +99,7 @@ pub fn write_json(path: &Path, value: &impl serde::Serialize) {
             std::process::exit(1);
         }
     };
-    let vyre_root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| PathBuf::from("."));
+    let vyre_root = crate::checkout::checkout_root();
     let santh_root = vyre_root
         .parent()
         .and_then(Path::parent)

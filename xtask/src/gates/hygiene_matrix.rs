@@ -218,10 +218,7 @@ const THRESHOLD_SUFFIXES: &[&str] = &[
 
 /// The vyre workspace root this build was compiled against.
 fn vyre_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| PathBuf::from("."))
+    crate::checkout::checkout_root()
 }
 
 pub(crate) fn run(args: &[String]) {
@@ -2390,10 +2387,7 @@ fn parse_output(args: &[String]) -> Result<PathBuf, String> {
 }
 
 fn default_output() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(|path| path.join("release/evidence/hygiene/hygiene-matrix.json"))
-        .unwrap_or_else(|| PathBuf::from("release/evidence/hygiene/hygiene-matrix.json"))
+    crate::checkout::checkout_root().join("release/evidence/hygiene/hygiene-matrix.json")
 }
 
 #[cfg(test)]
@@ -3198,9 +3192,8 @@ pub fn undocumented() {
     /// red instead of quietly inheriting the wrong rules.
     #[test]
     fn every_xtask_crate_carries_the_release_tooling_rules() {
-        let manifest =
-            fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../Cargo.toml"))
-                .expect("Fix: the workspace manifest must be readable");
+        let manifest = fs::read_to_string(crate::checkout::checkout_root().join("Cargo.toml"))
+            .expect("Fix: the workspace manifest must be readable");
         let crates: Vec<String> = manifest
             .lines()
             .filter_map(|line| {

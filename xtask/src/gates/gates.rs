@@ -23,10 +23,7 @@ use crate::subcommands::{self, Kind, Subcommand};
 /// Workspace root, resolved from the xtask manifest directory.
 #[must_use]
 pub(crate) fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: xtask must remain under the workspace root")
-        .to_path_buf()
+    crate::checkout::checkout_root()
 }
 
 /// Pinned result for one gate.

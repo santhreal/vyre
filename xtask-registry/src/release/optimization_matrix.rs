@@ -1,7 +1,7 @@
 //! Generate source-owned optimization integration evidence.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use serde::Serialize;
 use vyre_foundation::optimizer::pass_catalog::{
@@ -153,10 +153,6 @@ fn parse_output(args: &[String]) -> Result<PathBuf, String> {
 }
 
 fn default_output() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(|path| path.join("release/evidence/optimization/optimization-integration-matrix.json"))
-        .unwrap_or_else(|| {
-            PathBuf::from("release/evidence/optimization/optimization-integration-matrix.json")
-        })
+    xtask::checkout::checkout_root()
+        .join("release/evidence/optimization/optimization-integration-matrix.json")
 }

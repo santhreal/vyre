@@ -18,12 +18,12 @@
 //!
 //! Re-verifying a change to this gate means running `cargo test -p
 //! structure-gate`, which rebuilds first. The contract tests read the live tree
-//! when they run but carry their rules from when they were built, so a test
-//! binary already sitting in the shared target directory answers today's tree
-//! with yesterday's rules. Invoking
-//! `<target>/debug/deps/structure_gate-<hash>` by hand after restoring a
-//! mutated source file reported the mutated result against a byte-identical
-//! restored source. Read the result of a run that compiled, and nothing else.
+//! when they run but carry their rules from when they were built, and a target
+//! directory shared by several checkouts used to hand this crate a binary built
+//! from a different tree: the gate then answered today's tree with another
+//! checkout's rules. `VYRE_CHECKOUT_ROOT` in `.cargo/config.toml` is now a
+//! fingerprint input of this crate, so cargo rebuilds instead of reusing across
+//! checkouts, and `checkout_provenance.rs` fails if that ever stops holding.
 //!
 //! What this scan does not see: an operation id handed to a `macro_rules!`
 //! parameter and registered inside the macro body, when the macro is invoked
@@ -191,22 +191,32 @@ pub fn violations(root: &Path) -> Vec<String> {
     failures
 }
 
-/// Workspace root, resolved from the gate crate's manifest directory.
+/// Absolute root of the checkout that compiled this binary.
 ///
-/// Read from the environment at run time, with the compile-time value only as
-/// a fallback. `env!` alone bakes the path of whichever checkout produced the
-/// binary, and a shared cargo target directory hands the same binary to every
-/// worktree: a gate run inside a worktree then reported the main checkout's
-/// tree and hid the worktree's own findings entirely.
+/// `VYRE_CHECKOUT_ROOT` is declared in `.cargo/config.toml` as a checkout-
+/// relative path, so reading it with `env!` records this checkout's absolute
+/// location in the crate's dep-info. That recorded value is what keeps a target
+/// directory shared by several checkouts from handing this gate a binary
+/// compiled somewhere else: the value differs, so cargo rebuilds.
+#[must_use]
+pub fn compiled_checkout_root() -> PathBuf {
+    PathBuf::from(env!(
+        "VYRE_CHECKOUT_ROOT",
+        "Fix: run cargo from inside the vyre checkout so its .cargo/config.toml applies."
+    ))
+}
+
+/// Workspace root, resolved from the checkout the gate was invoked in.
+///
+/// Read from the environment at run time, with the compiled-in value as the
+/// fallback for a binary invoked outside cargo. Both name the same checkout now
+/// that the compiled-in value is a fingerprint input; before it was, a worktree
+/// run reported the main checkout's tree and hid the worktree's own findings.
 #[must_use]
 pub fn workspace_root() -> PathBuf {
-    let manifest_dir = std::env::var_os("CARGO_MANIFEST_DIR")
+    std::env::var_os("VYRE_CHECKOUT_ROOT")
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")));
-    manifest_dir
-        .parent()
-        .map(PathBuf::from)
-        .expect("Fix: structure-gate must live under the vyre workspace root.")
+        .unwrap_or_else(compiled_checkout_root)
 }
 
 /// Run the crate-structure gate.

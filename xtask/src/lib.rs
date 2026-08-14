@@ -18,6 +18,7 @@
 
 pub mod artifact_paths;
 pub mod binary;
+pub mod checkout;
 pub mod delegate;
 pub mod docs;
 pub mod gates;

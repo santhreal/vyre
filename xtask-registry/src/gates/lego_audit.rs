@@ -950,9 +950,7 @@ fn check_6_composition_chain_coverage(ops: &[OpInfo]) -> usize {
 /// dialects must not regain private sibling dependencies.
 fn check_4_cross_dialect_reachthrough() -> usize {
     println!("[4/10] Cross-dialect reach-through (Tier 3 dialects must not import private items from sibling Tier 3 dialects)");
-    let libs_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(|p| p.join("vyre-libs").join("src"));
+    let libs_root = Some(xtask::checkout::checkout_root().join("vyre-libs").join("src"));
     let Some(libs_root) = libs_root.filter(|p| p.is_dir()) else {
         println!(
             "  ⚠ vyre-libs/src not reachable from xtask. Fix: invoke from the workspace root."
@@ -1253,9 +1251,7 @@ fn check_7_trend(ops: &[OpInfo]) -> usize {
 }
 
 fn workspace_root() -> Option<std::path::PathBuf> {
-    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(std::path::Path::to_path_buf)
+    Some(xtask::checkout::checkout_root())
 }
 
 fn composition_fractions(ops: &[OpInfo]) -> BTreeMap<String, f64> {
