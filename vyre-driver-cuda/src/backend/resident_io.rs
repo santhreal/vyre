@@ -9,8 +9,8 @@ use super::dispatch::CudaBackend;
 use super::output_range::CudaOutputReadback;
 use super::resident::{CudaResidentBuffer, ResidentViewCache};
 use super::resident_readback_fusion::{
-    fuse_resident_readback_copies, validate_fused_resident_readbacks, FusedResidentReadbacks,
-    ResidentReadbackCopy, ResidentReadbackView,
+    fuse_resident_readback_copies, resident_readback_copy, validate_fused_resident_readbacks,
+    FusedResidentReadbacks, ResidentReadbackCopy, ResidentReadbackView,
 };
 use super::resident_upload_fusion::{
     fuse_resident_upload_copies, push_resident_upload_copy, ResidentUploadCopy,
@@ -395,11 +395,13 @@ impl CudaBackend {
                 &mut resident_view_cache,
                 "resident full-readback view cache",
             )?;
-            copies.push(ResidentReadbackCopy {
-                handle_id: handle.handle.id(),
-                src: if buffer.byte_len == 0 { 0 } else { buffer.ptr },
-                byte_len: buffer.byte_len,
-            });
+            copies.push(resident_readback_copy(
+                "resident full readback",
+                handle.handle,
+                buffer,
+                0,
+                buffer.byte_len,
+            )?);
             if buffer.byte_len != 0 {
                 add_resident_copy_count(&mut expected_copy_count, "full readback")?;
             }
@@ -476,56 +478,13 @@ impl CudaBackend {
                 &mut resident_view_cache,
                 "resident ranged-readback view cache",
             )?;
-            let end = vyre_driver::accounting::checked_usize_byte_range_end_lazy(
+            copies.push(resident_readback_copy(
+                "resident ranged batch download",
+                handle.handle,
+                buffer,
                 byte_offset,
                 byte_len,
-                buffer.byte_len,
-                || {
-                    BackendError::InvalidProgram {
-                    fix: format!(
-                        "Fix: CUDA resident ranged batch download for handle {} overflows usize at offset {byte_offset} len {byte_len}.",
-                        handle.handle
-                    ),
-                }
-                },
-                |end| {
-                    BackendError::InvalidProgram {
-                    fix: format!(
-                        "Fix: CUDA resident ranged batch download for handle {} requested bytes [{byte_offset}..{end}) but buffer has {} bytes.",
-                        handle.handle, buffer.byte_len
-                    ),
-                }
-                },
-            )?;
-            let src = if byte_len == 0 {
-                0
-            } else {
-                vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
-                    buffer.ptr,
-                    byte_offset,
-                    || {
-                        BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA resident ranged batch download byte offset {byte_offset} does not fit CUdeviceptr arithmetic for handle {}.",
-                            handle.handle
-                        ),
-                    }
-                    },
-                    || {
-                        BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA resident ranged batch download pointer arithmetic overflowed for handle {} at offset {byte_offset}.",
-                            handle.handle
-                        ),
-                    }
-                    },
-                )?
-            };
-            copies.push(ResidentReadbackCopy {
-                handle_id: handle.handle.id(),
-                src,
-                byte_len,
-            });
+            )?);
             if byte_len != 0 {
                 add_resident_copy_count(&mut expected_copy_count, "ranged readback")?;
             }
@@ -603,56 +562,13 @@ impl CudaBackend {
                 &mut resident_view_cache,
                 "resident readback view cache",
             )?;
-            let end = vyre_driver::accounting::checked_usize_byte_range_end_lazy(
+            copies.push(resident_readback_copy(
+                "resident readback",
+                handle.handle,
+                buffer,
                 readback.device_offset,
                 readback.byte_len,
-                buffer.byte_len,
-                || {
-                    BackendError::InvalidProgram {
-                    fix: format!(
-                        "Fix: CUDA resident readback for handle {} overflows usize at offset {} len {}.",
-                        handle.handle, readback.device_offset, readback.byte_len
-                    ),
-                }
-                },
-                |end| {
-                    BackendError::InvalidProgram {
-                    fix: format!(
-                        "Fix: CUDA resident readback for handle {} requested bytes [{}..{}) but buffer has {} bytes.",
-                        handle.handle, readback.device_offset, end, buffer.byte_len
-                    ),
-                }
-                },
-            )?;
-            let src = if readback.byte_len == 0 {
-                0
-            } else {
-                vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
-                    buffer.ptr,
-                    readback.device_offset,
-                    || {
-                        BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA resident readback device offset {} does not fit CUdeviceptr arithmetic for handle {}.",
-                            readback.device_offset, handle.handle
-                        ),
-                    }
-                    },
-                    || {
-                        BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA resident readback pointer arithmetic overflowed for handle {} at offset {}.",
-                            handle.handle, readback.device_offset
-                        ),
-                    }
-                    },
-                )?
-            };
-            copies.push(ResidentReadbackCopy {
-                handle_id: handle.handle.id(),
-                src,
-                byte_len: readback.byte_len,
-            });
+            )?);
         }
         self.download_resident_fused_copies_many_into(&copies, outputs)
     }
@@ -861,56 +777,13 @@ impl CudaBackend {
                     &mut resident_view_cache,
                     "resident batched-readback view cache",
                 )?;
-                let end = vyre_driver::accounting::checked_usize_byte_range_end_lazy(
+                copies.push(resident_readback_copy(
+                    "resident batch readback",
+                    handle.handle,
+                    buffer,
                     readback.device_offset,
                     readback.byte_len,
-                    buffer.byte_len,
-                    || {
-                        BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA resident batch readback for handle {} overflows usize at offset {} len {}.",
-                            handle.handle, readback.device_offset, readback.byte_len
-                        ),
-                    }
-                    },
-                    |end| {
-                        BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA resident batch readback for handle {} requested bytes [{}..{}) but buffer has {} bytes.",
-                            handle.handle, readback.device_offset, end, buffer.byte_len
-                        ),
-                    }
-                    },
-                )?;
-                let src = if readback.byte_len == 0 {
-                    0
-                } else {
-                    vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
-                        buffer.ptr,
-                        readback.device_offset,
-                        || {
-                            BackendError::InvalidProgram {
-                            fix: format!(
-                                "Fix: CUDA resident batch readback device offset {} does not fit CUdeviceptr arithmetic for handle {}.",
-                                readback.device_offset, handle.handle
-                            ),
-                        }
-                        },
-                        || {
-                            BackendError::InvalidProgram {
-                            fix: format!(
-                                "Fix: CUDA resident batch readback pointer arithmetic overflowed for handle {} at offset {}.",
-                                handle.handle, readback.device_offset
-                            ),
-                        }
-                        },
-                    )?
-                };
-                copies.push(ResidentReadbackCopy {
-                    handle_id: handle.handle.id(),
-                    src,
-                    byte_len: readback.byte_len,
-                });
+                )?);
             }
             copy_batches.push(copies);
         }

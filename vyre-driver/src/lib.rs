@@ -77,6 +77,8 @@ pub mod diagnostics;
 pub mod dispatch_policy;
 /// Backend-neutral dispatch-shape comparison helpers.
 pub mod dispatch_shape;
+/// Backend-neutral bounded fan-out for durability work on a path set.
+pub mod durable_fanout;
 /// Device-profile-aware extraction cost helpers (ROADMAP A7).
 pub mod extraction_cost;
 /// Backend-neutral fixpoint-iteration resolution.

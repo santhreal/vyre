@@ -10,8 +10,9 @@ use vyre_driver::{BackendError, DispatchConfig, LaunchPlan};
 use vyre_foundation::ir::Program;
 
 use super::allocations::cuda_check;
-use super::dispatch::CudaBackend;
+use super::dispatch::{CudaBackend, GridBarrierLease};
 use super::module_cache::ModuleCacheKey;
+use super::plan::CudaDispatchPlan;
 use super::staging_reserve::reserve_smallvec;
 use crate::numeric::CUDA_NUMERIC;
 use crate::occupancy::cooperative_thread_residency_block_limit;
@@ -476,6 +477,47 @@ impl CudaBackend {
         }
         self.telemetry.record_kernel_launch(launch);
         self.record_launch_occupancy(func, launch);
+        Ok(())
+    }
+
+    /// Enqueue the resolved kernel `prepared.fixpoint_iterations` times on one
+    /// stream, resetting the grid barrier ahead of every launch.
+    ///
+    /// Host, resident and resident-batch dispatch each replayed this sequence
+    /// themselves, and the reset is the part that must not drift: it belongs
+    /// inside the iteration and ahead of the launch, because the counter is
+    /// per-launch and a kernel that waits on a stale target hangs instead of
+    /// failing.
+    ///
+    /// CUDA serializes kernels within one stream, so each iteration observes the
+    /// previous iteration's writes. That is the persistent-state contract a
+    /// fixpoint program converges under, and it is why the iterations are
+    /// enqueued back to back on the same stream rather than fanned out.
+    pub(crate) fn replay_fixpoint_launches(
+        &self,
+        grid_barrier: &GridBarrierLease,
+        func: CUfunction,
+        kernel_args: &mut SmallVec<[*mut std::ffi::c_void; 8]>,
+        prepared: &CudaDispatchPlan,
+        stream: CUstream,
+    ) -> Result<(), BackendError> {
+        for _ in 0..prepared.fixpoint_iterations {
+            // SAFETY: `stream` is owned by this dispatch's launch lease for the
+            // whole replay, so it outlives the memset; the memset is enqueued on
+            // the same stream as the launch below and is therefore ordered ahead
+            // of the kernel that waits on the counter.
+            unsafe {
+                grid_barrier.enqueue_reset(stream)?;
+            }
+            self.launch_prevalidated_function(
+                func,
+                kernel_args,
+                &prepared.launch,
+                stream,
+                false,
+                prepared.cooperative,
+            )?;
+        }
         Ok(())
     }
 }

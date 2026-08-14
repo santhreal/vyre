@@ -433,8 +433,8 @@ impl CudaBackend {
     pub(crate) fn validate_transient_allocation_memory_budget(
         &self,
         byte_len: usize,
-        label: &'static str,
-        context: &'static str,
+        label: &str,
+        context: &str,
     ) -> Result<(), BackendError> {
         let required_bytes = cuda_dispatch_allocation_bucket(byte_len, label)?;
         let budget_bytes = cuda_transient_dispatch_live_available_budget_bytes(
@@ -622,14 +622,14 @@ fn cuda_mixed_dispatch_staging_bytes(
 pub(crate) fn validate_cuda_transient_dispatch_budget(
     required_bytes: u64,
     budget_bytes: u64,
-    context: &'static str,
+    context: &str,
 ) -> Result<(), BackendError> {
     if required_bytes > budget_bytes {
         return Err(BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: {context} requires {required_bytes} transient CUDA device bytes but the live-device preflight budget is {budget_bytes} bytes. Reduce input/output size, shard the dispatch, use resident handles with explicit reuse, or raise the CUDA memory budget deliberately."
-            ),
-        });
+        fix: format!(
+            "Fix: {context} requires {required_bytes} transient CUDA device bytes but the live-device preflight budget is {budget_bytes} bytes. Reduce input/output size, shard the dispatch, use resident handles with explicit reuse, or raise the CUDA memory budget deliberately."
+        ),
+    });
     }
     Ok(())
 }
@@ -647,27 +647,24 @@ fn checked_dispatch_bytes_add(
         })
 }
 
-fn cuda_dispatch_allocation_bucket(
-    byte_len: usize,
-    field: &'static str,
-) -> Result<u64, BackendError> {
+fn cuda_dispatch_allocation_bucket(byte_len: usize, field: &str) -> Result<u64, BackendError> {
     let bucket = byte_len
-        .max(1)
-        .checked_next_power_of_two()
-        .ok_or_else(|| BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: {field} request of {byte_len} bytes cannot be rounded to the CUDA allocation bucket. Shard the dispatch before CUDA allocation."
-            ),
-        })?;
+    .max(1)
+    .checked_next_power_of_two()
+    .ok_or_else(|| BackendError::InvalidProgram {
+        fix: format!(
+            "Fix: {field} request of {byte_len} bytes cannot be rounded to the CUDA allocation bucket. Shard the dispatch before CUDA allocation."
+        ),
+    })?;
     cuda_usize_bytes_to_u64(bucket, field)
 }
 
-fn cuda_usize_bytes_to_u64(byte_len: usize, field: &'static str) -> Result<u64, BackendError> {
+fn cuda_usize_bytes_to_u64(byte_len: usize, field: &str) -> Result<u64, BackendError> {
     u64::try_from(byte_len).map_err(|_| BackendError::InvalidProgram {
-        fix: format!(
-            "Fix: {field} value of {byte_len} bytes cannot fit u64 CUDA memory telemetry. Shard the dispatch or widen budget accounting."
-        ),
-    })
+    fix: format!(
+        "Fix: {field} value of {byte_len} bytes cannot fit u64 CUDA memory telemetry. Shard the dispatch or widen budget accounting."
+    ),
+})
 }
 
 #[cfg(test)]

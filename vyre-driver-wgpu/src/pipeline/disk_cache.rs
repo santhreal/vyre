@@ -208,21 +208,10 @@ pub(crate) fn flush_disk_pipeline_cache() -> Result<(), BackendError> {
 
 fn flush_disk_cache_paths(paths: &[PathBuf]) -> Result<(), BackendError> {
     sync_cache_files_bounded(paths, File::sync_data, "pipeline cache explicit flush")?;
-    let mut parents = Vec::new();
-    reserve_backend_vec(
-        &mut parents,
-        paths.len(),
-        "pipeline cache parent directory staging",
-    )?;
-    for path in paths {
-        if let Some(parent) = path.parent() {
-            parents.push(parent.to_path_buf());
-        }
-    }
-    parents.sort();
-    parents.dedup();
-    sync_parent_dirs_bounded(&parents)?;
-    Ok(())
+    let parents = vyre_driver::durable_fanout::parent_directories(paths, |parents, capacity| {
+        reserve_backend_vec(parents, capacity, "pipeline cache parent directory staging")
+    })?;
+    sync_parent_dirs_bounded(&parents)
 }
 
 fn persist_disk_wgsl(
@@ -395,48 +384,31 @@ fn sync_cache_files_bounded(
     sync: fn(&File) -> std::io::Result<()>,
     context: &'static str,
 ) -> Result<(), BackendError> {
-    if paths.is_empty() {
-        return Ok(());
-    }
-    let workers = std::thread::available_parallelism()
-        .map(usize::from)
-        .unwrap_or(1)
-        .clamp(1, 16);
-    for chunk in paths.chunks(workers) {
-        std::thread::scope(|scope| {
-            let mut handles = Vec::new();
-            reserve_backend_vec(
-                &mut handles,
-                chunk.len(),
-                "pipeline cache flush worker staging",
-            )?;
-            for path in chunk {
-                handles.push(scope.spawn(move || -> Result<(), BackendError> {
-                    let file = File::open(path).map_err(|error| {
-                        trace_io_err(path, &error, "pipeline cache flush open failed");
-                        BackendError::new(format!(
-                            "{context} failed to open {}: {error}. Fix: remove the corrupted cache entry and retry.",
-                            path_fingerprint(path)
-                        ))
-                    })?;
-                    sync(&file).map_err(|error| {
-                        trace_io_err(path, &error, "pipeline cache flush fsync failed");
-                        BackendError::new(format!(
-                            "{context} failed for {}: {error}. Fix: check cache storage health and retry.",
-                            path_fingerprint(path)
-                        ))
-                    })
-                }));
-            }
-            for handle in handles {
-                handle.join().map_err(|_| {
-                    BackendError::new(format!("{context} worker panicked. Fix: retry the flush."))
-                })??;
-            }
-            Ok::<(), BackendError>(())
-        })?;
-    }
-    Ok(())
+    vyre_driver::durable_fanout::for_each_bounded(
+        paths,
+        |path| {
+            let file = File::open(path).map_err(|error| {
+                trace_io_err(path, &error, "pipeline cache flush open failed");
+                BackendError::new(format!(
+                    "{context} failed to open {}: {error}. Fix: remove the corrupted cache entry and retry.",
+                    path_fingerprint(path)
+                ))
+            })?;
+            sync(&file).map_err(|error| {
+                trace_io_err(path, &error, "pipeline cache flush fsync failed");
+                BackendError::new(format!(
+                    "{context} failed for {}: {error}. Fix: check cache storage health and retry.",
+                    path_fingerprint(path)
+                ))
+            })
+        },
+        || BackendError::new(format!("{context} worker panicked. Fix: retry the flush.")),
+        |requested, source| {
+            BackendError::new(format!(
+                "{context} could not reserve {requested} flush worker handle(s): {source}. Fix: lower pipeline cache flush fan-out."
+            ))
+        },
+    )
 }
 
 fn read_metadata<T: serde::de::DeserializeOwned>(meta_path: &Path) -> Result<T, ()> {

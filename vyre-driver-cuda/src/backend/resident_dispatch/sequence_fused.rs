@@ -21,7 +21,8 @@ use crate::backend::resident_dispatch_support::{
 };
 use crate::backend::resident_io::reserve_borrowed_resident_readback_outputs;
 use crate::backend::resident_readback_fusion::{
-    fuse_resident_readback_copies, validate_fused_resident_readbacks, ResidentReadbackCopy,
+    fuse_resident_readback_copies, resident_readback_copy, validate_fused_resident_readbacks,
+    ResidentReadbackCopy,
 };
 use crate::backend::staging_reserve::{reserve_hash_map, reserve_smallvec};
 
@@ -475,57 +476,13 @@ impl CudaBackend {
                     &mut sequence_view_cache,
                     "resident sequence view cache",
                 )?;
-                let end = vyre_driver::accounting::checked_usize_byte_range_end_lazy(
+                requested_readbacks.push(resident_readback_copy(
+                    "resident sequence compact readback",
+                    handle.handle,
+                    buffer,
                     readback.device_offset,
                     readback.byte_len,
-                    buffer.byte_len,
-                    || {
-                        BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA resident sequence compact readback for handle {} overflows usize at offset {} len {}.",
-                            handle.handle, readback.device_offset, readback.byte_len
-                        ),
-                    }
-                    },
-                    |end| {
-                        BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA resident sequence compact readback for handle {} requested bytes [{}..{}) but buffer has {} bytes.",
-                            handle.handle, readback.device_offset, end, buffer.byte_len
-                        ),
-                    }
-                    },
-                )?;
-                let src = if readback.byte_len == 0 {
-                    0
-                } else {
-                    vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
-                        buffer.ptr,
-                        readback.device_offset,
-                        || {
-                            BackendError::InvalidProgram {
-                            fix: format!(
-                                "Fix: CUDA resident sequence compact readback device offset {} does not fit CUdeviceptr arithmetic for handle {}.",
-                                readback.device_offset, handle.handle
-                            ),
-                        }
-                        },
-                        || {
-                            BackendError::InvalidProgram {
-                            fix: format!(
-                                "Fix: CUDA resident sequence compact readback pointer arithmetic overflowed for handle {} at offset {}.",
-                                handle.handle, readback.device_offset
-                            ),
-                        }
-                        },
-                    )?
-                };
-                let copy = ResidentReadbackCopy {
-                    handle_id: handle.handle.id(),
-                    src,
-                    byte_len: readback.byte_len,
-                };
-                requested_readbacks.push(copy);
+                )?);
             }
 
             let fused_readbacks = fuse_resident_readback_copies(&requested_readbacks)?;
