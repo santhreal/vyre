@@ -8,70 +8,14 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 
-mod common;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
+
+use c_frontend::reference_lexer::{c11_lexer_outputs, run_c11_lexer_promoted as run_gpu_lexer};
 use c_grammar_gen::lex_c11_max_munch_kinds;
-use common::{decode_u32_words, u32_bytes};
 use vyre_libs::parsing::c::lex::diagnostics::{first_c11_lexer_diagnostic, C11LexerDiagnosticKind};
-use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
-use vyre_libs::parsing::c::lex::lexer::c11_lexer;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::pipeline::stages::C11_AST_MAX_TOK_SCAN;
-use vyre_reference::value::Value;
-
-// ---------------------------------------------------------------------------
-// Byte / word helpers
-// ---------------------------------------------------------------------------
-
-fn haystack_words(source: &[u8]) -> Vec<u32> {
-    source.iter().map(|b| u32::from(*b)).collect()
-}
-
-/// Run the GPU lexer `c11_lexer` through the Reference oracle oracle and return
-/// the compact, keyword-promoted token stream plus the emitted token count.
-fn run_gpu_lexer(source: &[u8], haystack_len: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>, u32) {
-    let program = c11_lexer(
-        "haystack",
-        "out_tok_types",
-        "out_tok_starts",
-        "out_tok_lens",
-        "out_counts",
-        haystack_len,
-    );
-    let haystack_buf = u32_bytes(&haystack_words(source));
-    let zero_buf = vec![0u8; haystack_len as usize * 4];
-    let count_zero = vec![0u8; 4];
-    let inputs = [
-        Value::from(haystack_buf),
-        Value::from(zero_buf.clone()),
-        Value::from(zero_buf.clone()),
-        Value::from(zero_buf),
-        Value::from(count_zero),
-    ];
-    let outputs = vyre_reference::reference_eval(&program, &inputs)
-        .expect("c11_lexer must execute under the reference oracle");
-    assert_eq!(
-        outputs.len(),
-        4,
-        "expected [tok_types, tok_starts, tok_lens, counts]"
-    );
-    let tok_types = decode_u32_words(&outputs[0].to_bytes());
-    let tok_starts = decode_u32_words(&outputs[1].to_bytes());
-    let tok_lens = decode_u32_words(&outputs[2].to_bytes());
-    let counts = decode_u32_words(&outputs[3].to_bytes());
-    let tok_count = counts.first().copied().unwrap_or(0);
-    let promoted_tok_types = reference_c_keyword_types(
-        &tok_types[..tok_count as usize],
-        &tok_starts[..tok_count as usize],
-        &tok_lens[..tok_count as usize],
-        source,
-    );
-    (
-        promoted_tok_types,
-        tok_starts[..tok_count as usize].to_vec(),
-        tok_lens[..tok_count as usize].to_vec(),
-        tok_count,
-    )
-}
 
 /// Assert that the GPU lexer and the host max-munch lexer agree on the
 /// non-whitespace, non-comment token sequence for `source`.

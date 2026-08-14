@@ -24,14 +24,26 @@ pub(crate) use super::rows::{
     flags_at, kind_at, FLAGS_FIELD, ORDINARY_FLAG_DECL, TYPEDEF_FLAG_DECL, TYPEDEF_FLAG_VISIBLE,
 };
 
+/// The atom spelling, owned by [`super::spelling`]. Re-exported for the same
+/// reason: a scope fixture is written `fixture("name", &c_atoms("typedef int T
+/// ;"))`, and every scope test reaches its atoms through `use
+/// scope_fixture::*`.
+#[allow(unused_imports)]
+pub(crate) use super::spelling::c_atoms;
+
 /// `u32` fields per scope-tree row.
 pub(crate) const SCOPE_TREE_STRIDE_U32: usize = 4;
 
 /// One token in a scope fixture: a bare kind, or an identifier with a lexeme.
+///
+/// The lexeme is owned because the scope property tests generate identifier
+/// names at run time (`x_0`, `outer_3_1`), and a borrowed `&'static str` forces
+/// every such case into a second assembler. That is exactly how
+/// `c11_sema_scope` came to carry a copy of this one.
 #[derive(Clone)]
 pub(crate) enum Atom {
     Tok(u32),
-    Ident(&'static str),
+    Ident(String),
 }
 
 /// A token stream whose identifier bytes are packed back to back.
@@ -46,12 +58,12 @@ pub(crate) fn tok(t: u32) -> Atom {
     Atom::Tok(t)
 }
 
-pub(crate) fn ident(name: &'static str) -> Atom {
-    Atom::Ident(name)
+pub(crate) fn ident(name: &str) -> Atom {
+    Atom::Ident(name.to_string())
 }
 
 /// Build a scope fixture. `_name` labels the fixture at the call site.
-pub(crate) fn fixture(_name: &'static str, atoms: &[Atom]) -> ScopeFixture {
+pub(crate) fn fixture(_name: &str, atoms: &[Atom]) -> ScopeFixture {
     let mut tok_types = Vec::with_capacity(atoms.len());
     let mut tok_starts = Vec::with_capacity(atoms.len());
     let mut tok_lens = Vec::with_capacity(atoms.len());
@@ -89,15 +101,22 @@ pub(crate) fn scope_tree_word_at(buf: &[u8], token_idx: usize, field: usize) -> 
     word_at(buf, token_idx * SCOPE_TREE_STRIDE_U32 + field)
 }
 
-pub(crate) fn scope_tree_for(fix: &ScopeFixture) -> Vec<u8> {
+/// The CPU reference scope tree as `u32` rows.
+///
+/// A parity test that compares row by row needs the words; one that compares
+/// buffers needs [`scope_tree_for`]. Both read the same pass.
+pub(crate) fn scope_tree_words_for(fix: &ScopeFixture) -> Vec<u32> {
     let haystack_u32: Vec<u32> = fix.haystack.iter().copied().map(u32::from).collect();
-    let words = reference_scope_tree(
+    reference_scope_tree(
         &fix.tok_types,
         &fix.tok_starts,
         &fix.tok_lens,
         &haystack_u32,
-    );
-    emit_u32_bytes(&words)
+    )
+}
+
+pub(crate) fn scope_tree_for(fix: &ScopeFixture) -> Vec<u8> {
+    emit_u32_bytes(&scope_tree_words_for(fix))
 }
 
 pub(crate) fn raw_vast(fix: &ScopeFixture) -> Vec<u8> {

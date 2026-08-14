@@ -18,6 +18,9 @@
 //! against the real wgpu backend, the actual production path, so a
 //! subgroup-divergence under-fire that only manifests on device is caught there.
 
+mod common;
+use common::decode_u32_words as decode_u32;
+
 mod presence_oracle;
 
 use presence_oracle::{
@@ -31,13 +34,6 @@ use vyre_libs::scan::classic_ac::{
 };
 use vyre_libs::scan::pack_haystack_u32;
 use vyre_primitives::wire::pack_u32_slice;
-
-fn decode_u32(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect()
-}
 
 /// Evaluate the region-presence GPU program on the CPU reference backend and
 /// return the decoded per-region presence bitmap.

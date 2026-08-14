@@ -13,7 +13,6 @@ use vyre_primitives::predicate::node_kind;
 mod c_frontend;
 
 use c_frontend::scope_fixture::*;
-use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_ARRAY_DECL, C_AST_KIND_CAST_EXPR, C_AST_KIND_FUNCTION_DECLARATOR,
     C_AST_KIND_POINTER_DECL,

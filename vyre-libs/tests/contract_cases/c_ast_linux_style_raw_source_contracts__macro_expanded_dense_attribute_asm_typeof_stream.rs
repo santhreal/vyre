@@ -56,7 +56,7 @@ fn macro_expanded_dense_attribute_asm_typeof_stream() {
 
     // Span monotonicity already asserted by parse_source, but double-check
     // that every emitted row has a valid parent or is a root.
-    let n = node_count_from_vast(v);
+    let n = node_count_from_vast(v) as usize;
     for i in 0..n {
         let parent = parent_at(v, i);
         if parent != u32::MAX {

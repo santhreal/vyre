@@ -12,8 +12,9 @@
 
 pub(crate) use crate::c_ast_gpu_parity_support::classify;
 use crate::c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, row_indices, void_fn_fixture, Fixture, FixtureToken,
+    assert_full_pipeline_parity, row_indices, void_fn_fixture, Fixture, FixtureToken,
 };
+use crate::c_frontend::spelling::c_tokens;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_ASSIGN_EXPR, C_AST_KIND_CAST_EXPR, C_AST_KIND_FOR_STMT,
@@ -81,32 +82,7 @@ pub(crate) fn fixture_computed_goto_comma() -> Fixture {
 
 /// void f(int n) { for (int i = 0; i < n; i++) { } }
 pub(crate) fn fixture_for_with_declaration() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new("n", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("for", TOK_FOR),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new("i", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("i", TOK_IDENTIFIER),
-        FixtureToken::new("<", TOK_LT),
-        FixtureToken::new("n", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("i", TOK_IDENTIFIER),
-        FixtureToken::new("++", TOK_INC),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens("void f ( int n ) { for ( int i = 0 ; i < n ; i ++ ) { } }")
 }
 
 /// void f() { for (int i = 0, j = 1; ; ) { } }

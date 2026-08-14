@@ -16,9 +16,8 @@ mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
 
-use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, row_indices, Fixture, FixtureToken,
-};
+use c_ast_gpu_parity_support::{assert_full_pipeline_parity, row_indices, Fixture};
+use c_frontend::spelling::c_tokens;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
@@ -33,73 +32,24 @@ use vyre_primitives::predicate::node_kind;
 
 /// typeof(int) *(*fp[4])(void);
 fn fixture_typeof_function_pointer_array() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("typeof", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("fp", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("4", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("typeof ( int ) * ( * fp [ 4 ] ) ( void ) ;")
 }
 
 /// typeof(int) (((*ptr)));
 fn fixture_typeof_deeply_parenthesised() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("typeof", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("ptr", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("typeof ( int ) ( ( ( * ptr ) ) ) ;")
 }
 
 /// typeof(int) * const * volatile p;
 fn fixture_typeof_nested_qualifiers() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("typeof", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("const", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("volatile", TOK_IDENTIFIER),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("typeof ( int ) * const * volatile p ;")
 }
 
 /// __typeof_unqual__(int) z;
 /// Simulate keyword promotion to verify the parser pipeline handles
 /// typeof_unqual without panic.
 fn fixture_typeof_unqual_simulated() -> Fixture {
-    let mut fix = build_fixture(&[
-        FixtureToken::new("__typeof_unqual__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("z", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ]);
+    let mut fix = c_tokens("__typeof_unqual__ ( int ) z ;");
     // Simulate keyword promotion so the parser sees it as typeof.
     fix.tok_types[0] = TOK_GNU_TYPEOF;
     fix
@@ -107,38 +57,12 @@ fn fixture_typeof_unqual_simulated() -> Fixture {
 
 /// _Atomic typeof(int) *q;
 fn fixture_atomic_typeof_pointer() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("_Atomic", TOK_IDENTIFIER),
-        FixtureToken::new("typeof", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("q", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("_Atomic typeof ( int ) * q ;")
 }
 
 /// typeof(int) *(*f(void))(float);
 fn fixture_typeof_function_returning_fnptr() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("typeof", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("float", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("typeof ( int ) * ( * f ( void ) ) ( float ) ;")
 }
 
 // ---------------------------------------------------------------------------

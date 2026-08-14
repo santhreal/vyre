@@ -24,13 +24,15 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+#[path = "../../tests/support/c_frontend/fixtures/asm_extended_operands.rs"]
+mod asm_extended_operands;
 mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
 
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, classify, row_indices, void_fn_fixture, word_at,
-    Fixture, FixtureToken, VAST_STRIDE_U32,
+    assert_full_pipeline_parity, classify, row_indices, void_fn_fixture, word_at, Fixture,
+    FixtureToken, VAST_STRIDE_U32,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::gnu_builtins::try_classify_gnu_builtin_name;
@@ -59,45 +61,14 @@ fn parent_of(rows: &[u8], idx: usize) -> u32 {
 // 1. GNU asm
 // ---------------------------------------------------------------------------
 
+use asm_extended_operands::{asm_goto_two_labels, asm_volatile_mov_one_clobber};
+
 fn fixture_asm_goto_with_labels() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__asm__", TOK_IDENTIFIER),
-        FixtureToken::new("goto", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"jmp %l0\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("fail", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("ok", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    asm_goto_two_labels("__asm__", TOK_IDENTIFIER, "\"jmp %l0\"")
 }
 
 fn fixture_asm_extended_io_clobbers() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("asm", TOK_IDENTIFIER),
-        FixtureToken::new("volatile", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"mov %1, %0\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"=a\"", TOK_STRING),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("out", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"r\"", TOK_STRING),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("in", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"memory\"", TOK_STRING),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    asm_volatile_mov_one_clobber("\"memory\"")
 }
 
 #[path = "c_ast_gnu_and_kernel_construct_integration/asm_goto_classifies_template_and_labels.rs"]

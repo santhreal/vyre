@@ -13,7 +13,6 @@ use vyre_primitives::predicate::node_kind;
 mod c_frontend;
 
 use c_frontend::scope_fixture::*;
-use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::C_AST_KIND_CAST_EXPR;
 use vyre_libs::parsing::c::sema::lookup::{DECL_KIND_NONE, DECL_KIND_VARIABLE};
 

@@ -12,73 +12,16 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use crate::c_ast_gpu_parity_support::dispatch_gpu_program;
 use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::tokens::*;
-use vyre_libs::parsing::c::preprocess::expansion::{
-    opt_conditional_mask, opt_dynamic_macro_expansion,
-};
+use vyre_libs::parsing::c::preprocess::expansion::opt_conditional_mask;
 use vyre_reference::value::Value;
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-pub(crate) const EMPTY_SLOT: u32 = u32::MAX;
-pub(crate) const TABLE_SLOTS: usize = 4096;
-
-pub(crate) fn hash_token(tok: u32) -> usize {
-    (tok.wrapping_mul(2_654_435_769) & 4095) as usize
-}
-
-pub(crate) struct MacroFixture {
-    pub(crate) keys: Vec<u32>,
-    pub(crate) vals: Vec<u32>,
-    pub(crate) sizes: Vec<u32>,
-}
-
-impl MacroFixture {
-    pub(crate) fn empty() -> Self {
-        Self {
-            keys: vec![EMPTY_SLOT; TABLE_SLOTS],
-            vals: vec![0; TABLE_SLOTS],
-            sizes: vec![0; TABLE_SLOTS],
-        }
-    }
-
-    pub(crate) fn insert(&mut self, token: u32, replacement_offset: usize, replacement: &[u32]) {
-        let slot = hash_token(token);
-        self.keys[slot] = token;
-        self.vals[slot] = replacement_offset as u32;
-        self.sizes[replacement_offset] = replacement.len() as u32;
-        for (idx, value) in replacement.iter().enumerate() {
-            self.vals[replacement_offset + idx] = *value;
-        }
-    }
-}
-
-pub(crate) fn run_dynamic_macro_expansion(
-    input: &[u32],
-    fixture: &MacroFixture,
-    max_out_tokens: u32,
-) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
-    let program = opt_dynamic_macro_expansion(
-        "in_tok_types",
-        "macro_keys",
-        "macro_vals",
-        "macro_sizes",
-        "out_tok_types",
-        "out_tok_counts",
-        Expr::u32(input.len() as u32),
-        max_out_tokens,
-    );
-    let values = [
-        Value::from(u32_bytes(input)),
-        Value::from(u32_bytes(&fixture.keys)),
-        Value::from(u32_bytes(&fixture.vals)),
-        Value::from(u32_bytes(&fixture.sizes)),
-        Value::from(vec![0u8; max_out_tokens as usize * 4]),
-        Value::from(vec![0u8; 4]),
-    ];
-    vyre_reference::reference_eval(&program, &values)
-}
+pub(crate) use crate::c_frontend::macro_expansion::{
+    dynamic_macro_expansion_program, hash_token, run_dynamic_macro_expansion, MacroFixture,
+};
 
 pub(crate) fn run_conditional_mask(
     tok_types: &[u32],
@@ -96,16 +39,7 @@ pub(crate) fn run_gpu_macro_expansion(
     fixture: &MacroFixture,
     max_out_tokens: u32,
 ) -> Vec<Vec<u8>> {
-    let program = opt_dynamic_macro_expansion(
-        "in_tok_types",
-        "macro_keys",
-        "macro_vals",
-        "macro_sizes",
-        "out_tok_types",
-        "out_tok_counts",
-        Expr::u32(input.len() as u32),
-        max_out_tokens,
-    );
+    let program = dynamic_macro_expansion_program(input.len(), max_out_tokens);
     let input_bytes = u32_bytes(input);
     let keys_bytes = u32_bytes(&fixture.keys);
     let vals_bytes = u32_bytes(&fixture.vals);

@@ -12,6 +12,9 @@
 //! separate presence bitmap word-for-word AND the fused triple set equals the
 //! separate position set. A divergence here is a recall bug in the fold.
 
+mod common;
+use common::decode_u32_words as decode_u32;
+
 use std::collections::BTreeSet;
 
 use vyre_libs::scan::classic_ac::{
@@ -84,13 +87,6 @@ fn random_region_starts(rng: &mut Lcg, haystack_len: usize) -> Vec<u32> {
         }
     }
     starts.into_iter().collect()
-}
-
-fn decode_u32(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect()
 }
 
 fn decode_triples(count_words: &[u32], match_words: &[u32]) -> BTreeSet<(u32, u32, u32)> {

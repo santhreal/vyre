@@ -2,22 +2,7 @@ use super::*;
 
 #[test]
 fn scope_tree_function_parameter_is_variable_decl() {
-    let fix = fixture(
-        "param_decl",
-        &[
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_COMMA),
-            tok(TOK_INT),
-            ident("y"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_RBRACE),
-        ],
-    );
+    let fix = fixture("param_decl", &c_atoms("void f ( int x , int y ) { }"));
     let st = scope_tree_for(&fix);
 
     assert_eq!(
@@ -36,20 +21,7 @@ fn scope_tree_function_parameter_is_variable_decl() {
 fn scope_tree_parameter_scope_is_function_body_scope() {
     let fix = fixture(
         "param_scope",
-        &[
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("x"),
-            tok(TOK_ASSIGN),
-            tok(TOK_INTEGER),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("void f ( int x ) { x = INTEGER@ ; }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -65,19 +37,7 @@ fn scope_tree_parameter_scope_is_function_body_scope() {
 fn scope_tree_parameter_shadows_outer_variable() {
     let fix = fixture(
         "param_shadow_outer",
-        &[
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("int x ; void f ( int x ) { }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -103,26 +63,7 @@ fn scope_tree_parameter_shadows_outer_variable() {
 fn annotation_parameter_shadows_typedef_in_body() {
     let fix = fixture(
         "ann_param_td",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( int T ) { ( T ) * p ; }"),
     );
     let ann = annotate_cpu(&fix);
     let typed = classify_cpu_annotated(&fix);
@@ -150,31 +91,7 @@ fn annotation_parameter_shadows_typedef_in_body() {
 fn annotation_multiple_parameters_shadow_typedef_sequentially() {
     let fix = fixture(
         "ann_multi_param",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_COMMA),
-            tok(TOK_INT),
-            ident("U"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("a"),
-            tok(TOK_SEMICOLON),
-            ident("U"),
-            tok(TOK_STAR),
-            ident("b"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( int T , int U ) { T * a ; U * b ; }"),
     );
     let ann = annotate_cpu(&fix);
     let typed = classify_cpu_annotated(&fix);
@@ -207,27 +124,7 @@ fn scope_tree_prototype_parameter_not_visible_in_body() {
     // Prototype then definition: the prototype params should not leak
     let fix = fixture(
         "proto_scope",
-        &[
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_RPAREN),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("y"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("y"),
-            tok(TOK_ASSIGN),
-            tok(TOK_INTEGER),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("void f ( int x ) ; void f ( int y ) { y = INTEGER@ ; }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -251,33 +148,7 @@ fn scope_tree_prototype_parameter_not_visible_in_body() {
 fn annotation_prototype_does_not_restore_typedef_for_body() {
     let fix = fixture(
         "ann_proto",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( int T ) ; void f ( int T ) { ( T ) * p ; }"),
     );
     let ann = annotate_cpu(&fix);
     let typed = classify_cpu_annotated(&fix);
@@ -303,27 +174,7 @@ fn annotation_prototype_does_not_restore_typedef_for_body() {
 fn scope_tree_kr_parameter_is_variable_in_body_scope() {
     let fix = fixture(
         "kr_param",
-        &[
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            ident("x"),
-            tok(TOK_COMMA),
-            ident("y"),
-            tok(TOK_RPAREN),
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_INT),
-            ident("y"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_LBRACE),
-            ident("x"),
-            tok(TOK_ASSIGN),
-            ident("y"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("void f ( x , y ) int x ; int y ; { x = y ; }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -355,28 +206,7 @@ fn scope_tree_kr_parameter_is_variable_in_body_scope() {
 fn annotation_kr_parameter_shadows_typedef() {
     let fix = fixture(
         "ann_kr_td",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_LBRACE),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( T ) int T ; { ( T ) * p ; }"),
     );
     let ann = annotate_cpu(&fix);
     let typed = classify_cpu_annotated(&fix);

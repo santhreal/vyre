@@ -373,7 +373,7 @@ pub(crate) fn c_tokens(spelling: &'static str) -> Fixture {
 /// identifier for a word the keyword table also claims, and `KIND@` a bare
 /// token of that kind for one no lexeme names.
 #[must_use]
-pub(crate) fn c_atoms(spelling: &'static str) -> Vec<Atom> {
+pub(crate) fn c_atoms(spelling: &str) -> Vec<Atom> {
     spelling
         .split_whitespace()
         .map(|word| {

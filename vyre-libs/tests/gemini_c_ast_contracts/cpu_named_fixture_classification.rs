@@ -5,7 +5,7 @@
 
 use super::gemini_named_fixtures::*;
 use crate::c_frontend::rows::{row_indices as typed_indices, word_at, VAST_STRIDE_U32};
-use vyre_libs::parsing::c::lex::tokens::*;
+use crate::c_frontend::scope_fixture::{annotate_cpu, c_atoms, fixture};
 use vyre_libs::parsing::c::parse::vast::*;
 use vyre_primitives::predicate::node_kind;
 
@@ -43,35 +43,11 @@ pub(crate) fn cpu_reference_typedef_shadowing() {
 
 #[test]
 pub(crate) fn cpu_reference_cast_vs_multiply() {
-    let fix = named_fixture(&[
-        tok(TOK_TYPEDEF),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-        tok(TOK_LPAREN),
-        ident("T"),
-        tok(TOK_RPAREN),
-        tok(TOK_STAR),
-        ident("x"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_LPAREN),
-        ident("T"),
-        tok(TOK_RPAREN),
-        tok(TOK_STAR),
-        ident("x"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_RBRACE),
-    ]);
-    let typed = reference_c11_classify_vast_node_kinds(&annotated_named_vast(&fix));
+    let fix = fixture(
+        "cast_vs_multiply",
+        &c_atoms("typedef int T ; void f ( void ) { ( T ) * x ; int T ; ( T ) * x ; }"),
+    );
+    let typed = reference_c11_classify_vast_node_kinds(&annotate_cpu(&fix));
 
     assert_eq!(
         word_at(&typed, 10 * VAST_STRIDE_U32),

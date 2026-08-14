@@ -10,8 +10,7 @@ mod c_frontend;
 
 use c_ast_gpu_parity_support::{
     build_fixture, kind_at, lexeme_indices, row_indices, run_gpu_classifier,
-    run_gpu_scoped_typedef_annotation, run_gpu_vast_builder_from_parts, word_at, Fixture,
-    FixtureToken,
+    run_gpu_scoped_typedef_annotation, run_gpu_vast_builder_from_parts, Fixture, FixtureToken,
 };
 use c_grammar_gen::lex_c11_max_munch_kinds;
 use vyre_libs::parsing::c::lex::tokens::*;
@@ -24,11 +23,9 @@ use vyre_libs::parsing::c::parse::vast::{
 };
 use vyre_primitives::predicate::node_kind;
 
-const VAST_STRIDE_U32: usize = 10;
-const TYPEDEF_FLAGS_FIELD: usize = 7;
-const TYPEDEF_FLAG_VISIBLE: u32 = 1;
-const TYPEDEF_FLAG_DECL: u32 = 1 << 1;
-const ORDINARY_FLAG_DECL: u32 = 1 << 2;
+use c_frontend::rows::{
+    assert_words_eq, flags_at, ORDINARY_FLAG_DECL, TYPEDEF_FLAG_DECL, TYPEDEF_FLAG_VISIBLE,
+};
 
 fn fixture_token_stream() -> Fixture {
     let tokens = [
@@ -192,35 +189,6 @@ fn fixture_token_stream() -> Fixture {
     ];
 
     build_fixture(&tokens)
-}
-
-fn flags_at(rows: &[u8], idx: usize) -> u32 {
-    word_at(rows, idx * VAST_STRIDE_U32 + TYPEDEF_FLAGS_FIELD)
-}
-
-fn assert_words_eq(actual: &[u8], expected: &[u8], context: &str) {
-    if actual == expected {
-        return;
-    }
-    let actual_words = actual.len() / core::mem::size_of::<u32>();
-    let expected_words = expected.len() / core::mem::size_of::<u32>();
-    let limit = actual_words.min(expected_words);
-    for word in 0..limit {
-        let actual_word = word_at(actual, word);
-        let expected_word = word_at(expected, word);
-        if actual_word != expected_word {
-            panic!(
-                "{context}: word {word} differs: actual={actual_word}, expected={expected_word}, row={}, field={}",
-                word / VAST_STRIDE_U32,
-                word % VAST_STRIDE_U32
-            );
-        }
-    }
-    panic!(
-        "{context}: byte lengths differ: actual={}, expected={}",
-        actual.len(),
-        expected.len()
-    );
 }
 
 fn assert_flag(rows: &[u8], idx: usize, flag: u32, message: &str) {

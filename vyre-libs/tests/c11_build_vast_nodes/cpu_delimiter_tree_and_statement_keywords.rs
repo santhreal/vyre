@@ -2,19 +2,9 @@ use super::*;
 
 #[test]
 fn cpu_reference_builds_delimiter_tree_for_function_body() {
-    let tok_types = [
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_LPAREN,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_RETURN,
-        TOK_INTEGER,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-    ];
+    let (tok_types, _, tok_lens) =
+        c_rows("INT:3 IDENTIFIER:4 LPAREN RPAREN LBRACE RETURN:6 INTEGER SEMICOLON RBRACE");
     let tok_starts = [0u32, 4, 8, 9, 10, 11, 18, 19, 20];
-    let tok_lens = [3u32, 4, 1, 1, 1, 6, 1, 1, 1];
     let rows = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
 
     assert_vast_row(&rows, 0, TOK_INT, u32::MAX, u32::MAX, 1);
@@ -30,45 +20,12 @@ fn cpu_reference_builds_delimiter_tree_for_function_body() {
 
 #[test]
 fn cpu_reference_classifies_gnu_c_style_function_definition() {
-    let tok_types = [
-        TOK_STATIC,
-        TOK_INLINE,
-        TOK_LONG,
-        TOK_STAR,
-        TOK_IDENTIFIER,
-        TOK_LPAREN,
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_STAR,
-        TOK_IDENTIFIER,
-        TOK_COMMA,
-        TOK_CONST,
-        TOK_CHAR_KW,
-        TOK_IDENTIFIER,
-        TOK_STAR,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_RETURN,
-        TOK_IDENTIFIER,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_QUESTION,
-        TOK_IDENTIFIER,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_COLON,
-        TOK_INTEGER,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-    ];
-    let tok_lens = [
-        6, 6, 4, 1, 9, 1, 6, 6, 1, 3, 1, 5, 4, 6, 1, 3, 1, 1, 6, 6, 1, 3, 1, 1, 7, 1, 3, 1, 1, 1,
-        1, 1,
-    ];
-    let tok_starts = starts_for_lens(&tok_lens);
+    let (tok_types, tok_starts, tok_lens) = c_rows(
+        "STATIC:6 INLINE:6 LONG:4 STAR IDENTIFIER:9 LPAREN STRUCT:6 IDENTIFIER:6 STAR \
+         IDENTIFIER:3 COMMA CONST:5 CHAR_KW:4 IDENTIFIER:6 STAR IDENTIFIER:3 RPAREN LBRACE \
+         RETURN:6 IDENTIFIER:6 LPAREN IDENTIFIER:3 RPAREN QUESTION IDENTIFIER:7 LPAREN \
+         IDENTIFIER:3 RPAREN COLON INTEGER SEMICOLON RBRACE",
+    );
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
@@ -87,92 +44,16 @@ fn cpu_reference_classifies_gnu_c_style_function_definition() {
 
 #[test]
 fn cpu_reference_classifies_gnu_c_typedef_attributes_blocks_and_calls() {
-    let tok_types = [
-        TOK_TYPEDEF,
-        TOK_LONG,
-        TOK_IDENTIFIER,
-        TOK_LPAREN,
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_STAR,
-        TOK_IDENTIFIER,
-        TOK_COMMA,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-        TOK_STATIC,
-        TOK_INLINE,
-        TOK_LONG,
-        TOK_IDENTIFIER,
-        TOK_LPAREN,
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_STAR,
-        TOK_IDENTIFIER,
-        TOK_COMMA,
-        TOK_CONST,
-        TOK_CHAR_KW,
-        TOK_STAR,
-        TOK_IDENTIFIER,
-        TOK_COMMA,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_GNU_ATTRIBUTE,
-        TOK_LPAREN,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_LBRACE,
-        TOK_IDENTIFIER,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-        TOK_IF,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_AMP,
-        TOK_INTEGER,
-        TOK_RPAREN,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_GNU_ASM,
-        TOK_VOLATILE,
-        TOK_LPAREN,
-        TOK_STRING,
-        TOK_COLON,
-        TOK_COLON,
-        TOK_COLON,
-        TOK_STRING,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-        TOK_RETURN,
-        TOK_IDENTIFIER,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_COMMA,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-        TOK_RETURN,
-        TOK_INTEGER,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-    ];
-    let tok_lens = [
-        7, 4, 10, 1, 6, 4, 1, 1, 1, 3, 5, 1, 1, 6, 6, 4, 12, 1, 6, 4, 1, 1, 1, 5, 4, 1, 4, 1, 3, 5,
-        1, 13, 1, 1, 13, 1, 1, 1, 1, 11, 1, 4, 1, 1, 1, 2, 1, 6, 1, 5, 1, 1, 1, 1, 1, 3, 8, 1, 7,
-        1, 1, 1, 8, 1, 1, 6, 8, 1, 1, 1, 5, 1, 1, 1, 6, 1, 1, 1,
-    ];
-    let tok_starts = starts_for_lens(&tok_lens);
+    let (tok_types, tok_starts, tok_lens) = c_rows(
+        "TYPEDEF:7 LONG:4 IDENTIFIER:10 LPAREN STRUCT:6 IDENTIFIER:4 STAR IDENTIFIER COMMA INT:3 \
+         IDENTIFIER:5 RPAREN SEMICOLON STATIC:6 INLINE:6 LONG:4 IDENTIFIER:12 LPAREN STRUCT:6 \
+         IDENTIFIER:4 STAR IDENTIFIER COMMA CONST:5 CHAR_KW:4 STAR IDENTIFIER:4 COMMA INT:3 \
+         IDENTIFIER:5 RPAREN GNU_ATTRIBUTE:13 LPAREN LPAREN IDENTIFIER:13 RPAREN RPAREN LBRACE \
+         LBRACE IDENTIFIER:11 LPAREN IDENTIFIER:4 RPAREN SEMICOLON RBRACE IF:2 LPAREN IDENTIFIER:6 \
+         LPAREN IDENTIFIER:5 AMP INTEGER RPAREN RPAREN LBRACE GNU_ASM:3 VOLATILE:8 LPAREN STRING:7 \
+         COLON COLON COLON STRING:8 RPAREN SEMICOLON RETURN:6 IDENTIFIER:8 LPAREN IDENTIFIER COMMA \
+         IDENTIFIER:5 RPAREN SEMICOLON RBRACE RETURN:6 INTEGER SEMICOLON RBRACE",
+    );
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
@@ -240,54 +121,12 @@ fn cpu_reference_classifies_gnu_c_typedef_attributes_blocks_and_calls() {
 
 #[test]
 fn cpu_reference_classifies_c_statement_keywords_as_first_class_vast_nodes() {
-    let tok_types = [
-        TOK_IF,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_RETURN,
-        TOK_INTEGER,
-        TOK_SEMICOLON,
-        TOK_ELSE,
-        TOK_FOR,
-        TOK_LPAREN,
-        TOK_SEMICOLON,
-        TOK_SEMICOLON,
-        TOK_RPAREN,
-        TOK_WHILE,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_DO,
-        TOK_CONTINUE,
-        TOK_SEMICOLON,
-        TOK_WHILE,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-        TOK_SWITCH,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_CASE,
-        TOK_INTEGER,
-        TOK_COLON,
-        TOK_BREAK,
-        TOK_SEMICOLON,
-        TOK_DEFAULT,
-        TOK_COLON,
-        TOK_GOTO,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-    ];
-    let tok_lens = [
-        2, 1, 1, 1, 6, 1, 1, 4, 3, 1, 1, 1, 1, 5, 1, 1, 1, 2, 8, 1, 5, 1, 1, 1, 1, 6, 1, 1, 1, 1,
-        4, 1, 1, 5, 1, 7, 1, 4, 3, 1, 1,
-    ];
-    let tok_starts = starts_for_lens(&tok_lens);
+    let (tok_types, tok_starts, tok_lens) = c_rows(
+        "IF:2 LPAREN IDENTIFIER RPAREN RETURN:6 INTEGER SEMICOLON ELSE:4 FOR:3 LPAREN SEMICOLON \
+         SEMICOLON RPAREN WHILE:5 LPAREN IDENTIFIER RPAREN DO:2 CONTINUE:8 SEMICOLON WHILE:5 LPAREN \
+         IDENTIFIER RPAREN SEMICOLON SWITCH:6 LPAREN IDENTIFIER RPAREN LBRACE CASE:4 INTEGER COLON \
+         BREAK:5 SEMICOLON DEFAULT:7 COLON GOTO:4 IDENTIFIER:3 SEMICOLON RBRACE",
+    );
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 

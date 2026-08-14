@@ -35,6 +35,7 @@ use vyre_libs::security::taint_flow::taint_flow;
 use vyre_libs::security::taint_pollution::taint_pollution;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
+use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
 use vyre_reference::value::Value;
 
 fn hex(fingerprint: [u8; 32]) -> String {
@@ -437,17 +438,6 @@ fn security_flow_family_entry_point_fingerprints_are_pinned() {
 // nothing else, so the predicate is what these assertions pin.
 // ---------------------------------------------------------------------------
 
-fn pack(words: &[u32]) -> Vec<u8> {
-    words.iter().flat_map(|w| w.to_le_bytes()).collect()
-}
-
-fn unpack(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
-        .collect()
-}
-
 /// A four-node graph carrying one edge of each interesting kind out of node 0:
 ///
 /// ```text
@@ -479,13 +469,13 @@ fn eval(program: &Program, named: &[(&str, Vec<u32>)]) -> Vec<Vec<u32>> {
                     || vec![0u32; decl.count() as usize],
                     |(_, words)| words.clone(),
                 );
-            Value::from(pack(&words))
+            Value::from(pack_u32_slice(&words))
         })
         .collect();
     vyre_reference::reference_eval(program, &values)
         .expect("Fix: security family guard program must evaluate")
         .iter()
-        .map(|value| unpack(&value.to_bytes()))
+        .map(|value| decode_u32_le_bytes_all(&value.to_bytes()))
         .collect()
 }
 

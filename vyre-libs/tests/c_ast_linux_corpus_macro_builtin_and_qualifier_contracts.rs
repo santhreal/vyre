@@ -22,9 +22,7 @@ use crate::c_frontend::rows::{assert_pg_preserves_row, row_indices};
 use linux_macro_builtin_qualifier::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_GOTO_STMT, C_AST_KIND_IF_STMT,
-    C_AST_KIND_RETURN_STMT,
+    C_AST_KIND_GOTO_STMT, C_AST_KIND_IF_STMT, C_AST_KIND_RETURN_STMT,
 };
 
 #[path = "c_ast_linux_corpus_macro_builtin_and_qualifier_contracts/error_label_control_flow_rows.rs"]

@@ -18,8 +18,8 @@ mod c_ast_gpu_parity_support;
 mod c_frontend;
 
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, assert_gpu_pg_parity, assert_pg_preserves_row, build_fixture,
-    c_fixture, kind_at, lexeme_indices, row_indices, Fixture, FixtureToken,
+    assert_full_pipeline_parity, assert_gpu_pg_parity, assert_pg_preserves_row, c_fixture, kind_at,
+    lexeme_indices, row_indices, Fixture,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;

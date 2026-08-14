@@ -2,24 +2,14 @@
 
 #![forbid(unsafe_code)]
 
+mod common;
+use common::{
+    bf16_bytes, bf16_word, f32_bytes as bytes, f32_words_of as decode, u16_words_of as decode_bf16,
+};
+
 use vyre::ir::DataType;
 use vyre_libs::nn::attention::{chunked_gated_delta, recurrent_gated_delta};
 use vyre_reference::value::Value;
-
-fn bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
-
-fn decode(value: &Value) -> Vec<f32> {
-    value
-        .to_bytes()
-        .chunks_exact(4)
-        .map(|word| f32::from_le_bytes(word.try_into().expect("Fix: exact f32 word")))
-        .collect()
-}
 
 fn execute(sequence: u32, chunked: bool, state: &[f32], seed: usize) -> (Vec<f32>, Vec<f32>) {
     let len = sequence as usize;
@@ -387,27 +377,6 @@ fn triangular_matrix_formula_matches_transformers_across_chunk_boundary() {
         sequence as u32,
         "Transformers state",
     );
-}
-
-fn bf16_word(value: f32) -> u16 {
-    let bits = value.to_bits();
-    let bias = 0x7fff + ((bits >> 16) & 1);
-    bits.wrapping_add(bias).wrapping_shr(16) as u16
-}
-
-fn bf16_bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| bf16_word(*value).to_le_bytes())
-        .collect()
-}
-
-fn decode_bf16(value: &Value) -> Vec<u16> {
-    value
-        .to_bytes()
-        .chunks_exact(2)
-        .map(|word| u16::from_le_bytes(word.try_into().expect("Fix: exact BF16 word")))
-        .collect()
 }
 
 fn execute_bf16_schedule(sequence: u32, chunked: bool, state: &[f32]) -> (Vec<u16>, Vec<f32>) {

@@ -6,14 +6,16 @@
 #![cfg(feature = "c-parser")]
 #![allow(clippy::erasing_op)]
 #![allow(deprecated)]
+#[path = "../../tests/support/c_frontend/fixtures/asm_extended_operands.rs"]
+mod asm_extended_operands;
 mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
 
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, row_indices, word_at, Fixture, FixtureToken,
-    VAST_STRIDE_U32,
+    assert_full_pipeline_parity, row_indices, word_at, Fixture, VAST_STRIDE_U32,
 };
+use c_frontend::spelling::c_tokens;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
@@ -29,172 +31,38 @@ use vyre_primitives::predicate::node_kind;
 // Fixture builders
 // ---------------------------------------------------------------------------
 
+use asm_extended_operands::{asm_goto_two_labels, asm_volatile_mov_one_clobber};
+
 fn fixture_asm_goto_multiple_labels() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__asm__", TOK_IDENTIFIER),
-        FixtureToken::new("goto", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"jmp %l0\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("fail", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("ok", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    asm_goto_two_labels("__asm__", TOK_IDENTIFIER, "\"jmp %l0\"")
 }
 
 fn fixture_asm_with_multiple_clobbers() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__asm__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"syscall\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"memory\"", TOK_STRING),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("\"cc\"", TOK_STRING),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("__asm__ ( \"syscall\" : : : \"memory\" , \"cc\" ) ;")
 }
 
 fn fixture_asm_extended_with_input_output() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("asm", TOK_IDENTIFIER),
-        FixtureToken::new("volatile", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"mov %1, %0\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"=a\"", TOK_STRING),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("out", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"r\"", TOK_STRING),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("in", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"rax\"", TOK_STRING),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    asm_volatile_mov_one_clobber("\"rax\"")
 }
 
 fn fixture_attribute_before_variable() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("aligned", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("64", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("static", TOK_IDENTIFIER),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("buf", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("8", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("__attribute__ ( ( aligned ( 64 ) ) ) static int buf [ 8 ] ;")
 }
 
 fn fixture_attribute_after_function_declarator() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("cleanup", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("unused", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("void cleanup ( void ) __attribute__ ( ( unused ) ) ;")
 }
 
 fn fixture_attribute_multiple_on_declaration() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("section", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\".data\"", TOK_STRING),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("used", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("sym", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("__attribute__ ( ( section ( \".data\" ) ) ) __attribute__ ( ( used ) ) int sym ;")
 }
 
 fn fixture_linux_statement_expression() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("v", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("y", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new("+", TOK_PLUS),
-        FixtureToken::new("y", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("int v = ( { int x = 1 ; int y = 2 ; x + y ; } ) ;")
 }
 
 fn fixture_statement_expression_in_condition() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("if", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("t", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("3", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("t", TOK_IDENTIFIER),
-        FixtureToken::new(">", TOK_GT),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens("if ( ( { int t = 3 ; t > 0 ; } ) ) { }")
 }
 
 // ---------------------------------------------------------------------------

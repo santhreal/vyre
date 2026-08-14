@@ -1,29 +1,11 @@
 use super::*;
+use crate::c_frontend::spelling::c_tokens;
+use crate::c_frontend::token_fixture::classify;
 
 #[test]
 fn case_inside_switch_has_switch_case_edge() {
     // void f(int x) { switch (x) { case 0: break; } }
-    let fix = build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("switch", TOK_SWITCH),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("case", TOK_CASE),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("break", TOK_BREAK),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ]);
+    let fix = c_tokens("void f ( int x ) { switch ( x ) { case 0 : break ; } }");
     let typed = classify(&fix);
     let cases = row_indices(&typed, C_AST_KIND_CASE_STMT);
     assert_eq!(cases, vec![12], "case must be at row 12");
@@ -58,17 +40,7 @@ fn case_inside_switch_has_switch_case_edge() {
 #[test]
 fn goto_undefined_label_has_no_goto_target_edge() {
     // void f() { goto nowhere; }
-    let fix = build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("goto", TOK_GOTO),
-        FixtureToken::new("nowhere", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ]);
+    let fix = c_tokens("void f ( ) { goto nowhere ; }");
     let typed = classify(&fix);
     let gotos = row_indices(&typed, C_AST_KIND_GOTO_STMT);
     assert_eq!(gotos, vec![5], "goto must classify as GOTO_STMT");
@@ -95,18 +67,7 @@ fn goto_undefined_label_has_no_goto_target_edge() {
 #[test]
 fn label_without_goto_has_no_incoming_goto_target_edge() {
     // void f() { unused: return; }
-    let fix = build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("unused", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("return", TOK_RETURN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ]);
+    let fix = c_tokens("void f ( ) { unused : return ; }");
     let typed = classify(&fix);
     let labels = row_indices(&typed, C_AST_KIND_LABEL_STMT);
     assert_eq!(labels, vec![5], "label must classify as LABEL_STMT");
@@ -132,27 +93,7 @@ fn label_without_goto_has_no_incoming_goto_target_edge() {
 #[test]
 fn goto_to_label_in_different_function_root_has_no_goto_target_edge() {
     // void f() { goto target; } void g() { target: return; }
-    let fix = build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("goto", TOK_GOTO),
-        FixtureToken::new("target", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("g", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("target", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("return", TOK_RETURN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ]);
+    let fix = c_tokens("void f ( ) { goto target ; } void g ( ) { target : return ; }");
     let typed = classify(&fix);
     let gotos = row_indices(&typed, C_AST_KIND_GOTO_STMT);
     assert_eq!(gotos, vec![5], "goto must be at row 5");
@@ -170,21 +111,7 @@ fn goto_to_label_in_different_function_root_has_no_goto_target_edge() {
 #[test]
 fn resolved_goto_has_goto_target_edge() {
     // void f() { goto end; end: return; }
-    let fix = build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("goto", TOK_GOTO),
-        FixtureToken::new("end", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("end", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("return", TOK_RETURN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ]);
+    let fix = c_tokens("void f ( ) { goto end ; end : return ; }");
     let typed = classify(&fix);
     let gotos = row_indices(&typed, C_AST_KIND_GOTO_STMT);
     let labels = row_indices(&typed, C_AST_KIND_LABEL_STMT);
@@ -347,17 +274,8 @@ fn semantic_graph_empty_vast_produces_empty_nodes_and_edges() {
 #[test]
 fn semantic_graph_malformed_stream_no_fabricated_edges() {
     // int (*)[ ;  -- malformed abstract declarator with unclosed bracket
-    let fix = build_fixture(&[
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ]);
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let fix = c_tokens("int ( * ) [ ;");
+    let typed = classify(&fix);
     let (nodes, edges) = semantic_lower(&typed);
     // No switch/case/default/goto in this stream, so no semantic edges should be fabricated
     let edge_count = edges.len() / (C_AST_PG_EDGE_STRIDE_U32 as usize * 4);

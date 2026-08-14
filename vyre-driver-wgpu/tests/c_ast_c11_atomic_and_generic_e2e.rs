@@ -16,9 +16,8 @@ mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
 
-use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, row_indices, Fixture, FixtureToken,
-};
+use c_ast_gpu_parity_support::{assert_full_pipeline_parity, row_indices, Fixture};
+use c_frontend::spelling::c_tokens;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
@@ -32,111 +31,31 @@ use vyre_primitives::predicate::node_kind;
 // ---------------------------------------------------------------------------
 
 fn fixture_atomic_variable() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("_Atomic", TOK_IDENTIFIER),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("counter", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("_Atomic int counter ;")
 }
 
 fn fixture_atomic_pointer() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("_Atomic", TOK_IDENTIFIER),
-        FixtureToken::new("unsigned", TOK_IDENTIFIER),
-        FixtureToken::new("long", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("_Atomic unsigned long * p ;")
 }
 
 fn fixture_atomic_struct_member() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("s", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("_Atomic", TOK_IDENTIFIER),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("val", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("struct s { _Atomic int val ; } ;")
 }
 
 fn fixture_atomic_parameter() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("_Atomic", TOK_IDENTIFIER),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens("void f ( _Atomic int * p ) { }")
 }
 
 fn fixture_generic_selection() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("_Generic", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("long", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("default", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("int x = _Generic ( a , int : 1 , long : 2 , default : 0 ) ;")
 }
 
 fn fixture_generic_in_call() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("foo", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("_Generic", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("default", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("foo ( _Generic ( x , int : 1 , default : 0 ) ) ;")
 }
 
 fn fixture_typeof_atomic_combo() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("typeof", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("_Atomic", TOK_IDENTIFIER),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("q", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("typeof ( _Atomic int ) * q ;")
 }
 
 // ---------------------------------------------------------------------------

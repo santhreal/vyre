@@ -20,17 +20,15 @@ mod c_frontend;
 #[path = "../../tests/support/c_frontend/fixtures/declaration_advanced_constructs.rs"]
 mod declaration_advanced_constructs;
 
-use crate::c_frontend::rows::{
-    assert_pg_preserves_row, flags_at, kind_at, row_indices, TYPEDEF_FLAG_DECL,
-};
+use crate::c_frontend::rows::{flags_at, kind_at, row_indices, TYPEDEF_FLAG_DECL};
 use declaration_advanced_constructs::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_ARRAY_DECL, C_AST_KIND_BIT_FIELD_DECL,
-    C_AST_KIND_ENUMERATOR_DECL, C_AST_KIND_ENUM_DECL, C_AST_KIND_FIELD_DECL,
-    C_AST_KIND_FUNCTION_DECLARATOR, C_AST_KIND_GNU_ATTRIBUTE, C_AST_KIND_POINTER_DECL,
-    C_AST_KIND_STRUCT_DECL, C_AST_KIND_TYPEDEF_DECL, C_AST_KIND_UNION_DECL,
+    reference_c11_build_vast_nodes, reference_c11_classify_vast_node_kinds, C_AST_KIND_ARRAY_DECL,
+    C_AST_KIND_BIT_FIELD_DECL, C_AST_KIND_ENUMERATOR_DECL, C_AST_KIND_ENUM_DECL,
+    C_AST_KIND_FIELD_DECL, C_AST_KIND_FUNCTION_DECLARATOR, C_AST_KIND_GNU_ATTRIBUTE,
+    C_AST_KIND_POINTER_DECL, C_AST_KIND_STRUCT_DECL, C_AST_KIND_TYPEDEF_DECL,
+    C_AST_KIND_UNION_DECL,
 };
 use vyre_primitives::predicate::node_kind;
 

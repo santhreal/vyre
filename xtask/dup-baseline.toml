@@ -4,36 +4,15 @@
 # also appears in another file. More than the pin fails; less is reported so
 # the owning dedup PR can lower it here as part of its own diff.
 #
-# A pin is never raised. `--write-baseline` rewrites every row from the current
-# tree and drops this block, so it must not be used to record one crate's
-# progress; edit that crate's row by hand. A crate with duplication and no row
-# fails, so a new crate cannot arrive unmeasured.
+# A pin is never raised. Every row now meets what its crate measures, so a red
+# dup-scan means a change added a copy rather than an older debt coming due.
+# `--write-baseline` rewrites every row from the current tree and drops this
+# block, so it must not be used to record one crate's progress; edit that
+# crate's row by hand.
 #
-# Rows currently pinned below what the crate measures, each failing on purpose
-# until the work that closes it lands:
-#
-#   tests            8      the C-frontend fixture streams under
-#                           tests/support/c_frontend/fixtures are still spelled
-#                           one FixtureToken per line.
-#   vyre-libs        11805  measures 13605. Two causes. The migrated
-#                           c_ast_sema_scope_* and c_parser_hostile_* suites
-#                           still repeat their row assertions per case, and the
-#                           crate absorbed the six trees the pass engine gave up
-#                           when the engine narrowed to pass execution, which
-#                           placed those trees beside code they resemble. The
-#                           pin is not raised to meet it; the vyre-libs dedup
-#                           owes the difference.
-#   vyre-pass-engine 395    measures 403. The IR rewriting walk exists three
-#                           times: rewrite_walk.rs here against
-#                           vyre-foundation's transform/subst.rs and
-#                           execution_plan/fusion/alpha_rename.rs. An IR-to-IR
-#                           rewrite is Layer 1 and belongs in vyre-foundation.
-#   xtask-evidence   949    measures 967, and xtask-registry 126 measures 136.
-#                           The release conformance matrix is computed twice,
-#                           once in xtask-registry/src/release/conformance_matrix.rs
-#                           and once in xtask/src/release/release_conformance.rs,
-#                           which share 23 shingles of catalog coverage, release
-#                           backend rows and op-matrix blocker logic.
+# vyre-primitives sits at its measured floor: the remaining rows are the CSR
+# traversal and iterative-solver program builders, which duplicate against their
+# vyre-libs dispatch partners rather than against each other.
 
 [[crate]]
 name = "conform"
@@ -87,7 +66,7 @@ total_lines = 36044
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 4544
+duplicate_lines = 4531
 total_lines = 69251
 
 [[crate]]
@@ -107,8 +86,8 @@ total_lines = 1974
 
 [[crate]]
 name = "vyre-driver-wgpu"
-duplicate_lines = 5709
-total_lines = 60002
+duplicate_lines = 4229
+total_lines = 60338
 
 [[crate]]
 name = "vyre-emit-metal"
@@ -147,7 +126,7 @@ total_lines = 3393
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 11805
+duplicate_lines = 11759
 total_lines = 142390
 
 [[crate]]

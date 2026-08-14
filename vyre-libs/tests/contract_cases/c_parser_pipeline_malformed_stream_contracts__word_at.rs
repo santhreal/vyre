@@ -44,20 +44,6 @@ fn node_count_from_vast(vast: &[u8]) -> u32 {
     u32::try_from(vast.len() / (VAST_STRIDE_U32 * 4)).unwrap_or_default()
 }
 
-fn run_reference_pg_lower(typed_vast: &[u8]) -> Vec<u8> {
-    let num_nodes = node_count_from_vast(typed_vast);
-    let program = c_lower_ast_to_pg_nodes("vast_nodes", Expr::u32(num_nodes), "pg_nodes");
-    let output_len = num_nodes.saturating_mul(PG_STRIDE_U32 as u32).max(1) as usize * 4;
-    let values = [
-        Value::from(typed_vast.to_vec()),
-        Value::from(vec![0; output_len]),
-    ];
-    let outputs = vyre_reference::reference_eval(&program, &values)
-        .unwrap_or_else(|e| panic!("PG lowerer must execute on CPU: {e}"));
-    assert_eq!(outputs.len(), 1);
-    outputs[0].to_bytes()
-}
-
 fn run_reference_expr_shape(raw_vast: &[u8], typed_vast: &[u8]) -> Vec<u8> {
     let num_nodes = node_count_from_vast(raw_vast);
     let program = c11_build_expression_shape_nodes(

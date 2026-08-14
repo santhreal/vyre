@@ -12,7 +12,36 @@
 #![allow(deprecated)]
 mod common;
 use common::{decode_u32_words, u32_bytes};
+use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
+
+/// The two-input, one-output reference evaluation every case in this suite runs.
+///
+/// `out_bytes` is the declared width of the output buffer, which varies per
+/// case; the input packing and the unwrap do not.
+fn eval_pair(program: &Program, a: &[u32], b: &[u32], out_bytes: usize) -> Vec<u8> {
+    let outputs = vyre_reference::reference_eval(
+        program,
+        &[
+            Value::from(u32_bytes(a)),
+            Value::from(u32_bytes(b)),
+            Value::from(vec![0u8; out_bytes]),
+        ],
+    )
+    .unwrap();
+    outputs[0].to_bytes()
+}
+
+/// The sketch mix the diversity cases predict against.
+fn mix(mut h: u32) -> u32 {
+    h = h.wrapping_add(!(h << 15));
+    h ^= h >> 12;
+    h = h.wrapping_add(h << 2);
+    h ^= h >> 4;
+    h = h.wrapping_mul(2057);
+    h ^= h >> 16;
+    h
+}
 
 // ---------------------------------------------------------------------------
 // Lattice Join (bitwise OR)

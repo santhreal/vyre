@@ -2,6 +2,7 @@
 
 use super::cpu_flexible_array_member_classifies::*;
 use super::*;
+use crate::c_frontend::spelling::c_tokens;
 
 #[test]
 pub(crate) fn gpu_parity_signal_function() {
@@ -14,23 +15,7 @@ pub(crate) fn gpu_parity_signal_function() {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn fixture_cast_abstract_function_pointer() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("void * p = ( void * ( ) ( void ) ) 0 ;")
 }
 
 #[test]

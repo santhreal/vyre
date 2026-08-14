@@ -59,14 +59,89 @@ pub(crate) fn fixture_asm_memory_and_cc_clobbers() -> Fixture {
 ///   : fail, ok);
 /// ```
 pub(crate) fn fixture_asm_goto_multiple_labels() -> Fixture {
+    asm_goto_two_labels("asm", TOK_GNU_ASM, "\"jmp %l0\\n\\tjmp %l1\"")
+}
+
+/// The asm-goto label operand shape: `<asm> goto (<template> : : : : fail, ok);`
+///
+/// The corpus spells the asm keyword both `asm` and `__asm__` and carries two
+/// templates, so the operand stream takes those as arguments rather than
+/// existing once per spelling.
+pub(crate) fn asm_goto_two_labels(
+    asm: &'static str,
+    asm_kind: u32,
+    template: &'static str,
+) -> Fixture {
     build_fixture(&[
-        FixtureToken::new("asm", TOK_GNU_ASM),
+        FixtureToken::new(asm, asm_kind),
         FixtureToken::new("goto", TOK_IDENTIFIER),
         FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"jmp %l0\\n\\tjmp %l1\"", TOK_STRING),
+        FixtureToken::new(template, TOK_STRING),
         FixtureToken::new(":", TOK_COLON),
         FixtureToken::new(":", TOK_COLON),
         FixtureToken::new(":", TOK_COLON),
+        FixtureToken::new(":", TOK_COLON),
+        FixtureToken::new("fail", TOK_IDENTIFIER),
+        FixtureToken::new(",", TOK_COMMA),
+        FixtureToken::new("ok", TOK_IDENTIFIER),
+        FixtureToken::new(")", TOK_RPAREN),
+        FixtureToken::new(";", TOK_SEMICOLON),
+    ])
+}
+
+/// `asm volatile ("mov %1, %0" : "=a" (out) : "r" (in) : <clobber>);`
+///
+/// The clobber is the only part that varies across the corpus.
+pub(crate) fn asm_volatile_mov_one_clobber(clobber: &'static str) -> Fixture {
+    build_fixture(&[
+        FixtureToken::new("asm", TOK_IDENTIFIER),
+        FixtureToken::new("volatile", TOK_IDENTIFIER),
+        FixtureToken::new("(", TOK_LPAREN),
+        FixtureToken::new("\"mov %1, %0\"", TOK_STRING),
+        FixtureToken::new(":", TOK_COLON),
+        FixtureToken::new("\"=a\"", TOK_STRING),
+        FixtureToken::new("(", TOK_LPAREN),
+        FixtureToken::new("out", TOK_IDENTIFIER),
+        FixtureToken::new(")", TOK_RPAREN),
+        FixtureToken::new(":", TOK_COLON),
+        FixtureToken::new("\"r\"", TOK_STRING),
+        FixtureToken::new("(", TOK_LPAREN),
+        FixtureToken::new("in", TOK_IDENTIFIER),
+        FixtureToken::new(")", TOK_RPAREN),
+        FixtureToken::new(":", TOK_COLON),
+        FixtureToken::new(clobber, TOK_STRING),
+        FixtureToken::new(")", TOK_RPAREN),
+        FixtureToken::new(";", TOK_SEMICOLON),
+    ])
+}
+
+/// ```c
+/// asm goto ("jmp %l0"
+///   : "=r" (out)
+///   : "r" (in)
+///   : "memory", "cc"
+///   : fail, ok);
+/// ```
+pub(crate) fn asm_goto_full_operands() -> Fixture {
+    build_fixture(&[
+        FixtureToken::new("asm", TOK_IDENTIFIER),
+        FixtureToken::new("goto", TOK_IDENTIFIER),
+        FixtureToken::new("(", TOK_LPAREN),
+        FixtureToken::new("\"jmp %l0\"", TOK_STRING),
+        FixtureToken::new(":", TOK_COLON),
+        FixtureToken::new("\"=r\"", TOK_STRING),
+        FixtureToken::new("(", TOK_LPAREN),
+        FixtureToken::new("out", TOK_IDENTIFIER),
+        FixtureToken::new(")", TOK_RPAREN),
+        FixtureToken::new(":", TOK_COLON),
+        FixtureToken::new("\"r\"", TOK_STRING),
+        FixtureToken::new("(", TOK_LPAREN),
+        FixtureToken::new("in", TOK_IDENTIFIER),
+        FixtureToken::new(")", TOK_RPAREN),
+        FixtureToken::new(":", TOK_COLON),
+        FixtureToken::new("\"memory\"", TOK_STRING),
+        FixtureToken::new(",", TOK_COMMA),
+        FixtureToken::new("\"cc\"", TOK_STRING),
         FixtureToken::new(":", TOK_COLON),
         FixtureToken::new("fail", TOK_IDENTIFIER),
         FixtureToken::new(",", TOK_COMMA),

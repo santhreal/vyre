@@ -10,87 +10,21 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 
-mod common;
-use common::{decode_u32_words, u32_bytes};
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 
-use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
-use vyre_libs::parsing::c::lex::tokens::*;
+use c_frontend::reference_lexer::classify_raw_source;
+use c_frontend::rows::row_indices as indices_with_kind;
+
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_BUILTIN_BPF_CORE_INTRIN_EXPR,
-    C_AST_KIND_BUILTIN_CHOOSE_EXPR, C_AST_KIND_BUILTIN_CONSTANT_P_EXPR,
-    C_AST_KIND_BUILTIN_EXPECT_EXPR, C_AST_KIND_BUILTIN_LIBC_INTRIN_EXPR,
-    C_AST_KIND_BUILTIN_TYPES_COMPATIBLE_P_EXPR, C_AST_KIND_BUILTIN_UNREACHABLE_STMT,
+    C_AST_KIND_BUILTIN_BPF_CORE_INTRIN_EXPR, C_AST_KIND_BUILTIN_CHOOSE_EXPR,
+    C_AST_KIND_BUILTIN_CONSTANT_P_EXPR, C_AST_KIND_BUILTIN_EXPECT_EXPR,
+    C_AST_KIND_BUILTIN_LIBC_INTRIN_EXPR, C_AST_KIND_BUILTIN_TYPES_COMPATIBLE_P_EXPR,
+    C_AST_KIND_BUILTIN_UNREACHABLE_STMT,
 };
 
-const VAST_STRIDE_U32: usize = 10;
-
-fn haystack_words(source: &[u8]) -> Vec<u32> {
-    source.iter().map(|b| u32::from(*b)).collect()
-}
-
-fn lex_raw_source(source: &[u8]) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    use vyre_libs::parsing::c::lex::lexer::c11_lexer;
-    use vyre_reference::value::Value;
-
-    let haystack_len = source.len() as u32;
-    let program = c11_lexer(
-        "haystack",
-        "out_tok_types",
-        "out_tok_starts",
-        "out_tok_lens",
-        "out_counts",
-        haystack_len,
-    );
-    let haystack_buf = u32_bytes(&haystack_words(source));
-    let zero_buf = vec![0u8; haystack_len as usize * 4];
-    let count_zero = vec![0u8; 4];
-    let inputs = [
-        Value::from(haystack_buf),
-        Value::from(zero_buf.clone()),
-        Value::from(zero_buf.clone()),
-        Value::from(zero_buf),
-        Value::from(count_zero),
-    ];
-    let outputs = vyre_reference::reference_eval(&program, &inputs)
-        .expect("c11_lexer must execute under the reference oracle");
-    let raw_types = decode_u32_words(&outputs[0].to_bytes());
-    let raw_starts = decode_u32_words(&outputs[1].to_bytes());
-    let raw_lens = decode_u32_words(&outputs[2].to_bytes());
-    let counts = decode_u32_words(&outputs[3].to_bytes());
-    let tok_count = counts.first().copied().unwrap_or(0) as usize;
-
-    let mut types = Vec::with_capacity(tok_count);
-    let mut starts = Vec::with_capacity(tok_count);
-    let mut lens = Vec::with_capacity(tok_count);
-    for i in 0..tok_count {
-        let k = raw_types[i];
-        if k != TOK_WHITESPACE && k != TOK_COMMENT {
-            types.push(k);
-            starts.push(raw_starts[i]);
-            lens.push(raw_lens[i]);
-        }
-    }
-    (types, starts, lens)
-}
-
 fn parse_source(source: &str) -> Vec<u8> {
-    let source_bytes = source.as_bytes();
-    let (raw_types, raw_starts, raw_lens) = lex_raw_source(source_bytes);
-    let tok_types = reference_c_keyword_types(&raw_types, &raw_starts, &raw_lens, source_bytes);
-    let raw_vast = reference_c11_build_vast_nodes(&tok_types, &raw_starts, &raw_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw_vast, source_bytes);
-    reference_c11_classify_vast_node_kinds(&annotated)
-}
-
-fn indices_with_kind(rows: &[u8], kind: u32) -> Vec<usize> {
-    rows.chunks_exact(VAST_STRIDE_U32 * 4)
-        .enumerate()
-        .filter_map(|(idx, row)| {
-            let row_kind = u32::from_le_bytes(row[0..4].try_into().unwrap());
-            (row_kind == kind).then_some(idx)
-        })
-        .collect()
+    classify_raw_source(source.as_bytes()).typed_vast
 }
 
 #[test]

@@ -17,6 +17,9 @@
 #![cfg(feature = "parsing")]
 #![forbid(unsafe_code)]
 
+mod support;
+
+use support::ir_fingerprint::assert_pinned_ir_fingerprints;
 use vyre_foundation::ir::{Expr, Node, Program};
 use vyre_foundation::operation::OperationRegistry;
 use vyre_libs::parsing::c::lower::ast_to_pg_nodes::{
@@ -42,6 +45,7 @@ use vyre_libs::parsing::python::parse::decorators::python312_extract_decorators;
 use vyre_libs::parsing::python::parse::structure::{
     python312_extract_imports, python312_extract_structure, python312_extract_with_blocks,
 };
+use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
 use vyre_reference::value::Value;
 
 const TOKENS: u32 = 16;
@@ -392,12 +396,12 @@ fn c_lowering_pg_node_rows_have_one_owner() {
     let n = rows.len();
 
     let structural = c_lower_ast_to_pg_nodes("vast_nodes", Expr::u32(n as u32), "out_pg_nodes");
-    let structural_rows = unpack(
+    let structural_rows = decode_u32_le_bytes_all(
         &vyre_reference::reference_eval(
             &structural,
             &[
-                Value::from(pack(&flat)),
-                Value::from(pack(&vec![0u32; n * 6])),
+                Value::from(pack_u32_slice(&flat)),
+                Value::from(pack_u32_slice(&vec![0u32; n * 6])),
             ],
         )
         .expect("structural lowerer runs")[0]
@@ -414,18 +418,19 @@ fn c_lowering_pg_node_rows_have_one_owner() {
     let semantic_outputs = vyre_reference::reference_eval(
         &semantic,
         &[
-            Value::from(pack(&flat)),
-            Value::from(pack(&vec![0u32; n * 6])),
-            Value::from(pack(&vec![
+            Value::from(pack_u32_slice(&flat)),
+            Value::from(pack_u32_slice(&vec![0u32; n * 6])),
+            Value::from(pack_u32_slice(&vec![
                 0u32;
-                n * C_AST_PG_SEMANTIC_NODE_STRIDE_U32 as usize
+                n * C_AST_PG_SEMANTIC_NODE_STRIDE_U32
+                    as usize
             ])),
-            Value::from(pack(&vec![0u32; n * 5 * 6])),
+            Value::from(pack_u32_slice(&vec![0u32; n * 5 * 6])),
         ],
     )
     .expect("semantic lowerer runs");
-    let plain_rows = unpack(&semantic_outputs[0].to_bytes());
-    let semantic_rows = unpack(&semantic_outputs[1].to_bytes());
+    let plain_rows = decode_u32_le_bytes_all(&semantic_outputs[0].to_bytes());
+    let semantic_rows = decode_u32_le_bytes_all(&semantic_outputs[1].to_bytes());
 
     assert!(
         structural_rows.iter().any(|&w| w != 0),
@@ -472,7 +477,7 @@ fn c_semantic_classification_has_one_owner() {
         })
         .collect();
     let n = kinds.len();
-    let packed = pack(&flat);
+    let packed = pack_u32_slice(&flat);
 
     let program = c_lower_ast_to_pg_semantic_graph(
         "vast_nodes",
@@ -484,16 +489,17 @@ fn c_semantic_classification_has_one_owner() {
         &program,
         &[
             Value::from(packed.clone()),
-            Value::from(pack(&vec![
+            Value::from(pack_u32_slice(&vec![
                 0u32;
-                n * C_AST_PG_SEMANTIC_NODE_STRIDE_U32 as usize
+                n * C_AST_PG_SEMANTIC_NODE_STRIDE_U32
+                    as usize
             ])),
-            Value::from(pack(&vec![0u32; n * 5 * 6])),
+            Value::from(pack_u32_slice(&vec![0u32; n * 5 * 6])),
         ],
     )
     .expect("semantic lowerer runs over the full kind sweep");
-    let gpu = unpack(&outputs[0].to_bytes());
-    let oracle = unpack(&reference_ast_to_pg_semantic_graph(&packed).nodes);
+    let gpu = decode_u32_le_bytes_all(&outputs[0].to_bytes());
+    let oracle = decode_u32_le_bytes_all(&reference_ast_to_pg_semantic_graph(&packed).nodes);
 
     let stride = C_AST_PG_SEMANTIC_NODE_STRIDE_U32 as usize;
     let mut disagreements = Vec::new();
@@ -911,50 +917,9 @@ const EXPECTED: &[(&str, &str)] = &[
     ),
 ];
 
-fn hex(program: &Program) -> String {
-    program
-        .fingerprint()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
-}
-
 #[test]
 fn clone_family_entry_points_emit_the_pinned_ir() {
-    let actual: Vec<(&'static str, String)> = entry_points()
-        .iter()
-        .map(|(name, program)| (*name, hex(program)))
-        .collect();
-    assert_eq!(
-        actual.len(),
-        EXPECTED.len(),
-        "fixture count drifted from the pinned table"
-    );
-    let mut report = String::new();
-    let mut drifted = false;
-    for ((name, got), (pinned_name, pinned)) in actual.iter().zip(EXPECTED.iter()) {
-        assert_eq!(name, pinned_name, "fixture order drifted from the table");
-        if got != pinned {
-            drifted = true;
-        }
-        report.push_str(&format!("    (\"{name}\", \"{got}\"),\n"));
-    }
-    assert!(
-        !drifted,
-        "generated IR changed for at least one clone-family entry point. \
-         Recorded fingerprints:\n{report}"
-    );
+    assert_pinned_ir_fingerprints(&entry_points(), EXPECTED);
 }
 
 // ---------------------------------------------------------------------------
-
-fn pack(words: &[u32]) -> Vec<u8> {
-    words.iter().flat_map(|w| w.to_le_bytes()).collect()
-}
-
-fn unpack(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| u32::from_le_bytes(chunk.try_into().expect("4-byte chunk")))
-        .collect()
-}

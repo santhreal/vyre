@@ -12,7 +12,9 @@
 //! are the common base; `expression_pipeline` and `scope_fixture` are the two
 //! fixture layouts the C tests use, and they intentionally do not glob together
 //! because each owns an `assert_pg_preserves_row` for its own row carrier.
-//! `semantic_graph` reads the property graph's node and edge buffers.
+//! `semantic_graph` reads the property graph's node and edge buffers, and
+//! `reference_lexer` runs real source bytes through the lexer kernel for the
+//! contracts that start from source rather than from a hand-built stream.
 //!
 //! `fixtures/` holds the per-family token streams that a family's CPU arm and
 //! its backend parity arm both build. Those are not declared here: each root
@@ -25,6 +27,8 @@
 //! streams here were measured as.
 
 pub(crate) mod expression_pipeline;
+pub(crate) mod macro_expansion;
+pub(crate) mod reference_lexer;
 pub(crate) mod rows;
 pub(crate) mod scope_fixture;
 pub(crate) mod semantic_graph;

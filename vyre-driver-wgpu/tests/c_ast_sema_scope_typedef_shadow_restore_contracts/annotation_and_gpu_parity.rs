@@ -4,30 +4,7 @@ use super::*;
 fn annotation_multiple_typedefs_same_name_in_disjoint_blocks() {
     let fix = fixture(
         "ann_disjoint",
-        &[
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_VOID),
-            ident("g"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_TYPEDEF),
-            tok(TOK_CHAR_KW),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("void f ( void ) { typedef int T ; } void g ( void ) { typedef char T ; }"),
     );
     let ann = annotate_cpu(&fix);
 
@@ -47,33 +24,7 @@ fn annotation_multiple_typedefs_same_name_in_disjoint_blocks() {
 fn annotation_parameter_typedef_shadow_restored_after_function() {
     let fix = fixture(
         "ann_param_restore",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_VOID),
-            ident("g"),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( int T ) { T * p ; } void g ( T * p ) { }"),
     );
     let ann = annotate_cpu(&fix);
     let typed = classify_cpu_annotated(&fix);
@@ -112,26 +63,7 @@ fn annotation_parameter_typedef_shadow_restored_after_function() {
 fn annotation_kr_parameter_shadows_typedef() {
     let fix = fixture(
         "ann_kr",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_LBRACE),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( T ) int T ; { T * p ; }"),
     );
     let ann = annotate_cpu(&fix);
     let typed = classify_cpu_annotated(&fix);
@@ -159,32 +91,7 @@ fn annotation_kr_parameter_shadows_typedef() {
 fn annotation_typedef_shadowed_by_for_loop_variable() {
     let fix = fixture(
         "ann_for",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_FOR),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_RBRACE),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { for ( int T ; ; ) { } T * p ; }"),
     );
     let ann = annotate_cpu(&fix);
     let typed = classify_cpu_annotated(&fix);
@@ -212,38 +119,7 @@ fn annotation_typedef_shadowed_by_for_loop_variable() {
 fn annotation_typedef_shadow_chain_three_levels() {
     let fix = fixture(
         "ann_chain3",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { { int T ; } { int T ; } { int T ; } T * p ; }"),
     );
     let ann = annotate_cpu(&fix);
     let typed = classify_cpu_annotated(&fix);
@@ -277,28 +153,7 @@ fn annotation_typedef_shadow_chain_three_levels() {
 fn gpu_parity_scope_tree_typedef_shadow_restore() {
     let fix = fixture(
         "gpu_scope_shadow",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { { int T ; } T * p ; }"),
     );
     let expected = scope_tree_for(&fix);
     let gpu = run_gpu_scope_tree(&fix);
@@ -312,30 +167,7 @@ fn gpu_parity_scope_tree_typedef_shadow_restore() {
 fn gpu_parity_annotation_typedef_shadow_restore() {
     let fix = fixture(
         "gpu_ann_shadow",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { { int T ; } ( T ) * p ; }"),
     );
     let expected_ann = annotate_cpu(&fix);
     let gpu_ann = run_gpu_annotate(&fix);
@@ -353,29 +185,7 @@ fn gpu_parity_annotation_typedef_shadow_restore() {
 fn gpu_parity_annotation_parameter_shadows_typedef() {
     let fix = fixture(
         "gpu_param_shadow",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_RBRACE),
-            tok(TOK_VOID),
-            ident("g"),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( int T ) { } void g ( T * p ) { }"),
     );
     let expected_ann = annotate_cpu(&fix);
     let gpu_ann = run_gpu_annotate(&fix);
@@ -387,18 +197,7 @@ fn gpu_parity_annotation_parameter_shadows_typedef() {
 
 #[test]
 fn gpu_parity_scope_tree_deep_shadow_chain() {
-    let mut atoms = vec![
-        tok(TOK_TYPEDEF),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-    ];
+    let mut atoms = c_atoms("typedef int T ; void f ( void ) {");
     for _ in 0..8 {
         atoms.push(tok(TOK_LBRACE));
         atoms.push(tok(TOK_INT));

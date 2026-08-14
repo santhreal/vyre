@@ -2,15 +2,11 @@
 
 #![forbid(unsafe_code)]
 
+mod common;
+use common::f32_bytes as bytes;
+
 use vyre_libs::nn::attention::attention_head_to_token;
 use vyre_reference::value::Value;
-
-fn bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
 
 fn execute(input: &[f32], batch: u32, heads: u32, sequence: u32, dim: u32) -> Vec<f32> {
     let program = attention_head_to_token("input", "output", batch, heads, sequence, dim)

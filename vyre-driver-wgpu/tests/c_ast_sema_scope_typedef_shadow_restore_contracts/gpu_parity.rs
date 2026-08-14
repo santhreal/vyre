@@ -2,18 +2,7 @@ use super::*;
 
 #[test]
 fn gpu_parity_annotation_deep_shadow_chain() {
-    let mut atoms = vec![
-        tok(TOK_TYPEDEF),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-    ];
+    let mut atoms = c_atoms("typedef int T ; void f ( void ) {");
     for _ in 0..6 {
         atoms.push(tok(TOK_LBRACE));
         atoms.push(tok(TOK_INT));

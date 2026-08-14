@@ -20,9 +20,9 @@ use crate::c_frontend::rows::{
 use crate::c_frontend::token_fixture::classify;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_BUILTIN_CHOOSE_EXPR,
-    C_AST_KIND_BUILTIN_EXPECT_EXPR, C_AST_KIND_IF_STMT, C_AST_KIND_SWITCH_STMT,
+    reference_c11_build_vast_nodes, reference_c11_classify_vast_node_kinds,
+    C_AST_KIND_BUILTIN_CHOOSE_EXPR, C_AST_KIND_BUILTIN_EXPECT_EXPR, C_AST_KIND_IF_STMT,
+    C_AST_KIND_SWITCH_STMT,
 };
 use vyre_primitives::predicate::node_kind;
 
@@ -126,9 +126,7 @@ pub(crate) fn cpu_builtin_expect_in_ternary_classifies() {
 #[test]
 pub(crate) fn pg_lower_preserves_builtin_expect_if_condition() {
     let fix = fixture_builtin_expect_if_condition();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let typed = classify(&fix);
     let pg = reference_ast_to_pg_nodes(&typed);
 
     assert_pg_preserves_row(&typed, &pg, &fix, 0, C_AST_KIND_IF_STMT);
@@ -138,9 +136,7 @@ pub(crate) fn pg_lower_preserves_builtin_expect_if_condition() {
 #[test]
 pub(crate) fn pg_lower_preserves_builtin_expect_switch_selector() {
     let fix = fixture_builtin_expect_switch_selector();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let typed = classify(&fix);
     let pg = reference_ast_to_pg_nodes(&typed);
 
     assert_pg_preserves_row(&typed, &pg, &fix, 0, C_AST_KIND_SWITCH_STMT);
@@ -150,9 +146,7 @@ pub(crate) fn pg_lower_preserves_builtin_expect_switch_selector() {
 #[test]
 pub(crate) fn pg_lower_preserves_builtin_choose_expr_in_statement_expr() {
     let fix = fixture_builtin_choose_expr_in_statement_expr();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let typed = classify(&fix);
     let pg = reference_ast_to_pg_nodes(&typed);
 
     assert_pg_preserves_row(&typed, &pg, &fix, 5, C_AST_KIND_BUILTIN_CHOOSE_EXPR);
@@ -171,9 +165,7 @@ pub(crate) fn pg_lower_preserves_builtin_choose_expr_in_designated_init() {
 #[test]
 pub(crate) fn pg_lower_preserves_nested_builtin_expect_choose_expr() {
     let fix = fixture_nested_builtin_expect_choose_expr();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let typed = classify(&fix);
     let pg = reference_ast_to_pg_nodes(&typed);
 
     assert_pg_preserves_row(&typed, &pg, &fix, 3, C_AST_KIND_BUILTIN_EXPECT_EXPR);

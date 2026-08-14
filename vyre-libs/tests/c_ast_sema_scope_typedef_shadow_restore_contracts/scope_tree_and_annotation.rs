@@ -4,24 +4,7 @@ use super::*;
 fn scope_tree_typedef_shadowed_by_inner_variable_has_different_scope_ids() {
     let fix = fixture(
         "shadow_scope",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { { int T ; } }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -58,28 +41,7 @@ fn scope_tree_typedef_shadowed_by_inner_variable_has_different_scope_ids() {
 fn scope_tree_typedef_restored_after_inner_block_exit() {
     let fix = fixture(
         "restore_scope",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { { int T ; } T * p ; }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -101,29 +63,7 @@ fn scope_tree_typedef_restored_after_inner_block_exit() {
 fn scope_tree_multiple_levels_of_shadowing_create_distinct_scope_ids() {
     let fix = fixture(
         "multi_shadow",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_RBRACE),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { { int T ; { int T ; } } }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -143,26 +83,7 @@ fn scope_tree_multiple_levels_of_shadowing_create_distinct_scope_ids() {
 fn scope_tree_typedef_inside_block_not_visible_outside() {
     let fix = fixture(
         "block_typedef",
-        &[
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_VOID),
-            ident("g"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("void f ( void ) { typedef int T ; } void g ( void ) { }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -179,24 +100,7 @@ fn scope_tree_typedef_inside_block_not_visible_outside() {
 fn scope_tree_parameter_shadows_typedef_in_function_body() {
     let fix = fixture(
         "param_shadow",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( int T ) { T * p ; }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -218,29 +122,7 @@ fn scope_tree_parameter_shadows_typedef_in_function_body() {
 fn scope_tree_parameter_typedef_restored_for_later_function() {
     let fix = fixture(
         "param_restore",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_RBRACE),
-            tok(TOK_VOID),
-            ident("g"),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( int T ) { } void g ( T * p ) { }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -262,28 +144,7 @@ fn scope_tree_parameter_typedef_restored_for_later_function() {
 fn annotation_typedef_visible_in_outer_scope_shadowed_in_inner() {
     let fix = fixture(
         "ann_shadow",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { { int T ; } T * p ; }"),
     );
     let ann = annotate_cpu(&fix);
 
@@ -316,36 +177,7 @@ fn annotation_typedef_visible_in_outer_scope_shadowed_in_inner() {
 fn annotation_shadowed_typedef_changes_cast_to_multiply() {
     let fix = fixture(
         "ann_cast_mul",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { { int T ; ( T ) * p ; } ( T ) * p ; }"),
     );
     let typed = classify_cpu_annotated(&fix);
 
@@ -377,30 +209,7 @@ fn annotation_shadowed_typedef_changes_cast_to_multiply() {
 fn annotation_typedef_declared_in_block_not_visible_outside() {
     let fix = fixture(
         "ann_block_td",
-        &[
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_VOID),
-            ident("g"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("void f ( void ) { typedef int T ; } void g ( void ) { T * p ; }"),
     );
     let ann = annotate_cpu(&fix);
 

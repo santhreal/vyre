@@ -22,6 +22,7 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 
+use c_frontend::spelling::c_tokens;
 use vyre_primitives::wire::{
     decode_u32_le_bytes_all as decode_u32_words, pack_u32_slice as u32_bytes,
 };
@@ -91,28 +92,7 @@ fn assemble_fixture(lexemes: &[(&str, u32)]) -> Fixture {
 // 1. Typedef shadowing
 // ---------------------------------------------------------------------------
 fn fixture_typedef_shadowed_by_auto_type() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("typedef", TOK_IDENTIFIER),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("T", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("__auto_type", TOK_IDENTIFIER),
-        FixtureToken::new("T", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("T", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens("typedef int T ; void f ( void ) { __auto_type T = 1 ; T * p ; }")
 }
 #[path = "c_ast_linux_gnu_declarations_preprocessor_contracts/cpu_alignas_on_variable_stays_raw_and_classifies.rs"]
 mod cpu_alignas_on_variable_stays_raw_and_classifies;

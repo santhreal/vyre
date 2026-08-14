@@ -2,18 +2,14 @@
 
 #![forbid(unsafe_code)]
 
+mod common;
+use common::f32_bytes;
+
 use vyre::ir::DataType;
 use vyre_libs::nn::conv::{
     depthwise_causal_conv1d, CausalConvActivation, DepthwiseCausalConv1dError,
 };
 use vyre_reference::value::Value;
-
-fn f32_bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
 
 fn u32_bytes(values: &[u32]) -> Vec<u8> {
     values

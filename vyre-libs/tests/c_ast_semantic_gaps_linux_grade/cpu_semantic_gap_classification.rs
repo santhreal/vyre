@@ -15,11 +15,10 @@ use super::semantic_gap_constructs::*;
 use crate::c_frontend::rows::{
     flags_at, kind_at, row_indices, TYPEDEF_FLAG_DECL, TYPEDEF_FLAG_VISIBLE,
 };
+use crate::c_frontend::token_fixture::{annotate_and_classify, classify};
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_ATTRIBUTE_PACKED,
-    C_AST_KIND_ATTRIBUTE_UNUSED, C_AST_KIND_ENUMERATOR_DECL, C_AST_KIND_ENUM_DECL,
-    C_AST_KIND_FUNCTION_DECLARATOR, C_AST_KIND_GNU_ATTRIBUTE,
+    C_AST_KIND_ATTRIBUTE_PACKED, C_AST_KIND_ATTRIBUTE_UNUSED, C_AST_KIND_ENUMERATOR_DECL,
+    C_AST_KIND_ENUM_DECL, C_AST_KIND_FUNCTION_DECLARATOR, C_AST_KIND_GNU_ATTRIBUTE,
 };
 use vyre_primitives::predicate::node_kind;
 
@@ -30,9 +29,7 @@ use vyre_primitives::predicate::node_kind;
 #[test]
 pub(crate) fn cpu_inner_typedef_shadows_outer_typedef() {
     let fix = fixture_inner_typedef_shadows_outer();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let (annotated, typed) = annotate_and_classify(&fix);
 
     // Outer typedef declaration
     assert_ne!(
@@ -73,9 +70,7 @@ pub(crate) fn cpu_inner_typedef_shadows_outer_typedef() {
 #[test]
 pub(crate) fn cpu_enum_with_attribute_classifies() {
     let fix = fixture_enum_with_attribute();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let typed = classify(&fix);
 
     assert_eq!(
         kind_at(&typed, 0),
@@ -102,9 +97,7 @@ pub(crate) fn cpu_enum_with_attribute_classifies() {
 #[test]
 pub(crate) fn cpu_parameter_with_attribute_classifies() {
     let fix = fixture_parameter_with_attribute();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let typed = classify(&fix);
 
     assert_eq!(
         kind_at(&typed, 1),

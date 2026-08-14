@@ -2,24 +2,12 @@
 
 #![forbid(unsafe_code)]
 
+mod common;
+use common::{f32_bytes as bytes, f32_words_of as decode};
+
 use vyre::ir::DataType;
 use vyre_libs::nn::linear::{linear_rows, linear_rows_no_bias_out_in_typed};
 use vyre_reference::value::Value;
-
-fn bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
-
-fn decode(value: &Value) -> Vec<f32> {
-    value
-        .to_bytes()
-        .chunks_exact(4)
-        .map(|word| f32::from_le_bytes(word.try_into().expect("Fix: exact f32 word")))
-        .collect()
-}
 
 /// Locks row-major affine projection and bias application for more than one token row.
 #[test]

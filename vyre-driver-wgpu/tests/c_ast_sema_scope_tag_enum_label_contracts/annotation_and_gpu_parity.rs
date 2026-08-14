@@ -4,27 +4,7 @@ use super::*;
 fn annotation_label_does_not_affect_typedef_visibility() {
     let fix = fixture(
         "label_typedef",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("T"),
-            tok(TOK_COLON),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { T : ( T ) * p ; }"),
     );
     let ann = annotate_cpu(&fix);
     let typed = classify_cpu_annotated(&fix);
@@ -50,37 +30,10 @@ fn annotation_label_does_not_affect_typedef_visibility() {
 fn annotation_struct_tag_and_typedef_same_name_both_visible() {
     let fix = fixture(
         "tag_typedef_same",
-        &[
-            tok(TOK_STRUCT),
-            ident("S"),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_SEMICOLON),
-            tok(TOK_TYPEDEF),
-            tok(TOK_STRUCT),
-            ident("S"),
-            ident("S"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_STRUCT),
-            ident("S"),
-            tok(TOK_STAR),
-            ident("a"),
-            tok(TOK_SEMICOLON),
-            ident("S"),
-            tok(TOK_STAR),
-            ident("b"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms(
+            "struct S { int x ; } ; typedef struct S S ; void f ( void ) { struct S * a ; S * b \
+             ; }",
+        ),
     );
     let ann = annotate_cpu(&fix);
     let typed = classify_cpu_annotated(&fix);
@@ -113,26 +66,7 @@ fn annotation_struct_tag_and_typedef_same_name_both_visible() {
 fn gpu_parity_scope_tree_struct_tag_vs_ordinary() {
     let fix = fixture(
         "gpu_struct_tag",
-        &[
-            tok(TOK_STRUCT),
-            ident("S"),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_SEMICOLON),
-            tok(TOK_INT),
-            ident("S"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("struct S { int x ; } ; int S ; void f ( void ) { }"),
     );
     let expected = scope_tree_for(&fix);
     let gpu = run_gpu_scope_tree(&fix);
@@ -144,23 +78,7 @@ fn gpu_parity_scope_tree_struct_tag_vs_ordinary() {
 
 #[test]
 fn gpu_parity_scope_tree_label_namespace() {
-    let fix = fixture(
-        "gpu_label",
-        &[
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("L"),
-            tok(TOK_COLON),
-            tok(TOK_GOTO),
-            ident("L"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
-    );
+    let fix = fixture("gpu_label", &c_atoms("void f ( void ) { L : goto L ; }"));
     let expected = scope_tree_for(&fix);
     let gpu = run_gpu_scope_tree(&fix);
     assert_eq!(
@@ -173,33 +91,7 @@ fn gpu_parity_scope_tree_label_namespace() {
 fn gpu_parity_annotation_tag_typedef_same_name() {
     let fix = fixture(
         "gpu_tag_td",
-        &[
-            tok(TOK_STRUCT),
-            ident("S"),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_SEMICOLON),
-            tok(TOK_TYPEDEF),
-            tok(TOK_STRUCT),
-            ident("S"),
-            ident("S"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_STRUCT),
-            ident("S"),
-            tok(TOK_STAR),
-            ident("a"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("struct S { int x ; } ; typedef struct S S ; void f ( void ) { struct S * a ; }"),
     );
     let expected_ann = annotate_cpu(&fix);
     let gpu_ann = run_gpu_annotate(&fix);
@@ -213,26 +105,7 @@ fn gpu_parity_annotation_tag_typedef_same_name() {
 fn gpu_parity_classifier_enum_constant_context() {
     let fix = fixture(
         "gpu_enum",
-        &[
-            tok(TOK_ENUM),
-            ident("E"),
-            tok(TOK_LBRACE),
-            ident("A"),
-            tok(TOK_COMMA),
-            ident("B"),
-            tok(TOK_RBRACE),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_RETURN),
-            ident("A"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("enum E { A , B } ; void f ( void ) { return A ; }"),
     );
     let expected_ann = annotate_cpu(&fix);
     let gpu_ann = run_gpu_annotate(&fix);
@@ -253,24 +126,7 @@ fn gpu_parity_classifier_enum_constant_context() {
 fn gpu_parity_scope_tree_enum_tag_vs_variable() {
     let fix = fixture(
         "gpu_enum_var",
-        &[
-            tok(TOK_ENUM),
-            ident("E"),
-            tok(TOK_LBRACE),
-            ident("A"),
-            tok(TOK_RBRACE),
-            tok(TOK_SEMICOLON),
-            tok(TOK_INT),
-            ident("E"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("enum E { A } ; int E ; void f ( void ) { }"),
     );
     let expected = scope_tree_for(&fix);
     let gpu = run_gpu_scope_tree(&fix);
@@ -284,27 +140,7 @@ fn gpu_parity_scope_tree_enum_tag_vs_variable() {
 fn gpu_parity_annotation_label_does_not_shadow_typedef() {
     let fix = fixture(
         "gpu_label_td",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("T"),
-            tok(TOK_COLON),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { T : ( T ) * p ; }"),
     );
     let expected_ann = annotate_cpu(&fix);
     let gpu_ann = run_gpu_annotate(&fix);

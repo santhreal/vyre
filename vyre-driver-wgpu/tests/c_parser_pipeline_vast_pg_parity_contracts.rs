@@ -7,6 +7,11 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
+
+use c_frontend::rows::assert_words_eq;
+use c_frontend::spelling::raw_kind_of_lexeme;
 use std::sync::OnceLock;
 
 use vyre::ir::Expr;
@@ -77,6 +82,19 @@ fn build_fixture(lexemes: &[(&str, u32)]) -> Fixture {
         tok_starts,
         tok_lens,
     }
+}
+
+/// A fixture from a whitespace-separated C source spelling.
+///
+/// The kind of each lexeme comes from the shared lexeme table, and
+/// [`build_fixture`] runs the keyword promotion, so a spelling cannot disagree
+/// with the keyword table the lexer uses.
+fn lexeme_fixture(spelling: &str) -> Fixture {
+    let lexemes: Vec<(&str, u32)> = spelling
+        .split_whitespace()
+        .map(|lexeme| (lexeme, raw_kind_of_lexeme(lexeme)))
+        .collect();
+    build_fixture(&lexemes)
 }
 
 fn gpu_backend() -> &'static WgpuBackend {
@@ -163,29 +181,6 @@ fn run_gpu_pg_lower(typed_vast: &[u8]) -> Vec<u8> {
         .expect("GPU PG lowerer dispatch must succeed");
     assert_eq!(outputs.len(), 1);
     outputs[0].clone()
-}
-
-fn assert_words_eq(actual: &[u8], expected: &[u8], context: &str) {
-    if actual == expected {
-        return;
-    }
-    let limit = (actual.len() / 4).min(expected.len() / 4);
-    for w in 0..limit {
-        let a = word_at(actual, w);
-        let e = word_at(expected, w);
-        if a != e {
-            panic!(
-                "{context}: word {w} differs (row={}, field={}): actual={a}, expected={e}",
-                w / VAST_STRIDE_U32,
-                w % VAST_STRIDE_U32
-            );
-        }
-    }
-    panic!(
-        "{context}: byte lengths differ: actual={}, expected={}",
-        actual.len(),
-        expected.len()
-    );
 }
 
 fn assert_full_pipeline_parity(fix: &Fixture, label: &str) {

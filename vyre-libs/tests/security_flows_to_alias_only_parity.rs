@@ -15,18 +15,8 @@
 use vyre_libs::security::flows_to::{flows_to, flows_to_alias_only};
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
+use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
 use vyre_reference::value::Value;
-
-fn pack(words: &[u32]) -> Vec<u8> {
-    words.iter().flat_map(|w| w.to_le_bytes()).collect()
-}
-
-fn unpack(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
-        .collect()
-}
 
 /// One forward-reach hop from frontier {0} over the 3-node graph
 ///   0 --ASSIGNMENT--> 1   (an aliasing edge)
@@ -45,17 +35,17 @@ fn one_hop(program: &vyre::ir::Program) -> u32 {
     let outputs = vyre_reference::reference_eval(
         program,
         &[
-            Value::from(pack(&pg_nodes)),
-            Value::from(pack(&pg_edge_offsets)),
-            Value::from(pack(&pg_edge_targets)),
-            Value::from(pack(&pg_edge_kind_mask)),
-            Value::from(pack(&pg_node_tags)),
-            Value::from(pack(&fin)),
-            Value::from(pack(&fout)),
+            Value::from(pack_u32_slice(&pg_nodes)),
+            Value::from(pack_u32_slice(&pg_edge_offsets)),
+            Value::from(pack_u32_slice(&pg_edge_targets)),
+            Value::from(pack_u32_slice(&pg_edge_kind_mask)),
+            Value::from(pack_u32_slice(&pg_node_tags)),
+            Value::from(pack_u32_slice(&fin)),
+            Value::from(pack_u32_slice(&fout)),
         ],
     )
     .expect("flows_to reach program must execute under reference_eval");
-    unpack(&outputs[0].to_bytes())[0]
+    decode_u32_le_bytes_all(&outputs[0].to_bytes())[0]
 }
 
 #[test]

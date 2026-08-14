@@ -18,11 +18,12 @@ mod c_ast_gpu_parity_support;
 mod c_frontend;
 
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, assert_semantic_node, assert_switch_dispatch_edges, build_fixture,
-    classify, first_row, fixture_builtin_unreachable, node_count_from_vast, row_indices,
+    assert_full_pipeline_parity, assert_semantic_node, assert_switch_dispatch_edges, classify,
+    first_row, fixture_builtin_unreachable, node_count_from_vast, row_indices,
     run_gpu_semantic_pg_lower as run_gpu_semantic_lower, semantic_edge_word, semantic_node_word,
     void_fn_fixture, Fixture, FixtureToken,
 };
+use c_frontend::spelling::c_tokens;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::{
     C_AST_PG_CATEGORY_CONTROL, C_AST_PG_CATEGORY_EXPRESSION, C_AST_PG_EDGE_PARENT,
@@ -68,38 +69,10 @@ fn fixture_computed_goto_edge() -> Fixture {
 ///   }
 /// }
 fn fixture_nested_switch_in_loop() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("for", TOK_FOR),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("switch", TOK_SWITCH),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("case", TOK_CASE),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("break", TOK_BREAK),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("default", TOK_DEFAULT),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("continue", TOK_CONTINUE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens(
+        "void f ( int x ) { for ( ; ; ) { switch ( x ) { case 1 : break ; default : continue ; } \
+         } }",
+    )
 }
 
 /// void f() { s.field; }

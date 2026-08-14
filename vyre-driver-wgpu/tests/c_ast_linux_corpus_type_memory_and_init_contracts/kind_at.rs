@@ -13,11 +13,11 @@
 
 pub(crate) use crate::c_ast_gpu_parity_support::node_count_from_vast;
 use crate::c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, row_indices,
-    run_gpu_pg_lower_with_count as run_gpu_pg_lower, Fixture, FixtureToken,
+    assert_full_pipeline_parity, row_indices, run_gpu_pg_lower_with_count as run_gpu_pg_lower,
+    Fixture,
 };
 use crate::c_frontend::rows::assert_pg_preserves_row;
-use vyre_libs::parsing::c::lex::tokens::*;
+use crate::c_frontend::spelling::c_tokens;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
@@ -38,65 +38,17 @@ use vyre_libs::parsing::c::parse::vast::{
 /// };
 /// ```
 pub(crate) fn fixture_bitfield_struct() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("flags", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("unsigned", TOK_IDENTIFIER),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("unsigned", TOK_IDENTIFIER),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("b", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("4", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("unsigned", TOK_IDENTIFIER),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("unsigned", TOK_IDENTIFIER),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("c", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("8", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens(
+        "struct flags { unsigned int a : 1 ; unsigned int b : 4 ; unsigned int : 0 ; unsigned int \
+         c : 8 ; } ;",
+    )
 }
 
 /// ```c
 /// static void (*const ops[])(struct device *) = { probe, remove };
 /// ```
 pub(crate) fn fixture_function_pointer_table() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("static", TOK_STATIC),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("const", TOK_IDENTIFIER),
-        FixtureToken::new("ops", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("device", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("probe", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("remove", TOK_IDENTIFIER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("static void ( * const ops [ ] ) ( struct device * ) = { probe , remove } ;")
 }
 
 /// ```c
@@ -108,26 +60,7 @@ pub(crate) fn fixture_function_pointer_table() -> Fixture {
 /// };
 /// ```
 pub(crate) fn fixture_nested_anonymous_union() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("X", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("union", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("i", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("char", TOK_IDENTIFIER),
-        FixtureToken::new("c", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("4", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("struct X { union { int i ; char c [ 4 ] ; } ; } ;")
 }
 
 /// ```c
@@ -138,84 +71,17 @@ pub(crate) fn fixture_nested_anonymous_union() -> Fixture {
 /// };
 /// ```
 pub(crate) fn fixture_compound_literal_in_array_init() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("point", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("y", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("point", TOK_IDENTIFIER),
-        FixtureToken::new("pts", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("point", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new(".", TOK_DOT),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new(".", TOK_DOT),
-        FixtureToken::new("y", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("point", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new(".", TOK_DOT),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens(
+        "struct point { int x ; int y ; } ; struct point pts [ ] = { ( struct point ) { . x = 0 , \
+         . y = 0 } , ( struct point ) { . x = 1 } } ;",
+    )
 }
 
 /// ```c
 /// int arr[8] = { [0 ... 3] = 1, [4] = 2 };
 /// ```
 pub(crate) fn fixture_designated_range_initializer() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("arr", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("8", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new("...", TOK_ELLIPSIS),
-        FixtureToken::new("3", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("4", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("int arr [ 8 ] = { [ 0 ... 3 ] = 1 , [ 4 ] = 2 } ;")
 }
 
 /// ```c
@@ -223,20 +89,7 @@ pub(crate) fn fixture_designated_range_initializer() -> Fixture {
 /// name_t x;
 /// ```
 pub(crate) fn fixture_typedef_struct_inline() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("typedef", TOK_IDENTIFIER),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("name_t", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("name_t", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("typedef struct { int a ; } name_t ; name_t x ;")
 }
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,6 @@
 use super::*;
+use crate::c_frontend::rows::assert_pg_preserves_fixture_row;
+use crate::c_frontend::token_fixture::annotate_and_classify;
 
 #[test]
 fn cpu_pointer_to_array_classifies_correctly() {
@@ -115,9 +117,7 @@ fn cpu_parameter_array_static_restrict_stays_raw() {
 #[test]
 fn cpu_nested_typedef_complex_declarator_annotations() {
     let fix = fixture_nested_typedef_complex_declarator();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let (annotated, typed) = annotate_and_classify(&fix);
 
     // typedef int (*fn_t)(int);
     assert_eq!(
@@ -398,13 +398,6 @@ fn pg_lower_preserves_struct_tag_mixed_declarator_rows() {
     let pg = reference_ast_to_pg_nodes(&typed);
 
     for idx in [0usize, 4, 7, 8, 10, 11] {
-        assert_pg_preserves_row(
-            &typed,
-            &pg,
-            &fix.tok_starts,
-            &fix.tok_lens,
-            idx,
-            kind_at(&typed, idx),
-        );
+        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, kind_at(&typed, idx));
     }
 }

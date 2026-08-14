@@ -11,9 +11,9 @@ use crate::c_frontend::expression_pipeline::{
     assert_shape_rows as assert_expr_shape_rows, conditional_row,
 };
 use crate::c_frontend::rows::{
-    assert_kind, assert_vast_row, row_indices as typed_indices, starts_for_lens, word_at,
-    VAST_STRIDE_U32,
+    assert_kind, assert_vast_row, row_indices as typed_indices, word_at, VAST_STRIDE_U32,
 };
+use crate::c_frontend::spelling::c_rows;
 use vast_builder_token_streams::*;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{

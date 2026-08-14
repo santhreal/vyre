@@ -2,16 +2,18 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+#[path = "../../tests/support/c_frontend/fixtures/asm_extended_operands.rs"]
+mod asm_extended_operands;
 #[allow(dead_code)]
 mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
 
 use c_ast_gpu_parity_support::{
-    build_fixture, classify, row_indices, run_gpu_semantic_pg_lower as run_gpu_semantic_lower,
-    semantic_edge_word, semantic_node_word, word_at, Fixture, FixtureToken, VAST_STRIDE_U32,
+    classify, row_indices, run_gpu_semantic_pg_lower as run_gpu_semantic_lower, semantic_edge_word,
+    semantic_node_word, word_at, Fixture, VAST_STRIDE_U32,
 };
-use vyre_libs::parsing::c::lex::tokens::*;
+use c_frontend::spelling::c_tokens;
 use vyre_libs::parsing::c::lower::{
     reference_ast_to_pg_semantic_graph, C_AST_PG_CATEGORY_GNU, C_AST_PG_EDGE_PARENT,
     C_AST_PG_ROLE_ASM_CLOBBER, C_AST_PG_ROLE_ASM_GOTO_LABEL, C_AST_PG_ROLE_ASM_INPUT,
@@ -35,57 +37,14 @@ fn assert_gnu_role(nodes: &[u8], idx: usize, kind: u32, role: u32) {
     assert_eq!(semantic_node_word(nodes, idx, 7), role, "role[{idx}]");
 }
 
+use asm_extended_operands::asm_goto_full_operands;
+
 fn fixture_asm_goto() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("asm", TOK_IDENTIFIER),
-        FixtureToken::new("goto", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"jmp %l0\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"=r\"", TOK_STRING),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("out", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"r\"", TOK_STRING),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("in", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"memory\"", TOK_STRING),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("\"cc\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("fail", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("ok", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    asm_goto_full_operands()
 }
 
 fn fixture_attributes() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("section", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\".text\"", TOK_STRING),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("aligned", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("16", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("used", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("probe", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("__attribute__ ( ( section ( \".text\" ) , aligned ( 16 ) , used ) ) int probe ;")
 }
 
 #[test]

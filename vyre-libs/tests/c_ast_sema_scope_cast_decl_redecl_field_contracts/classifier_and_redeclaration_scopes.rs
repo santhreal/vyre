@@ -4,24 +4,7 @@ use super::*;
 fn classifier_typedef_in_cast_is_cast_expr() {
     let fix = fixture(
         "cast_expr",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_RPAREN),
-            ident("x"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { ( T ) x ; }"),
     );
     let typed = classify_cpu_annotated(&fix);
     assert_eq!(
@@ -35,23 +18,7 @@ fn classifier_typedef_in_cast_is_cast_expr() {
 fn classifier_typedef_in_declaration_is_pointer_decl() {
     let fix = fixture(
         "decl_ptr",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { T * p ; }"),
     );
     let typed = classify_cpu_annotated(&fix);
     assert_eq!(
@@ -65,25 +32,7 @@ fn classifier_typedef_in_declaration_is_pointer_decl() {
 fn classifier_typedef_in_array_declaration_is_array_decl() {
     let fix = fixture(
         "decl_array",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("T"),
-            ident("a"),
-            tok(TOK_LBRACKET),
-            tok(TOK_INTEGER),
-            tok(TOK_RBRACKET),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { T a [ INTEGER@ ] ; }"),
     );
     let typed = classify_cpu_annotated(&fix);
     assert_eq!(
@@ -97,28 +46,7 @@ fn classifier_typedef_in_array_declaration_is_array_decl() {
 fn classifier_typedef_in_function_declarator() {
     let fix = fixture(
         "decl_func",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("T"),
-            tok(TOK_LPAREN),
-            tok(TOK_STAR),
-            ident("fp"),
-            tok(TOK_RPAREN),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { T ( * fp ) ( void ) ; }"),
     );
     let typed = classify_cpu_annotated(&fix);
     // int (*fp)(void) style function pointer
@@ -138,26 +66,7 @@ fn classifier_typedef_in_function_declarator() {
 fn classifier_shadowed_typedef_in_declaration_becomes_multiply() {
     let fix = fixture(
         "shadow_decl",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { int T ; T * p ; }"),
     );
     let typed = classify_cpu_annotated(&fix);
     // T * p after T is shadowed must be multiplication, not pointer decl
@@ -172,24 +81,7 @@ fn classifier_shadowed_typedef_in_declaration_becomes_multiply() {
 fn classifier_ordinary_variable_in_cast_is_not_cast_expr() {
     let fix = fixture(
         "var_cast",
-        &[
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_LPAREN),
-            ident("x"),
-            tok(TOK_RPAREN),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("void f ( void ) { int x ; ( x ) * p ; }"),
     );
     let typed = classify_cpu_annotated(&fix);
     assert_ne!(
@@ -212,21 +104,7 @@ fn classifier_ordinary_variable_in_cast_is_not_cast_expr() {
 fn scope_tree_inner_block_declaration_shadows_outer() {
     let fix = fixture(
         "inner_shadow",
-        &[
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("int x ; void f ( void ) { int x ; }"),
     );
     let st = scope_tree_for(&fix);
 
@@ -244,17 +122,7 @@ fn scope_tree_inner_block_declaration_shadows_outer() {
 fn scope_tree_same_scope_redeclaration_both_classified_variable() {
     // C11 forbids redeclaration in the same scope, but the current scope-tree
     // heuristic classifies both as VARIABLE. We assert the actual contract.
-    let fix = fixture(
-        "same_scope_redecl",
-        &[
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_SEMICOLON),
-        ],
-    );
+    let fix = fixture("same_scope_redecl", &c_atoms("int x ; int x ;"));
     let st = scope_tree_for(&fix);
 
     assert_eq!(
@@ -271,19 +139,7 @@ fn scope_tree_same_scope_redeclaration_both_classified_variable() {
 
 #[test]
 fn annotation_typedef_redeclaration_in_same_scope_both_marked_decl() {
-    let fix = fixture(
-        "td_redecl",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_TYPEDEF),
-            tok(TOK_CHAR_KW),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-        ],
-    );
+    let fix = fixture("td_redecl", &c_atoms("typedef int T ; typedef char T ;"));
     let ann = annotate_cpu(&fix);
 
     assert_ne!(
@@ -302,20 +158,7 @@ fn annotation_typedef_redeclaration_in_same_scope_both_marked_decl() {
 fn scope_tree_function_prototype_redeclaration() {
     let fix = fixture(
         "func_proto_redecl",
-        &[
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            tok(TOK_RPAREN),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            tok(TOK_RPAREN),
-            tok(TOK_SEMICOLON),
-        ],
+        &c_atoms("void f ( int ) ; void f ( int ) ;"),
     );
     let st = scope_tree_for(&fix);
 
@@ -335,23 +178,7 @@ fn scope_tree_function_prototype_redeclaration() {
 fn scope_tree_function_definition_after_prototype() {
     let fix = fixture(
         "func_def_after_proto",
-        &[
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_RPAREN),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_INT),
-            ident("y"),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("void f ( int x ) ; void f ( int y ) { }"),
     );
     let st = scope_tree_for(&fix);
 

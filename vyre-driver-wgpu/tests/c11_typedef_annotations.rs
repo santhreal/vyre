@@ -9,12 +9,11 @@ mod c_frontend;
 use c_ast_gpu_parity_support::scope_gpu_support::{run_gpu_annotate, run_gpu_classify};
 use c_frontend::rows::assert_words_eq;
 use c_frontend::scope_fixture::{
-    annotate_cpu, classify_cpu_annotated, fixture, ident, tok, ScopeFixture,
+    annotate_cpu, c_atoms, classify_cpu_annotated, fixture, ScopeFixture,
 };
 use c_frontend::scope_fixture::{
     flags_at, kind_at, ORDINARY_FLAG_DECL, TYPEDEF_FLAG_DECL, TYPEDEF_FLAG_VISIBLE,
 };
-use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_classify_vast_node_kinds, C_AST_KIND_CAST_EXPR, C_AST_KIND_POINTER_DECL,
 };
@@ -25,36 +24,7 @@ use vyre_libs::parsing::c::parse::vast::{
 fn fixture_inner_shadow() -> ScopeFixture {
     fixture(
         "inner_shadow",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { { int T ; ( T ) * p ; } ( T ) * p ; }"),
     )
 }
 
@@ -63,39 +33,10 @@ fn fixture_inner_shadow() -> ScopeFixture {
 fn fixture_tag_namespaces() -> ScopeFixture {
     fixture(
         "tag_namespaces",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("S"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_STRUCT),
-            ident("S"),
-            tok(TOK_LBRACE),
-            tok(TOK_INT),
-            ident("field"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_SEMICOLON),
-            tok(TOK_ENUM),
-            ident("S"),
-            tok(TOK_LBRACE),
-            ident("A"),
-            tok(TOK_RBRACE),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_LPAREN),
-            ident("S"),
-            tok(TOK_RPAREN),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms(
+            "typedef int S ; struct S { int field ; } ; enum S { A } ; void f ( void ) { ( S ) \
+             * p ; }",
+        ),
     )
 }
 
@@ -117,38 +58,7 @@ fn assert_annotation_and_classifier_parity(fix: &ScopeFixture, label: &str) -> (
 fn cpu_typedef_name_and_expression_identifier_are_distinct() {
     let fix = fixture(
         "typedef_vs_expression_identifier",
-        &[
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_LPAREN),
-            ident("T"),
-            tok(TOK_RPAREN),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_INT),
-            ident("x"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_LPAREN),
-            ident("x"),
-            tok(TOK_RPAREN),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("typedef int T ; void f ( void ) { T * p ; ( T ) * p ; int x ; ( x ) * p ; }"),
     );
     let annotated = annotate_cpu(&fix);
     let typed = classify_cpu_annotated(&fix);
@@ -203,33 +113,7 @@ fn gpu_annotation_and_classifier_match_cpu_for_shadowing() {
 fn gpu_typedef_visibility_walks_deeper_than_four_block_scopes() {
     let fix = fixture(
         "deep_block_visibility",
-        &[
-            tok(TOK_VOID),
-            ident("f"),
-            tok(TOK_LPAREN),
-            tok(TOK_VOID),
-            tok(TOK_RPAREN),
-            tok(TOK_LBRACE),
-            tok(TOK_TYPEDEF),
-            tok(TOK_INT),
-            ident("T"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_LBRACE),
-            tok(TOK_LBRACE),
-            tok(TOK_LBRACE),
-            tok(TOK_LBRACE),
-            tok(TOK_LBRACE),
-            ident("T"),
-            tok(TOK_STAR),
-            ident("p"),
-            tok(TOK_SEMICOLON),
-            tok(TOK_RBRACE),
-            tok(TOK_RBRACE),
-            tok(TOK_RBRACE),
-            tok(TOK_RBRACE),
-            tok(TOK_RBRACE),
-            tok(TOK_RBRACE),
-        ],
+        &c_atoms("void f ( void ) { typedef int T ; { { { { { T * p ; } } } } } }"),
     );
     let (gpu_annotations, gpu_typed) =
         assert_annotation_and_classifier_parity(&fix, "deep block visibility");

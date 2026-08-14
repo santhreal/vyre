@@ -6,9 +6,8 @@ mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
 
-use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, row_indices, Fixture, FixtureToken,
-};
+use c_ast_gpu_parity_support::{assert_full_pipeline_parity, row_indices, Fixture};
+use c_frontend::spelling::c_tokens;
 use c_frontend::token_fixture::classify;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
@@ -18,42 +17,11 @@ use vyre_libs::parsing::c::parse::vast::{
 use vyre_primitives::predicate::node_kind;
 
 fn real_typeof_unqual_function_pointer_table() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__typeof_unqual__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("const", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("table", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("unsigned", TOK_IDENTIFIER),
-        FixtureToken::new("long", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("__typeof_unqual__ ( int ) * const ( * table [ 2 ] ) ( unsigned long ) ;")
 }
 
 fn typedef_over_typeof_unqual_pointer() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("typedef", TOK_IDENTIFIER),
-        FixtureToken::new("typeof_unqual", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("alias_t", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("alias_t", TOK_IDENTIFIER),
-        FixtureToken::new("value", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("typedef typeof_unqual ( int ) * alias_t ; alias_t value ;")
 }
 
 #[test]

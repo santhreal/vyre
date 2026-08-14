@@ -1,4 +1,6 @@
 use super::*;
+use crate::c_frontend::rows::assert_pg_preserves_fixture_row;
+use crate::c_frontend::token_fixture::{annotate_and_classify, classify};
 
 #[test]
 fn cpu_nested_struct_union_enum_kinds() {
@@ -65,9 +67,7 @@ fn cpu_anonymous_struct_union_members() {
 #[test]
 fn cpu_typedef_multiple_complex_declarators() {
     let fix = fixture_typedef_multiple_declarators();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let (annotated, typed) = annotate_and_classify(&fix);
 
     assert_eq!(
         kind_at(&typed, 0),
@@ -333,34 +333,18 @@ fn pg_lower_preserves_nested_struct_union_enum_rows() {
     let pg = reference_ast_to_pg_nodes(&typed);
 
     for idx in [0usize, 3, 5, 8, 14, 19, 21, 25, 30] {
-        assert_pg_preserves_row(
-            &typed,
-            &pg,
-            &fix.tok_starts,
-            &fix.tok_lens,
-            idx,
-            kind_at(&typed, idx),
-        );
+        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, kind_at(&typed, idx));
     }
 }
 
 #[test]
 fn pg_lower_preserves_typedef_multiple_declarator_rows() {
     let fix = fixture_typedef_multiple_declarators();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let typed = classify(&fix);
     let pg = reference_ast_to_pg_nodes(&typed);
 
     for idx in [0usize, 1, 8, 10, 11] {
-        assert_pg_preserves_row(
-            &typed,
-            &pg,
-            &fix.tok_starts,
-            &fix.tok_lens,
-            idx,
-            kind_at(&typed, idx),
-        );
+        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, kind_at(&typed, idx));
     }
 }
 
@@ -372,14 +356,7 @@ fn pg_lower_preserves_deeply_nested_pointer_rows() {
     let pg = reference_ast_to_pg_nodes(&typed);
 
     for idx in [2usize, 4, 6, 8] {
-        assert_pg_preserves_row(
-            &typed,
-            &pg,
-            &fix.tok_starts,
-            &fix.tok_lens,
-            idx,
-            kind_at(&typed, idx),
-        );
+        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, kind_at(&typed, idx));
     }
 }
 
@@ -391,13 +368,6 @@ fn pg_lower_preserves_storage_class_rows() {
     let pg = reference_ast_to_pg_nodes(&typed);
 
     for idx in [3usize, 4, 11, 16] {
-        assert_pg_preserves_row(
-            &typed,
-            &pg,
-            &fix.tok_starts,
-            &fix.tok_lens,
-            idx,
-            kind_at(&typed, idx),
-        );
+        assert_pg_preserves_fixture_row(&typed, &pg, &fix, idx, kind_at(&typed, idx));
     }
 }
