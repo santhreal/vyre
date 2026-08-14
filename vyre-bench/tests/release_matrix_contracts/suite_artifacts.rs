@@ -1,5 +1,196 @@
 use super::*;
 
+/// Lowest workload-family inventory either release suite may claim.
+///
+/// `release/evidence/docs/benchmark-doc-proof.md` binds both suites to at least
+/// this many families. Without the floor the family-closure assertions below are
+/// satisfied by an empty `release-workload-matrix.json`, so truncating the
+/// matrix would narrow the release claim instead of turning this gate red.
+const RELEASE_WORKLOAD_FAMILY_FLOOR: usize = 12;
+
+/// Release-class recorded device memory floor, in MiB.
+const RELEASE_GPU_MEMORY_FLOOR_MIB: usize = 24 * 1024;
+
+/// Lowest compute capability the release backends are probed against.
+///
+/// The backend matrix records CUDA release support at sm_80 and above, so a
+/// recorded run below it did not exercise the release path.
+const RELEASE_COMPUTE_CAPABILITY_FLOOR: (usize, usize) = (8, 0);
+
+/// One recorded accelerator identity.
+///
+/// A suite status row and the workload artifact it cites each write this from
+/// the same probe of a single run. Comparing the two recordings is the only
+/// artifact-internal way to separate one measured sweep from rows glued
+/// together out of several, and it asks nothing of the machine reading the
+/// evidence.
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+struct RecordedDevice {
+    model: String,
+    memory_total_mib: usize,
+    compute_capability: (usize, usize),
+    driver_version: String,
+    cuda_version: String,
+}
+
+impl RecordedDevice {
+    fn from_status(status: &Value) -> Self {
+        Self {
+            model: json_str(status, "gpu_model").to_owned(),
+            memory_total_mib: json_usize(status, "gpu_memory_total_mib"),
+            compute_capability: (
+                json_usize(status, "gpu_compute_capability_major"),
+                json_usize(status, "gpu_compute_capability_minor"),
+            ),
+            driver_version: json_str(status, "nvidia_driver_version").to_owned(),
+            cuda_version: json_str(status, "nvidia_cuda_version").to_owned(),
+        }
+    }
+
+    fn from_environment(environment: &Value) -> Self {
+        let devices = environment["gpu_devices"]
+            .as_array()
+            .expect("Fix: benchmark environment must record probed gpu_devices.");
+        assert_eq!(
+            devices.len(),
+            1,
+            "Fix: release benchmark evidence must record exactly one probed device."
+        );
+        let device = &devices[0];
+        Self {
+            model: json_str(device, "name").to_owned(),
+            memory_total_mib: json_usize(device, "memory_total_mib"),
+            compute_capability: (
+                json_usize(device, "compute_capability_major"),
+                json_usize(device, "compute_capability_minor"),
+            ),
+            driver_version: json_str(environment, "nvidia_driver_version").to_owned(),
+            cuda_version: json_str(environment, "nvidia_cuda_version").to_owned(),
+        }
+    }
+}
+
+/// Single-run provenance closure over a release suite artifact.
+///
+/// Both suites record, per workload row, the device probed and the checkout
+/// measured, in two independent places: the suite status row and the workload
+/// artifact that row cites. One sweep writes one device and one tree into all
+/// of them, so the inventory is derived here from the artifact at run time and
+/// held to a count of one rather than to any expected value.
+///
+/// Trusting the suite's own `blockers` array instead cannot see a violation.
+/// The WGPU fallback suite carried an empty `blockers` array while two of its
+/// sixteen rows cited artifacts recorded against a different source tree on a
+/// different driver version, and its gate stayed green.
+#[derive(Default)]
+struct SuiteProvenance {
+    devices: BTreeSet<RecordedDevice>,
+    source_fingerprints: BTreeSet<String>,
+    source_tree_fingerprints: BTreeSet<String>,
+    paths: BTreeSet<String>,
+}
+
+impl SuiteProvenance {
+    fn record(&mut self, suite: &str, status: &Value, artifact: &Value) {
+        let path = json_str(status, "path");
+        assert!(
+            self.paths.insert(path.to_owned()),
+            "Fix: {suite} lists `{path}` in more than one status row."
+        );
+
+        let recorded = RecordedDevice::from_status(status);
+        assert!(
+            !recorded.model.trim().is_empty(),
+            "Fix: {suite} status `{path}` must record the probed device model."
+        );
+        assert!(
+            recorded.memory_total_mib >= RELEASE_GPU_MEMORY_FLOOR_MIB,
+            "Fix: {suite} status `{path}` records {} MiB of device memory, below the release floor of {RELEASE_GPU_MEMORY_FLOOR_MIB} MiB.",
+            recorded.memory_total_mib
+        );
+        assert!(
+            recorded.compute_capability >= RELEASE_COMPUTE_CAPABILITY_FLOOR,
+            "Fix: {suite} status `{path}` records compute capability {:?}, below the release floor {:?}.",
+            recorded.compute_capability,
+            RELEASE_COMPUTE_CAPABILITY_FLOOR
+        );
+        assert_probed_version(
+            suite,
+            path,
+            "nvidia_driver_version",
+            &recorded.driver_version,
+        );
+        assert_probed_version(suite, path, "nvidia_cuda_version", &recorded.cuda_version);
+        assert_eq!(
+            recorded,
+            RecordedDevice::from_environment(&artifact["environment"]),
+            "Fix: {suite} status `{path}` records a different device than the artifact it cites."
+        );
+        self.devices.insert(recorded);
+
+        for field in ["source_fingerprint", "source_tree_fingerprint"] {
+            let recorded_by_status = json_str(status, field);
+            assert!(
+                !recorded_by_status.trim().is_empty(),
+                "Fix: {suite} status `{path}` must record `{field}`."
+            );
+            assert_eq!(
+                recorded_by_status,
+                json_str(artifact, field),
+                "Fix: {suite} status `{path}` `{field}` disagrees with the artifact it cites."
+            );
+        }
+        self.source_fingerprints
+            .insert(json_str(status, "source_fingerprint").to_owned());
+        self.source_tree_fingerprints
+            .insert(json_str(status, "source_tree_fingerprint").to_owned());
+    }
+
+    fn assert_single_run(&self, suite: &str, rows: usize) {
+        assert_eq!(
+            self.paths.len(),
+            rows,
+            "Fix: {suite} must cite a distinct workload artifact in every status row."
+        );
+        assert_eq!(
+            self.devices.len(),
+            1,
+            "Fix: {suite} records {} distinct devices; one release sweep runs on one device: {:?}",
+            self.devices.len(),
+            self.devices
+        );
+        assert_eq!(
+            self.source_fingerprints.len(),
+            1,
+            "Fix: {suite} records {} distinct source fingerprints; one release sweep measures one checkout: {:?}",
+            self.source_fingerprints.len(),
+            self.source_fingerprints
+        );
+        assert_eq!(
+            self.source_tree_fingerprints.len(),
+            1,
+            "Fix: {suite} records {} distinct source trees; one release sweep measures one tree: {:?}",
+            self.source_tree_fingerprints.len(),
+            self.source_tree_fingerprints
+        );
+    }
+}
+
+/// A probed version field is dotted decimal.
+///
+/// A run that could not reach the driver writes a word there, so this separates
+/// a measured field from a placeholder without matching a vendor spelling.
+fn assert_probed_version(suite: &str, path: &str, field: &str, value: &str) {
+    let dotted_decimal = value.contains('.')
+        && value.split('.').all(|component| {
+            !component.is_empty() && component.bytes().all(|byte| byte.is_ascii_digit())
+        });
+    assert!(
+        dotted_decimal,
+        "Fix: {suite} status `{path}` `{field}` must be a probed dotted-decimal version, not `{value}`."
+    );
+}
+
 /// CUDA release evidence must use the current digest-bound suite schema and
 /// prove every release workload on real NVIDIA hardware.
 #[test]
@@ -39,6 +230,11 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
         matrix_families.len(),
         "Fix: CUDA release benchmark suite must cover every release workload matrix family."
     );
+    assert!(
+        matrix_families.len() >= RELEASE_WORKLOAD_FAMILY_FLOOR,
+        "Fix: release-workload-matrix declares {} families, below the release floor of {RELEASE_WORKLOAD_FAMILY_FLOOR}.",
+        matrix_families.len()
+    );
 
     let artifacts = suite["artifacts"]
         .as_array()
@@ -53,6 +249,7 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
     );
 
     let mut covered_families = std::collections::BTreeSet::new();
+    let mut provenance = SuiteProvenance::default();
     for status in statuses {
         let path = json_str(status, "path");
         let family_id = json_str(status, "family_id");
@@ -81,14 +278,6 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
             json_str(status, "selected_backend"),
             "cuda",
             "Fix: CUDA workload artifact `{path}` status must be CUDA-selected."
-        );
-        assert!(
-            json_str(status, "gpu_model").contains("NVIDIA"),
-            "Fix: CUDA workload artifact `{path}` must record NVIDIA GPU provenance."
-        );
-        assert!(
-            json_usize(status, "gpu_memory_total_mib") >= 24 * 1024,
-            "Fix: CUDA workload artifact `{path}` must record release-class GPU memory."
         );
         assert!(
             json_usize(status, "min_wall_samples") >= 30
@@ -121,6 +310,7 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
         );
 
         let artifact = read_json(&workspace.join(path));
+        provenance.record("CUDA release suite", status, &artifact);
         assert_eq!(
             artifact["schema"], "vyre-bench.result.v1",
             "Fix: `{path}` must be a vyre-bench result artifact."
@@ -211,6 +401,7 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
         }
         covered_families.insert(json_str(status, "family_id").to_owned());
     }
+    provenance.assert_single_run("CUDA release suite", statuses.len());
 
     assert_eq!(
         covered_families, matrix_families,
@@ -236,6 +427,11 @@ fn wgpu_fallback_suite_covers_executable_release_workload_families() {
             .len(),
         "Fix: WGPU fallback suite family_count must equal its authenticated status inventory."
     );
+    assert!(
+        json_usize(&suite, "family_count") >= RELEASE_WORKLOAD_FAMILY_FLOOR,
+        "Fix: WGPU fallback suite records {} families, below the release floor of {RELEASE_WORKLOAD_FAMILY_FLOOR}.",
+        json_usize(&suite, "family_count")
+    );
 
     let artifacts = suite["artifacts"]
         .as_array()
@@ -250,6 +446,7 @@ fn wgpu_fallback_suite_covers_executable_release_workload_families() {
     );
 
     let mut covered_families = BTreeSet::new();
+    let mut provenance = SuiteProvenance::default();
     for status in statuses {
         let path = json_str(status, "path");
         assert!(
@@ -267,6 +464,7 @@ fn wgpu_fallback_suite_covers_executable_release_workload_families() {
             "Fix: WGPU workload artifact `{path}` status must carry an explicit blockers array."
         );
         let artifact = read_json(&workspace.join(path));
+        provenance.record("WGPU fallback suite", status, &artifact);
         assert_eq!(
             artifact["schema"], "vyre-bench.result.v1",
             "Fix: `{path}` must be a vyre-bench result artifact."
@@ -289,6 +487,7 @@ fn wgpu_fallback_suite_covers_executable_release_workload_families() {
         );
         covered_families.insert(json_str(status, "family_id").to_owned());
     }
+    provenance.assert_single_run("WGPU fallback suite", statuses.len());
 
     assert_eq!(
         covered_families.len(),
