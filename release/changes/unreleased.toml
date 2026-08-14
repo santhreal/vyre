@@ -479,3 +479,8 @@ text = "The megakernel wave-policy corpora in `vyre-driver` are read from `megak
 id = "megakernel-caches-share-one-lru"
 category = "Changed"
 text = "The megakernel empty-template cache and the resident launch recommendation cache now share one bounded least-recently-used map, so eviction order and tick saturation are decided in one place instead of two."
+
+[[fragments]]
+id = "megakernel-body-walk-has-one-owner"
+category = "Changed"
+text = "Megakernel builder and scheduler body inspection now walks nested node bodies through one shared preorder helper built on the foundation-owned child-body enumeration, instead of two hand-written recursive matches that each had to list the nesting variants."

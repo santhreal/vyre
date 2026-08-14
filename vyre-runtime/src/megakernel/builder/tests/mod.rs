@@ -1,55 +1,30 @@
+use super::super::ir_util::{let_names_preorder, walk_body_preorder};
 use super::*;
 
-fn async_load_bindings(nodes: &[Node], out: &mut Vec<(String, String, String)>) {
-    for node in nodes {
-        match node {
-            Node::AsyncLoad {
-                source,
-                destination,
-                tag,
-                ..
-            } => out.push((
+fn async_load_bindings(nodes: &[Node]) -> Vec<(String, String, String)> {
+    let mut bindings = Vec::new();
+    walk_body_preorder(nodes, &mut |node| {
+        if let Node::AsyncLoad {
+            source,
+            destination,
+            tag,
+            ..
+        } = node
+        {
+            bindings.push((
                 source.as_str().to_string(),
                 destination.as_str().to_string(),
                 tag.as_str().to_string(),
-            )),
-            Node::If {
-                then, otherwise, ..
-            } => {
-                async_load_bindings(then, out);
-                async_load_bindings(otherwise, out);
-            }
-            Node::Loop { body, .. } | Node::Block(body) => async_load_bindings(body, out),
-            Node::Region { body, .. } => async_load_bindings(body, out),
-            _ => {}
+            ));
         }
-    }
-}
-
-fn collect_let_names_preorder<'a>(nodes: &'a [Node], out: &mut Vec<&'a str>) {
-    for node in nodes {
-        match node {
-            Node::Let { name, .. } => out.push(name.as_str()),
-            Node::If {
-                then, otherwise, ..
-            } => {
-                collect_let_names_preorder(then, out);
-                collect_let_names_preorder(otherwise, out);
-            }
-            Node::Loop { body, .. } | Node::Block(body) => {
-                collect_let_names_preorder(body, out);
-            }
-            Node::Region { body, .. } => collect_let_names_preorder(body, out),
-            _ => {}
-        }
-    }
+    });
+    bindings
 }
 
 #[test]
 fn io_polling_uses_capability_tables_not_fake_resource_names() {
     let program = build_program_sharded_with_io_polling(64, &[]);
-    let mut bindings = Vec::new();
-    async_load_bindings(&program.entry, &mut bindings);
+    let bindings = async_load_bindings(&program.entry);
     assert_eq!(bindings.len(), 1);
     let (source, destination, tag) = &bindings[0];
     assert_eq!(source, "io_source_capability_table");
@@ -84,8 +59,7 @@ fn direct_megakernel_defers_tenant_loads_until_status_is_published() {
             "Fix: the persistent megakernel prologue must not load tenant metadata before proving the slot is claimable."
         );
 
-    let mut names = Vec::new();
-    collect_let_names_preorder(&body, &mut names);
+    let names = let_names_preorder(&body);
     let observed = names
         .iter()
         .position(|name| *name == "observed_status")
@@ -125,8 +99,7 @@ fn empty_sharded_once_shared_builder_reuses_cached_program_arc() {
 #[test]
 fn self_loading_miss_handler_program_contains_load_miss_bindings() {
     let program = build_program_with_self_loading_miss_handler(64, 256, &[]);
-    let mut names = Vec::new();
-    collect_let_names_preorder(program.entry(), &mut names);
+    let names = let_names_preorder(program.entry());
     assert!(
         names.iter().any(|n| *n == "resource_id"),
         "Fix: self-loading miss handler must bind resource_id (the \
@@ -145,8 +118,7 @@ fn self_loading_miss_handler_program_contains_load_miss_bindings() {
 #[test]
 fn self_loading_miss_handler_does_not_include_async_load_nodes() {
     let program = build_program_with_self_loading_miss_handler(64, 256, &[]);
-    let mut bindings = Vec::new();
-    async_load_bindings(program.entry(), &mut bindings);
+    let bindings = async_load_bindings(program.entry());
     assert_eq!(
         bindings.len(),
         0,
