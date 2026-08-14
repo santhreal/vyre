@@ -2,6 +2,7 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
 #[path = "../../tests/support/c_frontend/fixtures/declaration_container_nodes.rs"]

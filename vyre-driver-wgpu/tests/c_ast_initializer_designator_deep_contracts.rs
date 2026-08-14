@@ -16,7 +16,6 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 
-use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_build_vast_nodes, reference_c11_classify_vast_node_kinds, C_AST_KIND_ARRAY_DECL,
@@ -31,11 +30,11 @@ mod c_ast_gpu_parity_support;
 mod c_frontend;
 use c_ast_gpu_parity_support::{
     run_gpu_classifier, run_gpu_pg_lower, run_gpu_vast_builder_from_parts as run_gpu_vast_builder,
-    starts_for_lens,
 };
 
 use c_frontend::expression_pipeline::run_reference_pg_lower;
 use c_frontend::rows::{assert_pg_preserves_row, kind_at, row_indices};
+use c_frontend::spelling::c_rows;
 
 fn assert_full_pipeline_parity(
     tok_types: &[u32],
@@ -67,227 +66,92 @@ fn assert_full_pipeline_parity(
 
 // ---------------------------------------------------------------------------
 // Fixtures
+//
+// Spelled through `c_rows` rather than one `TOK_` per line: two unrelated
+// initializer fixtures share long runs of `LBRACE DOT IDENTIFIER ASSIGN ...`,
+// and one token per line makes those runs read as copied text.
 // ---------------------------------------------------------------------------
 
 /// ```c
 /// struct S s = { .a[0] = 1, .b = { .c = 2 } };
 /// ```
 fn fixture_nested_field_array_designator() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_LBRACE,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_LBRACE,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_RBRACE,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![
-        6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    ];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "STRUCT:6 IDENTIFIER IDENTIFIER ASSIGN LBRACE \
+         DOT IDENTIFIER LBRACKET INTEGER RBRACKET ASSIGN INTEGER COMMA \
+         DOT IDENTIFIER ASSIGN LBRACE DOT IDENTIFIER ASSIGN INTEGER RBRACE \
+         RBRACE SEMICOLON",
+    )
 }
 
 /// ```c
 /// int arr[10] = { [0 ... 3] = 1, [5] = 2 };
 /// ```
 fn fixture_range_designator_array() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_ASSIGN,
-        TOK_LBRACE,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_ELLIPSIS,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![
-        3, 3, 1, 2, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    ];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "INT:3 IDENTIFIER:3 LBRACKET INTEGER:2 RBRACKET ASSIGN LBRACE \
+         LBRACKET INTEGER ELLIPSIS:3 INTEGER RBRACKET ASSIGN INTEGER COMMA \
+         LBRACKET INTEGER RBRACKET ASSIGN INTEGER RBRACE SEMICOLON",
+    )
 }
 
 /// ```c
 /// union U u = { .f = 42 };
 /// ```
 fn fixture_union_field_designator() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_UNION,
-        TOK_IDENTIFIER,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_LBRACE,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![5, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "UNION:5 IDENTIFIER IDENTIFIER ASSIGN \
+         LBRACE DOT IDENTIFIER ASSIGN INTEGER:2 RBRACE SEMICOLON",
+    )
 }
 
 /// ```c
 /// struct S s = { 1, .b = 2, 3 };
 /// ```
 fn fixture_mixed_positional_designated() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_LBRACE,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_INTEGER,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "STRUCT:6 IDENTIFIER IDENTIFIER ASSIGN LBRACE \
+         INTEGER COMMA DOT IDENTIFIER ASSIGN INTEGER COMMA INTEGER RBRACE SEMICOLON",
+    )
 }
 
 /// ```c
 /// struct T t = { .inner = (struct S){ .x = 1 } };
 /// ```
 fn fixture_compound_literal_nested() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_LBRACE,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_LPAREN,
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_RBRACE,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![6, 1, 1, 1, 1, 1, 5, 1, 1, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "STRUCT:6 IDENTIFIER IDENTIFIER ASSIGN LBRACE DOT IDENTIFIER:5 ASSIGN \
+         LPAREN STRUCT:6 IDENTIFIER RPAREN LBRACE DOT IDENTIFIER ASSIGN INTEGER RBRACE \
+         RBRACE SEMICOLON",
+    )
 }
 
 /// ```c
 /// int x = {1};
 /// ```
 fn fixture_assignment_suppression() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_LBRACE,
-        TOK_INTEGER,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![3, 1, 1, 1, 1, 1, 1];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows("INT:3 IDENTIFIER ASSIGN LBRACE INTEGER RBRACE SEMICOLON")
 }
 
 /// ```c
 /// struct S s = { .a = 1 };
 /// ```
 fn fixture_designator_assignment_class() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_LBRACE,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "STRUCT:6 IDENTIFIER IDENTIFIER ASSIGN \
+         LBRACE DOT IDENTIFIER ASSIGN INTEGER RBRACE SEMICOLON",
+    )
 }
 
 /// ```c
 /// struct Buf { char data[4]; } b = { .data = "abc" };
 /// ```
 fn fixture_string_char_array_nested() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_LBRACE,
-        TOK_CHAR_KW,
-        TOK_IDENTIFIER,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_LBRACE,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_STRING,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![6, 3, 1, 4, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 1, 5, 1, 1];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
+    c_rows(
+        "STRUCT:6 IDENTIFIER:3 LBRACE CHAR_KW:4 IDENTIFIER:4 LBRACKET INTEGER RBRACKET \
+         SEMICOLON RBRACE IDENTIFIER ASSIGN \
+         LBRACE DOT IDENTIFIER:4 ASSIGN STRING:5 RBRACE SEMICOLON",
+    )
 }
 
 // ---------------------------------------------------------------------------

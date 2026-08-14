@@ -5,149 +5,62 @@
 //! V1 covers the load-bearing rewrite (literal-on-right). The
 //! non-literal sort tie-break and `x == x` self-fold migrate as
 //! follow-up kernels.
+//!
+//! The input programs and the value the pass owes for each are
+//! `vyre_test_support::pass_programs::CANONICALIZE_CASES`, shared with the CUDA
+//! suite so both backends assert the same rewrite. The dispatch stays here: a
+//! pass proven through naga's WGSL is not proven through PTX.
 
 #![cfg(test)]
 
 mod common;
 use common::acquire_live_backend as live_backend;
-use common::self_optimizer::{first_let_value, wrapped, WgpuProgramDispatcher};
+use common::self_optimizer::WgpuProgramDispatcher;
 
-use vyre::ir::{BinOp, Expr, Node};
 use vyre_pass_engine::optimizer::canonicalize_via_encoded::gpu_canonicalize;
+use vyre_test_support::pass_programs::{assert_canonicalized, canonicalize_case};
+
+/// Dispatch canonicalize for the named case on the live GPU and assert the
+/// rewrite the case owes.
+fn assert_case_on_real_gpu(label: &str) {
+    let backend = live_backend();
+    let dispatcher = WgpuProgramDispatcher::new(&backend);
+    let case = canonicalize_case(label);
+    let canon = gpu_canonicalize(case.input(), &dispatcher).expect("dispatches");
+    assert_canonicalized("wgpu", case, &canon);
+}
 
 #[test]
 fn canonicalize_lit_plus_var_swaps_to_var_plus_lit_on_real_gpu() {
-    let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher::new(&backend);
-
-    // let x = 1 + a   →   let x = a + 1   (literal on right)
-    let p = wrapped(vec![Node::let_bind(
-        "x",
-        Expr::add(Expr::u32(1), Expr::var("a")),
-    )]);
-    let canon = gpu_canonicalize(p, &dispatcher).expect("dispatches");
-    let got = first_let_value(&canon);
-    match got {
-        Expr::BinOp { op, left, right } => {
-            assert!(matches!(op, BinOp::Add));
-            assert!(
-                matches!(*left, Expr::Var(ref n) if n.as_str() == "a"),
-                "left must be Var(a) after canonicalize, got {left:?}"
-            );
-            assert!(
-                matches!(*right, Expr::LitU32(1)),
-                "right must be LitU32(1), got {right:?}"
-            );
-        }
-        other => panic!("expected BinOp Add, got {other:?}"),
-    }
+    assert_case_on_real_gpu("lit_plus_var");
 }
 
 #[test]
 fn canonicalize_var_plus_lit_unchanged_on_real_gpu() {
-    let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher::new(&backend);
-
-    // let x = a + 1   →   unchanged (already canonical)
-    let p = wrapped(vec![Node::let_bind(
-        "x",
-        Expr::add(Expr::var("a"), Expr::u32(1)),
-    )]);
-    let canon = gpu_canonicalize(p, &dispatcher).expect("dispatches");
-    let got = first_let_value(&canon);
-    match got {
-        Expr::BinOp { left, right, .. } => {
-            assert!(matches!(*left, Expr::Var(ref n) if n.as_str() == "a"));
-            assert!(matches!(*right, Expr::LitU32(1)));
-        }
-        other => panic!("expected unchanged BinOp Add, got {other:?}"),
-    }
+    assert_case_on_real_gpu("var_plus_lit");
 }
 
 #[test]
 fn canonicalize_two_lits_unchanged_on_real_gpu() {
-    let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher::new(&backend);
-
-    // Both literals  -  no swap (CPU canonicalize also leaves these
-    // alone for non-tie-breaking ops).
-    let p = wrapped(vec![Node::let_bind(
-        "x",
-        Expr::add(Expr::u32(2), Expr::u32(3)),
-    )]);
-    let canon = gpu_canonicalize(p, &dispatcher).expect("dispatches");
-    let got = first_let_value(&canon);
-    match got {
-        Expr::BinOp { left, right, .. } => {
-            assert!(matches!(*left, Expr::LitU32(2)));
-            assert!(matches!(*right, Expr::LitU32(3)));
-        }
-        other => panic!("expected unchanged BinOp, got {other:?}"),
-    }
+    // Both literals: no swap. The CPU canonicalize leaves these alone too for
+    // ops without a tie-break.
+    assert_case_on_real_gpu("two_lits");
 }
 
 #[test]
 fn canonicalize_two_vars_unchanged_on_real_gpu() {
-    let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher::new(&backend);
-
-    // V1 doesn't tie-break non-literals → unchanged.
-    let p = wrapped(vec![Node::let_bind(
-        "x",
-        Expr::add(Expr::var("a"), Expr::var("b")),
-    )]);
-    let canon = gpu_canonicalize(p, &dispatcher).expect("dispatches");
-    let got = first_let_value(&canon);
-    match got {
-        Expr::BinOp { left, right, .. } => {
-            assert!(matches!(*left, Expr::Var(ref n) if n.as_str() == "a"));
-            assert!(matches!(*right, Expr::Var(ref n) if n.as_str() == "b"));
-        }
-        other => panic!("expected unchanged BinOp, got {other:?}"),
-    }
+    // V1 does not tie-break non-literals, so this must stay as written.
+    assert_case_on_real_gpu("two_vars");
 }
 
 #[test]
 fn canonicalize_lit_times_var_swaps_on_real_gpu() {
-    let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher::new(&backend);
-
-    // let x = 5 * a   →   let x = a * 5
-    let p = wrapped(vec![Node::let_bind(
-        "x",
-        Expr::mul(Expr::u32(5), Expr::var("a")),
-    )]);
-    let canon = gpu_canonicalize(p, &dispatcher).expect("dispatches");
-    let got = first_let_value(&canon);
-    match got {
-        Expr::BinOp { op, left, right } => {
-            assert!(matches!(op, BinOp::Mul));
-            assert!(matches!(*left, Expr::Var(ref n) if n.as_str() == "a"));
-            assert!(matches!(*right, Expr::LitU32(5)));
-        }
-        other => panic!("expected BinOp Mul, got {other:?}"),
-    }
+    assert_case_on_real_gpu("lit_times_var");
 }
 
 #[test]
 fn canonicalize_non_commutative_div_unchanged_on_real_gpu() {
-    let backend = live_backend();
-    let dispatcher = WgpuProgramDispatcher::new(&backend);
-
-    // Div is NOT commutative  -  must NEVER swap regardless of operands.
-    let p = wrapped(vec![Node::let_bind(
-        "x",
-        Expr::div(Expr::u32(10), Expr::var("a")),
-    )]);
-    let canon = gpu_canonicalize(p, &dispatcher).expect("dispatches");
-    let got = first_let_value(&canon);
-    match got {
-        Expr::BinOp { op, left, right } => {
-            assert!(matches!(op, BinOp::Div));
-            // Left stays literal (not swapped  -  Div is non-commutative).
-            assert!(matches!(*left, Expr::LitU32(10)));
-            assert!(matches!(*right, Expr::Var(ref n) if n.as_str() == "a"));
-        }
-        other => panic!("expected BinOp Div unchanged, got {other:?}"),
-    }
+    // Div is NOT commutative, so the literal must stay on the left whatever the
+    // operands are.
+    assert_case_on_real_gpu("non_commutative_div");
 }
