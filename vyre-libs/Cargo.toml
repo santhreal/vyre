@@ -953,3 +953,18 @@ required-features = ["c-parser"]
 name = "c11_ast_corpus_complete_constructs"
 path = "tests/c11_ast_corpus_complete_constructs.rs"
 required-features = ["c-parser"]
+
+[[test]]
+name = "scan_hit_buffer_layout_contracts"
+path = "tests/scan_hit_buffer_layout_contracts.rs"
+required-features = ["matching-substring"]
+
+[[test]]
+name = "rule_condition_program_frame_contract"
+path = "tests/rule_condition_program_frame_contract.rs"
+required-features = ["rule"]
+
+[[test]]
+name = "solvers_dispatch_softmax_contract"
+path = "tests/solvers_dispatch_softmax_contract.rs"
+required-features = ["solvers"]

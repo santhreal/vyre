@@ -517,6 +517,44 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   each fail the gate. `structure-gate` moves to a new `standalone-tooling`
   layer below `foundation`, which is what it already is: it depends on no crate
   in the workspace so it keeps answering while the workspace does not compile.
+- The clone-family IR pins for `nn::softmax` and `nn::layer_norm` track the
+  current shared child-region names. Renaming the reduce-family owners from
+  `vyre-libs::substrate::*` to `vyre-libs::builder::*` moved the fingerprint of
+  every program embedding them, because a region generator identity is part of
+  the wire encoding, and the pinned digests were left on the old names. The
+  drift went unnoticed because the target needs `nn-attention`, which the
+  package-scoped test command does not enable. Rewriting only those identity
+  strings in the built programs reproduces the previous digests exactly, so no
+  node, buffer, expression or workgroup value moved. A companion rule now pins
+  the region identities each entry point carries, which names a rename directly
+  instead of reporting an opaque digest change, and asserts the reduce-family
+  owner is still reached by more than one caller.
+- `vyre-libs` runs the registry/coverage closure gate.
+  `vyre_test_support::assert_registry_closure` is the workspace's single
+  enumerator of `pub fn -> Program` builders, and no crate called it, so the
+  contract it exists to enforce was unenforced everywhere: a builder that is
+  neither submitted through `inventory` nor named by a test still compiles,
+  still appears in the generated catalog documents, and still diverges from its
+  reference arm with nothing red. `vyre-libs/tests/registry_closure.rs` is the
+  caller, with an empty waiver and a floor under the enumerated builder count
+  so a broken source scan fails instead of reporting a clean sweep of an empty
+  set. The enumerator also stopped excluding itself by one hardcoded file name,
+  which was the name of a gitignored file rather than the one its own
+  documentation gives; it now excludes any test file that calls it, so a waiver
+  entry cannot cover itself.
+- Every scalar rule leaf is runnable again.
+  `vyre_libs::rule::condition_op::condition_program` declared its verdict slot
+  as a backend-allocated output with no static element count, which fails IR
+  validation with V130, so all eleven leaves (six file-size predicates, two
+  pattern-count predicates, the two literals, and the pattern-existence check)
+  built successfully and were refused before execution. The builder was neither
+  registered nor named by a test, which is why nothing reported it. It now
+  declares the one element it writes, and a frame contract pins the binding
+  order, the slot each accessor reads, the region identity, the verdict store,
+  and the element count, executing every leaf through the reference
+  interpreter. The leaf table is checked against the operation ids declared
+  under `vyre-libs/src/rule` on each run, so a twelfth predicate turns the
+  suite red until it is pinned.
 
 ## [0.7.1] - 2026-08-01
 

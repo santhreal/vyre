@@ -35,7 +35,7 @@ pub fn condition_program(op_id: &'static str, compute: fn() -> Expr) -> Program 
             BufferDecl::read("pattern_count", 3, DataType::U32),
             BufferDecl::read("file_size", 4, DataType::U32),
             BufferDecl::read("threshold", 5, DataType::U32),
-            BufferDecl::output("out", 6, DataType::U32),
+            BufferDecl::output("out", 6, DataType::U32).with_count(1),
         ],
         WORKGROUP_SIZE,
         vec![crate::region::wrap_anonymous(
