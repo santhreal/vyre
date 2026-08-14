@@ -24,9 +24,10 @@ use vyre_libs::parsing::c::parse::vast::{
 };
 use vyre_primitives::predicate::node_kind;
 
-mod c_ast_expression_support;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 
-use c_ast_expression_support::{bytes, starts_for_lens, word_at};
+use c_frontend::rows::{bytes, starts_for_lens, word_at};
 
 const VAST_STRIDE_U32: usize = 10;
 

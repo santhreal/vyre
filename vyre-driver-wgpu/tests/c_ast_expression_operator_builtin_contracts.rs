@@ -6,4 +6,6 @@
 mod builtin_expression_shapes;
 #[path = "c_ast_expression_operator_builtin_contracts/bytes.rs"]
 mod bytes;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 mod c_ast_gpu_parity_support;

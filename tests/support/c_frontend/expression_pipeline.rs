@@ -1,18 +1,22 @@
-//! C-AST expression support integration tests.
-
-#![allow(deprecated)]
+//! The CPU reference pipeline every C expression contract test runs.
+//!
+//! Tokens in, then VAST build, type-aware classification, expression-shape
+//! rows, and property-graph lowering, with the executable lowerer checked
+//! against the byte oracle on every call. Tests assert against the resulting
+//! [`PipelineRows`]; nothing here touches a backend.
 
 use vyre::ir::Expr;
 use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes};
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_build_expression_shape_nodes, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_EXPR_SHAPE_NONE, C_EXPR_SHAPE_STRIDE_U32,
+    reference_c11_classify_vast_node_kinds, C_EXPR_ASSOC_NONE, C_EXPR_SHAPE_NONE,
+    C_EXPR_SHAPE_STRIDE_U32,
 };
 use vyre_reference::value::Value;
 
-pub(crate) const VAST_STRIDE_U32: usize = 10;
-pub(crate) const PG_STRIDE_U32: usize = 6;
-pub(crate) const SENTINEL: u32 = u32::MAX;
+use super::rows::{
+    node_count_from_vast, starts_for_lens, word_at, PG_STRIDE_U32, SENTINEL, VAST_STRIDE_U32,
+};
 
 pub(crate) struct PipelineRows {
     pub(crate) tok_starts: Vec<u32>,
@@ -22,43 +26,10 @@ pub(crate) struct PipelineRows {
     pub(crate) pg_nodes: Vec<u8>,
 }
 
-pub(crate) fn bytes(words: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(words)
-}
-
-pub(crate) fn starts_for_lens(lens: &[u32]) -> Vec<u32> {
-    let mut cursor = 0u32;
-    lens.iter()
-        .map(|len| {
-            let start = cursor;
-            cursor = cursor.saturating_add(*len).saturating_add(1);
-            start
-        })
-        .collect()
-}
-
+/// `(tok_types, tok_lens)` for single-character lexemes.
 pub(crate) fn unit_lens_fixture(tok_types: Vec<u32>) -> (Vec<u32>, Vec<u32>) {
     let tok_lens = vec![1; tok_types.len()];
     (tok_types, tok_lens)
-}
-
-pub(crate) fn word_at(bytes: &[u8], word: usize) -> u32 {
-    let offset = word * 4;
-    u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap())
-}
-
-fn node_count_from_vast(vast: &[u8]) -> u32 {
-    u32::try_from(vast.len() / (VAST_STRIDE_U32 * 4)).unwrap_or_default()
-}
-
-pub(crate) fn row_indices(rows: &[u8], stride_words: usize, kind: u32) -> Vec<usize> {
-    rows.chunks_exact(stride_words * 4)
-        .enumerate()
-        .filter_map(|(idx, row)| {
-            let row_kind = u32::from_le_bytes(row[0..4].try_into().unwrap());
-            (row_kind == kind).then_some(idx)
-        })
-        .collect()
 }
 
 pub(crate) fn run_reference_pg_lower(typed_vast: &[u8]) -> Vec<u8> {
@@ -98,6 +69,23 @@ pub(crate) fn run_pipeline(tok_types: &[u32], tok_lens: &[u32]) -> PipelineRows 
 
 pub(crate) fn assert_kind(rows: &[u8], idx: usize, stride_words: usize, kind: u32) {
     assert_eq!(word_at(rows, idx * stride_words), kind, "kind at row {idx}");
+}
+
+/// Assert the expression-shape row at `idx` is the "not an operator" row.
+pub(crate) fn assert_shape_none(rows: &[u8], idx: usize, raw_operator: u32) {
+    let row = idx * C_EXPR_SHAPE_STRIDE_U32 as usize;
+    assert_eq!(word_at(rows, row), C_EXPR_SHAPE_NONE, "shape_kind[{idx}]");
+    assert_eq!(word_at(rows, row + 1), SENTINEL, "source_idx[{idx}]");
+    assert_eq!(word_at(rows, row + 2), raw_operator, "raw_operator[{idx}]");
+    assert_eq!(word_at(rows, row + 3), 0, "precedence[{idx}]");
+    assert_eq!(
+        word_at(rows, row + 4),
+        C_EXPR_ASSOC_NONE,
+        "associativity[{idx}]"
+    );
+    assert_eq!(word_at(rows, row + 5), SENTINEL, "first[{idx}]");
+    assert_eq!(word_at(rows, row + 6), SENTINEL, "second[{idx}]");
+    assert_eq!(word_at(rows, row + 7), SENTINEL, "third[{idx}]");
 }
 
 pub(crate) fn assert_pg_preserves_row(rows: &PipelineRows, idx: usize, kind: u32) {

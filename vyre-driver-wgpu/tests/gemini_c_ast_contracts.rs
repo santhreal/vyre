@@ -3,6 +3,8 @@
 #![cfg(feature = "c-parser")]
 #![allow(clippy::erasing_op)]
 #![allow(deprecated)]
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 mod c_ast_gpu_parity_support;
 #[path = "gemini_c_ast_contracts/cpu_reference_and_gpu_parity.rs"]
 mod cpu_reference_and_gpu_parity;

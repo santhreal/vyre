@@ -18,6 +18,8 @@ use vyre_primitives::predicate::node_kind;
 
 const VAST_STRIDE_U32: usize = 10;
 
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 mod c_ast_gpu_parity_support;
 use c_ast_gpu_parity_support::{
     build_fixture, run_gpu_classifier_with_count, Fixture, FixtureToken,

@@ -2,8 +2,6 @@
 
 #![allow(dead_code, unused_imports)]
 
-#[allow(deprecated)]
-pub(crate) mod c_fixture;
 pub(crate) mod every_op_random_inputs;
 
 use std::time::{Duration, Instant};

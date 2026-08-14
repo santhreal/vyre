@@ -19,14 +19,17 @@ use vyre_libs::parsing::c::parse::vast::{
 };
 use vyre_primitives::predicate::node_kind;
 
-mod c_ast_expression_support;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 mod c_ast_gpu_parity_support;
-use c_ast_expression_support::{
-    assert_pg_links_match_vast, assert_pg_preserves_row, assert_shape_row, bytes, row_indices,
-    run_pipeline, run_reference_pg_lower, starts_for_lens, unit_lens_fixture, word_at, SENTINEL,
-    VAST_STRIDE_U32,
+use c_ast_gpu_parity_support::expression_pipeline::{
+    assert_pg_links_match_vast, assert_pg_preserves_row, assert_shape_row, run_pipeline,
+    run_reference_pg_lower, unit_lens_fixture,
 };
-use c_ast_gpu_parity_support::{run_gpu_expr_shape, run_gpu_pg_lower};
+use c_ast_gpu_parity_support::{
+    bytes, row_indices_by_stride as row_indices, run_gpu_expr_shape, run_gpu_pg_lower,
+    starts_for_lens, word_at, SENTINEL, VAST_STRIDE_U32,
+};
 
 // ---------------------------------------------------------------------------
 // Fixtures

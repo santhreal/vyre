@@ -4,6 +4,8 @@
 #![allow(deprecated)]
 #[path = "c11_parser_typedef_contracts/assert_kind.rs"]
 mod assert_kind;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 mod c_ast_gpu_parity_support;
 #[path = "c11_parser_typedef_contracts/pg_lowering_and_gpu_parity.rs"]
 mod pg_lowering_and_gpu_parity;

@@ -4,6 +4,8 @@
 #![allow(deprecated)]
 #[path = "c_ast_pg_expression_shape_e2e/bytes.rs"]
 mod bytes;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 mod c_ast_gpu_parity_support;
 #[path = "c_ast_pg_expression_shape_e2e/expression_and_statement_rows.rs"]
 mod expression_and_statement_rows;

@@ -26,12 +26,6 @@ pub(crate) fn assert_full_pipeline_parity(fix: &Fixture, label: &str) {
     );
 }
 
-pub(crate) fn classify(fix: &Fixture) -> Vec<u8> {
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    reference_c11_classify_vast_node_kinds(&annotated)
-}
-
 pub(crate) fn assert_gpu_pg_parity(fix: &Fixture, typed_vast: &[u8], label: &str) {
     let node_count = node_count_from_vast(typed_vast);
     let cpu_pg = reference_ast_to_pg_nodes(typed_vast);

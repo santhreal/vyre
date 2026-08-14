@@ -26,6 +26,8 @@ use vyre_libs::parsing::c::parse::vast::{
 };
 use vyre_primitives::predicate::node_kind;
 
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 mod c_ast_gpu_parity_support;
 use c_ast_gpu_parity_support::{
     run_gpu_classifier, run_gpu_pg_lower, run_gpu_vast_builder_from_parts as run_gpu_vast_builder,

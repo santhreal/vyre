@@ -25,6 +25,8 @@
 use vyre_primitives::wire::{
     decode_u32_le_bytes_all as decode_u32_words, pack_u32_slice as u32_bytes,
 };
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 mod c_ast_gpu_parity_support;
 use c_ast_gpu_parity_support::{
     assert_full_pipeline_parity, build_fixture, row_indices, word_at, Fixture, FixtureToken,

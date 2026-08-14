@@ -4,6 +4,8 @@
 
 use vyre_primitives::wire::pack_u32_slice as words_to_bytes;
 
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 #[path = "c_ast_gpu_parity_support/mod.rs"]
 mod c_ast_gpu_parity_support;
 

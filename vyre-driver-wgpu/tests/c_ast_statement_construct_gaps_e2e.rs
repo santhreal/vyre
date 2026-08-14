@@ -2,6 +2,8 @@
 //! goto rows.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 mod c_ast_gpu_parity_support;
 #[path = "c_ast_statement_construct_gaps_e2e/classify.rs"]
 mod classify;

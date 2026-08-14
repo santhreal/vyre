@@ -1,4 +1,46 @@
-use super::*;
+//! Row accessors and row-shape assertions for the C frontend's packed buffers.
+//!
+//! VAST rows, property-graph rows, and semantic-graph rows are all `u32`
+//! records in a byte buffer, so every C frontend test needs the same handful of
+//! field readers and the same "PG row preserves the VAST row" assertion. One
+//! owner here keeps the field offsets from drifting per test file.
+
+use super::token_fixture::Fixture;
+use vyre_libs::parsing::c::lower::C_AST_PG_SEMANTIC_NODE_STRIDE_U32;
+
+/// `u32` fields per VAST row.
+pub(crate) const VAST_STRIDE_U32: usize = 10;
+/// `u32` fields per property-graph row.
+pub(crate) const PG_STRIDE_U32: usize = 6;
+/// Bytes per VAST row.
+pub(crate) const VAST_STRIDE_BYTES: usize = VAST_STRIDE_U32 * core::mem::size_of::<u32>();
+/// "No such row" marker used by every C frontend row buffer.
+pub(crate) const SENTINEL: u32 = u32::MAX;
+
+pub(crate) fn bytes(words: &[u32]) -> Vec<u8> {
+    vyre_primitives::wire::pack_u32_slice(words)
+}
+
+pub(crate) fn haystack_words(source: &[u8]) -> Vec<u8> {
+    vyre_primitives::wire::pack_bytes_as_u32_slice(source)
+}
+
+pub(crate) fn word_at(buf: &[u8], word: usize) -> u32 {
+    let offset = word * 4;
+    u32::from_le_bytes(buf[offset..offset + 4].try_into().unwrap())
+}
+
+pub(crate) fn kind_at(rows: &[u8], idx: usize) -> u32 {
+    word_at(rows, idx * VAST_STRIDE_U32)
+}
+
+pub(crate) fn pg_word_at(buf: &[u8], idx: usize, field: usize) -> u32 {
+    word_at(buf, idx * PG_STRIDE_U32 + field)
+}
+
+pub(crate) fn node_count_from_vast(buf: &[u8]) -> u32 {
+    u32::try_from(buf.len() / VAST_STRIDE_BYTES).unwrap_or_default()
+}
 
 pub(crate) fn row_indices(rows: &[u8], kind: u32) -> Vec<usize> {
     row_indices_by_stride(rows, VAST_STRIDE_U32, kind)
@@ -44,6 +86,7 @@ pub(crate) fn token_indices_containing(fix: &Fixture, needle: &str) -> Vec<usize
         .collect()
 }
 
+/// Token starts for unit-separated lexemes of the given lengths.
 pub(crate) fn starts_for_lens(lens: &[u32]) -> Vec<u32> {
     let mut cursor = 0u32;
     lens.iter()
@@ -55,14 +98,25 @@ pub(crate) fn starts_for_lens(lens: &[u32]) -> Vec<u32> {
         .collect()
 }
 
-pub(crate) fn pg_word_at(buf: &[u8], idx: usize, field: usize) -> u32 {
-    word_at(buf, idx * PG_STRIDE_U32 + field)
+pub(crate) fn assert_semantic_node(
+    nodes: &[u8],
+    index: usize,
+    kind: u32,
+    category: u32,
+    role: u32,
+) {
+    let field = |offset| {
+        word_at(
+            nodes,
+            index * C_AST_PG_SEMANTIC_NODE_STRIDE_U32 as usize + offset,
+        )
+    };
+    assert_eq!(field(0), kind, "kind[{index}]");
+    assert_eq!(field(6), category, "category[{index}]");
+    assert_eq!(field(7), role, "role[{index}]");
 }
 
-pub(crate) fn kind_at(rows: &[u8], idx: usize) -> u32 {
-    word_at(rows, idx * VAST_STRIDE_U32)
-}
-
+/// Assert the PG row at `idx` reproduces the VAST row's kind, span, and links.
 pub(crate) fn assert_pg_preserves_row(
     typed_vast: &[u8],
     pg: &[u8],
@@ -103,6 +157,25 @@ pub(crate) fn assert_pg_preserves_row(
     );
 }
 
+/// [`assert_pg_preserves_row`] against the spans a [`Fixture`] already carries.
+pub(crate) fn assert_pg_preserves_fixture_row(
+    typed_vast: &[u8],
+    pg: &[u8],
+    fix: &Fixture,
+    idx: usize,
+    expected_kind: u32,
+) {
+    assert_pg_preserves_row(
+        typed_vast,
+        pg,
+        &fix.tok_starts,
+        &fix.tok_lens,
+        idx,
+        expected_kind,
+    );
+}
+
+/// Compare two packed `u32` buffers, reporting the first differing row.
 pub(crate) fn assert_words_eq(actual: &[u8], expected: &[u8], context: &str) {
     if actual == expected {
         return;

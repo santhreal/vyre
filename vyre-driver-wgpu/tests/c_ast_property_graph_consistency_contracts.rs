@@ -5,6 +5,8 @@
 #![cfg(feature = "c-parser")]
 #![allow(clippy::same_item_push)]
 #![allow(deprecated)]
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 #[path = "c_ast_gpu_parity_support/mod.rs"]
 mod c_ast_gpu_parity_support;
 

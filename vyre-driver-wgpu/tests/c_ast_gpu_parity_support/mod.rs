@@ -1,4 +1,10 @@
 // Integration test module for the containing Vyre package.
+//
+// The CPU half of this harness (fixtures, row accessors, row assertions) is
+// shared with `vyre-libs/tests`, which owns the same C frontend's CPU-only
+// contracts, so it lives in `tests/support/c_frontend` and is included here.
+// What stays is the GPU half: adapter acquisition, dispatch, and the parity
+// assertions that compare a dispatched buffer against the CPU reference.
 #![allow(deprecated)]
 
 use std::sync::{mpsc, Mutex, OnceLock};
@@ -11,7 +17,6 @@ use vyre_libs::parsing::c::lex::tokens::{
     TOK_ASSIGN, TOK_COLON, TOK_COMMA, TOK_IDENTIFIER, TOK_LBRACE, TOK_LBRACKET, TOK_LPAREN,
     TOK_RBRACE, TOK_RBRACKET, TOK_RPAREN, TOK_SEMICOLON, TOK_TYPEDEF, TOK_VOID,
 };
-use vyre_libs::parsing::c::lower::C_AST_PG_SEMANTIC_NODE_STRIDE_U32;
 use vyre_libs::parsing::c::lower::{
     c_lower_ast_to_pg_nodes, c_lower_ast_to_pg_semantic_graph, reference_ast_to_pg_nodes,
 };
@@ -24,22 +29,21 @@ use vyre_libs::parsing::c::parse::vast::{
 };
 use vyre_libs::parsing::c::sema::c_sema_scope;
 
-pub(crate) const VAST_STRIDE_U32: usize = 10;
-pub(crate) const PG_STRIDE_U32: usize = 6;
-const VAST_STRIDE_BYTES: usize = VAST_STRIDE_U32 * core::mem::size_of::<u32>();
+pub(crate) use crate::c_frontend::rows::*;
+pub(crate) use crate::c_frontend::token_fixture::*;
+#[allow(unused_imports)]
+pub(crate) use crate::c_frontend::{expression_pipeline, scope_fixture};
+
 const VAST_TYPEDEF_SYMBOL_FIELD: usize = 9;
 
-mod common;
-pub(crate) use common::c_fixture::*;
 mod gpu_dispatch_support;
 mod gpu_pipeline_support;
-mod row_buffer_support;
+pub(crate) mod scope_gpu_support;
 mod typedef_gpu_support;
 
 pub(crate) use gpu_dispatch_support::*;
 #[allow(unused_imports)]
 pub(crate) use gpu_pipeline_support::*;
-pub(crate) use row_buffer_support::*;
 pub(crate) use typedef_gpu_support::*;
 
 /// Build the shared `void f() { __builtin_unreachable(); }` parser fixture.
@@ -56,39 +60,4 @@ pub(crate) fn fixture_builtin_unreachable() -> Fixture {
         FixtureToken::new(";", TOK_SEMICOLON),
         FixtureToken::new("}", TOK_RBRACE),
     ])
-}
-
-fn bytes(words: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(words)
-}
-
-pub(crate) fn word_at(buf: &[u8], word: usize) -> u32 {
-    let off = word * 4;
-    u32::from_le_bytes(buf[off..off + 4].try_into().unwrap())
-}
-
-pub(crate) fn node_count_from_vast(buf: &[u8]) -> u32 {
-    u32::try_from(buf.len() / VAST_STRIDE_BYTES).unwrap_or_default()
-}
-
-pub(crate) fn assert_semantic_node(
-    nodes: &[u8],
-    index: usize,
-    kind: u32,
-    category: u32,
-    role: u32,
-) {
-    let field = |offset| {
-        word_at(
-            nodes,
-            index * C_AST_PG_SEMANTIC_NODE_STRIDE_U32 as usize + offset,
-        )
-    };
-    assert_eq!(field(0), kind, "kind[{index}]");
-    assert_eq!(field(6), category, "category[{index}]");
-    assert_eq!(field(7), role, "role[{index}]");
-}
-
-fn haystack_words(bytes: &[u8]) -> Vec<u8> {
-    vyre_primitives::wire::pack_bytes_as_u32_slice(bytes)
 }

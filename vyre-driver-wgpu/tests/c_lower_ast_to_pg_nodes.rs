@@ -32,17 +32,17 @@ use vyre_libs::parsing::c::parse::vast::{
 use vyre_primitives::predicate::node_kind;
 use vyre_reference::value::Value;
 
-mod c_ast_expression_support;
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 
-use c_ast_expression_support::{bytes, row_indices, starts_for_lens, word_at};
+use c_frontend::rows::{bytes, row_indices_by_stride as row_indices, starts_for_lens, word_at};
+use c_frontend::token_fixture::FixtureToken;
 
 const VAST_STRIDE_U32: u32 = 10;
 const VAST_STRIDE_BYTES: usize = (VAST_STRIDE_U32 as usize) * core::mem::size_of::<u32>();
 const PG_STRIDE_U32: u32 = 6;
 const TEST_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 const OP_ID: &str = "vyre-libs::parsing::c::lower::ast_to_pg_nodes";
-mod common;
-use common::c_fixture::*;
 fn gnu_c_stress_fixture_source_and_tokens() -> (String, Vec<u32>, Vec<u32>, Vec<u32>) {
     let tokens = [
         FixtureToken::new(

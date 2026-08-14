@@ -1,6 +1,15 @@
-// Integration test module for the containing Vyre package.
+//! Lexeme-driven token fixtures for the C frontend.
+//!
+//! A fixture is a list of `(lexeme, raw token kind)` pairs. Building it here
+//! runs the same keyword promotion the real lexer runs, so a test that writes
+//! `("int", TOK_IDENTIFIER)` still gets `TOK_INT`, and every test file agrees on
+//! how source offsets are laid out.
 
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
+use vyre_libs::parsing::c::parse::vast::{
+    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
+    reference_c11_classify_vast_node_kinds,
+};
 
 #[derive(Clone, Copy)]
 pub(crate) struct FixtureToken {
@@ -49,12 +58,24 @@ pub(crate) fn build_fixture(tokens: &[FixtureToken]) -> Fixture {
     }
 }
 
+/// Typed VAST for a fixture: build, annotate typedef names, classify.
+pub(crate) fn classify(fix: &Fixture) -> Vec<u8> {
+    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
+    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
+    reference_c11_classify_vast_node_kinds(&annotated)
+}
+
+/// `c_fixture![("int", TOK_IDENTIFIER), ("x", TOK_IDENTIFIER)]`.
+///
+/// The expansion is rooted at `$crate::c_frontend`, the name every consumer
+/// gives this module, so the macro works from either crate without the caller
+/// importing the fixture builder.
 #[allow(unused_macros)]
 macro_rules! c_fixture {
     ($(($lexeme:literal, $kind:expr $(,)?)),+ $(,)?) => {
-        $crate::c_ast_gpu_parity_support::build_fixture(&[
+        $crate::c_frontend::token_fixture::build_fixture(&[
             $(
-                $crate::c_ast_gpu_parity_support::FixtureToken::new($lexeme, $kind),
+                $crate::c_frontend::token_fixture::FixtureToken::new($lexeme, $kind),
             )+
         ])
     };
