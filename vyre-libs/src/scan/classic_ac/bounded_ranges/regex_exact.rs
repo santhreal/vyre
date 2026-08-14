@@ -51,7 +51,8 @@ pub(in crate::scan) fn regex_exact_ranges_program(
         ));
     }
 
-    let mut walk_step = ac_transition_step_nodes(inputs.haystack, inputs.transitions, Expr::var("step"));
+    let mut walk_step =
+        ac_transition_step_nodes(inputs.haystack, inputs.transitions, Expr::var("step"));
     walk_step.extend(ac_output_span_nodes(inputs.output_offsets));
     walk_step.push(Node::loop_for(
         "out_idx",

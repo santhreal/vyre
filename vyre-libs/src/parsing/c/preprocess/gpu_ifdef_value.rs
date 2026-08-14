@@ -288,8 +288,18 @@ fn gpu_ifdef_value_with_byte_layouts(
 
     Program::wrapped(
         vec![
-            token_column("tok_starts", BINDING_TOK_STARTS, BufferAccess::ReadOnly, num_tokens),
-            token_column("tok_lens", BINDING_TOK_LENS, BufferAccess::ReadOnly, num_tokens),
+            token_column(
+                "tok_starts",
+                BINDING_TOK_STARTS,
+                BufferAccess::ReadOnly,
+                num_tokens,
+            ),
+            token_column(
+                "tok_lens",
+                BINDING_TOK_LENS,
+                BufferAccess::ReadOnly,
+                num_tokens,
+            ),
             token_column(
                 "directive_kinds",
                 BINDING_DIRECTIVE_KINDS,

@@ -152,7 +152,9 @@ fn csr_fixture() -> (Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>) {
     for node in 0..=NODE_COUNT {
         offsets.push(node.min(EDGE_COUNT));
     }
-    let targets: Vec<u32> = (0..EDGE_COUNT).map(|edge| (edge * 3) % NODE_COUNT).collect();
+    let targets: Vec<u32> = (0..EDGE_COUNT)
+        .map(|edge| (edge * 3) % NODE_COUNT)
+        .collect();
     let masks = vec![ALLOW_MASK; EDGE_COUNT as usize];
     let frontier = vec![1u32, 0u32];
     (offsets, targets, masks, frontier)
@@ -160,20 +162,17 @@ fn csr_fixture() -> (Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>) {
 
 fn bidirectional_program() -> Program {
     let (offsets, targets, masks, frontier) = csr_fixture();
-    plan_csr_bidirectional_step(NODE_COUNT, &offsets, &targets, &masks, &frontier, ALLOW_MASK)
-        .expect("Fix: bidirectional fixture must be a valid CSR graph")
-        .program()
+    plan_csr_bidirectional_step(
+        NODE_COUNT, &offsets, &targets, &masks, &frontier, ALLOW_MASK,
+    )
+    .expect("Fix: bidirectional fixture must be a valid CSR graph")
+    .program()
 }
 
 fn forward_or_changed_program(max_iters: u32) -> Program {
     let (offsets, targets, masks, _) = csr_fixture();
     plan_csr_forward_or_changed_launch(
-        NODE_COUNT,
-        &offsets,
-        &targets,
-        &masks,
-        ALLOW_MASK,
-        max_iters,
+        NODE_COUNT, &offsets, &targets, &masks, ALLOW_MASK, max_iters,
     )
     .expect("Fix: forward-or-changed fixture must be a valid CSR graph")
     .program()

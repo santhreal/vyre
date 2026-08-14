@@ -12,7 +12,7 @@ use crate::parsing::core::ast::node::AST_VAR;
 use vyre_foundation::ir::Expr;
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
 
-use super::{MAX_TOK_SCAN, OP_ID, ast_shunting_yard_with_capacity};
+use super::{ast_shunting_yard_with_capacity, MAX_TOK_SCAN, OP_ID};
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

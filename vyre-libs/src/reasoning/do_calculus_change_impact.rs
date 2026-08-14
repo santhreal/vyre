@@ -15,8 +15,8 @@ use crate::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_foundation::ir::Program;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::do_calculus::{
     do_intervention_delete_incoming, do_rule2_reverse_incoming, do_rule3_subgraph,
 };

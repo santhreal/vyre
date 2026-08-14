@@ -2,9 +2,9 @@ use super::super::state::PersistentBfsPlanCache;
 use super::super::*;
 use super::linear_graph;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentReadRange};
 use std::cell::{Cell, RefCell};
 use vyre_foundation::ir::Program;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentReadRange};
 
 #[derive(Default)]
 struct ResidentPersistentBfsDispatcher {

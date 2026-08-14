@@ -264,7 +264,10 @@ mod tests {
     #[test]
     fn direction_parameter_selects_the_entry_point_program() {
         for (order, expected) in [
-            (VastWalkOrder::Preorder, ast_walk_preorder("nodes", "out", 6, 8)),
+            (
+                VastWalkOrder::Preorder,
+                ast_walk_preorder("nodes", "out", 6, 8),
+            ),
             (
                 VastWalkOrder::Postorder,
                 ast_walk_postorder_nodes("nodes", "out", 6, 8),
@@ -321,10 +324,10 @@ mod tests {
             vyre_foundation::vast::walk_postorder_indices(&node_region, 6, 128).unwrap(),
             vec![4, 1, 2, 5, 3, 0]
         );
+        assert!(vyre_foundation::ir::validate(&ast_walk_preorder("nodes", "out", 6, 8)).is_empty());
         assert!(
-            vyre_foundation::ir::validate(&ast_walk_preorder("nodes", "out", 6, 8)).is_empty()
+            vyre_foundation::ir::validate(&ast_walk_postorder_nodes("nodes", "out", 6, 8))
+                .is_empty()
         );
-        assert!(vyre_foundation::ir::validate(&ast_walk_postorder_nodes("nodes", "out", 6, 8))
-            .is_empty());
     }
 }

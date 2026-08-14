@@ -5,8 +5,8 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use super::fnlike::*;
 use super::named_dispatch::*;
-use super::output_token::*;
 use super::objlike::*;
+use super::output_token::*;
 use super::*;
 
 pub fn opt_named_macro_expansion(

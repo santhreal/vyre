@@ -126,7 +126,8 @@ fn paste_branch(
             Expr::load(macro_vals, Expr::var("macro_paste_next_offset")),
         )],
         {
-            let arg_start = selected_arg_bound(macro_arg_starts, Expr::var("macro_paste_next_param"));
+            let arg_start =
+                selected_arg_bound(macro_arg_starts, Expr::var("macro_paste_next_param"));
             let arg_end = selected_arg_bound(macro_arg_ends, Expr::var("macro_paste_next_param"));
             vec![
                 Node::if_then(

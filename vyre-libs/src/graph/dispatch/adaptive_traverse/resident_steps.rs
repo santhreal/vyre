@@ -398,17 +398,15 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
             device_features,
         ),
     };
-    let traverse_program = scratch
-        .plan_cache
-        .get_or_build(traverse_key, || {
-            resident_csr_queue_traverse_program(
-                graph.node_count,
-                graph.edge_count,
-                queue_capacity,
-                allow_mask,
-                traverse_kind,
-            )
-        });
+    let traverse_program = scratch.plan_cache.get_or_build(traverse_key, || {
+        resident_csr_queue_traverse_program(
+            graph.node_count,
+            graph.edge_count,
+            queue_capacity,
+            allow_mask,
+            traverse_kind,
+        )
+    });
     let graph_handles = graph.handles;
     let traverse_handles = [
         queue_handle,
@@ -596,9 +594,7 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                     words_u32,
                     device_features,
                 ),
-                || {
-                    resident_csr_queue_word_counts_program(ADAPTIVE_FRONTIER_IN, graph.node_count)
-                },
+                || resident_csr_queue_word_counts_program(ADAPTIVE_FRONTIER_IN, graph.node_count),
             );
             let word_count_handles = [handles[0], word_partials, block_totals];
             if frontier_word_prefix_uses_precomputed_offsets(word_prefix.block_count) {

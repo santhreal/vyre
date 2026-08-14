@@ -4,8 +4,8 @@
 //! driver crate build the same token streams, so the fixtures have one owner
 //! here rather than a copy per crate.
 
-use crate::c_frontend::spelling::c_kinds;
 use crate::c_frontend::expression_pipeline::unit_lens_fixture;
+use crate::c_frontend::spelling::c_kinds;
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -42,9 +42,8 @@ pub(crate) fn compound_assignment_fixture() -> (Vec<u32>, Vec<u32>) {
 
 pub(crate) fn ternary_looser_than_assignment_fixture() -> (Vec<u32>, Vec<u32>) {
     // a = b ? c : d;
-    let tok_types = c_kinds(
-        "IDENTIFIER ASSIGN IDENTIFIER QUESTION IDENTIFIER COLON IDENTIFIER SEMICOLON",
-    );
+    let tok_types =
+        c_kinds("IDENTIFIER ASSIGN IDENTIFIER QUESTION IDENTIFIER COLON IDENTIFIER SEMICOLON");
     unit_lens_fixture(tok_types)
 }
 
@@ -59,9 +58,8 @@ pub(crate) fn ternary_right_assoc_fixture() -> (Vec<u32>, Vec<u32>) {
 
 pub(crate) fn comma_boundary_fixture() -> (Vec<u32>, Vec<u32>) {
     // a = b, c = d;
-    let tok_types = c_kinds(
-        "IDENTIFIER ASSIGN IDENTIFIER COMMA IDENTIFIER ASSIGN IDENTIFIER SEMICOLON",
-    );
+    let tok_types =
+        c_kinds("IDENTIFIER ASSIGN IDENTIFIER COMMA IDENTIFIER ASSIGN IDENTIFIER SEMICOLON");
     unit_lens_fixture(tok_types)
 }
 

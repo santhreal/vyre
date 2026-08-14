@@ -1,7 +1,5 @@
 //! Side-effect metadata for preprocessor directives.
 
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::parsing::c::preprocess::directive_scan::for_each_directive_row;
 use crate::parsing::c::lex::tokens::{
     TOK_PP_EFFECT_ERROR_DIAGNOSTIC, TOK_PP_EFFECT_IDENT, TOK_PP_EFFECT_INCLUDE,
     TOK_PP_EFFECT_INCLUDE_NEXT, TOK_PP_EFFECT_LINE, TOK_PP_EFFECT_PRAGMA,
@@ -10,6 +8,8 @@ use crate::parsing::c::lex::tokens::{
     TOK_PP_EFFECT_PRAGMA_DIAGNOSTIC_WARNING, TOK_PP_EFFECT_PRAGMA_ONCE, TOK_PP_EFFECT_SCCS,
     TOK_PP_EFFECT_WARNING_DIAGNOSTIC,
 };
+#[cfg(any(test, feature = "cpu-parity"))]
+use crate::parsing::c::preprocess::directive_scan::for_each_directive_row;
 use crate::parsing::c::preprocess::directive_scan::{skip_horizontal_ws, ScannedDirective};
 use crate::parsing::c::preprocess::{CPreprocessorDirectiveKind, CPreprocessorError};
 

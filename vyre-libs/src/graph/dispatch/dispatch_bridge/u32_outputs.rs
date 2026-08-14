@@ -1,6 +1,6 @@
 use crate::dispatch_buffers::decode_u32_output_exact;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_foundation::ir::Program;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Dispatch already-prepared inputs and decode exactly one u32 output buffer
 /// into `out`.

@@ -95,8 +95,7 @@ pub fn glyph_grid_blend(
 
     Program::wrapped(
         vec![
-            BufferDecl::storage(glyphs, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(cells),
+            BufferDecl::storage(glyphs, 0, BufferAccess::ReadOnly, DataType::U32).with_count(cells),
             BufferDecl::storage(fg, 1, BufferAccess::ReadOnly, DataType::U32).with_count(cells),
             BufferDecl::storage(bg, 2, BufferAccess::ReadOnly, DataType::U32).with_count(cells),
             BufferDecl::storage(atlas, 3, BufferAccess::ReadOnly, DataType::U32)
@@ -151,10 +150,7 @@ pub fn glyph_grid_blend(
                         ));
                         body.push(Node::let_bind(
                             "cov",
-                            Expr::bitand(
-                                Expr::load(atlas, Expr::var("texel")),
-                                Expr::u32(0xFF),
-                            ),
+                            Expr::bitand(Expr::load(atlas, Expr::var("texel")), Expr::u32(0xFF)),
                         ));
                         body.push(Node::let_bind(
                             "inv_cov",

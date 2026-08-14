@@ -93,8 +93,6 @@ pub const BINDING_DIRECTIVE_VALUES: u32 = 5;
 /// when classifying.
 pub const MAX_KEYWORD_LEN: u32 = 12;
 
-
-
 /// Build the 17a directive-classification `Program` over packed `DataType::U32`
 /// source words.
 ///
@@ -250,9 +248,24 @@ fn gpu_directive_metadata_with_source_layout(
 
     Program::wrapped(
         vec![
-            token_column("tok_types", BINDING_TOK_TYPES, BufferAccess::ReadOnly, num_tokens),
-            token_column("tok_starts", BINDING_TOK_STARTS, BufferAccess::ReadOnly, num_tokens),
-            token_column("tok_lens", BINDING_TOK_LENS, BufferAccess::ReadOnly, num_tokens),
+            token_column(
+                "tok_types",
+                BINDING_TOK_TYPES,
+                BufferAccess::ReadOnly,
+                num_tokens,
+            ),
+            token_column(
+                "tok_starts",
+                BINDING_TOK_STARTS,
+                BufferAccess::ReadOnly,
+                num_tokens,
+            ),
+            token_column(
+                "tok_lens",
+                BINDING_TOK_LENS,
+                BufferAccess::ReadOnly,
+                num_tokens,
+            ),
             runtime_sized_input(
                 "source",
                 BINDING_SOURCE,

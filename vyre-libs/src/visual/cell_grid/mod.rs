@@ -158,18 +158,15 @@ pub fn cell_grid_fill(cells: &str, output: &str, shape: GridShape) -> Program {
                 },
                 vec![
                     Node::let_bind("idx", Expr::gid_x()),
-                    Node::if_then(
-                        Expr::lt(Expr::var("idx"), Expr::u32(pixels)),
-                        {
-                            let mut body = cell_lookup_nodes(shape);
-                            body.push(Node::let_bind(
-                                "colour",
-                                Expr::load(cells, Expr::var("cell")),
-                            ));
-                            body.push(Node::store(output, Expr::var("idx"), Expr::var("colour")));
-                            body
-                        },
-                    ),
+                    Node::if_then(Expr::lt(Expr::var("idx"), Expr::u32(pixels)), {
+                        let mut body = cell_lookup_nodes(shape);
+                        body.push(Node::let_bind(
+                            "colour",
+                            Expr::load(cells, Expr::var("cell")),
+                        ));
+                        body.push(Node::store(output, Expr::var("idx"), Expr::var("colour")));
+                        body
+                    }),
                 ],
             )],
         )],

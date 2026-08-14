@@ -91,10 +91,7 @@ impl GatedDeltaSpec<'_> {
                 value_heads: self.value_heads,
             });
         }
-        if !matches!(
-            self.dtype,
-            DataType::F16 | DataType::BF16 | DataType::F32
-        ) {
+        if !matches!(self.dtype, DataType::F16 | DataType::BF16 | DataType::F32) {
             return Err(RecurrentGatedDeltaError::UnsupportedDtype {
                 dtype: self.dtype.clone(),
             });
@@ -193,12 +190,7 @@ pub(super) fn gated_delta_buffers(
         BufferDecl::storage(spec.state_input, 5, BufferAccess::ReadWrite, DataType::F32)
             .with_count(counts.state),
         BufferDecl::output(spec.output, 6, dtype.clone()).with_count(counts.value),
-        BufferDecl::storage(
-            spec.state_output,
-            7,
-            BufferAccess::ReadWrite,
-            DataType::F32,
-        )
-        .with_count(counts.state),
+        BufferDecl::storage(spec.state_output, 7, BufferAccess::ReadWrite, DataType::F32)
+            .with_count(counts.state),
     ]
 }

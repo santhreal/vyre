@@ -1,8 +1,8 @@
 use super::*;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use vyre_foundation::ir::Program;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 #[test]
 fn program_cache_reuses_same_key_and_rebuilds_on_shape_change() {

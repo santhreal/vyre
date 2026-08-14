@@ -184,13 +184,31 @@ const KINDS: &[(&str, u32)] = &[
     ("PP_EFFECT_INCLUDE_NEXT", TOK_PP_EFFECT_INCLUDE_NEXT),
     ("PP_EFFECT_PRAGMA", TOK_PP_EFFECT_PRAGMA),
     ("PP_EFFECT_PRAGMA_ONCE", TOK_PP_EFFECT_PRAGMA_ONCE),
-    ("PP_EFFECT_PRAGMA_DIAGNOSTIC_PUSH", TOK_PP_EFFECT_PRAGMA_DIAGNOSTIC_PUSH),
-    ("PP_EFFECT_PRAGMA_DIAGNOSTIC_POP", TOK_PP_EFFECT_PRAGMA_DIAGNOSTIC_POP),
-    ("PP_EFFECT_PRAGMA_DIAGNOSTIC_IGNORED", TOK_PP_EFFECT_PRAGMA_DIAGNOSTIC_IGNORED),
-    ("PP_EFFECT_PRAGMA_DIAGNOSTIC_WARNING", TOK_PP_EFFECT_PRAGMA_DIAGNOSTIC_WARNING),
-    ("PP_EFFECT_PRAGMA_DIAGNOSTIC_ERROR", TOK_PP_EFFECT_PRAGMA_DIAGNOSTIC_ERROR),
+    (
+        "PP_EFFECT_PRAGMA_DIAGNOSTIC_PUSH",
+        TOK_PP_EFFECT_PRAGMA_DIAGNOSTIC_PUSH,
+    ),
+    (
+        "PP_EFFECT_PRAGMA_DIAGNOSTIC_POP",
+        TOK_PP_EFFECT_PRAGMA_DIAGNOSTIC_POP,
+    ),
+    (
+        "PP_EFFECT_PRAGMA_DIAGNOSTIC_IGNORED",
+        TOK_PP_EFFECT_PRAGMA_DIAGNOSTIC_IGNORED,
+    ),
+    (
+        "PP_EFFECT_PRAGMA_DIAGNOSTIC_WARNING",
+        TOK_PP_EFFECT_PRAGMA_DIAGNOSTIC_WARNING,
+    ),
+    (
+        "PP_EFFECT_PRAGMA_DIAGNOSTIC_ERROR",
+        TOK_PP_EFFECT_PRAGMA_DIAGNOSTIC_ERROR,
+    ),
     ("PP_EFFECT_ERROR_DIAGNOSTIC", TOK_PP_EFFECT_ERROR_DIAGNOSTIC),
-    ("PP_EFFECT_WARNING_DIAGNOSTIC", TOK_PP_EFFECT_WARNING_DIAGNOSTIC),
+    (
+        "PP_EFFECT_WARNING_DIAGNOSTIC",
+        TOK_PP_EFFECT_WARNING_DIAGNOSTIC,
+    ),
     ("PP_EFFECT_IDENT", TOK_PP_EFFECT_IDENT),
     ("PP_EFFECT_SCCS", TOK_PP_EFFECT_SCCS),
     ("PP_EFFECT_LINE", TOK_PP_EFFECT_LINE),
@@ -365,10 +383,7 @@ pub(crate) fn c_atoms(spelling: &'static str) -> Vec<Atom> {
             if let Some(name) = word.strip_suffix('@') {
                 return tok(kind_of(name));
             }
-            if let Some((_, kind)) = PUNCTUATORS
-                .iter()
-                .find(|(candidate, _)| *candidate == word)
-            {
+            if let Some((_, kind)) = PUNCTUATORS.iter().find(|(candidate, _)| *candidate == word) {
                 return tok(*kind);
             }
             if let Some((_, kind)) = C_KEYWORDS.iter().find(|(candidate, _)| *candidate == word) {

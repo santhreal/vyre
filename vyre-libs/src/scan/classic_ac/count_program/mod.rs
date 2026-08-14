@@ -64,10 +64,8 @@ pub(in crate::scan) fn count_suffix2_prefilter_body(
     offset_zero_scan_nodes: Vec<Node>,
     suffix2_match_nodes: Vec<Node>,
 ) -> Vec<Node> {
-    let previous_byte = load_packed_byte_expr(
-        haystack,
-        Expr::saturating_sub(Expr::var("i"), Expr::u32(1)),
-    );
+    let previous_byte =
+        load_packed_byte_expr(haystack, Expr::saturating_sub(Expr::var("i"), Expr::u32(1)));
     let suffix2_index = Expr::bitor(
         Expr::shl(Expr::var("previous_byte"), Expr::u32(8)),
         Expr::var("candidate_byte"),

@@ -2,8 +2,10 @@
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, UnOp};
 
-use super::gated_delta_layout::{self, qk_index, scalar_index, state_index, value_index, GatedDeltaSpec};
 use super::gated_delta::RecurrentGatedDeltaError;
+use super::gated_delta_layout::{
+    self, qk_index, scalar_index, state_index, value_index, GatedDeltaSpec,
+};
 use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::chunked_gated_delta";

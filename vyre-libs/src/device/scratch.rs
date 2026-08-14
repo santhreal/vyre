@@ -4,9 +4,9 @@
 //! policy here prevents each domain from growing its own unchecked
 //! `Vec::reserve` variant and keeps allocation failures actionable.
 
-use vyre_foundation::program_dispatch::DispatchError;
 use std::collections::HashSet;
 use std::hash::{BuildHasher, Hash};
+use vyre_foundation::program_dispatch::DispatchError;
 
 /// Grow `buffer` to hold at least `capacity` items.
 ///

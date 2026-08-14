@@ -24,10 +24,12 @@ mod prefilter;
 mod regex_exact;
 
 pub use prefilter::{
-    build_ac_bounded_ranges_prefilter_program, build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
+    build_ac_bounded_ranges_prefilter_program,
+    build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
     build_ac_bounded_ranges_suffix3_prefilter_program,
     build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
-    classic_ac_bounded_ranges_prefilter_program, classic_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
+    classic_ac_bounded_ranges_prefilter_program,
+    classic_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
     classic_ac_bounded_ranges_suffix3_prefilter_program,
     classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
     classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
@@ -213,10 +215,20 @@ impl AcInputBindings<'_> {
         );
         decls.reserve(3);
         decls.extend([
-            BufferDecl::storage(self.output_records, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(self.output_records_len),
-            BufferDecl::storage(self.pattern_lengths, 4, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(self.pattern_count),
+            BufferDecl::storage(
+                self.output_records,
+                3,
+                BufferAccess::ReadOnly,
+                DataType::U32,
+            )
+            .with_count(self.output_records_len),
+            BufferDecl::storage(
+                self.pattern_lengths,
+                4,
+                BufferAccess::ReadOnly,
+                DataType::U32,
+            )
+            .with_count(self.pattern_count),
             BufferDecl::storage(self.haystack_len, 5, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(1),
         ]);
@@ -812,7 +824,12 @@ pub fn try_build_ac_bounded_ranges_program(
     pattern_count: u32,
     max_matches: u32,
 ) -> Result<Program, String> {
-    try_build_ac_bounded_ranges_program_with_subgroup_coalesce(dfa, pattern_count, max_matches, true)
+    try_build_ac_bounded_ranges_program_with_subgroup_coalesce(
+        dfa,
+        pattern_count,
+        max_matches,
+        true,
+    )
 }
 
 /// Fallible variant of [`build_ac_bounded_ranges_program_with_subgroup_coalesce`].
@@ -895,9 +912,11 @@ mod tests {
     #[test]
     fn infallible_builder_uses_real_dfa_not_empty_fallback() {
         let ac = classic_ac_compile(&[b"abc", b"de", b"abcd"]);
-        let via_infallible = build_ac_bounded_ranges_program_with_subgroup_coalesce(&ac.dfa, 3, 128, false);
-        let via_try = try_build_ac_bounded_ranges_program_with_subgroup_coalesce(&ac.dfa, 3, 128, false)
-            .expect("valid DFA must build");
+        let via_infallible =
+            build_ac_bounded_ranges_program_with_subgroup_coalesce(&ac.dfa, 3, 128, false);
+        let via_try =
+            try_build_ac_bounded_ranges_program_with_subgroup_coalesce(&ac.dfa, 3, 128, false)
+                .expect("valid DFA must build");
         // Binding 3 is output_records: the empty fallback carried 0 here.
         let records = via_infallible.buffers()[3].count;
         assert_eq!(records as usize, ac.dfa.output_records.len());
@@ -922,7 +941,8 @@ mod tests {
     #[test]
     fn try_build_ac_bounded_ranges_program_ext_succeeds_for_valid_dfa() {
         let ac = classic_ac_compile(&[b"abc", b"de"]);
-        let result = try_build_ac_bounded_ranges_program_with_subgroup_coalesce(&ac.dfa, 2, 128, false);
+        let result =
+            try_build_ac_bounded_ranges_program_with_subgroup_coalesce(&ac.dfa, 2, 128, false);
         assert!(
             result.is_ok(),
             "try_build must succeed for a valid small DFA: {:?}",

@@ -194,7 +194,13 @@ pub fn python312_extract_structure(
         .collect(),
     ));
 
-    let pass = line_index_pass(STRUCTURE_OP_ID, tok_types, tok_starts, tok_lens, haystack_len);
+    let pass = line_index_pass(
+        STRUCTURE_OP_ID,
+        tok_types,
+        tok_starts,
+        tok_lens,
+        haystack_len,
+    );
     let mut buffers = pass.token_buffers();
     buffers.extend(pass.record_buffers(out_records, out_counts, 3, DEF_RECORD_WORDS));
     pass.program(buffers, body)
@@ -382,10 +388,7 @@ pub fn python312_extract_with_blocks(
                     vec![Node::if_then(
                         Expr::and(
                             Expr::eq(Expr::var("colon_pos"), Expr::u32(INVALID_POS)),
-                            Expr::eq(
-                                load_u32(tok_types, Expr::var("scan")),
-                                Expr::u32(TOK_COLON),
-                            ),
+                            Expr::eq(load_u32(tok_types, Expr::var("scan")), Expr::u32(TOK_COLON)),
                         ),
                         vec![Node::assign("colon_pos", Expr::var("scan"))],
                     )],

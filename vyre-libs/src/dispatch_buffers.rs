@@ -126,10 +126,7 @@ pub fn f32_slice_to_le_bytes(values: &[f32]) -> Vec<u8> {
 }
 
 /// Decode an aligned u32 input buffer for a CPU-parity dispatcher.
-pub fn decode_u32_input_aligned(
-    bytes: &[u8],
-    context: &str,
-) -> Result<Vec<u32>, DispatchError> {
+pub fn decode_u32_input_aligned(bytes: &[u8], context: &str) -> Result<Vec<u32>, DispatchError> {
     if bytes.len() % std::mem::size_of::<u32>() != 0 {
         return Err(DispatchError::BadInputs(format!(
             "Fix: {context} input byte count {} is not divisible by 4.",
@@ -140,10 +137,7 @@ pub fn decode_u32_input_aligned(
 }
 
 /// Decode an aligned f32 input buffer for a CPU-parity dispatcher.
-pub fn decode_f32_input_aligned(
-    bytes: &[u8],
-    context: &str,
-) -> Result<Vec<f32>, DispatchError> {
+pub fn decode_f32_input_aligned(bytes: &[u8], context: &str) -> Result<Vec<f32>, DispatchError> {
     if bytes.len() % std::mem::size_of::<f32>() != 0 {
         return Err(DispatchError::BadInputs(format!(
             "Fix: {context} input byte count {} is not divisible by 4.",

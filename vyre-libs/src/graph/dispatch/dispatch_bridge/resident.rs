@@ -1,9 +1,9 @@
 use super::inputs::{prepare_dispatch_inputs, DispatchInput};
 use crate::dispatch_buffers::decode_u32_output_exact;
+use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{
     DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
-use vyre_foundation::ir::Program;
 
 /// Allocate resident buffers as one logical group and free partial state on failure.
 pub(crate) fn alloc_resident_buffers<D: ProgramDispatcher + ?Sized, const N: usize>(

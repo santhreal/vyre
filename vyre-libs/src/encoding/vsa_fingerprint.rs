@@ -220,14 +220,10 @@ mod tests {
                     inputs.len()
                 )));
             };
-            let a = crate::dispatch_buffers::decode_u32_input_aligned(
-                a_bytes,
-                "XOR test dispatcher",
-            )?;
-            let b = crate::dispatch_buffers::decode_u32_input_aligned(
-                b_bytes,
-                "XOR test dispatcher",
-            )?;
+            let a =
+                crate::dispatch_buffers::decode_u32_input_aligned(a_bytes, "XOR test dispatcher")?;
+            let b =
+                crate::dispatch_buffers::decode_u32_input_aligned(b_bytes, "XOR test dispatcher")?;
             let out_len = out_bytes.len() / 4;
             if a.len() < out_len || b.len() < out_len {
                 return Err(DispatchError::BadInputs(format!(

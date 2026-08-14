@@ -72,14 +72,14 @@ mod stack;
 #[cfg(test)]
 mod tests;
 
+use super::gpu_directive_parse_shared::{
+    push_directive_row_bounds, push_hash_and_keyword_start, push_keyword_end,
+    push_ws_skip_from_expr, runtime_sized_input, token_column,
+};
 use super::gpu_if_expression_abi::{
     BINDING_DIRECTIVE_KINDS, BINDING_DIRECTIVE_VALUES, BINDING_MACRO_NAMES_PACKED,
     BINDING_MACRO_OFFSETS, BINDING_MACRO_VALUES, BINDING_SOURCE, BINDING_TOK_LENS,
     BINDING_TOK_STARTS, OP_ID, STACK_DEPTH,
-};
-use super::gpu_directive_parse_shared::{
-    push_directive_row_bounds, push_hash_and_keyword_start, push_keyword_end,
-    push_ws_skip_from_expr, runtime_sized_input, token_column,
 };
 use super::gpu_source_bytes::{
     safe_load_source_layout_byte_expr, source_buffer_element, source_byte_len_expr,
@@ -1625,8 +1625,18 @@ fn gpu_if_expression_with_byte_layouts(
 
     Program::wrapped(
         vec![
-            token_column("tok_starts", BINDING_TOK_STARTS, BufferAccess::ReadOnly, num_tokens),
-            token_column("tok_lens", BINDING_TOK_LENS, BufferAccess::ReadOnly, num_tokens),
+            token_column(
+                "tok_starts",
+                BINDING_TOK_STARTS,
+                BufferAccess::ReadOnly,
+                num_tokens,
+            ),
+            token_column(
+                "tok_lens",
+                BINDING_TOK_LENS,
+                BufferAccess::ReadOnly,
+                num_tokens,
+            ),
             token_column(
                 "directive_kinds",
                 BINDING_DIRECTIVE_KINDS,

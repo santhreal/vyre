@@ -5,7 +5,6 @@
 //! driver crate build the same token streams, so the fixtures have one owner
 //! here rather than a copy per crate.
 
-
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
@@ -15,7 +14,6 @@
 ///   (T)*p;   -- cast expression: T is a typedef name
 ///   (x)*p;   -- multiplication: x is a variable, not a type
 /// }
-
 use crate::c_frontend::spelling::c_rows;
 pub(crate) fn fixture_typedef_cast_vs_expr_multiply() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     c_rows(

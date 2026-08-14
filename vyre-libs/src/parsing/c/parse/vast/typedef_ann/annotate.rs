@@ -160,7 +160,10 @@ pub(super) fn c11_annotate_typedef_names_impl(
         },
     };
 
-    let mut loop_body = vec![Node::let_bind("raw_kind", Expr::load(vast_nodes, base.clone()))];
+    let mut loop_body = vec![Node::let_bind(
+        "raw_kind",
+        Expr::load(vast_nodes, base.clone()),
+    )];
     loop_body.extend(row.bindings());
     loop_body.push(row.update(Expr::and(
         Expr::eq(Expr::var("raw_kind"), Expr::u32(TOK_IDENTIFIER)),

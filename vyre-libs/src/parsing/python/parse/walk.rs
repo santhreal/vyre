@@ -138,13 +138,8 @@ impl TokenPass<'_> {
             .into_iter()
             .enumerate()
             .map(|(binding, name)| {
-                BufferDecl::storage(
-                    name,
-                    binding as u32,
-                    BufferAccess::ReadOnly,
-                    DataType::U32,
-                )
-                .with_count(self.haystack_len)
+                BufferDecl::storage(name, binding as u32, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(self.haystack_len)
             })
             .collect()
     }
@@ -176,10 +171,7 @@ impl TokenPass<'_> {
                     self.op_id,
                     self.child_op_id,
                     vec![Node::if_then(
-                        Expr::lt(
-                            Expr::InvocationId { axis: 0 },
-                            Expr::u32(self.haystack_len),
-                        ),
+                        Expr::lt(Expr::InvocationId { axis: 0 }, Expr::u32(self.haystack_len)),
                         body,
                     )],
                 )],

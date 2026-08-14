@@ -363,7 +363,8 @@ pub(super) fn emit_materialized_function_paste_branch(
         out_tok_types: spec.out_tok_types,
         num_tokens: spec.num_tokens,
         resolve_rhs,
-        synth_trap: "function-like-token-paste-cannot-synthesize-token-type-from-materialized-bytes",
+        synth_trap:
+            "function-like-token-paste-cannot-synthesize-token-type-from-materialized-bytes",
         append_rhs_bytes,
         rhs_rest_guard: Expr::eq(Expr::var("macro_paste_right_from_argument"), Expr::u32(1)),
         rhs_rest_copy,

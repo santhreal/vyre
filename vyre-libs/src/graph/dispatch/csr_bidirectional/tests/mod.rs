@@ -1,9 +1,9 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::test_support::NeverDispatches;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use std::sync::Mutex;
 use vyre_foundation::ir::Program;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 mod reference_closure_tests;
 
@@ -70,7 +70,10 @@ fn linear_step_into(
 }
 
 /// [`linear_step_into`] returning owned storage.
-fn linear_step(dispatcher: &dyn ProgramDispatcher, seed: &[u32]) -> Result<Vec<u32>, DispatchError> {
+fn linear_step(
+    dispatcher: &dyn ProgramDispatcher,
+    seed: &[u32],
+) -> Result<Vec<u32>, DispatchError> {
     let (off, tgt, msk) = linear_graph();
     bidirectional_step_via(dispatcher, 4, &off, &tgt, &msk, seed, 0xFFFF_FFFF)
 }

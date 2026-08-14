@@ -1,8 +1,8 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use std::sync::Mutex;
 use vyre_foundation::ir::Program;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::motif::{
     cpu_ref as reference_motif, cpu_ref_matches as reference_motif_matches,
     cpu_ref_participation_count as reference_motif_participation_count, plan_motif_launch,

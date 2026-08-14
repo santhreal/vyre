@@ -1,8 +1,8 @@
+use std::cell::{Cell, RefCell};
+use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{
     DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
-use std::cell::{Cell, RefCell};
-use vyre_foundation::ir::Program;
 
 #[derive(Default)]
 pub(super) struct RecordingResidentDispatcher {

@@ -5,8 +5,6 @@
 //! driver crate build the same token streams, so the fixtures have one owner
 //! here rather than a copy per crate.
 
-
-
 use crate::c_frontend::spelling::c_kinds;
 pub(crate) fn expression_chain_fixture() -> (Vec<u32>, Vec<u32>) {
     let tok_types = c_kinds(

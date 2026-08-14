@@ -41,12 +41,12 @@
 //! Higher-moment FMM compression belongs in distinct registered ops so
 //! each multipole order has an explicit schema and test oracle.
 
+#[cfg(test)]
+use crate::device::scratch::reserve_vec_capacity_or_panic;
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-#[cfg(test)]
-use crate::device::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::math::fmm::{l2p_zeroth_f32_step, m2l_zeroth_f32_step, p2m_zeroth_f32_step};
 
@@ -774,14 +774,10 @@ mod tests {
                 inputs.len()
             )));
         };
-        let scores = crate::dispatch_buffers::decode_f32_input_aligned(
-            score_bytes,
-            "FMM test dispatcher",
-        )?;
-        let cells = crate::dispatch_buffers::decode_u32_input_aligned(
-            cell_bytes,
-            "FMM test dispatcher",
-        )?;
+        let scores =
+            crate::dispatch_buffers::decode_f32_input_aligned(score_bytes, "FMM test dispatcher")?;
+        let cells =
+            crate::dispatch_buffers::decode_u32_input_aligned(cell_bytes, "FMM test dispatcher")?;
         let n_cells = out_bytes.len() / std::mem::size_of::<f32>();
         let mut out = vec![0.0_f32; n_cells];
         for (score, &cell) in scores.iter().zip(&cells) {
@@ -797,10 +793,8 @@ mod tests {
                 inputs.len()
             )));
         };
-        let moments = crate::dispatch_buffers::decode_f32_input_aligned(
-            moment_bytes,
-            "FMM test dispatcher",
-        )?;
+        let moments =
+            crate::dispatch_buffers::decode_f32_input_aligned(moment_bytes, "FMM test dispatcher")?;
         let distances = crate::dispatch_buffers::decode_f32_input_aligned(
             distance_bytes,
             "FMM test dispatcher",
@@ -825,14 +819,10 @@ mod tests {
                 inputs.len()
             )));
         };
-        let local = crate::dispatch_buffers::decode_f32_input_aligned(
-            local_bytes,
-            "FMM test dispatcher",
-        )?;
-        let cells = crate::dispatch_buffers::decode_u32_input_aligned(
-            cell_bytes,
-            "FMM test dispatcher",
-        )?;
+        let local =
+            crate::dispatch_buffers::decode_f32_input_aligned(local_bytes, "FMM test dispatcher")?;
+        let cells =
+            crate::dispatch_buffers::decode_u32_input_aligned(cell_bytes, "FMM test dispatcher")?;
         let out_len = out_bytes.len() / std::mem::size_of::<f32>();
         let mut out = Vec::with_capacity(out_len);
         for &cell in cells.iter().take(out_len) {

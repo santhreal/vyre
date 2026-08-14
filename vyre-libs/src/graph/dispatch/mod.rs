@@ -6,8 +6,8 @@
 //! self-hosting integration.
 
 pub mod adaptive_traverse;
-pub mod cpu_oracle;
 pub mod alias_registry;
+pub mod cpu_oracle;
 pub mod csr_bidirectional;
 pub mod csr_forward_or_changed;
 pub mod csr_frontier_queue_batch_memory;

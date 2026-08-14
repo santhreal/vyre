@@ -64,8 +64,9 @@ fn decl_kind_phase_program(op_id: &str, packed_haystack: bool) -> Program {
     let buffers = vec![
         BufferDecl::storage(NODES, 0, BufferAccess::ReadOnly, DataType::U32)
             .with_count(PHASE_WITNESS_ROWS.saturating_mul(VAST_NODE_STRIDE_U32)),
-        BufferDecl::storage(HAYSTACK, 1, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(source_haystack_words(PHASE_WITNESS_SOURCE_LEN, packed_haystack)),
+        BufferDecl::storage(HAYSTACK, 1, BufferAccess::ReadOnly, DataType::U32).with_count(
+            source_haystack_words(PHASE_WITNESS_SOURCE_LEN, packed_haystack),
+        ),
         BufferDecl::storage(ROW, 2, BufferAccess::ReadOnly, DataType::U32).with_count(1),
         BufferDecl::storage(HAYSTACK_LEN, 3, BufferAccess::ReadOnly, DataType::U32).with_count(1),
         BufferDecl::storage(NUM_NODES, 4, BufferAccess::ReadOnly, DataType::U32).with_count(1),

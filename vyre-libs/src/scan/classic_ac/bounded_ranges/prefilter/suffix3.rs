@@ -704,7 +704,12 @@ pub fn build_ac_bounded_ranges_suffix3_prefilter_program(
     pattern_count: u32,
     max_matches: u32,
 ) -> Program {
-    build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(dfa, pattern_count, max_matches, true)
+    build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
+        dfa,
+        pattern_count,
+        max_matches,
+        true,
+    )
 }
 
 /// Variant of [`build_ac_bounded_ranges_suffix3_prefilter_program`] that
@@ -754,7 +759,12 @@ pub fn try_build_ac_bounded_ranges_suffix3_prefilter_program(
     pattern_count: u32,
     max_matches: u32,
 ) -> Result<Program, String> {
-    try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(dfa, pattern_count, max_matches, true)
+    try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
+        dfa,
+        pattern_count,
+        max_matches,
+        true,
+    )
 }
 
 /// Fallible variant of [`build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce`].
@@ -775,25 +785,27 @@ pub fn try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coale
             dfa.output_records.len()
         )
     })?;
-    Ok(classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
-        "haystack",
-        "transitions",
-        "output_offsets",
-        "output_records",
-        "pattern_lengths",
-        "haystack_len",
-        "match_count",
-        "candidate_end_mask",
-        "candidate_suffix2_mask",
-        "candidate_suffix3_bloom",
-        "matches",
-        dfa.state_count,
-        output_records_len,
-        pattern_count,
-        max_matches,
-        dfa.max_pattern_len,
-        use_subgroup_coalesce,
-    ))
+    Ok(
+        classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
+            "haystack",
+            "transitions",
+            "output_offsets",
+            "output_records",
+            "pattern_lengths",
+            "haystack_len",
+            "match_count",
+            "candidate_end_mask",
+            "candidate_suffix2_mask",
+            "candidate_suffix3_bloom",
+            "matches",
+            dfa.state_count,
+            output_records_len,
+            pattern_count,
+            max_matches,
+            dfa.max_pattern_len,
+            use_subgroup_coalesce,
+        ),
+    )
 }
 
 #[cfg(test)]
@@ -816,10 +828,13 @@ mod tests {
     fn infallible_suffix3_prefilter_uses_real_dfa_not_empty_fallback() {
         let ac = classic_ac_compile(&[b"abc", b"de", b"abcd"]);
         let via_infallible =
-            build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(&ac.dfa, 3, 128, false);
-        let via_try =
-            try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(&ac.dfa, 3, 128, false)
-                .expect("valid DFA must build");
+            build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
+                &ac.dfa, 3, 128, false,
+            );
+        let via_try = try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
+            &ac.dfa, 3, 128, false,
+        )
+        .expect("valid DFA must build");
         // Binding 3 is output_records: the empty fallback carried 0 here.
         let records = via_infallible.buffers()[3].count;
         assert_eq!(records as usize, ac.dfa.output_records.len());
@@ -882,8 +897,9 @@ mod tests {
     #[test]
     fn bounded_ranges_suffix3_prefilter_program_has_compact_stable_shape() {
         let ac = classic_ac_compile(&[b"Authorization: Bearer ", b"token", b"tok"]);
-        let program =
-            build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(&ac.dfa, 3, 1024, false);
+        let program = build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
+            &ac.dfa, 3, 1024, false,
+        );
 
         assert_eq!(program.workgroup_size(), [128, 1, 1]);
         assert_eq!(program.buffers().len(), 11);

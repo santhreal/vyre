@@ -185,8 +185,14 @@ pub const CANONICAL_BITS: &[(&str, u32)] = &[
     ("unbounded_sprintf", UNBOUNDED_SPRINTF_LAUNCH),
     ("pointer_use_family", POINTER_USE_LAUNCH),
     ("type_tag_check", TYPE_TAG_CHECK_LAUNCH),
-    ("reassign_or_null_after_free", REASSIGN_NULL_AFTER_FREE_LAUNCH),
-    ("bounded_copy_or_length_check", BOUNDED_COPY_OR_LENGTH_CHECK_LAUNCH),
+    (
+        "reassign_or_null_after_free",
+        REASSIGN_NULL_AFTER_FREE_LAUNCH,
+    ),
+    (
+        "bounded_copy_or_length_check",
+        BOUNDED_COPY_OR_LENGTH_CHECK_LAUNCH,
+    ),
     ("allocator", ALLOCATOR),
     ("deallocator", FREE),
     ("worker_family", SINK_PROCESS),

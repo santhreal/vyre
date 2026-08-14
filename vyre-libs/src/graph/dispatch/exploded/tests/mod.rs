@@ -1,8 +1,8 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::graph::dispatch::cpu_oracle::CpuOracleDispatcher;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use std::sync::Mutex;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::exploded::build_cpu_reference;
 
 mod support;

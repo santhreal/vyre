@@ -380,10 +380,7 @@ pub(crate) fn number_scan(ctx: &ClassifyCtx<'_>, names: &ScanNames<'_>, is_float
                         Node::let_bind("scan_byte", ctx.byte_at(Expr::var(names.scan))),
                         Node::let_bind(
                             "scan_prev",
-                            ctx.byte_at(Expr::saturating_sub(
-                                Expr::var(names.scan),
-                                Expr::u32(1),
-                            )),
+                            ctx.byte_at(Expr::saturating_sub(Expr::var(names.scan), Expr::u32(1))),
                         ),
                         Node::let_bind("scan_next", ctx.lookahead(&Expr::var(names.scan), 1)),
                         Node::let_bind(
@@ -647,10 +644,7 @@ pub(crate) fn quoted_literal_scan(
             vec![Node::assign("tok_type", Expr::u32(unterminated))],
         ));
     }
-    Node::if_then(
-        Expr::eq(Expr::var("tok_type"), Expr::u32(tok_type)),
-        body,
-    )
+    Node::if_then(Expr::eq(Expr::var("tok_type"), Expr::u32(tok_type)), body)
 }
 
 /// Whitespace under a per-invocation scanner.
@@ -684,10 +678,7 @@ fn operator_tail_expr(ctx: &ClassifyCtx<'_>, index: Expr, dot_pair_is_tail: bool
     let mut doubled_chain = Expr::and(
         byte_eq(b.clone(), b'='),
         Expr::or(
-            Expr::and(
-                byte_eq(prev.clone(), b'<'),
-                byte_eq(prev2.clone(), b'<'),
-            ),
+            Expr::and(byte_eq(prev.clone(), b'<'), byte_eq(prev2.clone(), b'<')),
             Expr::and(byte_eq(prev.clone(), b'>'), byte_eq(prev2, b'>')),
         ),
     );
@@ -719,11 +710,7 @@ fn operator_tail_expr(ctx: &ClassifyCtx<'_>, index: Expr, dot_pair_is_tail: bool
 }
 
 /// True where a per-invocation scanner should open a token at `index`.
-pub(crate) fn token_start_expr(
-    ctx: &ClassifyCtx<'_>,
-    index: Expr,
-    opts: &TokenStartOpts,
-) -> Expr {
+pub(crate) fn token_start_expr(ctx: &ClassifyCtx<'_>, index: Expr, opts: &TokenStartOpts) -> Expr {
     let b = ctx.byte_at(index.clone());
     let prev = Expr::select(
         Expr::gt(index.clone(), Expr::u32(0)),
@@ -786,8 +773,7 @@ impl SerialLexer<'_> {
                             vec![Node::if_then(
                                 Expr::lt(Expr::var("cursor"), Expr::buf_len(self.haystack)),
                                 {
-                                    let mut body =
-                                        vec![Node::let_bind("pos", Expr::var("cursor"))];
+                                    let mut body = vec![Node::let_bind("pos", Expr::var("cursor"))];
                                     body.push(child_phase(
                                         self.op_id,
                                         &format!("{}::classify_at_pos", self.op_id),

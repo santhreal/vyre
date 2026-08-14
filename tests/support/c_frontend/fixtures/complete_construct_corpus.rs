@@ -4,8 +4,6 @@
 //! driver crate build the same token streams, so the fixtures have one owner
 //! here rather than a copy per crate.
 
-
-
 use crate::c_frontend::spelling::c_rows;
 pub(crate) fn fixture_macro_shaped_decl_after_preproc() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     c_rows(

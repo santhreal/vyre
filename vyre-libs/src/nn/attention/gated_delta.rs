@@ -148,8 +148,9 @@ fn recurrent_gated_delta_impl(
         ..
     } = *spec;
 
-    let qk_index =
-        |dim: Expr| gated_delta_layout::qk_index(sequence, key_heads, key_dim, Expr::var("token"), dim);
+    let qk_index = |dim: Expr| {
+        gated_delta_layout::qk_index(sequence, key_heads, key_dim, Expr::var("token"), dim)
+    };
     let state_index = |key_index: Expr, value_index: Expr| {
         gated_delta_layout::state_index(key_dim, value_dim, key_index, value_index)
     };

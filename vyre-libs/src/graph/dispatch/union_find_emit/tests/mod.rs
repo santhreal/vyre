@@ -1,8 +1,8 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::test_support::NeverDispatches;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_foundation::ir::Program;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::union_find::{union_find_dispatch_grid, union_find_program};
 
 #[test]
@@ -203,9 +203,7 @@ fn union_find_alias_via_rejects_empty_parent_with_edges_before_dispatch() {
 fn union_find_alias_via_empty_edges_returns_parent_without_dispatch() {
     let mut out = Vec::with_capacity(8);
     union_find_alias_via_into(
-        &NeverDispatches(
-            "Fix: empty union-find edge set must not submit a zero-work GPU dispatch",
-        ),
+        &NeverDispatches("Fix: empty union-find edge set must not submit a zero-work GPU dispatch"),
         &[0, 1, 2],
         &[],
         &[],

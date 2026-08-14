@@ -5,7 +5,6 @@
 //! driver crate build the same token streams, so the fixtures have one owner
 //! here rather than a copy per crate.
 
-
 /// ```c
 /// int a = ++x;
 /// int b = y--;
@@ -16,7 +15,6 @@
 /// int g = ~t;
 /// int h = !s;
 /// ```
-
 use crate::c_frontend::spelling::c_kinds;
 pub(crate) fn fixture_unary_prefix_and_postfix() -> (Vec<u32>, Vec<u32>) {
     let tok_types = c_kinds(
@@ -56,9 +54,7 @@ pub(crate) fn fixture_member_access() -> (Vec<u32>, Vec<u32>) {
 /// int a = arr[0];
 /// ```
 pub(crate) fn fixture_array_subscript() -> (Vec<u32>, Vec<u32>) {
-    let tok_types = c_kinds(
-        "INT IDENTIFIER ASSIGN IDENTIFIER LBRACKET INTEGER RBRACKET SEMICOLON",
-    );
+    let tok_types = c_kinds("INT IDENTIFIER ASSIGN IDENTIFIER LBRACKET INTEGER RBRACKET SEMICOLON");
     let tok_lens = vec![1; tok_types.len()];
     (tok_types, tok_lens)
 }

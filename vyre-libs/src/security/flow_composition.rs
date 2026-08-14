@@ -282,13 +282,13 @@ fn pack(words: &[u32]) -> Vec<u8> {
 /// `fout` seeds as the accumulator so the convergence lens grows monotonically.
 pub(crate) fn forward_reach_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
-        pack(&[0, 0, 0, 0]),                 // pg_nodes
-        pack(&[0, 1, 2, 3, 3]),              // pg_edge_offsets
-        pack(&[1, 2, 3]),                    // pg_edge_targets
-        pack(&[edge_kind::ASSIGNMENT; 3]),   // pg_edge_kind_mask
-        pack(&[0, 0, 0, 0]),                 // pg_node_tags
-        pack(&[0b0001]),                     // frontier_in = {0}
-        pack(&[0b0001]),                     // frontier_out accumulator seed
+        pack(&[0, 0, 0, 0]),               // pg_nodes
+        pack(&[0, 1, 2, 3, 3]),            // pg_edge_offsets
+        pack(&[1, 2, 3]),                  // pg_edge_targets
+        pack(&[edge_kind::ASSIGNMENT; 3]), // pg_edge_kind_mask
+        pack(&[0, 0, 0, 0]),               // pg_node_tags
+        pack(&[0b0001]),                   // frontier_in = {0}
+        pack(&[0b0001]),                   // frontier_out accumulator seed
     ]]
 }
 
@@ -301,13 +301,13 @@ pub(crate) fn forward_reach_fixture_expected() -> Vec<Vec<Vec<u8>>> {
 /// Diamond dominance tree `0 → {1, 2} → 3`, frontier seeded at {3}.
 pub(crate) fn dominance_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
-        pack(&[0, 0, 0, 0]),               // pg_nodes
-        pack(&[0, 2, 3, 4, 4]),            // pg_edge_offsets
-        pack(&[1, 2, 3, 3]),               // pg_edge_targets
-        pack(&[edge_kind::DOMINANCE; 4]),  // pg_edge_kind_mask
-        pack(&[0, 0, 0, 0]),               // pg_node_tags
-        pack(&[0b1000]),                   // frontier_in = {3}
-        pack(&[0b1000]),                   // frontier_out accumulator seed
+        pack(&[0, 0, 0, 0]),              // pg_nodes
+        pack(&[0, 2, 3, 4, 4]),           // pg_edge_offsets
+        pack(&[1, 2, 3, 3]),              // pg_edge_targets
+        pack(&[edge_kind::DOMINANCE; 4]), // pg_edge_kind_mask
+        pack(&[0, 0, 0, 0]),              // pg_node_tags
+        pack(&[0b1000]),                  // frontier_in = {3}
+        pack(&[0b1000]),                  // frontier_out accumulator seed
     ]]
 }
 
@@ -319,16 +319,16 @@ pub(crate) fn dominance_fixture_expected() -> Vec<Vec<Vec<u8>>> {
 /// The forward chain again, with source {0} and the sink tag on {1}.
 pub(crate) fn dataflow_hit_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
-        pack(&[0, 0, 0, 0]),                // pg_nodes
-        pack(&[0, 1, 2, 3, 3]),             // pg_edge_offsets
-        pack(&[1, 2, 3]),                   // pg_edge_targets
-        pack(&[edge_kind::ASSIGNMENT; 3]),  // pg_edge_kind_mask
-        pack(&[0, 0, 0, 0]),                // pg_node_tags
-        pack(&[0b0001]),                    // source = {0}
-        pack(&[0b0001]),                    // reach accumulator seed
-        pack(&[0b0010]),                    // sink = {1}
-        pack(&[0b0000]),                    // hits
-        pack(&[0b0000]),                    // out_scalar
+        pack(&[0, 0, 0, 0]),               // pg_nodes
+        pack(&[0, 1, 2, 3, 3]),            // pg_edge_offsets
+        pack(&[1, 2, 3]),                  // pg_edge_targets
+        pack(&[edge_kind::ASSIGNMENT; 3]), // pg_edge_kind_mask
+        pack(&[0, 0, 0, 0]),               // pg_node_tags
+        pack(&[0b0001]),                   // source = {0}
+        pack(&[0b0001]),                   // reach accumulator seed
+        pack(&[0b0010]),                   // sink = {1}
+        pack(&[0b0000]),                   // hits
+        pack(&[0b0000]),                   // out_scalar
     ]]
 }
 

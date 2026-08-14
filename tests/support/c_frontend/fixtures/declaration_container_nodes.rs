@@ -5,11 +5,9 @@
 //! driver crate build the same token streams, so the fixtures have one owner
 //! here rather than a copy per crate.
 
-
 /// ```c
 /// struct S { int x; };
 /// ```
-
 use crate::c_frontend::spelling::c_rows;
 pub(crate) fn fixture_struct_definition() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     c_rows("STRUCT IDENTIFIER LBRACE INT IDENTIFIER SEMICOLON RBRACE SEMICOLON")

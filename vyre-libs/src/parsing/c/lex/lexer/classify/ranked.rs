@@ -1,7 +1,7 @@
-use super::stages::{token_column_buffers, LEXER_WORKGROUP_SIZE};
 use super::parallel_common::{
     regular_parallel_classifier, regular_parallel_token_start_expr, RegularParallelMode,
 };
+use super::stages::{token_column_buffers, LEXER_WORKGROUP_SIZE};
 use super::*;
 
 pub fn c11_lexer_regular_ranked(

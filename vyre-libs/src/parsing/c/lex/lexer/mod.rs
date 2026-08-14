@@ -18,7 +18,9 @@ mod sections;
 mod single_pass;
 mod sparse_compact;
 
-pub use classify::{c11_lexer, c11_lexer_regular, c11_lexer_regular_ranked, c11_lexer_regular_sparse};
+pub use classify::{
+    c11_lexer, c11_lexer_regular, c11_lexer_regular_ranked, c11_lexer_regular_sparse,
+};
 pub use core_sparse::{
     c11_lexer_regular_sparse_no_directives_no_backscan,
     c11_lexer_regular_sparse_packed_haystack_with_block_totals,

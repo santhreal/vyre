@@ -74,7 +74,10 @@ impl IdentifierRowHash<'_> {
                             ),
                             Node::assign(
                                 self.names.hash,
-                                Expr::bitxor(Expr::var(self.names.hash), Expr::var(self.names.byte)),
+                                Expr::bitxor(
+                                    Expr::var(self.names.hash),
+                                    Expr::var(self.names.byte),
+                                ),
                             ),
                             Node::assign(
                                 self.names.hash,

@@ -78,7 +78,8 @@ where
         if logical_len > len {
             return Err(CPreprocessorError {
                 offset: start + len,
-                message: "Fix: TOK_PREPROC span must include the full phase-2 spliced directive row",
+                message:
+                    "Fix: TOK_PREPROC span must include the full phase-2 spliced directive row",
             });
         }
         if token_end > source.len() {
@@ -95,7 +96,11 @@ where
             offset: start,
             message: "Fix: preprocessor token span must be inside the source buffer",
         })?;
-        visit(DirectiveRow { index, start, bytes })?;
+        visit(DirectiveRow {
+            index,
+            start,
+            bytes,
+        })?;
     }
     Ok(())
 }

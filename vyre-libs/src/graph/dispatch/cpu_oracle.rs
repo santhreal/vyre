@@ -72,12 +72,8 @@ impl ProgramDispatcher for CpuOracleDispatcher {
         })?;
 
         match generator {
-            vyre_primitives::graph::persistent_bfs::OP_ID => {
-                persistent_bfs_oracle(program, inputs)
-            }
-            vyre_primitives::graph::exploded::OP_ID => {
-                exploded_ifds_csr_oracle(program, inputs)
-            }
+            vyre_primitives::graph::persistent_bfs::OP_ID => persistent_bfs_oracle(program, inputs),
+            vyre_primitives::graph::exploded::OP_ID => exploded_ifds_csr_oracle(program, inputs),
             other if self.persistent_bfs_aliases.contains(&other) => {
                 persistent_bfs_oracle(program, inputs)
             }
@@ -321,8 +317,7 @@ fn exploded_ifds_csr_oracle(
     let mut col_idx_padded = vec![0u32; col_idx_words];
     if col_idx.len() > col_idx_words {
         return Err(DispatchError::BackendError(format!(
-            "Fix: exploded IFDS oracle emitted {} columns but program allocates {col_idx_words}."
-            ,
+            "Fix: exploded IFDS oracle emitted {} columns but program allocates {col_idx_words}.",
             col_idx.len()
         )));
     }
@@ -376,8 +371,7 @@ fn parse_ifds_rule_inputs(
         &inter_dst_block,
     )?;
     let flow_gen = read_ifds_triples("GEN", key.gen_count, &gen_proc, &gen_block, &gen_fact)?;
-    let flow_kill =
-        read_ifds_triples("KILL", key.kill_count, &kill_proc, &kill_block, &kill_fact)?;
+    let flow_kill = read_ifds_triples("KILL", key.kill_count, &kill_proc, &kill_block, &kill_fact)?;
 
     Ok((intra_edges, inter_edges, flow_gen, flow_kill))
 }
@@ -393,8 +387,7 @@ fn read_ifds_triples(
     for (name, column) in [("proc", proc), ("a", a), ("b", b)] {
         if column.len() < count {
             return Err(DispatchError::BadInputs(format!(
-                "Fix: exploded IFDS oracle {kind} {name} column has {} word(s), expected {count}."
-                ,
+                "Fix: exploded IFDS oracle {kind} {name} column has {} word(s), expected {count}.",
                 column.len()
             )));
         }
@@ -421,8 +414,7 @@ fn read_ifds_quads(
     ] {
         if column.len() < count {
             return Err(DispatchError::BadInputs(format!(
-                "Fix: exploded IFDS oracle {kind} {name} column has {} word(s), expected {count}."
-                ,
+                "Fix: exploded IFDS oracle {kind} {name} column has {} word(s), expected {count}.",
                 column.len()
             )));
         }

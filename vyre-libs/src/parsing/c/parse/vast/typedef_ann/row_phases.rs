@@ -22,9 +22,7 @@ use vyre_foundation::operation::OperationFixtures;
 #[cfg(any(test, feature = "cpu-parity"))]
 use super::super::phase_witness::PhaseWitness;
 #[cfg(any(test, feature = "cpu-parity"))]
-use super::super::ref_typedef::{
-    declaration_kind_at, scope_open_before, visible_declaration_kind,
-};
+use super::super::ref_typedef::{declaration_kind_at, scope_open_before, visible_declaration_kind};
 
 /// Scope-open row for a given row, from the reverse scope walk.
 pub(super) const SCOPE_OPEN_FOR_ROW_OP_ID: &str =

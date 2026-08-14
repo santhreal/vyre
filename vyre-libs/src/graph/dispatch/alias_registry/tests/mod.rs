@@ -164,15 +164,18 @@ fn generated_unknown_ids_never_match_alias_union_or_extensions() {
 
 #[test]
 fn alias_registry_uses_dedicated_observability_counter() {
-    let alias_before = crate::telemetry::observability::alias_registry_calls.load(Ordering::Relaxed);
-    let dataflow_before = crate::telemetry::observability::dataflow_fixpoint_calls.load(Ordering::Relaxed);
+    let alias_before =
+        crate::telemetry::observability::alias_registry_calls.load(Ordering::Relaxed);
+    let dataflow_before =
+        crate::telemetry::observability::dataflow_fixpoint_calls.load(Ordering::Relaxed);
 
     let registry = build_default_registry();
     assert!(alias_union_registered(&registry));
     assert!(lookup_alias_op(&registry, ALIAS_UNION_OP_ID).is_some());
 
     let alias_after = crate::telemetry::observability::alias_registry_calls.load(Ordering::Relaxed);
-    let dataflow_after = crate::telemetry::observability::dataflow_fixpoint_calls.load(Ordering::Relaxed);
+    let dataflow_after =
+        crate::telemetry::observability::dataflow_fixpoint_calls.load(Ordering::Relaxed);
     assert!(
         alias_after >= alias_before + 3,
         "Fix: alias-registry wrapper calls must charge the graph alias counter."

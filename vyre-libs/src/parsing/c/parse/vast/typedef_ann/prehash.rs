@@ -60,11 +60,11 @@ pub(super) fn c11_prehash_vast_identifiers_impl(
         },
     };
 
-    let mut loop_body = vec![Node::let_bind("raw_kind", Expr::load(vast_nodes, base.clone()))];
-    loop_body.extend(row.nodes(Expr::eq(
-        Expr::var("raw_kind"),
-        Expr::u32(TOK_IDENTIFIER),
-    )));
+    let mut loop_body = vec![Node::let_bind(
+        "raw_kind",
+        Expr::load(vast_nodes, base.clone()),
+    )];
+    loop_body.extend(row.nodes(Expr::eq(Expr::var("raw_kind"), Expr::u32(TOK_IDENTIFIER))));
 
     for field in 0..VAST_NODE_STRIDE_U32 {
         let value = if field == VAST_TYPEDEF_SYMBOL_FIELD {

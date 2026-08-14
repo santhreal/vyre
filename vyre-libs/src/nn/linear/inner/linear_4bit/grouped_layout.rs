@@ -97,10 +97,7 @@ pub(super) fn push_packed_word_fetch(
         ),
         Node::let_bind(
             "packed_word",
-            Expr::subgroup_shuffle(
-                Expr::var("packed_word_lane"),
-                Expr::var("word_leader_lane"),
-            ),
+            Expr::subgroup_shuffle(Expr::var("packed_word_lane"), Expr::var("word_leader_lane")),
         ),
     ]);
 }

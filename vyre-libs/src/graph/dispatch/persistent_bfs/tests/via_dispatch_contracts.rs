@@ -2,9 +2,9 @@ use super::super::*;
 use super::linear_graph;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::test_support::NeverDispatches;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use std::cell::RefCell;
 use vyre_foundation::ir::Program;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 struct PersistentBfsDispatcher {
     outputs: Vec<Vec<u8>>,
@@ -135,7 +135,16 @@ fn linear_expand(
     max_iters: u32,
 ) -> Result<(Vec<u32>, u32, u32), DispatchError> {
     let (off, tgt, msk) = linear_graph();
-    bfs_expand_via(dispatcher, 4, &off, &tgt, &msk, seed, 0xFFFF_FFFF, max_iters)
+    bfs_expand_via(
+        dispatcher,
+        4,
+        &off,
+        &tgt,
+        &msk,
+        seed,
+        0xFFFF_FFFF,
+        max_iters,
+    )
 }
 
 #[test]
@@ -195,8 +204,9 @@ fn via_into_rejects_non_boolean_converged_flag_readback() {
     };
     let mut frontier = Vec::new();
 
-    let err = linear_expand_into(&dispatcher, &[0b0001], 4, &mut frontier)
-        .expect_err("Fix: persistent BFS wrapper must reject a non-boolean converged-flag readback");
+    let err = linear_expand_into(&dispatcher, &[0b0001], 4, &mut frontier).expect_err(
+        "Fix: persistent BFS wrapper must reject a non-boolean converged-flag readback",
+    );
 
     assert!(
         matches!(err, DispatchError::BackendError(_)),
@@ -361,8 +371,7 @@ fn via_rejects_extra_outputs() {
             u32_slice_to_le_bytes(&[99]),
         ],
     };
-    let err =
-        linear_expand(&dispatcher, &[0b0001], 4).expect_err("extra outputs must be rejected");
+    let err = linear_expand(&dispatcher, &[0b0001], 4).expect_err("extra outputs must be rejected");
     assert!(
         matches!(err, DispatchError::BackendError(_)),
         "unexpected error: {err:?}"

@@ -1,8 +1,8 @@
+use std::cell::{Cell, RefCell};
+use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{
     DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
-use std::cell::{Cell, RefCell};
-use vyre_foundation::ir::Program;
 
 use super::super::ResidentAdaptiveTraversalGraph;
 
@@ -154,9 +154,12 @@ impl ProgramDispatcher for RecordingResidentDispatcher {
         self.step_grids
             .borrow_mut()
             .push(steps.iter().map(|step| step.grid_override).collect());
-        self.step_programs
-            .borrow_mut()
-            .push(steps.iter().map(|step| step.program.fingerprint()).collect());
+        self.step_programs.borrow_mut().push(
+            steps
+                .iter()
+                .map(|step| step.program.fingerprint())
+                .collect(),
+        );
         outputs.clear();
         outputs.extend(read_ranges.iter().map(|range| vec![0u8; range.byte_len]));
         Ok(())
