@@ -17,6 +17,21 @@ pub(crate) fn consumes_host_input(info: &BufferBindingInfo) -> bool {
         && (!info.is_output || info.preserve_input_contents)
 }
 
+/// Return true when a binding is the slot a single dispatch-parameter handle
+/// fills.
+///
+/// Only uniform and push-constant memory carries dispatch parameters, and only
+/// the first such binding takes the caller's params handle; later ones consume
+/// ordinary input handles. Both the persistent and the pre-recorded binding
+/// walks used to spell this kind test out, so the two could disagree about
+/// which binding a params handle lands on.
+pub(crate) fn accepts_params_handle(info: &BufferBindingInfo) -> bool {
+    matches!(
+        info.kind,
+        vyre_foundation::ir::MemoryKind::Uniform | vyre_foundation::ir::MemoryKind::Push
+    )
+}
+
 /// Bytes a binding declares through its element count, or 0 when it declares none.
 ///
 /// The one place that turns `BufferDecl::count` into a host byte length. Three

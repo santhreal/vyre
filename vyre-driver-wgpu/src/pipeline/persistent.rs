@@ -5,8 +5,8 @@ use std::sync::Arc;
 use vyre_driver::BackendError;
 
 use super::binding::{
-    clear_outputs_for_bound, consumes_host_input, declared_byte_size, usage_for_binding,
-    validate_handle,
+    accepts_params_handle, clear_outputs_for_bound, consumes_host_input, declared_byte_size,
+    usage_for_binding, validate_handle,
 };
 use crate::buffer::{BindGroupCacheStats, GpuBufferHandle};
 use crate::numeric::WGPU_NUMERIC;
@@ -443,12 +443,7 @@ impl WgpuPipeline {
                 })?;
                 output_index += 1;
                 handle
-            } else if matches!(
-                info.kind,
-                vyre_foundation::ir::MemoryKind::Uniform | vyre_foundation::ir::MemoryKind::Push
-            ) && item.params.is_some()
-                && !params_used
-            {
+            } else if accepts_params_handle(info) && item.params.is_some() && !params_used {
                 params_used = true;
                 let Some(params) = item.params else {
                     return Err(BackendError::new(

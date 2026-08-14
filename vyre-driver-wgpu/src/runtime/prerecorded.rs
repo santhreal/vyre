@@ -6,7 +6,7 @@ use smallvec::SmallVec;
 use vyre_driver::BackendError;
 
 use crate::buffer::GpuBufferHandle;
-use crate::pipeline::binding::{clear_outputs_for_bound, validate_handle};
+use crate::pipeline::binding::{accepts_params_handle, clear_outputs_for_bound, validate_handle};
 use crate::pipeline::persistent::DispatchNaming;
 use crate::pipeline::{BufferBindingInfo, WgpuPipeline};
 
@@ -229,12 +229,7 @@ fn bind_handles<'a>(
             })?;
             output_index += 1;
             handle
-        } else if matches!(
-            info.kind,
-            vyre_foundation::ir::MemoryKind::Uniform | vyre_foundation::ir::MemoryKind::Push
-        ) && params.is_some()
-            && !params_used
-        {
+        } else if accepts_params_handle(info) && params.is_some() && !params_used {
             params_used = true;
             if let Some(handle) = params {
                 handle
