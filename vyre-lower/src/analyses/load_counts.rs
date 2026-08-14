@@ -120,4 +120,46 @@ mod tests {
             "Fix: load counting must include real structured child bodies without treating loop bound operands as child indices."
         );
     }
+
+    /// Both memory-placement analyses read their precondition through this
+    /// traversal, so they must agree on the count for the same descriptor,
+    /// nested bodies included.
+    ///
+    /// WHY: shared-memory promotion and constant-buffer promotion each carried
+    /// their own copy of this walk, differing only in the eligibility filter.
+    /// Two copies is two answers to "how many times is this binding read", and
+    /// a rewrite acts on whichever it asked. This goes red the moment either
+    /// one grows its own traversal again and drifts.
+    ///
+    /// It does not check the eligibility filters themselves; each analysis owns
+    /// its own and tests it.
+    #[test]
+    fn both_promotion_analyses_read_the_same_nested_load_count() {
+        use crate::descriptor_builder::{body, descriptor, effect, global_ro, lit, SlotCount};
+        use crate::KernelOpKind;
+        use vyre_foundation::ir::DataType;
+
+        let desc = descriptor("k")
+            .slot(global_ro(0, DataType::F32, "ro0").with_count(16))
+            .dispatch(32, 1, 1)
+            .body(
+                body()
+                    .op(lit(0, 0))
+                    .op(effect(KernelOpKind::StructuredIfThen, [0, 0]))
+                    .child(super::fixtures::literal_then_loads(3))
+                    .literal(LiteralValue::Bool(true)),
+            )
+            .build();
+
+        let shared = crate::analyses::analyze_shared_mem_promote(&desc);
+        let constant = crate::analyses::analyze_const_buffer_promote(&desc);
+        assert_eq!(
+            (
+                shared.candidates[0].access_count,
+                constant.candidates[0].load_count
+            ),
+            (3, 3),
+            "Fix: both placement analyses count loads through count_global_loads_by_slot, so a nested binding read three times must read as three on each side."
+        );
+    }
 }
