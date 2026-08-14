@@ -8,10 +8,10 @@ use std::process::Command;
 
 use serde::Serialize;
 
+use crate::manifest_walk::MAX_MANIFEST_BYTES;
 use crate::release::release_train;
 
 const MAX_JSON_BYTES: u64 = 8_388_608;
-const MAX_MANIFEST_BYTES: u64 = 1_048_576;
 
 #[derive(Debug, Serialize)]
 struct PackageReadiness {

@@ -5,6 +5,8 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
+use crate::manifest_walk::MAX_MANIFEST_BYTES;
+
 #[derive(Debug, Serialize)]
 struct FeatureMatrix {
     schema_version: u32,
@@ -27,7 +29,6 @@ struct PackageFeatures {
     release_policy: &'static str,
 }
 
-const MAX_MANIFEST_BYTES: u64 = 1_048_576;
 const REQUIRED_RELEASE_PACKAGES: &[&str] = &[
     "vyre",
     "vyre-driver-cuda",

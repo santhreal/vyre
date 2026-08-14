@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
+use crate::manifest_walk::{MAX_MANIFEST_BYTES, workspace_package as load_workspace_package};
 use crate::release::release_train;
 
 #[derive(Debug, Serialize)]
@@ -50,7 +51,6 @@ struct RequiredReleaseSurface {
     release_surface: &'static str,
 }
 
-const MAX_MANIFEST_BYTES: u64 = 1_048_576;
 const MAX_README_BYTES: u64 = 2_097_152;
 
 fn required_release_surfaces() -> Vec<RequiredReleaseSurface> {
@@ -84,7 +84,8 @@ pub(crate) fn run(args: &[String]) {
     let vyre_root = crate::checkout::checkout_root();
     let mut packages = Vec::new();
     let mut metadata_blockers = Vec::new();
-    let workspace_package = load_workspace_package(&vyre_root, &mut metadata_blockers);
+    let workspace_package =
+        load_workspace_package(&vyre_root, "release metadata", &mut metadata_blockers);
     collect_packages(
         &vyre_root,
         workspace_package.as_ref(),
@@ -193,39 +194,6 @@ fn collect_packages(
     crate::manifest_walk::collect_manifests(root, "metadata", packages, blockers, |path| {
         parse_package(path, workspace_package)
     });
-}
-
-fn load_workspace_package(root: &Path, blockers: &mut Vec<String>) -> Option<toml::value::Table> {
-    let manifest = root.join("Cargo.toml");
-    let text = match crate::output_arg::read_text_bounded(
-        &manifest,
-        MAX_MANIFEST_BYTES,
-        "release metadata",
-    ) {
-        Ok(text) => text,
-        Err(error) => {
-            blockers.push(format!(
-                "failed to read workspace package manifest `{}`: {error}",
-                manifest.display()
-            ));
-            return None;
-        }
-    };
-    let value = match toml::from_str::<toml::Value>(&text) {
-        Ok(value) => value,
-        Err(error) => {
-            blockers.push(format!(
-                "failed to parse workspace package manifest `{}`: {error}",
-                manifest.display()
-            ));
-            return None;
-        }
-    };
-    value
-        .get("workspace")
-        .and_then(|workspace| workspace.get("package"))
-        .and_then(toml::Value::as_table)
-        .cloned()
 }
 
 fn parse_package(

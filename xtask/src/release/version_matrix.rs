@@ -1,7 +1,7 @@
 //! Generate release version-story evidence for Vyre.
 
 use std::fs;
-use std::io::{self, Read};
+use std::io;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
@@ -644,31 +644,8 @@ fn collect_workspace_versions(
 }
 
 fn workspace_package_version(root: &Path, blockers: &mut Vec<String>) -> Option<String> {
-    let manifest = root.join("Cargo.toml");
-    let text = match read_text_bounded(&manifest) {
-        Ok(text) => text,
-        Err(error) => {
-            blockers.push(format!(
-                "failed to read workspace package manifest `{}`: {error}",
-                manifest.display()
-            ));
-            return None;
-        }
-    };
-    let value = match toml::from_str::<toml::Value>(&text) {
-        Ok(value) => value,
-        Err(error) => {
-            blockers.push(format!(
-                "failed to parse workspace package manifest `{}`: {error}",
-                manifest.display()
-            ));
-            return None;
-        }
-    };
-    value
-        .get("workspace")
-        .and_then(|workspace| workspace.get("package"))
-        .and_then(|package| package.get("version"))
+    crate::manifest_walk::workspace_package(root, "version evidence", blockers)?
+        .get("version")
         .and_then(toml::Value::as_str)
         .map(str::to_string)
 }
@@ -744,20 +721,12 @@ fn default_output() -> PathBuf {
     crate::checkout::checkout_root().join("release/evidence/version/version-matrix.json")
 }
 
+/// Read version evidence text under this generator's cap.
+///
+/// The bound check itself lives in `output_arg`; this only binds the cap and the
+/// error context for the nine call sites below.
 fn read_text_bounded(path: &Path) -> io::Result<String> {
-    let mut reader = fs::File::open(path)?.take(MAX_VERSION_EVIDENCE_TEXT_BYTES.saturating_add(1));
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > MAX_VERSION_EVIDENCE_TEXT_BYTES {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "{} exceeds {MAX_VERSION_EVIDENCE_TEXT_BYTES} byte version evidence read cap",
-                path.display()
-            ),
-        ));
-    }
-    Ok(text)
+    crate::output_arg::read_text_bounded(path, MAX_VERSION_EVIDENCE_TEXT_BYTES, "version evidence")
 }
 
 #[cfg(test)]
