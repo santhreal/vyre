@@ -1,15 +1,3 @@
-#![allow(
-    clippy::doc_lazy_continuation,
-    clippy::double_must_use,
-    clippy::manual_div_ceil,
-    clippy::needless_range_loop,
-    clippy::collapsible_if,
-    clippy::match_like_matches_macro,
-    clippy::redundant_closure,
-    clippy::too_many_arguments,
-    clippy::nonminimal_bool,
-    clippy::derivable_impls
-)]
 //! PTX text emitter for vyre `KernelDescriptor`.
 //!
 //! Consumes a substrate-neutral `vyre_lower::KernelDescriptor` and

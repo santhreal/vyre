@@ -1,26 +1,3 @@
-#![allow(
-    clippy::doc_lazy_continuation,
-    clippy::double_must_use,
-    clippy::manual_div_ceil,
-    clippy::needless_range_loop,
-    clippy::collapsible_if,
-    clippy::match_like_matches_macro,
-    clippy::redundant_closure,
-    clippy::too_many_arguments,
-    clippy::nonminimal_bool,
-    clippy::derivable_impls,
-    clippy::unnecessary_lazy_evaluations,
-    clippy::needless_lifetimes,
-    clippy::bind_instead_of_map,
-    clippy::needless_borrows_for_generic_args,
-    clippy::map_entry,
-    clippy::map_identity,
-    clippy::manual_map,
-    clippy::match_single_binding,
-    clippy::field_reassign_with_default,
-    dead_code,
-    unused_variables
-)]
 //! Naga IR emitter for vyre `KernelDescriptor`.
 //!
 //! Consumes a substrate-neutral `vyre_lower::KernelDescriptor` and
