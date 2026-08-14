@@ -23,61 +23,19 @@
 mod common;
 use common::live_backend;
 
+use vyre_driver::parity_harness::u32_binop_parity;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::Expr;
 
-/// Little-endian `u32` words -> bytes (self-contained).
-fn u32_bytes(words: &[u32]) -> Vec<u8> {
-    let mut bytes = Vec::with_capacity(words.len() * 4);
-    for &w in words {
-        bytes.extend_from_slice(&w.to_le_bytes());
-    }
-    bytes
-}
-
-/// `out[i] = op(a[i], b[i])` over all-U32 buffers, `op` built from two loads.
-fn program(n: u32, build: fn(Expr, Expr) -> Expr) -> Program {
-    let mut body = Vec::new();
-    for i in 0..n {
-        body.push(Node::store(
-            "out",
-            Expr::u32(i),
-            build(Expr::load("a", Expr::u32(i)), Expr::load("b", Expr::u32(i))),
-        ));
-    }
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(n),
-            BufferDecl::storage("a", 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::storage("b", 2, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-        ],
-        [1, 1, 1],
-        body,
+/// `out[i] = build(a[i], b[i])` over u32 buffers, dispatched on `ps`.
+fn dispatch(backend: &CudaBackend, build: fn(Expr, Expr) -> Expr, ps: &[(u32, u32)]) -> Vec<u32> {
+    u32_binop_parity(
+        &|program, inputs| backend.dispatch_borrowed(program, inputs, &DispatchConfig::default()),
+        build,
+        ps,
+        "div-zero / shift-mask parity",
     )
-}
-
-fn dispatch(backend: &CudaBackend, program: &Program, ps: &[(u32, u32)]) -> Vec<u32> {
-    let a = u32_bytes(&ps.iter().map(|&(a, _)| a).collect::<Vec<_>>());
-    let b = u32_bytes(&ps.iter().map(|&(_, b)| b).collect::<Vec<_>>());
-    let out_init = u32_bytes(&vec![0u32; ps.len()]);
-    let outputs = backend
-        .dispatch_borrowed(
-            program,
-            &[out_init.as_slice(), a.as_slice(), b.as_slice()],
-            &DispatchConfig::default(),
-        )
-        .expect("Fix: CUDA must dispatch the div-zero / shift-mask parity contract.");
-    assert_eq!(
-        outputs.len(),
-        1,
-        "program declares one ReadWrite output; CUDA returned {} buffer(s)",
-        outputs.len()
-    );
-    outputs[0]
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect()
 }
 
 /// Divisor cases including the zero-divisor sentinels and normal control values.
@@ -98,7 +56,7 @@ fn div_cases() -> Vec<(u32, u32)> {
 fn u32_div_by_zero_yields_max_on_cuda() {
     let backend = live_backend();
     let ps = div_cases();
-    let gpu = dispatch(&backend, &program(ps.len() as u32, Expr::div), &ps);
+    let gpu = dispatch(&backend, Expr::div, &ps);
     let expected: Vec<u32> = ps
         .iter()
         .map(|&(a, b)| if b == 0 { u32::MAX } else { a / b })
@@ -120,7 +78,7 @@ fn u32_div_by_zero_yields_max_on_cuda() {
 fn u32_mod_by_zero_yields_zero_on_cuda() {
     let backend = live_backend();
     let ps = div_cases();
-    let gpu = dispatch(&backend, &program(ps.len() as u32, Expr::rem), &ps);
+    let gpu = dispatch(&backend, Expr::rem, &ps);
     let expected: Vec<u32> = ps
         .iter()
         .map(|&(a, b)| if b == 0 { 0 } else { a % b })
@@ -156,7 +114,7 @@ fn shift_cases() -> Vec<(u32, u32)> {
 fn u32_oversized_shift_left_masks_amount_on_cuda() {
     let backend = live_backend();
     let ps = shift_cases();
-    let gpu = dispatch(&backend, &program(ps.len() as u32, Expr::shl), &ps);
+    let gpu = dispatch(&backend, Expr::shl, &ps);
     // Oracle `shift_u32`: left << (right & 31). wrapping_shl masks identically.
     let expected: Vec<u32> = ps.iter().map(|&(v, s)| v.wrapping_shl(s)).collect();
     // Load-bearing oversized cases: 1<<32 -> 1 (NOT 0), 0xFFFFFFFF<<32 -> 0xFFFFFFFF,
@@ -187,7 +145,7 @@ fn u32_oversized_shift_left_masks_amount_on_cuda() {
 fn u32_oversized_shift_right_masks_amount_on_cuda() {
     let backend = live_backend();
     let ps = shift_cases();
-    let gpu = dispatch(&backend, &program(ps.len() as u32, Expr::shr), &ps);
+    let gpu = dispatch(&backend, Expr::shr, &ps);
     let expected: Vec<u32> = ps.iter().map(|&(v, s)| v.wrapping_shr(s)).collect();
     // 1>>32 -> 1 (32&31==0), 0xFFFFFFFF>>32 -> 0xFFFFFFFF, 0xFF>>36 -> 0xFF>>4 == 0xF.
     assert_eq!(

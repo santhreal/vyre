@@ -52,6 +52,9 @@ vyre-test-support.workspace = true
 # crates, so the emitted-PTX corpus is pinned the same way emitted artifacts
 # are instead of growing a second comparison spelling.
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
+# Elementwise parity-gate scaffolding, so the live-device parity tests state
+# their case tables and references and nothing else.
+vyre-driver = { workspace = true, features = ["test-fixtures"] }
 # Integration tests and benchmarks assert against the lower-layer libraries they
 # exercise. The canonical scan product is a direct dev dependency.
 vyre-libs = { path = "../vyre-libs", features = ["full", "c-parser"] }

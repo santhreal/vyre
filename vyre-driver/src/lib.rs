@@ -98,6 +98,9 @@ pub mod output_slots;
 /// launch metadata and a uniform buffer upload, based on a per-backend
 /// [`crate::param_inlining::ParamInliningPolicy`].
 pub mod param_inlining;
+/// Elementwise parity-gate scaffolding shared by the concrete driver crates.
+#[cfg(any(test, feature = "test-fixtures"))]
+pub mod parity_harness;
 /// Persistent-kernel-mode decision policy (ROADMAP D1). Decides
 /// whether to replace N small kernel launches with one persistent
 /// kernel that polls a device-side work queue, based on measured

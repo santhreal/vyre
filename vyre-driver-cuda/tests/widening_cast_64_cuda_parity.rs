@@ -23,78 +23,37 @@
 mod common;
 use common::live_backend;
 
+use vyre_driver::parity_harness::{
+    dispatch_single_output, elementwise_program, u64_words, ParityInput,
+};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{DataType, Expr};
 
-/// Little-endian `u32` words -> bytes (self-contained; no dependency on the
-/// shared matrix helpers' word-packing).
-fn u32_bytes(words: &[u32]) -> Vec<u8> {
-    let mut bytes = Vec::with_capacity(words.len() * 4);
-    for &w in words {
-        bytes.extend_from_slice(&w.to_le_bytes());
-    }
-    bytes
-}
-
-/// `out[i] = cast(target64, load(src, i))`: `src` is a 32-bit buffer (signed or
-/// unsigned per `src_ty`), `out` is the 64-bit `target64` buffer (8 bytes/elem).
-/// One thread ([1,1,1]) writes every element, mirroring the wgpu gate so the
-/// only moving part is the backend.
-fn widen_program(src_ty: DataType, target64: DataType, n: u32) -> Program {
-    let mut body = Vec::new();
-    for i in 0..n {
-        body.push(Node::store(
-            "out",
-            Expr::u32(i),
-            Expr::cast(target64.clone(), Expr::load("src", Expr::u32(i))),
-        ));
-    }
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::ReadWrite, target64).with_count(n),
-            BufferDecl::storage("src", 1, BufferAccess::ReadOnly, src_ty).with_count(n),
-        ],
-        [1, 1, 1],
-        body,
-    )
-}
-
-/// Dispatch and reconstruct each 64-bit element from its two little-endian words.
+/// Dispatch `out[i] = cast(target64, src[i])` and reconstruct each 64-bit
+/// element from its two little-endian words.
+///
+/// `src` is a 32-bit buffer typed by `src_ty` so the widening convert is driven
+/// by the SOURCE signedness, and `out` is an 8-byte-per-element `target64`
+/// buffer, which is the sizing no earlier CUDA test had ever dispatched.
 fn run(backend: &CudaBackend, src_ty: DataType, target64: DataType, words: &[u32]) -> Vec<u64> {
-    let n = words.len() as u32;
-    let program = widen_program(src_ty, target64, n);
-    let src_bytes = u32_bytes(words);
-    // 8 bytes per 64-bit output element => 2 zero u32 words each.
-    let out_init = u32_bytes(&vec![0u32; words.len() * 2]);
-    let outputs = backend
-        .dispatch_borrowed(
-            &program,
-            &[out_init.as_slice(), src_bytes.as_slice()],
-            &DispatchConfig::default(),
-        )
-        .expect("Fix: CUDA must dispatch the 64-bit widening-cast contract.");
-    assert_eq!(
-        outputs.len(),
-        1,
-        "widening program declares one ReadWrite output (out); CUDA returned {} buffer(s)",
-        outputs.len()
-    );
-    assert_eq!(
-        outputs[0].len(),
+    let buffers = vec![ParityInput::packed(
+        "src",
+        src_ty,
+        vyre_driver::parity_harness::u32_bytes(words),
+    )];
+    let count = words.len() as u32;
+    let program = elementwise_program(target64.clone(), &buffers, count, &|loads| {
+        Expr::cast(target64.clone(), loads[0].clone())
+    });
+    let bytes = dispatch_single_output(
+        &|program, inputs| backend.dispatch_borrowed(program, inputs, &DispatchConfig::default()),
+        &program,
+        &buffers,
         words.len() * 8,
-        "CUDA 64-bit output buffer must be 8 bytes per element; got {} bytes for {} elements",
-        outputs[0].len(),
-        words.len()
+        "64-bit widening-cast parity",
     );
-    outputs[0]
-        .chunks_exact(8)
-        .map(|c| {
-            let low = u32::from_le_bytes([c[0], c[1], c[2], c[3]]);
-            let high = u32::from_le_bytes([c[4], c[5], c[6], c[7]]);
-            (u64::from(high) << 32) | u64::from(low)
-        })
-        .collect()
+    u64_words(&bytes)
 }
 
 /// Bit patterns spanning the sign boundary and the extremes.

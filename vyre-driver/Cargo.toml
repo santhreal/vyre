@@ -44,6 +44,10 @@ self-substrate-adapters = [
     "vyre-self-substrate/telemetry",
 ]
 
+# Elementwise parity-gate scaffolding, used only by the concrete driver crates'
+# tests. Off by default so a published build does not carry test scaffolding.
+test-fixtures = []
+
 [dependencies]
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
