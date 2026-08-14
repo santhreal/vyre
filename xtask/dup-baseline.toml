@@ -76,23 +76,23 @@ total_lines = 75103
 
 [[crate]]
 name = "vyre-emit-metal"
-duplicate_lines = 41
-total_lines = 780
+duplicate_lines = 29
+total_lines = 768
 
 [[crate]]
 name = "vyre-emit-naga"
-duplicate_lines = 498
-total_lines = 9082
+duplicate_lines = 404
+total_lines = 9053
 
 [[crate]]
 name = "vyre-emit-ptx"
-duplicate_lines = 785
-total_lines = 11690
+duplicate_lines = 377
+total_lines = 11174
 
 [[crate]]
 name = "vyre-emit-spirv"
-duplicate_lines = 213
-total_lines = 1330
+duplicate_lines = 49
+total_lines = 1146
 
 [[crate]]
 name = "vyre-foundation"
@@ -121,8 +121,8 @@ total_lines = 3387
 
 [[crate]]
 name = "vyre-lower"
-duplicate_lines = 2114
-total_lines = 14842
+duplicate_lines = 2088
+total_lines = 15134
 
 [[crate]]
 name = "vyre-macros"

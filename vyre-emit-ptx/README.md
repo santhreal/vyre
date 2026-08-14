@@ -66,8 +66,8 @@ assert!(ptx.contains(".visible .entry"));
 - `ldmatrix_cp_async`: Ampere+ async global → shared copies.
 - `predicated_execution`: fold short branches into predicated ops.
 - `instruction_scheduling`: issue-slot-aware instruction order.
-- `vec_load_fusion`: adjacent `LoadGlobal`+1 chains → `ld.global.v2/v4`.
-- `vec_store_fusion`: adjacent `StoreGlobal`+1 chains → `st.global.v2/v4`.
+- `vec_memory_fusion`: adjacent `LoadGlobal`+1 or `StoreGlobal`+1 chains →
+  `ld.global.v2/v4` / `st.global.v2/v4`, selected by `MemoryFusionKind`.
 
 Run `patterns::audit(&desc, target)` for a unified read-only `PtxAuditReport`
 covering all six target-strategy pattern families.

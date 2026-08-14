@@ -94,6 +94,40 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `vyre_primitives::hardware::region`. The archived
   `docs/migration-vyre-ops-to-intrinsics.md` page is removed; the Category A
   and C classification rule it carried is owned by `docs/lego-block-rule.md`.
+- The three emitter pattern-audit reports no longer carry inherent copies of
+  the `PatternAudit` methods they already inherit. `NagaAuditReport` and
+  `PtxAuditReport` drop `total_candidates`, `has_any`, `format_short`, and
+  `is_clean`; `SpirvAuditReport` drops `total_findings`, `requires_action`,
+  `format_short`, and `is_clean`. Each forwarded to the trait, and the three
+  that shared a name with the trait method shadowed it. Callers import
+  `vyre_lower::pattern_audit::PatternAudit` and use `finding_count` and
+  `has_any`.
+- `vyre-emit-ptx` publishes one vector memory fusion module instead of two.
+  `patterns::vec_load_fusion` and `patterns::vec_store_fusion` were facades
+  over the same detector whose only difference was spelling one field
+  `first_load_idx` and `first_store_idx`; both are replaced by
+  `patterns::vec_memory_fusion` with `analyze(desc, MemoryFusionKind)`,
+  `MemoryFusionCandidate::first_op_idx`, and `MemoryFusionPlan`.
+  `PtxAuditReport::vec_load` and `::vec_store` keep their names and now share
+  that one plan type.
+- The four emitter crates no longer open with their own `#![allow(...)]`
+  block. Every lint named in those blocks is already allowed by
+  `[workspace.lints]`, which all four crates inherit.
+- Emitter test descriptors are built through
+  `vyre_lower::descriptor_builder`, which gains `binop`, `load_global`,
+  `store_global`, and neutral emission-target capability fixtures
+  (`workgroup_limits`, `permissive_workgroup_limits`,
+  `all_subgroup_capabilities`, `emission_target`, `target_without_subgroups`)
+  behind its existing `test-fixtures` feature.
+- Public API snapshots for `vyre-debug`, `vyre-driver`, `vyre-driver-cuda`,
+  `vyre-emit-naga`, `vyre-emit-ptx`, `vyre-emit-spirv`, and `vyre-libs` now
+  match their live surfaces. `vyre-debug` drops the `scan_explain` report,
+  error, exactness, and factor-role types that left with the scan product.
+  `vyre-libs` folds `graph::ast_walk_preorder` and `graph::ast_walk_postorder`
+  into one `graph::ast_walk` module and publishes `scan::pack_haystack_u32`.
+  The emitters and drivers publish the megakernel frontier plan error, the
+  neutral execution planner, and device capability constants that had shipped
+  without a snapshot refresh.
 - The standalone `vyre-harness` package is gone. Semantic operation identity,
   tier classification, and registration now live in `vyre-foundation`; library
   fixture views live in `vyre-libs`; conformance execution and parity policy

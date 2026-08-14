@@ -17,12 +17,8 @@ pub fn vyre_emit_naga::emit_many(descs: &[vyre_lower::descriptor::KernelDescript
 pub fn vyre_emit_naga::emit_with_capabilities(desc: &vyre_lower::descriptor::KernelDescriptor, target: &vyre_lower::target::EmissionTargetCapabilities) -> core::result::Result<naga::ir::Module, vyre_emit_naga::EmitError>
 pub fn vyre_emit_naga::patterns::NagaAuditReport::finding_count(&self) -> usize
 pub fn vyre_emit_naga::patterns::NagaAuditReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_emit_naga::patterns::NagaAuditReport::format_short(&self) -> alloc::string::String
-pub fn vyre_emit_naga::patterns::NagaAuditReport::has_any(&self) -> bool
-pub fn vyre_emit_naga::patterns::NagaAuditReport::is_clean(&self) -> bool
 pub fn vyre_emit_naga::patterns::NagaAuditReport::kernel_id(&self) -> &str
 pub fn vyre_emit_naga::patterns::NagaAuditReport::merge(&mut self, other: vyre_emit_naga::patterns::NagaAuditReport)
-pub fn vyre_emit_naga::patterns::NagaAuditReport::total_candidates(&self) -> usize
 pub fn vyre_emit_naga::patterns::NagaAuditReport::write_breakdown(&self, out: &mut dyn core::fmt::Write) -> core::fmt::Result
 pub fn vyre_emit_naga::patterns::NagaAuditReport::write_target_tag(&self, out: &mut dyn core::fmt::Write) -> core::fmt::Result
 pub fn vyre_emit_naga::patterns::NagaAuditReport::zero() -> Self

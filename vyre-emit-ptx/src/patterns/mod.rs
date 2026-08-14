@@ -10,9 +10,7 @@ pub mod instruction_scheduling;
 pub mod ldmatrix_cp_async;
 pub mod predicated_execution;
 pub mod tensor_core_fragment;
-pub mod vec_load_fusion;
-mod vec_memory_fusion;
-pub mod vec_store_fusion;
+pub mod vec_memory_fusion;
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -27,14 +25,17 @@ use crate::ComputeCapability;
 ///
 /// `target` controls capability-gated patterns (tensor cores require
 /// sm_70+; ldmatrix.cp.async requires sm_80+).
+///
+/// Finding totals, the clean/any predicates, and the one-line summary come
+/// from [`PatternAudit`]; import that trait to reach them.
 #[must_use]
 pub fn audit(desc: &KernelDescriptor, target: ComputeCapability) -> PtxAuditReport {
     PtxAuditReport {
         kernel_id: desc.id.clone(),
         target,
         predication: predicated_execution::analyze(desc),
-        vec_load: vec_load_fusion::analyze(desc),
-        vec_store: vec_store_fusion::analyze(desc),
+        vec_load: vec_memory_fusion::analyze(desc, vec_memory_fusion::MemoryFusionKind::Load),
+        vec_store: vec_memory_fusion::analyze(desc, vec_memory_fusion::MemoryFusionKind::Store),
         async_copy: ldmatrix_cp_async::analyze(desc, target),
         tensor_core: tensor_core_fragment::analyze(desc, target),
         scheduling: instruction_scheduling::analyze(desc),
@@ -43,8 +44,8 @@ pub fn audit(desc: &KernelDescriptor, target: ComputeCapability) -> PtxAuditRepo
 
 /// Combined PTX-pattern report. One `pub` field per shipped pattern.
 /// Callers can drill into individual reports for details, or use
-/// `total_candidates()` for a single-number "is anything actionable"
-/// signal.
+/// `PatternAudit::finding_count` for a single-number "is anything
+/// actionable" signal.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PtxAuditReport {
     /// Stable kernel identifier.
@@ -54,9 +55,9 @@ pub struct PtxAuditReport {
     /// Predicated-execution opportunities.
     pub predication: predicated_execution::PredicationPlan,
     /// Vector-load fusion opportunities.
-    pub vec_load: vec_load_fusion::FusionPlan,
+    pub vec_load: vec_memory_fusion::MemoryFusionPlan,
     /// Vector-store fusion opportunities.
-    pub vec_store: vec_store_fusion::FusionPlan,
+    pub vec_store: vec_memory_fusion::MemoryFusionPlan,
     /// Asynchronous-copy opportunities.
     pub async_copy: ldmatrix_cp_async::AsyncCopyPlan,
     /// Matrix-fragment opportunities.
@@ -100,27 +101,6 @@ impl PatternAudit for PtxAuditReport {
 }
 
 impl PtxAuditReport {
-    /// Sum of actionable findings across all patterns. `0` means no
-    /// PTX-specific optimizations apply to this kernel.
-    pub fn total_candidates(&self) -> usize {
-        PatternAudit::finding_count(self)
-    }
-
-    /// Whether any pattern fired.
-    pub fn has_any(&self) -> bool {
-        PatternAudit::has_any(self)
-    }
-
-    /// One-line human-readable summary suitable for log lines.
-    pub fn format_short(&self) -> String {
-        PatternAudit::format_short(self)
-    }
-
-    /// True iff no PTX-specific optimization opportunities found.
-    pub fn is_clean(&self) -> bool {
-        PatternAudit::is_clean(self)
-    }
-
     /// Identity element for [`Self::merge`]  -  empty report. The `target`
     /// defaults to SM_70 (the broadest-compatibility floor); merging
     /// reports with different targets is allowed but the aggregate
@@ -133,8 +113,8 @@ impl PtxAuditReport {
                 kernel_id: String::new(),
                 candidates: vec![],
             },
-            vec_load: vec_load_fusion::FusionPlan { candidates: vec![] },
-            vec_store: vec_store_fusion::FusionPlan { candidates: vec![] },
+            vec_load: vec_memory_fusion::MemoryFusionPlan::default(),
+            vec_store: vec_memory_fusion::MemoryFusionPlan::default(),
             async_copy: ldmatrix_cp_async::AsyncCopyPlan {
                 kernel_id: String::new(),
                 target_supports_cp_async: false,
@@ -197,7 +177,7 @@ mod tests {
         let desc = descriptor("empty").build();
         let report = audit(&desc, ComputeCapability::SM_70);
         assert_eq!(report.kernel_id, "empty");
-        assert_eq!(report.total_candidates(), 0);
+        assert_eq!(report.finding_count(), 0);
         assert!(!report.has_any());
     }
 
@@ -220,7 +200,7 @@ mod tests {
         let report = audit(&desc, ComputeCapability::SM_70);
         assert!(report.has_any());
         assert_eq!(report.vec_load.candidates.len(), 1);
-        assert_eq!(report.total_candidates(), 1);
+        assert_eq!(report.finding_count(), 1);
     }
 
     #[test]
@@ -231,7 +211,7 @@ mod tests {
         let desc = descriptor("k").dispatch(64, 1, 1).build();
         acc.merge(audit(&desc, ComputeCapability::SM_70));
         acc.merge(audit(&desc, ComputeCapability::SM_70));
-        assert_eq!(acc.total_candidates(), 0);
+        assert_eq!(acc.finding_count(), 0);
     }
 
     #[test]

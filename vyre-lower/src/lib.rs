@@ -31,6 +31,10 @@
 
 pub mod analyses;
 pub mod audit;
+/// Byte-stability harness for emitted backend artifacts. Test-only, like
+/// `descriptor_builder`: enable `test-fixtures` to reach it.
+#[cfg(any(test, feature = "test-fixtures"))]
+pub mod artifact_golden;
 mod canonicalize;
 pub mod descriptor;
 /// Fixture builders for kernel descriptors. Every consumer is a test, so this

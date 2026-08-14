@@ -18,6 +18,9 @@ use vyre_lower::KernelDescriptor;
 /// against the descriptor and bundles the reports. Mirror of
 /// `vyre_emit_ptx::patterns::audit` and `vyre_lower::audit::audit`,
 /// but for naga-specific patterns (vec packing, pipeline prewarm).
+///
+/// Finding totals, the clean/any predicates, and the one-line summary come
+/// from [`PatternAudit`]; import that trait to reach them.
 #[must_use]
 pub fn audit(desc: &KernelDescriptor) -> NagaAuditReport {
     NagaAuditReport {
@@ -64,27 +67,6 @@ impl PatternAudit for NagaAuditReport {
 }
 
 impl NagaAuditReport {
-    /// Sum of actionable findings across the per-kernel patterns.
-    /// Pre-warm contributes 1 if recommended.
-    pub fn total_candidates(&self) -> usize {
-        PatternAudit::finding_count(self)
-    }
-
-    /// Return whether any Naga-specific optimization is actionable.
-    pub fn has_any(&self) -> bool {
-        PatternAudit::has_any(self)
-    }
-
-    /// One-line human-readable summary suitable for log lines.
-    pub fn format_short(&self) -> String {
-        PatternAudit::format_short(self)
-    }
-
-    /// True iff no naga-specific optimization opportunities found.
-    pub fn is_clean(&self) -> bool {
-        PatternAudit::is_clean(self)
-    }
-
     /// Identity element for `merge`  -  empty report. Useful as the
     /// seed of a corpus fold.
     pub fn zero() -> Self {
@@ -131,7 +113,7 @@ mod audit_tests {
         let desc = descriptor("empty").build();
         let report = audit(&desc);
         assert_eq!(report.kernel_id, "empty");
-        assert_eq!(report.total_candidates(), 0);
+        assert_eq!(report.finding_count(), 0);
         assert!(!report.has_any());
     }
 
@@ -144,7 +126,7 @@ mod audit_tests {
         acc.merge(r1);
         acc.merge(r2);
         // No findings on empty kernels  -  sums to 0.
-        assert_eq!(acc.total_candidates(), 0);
+        assert_eq!(acc.finding_count(), 0);
     }
 
     #[test]
@@ -179,6 +161,6 @@ mod audit_tests {
         // ops >= 50 or bindings >= 4).
         // The contract this test enforces is "audit returns cleanly on
         // a real kernel without panicking", not a non-zero candidate count.
-        assert_eq!(report.total_candidates(), 0);
+        assert_eq!(report.finding_count(), 0);
     }
 }

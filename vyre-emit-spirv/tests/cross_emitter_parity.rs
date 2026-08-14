@@ -2,193 +2,101 @@
 //! through Naga, PTX, and SPIR-V. Failure in any target breaks the
 //! substrate-neutral `KernelDescriptor` contract.
 //!
-//! Lives in `vyre-emit-spirv` because it depends on both
-//! `vyre-emit-naga` (always) and `vyre-emit-ptx` (added as dev-dep
-//! for this test). Putting it here avoids the in-flight `vyre-libs`
-//! Codex hold that blocks `vyre-bench`.
+//! Descriptor scaffolding comes from `vyre_lower::descriptor_builder`. The
+//! suite lives here because this is the only emitter crate that dev-depends on
+//! all three emitters.
 
 use vyre_foundation::ir::{BinOp, DataType};
-use vyre_lower::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-    KernelOp, KernelOpKind, LiteralValue, MemoryClass,
-};
+use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
+use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
-fn rw_slot(id: u32, name: &str) -> BindingSlot {
-    BindingSlot {
-        slot: id,
-        element_type: DataType::U32,
-        element_count: None,
-        memory_class: MemoryClass::Global,
-        visibility: BindingVisibility::ReadWrite,
-        name: name.into(),
-    }
+fn out_slot() -> vyre_lower::BindingSlot {
+    global_rw(0, DataType::U32, "out")
+}
+
+/// (1) Empty kernel.
+fn empty() -> KernelDescriptor {
+    descriptor("empty").build()
+}
+
+/// (2) Single store.
+fn single_store() -> KernelDescriptor {
+    descriptor("single_store")
+        .slot(out_slot())
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([LiteralValue::U32(0), LiteralValue::U32(7)])
+                .op(lit(0, 0))
+                .op(lit(1, 1))
+                .op(effect(KernelOpKind::StoreGlobal, [0, 0, 1])),
+        )
+        .build()
+}
+
+/// (3) Add and store.
+fn add_store() -> KernelDescriptor {
+    descriptor("add_store")
+        .slot(out_slot())
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([
+                    LiteralValue::U32(3),
+                    LiteralValue::U32(4),
+                    LiteralValue::U32(0),
+                ])
+                .op(lit(0, 0))
+                .op(lit(1, 1))
+                .op(lit(2, 2))
+                .op(op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 3))
+                .op(effect(KernelOpKind::StoreGlobal, [0, 2, 3])),
+        )
+        .build()
+}
+
+/// (4) Identity arithmetic that the rewrite stack eliminates before any
+/// emitter sees it: an additive identity and an absorbing zero.
+fn identity_heavy() -> KernelDescriptor {
+    descriptor("identity_heavy")
+        .slot(out_slot())
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([LiteralValue::U32(0), LiteralValue::U32(99)])
+                .op(lit(0, 0))
+                .op(lit(1, 1))
+                .op(op(KernelOpKind::BinOpKind(BinOp::Add), [1, 0], 2))
+                .op(op(KernelOpKind::BinOpKind(BinOp::Mul), [1, 0], 3))
+                .op(effect(KernelOpKind::StoreGlobal, [0, 0, 1])),
+        )
+        .build()
+}
+
+/// (5) Store-load-store that load forwarding and dead-store elimination
+/// should collapse.
+fn store_load_store() -> KernelDescriptor {
+    descriptor("stl")
+        .slot(global_rw(0, DataType::U32, "buf"))
+        .body(
+            body()
+                .literals([LiteralValue::U32(0), LiteralValue::U32(7)])
+                .op(lit(0, 0))
+                .op(lit(1, 1))
+                .op(effect(KernelOpKind::StoreGlobal, [0, 0, 1]))
+                .op(op(KernelOpKind::LoadGlobal, [0, 0], 2))
+                .op(effect(KernelOpKind::StoreGlobal, [0, 0, 2])),
+        )
+        .build()
 }
 
 fn descriptor_corpus() -> Vec<KernelDescriptor> {
     vec![
-        // (1) Empty kernel.
-        KernelDescriptor {
-            id: "empty".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        },
-        // (2) Single store.
-        KernelDescriptor {
-            id: "single_store".into(),
-            bindings: BindingLayout {
-                slots: vec![rw_slot(0, "out")],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 1],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(7)],
-            },
-        },
-        // (3) Add and store.
-        KernelDescriptor {
-            id: "add_store".into(),
-            bindings: BindingLayout {
-                slots: vec![rw_slot(0, "out")],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    }, // 3
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    }, // 4
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![2],
-                        result: Some(2),
-                    }, // 0 (idx)
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Add),
-                        operands: vec![0, 1],
-                        result: Some(3),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 2, 3],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![
-                    LiteralValue::U32(3),
-                    LiteralValue::U32(4),
-                    LiteralValue::U32(0),
-                ],
-            },
-        },
-        // (4) Identity arithmetic that the rewrite stack will eliminate
-        //     before any of the emitters even sees it.
-        KernelDescriptor {
-            id: "identity_heavy".into(),
-            bindings: BindingLayout {
-                slots: vec![rw_slot(0, "out")],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    }, // 0
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    }, // 99
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Add),
-                        operands: vec![1, 0],
-                        result: Some(2),
-                    }, // identity
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                        operands: vec![1, 0],
-                        result: Some(3),
-                    }, // absorbing zero
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 1],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(99)],
-            },
-        },
-        // (5) Store-load-store pattern that load_forwarding+dead_store
-        //     should collapse.
-        KernelDescriptor {
-            id: "stl".into(),
-            bindings: BindingLayout {
-                slots: vec![rw_slot(0, "buf")],
-            },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 1],
-                        result: None,
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(2),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 2],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(7)],
-            },
-        },
+        empty(),
+        single_store(),
+        add_store(),
+        identity_heavy(),
+        store_load_store(),
     ]
 }
 
@@ -337,36 +245,19 @@ fn descriptor_verification_and_audits_succeed_on_corpus() {
 
 #[test]
 fn audit_carries_kernel_id_through_every_layer() {
-    // For a kernel with a distinct id, the id should survive into all
-    // four audit reports unchanged.
-    let desc = KernelDescriptor {
-        id: "named_kernel_42".into(),
-        bindings: BindingLayout {
-            slots: vec![rw_slot(0, "buf")],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 0, 1],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(7)],
-        },
-    };
+    // For a kernel with a distinct id, the id should survive into all four
+    // audit reports unchanged.
+    let desc = descriptor("named_kernel_42")
+        .slot(global_rw(0, DataType::U32, "buf"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([LiteralValue::U32(0), LiteralValue::U32(7)])
+                .op(lit(0, 0))
+                .op(lit(1, 1))
+                .op(effect(KernelOpKind::StoreGlobal, [0, 0, 1])),
+        )
+        .build();
     use vyre_emit_ptx::ComputeCapability;
     assert_eq!(vyre_lower::audit::audit(&desc).kernel_id, "named_kernel_42");
     assert_eq!(
