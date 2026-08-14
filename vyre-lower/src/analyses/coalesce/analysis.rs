@@ -192,40 +192,40 @@ fn literal_operand_u32(body: &KernelBody, operand_id: u32) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-        KernelOp, MemoryClass,
+    use crate::descriptor_builder::{
+        binop, body, descriptor, effect, global_ro, global_rw, lit, load_global, op, store_global,
     };
-    use vyre_foundation::ir::DataType;
+    use crate::{KernelBody, KernelDescriptor, KernelOp};
+    use vyre_foundation::ir::{BinOp, DataType};
 
-    fn one_buffer_kernel(ops: Vec<KernelOp>, literals: Vec<LiteralValue>) -> KernelDescriptor {
-        KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "buf".into(),
-                }],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops,
-                child_bodies: vec![],
-                literals,
-            },
-        }
+    /// A 64-thread kernel over a single read-write `u32` global.
+    fn one_buffer_kernel(body: impl Into<KernelBody>) -> KernelDescriptor {
+        descriptor("k")
+            .slot(global_rw(0, DataType::U32, "buf"))
+            .dispatch(64, 1, 1)
+            .body(body)
+            .build()
     }
 
-    fn op(kind: KernelOpKind, operands: Vec<u32>, result: Option<u32>) -> KernelOp {
-        KernelOp {
-            kind,
-            operands,
-            result,
-        }
+    /// `LocalInvocationId` on the given axis.
+    fn tid(axis: impl Into<Vec<u32>>, result: u32) -> KernelOp {
+        op(KernelOpKind::LocalInvocationId, axis, result)
+    }
+
+    fn pattern_of(body: impl Into<KernelBody>) -> AccessPattern {
+        analyze(&one_buffer_kernel(body)).sites[0].pattern
+    }
+
+    /// `load(buf, factor * tid)` with the multiply operands in the given
+    /// order, which is the shape every stride classification is read from.
+    fn scaled_load(lhs: u32, rhs: u32, factor: u32) -> KernelBody {
+        body()
+            .op(tid([], 0))
+            .op(lit(0, 1))
+            .op(binop(BinOp::Mul, lhs, rhs, 2))
+            .op(load_global(0, 2, 3))
+            .literal(LiteralValue::U32(factor))
+            .build()
     }
 
     // Positive truth (coalesced detected)
@@ -233,14 +233,9 @@ mod tests {
     #[test]
     fn positive_load_at_local_invocation_id_is_coalesced() {
         // tid = LocalInvocationId; load(buf, tid)
-        let k = one_buffer_kernel(
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-            ],
-            vec![],
-        );
-        let r = analyze(&k);
+        let r = analyze(&one_buffer_kernel(
+            body().op(tid([], 0)).op(load_global(0, 0, 1)),
+        ));
         assert_eq!(r.sites.len(), 1);
         assert_eq!(r.sites[0].pattern, AccessPattern::CoalescedUnitStride);
         assert_eq!(r.sites[0].kind, AccessKind::Load);
@@ -248,15 +243,13 @@ mod tests {
 
     #[test]
     fn positive_store_at_local_invocation_id_is_coalesced() {
-        let k = one_buffer_kernel(
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(KernelOpKind::StoreGlobal, vec![0, 0, 1], None),
-            ],
-            vec![LiteralValue::U32(7)],
-        );
-        let r = analyze(&k);
+        let r = analyze(&one_buffer_kernel(
+            body()
+                .op(tid([], 0))
+                .op(lit(0, 1))
+                .op(store_global(0, 0, 1))
+                .literal(LiteralValue::U32(7)),
+        ));
         assert_eq!(r.sites.len(), 1);
         assert_eq!(r.sites[0].pattern, AccessPattern::CoalescedUnitStride);
         assert_eq!(r.sites[0].kind, AccessKind::Store);
@@ -265,47 +258,35 @@ mod tests {
     #[test]
     fn positive_load_at_tid_plus_constant_is_coalesced() {
         // load(buf, tid + 16)  -  still coalesced unit stride
-        let k = one_buffer_kernel(
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add),
-                    vec![0, 1],
-                    Some(2),
-                ),
-                op(KernelOpKind::LoadGlobal, vec![0, 2], Some(3)),
-            ],
-            vec![LiteralValue::U32(16)],
+        let pattern = pattern_of(
+            body()
+                .op(tid([], 0))
+                .op(lit(0, 1))
+                .op(binop(BinOp::Add, 0, 1, 2))
+                .op(load_global(0, 2, 3))
+                .literal(LiteralValue::U32(16)),
         );
-        let r = analyze(&k);
-        assert_eq!(r.sites[0].pattern, AccessPattern::CoalescedUnitStride);
+        assert_eq!(pattern, AccessPattern::CoalescedUnitStride);
     }
 
     #[test]
     fn positive_load_at_global_invocation_id_treated_as_coalesced() {
-        let k = one_buffer_kernel(
-            vec![
-                op(KernelOpKind::GlobalInvocationId, vec![0], Some(0)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-            ],
-            vec![],
+        let pattern = pattern_of(
+            body()
+                .op(op(KernelOpKind::GlobalInvocationId, [0], 0))
+                .op(load_global(0, 0, 1)),
         );
-        let r = analyze(&k);
-        assert_eq!(r.sites[0].pattern, AccessPattern::CoalescedUnitStride);
+        assert_eq!(pattern, AccessPattern::CoalescedUnitStride);
     }
 
     #[test]
     fn global_invocation_y_axis_is_not_unit_stride_x_coalesced() {
-        let k = one_buffer_kernel(
-            vec![
-                op(KernelOpKind::GlobalInvocationId, vec![1], Some(0)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-            ],
-            vec![],
+        let pattern = pattern_of(
+            body()
+                .op(op(KernelOpKind::GlobalInvocationId, [1], 0))
+                .op(load_global(0, 0, 1)),
         );
-        let r = analyze(&k);
-        assert_eq!(r.sites[0].pattern, AccessPattern::Scattered);
+        assert_eq!(pattern, AccessPattern::Scattered);
     }
 
     // Strided detection
@@ -313,82 +294,48 @@ mod tests {
     #[test]
     fn strided_4_detected_as_stride_4() {
         // load(buf, 4 * tid)  -  stride 4
-        let k = one_buffer_kernel(
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Mul),
-                    vec![1, 0],
-                    Some(2),
-                ),
-                op(KernelOpKind::LoadGlobal, vec![0, 2], Some(3)),
-            ],
-            vec![LiteralValue::U32(4)],
+        assert_eq!(
+            pattern_of(scaled_load(1, 0, 4)),
+            AccessPattern::Strided { stride: 4 }
         );
-        let r = analyze(&k);
-        assert_eq!(r.sites[0].pattern, AccessPattern::Strided { stride: 4 });
     }
 
     #[test]
     fn strided_8_with_offset_preserves_stride() {
         // load(buf, 8 * tid + 3)
-        let k = one_buffer_kernel(
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Mul),
-                    vec![1, 0],
-                    Some(2),
-                ),
-                op(KernelOpKind::Literal, vec![1], Some(3)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add),
-                    vec![2, 3],
-                    Some(4),
-                ),
-                op(KernelOpKind::LoadGlobal, vec![0, 4], Some(5)),
-            ],
-            vec![LiteralValue::U32(8), LiteralValue::U32(3)],
+        let pattern = pattern_of(
+            body()
+                .op(tid([], 0))
+                .op(lit(0, 1))
+                .op(binop(BinOp::Mul, 1, 0, 2))
+                .op(lit(1, 3))
+                .op(binop(BinOp::Add, 2, 3, 4))
+                .op(load_global(0, 4, 5))
+                .literals([LiteralValue::U32(8), LiteralValue::U32(3)]),
         );
-        let r = analyze(&k);
-        assert_eq!(r.sites[0].pattern, AccessPattern::Strided { stride: 8 });
+        assert_eq!(pattern, AccessPattern::Strided { stride: 8 });
     }
 
     #[test]
     fn strided_with_tid_on_left_of_mul_also_detected() {
         // load(buf, tid * 4)  -  same as 4 * tid
-        let k = one_buffer_kernel(
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Mul),
-                    vec![0, 1],
-                    Some(2),
-                ),
-                op(KernelOpKind::LoadGlobal, vec![0, 2], Some(3)),
-            ],
-            vec![LiteralValue::U32(4)],
+        assert_eq!(
+            pattern_of(scaled_load(0, 1, 4)),
+            AccessPattern::Strided { stride: 4 }
         );
-        let r = analyze(&k);
-        assert_eq!(r.sites[0].pattern, AccessPattern::Strided { stride: 4 });
     }
 
     // Broadcast (constant index)
 
     #[test]
     fn constant_index_is_broadcast() {
-        let k = one_buffer_kernel(
-            vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-            ],
-            vec![LiteralValue::U32(0)],
+        let pattern = pattern_of(
+            body()
+                .op(lit(0, 0))
+                .op(load_global(0, 0, 1))
+                .literal(LiteralValue::U32(0)),
         );
-        let r = analyze(&k);
-        assert_eq!(r.sites[0].pattern, AccessPattern::Broadcast);
+        assert_eq!(pattern, AccessPattern::Broadcast);
     }
 
     // Negative precision (rule does NOT fire)
@@ -396,59 +343,31 @@ mod tests {
     #[test]
     fn negative_load_index_from_unrelated_op_is_scattered() {
         // load(buf, sub(tid, tid))  -  not a recognized pattern
-        let k = one_buffer_kernel(
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Sub),
-                    vec![0, 0],
-                    Some(1),
-                ),
-                op(KernelOpKind::LoadGlobal, vec![0, 1], Some(2)),
-            ],
-            vec![],
+        let pattern = pattern_of(
+            body()
+                .op(tid([], 0))
+                .op(binop(BinOp::Sub, 0, 0, 1))
+                .op(load_global(0, 1, 2)),
         );
-        let r = analyze(&k);
-        assert_eq!(r.sites[0].pattern, AccessPattern::Scattered);
+        assert_eq!(pattern, AccessPattern::Scattered);
     }
 
     #[test]
     fn negative_load_index_from_indirect_load_is_scattered() {
         // load(buf, load(idx_buf, tid))  -  indirect addressing
-        let k = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![
-                    BindingSlot {
-                        slot: 0,
-                        element_type: DataType::U32,
-
-                        element_count: None,
-                        memory_class: MemoryClass::Global,
-                        visibility: BindingVisibility::ReadOnly,
-                        name: "idx_buf".into(),
-                    },
-                    BindingSlot {
-                        slot: 1,
-                        element_type: DataType::U32,
-                        element_count: None,
-                        memory_class: MemoryClass::Global,
-                        visibility: BindingVisibility::ReadOnly,
-                        name: "buf".into(),
-                    },
-                ],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                    op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)), // load idx_buf[tid]
-                    op(KernelOpKind::LoadGlobal, vec![1, 1], Some(2)), // load buf[idx]
-                ],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let k = descriptor("k")
+            .slots([
+                global_ro(0, DataType::U32, "idx_buf"),
+                global_ro(1, DataType::U32, "buf"),
+            ])
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .op(tid([], 0))
+                    .op(load_global(0, 0, 1))
+                    .op(load_global(1, 1, 2)),
+            )
+            .build();
         let r = analyze(&k);
         // Two access sites; outer one is scattered (indirect).
         assert_eq!(r.sites.len(), 2);
@@ -457,19 +376,13 @@ mod tests {
 
     #[test]
     fn negative_no_global_accesses_yields_empty_report() {
-        let k = one_buffer_kernel(
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add),
-                    vec![0, 1],
-                    Some(2),
-                ),
-            ],
-            vec![LiteralValue::U32(1)],
-        );
-        let r = analyze(&k);
+        let r = analyze(&one_buffer_kernel(
+            body()
+                .op(tid([], 0))
+                .op(lit(0, 1))
+                .op(binop(BinOp::Add, 0, 1, 2))
+                .literal(LiteralValue::U32(1)),
+        ));
         assert!(r.sites.is_empty());
     }
 
@@ -477,49 +390,25 @@ mod tests {
 
     #[test]
     fn adversarial_mul_by_one_is_coalesced_not_strided() {
-        let k = one_buffer_kernel(
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Mul),
-                    vec![1, 0],
-                    Some(2),
-                ),
-                op(KernelOpKind::LoadGlobal, vec![0, 2], Some(3)),
-            ],
-            vec![LiteralValue::U32(1)],
+        assert_eq!(
+            pattern_of(scaled_load(1, 0, 1)),
+            AccessPattern::CoalescedUnitStride
         );
-        let r = analyze(&k);
-        assert_eq!(r.sites[0].pattern, AccessPattern::CoalescedUnitStride);
     }
 
     #[test]
     fn adversarial_mul_by_zero_is_broadcast_or_scattered() {
         // 0 * tid = 0, which is a broadcast access rather than an
         // unstructured scatter.
-        let k = one_buffer_kernel(
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Mul),
-                    vec![1, 0],
-                    Some(2),
-                ),
-                op(KernelOpKind::LoadGlobal, vec![0, 2], Some(3)),
-            ],
-            vec![LiteralValue::U32(0)],
-        );
-        let r = analyze(&k);
-        assert_eq!(r.sites[0].pattern, AccessPattern::Broadcast);
+        assert_eq!(pattern_of(scaled_load(1, 0, 0)), AccessPattern::Broadcast);
     }
 
     #[test]
     fn adversarial_malformed_op_with_too_few_operands_skipped_safely() {
         // A LoadGlobal with no operands shouldn't panic.
-        let k = one_buffer_kernel(vec![op(KernelOpKind::LoadGlobal, vec![], None)], vec![]);
-        let r = analyze(&k);
+        let r = analyze(&one_buffer_kernel(
+            body().op(effect(KernelOpKind::LoadGlobal, [])),
+        ));
         // Malformed ops produce no coalescence site and the analysis
         // stays robust to bad input rather than panicking.
         assert!(r.sites.is_empty());
@@ -530,27 +419,17 @@ mod tests {
     {
         // tid * 1 (mul by one) plus another constant = still coalesced.
         // Verifies the Add classifier sees CoalescedUnitStride + Broadcast.
-        let k = one_buffer_kernel(
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Mul),
-                    vec![0, 1],
-                    Some(2),
-                ), // tid * 1
-                op(KernelOpKind::Literal, vec![1], Some(3)), // 99
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add),
-                    vec![2, 3],
-                    Some(4),
-                ), // (tid * 1) + 99
-                op(KernelOpKind::LoadGlobal, vec![0, 4], Some(5)),
-            ],
-            vec![LiteralValue::U32(1), LiteralValue::U32(99)],
+        let pattern = pattern_of(
+            body()
+                .op(tid([], 0))
+                .op(lit(0, 1))
+                .op(binop(BinOp::Mul, 0, 1, 2))
+                .op(lit(1, 3))
+                .op(binop(BinOp::Add, 2, 3, 4))
+                .op(load_global(0, 4, 5))
+                .literals([LiteralValue::U32(1), LiteralValue::U32(99)]),
         );
-        let r = analyze(&k);
-        assert_eq!(r.sites[0].pattern, AccessPattern::CoalescedUnitStride);
+        assert_eq!(pattern, AccessPattern::CoalescedUnitStride);
     }
 
     // Report aggregation
@@ -558,21 +437,15 @@ mod tests {
     #[test]
     fn waste_score_reflects_mixed_kernel() {
         // One coalesced, one strided 4. Expected waste: 0 + 0.75 = 0.75.
-        let k = one_buffer_kernel(
-            vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-                op(KernelOpKind::Literal, vec![0], Some(2)),
-                op(
-                    KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Mul),
-                    vec![2, 0],
-                    Some(3),
-                ),
-                op(KernelOpKind::LoadGlobal, vec![0, 3], Some(4)),
-            ],
-            vec![LiteralValue::U32(4)],
-        );
-        let r = analyze(&k);
+        let r = analyze(&one_buffer_kernel(
+            body()
+                .op(tid([], 0))
+                .op(load_global(0, 0, 1))
+                .op(lit(0, 2))
+                .op(binop(BinOp::Mul, 2, 0, 3))
+                .op(load_global(0, 3, 4))
+                .literal(LiteralValue::U32(4)),
+        ));
         assert_eq!(r.sites.len(), 2);
         assert!((r.waste_score() - 0.75).abs() < 1e-5);
         assert_eq!(r.problematic_count(), 1);
@@ -580,17 +453,7 @@ mod tests {
 
     #[test]
     fn report_kernel_id_echoes_descriptor_id() {
-        let k = one_buffer_kernel(vec![], vec![]);
-        let r = analyze(&k);
+        let r = analyze(&one_buffer_kernel(body()));
         assert_eq!(r.kernel_id, "k");
-    }
-
-    #[test]
-    fn coverage_minimum_test_count() {
-        // Pin minimum: 4 positive + 3 strided + 1 broadcast +
-        // 3 negative + 4 adversarial + 2 aggregation = 17 tests.
-        // Plus 1 self-counter = 18.
-        // Updating tests requires updating this assertion.
-        // assert removed
     }
 }

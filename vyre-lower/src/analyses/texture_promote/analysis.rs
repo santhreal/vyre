@@ -51,81 +51,43 @@ pub fn analyze(desc: &KernelDescriptor) -> TexturePromotionPlan {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        BindingLayout, BindingSlot, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind,
-        LiteralValue,
-    };
+    use crate::descriptor_builder::{body, descriptor, global_ro, global_rw, lit, load_global, slot, SlotCount};
+    use crate::{BindingSlot, KernelBody, KernelDescriptor, LiteralValue};
     use vyre_foundation::ir::DataType;
 
-    fn ro_binding(slot: u32) -> BindingSlot {
-        BindingSlot {
-            slot,
-            element_type: DataType::F32,
-            element_count: None,
-            memory_class: MemoryClass::Global,
-            visibility: BindingVisibility::ReadOnly,
-            name: format!("ro{slot}"),
-        }
+    fn ro_binding(index: u32) -> BindingSlot {
+        global_ro(index, DataType::F32, &format!("ro{index}"))
     }
 
-    fn rw_binding(slot: u32) -> BindingSlot {
-        BindingSlot {
-            slot,
-            element_type: DataType::F32,
-            element_count: None,
-            memory_class: MemoryClass::Global,
-            visibility: BindingVisibility::ReadWrite,
-            name: format!("rw{slot}"),
-        }
+    /// One literal at pool index 0 followed by `count` loads of slot 0. This
+    /// is the whole op shape the precondition reads, so every eligibility
+    /// case differs only in its binding and its load count.
+    fn literal_then_loads(count: u32) -> KernelBody {
+        body()
+            .op(lit(0, 0))
+            .ops((1..=count).map(|result| load_global(0, 0, result)))
+            .literal(LiteralValue::U32(0))
+            .build()
+    }
+
+    fn kernel(binding: BindingSlot, load_count: u32) -> KernelDescriptor {
+        descriptor("k")
+            .slot(binding)
+            .dispatch(32, 1, 1)
+            .body(literal_then_loads(load_count))
+            .build()
     }
 
     #[test]
     fn empty_kernel_has_no_candidates() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("k").dispatch(64, 1, 1).build();
         let p = analyze(&desc);
         assert!(p.candidates.is_empty());
     }
 
     #[test]
     fn read_only_binding_with_two_loads_is_candidate() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![ro_binding(0)],
-            },
-            dispatch: Dispatch::new(32, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(2),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
-        let p = analyze(&desc);
+        let p = analyze(&kernel(ro_binding(0), 2));
         assert_eq!(p.candidates.len(), 1);
         assert_eq!(p.candidates[0].binding_slot, 0);
         assert_eq!(p.candidates[0].load_count, 2);
@@ -133,35 +95,8 @@ mod tests {
 
     #[test]
     fn read_write_binding_is_not_candidate() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![rw_binding(0)],
-            },
-            dispatch: Dispatch::new(32, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(2),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
-        let p = analyze(&desc);
+        let binding = global_rw(0, DataType::F32, "rw0");
+        let p = analyze(&kernel(binding, 2));
         assert!(
             p.candidates.is_empty(),
             "RW bindings can't be promoted to texture"
@@ -170,30 +105,7 @@ mod tests {
 
     #[test]
     fn read_only_binding_with_one_load_is_not_candidate() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![ro_binding(0)],
-            },
-            dispatch: Dispatch::new(32, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(1),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
-        let p = analyze(&desc);
+        let p = analyze(&kernel(ro_binding(0), 1));
         assert!(
             p.candidates.is_empty(),
             "single-load bindings don't gain enough"
@@ -202,42 +114,15 @@ mod tests {
 
     #[test]
     fn shared_memory_binding_is_not_candidate() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::F32,
-                    element_count: Some(64),
-                    memory_class: MemoryClass::Shared,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "shared".into(),
-                }],
-            },
-            dispatch: Dispatch::new(32, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(2),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
-        let p = analyze(&desc);
+        let binding = slot(
+            0,
+            DataType::F32,
+            MemoryClass::Shared,
+            BindingVisibility::ReadOnly,
+            "shared",
+        )
+        .with_count(64);
+        let p = analyze(&kernel(binding, 2));
         assert!(
             p.candidates.is_empty(),
             "shared memory isn't promotable to texture"
@@ -246,33 +131,7 @@ mod tests {
 
     #[test]
     fn speedup_grows_with_load_count_log2() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![ro_binding(0)],
-            },
-            dispatch: Dispatch::new(32, 1, 1),
-            body: KernelBody {
-                ops: {
-                    let mut ops = vec![KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    }];
-                    for i in 1..=8 {
-                        ops.push(KernelOp {
-                            kind: KernelOpKind::LoadGlobal,
-                            operands: vec![0, 0],
-                            result: Some(i),
-                        });
-                    }
-                    ops
-                },
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
-        let p = analyze(&desc);
+        let p = analyze(&kernel(ro_binding(0), 8));
         assert_eq!(p.candidates.len(), 1);
         assert_eq!(p.candidates[0].load_count, 8);
         // 1.5 + log2(8) = 4.5
@@ -281,46 +140,23 @@ mod tests {
 
     #[test]
     fn loop_bounds_are_not_treated_as_child_body_indices() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![ro_binding(0)],
-            },
-            dispatch: Dispatch::new(32, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StructuredForLoop {
+        let desc = descriptor("k")
+            .slot(ro_binding(0))
+            .dispatch(32, 1, 1)
+            .body(
+                body()
+                    .op(lit(0, 0))
+                    .op(crate::descriptor_builder::effect(
+                        crate::KernelOpKind::StructuredForLoop {
                             loop_var: "i".into(),
                         },
-                        operands: vec![0, 0, 1],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![
-                    KernelBody {
-                        ops: vec![KernelOp {
-                            kind: KernelOpKind::LoadGlobal,
-                            operands: vec![0, 0],
-                            result: Some(1),
-                        }],
-                        child_bodies: vec![],
-                        literals: vec![],
-                    },
-                    KernelBody {
-                        ops: vec![],
-                        child_bodies: vec![],
-                        literals: vec![],
-                    },
-                ],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
+                        [0, 0, 1],
+                    ))
+                    .child(body().op(load_global(0, 0, 1)))
+                    .child(body())
+                    .literal(LiteralValue::U32(0)),
+            )
+            .build();
 
         let p = analyze(&desc);
         assert!(
