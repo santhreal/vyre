@@ -2,62 +2,19 @@ use super::*;
 
 #[test]
 fn zero_repeat_resident_sequence_does_not_prepare_dead_repeated_steps() {
-    let backend = CudaBackendRegistration::new(
-        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host."),
-    );
-    let add_seven = Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(4),
-            BufferDecl::output("tmp", 1, DataType::U32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "tmp",
-            Expr::gid_x(),
-            Expr::add(Expr::load("input", Expr::gid_x()), Expr::u32(7)),
-        )],
-    );
-    let dead_repeated = Program::wrapped(
-        vec![
-            BufferDecl::read("dead_in", 0, DataType::U32).with_count(4),
-            BufferDecl::output("dead_out", 1, DataType::U32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "dead_out",
-            Expr::gid_x(),
-            Expr::load("dead_in", Expr::gid_x()),
-        )],
-    );
-    let input = VyreBackend::allocate_resident(&backend, 16)
-        .expect("Fix: CUDA zero-repeat resident input allocation failed.");
-    let tmp = VyreBackend::allocate_resident(&backend, 16)
-        .expect("Fix: CUDA zero-repeat resident tmp allocation failed.");
-    VyreBackend::upload_resident(&backend, &input, &u32_bytes(&[1, 2, 3, 4]))
-        .expect("Fix: CUDA zero-repeat resident input upload failed.");
+    let backend = acquire_registration();
+    let add_seven = add_program("input", "tmp", 7);
+    let dead_repeated = copy_program("dead_in", "dead_out");
+    let input = seeded_resource_lane(&backend, "input");
+    let tmp = resource_lane(&backend, "tmp");
 
     let prefix_resources = [input.clone(), tmp.clone()];
-    let invalid_repeated_resources = [
-        vyre_driver::backend::Resource::default(),
-        vyre_driver::backend::Resource::default(),
-    ];
-    let prefix_steps = [vyre_driver::backend::ResidentDispatchStep {
-        program: &add_seven,
-        resources: &prefix_resources,
-        grid_override: None,
-        workgroup_override: None,
-    }];
-    let repeated_steps = [vyre_driver::backend::ResidentDispatchStep {
-        program: &dead_repeated,
-        resources: &invalid_repeated_resources,
-        grid_override: None,
-        workgroup_override: None,
-    }];
-    let read_ranges = [vyre_driver::backend::ResidentReadRange {
-        resource: &tmp,
-        byte_offset: 0,
-        byte_len: 16,
-    }];
+    // Deliberately unresolvable bindings: a zero-repeat window must never touch
+    // them, and resolving them would fail before the prefix could read back.
+    let invalid_repeated_resources = [Resource::default(), Resource::default()];
+    let prefix_steps = [step(&add_seven, &prefix_resources)];
+    let repeated_steps = [step(&dead_repeated, &invalid_repeated_resources)];
+    let read_ranges = [read_range(&tmp, 0, LANE_BYTES)];
     let mut readback = Vec::new();
 
     backend.reset_telemetry();
@@ -82,69 +39,23 @@ fn zero_repeat_resident_sequence_does_not_prepare_dead_repeated_steps() {
         "Fix: CUDA zero-repeat resident sequence should still use one compact readback fence."
     );
 
-    VyreBackend::free_resident(&backend, input)
-        .expect("Fix: CUDA zero-repeat resident input free failed.");
-    VyreBackend::free_resident(&backend, tmp)
-        .expect("Fix: CUDA zero-repeat resident tmp free failed.");
+    free_resource_lanes(&backend, vec![(input, "input"), (tmp, "tmp")]);
 }
 
 #[test]
 fn golden_fixed_graph_replay_keeps_host_overhead_sublinear() {
-    let backend = CudaBackendRegistration::new(
-        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host."),
-    );
-    let add_seven = Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(4),
-            BufferDecl::output("tmp", 1, DataType::U32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "tmp",
-            Expr::gid_x(),
-            Expr::add(Expr::load("input", Expr::gid_x()), Expr::u32(7)),
-        )],
-    );
-    let double = Program::wrapped(
-        vec![
-            BufferDecl::read("tmp", 0, DataType::U32).with_count(4),
-            BufferDecl::output("out", 1, DataType::U32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::gid_x(),
-            Expr::mul(Expr::load("tmp", Expr::gid_x()), Expr::u32(2)),
-        )],
-    );
-    let input = VyreBackend::allocate_resident(&backend, 16)
-        .expect("Fix: CUDA golden replay resident input allocation failed.");
-    let tmp = VyreBackend::allocate_resident(&backend, 16)
-        .expect("Fix: CUDA golden replay resident tmp allocation failed.");
-    let output = VyreBackend::allocate_resident(&backend, 16)
-        .expect("Fix: CUDA golden replay resident output allocation failed.");
-    VyreBackend::upload_resident(&backend, &input, &u32_bytes(&[1, 2, 3, 4]))
-        .expect("Fix: CUDA golden replay resident input upload failed.");
+    let backend = acquire_registration();
+    let add_seven = add_program("input", "tmp", 7);
+    let double = mul_program("tmp", "out", 2);
+    let input = seeded_resource_lane(&backend, "input");
+    let tmp = resource_lane(&backend, "tmp");
+    let output = resource_lane(&backend, "output");
 
     let prefix_resources = [input.clone(), tmp.clone()];
     let repeated_resources = [tmp.clone(), output.clone()];
-    let prefix_steps = [vyre_driver::backend::ResidentDispatchStep {
-        program: &add_seven,
-        resources: &prefix_resources,
-        grid_override: None,
-        workgroup_override: None,
-    }];
-    let repeated_steps = [vyre_driver::backend::ResidentDispatchStep {
-        program: &double,
-        resources: &repeated_resources,
-        grid_override: None,
-        workgroup_override: None,
-    }];
-    let read_ranges = [vyre_driver::backend::ResidentReadRange {
-        resource: &output,
-        byte_offset: 0,
-        byte_len: 16,
-    }];
+    let prefix_steps = [step(&add_seven, &prefix_resources)];
+    let repeated_steps = [step(&double, &repeated_resources)];
+    let read_ranges = [read_range(&output, 0, LANE_BYTES)];
     let mut readback = Vec::with_capacity(64);
     let readback_ptr = readback.as_ptr();
     let mut baseline_param_upload_bytes = None;
@@ -190,55 +101,8 @@ fn golden_fixed_graph_replay_keeps_host_overhead_sublinear() {
         );
     }
 
-    VyreBackend::free_resident(&backend, input)
-        .expect("Fix: CUDA golden replay resident input free failed.");
-    VyreBackend::free_resident(&backend, tmp)
-        .expect("Fix: CUDA golden replay resident tmp free failed.");
-    VyreBackend::free_resident(&backend, output)
-        .expect("Fix: CUDA golden replay resident output free failed.");
-}
-
-#[test]
-fn release_path_resident_dispatch_keeps_borrowed_fallback_counter_at_zero() {
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(4),
-            BufferDecl::output("out", 1, DataType::U32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::gid_x(),
-            Expr::mul(Expr::load("input", Expr::gid_x()), Expr::u32(2)),
-        )],
+    free_resource_lanes(
+        &backend,
+        vec![(input, "input"), (tmp, "tmp"), (output, "output")],
     );
-    let input = backend
-        .allocate_resident(16)
-        .expect("Fix: CUDA resident input allocation failed.");
-    let output = backend
-        .allocate_resident(16)
-        .expect("Fix: CUDA resident output allocation failed.");
-    backend
-        .upload_resident(input, &u32_bytes(&[1, 2, 3, 4]))
-        .expect("Fix: CUDA resident input upload failed.");
-
-    backend.reset_telemetry();
-    backend
-        .dispatch_resident(&program, &[input, output], &DispatchConfig::default())
-        .expect("Fix: CUDA native resident dispatch must succeed on the release path.");
-
-    let telemetry = backend.telemetry_snapshot();
-    assert_eq!(
-        telemetry.resident_borrowed_fallback_dispatches, 0,
-        "Fix: release-path CUDA resident dispatch must not use the host-buffer borrowed fallback unless both VYRE_CUDA_RESIDENT_BORROWED_FALLBACK and VYRE_CUDA_ALLOW_BORROWED_FALLBACK=1 are set."
-    );
-
-    backend
-        .free_resident(input)
-        .expect("Fix: CUDA resident input free failed.");
-    backend
-        .free_resident(output)
-        .expect("Fix: CUDA resident output free failed.");
 }

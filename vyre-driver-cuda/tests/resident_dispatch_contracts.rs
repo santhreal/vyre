@@ -17,39 +17,21 @@ mod optimizer_combined_contracts;
 mod repeated_sequence_contracts;
 #[path = "resident_dispatch_contracts/sequence_readback_contracts.rs"]
 mod sequence_readback_contracts;
+#[path = "resident_dispatch_contracts/support.rs"]
+mod support;
 
 use common::{bytes_u32, u32_bytes};
+use support::*;
 
 use vyre_driver::{DispatchConfig, Resource, VyreBackend};
-use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration, CudaProgramDispatcher};
+use vyre_driver_cuda::{
+    CudaBackend, CudaBackendRegistration, CudaProgramDispatcher, CudaResidentBuffer,
+    CudaTelemetrySnapshot,
+};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::program_dispatch::{
     ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
-
-fn cuda_resident_borrowed_fallback_active() -> bool {
-    if std::env::var_os("VYRE_CUDA_RESIDENT_BORROWED_FALLBACK").is_none() {
-        return false;
-    }
-    #[cfg(debug_assertions)]
-    {
-        true
-    }
-    #[cfg(not(debug_assertions))]
-    {
-        std::env::var("VYRE_CUDA_ALLOW_BORROWED_FALLBACK")
-            .map(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "on" | "ON"))
-            .unwrap_or(false)
-    }
-}
-
-fn expected_readback_bytes(native_resident: u64, fallback_resident: u64) -> u64 {
-    if cuda_resident_borrowed_fallback_active() {
-        fallback_resident
-    } else {
-        native_resident
-    }
-}
 
 /// Law-10 release-path contract: a NATIVE resident dispatch must never
 /// silently escape to the borrowed host-buffer fallback. After a clean
@@ -70,7 +52,7 @@ fn release_path_resident_dispatch_keeps_borrowed_fallback_counter_at_zero() {
     // does not hold; we surface that loudly rather than asserting a
     // contradiction. This mirrors `expected_readback_bytes`'s handling
     // of the same env toggle.
-    if cuda_resident_borrowed_fallback_active() {
+    if borrowed_fallback_active() {
         eprintln!(
             "release_path_resident_dispatch_keeps_borrowed_fallback_counter_at_zero: \
              VYRE_CUDA_RESIDENT_BORROWED_FALLBACK is active; the native zero-counter \
@@ -78,60 +60,25 @@ fn release_path_resident_dispatch_keeps_borrowed_fallback_counter_at_zero() {
         );
         return;
     }
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(4),
-            BufferDecl::output("out", 1, DataType::U32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::gid_x(),
-            Expr::add(Expr::load("input", Expr::gid_x()), Expr::u32(7)),
-        )],
-    );
-
-    let input = backend
-        .allocate_resident(16)
-        .expect("Fix: CUDA resident input allocation failed.");
-    let output = backend
-        .allocate_resident(16)
-        .expect("Fix: CUDA resident output allocation failed.");
-    backend
-        .upload_resident(input, &u32_bytes(&[1, 2, 3, 4]))
-        .expect("Fix: CUDA resident input upload failed.");
-
-    backend.reset_telemetry();
-    backend
-        .dispatch_resident(&program, &[input, output], &DispatchConfig::default())
-        .expect("Fix: CUDA native resident dispatch must execute without the borrowed fallback.");
-
-    let output_bytes = backend
-        .download_resident(output)
-        .expect("Fix: CUDA resident output download failed.");
-    assert_eq!(
-        bytes_u32(&output_bytes),
-        vec![8, 9, 10, 11],
-        "Fix: native resident dispatch produced wrong results; the kernel did not run on the resident buffers."
-    );
-
-    let telemetry = backend.telemetry_snapshot();
-    assert_eq!(
-        telemetry.resident_borrowed_fallback_dispatches, 0,
-        "Fix: a native resident dispatch silently escaped to the borrowed host-buffer fallback \
-         ({} dispatch(es)); the resident fast path must stay native so the release perf gate \
-         cannot pass on a degraded path.",
-        telemetry.resident_borrowed_fallback_dispatches
-    );
-
-    backend
-        .free_resident(input)
-        .expect("Fix: CUDA resident input free failed.");
-    backend
-        .free_resident(output)
-        .expect("Fix: CUDA resident output free failed.");
+    // Both arithmetic shapes the release path ships: the add lowers through the
+    // integer add opcode, the multiply through the wide-multiply selection, and
+    // either one degrading to the borrowed path is the regression.
+    for (program, expected) in [
+        (add_program("input", "out", 7), vec![8, 9, 10, 11]),
+        (mul_program("input", "out", 2), vec![2, 4, 6, 8]),
+    ] {
+        let (lanes, borrowed_fallback_dispatches) = dispatch_resident_lanes(&program, &SEED);
+        assert_eq!(
+            lanes, expected,
+            "Fix: native resident dispatch produced wrong results; the kernel did not run on the resident buffers."
+        );
+        assert_eq!(
+            borrowed_fallback_dispatches, 0,
+            "Fix: a native resident dispatch silently escaped to the borrowed host-buffer fallback \
+             ({borrowed_fallback_dispatches} dispatch(es)); the resident fast path must stay native \
+             so the release perf gate cannot pass on a degraded path."
+        );
+    }
 }
 
 /// WHY: the object-safe resident async seam must use CUDA's native pending
@@ -139,30 +86,10 @@ fn release_path_resident_dispatch_keeps_borrowed_fallback_counter_at_zero() {
 /// output and immediate resident-handle validation.
 #[test]
 fn trait_resident_async_dispatch_preserves_output_and_rejects_nonresident_bindings() {
-    let backend = CudaBackendRegistration::new(
-        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host."),
-    );
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(4),
-            BufferDecl::output("out", 1, DataType::U32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::gid_x(),
-            Expr::add(Expr::load("input", Expr::gid_x()), Expr::u32(9)),
-        )],
-    );
-    let input = backend
-        .allocate_resident(16)
-        .expect("Fix: trait resident input allocation failed.");
-    let output = backend
-        .allocate_resident(16)
-        .expect("Fix: trait resident output allocation failed.");
-    backend
-        .upload_resident(&input, &u32_bytes(&[1, 2, 3, 4]))
-        .expect("Fix: trait resident input upload failed.");
+    let backend = acquire_registration();
+    let program = add_program("input", "out", 9);
+    let input = seeded_resource_lane(&backend, "input");
+    let output = resource_lane(&backend, "output");
 
     let pending = backend
         .dispatch_resident_async(
@@ -192,7 +119,7 @@ fn trait_resident_async_dispatch_preserves_output_and_rejects_nonresident_bindin
         "Fix: resident async dispatch diverged from the exact resident program result."
     );
 
-    let nonresident = Resource::Borrowed(vec![0; 16]);
+    let nonresident = Resource::Borrowed(vec![0; LANE_BYTES]);
     let error = match backend.dispatch_resident_async(
         &program,
         &[nonresident, output.clone()],
@@ -208,10 +135,5 @@ fn trait_resident_async_dispatch_preserves_output_and_rejects_nonresident_bindin
         "Fix: nonresident-binding error must name the corrective boundary: {error}"
     );
 
-    backend
-        .free_resident(input)
-        .expect("Fix: trait resident input free failed.");
-    backend
-        .free_resident(output)
-        .expect("Fix: trait resident output free failed.");
+    free_resource_lanes(&backend, vec![(input, "input"), (output, "output")]);
 }

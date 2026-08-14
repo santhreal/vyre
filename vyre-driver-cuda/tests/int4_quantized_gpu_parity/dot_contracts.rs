@@ -1,37 +1,31 @@
 use super::*;
 
+use vyre_primitives::math::quantized::{
+    i4x8_dot_f32_scaled, i4x8_dot_f32_scaled_cpu, i4x8_dot_i32, i4x8_dot_i32_cpu,
+};
+
+/// Fixed-pattern packed operands for one dot lane count.
+fn patterned_dot_operands(lane_count: u32) -> (Vec<u32>, Vec<u32>) {
+    let lhs = cycled_rows(&WEIGHT_PATTERN, 1, lane_count, 0);
+    let rhs = cycled_rows(&ACTIVATION_PATTERN, 1, lane_count, 0);
+    (pack_i4x8_cpu(&lhs[0]), pack_i4x8_cpu(&rhs[0]))
+}
+
 #[test]
 fn cuda_dispatch_matches_packed_int4_dot_i32_oracle() {
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let lhs_pattern = [-8, -3, -1, 0, 1, 3, 7, 6, 5, 4, 2, -2, -4, -6, -7, -5];
-    let rhs_pattern = [7, 5, 3, 1, -1, -3, -5, -7, 6, 4, 2, 0, -2, -4, -6, -8];
+    let backend = cuda_backend();
 
-    for lane_count in [1_u32, 7, 8, 9, 16, 31, 32, 33, 65] {
-        let lhs = lhs_pattern
-            .iter()
-            .copied()
-            .cycle()
-            .take(lane_count as usize)
-            .collect::<Vec<_>>();
-        let rhs = rhs_pattern
-            .iter()
-            .copied()
-            .cycle()
-            .take(lane_count as usize)
-            .collect::<Vec<_>>();
-        let lhs_packed = pack_i4x8(&lhs);
-        let rhs_packed = pack_i4x8(&rhs);
-        let program =
-            vyre_primitives::math::quantized::i4x8_dot_i32("lhs", "rhs", "out", lane_count);
+    for lane_count in DOT_LANE_COUNTS {
+        let (lhs_packed, rhs_packed) = patterned_dot_operands(lane_count);
+        let program = i4x8_dot_i32("lhs", "rhs", "out", lane_count);
         let outputs = backend
             .dispatch(
                 &program,
-                &[pack_u32(&lhs_packed), pack_u32(&rhs_packed)],
+                &[pack_u32_slice(&lhs_packed), pack_u32_slice(&rhs_packed)],
                 &DispatchConfig::default(),
             )
             .expect("Fix: CUDA must execute packed INT4 dot without CPU fallback.");
-        let expected = dot_i32_oracle(&lhs_packed, &rhs_packed, lane_count);
+        let expected = i4x8_dot_i32_cpu(&lhs_packed, &rhs_packed, lane_count);
         let actual = read_i32(&outputs[0]);
 
         assert_eq!(actual, expected, "lane_count={lane_count}");
@@ -40,29 +34,13 @@ fn cuda_dispatch_matches_packed_int4_dot_i32_oracle() {
 
 #[test]
 fn cuda_dispatch_matches_packed_int4_scaled_dot_oracle() {
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let lhs_pattern = [-8, -3, -1, 0, 1, 3, 7, 6, 5, 4, 2, -2, -4, -6, -7, -5];
-    let rhs_pattern = [7, 5, 3, 1, -1, -3, -5, -7, 6, 4, 2, 0, -2, -4, -6, -8];
+    let backend = cuda_backend();
 
-    for lane_count in [1_u32, 7, 8, 9, 16, 31, 32, 33, 65] {
-        let lhs = lhs_pattern
-            .iter()
-            .copied()
-            .cycle()
-            .take(lane_count as usize)
-            .collect::<Vec<_>>();
-        let rhs = rhs_pattern
-            .iter()
-            .copied()
-            .cycle()
-            .take(lane_count as usize)
-            .collect::<Vec<_>>();
-        let lhs_packed = pack_i4x8(&lhs);
-        let rhs_packed = pack_i4x8(&rhs);
+    for lane_count in DOT_LANE_COUNTS {
+        let (lhs_packed, rhs_packed) = patterned_dot_operands(lane_count);
         let lhs_scale = 0.125_f32 + (lane_count % 4) as f32 * 0.0625;
         let rhs_scale = 0.25_f32 + (lane_count % 3) as f32 * 0.125;
-        let program = vyre_primitives::math::quantized::i4x8_dot_f32_scaled(
+        let program = i4x8_dot_f32_scaled(
             "lhs",
             "rhs",
             "lhs_scale",
@@ -74,16 +52,16 @@ fn cuda_dispatch_matches_packed_int4_scaled_dot_oracle() {
             .dispatch(
                 &program,
                 &[
-                    pack_u32(&lhs_packed),
-                    pack_u32(&rhs_packed),
-                    pack_f32(&[lhs_scale]),
-                    pack_f32(&[rhs_scale]),
+                    pack_u32_slice(&lhs_packed),
+                    pack_u32_slice(&rhs_packed),
+                    pack_f32_slice(&[lhs_scale]),
+                    pack_f32_slice(&[rhs_scale]),
                 ],
                 &DispatchConfig::default(),
             )
             .expect("Fix: CUDA must execute fused packed INT4 scaled dot without CPU fallback.");
         let expected =
-            dot_scaled_oracle(&lhs_packed, &rhs_packed, lhs_scale, rhs_scale, lane_count);
+            i4x8_dot_f32_scaled_cpu(&lhs_packed, &rhs_packed, lhs_scale, rhs_scale, lane_count);
         let actual = read_f32(&outputs[0]);
 
         assert_eq!(
