@@ -25,18 +25,7 @@
 #                           owes the difference.
 #   vyre-primitives  8454   the CRC and graph oracle matrices still restate
 #                           src/hash/crc32.rs and src/graph/motif.rs.
-#   vyre-driver-metal 282   ninety of metal's lines are duplicated only because
-#                           cuda, spirv and wgpu hold copies of the Submission
-#                           and Completion materializer body. The single owner is
-#                           vyre-driver/src/materialize.rs.
-#   vyre-driver-spirv 310   the same materializer body.
-#   vyre-driver-reference 23 the same materializer body.
-#   vyre-driver      1535   megakernel_frontier.rs against megakernel_barrier.rs,
-#                           and resident_transfer_fusion.rs against cuda's
-#                           resident_upload_fusion.rs and resident_readback_
-#                           fusion.rs.
-#   vyre-driver-cuda 5787   the tests/self_optimizer_* family, which has no
-#                           tests/common/ harness of the kind wgpu already has.
+
 
 [[crate]]
 name = "conform"
@@ -95,8 +84,8 @@ total_lines = 69251
 
 [[crate]]
 name = "vyre-driver-metal"
-duplicate_lines = 282
-total_lines = 4854
+duplicate_lines = 279
+total_lines = 4735
 
 [[crate]]
 name = "vyre-driver-reference"
@@ -105,13 +94,13 @@ total_lines = 641
 
 [[crate]]
 name = "vyre-driver-spirv"
-duplicate_lines = 310
-total_lines = 2070
+duplicate_lines = 223
+total_lines = 1974
 
 [[crate]]
 name = "vyre-driver-wgpu"
-duplicate_lines = 7804
-total_lines = 61889
+duplicate_lines = 7708
+total_lines = 61762
 
 [[crate]]
 name = "vyre-emit-metal"
@@ -185,8 +174,8 @@ total_lines = 15205
 
 [[crate]]
 name = "vyre-runtime"
-duplicate_lines = 545
-total_lines = 29205
+duplicate_lines = 520
+total_lines = 29187
 
 [[crate]]
 name = "vyre-pass-engine"

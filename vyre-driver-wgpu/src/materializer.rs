@@ -1,18 +1,14 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+use vyre_driver::materialize::{self, InstanceCore, MaterializerDevice};
 use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet, BoundResource,
-    CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig, ResidentOwner,
-    Submission,
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet, CompiledPipeline,
+    Completion, Device, DeviceIdentity, DispatchConfig, ResidentOwner, Submission,
 };
-use vyre_driver::materialize;
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{
-    Artifact, ArtifactValueId, Digest, TargetPayload,
-    TargetPayloadFormat, TargetProfile,
-};
+use vyre_megakernel::{Artifact, ArtifactValueId, Digest, TargetPayload, TargetPayloadFormat};
 
 use crate::descriptor_mapping::descriptor_bind_group;
 use crate::pipeline::WgpuPipeline;
@@ -22,34 +18,42 @@ use crate::target_compiler::{
 use crate::{WgpuBackend, WGPU_BACKEND_ID};
 use vyre_lower::TRAP_SIDECAR_NAME;
 
-struct WgpuDevice {
-    identity: DeviceIdentity,
-    format: TargetPayloadFormat,
-    profile: TargetProfile,
-    lost: Arc<AtomicBool>,
+/// Rejection for a host dispatch that skipped a declared output slot.
+fn omitted_output(output_index: usize, name: &str) -> BackendError {
+    materialize::invalid_module(&format!(
+        "WGSL target module omitted output {output_index} for Program buffer `{name}`"
+    ))
 }
 
-impl Device for WgpuDevice {
-    fn identity(&self) -> &DeviceIdentity {
-        &self.identity
-    }
+/// Rejection for a resident dispatch that skipped a declared output slot.
+fn omitted_resident_output(output_index: usize, name: &str) -> BackendError {
+    materialize::invalid_module(&format!(
+        "WGPU resident target module omitted output {output_index} for Program buffer `{name}`"
+    ))
+}
 
-    fn target_format(&self) -> &TargetPayloadFormat {
-        &self.format
-    }
+/// Rejection for an unproduced output value on the resident path, which names
+/// the value without its lifetime class.
+fn unproduced_resident_value(value: ArtifactValueId) -> BackendError {
+    materialize::invalid_module(&format!(
+        "selected execution did not produce canonical value {}",
+        value.0
+    ))
+}
 
-    fn target_profile(&self) -> &TargetProfile {
-        &self.profile
-    }
-
-    fn is_healthy(&self) -> bool {
-        !self.lost.load(Ordering::Acquire)
-    }
+/// Rejection for an unpreserved retained value on the resident path, which
+/// names the value without its lifetime class.
+fn unpreserved_resident_value(value: ArtifactValueId) -> BackendError {
+    materialize::invalid_module(&format!(
+        "selected execution did not preserve canonical value {}",
+        value.0
+    ))
 }
 
 pub(crate) struct WgpuMaterializer {
     backend: WgpuBackend,
-    descriptor: WgpuDevice,
+    descriptor: MaterializerDevice,
+    lost: Arc<AtomicBool>,
 }
 
 impl ArtifactMaterializer for WgpuMaterializer {
@@ -87,16 +91,12 @@ impl ArtifactMaterializer for WgpuMaterializer {
         payload: &TargetPayload,
     ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
         if !self.descriptor.is_healthy() {
-            return Err(device_lost_error(&self.descriptor.identity));
+            return Err(device_lost_error(self.descriptor.identity()));
         }
         let admitted = materialize::admit(
             artifact,
             payload,
-            materialize::MaterializerTarget {
-                backend_id: WGPU_BACKEND_ID,
-                format: self.descriptor.target_format(),
-                profile: self.descriptor.target_profile(),
-            },
+            self.descriptor.target(WGPU_BACKEND_ID),
         )?;
         let mut modules = Vec::with_capacity(admitted.len());
         for module in admitted {
@@ -166,16 +166,12 @@ impl ArtifactMaterializer for WgpuMaterializer {
                 config,
             });
         }
-        let resources = materialize::project_resources(artifact);
         Ok(Box::new(WgpuArtifactInstance {
-            artifact: artifact.digest(),
-            payload: payload.digest(),
-            device: self.descriptor.identity.clone(),
-            lost: Arc::clone(&self.descriptor.lost),
+            core: self
+                .descriptor
+                .instance(artifact, payload, materialize::NEUTRAL_MESSAGES),
+            lost: Arc::clone(&self.lost),
             modules,
-            values: resources.values,
-            outputs: resources.outputs,
-            retained: resources.retained,
         }))
     }
 }
@@ -194,62 +190,42 @@ struct WgpuExecutableModule {
 }
 
 struct WgpuArtifactInstance {
-    artifact: Digest,
-    payload: Digest,
-    device: DeviceIdentity,
+    core: InstanceCore,
     lost: Arc<AtomicBool>,
     modules: Vec<WgpuExecutableModule>,
-    values: BTreeMap<String, ArtifactValueId>,
-    outputs: BTreeSet<ArtifactValueId>,
-    retained: BTreeSet<ArtifactValueId>,
 }
 
 impl ArtifactInstance for WgpuArtifactInstance {
     fn artifact(&self) -> Digest {
-        self.artifact
+        self.core.artifact
     }
 
     fn payload(&self) -> Digest {
-        self.payload
+        self.core.payload
     }
 
     fn device(&self) -> &DeviceIdentity {
-        &self.device
+        &self.core.device
     }
 
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
         if self.lost.load(Ordering::Acquire) {
-            return Err(device_lost_error(&self.device));
+            return Err(device_lost_error(&self.core.device));
         }
-        if bindings.artifact() != self.artifact {
-            return Err(materialize::invalid_module("bindings name a different neutral artifact"));
-        }
+        self.core.accept(&bindings)?;
         let invocation_grid = bindings.invocation_grid();
-        let mut host_state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
-        let mut resident_state = BTreeMap::<ArtifactValueId, vyre_driver::Resource>::new();
-        for (value, resource) in bindings.resources() {
-            match resource {
-                BoundResource::Host(bytes) => {
-                    host_state.insert(*value, bytes.clone());
-                }
-                BoundResource::Resident(resource) => {
-                    resident_state.insert(*value, resource.clone());
-                }
-            }
-        }
-        if !host_state.is_empty() && !resident_state.is_empty() {
+        let bound = materialize::partition_bindings(&bindings);
+        if !bound.host.is_empty() && !bound.resident.is_empty() {
             return Err(materialize::invalid_module(
                 "WGPU artifact submission cannot mix host and resident resources",
             ));
         }
-        let result = if resident_state.is_empty() {
-            self.execute(host_state, invocation_grid)
+        let result = if bound.resident.is_empty() {
+            self.execute(bound.host, invocation_grid)
         } else {
-            self.execute_resident(resident_state, invocation_grid)
+            self.execute_resident(&bound.resident, invocation_grid)
         };
-        Ok(Box::new(ReadySubmission {
-            result: Some(result),
-        }))
+        Ok(self.core.ready(result))
     }
 }
 
@@ -263,14 +239,11 @@ impl WgpuArtifactInstance {
         let mut has_device_timing = false;
         for module in &self.modules {
             let mut config = module.config.clone();
-            if let Some(grid) = invocation_grid {
-                config.grid_override = Some(grid);
-                config.dispatch_grid = Some(grid);
-            }
+            materialize::override_grid(&mut config, invocation_grid);
             let plan = BindingPlan::build(&module.program)?;
             let mut inputs = Vec::with_capacity(module.input_slots.len());
             for slot in &module.input_slots {
-                let value = self.value_for_buffer(&slot.name)?;
+                let value = self.core.value_for_buffer(&slot.name)?;
                 match state.get(&value) {
                     Some(bytes) => inputs.push(bytes.as_slice()),
                     None if !slot.required => inputs.push(&[]),
@@ -284,7 +257,7 @@ impl WgpuArtifactInstance {
             }
             let dispatched = match module.pipeline.dispatch_borrowed_timed(&inputs, &config) {
                 Err(_) if self.lost.load(Ordering::Acquire) => {
-                    return Err(device_lost_error(&self.device));
+                    return Err(device_lost_error(&self.core.device));
                 }
                 result => result?,
             };
@@ -292,63 +265,21 @@ impl WgpuArtifactInstance {
                 device_ns = device_ns.saturating_add(ns);
                 has_device_timing = true;
             }
-            for binding in &plan.bindings {
-                let Some(output_index) = binding.output_index else {
-                    continue;
-                };
-                let buffer = &module.program.buffers()[binding.buffer_index];
-                let value = self.value_for_buffer(buffer.name())?;
-                let bytes = dispatched.outputs.get(output_index).ok_or_else(|| {
-                    materialize::invalid_module(&format!(
-                        "WGSL target module omitted output {output_index} for Program buffer `{}`",
-                        buffer.name()
-                    ))
-                })?;
-                state.insert(value, bytes.clone());
-            }
+            self.core.absorb_outputs(
+                &plan,
+                &module.program,
+                &dispatched.outputs,
+                &mut state,
+                omitted_output,
+            )?;
         }
-        let outputs = self
-            .outputs
-            .iter()
-            .map(|value| {
-                state
-                    .get(value)
-                    .cloned()
-                    .map(|bytes| (*value, bytes))
-                    .ok_or_else(|| {
-                        materialize::invalid_module(&format!(
-                            "selected execution did not produce canonical output value {}",
-                            value.0
-                        ))
-                    })
-            })
-            .collect::<Result<BTreeMap<_, _>, _>>()?;
-        let retained = self
-            .retained
-            .iter()
-            .map(|value| {
-                state
-                    .get(value)
-                    .cloned()
-                    .map(|bytes| (*value, bytes))
-                    .ok_or_else(|| {
-                        materialize::invalid_module(&format!(
-                            "selected execution did not preserve retained value {}",
-                            value.0
-                        ))
-                    })
-            })
-            .collect::<Result<BTreeMap<_, _>, _>>()?;
-        Ok(Completion {
-            artifact: self.artifact,
-            outputs,
-            retained,
-            device_ns: has_device_timing.then_some(device_ns),
-        })
+        self.core
+            .completion(&state, has_device_timing.then_some(device_ns))
     }
+
     fn execute_resident(
         &self,
-        resources: BTreeMap<ArtifactValueId, vyre_driver::Resource>,
+        resources: &BTreeMap<ArtifactValueId, vyre_driver::Resource>,
         invocation_grid: Option<[u32; 3]>,
     ) -> Result<Completion, BackendError> {
         if self.modules.len() != 1 {
@@ -360,7 +291,7 @@ impl WgpuArtifactInstance {
         let module = &self.modules[0];
         let mut ordered = Vec::with_capacity(module.resident_slots.len());
         for name in &module.resident_slots {
-            let value = self.value_for_buffer(name)?;
+            let value = self.core.value_for_buffer(name)?;
             let resource = resources.get(&value).ok_or_else(|| {
                 materialize::invalid_module(&format!(
                     "canonical artifact value {} for resident target binding `{name}` is unbound",
@@ -370,67 +301,28 @@ impl WgpuArtifactInstance {
             ordered.push(resource.clone());
         }
         let mut config = module.config.clone();
-        if let Some(grid) = invocation_grid {
-            config.grid_override = Some(grid);
-            config.dispatch_grid = Some(grid);
-        }
+        materialize::override_grid(&mut config, invocation_grid);
         let dispatched = module
             .pipeline
             .dispatch_persistent_handles_timed(&ordered, &config)?;
         let plan = BindingPlan::build(&module.program)?;
-        let mut output_state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
-        for binding in &plan.bindings {
-            let Some(output_index) = binding.output_index else {
-                continue;
-            };
-            let buffer = &module.program.buffers()[binding.buffer_index];
-            let value = self.value_for_buffer(buffer.name())?;
-            let bytes = dispatched.outputs.get(output_index).ok_or_else(|| {
-                materialize::invalid_module(&format!(
-                    "WGPU resident target module omitted output {output_index} for Program buffer `{}`",
-                    buffer.name()
-                ))
-            })?;
-            output_state.insert(value, bytes.clone());
-        }
-        let outputs = self.project_values(&output_state, &self.outputs, "produce")?;
-        let retained = self.project_values(&output_state, &self.retained, "preserve")?;
+        let mut state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
+        self.core.absorb_outputs(
+            &plan,
+            &module.program,
+            &dispatched.outputs,
+            &mut state,
+            omitted_resident_output,
+        )?;
         Ok(Completion {
-            artifact: self.artifact,
-            outputs,
-            retained,
+            artifact: self.core.artifact,
+            outputs: self
+                .core
+                .project(&self.core.outputs, &state, unproduced_resident_value)?,
+            retained: self
+                .core
+                .project(&self.core.retained, &state, unpreserved_resident_value)?,
             device_ns: dispatched.device_ns,
-        })
-    }
-
-    fn project_values(
-        &self,
-        state: &BTreeMap<ArtifactValueId, Vec<u8>>,
-        values: &BTreeSet<ArtifactValueId>,
-        action: &str,
-    ) -> Result<BTreeMap<ArtifactValueId, Vec<u8>>, BackendError> {
-        values
-            .iter()
-            .map(|value| {
-                state
-                    .get(value)
-                    .cloned()
-                    .map(|bytes| (*value, bytes))
-                    .ok_or_else(|| {
-                        materialize::invalid_module(&format!(
-                            "selected execution did not {action} canonical value {}",
-                            value.0
-                        ))
-                    })
-            })
-            .collect()
-    }
-
-    fn value_for_buffer(&self, name: &str) -> Result<ArtifactValueId, BackendError> {
-        self.values.get(name).copied().ok_or_else(|| {
-            materialize::invalid_module(&format!(
-                "Program buffer `{name}` is absent from the canonical artifact ABI"
-            ))
         })
     }
 }
@@ -444,27 +336,10 @@ fn device_lost_error(identity: &DeviceIdentity) -> BackendError {
     }
 }
 
-struct ReadySubmission {
-    result: Option<Result<Completion, BackendError>>,
-}
-
-impl Submission for ReadySubmission {
-    fn is_ready(&self) -> bool {
-        true
-    }
-
-    fn wait(mut self: Box<Self>) -> Result<Completion, BackendError> {
-        self.result
-            .take()
-            .ok_or_else(|| materialize::invalid_module("each Submission completion may be consumed only once"))?
-    }
-}
-
 pub(crate) fn materializer_for_backend(
     backend: WgpuBackend,
 ) -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
-    let format =
-        TargetPayloadFormat::new("wgsl", WGPU_TARGET_FORMAT_VERSION)
+    let format = TargetPayloadFormat::new("wgsl", WGPU_TARGET_FORMAT_VERSION)
         .map_err(|error| materialize::compile_error(WGPU_BACKEND_ID, error))?;
     let profile = crate::target_compiler::target_profile()?;
     let generation = ResidentOwner::new()?.get();
@@ -472,16 +347,17 @@ pub(crate) fn materializer_for_backend(
     let lost = Arc::clone(&backend.device_lost);
     Ok(Box::new(WgpuMaterializer {
         backend,
-        descriptor: WgpuDevice {
-            identity: DeviceIdentity {
+        descriptor: MaterializerDevice::revocable(
+            DeviceIdentity {
                 backend: WGPU_BACKEND_ID,
                 device,
                 generation,
             },
             format,
             profile,
-            lost,
-        },
+            Arc::clone(&lost),
+        ),
+        lost,
     }))
 }
 
@@ -489,28 +365,31 @@ pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, Ba
     materializer_for_backend(WgpuBackend::acquire()?)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeSet;
 
     /// WHY: runtime recovery must receive a stable device-loss class, never text to parse.
     #[test]
     fn lost_instance_submission_is_structured() {
         let digest = Digest([7; 32]);
         let instance = WgpuArtifactInstance {
-            artifact: digest,
-            payload: Digest([8; 32]),
-            device: DeviceIdentity {
-                backend: WGPU_BACKEND_ID,
-                device: "fault-injection".to_string(),
-                generation: 11,
+            core: InstanceCore {
+                artifact: digest,
+                payload: Digest([8; 32]),
+                device: DeviceIdentity {
+                    backend: WGPU_BACKEND_ID,
+                    device: "fault-injection".to_string(),
+                    generation: 11,
+                },
+                values: BTreeMap::new(),
+                outputs: BTreeSet::new(),
+                retained: BTreeSet::new(),
+                messages: materialize::NEUTRAL_MESSAGES,
             },
             lost: Arc::new(AtomicBool::new(true)),
             modules: Vec::new(),
-            values: BTreeMap::new(),
-            outputs: BTreeSet::new(),
-            retained: BTreeSet::new(),
         };
 
         let error = match instance.submit(BindingSet::new(digest)) {

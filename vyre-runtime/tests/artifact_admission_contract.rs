@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::LazyLock;
 
 use vyre_driver::backend::BackendRegistration;
+use vyre_driver::materialize::MaterializerDevice;
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, BoundResource, Completion,
     Device, DeviceIdentity, ResidentOwner, Resource, Submission, VyreBackend,
@@ -645,32 +646,8 @@ static MATERIALIZER_CALLS: AtomicU64 = AtomicU64::new(0);
 static TEST_SUPPORTED_OPS: LazyLock<HashSet<vyre_foundation::ir::OpId>> =
     LazyLock::new(HashSet::new);
 
-struct TestDevice {
-    identity: DeviceIdentity,
-    format: TargetPayloadFormat,
-    profile: TargetProfile,
-}
-
-impl Device for TestDevice {
-    fn identity(&self) -> &DeviceIdentity {
-        &self.identity
-    }
-
-    fn target_format(&self) -> &TargetPayloadFormat {
-        &self.format
-    }
-
-    fn target_profile(&self) -> &TargetProfile {
-        &self.profile
-    }
-
-    fn is_healthy(&self) -> bool {
-        true
-    }
-}
-
 struct TestMaterializer {
-    device: TestDevice,
+    device: MaterializerDevice,
 }
 
 impl ArtifactMaterializer for TestMaterializer {
@@ -691,7 +668,7 @@ impl ArtifactMaterializer for TestMaterializer {
         Ok(Box::new(TestInstance {
             artifact: artifact.digest(),
             payload: payload.digest(),
-            device: self.device.identity.clone(),
+            device: self.device.identity().clone(),
             retained: artifact
                 .resources()
                 .iter()
@@ -779,15 +756,15 @@ fn test_materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendE
     MATERIALIZER_CALLS.fetch_add(1, Ordering::AcqRel);
     let generation = MATERIALIZER_GENERATION.fetch_add(1, Ordering::AcqRel) + 1;
     Ok(Box::new(TestMaterializer {
-        device: TestDevice {
-            identity: DeviceIdentity {
+        device: MaterializerDevice::new(
+            DeviceIdentity {
                 backend: "test-artifact",
                 device: "test-device".to_string(),
                 generation,
             },
-            format: format("test.cache-target", 1),
-            profile: profile("test.cache-target", 1),
-        },
+            format("test.cache-target", 1),
+            profile("test.cache-target", 1),
+        ),
     }))
 }
 

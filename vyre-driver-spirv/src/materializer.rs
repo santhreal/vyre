@@ -1,46 +1,60 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use vyre_driver::materialize::{self, InstanceCore, InstanceMessages, MaterializerDevice};
 use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet, BoundResource,
-    Completion, Device, DeviceIdentity, DispatchConfig, ResidentOwner, Submission,
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet, Completion,
+    Device, DeviceIdentity, DispatchConfig, ResidentOwner, Submission,
 };
-use vyre_driver::materialize;
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{
-    Artifact, ArtifactValueId, Digest, TargetPayload,
-    TargetPayloadFormat, TargetProfile,
-};
+use vyre_megakernel::{Artifact, ArtifactValueId, Digest, TargetPayload, TargetPayloadFormat};
 
 use crate::{vulkan, SPIRV_BACKEND_ID};
 
-struct SpirvDevice {
-    identity: DeviceIdentity,
-    format: TargetPayloadFormat,
-    profile: TargetProfile,
+/// SPIR-V rejection text, unchanged from when this crate owned the whole path.
+const MESSAGES: InstanceMessages = InstanceMessages {
+    foreign_artifact: || BackendError::InvalidProgram {
+        fix: "Fix: bind resources against the exact artifact digest owned by this instance."
+            .to_string(),
+    },
+    unmapped_buffer: |name| BackendError::InvalidProgram {
+        fix: format!(
+            "Fix: target Program buffer `{name}` must project from the canonical artifact ABI."
+        ),
+    },
+    missing_output_value: |value| BackendError::InvalidProgram {
+        fix: format!(
+            "Fix: selected execution must produce canonical output value {}.",
+            value.0
+        ),
+    },
+    missing_retained_value: |value| BackendError::InvalidProgram {
+        fix: format!(
+            "Fix: selected execution must preserve retained value {}.",
+            value.0
+        ),
+    },
+    completion_consumed: || BackendError::InvalidProgram {
+        fix: "Fix: consume each Submission completion exactly once.".to_string(),
+    },
+};
+
+/// Rejection for a declared input whose canonical value was never bound.
+fn unbound_input(value: ArtifactValueId, name: &str) -> BackendError {
+    BackendError::InvalidProgram {
+        fix: format!(
+            "Fix: bind canonical artifact value {} for Program buffer `{name}` before submission.",
+            value.0
+        ),
+    }
 }
 
-impl Device for SpirvDevice {
-    fn identity(&self) -> &DeviceIdentity {
-        &self.identity
-    }
-
-    fn target_format(&self) -> &TargetPayloadFormat {
-        &self.format
-    }
-
-    fn target_profile(&self) -> &TargetProfile {
-        &self.profile
-    }
-
-    fn is_healthy(&self) -> bool {
-        true
-    }
-}
+/// First word of every well-formed SPIR-V module.
+const SPIRV_MAGIC: u32 = 0x0723_0203;
 
 pub(crate) struct SpirvMaterializer {
     device: Arc<vulkan::VulkanDevice>,
-    descriptor: SpirvDevice,
+    descriptor: MaterializerDevice,
 }
 
 impl ArtifactMaterializer for SpirvMaterializer {
@@ -56,11 +70,7 @@ impl ArtifactMaterializer for SpirvMaterializer {
         let admitted = materialize::admit(
             artifact,
             payload,
-            materialize::MaterializerTarget {
-                backend_id: SPIRV_BACKEND_ID,
-                format: self.descriptor.target_format(),
-                profile: self.descriptor.target_profile(),
-            },
+            self.descriptor.target(SPIRV_BACKEND_ID),
         )?;
         let mut modules = Vec::with_capacity(admitted.len());
         for admitted_module in admitted {
@@ -75,7 +85,7 @@ impl ArtifactMaterializer for SpirvMaterializer {
                 .chunks_exact(4)
                 .map(|word| u32::from_le_bytes([word[0], word[1], word[2], word[3]]))
                 .collect::<Vec<_>>();
-            if words.first().copied() != Some(0x0723_0203) {
+            if words.first().copied() != Some(SPIRV_MAGIC) {
                 return Err(materialize::invalid_module(
                     "SPIR-V target module must begin with the SPIR-V magic word",
                 ));
@@ -86,16 +96,10 @@ impl ArtifactMaterializer for SpirvMaterializer {
                 config: admitted_module.config,
             });
         }
-        let resources = materialize::project_resources(artifact);
         Ok(Box::new(SpirvArtifactInstance {
-            artifact: artifact.digest(),
-            payload: payload.digest(),
-            device: self.descriptor.identity.clone(),
+            core: self.descriptor.instance(artifact, payload, MESSAGES),
             native: Arc::clone(&self.device),
             modules,
-            values: resources.values,
-            outputs: resources.outputs,
-            retained: resources.retained,
         }))
     }
 }
@@ -107,56 +111,33 @@ struct SpirvExecutableModule {
 }
 
 struct SpirvArtifactInstance {
-    artifact: Digest,
-    payload: Digest,
-    device: DeviceIdentity,
+    core: InstanceCore,
     native: Arc<vulkan::VulkanDevice>,
     modules: Vec<SpirvExecutableModule>,
-    values: BTreeMap<String, ArtifactValueId>,
-    outputs: BTreeSet<ArtifactValueId>,
-    retained: BTreeSet<ArtifactValueId>,
 }
 
 impl ArtifactInstance for SpirvArtifactInstance {
     fn artifact(&self) -> Digest {
-        self.artifact
+        self.core.artifact
     }
 
     fn payload(&self) -> Digest {
-        self.payload
+        self.core.payload
     }
 
     fn device(&self) -> &DeviceIdentity {
-        &self.device
+        &self.core.device
     }
 
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
-        if bindings.artifact() != self.artifact {
-            return Err(BackendError::InvalidProgram {
-                fix:
-                    "Fix: bind resources against the exact artifact digest owned by this instance."
-                        .to_string(),
-            });
-        }
+        self.core.accept(&bindings)?;
         let invocation_grid = bindings.invocation_grid();
-        let mut state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
-        for (value, resource) in bindings.resources() {
-            match resource {
-                BoundResource::Host(bytes) => {
-                    state.insert(*value, bytes.clone());
-                }
-                BoundResource::Resident(_) => {
-                    return Err(BackendError::UnsupportedFeature {
-                        name: "SPIR-V artifact resident binding".to_string(),
-                        backend: SPIRV_BACKEND_ID.to_string(),
-                    });
-                }
-            }
-        }
-        let result = self.execute(state, invocation_grid);
-        Ok(Box::new(ReadySubmission {
-            result: Some(result),
-        }))
+        let state = materialize::host_only_bindings(
+            &bindings,
+            "SPIR-V artifact resident binding",
+            SPIRV_BACKEND_ID,
+        )?;
+        Ok(self.core.ready(self.execute(state, invocation_grid)))
     }
 }
 
@@ -168,41 +149,11 @@ impl SpirvArtifactInstance {
     ) -> Result<Completion, BackendError> {
         for module in &self.modules {
             let mut config = module.config.clone();
-            if let Some(grid) = invocation_grid {
-                config.grid_override = Some(grid);
-                config.dispatch_grid = Some(grid);
-            }
+            materialize::override_grid(&mut config, invocation_grid);
             let plan = BindingPlan::build(&module.program)?;
-            let input_count = plan
-                .bindings
-                .iter()
-                .filter_map(|binding| binding.input_index)
-                .max()
-                .map_or(0, |index| index + 1);
-            let mut inputs = vec![&[][..]; input_count];
-            for binding in &plan.bindings {
-                let Some(input_index) = binding.input_index else {
-                    continue;
-                };
-                let buffer = &module.program.buffers()[binding.buffer_index];
-                let value = self.values.get(buffer.name()).ok_or_else(|| {
-                    BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: target Program buffer `{}` must project from the canonical artifact ABI.",
-                            buffer.name()
-                        ),
-                    }
-                })?;
-                inputs[input_index] = state.get(value).map(Vec::as_slice).ok_or_else(|| {
-                    BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: bind canonical artifact value {} for Program buffer `{}` before submission.",
-                            value.0,
-                            buffer.name()
-                        ),
-                    }
-                })?;
-            }
+            let inputs =
+                self.core
+                    .gather_inputs(&plan, &module.program, &state, unbound_input)?;
             // SAFETY: `native` owns a live Vulkan device for the entire instance;
             // words were validated as aligned SPIR-V and Program metadata came
             // from the authenticated neutral artifact.
@@ -215,13 +166,16 @@ impl SpirvArtifactInstance {
                     &config,
                 )
             }?;
+            // A SPIR-V dispatch that returns fewer buffers than the plan declares
+            // leaves the earlier value in place rather than failing the submission.
             for binding in &plan.bindings {
                 let Some(output_index) = binding.output_index else {
                     continue;
                 };
                 let buffer = &module.program.buffers()[binding.buffer_index];
                 let value =
-                    self.values
+                    self.core
+                        .values
                         .get(buffer.name())
                         .ok_or_else(|| BackendError::InvalidProgram {
                             fix: format!(
@@ -234,80 +188,26 @@ impl SpirvArtifactInstance {
                 }
             }
         }
-        let outputs = self
-            .outputs
-            .iter()
-            .map(|value| {
-                state
-                    .get(value)
-                    .cloned()
-                    .map(|bytes| (*value, bytes))
-                    .ok_or_else(|| BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: selected execution must produce canonical output value {}.",
-                            value.0
-                        ),
-                    })
-            })
-            .collect::<Result<BTreeMap<_, _>, _>>()?;
-        let retained = self
-            .retained
-            .iter()
-            .map(|value| {
-                state
-                    .get(value)
-                    .cloned()
-                    .map(|bytes| (*value, bytes))
-                    .ok_or_else(|| BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: selected execution must preserve retained value {}.",
-                            value.0
-                        ),
-                    })
-            })
-            .collect::<Result<BTreeMap<_, _>, _>>()?;
-        Ok(Completion {
-            artifact: self.artifact,
-            outputs,
-            retained,
-            device_ns: None,
-        })
-    }
-}
-
-struct ReadySubmission {
-    result: Option<Result<Completion, BackendError>>,
-}
-
-impl Submission for ReadySubmission {
-    fn is_ready(&self) -> bool {
-        true
-    }
-
-    fn wait(mut self: Box<Self>) -> Result<Completion, BackendError> {
-        self.result
-            .take()
-            .ok_or_else(|| BackendError::InvalidProgram {
-                fix: "Fix: consume each Submission completion exactly once.".to_string(),
-            })?
+        self.core.completion(&state, None)
     }
 }
 
 pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
     let native = Arc::new(vulkan::VulkanDevice::acquire()?);
-    let format = TargetPayloadFormat::new("spv", 1).map_err(|error| materialize::compile_error(SPIRV_BACKEND_ID, error))?;
+    let format = TargetPayloadFormat::new("spv", 1)
+        .map_err(|error| materialize::compile_error(SPIRV_BACKEND_ID, error))?;
     let profile = crate::target_compiler::target_profile()?;
     let generation = ResidentOwner::new()?.get();
     Ok(Box::new(SpirvMaterializer {
         device: native,
-        descriptor: SpirvDevice {
-            identity: DeviceIdentity {
+        descriptor: MaterializerDevice::new(
+            DeviceIdentity {
                 backend: SPIRV_BACKEND_ID,
                 device: "vulkan-compute".to_string(),
                 generation,
             },
             format,
             profile,
-        },
+        ),
     }))
 }
