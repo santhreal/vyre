@@ -411,12 +411,7 @@ fn adaptive_u32_byte_len(words: usize, context: &str) -> Result<usize, String> {
 }
 
 const fn adaptive_linear_grid(items: u32) -> [u32; 3] {
-    let groups = items.div_ceil(ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_LANES);
-    if groups == 0 {
-        [1, 1, 1]
-    } else {
-        [groups, 1, 1]
-    }
+    crate::graph::lane_grid(items, ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_LANES)
 }
 
 /// Dispatch grid for adaptive traversal kernels that process one node per lane.

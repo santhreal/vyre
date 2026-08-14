@@ -16,6 +16,7 @@ use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::bitset::bitset_words;
+use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::graph::dominator_frontier";
@@ -36,17 +37,16 @@ pub const DOMINATOR_FRONTIER_OUT_BUFFER: u32 = 5;
 pub const DOMINATOR_FRONTIER_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
 /// Dispatch grid for one dominance-frontier query over candidate nodes.
+///
+/// A zero-node query used to return a grid of ZERO groups here while every
+/// sibling graph primitive returned one. `node_count == 0` is accepted by
+/// `validate_dominator_frontier_inputs` (an empty seed is exactly zero words), so
+/// that grid reached the launcher, and the CUDA launcher refuses `grid[axis] == 0`
+/// outright. The candidate lanes are already guarded against `node_count`, so one
+/// group of guarded lanes is the no-op the zero-node case wants.
 #[must_use]
 pub const fn dominator_frontier_dispatch_grid(node_count: u32) -> [u32; 3] {
-    if node_count == 0 {
-        [0, 1, 1]
-    } else {
-        [
-            node_count.div_ceil(DOMINATOR_FRONTIER_WORKGROUP_SIZE[0]),
-            1,
-            1,
-        ]
-    }
+    crate::graph::lane_grid(node_count, DOMINATOR_FRONTIER_WORKGROUP_SIZE[0])
 }
 
 /// Validated dominance-frontier dispatch layout.
@@ -427,21 +427,16 @@ pub fn try_dominator_frontier(
     });
     let offset_count = offset_count?;
     let t = Expr::InvocationId { axis: 0 };
-    let dominator_is_seed = vec![
-        Node::let_bind(
-            "seed_word",
-            Expr::load(seed, Expr::shr(Expr::var("n"), Expr::u32(5))),
-        ),
-        Node::let_bind(
-            "seed_bit",
-            Expr::shl(Expr::u32(1), Expr::bitand(Expr::var("n"), Expr::u32(31))),
-        ),
-        Node::if_then(
-            Expr::ne(
-                Expr::bitand(Expr::var("seed_word"), Expr::var("seed_bit")),
-                Expr::u32(0),
-            ),
-            vec![
+    let dominator_is_seed = when_bit_set(
+        seed,
+        &Expr::var("n"),
+        BitAccess {
+            word: "seed_word_idx",
+            mask: "seed_bit",
+            value: "seed_word",
+        },
+        |word| word,
+        vec![
                 Node::let_bind(
                     "pred_start",
                     Expr::load("pred_offsets", Expr::var("candidate")),
@@ -519,31 +514,20 @@ pub fn try_dominator_frontier(
                         Expr::eq(Expr::var("dominates_a_predecessor"), Expr::u32(1)),
                         Expr::eq(Expr::var("strictly_dominates_candidate"), Expr::u32(0)),
                     ),
-                    vec![
-                        Node::let_bind(
-                            "candidate_word",
-                            Expr::shr(Expr::var("candidate"), Expr::u32(5)),
-                        ),
-                        Node::let_bind(
-                            "candidate_bit",
-                            Expr::shl(
-                                Expr::u32(1),
-                                Expr::bitand(Expr::var("candidate"), Expr::u32(31)),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "_prev",
-                            Expr::atomic_or(
-                                out,
-                                Expr::var("candidate_word"),
-                                Expr::var("candidate_bit"),
-                            ),
-                        ),
-                    ],
+                    set_bit(
+                        out,
+                        &Expr::var("candidate"),
+                        BitAccess {
+                            word: "candidate_word",
+                            mask: "candidate_bit",
+                            value: "_prev",
+                        },
+                        |word| word,
+                        Vec::new(),
+                    ),
                 ),
-            ],
-        ),
-    ];
+        ],
+    );
     Ok(Program::wrapped(
         vec![
             BufferDecl::storage(
@@ -1078,7 +1062,10 @@ mod tests {
 
     #[test]
     fn launch_plan_packs_candidate_lanes_into_blocks() {
-        assert_eq!(dominator_frontier_dispatch_grid(0), [0, 1, 1]);
+        // A zero-node query launches ONE guarded group, not zero groups: the CUDA
+        // launcher refuses `grid[axis] == 0`, and this used to be the only graph
+        // grid builder that produced it.
+        assert_eq!(dominator_frontier_dispatch_grid(0), [1, 1, 1]);
         assert_eq!(dominator_frontier_dispatch_grid(1), [1, 1, 1]);
         assert_eq!(dominator_frontier_dispatch_grid(256), [1, 1, 1]);
         assert_eq!(dominator_frontier_dispatch_grid(257), [2, 1, 1]);

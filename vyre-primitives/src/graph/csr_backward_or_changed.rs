@@ -6,6 +6,8 @@ use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{Expr, Node, Program};
 
 use crate::bitset::bitset_words;
+use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
+use crate::graph::lane_grid;
 use crate::graph::program_graph::{
     push_frontier_changed_buffers, ProgramGraphShape, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS,
     NAME_EDGE_TARGETS,
@@ -19,26 +21,7 @@ pub const CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// Dispatch grid for a node-parallel reverse in-place CSR expansion pass.
 #[must_use]
 pub const fn csr_backward_or_changed_parallel_grid(node_count: u32) -> [u32; 3] {
-    [
-        ceil_div_u32(
-            at_least_one(node_count),
-            CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE[0],
-        ),
-        1,
-        1,
-    ]
-}
-
-const fn at_least_one(value: u32) -> u32 {
-    if value == 0 {
-        1
-    } else {
-        value
-    }
-}
-
-const fn ceil_div_u32(value: u32, divisor: u32) -> u32 {
-    ((value - 1) / divisor) + 1
+    lane_grid(node_count, CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE[0])
 }
 
 /// Parallel in-place reverse expansion program for resident fixed-point drivers.
@@ -74,32 +57,17 @@ pub fn csr_backward_or_changed_parallel(
                             Node::let_bind("dst", Expr::load(NAME_EDGE_TARGETS, Expr::var("e"))),
                             Node::if_then(
                                 Expr::lt(Expr::var("dst"), Expr::u32(shape.node_count)),
-                                vec![
-                                    Node::let_bind(
-                                        "dst_word",
-                                        Expr::load(
-                                            frontier_out,
-                                            Expr::shr(Expr::var("dst"), Expr::u32(5)),
-                                        ),
-                                    ),
-                                    Node::let_bind(
-                                        "dst_bit",
-                                        Expr::shl(
-                                            Expr::u32(1),
-                                            Expr::bitand(Expr::var("dst"), Expr::u32(31)),
-                                        ),
-                                    ),
-                                    Node::if_then(
-                                        Expr::ne(
-                                            Expr::bitand(
-                                                Expr::var("dst_word"),
-                                                Expr::var("dst_bit"),
-                                            ),
-                                            Expr::u32(0),
-                                        ),
-                                        vec![Node::assign("hit", Expr::u32(1))],
-                                    ),
-                                ],
+                                when_bit_set(
+                                    frontier_out,
+                                    &Expr::var("dst"),
+                                    BitAccess {
+                                        word: "dst_word_idx",
+                                        mask: "dst_bit",
+                                        value: "dst_word",
+                                    },
+                                    |word| word,
+                                    vec![Node::assign("hit", Expr::u32(1))],
+                                ),
                             ),
                         ],
                     ),
@@ -108,31 +76,20 @@ pub fn csr_backward_or_changed_parallel(
         ),
         Node::if_then(
             Expr::eq(Expr::var("hit"), Expr::u32(1)),
-            vec![
-                Node::let_bind("src_word_idx", Expr::shr(src.clone(), Expr::u32(5))),
-                Node::let_bind(
-                    "src_bit",
-                    Expr::shl(Expr::u32(1), Expr::bitand(src.clone(), Expr::u32(31))),
-                ),
-                Node::let_bind(
-                    "old",
-                    Expr::atomic_or(
-                        frontier_out,
-                        Expr::var("src_word_idx"),
-                        Expr::var("src_bit"),
-                    ),
-                ),
-                Node::if_then(
-                    Expr::eq(
-                        Expr::bitand(Expr::var("old"), Expr::var("src_bit")),
-                        Expr::u32(0),
-                    ),
-                    vec![Node::let_bind(
-                        "_changed",
-                        Expr::atomic_or(changed, Expr::u32(0), Expr::u32(1)),
-                    )],
-                ),
-            ],
+            set_bit(
+                frontier_out,
+                &src,
+                BitAccess {
+                    word: "src_word_idx",
+                    mask: "src_bit",
+                    value: "old",
+                },
+                |word| word,
+                vec![Node::let_bind(
+                    "_changed",
+                    Expr::atomic_or(changed, Expr::u32(0), Expr::u32(1)),
+                )],
+            ),
         ),
     ];
     let mut buffers = shape.read_only_buffers();

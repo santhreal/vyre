@@ -11,6 +11,7 @@ use super::{
     FRONTIER_TO_QUEUE_WORKGROUP_LANES,
 };
 use crate::bitset::bitset_words;
+use crate::graph::frontier_bits::{when_bit_set, BitAccess};
 
 /// Build a GPU program that initializes the active queue length scalar.
 ///
@@ -111,43 +112,30 @@ pub fn frontier_to_queue(
                     ),
                     Node::if_then(
                         Expr::lt(Expr::var("q_src"), Expr::u32(node_count)),
-                        vec![
-                            Node::let_bind(
-                                "q_word_idx",
-                                Expr::shr(Expr::var("q_src"), Expr::u32(5)),
-                            ),
-                            Node::let_bind(
-                                "q_bit_mask",
-                                Expr::shl(
-                                    Expr::u32(1),
-                                    Expr::bitand(Expr::var("q_src"), Expr::u32(31)),
+                        when_bit_set(
+                            frontier_in,
+                            &Expr::var("q_src"),
+                            BitAccess {
+                                word: "q_word_idx",
+                                mask: "q_bit_mask",
+                                value: "q_src_word",
+                            },
+                            |word| word,
+                            vec![
+                                Node::let_bind(
+                                    "q_slot",
+                                    Expr::atomic_add(queue_len, Expr::u32(0), Expr::u32(1)),
                                 ),
-                            ),
-                            Node::let_bind(
-                                "q_src_word",
-                                Expr::load(frontier_in, Expr::var("q_word_idx")),
-                            ),
-                            Node::if_then(
-                                Expr::ne(
-                                    Expr::bitand(Expr::var("q_src_word"), Expr::var("q_bit_mask")),
-                                    Expr::u32(0),
+                                Node::if_then(
+                                    Expr::lt(Expr::var("q_slot"), Expr::u32(queue_capacity)),
+                                    vec![Node::store(
+                                        active_queue,
+                                        Expr::var("q_slot"),
+                                        Expr::var("q_src"),
+                                    )],
                                 ),
-                                vec![
-                                    Node::let_bind(
-                                        "q_slot",
-                                        Expr::atomic_add(queue_len, Expr::u32(0), Expr::u32(1)),
-                                    ),
-                                    Node::if_then(
-                                        Expr::lt(Expr::var("q_slot"), Expr::u32(queue_capacity)),
-                                        vec![Node::store(
-                                            active_queue,
-                                            Expr::var("q_slot"),
-                                            Expr::var("q_src"),
-                                        )],
-                                    ),
-                                ],
-                            ),
-                        ],
+                            ],
+                        ),
                     ),
                 ],
             )],
@@ -198,40 +186,30 @@ pub fn frontier_to_queue_parallel(
         Node::let_bind("qp_src", lane),
         Node::if_then(
             Expr::lt(Expr::var("qp_src"), Expr::u32(node_count)),
-            vec![
-                Node::let_bind("qp_word_idx", Expr::shr(Expr::var("qp_src"), Expr::u32(5))),
-                Node::let_bind(
-                    "qp_bit_mask",
-                    Expr::shl(
-                        Expr::u32(1),
-                        Expr::bitand(Expr::var("qp_src"), Expr::u32(31)),
+            when_bit_set(
+                frontier_in,
+                &Expr::var("qp_src"),
+                BitAccess {
+                    word: "qp_word_idx",
+                    mask: "qp_bit_mask",
+                    value: "qp_src_word",
+                },
+                |word| word,
+                vec![
+                    Node::let_bind(
+                        "qp_slot",
+                        Expr::atomic_add(queue_len, Expr::u32(0), Expr::u32(1)),
                     ),
-                ),
-                Node::let_bind(
-                    "qp_src_word",
-                    Expr::load(frontier_in, Expr::var("qp_word_idx")),
-                ),
-                Node::if_then(
-                    Expr::ne(
-                        Expr::bitand(Expr::var("qp_src_word"), Expr::var("qp_bit_mask")),
-                        Expr::u32(0),
+                    Node::if_then(
+                        Expr::lt(Expr::var("qp_slot"), Expr::u32(queue_capacity)),
+                        vec![Node::store(
+                            active_queue,
+                            Expr::var("qp_slot"),
+                            Expr::var("qp_src"),
+                        )],
                     ),
-                    vec![
-                        Node::let_bind(
-                            "qp_slot",
-                            Expr::atomic_add(queue_len, Expr::u32(0), Expr::u32(1)),
-                        ),
-                        Node::if_then(
-                            Expr::lt(Expr::var("qp_slot"), Expr::u32(queue_capacity)),
-                            vec![Node::store(
-                                active_queue,
-                                Expr::var("qp_slot"),
-                                Expr::var("qp_src"),
-                            )],
-                        ),
-                    ],
-                ),
-            ],
+                ],
+            ),
         ),
     ];
     Program::wrapped(

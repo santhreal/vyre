@@ -22,10 +22,9 @@ use crate::bitset::bitset_words;
 use crate::bitset::frontier::{
     frontier_absorb_new_bits_body_prefixed_with_flag, frontier_tail_mask,
 };
-use crate::graph::program_graph::{
-    word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_KIND_MASK,
-    NAME_EDGE_OFFSETS, NAME_EDGE_TARGETS,
-};
+use crate::graph::edge_scan::csr_edge_expand_nodes;
+use crate::graph::frontier_bits::{when_bit_set, BitAccess};
+use crate::graph::program_graph::{word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::graph::reachable_program";
@@ -432,97 +431,34 @@ fn reachable_forward_wave_node(
     let word_idx = local("word_idx");
     let bit_mask = local("bit_mask");
     let src_word = local("src_word");
-    let edge_start = local("edge_start");
-    let edge_end = local("edge_end");
-    let edge_iter = local("edge");
-    let kind_mask = local("kind_mask");
-    let dst = local("dst");
-    let dst_word_idx = local("dst_word_idx");
-    let dst_bit = local("dst_bit");
-    let previous = local("_prev");
 
+    // Two-buffer wave: the source bit is read from `frontier_in` while newly
+    // reached bits are ORed into `frontier_out`, so the source probe cannot come
+    // from `csr_edge_scan_nodes` (which probes the buffer it writes). The probe is
+    // `frontier_bits::when_bit_set` and the walk is the canonical edge expansion.
+    // `0xFFFF_FFFF` is "every edge kind", this wave's traversal admitting all of
+    // them.
     Node::if_then(
         Expr::lt(lane.clone(), Expr::u32(shape.node_count)),
-        vec![
-            Node::let_bind(word_idx.as_str(), Expr::shr(lane.clone(), Expr::u32(5))),
-            Node::let_bind(
-                bit_mask.as_str(),
-                Expr::shl(Expr::u32(1), Expr::bitand(lane.clone(), Expr::u32(31))),
+        when_bit_set(
+            frontier_in,
+            &lane,
+            BitAccess {
+                word: word_idx.as_str(),
+                mask: bit_mask.as_str(),
+                value: src_word.as_str(),
+            },
+            |word| word,
+            csr_edge_expand_nodes(
+                shape,
+                frontier_out,
+                lane.clone(),
+                |word| word,
+                Vec::new,
+                0xFFFF_FFFF,
+                local_prefix,
             ),
-            Node::let_bind(
-                src_word.as_str(),
-                Expr::load(frontier_in, Expr::var(word_idx.as_str())),
-            ),
-            Node::if_then(
-                Expr::ne(
-                    Expr::bitand(Expr::var(src_word.as_str()), Expr::var(bit_mask.as_str())),
-                    Expr::u32(0),
-                ),
-                vec![
-                    Node::let_bind(
-                        edge_start.as_str(),
-                        Expr::load(NAME_EDGE_OFFSETS, lane.clone()),
-                    ),
-                    Node::let_bind(
-                        edge_end.as_str(),
-                        Expr::load(NAME_EDGE_OFFSETS, Expr::add(lane.clone(), Expr::u32(1))),
-                    ),
-                    Node::loop_for(
-                        edge_iter.as_str(),
-                        Expr::var(edge_start.as_str()),
-                        Expr::var(edge_end.as_str()),
-                        vec![
-                            Node::let_bind(
-                                kind_mask.as_str(),
-                                Expr::load(NAME_EDGE_KIND_MASK, Expr::var(edge_iter.as_str())),
-                            ),
-                            Node::if_then(
-                                Expr::ne(Expr::var(kind_mask.as_str()), Expr::u32(0)),
-                                vec![
-                                    Node::let_bind(
-                                        dst.as_str(),
-                                        Expr::load(
-                                            NAME_EDGE_TARGETS,
-                                            Expr::var(edge_iter.as_str()),
-                                        ),
-                                    ),
-                                    Node::if_then(
-                                        Expr::lt(
-                                            Expr::var(dst.as_str()),
-                                            Expr::u32(shape.node_count),
-                                        ),
-                                        vec![
-                                            Node::let_bind(
-                                                dst_word_idx.as_str(),
-                                                Expr::shr(Expr::var(dst.as_str()), Expr::u32(5)),
-                                            ),
-                                            Node::let_bind(
-                                                dst_bit.as_str(),
-                                                Expr::shl(
-                                                    Expr::u32(1),
-                                                    Expr::bitand(
-                                                        Expr::var(dst.as_str()),
-                                                        Expr::u32(31),
-                                                    ),
-                                                ),
-                                            ),
-                                            Node::let_bind(
-                                                previous.as_str(),
-                                                Expr::atomic_or(
-                                                    frontier_out,
-                                                    Expr::var(dst_word_idx.as_str()),
-                                                    Expr::var(dst_bit.as_str()),
-                                                ),
-                                            ),
-                                        ],
-                                    ),
-                                ],
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
+        ),
     )
 }
 

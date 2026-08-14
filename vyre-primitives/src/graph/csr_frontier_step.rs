@@ -17,6 +17,9 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+use crate::graph::frontier_bits::{
+    active_source_lane, bind_bit_address, set_bit, when_bit_set, BitAccess,
+};
 use crate::graph::program_graph::{
     frontier_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_KIND_MASK,
     NAME_EDGE_OFFSETS, NAME_EDGE_TARGETS,
@@ -38,12 +41,7 @@ pub(crate) const CSR_FRONTIER_STEP_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// Dispatch grid for one source-lane CSR frontier step.
 #[must_use]
 pub const fn csr_frontier_step_dispatch_grid(node_count: u32) -> [u32; 3] {
-    let blocks = node_count.div_ceil(CSR_FRONTIER_STEP_WORKGROUP_SIZE[0]);
-    if blocks == 0 {
-        [1, 1, 1]
-    } else {
-        [blocks, 1, 1]
-    }
+    crate::graph::lane_grid(node_count, CSR_FRONTIER_STEP_WORKGROUP_SIZE[0])
 }
 
 /// Direction for a one-step CSR frontier traversal.
@@ -342,33 +340,6 @@ pub(crate) fn csr_forward_step_excluding_program(
     )
 }
 
-pub(crate) fn active_frontier_source_lane(
-    node_count: u32,
-    frontier_in: &str,
-    source: Expr,
-    active_body: Vec<Node>,
-) -> Node {
-    Node::if_then(
-        Expr::lt(source.clone(), Expr::u32(node_count)),
-        vec![
-            Node::let_bind("src", source),
-            Node::let_bind("word_idx", Expr::shr(Expr::var("src"), Expr::u32(5))),
-            Node::let_bind(
-                "bit_mask",
-                Expr::shl(Expr::u32(1), Expr::bitand(Expr::var("src"), Expr::u32(31))),
-            ),
-            Node::let_bind("src_word", Expr::load(frontier_in, Expr::var("word_idx"))),
-            Node::if_then(
-                Expr::ne(
-                    Expr::bitand(Expr::var("src_word"), Expr::var("bit_mask")),
-                    Expr::u32(0),
-                ),
-                active_body,
-            ),
-        ],
-    )
-}
-
 fn forward_body(
     node_count: u32,
     frontier_in: &str,
@@ -386,55 +357,13 @@ fn forward_body(
         allow_mask,
         "",
     );
-    let source_lane = match excluded_sources {
-        Some(excluded_sources) => active_frontier_source_lane_excluding(
-            node_count,
-            frontier_in,
-            excluded_sources,
-            t,
-            active_body,
-        ),
-        None => active_frontier_source_lane(node_count, frontier_in, t, active_body),
-    };
-    vec![source_lane]
-}
-
-fn active_frontier_source_lane_excluding(
-    node_count: u32,
-    frontier_in: &str,
-    excluded_sources: &str,
-    source: Expr,
-    active_body: Vec<Node>,
-) -> Node {
-    Node::if_then(
-        Expr::lt(source.clone(), Expr::u32(node_count)),
-        vec![
-            Node::let_bind("src", source),
-            Node::let_bind("word_idx", Expr::shr(Expr::var("src"), Expr::u32(5))),
-            Node::let_bind(
-                "bit_mask",
-                Expr::shl(Expr::u32(1), Expr::bitand(Expr::var("src"), Expr::u32(31))),
-            ),
-            Node::let_bind("src_word", Expr::load(frontier_in, Expr::var("word_idx"))),
-            Node::let_bind(
-                "excluded_word",
-                Expr::load(excluded_sources, Expr::var("word_idx")),
-            ),
-            Node::if_then(
-                Expr::and(
-                    Expr::ne(
-                        Expr::bitand(Expr::var("src_word"), Expr::var("bit_mask")),
-                        Expr::u32(0),
-                    ),
-                    Expr::eq(
-                        Expr::bitand(Expr::var("excluded_word"), Expr::var("bit_mask")),
-                        Expr::u32(0),
-                    ),
-                ),
-                active_body,
-            ),
-        ],
-    )
+    vec![active_source_lane(
+        node_count,
+        frontier_in,
+        excluded_sources,
+        t,
+        active_body,
+    )]
 }
 
 fn backward_body(
@@ -461,26 +390,17 @@ fn backward_body(
                     Node::let_bind("dst", Expr::load(NAME_EDGE_TARGETS, Expr::var("e"))),
                     Node::if_then(
                         Expr::lt(Expr::var("dst"), Expr::u32(node_count)),
-                        vec![
-                            Node::let_bind(
-                                "dst_word",
-                                Expr::load(frontier_in, Expr::shr(Expr::var("dst"), Expr::u32(5))),
-                            ),
-                            Node::let_bind(
-                                "dst_bit",
-                                Expr::shl(
-                                    Expr::u32(1),
-                                    Expr::bitand(Expr::var("dst"), Expr::u32(31)),
-                                ),
-                            ),
-                            Node::if_then(
-                                Expr::ne(
-                                    Expr::bitand(Expr::var("dst_word"), Expr::var("dst_bit")),
-                                    Expr::u32(0),
-                                ),
-                                vec![Node::assign("hit", Expr::u32(1))],
-                            ),
-                        ],
+                        when_bit_set(
+                            frontier_in,
+                            &Expr::var("dst"),
+                            BitAccess {
+                                word: "dst_word_idx",
+                                mask: "dst_bit",
+                                value: "dst_word",
+                            },
+                            |word| word,
+                            vec![Node::assign("hit", Expr::u32(1))],
+                        ),
                     ),
                 ],
             ),
@@ -488,7 +408,17 @@ fn backward_body(
     )]));
     body.push(Node::if_then(
         Expr::eq(Expr::var("hit"), Expr::u32(1)),
-        mark_node_bit(frontier_out, "src", "src_word_idx", "src_bit"),
+        set_bit(
+            frontier_out,
+            &Expr::var("src"),
+            BitAccess {
+                word: "src_word_idx",
+                mask: "src_bit",
+                value: "_prev",
+            },
+            |word| word,
+            Vec::new(),
+        ),
     ));
     body
 }
@@ -528,28 +458,6 @@ fn edge_bounds_and_loop(loop_body: Vec<Node>) -> Vec<Node> {
             Expr::var("edge_start"),
             Expr::var("edge_end"),
             loop_body,
-        ),
-    ]
-}
-
-fn mark_node_bit(
-    frontier_out: &str,
-    node_var: &'static str,
-    word_var: &'static str,
-    bit_var: &'static str,
-) -> Vec<Node> {
-    vec![
-        Node::let_bind(word_var, Expr::shr(Expr::var(node_var), Expr::u32(5))),
-        Node::let_bind(
-            bit_var,
-            Expr::shl(
-                Expr::u32(1),
-                Expr::bitand(Expr::var(node_var), Expr::u32(31)),
-            ),
-        ),
-        Node::let_bind(
-            "_prev",
-            Expr::atomic_or(frontier_out, Expr::var(word_var), Expr::var(bit_var)),
         ),
     ]
 }
@@ -1129,19 +1037,13 @@ fn csr_queue_edge_guard_nodes(spec: &CsrQueueStepSpec<'_>) -> Vec<Node> {
                     Node::if_then(
                         Expr::lt(Expr::var(dst.as_str()), Expr::u32(spec.node_count)),
                         {
-                            let mut body = vec![
-                                Node::let_bind(
-                                    dst_word.as_str(),
-                                    Expr::shr(Expr::var(dst.as_str()), Expr::u32(5)),
-                                ),
-                                Node::let_bind(
-                                    dst_bit.as_str(),
-                                    Expr::shl(
-                                        Expr::u32(1),
-                                        Expr::bitand(Expr::var(dst.as_str()), Expr::u32(31)),
-                                    ),
-                                ),
-                            ];
+                            let mut body = bind_bit_address(
+                                &Expr::var(dst.as_str()),
+                                dst_word.as_str(),
+                                dst_bit.as_str(),
+                                |word| word,
+                            )
+                            .to_vec();
                             body.extend(csr_queue_emit_nodes(spec, &dst, &dst_word, &dst_bit));
                             body
                         },

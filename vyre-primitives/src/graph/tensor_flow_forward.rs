@@ -8,6 +8,7 @@
 //! tracking nested dependencies efficiently.
 
 use crate::graph::csr_frontier_step::edge_scan_body;
+use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
 use crate::graph::program_graph::{
     word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_TARGETS,
 };
@@ -28,19 +29,22 @@ pub const BINDING_TENSOR_OUT: u32 = BINDING_PRIMITIVE_START + 1;
 /// Dispatch grid for source-node tensor-flow propagation.
 #[must_use]
 pub const fn tensor_flow_forward_dispatch_grid(node_count: u32) -> [u32; 3] {
-    let blocks = node_count.div_ceil(TENSOR_FLOW_FORWARD_WORKGROUP_SIZE[0]);
-    if blocks == 0 {
-        [1, 1, 1]
-    } else {
-        [blocks, 1, 1]
-    }
+    crate::graph::lane_grid(node_count, TENSOR_FLOW_FORWARD_WORKGROUP_SIZE[0])
 }
 
-/// Word count calculates matrix boundaries packed strictly per node.
+/// Words needed for the per-node context x field tensor bitset, saturating.
+///
+/// The bit count is `node_count * context_limit * field_limit`, which overflows
+/// u64 for three large factors, so the product saturates before the word count is
+/// taken. `try_tensor_words` is the checked twin every release builder uses; this
+/// const form exists for buffer metadata and saturates rather than wrapping to a
+/// small, silently mis-sized allocation.
 #[must_use]
 pub const fn tensor_words(node_count: u32, context_limit: u32, field_limit: u32) -> u32 {
-    let bits = (node_count as u64) * (context_limit as u64) * (field_limit as u64);
-    let words = (bits + 31) / 32;
+    let bits = (node_count as u64)
+        .saturating_mul(context_limit as u64)
+        .saturating_mul(field_limit as u64);
+    let words = bits.div_ceil(32);
     if words > u32::MAX as u64 {
         u32::MAX
     } else {
@@ -64,7 +68,7 @@ pub fn try_tensor_words(
             "{OP_ID} node_count={node_count} context_limit={context_limit} field_limit={field_limit} overflows tensor bit count. Fix: shard the graph tensor before dispatch."
         )
     })?;
-    Ok(bit_count / 32 + u32::from(bit_count % 32 != 0))
+    Ok(crate::bitset::bitset_words(bit_count))
 }
 
 fn tensor_flow_edge_scan_body(
@@ -88,33 +92,38 @@ fn tensor_flow_edge_scan_body(
 }
 
 fn mark_tensor_bit(tensor_out: &str, field_limit: u32, tensor_lane_count: u32) -> Vec<Node> {
-    vec![
-        Node::let_bind(
-            "dst_abs_bit",
-            Expr::add(
-                Expr::mul(Expr::var("dst"), Expr::u32(tensor_lane_count)),
-                Expr::add(
-                    Expr::mul(Expr::var("ctx"), Expr::u32(field_limit)),
-                    Expr::var("fld"),
-                ),
-            ),
+    let mut nodes = vec![Node::let_bind(
+        "dst_abs_bit",
+        tensor_lane_bit(Expr::var("dst"), field_limit, tensor_lane_count),
+    )];
+    nodes.extend(set_bit(
+        tensor_out,
+        &Expr::var("dst_abs_bit"),
+        BitAccess {
+            word: "dst_word",
+            mask: "dst_bit",
+            value: "_prev",
+        },
+        |word| word,
+        Vec::new(),
+    ));
+    nodes
+}
+
+/// Absolute bit index of the `(node, ctx, fld)` tensor lane in the flat bitset.
+///
+/// The tensor packs `context_limit * field_limit` lanes per node, so a lane's bit
+/// is `node * tensor_lane_count + ctx * field_limit + fld`. Both the source probe
+/// and the destination mark address it, and they must agree exactly or a forward
+/// step reads one lane and writes another. [`tensor_bit_index`] is the host twin.
+fn tensor_lane_bit(node: Expr, field_limit: u32, tensor_lane_count: u32) -> Expr {
+    Expr::add(
+        Expr::mul(node, Expr::u32(tensor_lane_count)),
+        Expr::add(
+            Expr::mul(Expr::var("ctx"), Expr::u32(field_limit)),
+            Expr::var("fld"),
         ),
-        Node::let_bind(
-            "dst_word",
-            Expr::shr(Expr::var("dst_abs_bit"), Expr::u32(5)),
-        ),
-        Node::let_bind(
-            "dst_bit",
-            Expr::shl(
-                Expr::u32(1),
-                Expr::bitand(Expr::var("dst_abs_bit"), Expr::u32(31)),
-            ),
-        ),
-        Node::let_bind(
-            "_prev",
-            Expr::atomic_or(tensor_out, Expr::var("dst_word"), Expr::var("dst_bit")),
-        ),
-    ]
+    )
 }
 
 /// Generate Context-Sensitive / Field-Sensitive Traverse primitive program.
@@ -183,32 +192,21 @@ pub fn try_tensor_flow_forward(
                 "fld",
                 Expr::u32(0),
                 Expr::u32(field_limit),
-                vec![
-                    // Check if (src, ctx, fld) is hot in the tensor
-                    Node::let_bind(
+                {
+                    // Is the (src, ctx, fld) lane hot in the tensor?
+                    let mut lane = vec![Node::let_bind(
                         "abs_bit",
-                        Expr::add(
-                            Expr::mul(Expr::var("src"), Expr::u32(tensor_lane_count)),
-                            Expr::add(
-                                Expr::mul(Expr::var("ctx"), Expr::u32(field_limit)),
-                                Expr::var("fld"),
-                            ),
-                        ),
-                    ),
-                    Node::let_bind("word_idx", Expr::shr(Expr::var("abs_bit"), Expr::u32(5))),
-                    Node::let_bind(
-                        "bit_mask",
-                        Expr::shl(
-                            Expr::u32(1),
-                            Expr::bitand(Expr::var("abs_bit"), Expr::u32(31)),
-                        ),
-                    ),
-                    Node::let_bind("src_word", Expr::load(tensor_in, Expr::var("word_idx"))),
-                    Node::if_then(
-                        Expr::ne(
-                            Expr::bitand(Expr::var("src_word"), Expr::var("bit_mask")),
-                            Expr::u32(0),
-                        ),
+                        tensor_lane_bit(Expr::var("src"), field_limit, tensor_lane_count),
+                    )];
+                    lane.extend(when_bit_set(
+                        tensor_in,
+                        &Expr::var("abs_bit"),
+                        BitAccess {
+                            word: "word_idx",
+                            mask: "bit_mask",
+                            value: "src_word",
+                        },
+                        |word| word,
                         tensor_flow_edge_scan_body(
                             tensor_out,
                             shape.node_count,
@@ -216,8 +214,9 @@ pub fn try_tensor_flow_forward(
                             tensor_lane_count,
                             allow_mask,
                         ),
-                    ),
-                ],
+                    ));
+                    lane
+                },
             )],
         ),
     ];
@@ -250,6 +249,9 @@ pub fn try_tensor_flow_forward(
     ))
 }
 
+/// Host twin of [`tensor_lane_bit`]: the same absolute bit index computed on the
+/// CPU oracle's side. The two must agree exactly, or the oracle proves the wrong
+/// lane.
 #[cfg(any(test, feature = "cpu-parity"))]
 fn tensor_bit_index(node: u32, ctx: u32, fld: u32, context_limit: u32, field_limit: u32) -> u32 {
     node * context_limit * field_limit + ctx * field_limit + fld

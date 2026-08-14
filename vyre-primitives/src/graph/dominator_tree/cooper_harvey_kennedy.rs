@@ -19,7 +19,7 @@ pub fn cooper_harvey_kennedy_idoms(
         return vec![None; n];
     }
 
-    let words = ((n + 31) / 32).max(1);
+    let words = crate::bitset::bitset_words(node_count).max(1) as usize;
     let last_mask = if n % 32 == 0 {
         u32::MAX
     } else {

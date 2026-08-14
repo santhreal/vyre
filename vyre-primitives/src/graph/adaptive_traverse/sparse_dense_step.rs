@@ -10,6 +10,7 @@ use super::frontier_plan::ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE;
 use super::mode_selection::dense_cutover_nodes;
 use super::HYBRID_OP_ID;
 use crate::bitset::bitset_words;
+use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
 
 /// Build the GPU Program for one adaptive sparse/dense step.
 ///
@@ -94,40 +95,30 @@ pub fn adaptive_sparse_dense_step(
         ),
         Node::if_then(
             Expr::ne(Expr::var("dense_hit"), Expr::u32(0)),
-            vec![
-                Node::let_bind("dense_word_idx", Expr::shr(lane.clone(), Expr::u32(5))),
-                Node::let_bind(
-                    "dense_bit_mask",
-                    Expr::shl(Expr::u32(1), Expr::bitand(lane.clone(), Expr::u32(31))),
-                ),
-                Node::let_bind(
-                    "_dense_prev",
-                    Expr::atomic_or(
-                        frontier_out,
-                        Expr::var("dense_word_idx"),
-                        Expr::var("dense_bit_mask"),
-                    ),
-                ),
-            ],
+            set_bit(
+                frontier_out,
+                &lane,
+                BitAccess {
+                    word: "dense_word_idx",
+                    mask: "dense_bit_mask",
+                    value: "_dense_prev",
+                },
+                |word| word,
+                Vec::new(),
+            ),
         ),
     ];
 
-    let sparse_body: Vec<Node> = vec![
-        Node::let_bind("sparse_word_idx", Expr::shr(lane.clone(), Expr::u32(5))),
-        Node::let_bind(
-            "sparse_bit_mask",
-            Expr::shl(Expr::u32(1), Expr::bitand(lane.clone(), Expr::u32(31))),
-        ),
-        Node::let_bind(
-            "sparse_src_word",
-            Expr::load(frontier_in, Expr::var("sparse_word_idx")),
-        ),
-        Node::if_then(
-            Expr::ne(
-                Expr::bitand(Expr::var("sparse_src_word"), Expr::var("sparse_bit_mask")),
-                Expr::u32(0),
-            ),
-            vec![
+    let sparse_body: Vec<Node> = when_bit_set(
+        frontier_in,
+        &lane,
+        BitAccess {
+            word: "sparse_word_idx",
+            mask: "sparse_bit_mask",
+            value: "sparse_src_word",
+        },
+        |word| word,
+        vec![
                 Node::let_bind("sparse_edge_start", Expr::load(edge_offsets, lane.clone())),
                 Node::let_bind(
                     "sparse_edge_end",
@@ -154,38 +145,24 @@ pub fn adaptive_sparse_dense_step(
                                 ),
                                 Node::if_then(
                                     Expr::lt(Expr::var("sparse_dst"), Expr::u32(node_count)),
-                                    vec![
-                                        Node::let_bind(
-                                            "sparse_dst_word_idx",
-                                            Expr::shr(Expr::var("sparse_dst"), Expr::u32(5)),
-                                        ),
-                                        Node::let_bind(
-                                            "sparse_dst_bit",
-                                            Expr::shl(
-                                                Expr::u32(1),
-                                                Expr::bitand(
-                                                    Expr::var("sparse_dst"),
-                                                    Expr::u32(31),
-                                                ),
-                                            ),
-                                        ),
-                                        Node::let_bind(
-                                            "_sparse_prev",
-                                            Expr::atomic_or(
-                                                frontier_out,
-                                                Expr::var("sparse_dst_word_idx"),
-                                                Expr::var("sparse_dst_bit"),
-                                            ),
-                                        ),
-                                    ],
+                                    set_bit(
+                                        frontier_out,
+                                        &Expr::var("sparse_dst"),
+                                        BitAccess {
+                                            word: "sparse_dst_word_idx",
+                                            mask: "sparse_dst_bit",
+                                            value: "_sparse_prev",
+                                        },
+                                        |word| word,
+                                        Vec::new(),
+                                    ),
                                 ),
                             ],
                         ),
                     ],
                 ),
-            ],
-        ),
-    ];
+        ],
+    );
 
     let body = vec![
         Node::let_bind(
