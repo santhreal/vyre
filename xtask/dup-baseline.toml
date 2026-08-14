@@ -196,8 +196,8 @@ total_lines = 15850
 
 [[crate]]
 name = "xtask-evidence"
-duplicate_lines = 739
-total_lines = 25761
+duplicate_lines = 467
+total_lines = 25647
 
 [[crate]]
 name = "xtask-registry"
