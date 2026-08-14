@@ -14,7 +14,7 @@
 //! CPU oracles.
 #![cfg(feature = "cpu-parity")]
 
-use vyre_self_substrate::data::bitset_mask_algebra::{
+use vyre_libs::encoding::bitset_mask_algebra::{
     mask_and_via, mask_clear_bit_via, mask_contains_via, mask_equal_via, mask_not_via, mask_or_via,
     mask_set_bit_via, mask_subset_of_via, mask_test_bit_via, mask_xor_via, reference_mask_and,
     reference_mask_clear_bit, reference_mask_contains, reference_mask_equal, reference_mask_not,

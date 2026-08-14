@@ -6,7 +6,7 @@
 
 use vyre_libs::test_support::u32_bytes;
 use vyre_reference::value::Value;
-use vyre_self_substrate::data::bitset_transform_pipeline::{
+use vyre_libs::encoding::bitset_transform_pipeline::{
     dense_boolean_matvec_lut, dense_matvec_frontier_words, dense_matvec_lut_words,
     four_russians_dense_matvec_program,
 };

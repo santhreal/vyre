@@ -40,7 +40,7 @@ default = []
 self-substrate-adapters = [
     "dep:vyre-self-substrate",
     "dep:vyre-libs",
-    "vyre-self-substrate/data",
+    "vyre-libs/encoding",
     "vyre-libs/reasoning",
     "vyre-libs/telemetry",
     "vyre-libs/analysis",

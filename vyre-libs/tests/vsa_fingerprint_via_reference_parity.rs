@@ -14,7 +14,7 @@
 #![forbid(unsafe_code)]
 #![cfg(feature = "cpu-parity")]
 
-use vyre_self_substrate::data::vsa_fingerprint::{fingerprint_via, reference_fingerprint};
+use vyre_libs::encoding::vsa_fingerprint::{fingerprint_via, reference_fingerprint};
 
 use vyre_libs::test_support::ReferenceEvalDispatcher;
 

@@ -56,6 +56,7 @@ rule = ["dep:regex"]
 # crate. Each gates one module tree; `all-solvers` turns on the set.
 telemetry = []
 device = []
+encoding = ["device", "telemetry", "vyre-primitives/matching", "vyre-primitives/math", "vyre-primitives/nn", "vyre-primitives/parsing"]
 reasoning = ["analysis", "vyre-primitives/cat", "vyre-primitives/dnnf", "vyre-primitives/zx"]
 analysis = ["device", "telemetry", "vyre-primitives/effects", "vyre-primitives/math", "vyre-primitives/types"]
 scheduling = ["device", "telemetry", "vyre-primitives/math", "vyre-primitives/parsing"]
@@ -196,6 +197,61 @@ required-features = ["cpu-parity", "reasoning", "test-fixtures"]
 name = "predict_impact_via_reference_parity"
 path = "tests/predict_impact_via_reference_parity.rs"
 required-features = ["cpu-parity", "reasoning", "test-fixtures"]
+
+[[test]]
+name = "bitset_dense_matvec_pipeline_generated"
+path = "tests/bitset_dense_matvec_pipeline_generated.rs"
+required-features = ["cpu-parity", "encoding", "test-fixtures"]
+
+[[test]]
+name = "bitset_mask_algebra_via_reference_parity"
+path = "tests/bitset_mask_algebra_via_reference_parity.rs"
+required-features = ["cpu-parity", "encoding", "test-fixtures"]
+
+[[test]]
+name = "bitset_summary_via_reference_parity"
+path = "tests/bitset_summary_via_reference_parity.rs"
+required-features = ["cpu-parity", "encoding", "test-fixtures"]
+
+[[test]]
+name = "matching_diagnostic_via_reference_parity"
+path = "tests/matching_diagnostic_via_reference_parity.rs"
+required-features = ["cpu-parity", "encoding", "test-fixtures"]
+
+[[test]]
+name = "matroid_exact_subset_via_reference_parity"
+path = "tests/matroid_exact_subset_via_reference_parity.rs"
+required-features = ["cpu-parity", "encoding", "test-fixtures"]
+
+[[test]]
+name = "reduction_metrics_via_reference_parity"
+path = "tests/reduction_metrics_via_reference_parity.rs"
+required-features = ["cpu-parity", "encoding", "test-fixtures"]
+
+[[test]]
+name = "scallop_provenance_via_reference_parity"
+path = "tests/scallop_provenance_via_reference_parity.rs"
+required-features = ["cpu-parity", "encoding", "test-fixtures"]
+
+[[test]]
+name = "vsa_fingerprint_via_reference_parity"
+path = "tests/vsa_fingerprint_via_reference_parity.rs"
+required-features = ["cpu-parity", "encoding", "test-fixtures"]
+
+[[test]]
+name = "provenance_closure"
+path = "tests/provenance_closure.rs"
+required-features = ["cpu-parity", "encoding", "test-fixtures"]
+
+[[test]]
+name = "primitive_vs_consumer"
+path = "tests/primitive_vs_consumer.rs"
+required-features = ["cpu-parity", "encoding", "analysis", "test-fixtures"]
+
+[[test]]
+name = "self_consumer_conform"
+path = "tests/self_consumer_conform.rs"
+required-features = ["cpu-parity", "encoding", "test-fixtures"]
 
 [[test]]
 name = "sweep_text_utf8_oracle_matrix"

@@ -7,7 +7,7 @@
 //! in each optimizer pass.
 
 use super::decode_first_output;
-use vyre_libs::dispatch_buffers::{
+use crate::dispatch_buffers::{
     ceil_div_u32, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
@@ -89,7 +89,7 @@ pub fn mask_binary_via_with_scratch_into(
     scratch: &mut BitsetMaskAlgebraGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bitset_mask_algebra_calls, bump};
+    use crate::telemetry::observability::{bitset_mask_algebra_calls, bump};
     bump(&bitset_mask_algebra_calls);
 
     if lhs.len() != rhs.len() {
@@ -190,7 +190,7 @@ pub fn mask_not_via_with_scratch_into(
     scratch: &mut BitsetMaskAlgebraGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bitset_mask_algebra_calls, bump};
+    use crate::telemetry::observability::{bitset_mask_algebra_calls, bump};
     bump(&bitset_mask_algebra_calls);
 
     if input.is_empty() {
@@ -250,7 +250,7 @@ pub fn mask_contains_via(
     input: &[u32],
     bit_idx: u32,
 ) -> Result<bool, DispatchError> {
-    use vyre_libs::telemetry::observability::{bitset_mask_algebra_calls, bump};
+    use crate::telemetry::observability::{bitset_mask_algebra_calls, bump};
     bump(&bitset_mask_algebra_calls);
 
     let words = checked_words(input.len(), "mask_contains_via")?;
@@ -274,7 +274,7 @@ pub fn mask_test_bit_via(
     input: &[u32],
     bit_idx: u32,
 ) -> Result<bool, DispatchError> {
-    use vyre_libs::telemetry::observability::{bitset_mask_algebra_calls, bump};
+    use crate::telemetry::observability::{bitset_mask_algebra_calls, bump};
     bump(&bitset_mask_algebra_calls);
 
     if (bit_idx / 32) as usize >= input.len() {
@@ -410,7 +410,7 @@ fn scalar_binary_predicate_via(
     rhs: &[u32],
     build: fn(&str, &str, &str, u32) -> vyre_foundation::ir::Program,
 ) -> Result<bool, DispatchError> {
-    use vyre_libs::telemetry::observability::{bitset_mask_algebra_calls, bump};
+    use crate::telemetry::observability::{bitset_mask_algebra_calls, bump};
     bump(&bitset_mask_algebra_calls);
 
     if lhs.len() != rhs.len() {
@@ -438,7 +438,7 @@ fn scalar_mutate_bit_via(
     bit_idx: u32,
     build: fn(&str, u32, u32) -> vyre_foundation::ir::Program,
 ) -> Result<Vec<u32>, DispatchError> {
-    use vyre_libs::telemetry::observability::{bitset_mask_algebra_calls, bump};
+    use crate::telemetry::observability::{bitset_mask_algebra_calls, bump};
     bump(&bitset_mask_algebra_calls);
 
     if (bit_idx / 32) as usize >= target.len() {
@@ -472,7 +472,7 @@ fn decode_scalar_bool(outputs: &[Vec<u8>], context: &'static str) -> Result<bool
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     struct MaskDispatcher;
@@ -507,28 +507,28 @@ mod tests {
                 }
                 vyre_primitives::bitset::not::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let input = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+                    let input = crate::dispatch_buffers::read_u32s(&inputs[0]);
                     Ok(vec![u32_slice_to_le_bytes(
                         &input.iter().map(|word| !word).collect::<Vec<_>>(),
                     )])
                 }
                 vyre_primitives::bitset::equal::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let lhs = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
-                    let rhs = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+                    let lhs = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                    let rhs = crate::dispatch_buffers::read_u32s(&inputs[1]);
                     Ok(vec![u32_slice_to_le_bytes(&[u32::from(lhs == rhs)])])
                 }
                 vyre_primitives::bitset::subset_of::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let lhs = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
-                    let rhs = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+                    let lhs = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                    let rhs = crate::dispatch_buffers::read_u32s(&inputs[1]);
                     let ok = lhs.iter().zip(rhs.iter()).all(|(a, b)| (a & !b) == 0);
                     Ok(vec![u32_slice_to_le_bytes(&[u32::from(ok)])])
                 }
                 vyre_primitives::bitset::contains::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let input = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
-                    let index = vyre_libs::dispatch_buffers::read_u32s(&inputs[1])[0];
+                    let input = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                    let index = crate::dispatch_buffers::read_u32s(&inputs[1])[0];
                     Ok(vec![u32_slice_to_le_bytes(&[primitive_contains(
                         &input, index,
                     )])])
@@ -539,13 +539,13 @@ mod tests {
                 }
                 vyre_primitives::bitset::set_bit::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let mut target = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+                    let mut target = crate::dispatch_buffers::read_u32s(&inputs[0]);
                     primitive_set_bit(&mut target, 1);
                     Ok(vec![u32_slice_to_le_bytes(&target)])
                 }
                 vyre_primitives::bitset::clear_bit::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let mut target = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+                    let mut target = crate::dispatch_buffers::read_u32s(&inputs[0]);
                     primitive_clear_bit(&mut target, 1);
                     Ok(vec![u32_slice_to_le_bytes(&target)])
                 }
@@ -558,8 +558,8 @@ mod tests {
         inputs: &[Vec<u8>],
         op: impl Fn(u32, u32) -> u32,
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        let lhs = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
-        let rhs = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+        let lhs = crate::dispatch_buffers::read_u32s(&inputs[0]);
+        let rhs = crate::dispatch_buffers::read_u32s(&inputs[1]);
         let out = lhs
             .iter()
             .zip(rhs.iter())

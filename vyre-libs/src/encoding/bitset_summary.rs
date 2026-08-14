@@ -10,7 +10,7 @@ use vyre_primitives::bitset::popcount::{
     cpu_ref as primitive_popcount, cpu_ref_into as primitive_popcount_into,
 };
 
-use vyre_libs::dispatch_buffers::{
+use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
@@ -28,7 +28,7 @@ pub struct BitsetSummaryGpuScratch {
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn per_word_popcount(input: &[u32]) -> Vec<u32> {
-    use vyre_libs::telemetry::observability::{bump, dataflow_fixpoint_calls};
+    use crate::telemetry::observability::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     primitive_popcount(input)
 }
@@ -36,7 +36,7 @@ pub fn per_word_popcount(input: &[u32]) -> Vec<u32> {
 /// Per-word popcount into caller-owned storage.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn per_word_popcount_into(input: &[u32], out: &mut Vec<u32>) {
-    use vyre_libs::telemetry::observability::{bump, dataflow_fixpoint_calls};
+    use crate::telemetry::observability::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     primitive_popcount_into(input, out);
 }
@@ -183,7 +183,7 @@ pub fn saturation_ratio_via(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     struct PopcountDispatcher;
@@ -197,7 +197,7 @@ mod tests {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 2);
-            let input = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let input = crate::dispatch_buffers::read_u32s(&inputs[0]);
             assert_eq!(inputs[1].len(), input.len() * std::mem::size_of::<u32>());
             let out: Vec<u32> = input.iter().map(|word| word.count_ones()).collect();
             Ok(vec![u32_slice_to_le_bytes(&out)])

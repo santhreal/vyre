@@ -22,7 +22,7 @@ pub fn scallop_provenance_wide_program(
     w: u32,
     max_iterations: u32,
 ) -> Program {
-    use vyre_libs::telemetry::observability::{bump, scallop_provenance_wide_calls};
+    use crate::telemetry::observability::{bump, scallop_provenance_wide_calls};
     bump(&scallop_provenance_wide_calls);
     scallop_join_wide(state, next, join_rules, changed, n, w, max_iterations)
 }
@@ -44,7 +44,7 @@ mod tests {
         let p2 = scallop_provenance_wide_program("s2", "n2", "j2", "c2", 4, 1, 5);
         let p3 = scallop_provenance_wide_program("s3", "n3", "j3", "c3", 4, 1, 5);
 
-        let final_p = vyre_libs::test_support::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
+        let final_p = crate::test_support::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
         let region_count = final_p
             .entry()
             .iter()

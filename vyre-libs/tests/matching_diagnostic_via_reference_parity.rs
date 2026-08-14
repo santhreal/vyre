@@ -29,7 +29,7 @@ use vyre_primitives::matching::bracket_match::{
     cpu_ref as bracket_cpu_ref, CLOSE_BRACE, OPEN_BRACE,
 };
 use vyre_primitives::matching::region::RegionTriple;
-use vyre_self_substrate::data::matching_diagnostic_compaction::{
+use vyre_libs::encoding::matching_diagnostic_compaction::{
     bracket_pairs_via, dedup_region_survivor_flags_via, reference_dedup_regions,
     reference_sort_regions, sort_regions_via,
 };

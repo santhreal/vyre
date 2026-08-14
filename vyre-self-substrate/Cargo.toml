@@ -23,15 +23,6 @@ workspace = true
 [features]
 default = ["optimizer"]
 optimizer = ["vyre-primitives/graph"]
-data = [
-    "optimizer",
-    "vyre-libs/telemetry",
-    "vyre-libs/device",
-    "vyre-primitives/matching",
-    "vyre-primitives/math",
-    "vyre-primitives/nn",
-    "vyre-primitives/parsing",
-]
 graph-solvers = ["optimizer", "vyre-libs/telemetry", "vyre-libs/device", "vyre-primitives/math"]
 math-solvers = [
     "optimizer",
@@ -42,7 +33,7 @@ math-solvers = [
 ]
 all-solvers = [
     "vyre-libs/analysis",
-    "data",
+    "vyre-libs/encoding",
     "graph-solvers",
     "vyre-libs/reasoning",
     "math-solvers",
@@ -78,28 +69,8 @@ path = "tests/sweep_graph_cpu_oracle_matrix.rs"
 required-features = ["cpu-parity"]
 
 [[test]]
-name = "provenance_closure"
-path = "tests/provenance_closure.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
 name = "bellman_shortest_path_via_reference_parity"
 path = "tests/bellman_shortest_path_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "bitset_dense_matvec_pipeline_generated"
-path = "tests/bitset_dense_matvec_pipeline_generated.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "bitset_mask_algebra_via_reference_parity"
-path = "tests/bitset_mask_algebra_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "bitset_summary_via_reference_parity"
-path = "tests/bitset_summary_via_reference_parity.rs"
 required-features = ["cpu-parity"]
 
 [[test]]
@@ -120,16 +91,6 @@ required-features = ["cpu-parity"]
 [[test]]
 name = "match_motif_via_reference_parity"
 path = "tests/match_motif_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "matching_diagnostic_via_reference_parity"
-path = "tests/matching_diagnostic_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "matroid_exact_subset_via_reference_parity"
-path = "tests/matroid_exact_subset_via_reference_parity.rs"
 required-features = ["cpu-parity"]
 
 [[test]]
@@ -158,11 +119,6 @@ path = "tests/optimizer_bfs_and_softmax_parity.rs"
 required-features = ["cpu-parity"]
 
 [[test]]
-name = "primitive_vs_consumer"
-path = "tests/primitive_vs_consumer.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
 name = "quantized_via_reference_parity"
 path = "tests/quantized_via_reference_parity.rs"
 required-features = ["cpu-parity"]
@@ -170,21 +126,6 @@ required-features = ["cpu-parity"]
 [[test]]
 name = "reconstruct_path_via_reference_parity"
 path = "tests/reconstruct_path_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "reduction_metrics_via_reference_parity"
-path = "tests/reduction_metrics_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "scallop_provenance_via_reference_parity"
-path = "tests/scallop_provenance_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "self_consumer_conform"
-path = "tests/self_consumer_conform.rs"
 required-features = ["cpu-parity"]
 
 [[test]]
@@ -242,7 +183,3 @@ name = "vietoris_rips_via_reference_parity"
 path = "tests/vietoris_rips_via_reference_parity.rs"
 required-features = ["cpu-parity"]
 
-[[test]]
-name = "vsa_fingerprint_via_reference_parity"
-path = "tests/vsa_fingerprint_via_reference_parity.rs"
-required-features = ["cpu-parity"]

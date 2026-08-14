@@ -7,7 +7,7 @@
 #![allow(missing_docs)]
 
 use vyre_libs::analysis::dataflow_fixpoint;
-use vyre_self_substrate::{scallop_provenance, scallop_provenance_wide};
+use vyre_libs::encoding::{scallop_provenance, scallop_provenance_wide};
 
 #[test]
 fn consumers_are_thicker_wrappers_not_rewrites() {

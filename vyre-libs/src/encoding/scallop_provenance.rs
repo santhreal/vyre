@@ -53,7 +53,7 @@
 //! See `vyre-primitives::math::scallop_join::PROVENANCE_SELF_CONSUMER`
 //! for the cross-link from the primitive's docs back here.
 
-use vyre_libs::dispatch_buffers::{
+use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
@@ -155,7 +155,7 @@ pub fn reference_provenance_closure_with_scratch(
     max_iterations: u32,
     scratch: &mut ScallopProvenanceScratch,
 ) -> u32 {
-    use vyre_libs::telemetry::observability::{bump, scallop_provenance_calls};
+    use crate::telemetry::observability::{bump, scallop_provenance_calls};
     bump(&scallop_provenance_calls);
     scallop_join::cpu_ref_into(
         state,
@@ -180,7 +180,7 @@ pub fn lineage_for_output(closure: &[u32], n: u32, out: u32) -> Vec<u32> {
 
 /// Project one output row into caller-owned storage.
 pub fn lineage_for_output_into(closure: &[u32], n: u32, out: u32, row: &mut Vec<u32>) {
-    use vyre_libs::telemetry::observability::{bump, scallop_provenance_calls};
+    use crate::telemetry::observability::{bump, scallop_provenance_calls};
     bump(&scallop_provenance_calls);
     row.clear();
     row.extend_from_slice(lineage_for_output_slice(closure, n, out));
@@ -253,7 +253,7 @@ pub fn provenance_closure_via_with_scratch_into(
     scratch: &mut ScallopProvenanceGpuScratch,
     closure: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, scallop_provenance_calls};
+    use crate::telemetry::observability::{bump, scallop_provenance_calls};
     bump(&scallop_provenance_calls);
 
     let n_usize = n as usize;
@@ -338,7 +338,7 @@ pub fn lineage_for_output_slice(closure: &[u32], n: u32, out: u32) -> &[u32] {
 mod tests {
     #![allow(clippy::identity_op, clippy::erasing_op)]
     use super::*;
-    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::dispatch_buffers::u32_slice_to_le_bytes;
 
     struct ProvenanceDispatcher {
         outputs: Vec<Vec<u8>>,

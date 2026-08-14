@@ -7,7 +7,7 @@
 //! host loops in each pass.
 
 use super::decode_first_output;
-use vyre_libs::dispatch_buffers::{
+use crate::dispatch_buffers::{
     ceil_div_u32, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
@@ -74,7 +74,7 @@ pub fn reduce_metric_via_with_scratch(
     values: &[u32],
     scratch: &mut ReductionMetricsGpuScratch,
 ) -> Result<u32, DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, reduction_metrics_calls};
+    use crate::telemetry::observability::{bump, reduction_metrics_calls};
     bump(&reduction_metrics_calls);
 
     let count = checked_len(values.len(), "reduce_metric_via")?;
@@ -204,7 +204,7 @@ pub fn segment_reduce_sum_via_with_scratch_into(
     scratch: &mut ReductionMetricsGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, reduction_metrics_calls};
+    use crate::telemetry::observability::{bump, reduction_metrics_calls};
     bump(&reduction_metrics_calls);
 
     let num_segments = validate_segment_offsets(input, segment_offsets)?;
@@ -236,7 +236,7 @@ pub fn histogram_atomic_scatter_via(
     input: &[u32],
     num_bins: u32,
 ) -> Result<Vec<u32>, DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, reduction_metrics_calls};
+    use crate::telemetry::observability::{bump, reduction_metrics_calls};
     bump(&reduction_metrics_calls);
 
     let count = checked_nonzero_len(input.len(), "histogram_atomic_scatter_via")?;
@@ -388,7 +388,7 @@ fn decode_scalar(outputs: &[Vec<u8>], context: &'static str) -> Result<u32, Disp
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     struct ReduceDispatcher;
@@ -408,7 +408,7 @@ mod tests {
                     _ => None,
                 })
                 .expect("Fix: reduction primitive should expose a region generator");
-            let values = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let values = crate::dispatch_buffers::read_u32s(&inputs[0]);
             match op_id {
                 vyre_primitives::reduce::sum::OP_ID => {
                     assert_scalar_metric_dispatch(
@@ -467,7 +467,7 @@ mod tests {
                 vyre_primitives::reduce::segment_reduce::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     assert_eq!(program.workgroup_size(), [256, 1, 1]);
-                    let offsets = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+                    let offsets = crate::dispatch_buffers::read_u32s(&inputs[1]);
                     Ok(vec![u32_slice_to_le_bytes(&primitive_segment_reduce_sum(
                         &values, &offsets,
                     ))])

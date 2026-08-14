@@ -16,7 +16,7 @@
 //! Values are exact bitset unions → BIT-EXACT (no tolerance) vs `reference_provenance_closure`.
 #![cfg(feature = "cpu-parity")]
 
-use vyre_self_substrate::data::scallop_provenance::{
+use vyre_libs::encoding::scallop_provenance::{
     provenance_closure_via, reference_provenance_closure,
 };
 

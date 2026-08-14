@@ -5,11 +5,11 @@
 //! compile the DFA once, match brackets on-device, sort region triples, then
 //! emit dedup survivor flags for stream compaction.
 
-use vyre_libs::dispatch_buffers::{
+use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
-use vyre_libs::device::scratch::reserve_vec_capacity;
+use crate::device::scratch::reserve_vec_capacity;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::matching::bracket_match::{
     bracket_match, bracket_match_dispatch_grid, pack_u32, CLOSE_BRACE, OPEN_BRACE, OTHER,
@@ -158,7 +158,7 @@ pub fn bracket_pairs_via_with_scratch_into(
     scratch: &mut MatchingDiagnosticCompactionGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, matching_diagnostic_compaction_calls};
+    use crate::telemetry::observability::{bump, matching_diagnostic_compaction_calls};
     bump(&matching_diagnostic_compaction_calls);
 
     let n = checked_len(kinds.len(), "bracket_pairs_via")?;
@@ -217,7 +217,7 @@ pub fn sort_regions_via_with_scratch_into(
     scratch: &mut MatchingDiagnosticCompactionGpuScratch,
     out: &mut Vec<RegionTriple>,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, matching_diagnostic_compaction_calls};
+    use crate::telemetry::observability::{bump, matching_diagnostic_compaction_calls};
     bump(&matching_diagnostic_compaction_calls);
 
     let count = checked_nonzero_len(regions.len(), "sort_regions_via")?;
@@ -287,7 +287,7 @@ pub fn dedup_region_survivor_flags_via_with_scratch_into(
     scratch: &mut MatchingDiagnosticCompactionGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, matching_diagnostic_compaction_calls};
+    use crate::telemetry::observability::{bump, matching_diagnostic_compaction_calls};
     bump(&matching_diagnostic_compaction_calls);
 
     if sorted_regions.is_empty() {
@@ -469,7 +469,7 @@ fn decode_output_at(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     struct MatchingDispatcher;
@@ -498,7 +498,7 @@ mod tests {
                         2,
                         "Fix: bracket_pairs_via must pass exactly the two input-consuming buffers (kinds, stack); match_pairs is backend-allocated."
                     );
-                    let kinds = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+                    let kinds = crate::dispatch_buffers::read_u32s(&inputs[0]);
                     let depth_words = inputs[1].len() / std::mem::size_of::<u32>();
                     assert_eq!(
                         grid_override,
@@ -522,9 +522,9 @@ mod tests {
                         "Fix: sort_regions_via must pass all six input-consuming buffers (3 RO + 3 plain-RW outputs)."
                     );
                     let regions = join_regions(
-                        &vyre_libs::dispatch_buffers::read_u32s(&inputs[0]),
-                        &vyre_libs::dispatch_buffers::read_u32s(&inputs[1]),
-                        &vyre_libs::dispatch_buffers::read_u32s(&inputs[2]),
+                        &crate::dispatch_buffers::read_u32s(&inputs[0]),
+                        &crate::dispatch_buffers::read_u32s(&inputs[1]),
+                        &crate::dispatch_buffers::read_u32s(&inputs[2]),
                     );
                     assert_eq!(
                         grid_override,
@@ -548,9 +548,9 @@ mod tests {
                         "Fix: dedup_region_survivor_flags_via must pass exactly the three RO buffers; survivors is backend-allocated."
                     );
                     let regions = join_regions(
-                        &vyre_libs::dispatch_buffers::read_u32s(&inputs[0]),
-                        &vyre_libs::dispatch_buffers::read_u32s(&inputs[1]),
-                        &vyre_libs::dispatch_buffers::read_u32s(&inputs[2]),
+                        &crate::dispatch_buffers::read_u32s(&inputs[0]),
+                        &crate::dispatch_buffers::read_u32s(&inputs[1]),
+                        &crate::dispatch_buffers::read_u32s(&inputs[2]),
                     );
                     assert_eq!(
                         grid_override,

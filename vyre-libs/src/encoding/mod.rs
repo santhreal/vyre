@@ -1,4 +1,4 @@
-//! Data-structure, provenance, and substrate encoding modules.
+//! Bitset, provenance, matroid and fingerprint encoding compositions.
 
 pub mod bitset_compression;
 pub mod bitset_mask_algebra;
@@ -26,5 +26,5 @@ pub(crate) fn decode_first_output(
             format!("Fix: {context} expected at least one output buffer, got 0."),
         ));
     }
-    vyre_libs::dispatch_buffers::decode_u32_output_exact(&outputs[0], words, context, out)
+    crate::dispatch_buffers::decode_u32_output_exact(&outputs[0], words, context, out)
 }

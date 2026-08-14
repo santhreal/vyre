@@ -140,6 +140,10 @@ pub mod analysis;
 #[cfg(feature = "reasoning")]
 pub mod reasoning;
 
+/// Bitset, provenance, matroid and fingerprint encoding compositions.
+#[cfg(feature = "encoding")]
+pub mod encoding;
+
 /// Math dialect  -  linear algebra, scans, broadcasting.
 #[cfg(any(
     feature = "math-linalg",

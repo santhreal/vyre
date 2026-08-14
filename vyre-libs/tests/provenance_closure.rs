@@ -4,7 +4,7 @@
 //! lineage directly.
 #![allow(missing_docs)]
 
-use vyre_self_substrate::scallop_provenance;
+use vyre_libs::encoding::scallop_provenance;
 
 #[test]
 fn provenance_closure_matches_expected_lineage() {

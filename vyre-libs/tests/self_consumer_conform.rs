@@ -1,14 +1,14 @@
-//! P-HARNESS-1: every self-substrate consumer runs through the
+//! P-HARNESS-1: every composition consumer runs through the
 //! conform suite.
 //!
-//! For every module in `vyre_self_substrate::*`, the
+//! For every module in `vyre_libs::encoding::*`, the
 //! conform suite runs the module's primary entry point on the
 //! standard corpus and asserts no panics. Today the test gates
 //! each consumer behind a feature flag; the consumer's own crate
 //! must enable that feature in CI.
 #![allow(missing_docs)]
 
-use vyre_self_substrate::{scallop_provenance, vsa_fingerprint};
+use vyre_libs::encoding::{scallop_provenance, vsa_fingerprint};
 
 #[test]
 fn no_self_consumer_panics_on_smoke_input() {

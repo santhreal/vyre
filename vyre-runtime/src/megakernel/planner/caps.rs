@@ -142,7 +142,7 @@ pub struct ResidentQueueReport {
     /// region in dispatch order. `lineage[i]` is a 32-bit set of
     /// source-rule IDs that contributed to fused-region `i`'s output,
     /// computed via the substrate
-    /// `vyre_self_substrate::scallop_provenance` Datalog
+    /// `vyre_libs::encoding::scallop_provenance` Datalog
     /// closure on the rule-derivation graph. Empty `Vec` when
     /// provenance tracking was disabled for the dispatch.
     ///

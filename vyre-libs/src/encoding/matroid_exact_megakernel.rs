@@ -29,12 +29,12 @@
 //! exists. Each augmentation strictly grows the independent set.
 
 #[cfg(test)]
-use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
-use vyre_libs::dispatch_buffers::{
+use crate::dispatch_buffers::u32_slice_to_le_bytes;
+use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_libs::device::scratch::{reserve_hash_set_capacity_or_panic, reserve_vec_capacity_or_panic};
+use crate::device::scratch::{reserve_hash_set_capacity_or_panic, reserve_vec_capacity_or_panic};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
 use rustc_hash::FxHashSet;
@@ -320,7 +320,7 @@ pub fn select_optimal_subset_via_with_scratch_into(
     scratch: &mut ExactMatroidDispatchScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, matroid_exact_megakernel_calls};
+    use crate::telemetry::observability::{bump, matroid_exact_megakernel_calls};
     bump(&matroid_exact_megakernel_calls);
 
     let n_u32 = validate_full_for_dispatch(exchange_adj, sources, sinks, seed_x, n)?;
@@ -422,7 +422,7 @@ pub fn reference_select_optimal_subset_into<'a>(
 ) -> Result<&'a [u32], ExactMatroidError> {
     validate_full(exchange_adj, sources, sinks, seed_x, n)?;
 
-    use vyre_libs::telemetry::observability::{bump, matroid_exact_megakernel_calls};
+    use crate::telemetry::observability::{bump, matroid_exact_megakernel_calls};
     bump(&matroid_exact_megakernel_calls);
 
     scratch.prepare(seed_x, n, max_augmentations);
@@ -494,7 +494,7 @@ pub fn reference_select_optimal_subset_all_eligible_into<'a>(
 ) -> Result<&'a [u32], ExactMatroidError> {
     let _expected_adj = validate_common(exchange_adj, seed_x, n)?;
 
-    use vyre_libs::telemetry::observability::{bump, matroid_exact_megakernel_calls};
+    use crate::telemetry::observability::{bump, matroid_exact_megakernel_calls};
     bump(&matroid_exact_megakernel_calls);
 
     scratch.prepare(seed_x, n, max_augmentations);
@@ -693,10 +693,10 @@ mod tests {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 12);
-            let exchange_adj = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
-            let sources = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
-            let sinks = vyre_libs::dispatch_buffers::read_u32s(&inputs[2]);
-            let seed_x = vyre_libs::dispatch_buffers::read_u32s(&inputs[3]);
+            let exchange_adj = crate::dispatch_buffers::read_u32s(&inputs[0]);
+            let sources = crate::dispatch_buffers::read_u32s(&inputs[1]);
+            let sinks = crate::dispatch_buffers::read_u32s(&inputs[2]);
+            let seed_x = crate::dispatch_buffers::read_u32s(&inputs[3]);
             let n = seed_x.len();
             assert_eq!(exchange_adj.len(), n * n);
             assert_eq!(sources.len(), n);

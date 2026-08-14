@@ -101,8 +101,6 @@
 //!   onto disjoint sub-trees via planar non-overlapping selection.
 //!   Drops dispatch count from O(N) sequential to O(log N) batched.
 
-#[cfg(feature = "data")]
-pub mod data;
 #[cfg(feature = "graph-solvers")]
 pub mod graph;
 #[cfg(feature = "math-solvers")]
@@ -116,12 +114,6 @@ pub mod math;
 /// points, and optimizer contract metadata without descending into
 /// private module paths.
 pub mod optimizer;
-
-#[cfg(feature = "data")]
-pub use data::{
-    bitset_compression, bitset_summary, matroid_exact_megakernel, matroid_megakernel_scheduler,
-    parsing_dispatch_pipeline, scallop_provenance, scallop_provenance_wide, vsa_fingerprint,
-};
 
 #[cfg(feature = "graph-solvers")]
 pub use graph::{

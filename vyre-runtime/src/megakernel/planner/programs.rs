@@ -37,7 +37,7 @@ pub fn build_sinkhorn_full_clustering_program(
 }
 
 /// Build a multi-word scallop-provenance Program. Wraps
-/// [`vyre_self_substrate::scallop_provenance_wide::scallop_provenance_wide_program`]
+/// [`vyre_libs::encoding::scallop_provenance_wide::scallop_provenance_wide_program`]
 /// for >32-rule lineage tracking (W=8 → 256 rules max).
 #[must_use]
 pub fn build_scallop_provenance_wide_program(
@@ -49,7 +49,7 @@ pub fn build_scallop_provenance_wide_program(
     w: u32,
     max_iterations: u32,
 ) -> vyre_foundation::ir::Program {
-    vyre_self_substrate::scallop_provenance_wide::scallop_provenance_wide_program(
+    vyre_libs::encoding::scallop_provenance_wide::scallop_provenance_wide_program(
         state,
         next,
         join_rules,

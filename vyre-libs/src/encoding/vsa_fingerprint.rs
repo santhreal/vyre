@@ -5,7 +5,7 @@
 //! returns the same fingerprint for two semantically-equivalent
 //! Region trees with reordered children  -  beats byte-equal hashing.
 
-use vyre_libs::dispatch_buffers::{
+use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
@@ -35,7 +35,7 @@ pub fn vsa_fingerprint(program: &vyre_foundation::ir::Program) -> Vec<u32> {
 /// Build the stable eight-lane VSA cache fingerprint without heap allocation.
 #[must_use]
 pub fn vsa_fingerprint_words(program: &vyre_foundation::ir::Program) -> [u32; 8] {
-    use vyre_libs::telemetry::observability::{bump, vsa_fingerprint_calls};
+    use crate::telemetry::observability::{bump, vsa_fingerprint_calls};
     bump(&vsa_fingerprint_calls);
     let fingerprint = program.fingerprint();
     vyre_primitives::wire::decode_u32x8_le_bytes(&fingerprint)
@@ -52,7 +52,7 @@ pub fn reference_fingerprint(kind_hv: &[u32], signature_hv: &[u32], region_hv: &
 
 /// Fingerprint a Program component triple through GPU-dispatchable XOR binding primitives.
 ///
-/// Unlike [`reference_fingerprint`], this production dispatch path rejects mismatched dimensions instead of
+/// Unlike `reference_fingerprint`, this production dispatch path rejects mismatched dimensions instead of
 /// silently truncating. Cache fingerprints must have one unambiguous dimensionality across all
 /// components.
 ///
@@ -203,7 +203,7 @@ pub fn lookup_approximate(query: &[u32], cached: &[Vec<u32>], threshold: f32) ->
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::dispatch_buffers::u32_slice_to_le_bytes;
 
     struct XorDispatcher;
 
@@ -220,11 +220,11 @@ mod tests {
                     inputs.len()
                 )));
             };
-            let a = vyre_libs::dispatch_buffers::decode_u32_input_aligned(
+            let a = crate::dispatch_buffers::decode_u32_input_aligned(
                 a_bytes,
                 "XOR test dispatcher",
             )?;
-            let b = vyre_libs::dispatch_buffers::decode_u32_input_aligned(
+            let b = crate::dispatch_buffers::decode_u32_input_aligned(
                 b_bytes,
                 "XOR test dispatcher",
             )?;

@@ -11,7 +11,7 @@
 //! independent inline `u32::count_ones` oracle.
 #![cfg(feature = "cpu-parity")]
 
-use vyre_self_substrate::data::bitset_summary::{per_word_popcount_via, total_set_bits_via};
+use vyre_libs::encoding::bitset_summary::{per_word_popcount_via, total_set_bits_via};
 
 use vyre_libs::test_support::ReferenceEvalDispatcher;
 

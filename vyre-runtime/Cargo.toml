@@ -25,7 +25,7 @@ self-substrate-adapters = [
     "dep:vyre-self-substrate",
     "dep:vyre-libs",
     "vyre-libs/analysis",
-    "vyre-self-substrate/data",
+    "vyre-libs/encoding",
     "vyre-self-substrate/math-solvers",
 ]
 remote-cache = ["ureq"]

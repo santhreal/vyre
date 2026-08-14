@@ -13,7 +13,7 @@ use vyre_foundation::program_dispatch::{
     DispatchError as SelfSubstrateDispatchError, ProgramDispatcher,
 };
 #[cfg(feature = "self-substrate-adapters")]
-use vyre_self_substrate::scallop_provenance::provenance_closure_via_into;
+use vyre_libs::encoding::scallop_provenance::provenance_closure_via_into;
 
 /// Error raised by GPU-resident cache invalidation.
 #[derive(Debug, Clone, PartialEq, Eq)]

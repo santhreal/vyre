@@ -37,7 +37,7 @@
 //!      and the main sweep exercises varying `max_augmentations` (1..4).
 #![cfg(feature = "cpu-parity")]
 
-use vyre_self_substrate::data::matroid_exact_megakernel::{
+use vyre_libs::encoding::matroid_exact_megakernel::{
     reference_select_optimal_subset, select_optimal_subset_via,
 };
 

@@ -15,7 +15,7 @@
 //! arithmetic → BIT-EXACT (no tolerance).
 #![cfg(feature = "cpu-parity")]
 
-use vyre_self_substrate::data::reduction_metrics::{
+use vyre_libs::encoding::reduction_metrics::{
     histogram_atomic_scatter_via, reduce_all_via, reduce_any_via, reduce_count_non_zero_via,
     reduce_max_via, reduce_min_via, reduce_sum_via, reference_histogram_atomic_scatter,
     reference_segment_reduce_sum, segment_reduce_sum_via,
