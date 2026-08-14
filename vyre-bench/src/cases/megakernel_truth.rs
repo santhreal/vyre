@@ -1,6 +1,6 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRun, Correctness,
-    DeterminismClass, PreparedCase, WorkloadClass,
+    prepared_as_mut, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{dispatch_artifact_timed, ResidentInputPool};
@@ -105,13 +105,7 @@ impl BenchCase for MegakernelTruth {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_mut::<MegakernelTruthPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "megakernel truth prepared payload type mismatch".to_string(),
-                )
-            })?;
+        let prepared = prepared_as_mut::<MegakernelTruthPrepared>(prepared, "megakernel truth")?;
 
         let mut dispatch_config = ctx.dispatch_config.clone();
         dispatch_config.grid_override =

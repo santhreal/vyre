@@ -1,7 +1,7 @@
 use super::byte_pack::{gb_per_second, rate_per_second_x1000, read_word, write_word};
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRun, Correctness,
-    DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    prepared_as_mut, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{dispatch_artifact_timed, ResidentInputPool};
@@ -106,13 +106,8 @@ impl BenchCase for MegakernelCondition {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_mut::<MegakernelConditionPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "megakernel condition prepared payload type mismatch".to_string(),
-                )
-            })?;
+        let prepared =
+            prepared_as_mut::<MegakernelConditionPrepared>(prepared, "megakernel condition")?;
         let mut config = ctx.dispatch_config.clone();
         config.grid_override = Some([SLOT_COUNT.div_ceil(WORKGROUP_SIZE), 1, 1]);
 

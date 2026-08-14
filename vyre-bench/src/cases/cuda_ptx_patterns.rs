@@ -1,8 +1,8 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::suite::SuiteKind;
 use std::collections::HashMap;
 use std::time::Instant;
@@ -95,16 +95,10 @@ impl BenchCase for CudaPtxPatterns {
         _ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let corpus = prepared
-            .downcast_ref::<Vec<KernelDescriptor>>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "CUDA PTX pattern prepared payload type mismatch".to_string(),
-                )
-            })?;
+        let corpus = prepared_as::<Vec<KernelDescriptor>>(prepared, "CUDA PTX pattern")?;
         let started = Instant::now();
         let totals = measure_corpus(corpus)?;
-        let elapsed = started.elapsed().as_nanos() as u64;
+        let elapsed = elapsed_ns(started);
 
         let mut output = Vec::with_capacity(22 * std::mem::size_of::<u64>());
         for value in [

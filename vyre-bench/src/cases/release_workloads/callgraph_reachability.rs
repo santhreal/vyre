@@ -2,15 +2,20 @@
 //! generator, CPU forward baseline, and witness digest.
 
 use super::registration::{gpu_requirements, RELEASE_SUITES};
+use super::resident_batch::{
+    batch_metric_points, dispatch_batch_or_single, dispatch_single, BatchPlan,
+};
 use super::run_assembly::{
     bench_run_from_timed_with_accounting, encode_u32_words, resident_reset_transfer_accounting,
 };
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase,
+    WorkloadClass,
 };
 use crate::api::metric::MetricPoint;
 use crate::api::resident::{input_bytes_total, ResidentInputPool};
+use crate::cases::reference_sample::timed_reference;
 use vyre::ir::Program;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
@@ -118,11 +123,7 @@ impl BenchCase for CallgraphReachabilityStep {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<CallgraphPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed("callgraph prepared payload type mismatch".to_string())
-            })?;
+        let prepared = prepared_as::<CallgraphPrepared>(prepared, "callgraph")?;
         let reset_payload = prepared
             .graph
             .inputs
@@ -134,120 +135,56 @@ impl BenchCase for CallgraphReachabilityStep {
                     prepared.graph.inputs.len()
                 ))
             })?;
-        let mut batch_wall_ns = None;
-        let mut batch_len = None;
-        let (timed, resident_used, resident_reset_bytes) =
-            if let Some(resident_batch) = prepared.resident_batch.as_ref() {
-                resident_batch.upload_resource_to_all_sets(
-                    prepared.output_resource_index,
-                    reset_payload,
-                    "callgraph resident batch frontier reset",
-                )?;
-                let config = crate::api::case::dispatch_config_with_inferred_grid(
-                    &prepared.program,
-                    &prepared.graph.inputs,
-                    &ctx.dispatch_config,
-                )
-                .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-                match resident_batch.dispatch_artifact_batch_timed(
-                    ctx,
-                    &prepared.program,
-                    CALLGRAPH_RESIDENT_BATCH_SIZE,
-                    &config,
-                ) {
-                    Ok(batch) => {
-                        if batch.outputs.len() != CALLGRAPH_RESIDENT_BATCH_SIZE {
-                            return Err(BenchError::ExecutionFailed(format!(
-                                "callgraph resident batch returned {} output row(s), expected {}",
-                                batch.outputs.len(),
-                                CALLGRAPH_RESIDENT_BATCH_SIZE
-                            )));
-                        }
-                        let first_outputs = batch.outputs.first().cloned().ok_or_else(|| {
-                            BenchError::ExecutionFailed(
-                                "callgraph resident batch returned no output rows".to_string(),
-                            )
-                        })?;
-                        if let Some((index, _)) = batch
-                            .outputs
-                            .iter()
-                            .enumerate()
-                            .find(|(_, outputs)| **outputs != first_outputs)
-                        {
-                            return Err(BenchError::CorrectnessViolation(format!(
-                                "callgraph resident batch output row {index} disagreed with row 0"
-                            )));
-                        }
-                        batch_wall_ns = Some(batch.wall_ns_total);
-                        batch_len = Some(batch.batch_len as u64);
-                        (
-                            vyre_driver::TimedDispatchResult {
-                                outputs: first_outputs,
-                                wall_ns: batch.per_item_wall_ns(),
-                                device_ns: batch.per_item_device_ns(),
-                                enqueue_ns: None,
-                                wait_ns: None,
-                            },
-                            true,
-                            reset_payload.len() as u64,
-                        )
-                    }
-                    Err(vyre_driver::BackendError::UnsupportedFeature { .. }) => {
-                        let timed = ctx
-                            .dispatch_timed(
-                                &prepared.program,
-                                &prepared.graph.inputs,
-                                &ctx.dispatch_config,
-                            )
-                            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-                        (timed, false, 0)
-                    }
-                    Err(error) => return Err(BenchError::BackendFailed(error.to_string())),
-                }
-            } else {
-                let timed = ctx
-                    .dispatch_timed(
-                        &prepared.program,
-                        &prepared.graph.inputs,
-                        &ctx.dispatch_config,
-                    )
-                    .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-                (timed, false, 0)
-            };
+        let sample = dispatch_batch_or_single(
+            ctx,
+            &prepared.program,
+            &prepared.graph.inputs,
+            prepared.resident_batch.as_ref(),
+            &BatchPlan {
+                label: "callgraph",
+                batch_size: CALLGRAPH_RESIDENT_BATCH_SIZE,
+                reset_resource: prepared.output_resource_index,
+                reset_resource_kind: "frontier",
+                reset_payload,
+            },
+            || dispatch_single(ctx, &prepared.program, &prepared.graph.inputs),
+        )?;
 
         let graph = &prepared.graph;
-        let baseline_start = std::time::Instant::now();
-        let mut expected = release_benchmark_csr_forward_baseline(
-            CALLGRAPH_NODES,
-            &graph.edge_offsets,
-            &graph.edge_targets,
-            &graph.edge_kind_mask,
-            &graph.frontier_in,
-            1,
-        );
-        let witness_digest = callgraph_witness_digest(
-            CALLGRAPH_NODES,
-            &graph.edge_offsets,
-            &graph.edge_targets,
-            &graph.edge_kind_mask,
-            &graph.frontier_in,
-            1,
-        );
-        for (out, seed) in expected.iter_mut().zip(graph.frontier_out_seed.iter()) {
-            *out |= *seed;
-        }
+        let ((expected, witness_digest), baseline_wall) = timed_reference(|| {
+            let mut expected = release_benchmark_csr_forward_baseline(
+                CALLGRAPH_NODES,
+                &graph.edge_offsets,
+                &graph.edge_targets,
+                &graph.edge_kind_mask,
+                &graph.frontier_in,
+                1,
+            );
+            let witness_digest = callgraph_witness_digest(
+                CALLGRAPH_NODES,
+                &graph.edge_offsets,
+                &graph.edge_targets,
+                &graph.edge_kind_mask,
+                &graph.frontier_in,
+                1,
+            );
+            for (out, seed) in expected.iter_mut().zip(graph.frontier_out_seed.iter()) {
+                *out |= *seed;
+            }
+            (expected, witness_digest)
+        });
         let baseline_outputs = vec![encode_u32_words(&expected)];
-        let baseline_wall = baseline_start.elapsed().as_nanos() as u64;
-        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
+        let output_bytes = sample.timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
         let logical_bytes_touched = prepared.input_bytes_total.saturating_add(output_bytes);
         let accounting = resident_reset_transfer_accounting(
             prepared.input_bytes_total,
             output_bytes,
-            resident_used,
-            resident_reset_bytes,
+            sample.resident_used,
+            sample.reset_bytes,
         );
+        let mut custom = batch_metric_points("callgraph", &sample);
         let mut run = bench_run_from_timed_with_accounting(
-            timed,
+            sample.timed,
             prepared.input_bytes_total,
             baseline_outputs,
             baseline_wall,
@@ -260,26 +197,7 @@ impl BenchCase for CallgraphReachabilityStep {
             name: "callgraph_witness_digest".to_string(),
             value: u64::from(witness_digest),
         });
-        run.metrics.custom.push(MetricPoint {
-            name: "callgraph_resident_buffers".to_string(),
-            value: u64::from(resident_used),
-        });
-        run.metrics.custom.push(MetricPoint {
-            name: "callgraph_resident_reset_bytes".to_string(),
-            value: resident_reset_bytes,
-        });
-        if let Some(wall_ns) = batch_wall_ns {
-            run.metrics.custom.push(MetricPoint {
-                name: "callgraph_resident_batch_wall_ns".to_string(),
-                value: wall_ns,
-            });
-        }
-        if let Some(len) = batch_len {
-            run.metrics.custom.push(MetricPoint {
-                name: "callgraph_resident_batch_len".to_string(),
-                value: len,
-            });
-        }
+        run.metrics.custom.append(&mut custom);
         Ok(run)
     }
 

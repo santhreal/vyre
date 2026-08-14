@@ -2,10 +2,10 @@ use std::hint::black_box;
 use std::time::Instant;
 
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::suite::SuiteKind;
 use vyre_foundation::ir::Program;
 use vyre_libs::parsing::c::lex::lexer::c11_lexer_regular_sparse_u8_haystack_with_flags;
@@ -158,26 +158,17 @@ impl BenchCase for LexerSmallStateTransition {
         _ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<LexerTransitionPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "prepared lexer transition payload had the wrong type".to_string(),
-                )
-            })?;
+        let prepared = prepared_as::<LexerTransitionPrepared>(prepared, "lexer transition")?;
 
         let baseline_start = Instant::now();
         let baseline_tokens = sparse_reference_tokens(&prepared.source);
         black_box(baseline_tokens.len());
-        let baseline_wall_ns = baseline_start
-            .elapsed()
-            .as_nanos()
-            .min(u128::from(u64::MAX)) as u64;
+        let baseline_wall_ns = elapsed_ns(baseline_start);
 
         let started = Instant::now();
         let transition_tokens = small_state_transition_tokens(&prepared.source);
         black_box(transition_tokens.len());
-        let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
+        let wall_ns = elapsed_ns(started);
 
         let outputs = vec![encode_tokens(&transition_tokens)];
         let baseline_outputs = vec![encode_tokens(&baseline_tokens)];

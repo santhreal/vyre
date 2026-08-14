@@ -9,7 +9,7 @@
 use std::time::Instant;
 
 use crate::api::case::{BenchContext, BenchError, BenchRun};
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::resident::{input_bytes_total, ResidentInputSet};
 use crate::cases::queue_closure_oracle::QueueClosureOracle;
 use crate::cases::queue_closure_profile::validate_queue_closure_wave_profile;
@@ -84,7 +84,7 @@ pub(crate) fn timed_closure_oracle(
 ) -> Result<(QueueClosureOracle, u64), BenchError> {
     let start = Instant::now();
     let oracle = oracle()?;
-    let wall_ns = start.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
+    let wall_ns = elapsed_ns(start);
     Ok((oracle, wall_ns))
 }
 

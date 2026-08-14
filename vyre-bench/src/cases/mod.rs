@@ -76,6 +76,7 @@ pub mod graph_frontier;
 pub(crate) mod harness;
 pub mod hashtable;
 pub(crate) mod histogram;
+pub(crate) mod honest_case;
 pub mod interpreter;
 pub mod lexer_transition;
 pub(crate) mod matmul;

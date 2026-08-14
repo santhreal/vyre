@@ -9,12 +9,13 @@
 //! massive parallelism over independent program instances.
 
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    BenchCase, BenchContext, BenchError, BenchId, BenchMetadata, BenchRequirements, BenchRun,
+    Correctness, PerformanceContract, PreparedCase,
 };
-use crate::api::metric::BenchMetrics;
+use crate::api::resident::{input_bytes_total, transfer_accounting};
 use crate::api::suite::SuiteKind;
-use crate::cases::reference_sample::timed_reference;
+use crate::cases::honest_case::{honest_gpu_requirements, honest_metadata, HONEST_SUITES};
+use crate::cases::reference_sample::{run_against_reference, timed_reference, ReferenceSample};
 use rand::{RngExt, SeedableRng};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -32,13 +33,6 @@ const OP_MUL: u32 = 2;
 const OP_DUP: u32 = 3;
 const OP_SWAP: u32 = 4;
 
-const HONEST_SUITES: &[SuiteKind] = &[
-    SuiteKind::Honest,
-    SuiteKind::Deep,
-    SuiteKind::Release,
-    SuiteKind::Smoke,
-];
-
 pub struct BytecodeDispatch;
 
 impl BenchCase for BytecodeDispatch {
@@ -47,21 +41,12 @@ impl BenchCase for BytecodeDispatch {
     }
 
     fn metadata(&self) -> BenchMetadata {
-        BenchMetadata {
-            id: self.id(),
-            name: "Bytecode Interpreter 10M".to_string(),
-            description: "Stack-based bytecode VM: 4096 instances × 2500 instructions each"
-                .to_string(),
-            tags: vec![
-                "honest".to_string(),
-                "branch-heavy".to_string(),
-                "serial".to_string(),
-            ],
-            layer: BenchLayer::Honest,
-            workload: WorkloadClass::Honest,
-            determinism: DeterminismClass::Deterministic,
-            owner_crate: "vyre-bench".to_string(),
-        }
+        honest_metadata(
+            self.id(),
+            "Bytecode Interpreter 10M",
+            "Stack-based bytecode VM: 4096 instances × 2500 instructions each",
+            &["honest", "branch-heavy", "serial"],
+        )
     }
 
     fn suites(&self) -> &'static [SuiteKind] {
@@ -69,13 +54,7 @@ impl BenchCase for BytecodeDispatch {
     }
 
     fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: Some((TOTAL_INSTRS as u64) * 4 + (INSTANCE_COUNT as u64) * 4),
-            min_input_bytes: None,
-            feature_set: vec![],
-        }
+        honest_gpu_requirements((TOTAL_INSTRS as u64) * 4 + (INSTANCE_COUNT as u64) * 4)
     }
 
     fn performance_contract(&self) -> Option<PerformanceContract> {
@@ -113,12 +92,12 @@ impl BenchCase for BytecodeDispatch {
 
         let instrs_bytes = vyre_primitives::wire::pack_u32_slice(&instrs);
         let inputs = vec![instrs_bytes];
+        let input_bytes = input_bytes_total(&inputs);
 
         // GPU dispatch
         let timed = ctx
             .dispatch_timed(prog, &inputs, &ctx.dispatch_config)
             .map_err(|e| BenchError::BackendFailed(e.to_string()))?;
-        let outputs = timed.outputs;
 
         let (cpu_results, elapsed_ref) = timed_reference(|| {
             cpu_interpret(
@@ -128,21 +107,17 @@ impl BenchCase for BytecodeDispatch {
             )
         });
 
-        Ok(BenchRun {
-            metrics: BenchMetrics {
-                wall_ns: Some(timed.wall_ns),
-                dispatch_ns: timed.device_ns,
-                input_bytes: Some(inputs.iter().map(Vec::len).sum::<usize>() as u64),
-                output_bytes: Some(outputs.iter().map(Vec::len).sum::<usize>() as u64),
-                ..Default::default()
+        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
+        Ok(run_against_reference(
+            timed,
+            input_bytes,
+            transfer_accounting(input_bytes, output_bytes, false),
+            ReferenceSample {
+                outputs: vec![cpu_results],
+                wall_ns: elapsed_ref,
+                input_bytes,
             },
-            baseline_metrics: Some(BenchMetrics {
-                wall_ns: Some(elapsed_ref),
-                ..Default::default()
-            }),
-            outputs,
-            baseline_outputs: Some(vec![cpu_results]),
-        })
+        ))
     }
 
     fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {

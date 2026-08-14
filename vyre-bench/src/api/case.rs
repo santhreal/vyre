@@ -1,3 +1,4 @@
+use crate::api::metric::elapsed_ns;
 use std::{
     borrow::Cow,
     collections::BTreeMap,
@@ -298,7 +299,7 @@ impl BenchContext {
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         Ok(vyre_driver::TimedDispatchResult {
             outputs,
-            wall_ns: u64::try_from(start.elapsed().as_nanos()).unwrap_or(u64::MAX),
+            wall_ns: elapsed_ns(start),
             device_ns: completion.device_ns,
             enqueue_ns: None,
             wait_ns: None,
@@ -326,7 +327,7 @@ impl BenchContext {
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         Ok(vyre_driver::TimedDispatchResult {
             outputs,
-            wall_ns: u64::try_from(start.elapsed().as_nanos()).unwrap_or(u64::MAX),
+            wall_ns: elapsed_ns(start),
             device_ns: completion.device_ns,
             enqueue_ns: None,
             wait_ns: None,
@@ -353,7 +354,7 @@ impl BenchContext {
         let (device_ns, bindings, completion) = self.submit_resident_steps(steps)?;
         copy_typed_read_ranges(&bindings, &completion, read_ranges, outputs)?;
         Ok(vyre_driver::ResidentSequenceTiming {
-            wall_ns: u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX),
+            wall_ns: elapsed_ns(started),
             device_ns,
             enqueue_ns: None,
             wait_ns: None,
@@ -627,6 +628,34 @@ pub fn prepared_program(prepared: &PreparedCase) -> Result<&vyre::ir::Program, B
         BenchError::ExecutionFailed(
             "prepared benchmark payload was not a vyre::ir::Program".to_string(),
         )
+    })
+}
+
+/// Borrow a case's prepared payload as its own type.
+///
+/// Sixteen cases hand-rolled this downcast with the same error wording, each
+/// naming itself in the message. `case` is that name, and it is the only thing
+/// that varied.
+pub fn prepared_as<'a, T: 'static>(
+    prepared: &'a PreparedCase,
+    case: &str,
+) -> Result<&'a T, BenchError> {
+    prepared.downcast_ref::<T>().ok_or_else(|| {
+        BenchError::ExecutionFailed(format!("{case} prepared payload type mismatch"))
+    })
+}
+
+/// Borrow a case's prepared payload mutably as its own type.
+///
+/// The mutable half of `prepared_as`. Splitting the two is what left five
+/// cases still hand-rolling the downcast after the read-only ones were
+/// collapsed, so both flavours are named here and the wording is shared.
+pub fn prepared_as_mut<'a, T: 'static>(
+    prepared: &'a mut PreparedCase,
+    case: &str,
+) -> Result<&'a mut T, BenchError> {
+    prepared.downcast_mut::<T>().ok_or_else(|| {
+        BenchError::ExecutionFailed(format!("{case} prepared payload type mismatch"))
     })
 }
 

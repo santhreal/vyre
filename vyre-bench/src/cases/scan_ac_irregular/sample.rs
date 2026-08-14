@@ -14,7 +14,7 @@ use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::Program;
 
 use crate::api::case::{BenchContext, BenchError, BenchRun};
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::resident::{dispatch_program_timed, transfer_accounting, ResidentInputSet};
 
 use super::metrics::{scan_ac_baseline_metric_points, ScanAcStats};
@@ -167,7 +167,7 @@ pub(super) fn dispatch_reset_then_scan(
         ctx.dispatch_resident_sequence_read_ranges_into(&steps, &read_ranges, &mut targets)
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     }
-    let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
+    let wall_ns = elapsed_ns(started);
 
     Ok((outputs, wall_ns))
 }

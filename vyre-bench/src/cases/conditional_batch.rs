@@ -17,6 +17,7 @@ use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, Correctness, DeterminismClass,
     WorkloadClass,
 };
+use crate::api::metric::elapsed_ns;
 use crate::api::resident::{input_bytes_total, u32_counter_reset_program, ResidentInputSet};
 use rayon::prelude::*;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -259,7 +260,7 @@ fn prepare_conditional_batch(ctx: &mut BenchContext) -> Result<ConditionalPrepar
         &file_sizes,
         &file_entropy,
     );
-    let baseline_wall_ns = baseline_start.elapsed().as_nanos() as u64;
+    let baseline_wall_ns = elapsed_ns(baseline_start);
 
     Ok(ConditionalPrepared {
         program,

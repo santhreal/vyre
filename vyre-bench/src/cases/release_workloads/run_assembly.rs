@@ -6,6 +6,7 @@ use crate::api::case::{BenchError, BenchRun};
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::TransferAccounting;
 use crate::cases::byte_pack::gb_per_second;
+use crate::cases::reference_sample::reference_metrics;
 
 pub(super) fn resident_reset_transfer_accounting(
     input_bytes_total: u64,
@@ -83,15 +84,11 @@ pub(super) fn bench_run_from_timed_with_accounting(
             }],
             ..Default::default()
         },
-        baseline_metrics: Some(BenchMetrics {
-            wall_ns: Some(baseline_wall),
-            input_bytes: Some(input_bytes),
-            output_bytes: Some(baseline_outputs.iter().map(Vec::len).sum::<usize>() as u64),
-            bytes_touched: Some(logical_bytes_touched),
-            bytes_read: Some(input_bytes),
-            bytes_written: Some(output_bytes),
-            ..Default::default()
-        }),
+        baseline_metrics: Some(reference_metrics(
+            baseline_wall,
+            input_bytes,
+            baseline_outputs.iter().map(Vec::len).sum::<usize>() as u64,
+        )),
         outputs: timed.outputs,
         baseline_outputs: Some(baseline_outputs),
     })

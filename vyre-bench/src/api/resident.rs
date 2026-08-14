@@ -1,3 +1,4 @@
+use crate::api::metric::elapsed_ns;
 use std::sync::Arc;
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -562,7 +563,7 @@ impl ResidentInputPool {
             };
             outputs.push(timed.outputs);
         }
-        let wall_ns_total = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
+        let wall_ns_total = elapsed_ns(started);
         Ok(ResidentBatchDispatch {
             outputs,
             wall_ns_total,

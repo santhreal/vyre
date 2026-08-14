@@ -8,15 +8,15 @@
 //! x86_64 hosts with AES acceleration.
 
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchMetadata, BenchRequirements,
+    BenchRun, Correctness, PerformanceContract, PreparedCase,
 };
-use crate::api::metric::BenchMetrics;
 use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
 };
 use crate::api::suite::SuiteKind;
-use crate::cases::reference_sample::timed_reference;
+use crate::cases::honest_case::{honest_gpu_requirements, honest_metadata, HONEST_SUITES};
+use crate::cases::reference_sample::{run_against_reference, timed_reference, ReferenceSample};
 use openssl::symm::{Cipher, Crypter, Mode};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::wire::pack_u32_iter;
@@ -26,13 +26,6 @@ use vyre_primitives::wire::pack_u32_iter;
 const BLOCK_COUNT: u32 = 655_360; // 10MB / 16 bytes = 655360 blocks
 const BLOCK_SIZE_WORDS: u32 = 4; // 16 bytes = 4 u32
 const TOTAL_WORDS: u32 = BLOCK_COUNT * BLOCK_SIZE_WORDS;
-
-const HONEST_SUITES: &[SuiteKind] = &[
-    SuiteKind::Honest,
-    SuiteKind::Deep,
-    SuiteKind::Release,
-    SuiteKind::Smoke,
-];
 
 const AES_BLOCK_BYTES: usize = 16;
 const AES_ROUNDS: usize = 10;
@@ -84,21 +77,12 @@ impl BenchCase for AesCtrEncrypt {
     }
 
     fn metadata(&self) -> BenchMetadata {
-        BenchMetadata {
-            id: self.id(),
-            name: "AES-CTR Encrypt 10MB".to_string(),
-            description: "AES-128 counter-mode encryption, 10MB stream, per-block parallel"
-                .to_string(),
-            tags: vec![
-                "honest".to_string(),
-                "crypto".to_string(),
-                "compute-bound".to_string(),
-            ],
-            layer: BenchLayer::Honest,
-            workload: WorkloadClass::Honest,
-            determinism: DeterminismClass::Deterministic,
-            owner_crate: "vyre-bench".to_string(),
-        }
+        honest_metadata(
+            self.id(),
+            "AES-CTR Encrypt 10MB",
+            "AES-128 counter-mode encryption, 10MB stream, per-block parallel",
+            &["honest", "crypto", "compute-bound"],
+        )
     }
 
     fn suites(&self) -> &'static [SuiteKind] {
@@ -106,13 +90,8 @@ impl BenchCase for AesCtrEncrypt {
     }
 
     fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: Some((TOTAL_WORDS as u64) * 4 * 2), // input + output
-            min_input_bytes: None,
-            feature_set: vec![],
-        }
+        // input + output
+        honest_gpu_requirements((TOTAL_WORDS as u64) * 4 * 2)
     }
 
     fn performance_contract(&self) -> Option<PerformanceContract> {
@@ -178,9 +157,7 @@ impl BenchCase for AesCtrEncrypt {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared.downcast_ref::<AesCtrPrepared>().ok_or_else(|| {
-            BenchError::ExecutionFailed("aes-ctr prepared payload type mismatch".to_string())
-        })?;
+        let prepared = prepared_as::<AesCtrPrepared>(prepared, "aes-ctr")?;
 
         let dispatch = dispatch_program_timed(
             ctx,
@@ -191,35 +168,23 @@ impl BenchCase for AesCtrEncrypt {
         )?;
         let resident_used = dispatch.resident_used;
         let timed = dispatch.timed;
-        let outputs = timed.outputs;
 
         let (cpu_result, elapsed_ref) =
             timed_reference(|| cpu_openssl_aes_ctr(&prepared.plaintext_bytes, &prepared.key_bytes));
         let cpu_result = cpu_result?;
         let input_bytes = prepared.input_bytes_total;
-        let output_bytes = outputs.iter().map(Vec::len).sum::<usize>() as u64;
-        let accounting = transfer_accounting(input_bytes, output_bytes, resident_used);
+        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
 
-        Ok(BenchRun {
-            metrics: BenchMetrics {
-                wall_ns: Some(timed.wall_ns),
-                dispatch_ns: timed.device_ns,
-                input_bytes: Some(input_bytes),
-                output_bytes: Some(output_bytes),
-                bytes_read: Some(accounting.bytes_read),
-                bytes_written: Some(accounting.bytes_written),
-                bytes_touched: Some(accounting.bytes_touched),
-                ..Default::default()
+        Ok(run_against_reference(
+            timed,
+            input_bytes,
+            transfer_accounting(input_bytes, output_bytes, resident_used),
+            ReferenceSample {
+                outputs: vec![cpu_result],
+                wall_ns: elapsed_ref,
+                input_bytes: prepared.plaintext_bytes.len() as u64,
             },
-            baseline_metrics: Some(BenchMetrics {
-                wall_ns: Some(elapsed_ref),
-                input_bytes: Some(prepared.plaintext_bytes.len() as u64),
-                output_bytes: Some(cpu_result.len() as u64),
-                ..Default::default()
-            }),
-            outputs,
-            baseline_outputs: Some(vec![cpu_result]),
-        })
+        ))
     }
 
     fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {

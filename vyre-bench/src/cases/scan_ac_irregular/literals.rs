@@ -4,9 +4,11 @@
 //! cardinality-only kernel. Both take their sample through [`super::sample`].
 
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase,
+    WorkloadClass,
 };
+use crate::api::metric::elapsed_ns;
 use crate::api::resident::{input_bytes_total, u32_counter_reset_program, ResidentInputSet};
 use crate::api::suite::SuiteKind;
 use vyre_foundation::ir::Program;
@@ -147,13 +149,7 @@ impl BenchCase for ScanAcIrregularLiterals {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<ScanAcIrregularPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "prepared irregular AC scan payload had the wrong type".to_string(),
-                )
-            })?;
+        let prepared = prepared_as::<ScanAcIrregularPrepared>(prepared, "irregular AC scan")?;
         let ctx: &BenchContext = ctx;
 
         let resident_sequence = prepared.resident.as_ref().map(|resident| {
@@ -245,10 +241,7 @@ pub(super) fn prepare_scan_ac_irregular(
 
     let baseline_start = std::time::Instant::now();
     let expected_matches = cpu_aho_overlapping_matches(PATTERNS, &haystack)?;
-    let baseline_wall_ns = baseline_start
-        .elapsed()
-        .as_nanos()
-        .min(u128::from(u64::MAX)) as u64;
+    let baseline_wall_ns = elapsed_ns(baseline_start);
     if expected_matches.len() > MAX_MATCHES as usize {
         return Err(BenchError::EnvironmentInvalid(format!(
             "irregular AC scan fixture produced {} matches, above MAX_MATCHES={MAX_MATCHES}. Fix: lower fixture density or raise output capacity.",
