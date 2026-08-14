@@ -1,8 +1,8 @@
+use super::super::lru_tick_cache::LruTickCache;
 use super::{
     default_buffers, finite_body_with_io, persistent_body_with_io, prepare_megakernel_program,
     wrap_megakernel_program, wrap_persistent_megakernel_program,
 };
-use rustc_hash::FxHashMap;
 use std::cell::RefCell;
 use std::sync::Arc;
 use vyre_foundation::ir::Program;
@@ -18,86 +18,15 @@ struct EmptyTemplateKey {
     control_report_only: bool,
 }
 
-struct EmptyTemplateCache {
-    entries: FxHashMap<EmptyTemplateKey, EmptyTemplateEntry>,
-    clock: u64,
-}
+type EmptyTemplateCache = LruTickCache<EmptyTemplateKey, Arc<Program>>;
 
-struct EmptyTemplateEntry {
-    program: Arc<Program>,
-    last_seen: u64,
-}
-
-impl EmptyTemplateCache {
-    fn get(&mut self, key: &EmptyTemplateKey) -> Option<Arc<Program>> {
-        if self.clock == u64::MAX {
-            self.clock = 0;
-            for entry in self.entries.values_mut() {
-                entry.last_seen = 0;
-            }
-        }
-        let entry = self.entries.get_mut(key)?;
-        self.clock += 1;
-        entry.last_seen = self.clock;
-        Some(Arc::clone(&entry.program))
-    }
-
-    fn insert(&mut self, key: EmptyTemplateKey, program: Arc<Program>) {
-        let tick = self.next_tick();
-        self.entries.insert(
-            key,
-            EmptyTemplateEntry {
-                program,
-                last_seen: tick,
-            },
-        );
-        while self.entries.len() > EMPTY_TEMPLATE_CACHE_CAP {
-            let Some(evicted) = self
-                .entries
-                .iter()
-                .filter(|(candidate, _)| **candidate != key)
-                .min_by_key(|(_, entry)| entry.last_seen)
-                .map(|(candidate, _)| *candidate)
-            else {
-                break;
-            };
-            self.entries.remove(&evicted);
-        }
-    }
-
-    #[cfg(test)]
-    fn clear(&mut self) {
-        self.entries.clear();
-        self.clock = 0;
-    }
-
-    fn next_tick(&mut self) -> u64 {
-        if self.clock == u64::MAX {
-            self.clock = 0;
-            for entry in self.entries.values_mut() {
-                entry.last_seen = 0;
-            }
-        }
-        self.clock += 1;
-        self.clock
-    }
-}
-
-impl Default for EmptyTemplateCache {
-    fn default() -> Self {
-        Self {
-            entries: FxHashMap::with_capacity_and_hasher(
-                EMPTY_TEMPLATE_CACHE_CAP,
-                Default::default(),
-            ),
-            clock: 0,
-        }
-    }
+fn empty_template_cache() -> EmptyTemplateCache {
+    EmptyTemplateCache::with_capacity(EMPTY_TEMPLATE_CACHE_CAP)
 }
 
 thread_local! {
     static EMPTY_TEMPLATE_CACHE: RefCell<EmptyTemplateCache> =
-        RefCell::new(EmptyTemplateCache::default());
+        RefCell::new(empty_template_cache());
 }
 
 pub(super) fn cached_empty_sharded_program(
@@ -122,20 +51,13 @@ pub(super) fn cached_empty_sharded_program_shared(
         finite_once: false,
         control_report_only: false,
     };
-    if let Some(program) = EMPTY_TEMPLATE_CACHE.with(|cache| cache.borrow_mut().get(&key)) {
-        return program;
-    }
-
-    let program = wrap_persistent_megakernel_program(
-        workgroup_size_x,
-        slot_count,
-        persistent_body_with_io(workgroup_size_x, &[], include_io_polling),
-    );
-    let program = Arc::new(program);
-    EMPTY_TEMPLATE_CACHE.with(|cache| {
-        cache.borrow_mut().insert(key, Arc::clone(&program));
-    });
-    program
+    cached_template(key, || {
+        wrap_persistent_megakernel_program(
+            workgroup_size_x,
+            slot_count,
+            persistent_body_with_io(workgroup_size_x, &[], include_io_polling),
+        )
+    })
 }
 
 pub(super) fn cached_empty_sharded_once_program(workgroup_size_x: u32, slot_count: u32) -> Program {
@@ -155,20 +77,13 @@ pub(super) fn cached_empty_sharded_once_program_shared(
         finite_once: true,
         control_report_only: false,
     };
-    if let Some(program) = EMPTY_TEMPLATE_CACHE.with(|cache| cache.borrow_mut().get(&key)) {
-        return program;
-    }
-
-    let program = wrap_megakernel_program(
-        workgroup_size_x,
-        slot_count,
-        finite_body_with_io(workgroup_size_x, &[], false),
-    );
-    let program = Arc::new(program);
-    EMPTY_TEMPLATE_CACHE.with(|cache| {
-        cache.borrow_mut().insert(key, Arc::clone(&program));
-    });
-    program
+    cached_template(key, || {
+        wrap_megakernel_program(
+            workgroup_size_x,
+            slot_count,
+            finite_body_with_io(workgroup_size_x, &[], false),
+        )
+    })
 }
 
 pub(super) fn cached_empty_sharded_once_control_report_program_shared(
@@ -182,19 +97,28 @@ pub(super) fn cached_empty_sharded_once_control_report_program_shared(
         finite_once: true,
         control_report_only: true,
     };
-    if let Some(program) = EMPTY_TEMPLATE_CACHE.with(|cache| cache.borrow_mut().get(&key)) {
+    cached_template(key, || {
+        let mut buffers = default_buffers(slot_count);
+        for buffer in buffers.iter_mut().skip(1) {
+            buffer.output_byte_range = Some(0..0);
+        }
+        prepare_megakernel_program(Program::wrapped(
+            buffers,
+            [workgroup_size_x, 1, 1],
+            finite_body_with_io(workgroup_size_x, &[], false),
+        ))
+    })
+}
+
+/// Return the cached template for `key`, building and installing it on a miss.
+fn cached_template(key: EmptyTemplateKey, build: impl FnOnce() -> Program) -> Arc<Program> {
+    if let Some(program) =
+        EMPTY_TEMPLATE_CACHE.with(|cache| cache.borrow_mut().get(&key).map(Arc::clone))
+    {
         return program;
     }
 
-    let mut buffers = default_buffers(slot_count);
-    for buffer in buffers.iter_mut().skip(1) {
-        buffer.output_byte_range = Some(0..0);
-    }
-    let program = Arc::new(prepare_megakernel_program(Program::wrapped(
-        buffers,
-        [workgroup_size_x, 1, 1],
-        finite_body_with_io(workgroup_size_x, &[], false),
-    )));
+    let program = Arc::new(build());
     EMPTY_TEMPLATE_CACHE.with(|cache| {
         cache.borrow_mut().insert(key, Arc::clone(&program));
     });
