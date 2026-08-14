@@ -179,21 +179,13 @@ fn is_bit_exact_commutative_binop(bin_op: BinOp) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, LiteralValue};
-    use vyre_foundation::ir::BinOp;
+    use crate::LiteralValue;
+    use crate::descriptor_builder::{binop, body, descriptor, global_wo, lit, op, store_global};
+    use vyre_foundation::ir::{BinOp, DataType};
 
     #[test]
     fn empty_kernel_no_groups() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("k").build();
         let r = analyze(&desc);
         assert!(r.groups.is_empty());
         assert_eq!(r.ops_eliminable(), 0);
@@ -201,27 +193,14 @@ mod tests {
 
     #[test]
     fn two_identical_literals_form_group() {
-        let desc = KernelDescriptor {
-            id: "dup_lit".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(1),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(7)],
-            },
-        };
+        let desc = descriptor("dup_lit")
+            .body(
+                body()
+                    .literals([LiteralValue::U32(7)])
+                    .op(lit(0, 0))
+                    .op(lit(0, 1)),
+            )
+            .build();
         let r = analyze(&desc);
         assert_eq!(r.groups.len(), 1);
         assert_eq!(r.groups[0].op_indices, vec![0, 1]);
@@ -230,64 +209,30 @@ mod tests {
 
     #[test]
     fn distinct_literal_pool_indices_are_distinct() {
-        let desc = KernelDescriptor {
-            id: "two_lits".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(7), LiteralValue::U32(8)],
-            },
-        };
+        let desc = descriptor("two_lits")
+            .body(
+                body()
+                    .literals([LiteralValue::U32(7), LiteralValue::U32(8)])
+                    .op(lit(0, 0))
+                    .op(lit(1, 1)),
+            )
+            .build();
         let r = analyze(&desc);
         assert!(r.groups.is_empty());
     }
 
     #[test]
     fn duplicate_binop_with_same_operands_grouped() {
-        let desc = KernelDescriptor {
-            id: "dup_add".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Add),
-                        operands: vec![0, 1],
-                        result: Some(2),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Add),
-                        operands: vec![0, 1],
-                        result: Some(3),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(3), LiteralValue::U32(4)],
-            },
-        };
+        let desc = descriptor("dup_add")
+            .body(
+                body()
+                    .literals([LiteralValue::U32(3), LiteralValue::U32(4)])
+                    .op(lit(0, 0))
+                    .op(lit(1, 1))
+                    .op(binop(BinOp::Add, 0, 1, 2))
+                    .op(binop(BinOp::Add, 0, 1, 3)),
+            )
+            .build();
         let r = analyze(&desc);
         assert_eq!(r.groups.len(), 1);
         assert_eq!(r.groups[0].op_indices, vec![2, 3]);
@@ -298,37 +243,16 @@ mod tests {
         // Add may be integer, wrapping, or floating point at this layer. Keep
         // it order-sensitive until descriptor ops carry enough semantic context
         // to prove bit-identical results for every backend.
-        let desc = KernelDescriptor {
-            id: "comm".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Add),
-                        operands: vec![0, 1],
-                        result: Some(2),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Add),
-                        operands: vec![1, 0],
-                        result: Some(3),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(3), LiteralValue::U32(4)],
-            },
-        };
+        let desc = descriptor("comm")
+            .body(
+                body()
+                    .literals([LiteralValue::U32(3), LiteralValue::U32(4)])
+                    .op(lit(0, 0))
+                    .op(lit(1, 1))
+                    .op(binop(BinOp::Add, 0, 1, 2))
+                    .op(binop(BinOp::Add, 1, 0, 3)),
+            )
+            .build();
         let r = analyze(&desc);
         assert!(
             r.groups.is_empty(),
@@ -338,37 +262,16 @@ mod tests {
 
     #[test]
     fn bit_exact_commutative_swap_is_grouped() {
-        let desc = KernelDescriptor {
-            id: "comm_bitxor".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::BitXor),
-                        operands: vec![0, 1],
-                        result: Some(2),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::BitXor),
-                        operands: vec![1, 0],
-                        result: Some(3),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(3), LiteralValue::U32(4)],
-            },
-        };
+        let desc = descriptor("comm_bitxor")
+            .body(
+                body()
+                    .literals([LiteralValue::U32(3), LiteralValue::U32(4)])
+                    .op(lit(0, 0))
+                    .op(lit(1, 1))
+                    .op(binop(BinOp::BitXor, 0, 1, 2))
+                    .op(binop(BinOp::BitXor, 1, 0, 3)),
+            )
+            .build();
         let r = analyze(&desc);
         assert_eq!(r.groups.len(), 1);
         assert_eq!(r.groups[0].op_indices, vec![2, 3]);
@@ -376,51 +279,19 @@ mod tests {
 
     #[test]
     fn store_ops_not_grouped_even_if_identical() {
-        // Two identical stores must NOT be CSE'd  -  they're side effects.
-        use crate::{BindingSlot, BindingVisibility, MemoryClass};
-        use vyre_foundation::ir::DataType;
-        let desc = KernelDescriptor {
-            id: "double_store".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::WriteOnly,
-                    name: "out".into(),
-                }],
-            },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 1],
-                        result: None,
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 1],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(7)],
-            },
-        };
+        // Two identical stores must NOT be CSE'd: they are side effects.
+        let desc = descriptor("double_store")
+            .slot(global_wo(0, DataType::U32, "out"))
+            .body(
+                body()
+                    .literals([LiteralValue::U32(0), LiteralValue::U32(7)])
+                    .op(lit(0, 0))
+                    .op(lit(1, 1))
+                    .op(store_global(0, 0, 1))
+                    .op(store_global(0, 0, 1)),
+            )
+            .build();
         let r = analyze(&desc);
-        // Stores are excluded from CSE eligibility.
         let store_groups = r
             .groups
             .iter()
@@ -435,32 +306,15 @@ mod tests {
 
     #[test]
     fn three_identical_literals_eliminate_two() {
-        let desc = KernelDescriptor {
-            id: "three".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(2),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(42)],
-            },
-        };
+        let desc = descriptor("three")
+            .body(
+                body()
+                    .literals([LiteralValue::U32(42)])
+                    .op(lit(0, 0))
+                    .op(lit(0, 1))
+                    .op(lit(0, 2)),
+            )
+            .build();
         let r = analyze(&desc);
         assert_eq!(r.groups.len(), 1);
         assert_eq!(r.groups[0].op_indices, vec![0, 1, 2]);
@@ -471,56 +325,29 @@ mod tests {
     fn local_invocation_id_calls_grouped() {
         // Two LocalInvocationId calls are equivalent (constant per
         // thread, same in any order).
-        let desc = KernelDescriptor {
-            id: "tid_dup".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::LocalInvocationId,
-                        operands: vec![],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LocalInvocationId,
-                        operands: vec![],
-                        result: Some(1),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("tid_dup")
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .op(op(KernelOpKind::LocalInvocationId, [], 0))
+                    .op(op(KernelOpKind::LocalInvocationId, [], 1)),
+            )
+            .build();
         let r = analyze(&desc);
         assert_eq!(r.groups.len(), 1);
     }
 
     #[test]
     fn sibling_child_body_indices_are_monotonic_not_overlapping() {
-        let child = KernelBody {
-            ops: vec![KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(1),
-            }],
-            child_bodies: vec![],
-            literals: vec![],
-        };
-        let desc = KernelDescriptor {
-            id: "siblings".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                }],
-                child_bodies: vec![child.clone(), child],
-                literals: vec![LiteralValue::U32(9)],
-            },
-        };
+        let child = body().op(lit(0, 1)).build();
+        let desc = descriptor("siblings")
+            .body(
+                body()
+                    .literals([LiteralValue::U32(9)])
+                    .op(lit(0, 0))
+                    .children([child.clone(), child]),
+            )
+            .build();
 
         let r = analyze(&desc);
         assert_eq!(r.groups.len(), 1);
@@ -533,27 +360,14 @@ mod tests {
 
     #[test]
     fn shallow_analysis_excludes_child_bodies() {
-        let child = KernelBody {
-            ops: vec![KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(1),
-            }],
-            child_bodies: vec![],
-            literals: vec![],
-        };
-        let body = KernelBody {
-            ops: vec![KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            }],
-            child_bodies: vec![child],
-            literals: vec![LiteralValue::U32(9)],
-        };
+        let tree = body()
+            .literals([LiteralValue::U32(9)])
+            .op(lit(0, 0))
+            .child(body().op(lit(0, 1)))
+            .build();
 
-        let recursive = analyze_body("recursive".into(), &body);
-        let shallow = analyze_body_shallow("shallow".into(), &body);
+        let recursive = analyze_body("recursive".into(), &tree);
+        let shallow = analyze_body_shallow("shallow".into(), &tree);
         assert_eq!(recursive.groups.len(), 1);
         assert!(shallow.groups.is_empty());
     }
