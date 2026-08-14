@@ -295,7 +295,7 @@ mod ir_program_tests {
     #[test]
     fn consume_step_program_validates() {
         let prog = make_prog();
-        let errors = crate::validate::validate::validate(&prog);
+        let errors = crate::validate::rule_pipeline::validate(&prog);
         assert!(errors.is_empty(), "parser IR must validate: {errors:?}");
     }
 

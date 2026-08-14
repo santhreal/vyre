@@ -20,7 +20,7 @@ use rustc_hash::FxHashMap;
 /// # Examples
 ///
 /// `check_store` is `pub(crate)` and runs inside
-/// [`crate::validate::validate::validate`] for every `Node::Store`. See
+/// [`crate::validate::rule_pipeline::validate`] for every `Node::Store`. See
 /// that function's unit tests for runnable coverage of the writable /
 /// unknown-buffer / Bytes-element branches.
 ///
@@ -88,7 +88,7 @@ pub(crate) fn check_store(
 /// # Examples
 ///
 /// `check_load` is `pub(crate)` and runs inside
-/// [`crate::validate::validate::validate`] for every `Expr::Load`. See
+/// [`crate::validate::rule_pipeline::validate`] for every `Expr::Load`. See
 /// that function's unit tests for runnable coverage of the
 /// unknown-buffer and Bytes-element branches.
 ///

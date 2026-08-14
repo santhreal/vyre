@@ -1228,5 +1228,5 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
 }
 
 #[cfg(test)]
-#[path = "validate_tests.rs"]
+#[path = "rule_pipeline_tests.rs"]
 mod tests;

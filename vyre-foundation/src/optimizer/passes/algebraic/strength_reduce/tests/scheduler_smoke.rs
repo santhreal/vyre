@@ -21,7 +21,7 @@ fn optimizer_strength_reduce_multiplies_by_two() {
     .run(program)
     .expect("Fix: strength reduce should converge");
 
-    let body = crate::test_util::region_body(&optimized);
+    let body = crate::test_region_body::region_body(&optimized);
     assert!(matches!(
         &body[0],
         Node::Store {
@@ -54,7 +54,7 @@ fn optimizer_strength_reduce_decomposes_mul_by_three() {
     .run(program)
     .expect("Fix: strength reduce should converge");
 
-    let body = crate::test_util::region_body(&optimized);
+    let body = crate::test_region_body::region_body(&optimized);
     assert!(
         matches!(
             &body[0],

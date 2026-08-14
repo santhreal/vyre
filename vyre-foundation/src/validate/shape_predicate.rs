@@ -5,7 +5,7 @@
 //! against the static `count` declared on that buffer. Buffers
 //! without a predicate (the default) are always accepted.
 //!
-//! Wired into `validate::validate` so backends never see a program
+//! Wired into `validate::rule_pipeline` so backends never see a program
 //! whose declared shape contradicts the static count.
 
 use crate::ir_inner::model::program::Program;
