@@ -2,11 +2,11 @@
 //! fixpoint: per-pivot forward/backward bitset packing and the host driver.
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use super::reference_closures::reachability_closure_into;
-#[cfg(any(test, feature = "cpu-parity"))]
 use super::DataflowFixpointScratch;
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::device::scratch::reserve_vec_capacity_or_panic;
+#[cfg(any(test, feature = "cpu-parity"))]
+use vyre_foundation::pass_substrate::dataflow_fixpoint::reachability_closure_into;
 
 #[cfg(any(test, feature = "cpu-parity"))]
 impl DataflowFixpointScratch {

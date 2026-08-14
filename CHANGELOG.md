@@ -1133,6 +1133,14 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   rustdoc preferred. The function is `facts_for`, reached as
   `vyre_lower::facts_for` or `vyre_lower::op_facts::facts_for`. Five call sites
   and the crate root re-export name the new spelling.
+- The host dataflow closures are read from their owner. `vyre-libs` carried a
+  module whose six public functions each did nothing but call the identically
+  named function in `vyre_foundation::pass_substrate::dataflow_fixpoint`, and
+  it had grown a copy of the owner's whole test module: five assertions
+  verbatim, plus two that could not fail because they compared the forwarder
+  against the function it forwards to. The forwarders are gone and the module
+  re-exports the owner, so the documented paths still resolve. What remains is
+  the one thing this crate adds, the call counter, in a file named for it.
 
 ### Removed
 

@@ -15,12 +15,14 @@
 //! Same primitive (#1), same Program, four different IR analyses.
 //! Demonstrates the recursion thesis directly.
 //!
-//! `reference_closures` owns the host closures, `dense_matrix` the shared
-//! adjacency shape checks, `fixpoint_comparison` the three-engine reachability
-//! comparison, `delta_maintenance` the incremental relation update,
-//! `scc_decomposition` the strongly-connected-component driver, and `gpu_dispatch`
-//! every dispatcher-backed wrapper. The public types stay declared here so
-//! their rendered documentation paths do not move.
+//! `dense_matrix` owns the shared adjacency shape checks,
+//! `fixpoint_comparison` the three-engine reachability comparison,
+//! `delta_maintenance` the incremental relation update, `scc_decomposition` the
+//! strongly-connected-component driver, and `gpu_dispatch` every
+//! dispatcher-backed wrapper. The host closures are the foundation substrate's
+//! own, re-exported here so this module's documented paths keep resolving;
+//! `reference_gemm` adds the call counter and nothing else. The public types
+//! stay declared here so their rendered documentation paths do not move.
 
 pub use vyre_foundation::pass_substrate::dataflow_fixpoint::Semiring;
 
@@ -28,7 +30,7 @@ mod delta_maintenance;
 mod dense_matrix;
 mod fixpoint_comparison;
 mod gpu_dispatch;
-mod reference_closures;
+mod reference_gemm;
 mod scc_decomposition;
 
 pub use delta_maintenance::compare_delta_maintained_reachability;
@@ -41,16 +43,15 @@ pub use gpu_dispatch::{
     semiring_gemm_via_into, semiring_gemm_via_lineage, semiring_gemm_via_min_plus,
     semiring_gemm_via_with_scratch_into, shortest_path_closure_via,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use reference_closures::{
-    lineage_closure, lineage_closure_into, reference_semiring_gemm, reference_semiring_gemm_into,
-    shortest_path_closure, shortest_path_closure_into,
-};
-pub use reference_closures::{reachability_closure, reachability_closure_into};
+pub use reference_gemm::{reference_semiring_gemm, reference_semiring_gemm_into};
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use scc_decomposition::{
     forward_backward_bitsets_for_pivot, forward_backward_bitsets_for_pivot_into,
     reference_scc_components_via_substrate_into, scc_components_via_substrate,
+};
+pub use vyre_foundation::pass_substrate::dataflow_fixpoint::{
+    lineage_closure, lineage_closure_into, reachability_closure, reachability_closure_into,
+    shortest_path_closure, shortest_path_closure_into,
 };
 
 /// Caller-owned dispatch scratch for repeated semiring-GEMM GPU calls.

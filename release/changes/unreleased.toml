@@ -1009,3 +1009,8 @@ text = "`vyre-primitives` feature `graph` enables `fixpoint`. `graph::persistent
 id = "module-docs-resolve-in-one-scope"
 category = "Fixed"
 text = "Six intra-doc links were unresolved or pointed at a private item, and each was reported only by the public-API gate's rustdoc pass rather than by a build. A module carrying both an outer doc comment on its `mod` declaration and an inner `//!` header has the two merged and resolved in the PARENT scope, which is why `vyre-driver`'s `TargetDialect` link failed from inside the module that defines it; that one is now fully qualified. The five links naming a private item are plain code spans, because a link to an item a reader cannot reach is not a link."
+
+[[fragments]]
+id = "dataflow-closure-shims-deleted"
+category = "Changed"
+text = "The host dataflow closures are read from their owner. `vyre-libs` carried a module whose six public functions each did nothing but call the identically named function in `vyre_foundation::pass_substrate::dataflow_fixpoint`, and it had grown a copy of the owner's whole test module: five assertions verbatim, plus two that could not fail because they compared the forwarder against the function it forwards to. The forwarders are gone and the module re-exports the owner, so the documented paths still resolve. What remains is the one thing this crate adds, the call counter, in a file named for it."

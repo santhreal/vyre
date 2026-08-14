@@ -2,8 +2,8 @@
 //! insertion/deletion batch, compared against full recompute.
 
 use super::dense_matrix::{checked_dense_cells, checked_dense_node_count, normalize_bool_matrix};
-use super::reference_closures::reachability_closure_into;
 use super::{DeltaDataflowEvidence, DeltaDataflowReport, DeltaRelationBatch, DeltaRelationChange};
+use vyre_foundation::pass_substrate::dataflow_fixpoint::reachability_closure_into;
 
 impl DeltaRelationBatch {
     /// Number of inserted tuples.
