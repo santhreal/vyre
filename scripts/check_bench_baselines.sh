@@ -25,14 +25,18 @@ for field in "${required_fields[@]}"; do
     fi
 done
 
-# Every crate with a benches/ dir must have at least one bench row
-# in RESULTS.md.
-while IFS= read -r crate; do
-    name=$(basename "$(dirname "$crate")")
+# Every crate that declares a bench target must have a section in RESULTS.md.
+# A crate qualifies by owning at least one bench source file, not by owning a
+# directory called benches: vyre-grammar-gen/benches holds documentation and no
+# target, so a directory-name search demanded a measured section for a crate
+# `cargo bench` cannot run.
+while IFS= read -r bench_source; do
+    name=$(basename "$(dirname "$(dirname "$bench_source")")")
     if ! grep -q "^### $name\b" "$RESULTS"; then
         echo "gap #11: $RESULTS missing section for $name" >&2
+        echo "  fix: run 'cargo bench -p $name' and record the numbers under a '### $name' heading" >&2
         exit 1
     fi
-done < <(find . -name benches -type d -not -path '*/target/*' -not -path './benches' | head -20)
+done < <(find . -path '*/benches/*.rs' -not -path '*/target/*' -not -path './benches/*' | sort)
 
-echo "gap #11: baseline file present and covers every benches/ crate"
+echo "gap #11: baseline file present and covers every crate with a bench target"

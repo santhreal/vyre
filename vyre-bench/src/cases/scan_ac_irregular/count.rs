@@ -4,12 +4,9 @@ use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
-use crate::api::metric::BenchMetrics;
-use crate::api::resident::{
-    dispatch_program_timed, input_bytes_total, transfer_accounting, u32_counter_reset_program,
-    ResidentInputSet,
-};
+use crate::api::resident::{input_bytes_total, u32_counter_reset_program, ResidentInputSet};
 use crate::api::suite::SuiteKind;
+use vyre_foundation::ir::Program;
 use vyre_libs::scan::classic_ac::{
     build_ac_bounded_count_suffix3_prefilter_program, classic_ac_candidate_end_byte_mask_words,
     classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,
@@ -18,14 +15,12 @@ use vyre_libs::scan::classic_ac::{
 };
 use vyre_libs::scan::pack_haystack_u32;
 use vyre_primitives::wire::pack_u32_slice;
-use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
-use vyre_foundation::ir::Program;
 
 use super::baseline::cpu_aho_overlapping_matches;
-use super::metrics::{scan_ac_baseline_metric_points, scan_ac_count_metric_points, ScanAcStats};
-use super::{
-    build_irregular_haystack, pattern_lengths, HAYSTACK_BYTES, MAX_MATCHES, PATTERNS, SUITES,
-};
+use super::haystack::{build_irregular_haystack, pattern_lengths};
+use super::metrics::{scan_ac_count_metric_points, ScanAcStats};
+use super::sample::{dispatch_reset_then_scan, scan_bench_run, take_scan_sample, ResetThenScan};
+use super::{HAYSTACK_BYTES, MAX_MATCHES, PATTERNS, SUITES};
 
 const COUNT_CANDIDATE_END_MASK_INPUT_INDEX: usize = 3;
 const COUNT_CANDIDATE_SUFFIX2_MASK_INPUT_INDEX: usize = 4;
@@ -43,6 +38,8 @@ const COUNT_SCAN_RESOURCE_INDICES: [usize; 8] = [
     COUNT_HAYSTACK_LEN_INPUT_INDEX,
     COUNT_MATCH_COUNT_INPUT_INDEX,
 ];
+/// Index of `match_count` inside `COUNT_SCAN_RESOURCE_INDICES`, for readback.
+const COUNT_MATCH_COUNT_RESOURCE_SLOT: usize = 7;
 
 pub(super) struct ScanAcIrregularCountPrepared {
     pub(super) program: Program,
@@ -147,80 +144,57 @@ impl BenchCase for ScanAcIrregularCount {
                     "prepared irregular AC count payload had the wrong type".to_string(),
                 )
             })?;
+        let ctx: &BenchContext = ctx;
 
-        let mut dispatch_config = ctx.dispatch_config.clone();
-        let program_workgroup = prepared.program.workgroup_size();
-        let workgroup = dispatch_config
-            .workgroup_override
-            .unwrap_or(program_workgroup);
-        if workgroup.contains(&0) {
-            return Err(BenchError::ExecutionFailed(format!(
-                "irregular AC count received invalid workgroup {:?}. Fix: use positive dispatch dimensions.",
-                workgroup
-            )));
-        }
-        dispatch_config.grid_override.get_or_insert([
-            prepared.stats.haystack_bytes.div_ceil(workgroup[0]).max(1),
-            1,
-            1,
-        ]);
-
-        let (outputs, wall_ns, dispatch_ns, resident_used, device_reset_sequence) =
-            if let Some(resident) = prepared.resident.as_ref() {
-                let sequence =
-                    dispatch_resident_count_sequence(ctx, prepared, resident, program_workgroup)?;
-                (sequence.outputs, sequence.wall_ns, None, true, true)
-            } else {
-                let dispatch = dispatch_program_timed(
+        let resident_sequence = prepared.resident.as_ref().map(|resident| {
+            move |workgroup: [u32; 3]| -> Result<(Vec<Vec<u8>>, u64), BenchError> {
+                dispatch_reset_then_scan(
                     ctx,
-                    &prepared.program,
-                    None,
-                    &prepared.inputs,
-                    &dispatch_config,
-                )?;
-                let timed = dispatch.timed;
-                (
-                    timed.outputs,
-                    timed.wall_ns,
-                    timed.device_ns,
-                    dispatch.resident_used,
-                    false,
+                    resident,
+                    workgroup,
+                    ResetThenScan {
+                        reset_program: &prepared.reset_program,
+                        scan_program: &prepared.program,
+                        reset_indices: &COUNT_RESET_RESOURCE_INDICES,
+                        scan_indices: &COUNT_SCAN_RESOURCE_INDICES,
+                        label: "irregular AC count",
+                        kind: "count",
+                        scan_resources_context: "irregular AC count scan",
+                        haystack_bytes: prepared.stats.haystack_bytes,
+                    },
+                    &[(
+                        COUNT_MATCH_COUNT_RESOURCE_SLOT,
+                        prepared.baseline_output.len(),
+                    )],
                 )
-            };
+            }
+        });
 
-        let output_bytes = outputs.iter().map(Vec::len).sum::<usize>() as u64;
-        let accounting =
-            transfer_accounting(prepared.input_bytes_total, output_bytes, resident_used);
+        let sample = take_scan_sample(
+            ctx,
+            "irregular AC count",
+            &prepared.program,
+            &prepared.inputs,
+            prepared.stats.haystack_bytes,
+            resident_sequence,
+        )?;
 
-        Ok(BenchRun {
-            metrics: BenchMetrics {
-                wall_ns: Some(wall_ns),
-                dispatch_ns,
-                input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(output_bytes),
-                bytes_read: Some(accounting.bytes_read),
-                bytes_written: Some(accounting.bytes_written),
-                bytes_touched: Some(accounting.bytes_touched),
-                custom: scan_ac_count_metric_points(
-                    prepared.stats,
-                    prepared.baseline_wall_ns,
-                    wall_ns,
-                    resident_used,
-                    device_reset_sequence,
-                    workgroup[0],
-                ),
-                ..Default::default()
-            },
-            baseline_metrics: Some(BenchMetrics {
-                wall_ns: Some(prepared.baseline_wall_ns),
-                input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(prepared.baseline_output.len() as u64),
-                custom: scan_ac_baseline_metric_points(prepared.stats),
-                ..Default::default()
-            }),
-            outputs,
-            baseline_outputs: Some(vec![prepared.baseline_output.clone()]),
-        })
+        let custom = scan_ac_count_metric_points(
+            prepared.stats,
+            prepared.baseline_wall_ns,
+            sample.wall_ns,
+            sample.resident_used,
+            sample.device_reset_sequence,
+            sample.workgroup_x,
+        );
+        Ok(scan_bench_run(
+            sample,
+            prepared.input_bytes_total,
+            prepared.baseline_wall_ns,
+            prepared.stats,
+            custom,
+            vec![prepared.baseline_output.clone()],
+        ))
     }
 
     fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
@@ -420,70 +394,6 @@ pub(super) fn suffix3_triple_is_candidate(
     mask: &[u32],
 ) -> bool {
     classic_ac_suffix3_bloom_contains(mask, previous2, previous, current)
-}
-
-struct CountResidentSequenceRun {
-    outputs: Vec<Vec<u8>>,
-    wall_ns: u64,
-}
-
-fn dispatch_resident_count_sequence(
-    ctx: &BenchContext,
-    prepared: &ScanAcIrregularCountPrepared,
-    resident: &ResidentInputSet,
-    workgroup: [u32; 3],
-) -> Result<CountResidentSequenceRun, BenchError> {
-    if let Some(override_workgroup) = ctx.dispatch_config.workgroup_override {
-        if override_workgroup != workgroup {
-            return Err(BenchError::ExecutionFailed(format!(
-                "irregular AC count resident sequence uses program workgroup {:?}, but received override {:?}. Fix: run the resident count sequence without a workgroup override or rebuild the resident sequence program.",
-                workgroup, override_workgroup
-            )));
-        }
-    }
-
-    let reset_resources = resident.resources_for_indices(
-        &COUNT_RESET_RESOURCE_INDICES,
-        "irregular AC count reset sequence",
-    )?;
-    let scan_resources =
-        resident.resources_for_indices(&COUNT_SCAN_RESOURCE_INDICES, "irregular AC count scan")?;
-    let reset_step = ResidentDispatchStep {
-        program: &prepared.reset_program,
-        resources: &reset_resources,
-        grid_override: Some([1, 1, 1]),
-        workgroup_override: None,
-    };
-    let scan_step = ResidentDispatchStep {
-        program: &prepared.program,
-        resources: &scan_resources,
-        grid_override: Some([
-            prepared.stats.haystack_bytes.div_ceil(workgroup[0]).max(1),
-            1,
-            1,
-        ]),
-        workgroup_override: None,
-    };
-    let read_ranges = [ResidentReadRange {
-        resource: &scan_resources[COUNT_MATCH_COUNT_INPUT_INDEX],
-        byte_offset: 0,
-        byte_len: prepared.baseline_output.len(),
-    }];
-
-    let mut count_output = Vec::with_capacity(prepared.baseline_output.len());
-    let started = Instant::now();
-    ctx.dispatch_resident_sequence_read_ranges_into(
-        &[reset_step, scan_step],
-        &read_ranges,
-        &mut [&mut count_output],
-    )
-    .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-    let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
-
-    Ok(CountResidentSequenceRun {
-        outputs: vec![count_output],
-        wall_ns,
-    })
 }
 
 inventory::submit! {
