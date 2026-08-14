@@ -16,7 +16,7 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::graph::csr_forward_traverse::bitset_words;
+use crate::bitset::bitset_words;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::graph::scc_decompose";

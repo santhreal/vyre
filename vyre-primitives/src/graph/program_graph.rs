@@ -177,6 +177,64 @@ fn read_only_buffers_with_counts(
     ]
 }
 
+/// One primitive-owned `u32` storage buffer at `binding`, holding `words` words.
+///
+/// Every buffer a graph primitive adds beyond the read-only ProgramGraph bundle
+/// is a `u32` array at a binding at or above [`BINDING_PRIMITIVE_START`], so the
+/// name, the binding, the access and the count are all a call site has left to
+/// say.
+#[must_use]
+pub fn word_buffer(name: &str, binding: u32, access: BufferAccess, words: u32) -> BufferDecl {
+    BufferDecl::storage(name, binding, access, DataType::U32).with_count(words)
+}
+
+/// One primitive-owned frontier bitset over `node_count` nodes.
+///
+/// A frontier is `bitset_words(node_count)` words with a floor of one: a
+/// zero-word storage buffer cannot be bound, so a zero-node graph still gets a
+/// single word rather than a degenerate binding.
+#[must_use]
+pub fn frontier_buffer(
+    name: &str,
+    binding: u32,
+    access: BufferAccess,
+    node_count: u32,
+) -> BufferDecl {
+    word_buffer(
+        name,
+        binding,
+        access,
+        crate::bitset::bitset_words(node_count).max(1),
+    )
+}
+
+/// Append the `(frontier, changed)` pair every monotone CSR fixpoint primitive
+/// owns: the read-write frontier accumulator at [`BINDING_PRIMITIVE_START`], and
+/// the one-word changed flag directly after it.
+///
+/// A primitive that re-declares this pair by hand can disagree with the rest on
+/// the frontier word count or the binding order, which a backend sees only as a
+/// mis-sized allocation.
+pub fn push_frontier_changed_buffers(
+    buffers: &mut Vec<BufferDecl>,
+    frontier: &str,
+    changed: &str,
+    node_count: u32,
+) {
+    buffers.push(frontier_buffer(
+        frontier,
+        BINDING_PRIMITIVE_START,
+        BufferAccess::ReadWrite,
+        node_count,
+    ));
+    buffers.push(word_buffer(
+        changed,
+        BINDING_PRIMITIVE_START + 1,
+        BufferAccess::ReadWrite,
+        1,
+    ));
+}
+
 /// Error kinds surfaced by [`validate_program_graph`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum GraphValidationError {

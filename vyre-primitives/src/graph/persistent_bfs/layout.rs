@@ -1,4 +1,6 @@
-use crate::graph::program_graph::BINDING_PRIMITIVE_START;
+use vyre_foundation::ir::{BufferAccess, BufferDecl};
+
+use crate::graph::program_graph::{word_buffer, BINDING_PRIMITIVE_START};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::graph::persistent_bfs";
@@ -40,6 +42,61 @@ pub const DENSITY_ACTIVE_BUFFER: &str = "density_active";
 pub const PERSISTENT_BFS_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// One-block dispatch grid used by the compact single-workgroup BFS path.
 pub(crate) const PERSISTENT_BFS_SINGLE_DISPATCH_GRID: [u32; 3] = [1, 1, 1];
+
+/// The persistent-BFS buffer bundle: two frontier bitsets, a changed array, a
+/// converged array, and the optional per-iteration density array.
+///
+/// The three program variants differ only in these word counts, never in the
+/// binding order or the access, so each one names its counts here instead of
+/// restating the bundle and risking a disagreement a backend would see only as a
+/// mis-sized allocation.
+pub(crate) struct PersistentBfsBuffers<'a> {
+    /// Read-only input frontier.
+    pub frontier_in: &'a str,
+    /// Read-write output frontier.
+    pub frontier_out: &'a str,
+    /// Words in each frontier bitset.
+    pub frontier_words: u32,
+    /// Changed array name and word count.
+    pub changed: (&'a str, u32),
+    /// Converged array name and word count.
+    pub converged: (&'a str, u32),
+    /// Density array name and word count, when the variant is instrumented.
+    pub density_active: Option<(&'a str, u32)>,
+}
+
+impl PersistentBfsBuffers<'_> {
+    /// Append the bundle in canonical binding order.
+    pub(crate) fn push_onto(&self, buffers: &mut Vec<BufferDecl>) {
+        let words = self.frontier_words.max(1);
+        buffers.push(word_buffer(
+            self.frontier_in,
+            BINDING_FRONTIER_IN,
+            BufferAccess::ReadOnly,
+            words,
+        ));
+        buffers.push(word_buffer(
+            self.frontier_out,
+            BINDING_FRONTIER_OUT,
+            BufferAccess::ReadWrite,
+            words,
+        ));
+        for (name, binding, count) in [
+            (self.changed.0, BINDING_CHANGED, self.changed.1),
+            (self.converged.0, BINDING_CONVERGED, self.converged.1),
+        ] {
+            buffers.push(word_buffer(name, binding, BufferAccess::ReadWrite, count));
+        }
+        if let Some((density, count)) = self.density_active {
+            buffers.push(word_buffer(
+                density,
+                BINDING_DENSITY_ACTIVE,
+                BufferAccess::ReadWrite,
+                count,
+            ));
+        }
+    }
+}
 
 /// Dispatch grid for a single persistent-BFS query.
 #[must_use]

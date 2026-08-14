@@ -8,11 +8,11 @@ use std::sync::Arc;
 
 use super::padded_u32_slice_fingerprint as motif_padded_slice_fingerprint;
 use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 
 use crate::graph::program_graph::{
-    ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS,
-    NAME_EDGE_TARGETS,
+    word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_KIND_MASK,
+    NAME_EDGE_OFFSETS, NAME_EDGE_TARGETS,
 };
 
 /// Canonical op id.
@@ -303,24 +303,19 @@ pub fn motif(shape: ProgramGraphShape, edges: &[MotifEdge], witness_out: &str) -
         );
     };
     let mut buffers = shape.read_only_buffers();
-    buffers.push(
-        BufferDecl::storage(
-            "motif_hits",
-            MOTIF_HITS_BUFFER,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(shape.node_count.max(1)),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            witness_out,
-            MOTIF_WITNESS_OUT_BUFFER,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(shape.node_count.max(1)),
-    );
+    let per_node = shape.node_count.max(1);
+    buffers.push(word_buffer(
+        "motif_hits",
+        MOTIF_HITS_BUFFER,
+        BufferAccess::ReadWrite,
+        per_node,
+    ));
+    buffers.push(word_buffer(
+        witness_out,
+        MOTIF_WITNESS_OUT_BUFFER,
+        BufferAccess::ReadWrite,
+        per_node,
+    ));
 
     let clear_outputs = vec![
         Node::store("motif_hits", Expr::var("node"), Expr::u32(0)),

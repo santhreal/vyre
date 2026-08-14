@@ -27,19 +27,10 @@ pub const OP_ID: &str = "vyre-primitives::graph::csr_forward_traverse";
 pub const EXCLUDING_OP_ID: &str = "vyre-primitives::graph::csr_forward_traverse_excluding";
 
 pub use crate::graph::csr_frontier_step::{
-    csr_frontier_step_dispatch_grid as csr_forward_traverse_dispatch_grid, BINDING_FRONTIER_IN,
+    csr_frontier_step_dispatch_grid as csr_forward_traverse_dispatch_grid,
+    BINDING_EXCLUDED_SOURCES, BINDING_EXCLUDING_FRONTIER_OUT, BINDING_FRONTIER_IN,
     BINDING_FRONTIER_OUT,
 };
-
-/// Number of u32 words needed to hold a bitset over `node_count`
-/// nodes (one bit per node, packed 32-per-word, rounded up).
-///
-/// Delegates to `crate::bitset::bitset_words` so CSR traversal and
-/// bitset primitives share one overflow-safe sizing rule.
-#[must_use]
-pub const fn bitset_words(node_count: u32) -> u32 {
-    crate::bitset::bitset_words(node_count)
-}
 
 /// Build the IR `Program` for one BFS forward step.
 ///

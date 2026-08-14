@@ -50,7 +50,7 @@ pub use plan::{
     validate_persistent_bfs_converged_flag,
 };
 pub use program::{
-    bitset_words, persistent_bfs, persistent_bfs_batch, persistent_bfs_batch_with_density,
+    persistent_bfs, persistent_bfs_batch, persistent_bfs_batch_with_density,
     persistent_bfs_with_density, try_persistent_bfs_batch, try_persistent_bfs_batch_with_density,
 };
 pub use validate::{

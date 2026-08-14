@@ -1,21 +1,13 @@
 use std::sync::Arc;
 
-use super::layout::{
-    BATCH_OP_ID, BINDING_CHANGED, BINDING_CONVERGED, BINDING_DENSITY_ACTIVE, BINDING_FRONTIER_IN,
-    BINDING_FRONTIER_OUT, OP_ID, PERSISTENT_BFS_WORKGROUP_SIZE,
-};
+use super::layout::{PersistentBfsBuffers, BATCH_OP_ID, OP_ID, PERSISTENT_BFS_WORKGROUP_SIZE};
+use crate::bitset::bitset_words;
 use crate::fixpoint::persistent_fixpoint::grid_sync_barrier;
 use crate::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_snapshot_child_prefixed_with_active;
 use crate::graph::persistent_bfs_step::persistent_bfs_step_child_prefixed_with_active;
 use crate::graph::program_graph::ProgramGraphShape;
 use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-/// Words needed to hold a bitset over `node_count` nodes.
-#[must_use]
-pub const fn bitset_words(node_count: u32) -> u32 {
-    crate::bitset::bitset_words(node_count)
-}
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 /// Build the IR `Program` for persistent BFS.
 ///
@@ -283,53 +275,15 @@ fn persistent_bfs_single_workgroup(
     ));
 
     let mut buffers = shape.read_only_buffers();
-    buffers.push(
-        BufferDecl::storage(
-            frontier_in,
-            BINDING_FRONTIER_IN,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(words.max(1)),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            frontier_out,
-            BINDING_FRONTIER_OUT,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(words.max(1)),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            "changed",
-            BINDING_CHANGED,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(1),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            "converged",
-            BINDING_CONVERGED,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(1),
-    );
-    if let Some(density) = density_active {
-        buffers.push(
-            BufferDecl::storage(
-                density,
-                BINDING_DENSITY_ACTIVE,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )
-            .with_count(max_iters.max(1)),
-        );
+    PersistentBfsBuffers {
+        frontier_in,
+        frontier_out,
+        frontier_words: words,
+        changed: ("changed", 1),
+        converged: ("converged", 1),
+        density_active: density_active.map(|density| (density, max_iters.max(1))),
     }
+    .push_onto(&mut buffers);
     buffers.push(BufferDecl::workgroup("wg_scratch", 256, DataType::U32));
     buffers.push(BufferDecl::workgroup("wg_active", 1, DataType::U32));
 
@@ -488,53 +442,18 @@ fn persistent_bfs_grid_sync_parallel(
     }
 
     let mut buffers = shape.read_only_buffers();
-    buffers.push(
-        BufferDecl::storage(
-            frontier_in,
-            BINDING_FRONTIER_IN,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(words.max(1)),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            frontier_out,
-            BINDING_FRONTIER_OUT,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(words.max(1)),
-    );
-    buffers.push(
-        BufferDecl::storage(
+    PersistentBfsBuffers {
+        frontier_in,
+        frontier_out,
+        frontier_words: words,
+        changed: (
             "changed",
-            BINDING_CHANGED,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(if max_iters > 0 { GRID_CHANGED_WORDS } else { 1 }),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            "converged",
-            BINDING_CONVERGED,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(1),
-    );
-    if let Some(density) = density_active {
-        buffers.push(
-            BufferDecl::storage(
-                density,
-                BINDING_DENSITY_ACTIVE,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )
-            .with_count(max_iters.max(1)),
-        );
+            if max_iters > 0 { GRID_CHANGED_WORDS } else { 1 },
+        ),
+        converged: ("converged", 1),
+        density_active: density_active.map(|density| (density, max_iters.max(1))),
     }
+    .push_onto(&mut buffers);
 
     Program::wrapped(
         buffers,
@@ -833,63 +752,30 @@ fn try_persistent_bfs_batch_inner(
         ));
     }
 
+    let density_words = match density_active {
+        Some(_) => Some(
+            query_count
+                .max(1)
+                .checked_mul(max_iters)
+                .ok_or_else(|| {
+                    format!(
+                        "{BATCH_OP_ID} density array words overflow u32: query_count={query_count}, max_iters={max_iters}. Fix: shard the BFS query batch before GPU dispatch."
+                    )
+                })?
+                .max(1),
+        ),
+        None => None,
+    };
     let mut buffers = shape.try_read_only_buffers()?;
-    buffers.push(
-        BufferDecl::storage(
-            frontier_in,
-            BINDING_FRONTIER_IN,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(total_words.max(1)),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            frontier_out,
-            BINDING_FRONTIER_OUT,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(total_words.max(1)),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            changed,
-            BINDING_CHANGED,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(query_count.max(1)),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            converged,
-            BINDING_CONVERGED,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(query_count.max(1)),
-    );
-    if let Some(density) = density_active {
-        let density_count = query_count
-            .max(1)
-            .checked_mul(max_iters)
-            .ok_or_else(|| {
-                format!(
-                    "{BATCH_OP_ID} density array words overflow u32: query_count={query_count}, max_iters={max_iters}. Fix: shard the BFS query batch before GPU dispatch."
-                )
-            })?
-            .max(1);
-        buffers.push(
-            BufferDecl::storage(
-                density,
-                BINDING_DENSITY_ACTIVE,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )
-            .with_count(density_count),
-        );
+    PersistentBfsBuffers {
+        frontier_in,
+        frontier_out,
+        frontier_words: total_words,
+        changed: (changed, query_count.max(1)),
+        converged: (converged, query_count.max(1)),
+        density_active: density_active.zip(density_words),
     }
+    .push_onto(&mut buffers);
 
     Ok(Program::wrapped(
         buffers,

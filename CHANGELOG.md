@@ -145,6 +145,12 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   registration is one the source crate's widest aggregate turns on. A new
   domain feature carrying registrations turns both red until the aggregate
   covers it, and a consumer naming the aggregate then needs no change.
+- `graph_primitive_binding_contracts` reads the operation registry at run time
+  and asserts that every registered graph primitive declares bindings that are
+  the contiguous range from zero, and that a `changed` convergence flag sits
+  read-write directly above the read-write frontier it reports on. A count of
+  zero is deliberately not a signal: it is the documented sentinel for a
+  runtime-sized storage buffer.
 
 ### Changed
 
@@ -1080,6 +1086,17 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   halves together. The grid form indexes `changed[iteration]`, so taking the
   harness without its flag width was an out-of-bounds atomic write on the
   second iteration.
+- The buffer layout every CSR graph primitive appends to the read-only
+  ProgramGraph bundle has one owner. `graph::program_graph` gains
+  `word_buffer`, `frontier_buffer`, and `push_frontier_changed_buffers`;
+  thirteen call sites across the forward, backward, frontier-step, degree-sum,
+  motif, reachability, tensor-flow and persistent-BFS builders read them
+  instead of restating the declarations. Two of those sites disagreed on the
+  frontier word count for a zero-node graph, one declaring a zero-word storage
+  binding that no backend can allocate, and the excluding forward step bound
+  its extra input at the index its own module documents as the output frontier.
+  `bitset_words` had three spellings; the two forwarding shims are gone and
+  every caller reads `bitset::bitset_words`.
 
 ### Removed
 

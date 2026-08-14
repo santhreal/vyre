@@ -5,7 +5,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use super::batch_shared::checked_batched_frontier_words;
 use super::layout::{CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE, OP_ID};
-use crate::graph::program_graph::{ProgramGraphShape, BINDING_PRIMITIVE_START};
+use crate::graph::program_graph::{word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START};
 
 /// Batched parallel expansion with one global convergence flag.
 ///
@@ -190,24 +190,18 @@ pub(crate) fn csr_forward_or_changed_parallel_batch_global_indexed(
     ));
     prologue.append(&mut body);
     let mut buffers = shape.try_read_only_buffers()?;
-    buffers.push(
-        BufferDecl::storage(
-            frontier_out,
-            BINDING_PRIMITIVE_START,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(total_words.max(1)),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            changed,
-            BINDING_PRIMITIVE_START + 1,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(changed_slots),
-    );
+    buffers.push(word_buffer(
+        frontier_out,
+        BINDING_PRIMITIVE_START,
+        BufferAccess::ReadWrite,
+        total_words.max(1),
+    ));
+    buffers.push(word_buffer(
+        changed,
+        BINDING_PRIMITIVE_START + 1,
+        BufferAccess::ReadWrite,
+        changed_slots,
+    ));
     buffers.extend(extra_buffers);
     Ok(Program::wrapped(
         buffers,

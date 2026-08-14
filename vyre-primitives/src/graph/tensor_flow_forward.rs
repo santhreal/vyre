@@ -8,10 +8,12 @@
 //! tracking nested dependencies efficiently.
 
 use crate::graph::csr_frontier_step::edge_scan_body;
-use crate::graph::program_graph::{ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_TARGETS};
+use crate::graph::program_graph::{
+    word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_TARGETS,
+};
 use std::sync::Arc;
 use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::graph::tensor_flow_forward";
@@ -221,24 +223,18 @@ pub fn try_tensor_flow_forward(
     ];
 
     let mut buffers = shape.read_only_buffers();
-    buffers.push(
-        BufferDecl::storage(
-            tensor_in,
-            BINDING_TENSOR_IN,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(words),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            tensor_out,
-            BINDING_TENSOR_OUT,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(words),
-    );
+    buffers.push(word_buffer(
+        tensor_in,
+        BINDING_TENSOR_IN,
+        BufferAccess::ReadOnly,
+        words,
+    ));
+    buffers.push(word_buffer(
+        tensor_out,
+        BINDING_TENSOR_OUT,
+        BufferAccess::ReadWrite,
+        words,
+    ));
 
     Ok(Program::wrapped(
         buffers,

@@ -32,9 +32,9 @@ use vyre_foundation::execution_plan::fusion::{fuse_programs, FusionError};
 use vyre_foundation::ir::Program;
 use vyre_foundation::ir::{BufferAccess, DataType};
 use vyre_primitives::bitset::and::bitset_and;
+use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::bitset::or_into::bitset_or_into;
 use vyre_primitives::bitset::zero::bitset_zero;
-use vyre_primitives::graph::csr_forward_traverse::bitset_words;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
 

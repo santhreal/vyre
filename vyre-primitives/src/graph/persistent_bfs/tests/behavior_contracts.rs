@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::bitset::bitset_words;
 use crate::graph::program_graph::ProgramGraphShape;
 use vyre_foundation::{ir::Node, MemoryOrdering};
 

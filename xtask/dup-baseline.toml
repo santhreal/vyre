@@ -10,8 +10,11 @@
 # fails, so a new crate cannot arrive unmeasured.
 #
 # vyre-primitives and vyre-libs sit at their measured values but not at a floor:
-# the iterative-solver and CSR traversal builders in vyre-primitives duplicate
-# against their vyre-libs dispatch partners, and neither side owns the shape yet.
+# the iterative-solver builders in vyre-primitives duplicate against their
+# vyre-libs dispatch partners, and neither side owns the shape yet. The CSR
+# frontier buffer layout is no longer part of that: `graph::program_graph` owns
+# `word_buffer`, `frontier_buffer` and `push_frontier_changed_buffers`, and every
+# graph primitive declares its own buffers through them.
 #
 # Eleven of vyre-primitives' lines are deliberate and cannot be collapsed.
 # `vyre_primitives::types::linear_check::LinearDiscipline` and
@@ -135,7 +138,7 @@ total_lines = 3383
 [[crate]]
 name = "vyre-libs"
 duplicate_lines = 11384
-total_lines = 187485
+total_lines = 187486
 
 [[crate]]
 name = "vyre-lints"
@@ -159,8 +162,8 @@ total_lines = 3599
 
 [[crate]]
 name = "vyre-primitives"
-duplicate_lines = 6842
-total_lines = 102064
+duplicate_lines = 6638
+total_lines = 102006
 
 [[crate]]
 name = "vyre-reference"

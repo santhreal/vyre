@@ -476,3 +476,7 @@ required-features = ["predicate", "cpu-parity"]
 name = "resolve_family_ir_parity_proptest"
 path = "tests/resolve_family_ir_parity_proptest.rs"
 required-features = ["label", "cpu-parity"]
+[[test]]
+name = "graph_primitive_binding_contracts"
+path = "tests/graph_primitive_binding_contracts.rs"
+required-features = ["graph", "inventory-registry"]

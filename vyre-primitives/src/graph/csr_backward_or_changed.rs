@@ -3,11 +3,11 @@
 use std::sync::Arc;
 
 use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Node, Program};
 
-use crate::graph::csr_forward_traverse::bitset_words;
+use crate::bitset::bitset_words;
 use crate::graph::program_graph::{
-    ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS,
+    push_frontier_changed_buffers, ProgramGraphShape, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS,
     NAME_EDGE_TARGETS,
 };
 
@@ -50,7 +50,6 @@ pub fn csr_backward_or_changed_parallel(
     edge_kind_mask: u32,
 ) -> Program {
     let src = Expr::InvocationId { axis: 0 };
-    let words = bitset_words(shape.node_count);
     let body = vec![
         Node::let_bind("edge_start", Expr::load(NAME_EDGE_OFFSETS, src.clone())),
         Node::let_bind(
@@ -137,24 +136,7 @@ pub fn csr_backward_or_changed_parallel(
         ),
     ];
     let mut buffers = shape.read_only_buffers();
-    buffers.push(
-        BufferDecl::storage(
-            frontier_out,
-            BINDING_PRIMITIVE_START,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(words),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            changed,
-            BINDING_PRIMITIVE_START + 1,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(1),
-    );
+    push_frontier_changed_buffers(&mut buffers, frontier_out, changed, shape.node_count);
     Program::wrapped(
         buffers,
         CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE,

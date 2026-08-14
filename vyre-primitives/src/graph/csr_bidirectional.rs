@@ -6,11 +6,12 @@ use super::padded_u32_slice_fingerprint as csr_bidirectional_padded_slice_finger
 use vyre_foundation::execution_plan::fusion::fuse_programs;
 use vyre_foundation::ir::{DataType, Program};
 
+use crate::bitset::bitset_words;
 use crate::graph::csr_backward_traverse::csr_backward_traverse;
 use crate::graph::csr_closure_entry_points::{
     define_panicking_csr_closure_entry_points, define_try_csr_closure_entry_points,
 };
-use crate::graph::csr_forward_traverse::{bitset_words, csr_forward_traverse};
+use crate::graph::csr_forward_traverse::csr_forward_traverse;
 use crate::graph::csr_frontier_step::csr_frontier_step_dispatch_grid;
 use crate::graph::program_graph::ProgramGraphShape;
 

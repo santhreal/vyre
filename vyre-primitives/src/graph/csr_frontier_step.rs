@@ -18,14 +18,21 @@ use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::graph::program_graph::{
-    ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS,
-    NAME_EDGE_TARGETS,
+    frontier_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_KIND_MASK,
+    NAME_EDGE_OFFSETS, NAME_EDGE_TARGETS,
 };
 
 /// Canonical binding index for the input frontier bitset.
 pub const BINDING_FRONTIER_IN: u32 = BINDING_PRIMITIVE_START;
 /// Canonical binding index for the output frontier bitset.
 pub const BINDING_FRONTIER_OUT: u32 = BINDING_PRIMITIVE_START + 1;
+/// Binding index for the excluded-source mask of the excluding forward step.
+pub const BINDING_EXCLUDED_SOURCES: u32 = BINDING_PRIMITIVE_START + 1;
+/// Binding index for the output frontier of the excluding forward step.
+///
+/// The excluded-source mask takes the slot [`BINDING_FRONTIER_OUT`] holds in
+/// every other frontier step, so the output frontier sits one slot further out.
+pub const BINDING_EXCLUDING_FRONTIER_OUT: u32 = BINDING_PRIMITIVE_START + 2;
 pub(crate) const CSR_FRONTIER_STEP_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
 /// Dispatch grid for one source-lane CSR frontier step.
@@ -246,26 +253,19 @@ pub(crate) fn csr_frontier_step_program(
     allow_mask: u32,
 ) -> Program {
     let t = Expr::InvocationId { axis: 0 };
-    let words = crate::bitset::bitset_words(shape.node_count);
     let mut buffers = shape.read_only_buffers();
-    buffers.push(
-        BufferDecl::storage(
-            frontier_in,
-            BINDING_FRONTIER_IN,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(words),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            frontier_out,
-            BINDING_FRONTIER_OUT,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(words),
-    );
+    buffers.push(frontier_buffer(
+        frontier_in,
+        BINDING_FRONTIER_IN,
+        BufferAccess::ReadOnly,
+        shape.node_count,
+    ));
+    buffers.push(frontier_buffer(
+        frontier_out,
+        BINDING_FRONTIER_OUT,
+        BufferAccess::ReadWrite,
+        shape.node_count,
+    ));
 
     let body = match kind {
         CsrFrontierStepKind::Forward => forward_body(
@@ -304,35 +304,25 @@ pub(crate) fn csr_forward_step_excluding_program(
     allow_mask: u32,
 ) -> Program {
     let t = Expr::InvocationId { axis: 0 };
-    let words = crate::bitset::bitset_words(shape.node_count);
     let mut buffers = shape.read_only_buffers();
-    buffers.push(
-        BufferDecl::storage(
-            frontier_in,
-            BINDING_FRONTIER_IN,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(words),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            excluded_sources,
-            BINDING_FRONTIER_OUT,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(words),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            frontier_out,
-            BINDING_FRONTIER_OUT + 1,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(words),
-    );
+    buffers.push(frontier_buffer(
+        frontier_in,
+        BINDING_FRONTIER_IN,
+        BufferAccess::ReadOnly,
+        shape.node_count,
+    ));
+    buffers.push(frontier_buffer(
+        excluded_sources,
+        BINDING_EXCLUDED_SOURCES,
+        BufferAccess::ReadOnly,
+        shape.node_count,
+    ));
+    buffers.push(frontier_buffer(
+        frontier_out,
+        BINDING_EXCLUDING_FRONTIER_OUT,
+        BufferAccess::ReadWrite,
+        shape.node_count,
+    ));
 
     Program::wrapped(
         buffers,

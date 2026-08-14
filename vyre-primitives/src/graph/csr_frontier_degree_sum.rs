@@ -24,10 +24,12 @@
 use std::sync::Arc;
 
 use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, Expr, Node, Program};
 
 use crate::graph::csr_frontier_step::active_frontier_source_lane;
-use crate::graph::program_graph::{ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_OFFSETS};
+use crate::graph::program_graph::{
+    frontier_buffer, word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_OFFSETS,
+};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::graph::csr_frontier_degree_sum";
@@ -87,25 +89,18 @@ pub fn csr_frontier_degree_sum(shape: ProgramGraphShape) -> Program {
     )];
 
     let mut buffers = shape.read_only_buffers();
-    let frontier_words = crate::bitset::bitset_words(shape.node_count);
-    buffers.push(
-        BufferDecl::storage(
-            frontier_in,
-            BINDING_FRONTIER_IN,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(frontier_words),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            degree_sum_out,
-            BINDING_DEGREE_SUM_OUT,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(1),
-    );
+    buffers.push(frontier_buffer(
+        frontier_in,
+        BINDING_FRONTIER_IN,
+        BufferAccess::ReadOnly,
+        shape.node_count,
+    ));
+    buffers.push(word_buffer(
+        degree_sum_out,
+        BINDING_DEGREE_SUM_OUT,
+        BufferAccess::ReadWrite,
+        1,
+    ));
 
     let entry = vec![Node::Region {
         generator: Ident::from(OP_ID),

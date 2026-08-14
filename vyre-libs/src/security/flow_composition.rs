@@ -25,10 +25,11 @@ use vyre_primitives::bitset::and_not::bitset_and_not;
 #[cfg(test)]
 use vyre_primitives::bitset::and_not::cpu_ref as bitset_and_not_cpu_ref;
 use vyre_primitives::bitset::any::bitset_any;
+use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::csr_backward_traverse::csr_backward_traverse;
 #[cfg(test)]
 use vyre_primitives::graph::csr_forward_traverse::cpu_ref as csr_forward_cpu_ref;
-use vyre_primitives::graph::csr_forward_traverse::{bitset_words, csr_forward_traverse};
+use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
 

@@ -15,7 +15,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 use vyre_foundation::MemoryOrdering;
 
 use crate::bitset::bitset_words;
@@ -23,8 +23,8 @@ use crate::bitset::frontier::{
     frontier_absorb_new_bits_body_prefixed_with_flag, frontier_tail_mask,
 };
 use crate::graph::program_graph::{
-    ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS,
-    NAME_EDGE_TARGETS,
+    word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_KIND_MASK,
+    NAME_EDGE_OFFSETS, NAME_EDGE_TARGETS,
 };
 
 /// Canonical op id.
@@ -377,42 +377,30 @@ pub fn reachable_program(
 
     let storage_words = words.max(1);
     let mut buffers = shape.read_only_buffers();
-    buffers.push(
-        BufferDecl::storage(
-            sources_buf,
-            BINDING_PRIMITIVE_START,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(storage_words),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            reach_out,
-            BINDING_PRIMITIVE_START + 1,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(storage_words),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            frontier_a,
-            BINDING_PRIMITIVE_START + 2,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(storage_words),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            frontier_b,
-            BINDING_PRIMITIVE_START + 3,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(frontier_b_storage_words),
-    );
+    buffers.push(word_buffer(
+        sources_buf,
+        BINDING_PRIMITIVE_START,
+        BufferAccess::ReadOnly,
+        storage_words,
+    ));
+    buffers.push(word_buffer(
+        reach_out,
+        BINDING_PRIMITIVE_START + 1,
+        BufferAccess::ReadWrite,
+        storage_words,
+    ));
+    buffers.push(word_buffer(
+        frontier_a,
+        BINDING_PRIMITIVE_START + 2,
+        BufferAccess::ReadWrite,
+        storage_words,
+    ));
+    buffers.push(word_buffer(
+        frontier_b,
+        BINDING_PRIMITIVE_START + 3,
+        BufferAccess::ReadWrite,
+        frontier_b_storage_words,
+    ));
 
     Program::wrapped(
         buffers,

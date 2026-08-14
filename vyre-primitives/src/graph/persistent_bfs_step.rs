@@ -3,10 +3,10 @@
 use std::sync::Arc;
 
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use crate::graph::csr_forward_or_changed::csr_forward_or_changed_child_prefixed;
-use crate::graph::program_graph::{ProgramGraphShape, BINDING_PRIMITIVE_START};
+use crate::graph::program_graph::{push_frontier_changed_buffers, ProgramGraphShape};
 use crate::reduce::workgroup_any::workgroup_any_u32_child_prefixed;
 
 /// Canonical op id for one persistent-BFS workgroup-coalesced step.
@@ -235,26 +235,8 @@ pub fn persistent_bfs_step(
     changed: &str,
     edge_kind_mask: u32,
 ) -> Program {
-    let words = crate::bitset::bitset_words(shape.node_count).max(1);
     let mut buffers = shape.read_only_buffers();
-    buffers.push(
-        BufferDecl::storage(
-            frontier_out,
-            BINDING_PRIMITIVE_START,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(words),
-    );
-    buffers.push(
-        BufferDecl::storage(
-            changed,
-            BINDING_PRIMITIVE_START + 1,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )
-        .with_count(1),
-    );
+    push_frontier_changed_buffers(&mut buffers, frontier_out, changed, shape.node_count);
     buffers.push(BufferDecl::workgroup("wg_scratch", 256, DataType::U32));
 
     Program::wrapped(

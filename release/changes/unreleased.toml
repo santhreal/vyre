@@ -959,3 +959,13 @@ text = "Harness selection and convergence-flag width for the persistent fixpoint
 id = "grid-sync-inspection-single-owner"
 category = "Fixed"
 text = "Grid-fence counting for wave-structure assertions descends through the workspace's single exhaustive owner of node nesting. Seven copies each re-derived the walk with a trailing catch-all arm, which classifies an unrecognised nesting variant as containing no fences and would let an under-fenced program pass its own structure test. The grid-fence builder, the launch-width reader, and the declared-flag-width reader also had three copies each."
+
+[[fragments]]
+id = "graph-frontier-buffer-owner"
+category = "Changed"
+text = "The buffer layout every CSR graph primitive appends to the read-only ProgramGraph bundle has one owner. `graph::program_graph` gains `word_buffer`, `frontier_buffer`, and `push_frontier_changed_buffers`; thirteen call sites across the forward, backward, frontier-step, degree-sum, motif, reachability, tensor-flow and persistent-BFS builders read them instead of restating the declarations. Two of those sites disagreed on the frontier word count for a zero-node graph, one declaring a zero-word storage binding that no backend can allocate, and the excluding forward step bound its extra input at the index its own module documents as the output frontier. `bitset_words` had three spellings; the two forwarding shims are gone and every caller reads `bitset::bitset_words`."
+
+[[fragments]]
+id = "graph-binding-contracts-gate"
+category = "Added"
+text = "`graph_primitive_binding_contracts` reads the operation registry at run time and asserts that every registered graph primitive declares bindings that are the contiguous range from zero, and that a `changed` convergence flag sits read-write directly above the read-write frontier it reports on. A count of zero is deliberately not a signal: it is the documented sentinel for a runtime-sized storage buffer."

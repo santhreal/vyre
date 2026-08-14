@@ -32,7 +32,7 @@ macro_rules! define_bitset_and_security_op {
         pub mod $module {
             use vyre_foundation::ir::Program;
             use vyre_primitives::bitset::and::bitset_and;
-            use vyre_primitives::graph::csr_forward_traverse::bitset_words;
+            use vyre_primitives::bitset::bitset_words;
 
             pub(crate) const OP_ID: &str = $op_id;
 
@@ -94,7 +94,7 @@ macro_rules! define_bitset_and_not_security_op {
         pub mod $module {
             use vyre_foundation::ir::Program;
             use vyre_primitives::bitset::and_not::bitset_and_not;
-            use vyre_primitives::graph::csr_forward_traverse::bitset_words;
+            use vyre_primitives::bitset::bitset_words;
 
             pub(crate) const OP_ID: &str = $op_id;
 
