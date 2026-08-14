@@ -5,7 +5,7 @@ use std::process::Command;
 use serde_json::Value;
 
 use super::inspect_core::{read_text_bounded, suite_metric_percentile, suite_metric_samples};
-use super::types::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
+use super::release_thresholds::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
 
 const RELEASE_WARMUP_SAMPLES: usize = 300;
 

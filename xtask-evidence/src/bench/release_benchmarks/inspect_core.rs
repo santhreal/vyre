@@ -14,7 +14,7 @@ use std::path::Path;
 
 use serde_json::Value;
 
-use super::types::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
+use super::release_thresholds::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
 
 /// Samples a metric needs before its percentiles count as release evidence.
 const MIN_RELEASE_METRIC_SAMPLES: u64 = 30;

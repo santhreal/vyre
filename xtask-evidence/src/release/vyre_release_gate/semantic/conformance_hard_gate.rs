@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use super::super::checks::*;
-use super::super::types::Requirement;
+use super::super::gate_inputs::Requirement;
 
 pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     let Some(matrix) =

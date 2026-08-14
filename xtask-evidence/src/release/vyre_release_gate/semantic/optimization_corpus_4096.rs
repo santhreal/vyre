@@ -3,7 +3,7 @@ use std::path::Path;
 use crate::bench::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values;
 
 use super::super::checks::*;
-use super::super::types::Requirement;
+use super::super::gate_inputs::Requirement;
 
 pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     const REQUIRED_FAMILIES: [&str; 8] = [

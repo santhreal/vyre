@@ -15,10 +15,8 @@ use super::suite_inspect::{
     backend_suite_output_path, prefixed_benchmark_artifact, run_workload_benchmark,
     write_backend_suite_with_extra_blockers,
 };
-use super::types::{
-    BackendSuiteArtifactInput, ReleaseWorkloadFamily, ReleaseWorkloadMatrix,
-    MAX_RELEASE_BENCHMARK_TEXT_BYTES, REQUIRED_CPU_SOTA_100X_CASES,
-};
+use super::release_thresholds::{MAX_RELEASE_BENCHMARK_TEXT_BYTES, REQUIRED_CPU_SOTA_100X_CASES};
+use super::evidence_schema::{BackendSuiteArtifactInput, ReleaseWorkloadFamily, ReleaseWorkloadMatrix};
 
 pub(crate) fn run(args: &[String]) {
     let config = match parse_args(args) {

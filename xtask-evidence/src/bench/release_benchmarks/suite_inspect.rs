@@ -10,12 +10,8 @@ use super::inspect_core::{
 };
 use super::metrics::write_json;
 use super::runner::run_command_status;
-use super::types::{
-    BackendSuiteArtifact, BackendSuiteArtifactInput, BackendSuiteEvidence, HardwareDigestField,
-    HardwareUnavailableReason, MAX_RELEASE_BENCHMARK_TEXT_BYTES,
-    MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MAJOR, MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MINOR,
-    MIN_CUDA_RELEASE_MEMORY_MIB,
-};
+use super::release_thresholds::{MAX_RELEASE_BENCHMARK_TEXT_BYTES, MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MAJOR, MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MINOR, MIN_CUDA_RELEASE_MEMORY_MIB};
+use super::evidence_schema::{BackendSuiteArtifact, BackendSuiteArtifactInput, BackendSuiteEvidence, HardwareDigestField, HardwareUnavailableReason};
 
 pub(super) fn run_workload_benchmark(
     workspace_root: &Path,

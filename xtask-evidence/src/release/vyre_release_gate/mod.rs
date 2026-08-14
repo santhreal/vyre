@@ -12,12 +12,12 @@ use std::path::{Path, PathBuf};
 mod checks;
 mod paths;
 mod semantic;
-mod types;
+mod gate_inputs;
 
 use checks::check_markdown_evidence_path_ready;
 use paths::{escapes_repository, options_from_args, read_text_bounded, resolve_manifest_path};
 use semantic::run_semantic_requirement_checks;
-use types::{EvidenceManifest, GateMode};
+use gate_inputs::{EvidenceManifest, GateMode};
 
 pub(crate) fn run(args: &[String]) {
     let options = match options_from_args(args) {

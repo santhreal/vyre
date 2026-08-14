@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use super::super::checks::*;
-use super::super::types::{GateMode, Requirement};
+use super::super::gate_inputs::{GateMode, Requirement};
 
 const REQUIREMENT_ID: &str = "public-launch";
 

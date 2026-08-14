@@ -15,7 +15,7 @@ mod wgpu_fallback;
 
 use std::path::Path;
 
-use super::types::{GateMode, Requirement};
+use super::gate_inputs::{GateMode, Requirement};
 
 pub(super) fn run_semantic_requirement_checks(
     requirement: &Requirement,

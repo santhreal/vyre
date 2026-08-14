@@ -24,8 +24,10 @@ mod run;
 mod runner;
 #[path = "release_benchmarks/suite_inspect.rs"]
 mod suite_inspect;
-#[path = "release_benchmarks/types.rs"]
-mod types;
+#[path = "release_benchmarks/evidence_schema.rs"]
+mod evidence_schema;
+#[path = "release_benchmarks/release_thresholds.rs"]
+mod release_thresholds;
 
 pub(crate) use frontier_leaderboard::{
     frontier_leaderboard_required_artifact_fields, validate_frontier_leaderboard_artifact_bytes,

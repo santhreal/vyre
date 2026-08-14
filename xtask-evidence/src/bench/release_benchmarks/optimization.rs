@@ -12,11 +12,8 @@ use super::metrics::{
     max_metric_p50, max_observed_ulp, max_vram_mib, min_first_available_metric_p50, min_metric_p50,
     release_axis_blockers, write_json,
 };
-use super::types::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
-use super::types::{
-    OptimizationArtifactInspection, OptimizationBenchmarkEvidence, OptimizationBenchmarkManifest,
-    OptimizationBenchmarkManifestSummary, ReleaseAxesEvidence,
-};
+use super::release_thresholds::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
+use super::evidence_schema::{OptimizationArtifactInspection, OptimizationBenchmarkEvidence, OptimizationBenchmarkManifest, OptimizationBenchmarkManifestSummary, ReleaseAxesEvidence};
 
 pub(super) fn metric_p50(metric: &Value) -> Option<u64> {
     metric.get("p50").and_then(Value::as_u64)

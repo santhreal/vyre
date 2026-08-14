@@ -7,7 +7,7 @@ use crate::bench::benchmark_evidence_semantics::{
 };
 
 use super::super::checks::*;
-use super::super::types::Requirement;
+use super::super::gate_inputs::Requirement;
 
 pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     let Some(matrix) = first_json_evidence(

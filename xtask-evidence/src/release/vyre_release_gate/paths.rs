@@ -2,7 +2,7 @@ use std::fs;
 use std::io::{self, Read};
 use std::path::{Component, Path, PathBuf};
 
-use super::types::{GateMode, MAX_RELEASE_GATE_TEXT_BYTES};
+use super::gate_inputs::{GateMode, MAX_RELEASE_GATE_TEXT_BYTES};
 
 pub(super) struct GateOptions {
     pub(super) manifest_path: PathBuf,
@@ -165,7 +165,7 @@ mod tests {
     fn the_shipped_manifest_cites_only_repository_paths() {
         let manifest = default_manifest_path();
         let text = read_text_bounded(&manifest).expect("release evidence manifest is readable");
-        let manifest: super::super::types::EvidenceManifest =
+        let manifest: super::super::gate_inputs::EvidenceManifest =
             toml::from_str(&text).expect("release evidence manifest is valid TOML");
 
         let escaping = manifest

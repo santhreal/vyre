@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use super::paths::{read_text_bounded, resolve_artifact_path, resolve_manifest_path};
-use super::types::Requirement;
+use super::gate_inputs::Requirement;
 
 fn check_duplicate_object_rows(
     report: &serde_json::Value,

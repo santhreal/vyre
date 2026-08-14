@@ -3,7 +3,7 @@ use std::path::Path;
 use crate::bench::benchmark_evidence_semantics::cuda_release_axes_source_artifact_issues;
 
 use super::super::checks::*;
-use super::super::types::Requirement;
+use super::super::gate_inputs::Requirement;
 
 pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     let Some(matrix) = first_json_evidence(requirement, base_dir, "backend-matrix.json", failures)
