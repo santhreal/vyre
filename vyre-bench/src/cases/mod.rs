@@ -70,6 +70,7 @@ pub mod cuda_ptx_patterns;
 pub mod dataflow_irregular;
 pub mod dfa_match;
 pub mod elementwise;
+pub(crate) mod frontier_step;
 pub mod gather;
 pub(crate) mod gpu_case;
 pub mod graph_frontier;

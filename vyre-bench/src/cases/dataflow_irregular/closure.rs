@@ -1,14 +1,14 @@
 use std::time::Instant;
 
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
+    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
 };
 use crate::api::metric::BenchMetrics;
 use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, ResidentInputSet, TransferAccounting,
 };
-use crate::api::suite::SuiteKind;
+use crate::cases::frontier_step::timed_baseline;
+use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
 use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::graph::csr_forward_or_changed::csr_forward_or_changed_parallel;
@@ -56,113 +56,90 @@ pub(super) struct DataflowIfdsSkewedClosurePrepared {
     pub(super) resident: Option<ResidentInputSet>,
 }
 
-/// Fixed-replay IFDS closure over a resident skewed exploded-supergraph.
-struct DataflowIfdsSkewedClosure;
+static WORKLOAD: WorkloadDescription = WorkloadDescription {
+    id: "dataflow.ifds.skewed.closure.1m",
+    name: "Dataflow IFDS Skewed Closure 1M",
+    summary: "Bounded IFDS reachability closure over a million-node skewed exploded-supergraph CSR with resident frontier accumulation",
+    tags: &[
+        "dataflow",
+        "ifds",
+        "graph",
+        "csr",
+        "bitset",
+        "closure",
+        "skewed-degree",
+        "irregular",
+        "resident",
+        "release",
+    ],
+    layer: BenchLayer::Libs,
+    workload: WorkloadClass::Macro,
+    determinism: DeterminismClass::Deterministic,
+    owner_crate: "vyre-primitives",
+    suites: SUITES,
+    needs_gpu: true,
+    needs_network: false,
+    min_vram_bytes: Some(96 * 1024 * 1024),
+    min_input_bytes: Some(NODE_COUNT as u64 * 20),
+    feature_set: &[
+        "dataflow",
+        "ifds",
+        "skewed-csr",
+        "resident-frontier",
+    ],
+    contract: None,
+};
 
-impl BenchCase for DataflowIfdsSkewedClosure {
-    fn id(&self) -> BenchId {
-        BenchId("dataflow.ifds.skewed.closure.1m".to_string())
-    }
+static OPS: CaseOps<DataflowIfdsSkewedClosurePrepared> = CaseOps {
+    build: build_case,
+    measure,
+    verify: verify_exact,
+    program: closure_program,
+    fingerprint: None,
+    bytes_touched,
+};
 
-    fn metadata(&self) -> BenchMetadata {
-        BenchMetadata {
-            id: self.id(),
-            name: "Dataflow IFDS Skewed Closure 1M".to_string(),
-            description: "Bounded IFDS reachability closure over a million-node skewed exploded-supergraph CSR with resident frontier accumulation".to_string(),
-            tags: vec![
-                "dataflow".to_string(),
-                "ifds".to_string(),
-                "graph".to_string(),
-                "csr".to_string(),
-                "bitset".to_string(),
-                "closure".to_string(),
-                "skewed-degree".to_string(),
-                "irregular".to_string(),
-                "resident".to_string(),
-                "release".to_string(),
-            ],
-            layer: BenchLayer::Libs,
-            workload: WorkloadClass::Macro,
-            determinism: DeterminismClass::Deterministic,
-            owner_crate: "vyre-primitives".to_string(),
-        }
-    }
+static CASE: HarnessCase<DataflowIfdsSkewedClosurePrepared> = HarnessCase {
+    workload: &WORKLOAD,
+    ops: &OPS,
+};
 
-    fn suites(&self) -> &'static [SuiteKind] {
-        SUITES
-    }
+fn build_case(ctx: &mut BenchContext) -> Result<DataflowIfdsSkewedClosurePrepared, BenchError> {
+    prepare_ifds_skewed_closure(Some(ctx))
+}
 
-    fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: Some(96 * 1024 * 1024),
-            min_input_bytes: Some(u64::from(NODE_COUNT) * 20),
-            feature_set: vec![
-                "dataflow".to_string(),
-                "ifds".to_string(),
-                "skewed-csr".to_string(),
-                "resident-frontier".to_string(),
-            ],
-        }
-    }
+fn closure_program(prepared: &DataflowIfdsSkewedClosurePrepared) -> Option<&Program> {
+    Some(&prepared.program)
+}
 
-    fn bytes_touched(&self, prepared: &PreparedCase) -> (u64, u64) {
+fn bytes_touched(prepared: &DataflowIfdsSkewedClosurePrepared) -> (u64, u64) {
+    (
+        prepared.input_bytes_total,
         prepared
-            .downcast_ref::<DataflowIfdsSkewedClosurePrepared>()
-            .map(|prepared| {
-                (
-                    prepared.input_bytes_total,
-                    prepared
-                        .baseline_outputs
-                        .iter()
-                        .map(Vec::len)
-                        .sum::<usize>() as u64,
-                )
-            })
-            .unwrap_or((0, 0))
-    }
+            .baseline_outputs
+            .iter()
+            .map(Vec::len)
+            .sum::<usize>() as u64,
+    )
+}
 
-    fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        Ok(Box::new(prepare_ifds_skewed_closure(Some(ctx))?))
-    }
-
-    fn program<'a>(&self, prepared: &'a PreparedCase) -> Option<&'a Program> {
-        prepared
-            .downcast_ref::<DataflowIfdsSkewedClosurePrepared>()
-            .map(|prepared| &prepared.program)
-    }
-
-    fn run(
-        &self,
-        ctx: &mut BenchContext,
-        prepared: &mut PreparedCase,
-    ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<DataflowIfdsSkewedClosurePrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "prepared IFDS closure payload had the wrong type".to_string(),
-                )
-            })?;
-
-        let workgroup = prepared.program.workgroup_size();
-        if workgroup.contains(&0) {
-            return Err(BenchError::ExecutionFailed(format!(
+/// Replay the bounded closure, resident when the backend keeps buffers on the
+/// device and as one fixpoint dispatch otherwise.
+fn measure(
+    ctx: &mut BenchContext,
+    prepared: &mut DataflowIfdsSkewedClosurePrepared,
+) -> Result<BenchRun, BenchError> {
+    let workgroup = prepared.program.workgroup_size();
+    if workgroup.contains(&0) {
+        return Err(BenchError::ExecutionFailed(format!(
                 "IFDS closure benchmark received invalid workgroup {:?}. Fix: use positive dispatch dimensions.",
                 workgroup
             )));
-        }
+    }
 
-        let mut reported_workgroup_x = workgroup[0];
-        let (
-            outputs,
-            wall_ns,
-            dispatch_ns,
-            resident_used,
-            resident_reset_bytes,
-            device_reset_sequence,
-        ) = if let Some(resident) = prepared.resident.as_ref() {
+    let mut reported_workgroup_x = workgroup[0];
+    let (outputs, wall_ns, dispatch_ns, resident_used, resident_reset_bytes, device_reset_sequence) =
+        if let Some(resident) = prepared.resident.as_ref() {
             let sequence = dispatch_resident_closure_sequence(ctx, prepared, resident, workgroup)?;
             (sequence.outputs, sequence.wall_ns, None, true, 0, true)
         } else {
@@ -202,65 +179,60 @@ impl BenchCase for DataflowIfdsSkewedClosure {
                 false,
             )
         };
-        let output_bytes = outputs.iter().map(Vec::len).sum::<usize>() as u64;
-        let accounting = closure_transfer_accounting(
-            prepared.input_bytes_total,
-            output_bytes,
-            resident_used,
-            resident_reset_bytes,
-        );
+    let output_bytes = outputs.iter().map(Vec::len).sum::<usize>() as u64;
+    let accounting = closure_transfer_accounting(
+        prepared.input_bytes_total,
+        output_bytes,
+        resident_used,
+        resident_reset_bytes,
+    );
 
-        Ok(BenchRun {
-            metrics: BenchMetrics {
-                wall_ns: Some(wall_ns),
-                dispatch_ns,
-                input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(output_bytes),
-                bytes_read: Some(accounting.bytes_read),
-                bytes_written: Some(accounting.bytes_written),
-                bytes_touched: Some(accounting.bytes_touched),
-                custom: ifds_closure_metric_points(
-                    prepared.stats,
-                    prepared.closure_iterations,
-                    prepared.closure_changed,
-                    prepared.baseline_wall_ns,
-                    wall_ns,
-                    resident_used,
-                    resident_reset_bytes,
-                    device_reset_sequence,
-                    prepared.dispatch_iterations,
-                    CLOSURE_MAX_ITERS,
-                    reported_workgroup_x,
-                ),
-                ..Default::default()
-            },
-            baseline_metrics: Some(BenchMetrics {
-                wall_ns: Some(prepared.baseline_wall_ns),
-                input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(
-                    prepared
-                        .baseline_outputs
-                        .iter()
-                        .map(Vec::len)
-                        .sum::<usize>() as u64,
-                ),
-                custom: ifds_closure_baseline_metric_points(
-                    prepared.stats,
-                    prepared.closure_iterations,
-                    prepared.closure_changed,
-                    prepared.dispatch_iterations,
-                    CLOSURE_MAX_ITERS,
-                ),
-                ..Default::default()
-            }),
-            outputs,
-            baseline_outputs: Some(prepared.baseline_outputs.clone()),
-        })
-    }
-
-    fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
-        run.verify_exact_outputs()
-    }
+    Ok(BenchRun {
+        metrics: BenchMetrics {
+            wall_ns: Some(wall_ns),
+            dispatch_ns,
+            input_bytes: Some(prepared.input_bytes_total),
+            output_bytes: Some(output_bytes),
+            bytes_read: Some(accounting.bytes_read),
+            bytes_written: Some(accounting.bytes_written),
+            bytes_touched: Some(accounting.bytes_touched),
+            custom: ifds_closure_metric_points(
+                prepared.stats,
+                prepared.closure_iterations,
+                prepared.closure_changed,
+                prepared.baseline_wall_ns,
+                wall_ns,
+                resident_used,
+                resident_reset_bytes,
+                device_reset_sequence,
+                prepared.dispatch_iterations,
+                CLOSURE_MAX_ITERS,
+                reported_workgroup_x,
+            ),
+            ..Default::default()
+        },
+        baseline_metrics: Some(BenchMetrics {
+            wall_ns: Some(prepared.baseline_wall_ns),
+            input_bytes: Some(prepared.input_bytes_total),
+            output_bytes: Some(
+                prepared
+                    .baseline_outputs
+                    .iter()
+                    .map(Vec::len)
+                    .sum::<usize>() as u64,
+            ),
+            custom: ifds_closure_baseline_metric_points(
+                prepared.stats,
+                prepared.closure_iterations,
+                prepared.closure_changed,
+                prepared.dispatch_iterations,
+                CLOSURE_MAX_ITERS,
+            ),
+            ..Default::default()
+        }),
+        outputs,
+        baseline_outputs: Some(prepared.baseline_outputs.clone()),
+    })
 }
 
 pub(super) fn prepare_ifds_skewed_closure(
@@ -273,12 +245,8 @@ pub(super) fn prepare_ifds_skewed_closure(
     program.set_workgroup_size(CLOSURE_WORKGROUP_SIZE);
     let reset_program = ifds_closure_reset_program(fixture.stats.frontier_words);
 
-    let baseline_start = std::time::Instant::now();
-    let oracle = ifds_skewed_closure_oracle(&fixture, CLOSURE_MAX_ITERS);
-    let baseline_wall_ns = baseline_start
-        .elapsed()
-        .as_nanos()
-        .min(u128::from(u64::MAX)) as u64;
+    let (oracle, baseline_wall_ns) =
+        timed_baseline(|| ifds_skewed_closure_oracle(&fixture, CLOSURE_MAX_ITERS));
     let mut stats = fixture.stats;
     stats.output_words_set = oracle.output_words_set;
     let dispatch_iterations = ifds_skewed_launch_wave_iterations(&fixture, CLOSURE_MAX_ITERS);
@@ -436,5 +404,5 @@ fn ifds_closure_reset_program(frontier_words: u32) -> Program {
 }
 
 inventory::submit! {
-    &DataflowIfdsSkewedClosure as &'static dyn BenchCase
+    &CASE as &'static dyn BenchCase
 }

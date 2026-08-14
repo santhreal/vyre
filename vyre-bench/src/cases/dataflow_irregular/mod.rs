@@ -1,12 +1,19 @@
+//! One IFDS propagation step over a skewed exploded supergraph.
+//!
+//! The payload, the CPU baseline timing, the dispatch and its transfer
+//! accounting, and the run assembly are owned by
+//! [`crate::cases::frontier_step`]. What is this case's own: the fixture, the
+//! edge-kind filter it propagates under, and its metric points.
+
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
-};
-use crate::api::metric::BenchMetrics;
-use crate::api::resident::{
-    dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
+    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
 };
 use crate::api::suite::SuiteKind;
+use crate::cases::frontier_step::{
+    dispatch_frontier_step, frontier_step, frontier_step_bytes_touched, frontier_step_run,
+    timed_baseline, FrontierStep, StepGrid,
+};
+use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
@@ -36,161 +43,76 @@ const SUITES: &[SuiteKind] = &[
     SuiteKind::Honest,
 ];
 
-struct DataflowIfdsSkewedPrepared {
-    program: Program,
-    inputs: Vec<Vec<u8>>,
-    input_bytes_total: u64,
-    baseline_output: Vec<u8>,
-    baseline_wall_ns: u64,
-    stats: IfdsSkewedStats,
-    resident: Option<ResidentInputSet>,
+type DataflowIfdsSkewedPrepared = FrontierStep<IfdsSkewedStats>;
+
+static WORKLOAD: WorkloadDescription = WorkloadDescription {
+    id: "dataflow.ifds.skewed.step.1m",
+    name: "Dataflow IFDS Skewed Step 1M",
+    summary: "One IFDS propagation step over a million-node skewed exploded-supergraph CSR with packed frontier bits and filtered edge kinds",
+    tags: &[
+        "dataflow",
+        "ifds",
+        "graph",
+        "csr",
+        "bitset",
+        "skewed-degree",
+        "irregular",
+        "release",
+    ],
+    layer: BenchLayer::Libs,
+    workload: WorkloadClass::Macro,
+    determinism: DeterminismClass::Deterministic,
+    owner_crate: "vyre-primitives",
+    suites: SUITES,
+    needs_gpu: true,
+    needs_network: false,
+    min_vram_bytes: Some(96 * 1024 * 1024),
+    min_input_bytes: Some(NODE_COUNT as u64 * 20),
+    feature_set: &["dataflow", "ifds", "skewed-csr"],
+    contract: None,
+};
+
+static OPS: CaseOps<DataflowIfdsSkewedPrepared> = CaseOps {
+    build: build_case,
+    measure,
+    verify: verify_exact,
+    program: traverse_program,
+    fingerprint: None,
+    bytes_touched: frontier_step_bytes_touched,
+};
+
+static CASE: HarnessCase<DataflowIfdsSkewedPrepared> = HarnessCase {
+    workload: &WORKLOAD,
+    ops: &OPS,
+};
+
+fn build_case(ctx: &mut BenchContext) -> Result<DataflowIfdsSkewedPrepared, BenchError> {
+    prepare_ifds_skewed_step(Some(ctx))
 }
 
-/// Skewed exploded-supergraph IFDS step with edge-kind filtering.
-struct DataflowIfdsSkewedStep;
+fn traverse_program(prepared: &DataflowIfdsSkewedPrepared) -> Option<&Program> {
+    Some(&prepared.program)
+}
 
-impl BenchCase for DataflowIfdsSkewedStep {
-    fn id(&self) -> BenchId {
-        BenchId("dataflow.ifds.skewed.step.1m".to_string())
-    }
-
-    fn metadata(&self) -> BenchMetadata {
-        BenchMetadata {
-            id: self.id(),
-            name: "Dataflow IFDS Skewed Step 1M".to_string(),
-            description: "One IFDS propagation step over a million-node skewed exploded-supergraph CSR with packed frontier bits and filtered edge kinds".to_string(),
-            tags: vec![
-                "dataflow".to_string(),
-                "ifds".to_string(),
-                "graph".to_string(),
-                "csr".to_string(),
-                "bitset".to_string(),
-                "skewed-degree".to_string(),
-                "irregular".to_string(),
-                "release".to_string(),
-            ],
-            layer: BenchLayer::Libs,
-            workload: WorkloadClass::Macro,
-            determinism: DeterminismClass::Deterministic,
-            owner_crate: "vyre-primitives".to_string(),
-        }
-    }
-
-    fn suites(&self) -> &'static [SuiteKind] {
-        SUITES
-    }
-
-    fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: Some(96 * 1024 * 1024),
-            min_input_bytes: Some(u64::from(NODE_COUNT) * 20),
-            feature_set: vec![
-                "dataflow".to_string(),
-                "ifds".to_string(),
-                "skewed-csr".to_string(),
-            ],
-        }
-    }
-
-    fn bytes_touched(&self, prepared: &PreparedCase) -> (u64, u64) {
-        prepared
-            .downcast_ref::<DataflowIfdsSkewedPrepared>()
-            .map(|prepared| {
-                (
-                    prepared.input_bytes_total,
-                    prepared.baseline_output.len() as u64,
-                )
-            })
-            .unwrap_or((0, 0))
-    }
-
-    fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        Ok(Box::new(prepare_ifds_skewed_step(Some(ctx))?))
-    }
-
-    fn program<'a>(&self, prepared: &'a PreparedCase) -> Option<&'a Program> {
-        prepared
-            .downcast_ref::<DataflowIfdsSkewedPrepared>()
-            .map(|prepared| &prepared.program)
-    }
-
-    fn run(
-        &self,
-        ctx: &mut BenchContext,
-        prepared: &mut PreparedCase,
-    ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<DataflowIfdsSkewedPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "prepared IFDS skewed payload had the wrong type".to_string(),
-                )
-            })?;
-
-        let mut dispatch_config = ctx.dispatch_config.clone();
-        let workgroup = dispatch_config
-            .workgroup_override
-            .unwrap_or_else(|| prepared.program.workgroup_size());
-        if workgroup.contains(&0) {
-            return Err(BenchError::ExecutionFailed(format!(
-                "IFDS skewed benchmark received invalid workgroup {:?}. Fix: use positive dispatch dimensions.",
-                workgroup
-            )));
-        }
-        dispatch_config.grid_override.get_or_insert([
-            prepared.stats.nodes.div_ceil(workgroup[0]),
-            1,
-            1,
-        ]);
-
-        let dispatch = dispatch_program_timed(
-            ctx,
-            &prepared.program,
-            prepared.resident.as_ref(),
-            &prepared.inputs,
-            &dispatch_config,
-        )?;
-        let resident_used = dispatch.resident_used;
-        let timed = dispatch.timed;
-        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
-        let accounting =
-            transfer_accounting(prepared.input_bytes_total, output_bytes, resident_used);
-
-        Ok(BenchRun {
-            metrics: BenchMetrics {
-                wall_ns: Some(timed.wall_ns),
-                dispatch_ns: timed.device_ns,
-                input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(output_bytes),
-                bytes_read: Some(accounting.bytes_read),
-                bytes_written: Some(accounting.bytes_written),
-                bytes_touched: Some(accounting.bytes_touched),
-                custom: ifds_skewed_metric_points(
-                    prepared.stats,
-                    prepared.baseline_wall_ns,
-                    timed.wall_ns,
-                    resident_used,
-                    workgroup[0],
-                ),
-                ..Default::default()
-            },
-            baseline_metrics: Some(BenchMetrics {
-                wall_ns: Some(prepared.baseline_wall_ns),
-                input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(prepared.baseline_output.len() as u64),
-                custom: ifds_skewed_baseline_metric_points(prepared.stats),
-                ..Default::default()
-            }),
-            outputs: timed.outputs,
-            baseline_outputs: Some(vec![prepared.baseline_output.clone()]),
-        })
-    }
-
-    fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
-        run.verify_exact_outputs()
-    }
+fn measure(
+    ctx: &mut BenchContext,
+    prepared: &mut DataflowIfdsSkewedPrepared,
+) -> Result<BenchRun, BenchError> {
+    let sample = dispatch_frontier_step(
+        ctx,
+        prepared,
+        StepGrid::PerNode(prepared.stats.nodes),
+        "IFDS skewed",
+    )?;
+    let custom = ifds_skewed_metric_points(
+        prepared.stats,
+        prepared.baseline_wall_ns,
+        sample.wall_ns,
+        sample.resident_used,
+        sample.workgroup_x,
+    );
+    let baseline_custom = ifds_skewed_baseline_metric_points(prepared.stats);
+    Ok(frontier_step_run(prepared, sample, custom, baseline_custom))
 }
 
 fn prepare_ifds_skewed_step(
@@ -200,35 +122,23 @@ fn prepare_ifds_skewed_step(
     let shape = ProgramGraphShape::new(fixture.stats.nodes, fixture.stats.edges);
     let program = csr_forward_traverse(shape, "frontier_in", "frontier_out", IFDS_REACH_MASK);
 
-    let baseline_start = std::time::Instant::now();
-    let oracle = ifds_skewed_cpu_oracle(&fixture);
-    let baseline_wall_ns = baseline_start
-        .elapsed()
-        .as_nanos()
-        .min(u128::from(u64::MAX)) as u64;
+    let (oracle, baseline_wall_ns) = timed_baseline(|| ifds_skewed_cpu_oracle(&fixture));
     let mut stats = fixture.stats;
     stats.allowed_edges_from_active = oracle.allowed_edges_from_active;
     stats.filtered_edges_from_active = oracle.filtered_edges_from_active;
     stats.output_words_set = oracle.output_words_set;
 
-    let inputs = ifds_skewed_inputs(&fixture);
-    let input_bytes_total = input_bytes_total(&inputs);
-    let resident = ctx
-        .map(|ctx| ResidentInputSet::upload_optional(ctx, &inputs, "dataflow IFDS skewed"))
-        .transpose()?
-        .flatten();
-
-    Ok(DataflowIfdsSkewedPrepared {
+    frontier_step(
+        ctx,
+        "dataflow IFDS skewed",
         program,
-        inputs,
-        input_bytes_total,
-        baseline_output: vyre_primitives::wire::pack_u32_slice(&oracle.output),
-        baseline_wall_ns,
+        ifds_skewed_inputs(&fixture),
         stats,
-        resident,
-    })
+        &oracle.output,
+        baseline_wall_ns,
+    )
 }
 
 inventory::submit! {
-    &DataflowIfdsSkewedStep as &'static dyn BenchCase
+    &CASE as &'static dyn BenchCase
 }

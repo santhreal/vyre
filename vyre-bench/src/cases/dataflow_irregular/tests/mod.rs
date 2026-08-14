@@ -261,7 +261,7 @@ fn ifds_queue_materialize_prepare_builds_parallel_sparse_sequence() {
 fn ifds_active_queue_prepare_builds_sparse_traversal_program() {
     let prepared = prepare_ifds_skewed_active_queue_step(None).unwrap();
 
-    assert_eq!(prepared.traverse_program.workgroup_size(), [256, 1, 1]);
+    assert_eq!(prepared.step.program.workgroup_size(), [256, 1, 1]);
     assert!(prepared.row_strided_traverse);
     assert_eq!(
         prepared.traverse_grid,
@@ -273,20 +273,20 @@ fn ifds_active_queue_prepare_builds_sparse_traversal_program() {
         prepared.traverse_logical_lanes,
         traverse_logical_lanes(prepared.queue_capacity, prepared.row_strided_traverse)
     );
-    assert_eq!(prepared.stats.nodes, NODE_COUNT);
-    assert_eq!(prepared.inputs.len(), 6);
+    assert_eq!(prepared.step.stats.nodes, NODE_COUNT);
+    assert_eq!(prepared.step.inputs.len(), 6);
     assert_eq!(
-        prepared.inputs[ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX].len(),
+        prepared.step.inputs[ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX].len(),
         prepared.queue_capacity as usize * std::mem::size_of::<u32>()
     );
     assert_eq!(
-        prepared.inputs[ACTIVE_QUEUE_LEN_INDEX],
-        vyre_primitives::wire::pack_u32_slice(&[prepared.stats.active_sources as u32])
+        prepared.step.inputs[ACTIVE_QUEUE_LEN_INDEX],
+        vyre_primitives::wire::pack_u32_slice(&[prepared.step.stats.active_sources as u32])
     );
-    assert_eq!(prepared.baseline_output.len(), FRONTIER_WORDS * 4);
-    assert!(u64::from(prepared.queue_capacity) >= prepared.stats.active_sources);
-    assert!(prepared.queue_capacity < prepared.stats.nodes / 32);
-    assert!(prepared.stats.allowed_edges_from_active > 0);
+    assert_eq!(prepared.step.baseline_output.len(), FRONTIER_WORDS * 4);
+    assert!(u64::from(prepared.queue_capacity) >= prepared.step.stats.active_sources);
+    assert!(prepared.queue_capacity < prepared.step.stats.nodes / 32);
+    assert!(prepared.step.stats.allowed_edges_from_active > 0);
 }
 
 #[test]
