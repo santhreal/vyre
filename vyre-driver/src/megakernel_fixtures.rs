@@ -139,6 +139,10 @@ pub const DIAMOND_WAVES: &[MegakernelFrontierWave] = &[
     },
 ];
 
+/// The first two [`DIAMOND_WAVES`], the shortest chain where the peak of a fused
+/// group is the second wave's footprint rather than the pair's sum.
+pub const GROWING_PAIR_WAVES: &[MegakernelFrontierWave] = &[DIAMOND_WAVES[0], DIAMOND_WAVES[1]];
+
 /// Two independent waves whose static output volume exceeds any plausible
 /// measured readback, so the plan must amortize against the static figure.
 pub const OUTPUT_HEAVY_WAVES: &[MegakernelFrontierWave] = &[
@@ -190,3 +194,26 @@ pub const OVERFLOW_WAVES: &[MegakernelFrontierWave] = &[
         output_bytes: 1,
     },
 ];
+
+/// The dependency edges of a `width` by `depth` layered DAG.
+///
+/// Wave `slot` of each layer waits on the wave in the same slot of the previous
+/// layer and on nothing else, so the barrier depth is exactly `depth` and every
+/// barrier-free group is exactly `width` waves wide. That exactness is what lets
+/// a generated sweep assert a plan rather than a bound, and it is why both the
+/// barrier planner sweep and the frontier memory sweep drive the same edges.
+#[must_use]
+pub fn layered_dag_dependencies(width: usize, depth: usize) -> Vec<MegakernelWaveDependency> {
+    let mut dependencies = Vec::with_capacity(width * depth.saturating_sub(1));
+    for layer in 0..depth.saturating_sub(1) {
+        let base = layer * width;
+        let next = base + width;
+        for slot in 0..width {
+            dependencies.push(MegakernelWaveDependency {
+                before: base + slot,
+                after: next + slot,
+            });
+        }
+    }
+    dependencies
+}
