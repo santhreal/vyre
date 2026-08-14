@@ -1,6 +1,6 @@
 //! End-to-end parity for `data::matroid_exact_megakernel::select_optimal_subset_via`, the full
 //! Edmonds matroid-intersection megakernel (provably-optimal fusion subset), through the shared
-//! faithful [`common::ReferenceEvalDispatcher`].
+//! faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `matroid_intersection_full`'s IR is not run through a faithful dispatch boundary by any
@@ -41,8 +41,7 @@ use vyre_self_substrate::data::matroid_exact_megakernel::{
     reference_select_optimal_subset, select_optimal_subset_via,
 };
 
-mod common;
-use common::ReferenceEvalDispatcher;
+use vyre_libs::test_support::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

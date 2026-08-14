@@ -1,6 +1,6 @@
 //! End-to-end parity for the COMPOSITE
 //! `analysis::cost_model::predict_runtime_fixed_via`: probabilistic dispatch-cost prediction, through
-//! the shared faithful [`common::ReferenceEvalDispatcher`].
+//! the shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the release cost model chains TWO dispatches, a 16.16 sum-product circuit evaluation over the
@@ -38,9 +38,8 @@ use vyre_primitives::graph::sum_product_circuit::{KIND_LEAF, KIND_PRODUCT, KIND_
 use vyre_primitives::math::conformal::conformal_threshold_cpu;
 use vyre_self_substrate::analysis::cost_model::predict_runtime_fixed_via;
 
-mod common;
-use common::fixed_mul as fixed_mul_16_16;
-use common::ReferenceEvalDispatcher;
+use vyre_libs::test_support::fixed_mul as fixed_mul_16_16;
+use vyre_libs::test_support::ReferenceEvalDispatcher;
 
 const FIXED_ONE: u32 = 1 << 16;
 

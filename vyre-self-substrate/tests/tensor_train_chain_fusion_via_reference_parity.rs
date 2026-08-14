@@ -1,5 +1,5 @@
 //! End-to-end parity for `math::tensor_train_chain_fusion::fusion_pressure_via` through the shared
-//! faithful [`common::ReferenceEvalDispatcher`].
+//! faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`
 //! / `SWEEP-via-consumer-input-output-contract-audit`): `tt_contract_step`'s IR is run by NO
@@ -19,8 +19,7 @@ use vyre_self_substrate::math::tensor_train_chain_fusion::{
     fusion_pressure_via, should_fuse_chain_via,
 };
 
-mod common;
-use common::ReferenceEvalDispatcher;
+use vyre_libs::test_support::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

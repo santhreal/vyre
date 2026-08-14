@@ -1,6 +1,6 @@
 //! End-to-end parity for `graph::motif::{match_motif_via, motif_matches_via,
 //! motif_participation_count_via}`, the CSR subgraph-motif matcher, through the shared faithful
-//! [`common::ReferenceEvalDispatcher`].
+//! [`vyre_libs::test_support::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the `match_motif` IR is not run through a faithful dispatch boundary by any `vyre-primitives/tests/*`
@@ -20,8 +20,7 @@ use vyre_self_substrate::motif::{
     motif_participation_count_via,
 };
 
-mod common;
-use common::ReferenceEvalDispatcher;
+use vyre_libs::test_support::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

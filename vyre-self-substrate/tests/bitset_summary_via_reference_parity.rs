@@ -1,5 +1,5 @@
 //! End-to-end parity for `data::bitset_summary::{per_word_popcount_via, total_set_bits_via}` through
-//! the shared faithful [`common::ReferenceEvalDispatcher`].
+//! the shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the per-word popcount IR is not run through a faithful dispatch boundary by any
@@ -13,8 +13,7 @@
 
 use vyre_self_substrate::data::bitset_summary::{per_word_popcount_via, total_set_bits_via};
 
-mod common;
-use common::ReferenceEvalDispatcher;
+use vyre_libs::test_support::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

@@ -80,7 +80,7 @@ device = []
 "c-parser" = ["matching-substring", "matching-dfa", "matching-nfa"]
 "go-parser" = []
 "python-parser" = []
-"test-fixtures" = []
+"test-fixtures" = ["dep:vyre-reference"]
 security = []
 
 [dependencies]
@@ -95,6 +95,9 @@ thiserror.workspace = true
 tracing.workspace = true
 regex-syntax = { workspace = true, optional = true }
 regex = { workspace = true, optional = true }
+# `test_support::ReferenceEvalDispatcher` executes programs through the CPU
+# reference interpreter. Optional so only `test-fixtures` builds link it.
+vyre-reference = { workspace = true, optional = true }
 libm.workspace = true
 rustc-hash.workspace = true
 blake3.workspace = true

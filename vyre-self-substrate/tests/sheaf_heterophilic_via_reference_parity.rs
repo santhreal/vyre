@@ -1,5 +1,5 @@
 //! End-to-end parity for `math::sheaf_heterophilic_dispatch::diffuse_dispatch_stalks_fixed_via`
-//! through the shared faithful [`common::ReferenceEvalDispatcher`].
+//! through the shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `sheaf_diffusion_step`'s IR is run by NO `vyre-primitives/tests/*` file and the consumer's only
@@ -18,9 +18,8 @@
 
 use vyre_self_substrate::math::sheaf_heterophilic_dispatch::diffuse_dispatch_stalks_fixed_via;
 
-mod common;
-use common::fixed_mul;
-use common::ReferenceEvalDispatcher;
+use vyre_libs::test_support::fixed_mul;
+use vyre_libs::test_support::ReferenceEvalDispatcher;
 
 const FIXED_ONE: u32 = 1 << 16;
 

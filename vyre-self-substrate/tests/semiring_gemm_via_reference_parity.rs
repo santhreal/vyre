@@ -1,5 +1,5 @@
 //! End-to-end parity for `analysis::dataflow_fixpoint::semiring_gemm_via_*` through the shared
-//! faithful [`common::ReferenceEvalDispatcher`], across all three semirings the consumer exposes
+//! faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`], across all three semirings the consumer exposes
 //! (boolean-OR reachability, min-plus shortest-path, lineage/provenance).
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
@@ -27,8 +27,7 @@ use vyre_self_substrate::analysis::dataflow_fixpoint::{
     semiring_gemm_via_min_plus,
 };
 
-mod common;
-use common::ReferenceEvalDispatcher;
+use vyre_libs::test_support::ReferenceEvalDispatcher;
 
 const INF: u32 = u32::MAX;
 

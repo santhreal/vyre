@@ -13,8 +13,7 @@
 
 use vyre_self_substrate::math::sheaf_spectral_clustering::dominant_spectrum_fixed_via;
 
-mod common;
-use common::ReferenceEvalDispatcher;
+use vyre_libs::test_support::ReferenceEvalDispatcher;
 
 const ONE_FP: u32 = 1 << 16;
 

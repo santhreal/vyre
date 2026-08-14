@@ -21,8 +21,7 @@ use vyre_self_substrate::math::sinkhorn_dispatch_clustering::{
     reference_sinkhorn_clustering, sinkhorn_clustering_via,
 };
 
-mod common;
-use common::ReferenceEvalDispatcher;
+use vyre_libs::test_support::ReferenceEvalDispatcher;
 
 const ITERS: u32 = 12;
 const EPS: f32 = 0.1;

@@ -1,5 +1,5 @@
 //! End-to-end parity for `math::differentiable_autotune::pick_config_pre_exp_fixed_via` (the
-//! fixed-point softmax normalization step) through the shared faithful [`common::ReferenceEvalDispatcher`].
+//! fixed-point softmax normalization step) through the shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `softmax_step`'s IR is not run through a faithful dispatch boundary by any `vyre-primitives/tests/*`
@@ -17,8 +17,7 @@
 
 use vyre_self_substrate::math::differentiable_autotune::pick_config_pre_exp_fixed_via;
 
-mod common;
-use common::ReferenceEvalDispatcher;
+use vyre_libs::test_support::ReferenceEvalDispatcher;
 
 const FIXED_ONE: u32 = 1 << 16;
 

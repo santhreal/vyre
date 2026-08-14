@@ -1,6 +1,6 @@
 //! End-to-end parity for the COMPOSITE `math::fmm_polyhedral_compress::fmm_compress_pairwise_via`, the
 //! full zeroth-order Fast-Multipole compress pipeline P2M → M2L → L2P, through the shared faithful
-//! [`common::ReferenceEvalDispatcher`].
+//! [`vyre_libs::test_support::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the three stages are each parity-covered in isolation (`fmm_polyhedral_via_reference_parity`), but the
@@ -23,8 +23,7 @@
 
 use vyre_self_substrate::math::fmm_polyhedral_compress::fmm_compress_pairwise_via;
 
-mod common;
-use common::ReferenceEvalDispatcher;
+use vyre_libs::test_support::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

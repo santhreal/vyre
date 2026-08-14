@@ -18,8 +18,7 @@ use vyre_self_substrate::logic::functorial_pass_composition::{
     apply_pass_functor, apply_pass_functor_via,
 };
 
-mod common;
-use common::ReferenceEvalDispatcher;
+use vyre_libs::test_support::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

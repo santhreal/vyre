@@ -1,6 +1,6 @@
 //! End-to-end parity for `data::matching_diagnostic_compaction`'s three `_via` entry points
 //! (`bracket_pairs_via`, `sort_regions_via`, `dedup_region_survivor_flags_via`) through the shared
-//! faithful [`common::ReferenceEvalDispatcher`].
+//! faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
 //!
 //! Closes another mock-dispatcher-coherence family (see BACKLOG
 //! `SWEEP-via-consumer-input-output-contract-audit`). The consumer's in-file `MatchingDispatcher`
@@ -34,8 +34,7 @@ use vyre_self_substrate::data::matching_diagnostic_compaction::{
     reference_sort_regions, sort_regions_via,
 };
 
-mod common;
-use common::ReferenceEvalDispatcher;
+use vyre_libs::test_support::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

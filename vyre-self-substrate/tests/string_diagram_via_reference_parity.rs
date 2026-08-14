@@ -1,5 +1,5 @@
 //! End-to-end parity for `logic::string_diagram_ir_rewrite::compose_ir_arrows_fixed_via` through the
-//! shared faithful [`common::ReferenceEvalDispatcher`].
+//! shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap AND locks a real bug the conversion surfaced (see BACKLOG
 //! `SWEEP-via-consumer-input-output-contract-audit`): `monoidal_compose` delegates to the shared
@@ -17,9 +17,8 @@
 
 use vyre_self_substrate::logic::string_diagram_ir_rewrite::compose_ir_arrows_fixed_via;
 
-mod common;
-use common::fixed_mul;
-use common::ReferenceEvalDispatcher;
+use vyre_libs::test_support::fixed_mul;
+use vyre_libs::test_support::ReferenceEvalDispatcher;
 
 const FIXED_ONE: u32 = 1 << 16;
 

@@ -1,5 +1,5 @@
 //! End-to-end parity for `scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via`
-//! through the shared faithful [`common::ReferenceEvalDispatcher`].
+//! through the shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `planar_rewrite_schedule`'s IR is run by NO `vyre-primitives/tests/*` file and the consumer's only
@@ -16,8 +16,7 @@
 use vyre_primitives::parsing::planar_rewrite::reference_planar_rewrite_schedule;
 use vyre_self_substrate::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via;
 
-mod common;
-use common::ReferenceEvalDispatcher;
+use vyre_libs::test_support::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

@@ -1,6 +1,6 @@
 //! End-to-end parity for `scheduling::spectral_schedule::shape_spectrum_fixed_via`, the
 //! Marchenko-Pastur outlier-eigenvalue edge clip, through the shared faithful
-//! [`common::ReferenceEvalDispatcher`].
+//! [`vyre_libs::test_support::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the `mp_edge_clip` IR is not run through a faithful dispatch boundary by any `vyre-primitives/tests/*`
@@ -20,8 +20,7 @@
 use vyre_primitives::math::spectral_shape::mp_edge_clip_cpu;
 use vyre_self_substrate::spectral_schedule::shape_spectrum_fixed_via;
 
-mod common;
-use common::ReferenceEvalDispatcher;
+use vyre_libs::test_support::ReferenceEvalDispatcher;
 
 const FIXED_ONE: u32 = 1 << 16;
 
