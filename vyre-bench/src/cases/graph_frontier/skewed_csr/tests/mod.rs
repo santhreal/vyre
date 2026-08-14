@@ -342,7 +342,7 @@ fn skewed_csr_queue_closure_prepare_builds_resident_delta_sequence() {
         crate::cases::queue_closure_profile::QueueClosureLaneProfile::from_wave_lengths_with_launch_lanes(
             prepared.queue_capacity,
             &prepared.wave_queue_lengths,
-            queue_closure::graph_queue_closure_delta_lanes_per_source(prepared.row_strided_delta),
+            crate::cases::queue_closure::delta_lanes_per_source(prepared.row_strided_delta),
             launch_lanes,
         );
     assert_eq!(

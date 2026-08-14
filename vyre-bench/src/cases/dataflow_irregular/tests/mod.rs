@@ -1,15 +1,16 @@
 use super::fixture::{
-    ifds_active_high_degree_sources, ifds_active_queue_inputs, ifds_queue_inputs,
+    ifds_active_high_degree_sources, ifds_active_queue_inputs, ifds_queue_closure_inputs,
+    ifds_queue_inputs,
 };
 use super::queue::{
-    ifds_queue_closure_delta_lanes_per_source, ifds_queue_closure_inputs,
-    ifds_queue_closure_reset_program, ifds_queue_materialize_sequence_fingerprint,
-    ifds_sparse_queue_capacity, prepare_ifds_skewed_active_queue_step,
-    prepare_ifds_skewed_queue_closure, prepare_ifds_skewed_queue_materialize_step,
-    ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX, ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX,
-    ACTIVE_QUEUE_EDGE_TARGETS_INDEX, ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_LEN_INDEX,
+    ifds_queue_materialize_sequence_fingerprint, ifds_sparse_queue_capacity,
+    prepare_ifds_skewed_active_queue_step, prepare_ifds_skewed_queue_closure,
+    prepare_ifds_skewed_queue_materialize_step, ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX,
+    ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX, ACTIVE_QUEUE_EDGE_TARGETS_INDEX,
+    ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_LEN_INDEX,
 };
 use super::*;
+use crate::cases::queue_closure::{delta_lanes_per_source, queue_closure_reset_program};
 pub(crate) use crate::cases::queue_stage::{
     QUEUE_ACTIVE_QUEUE_INDEX, QUEUE_CLOSURE_ACCUMULATOR_INDEX, QUEUE_CLOSURE_EDGE_KIND_INDEX,
     QUEUE_CLOSURE_EDGE_OFFSETS_INDEX, QUEUE_CLOSURE_EDGE_TARGETS_INDEX, QUEUE_CLOSURE_LEN_A_INDEX,

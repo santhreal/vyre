@@ -86,6 +86,8 @@ pub mod megakernel_truth;
 pub mod nvme_gpu_ingest;
 pub mod optimizer_impact;
 pub mod quantized_linear;
+pub(crate) mod queue_closure;
+pub(crate) mod queue_closure_oracle;
 pub(crate) mod queue_closure_profile;
 pub(crate) mod queue_materialize;
 pub(crate) mod queue_stage;

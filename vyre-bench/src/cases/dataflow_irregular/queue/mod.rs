@@ -23,11 +23,7 @@ use super::SUITES;
 mod closure;
 mod materialize;
 #[cfg(test)]
-pub(super) use closure::{
-    ifds_queue_closure_delta_lanes_per_source, ifds_queue_closure_inputs,
-    ifds_queue_closure_reset_program, ifds_skewed_queue_closure_oracle,
-    prepare_ifds_skewed_queue_closure,
-};
+pub(super) use closure::prepare_ifds_skewed_queue_closure;
 #[cfg(test)]
 pub(super) use materialize::{
     ifds_queue_materialize_sequence_fingerprint, prepare_ifds_skewed_queue_materialize_step,

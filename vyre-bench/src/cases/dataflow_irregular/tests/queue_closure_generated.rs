@@ -1,7 +1,7 @@
 use super::super::fixture::{
-    ifds_skewed_closure_oracle, IfdsSkewedFixture, IfdsSkewedStats, IFDS_REACH_MASK,
+    ifds_queue_closure_inputs, ifds_skewed_closure_oracle, ifds_skewed_queue_closure_oracle,
+    IfdsSkewedFixture, IfdsSkewedStats, IFDS_REACH_MASK,
 };
-use super::super::queue::{ifds_queue_closure_inputs, ifds_skewed_queue_closure_oracle};
 use crate::cases::mix32;
 use crate::cases::queue_stage::{
     QUEUE_CLOSURE_QUEUE_A_INDEX, QUEUE_CLOSURE_QUEUE_B_INDEX, QUEUE_CLOSURE_SEED_LEN_INDEX,
