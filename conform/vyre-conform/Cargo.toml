@@ -16,6 +16,16 @@ workspace = true
 [lib]
 path = "src/lib.rs"
 
+# The whole suite compares the reference path against cuda and wgpu, so it needs
+# the concrete driver crates the `gpu` feature pulls in. Declared here rather
+# than wrapped in a file-level `cfg`: cargo then skips the target when the
+# feature is off, which is what `--no-default-features --all-targets` needs from
+# any consumer, instead of compiling 606 lines down to an empty test binary.
+[[test]]
+name = "countless_readwrite_output_parity"
+path = "tests/countless_readwrite_output_parity.rs"
+required-features = ["gpu"]
+
 [features]
 default = ["gpu"]
 gpu = ["dep:vyre-driver-cuda", "dep:vyre-driver-metal", "dep:vyre-driver-wgpu"]

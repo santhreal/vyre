@@ -220,6 +220,27 @@ jobs:
       - name: Feature-isolated MSRV sweep
         run: bash scripts/check_feature_msrv.sh
 
+  feature-isolation:
+    name: Every feature compiles alone or records why it cannot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      # The class `feature-msrv` above cannot close: it compiles the derived
+      # matrix and reports pass or fail, so a pair that cannot stand alone has
+      # nowhere to be recorded and the whole job is red until someone deletes a
+      # feature. This holds each (member, feature) pair to the outcome recorded
+      # in xtask/feature-isolation.toml. The pair set is re-derived from the
+      # tracked manifests inside the gate, so a new feature or member fails here
+      # until a decision is recorded for it, and a row naming a pair that no
+      # longer exists fails as stale. The declaration half also runs inside
+      # `xtask gates`; this job is the compile half. `--bin xtask` is explicit
+      # because the package also carries two rule-authoring binaries, so a bare
+      # `cargo run -p xtask` cannot decide which one to build.
+      - name: Feature-isolation compile sweep
+        run: ./cargo_full run -p xtask --bin xtask -- feature-isolation --sweep
+
   feature-gated-sweeps:
     name: Oracle-matrix sweeps ci.yml cannot reach
     runs-on: ubuntu-latest

@@ -28,7 +28,10 @@ self-substrate-adapters = [
     "vyre-libs/encoding",
     "vyre-libs/solvers",
 ]
-remote-cache = ["ureq"]
+# `dep:` and not a bare name: a bare optional dependency also publishes a
+# feature of its own, so `remote-cache = ["ureq"]` made `--features ureq` a
+# second, undeclared way to turn the same code on.
+remote-cache = ["dep:ureq"]
 # Opt-in NVMe passthrough via `IORING_OP_URING_CMD` (Linux kernel 6.0+).
 uring-cmd-nvme = []
 

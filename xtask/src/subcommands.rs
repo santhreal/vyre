@@ -12,8 +12,8 @@
 
 use crate::docs::docs_check;
 use crate::gates::{
-    check_cat_a, check_tier_deps, dep_drift, dup_scan, gates, hot_path_scan, hygiene_matrix,
-    platform_boundary,
+    check_cat_a, check_tier_deps, dep_drift, dup_scan, feature_isolation, gates, hot_path_scan,
+    hygiene_matrix, platform_boundary,
 };
 use crate::release::{
     feature_matrix, launch_state, metadata_matrix, package_readiness, release_conformance,
@@ -248,6 +248,14 @@ pub const SUBCOMMANDS: &[Subcommand] = &[
         kind: Kind::Gate,
         ci_args: &[],
         home: Home::Local(dup_scan::run),
+    },
+    Subcommand {
+        name: "feature-isolation",
+        usage: "[--list] [--sweep [--write]] [--member NAME]",
+        help: "Hold every (member, feature) pair to its recorded compile-alone outcome",
+        kind: Kind::Gate,
+        ci_args: &[],
+        home: Home::Local(feature_isolation::run),
     },
     Subcommand {
         name: "feature-matrix",

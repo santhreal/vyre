@@ -43,6 +43,11 @@ status = "green"
 output_lines = 1
 
 [[gate]]
+name = "feature-isolation"
+status = "green"
+output_lines = 1
+
+[[gate]]
 name = "gate1"
 status = "green"
 output_lines = 372

@@ -20,6 +20,7 @@ mod canonical_first_workgroup_guard;
 mod cli_docs;
 mod crate_ownership_registry;
 mod crate_readmes;
+mod feature_isolation;
 mod public_api_snapshot_inventory;
 mod relation_import_certificates;
 mod testing_guides;

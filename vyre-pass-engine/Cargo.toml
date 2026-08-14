@@ -32,7 +32,10 @@ all-solvers = [
     "vyre-libs/scheduling",
     "vyre-libs/telemetry",
 ]
-cpu-parity = ["all-solvers", "vyre-primitives/cpu-parity"]
+# `optimizer` because the parity suite this feature gates imports
+# `vyre_pass_engine::optimizer`. Without the edge, `--features cpu-parity` on its
+# own reserved the suite for a namespace the same selection did not compile.
+cpu-parity = ["all-solvers", "optimizer", "vyre-primitives/cpu-parity"]
 
 [dependencies]
 vyre-foundation.workspace = true
@@ -61,3 +64,16 @@ name = "optimizer_bfs_and_softmax_parity"
 path = "tests/optimizer_bfs_and_softmax_parity.rs"
 required-features = ["cpu-parity"]
 
+# Both suites assert the contract of the `optimizer` namespace, so they cannot
+# build when it is off. Declared rather than wrapped in a file-level `cfg`: cargo
+# then skips them for a selection that lacks the feature instead of failing, and
+# a consumer reads the prerequisite from the manifest.
+[[test]]
+name = "dce_program_back_edge_contract"
+path = "tests/dce_program_back_edge_contract.rs"
+required-features = ["optimizer"]
+
+[[test]]
+name = "dce_dispatch_binding_contract"
+path = "tests/dce_dispatch_binding_contract.rs"
+required-features = ["optimizer"]
