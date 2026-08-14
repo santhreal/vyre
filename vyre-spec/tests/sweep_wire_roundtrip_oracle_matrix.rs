@@ -6,7 +6,14 @@
 
 #![forbid(unsafe_code)]
 
+#[path = "../../tests/support/spec_variant_tables.rs"]
+mod spec_variant_tables;
+#[path = "../../tests/support/sweep_rng.rs"]
+mod sweep_rng;
+
 use smallvec::smallvec;
+use spec_variant_tables::{buffer_data_types, builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
+use sweep_rng::Rng;
 use vyre_foundation::ir::{BufferDecl, Expr, Node, Program};
 use vyre_spec::extension::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionUnOpId,
@@ -16,40 +23,6 @@ use vyre_spec::{
 };
 
 const CASES: usize = 1024;
-
-#[derive(Clone, Copy)]
-struct Rng(u64);
-
-impl Rng {
-    fn new(seed: u64) -> Self {
-        Self(seed)
-    }
-
-    fn next_u32(&mut self) -> u32 {
-        let mut x = self.0;
-        x ^= x << 7;
-        x ^= x >> 9;
-        x ^= x << 8;
-        self.0 = x;
-        (x >> 16) as u32
-    }
-
-    fn range(&mut self, upper: u32) -> u32 {
-        if upper == 0 {
-            0
-        } else {
-            self.next_u32() % upper
-        }
-    }
-
-    fn pick<T: Copy>(&mut self, items: &[T]) -> T {
-        items[self.range(items.len() as u32) as usize]
-    }
-
-    fn pick_str<'a>(&mut self, items: &[&'a str]) -> &'a str {
-        items[self.range(items.len() as u32) as usize]
-    }
-}
 
 #[test]
 fn sweep_wire_roundtrip_oracle_matrix_preserves_canonical_bytes() {
@@ -220,97 +193,22 @@ fn hostile_f32_bits(rng: &mut Rng) -> f32 {
 }
 
 fn hostile_bin_op(rng: &mut Rng) -> BinOp {
-    let opaque = BinOp::Opaque(ExtensionBinOpId(rng.next_u32() | 0x8000_0000));
-    let ops = [
-        BinOp::Add,
-        BinOp::Sub,
-        BinOp::Mul,
-        BinOp::Div,
-        BinOp::Mod,
-        BinOp::BitAnd,
-        BinOp::BitOr,
-        BinOp::BitXor,
-        BinOp::Shl,
-        BinOp::Shr,
-        BinOp::Eq,
-        BinOp::Ne,
-        BinOp::Lt,
-        BinOp::Gt,
-        BinOp::Le,
-        BinOp::Ge,
-        BinOp::And,
-        BinOp::Or,
-        BinOp::AbsDiff,
-        BinOp::Min,
-        BinOp::Max,
-        BinOp::SaturatingAdd,
-        BinOp::SaturatingSub,
-        BinOp::SaturatingMul,
-        BinOp::WrappingAdd,
-        BinOp::WrappingSub,
-        BinOp::MulHigh,
-        opaque,
-    ];
-    ops[rng.range(ops.len() as u32) as usize]
+    let mut ops = builtin_bin_ops();
+    ops.push(BinOp::Opaque(ExtensionBinOpId(
+        rng.next_u32() | 0x8000_0000,
+    )));
+    rng.pick(&ops)
 }
 
 fn hostile_un_op(rng: &mut Rng) -> UnOp {
-    let opaque = UnOp::Opaque(ExtensionUnOpId(rng.next_u32() | 0x8000_0000));
-    let ops = [
-        UnOp::Negate,
-        UnOp::BitNot,
-        UnOp::LogicalNot,
-        UnOp::Popcount,
-        UnOp::Clz,
-        UnOp::Ctz,
-        UnOp::ReverseBits,
-        UnOp::Cos,
-        UnOp::Sin,
-        UnOp::Abs,
-        UnOp::Sqrt,
-        UnOp::Floor,
-        UnOp::Ceil,
-        UnOp::Round,
-        UnOp::Trunc,
-        UnOp::Sign,
-        UnOp::IsNan,
-        UnOp::IsInf,
-        UnOp::IsFinite,
-        UnOp::Exp,
-        UnOp::Log,
-        UnOp::Log2,
-        UnOp::Exp2,
-        UnOp::InverseSqrt,
-        UnOp::Reciprocal,
-        opaque,
-    ];
-    ops[rng.range(ops.len() as u32) as usize].clone()
+    let mut ops = builtin_un_ops();
+    ops.push(UnOp::Opaque(ExtensionUnOpId(rng.next_u32() | 0x8000_0000)));
+    rng.pick_cloned(&ops)
 }
 
 fn hostile_buffer_datatype(rng: &mut Rng) -> DataType {
-    let ops = [
-        DataType::U8,
-        DataType::U16,
-        DataType::U32,
-        DataType::I8,
-        DataType::I16,
-        DataType::I32,
-        DataType::I64,
-        DataType::U64,
-        DataType::Vec2U32,
-        DataType::Vec4U32,
-        DataType::Bool,
-        DataType::Bytes,
-        DataType::Array {
-            element_size: 1 + rng.range(64) as usize,
-        },
-        DataType::F16,
-        DataType::BF16,
-        DataType::F32,
-        DataType::F64,
-        DataType::Tensor,
-    ];
-    ops[rng.range(ops.len() as u32) as usize].clone()
+    let element_size = 1 + rng.range(64) as usize;
+    rng.pick_cloned(&buffer_data_types(element_size))
 }
 
 fn hostile_datatype(rng: &mut Rng) -> DataType {
@@ -368,22 +266,11 @@ fn sweep_wire_roundtrip_exercises_spec_atomic_tags_in_programs() {
     let mut assertions = 0usize;
     for case in 0..128usize {
         let mut rng = Rng::new(0xA71C_0000 ^ case as u64);
-        let opaque = AtomicOp::Opaque(ExtensionAtomicOpId(rng.next_u32() | 0x8000_0000));
-        let ops = [
-            AtomicOp::Add,
-            AtomicOp::Or,
-            AtomicOp::And,
-            AtomicOp::Xor,
-            AtomicOp::Min,
-            AtomicOp::Max,
-            AtomicOp::Exchange,
-            AtomicOp::CompareExchange,
-            AtomicOp::CompareExchangeWeak,
-            AtomicOp::FetchNand,
-            AtomicOp::LruUpdate,
-            opaque,
-        ];
-        let op = ops[rng.range(ops.len() as u32) as usize];
+        let mut ops = builtin_atomic_ops();
+        ops.push(AtomicOp::Opaque(ExtensionAtomicOpId(
+            rng.next_u32() | 0x8000_0000,
+        )));
+        let op = rng.pick(&ops);
         let program = Program::wrapped(
             vec![BufferDecl::read_write("rw", 0, DataType::U32).with_count(4)],
             [1, 1, 1],
