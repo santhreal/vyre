@@ -1,7 +1,14 @@
-//! Handwritten oracle matrix for `hash::crc32` and packed FNV-1a32 variants.
+//! Independent-source contract matrix for `hash::crc32` and packed FNV-1a32.
 //!
-//! Compares production CRC chunk/combine and FNV packed walkers against
-//! independent byte-stream oracles across hostile lengths and LCG seeds.
+//! Nothing here re-implements the production algorithm. CRC-32 is pinned three
+//! ways that do not share a line of code with `hash::crc32`: the published
+//! CRC-32/ISO-HDLC check vectors, a bit-at-a-time polynomial division that
+//! never builds a lookup table, and the concatenation law, which fixes the
+//! chunk algebra against the value the whole-input walker produces for the
+//! joined bytes. FNV-1a32 is pinned to its published vectors and to a modular
+//! reference that multiplies in `u64` instead of wrapping in `u32`.
+//!
+//! Volume testing.volume - do NOT weaken to shape-only asserts.
 
 #![forbid(unsafe_code)]
 #![cfg(feature = "hash")]
@@ -16,88 +23,145 @@ use vyre_primitives::hash::fnv1a::{
     fnv1a32, fnv1a32_packed_u32_low8, FNV1A32_OFFSET, FNV1A32_PRIME,
 };
 
+/// Reflected IEEE 802.3 polynomial, from the CRC-32/ISO-HDLC specification.
+const SPEC_CRC32_POLY: u32 = 0xEDB8_8320;
+
+/// Specified CRC-32/ISO-HDLC register preset and final xor.
+const SPEC_CRC32_INIT: u32 = 0xFFFF_FFFF;
+
+/// FNV-1a 32-bit offset basis from the FNV specification.
+const SPEC_FNV1A32_OFFSET: u32 = 0x811C_9DC5;
+
+/// FNV-1a 32-bit prime from the FNV specification.
+const SPEC_FNV1A32_PRIME: u32 = 0x0100_0193;
+
+/// Published CRC-32/ISO-HDLC check values.
+///
+/// `"123456789"` is the catalogue check value for this CRC; the remaining
+/// strings are the values every zlib-compatible CRC-32 must reproduce.
+const CRC32_CHECK_VECTORS: &[(&[u8], u32)] = &[
+    (b"", 0x0000_0000),
+    (b"a", 0xE8B7_BE43),
+    (b"abc", 0x3524_41C2),
+    (b"123456789", 0xCBF4_3926),
+    (b"message digest", 0x2015_9D7F),
+    (b"abcdefghijklmnopqrstuvwxyz", 0x4C27_50BD),
+    (
+        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
+        0x1FC2_E6D2,
+    ),
+    (
+        b"12345678901234567890123456789012345678901234567890123456789012345678901234567890",
+        0x7CA9_4A72,
+    ),
+    (
+        b"The quick brown fox jumps over the lazy dog",
+        0x414F_A339,
+    ),
+];
+
+/// Published FNV-1a 32-bit check values.
+const FNV1A32_CHECK_VECTORS: &[(&[u8], u32)] = &[
+    (b"", 0x811C_9DC5),
+    (b"a", 0xE40C_292C),
+    (b"b", 0xE70C_2DE5),
+    (b"c", 0xE60C_2C52),
+    (b"foobar", 0xBF9C_F968),
+    (b"chongo was here!\n", 0xD499_30D5),
+];
+
 #[test]
-fn crc32_matches_independent_table_oracle_matrix() {
+fn crc32_public_constants_match_the_specification() {
+    assert_eq!(
+        CRC32_POLY, SPEC_CRC32_POLY,
+        "Fix: CRC32_POLY must be the reflected IEEE 802.3 polynomial."
+    );
+    assert_eq!(
+        CRC32_INIT, SPEC_CRC32_INIT,
+        "Fix: CRC32_INIT must be the specified CRC-32/ISO-HDLC preset."
+    );
+    assert_eq!(
+        FNV1A32_OFFSET, SPEC_FNV1A32_OFFSET,
+        "Fix: FNV1A32_OFFSET must be the specified FNV-1a 32-bit offset basis."
+    );
+    assert_eq!(
+        FNV1A32_PRIME, SPEC_FNV1A32_PRIME,
+        "Fix: FNV1A32_PRIME must be the specified FNV-1a 32-bit prime."
+    );
+}
+
+#[test]
+fn crc32_matches_the_published_check_vectors() {
+    for (case_idx, (bytes, published)) in CRC32_CHECK_VECTORS.iter().enumerate() {
+        assert_eq!(
+            crc32(bytes),
+            *published,
+            "Fix: crc32 published vector {case_idx} len={} must match the CRC-32/ISO-HDLC check value.",
+            bytes.len()
+        );
+        assert_eq!(
+            bitwise_crc32(bytes),
+            *published,
+            "Fix: the bit-at-a-time reference must reproduce published vector {case_idx}; it is the independent source of truth for the generated matrix."
+        );
+    }
+}
+
+#[test]
+fn crc32_matches_bitwise_polynomial_division_matrix() {
     for (case_idx, bytes) in byte_cases().iter().enumerate() {
         assert_eq!(
             crc32(bytes),
-            oracle_crc32(bytes),
-            "Fix: crc32 adversarial case {case_idx} len={} must match the independent table oracle.",
+            bitwise_crc32(bytes),
+            "Fix: crc32 adversarial case {case_idx} len={} must match bit-at-a-time polynomial division.",
             bytes.len()
         );
     }
 }
 
 #[test]
-fn crc32_chunk_and_combine_matches_independent_oracle_matrix() {
+fn crc32_chunk_algebra_matches_the_concatenation_law_matrix() {
     for (case_idx, bytes) in byte_cases().iter().enumerate() {
         let chunk_size = NonZeroU32::new(1 + (case_idx % 64) as u32).expect("chunk size");
-        let expected = oracle_crc32(bytes);
-        let chunks: Vec<Crc32Chunk> = bytes
-            .chunks(chunk_size.get() as usize)
-            .map(|part| Crc32Chunk {
-                len: part.len() as u64,
-                crc: oracle_crc32(part),
-            })
-            .collect();
-        let mut folded = chunks.clone();
-        while folded.len() > 1 {
-            folded = oracle_pair_reduce(&folded);
-        }
-        let actual_folded = {
-            let chunks: Vec<Crc32Chunk> = if bytes.is_empty() {
-                vec![Crc32Chunk {
-                    len: 0,
-                    crc: oracle_crc32(bytes),
-                }]
-            } else {
-                bytes
-                    .chunks(chunk_size.get() as usize)
-                    .map(|part| Crc32Chunk {
-                        len: part.len() as u64,
-                        crc: oracle_crc32(part),
-                    })
-                    .collect()
-            };
-            let mut reduced = chunks;
-            while reduced.len() > 1 {
-                reduced = crc32_pair_reduce_chunks(&reduced)
-                    .expect("Fix: generated CRC chunk lengths must not overflow.");
-            }
-            reduced[0]
+        let expected = bitwise_crc32(bytes);
+
+        let mut reduced: Vec<Crc32Chunk> = if bytes.is_empty() {
+            vec![crc32_chunk(bytes)]
+        } else {
+            bytes
+                .chunks(chunk_size.get() as usize)
+                .map(crc32_chunk)
+                .collect()
         };
+        while reduced.len() > 1 {
+            reduced = crc32_pair_reduce_chunks(&reduced)
+                .expect("Fix: generated CRC chunk lengths must not overflow.");
+        }
+        let folded = reduced[0];
         assert_eq!(
-            actual_folded.crc, expected,
-            "Fix: crc32 map-reduce adversarial case {case_idx} must match direct CRC."
+            folded.crc, expected,
+            "Fix: crc32 map-reduce adversarial case {case_idx} must equal the CRC of the joined bytes."
         );
         assert_eq!(
-            actual_folded.len,
+            folded.len,
             bytes.len() as u64,
             "Fix: crc32 map-reduce adversarial case {case_idx} must preserve byte length."
         );
 
         for split in 0..=bytes.len().min(8) {
-            let left = oracle_crc32(&bytes[..split]);
-            let right = oracle_crc32(&bytes[split..]);
+            let left = crc32_chunk(&bytes[..split]);
+            let right = crc32_chunk(&bytes[split..]);
             assert_eq!(
-                crc32_combine(left, right, (bytes.len() - split) as u64),
+                crc32_combine(left.crc, right.crc, right.len),
                 expected,
-                "Fix: crc32_combine adversarial case {case_idx} split={split} must match direct CRC."
+                "Fix: crc32_combine adversarial case {case_idx} split={split} must equal the CRC of the joined bytes."
             );
-            let left_chunk = Crc32Chunk {
-                len: split as u64,
-                crc: left,
-            };
-            let right_chunk = Crc32Chunk {
-                len: (bytes.len() - split) as u64,
-                crc: right,
-            };
             assert_eq!(
-                crc32_combine_chunks(left_chunk, right_chunk)
+                crc32_combine_chunks(left, right)
                     .expect("Fix: generated CRC chunk length must not overflow.")
                     .crc,
                 expected,
-                "Fix: crc32_combine_chunks adversarial case {case_idx} split={split} must match direct CRC."
+                "Fix: crc32_combine_chunks adversarial case {case_idx} split={split} must equal the CRC of the joined bytes."
             );
         }
 
@@ -107,139 +171,80 @@ fn crc32_chunk_and_combine_matches_independent_oracle_matrix() {
                 len: bytes.len() as u64,
                 crc: expected,
             },
-            "Fix: crc32_chunk adversarial case {case_idx} must match independent oracle."
+            "Fix: crc32_chunk adversarial case {case_idx} must carry the joined-bytes CRC and length."
         );
     }
 }
 
 #[test]
-fn fnv1a32_packed_low8_matches_independent_oracle_matrix() {
+fn fnv1a32_matches_the_published_check_vectors() {
+    for (case_idx, (bytes, published)) in FNV1A32_CHECK_VECTORS.iter().enumerate() {
+        assert_eq!(
+            fnv1a32(bytes),
+            *published,
+            "Fix: fnv1a32 published vector {case_idx} must match the FNV-1a 32-bit check value."
+        );
+        assert_eq!(
+            modular_fnv1a32(bytes),
+            *published,
+            "Fix: the modular reference must reproduce published vector {case_idx}; it is the independent source of truth for the generated matrix."
+        );
+    }
+}
+
+#[test]
+fn fnv1a32_packed_low8_matches_modular_reference_matrix() {
     for (case_idx, words) in packed_u32_cases().iter().enumerate() {
-        let expected = oracle_fnv1a32_packed_low8(words);
+        let bytes: Vec<u8> = words.iter().map(|word| (*word & 0xFF) as u8).collect();
+        let expected = modular_fnv1a32(&bytes);
         assert_eq!(
             fnv1a32_packed_u32_low8(words),
             expected,
-            "Fix: fnv1a32_packed_u32_low8 adversarial case {case_idx} len={} must match the independent oracle.",
+            "Fix: fnv1a32_packed_u32_low8 adversarial case {case_idx} len={} must match the modular reference over the low bytes.",
             words.len()
         );
-        let bytes: Vec<u8> = words.iter().map(|word| (*word & 0xFF) as u8).collect();
         assert_eq!(
             fnv1a32(&bytes),
             expected,
-            "Fix: fnv1a32 byte path adversarial case {case_idx} must match packed-low8 oracle."
+            "Fix: fnv1a32 byte path adversarial case {case_idx} must match the modular reference."
         );
     }
 }
 
-fn oracle_pair_reduce(chunks: &[Crc32Chunk]) -> Vec<Crc32Chunk> {
-    let mut reduced = Vec::with_capacity(chunks.len().div_ceil(2));
-    for pair in chunks.chunks(2) {
-        let chunk = match pair {
-            [left, right] => Crc32Chunk {
-                len: left
-                    .len
-                    .checked_add(right.len)
-                    .expect("oracle chunk length overflow"),
-                crc: oracle_crc32_combine(left.crc, right.crc, right.len),
-            },
-            [tail] => *tail,
-            [] => continue,
-            _ => unreachable!("chunks of two"),
-        };
-        reduced.push(chunk);
-    }
-    reduced
-}
-
-fn oracle_crc32_combine(left_crc: u32, right_crc: u32, right_len: u64) -> u32 {
-    if right_len == 0 {
-        return left_crc;
-    }
-    let mut odd = [0u32; 32];
-    let mut even = [0u32; 32];
-    odd[0] = CRC32_POLY;
-    let mut row = 1u32;
-    for slot in odd.iter_mut().skip(1) {
-        *slot = row;
-        row <<= 1;
-    }
-    gf2_matrix_square(&mut even, &odd);
-    gf2_matrix_square(&mut odd, &even);
-
-    let mut len = right_len;
-    let mut crc = left_crc;
-    loop {
-        gf2_matrix_square(&mut even, &odd);
-        if (len & 1) != 0 {
-            crc = gf2_matrix_times(&even, crc);
-        }
-        len >>= 1;
-        if len == 0 {
-            break;
-        }
-        gf2_matrix_square(&mut odd, &even);
-        if (len & 1) != 0 {
-            crc = gf2_matrix_times(&odd, crc);
-        }
-        len >>= 1;
-        if len == 0 {
-            break;
-        }
-    }
-    crc ^ right_crc
-}
-
-fn gf2_matrix_times(matrix: &[u32; 32], mut vector: u32) -> u32 {
-    let mut sum = 0u32;
-    let mut index = 0usize;
-    while vector != 0 {
-        if (vector & 1) != 0 {
-            sum ^= matrix[index];
-        }
-        vector >>= 1;
-        index += 1;
-    }
-    sum
-}
-
-fn gf2_matrix_square(square: &mut [u32; 32], matrix: &[u32; 32]) {
-    for index in 0..32 {
-        square[index] = gf2_matrix_times(matrix, matrix[index]);
-    }
-}
-
-fn oracle_crc32_table() -> [u32; 256] {
-    let mut table = [0u32; 256];
-    for (i, slot) in table.iter_mut().enumerate() {
-        let mut c = i as u32;
-        for _ in 0..8 {
-            c = if c & 1 == 1 {
-                (c >> 1) ^ CRC32_POLY
-            } else {
-                c >> 1
-            };
-        }
-        *slot = c;
-    }
-    table
-}
-
-fn oracle_crc32(bytes: &[u8]) -> u32 {
-    let table = oracle_crc32_table();
-    let mut crc = CRC32_INIT;
+/// CRC-32/ISO-HDLC by bit-at-a-time polynomial division.
+///
+/// This is the textbook shift-register form: no lookup table, no byte-indexed
+/// slice, no GF(2) matrix. It shares no construction with the production
+/// walker, which is the only reason it can prove that walker right, and it is
+/// itself proved by the published check vectors above.
+fn bitwise_crc32(bytes: &[u8]) -> u32 {
+    let mut register = SPEC_CRC32_INIT;
     for &byte in bytes {
-        let idx = ((crc ^ u32::from(byte)) & 0xFF) as usize;
-        crc = (crc >> 8) ^ table[idx];
+        register ^= u32::from(byte);
+        for _ in 0..8 {
+            let feedback = register & 1;
+            register >>= 1;
+            if feedback != 0 {
+                register ^= SPEC_CRC32_POLY;
+            }
+        }
     }
-    crc ^ CRC32_INIT
+    register ^ SPEC_CRC32_INIT
 }
 
-fn oracle_fnv1a32_packed_low8(words: &[u32]) -> u32 {
-    let mut hash = FNV1A32_OFFSET;
-    for &word in words {
-        hash = (hash ^ (word & 0xFF)).wrapping_mul(FNV1A32_PRIME);
+/// FNV-1a 32-bit with the product taken in `u64` and reduced modulo 2^32.
+///
+/// The production walker relies on `u32` wrapping multiplication. Doing the
+/// arithmetic in a wider type and reducing explicitly is a different
+/// construction of the same specified function, so agreement is evidence rather
+/// than tautology.
+fn modular_fnv1a32(bytes: &[u8]) -> u32 {
+    const MODULUS: u64 = 1 << 32;
+    let mut hash = u64::from(SPEC_FNV1A32_OFFSET);
+    for &byte in bytes {
+        hash = ((hash ^ u64::from(byte)) * u64::from(SPEC_FNV1A32_PRIME)) % MODULUS;
     }
-    hash
+    hash as u32
 }
 
 fn byte_cases() -> Vec<Vec<u8>> {
