@@ -17,7 +17,9 @@ if [[ ! -f "$manifest" ]]; then
     exit 1
 fi
 
-demo_loc=$(find "$demo" -name '*.rs' -exec cat {} + | wc -l | tr -d ' ')
+# Tracked files only. Counting whatever is on disk lets untracked scratch inside
+# the demo inflate the cap, so the gate would disagree between a dev tree and CI.
+demo_loc=$(git ls-files -z -- "$demo/*.rs" | xargs -0r cat | wc -l | tr -d ' ')
 if [[ "$demo_loc" -gt 200 ]]; then
     echo "external-ir-extension-ci gate: $demo_loc Rust LOC exceeds the 200 LOC cap." >&2
     echo "Fix: keep external extension onboarding trivial enough to audit in one screen." >&2
@@ -30,6 +32,6 @@ if ! grep -q '^\[workspace\]$' "$manifest"; then
     exit 1
 fi
 
-CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" "$CARGO_RUNNER" check --manifest-path "$manifest" --locked -q
+"$CARGO_RUNNER" check --manifest-path "$manifest" --locked -q
 
 echo "external-ir-extension-ci gate: demo builds as an isolated crate at ${demo_loc} LOC."

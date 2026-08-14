@@ -27,6 +27,12 @@ jobs:
       - name: Workspace structure
         run: ./cargo_full run -p structure-gate
 
+      # The external-IR extension demo is the only proof that a third party can
+      # extend the IR from outside this workspace. Presence proves nothing, so
+      # this builds it as its own isolated crate against the committed lockfile.
+      - name: External IR extension demo builds standalone
+        run: bash scripts/check_external_ir_extension_ci.sh
+
   tree-rules:
     name: Rules that need no build
     runs-on: ubuntu-latest
