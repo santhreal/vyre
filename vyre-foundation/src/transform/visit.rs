@@ -29,12 +29,73 @@ pub trait ExprVisitor {
     fn visit_expr(&mut self, expr: &Expr);
 }
 
+/// Every child node body of `node`, in source order.
+///
+/// This is the ONE owner of the question "which node variants contain other
+/// nodes". Adding a `Node` variant fails to compile here, and that failure is
+/// the mechanism that keeps every traversal in the workspace correct.
+///
+/// A traversal that re-derives this with its own `match node` ending in
+/// `_ => false` silently classifies a new nesting variant as a leaf. In
+/// `validate::barrier` that is a correctness bug rather than a missed
+/// optimization: a barrier hidden inside an unrecognised variant makes an exit
+/// look ordered when it is not.
+///
+/// Leaves return two empty slices, so a caller can flatten unconditionally.
+/// Only `Node::If` uses both groups.
+#[inline]
+#[must_use]
+pub fn child_bodies(node: &Node) -> [&[Node]; 2] {
+    match node {
+        Node::If {
+            then, otherwise, ..
+        } => [then, otherwise],
+        Node::Loop { body, .. } => [body, &[]],
+        Node::Block(nodes) => [nodes, &[]],
+        Node::Region { body, .. } => [body, &[]],
+        Node::Let { .. }
+        | Node::Assign { .. }
+        | Node::Store { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AllReduce { .. }
+        | Node::AllGather { .. }
+        | Node::ReduceScatter { .. }
+        | Node::Broadcast { .. }
+        | Node::AsyncLoad { .. }
+        | Node::AsyncStore { .. }
+        | Node::AsyncWait { .. }
+        | Node::Trap { .. }
+        | Node::Resume { .. }
+        | Node::Opaque(_) => [&[], &[]],
+    }
+}
+
+/// True when `node` or any descendant satisfies `pred`.
+///
+/// Recurses through [`child_bodies`], so a new nesting variant is covered
+/// without touching this function.
+#[inline]
+pub fn any_descendant(node: &Node, pred: &mut impl FnMut(&Node) -> bool) -> bool {
+    if pred(node) {
+        return true;
+    }
+    child_bodies(node)
+        .into_iter()
+        .flatten()
+        .any(|child| any_descendant(child, pred))
+}
+
 /// Walk all nodes in a program, calling `f` on each.
 ///
 /// The traversal is depth-first and visits every statement node in the
 /// program's entry block, including nested `If`, `Loop`, and `Block`
 /// bodies. Because the walk is iterative, it can handle arbitrarily deep
 /// nesting without growing the native call stack.
+///
+/// Child bodies come from [`child_bodies`], the single exhaustive owner, so
+/// this function does not restate which variants nest.
 ///
 /// # Examples
 ///
@@ -57,48 +118,13 @@ pub fn walk_nodes(program: &Program, mut f: impl FnMut(&Node)) {
 
     while let Some(node) = stack.pop() {
         f(node);
-        match node {
-            Node::If {
-                then, otherwise, ..
-            } => {
-                for n in otherwise.iter().rev() {
-                    stack.push(n);
-                }
-                for n in then.iter().rev() {
-                    stack.push(n);
-                }
+        // Groups in reverse, each reversed: `then` pops before `otherwise`,
+        // and both in source order. Same visit order as the hand-written match
+        // this replaces.
+        for body in child_bodies(node).into_iter().rev() {
+            for n in body.iter().rev() {
+                stack.push(n);
             }
-            Node::Loop { body, .. } => {
-                for n in body.iter().rev() {
-                    stack.push(n);
-                }
-            }
-            Node::Block(inner) => {
-                for n in inner.iter().rev() {
-                    stack.push(n);
-                }
-            }
-            Node::Region { body, .. } => {
-                for n in body.iter().rev() {
-                    stack.push(n);
-                }
-            }
-            Node::Let { .. }
-            | Node::Assign { .. }
-            | Node::Store { .. }
-            | Node::Return
-            | Node::Barrier { .. }
-            | Node::IndirectDispatch { .. }
-            | Node::AllReduce { .. }
-            | Node::AllGather { .. }
-            | Node::ReduceScatter { .. }
-            | Node::Broadcast { .. }
-            | Node::AsyncLoad { .. }
-            | Node::AsyncStore { .. }
-            | Node::AsyncWait { .. }
-            | Node::Trap { .. }
-            | Node::Resume { .. }
-            | Node::Opaque(_) => {}
         }
     }
 }
@@ -108,6 +134,16 @@ fn push_node_children_and_exprs<'a>(
     node_stack: &mut SmallVec<[&'a Node; 128]>,
     expr_stack: &mut SmallVec<[&'a Expr; 128]>,
 ) {
+    // Child bodies come from the single exhaustive owner. The two stacks are
+    // independent, so pushing bodies before expressions preserves the order
+    // within each one.
+    for body in child_bodies(node).into_iter().rev() {
+        for n in body.iter().rev() {
+            node_stack.push(n);
+        }
+    }
+
+    // Which expressions a variant carries is genuinely per-variant.
     match node {
         Node::Let { value, .. } | Node::Assign { value, .. } => {
             expr_stack.push(value);
@@ -116,37 +152,16 @@ fn push_node_children_and_exprs<'a>(
             expr_stack.push(value);
             expr_stack.push(index);
         }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            for n in otherwise.iter().rev() {
-                node_stack.push(n);
-            }
-            for n in then.iter().rev() {
-                node_stack.push(n);
-            }
+        Node::If { cond, .. } => {
             expr_stack.push(cond);
         }
-        Node::Loop { from, to, body, .. } => {
-            for n in body.iter().rev() {
-                node_stack.push(n);
-            }
+        Node::Loop { from, to, .. } => {
             expr_stack.push(to);
             expr_stack.push(from);
         }
-        Node::Block(nodes) => {
-            for n in nodes.iter().rev() {
-                node_stack.push(n);
-            }
-        }
-        Node::Region { body, .. } => {
-            for n in body.iter().rev() {
-                node_stack.push(n);
-            }
-        }
-        Node::Return
+        Node::Block(_)
+        | Node::Region { .. }
+        | Node::Return
         | Node::Barrier { .. }
         | Node::IndirectDispatch { .. }
         | Node::AllReduce { .. }

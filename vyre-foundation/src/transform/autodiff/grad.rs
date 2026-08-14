@@ -8,6 +8,7 @@
 use rustc_hash::FxHashMap;
 
 use crate::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program, UnOp};
+use crate::transform::visit::child_bodies;
 
 use super::error::AutodiffError;
 mod expr;
@@ -226,25 +227,38 @@ fn first_dangling_forward_local(body: &[Node], local_targets: &[Ident]) -> Optio
         }
     }
     fn node_ref<'a>(node: &Node, locals: &'a [Ident]) -> Option<&'a Ident> {
-        match node {
+        let own = match node {
             Node::Let { value, .. } | Node::Assign { value, .. } => expr_ref(value, locals),
             Node::Store { index, value, .. } => {
                 expr_ref(index, locals).or_else(|| expr_ref(value, locals))
             }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => expr_ref(cond, locals)
-                .or_else(|| then.iter().find_map(|n| node_ref(n, locals)))
-                .or_else(|| otherwise.iter().find_map(|n| node_ref(n, locals))),
-            Node::Loop { from, to, body, .. } => expr_ref(from, locals)
-                .or_else(|| expr_ref(to, locals))
-                .or_else(|| body.iter().find_map(|n| node_ref(n, locals))),
-            Node::Block(body) => body.iter().find_map(|n| node_ref(n, locals)),
-            Node::Region { body, .. } => body.iter().find_map(|n| node_ref(n, locals)),
-            _ => None,
-        }
+            Node::If { cond, .. } => expr_ref(cond, locals),
+            Node::Loop { from, to, .. } => {
+                expr_ref(from, locals).or_else(|| expr_ref(to, locals))
+            }
+            Node::Block(_)
+            | Node::Region { .. }
+            | Node::Return
+            | Node::Barrier { .. }
+            | Node::IndirectDispatch { .. }
+            | Node::AllReduce { .. }
+            | Node::AllGather { .. }
+            | Node::ReduceScatter { .. }
+            | Node::Broadcast { .. }
+            | Node::AsyncLoad { .. }
+            | Node::AsyncStore { .. }
+            | Node::AsyncWait { .. }
+            | Node::Trap { .. }
+            | Node::Resume { .. }
+            | Node::Opaque(_) => None,
+        };
+        // Children come from the single exhaustive owner, in source order.
+        own.or_else(|| {
+            child_bodies(node)
+                .into_iter()
+                .flatten()
+                .find_map(|n| node_ref(n, locals))
+        })
     }
     body.iter()
         .find_map(|node| node_ref(node, local_targets))

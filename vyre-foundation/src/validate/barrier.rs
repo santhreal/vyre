@@ -15,6 +15,7 @@ use self::exit_uniformity::exits_after_last_barrier_are_uniform;
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::node::Node;
 use crate::memory_model::MemoryOrdering;
+use crate::transform::visit::any_descendant;
 use crate::validate::binding::Binding;
 use crate::validate::{err, ValidationError};
 
@@ -251,19 +252,7 @@ fn splice_straight_line<'a>(nodes: &'a [Node], out: &mut Vec<&'a Node>) {
 /// side by side invites merging them, and merging them in either direction is a
 /// defect: permissive guarding accepts the race, strict triggering misses it.
 fn contains_barrier_anywhere(node: &Node) -> bool {
-    match node {
-        Node::Barrier { .. } => true,
-        Node::If {
-            then, otherwise, ..
-        } => {
-            then.iter().any(contains_barrier_anywhere)
-                || otherwise.iter().any(contains_barrier_anywhere)
-        }
-        Node::Loop { body, .. } => body.iter().any(contains_barrier_anywhere),
-        Node::Block(nodes) => nodes.iter().any(contains_barrier_anywhere),
-        Node::Region { body, .. } => body.iter().any(contains_barrier_anywhere),
-        _ => false,
-    }
+    any_descendant(node, &mut |n| matches!(n, Node::Barrier { .. }))
 }
 
 /// True when executing `node` can leave the kernel.
@@ -272,16 +261,7 @@ fn contains_barrier_anywhere(node: &Node) -> bool {
 /// a nested one still ends participation in the outer loop's barriers and is
 /// counted here.
 fn can_return(node: &Node) -> bool {
-    match node {
-        Node::Return => true,
-        Node::If {
-            then, otherwise, ..
-        } => then.iter().any(can_return) || otherwise.iter().any(can_return),
-        Node::Loop { body, .. } => body.iter().any(can_return),
-        Node::Block(nodes) => nodes.iter().any(can_return),
-        Node::Region { body, .. } => body.iter().any(can_return),
-        _ => false,
-    }
+    any_descendant(node, &mut |n| matches!(n, Node::Return))
 }
 
 #[cfg(test)]
