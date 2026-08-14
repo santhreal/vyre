@@ -11,7 +11,7 @@ use super::{
     FRONTIER_TO_QUEUE_WORKGROUP_LANES,
 };
 use crate::bitset::bitset_words;
-use crate::graph::frontier_bits::{when_bit_set, BitAccess};
+use crate::graph::frontier_bits::when_bit_set;
 
 /// Build a GPU program that initializes the active queue length scalar.
 ///
@@ -115,11 +115,9 @@ pub fn frontier_to_queue(
                         when_bit_set(
                             frontier_in,
                             &Expr::var("q_src"),
-                            BitAccess {
-                                word: "q_word_idx",
-                                mask: "q_bit_mask",
-                                value: "q_src_word",
-                            },
+                            Some("q_word_idx"),
+                            "q_src_word",
+                            "q_bit_mask",
                             |word| word,
                             vec![
                                 Node::let_bind(
@@ -189,11 +187,9 @@ pub fn frontier_to_queue_parallel(
             when_bit_set(
                 frontier_in,
                 &Expr::var("qp_src"),
-                BitAccess {
-                    word: "qp_word_idx",
-                    mask: "qp_bit_mask",
-                    value: "qp_src_word",
-                },
+                Some("qp_word_idx"),
+                "qp_src_word",
+                "qp_bit_mask",
                 |word| word,
                 vec![
                     Node::let_bind(

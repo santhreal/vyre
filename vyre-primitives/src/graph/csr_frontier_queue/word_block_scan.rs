@@ -126,38 +126,14 @@ pub fn frontier_word_counts_scan_pass_a(
         ordering: MemoryOrdering::SeqCst,
     });
 
-    let mut stride = 1_u32;
-    while stride < FRONTIER_WORD_SCAN_BLOCK_LANES {
-        body.push(Node::store(
-            &scratch_b,
-            lane.clone(),
-            Expr::load(&scratch_a, lane.clone()),
-        ));
-        let previous_lane = Expr::add(lane.clone(), Expr::u32(0u32.wrapping_sub(stride)));
-        body.push(Node::if_then(
-            Expr::lt(Expr::u32(stride - 1), lane.clone()),
-            vec![Node::store(
-                &scratch_b,
-                lane.clone(),
-                Expr::add(
-                    Expr::load(&scratch_a, lane.clone()),
-                    Expr::load(&scratch_a, previous_lane),
-                ),
-            )],
-        ));
-        body.push(Node::Barrier {
-            ordering: MemoryOrdering::SeqCst,
-        });
-        body.push(Node::store(
+    body.extend(
+        crate::reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes(
             &scratch_a,
-            lane.clone(),
-            Expr::load(&scratch_b, lane.clone()),
-        ));
-        body.push(Node::Barrier {
-            ordering: MemoryOrdering::SeqCst,
-        });
-        stride *= 2;
-    }
+            &scratch_b,
+            &lane,
+            FRONTIER_WORD_SCAN_BLOCK_LANES,
+        ),
+    );
 
     body.push(Node::if_then(
         Expr::lt(global.clone(), Expr::u32(words)),
@@ -264,38 +240,14 @@ fn frontier_word_block_offsets_single_workgroup(
         ordering: MemoryOrdering::SeqCst,
     });
 
-    let mut stride = 1_u32;
-    while stride < FRONTIER_WORD_SCAN_BLOCK_LANES {
-        body.push(Node::store(
-            &scratch_b,
-            lane.clone(),
-            Expr::load(&scratch_a, lane.clone()),
-        ));
-        let previous_lane = Expr::add(lane.clone(), Expr::u32(0u32.wrapping_sub(stride)));
-        body.push(Node::if_then(
-            Expr::lt(Expr::u32(stride - 1), lane.clone()),
-            vec![Node::store(
-                &scratch_b,
-                lane.clone(),
-                Expr::add(
-                    Expr::load(&scratch_a, lane.clone()),
-                    Expr::load(&scratch_a, previous_lane),
-                ),
-            )],
-        ));
-        body.push(Node::Barrier {
-            ordering: MemoryOrdering::SeqCst,
-        });
-        body.push(Node::store(
+    body.extend(
+        crate::reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes(
             &scratch_a,
-            lane.clone(),
-            Expr::load(&scratch_b, lane.clone()),
-        ));
-        body.push(Node::Barrier {
-            ordering: MemoryOrdering::SeqCst,
-        });
-        stride *= 2;
-    }
+            &scratch_b,
+            &lane,
+            FRONTIER_WORD_SCAN_BLOCK_LANES,
+        ),
+    );
 
     body.push(Node::if_then(
         Expr::lt(lane.clone(), Expr::u32(num_blocks)),

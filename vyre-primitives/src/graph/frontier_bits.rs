@@ -85,22 +85,47 @@ pub(in crate::graph) fn bit_is_clear(value: &str, mask: &str) -> Expr {
 
 /// Run `body` only when bit `bit` of packed bitset `buffer` is set.
 ///
-/// Emits the address pair, the word load, and the guarded body: the "this lane's
-/// bit is live" preamble of every frontier-driven kernel.
+/// Emits the address bindings, the word load, and the guarded body: the "this
+/// lane's bit is live" preamble of every frontier-driven kernel.
+///
+/// `word` names the binding that holds the word index, or is `None` to inline
+/// that index into the load. Both shapes are live because both are ABI: a kernel
+/// that reads the index again keeps it bound, and a kernel whose only reader is
+/// the load does not introduce a binding it never reads a second time.
 pub(in crate::graph) fn when_bit_set(
     buffer: &str,
     bit: &Expr,
-    names: BitAccess<'_>,
+    word: Option<&str>,
+    value: &str,
+    mask: &str,
     word_index: impl FnOnce(Expr) -> Expr,
     body: Vec<Node>,
 ) -> Vec<Node> {
-    let [word, mask] = bind_bit_address(bit, names.word, names.mask, word_index);
-    vec![
-        word,
+    let index = word_index(Expr::shr(bit.clone(), Expr::u32(5)));
+    let bit_mask = Node::let_bind(
         mask,
-        bind_word(buffer, names),
-        Node::if_then(bit_is_set(names), body),
-    ]
+        Expr::shl(Expr::u32(1), Expr::bitand(bit.clone(), Expr::u32(31))),
+    );
+    let guard = Node::if_then(
+        Expr::ne(
+            Expr::bitand(Expr::var(value), Expr::var(mask)),
+            Expr::u32(0),
+        ),
+        body,
+    );
+    match word {
+        Some(word) => vec![
+            Node::let_bind(word, index),
+            bit_mask,
+            Node::let_bind(value, Expr::load(buffer, Expr::var(word))),
+            guard,
+        ],
+        None => vec![
+            Node::let_bind(value, Expr::load(buffer, index)),
+            bit_mask,
+            guard,
+        ],
+    }
 }
 
 /// Set bit `bit` of packed bitset `buffer` with an atomic OR, running
@@ -168,10 +193,7 @@ pub(in crate::graph) fn active_source_lane(
                 "excluded_word",
                 Expr::load(excluded_sources, Expr::var(names.word)),
             ));
-            Expr::and(
-                bit_is_set(names),
-                bit_is_clear("excluded_word", names.mask),
-            )
+            Expr::and(bit_is_set(names), bit_is_clear("excluded_word", names.mask))
         }
         None => bit_is_set(names),
     };

@@ -112,55 +112,53 @@ pub fn adaptive_sparse_dense_step(
     let sparse_body: Vec<Node> = when_bit_set(
         frontier_in,
         &lane,
-        BitAccess {
-            word: "sparse_word_idx",
-            mask: "sparse_bit_mask",
-            value: "sparse_src_word",
-        },
+        Some("sparse_word_idx"),
+        "sparse_src_word",
+        "sparse_bit_mask",
         |word| word,
         vec![
-                Node::let_bind("sparse_edge_start", Expr::load(edge_offsets, lane.clone())),
-                Node::let_bind(
-                    "sparse_edge_end",
-                    Expr::load(edge_offsets, Expr::add(lane.clone(), Expr::u32(1))),
-                ),
-                Node::loop_for(
-                    "sparse_e",
-                    Expr::var("sparse_edge_start"),
-                    Expr::var("sparse_edge_end"),
-                    vec![
-                        Node::let_bind(
-                            "sparse_kind_mask",
-                            Expr::load(edge_kind_mask, Expr::var("sparse_e")),
+            Node::let_bind("sparse_edge_start", Expr::load(edge_offsets, lane.clone())),
+            Node::let_bind(
+                "sparse_edge_end",
+                Expr::load(edge_offsets, Expr::add(lane.clone(), Expr::u32(1))),
+            ),
+            Node::loop_for(
+                "sparse_e",
+                Expr::var("sparse_edge_start"),
+                Expr::var("sparse_edge_end"),
+                vec![
+                    Node::let_bind(
+                        "sparse_kind_mask",
+                        Expr::load(edge_kind_mask, Expr::var("sparse_e")),
+                    ),
+                    Node::if_then(
+                        Expr::ne(
+                            Expr::bitand(Expr::var("sparse_kind_mask"), Expr::u32(allow_mask)),
+                            Expr::u32(0),
                         ),
-                        Node::if_then(
-                            Expr::ne(
-                                Expr::bitand(Expr::var("sparse_kind_mask"), Expr::u32(allow_mask)),
-                                Expr::u32(0),
+                        vec![
+                            Node::let_bind(
+                                "sparse_dst",
+                                Expr::load(edge_targets, Expr::var("sparse_e")),
                             ),
-                            vec![
-                                Node::let_bind(
-                                    "sparse_dst",
-                                    Expr::load(edge_targets, Expr::var("sparse_e")),
+                            Node::if_then(
+                                Expr::lt(Expr::var("sparse_dst"), Expr::u32(node_count)),
+                                set_bit(
+                                    frontier_out,
+                                    &Expr::var("sparse_dst"),
+                                    BitAccess {
+                                        word: "sparse_dst_word_idx",
+                                        mask: "sparse_dst_bit",
+                                        value: "_sparse_prev",
+                                    },
+                                    |word| word,
+                                    Vec::new(),
                                 ),
-                                Node::if_then(
-                                    Expr::lt(Expr::var("sparse_dst"), Expr::u32(node_count)),
-                                    set_bit(
-                                        frontier_out,
-                                        &Expr::var("sparse_dst"),
-                                        BitAccess {
-                                            word: "sparse_dst_word_idx",
-                                            mask: "sparse_dst_bit",
-                                            value: "_sparse_prev",
-                                        },
-                                        |word| word,
-                                        Vec::new(),
-                                    ),
-                                ),
-                            ],
-                        ),
-                    ],
-                ),
+                            ),
+                        ],
+                    ),
+                ],
+            ),
         ],
     );
 

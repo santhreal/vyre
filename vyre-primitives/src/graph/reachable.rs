@@ -23,7 +23,7 @@ use crate::bitset::frontier::{
     frontier_absorb_new_bits_body_prefixed_with_flag, frontier_tail_mask,
 };
 use crate::graph::edge_scan::csr_edge_expand_nodes;
-use crate::graph::frontier_bits::{when_bit_set, BitAccess};
+use crate::graph::frontier_bits::when_bit_set;
 use crate::graph::program_graph::{word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START};
 
 /// Canonical op id.
@@ -443,11 +443,9 @@ fn reachable_forward_wave_node(
         when_bit_set(
             frontier_in,
             &lane,
-            BitAccess {
-                word: word_idx.as_str(),
-                mask: bit_mask.as_str(),
-                value: src_word.as_str(),
-            },
+            Some(word_idx.as_str()),
+            src_word.as_str(),
+            bit_mask.as_str(),
             |word| word,
             csr_edge_expand_nodes(
                 shape,

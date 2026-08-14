@@ -167,11 +167,9 @@ pub(in crate::graph) fn csr_edge_scan_nodes(
     when_bit_set(
         frontier_out,
         &src,
-        BitAccess {
-            word: word_idx.as_str(),
-            mask: bit_mask.as_str(),
-            value: src_word.as_str(),
-        },
+        Some(word_idx.as_str()),
+        src_word.as_str(),
+        bit_mask.as_str(),
         frontier_index,
         expand,
     )

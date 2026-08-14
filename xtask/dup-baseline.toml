@@ -14,7 +14,11 @@
 # vyre-libs dispatch partners, and neither side owns the shape yet. The CSR
 # frontier buffer layout is no longer part of that: `graph::program_graph` owns
 # `word_buffer`, `frontier_buffer` and `push_frontier_changed_buffers`, and every
-# graph primitive declares its own buffers through them.
+# graph primitive declares its own buffers through them. Nor is the kernel-body
+# skeleton below those buffers: `graph::frontier_bits` owns packed-bitset word
+# and mask addressing, `graph::lane_grid` owns the one-dimensional dispatch grid,
+# and `reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes` owns the
+# double-buffered workgroup scan sweep.
 #
 # Eleven of vyre-primitives' lines are deliberate and cannot be collapsed.
 # `vyre_primitives::types::linear_check::LinearDiscipline` and
@@ -162,8 +166,8 @@ total_lines = 3599
 
 [[crate]]
 name = "vyre-primitives"
-duplicate_lines = 6981
-total_lines = 101992
+duplicate_lines = 6307
+total_lines = 101622
 
 [[crate]]
 name = "vyre-reference"

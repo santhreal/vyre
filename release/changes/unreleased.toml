@@ -994,3 +994,8 @@ text = "`vyre-conform` depends on `vyre-libs` with `features = [\"full\"]` rathe
 id = "conform-spec-duplication-pins-lowered-to-measured"
 category = "Changed"
 text = "Four duplication pins record what the tree measures: `conform` 765 to 367 duplicated lines, `vyre-spec` 244 to 84, `vyre-foundation` 4342 to 4127, and `vyre-libs` 11446 to 11425, each with `total_lines` measured. A pin with room under it hides the next copy."
+
+[[fragments]]
+id = "graph-kernel-body-skeleton-has-one-owner"
+category = "Fixed"
+text = "The packed-bitset addressing skeleton, the one-dimensional dispatch grid and the double-buffered workgroup scan sweep each have one owner in `vyre-primitives`: `graph::frontier_bits`, `graph::lane_grid` and `reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes`. Each was hand-written in a dozen or more graph primitives, and the copies disagreed at the zero case. Two dispatch grids returned zero groups for an empty input, which the CUDA launcher rejects outright because it requires every grid axis above zero, and the empty input reaches those grids because their input validators accept it. Three copies of a ceiling division underflowed at zero and were safe only because every caller happened to floor its argument first, and a fourth returned zero groups. A frontier word count multiplied three unsigned factors without saturating, so three large factors wrap to a small allocation. A kernel body restated per primitive drifts where no per-op oracle looks, because an oracle compares evaluated output and never sees the grid or the allocation size."

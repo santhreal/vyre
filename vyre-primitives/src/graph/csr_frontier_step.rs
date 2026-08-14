@@ -393,11 +393,9 @@ fn backward_body(
                         when_bit_set(
                             frontier_in,
                             &Expr::var("dst"),
-                            BitAccess {
-                                word: "dst_word_idx",
-                                mask: "dst_bit",
-                                value: "dst_word",
-                            },
+                            None,
+                            "dst_word",
+                            "dst_bit",
                             |word| word,
                             vec![Node::assign("hit", Expr::u32(1))],
                         ),

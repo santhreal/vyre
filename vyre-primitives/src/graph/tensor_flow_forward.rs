@@ -201,11 +201,9 @@ pub fn try_tensor_flow_forward(
                     lane.extend(when_bit_set(
                         tensor_in,
                         &Expr::var("abs_bit"),
-                        BitAccess {
-                            word: "word_idx",
-                            mask: "bit_mask",
-                            value: "src_word",
-                        },
+                        Some("word_idx"),
+                        "src_word",
+                        "bit_mask",
                         |word| word,
                         tensor_flow_edge_scan_body(
                             tensor_out,
