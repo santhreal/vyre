@@ -22,6 +22,7 @@ mod dispatch_result;
 mod error;
 mod pending_dispatch;
 mod regex_accelerator;
+mod resident_sequence;
 mod resource;
 mod typed_dispatch;
 mod vyre_backend;
