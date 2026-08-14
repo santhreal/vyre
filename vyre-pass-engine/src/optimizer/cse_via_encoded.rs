@@ -36,9 +36,9 @@ use vyre_libs::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use super::encode::EncodeError;
 use super::expr_arena::{encode_expr_arena, expr_kind, ExprArenaEncoding};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 #[derive(Debug, Default)]
 struct CseKernelScratch {
@@ -335,25 +335,6 @@ fn run_cse_kernels_with_scratch_into(
 ///   6: hash (RW; init zeros)
 #[must_use]
 pub fn build_structural_hash_program(expr_count: u32, max_depth_iter_cap: u32) -> Program {
-    let buffers = vec![
-        BufferDecl::storage("arena_kinds", 0, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg0", 1, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg1", 2, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg2", 3, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_depths", 4, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("max_depth_buf", 5, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(1),
-        BufferDecl::storage("hash", 6, BufferAccess::ReadWrite, DataType::U32)
-            .with_count(expr_count.max(1)),
-    ];
-
-    let chunk_cap = (expr_count + WORKGROUP_X - 1) / WORKGROUP_X;
-
     // Per-Expr body: structural-hash mixer. Critical invariant:
     // mix child HASHES (h0/h1/h2), never raw arg slots (a0/a1/a2)
     // for parent kinds  -  raw args carry arena-position-dependent
@@ -458,48 +439,15 @@ pub fn build_structural_hash_program(expr_count: u32, max_depth_iter_cap: u32) -
         Node::store("hash", Expr::var("i"), Expr::var("h")),
     ];
 
-    let chunk_loop = Node::loop_for(
-        "chunk",
-        Expr::u32(0),
-        Expr::u32(chunk_cap.max(1)),
+    super::arena_kernel::build_fused_level_wave_program(
+        expr_count,
+        max_depth_iter_cap,
         vec![
-            Node::let_bind(
-                "i",
-                Expr::add(
-                    Expr::gid_x(),
-                    Expr::mul(Expr::var("chunk"), Expr::u32(WORKGROUP_X)),
-                ),
-            ),
-            Node::if_then(
-                Expr::lt(Expr::var("i"), Expr::u32(expr_count)),
-                vec![
-                    Node::let_bind("my_depth", Expr::load("arena_depths", Expr::var("i"))),
-                    Node::if_then(
-                        Expr::eq(Expr::var("my_depth"), Expr::var("level")),
-                        per_expr_body,
-                    ),
-                ],
-            ),
+            BufferDecl::storage("hash", 6, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(expr_count.max(1)),
         ],
-    );
-
-    let outer = Node::loop_for(
-        "level",
-        Expr::u32(0),
-        Expr::u32(max_depth_iter_cap.max(1)),
-        vec![
-            Node::let_bind("md", Expr::load("max_depth_buf", Expr::u32(0))),
-            Node::if_then(
-                Expr::le(Expr::var("level"), Expr::var("md")),
-                vec![chunk_loop],
-            ),
-            Node::Barrier {
-                ordering: vyre_foundation::MemoryOrdering::SeqCst,
-            },
-        ],
-    );
-
-    Program::wrapped(buffers, [WORKGROUP_X, 1, 1], vec![outer])
+        per_expr_body,
+    )
 }
 
 /// Build the canonical-id Program. Single dispatch: each thread `i`
@@ -525,25 +473,18 @@ pub fn build_structural_hash_program(expr_count: u32, max_depth_iter_cap: u32) -
 ///   6: arena_arg2    (RO)
 #[must_use]
 pub fn build_canonical_id_program(expr_count: u32, capacity: u32) -> Program {
-    let buffers = vec![
+    let mut buffers = vec![
         BufferDecl::storage("hash", 0, BufferAccess::ReadOnly, DataType::U32)
             .with_count(expr_count.max(1)),
         BufferDecl::storage("canonical", 1, BufferAccess::ReadWrite, DataType::U32)
             .with_count(expr_count.max(1)),
         BufferDecl::storage("table_canonical", 2, BufferAccess::ReadWrite, DataType::U32)
             .with_count(capacity.max(1)),
-        // Structural tuple buffers: hash collision alone must never
-        // declare two exprs equivalent. These four buffers supply the
-        // definitive (kind, arg0, arg1, arg2) tuple comparison.
-        BufferDecl::storage("arena_kinds", 3, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg0", 4, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg1", 5, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg2", 6, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
     ];
+    // Structural tuple buffers: hash collision alone must never declare two
+    // exprs equivalent. The four arena rows supply the definitive
+    // (kind, arg0, arg1, arg2) tuple comparison.
+    buffers.extend(super::arena_kernel::arena_row_buffers(expr_count, 3));
 
     // Per-thread body: brute-force scan 0..i.
     // The post-order encoding ensures children appear before parents,
@@ -750,26 +691,7 @@ pub fn apply_cse_let_dedupe_with_lookup<C: CanonicalLookup + ?Sized>(
         node_index: 1, // node_top_level_exprs[0] is the synthetic ROOT
         node_top_level_exprs: &arena.node_top_level_exprs,
     };
-
-    let body: Vec<Node> = match program.entry() {
-        [Node::Region { body, .. }] => body.as_ref().clone(),
-        entry => entry.to_vec(),
-    };
-    let new_body = walker.rewrite_scope(&body);
-
-    let new_entry = match program.entry() {
-        [Node::Region {
-            generator,
-            source_region,
-            ..
-        }] => vec![Node::Region {
-            generator: generator.clone(),
-            source_region: source_region.clone(),
-            body: Arc::new(new_body),
-        }],
-        _ => new_body,
-    };
-    program.with_rewritten_entry(new_entry)
+    super::rewrite_program_entry(program, |body| walker.rewrite_scope(body))
 }
 
 struct LetDedupeWalker<'a, C: CanonicalLookup + ?Sized> {
@@ -869,8 +791,8 @@ impl<C: CanonicalLookup + ?Sized> LetDedupeWalker<'_, C> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use std::cell::RefCell;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
 
     struct CseDispatcher {
         outputs: RefCell<Vec<Vec<Vec<u8>>>>,
@@ -887,18 +809,7 @@ mod tests {
         }
     }
 
-    fn one_expr_arena() -> ExprArenaEncoding {
-        ExprArenaEncoding {
-            expr_count: 1,
-            kinds: vec![expr_kind::LIT_U32],
-            arg0: vec![0],
-            arg1: vec![0],
-            arg2: vec![0],
-            depths: vec![0],
-            max_depth: 0,
-            ..ExprArenaEncoding::default()
-        }
-    }
+    use super::super::arena_kernel::single_lit_u32_arena as one_expr_arena;
 
     #[test]
     fn structural_hash_program_compiles_to_program() {

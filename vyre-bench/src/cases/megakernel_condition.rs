@@ -1,6 +1,7 @@
+use super::byte_pack::{gb_per_second, rate_per_second_x1000, read_word, write_word};
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRun, Correctness,
+    DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{
@@ -14,7 +15,6 @@ use vyre_runtime::resident_work_queue::protocol::{
     ARG0_WORD, OPCODE_WORD, PRIORITY_WORD, STATUS_WORD, TENANT_WORD,
 };
 use vyre_runtime::resident_work_queue::{self, control, slot, OpcodeHandler, SLOT_WORDS};
-use super::byte_pack::{gb_per_second, rate_per_second_x1000, read_word, write_word};
 
 /// Names this case's buffers in word codec errors.
 const WORD_CONTEXT: &str = "megakernel condition output";
@@ -286,13 +286,43 @@ fn condition_ring(slot_count: u32, expected_fired: &mut u32) -> Result<Vec<u8>, 
             })?;
         }
         let base = slot_index.saturating_mul(SLOT_WORDS);
-        write_word(&mut ring, base.saturating_add(STATUS_WORD), slot::PUBLISHED, WORD_CONTEXT)?;
-        write_word(&mut ring, base.saturating_add(OPCODE_WORD), CONDITION_OPCODE, WORD_CONTEXT)?;
+        write_word(
+            &mut ring,
+            base.saturating_add(STATUS_WORD),
+            slot::PUBLISHED,
+            WORD_CONTEXT,
+        )?;
+        write_word(
+            &mut ring,
+            base.saturating_add(OPCODE_WORD),
+            CONDITION_OPCODE,
+            WORD_CONTEXT,
+        )?;
         write_word(&mut ring, base.saturating_add(TENANT_WORD), 0, WORD_CONTEXT)?;
-        write_word(&mut ring, base.saturating_add(PRIORITY_WORD), slot::PRIORITY_NORMAL, WORD_CONTEXT)?;
-        write_word(&mut ring, base.saturating_add(ARG0_WORD), flags, WORD_CONTEXT)?;
-        write_word(&mut ring, base.saturating_add(ARG0_WORD + 1), count | (threshold << 16), WORD_CONTEXT)?;
-        write_word(&mut ring, base.saturating_add(ARG0_WORD + 2), offset | (limit << 16), WORD_CONTEXT)?;
+        write_word(
+            &mut ring,
+            base.saturating_add(PRIORITY_WORD),
+            slot::PRIORITY_NORMAL,
+            WORD_CONTEXT,
+        )?;
+        write_word(
+            &mut ring,
+            base.saturating_add(ARG0_WORD),
+            flags,
+            WORD_CONTEXT,
+        )?;
+        write_word(
+            &mut ring,
+            base.saturating_add(ARG0_WORD + 1),
+            count | (threshold << 16),
+            WORD_CONTEXT,
+        )?;
+        write_word(
+            &mut ring,
+            base.saturating_add(ARG0_WORD + 2),
+            offset | (limit << 16),
+            WORD_CONTEXT,
+        )?;
     }
     Ok(ring)
 }

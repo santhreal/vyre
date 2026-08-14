@@ -1,5 +1,25 @@
-use super::*;
+use super::baseline::{cpu_aho_overlapping_matches, cpu_bounded_range_matches};
+use super::haystack::{build_irregular_haystack, pattern_lengths};
+use super::literals::{
+    prepare_scan_ac_irregular, scan_ac_inputs, MATCHES_RESOURCE_INDEX, MATCH_COUNT_INPUT_INDEX,
+    SCAN_RESOURCE_INDICES,
+};
+use super::match_triples::{
+    decode_scan_outputs, encode_match_triples, match_triples_output_bytes,
+    match_triples_readback_bytes, selected_scan_output_bytes,
+};
+use super::{
+    count, CANDIDATE_END_MASK_INPUT_INDEX, CANDIDATE_SUFFIX2_MASK_INPUT_INDEX,
+    CANDIDATE_SUFFIX3_BLOOM_INPUT_INDEX, HAYSTACK_BYTES, MAX_MATCHES, PATTERNS,
+};
+use vyre_foundation::ir::Program;
 use vyre_foundation::match_result::ByteRange;
+use vyre_libs::scan::classic_ac::{
+    classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
+    classic_ac_candidate_suffix3_bloom_words, classic_ac_compile,
+    try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
+};
+use vyre_primitives::wire::pack_u32_slice;
 
 mod count_prefilter_generated;
 

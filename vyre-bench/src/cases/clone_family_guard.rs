@@ -18,7 +18,10 @@ fn classify(result: Result<Correctness, BenchError>) -> (&'static str, String) {
 
 fn sparse_output_shapes() -> Vec<(&'static str, Vec<Vec<u8>>, Option<Vec<Vec<u8>>>)> {
     let words = |values: &[u32]| -> Vec<u8> {
-        values.iter().flat_map(|value| value.to_le_bytes()).collect()
+        values
+            .iter()
+            .flat_map(|value| value.to_le_bytes())
+            .collect()
     };
     vec![
         ("no baseline", vec![words(&[1]), words(&[7])], None),
@@ -52,7 +55,11 @@ fn sparse_output_shapes() -> Vec<(&'static str, Vec<Vec<u8>>, Option<Vec<Vec<u8>
             vec![words(&[2]), words(&[7, 9])],
             Some(vec![words(&[2]), words(&[7, 10])]),
         ),
-        ("empty sets", vec![words(&[0]), vec![]], Some(vec![words(&[0]), vec![]])),
+        (
+            "empty sets",
+            vec![words(&[0]), vec![]],
+            Some(vec![words(&[0]), vec![]]),
+        ),
     ]
 }
 
@@ -69,11 +76,23 @@ fn conditional_sparse_verifier_classifies_every_shape_identically() {
     let expected = [
         ("err-correctness", "did not capture baseline sparse"),
         ("err-correctness", "sparse output count mismatch"),
-        ("err-correctness", "count mismatch: backend returned 2, baseline returned 1"),
-        ("err-correctness", "output buffer shorter than reported count"),
-        ("err-correctness", "output buffer shorter than reported count"),
+        (
+            "err-correctness",
+            "count mismatch: backend returned 2, baseline returned 1",
+        ),
+        (
+            "err-correctness",
+            "output buffer shorter than reported count",
+        ),
+        (
+            "err-correctness",
+            "output buffer shorter than reported count",
+        ),
         ("ok-exact", ""),
-        ("err-correctness", "set differs between backend and baseline"),
+        (
+            "err-correctness",
+            "set differs between backend and baseline",
+        ),
         ("ok-exact", ""),
     ];
 
@@ -100,13 +119,7 @@ fn conditional_sparse_verifier_classifies_every_shape_identically() {
 
 /// The exact words the bench-wide mixer produced before it was collapsed
 /// from eleven byte-identical copies onto one owner.
-const MIX32_PINNED_WORDS: [u32; 5] = [
-    0x00000000,
-    0x688990C0,
-    0x6768824A,
-    0x01FCE552,
-    0x5CE575F0,
-];
+const MIX32_PINNED_WORDS: [u32; 5] = [0x00000000, 0x688990C0, 0x6768824A, 0x01FCE552, 0x5CE575F0];
 
 /// The bench-wide mixer has one owner. This pins the exact words it produces,
 /// so a rewrite of the owner cannot silently change every generated fixture in
@@ -157,11 +170,18 @@ fn word_codec_refuses_out_of_range_and_round_trips_the_rest() {
         // handed to the wire decoder underneath it: only this branch can name
         // the index that was asked for.
         let expected = format!("guard buffer word {out_of_range} is outside output buffer");
-        assert_eq!(read.to_string(), format!("Correctness violation: {expected}"));
+        assert_eq!(
+            read.to_string(),
+            format!("Correctness violation: {expected}")
+        );
         assert_eq!(write.to_string(), format!("Execution failed: {expected}"));
     }
 
-    assert_eq!(buffer.len(), 64, "a rejected write must not resize the buffer");
+    assert_eq!(
+        buffer.len(),
+        64,
+        "a rejected write must not resize the buffer"
+    );
 }
 
 /// Zero elapsed time reports zero, not an infinity or a division panic, and the

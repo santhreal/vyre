@@ -15,9 +15,9 @@ use vyre_foundation::ir::Program;
 use super::canonicalize_via_encoded::{gpu_canonicalize, CanonicalizeError};
 use super::const_fold_via_encoded::{gpu_const_fold, ConstFoldError};
 use super::dce_via_encoded::{gpu_dce, DceError};
-use vyre_foundation::program_dispatch::ProgramDispatcher;
 use super::pattern_match_via_encoded::{gpu_algebraic_identities, PatternMatchError};
 use super::pipeline_resident::{gpu_pipeline_resident, PipelineError};
+use vyre_foundation::program_dispatch::ProgramDispatcher;
 
 /// Errors surfaced by `gpu_optimize`.
 #[derive(Debug)]

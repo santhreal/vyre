@@ -66,7 +66,7 @@ total_lines = 1534
 
 [[crate]]
 name = "vyre-bench"
-duplicate_lines = 3563
+duplicate_lines = 3397
 total_lines = 37846
 
 [[crate]]
@@ -181,7 +181,7 @@ total_lines = 29187
 
 [[crate]]
 name = "vyre-pass-engine"
-duplicate_lines = 834
+duplicate_lines = 395
 total_lines = 58675
 
 [[crate]]

@@ -16,6 +16,7 @@
 //! against `vyre_libs::graph::dispatch::cpu_oracle` under `cpu-parity` and
 //! against a backend dispatcher in production, from the same Program.
 
+mod arena_kernel;
 pub mod canonicalize_via_encoded;
 pub mod const_fold_via_encoded;
 pub mod const_prop;
@@ -85,18 +86,11 @@ fn build_encoded_analysis_program(
 ) -> vyre_foundation::ir::Program {
     use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
     let count = expr_count.max(1);
-    let buffers = vec![
-        BufferDecl::storage("arena_kinds", 0, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(count),
-        BufferDecl::storage("arena_arg0", 1, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(count),
-        BufferDecl::storage("arena_arg1", 2, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(count),
-        BufferDecl::storage("arena_arg2", 3, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(count),
+    let mut buffers = arena_kernel::arena_row_buffers(expr_count, 0);
+    buffers.push(
         BufferDecl::storage(output_name, 4, BufferAccess::ReadWrite, DataType::U32)
             .with_count(count),
-    ];
+    );
     let body = vec![
         Node::let_bind("i", Expr::gid_x()),
         Node::if_then(
@@ -141,10 +135,12 @@ fn run_encoded_analysis_kernel(
         Some([count.div_ceil(256), 1, 1]),
     )?;
     if outputs.len() != 1 {
-        return Err(vyre_foundation::program_dispatch::DispatchError::BackendError(format!(
-            "Fix: {stage} dispatch expected exactly one {output_name} output, got {}.",
-            outputs.len()
-        )));
+        return Err(
+            vyre_foundation::program_dispatch::DispatchError::BackendError(format!(
+                "Fix: {stage} dispatch expected exactly one {output_name} output, got {}.",
+                outputs.len()
+            )),
+        );
     }
     decode_u32_output_exact(
         &outputs[0],

@@ -31,9 +31,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use vyre_libs::dispatch_buffers::{decode_u32_output_exact, u32_slice_to_le_bytes};
 
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentDispatchStep};
 use super::encode::{encode_program, EncodeError};
 use super::expr_arena::{encode_expr_arena, ExprArenaEncoding};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentDispatchStep};
 
 /// Max expression nesting depth this GPU-native pre-filter flags.
 ///

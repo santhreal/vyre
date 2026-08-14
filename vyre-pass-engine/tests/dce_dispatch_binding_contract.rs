@@ -21,8 +21,8 @@
 use std::cell::RefCell;
 
 use vyre_foundation::ir::{BufferAccess, Expr, MemoryKind, Node, Program};
-use vyre_pass_engine::optimizer::dce_via_encoded::gpu_dce;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_pass_engine::optimizer::dce_via_encoded::gpu_dce;
 
 /// Number of dispatch input slots a program declares.
 ///

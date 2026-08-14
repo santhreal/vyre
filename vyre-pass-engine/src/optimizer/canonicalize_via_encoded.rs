@@ -13,9 +13,9 @@
 
 use vyre_foundation::ir::{Expr, Node, Program};
 
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use super::encode::EncodeError;
 use super::expr_arena::{encode_expr_arena, expr_kind, ExprArenaEncoding};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 #[derive(Debug, Default)]
 struct CanonicalizeKernelScratch {
@@ -217,7 +217,7 @@ fn bin_op_body() -> Vec<Node> {
 }
 
 fn rewrite_program_with_swap_mask(program: Program, swap_mask: &[u32]) -> Program {
-    super::rewrite_walk::rewrite_program_with_expr_rewriter(program, |expr, counter| {
+    super::rewrite_walk::rewrite_program_with_expr_rewriter(&program, |expr, counter| {
         rewrite_expr(expr, swap_mask, counter)
     })
 }
@@ -266,16 +266,7 @@ mod tests {
         }
     }
 
-    fn one_expr_arena() -> ExprArenaEncoding {
-        ExprArenaEncoding {
-            expr_count: 1,
-            kinds: vec![expr_kind::LIT_U32],
-            arg0: vec![0],
-            arg1: vec![0],
-            arg2: vec![0],
-            ..ExprArenaEncoding::default()
-        }
-    }
+    use super::super::arena_kernel::single_lit_u32_arena as one_expr_arena;
 
     #[test]
     fn kernel_into_decodes_exact_swap_mask_into_reused_buffer() {

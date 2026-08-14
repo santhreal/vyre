@@ -1,47 +1,16 @@
+//! The `(tag, start, end)` match-triple wire format both scan cases read back.
+//!
+//! The GPU writes a match count into one buffer and packed u32 triples into
+//! another. Everything here is about turning that pair into `ByteRange` values,
+//! sizing the compact readback, and failing closed when the count and the
+//! triples disagree.
+
 use crate::api::case::BenchError;
 use vyre_foundation::ir::Program;
 use vyre_foundation::match_result::ByteRange;
 
 use super::metrics::ScanAcStats;
-use super::{MATCH_TRIPLE_WORDS, PATTERNS};
-use crate::cases::mix32;
-
-pub(super) fn pattern_lengths() -> Result<Vec<u32>, BenchError> {
-    PATTERNS
-        .iter()
-        .map(|pattern| {
-            u32::try_from(pattern.len()).map_err(|_| {
-                BenchError::EnvironmentInvalid(
-                    "irregular AC pattern length exceeded u32. Fix: split oversized literals."
-                        .to_string(),
-                )
-            })
-        })
-        .collect()
-}
-
-pub(crate) fn build_irregular_haystack(len: usize) -> (Vec<u8>, u32) {
-    let mut haystack = vec![0_u8; len];
-    for (index, byte) in haystack.iter_mut().enumerate() {
-        let mixed = mix32(index as u32);
-        *byte = 33 + (mixed % 90) as u8;
-    }
-
-    let mut planted = 0_u32;
-    for (pattern_index, pattern) in PATTERNS.iter().enumerate() {
-        let stride = 8_191 + pattern_index * 271;
-        let phase = 17 + pattern_index * 113;
-        let mut offset = phase;
-        while offset + pattern.len() <= haystack.len() {
-            if (offset & 31) != 0 {
-                haystack[offset..offset + pattern.len()].copy_from_slice(pattern);
-                planted += 1;
-            }
-            offset += stride;
-        }
-    }
-    (haystack, planted)
-}
+use super::MATCH_TRIPLE_WORDS;
 
 pub(super) fn decode_scan_outputs(
     outputs: &[Vec<u8>],
@@ -116,7 +85,7 @@ fn unpack_match_triples(
     Ok(results)
 }
 
-pub(crate) fn encode_match_triples(matches: &[ByteRange]) -> Vec<u8> {
+pub(super) fn encode_match_triples(matches: &[ByteRange]) -> Vec<u8> {
     let mut encoded = Vec::with_capacity(matches.len() * 12);
     for hit in matches {
         encoded.extend_from_slice(&hit.tag.to_le_bytes());
@@ -187,4 +156,3 @@ pub(super) fn with_matches_readback_range(
     }
     Ok(program.with_rewritten_buffers(buffers))
 }
-

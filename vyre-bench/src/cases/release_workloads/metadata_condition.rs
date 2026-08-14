@@ -1,6 +1,8 @@
 //! Metadata condition batch release case over filesize, header, and entropy metadata
 //! columns.
 
+use super::registration::{gpu_requirements, RELEASE_SUITES};
+use super::run_assembly::{encode_u32_words, resident_reset_transfer_accounting};
 use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
@@ -9,8 +11,6 @@ use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, ResidentInputPool, ResidentInputSet,
 };
-use super::registration::{gpu_requirements, RELEASE_SUITES};
-use super::run_assembly::{encode_u32_words, resident_reset_transfer_accounting};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const METADATA_CONDITION_RESIDENT_BATCH_SIZE: usize = 16;

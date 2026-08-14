@@ -17,8 +17,8 @@ use super::conditional::{
     conditional_measure, conditional_program, pattern_streams, verify_sparse_outputs,
     ConditionalLabels, ConditionalPrepared, HONEST_SUITES,
 };
-use super::mix32;
 use super::harness::{CaseOps, ContractDescription, HarnessCase, WorkloadDescription};
+use super::mix32;
 use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, Correctness, DeterminismClass,
     WorkloadClass,

@@ -399,3 +399,18 @@ text = "The WGPU C-frontend token tests share the fixture builder, the CPU pipel
 id = "expression-shape-rows-have-constructors"
 category = "Changed"
 text = "An expected expression-shape row is stated as one call. It was an eight-field tuple written across ten lines, so a precedence ladder read as three hundred lines of columns and two suites expecting the same row for the same operator matched as duplicated text. `binary_row` and `conditional_row` join `shape_none_row` in the shared support module and fix only what the grammar determines: a binary row's third link is the sentinel, and a ternary's operator spelling, precedence band, and associativity are constants. Precedence and associativity stay explicit arguments for binary operators, because deriving them from the parser's own table would make the assertion agree with the implementation by construction."
+
+[[fragments]]
+id = "pass-engine-encoded-rewrite-single-owner"
+category = "Changed"
+text = "The encoded-order IR rewrite walk in `vyre-pass-engine` has one owner, `optimizer::rewrite_walk`. Three copies of the same recursive rebuild existed, in the walk module, in const folding, and in resident arena-delta decoding, so a fix to the descent order reached one pass and not the others. Each pass now supplies only its per-expression decision: `fold_decision` for const folding and `arena_delta_decision` for the combined resident deltas, which applies const fold, then pattern-match action, then canonicalize swap. The fused level-wave kernel skeleton and the arena row buffer declarations are likewise owned once, by `optimizer::arena_kernel`, and the region entry unwrap by `optimizer::rewrite_program_entry`. Program output is unchanged; `vyre-pass-engine/tests/encoded_rewrite_walk_contract.rs` pins the walk and both decision functions against the rebuilt tree they must produce."
+
+[[fragments]]
+id = "scan-ac-irregular-one-owner-per-concern"
+category = "Changed"
+text = "The irregular Aho-Corasick bench case cluster has one owner per concern. `vyre-bench/src/cases/scan_ac_irregular/mod.rs` held module wiring, the shared constants, and one of the two case implementations, and the literal scan and the count preflight each carried their own copy of the workgroup validation, grid derivation, resident reset-then-scan dispatch, transfer accounting, and BenchRun assembly. The case now lives in `literals.rs`, the sampling path in `sample.rs`, the 4 MiB fixture in `haystack.rs`, and the match wire format in `match_triples.rs`; `support.rs`, which was named for a shape rather than a concern, is gone. Reported metrics, error strings, and readback ranges are unchanged."
+
+[[fragments]]
+id = "bench-baselines-gate-finds-bench-targets"
+category = "Fixed"
+text = "`scripts/check_bench_baselines.sh` requires a `benches/RESULTS.md` section for every crate that owns a bench source file, not for every directory named `benches`. The directory search demanded a measured section for `vyre-grammar-gen`, whose `benches/` directory holds documentation and no target, so the gate could not pass without an invented number. `benches/RESULTS.md` now carries the criterion medians of `cargo bench -p vyre-primitives --bench wire_throughput` and `cargo bench -p vyre-bench --bench release` with the machine, GPU, CPU, toolchain, and commit they were measured on."

@@ -11,8 +11,8 @@
 //! [`super::triplet_pass`]; the routing program, the generated streams and the
 //! per-item routing decision are here.
 
-use super::mix32;
 use super::harness::{CaseOps, ContractDescription, HarnessCase, WorkloadDescription};
+use super::mix32;
 use super::triplet_pass::{
     prepare_triplet, triplet_bytes_touched, triplet_measure, triplet_program, TripletPrepared,
     TripletSpec,
@@ -217,7 +217,6 @@ fn adaptive_route_word(signal: u32, history: u32, threshold: u32) -> u32 {
     };
     (route << 24) | (risk & 0x00ff_ffff)
 }
-
 
 fn value_identity(value: &mut u32) -> u32 {
     *value

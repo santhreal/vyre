@@ -1,16 +1,16 @@
 //! Callgraph reachability step release case over a CSR graph, with the linear graph
 //! generator, CPU forward baseline, and witness digest.
 
+use super::registration::{gpu_requirements, RELEASE_SUITES};
+use super::run_assembly::{
+    bench_run_from_timed_with_accounting, encode_u32_words, resident_reset_transfer_accounting,
+};
 use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::MetricPoint;
 use crate::api::resident::{input_bytes_total, ResidentInputPool};
-use super::registration::{gpu_requirements, RELEASE_SUITES};
-use super::run_assembly::{
-    bench_run_from_timed_with_accounting, encode_u32_words, resident_reset_transfer_accounting,
-};
 use vyre::ir::Program;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 

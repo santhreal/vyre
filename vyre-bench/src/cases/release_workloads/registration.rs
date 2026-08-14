@@ -1,7 +1,6 @@
 //! Suite membership, GPU requirement shape, and inventory registration for the
 //! release bench cases.
 
-use crate::api::case::{BenchCase, BenchRequirements};
 use super::callgraph_reachability::CallgraphReachabilityStep;
 use super::families::{
     ALIAS_REACHING_DEF, CONDITION_EVAL_BATCH, C_AST_TRAVERSAL, EGRAPH_SATURATION, ENTROPY_WINDOW,
@@ -10,6 +9,7 @@ use super::families::{
 };
 use super::metadata_condition::MetadataConditionBatch;
 use super::sparse_compaction::SparseOutputCompactionCount;
+use crate::api::case::{BenchCase, BenchRequirements};
 
 pub(super) const RELEASE_SUITES: &[crate::api::suite::SuiteKind] = &[
     crate::api::suite::SuiteKind::Release,

@@ -3,8 +3,8 @@ use crate::api::case::{
     BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
-use vyre_frontend_rust::pipeline::{RustPipeline, RustPipelineConfig};
 use crate::cases::mix32;
+use vyre_frontend_rust::pipeline::{RustPipeline, RustPipelineConfig};
 
 mod lexer;
 mod lexer_batch;
@@ -238,7 +238,6 @@ fn rust_range_inputs() -> Vec<i32> {
         .map(|lane| (mix32(lane as u32) & 0x7f) as i32 - 16)
         .collect()
 }
-
 
 fn i32s_to_bytes(values: &[i32]) -> Vec<u8> {
     values

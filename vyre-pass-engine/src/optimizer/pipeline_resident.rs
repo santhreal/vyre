@@ -40,15 +40,15 @@ use super::cse_via_encoded::{
     CANONICAL_TABLE_MULT,
 };
 use super::dce_program::build_dce_bfs_program;
-use vyre_foundation::program_dispatch::{
-    DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
-    ResidentStaticBufferSet,
-};
 use super::encode::{apply_live_bitset_mask, encode_program, ROOT_GRAPH_ID};
 use super::expr_arena::encode_expr_arena;
 use super::pattern_match_via_encoded::build_pattern_match_program_with_cse;
 use super::pipeline_resident_decode::{
     apply_combined_arena_deltas_bitsets, build_resident_delta_bitset_pack_program,
+};
+use vyre_foundation::program_dispatch::{
+    DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
+    ResidentStaticBufferSet,
 };
 
 const RESIDENT_CACHE_DOMAIN_PIPELINE_ARENA_RO: u64 = 0x5659_5245_4152_4f31;

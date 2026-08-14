@@ -27,7 +27,7 @@ use super::super::metrics::{ifds_queue_baseline_metric_points, ifds_queue_metric
 use super::{
     ifds_queue_traverse_logical_lanes, ifds_queue_traverse_plan, ifds_sparse_queue_capacity,
 };
-use crate::cases::queue_stage::{QUEUE_RESET_GRID};
+use crate::cases::queue_stage::QUEUE_RESET_GRID;
 
 pub(in crate::cases::dataflow_irregular) const QUEUE_MATERIALIZE_SUITES: &[SuiteKind] = &[
     SuiteKind::Smoke,
@@ -35,7 +35,6 @@ pub(in crate::cases::dataflow_irregular) const QUEUE_MATERIALIZE_SUITES: &[Suite
     SuiteKind::Deep,
     SuiteKind::Honest,
 ];
-
 
 pub(in crate::cases::dataflow_irregular) struct DataflowIfdsSkewedQueuePrepared {
     pub(in crate::cases::dataflow_irregular) reset_program: Program,

@@ -9,12 +9,12 @@
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_reference::value::Value;
 use vyre_libs::solvers::dataflow_compaction_pipeline::dispatch_softmax;
 use vyre_pass_engine::optimizer::dce_program::{
     build_dce_bfs_program, build_persistent_bfs_program,
 };
+use vyre_primitives::graph::program_graph::ProgramGraphShape;
+use vyre_reference::value::Value;
 
 fn pack(words: &[u32]) -> Vec<u8> {
     words.iter().flat_map(|w| w.to_le_bytes()).collect()

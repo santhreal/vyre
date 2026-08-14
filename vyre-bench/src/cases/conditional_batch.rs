@@ -11,8 +11,8 @@ use super::conditional::{
     conditional_measure, conditional_program, pattern_streams, verify_sparse_outputs,
     ConditionalLabels, ConditionalPrepared, HONEST_SUITES,
 };
-use super::mix32;
 use super::harness::{CaseOps, HarnessCase, WorkloadDescription};
+use super::mix32;
 use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, Correctness, DeterminismClass,
     WorkloadClass,
@@ -93,10 +93,7 @@ fn verify_fired_pairs(run: &BenchRun) -> Result<Correctness, BenchError> {
 }
 
 fn bytes_touched(prepared: &ConditionalPrepared) -> (u64, u64) {
-    (
-        prepared.input_bytes_total,
-        EVAL_COUNT as u64 * 4 + 4,
-    )
+    (prepared.input_bytes_total, EVAL_COUNT as u64 * 4 + 4)
 }
 
 fn condition_program() -> Program {
@@ -375,7 +372,10 @@ mod tests {
     /// case is the release proof workload and owns that claim.
     #[test]
     fn harness_case_keeps_its_registered_identity_and_no_contract() {
-        assert_eq!(CONDITIONAL_BATCH.id().0, "conditions.yara_like.batch.16x64k");
+        assert_eq!(
+            CONDITIONAL_BATCH.id().0,
+            "conditions.yara_like.batch.16x64k"
+        );
         assert_eq!(CONDITIONAL_BATCH.suites(), HONEST_SUITES);
         assert!(CONDITIONAL_BATCH.performance_contract().is_none());
     }

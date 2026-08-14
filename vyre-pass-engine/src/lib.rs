@@ -76,4 +76,3 @@
 /// entry points and optimizer contract metadata without descending into
 /// private module paths.
 pub mod optimizer;
-

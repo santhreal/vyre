@@ -956,7 +956,11 @@ mod tests {
                 let iterations = mix32(case ^ salt) % 16_385;
                 let plan = queue_closure_repeated_plan(iterations);
 
-                assert_eq!(plan.total_half_waves(), iterations, "salt {salt:#x} case {case}");
+                assert_eq!(
+                    plan.total_half_waves(),
+                    iterations,
+                    "salt {salt:#x} case {case}"
+                );
                 assert_eq!(
                     plan.dispatch_count(),
                     1 + iterations.saturating_mul(2),

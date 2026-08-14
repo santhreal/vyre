@@ -1,37 +1,40 @@
+//! The one encoded-order IR rewrite walk.
+//!
+//! Every pass that consumes a per-Expr verdict from a GPU analysis kernel has
+//! to revisit the IR in exactly the order `expr_arena` encoded it, because the
+//! verdict is indexed by the encoder's post-order Expr id. That walk is
+//! identical for const-fold, canonicalize, pattern-match, and the fused
+//! resident decode; only the decision taken at each id differs. The walk is
+//! here and each pass supplies the decision.
+
 use std::sync::Arc;
 
 use vyre_foundation::ir::{Expr, Node, Program};
 
+/// Rewrite every Expr in `program` in encoder order.
+///
+/// `rewrite_expr` receives each Expr and the running post-order counter, and is
+/// responsible for advancing that counter exactly as the encoder did. Use
+/// [`rewrite_simple_expr_postorder`] inside it to get that for free.
 pub(super) fn rewrite_program_with_expr_rewriter<F>(
-    program: Program,
+    program: &Program,
     mut rewrite_expr: F,
 ) -> Program
 where
     F: FnMut(&Expr, &mut u32) -> Expr,
 {
-    let body: Vec<Node> = match program.entry() {
-        [Node::Region { body, .. }] => body.as_ref().clone(),
-        entry => entry.to_vec(),
-    };
-
     let mut counter = 0u32;
-    let rebuilt = rewrite_scope(&body, &mut rewrite_expr, &mut counter);
-
-    let new_entry = match program.entry() {
-        [Node::Region {
-            generator,
-            source_region,
-            ..
-        }] => vec![Node::Region {
-            generator: generator.clone(),
-            source_region: source_region.clone(),
-            body: Arc::new(rebuilt),
-        }],
-        _ => rebuilt,
-    };
-    program.with_rewritten_entry(new_entry)
+    super::rewrite_program_entry(program, |body| {
+        rewrite_scope(body, &mut rewrite_expr, &mut counter)
+    })
 }
 
+/// Rebuild `expr` bottom-up, then hand the rebuilt Expr and its arena id to
+/// `transform`.
+///
+/// The counter advances once per encoded Expr, after its children, which is the
+/// encoder's own post-order numbering. Expr variants the encoder rejects return
+/// unchanged without consuming an id.
 pub(super) fn rewrite_simple_expr_postorder<F>(
     expr: &Expr,
     counter: &mut u32,

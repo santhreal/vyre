@@ -1,12 +1,6 @@
 //! Synthetic count workload descriptor, its pattern discriminant, and the bench case
 //! that dispatches one release macro pattern.
 
-use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
-};
-use crate::api::metric::MetricPoint;
-use crate::api::resident::{dispatch_program_timed, input_bytes_total, ResidentInputSet};
 use super::macro_registry::ReleaseMacroFamily;
 use super::registration::{gpu_requirements, RELEASE_SUITES};
 use super::run_assembly::{
@@ -21,6 +15,12 @@ use super::synthetic_oracle::{
 use super::synthetic_programs::{
     build_synthetic_release_program, string_bitmap_scatter_release_program,
 };
+use crate::api::case::{
+    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
+    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+};
+use crate::api::metric::MetricPoint;
+use crate::api::resident::{dispatch_program_timed, input_bytes_total, ResidentInputSet};
 use vyre::ir::Program;
 
 pub(super) const STRING_BITMAP_RESIDENT_BATCH_SIZE: usize = 16;

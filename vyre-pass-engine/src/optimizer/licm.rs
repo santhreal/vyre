@@ -44,25 +44,7 @@ pub fn apply_licm(program: &Program) -> Program {
         .map(|b| Ident::new(b.name.clone()))
         .collect();
 
-    let body: Vec<Node> = match program.entry() {
-        [Node::Region { body, .. }] => body.as_ref().clone(),
-        entry => entry.to_vec(),
-    };
-    let new_body = rewrite_scope(&body, &read_only);
-
-    let new_entry = match program.entry() {
-        [Node::Region {
-            generator,
-            source_region,
-            ..
-        }] => vec![Node::Region {
-            generator: generator.clone(),
-            source_region: source_region.clone(),
-            body: Arc::new(new_body),
-        }],
-        _ => new_body,
-    };
-    program.with_rewritten_entry(new_entry)
+    super::rewrite_program_entry(program, |body| rewrite_scope(body, &read_only))
 }
 
 fn rewrite_scope(body: &[Node], read_only: &FxHashSet<Ident>) -> Vec<Node> {

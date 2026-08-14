@@ -1,6 +1,7 @@
+use super::byte_pack::{gb_per_second, rate_per_second_x1000, read_word, write_word};
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRun, Correctness,
+    DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{
@@ -13,7 +14,6 @@ use vyre_driver::speculation_verdict::SpeculationVerdict;
 use vyre_runtime::resident_work_queue::{
     self, control, slot, PairedSpeculationSample, PairedSpeculationWindow, SLOT_WORDS, STATUS_WORD,
 };
-use super::byte_pack::{gb_per_second, rate_per_second_x1000, read_word, write_word};
 
 /// Names this case's buffers in word codec errors.
 const WORD_CONTEXT: &str = "megakernel latency output";
@@ -344,11 +344,21 @@ fn simulate_sharded_once_outputs(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, Ben
     let io = inputs[3].clone();
 
     write_word(&mut control, control::DONE_COUNT, SLOT_COUNT, WORD_CONTEXT)?;
-    write_word(&mut control, control::METRICS_BASE, SLOT_COUNT, WORD_CONTEXT)?;
+    write_word(
+        &mut control,
+        control::METRICS_BASE,
+        SLOT_COUNT,
+        WORD_CONTEXT,
+    )?;
     for slot_index in 0..SLOT_COUNT {
-        write_word(&mut ring, slot_index
-            .saturating_mul(SLOT_WORDS)
-            .saturating_add(STATUS_WORD), slot::DONE, WORD_CONTEXT)?;
+        write_word(
+            &mut ring,
+            slot_index
+                .saturating_mul(SLOT_WORDS)
+                .saturating_add(STATUS_WORD),
+            slot::DONE,
+            WORD_CONTEXT,
+        )?;
     }
     Ok(vec![control, ring, debug, io])
 }
@@ -367,9 +377,13 @@ fn verify_megakernel_outputs(outputs: &[Vec<u8>]) -> Result<Correctness, BenchEr
         )));
     }
     for slot_index in 0..SLOT_COUNT {
-        let status = read_word(&outputs[1], slot_index
-            .saturating_mul(SLOT_WORDS)
-            .saturating_add(STATUS_WORD), WORD_CONTEXT)?;
+        let status = read_word(
+            &outputs[1],
+            slot_index
+                .saturating_mul(SLOT_WORDS)
+                .saturating_add(STATUS_WORD),
+            WORD_CONTEXT,
+        )?;
         if status != slot::DONE {
             return Err(BenchError::CorrectnessViolation(format!(
                 "megakernel slot {slot_index} status was {status}, expected DONE"

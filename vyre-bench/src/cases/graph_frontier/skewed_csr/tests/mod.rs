@@ -59,7 +59,9 @@ fn skewed_csr_queue_inputs_preserve_frontier_and_device_scratch() {
         capacity as usize * std::mem::size_of::<u32>()
     );
     assert_eq!(
-        vyre_primitives::wire::decode_u32_le_bytes_all(&inputs[crate::cases::queue_stage::QUEUE_LEN_INDEX]),
+        vyre_primitives::wire::decode_u32_le_bytes_all(
+            &inputs[crate::cases::queue_stage::QUEUE_LEN_INDEX]
+        ),
         vec![0]
     );
     assert_eq!(
@@ -259,12 +261,16 @@ fn skewed_csr_queue_closure_inputs_materialize_seed_queue_once() {
         inputs[crate::cases::queue_stage::QUEUE_CLOSURE_QUEUE_A_INDEX].len(),
         capacity as usize * std::mem::size_of::<u32>()
     );
-    assert!(inputs[crate::cases::queue_stage::QUEUE_CLOSURE_QUEUE_A_INDEX]
-        .iter()
-        .all(|byte| *byte == 0));
-    assert!(inputs[crate::cases::queue_stage::QUEUE_CLOSURE_QUEUE_B_INDEX]
-        .iter()
-        .all(|byte| *byte == 0));
+    assert!(
+        inputs[crate::cases::queue_stage::QUEUE_CLOSURE_QUEUE_A_INDEX]
+            .iter()
+            .all(|byte| *byte == 0)
+    );
+    assert!(
+        inputs[crate::cases::queue_stage::QUEUE_CLOSURE_QUEUE_B_INDEX]
+            .iter()
+            .all(|byte| *byte == 0)
+    );
     assert_eq!(
         vyre_primitives::wire::decode_u32_le_bytes_all(
             &inputs[crate::cases::queue_stage::QUEUE_CLOSURE_LEN_A_INDEX]

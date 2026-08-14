@@ -110,17 +110,20 @@ mod tests {
 
     #[test]
     fn multi_case_table() {
-        let report = schema("kernel_time_test", vec![
-            case(
-                "op_a",
-                &[
-                    ("kernel_execute_ns", 1000, 2000),
-                    ("bytes_touched", 4096, 4096),
-                    ("wall_throughput_gb_s", 10, 10),
-                ],
-            ),
-            case("op_b", &[("kernel_execute_ns", 500, 800)]),
-        ]);
+        let report = schema(
+            "kernel_time_test",
+            vec![
+                case(
+                    "op_a",
+                    &[
+                        ("kernel_execute_ns", 1000, 2000),
+                        ("bytes_touched", 4096, 4096),
+                        ("wall_throughput_gb_s", 10, 10),
+                    ],
+                ),
+                case("op_b", &[("kernel_execute_ns", 500, 800)]),
+            ],
+        );
         let table = kernel_time_table(&report);
         let lines: Vec<&str> = table.lines().collect();
         assert_eq!(lines.len(), 3, "header + 2 data rows");
@@ -131,7 +134,10 @@ mod tests {
 
     #[test]
     fn single_case_table() {
-        let report = schema("kernel_time_test", vec![case("single", &[("kernel_execute_ns", 999, 1500)])]);
+        let report = schema(
+            "kernel_time_test",
+            vec![case("single", &[("kernel_execute_ns", 999, 1500)])],
+        );
         let table = kernel_time_table(&report);
         let lines: Vec<&str> = table.lines().collect();
         assert_eq!(lines.len(), 2);
@@ -140,7 +146,10 @@ mod tests {
 
     #[test]
     fn missing_kernel_execute_emits_explicit_missing_fields() {
-        let report = schema("kernel_time_test", vec![case("no_kernel", &[("optimize_ns", 100, 200)])]);
+        let report = schema(
+            "kernel_time_test",
+            vec![case("no_kernel", &[("optimize_ns", 100, 200)])],
+        );
         let table = kernel_time_table(&report);
         let lines: Vec<&str> = table.lines().collect();
         assert_eq!(
@@ -161,17 +170,20 @@ mod tests {
 
     #[test]
     fn kernel_time_table_json_multi_case() {
-        let report = schema("kernel_time_test", vec![
-            case(
-                "op_a",
-                &[
-                    ("kernel_execute_ns", 1000, 2000),
-                    ("bytes_touched", 4096, 4096),
-                    ("wall_throughput_gb_s", 10, 10),
-                ],
-            ),
-            case("op_b", &[("kernel_execute_ns", 500, 800)]),
-        ]);
+        let report = schema(
+            "kernel_time_test",
+            vec![
+                case(
+                    "op_a",
+                    &[
+                        ("kernel_execute_ns", 1000, 2000),
+                        ("bytes_touched", 4096, 4096),
+                        ("wall_throughput_gb_s", 10, 10),
+                    ],
+                ),
+                case("op_b", &[("kernel_execute_ns", 500, 800)]),
+            ],
+        );
         let out = kernel_time_table_json(&report);
         let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
         let arr = parsed.as_array().unwrap();
@@ -189,7 +201,10 @@ mod tests {
 
     #[test]
     fn kernel_time_table_json_single_case() {
-        let report = schema("kernel_time_test", vec![case("single", &[("kernel_execute_ns", 999, 1500)])]);
+        let report = schema(
+            "kernel_time_test",
+            vec![case("single", &[("kernel_execute_ns", 999, 1500)])],
+        );
         let out = kernel_time_table_json(&report);
         let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
         let arr = parsed.as_array().unwrap();
@@ -199,7 +214,10 @@ mod tests {
 
     #[test]
     fn kernel_time_table_json_missing_kernel_execute_emits_nulls() {
-        let report = schema("kernel_time_test", vec![case("no_kernel", &[("optimize_ns", 100, 200)])]);
+        let report = schema(
+            "kernel_time_test",
+            vec![case("no_kernel", &[("optimize_ns", 100, 200)])],
+        );
         let out = kernel_time_table_json(&report);
         let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
         let arr = parsed.as_array().unwrap();

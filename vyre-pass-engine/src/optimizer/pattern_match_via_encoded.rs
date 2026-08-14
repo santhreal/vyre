@@ -25,9 +25,9 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use super::encode::EncodeError;
 use super::expr_arena::{encode_expr_arena, expr_kind, ExprArenaEncoding};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 #[derive(Debug, Default)]
 struct PatternKernelScratch {
@@ -139,20 +139,13 @@ const WORKGROUP_X: u32 = 256;
 /// `gpu_cse_canonicals` first.
 #[must_use]
 pub fn build_pattern_match_program_with_cse(expr_count: u32) -> Program {
-    let buffers = vec![
-        BufferDecl::storage("arena_kinds", 0, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg0", 1, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg1", 2, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg2", 3, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
+    let mut buffers = super::arena_kernel::arena_row_buffers(expr_count, 0);
+    buffers.extend([
         BufferDecl::storage("rewrite_action", 4, BufferAccess::ReadWrite, DataType::U32)
             .with_count(expr_count.max(1)),
         BufferDecl::storage("canonical", 5, BufferAccess::ReadOnly, DataType::U32)
             .with_count(expr_count.max(1)),
-    ];
+    ]);
 
     let body = vec![
         Node::let_bind("i", Expr::gid_x()),
@@ -1356,7 +1349,7 @@ fn bin_op_match_body() -> Vec<Node> {
 }
 
 fn rewrite_program_with_actions(program: Program, actions: &[u32]) -> Program {
-    super::rewrite_walk::rewrite_program_with_expr_rewriter(program, |expr, counter| {
+    super::rewrite_walk::rewrite_program_with_expr_rewriter(&program, |expr, counter| {
         rewrite_expr(expr, actions, counter)
     })
 }
@@ -1403,16 +1396,7 @@ mod tests {
         }
     }
 
-    fn one_expr_arena() -> ExprArenaEncoding {
-        ExprArenaEncoding {
-            expr_count: 1,
-            kinds: vec![expr_kind::LIT_U32],
-            arg0: vec![0],
-            arg1: vec![0],
-            arg2: vec![0],
-            ..ExprArenaEncoding::default()
-        }
-    }
+    use super::super::arena_kernel::single_lit_u32_arena as one_expr_arena;
 
     #[test]
     fn kernel_into_decodes_exact_actions_into_reused_buffer() {

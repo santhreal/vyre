@@ -195,10 +195,12 @@ mod tests {
             lane: |a, b, c| a ^ b ^ c,
             stream_names: ["alpha", "beta", "gamma"],
             subject: "triplet test",
-            metrics: |words| vec![MetricPoint {
-                name: "lanes".to_string(),
-                value: words.len() as u64,
-            }],
+            metrics: |words| {
+                vec![MetricPoint {
+                    name: "lanes".to_string(),
+                    value: words.len() as u64,
+                }]
+            },
         }
     }
 
@@ -216,7 +218,10 @@ mod tests {
         )
         .expect_err("mismatched streams must never truncate");
 
-        assert!(error.to_string().contains("input length mismatch"), "{error}");
+        assert!(
+            error.to_string().contains("input length mismatch"),
+            "{error}"
+        );
         assert!(error.to_string().contains("beta=2"), "{error}");
     }
 
