@@ -1,6 +1,120 @@
 use super::*;
 use std::sync::Arc;
 
+/// The binding names every program test in this module builds against, with
+/// each field named once.
+///
+/// This is the only place in the module the ten names are spelled, so a
+/// transposition of two of them is a one-line diff here rather than a
+/// reordering inside a positional argument list nobody reads.
+const FIXTURE: SinkhornBuffers<'static> = SinkhornBuffers {
+    k: "k",
+    k_t: "kt",
+    a: "a",
+    b: "b",
+    u_curr: "uc",
+    u_next: "un",
+    v: "v",
+    kv: "kv",
+    ktu: "ktu",
+    changed: "c",
+};
+
+/// `SinkhornExtents` for `m x n` under an iteration cap.
+fn extents(m: u32, n: u32, max_iterations: u32) -> SinkhornExtents {
+    SinkhornExtents {
+        m,
+        n,
+        max_iterations,
+    }
+}
+
+/// The emitted binding at `index`, as `(name, count)`.
+fn binding(program: &Program, index: usize) -> (&str, u32) {
+    let buffer = &program.buffers()[index];
+    (buffer.name(), buffer.count())
+}
+
+/// Each named field must reach the binding that carries its role.
+///
+/// All ten fields are `&str`, so the type system cannot reject a transposition;
+/// what it can do is make one observable. This pins field to (binding index,
+/// declared count) for the whole record, so a swap of any two names moves a name
+/// to a binding whose count belongs to the other role and fails here. The counts
+/// are deliberately all distinct except where two roles genuinely share a length,
+/// and `m != n` so the `m`-length and `n`-length roles cannot be confused.
+#[test]
+fn every_named_binding_reaches_the_role_it_names() {
+    let program = sinkhorn_iterate(FIXTURE, extents(3, 5, 1));
+
+    assert_eq!(binding(&program, 0), (FIXTURE.u_curr, 3));
+    assert_eq!(binding(&program, 1), (FIXTURE.u_next, 3));
+    assert_eq!(binding(&program, 2), (FIXTURE.changed, 1));
+    assert_eq!(binding(&program, 3), (FIXTURE.k, 15));
+    assert_eq!(binding(&program, 4), (FIXTURE.k_t, 15));
+    assert_eq!(binding(&program, 5), (FIXTURE.a, 3));
+    assert_eq!(binding(&program, 6), (FIXTURE.b, 5));
+    assert_eq!(binding(&program, 7), (FIXTURE.v, 5));
+    assert_eq!(binding(&program, 8), (FIXTURE.kv, 3));
+    assert_eq!(binding(&program, 9), (FIXTURE.ktu, 5));
+}
+
+/// Transposing two names must change the emitted program.
+///
+/// The old positional call took the ten names in any order and emitted a program
+/// that differed only in which label sat on which binding, which no test read.
+/// The crate's own IR parity test passed them in binding order for exactly that
+/// reason and named the kernel matrix `u_curr` without failing anything. Each
+/// pair below is a swap that leaves the argument COUNT and every type valid, so
+/// it is precisely what a positional call could not catch; the wire encoding must
+/// differ for every one of them.
+#[test]
+fn transposing_two_binding_names_changes_the_wire_encoding() {
+    let extents = extents(3, 5, 1);
+    let canonical = to_wire(&sinkhorn_iterate(FIXTURE, extents));
+
+    let kernel_swapped = SinkhornBuffers {
+        k: FIXTURE.k_t,
+        k_t: FIXTURE.k,
+        ..FIXTURE
+    };
+    let pingpong_swapped = SinkhornBuffers {
+        u_curr: FIXTURE.u_next,
+        u_next: FIXTURE.u_curr,
+        ..FIXTURE
+    };
+    let scratch_swapped = SinkhornBuffers {
+        kv: FIXTURE.ktu,
+        ktu: FIXTURE.kv,
+        ..FIXTURE
+    };
+    let marginal_swapped = SinkhornBuffers {
+        a: FIXTURE.b,
+        b: FIXTURE.a,
+        ..FIXTURE
+    };
+
+    for (label, transposed) in [
+        ("k / k_t", kernel_swapped),
+        ("u_curr / u_next", pingpong_swapped),
+        ("kv / ktu", scratch_swapped),
+        ("a / b", marginal_swapped),
+    ] {
+        assert_ne!(
+            to_wire(&sinkhorn_iterate(transposed, extents)),
+            canonical,
+            "Fix: transposing {label} must change the emitted program, or the two names are interchangeable and one of them is dead."
+        );
+    }
+}
+
+/// Wire encoding of `program`, the comparison every collapse in this module is
+/// proved on. A debug string would compare formatting rather than emission.
+fn to_wire(program: &Program) -> Vec<u8> {
+    vyre_foundation::serial::wire::encode::to_wire(program)
+        .expect("Fix: a sinkhorn program must encode to the wire form.")
+}
+
 #[test]
 fn test_sinkhorn_cpu_ref_trivial() {
     let (u, v, _iters) = cpu_ref(
@@ -136,9 +250,7 @@ fn test_sinkhorn_program_parity() {
     let u_c = vec![1, 1];
     let v_in = vec![1, 1];
 
-    let p = sinkhorn_iterate(
-        "k", "kt", "a", "b", "uc", "un", "v", "kv", "ktu", "c", 2, 2, 1,
-    );
+    let p = sinkhorn_iterate(FIXTURE, extents(2, 2, 1));
 
     let (expected_u, _, _) = cpu_ref(&k, &k, &a, &b, &u_c, &v_in, 2, 2, 1);
 
@@ -174,9 +286,7 @@ fn test_sinkhorn_program_parity() {
 
 #[test]
 fn program_declares_ten_buffers() {
-    let p = sinkhorn_iterate(
-        "k", "kt", "a", "b", "uc", "un", "v", "kv", "ktu", "c", 2, 2, 5,
-    );
+    let p = sinkhorn_iterate(FIXTURE, extents(2, 2, 5));
     assert_eq!(p.buffers().len(), 10);
 }
 
@@ -219,9 +329,7 @@ fn changed_words(program: &Program) -> u32 {
 /// never be handed one shared cleared word.
 #[test]
 fn multi_workgroup_sinkhorn_never_shares_one_cleared_convergence_word() {
-    let program = sinkhorn_iterate(
-        "k", "kt", "a", "b", "uc", "un", "v", "kv", "ktu", "c", 257, 1, 8,
-    );
+    let program = sinkhorn_iterate(FIXTURE, extents(257, 1, 8));
 
     assert_eq!(
         required_workgroups(&program),
@@ -267,9 +375,7 @@ fn count_grid_sync(nodes: &[Node]) -> usize {
 fn routing_threshold_is_the_declared_workgroup_width() {
     let width = PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];
 
-    let at_width = sinkhorn_iterate(
-        "k", "kt", "a", "b", "uc", "un", "v", "kv", "ktu", "c", width, 1, 8,
-    );
+    let at_width = sinkhorn_iterate(FIXTURE, extents(width, 1, 8));
     assert_eq!(
         at_width.workgroup_size(),
         PERSISTENT_FIXPOINT_WORKGROUP_SIZE
@@ -281,21 +387,7 @@ fn routing_threshold_is_the_declared_workgroup_width() {
         "Fix: a single-workgroup launch must keep the compact one-word convergence flag."
     );
 
-    let past_width = sinkhorn_iterate(
-        "k",
-        "kt",
-        "a",
-        "b",
-        "uc",
-        "un",
-        "v",
-        "kv",
-        "ktu",
-        "c",
-        width + 1,
-        1,
-        8,
-    );
+    let past_width = sinkhorn_iterate(FIXTURE, extents(width + 1, 1, 8));
     assert_eq!(required_workgroups(&past_width), 2);
     assert_eq!(
         changed_words(&past_width),
@@ -318,9 +410,7 @@ fn routing_threshold_is_the_declared_workgroup_width() {
 /// the defect bite at ordinary sizes rather than large ones.
 #[test]
 fn modest_square_matrix_with_tiny_extents_still_routes_to_the_grid_form() {
-    let program = sinkhorn_iterate(
-        "k", "kt", "a", "b", "uc", "un", "v", "kv", "ktu", "c", 17, 17, 8,
-    );
+    let program = sinkhorn_iterate(FIXTURE, extents(17, 17, 8));
 
     assert_eq!(
         matrix_cells(&program),
@@ -364,18 +454,14 @@ fn matrix_cells(program: &Program) -> u32 {
 fn grid_route_fences_the_grid_and_single_workgroup_route_does_not() {
     let width = PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];
 
-    let single = sinkhorn_iterate(
-        "k", "kt", "a", "b", "uc", "un", "v", "kv", "ktu", "c", width, 1, 4,
-    );
+    let single = sinkhorn_iterate(FIXTURE, extents(width, 1, 4));
     assert_eq!(
         count_grid_sync(single.entry()),
         0,
         "Fix: a single-workgroup sinkhorn program must not force a cooperative grid launch."
     );
 
-    let grid = sinkhorn_iterate(
-        "k", "kt", "a", "b", "uc", "un", "v", "kv", "ktu", "c", 17, 17, 4,
-    );
+    let grid = sinkhorn_iterate(FIXTURE, extents(17, 17, 4));
     assert_eq!(
         count_grid_sync(grid.entry()),
         8,
@@ -390,21 +476,7 @@ fn grid_route_fences_the_grid_and_single_workgroup_route_does_not() {
 #[test]
 fn grid_route_sizes_changed_to_one_word_per_iteration() {
     for max_iterations in [1_u32, 2, 8, 64] {
-        let program = sinkhorn_iterate(
-            "k",
-            "kt",
-            "a",
-            "b",
-            "uc",
-            "un",
-            "v",
-            "kv",
-            "ktu",
-            "c",
-            17,
-            17,
-            max_iterations,
-        );
+        let program = sinkhorn_iterate(FIXTURE, extents(17, 17, max_iterations));
         let harness = persistent_fixpoint_grid(Vec::new(), "uc", "un", "c", 17, max_iterations);
 
         assert_eq!(
@@ -514,21 +586,7 @@ fn single_word_harness_returns_a_wrong_scaling_vector_above_one_workgroup() {
 
     let (expected_u, _, _) = cpu_ref(&k, &k, &a, &b, &u_curr, &v, m, n, max_iterations);
 
-    let unsound = sinkhorn_single_word_harness(
-        "k",
-        "kt",
-        "a",
-        "b",
-        "uc",
-        "un",
-        "v",
-        "kv",
-        "ktu",
-        "c",
-        m,
-        n,
-        max_iterations,
-    );
+    let unsound = sinkhorn_single_word_harness(FIXTURE, extents(m, n, max_iterations));
     let (forward, _) = run_sinkhorn(&unsound, false, &k, &a, &b, &u_curr, &v, 1);
     let (reversed, reversed_flag) = run_sinkhorn(&unsound, true, &k, &a, &b, &u_curr, &v, 1);
     // Exact observed values, not a shape check. The oracle settles element 256 at
@@ -569,21 +627,7 @@ fn grid_routed_sinkhorn_is_order_independent_where_single_word_diverges() {
     let (k, a, b, u_curr, v) = evolving_sinkhorn_fixture(m, n);
 
     let (expected_u, _, _) = cpu_ref(&k, &k, &a, &b, &u_curr, &v, m, n, max_iterations);
-    let routed = sinkhorn_iterate(
-        "k",
-        "kt",
-        "a",
-        "b",
-        "uc",
-        "un",
-        "v",
-        "kv",
-        "ktu",
-        "c",
-        m,
-        n,
-        max_iterations,
-    );
+    let routed = sinkhorn_iterate(FIXTURE, extents(m, n, max_iterations));
     assert_eq!(
         changed_words(&routed),
         max_iterations,
@@ -618,21 +662,7 @@ fn modest_square_matrix_is_correct_on_the_single_word_harness_despite_two_workgr
     let (k, a, b, u_curr, v) = evolving_sinkhorn_fixture(m, n);
 
     let (expected_u, _, _) = cpu_ref(&k, &k, &a, &b, &u_curr, &v, m, n, max_iterations);
-    let unsound = sinkhorn_single_word_harness(
-        "k",
-        "kt",
-        "a",
-        "b",
-        "uc",
-        "un",
-        "v",
-        "kv",
-        "ktu",
-        "c",
-        m,
-        n,
-        max_iterations,
-    );
+    let unsound = sinkhorn_single_word_harness(FIXTURE, extents(m, n, max_iterations));
 
     assert_eq!(
         required_workgroups(&unsound),

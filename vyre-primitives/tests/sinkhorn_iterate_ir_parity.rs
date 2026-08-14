@@ -17,7 +17,9 @@
 
 use vyre_reference::value::Value;
 
-use vyre_primitives::math::sinkhorn_iterate::{cpu_ref, sinkhorn_iterate};
+use vyre_primitives::math::sinkhorn_iterate::{
+    cpu_ref, sinkhorn_iterate, SinkhornBuffers, SinkhornExtents,
+};
 
 /// 16.16 fixed-point encode.
 fn enc(v: f64) -> u32 {
@@ -47,20 +49,30 @@ fn run_ir(
     n: u32,
     max_iterations: u32,
 ) -> (Vec<u32>, Vec<u32>) {
+    // Before the binding record existed, this call passed the ten names
+    // positionally in BINDING order rather than parameter order, so the emitted
+    // program named its kernel matrix `u_curr`, its `u` ping-pong half `k_t` and
+    // its convergence flag `kv`. Nothing failed, because `reference_eval` binds
+    // by index and a name is only a label to it. Naming each field is what makes
+    // the roles checkable.
     let program = sinkhorn_iterate(
-        "u_curr",
-        "u_next",
-        "changed",
-        "k",
-        "k_t",
-        "a",
-        "b",
-        "v",
-        "kv",
-        "ktu",
-        m,
-        n,
-        max_iterations,
+        SinkhornBuffers {
+            k: "k",
+            k_t: "k_t",
+            a: "a",
+            b: "b",
+            u_curr: "u_curr",
+            u_next: "u_next",
+            v: "v",
+            kv: "kv",
+            ktu: "ktu",
+            changed: "changed",
+        },
+        SinkhornExtents {
+            m,
+            n,
+            max_iterations,
+        },
     );
     let pack = |data: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(data));
     let (mm, nn) = (m as usize, n as usize);
