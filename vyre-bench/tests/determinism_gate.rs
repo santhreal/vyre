@@ -1,4 +1,4 @@
-//! Determinism gate test.
+//! The determinism gate rejects a nondeterministic run and accepts a repeatable one.
 #![allow(missing_docs, clippy::field_reassign_with_default, unsafe_code)]
 
 use vyre_bench::api::suite::SuiteKind;

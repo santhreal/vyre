@@ -1,4 +1,4 @@
-//! CUDA events test.
+//! CUDA event timing metrics are populated on a measured CUDA run.
 #![allow(missing_docs)]
 #![allow(clippy::field_reassign_with_default)]
 use vyre_bench::api::suite::SuiteKind;

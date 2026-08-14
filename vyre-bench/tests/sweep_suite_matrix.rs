@@ -1,4 +1,4 @@
-//! G9  -  Sweep matrix.
+//! Sweep matrix.
 //!
 //! Verifies that the Sweep suite kind runs cases and produces results.
 //! Since sweep requires workgroup iteration, this test validates

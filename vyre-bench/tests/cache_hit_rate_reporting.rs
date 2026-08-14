@@ -1,4 +1,4 @@
-//! Cache hit rate test.
+//! Cache hit rate is reported only when a run observes a cache contract.
 #![allow(missing_docs)]
 #![allow(clippy::field_reassign_with_default)]
 use vyre_bench::api::suite::SuiteKind;
