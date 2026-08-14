@@ -9,7 +9,6 @@ is the op catalog xtask emits and consumes.
 | Subcommand / env             | Default | Purpose                                                                   |
 |------------------------------|---------|---------------------------------------------------------------------------|
 | `xtask catalog`              |  -        | Emit the op catalog TOML manifest.                                        |
-| `xtask perf-inventory wave1` |  -        | Run wave-1 perf inventory.                                                |
 | `xtask lego-audit`           |  -        | Walk vyre-libs primitives and audit the LEGO surface.                    |
 | `xtask publish-dryrun`       |  -        | Dry-run cargo publish across every workspace member.                     |
 | env `XTASK_PARALLELISM`      | `nproc` | Host-side parallelism for catalog walk / lego-audit.                      |
@@ -21,8 +20,8 @@ sub-directory is a usage bug, not a configuration choice.
 
 ## Tier B  -  community knowledge
 
-xtask both produces and consumes `rules/op/*.toml`. The generators in
-`xtask/src/gates/lego_audit.rs` and `xtask/src/perf_inventory_wave1.rs` walk
-the workspace and emit Tier-B TOML; downstream gates consume the same
+xtask both produces and consumes `rules/op/*.toml`. The generator in
+`xtask/src/gates/lego_audit.rs` walks the workspace and emits Tier-B TOML;
+downstream gates consume the same
 TOML. Adding a new audit dimension is a code change in xtask AND a
 schema change under `rules/SCHEMA.md`. Both must land in the same patch.
