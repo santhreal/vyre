@@ -79,7 +79,7 @@ pub fn reference_pass_applies(
     var_assignments: &[u32],
     topo_order: &[u32],
 ) -> u32 {
-    use crate::observability::{bump, knowledge_compile_pass_precondition_calls};
+    use vyre_libs::telemetry::observability::{bump, knowledge_compile_pass_precondition_calls};
     bump(&knowledge_compile_pass_precondition_calls);
     let evals = ddnnf_evaluate_cpu(nodes, node_var, children, var_assignments, topo_order);
     // The root of the topological order is the formula's overall
@@ -176,7 +176,7 @@ pub fn pass_applies_via_with_scratch_into(
     scratch: &mut KnowledgeCompilePassScratch,
     evals_out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::observability::{bump, knowledge_compile_pass_precondition_calls};
+    use vyre_libs::telemetry::observability::{bump, knowledge_compile_pass_precondition_calls};
     bump(&knowledge_compile_pass_precondition_calls);
 
     if nodes.is_empty() {

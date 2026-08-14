@@ -17,7 +17,7 @@ use vyre_primitives::graph::alias_registry::{
 /// instantiates.
 #[must_use]
 pub fn build_default_registry() -> AliasRegistry {
-    use crate::observability::{alias_registry_calls, bump};
+    use vyre_libs::telemetry::observability::{alias_registry_calls, bump};
     bump(&alias_registry_calls);
     primitive_default_alias_registry()
 }
@@ -29,7 +29,7 @@ pub fn lookup_alias_op<'a>(
     registry: &'a AliasRegistry,
     op_id: &str,
 ) -> Option<&'a AliasOpDescriptor> {
-    use crate::observability::{alias_registry_calls, bump};
+    use vyre_libs::telemetry::observability::{alias_registry_calls, bump};
     bump(&alias_registry_calls);
     registry.get(op_id)
 }
@@ -39,7 +39,7 @@ pub fn lookup_alias_op<'a>(
 /// before emitting alias-union nodes.
 #[must_use]
 pub fn alias_union_registered(registry: &AliasRegistry) -> bool {
-    use crate::observability::{alias_registry_calls, bump};
+    use vyre_libs::telemetry::observability::{alias_registry_calls, bump};
     bump(&alias_registry_calls);
     primitive_alias_union_registered(registry)
 }

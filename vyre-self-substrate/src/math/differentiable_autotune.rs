@@ -237,7 +237,7 @@ pub fn reference_pick_config_into(
     scaled: &mut Vec<f64>,
     out: &mut Vec<f64>,
 ) {
-    use crate::observability::{bump, differentiable_autotune_calls};
+    use vyre_libs::telemetry::observability::{bump, differentiable_autotune_calls};
     bump(&differentiable_autotune_calls);
     // Negate costs so higher input = better config.
     neg_costs.clear();

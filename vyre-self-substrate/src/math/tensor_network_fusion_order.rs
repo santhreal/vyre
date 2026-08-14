@@ -5,14 +5,14 @@ use vyre_foundation::pass_substrate::tensor_network_fusion_order as foundation_t
 /// Return a stable greedy contraction order.
 #[must_use]
 pub fn optimal_fusion_order(dimensions: &[u32]) -> Vec<usize> {
-    use crate::observability::{bump, tensor_network_fusion_order_calls};
+    use vyre_libs::telemetry::observability::{bump, tensor_network_fusion_order_calls};
     bump(&tensor_network_fusion_order_calls);
     foundation_tn_order::optimal_fusion_order(dimensions)
 }
 
 /// Return a stable greedy contraction order into caller-owned storage.
 pub fn optimal_fusion_order_into(dimensions: &[u32], order: &mut Vec<usize>) {
-    use crate::observability::{bump, tensor_network_fusion_order_calls};
+    use vyre_libs::telemetry::observability::{bump, tensor_network_fusion_order_calls};
     bump(&tensor_network_fusion_order_calls);
     foundation_tn_order::optimal_fusion_order_into(dimensions, order);
 }
@@ -20,7 +20,7 @@ pub fn optimal_fusion_order_into(dimensions: &[u32], order: &mut Vec<usize>) {
 /// Score a proposed contraction order with saturating arithmetic.
 #[must_use]
 pub fn fusion_order_cost(dimensions: &[u32], order: &[usize]) -> u64 {
-    use crate::observability::{bump, tensor_network_fusion_order_calls};
+    use vyre_libs::telemetry::observability::{bump, tensor_network_fusion_order_calls};
     bump(&tensor_network_fusion_order_calls);
     foundation_tn_order::fusion_order_cost(dimensions, order)
 }

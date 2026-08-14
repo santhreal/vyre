@@ -175,7 +175,7 @@ pub fn try_schedule_via_homotopy(
     n_steps: u32,
     dt: f64,
 ) -> Result<Vec<f64>, MegakernelScheduleError> {
-    use crate::observability::{bump, megakernel_schedule_calls};
+    use vyre_libs::telemetry::observability::{bump, megakernel_schedule_calls};
     bump(&megakernel_schedule_calls);
     let mut out = Vec::new();
     try_schedule_via_homotopy_into(costs, n, n_steps, dt, &mut out)?;
@@ -230,7 +230,7 @@ pub fn try_schedule_via_scale_aware_telemetry(
     n_steps: u32,
     dt: f64,
 ) -> Result<Vec<f64>, MegakernelScheduleError> {
-    use crate::observability::{bump, megakernel_schedule_calls};
+    use vyre_libs::telemetry::observability::{bump, megakernel_schedule_calls};
     bump(&megakernel_schedule_calls);
     let mut out = Vec::new();
     try_schedule_via_scale_aware_telemetry_into(costs, telemetry, n, n_steps, dt, &mut out)?;

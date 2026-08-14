@@ -41,7 +41,7 @@ pub fn try_bfs_expand(
     allow_mask: u32,
     max_iters: u32,
 ) -> Result<(Vec<u32>, u32), String> {
-    use crate::observability::{bump, graph_dispatch_calls};
+    use vyre_libs::telemetry::observability::{bump, graph_dispatch_calls};
     bump(&graph_dispatch_calls);
     try_reference_persistent_bfs(
         node_count,
@@ -74,7 +74,7 @@ pub fn try_bfs_expand_converged(
     allow_mask: u32,
     max_iters: u32,
 ) -> Result<(Vec<u32>, PersistentBfsConvergence), String> {
-    use crate::observability::{bump, graph_dispatch_calls};
+    use vyre_libs::telemetry::observability::{bump, graph_dispatch_calls};
     bump(&graph_dispatch_calls);
     try_cpu_ref_converged(
         node_count,

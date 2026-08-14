@@ -155,7 +155,7 @@ pub fn reference_provenance_closure_with_scratch(
     max_iterations: u32,
     scratch: &mut ScallopProvenanceScratch,
 ) -> u32 {
-    use crate::observability::{bump, scallop_provenance_calls};
+    use vyre_libs::telemetry::observability::{bump, scallop_provenance_calls};
     bump(&scallop_provenance_calls);
     scallop_join::cpu_ref_into(
         state,
@@ -180,7 +180,7 @@ pub fn lineage_for_output(closure: &[u32], n: u32, out: u32) -> Vec<u32> {
 
 /// Project one output row into caller-owned storage.
 pub fn lineage_for_output_into(closure: &[u32], n: u32, out: u32, row: &mut Vec<u32>) {
-    use crate::observability::{bump, scallop_provenance_calls};
+    use vyre_libs::telemetry::observability::{bump, scallop_provenance_calls};
     bump(&scallop_provenance_calls);
     row.clear();
     row.extend_from_slice(lineage_for_output_slice(closure, n, out));
@@ -253,7 +253,7 @@ pub fn provenance_closure_via_with_scratch_into(
     scratch: &mut ScallopProvenanceGpuScratch,
     closure: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::observability::{bump, scallop_provenance_calls};
+    use vyre_libs::telemetry::observability::{bump, scallop_provenance_calls};
     bump(&scallop_provenance_calls);
 
     let n_usize = n as usize;

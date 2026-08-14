@@ -32,7 +32,7 @@ pub fn sinkhorn_full_clustering_program(
     n: u32,
     max_iterations: u32,
 ) -> Program {
-    use crate::observability::{bump, sinkhorn_full_clustering_calls};
+    use vyre_libs::telemetry::observability::{bump, sinkhorn_full_clustering_calls};
     bump(&sinkhorn_full_clustering_calls);
     sinkhorn_iterate(
         k,

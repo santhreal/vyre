@@ -42,7 +42,7 @@ pub fn try_reference_build_ifds_csr(
     flow_gen: &[(u32, u32, u32)],
     flow_kill: &[(u32, u32, u32)],
 ) -> Result<(Vec<u32>, Vec<u32>), String> {
-    use crate::observability::{bump, graph_dispatch_calls};
+    use vyre_libs::telemetry::observability::{bump, graph_dispatch_calls};
     bump(&graph_dispatch_calls);
     try_build_cpu_reference(
         num_procs,

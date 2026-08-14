@@ -79,7 +79,7 @@ pub fn reference_matroid_solve_step(
     omega: f64,
     n: u32,
 ) -> Vec<f64> {
-    use crate::observability::{bump, multigrid_matroid_solver_calls};
+    use vyre_libs::telemetry::observability::{bump, multigrid_matroid_solver_calls};
     bump(&multigrid_matroid_solver_calls);
     foundation_multigrid::matroid_solve_step(a, b, x_in, omega, n)
 }
@@ -97,7 +97,7 @@ pub fn reference_matroid_solve_step_into(
     n: u32,
     out: &mut Vec<f64>,
 ) {
-    use crate::observability::{bump, multigrid_matroid_solver_calls};
+    use vyre_libs::telemetry::observability::{bump, multigrid_matroid_solver_calls};
     bump(&multigrid_matroid_solver_calls);
     foundation_multigrid::matroid_solve_step_into(a, b, x_in, omega, n, out);
 }
@@ -177,7 +177,7 @@ pub fn matroid_solve_step_fixed_via_with_scratch_into(
     scratch: &mut MultigridMatroidGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::observability::{bump, multigrid_matroid_solver_calls};
+    use vyre_libs::telemetry::observability::{bump, multigrid_matroid_solver_calls};
     bump(&multigrid_matroid_solver_calls);
 
     let cells = checked_square_cells(n, "matroid_solve_step_fixed_via")?;

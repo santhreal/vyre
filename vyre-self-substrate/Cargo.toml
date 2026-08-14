@@ -25,20 +25,20 @@ default = ["optimizer"]
 optimizer = ["vyre-primitives/graph"]
 analysis = [
     "optimizer",
-    "telemetry",
+    "vyre-libs/telemetry",
     "vyre-primitives/effects",
     "vyre-primitives/math",
     "vyre-primitives/types",
 ]
 data = [
     "optimizer",
-    "telemetry",
+    "vyre-libs/telemetry",
     "vyre-primitives/matching",
     "vyre-primitives/math",
     "vyre-primitives/nn",
     "vyre-primitives/parsing",
 ]
-graph-solvers = ["optimizer", "telemetry", "vyre-primitives/math"]
+graph-solvers = ["optimizer", "vyre-libs/telemetry", "vyre-primitives/math"]
 logic = [
     "analysis",
     "vyre-primitives/cat",
@@ -47,17 +47,16 @@ logic = [
 ]
 math-solvers = [
     "optimizer",
-    "telemetry",
+    "vyre-libs/telemetry",
     "vyre-primitives/math",
     "vyre-primitives/topology",
 ]
 scheduling = [
     "optimizer",
-    "telemetry",
+    "vyre-libs/telemetry",
     "vyre-primitives/math",
     "vyre-primitives/parsing",
 ]
-telemetry = []
 all-solvers = [
     "analysis",
     "data",
@@ -65,7 +64,7 @@ all-solvers = [
     "logic",
     "math-solvers",
     "scheduling",
-    "telemetry",
+    "vyre-libs/telemetry",
 ]
 cpu-parity = ["all-solvers", "vyre-primitives/cpu-parity"]
 

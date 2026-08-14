@@ -20,7 +20,7 @@ pub fn reference_forward_step_with_change_flag(
     frontier: &[u32],
     allow_mask: u32,
 ) -> (Vec<u32>, u32) {
-    use crate::observability::{bump, graph_dispatch_calls};
+    use vyre_libs::telemetry::observability::{bump, graph_dispatch_calls};
     bump(&graph_dispatch_calls);
     csr_foc_cpu(
         node_count,
@@ -81,7 +81,7 @@ pub fn reference_forward_closure_via_change_flag_into(
     current: &mut Vec<u32>,
     next: &mut Vec<u32>,
 ) {
-    use crate::observability::{bump, graph_dispatch_calls};
+    use vyre_libs::telemetry::observability::{bump, graph_dispatch_calls};
     csr_foc_closure_into_with_step_hook(
         node_count,
         edge_offsets,

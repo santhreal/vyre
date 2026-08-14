@@ -39,15 +39,17 @@ path = "tests/driver_lifecycle_e2e.rs"
 default = []
 self-substrate-adapters = [
     "dep:vyre-self-substrate",
+    "dep:vyre-libs",
     "vyre-self-substrate/data",
     "vyre-self-substrate/logic",
-    "vyre-self-substrate/telemetry",
+    "vyre-libs/telemetry",
 ]
 
 [dependencies]
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
 vyre-self-substrate = { workspace = true, optional = true }
+vyre-libs = { workspace = true, optional = true }
 vyre-spec.workspace = true
 vyre-macros.workspace = true
 serde.workspace = true

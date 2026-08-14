@@ -167,7 +167,7 @@ pub fn reference_transport_residual_into(
     t_curr: &mut Vec<f64>,
     t_next: &mut Vec<f64>,
 ) {
-    use crate::observability::{bump, qsvt_matrix_function_fusion_calls};
+    use vyre_libs::telemetry::observability::{bump, qsvt_matrix_function_fusion_calls};
     bump(&qsvt_matrix_function_fusion_calls);
     assert!(
         chebyshev_order > 0 && chebyshev_order <= 8,
@@ -231,7 +231,7 @@ pub fn transport_residual_fixed_via_with_scratch_into(
     scratch: &mut QsvtTransportGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::observability::{bump, qsvt_matrix_function_fusion_calls};
+    use vyre_libs::telemetry::observability::{bump, qsvt_matrix_function_fusion_calls};
     bump(&qsvt_matrix_function_fusion_calls);
 
     if chebyshev_order == 0 || chebyshev_order > CHEBYSHEV_MAX_K {

@@ -72,7 +72,7 @@ pub fn reference_precondition_autotune_gradient(
     grad: &[f64],
     n: u32,
 ) -> Vec<f64> {
-    use crate::observability::{bump, natural_gradient_autotuner_calls};
+    use vyre_libs::telemetry::observability::{bump, natural_gradient_autotuner_calls};
     bump(&natural_gradient_autotuner_calls);
     natural_gradient_block_apply_cpu(m_inv_sqrt, grad, n)
 }
@@ -85,7 +85,7 @@ pub fn reference_precondition_autotune_gradient_into(
     n: u32,
     out: &mut Vec<f64>,
 ) {
-    use crate::observability::{bump, natural_gradient_autotuner_calls};
+    use vyre_libs::telemetry::observability::{bump, natural_gradient_autotuner_calls};
     bump(&natural_gradient_autotuner_calls);
     natural_gradient_block_apply_cpu_into(m_inv_sqrt, grad, n, out);
 }
@@ -156,7 +156,7 @@ pub fn precondition_autotune_gradient_fixed_via_with_scratch_into(
     scratch: &mut NaturalGradientGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::observability::{bump, natural_gradient_autotuner_calls};
+    use vyre_libs::telemetry::observability::{bump, natural_gradient_autotuner_calls};
     bump(&natural_gradient_autotuner_calls);
 
     let matrix_cells = checked_square_cells(n, "precondition_autotune_gradient_fixed_via")?;

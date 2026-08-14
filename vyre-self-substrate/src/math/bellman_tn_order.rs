@@ -48,7 +48,7 @@ pub fn bellman_tn_order_program(
     n_edges: u32,
     max_iterations: u32,
 ) -> Program {
-    use crate::observability::{bellman_tn_order_calls, bump};
+    use vyre_libs::telemetry::observability::{bellman_tn_order_calls, bump};
     bump(&bellman_tn_order_calls);
     // Composes the tier-2.5 primitive directly.
     bellman_shortest_path(

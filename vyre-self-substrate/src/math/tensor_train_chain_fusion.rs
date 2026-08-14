@@ -39,7 +39,7 @@ pub struct TensorTrainFusionGpuScratch {
 #[cfg(test)]
 #[must_use]
 pub fn reference_fusion_pressure(shared_buffer_ranks: &[u32]) -> f64 {
-    use crate::observability::{bump, tensor_train_chain_fusion_calls};
+    use vyre_libs::telemetry::observability::{bump, tensor_train_chain_fusion_calls};
     bump(&tensor_train_chain_fusion_calls);
     if shared_buffer_ranks.is_empty() {
         return 0.0;
@@ -98,7 +98,7 @@ pub fn fusion_pressure_via_with_scratch(
     shared_buffer_ranks: &[u32],
     scratch: &mut TensorTrainFusionGpuScratch,
 ) -> Result<f64, DispatchError> {
-    use crate::observability::{bump, tensor_train_chain_fusion_calls};
+    use vyre_libs::telemetry::observability::{bump, tensor_train_chain_fusion_calls};
     bump(&tensor_train_chain_fusion_calls);
     if shared_buffer_ranks.is_empty() {
         return Ok(0.0);

@@ -52,6 +52,10 @@ text = []
 logical = ["math-broadcast"]
 rule = ["dep:regex"]
 
+# Compiler self-use composition domains, migrated out of the GPU pass engine
+# crate. Each gates one module tree; `all-solvers` turns on the set.
+telemetry = []
+
 "math-linalg" = []
 "math-scan" = []
 "math-broadcast" = []

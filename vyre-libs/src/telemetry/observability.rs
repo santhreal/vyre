@@ -1,28 +1,32 @@
-//! Substrate-call observability counters.
+//! Composition-call observability counters.
 //!
-//! Each self-consumer module increments a global atomic counter on
-//! every call. Operators read snapshots via [`snapshot_counters`] for
+//! Each consumer module increments a global atomic counter on every
+//! call. Operators read snapshots via [`snapshot_counters`] for
 //! Prometheus / OpenTelemetry / Datadog dashboards. Lets us answer:
 //!
-//! - Which substrate modules are actually consumed in production
+//! - Which composition modules are actually consumed in production
 //!   (≠ shipped library code)?
-//! - Which substrate calls dominate the dispatch hot path?
-//! - When a substrate path is added, when does it first see traffic?
+//! - Which composition calls dominate the dispatch hot path?
+//! - When a composition path is added, when does it first see traffic?
 //!
 //! The counters are lock-free (`AtomicU64` with relaxed ordering) so
 //! they don't add overhead to the hot path. Reading the snapshot is
-//! also lock-free.
+//! also lock-free. The statics and [`bump`] are public because the
+//! instrumented modules span crate boundaries during migration and
+//! because a dashboard that wants one counter should not have to walk
+//! the whole snapshot.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
 macro_rules! counters {
     ($($name:ident),* $(,)?) => {
         $(
+            #[doc = concat!("Call counter for `", stringify!($name), "`.")]
             #[allow(non_upper_case_globals)]
-            pub(crate) static $name: AtomicU64 = AtomicU64::new(0);
+            pub static $name: AtomicU64 = AtomicU64::new(0);
         )*
 
-        /// Snapshot of every substrate counter as a flat slice of
+        /// Snapshot of every composition counter as a flat slice of
         /// (module_name, call_count) tuples. Each call resets nothing
         ///  -  counters are monotonic from process start. Callers can
         /// diff two snapshots to derive call rate.
@@ -35,8 +39,8 @@ macro_rules! counters {
             ]
         }
 
-        /// Sum of every substrate-call counter. Useful as a
-        /// single-number "is the substrate doing anything" health
+        /// Sum of every composition-call counter. Useful as a
+        /// single-number "are the compositions doing anything" health
         /// signal in dashboards.
         #[must_use]
         pub fn total_calls() -> u64 {
@@ -95,10 +99,10 @@ counters! {
     vast_tree_walk_calls,
 }
 
-/// Bump counter `c` by one. Used internally by self-consumer modules
+/// Bump counter `c` by one. Called by the instrumented modules
 /// in their public-API entry points.
 #[inline]
-pub(crate) fn bump(c: &AtomicU64) {
+pub fn bump(c: &AtomicU64) {
     c.fetch_add(1, Ordering::Relaxed);
 }
 

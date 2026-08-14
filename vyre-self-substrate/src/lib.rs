@@ -115,8 +115,6 @@ pub mod logic;
 pub mod math;
 #[cfg(feature = "scheduling")]
 pub mod scheduling;
-#[cfg(feature = "telemetry")]
-pub mod telemetry;
 
 #[cfg(feature = "optimizer")]
 /// Self-hosted optimizer keystone  -  the encoder + GPU passes that run
@@ -145,9 +143,6 @@ pub use data::{
     bitset_compression, bitset_summary, matroid_exact_megakernel, matroid_megakernel_scheduler,
     parsing_dispatch_pipeline, scallop_provenance, scallop_provenance_wide, vsa_fingerprint,
 };
-
-#[cfg(feature = "telemetry")]
-pub use telemetry::observability;
 
 #[cfg(feature = "scheduling")]
 pub use scheduling::{

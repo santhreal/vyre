@@ -42,7 +42,7 @@ pub fn reference_predict_runtime(
     historical_residuals: &[u32],
     alpha: f64,
 ) -> (f64, u32) {
-    use crate::observability::{bump, cost_model_calls};
+    use vyre_libs::telemetry::observability::{bump, cost_model_calls};
     bump(&cost_model_calls);
     let topo: Vec<u32> = (0..feature_circuit_kinds.len() as u32).collect();
     let result = sum_product_evaluate_cpu(
@@ -115,7 +115,7 @@ pub fn predict_runtime_fixed_via_with_scratch(
     alpha: f64,
     scratch: &mut CostModelGpuScratch,
 ) -> Result<(u32, u32), DispatchError> {
-    use crate::observability::{bump, cost_model_calls};
+    use vyre_libs::telemetry::observability::{bump, cost_model_calls};
     bump(&cost_model_calls);
 
     let n_nodes = validate_circuit(

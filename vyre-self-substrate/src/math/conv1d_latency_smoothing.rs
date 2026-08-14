@@ -92,7 +92,7 @@ pub fn smooth_latency_trace_via_with_scratch_into(
     scratch: &mut Conv1dLatencySmoothingScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::observability::{bump, conv1d_latency_smoothing_calls};
+    use vyre_libs::telemetry::observability::{bump, conv1d_latency_smoothing_calls};
     bump(&conv1d_latency_smoothing_calls);
 
     if latency_fixed.is_empty() {

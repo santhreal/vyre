@@ -35,7 +35,7 @@ pub fn vsa_fingerprint(program: &vyre_foundation::ir::Program) -> Vec<u32> {
 /// Build the stable eight-lane VSA cache fingerprint without heap allocation.
 #[must_use]
 pub fn vsa_fingerprint_words(program: &vyre_foundation::ir::Program) -> [u32; 8] {
-    use crate::observability::{bump, vsa_fingerprint_calls};
+    use vyre_libs::telemetry::observability::{bump, vsa_fingerprint_calls};
     bump(&vsa_fingerprint_calls);
     let fingerprint = program.fingerprint();
     vyre_primitives::wire::decode_u32x8_le_bytes(&fingerprint)

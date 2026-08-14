@@ -33,7 +33,7 @@ pub struct SpectralScheduleGpuScratch {
 #[must_use]
 #[cfg(test)]
 pub fn reference_fusion_scores(laplacian: &[f32], n: u32) -> Vec<f32> {
-    use crate::observability::{bump, spectral_schedule_calls};
+    use vyre_libs::telemetry::observability::{bump, spectral_schedule_calls};
     bump(&spectral_schedule_calls);
     assert_eq!(laplacian.len(), (n * n) as usize);
     let signal: Vec<f32> = (0..n).map(|_| 1.0 / (n as f32).sqrt()).collect();
@@ -115,7 +115,7 @@ pub fn fusion_scores_fixed_via_with_scratch_into(
     scratch: &mut SpectralScheduleGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::observability::{bump, spectral_schedule_calls};
+    use vyre_libs::telemetry::observability::{bump, spectral_schedule_calls};
     bump(&spectral_schedule_calls);
 
     if k_steps > CHEBYSHEV_MAX_K {

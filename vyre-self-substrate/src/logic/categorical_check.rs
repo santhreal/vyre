@@ -18,7 +18,7 @@ use vyre_primitives::cat::yoneda::{yoneda_natural_iso as primitive_yoneda, Finit
 /// dataflow-fixpoint substrate counter.
 #[must_use]
 pub fn natural_transformation_count(category: &FiniteCategory, x: u32, f_at_x: u32) -> u32 {
-    use crate::observability::{bump, dataflow_fixpoint_calls};
+    use vyre_libs::telemetry::observability::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     primitive_yoneda(category, x, f_at_x)
 }
@@ -32,7 +32,7 @@ pub fn check_adjunction(
     f: &FiniteFunctor,
     g: &FiniteFunctor,
 ) -> AdjointPair {
-    use crate::observability::{bump, dataflow_fixpoint_calls};
+    use vyre_libs::telemetry::observability::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     primitive_is_adjoint(c_cat, d_cat, f, g)
 }
@@ -41,7 +41,7 @@ pub fn check_adjunction(
 /// the dataflow-fixpoint substrate counter.
 #[must_use]
 pub fn left_kan_at(k: &FiniteFunctor, f_image: &[u32], c: u32) -> u32 {
-    use crate::observability::{bump, dataflow_fixpoint_calls};
+    use vyre_libs::telemetry::observability::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     primitive_lan(k, f_image, c)
 }
@@ -50,7 +50,7 @@ pub fn left_kan_at(k: &FiniteFunctor, f_image: &[u32], c: u32) -> u32 {
 /// Bumps the dataflow-fixpoint substrate counter.
 #[must_use]
 pub fn right_kan_at(k: &FiniteFunctor, f_image: &[u32], c: u32) -> u32 {
-    use crate::observability::{bump, dataflow_fixpoint_calls};
+    use vyre_libs::telemetry::observability::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     primitive_ran(k, f_image, c)
 }

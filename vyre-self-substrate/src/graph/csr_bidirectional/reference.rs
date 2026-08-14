@@ -19,7 +19,7 @@ pub fn reference_bidirectional_step(
     frontier_in: &[u32],
     allow_mask: u32,
 ) -> Vec<u32> {
-    use crate::observability::{bump, graph_dispatch_calls};
+    use vyre_libs::telemetry::observability::{bump, graph_dispatch_calls};
     bump(&graph_dispatch_calls);
     reference_csr_bidir(
         node_count,
@@ -74,7 +74,7 @@ pub fn reference_bidirectional_closure_into(
     current: &mut Vec<u32>,
     next: &mut Vec<u32>,
 ) {
-    use crate::observability::{bump, graph_dispatch_calls};
+    use vyre_libs::telemetry::observability::{bump, graph_dispatch_calls};
     reference_csr_bidir_closure_into_with_step_hook(
         node_count,
         edge_offsets,

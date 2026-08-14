@@ -105,7 +105,7 @@ pub fn cluster_projection_matrix_into<'a>(
     k: u32,
     scratch: &'a mut RegionCoarsenScratch,
 ) -> &'a [f64] {
-    use crate::observability::{bump, mori_zwanzig_region_coarsen_calls};
+    use vyre_libs::telemetry::observability::{bump, mori_zwanzig_region_coarsen_calls};
     bump(&mori_zwanzig_region_coarsen_calls);
     assert!(n > 0);
     assert!(k > 0);
@@ -165,7 +165,7 @@ pub fn reference_coarsen_region_state_into(
     n: u32,
     out: &mut Vec<f64>,
 ) {
-    use crate::observability::{bump, mori_zwanzig_region_coarsen_calls};
+    use vyre_libs::telemetry::observability::{bump, mori_zwanzig_region_coarsen_calls};
     bump(&mori_zwanzig_region_coarsen_calls);
     mz_project_step_cpu_into(p_matrix, state, n, out);
 }
@@ -232,7 +232,7 @@ pub fn coarsen_region_state_fixed_via_with_scratch_into(
     scratch: &mut RegionCoarsenGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::observability::{bump, mori_zwanzig_region_coarsen_calls};
+    use vyre_libs::telemetry::observability::{bump, mori_zwanzig_region_coarsen_calls};
     bump(&mori_zwanzig_region_coarsen_calls);
 
     let cells = checked_square_cells(n, "coarsen_region_state_fixed_via")?;

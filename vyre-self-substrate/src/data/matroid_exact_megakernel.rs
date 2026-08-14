@@ -320,7 +320,7 @@ pub fn select_optimal_subset_via_with_scratch_into(
     scratch: &mut ExactMatroidDispatchScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::observability::{bump, matroid_exact_megakernel_calls};
+    use vyre_libs::telemetry::observability::{bump, matroid_exact_megakernel_calls};
     bump(&matroid_exact_megakernel_calls);
 
     let n_u32 = validate_full_for_dispatch(exchange_adj, sources, sinks, seed_x, n)?;
@@ -422,7 +422,7 @@ pub fn reference_select_optimal_subset_into<'a>(
 ) -> Result<&'a [u32], ExactMatroidError> {
     validate_full(exchange_adj, sources, sinks, seed_x, n)?;
 
-    use crate::observability::{bump, matroid_exact_megakernel_calls};
+    use vyre_libs::telemetry::observability::{bump, matroid_exact_megakernel_calls};
     bump(&matroid_exact_megakernel_calls);
 
     scratch.prepare(seed_x, n, max_augmentations);
@@ -494,7 +494,7 @@ pub fn reference_select_optimal_subset_all_eligible_into<'a>(
 ) -> Result<&'a [u32], ExactMatroidError> {
     let _expected_adj = validate_common(exchange_adj, seed_x, n)?;
 
-    use crate::observability::{bump, matroid_exact_megakernel_calls};
+    use vyre_libs::telemetry::observability::{bump, matroid_exact_megakernel_calls};
     bump(&matroid_exact_megakernel_calls);
 
     scratch.prepare(seed_x, n, max_augmentations);

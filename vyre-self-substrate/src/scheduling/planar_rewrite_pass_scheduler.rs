@@ -72,7 +72,7 @@ pub struct PlanarRewriteScheduleGpuScratch {
 #[must_use]
 #[cfg(test)]
 pub fn schedule_disjoint_rewrites(candidates: &[u32], h: u32, w: u32, k: u32) -> Vec<u32> {
-    use crate::observability::{bump, planar_rewrite_pass_scheduler_calls};
+    use vyre_libs::telemetry::observability::{bump, planar_rewrite_pass_scheduler_calls};
     bump(&planar_rewrite_pass_scheduler_calls);
     assert!(k > 0, "Fix: rewrite footprint k must be > 0.");
     reference_planar_rewrite_schedule(candidates, h, w, k)
@@ -141,7 +141,7 @@ pub fn schedule_disjoint_rewrites_via_with_scratch_into(
     scratch: &mut PlanarRewriteScheduleGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::observability::{bump, planar_rewrite_pass_scheduler_calls};
+    use vyre_libs::telemetry::observability::{bump, planar_rewrite_pass_scheduler_calls};
     bump(&planar_rewrite_pass_scheduler_calls);
 
     if k == 0 {

@@ -87,7 +87,7 @@ pub fn reference_region_loop_skeleton_into(
     n: u32,
     out: &mut Vec<u32>,
 ) {
-    use crate::observability::{bump, persistent_homology_loop_signature_calls};
+    use vyre_libs::telemetry::observability::{bump, persistent_homology_loop_signature_calls};
     bump(&persistent_homology_loop_signature_calls);
     let n_us = n as usize;
     assert_eq!(dist_matrix.len(), n_us * n_us);
@@ -136,7 +136,7 @@ pub fn region_loop_skeleton_fixed_via_into(
     n: u32,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::observability::{bump, persistent_homology_loop_signature_calls};
+    use vyre_libs::telemetry::observability::{bump, persistent_homology_loop_signature_calls};
     bump(&persistent_homology_loop_signature_calls);
 
     let cells = checked_square_cells(n, "region_loop_skeleton_fixed_via")?;

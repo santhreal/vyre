@@ -25,7 +25,7 @@ use vyre_primitives::effects::{
 /// effect not permitted by the signature. The error's
 /// `unpermitted` field is the offending bitmask.
 pub fn check_signature(signature: EffectRow, observed: EffectRow) -> Result<(), EffectTypeError> {
-    use crate::observability::{bump, dataflow_fixpoint_calls};
+    use vyre_libs::telemetry::observability::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     primitive_check(signature, observed)
 }
@@ -34,7 +34,7 @@ pub fn check_signature(signature: EffectRow, observed: EffectRow) -> Result<(), 
 /// failure detail.
 #[must_use]
 pub fn signature_fits(signature: EffectRow, observed: EffectRow) -> bool {
-    use crate::observability::{bump, dataflow_fixpoint_calls};
+    use vyre_libs::telemetry::observability::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     primitive_fits(signature, observed)
 }

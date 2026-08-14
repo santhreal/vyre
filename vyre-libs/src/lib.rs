@@ -120,6 +120,10 @@ pub use descriptor::{BufferDescriptor, ProgramDescriptor};
 /// Derived view over canonical library operation registrations.
 pub mod operation_catalog;
 
+/// Per-module call counters for the composition surface.
+#[cfg(feature = "telemetry")]
+pub mod telemetry;
+
 /// Math dialect  -  linear algebra, scans, broadcasting.
 #[cfg(any(
     feature = "math-linalg",

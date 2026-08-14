@@ -86,7 +86,7 @@ pub fn reference_diffuse_dispatch_stalks(
     restriction_diag: &[f64],
     damping: f64,
 ) -> Vec<f64> {
-    use crate::observability::{bump, sheaf_heterophilic_dispatch_calls};
+    use vyre_libs::telemetry::observability::{bump, sheaf_heterophilic_dispatch_calls};
     bump(&sheaf_heterophilic_dispatch_calls);
     sheaf_diffusion_step_cpu(stalks, restriction_diag, damping)
 }
@@ -101,7 +101,7 @@ pub fn reference_diffuse_dispatch_stalks_into(
     damping: f64,
     out: &mut Vec<f64>,
 ) {
-    use crate::observability::{bump, sheaf_heterophilic_dispatch_calls};
+    use vyre_libs::telemetry::observability::{bump, sheaf_heterophilic_dispatch_calls};
     bump(&sheaf_heterophilic_dispatch_calls);
     sheaf_diffusion_step_cpu_into(stalks, restriction_diag, damping, out);
 }
@@ -178,7 +178,7 @@ pub fn diffuse_dispatch_stalks_fixed_via_with_scratch_into(
     scratch: &mut SheafDispatchGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::observability::{bump, sheaf_heterophilic_dispatch_calls};
+    use vyre_libs::telemetry::observability::{bump, sheaf_heterophilic_dispatch_calls};
     bump(&sheaf_heterophilic_dispatch_calls);
 
     let cells = checked_product_count(

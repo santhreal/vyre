@@ -56,7 +56,7 @@ pub fn forward_backward_bitsets_for_pivot_into(
     n: u32,
     scratch: &mut DataflowFixpointScratch,
 ) {
-    use crate::observability::{bump, dataflow_fixpoint_calls};
+    use vyre_libs::telemetry::observability::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     assert!(
         n > 0,
@@ -156,7 +156,7 @@ pub fn reference_scc_components_via_substrate_into(
     components: &mut Vec<u32>,
     scratch: &mut DataflowFixpointScratch,
 ) {
-    use crate::observability::{bump, dataflow_fixpoint_calls};
+    use vyre_libs::telemetry::observability::{bump, dataflow_fixpoint_calls};
     bump(&dataflow_fixpoint_calls);
     components.clear();
     if n == 0 {

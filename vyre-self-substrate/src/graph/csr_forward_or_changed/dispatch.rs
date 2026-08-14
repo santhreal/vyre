@@ -179,7 +179,7 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
     )?;
 
     for iter in 0..max_iters {
-        use crate::observability::{bump, graph_dispatch_calls};
+        use vyre_libs::telemetry::observability::{bump, graph_dispatch_calls};
         bump(&graph_dispatch_calls);
 
         write_dispatch_input(&mut inputs[5], DispatchInput::u32_slice(frontier))?;

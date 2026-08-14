@@ -18,7 +18,7 @@ pub fn reference_topo_order(
     node_count: u32,
     edges: &[(u32, u32)],
 ) -> Result<Vec<u32>, ToposortError> {
-    use crate::observability::{bump, toposort_calls};
+    use vyre_libs::telemetry::observability::{bump, toposort_calls};
     bump(&toposort_calls);
     toposort_cpu(node_count, edges)
 }
@@ -37,7 +37,7 @@ pub fn reference_reachable_set(
     edges: &[(u32, u32)],
     sources: &[u32],
 ) -> Result<HashSet<u32>, UnknownNode> {
-    use crate::observability::{bump, toposort_calls};
+    use vyre_libs::telemetry::observability::{bump, toposort_calls};
     bump(&toposort_calls);
     reachable_cpu(node_count, edges, sources)
 }

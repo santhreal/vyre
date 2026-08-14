@@ -106,7 +106,7 @@ pub fn reference_aggregate_to_cells_into(
     cell_assignment: &[u32],
     out: &mut Vec<f64>,
 ) {
-    use crate::observability::{bump, fmm_polyhedral_compress_calls};
+    use vyre_libs::telemetry::observability::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
     assert_eq!(scores.len(), cell_assignment.len());
     p2m_zeroth_moment_cpu_into(scores, cell_assignment, out);
@@ -137,7 +137,7 @@ pub fn reference_translate_to_targets_into(
     cell_distances: &[f64],
     local: &mut Vec<f64>,
 ) {
-    use crate::observability::{bump, fmm_polyhedral_compress_calls};
+    use vyre_libs::telemetry::observability::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
     let num_cells = cell_moments.len();
     assert_eq!(
@@ -179,7 +179,7 @@ pub fn reference_evaluate_at_regions_into(
     n: u32,
     out: &mut Vec<f64>,
 ) {
-    use crate::observability::{bump, fmm_polyhedral_compress_calls};
+    use vyre_libs::telemetry::observability::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
     assert_eq!(cell_assignment.len(), n as usize);
     out.clear();
@@ -276,7 +276,7 @@ pub fn aggregate_to_cells_via_with_scratch_into(
     scratch: &mut FmmPolyhedralGpuScratch,
     out: &mut Vec<f32>,
 ) -> Result<(), DispatchError> {
-    use crate::observability::{bump, fmm_polyhedral_compress_calls};
+    use vyre_libs::telemetry::observability::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
 
     let n_regions = validate_region_shape(
@@ -340,7 +340,7 @@ pub fn translate_to_targets_via_with_scratch_into(
     scratch: &mut FmmPolyhedralGpuScratch,
     out: &mut Vec<f32>,
 ) -> Result<(), DispatchError> {
-    use crate::observability::{bump, fmm_polyhedral_compress_calls};
+    use vyre_libs::telemetry::observability::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
 
     let n_cells = validate_square_distance_shape(
@@ -406,7 +406,7 @@ pub fn evaluate_at_regions_via_with_scratch_into(
     scratch: &mut FmmPolyhedralGpuScratch,
     out: &mut Vec<f32>,
 ) -> Result<(), DispatchError> {
-    use crate::observability::{bump, fmm_polyhedral_compress_calls};
+    use vyre_libs::telemetry::observability::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
 
     validate_region_n(cell_assignment.len(), n, "evaluate_at_regions_via")?;

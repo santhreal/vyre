@@ -26,7 +26,6 @@ self-substrate-adapters = [
     "vyre-self-substrate/analysis",
     "vyre-self-substrate/data",
     "vyre-self-substrate/math-solvers",
-    "vyre-self-substrate/telemetry",
 ]
 remote-cache = ["ureq"]
 # Opt-in NVMe passthrough via `IORING_OP_URING_CMD` (Linux kernel 6.0+).
