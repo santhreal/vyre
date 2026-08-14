@@ -7,13 +7,13 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use crate::hardware::{pack_u32, packed_u32_input_with_output, MAP_WORKGROUP};
 /// Canonical op id shared by semantics, fixtures, and driver registration.
-pub const OP_ID: &str = "vyre-intrinsics::hardware::subgroup_ballot";
+pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_ballot";
 
 /// Build a Program that collects the per-lane boolean predicate into a u32
 /// bitmask broadcast to every lane.
 #[must_use]
 pub fn subgroup_ballot(cond_input: &str, out: &str, n: u32) -> Program {
-    let body = vec![crate::region::wrap_anonymous(
+    let body = vec![crate::hardware::region::wrap_anonymous(
         OP_ID,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
@@ -73,7 +73,7 @@ inventory::submit! {
     vyre_foundation::operation::OperationRegistration {
         id: OP_ID,
         semantic_version: 1,
-        signature: Some(crate::operation_catalog::U32_UNARY_SIGNATURE),
+        signature: Some(crate::hardware::catalog::U32_UNARY_SIGNATURE),
         tier: vyre_foundation::operation::OperationTier::Intrinsic,
         category: Some("hardware"),
         build: Some(|| subgroup_ballot("cond", "out", 4)),
@@ -85,13 +85,13 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::operation_catalog::IntrinsicFacet {
+    crate::hardware::catalog::IntrinsicFacet {
         operation_id: OP_ID,
-        shape: crate::operation_catalog::OpShape::new(
+        shape: crate::hardware::catalog::OpShape::new(
             1,
             1,
             4,
-            crate::operation_catalog::HardwareSemantic::SubgroupBallotU32,
+            crate::hardware::catalog::HardwareSemantic::SubgroupBallotU32,
         ),
     }
 }

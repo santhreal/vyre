@@ -451,7 +451,7 @@ fn hygiene_owner_lane_for_path(path: &str) -> &'static str {
     }
     if normalized.contains("/vyre-foundation/src/runtime/")
         || normalized.contains("/vyre-reference/")
-        || normalized.contains("/vyre-intrinsics/")
+        || normalized.contains("/vyre-primitives/src/hardware/")
     {
         return "driver_shared";
     }

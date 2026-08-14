@@ -1,7 +1,7 @@
 # Vision-Alignment Audit  -  vyre + surgec north-star fidelity
 
 **Date:** 2026-04-23  
-**Scope:** vyre-foundation, vyre-core, vyre-intrinsics, vyre-libs, vyre-driver-wgpu, vyre-runtime, surgec  
+**Scope:** vyre-foundation, vyre-core, vyre-primitives, vyre-libs, vyre-driver-wgpu, vyre-runtime, surgec  
 **Source of truth:** `VISION.md` (vyre), `docs/library-tiers.md`, `docs/primitives-tier.md`, `docs/region-chain.md`, `libs/surge/surgec/README.md`  
 **Authored by:** Claude, hands-on read.
 
@@ -186,7 +186,7 @@ becomes).
 
 ---
 
-## V6  -  vyre-intrinsics doc says 9 ops; hardware/ has 9 subdirs  -  confirm
+## V6  -  vyre-primitives doc says 9 ops; hardware/ has 9 subdirs  -  confirm
 
 **Severity:** INFO (verified, matches)  
 **File:** `docs/library-tiers.md:35`
@@ -202,7 +202,7 @@ and a CPU reference. OK, not a drift.
 ## V7  -  Region-chain invariant: is it provable today?
 
 **Severity:** HIGH (needs answering before vyre-libs-extern ships)  
-**Files:** `docs/region-chain.md`, `vyre-intrinsics/src/region.rs`,
+**Files:** `docs/region-chain.md`, `vyre-primitives/src/hardware/region.rs`,
 `vyre-libs/src/region.rs`
 
 **Drift:** the vision promises "`cargo xtask print-composition
@@ -266,7 +266,7 @@ and asserts bytewise-correct output against a CPU reference.
 | V3 | HIGH | SURGE predicates hardcoded vs registered | Partial  -  confirm registry-first dispatch |
 | V4 | HIGH | `surgec run <program>` verb missing | Open  -  new subcommand required |
 | V5 | MEDIUM | surgec unconditional `vyre-libs::security` import | Open  -  gate or hoist to primitives |
-| V6 | INFO | vyre-intrinsics 9-op lock | Verified matches doc |
+| V6 | INFO | vyre-primitives 9-op lock | Verified matches doc |
 | V7 | HIGH | Region-chain `print-composition` CI-gate | Open  -  audit existing tooling |
 | V8 |  -  | Folded into V5 |  -  |
 | V9 | INFO | Backend roadmap visibility | Minor doc task |

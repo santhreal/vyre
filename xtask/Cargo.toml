@@ -27,8 +27,7 @@ vyre-spec.workspace = true
 # shipped Tier-3 consumer so primitive coverage is measured against the
 # real composition surface, not a feature-narrow slice.
 vyre-libs = { workspace = true, features = ["full", "logical", "nn-moe", "security", "visual", "parsing", "math", "nn", "matching", "crypto"] }
-vyre-intrinsics.workspace = true
-vyre-primitives = { workspace = true, features = ["text", "matching", "math", "nn", "hash", "parsing", "graph", "bitset", "reduce", "label", "predicate", "fixpoint", "inventory-registry"] }
+vyre-primitives = { workspace = true, features = ["text", "matching", "math", "nn", "hash", "parsing", "graph", "bitset", "reduce", "label", "predicate", "fixpoint", "inventory-registry", "hardware"] }
 vyre-reference.workspace = true
 vyre-bench.workspace = true
 vyre-driver-wgpu.workspace = true

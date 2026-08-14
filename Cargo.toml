@@ -34,7 +34,6 @@ members = [
     "vyre-runtime",
     "vyre-safetensors",
     "vyre-libs",
-    "vyre-intrinsics",
     "vyre-aot",
     "vyre-frontend-rust",
     "vyre-bench",
@@ -67,7 +66,7 @@ exclude = [
 edition = "2021"
 rust-version = "1.85"
 license = "MIT OR Apache-2.0"
-authors = ["Santh Project <contact@santh.dev>"]
+authors = ["Santh <64453045+santhreal@users.noreply.github.com>"]
 repository = "https://github.com/santhreal/vyre"
 homepage = "https://santh.dev"
 
@@ -214,7 +213,6 @@ vyre-runtime = { version = "0.7.2", path = "vyre-runtime" }
 vyre-safetensors = { version = "0.7.2", path = "vyre-safetensors" }
 vyre-libs = { version = "0.7.2", path = "vyre-libs" }
 vyre-self-substrate = { version = "0.7.2", path = "vyre-self-substrate" }
-vyre-intrinsics = { version = "0.7.2", path = "vyre-intrinsics" }
 vyre-aot = { version = "0.7.2", path = "vyre-aot" }
 vyre-bench = { version = "0.7.2", path = "vyre-bench" }
 vyre-conform = { version = "0.7.2", path = "conform/vyre-conform", default-features = false }
@@ -312,4 +310,13 @@ lto = "thin"
 codegen-units = 1
 
 [profile.dev]
-incremental = true
+# Incremental is OFF deliberately. Worktrees and agents build the same crates
+# under different absolute paths and different feature permutations, so
+# incremental state is never re-read: it grew debug/deps to 1.1T and produced a
+# measured 0.00% hit rate on 1310 cached compile requests. It is also what
+# makes any shared compilation cache impossible, because rustc refuses to
+# emit a cacheable artifact under -C incremental.
+incremental = false
+# Backtraces need line tables, not full DWARF. Cuts rlib bytes and link time.
+debug = "line-tables-only"
+split-debuginfo = "unpacked"

@@ -35,11 +35,10 @@ PUBLISHABLE=(
     "vyre-primitives/Cargo.toml"
     "vyre-runtime/Cargo.toml"
     "vyre-libs/Cargo.toml"
-    "vyre-intrinsics/Cargo.toml"
     "vyre-aot/Cargo.toml"
 )
 
-INTERNAL_RE='^(vyre|vyre-foundation|vyre-driver|vyre-driver-wgpu|vyre-driver-spirv|vyre-driver-cuda|vyre-reference|vyre-spec|vyre-macros|vyre-primitives|vyre-runtime|vyre-libs|vyre-intrinsics|vyre-aot|vyre-conform-spec|vyre-conform)$'
+INTERNAL_RE='^(vyre|vyre-foundation|vyre-driver|vyre-driver-wgpu|vyre-driver-spirv|vyre-driver-cuda|vyre-reference|vyre-spec|vyre-macros|vyre-primitives|vyre-runtime|vyre-libs|vyre-aot|vyre-conform-spec|vyre-conform)$'
 
 errors=()
 

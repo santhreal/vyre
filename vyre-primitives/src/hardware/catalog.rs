@@ -1,4 +1,5 @@
-//! Canonical Category-C intrinsic catalog.
+//! Canonical Category C catalog: typed signatures plus the conformance
+//! geometry each hardware intrinsic declares alongside its registration.
 //!
 //! Each entry owns one stable identity and signature together with its neutral
 //! program builder, semantic classification, and deterministic fixtures.
@@ -9,7 +10,6 @@ use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
 use vyre_foundation::dialect_lookup::{AttrSchema, Signature, TypedParam};
-use vyre_foundation::operation::{OperationRegistry, OperationTier};
 
 const NO_ATTRS: &[AttrSchema] = &[];
 
@@ -141,9 +141,6 @@ impl OpShape {
     }
 }
 
-/// Canonical semantic intrinsic view.
-pub use vyre_foundation::operation::SemanticOperation;
-
 /// Intrinsic-specific conformance geometry keyed by canonical operation identity.
 pub struct IntrinsicFacet {
     /// Canonical semantic operation identifier.
@@ -170,11 +167,4 @@ static FACETS: LazyLock<BTreeMap<&'static str, &'static IntrinsicFacet>> = LazyL
 #[must_use]
 pub fn intrinsic_facet(operation_id: &str) -> Option<&'static IntrinsicFacet> {
     FACETS.get(operation_id).copied()
-}
-
-/// Iterate canonical hardware-facing semantic intrinsic registrations.
-pub fn all_entries() -> impl Iterator<Item = SemanticOperation> {
-    OperationRegistry::global()
-        .iter()
-        .filter(|entry| entry.tier == OperationTier::Intrinsic)
 }

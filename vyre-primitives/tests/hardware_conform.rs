@@ -1,13 +1,13 @@
 //! Cat-C hardware intrinsic differential harness.
 //!
 //! Iterates every canonical `SemanticOperation` whose id begins with
-//! `vyre-intrinsics::hardware::` and asserts the CPU reference matches
+//! `vyre-primitives::hardware::` and asserts the CPU reference matches
 //! the declared `expected_output` bit-for-bit. This is the lightweight
 //! gate; GPU conform tests run separately through the backend lowering
 //! and dispatch suites.
 
 use vyre_foundation::operation::SemanticOperation;
-use vyre_intrinsics::operation_catalog::all_entries;
+use vyre_primitives::hardware::all_entries;
 use vyre_reference::value::Value;
 
 fn run_cpu(entry: &SemanticOperation, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
@@ -28,7 +28,7 @@ fn run_cpu(entry: &SemanticOperation, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
 #[test]
 fn hardware_intrinsics_match_expected_output() {
     let entries: Vec<_> = all_entries()
-        .filter(|e| e.id.starts_with("vyre-intrinsics::hardware::"))
+        .filter(|e| e.id.starts_with("vyre-primitives::hardware::"))
         .collect();
     assert!(
         !entries.is_empty(),

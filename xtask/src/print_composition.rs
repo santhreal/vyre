@@ -28,7 +28,7 @@ pub(crate) fn run(args: &[String]) {
         None => {
             eprintln!(
                 "Fix: op id '{op_id}' not found in any inventory registry. \
-                 Known id prefixes: vyre-intrinsics::hardware::*, \
+                 Known id prefixes: vyre-primitives::hardware::*, \
                  vyre-primitives::*, \
                  vyre-libs::math::*, vyre-libs::math::atomic::*, \
                  vyre-libs::hash::*, vyre-libs::logical::*, vyre-libs::nn::*, \

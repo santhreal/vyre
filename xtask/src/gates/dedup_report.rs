@@ -295,7 +295,7 @@ fn bigram_counts(bytes: &[u8]) -> HashMap<(u8, u8), u32> {
 }
 
 pub(crate) fn registered_op_owner_lane(op_id: &str) -> &'static str {
-    if op_id.starts_with("vyre-intrinsics::") {
+    if op_id.starts_with("vyre-primitives::hardware::") {
         "lower_emit"
     } else if op_id.starts_with("vyre-primitives::graph::")
         || op_id.starts_with("vyre-primitives::bitset::")

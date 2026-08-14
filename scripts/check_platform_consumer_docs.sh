@@ -15,7 +15,6 @@ PLATFORM_CRATES=(
   "vyre-macros"
   "vyre-foundation"
   "vyre-primitives"
-  "vyre-intrinsics"
   "vyre-libs"
   "vyre-reference"
   "vyre-driver"

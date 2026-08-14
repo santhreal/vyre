@@ -92,7 +92,7 @@ Execute production artifacts against independent reference semantics, minimize c
 ### Boundaries
 
 The `conformance` owner maintains this `conformance` crate at `conform/vyre-conform`.
-Its allowed internal production dependencies are: `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

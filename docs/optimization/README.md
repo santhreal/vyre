@@ -60,7 +60,7 @@ single backend.
 | Concrete codegen or device API | `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-driver-spirv` | Only irreducible substrate glue stays here. |
 | Persistent megakernel scheduling/protocol | `vyre-runtime/src/megakernel/` | Primary runtime path; do not duplicate in drivers. |
 | Domain ops and libraries | `vyre-libs/src/` | Compose lower tiers; no driver logic. |
-| Primitive reusable ops | `vyre-primitives/src/` or `vyre-intrinsics/src/` | Must meet tier rules and matrix entry. |
+| Primitive reusable ops | `vyre-primitives/src/` | Must meet tier rules and matrix entry. |
 | Benchmark harness and targets | `vyre-bench/` plus `docs/optimization/BENCH_TARGETS.toml` | Targets must identify baseline class. |
 
 
@@ -88,7 +88,7 @@ release-blocking, or intentionally outside the backend's scope.
 
 Op-specific files belong by tier:
 
-- hardware one-instruction intrinsics: `vyre-intrinsics/src/hardware/`
+- hardware one-instruction intrinsics: `vyre-primitives/src/hardware/`
 - reusable substrate primitives: `vyre-primitives/src/<family>/`
 - domain compositions: `vyre-libs/src/<family>/`
 - IR variants and validation: `vyre-foundation`

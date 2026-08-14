@@ -117,7 +117,6 @@ fn crate_tier(member_path: &str) -> u32 {
     let name = member_path.rsplit('/').next().unwrap_or(member_path);
     match name {
         "vyre-foundation" | "vyre-spec" | "vyre" | "vyre-macros" => 10,
-        "vyre-intrinsics" => 20,
         "vyre-primitives" => 25,
         "vyre-self-substrate" => 28,
         "vyre-libs" => 30,

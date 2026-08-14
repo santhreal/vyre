@@ -38,10 +38,9 @@ vyre-driver-metal = { workspace = true, optional = true }
 vyre-driver-reference = { workspace = true }
 vyre-driver-wgpu = { workspace = true, optional = true }
 vyre-foundation = { workspace = true }
-vyre-intrinsics = { workspace = true }
 vyre-libs = { workspace = true, features = ["full", "logical", "nn-moe", "security", "visual", "parsing", "math", "nn", "matching", "crypto"] }
 vyre-megakernel = { workspace = true }
-vyre-primitives = { workspace = true }
+vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
 vyre-runtime = { workspace = true }
 vyre-spec = { workspace = true }

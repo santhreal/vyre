@@ -72,5 +72,5 @@ vyre-test-support.workspace = true
 vyre = { path = "../vyre", default-features = false }
 vyre-driver-reference = { path = "../vyre-driver-reference" }
 vyre-reference = { path = "../vyre-reference" }
-vyre-intrinsics = { path = "../vyre-intrinsics" }
+vyre-primitives = { path = "../vyre-primitives", features = ["hardware"] }
 tempfile.workspace = true

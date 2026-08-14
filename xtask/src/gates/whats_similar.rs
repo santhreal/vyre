@@ -803,8 +803,8 @@ mod tests {
             implementation_family_id("vyre-libs::math::avg_floor")
         );
         assert_eq!(
-            implementation_family_id("vyre-intrinsics::hardware::bit_reverse_u32"),
-            implementation_family_id("vyre-intrinsics::hardware::popcount_u32")
+            implementation_family_id("vyre-primitives::hardware::bit_reverse_u32"),
+            implementation_family_id("vyre-primitives::hardware::popcount_u32")
         );
         assert_eq!(
             implementation_family_id("vyre-libs::math::lzcnt_u32"),
@@ -827,8 +827,8 @@ mod tests {
             implementation_family_id("vyre-libs::parsing::c_sema_scope.identifier_intern")
         );
         assert!(known_distinct_implementation_family_id(
-            "vyre-intrinsics::hardware::workgroup_barrier",
-            "vyre-intrinsics::hardware::bit_reverse_u32"
+            "vyre-primitives::hardware::workgroup_barrier",
+            "vyre-primitives::hardware::bit_reverse_u32"
         ));
         assert!(known_distinct_implementation_family_id(
             "vyre-primitives::graph::csr_forward_or_changed",
@@ -839,8 +839,8 @@ mod tests {
             "vyre-primitives::graph::functor_apply"
         ));
         assert!(!known_distinct_implementation_family_id(
-            "vyre-intrinsics::hardware::workgroup_barrier",
-            "vyre-intrinsics::hardware::storage_barrier"
+            "vyre-primitives::hardware::workgroup_barrier",
+            "vyre-primitives::hardware::storage_barrier"
         ));
     }
 

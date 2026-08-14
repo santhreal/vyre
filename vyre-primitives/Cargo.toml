@@ -83,12 +83,17 @@ dnnf = ["vyre-foundation", "graph"]
 topology = ["vyre-foundation", "math", "graph"]
 visual = ["vyre-foundation"]
 
+# Category C hardware intrinsics. Every op here submits an
+# `OperationRegistration`, so the registry feature comes with it rather than
+# being a second thing to remember.
+hardware = ["vyre-foundation", "inventory-registry"]
+
 # Convenience aggregate  -  enable the entire Tier 2.5 substrate.
 all-lego = [
     "text", "matching", "math", "nn", "hash", "parsing",
     "geom", "opt", "topology",
     "graph", "bitset", "reduce", "label", "predicate", "fixpoint", "decode",
-    "nfa", "effects", "visual",
+    "nfa", "effects", "visual", "hardware",
 ]
 
 # Enable canonical `OperationRegistration::primitive(...)` submissions so the
@@ -324,6 +329,16 @@ path = "tests/sweep_hash_fnv1a_oracle_matrix.rs"
 required-features = ["hash"]
 
 [[test]]
+name = "fnv1a64_u32_lane_parity"
+path = "tests/fnv1a64_u32_lane_parity.rs"
+required-features = ["hash"]
+
+[[test]]
+name = "hash_registration_witnesses"
+path = "tests/hash_registration_witnesses.rs"
+required-features = ["hash", "inventory-registry"]
+
+[[test]]
 name = "sweep_toposort_oracle_matrix"
 path = "tests/sweep_toposort_oracle_matrix.rs"
 required-features = ["graph", "cpu-parity"]
@@ -521,3 +536,23 @@ required-features = ["reduce", "cpu-parity"]
 name = "persistent_fixpoint_grid_contracts"
 path = "tests/persistent_fixpoint_grid_contracts.rs"
 required-features = ["fixpoint", "cpu-parity"]
+[[test]]
+name = "hardware_conform"
+path = "tests/hardware_conform.rs"
+required-features = ["hardware"]
+[[test]]
+name = "hardware_registry_contract"
+path = "tests/hardware_registry_contract.rs"
+required-features = ["hardware"]
+[[test]]
+name = "generated_hardware_f32_matrix"
+path = "tests/generated_hardware_f32_matrix.rs"
+required-features = ["hardware"]
+[[test]]
+name = "generated_hardware_u32_matrix"
+path = "tests/generated_hardware_u32_matrix.rs"
+required-features = ["hardware"]
+[[test]]
+name = "generated_hardware_registry_matrix"
+path = "tests/generated_hardware_registry_matrix.rs"
+required-features = ["hardware"]

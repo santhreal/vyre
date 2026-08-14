@@ -1,5 +1,5 @@
-//! Region builder  -  mandatory wrap-every-body helper for every Cat-C
-//! intrinsic. Spec: `docs/region-chain.md`.
+//! Region builder  -  mandatory wrap-every-body helper for every Category C
+//! hardware intrinsic. Spec: `docs/region-chain.md`.
 
 use std::sync::Arc;
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};

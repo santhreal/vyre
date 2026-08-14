@@ -43,7 +43,7 @@ universal harness:
 
 - **Tier 1**  -  `vyre-foundation` / `vyre-spec` / `vyre-core`: the IR
   model, wire format, frozen contracts. No ops.
-- **Tier 2**  -  `vyre-intrinsics`: the frozen core surface.
+- **Tier 2**  -  `vyre-primitives`: the frozen core surface.
   `hardware/` (Cat-C intrinsics, one hardware instruction each) +
   `primitive/` (arithmetic, bitwise, compare) + `composite/` (Cat-A
   stdlib). Every op has a size cap of ≤ 200 top-level Nodes. Every
@@ -58,7 +58,7 @@ universal harness:
   Published outside the santht org, registered via `ExternDialect`,
   verified to live under the `vyre-libs-` naming prefix.
 
-Op IDs encode the tier: `vyre-intrinsics::...` (T2), `vyre-libs-nn::...`
+Op IDs encode the tier: `vyre-primitives::...` (T2), `vyre-libs-nn::...`
 (T3), `<dialect>::...` (T4). A grep tells you exactly where any op
 lives.
 
@@ -219,11 +219,9 @@ vyre/
 │   ├── src/validate/     Program validation (V### error codes)
 │   ├── src/transform/    Optimization passes
 │   └── src/lower.rs      Lowerable trait definitions
-├── vyre-intrinsics/      Tier 2  -  frozen hardware-mapped intrinsics
+├── vyre-primitives/      Tier 2  -  frozen hardware-mapped intrinsics
 │   ├── hardware/         subgroup, barrier, fma, popcount, bit_reverse,
 │   │                     inverse_sqrt (dedicated Naga + reference arms)
-│   └── …
-├── vyre-primitives/      Tier 2.5  -  LEGO compositional primitives
 │   ├── graph/ bitset/ reduce/ label/ predicate/ fixpoint/
 │   └── text/ matching/ math/ nn/ hash/ parsing/ (feature-gated)
 ├── vyre-driver/          Backend traits, registry, routing, diagnostics

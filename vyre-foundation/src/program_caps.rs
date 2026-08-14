@@ -389,7 +389,7 @@ mod tests {
             vec![IrNode::let_bind(
                 "s",
                 IrExpr::call(
-                    "vyre-intrinsics::math::subgroup_inclusive_add",
+                    "vyre-primitives::hardware::subgroup_add",
                     vec![IrExpr::u32(1)],
                 ),
             )],

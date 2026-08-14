@@ -17,22 +17,22 @@ struct U32Case {
 const CASES: &[U32Case] = &[
     U32Case {
         name: "bit_reverse_u32",
-        build: vyre_intrinsics::hardware::bit_reverse_u32::bit_reverse_u32::bit_reverse_u32,
+        build: vyre_primitives::hardware::bit_reverse_u32::bit_reverse_u32,
         expected: u32::reverse_bits,
     },
     U32Case {
         name: "popcount_u32",
-        build: vyre_intrinsics::hardware::popcount_u32::popcount_u32::popcount_u32,
+        build: vyre_primitives::hardware::popcount_u32::popcount_u32,
         expected: u32::count_ones,
     },
     U32Case {
         name: "storage_barrier",
-        build: vyre_intrinsics::hardware::storage_barrier::storage_barrier::storage_barrier,
+        build: vyre_primitives::hardware::storage_barrier::storage_barrier,
         expected: |value| value,
     },
     U32Case {
         name: "workgroup_barrier",
-        build: vyre_intrinsics::hardware::workgroup_barrier::workgroup_barrier::workgroup_barrier,
+        build: vyre_primitives::hardware::workgroup_barrier::workgroup_barrier,
         expected: |value| value,
     },
 ];

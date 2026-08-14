@@ -474,5 +474,5 @@ write = [
   "docs/generated/**",
 ]
 required_commands = [
-  "cargo_full check -p vyre-foundation -p vyre-primitives -p vyre-intrinsics -p vyre-libs",
+  "cargo_full check -p vyre-foundation -p vyre-primitives -p vyre-libs",
 ]

@@ -47,7 +47,7 @@ auditable after inlining.
 ## Helpers
 
 Exported from the composition crates that build `Program`s, primarily
-`vyre-libs::region` and `vyre-intrinsics::region`:
+`vyre-libs::region` and `vyre-primitives::hardware::region`:
 
 ```rust
 pub fn wrap_anonymous(name: &str, body: Vec<Node>) -> Node {
@@ -126,15 +126,15 @@ $ cargo xtask print-composition vyre-libs-nn::attention
 vyre-libs-nn::attention  [48 nodes]
 ├─ softmax                           [14 nodes]
 │  ├─ reduce_f32_max                 (vyre-primitives::reduce::max)
-│  │  └─ subgroup_reduce_f32         (vyre-intrinsics::hardware::subgroup_add [f32 sum])
+│  │  └─ subgroup_reduce_f32         (vyre-primitives::hardware::subgroup_add [f32 sum])
 │  └─ scan_u32_add                   (vyre-primitives::reduce::sum)
-│     └─ subgroup_add                (vyre-intrinsics::hardware::subgroup_add)
+│     └─ subgroup_add                (vyre-primitives::hardware::subgroup_add)
 ├─ matmul_tiled                      [22 nodes]
-│  └─ fma_f32                        (vyre-intrinsics::hardware::fma_f32)
+│  └─ fma_f32                        (vyre-primitives::hardware::fma_f32)
 └─ layer_norm                        [12 nodes]
-   ├─ inverse_sqrt_f32               (vyre-intrinsics::hardware::inverse_sqrt_f32)
+   ├─ inverse_sqrt_f32               (vyre-primitives::hardware::inverse_sqrt_f32)
    └─ reduce_u32_add                 (vyre-primitives::reduce::sum)
-      └─ subgroup_add                (vyre-intrinsics::hardware::subgroup_add)
+      └─ subgroup_add                (vyre-primitives::hardware::subgroup_add)
 ```
 
 ## Size cap enforcement
@@ -148,7 +148,7 @@ without being decomposed into smaller child Regions.
 
 - **Audit a big Tier-3 op**: `cargo xtask print-composition
   consumer-owned rule parser` shows every grammar-level node
-  down to the `vyre-intrinsics::hardware::*` leaves.
+  down to the `vyre-primitives::hardware::*` leaves.
 - **Debug a GPU divergence**: shader has `// vyre-region:
   vyre-libs-nn::attention > softmax > workgroup_reduce_f32_max >
   subgroup_reduce_f32`  -  you know exactly which composition layer is

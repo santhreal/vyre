@@ -31,7 +31,8 @@ use walkdir::WalkDir;
 /// operation crate structure", decided 2026-08-12.
 const CATEGORY_A_CRATE: &str = "vyre-libs";
 /// Category C owner: strict hardware intrinsics, one emitter arm and one
-/// reference-interpreter arm each. Absorbs `vyre-intrinsics` at migration.
+/// reference-interpreter arm each. Absorbed the former standalone hardware
+/// crate on 2026-08-13; the intrinsics live in `vyre-primitives/src/hardware`.
 const CATEGORY_C_CRATE: &str = "vyre-primitives";
 
 /// Directory that owns every module named `*substrate*`.
@@ -281,11 +282,7 @@ pub fn category_home_failures(registrations: &[Registration]) -> Vec<String> {
         let Some(tier) = reg.tier.as_deref() else {
             continue;
         };
-        // `Primitive` is the pre-rename spelling of `Intrinsic`; the registry
-        // rename lands with the migration. Reading only the new name here
-        // would report every current registration as a category violation and
-        // bury the real ones.
-        let hardware = matches!(tier, "Intrinsic" | "Hardware" | "Primitive");
+        let hardware = matches!(tier, "Intrinsic" | "Hardware");
         if hardware && reg.crate_name == CATEGORY_A_CRATE {
             failures.push(format!(
                 "{} registers Category C `{}` in {CATEGORY_A_CRATE}; hardware-contract operations live in {CATEGORY_C_CRATE}",
@@ -492,9 +489,10 @@ fn scan_registrations(root: &Path, members: &[String]) -> Vec<Registration> {
 /// `new` takes the tier as its second argument, so it is read there rather
 /// than assumed. Guessing it wrong is worse than not knowing: mapping
 /// `primitive` to `Library` once reported all 122 of one crate's intrinsics as
-/// misplaced compositions and buried the real findings.
+/// misplaced compositions and buried the real findings. `primitive` names the
+/// owning crate, `vyre-primitives`, and builds `OperationTier::Intrinsic`.
 const CONSTRUCTOR_TIERS: &[(&str, Option<&str>)] = &[
-    ("::primitive(", Some("Primitive")),
+    ("::primitive(", Some("Intrinsic")),
     ("::library(", Some("Library")),
     ("::new(", None),
 ];
@@ -1076,7 +1074,7 @@ fn registration() -> OperationRegistration {
             parsed,
             vec![(
                 "vyre-foundation::hash::adler32".to_string(),
-                Some("Primitive".to_string())
+                Some("Intrinsic".to_string())
             )]
         );
     }

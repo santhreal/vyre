@@ -8,7 +8,8 @@
 use std::collections::BTreeMap;
 
 use vyre_foundation::operation::SemanticOperation;
-use vyre_intrinsics::operation_catalog::{all_entries, intrinsic_facet, HardwareSemantic, OpShape};
+use vyre_primitives::hardware::all_entries;
+use vyre_primitives::hardware::catalog::{intrinsic_facet, HardwareSemantic, OpShape};
 use vyre_reference::value::Value;
 
 #[derive(Clone, Copy)]
@@ -19,39 +20,39 @@ struct ExpectedHardwareEntry {
 
 const EXPECTED: &[ExpectedHardwareEntry] = &[
     ExpectedHardwareEntry {
-        id: "vyre-intrinsics::hardware::bit_reverse_u32",
+        id: "vyre-primitives::hardware::bit_reverse_u32",
         shape: OpShape::new(1, 1, 4, HardwareSemantic::UnaryU32Map),
     },
     ExpectedHardwareEntry {
-        id: "vyre-intrinsics::hardware::fma_f32",
+        id: "vyre-primitives::hardware::fma_f32",
         shape: OpShape::new(3, 1, 4, HardwareSemantic::FmaF32),
     },
     ExpectedHardwareEntry {
-        id: "vyre-intrinsics::hardware::inverse_sqrt_f32",
+        id: "vyre-primitives::hardware::inverse_sqrt_f32",
         shape: OpShape::new(1, 1, 4, HardwareSemantic::InverseSqrtF32),
     },
     ExpectedHardwareEntry {
-        id: "vyre-intrinsics::hardware::popcount_u32",
+        id: "vyre-primitives::hardware::popcount_u32",
         shape: OpShape::new(1, 1, 4, HardwareSemantic::UnaryU32Map),
     },
     ExpectedHardwareEntry {
-        id: "vyre-intrinsics::hardware::storage_barrier",
+        id: "vyre-primitives::hardware::storage_barrier",
         shape: OpShape::new(1, 1, 4, HardwareSemantic::BarrierIdentityU32),
     },
     ExpectedHardwareEntry {
-        id: "vyre-intrinsics::hardware::subgroup_add",
+        id: "vyre-primitives::hardware::subgroup_add",
         shape: OpShape::new(1, 1, 4, HardwareSemantic::SubgroupAddU32),
     },
     ExpectedHardwareEntry {
-        id: "vyre-intrinsics::hardware::subgroup_ballot",
+        id: "vyre-primitives::hardware::subgroup_ballot",
         shape: OpShape::new(1, 1, 4, HardwareSemantic::SubgroupBallotU32),
     },
     ExpectedHardwareEntry {
-        id: "vyre-intrinsics::hardware::subgroup_shuffle",
+        id: "vyre-primitives::hardware::subgroup_shuffle",
         shape: OpShape::new(2, 1, 4, HardwareSemantic::SubgroupShuffleU32),
     },
     ExpectedHardwareEntry {
-        id: "vyre-intrinsics::hardware::workgroup_barrier",
+        id: "vyre-primitives::hardware::workgroup_barrier",
         shape: OpShape::new(1, 1, 4, HardwareSemantic::BarrierIdentityU32),
     },
 ];
@@ -83,7 +84,7 @@ fn generated_hardware_registry_shapes_match_declared_surface() {
     let entries = hardware_entries();
     let invalid_namespaces = entries
         .keys()
-        .filter(|id| !id.starts_with("vyre-intrinsics::hardware::"))
+        .filter(|id| !id.starts_with("vyre-primitives::hardware::"))
         .copied()
         .collect::<Vec<_>>();
     assert!(

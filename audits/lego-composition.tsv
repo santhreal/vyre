@@ -1,13 +1,4 @@
 # op_id	composed_fraction
-vyre-intrinsics::hardware::bit_reverse_u32	0.000000000000
-vyre-intrinsics::hardware::fma_f32	0.000000000000
-vyre-intrinsics::hardware::inverse_sqrt_f32	0.000000000000
-vyre-intrinsics::hardware::popcount_u32	0.000000000000
-vyre-intrinsics::hardware::storage_barrier	0.000000000000
-vyre-intrinsics::hardware::subgroup_add	0.000000000000
-vyre-intrinsics::hardware::subgroup_ballot	0.000000000000
-vyre-intrinsics::hardware::subgroup_shuffle	0.000000000000
-vyre-intrinsics::hardware::workgroup_barrier	0.000000000000
 vyre-libs::decode::base64	0.944444444444
 vyre-libs::decode::encodex	0.936170212766
 vyre-libs::decode::hex	0.600000000000
@@ -263,6 +254,15 @@ vyre-primitives::graph::tensor_flow_forward	0.000000000000
 vyre-primitives::graph::union_find	0.000000000000
 vyre-primitives::graph::vast_walk_postorder	0.000000000000
 vyre-primitives::graph::vast_walk_preorder	0.000000000000
+vyre-primitives::hardware::bit_reverse_u32	0.000000000000
+vyre-primitives::hardware::fma_f32	0.000000000000
+vyre-primitives::hardware::inverse_sqrt_f32	0.000000000000
+vyre-primitives::hardware::popcount_u32	0.000000000000
+vyre-primitives::hardware::storage_barrier	0.000000000000
+vyre-primitives::hardware::subgroup_add	0.000000000000
+vyre-primitives::hardware::subgroup_ballot	0.000000000000
+vyre-primitives::hardware::subgroup_shuffle	0.000000000000
+vyre-primitives::hardware::workgroup_barrier	0.000000000000
 vyre-primitives::hash::adler32	0.000000000000
 vyre-primitives::hash::blake3_g	0.000000000000
 vyre-primitives::hash::blake3_round	0.463768115942

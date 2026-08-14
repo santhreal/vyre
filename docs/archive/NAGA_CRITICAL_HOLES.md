@@ -24,7 +24,7 @@ Tracked in #171 F-NAGA; each requires structural naga emitter work.
 
 | Hole | Reason open | Next step |
 |---|---|---|
-| Expr::SubgroupBallot / Shuffle / Add | Naga 24 feature-gates these; vyre-intrinsics still submits them unconditionally. | Feature-gate the intrinsics under `subgroup-ops` to match naga; re-admit on naga ≥ 25. |
+| Expr::SubgroupBallot / Shuffle / Add | Naga 24 feature-gates these; `vyre-primitives` still submits them unconditionally. | Feature-gate the intrinsics under `subgroup-ops` to match naga; re-admit on naga ≥ 25. |
 | Expr::BufLen on workgroup buffer | ArrayLength invalid for workgroup (static-size only). | Read static count from `BufferDecl.count`; guarded by `is_workgroup()`. |
 | Expr::Fma type-agnostic | Assumes F32 regardless of operand type. | Dispatch on operand dtype; route I32/U32 through a fallback. |
 | Node::Barrier scope | Always emits combined STORAGE\|WORK_GROUP. | Add `scope: BarrierKind` parameter; map to exact naga flag (Workgroup/Storage/Subgroup). |

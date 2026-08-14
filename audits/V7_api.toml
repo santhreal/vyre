@@ -1,8 +1,8 @@
 # V7 Phase C2 audit #4  -  API SURFACE
-# Scope: vyre, vyre-core, vyre-foundation, vyre-spec, vyre-intrinsics, vyre-libs,
+# Scope: vyre, vyre-core, vyre-foundation, vyre-spec, vyre-primitives, vyre-libs,
 #         vyre-libs-extern, vyre-driver, vyre-driver-wgpu, vyre-driver-spirv,
 #         vyre-driver-photonic, vyre-pipeline, vyre-pipeline-cache, vyre-macros,
-#         vyre-primitives, vyre-reference
+#         vyre-reference
 # Checks: doc comments, non_exhaustive, public paths, redundant re-exports,
 #         feature consistency, sealed traits, internal type leakage.
 # Date: 2026-04-20
@@ -19,10 +19,10 @@ suggested_fix = "Add a `///` doc comment above every `pub use` and `pub` re-expo
 [[finding]]
 id = "V7-API-002"
 severity = "HIGH"
-file = "vyre-intrinsics/src/lib.rs"
+file = "vyre-primitives/src/lib.rs"
 line = 31
-description = "The legacy `vyre-ops` root was renamed and narrowed to `vyre-intrinsics`. Current root modules and re-exports have explicit rustdoc comments (`region`, `harness`, `cpu_op`, `vyre_spec`, `category_check`, `hardware`)."
-suggested_fix = "Keep future `vyre-intrinsics` root modules explicitly documented and scoped to Cat-C hardware intrinsics only."
+description = "The legacy `vyre-ops` root was renamed and narrowed to `vyre-primitives`. Current root modules and re-exports have explicit rustdoc comments (`region`, `harness`, `cpu_op`, `vyre_spec`, `category_check`, `hardware`)."
+suggested_fix = "Keep future `vyre-primitives` root modules explicitly documented and scoped to Cat-C hardware intrinsics only."
 
 [[finding]]
 id = "V7-API-003"
@@ -67,10 +67,10 @@ suggested_fix = "Deprecate or remove the `dialect` back-compat alias; consolidat
 [[finding]]
 id = "V7-API-008"
 severity = "MEDIUM"
-file = "vyre-intrinsics/Cargo.toml"
+file = "vyre-primitives/Cargo.toml"
 line = 37
-description = "The legacy `vyre-ops` feature surface was replaced by the narrow `vyre-intrinsics` feature surface: `all`, `hardware`, and `subgroup-ops`. The old coarse `math`, `rule`, `logical`, and `primitive` feature names no longer exist in this crate."
-suggested_fix = "Keep `vyre-intrinsics` features tied to Cat-C hardware capability groups; pure library domains belong in `vyre-libs` or `vyre-primitives` feature surfaces."
+description = "The legacy `vyre-ops` feature surface was replaced by a narrow Cat-C surface: `hardware`. The old coarse `math`, `rule`, `logical`, and `primitive` feature names no longer exist under that surface."
+suggested_fix = "Keep the `hardware` feature tied to Cat-C hardware capability groups; pure library domains belong in `vyre-libs` feature surfaces."
 
 [[finding]]
 id = "V7-API-009"

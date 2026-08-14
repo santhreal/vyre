@@ -98,7 +98,7 @@ fn resolve(op_id: &str) -> Option<(Program, Vec<Vec<Vec<u8>>>)> {
         ));
     }
     if let Some(entry) =
-        vyre_intrinsics::operation_catalog::all_entries().find(|entry| entry.id == op_id)
+        vyre_primitives::operation_catalog::all_entries().find(|entry| entry.id == op_id)
     {
         let inputs = entry.test_inputs?;
         return Some((

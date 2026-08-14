@@ -31,7 +31,7 @@ flag always wins. There is no config file: the runner reads no
 ## Tier B  -  the witness corpus
 
 Every conformance witness the runner executes comes from canonical
-`OperationRegistration` records linked by `vyre-libs`, `vyre-intrinsics`, and
+`OperationRegistration` records linked by `vyre-libs` and
 `vyre-primitives`. `unified_entries` joins the registry view used by those
 crates. Each operation carries its program builder, deterministic test inputs,
 and expected output.

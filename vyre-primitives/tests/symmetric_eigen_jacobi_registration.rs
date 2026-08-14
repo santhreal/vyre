@@ -50,8 +50,8 @@ fn registry_entry_ships_both_fixtures_with_the_program_buffer_shape() {
     let entry = registered();
     assert_eq!(
         entry.tier,
-        OperationTier::Primitive,
-        "{OP_ID} is a reusable building block, not a library composition."
+        OperationTier::Intrinsic,
+        "{OP_ID} is a Category C intrinsic, not a library composition."
     );
 
     let test_inputs = entry

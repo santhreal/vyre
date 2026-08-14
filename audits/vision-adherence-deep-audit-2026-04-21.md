@@ -39,7 +39,7 @@ ordered by how much each one poisons downstream trust.
 | Area | Status |
 | --- | --- |
 | Tier 1 (IR / contracts) | **green**  -  vyre-foundation + vyre-spec + vyre-core stay frozen; no ops live there. |
-| Tier 2 (`vyre-intrinsics`) | **green but shadowed**  -  the canonical 9-op set is correct (`vyre-intrinsics/src/hardware/`), but a parallel `vyre-libs/src/hardware/` exists that duplicates every intrinsic. See BLOCKER-1. |
+| Tier 2 (`vyre-primitives`) | **green but shadowed**  -  the canonical 9-op set is correct (`vyre-primitives/src/hardware/`), but a parallel `vyre-libs/src/hardware/` exists that duplicates every intrinsic. See BLOCKER-1. |
 | Tier 2.5 (`vyre-primitives`) | **partial**  -  six domain folders exist with ~30 primitive source files, but **zero `inventory::submit!(OpEntry { … })` registrations** → invisible to the universal harness, Gate 1, and `cargo xtask print-composition`. See BLOCKER-2. |
 | Tier 3 (`vyre-libs`) | **structurally broken**  -  182 files / 13 326 LoC; contains hardware/ (should be Tier 2), composite/hash/ + hash/ + crypto/ (triple-hash collision), test_migration.rs + representation/ + signatures.rs + contracts.rs at root (god-drawer pattern). See BLOCKER-1, 3, 4, 5. |
 | Tier 4 (`vyre-libs-extern`) | **untested**  -  the `ExternDialect` mechanism is declared but no Tier-4 pack is published, so the promotion path is unexercised. See WATCH-1. |
@@ -52,7 +52,7 @@ ordered by how much each one poisons downstream trust.
 
 ## BLOCKER findings (must fix before claiming vision adherence)
 
-### BLOCKER-1  -  Parallel hardware/ tree in vyre-libs duplicates vyre-intrinsics
+### BLOCKER-1  -  Parallel hardware/ tree in vyre-libs duplicates vyre-primitives
 
 **Where.** `vyre-libs/src/hardware/` contains:
 ```
@@ -66,7 +66,7 @@ Sixteen sub-folders, each with a `<name>.rs` ≈ 60–200 LoC.
 **Why it violates the tier rule.** `docs/library-tiers.md:32–44` lists exactly 9
 Cat-C intrinsics (subgroup_add/ballot/shuffle, workgroup_barrier, storage_barrier,
 bit_reverse_u32, popcount_u32, fma_f32, inverse_sqrt_f32) and pins them to
-`vyre-intrinsics`. The eight `atomic_*_u32` and three of the "hardware" folders
+`vyre-primitives`. The eight `atomic_*_u32` and three of the "hardware" folders
 (`clamp_u32`, `lzcnt_u32`, `tzcnt_u32`) should be **library compositions over
 `Expr::Atomic` / `Expr::{min,max}` / `Expr::popcount` / `Expr::bit_reverse`**  -  not
 duplicated sub-crates. The doc is explicit (`library-tiers.md:146–154`):
@@ -82,7 +82,7 @@ harness runs each twice with two different op_ids (`vyre-libs::math::clamp_u32` 
 cost. Audit tools can't tell which is the "real" one.
 
 **Remediation.** Delete `vyre-libs/src/hardware/` in its entirety. For each of the
-9 true intrinsics, ensure the version in `vyre-intrinsics/src/hardware/` is the
+9 true intrinsics, ensure the version in `vyre-primitives/src/hardware/` is the
 canonical one. For the 11 non-intrinsic folders (`clamp_u32`, `lzcnt_u32`,
 `tzcnt_u32`, 8 atomics), fold anything novel into the sibling file in
 `vyre-libs/src/math/` (which already exists and is Region-wrapped) and delete the
@@ -235,18 +235,18 @@ that iterates `inventory::iter::<OpEntry>`, builds each op, asserts
 
 ---
 
-### BLOCKER-6  -  Hardware intrinsics (Tier 2) live in BOTH vyre-intrinsics AND vyre-libs
+### BLOCKER-6  -  Hardware intrinsics (Tier 2) live in BOTH vyre-primitives AND vyre-libs
 
-**Evidence.** `vyre-intrinsics/src/hardware/` has `bit_reverse_u32`, `popcount_u32`,
+**Evidence.** `vyre-primitives/src/hardware/` has `bit_reverse_u32`, `popcount_u32`,
 `fma_f32`, `inverse_sqrt_f32`, the 2 barriers, the 3 subgroup ops. All 9 Tier-2
 canonical entries.
 
 `vyre-libs/src/hardware/` has all 9 of the same plus 11 extras. Compare line
 counts  -  they disagree. Compare `inventory::submit!` op_ids:
 
-| Op | vyre-intrinsics id | vyre-libs id |
+| Op | vyre-primitives id | vyre-libs id |
 | --- | --- | --- |
-| popcount_u32 | `vyre-intrinsics::hardware::popcount_u32` | `vyre-libs::hardware::popcount_u32` |
+| popcount_u32 | `vyre-primitives::hardware::popcount_u32` | `vyre-libs::hardware::popcount_u32` |
 | ... | ... | ... |
 
 Both get registered. A Program that calls "popcount_u32" matches BOTH inventory
@@ -443,7 +443,7 @@ Dead code at the crate root; move to `examples/` or delete.
 
 1. **BLOCKER-1 + 6** (delete `vyre-libs/src/hardware/`). Single clean sweep,
    breaks nothing  -  each duplicated intrinsic has a correct equivalent already
-   landed in `vyre-intrinsics` (9 Cat-C) or `vyre-libs/src/math/` (11
+   landed in `vyre-primitives` (9 Cat-C) or `vyre-libs/src/math/` (11
    compositions). **This immediately restores tier clarity**, removes 16
    folders, and collapses Gate 1 double-counting.
 2. **BLOCKER-3** (collapse crypto + composite/hash into hash/). Same

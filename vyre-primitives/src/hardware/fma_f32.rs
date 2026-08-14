@@ -12,7 +12,7 @@ use vyre_foundation::ir::Program;
 
 use crate::hardware::{pack_f32, ternary_f32_program};
 /// Canonical op id shared by semantics, fixtures, and driver registration.
-pub const OP_ID: &str = "vyre-intrinsics::hardware::fma_f32";
+pub const OP_ID: &str = "vyre-primitives::hardware::fma_f32";
 
 /// Map `out[i] = fma(a[i], b[i], c[i])` over n elements.
 ///
@@ -64,7 +64,7 @@ inventory::submit! {
     vyre_foundation::operation::OperationRegistration {
         id: OP_ID,
         semantic_version: 1,
-        signature: Some(crate::operation_catalog::F32_TERNARY_SIGNATURE),
+        signature: Some(crate::hardware::catalog::F32_TERNARY_SIGNATURE),
         tier: vyre_foundation::operation::OperationTier::Intrinsic,
         category: Some("hardware"),
         build: Some(|| fma_f32("a", "b", "c", "out", 4)),
@@ -76,13 +76,13 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::operation_catalog::IntrinsicFacet {
+    crate::hardware::catalog::IntrinsicFacet {
         operation_id: OP_ID,
-        shape: crate::operation_catalog::OpShape::new(
+        shape: crate::hardware::catalog::OpShape::new(
             3,
             1,
             4,
-            crate::operation_catalog::HardwareSemantic::FmaF32,
+            crate::hardware::catalog::HardwareSemantic::FmaF32,
         ),
     }
 }

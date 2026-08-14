@@ -78,7 +78,7 @@ pub mod float_type;
 /// Golden reference samples  -  tiny fixtures every backend must reproduce exactly.
 /// Specification element.
 pub mod golden_sample;
-/// Table of hardware intrinsics exposed by vyre-intrinsics.
+/// Table of hardware intrinsics exposed by `vyre-primitives::hardware`.
 /// Specification element.
 pub mod intrinsic_table;
 /// Abstract invariant type + provenance tracking.

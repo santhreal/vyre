@@ -49,13 +49,13 @@ pub(crate) fn implementation_family_id(op_id: &str) -> Option<&'static str> {
         "vyre-primitives::graph::functor_apply" => {
             Some("vyre-primitives::graph::target_centric_functor_apply")
         }
-        "vyre-intrinsics::hardware::workgroup_barrier"
-        | "vyre-intrinsics::hardware::storage_barrier" => {
-            Some("vyre-intrinsics::hardware::barrier_identity_u32_program")
+        "vyre-primitives::hardware::workgroup_barrier"
+        | "vyre-primitives::hardware::storage_barrier" => {
+            Some("vyre-primitives::hardware::barrier_identity_u32_program")
         }
-        "vyre-intrinsics::hardware::bit_reverse_u32"
-        | "vyre-intrinsics::hardware::popcount_u32" => {
-            Some("vyre-intrinsics::hardware::unary_u32_program")
+        "vyre-primitives::hardware::bit_reverse_u32"
+        | "vyre-primitives::hardware::popcount_u32" => {
+            Some("vyre-primitives::hardware::unary_u32_program")
         }
         "vyre-primitives::graph::monoidal_compose"
         | "vyre-primitives::math::tensor_network_pair_contract"
@@ -152,11 +152,11 @@ pub(crate) fn known_distinct_implementation_families(left_id: &str, right_id: &s
     matches!(
         (left_family, right_family),
         (
-            "vyre-intrinsics::hardware::barrier_identity_u32_program",
-            "vyre-intrinsics::hardware::unary_u32_program"
+            "vyre-primitives::hardware::barrier_identity_u32_program",
+            "vyre-primitives::hardware::unary_u32_program"
         ) | (
-            "vyre-intrinsics::hardware::unary_u32_program",
-            "vyre-intrinsics::hardware::barrier_identity_u32_program"
+            "vyre-primitives::hardware::unary_u32_program",
+            "vyre-primitives::hardware::barrier_identity_u32_program"
         ) | (
             "vyre-primitives::graph::outgoing_frontier_or_changed",
             "vyre-primitives::graph::incoming_frontier_or_changed"

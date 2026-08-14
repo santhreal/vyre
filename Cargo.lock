@@ -3432,7 +3432,6 @@ dependencies = [
  "vyre-emit-spirv",
  "vyre-foundation",
  "vyre-frontend-rust",
- "vyre-intrinsics",
  "vyre-libs",
  "vyre-lower",
  "vyre-primitives",
@@ -3465,7 +3464,6 @@ dependencies = [
  "vyre-driver-reference",
  "vyre-driver-wgpu",
  "vyre-foundation",
- "vyre-intrinsics",
  "vyre-libs",
  "vyre-megakernel",
  "vyre-primitives",
@@ -3526,9 +3524,9 @@ dependencies = [
  "vyre",
  "vyre-driver-reference",
  "vyre-foundation",
- "vyre-intrinsics",
  "vyre-macros",
  "vyre-megakernel",
+ "vyre-primitives",
  "vyre-reference",
  "vyre-self-substrate",
  "vyre-spec",
@@ -3786,19 +3784,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "vyre-intrinsics"
-version = "0.7.2"
-dependencies = [
- "criterion",
- "inventory",
- "thiserror 2.0.19",
- "vyre-foundation",
- "vyre-primitives",
- "vyre-reference",
- "vyre-test-support",
-]
-
-[[package]]
 name = "vyre-libs"
 version = "0.7.2"
 dependencies = [
@@ -3830,7 +3815,6 @@ dependencies = [
  "vyre-emit-ptx",
  "vyre-foundation",
  "vyre-grammar-gen",
- "vyre-intrinsics",
  "vyre-lower",
  "vyre-primitives",
  "vyre-reference",
@@ -4691,7 +4675,6 @@ dependencies = [
  "vyre-driver-wgpu",
  "vyre-emit-metal",
  "vyre-foundation",
- "vyre-intrinsics",
  "vyre-libs",
  "vyre-lints",
  "vyre-lower",

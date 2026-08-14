@@ -52,7 +52,6 @@ packages = [
   "vyre-emit-spirv",
   "vyre-foundation",
   "vyre-grammar-gen",
-  "vyre-intrinsics",
   "vyre-libs",
   "vyre-lints",
   "vyre-lower",

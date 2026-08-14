@@ -10,7 +10,7 @@ instead of editing versions, packages, repositories, tags, or approval actions.
 
 | Group | Repository | Version | Packages |
 | --- | --- | --- | --- |
-| `vyre` | `santhreal/vyre` | `0.7.2` | `vyre`, `vyre-aot`, `vyre-debug`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-emit-naga`, `vyre-emit-ptx`, `vyre-emit-spirv`, `vyre-foundation`, `vyre-grammar-gen`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-macros`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-safetensors`, `vyre-scan`, `vyre-self-substrate`, `vyre-spec` |
+| `vyre` | `santhreal/vyre` | `0.7.2` | `vyre`, `vyre-aot`, `vyre-debug`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-emit-naga`, `vyre-emit-ptx`, `vyre-emit-spirv`, `vyre-foundation`, `vyre-grammar-gen`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-macros`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-safetensors`, `vyre-self-substrate`, `vyre-spec` |
 
 ## Internal preparation
 

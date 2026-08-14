@@ -13,7 +13,7 @@ fn parity_matrix_across_all_registered_ops() {
     );
     assert!(
         !entries.is_empty(),
-        "Fix: parity matrix linked zero canonical operation registrations. Ensure vyre-libs and vyre-intrinsics are linked into this test binary."
+        "Fix: parity matrix linked zero canonical operation registrations. Ensure vyre-libs and vyre-primitives are linked into this test binary."
     );
     let missing_expr_variants = expr_variants()
         .iter()
