@@ -40,6 +40,30 @@ DEP_TABLES = ("dependencies", "dev-dependencies", "build-dependencies")
 problems: list[str] = []
 edges = 0
 
+_root_workspace = tomllib.loads((root / "Cargo.toml").read_text(encoding="utf-8")).get(
+    "workspace", {}
+)
+WORKSPACE_DEPS = set(_root_workspace.get("dependencies") or {})
+WORKSPACE_PACKAGE = set(_root_workspace.get("package") or {})
+if not WORKSPACE_DEPS:
+    sys.exit(
+        "check-path-deps-resolve: root workspace.dependencies is empty; "
+        "the inheritance scan would pass vacuously"
+    )
+
+
+def check_inherited(manifest: Path, label: str, name: str, table: set[str], origin: str) -> None:
+    """Record a problem unless `workspace = true` has something to inherit from."""
+    global edges
+    edges += 1
+    if name not in table:
+        problems.append(
+            f"`{manifest.relative_to(root)}` {label} declares `workspace = true` but "
+            f"`{origin}.{name}` does not exist\n"
+            f"    Fix: add the entry to the root manifest or drop the inheritance. "
+            f"cargo cannot load the workspace at all while this dangles."
+        )
+
 
 def check(manifest: Path, label: str, raw: str) -> None:
     """Record a problem unless raw resolves to a tracked Cargo.toml under root."""
@@ -71,8 +95,18 @@ def check(manifest: Path, label: str, raw: str) -> None:
 def walk_dep_tables(manifest: Path, table: dict, prefix: str) -> None:
     for kind in DEP_TABLES:
         for name, spec in (table.get(kind) or {}).items():
-            if isinstance(spec, dict) and "path" in spec:
+            if not isinstance(spec, dict):
+                continue
+            if "path" in spec:
                 check(manifest, f"{prefix}{kind}.{name}", spec["path"])
+            if spec.get("workspace") is True:
+                check_inherited(
+                    manifest,
+                    f"{prefix}{kind}.{name}",
+                    name,
+                    WORKSPACE_DEPS,
+                    "workspace.dependencies",
+                )
 
 
 for entry in manifests:
@@ -87,6 +121,12 @@ for entry in manifests:
     for triple, spec in (data.get("target") or {}).items():
         if isinstance(spec, dict):
             walk_dep_tables(manifest, spec, f"target.{triple}.")
+
+    for field, spec in (data.get("package") or {}).items():
+        if isinstance(spec, dict) and spec.get("workspace") is True:
+            check_inherited(
+                manifest, f"package.{field}", field, WORKSPACE_PACKAGE, "workspace.package"
+            )
 
     workspace = data.get("workspace") or {}
     walk_dep_tables(manifest, workspace, "workspace.")
