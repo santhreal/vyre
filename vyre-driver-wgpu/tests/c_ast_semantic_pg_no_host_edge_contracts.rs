@@ -21,27 +21,24 @@ mod c_ast_gpu_parity_support;
 mod c_frontend;
 
 use c_ast_gpu_parity_support::{
-    assert_parent_edge, assert_semantic_edge, assert_semantic_node, build_fixture, classify,
-    node_count_from_vast, row_indices, run_gpu_semantic_pg_lower as run_gpu_semantic_lower,
-    semantic_edge_word, semantic_node_word, vast_word, Fixture, FixtureToken,
+    assert_parent_edge, assert_semantic_edge, assert_semantic_node, assert_switch_dispatch_edges,
+    build_fixture, classify, first_row, node_count_from_vast, row_indices,
+    run_gpu_semantic_pg_lower as run_gpu_semantic_lower, semantic_edge_word, semantic_node_word,
+    vast_word, void_fn_fixture, Fixture, FixtureToken,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::ast_to_pg_nodes::C_AST_PG_ROLE_AGGREGATE_DECL;
 use vyre_libs::parsing::c::lower::{
-    C_AST_PG_CATEGORY_CONTROL, C_AST_PG_CATEGORY_DECLARATION, C_AST_PG_EDGE_CASE_VALUE,
-    C_AST_PG_EDGE_GOTO_TARGET, C_AST_PG_EDGE_PARENT, C_AST_PG_EDGE_ROWS_PER_NODE,
-    C_AST_PG_EDGE_STRIDE_U32, C_AST_PG_EDGE_SWITCH_CASE, C_AST_PG_EDGE_SWITCH_DEFAULT,
-    C_AST_PG_EDGE_SWITCH_SELECTOR, C_AST_PG_ROLE_CASE, C_AST_PG_ROLE_DEFAULT,
+    C_AST_PG_CATEGORY_CONTROL, C_AST_PG_CATEGORY_DECLARATION, C_AST_PG_EDGE_GOTO_TARGET,
+    C_AST_PG_EDGE_PARENT, C_AST_PG_EDGE_ROWS_PER_NODE, C_AST_PG_EDGE_STRIDE_U32,
     C_AST_PG_ROLE_ENUMERATOR_DECL, C_AST_PG_ROLE_FUNCTION_DEFINITION,
     C_AST_PG_ROLE_FUNCTION_POINTER_DECL, C_AST_PG_ROLE_GOTO, C_AST_PG_ROLE_LABEL,
-    C_AST_PG_ROLE_POINTER_DECL, C_AST_PG_ROLE_SWITCH, C_AST_PG_ROLE_TYPEDEF_DECL,
-    C_AST_PG_SEMANTIC_NODE_STRIDE_U32,
+    C_AST_PG_ROLE_POINTER_DECL, C_AST_PG_ROLE_TYPEDEF_DECL, C_AST_PG_SEMANTIC_NODE_STRIDE_U32,
 };
 use vyre_libs::parsing::c::parse::vast::{
-    C_AST_KIND_CASE_STMT, C_AST_KIND_DEFAULT_STMT, C_AST_KIND_ENUMERATOR_DECL,
-    C_AST_KIND_ENUM_DECL, C_AST_KIND_FUNCTION_DECLARATOR, C_AST_KIND_FUNCTION_DEFINITION,
-    C_AST_KIND_GOTO_STMT, C_AST_KIND_LABEL_STMT, C_AST_KIND_POINTER_DECL, C_AST_KIND_STRUCT_DECL,
-    C_AST_KIND_SWITCH_STMT, C_AST_KIND_TYPEDEF_DECL,
+    C_AST_KIND_ENUMERATOR_DECL, C_AST_KIND_ENUM_DECL, C_AST_KIND_FUNCTION_DECLARATOR,
+    C_AST_KIND_FUNCTION_DEFINITION, C_AST_KIND_GOTO_STMT, C_AST_KIND_LABEL_STMT,
+    C_AST_KIND_POINTER_DECL, C_AST_KIND_STRUCT_DECL, C_AST_KIND_TYPEDEF_DECL,
 };
 
 // ---------------------------------------------------------------------------
@@ -143,12 +140,7 @@ fn fixture_switch_case_default_goto_label() -> Fixture {
 /// }
 /// ```
 fn fixture_scope_nesting() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("{", TOK_LBRACE),
         FixtureToken::new("int", TOK_INT),
         FixtureToken::new("a", TOK_IDENTIFIER),
@@ -158,7 +150,6 @@ fn fixture_scope_nesting() -> Fixture {
         FixtureToken::new("int", TOK_INT),
         FixtureToken::new("b", TOK_IDENTIFIER),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
         FixtureToken::new("}", TOK_RBRACE),
     ])
 }

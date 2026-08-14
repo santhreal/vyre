@@ -11,7 +11,7 @@
 // A missing GPU adapter is a configuration failure; tests do not skip.
 
 use crate::c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, row_indices, Fixture, FixtureToken,
+    assert_full_pipeline_parity, build_fixture, row_indices, void_fn_fixture, Fixture, FixtureToken,
 };
 pub(crate) use crate::c_ast_gpu_parity_support::{
     assert_pg_preserves_fixture_row, classify, pg_word_at,
@@ -31,12 +31,7 @@ pub(crate) const PG_STRIDE_U32: usize = 6;
 
 /// void f() { void *p = &&label; label: return; }
 pub(crate) fn fixture_computed_goto_simple() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("void", TOK_VOID),
         FixtureToken::new("*", TOK_STAR),
         FixtureToken::new("p", TOK_IDENTIFIER),
@@ -48,18 +43,12 @@ pub(crate) fn fixture_computed_goto_simple() -> Fixture {
         FixtureToken::new(":", TOK_COLON),
         FixtureToken::new("return", TOK_RETURN),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
 /// void f() { goto *&&end; end: return; }
 pub(crate) fn fixture_computed_goto_in_goto() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("goto", TOK_GOTO),
         FixtureToken::new("*", TOK_STAR),
         FixtureToken::new("&&", TOK_AND),
@@ -69,18 +58,12 @@ pub(crate) fn fixture_computed_goto_in_goto() -> Fixture {
         FixtureToken::new(":", TOK_COLON),
         FixtureToken::new("return", TOK_RETURN),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
 /// void f() { return &&a, &&b; a: b: ; }
 pub(crate) fn fixture_computed_goto_comma() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("return", TOK_RETURN),
         FixtureToken::new("&&", TOK_AND),
         FixtureToken::new("a", TOK_IDENTIFIER),
@@ -93,7 +76,6 @@ pub(crate) fn fixture_computed_goto_comma() -> Fixture {
         FixtureToken::new("b", TOK_IDENTIFIER),
         FixtureToken::new(":", TOK_COLON),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
@@ -133,12 +115,7 @@ pub(crate) fn fixture_for_with_declaration() -> Fixture {
 
 /// void f() { for (int i = 0, j = 1; ; ) { } }
 pub(crate) fn fixture_for_with_multiple_declarators() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("for", TOK_FOR),
         FixtureToken::new("(", TOK_LPAREN),
         FixtureToken::new("int", TOK_INT),
@@ -154,7 +131,6 @@ pub(crate) fn fixture_for_with_multiple_declarators() -> Fixture {
         FixtureToken::new(")", TOK_RPAREN),
         FixtureToken::new("{", TOK_LBRACE),
         FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
@@ -164,35 +140,23 @@ pub(crate) fn fixture_for_with_multiple_declarators() -> Fixture {
 
 /// void f() { _Atomic int x; }
 pub(crate) fn fixture_atomic_qualifier() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("_Atomic", TOK_ATOMIC),
         FixtureToken::new("int", TOK_INT),
         FixtureToken::new("x", TOK_IDENTIFIER),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
 /// void f() { _Atomic(int) y; }
 pub(crate) fn fixture_atomic_type_specifier() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("_Atomic", TOK_ATOMIC),
         FixtureToken::new("(", TOK_LPAREN),
         FixtureToken::new("int", TOK_INT),
         FixtureToken::new(")", TOK_RPAREN),
         FixtureToken::new("y", TOK_IDENTIFIER),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 

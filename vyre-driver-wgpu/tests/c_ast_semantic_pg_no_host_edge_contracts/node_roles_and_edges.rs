@@ -179,49 +179,10 @@ fn gpu_switch_case_default_goto_label_edges_resolve() {
     let typed = classify(&fix);
     let (gpu_nodes, gpu_edges) = run_gpu_semantic_lower(&typed);
 
-    let switch_idx = row_indices(&typed, C_AST_KIND_SWITCH_STMT)
-        .into_iter()
-        .next()
-        .expect("fixture must classify a switch statement");
-    let case_idx = row_indices(&typed, C_AST_KIND_CASE_STMT)
-        .into_iter()
-        .next()
-        .expect("fixture must classify a case statement");
-    let default_idx = row_indices(&typed, C_AST_KIND_DEFAULT_STMT)
-        .into_iter()
-        .next()
-        .expect("fixture must classify a default statement");
-    let goto_idx = row_indices(&typed, C_AST_KIND_GOTO_STMT)
-        .into_iter()
-        .next()
-        .expect("fixture must classify a goto statement");
-    let label_idx = row_indices(&typed, C_AST_KIND_LABEL_STMT)
-        .into_iter()
-        .next()
-        .expect("fixture must classify a label statement");
+    let goto_idx = first_row(&typed, C_AST_KIND_GOTO_STMT, "a goto statement");
+    let label_idx = first_row(&typed, C_AST_KIND_LABEL_STMT, "a label statement");
 
-    // Semantic node roles
-    assert_semantic_node(
-        &gpu_nodes,
-        switch_idx,
-        C_AST_KIND_SWITCH_STMT,
-        C_AST_PG_CATEGORY_CONTROL,
-        C_AST_PG_ROLE_SWITCH,
-    );
-    assert_semantic_node(
-        &gpu_nodes,
-        case_idx,
-        C_AST_KIND_CASE_STMT,
-        C_AST_PG_CATEGORY_CONTROL,
-        C_AST_PG_ROLE_CASE,
-    );
-    assert_semantic_node(
-        &gpu_nodes,
-        default_idx,
-        C_AST_KIND_DEFAULT_STMT,
-        C_AST_PG_CATEGORY_CONTROL,
-        C_AST_PG_ROLE_DEFAULT,
-    );
+    assert_switch_dispatch_edges(&typed, &gpu_nodes, &gpu_edges);
     assert_semantic_node(
         &gpu_nodes,
         goto_idx,
@@ -235,61 +196,6 @@ fn gpu_switch_case_default_goto_label_edges_resolve() {
         C_AST_KIND_LABEL_STMT,
         C_AST_PG_CATEGORY_CONTROL,
         C_AST_PG_ROLE_LABEL,
-    );
-
-    // Compute expected edge endpoints from VAST structure (not from CPU oracle).
-    let switch_condition_group = vast_word(&typed, switch_idx, 3);
-    assert_ne!(
-        switch_condition_group,
-        u32::MAX,
-        "switch must have a condition-group sibling"
-    );
-    let switch_selector = vast_word(&typed, switch_condition_group as usize, 2);
-    assert_ne!(
-        switch_selector,
-        u32::MAX,
-        "switch condition group must have a first-child selector"
-    );
-
-    let case_value = vast_word(&typed, case_idx, 3);
-    assert_ne!(
-        case_value,
-        u32::MAX,
-        "case must have a value-expression sibling"
-    );
-
-    // Concrete semantic edge assertions
-    assert_semantic_edge(
-        &gpu_edges,
-        switch_idx,
-        3,
-        C_AST_PG_EDGE_SWITCH_SELECTOR,
-        switch_idx as u32,
-        switch_selector,
-    );
-    assert_semantic_edge(
-        &gpu_edges,
-        case_idx,
-        3,
-        C_AST_PG_EDGE_CASE_VALUE,
-        case_idx as u32,
-        case_value,
-    );
-    assert_semantic_edge(
-        &gpu_edges,
-        case_idx,
-        4,
-        C_AST_PG_EDGE_SWITCH_CASE,
-        switch_idx as u32,
-        case_idx as u32,
-    );
-    assert_semantic_edge(
-        &gpu_edges,
-        default_idx,
-        3,
-        C_AST_PG_EDGE_SWITCH_DEFAULT,
-        switch_idx as u32,
-        default_idx as u32,
     );
     assert_semantic_edge(
         &gpu_edges,

@@ -41,25 +41,41 @@ const VAST_TYPEDEF_SYMBOL_FIELD: usize = 9;
 mod gpu_dispatch_support;
 mod gpu_pipeline_support;
 pub(crate) mod scope_gpu_support;
+pub(crate) mod semantic_dispatch_edges;
 mod typedef_gpu_support;
 
 pub(crate) use gpu_dispatch_support::*;
 #[allow(unused_imports)]
 pub(crate) use gpu_pipeline_support::*;
+#[allow(unused_imports)]
+pub(crate) use semantic_dispatch_edges::*;
 pub(crate) use typedef_gpu_support::*;
 
-/// Build the shared `void f() { __builtin_unreachable(); }` parser fixture.
-pub(crate) fn fixture_builtin_unreachable() -> Fixture {
-    build_fixture(&[
+/// Build a fixture for `void f() { <body> }`.
+///
+/// Every statement-level C fixture needs the same function shell, and the shell
+/// is five of the eight tokens a parser fixture usually carries, so restating it
+/// per fixture is most of each fixture's text.
+pub(crate) fn void_fn_fixture(body: &[FixtureToken]) -> Fixture {
+    let mut tokens = Vec::with_capacity(body.len() + 6);
+    tokens.extend_from_slice(&[
         FixtureToken::new("void", TOK_VOID),
         FixtureToken::new("f", TOK_IDENTIFIER),
         FixtureToken::new("(", TOK_LPAREN),
         FixtureToken::new(")", TOK_RPAREN),
         FixtureToken::new("{", TOK_LBRACE),
+    ]);
+    tokens.extend_from_slice(body);
+    tokens.push(FixtureToken::new("}", TOK_RBRACE));
+    build_fixture(&tokens)
+}
+
+/// Build the shared `void f() { __builtin_unreachable(); }` parser fixture.
+pub(crate) fn fixture_builtin_unreachable() -> Fixture {
+    void_fn_fixture(&[
         FixtureToken::new("__builtin_unreachable", TOK_IDENTIFIER),
         FixtureToken::new("(", TOK_LPAREN),
         FixtureToken::new(")", TOK_RPAREN),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }

@@ -10,7 +10,7 @@
 // GPU/CPU parity is asserted for the full pipeline.
 
 use crate::c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, row_indices, word_at, Fixture, FixtureToken,
+    assert_full_pipeline_parity, row_indices, void_fn_fixture, word_at, Fixture, FixtureToken,
 };
 pub(crate) use crate::c_ast_gpu_parity_support::{assert_pg_preserves_fixture_row, classify};
 use vyre_libs::parsing::c::lex::tokens::*;
@@ -40,44 +40,27 @@ pub(crate) fn assert_shape_none(rows: &[u8], idx: usize, raw_operator: u32) {
 
 /// void f() { s.field; }
 pub(crate) fn fixture_member_access_simple() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("s", TOK_IDENTIFIER),
         FixtureToken::new(".", TOK_DOT),
         FixtureToken::new("field", TOK_IDENTIFIER),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
 /// void f() { p->field; }
 pub(crate) fn fixture_ptr_member_access_simple() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("p", TOK_IDENTIFIER),
         FixtureToken::new("->", TOK_ARROW),
         FixtureToken::new("field", TOK_IDENTIFIER),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
 /// void f() { a.b->c.d; }
 pub(crate) fn fixture_chained_member_access() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("a", TOK_IDENTIFIER),
         FixtureToken::new(".", TOK_DOT),
         FixtureToken::new("b", TOK_IDENTIFIER),
@@ -86,7 +69,6 @@ pub(crate) fn fixture_chained_member_access() -> Fixture {
         FixtureToken::new(".", TOK_DOT),
         FixtureToken::new("d", TOK_IDENTIFIER),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
@@ -96,48 +78,31 @@ pub(crate) fn fixture_chained_member_access() -> Fixture {
 
 /// void f() { (int)*p; }
 pub(crate) fn fixture_cast_then_deref() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("(", TOK_LPAREN),
         FixtureToken::new("int", TOK_INT),
         FixtureToken::new(")", TOK_RPAREN),
         FixtureToken::new("*", TOK_STAR),
         FixtureToken::new("p", TOK_IDENTIFIER),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
 /// void f() { (x)*y; }
 pub(crate) fn fixture_paren_expr_then_mul() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("(", TOK_LPAREN),
         FixtureToken::new("x", TOK_IDENTIFIER),
         FixtureToken::new(")", TOK_RPAREN),
         FixtureToken::new("*", TOK_STAR),
         FixtureToken::new("y", TOK_IDENTIFIER),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
 /// void f() { (int)(1); }
 pub(crate) fn fixture_cast_not_compound_literal() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("(", TOK_LPAREN),
         FixtureToken::new("int", TOK_INT),
         FixtureToken::new(")", TOK_RPAREN),
@@ -145,18 +110,12 @@ pub(crate) fn fixture_cast_not_compound_literal() -> Fixture {
         FixtureToken::new("1", TOK_INTEGER),
         FixtureToken::new(")", TOK_RPAREN),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
 /// void f() { (x)(1); }
 pub(crate) fn fixture_paren_expr_then_call_like() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("(", TOK_LPAREN),
         FixtureToken::new("x", TOK_IDENTIFIER),
         FixtureToken::new(")", TOK_RPAREN),
@@ -164,7 +123,6 @@ pub(crate) fn fixture_paren_expr_then_call_like() -> Fixture {
         FixtureToken::new("1", TOK_INTEGER),
         FixtureToken::new(")", TOK_RPAREN),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
@@ -174,12 +132,7 @@ pub(crate) fn fixture_paren_expr_then_call_like() -> Fixture {
 
 /// void f() { a ? b ? c : d : e, f; }
 pub(crate) fn fixture_nested_conditional_comma() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("a", TOK_IDENTIFIER),
         FixtureToken::new("?", TOK_QUESTION),
         FixtureToken::new("b", TOK_IDENTIFIER),
@@ -192,7 +145,6 @@ pub(crate) fn fixture_nested_conditional_comma() -> Fixture {
         FixtureToken::new(",", TOK_COMMA),
         FixtureToken::new("f", TOK_IDENTIFIER),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
@@ -202,12 +154,7 @@ pub(crate) fn fixture_nested_conditional_comma() -> Fixture {
 
 /// void f() { int *p = (int[]){1, 2, 3}; }
 pub(crate) fn fixture_array_compound_literal() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("int", TOK_INT),
         FixtureToken::new("*", TOK_STAR),
         FixtureToken::new("p", TOK_IDENTIFIER),
@@ -225,7 +172,6 @@ pub(crate) fn fixture_array_compound_literal() -> Fixture {
         FixtureToken::new("3", TOK_INTEGER),
         FixtureToken::new("}", TOK_RBRACE),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
@@ -235,12 +181,7 @@ pub(crate) fn fixture_array_compound_literal() -> Fixture {
 
 /// void f() { sizeof(int) * p; }
 pub(crate) fn fixture_sizeof_typename_then_star() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("sizeof", TOK_SIZEOF),
         FixtureToken::new("(", TOK_LPAREN),
         FixtureToken::new("int", TOK_INT),
@@ -248,18 +189,12 @@ pub(crate) fn fixture_sizeof_typename_then_star() -> Fixture {
         FixtureToken::new("*", TOK_STAR),
         FixtureToken::new("p", TOK_IDENTIFIER),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
 /// void f() { _Alignof(int) * p; }
 pub(crate) fn fixture_alignof_typename_then_star() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
+    void_fn_fixture(&[
         FixtureToken::new("_Alignof", TOK_ALIGNOF),
         FixtureToken::new("(", TOK_LPAREN),
         FixtureToken::new("int", TOK_INT),
@@ -267,7 +202,6 @@ pub(crate) fn fixture_alignof_typename_then_star() -> Fixture {
         FixtureToken::new("*", TOK_STAR),
         FixtureToken::new("p", TOK_IDENTIFIER),
         FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
     ])
 }
 
