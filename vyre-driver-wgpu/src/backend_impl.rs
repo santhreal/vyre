@@ -504,14 +504,11 @@ impl WgpuBackend {
         self.enforce_config_caps(config)?;
         self.validate_with_cache(program)?;
         let pipeline = self.compile_pipeline(program, config, None)?;
-        if let Some(deadline) = config.timeout {
-            let elapsed = started.elapsed();
-            if elapsed > deadline {
-                return Err(vyre_driver::BackendError::new(format!(
-                    "batch dispatch cancelled before GPU submission: took {elapsed:?}, budget {deadline:?}. Fix: raise DispatchConfig.timeout or split the program into smaller chunks."
-                )));
-            }
-        }
+        crate::dispatch_timeout::enforce_budget(
+            started,
+            config.timeout,
+            "batch dispatch cancelled before GPU submission",
+        )?;
         let workgroup_count = pipeline.workgroups_for_dispatch(config)?;
         let dispatch_arena = self.dispatch_arena_snapshot();
         crate::engine::record_and_readback::record_dispatch_unsubmitted(
@@ -568,14 +565,11 @@ impl WgpuBackend {
             .zip(crate::engine::record_and_readback::WgpuPendingReadback::await_many_owned(pending))
         {
             results[index] = Some(result.and_then(|outputs| {
-                if let Some(deadline) = timeout {
-                    let elapsed = started.elapsed();
-                    if elapsed > deadline {
-                        return Err(vyre_driver::BackendError::new(format!(
-                            "batch dispatch exceeded configured timeout: took {elapsed:?}, budget {deadline:?}. Fix: raise DispatchConfig.timeout or split the program into smaller chunks."
-                        )));
-                    }
-                }
+                crate::dispatch_timeout::enforce_budget(
+                    started,
+                    timeout,
+                    "batch dispatch exceeded configured timeout",
+                )?;
                 Ok(outputs)
             }));
         }
@@ -631,14 +625,11 @@ impl WgpuBackend {
                 readback
                     .collect_after_submission_wait(&mut outputs[index], deadline)
                     .and_then(|()| {
-                        if let Some(deadline) = timeout {
-                            let elapsed = started.elapsed();
-                            if elapsed > deadline {
-                                return Err(vyre_driver::BackendError::new(format!(
-                                    "batch dispatch exceeded configured timeout: took {elapsed:?}, budget {deadline:?}. Fix: raise DispatchConfig.timeout or split the program into smaller chunks."
-                                )));
-                            }
-                        }
+                        crate::dispatch_timeout::enforce_budget(
+                            started,
+                            timeout,
+                            "batch dispatch exceeded configured timeout",
+                        )?;
                         Ok(())
                     }),
             );
