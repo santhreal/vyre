@@ -19,7 +19,7 @@
 
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::BinOp;
-use vyre_lower::operand_semantics::operand_is_result_reference;
+use vyre_lower::operand_class::operand_is_result_reference;
 use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
 pub(crate) struct IndexFacts {
@@ -515,7 +515,7 @@ mod tests {
     /// Resolution guard for the operand-namespace clone family.
     ///
     /// This crate used to carry its own operand classifier. Step 0 proved it
-    /// had drifted from `vyre_lower::operand_semantics`: on operand counts the
+    /// had drifted from `vyre_lower::operand_class`: on operand counts the
     /// op contracts forbid, the local copy dropped trailing operands from the
     /// use map (`take(2)` on `StructuredForLoop`, `skip(1)` on the loads)
     /// while the owner kept them. The owner won, because under-counting uses

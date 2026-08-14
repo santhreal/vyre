@@ -1,6 +1,11 @@
-use std::fmt::Write as _;
+//! PTX type-suffix rules.
+//!
+//! Owns the mapping from an operator plus a register class to the `.u32`,
+//! `.s32`, `.f32`, `.b32`, or `.pred` suffix the instruction must carry, and
+//! the predicate naming which element types have a vector memory form. It
+//! selects no instruction and writes no text.
 
-use crate::reg::{PtxType, Reg};
+use crate::reg::PtxType;
 use vyre_foundation::ir::{BinOp, DataType};
 
 pub(super) fn is_ptx_vectorizable_dtype(dt: &DataType) -> bool {
@@ -8,17 +13,6 @@ pub(super) fn is_ptx_vectorizable_dtype(dt: &DataType) -> bool {
         dt,
         DataType::U32 | DataType::I32 | DataType::F32 | DataType::Bool
     )
-}
-
-pub(super) fn write_reg_tuple(out: &mut String, regs: &[Reg]) {
-    out.push('{');
-    for (idx, reg) in regs.iter().enumerate() {
-        if idx > 0 {
-            out.push_str(", ");
-        }
-        let _ = write!(out, "{reg}");
-    }
-    out.push('}');
 }
 
 pub(super) fn ptx_binop_suffix(op: BinOp, ty: PtxType) -> &'static str {

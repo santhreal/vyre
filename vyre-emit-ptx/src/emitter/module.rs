@@ -5,8 +5,8 @@ use vyre_lower::{KernelDescriptor, MemoryClass, TRAP_SIDECAR_NAME};
 
 use vyre_lower::KernelOpKind;
 
-use super::names::sanitize_param_name;
-use super::sizing::{body_op_count_recursive, estimate_body_text_capacity};
+use super::param_identifier::sanitize_param_name;
+use super::text_capacity::{body_op_count_recursive, estimate_body_text_capacity};
 use super::BodyCtx;
 use crate::{EmitError, PtxEmitOptions};
 

@@ -1,3 +1,9 @@
+//! Output-buffer capacity estimates.
+//!
+//! Owns the heuristics that size the module and body `String` up front so
+//! emission does not reallocate while writing. Every number here is an
+//! estimate; being wrong costs a reallocation, never correctness.
+
 use vyre_lower::{BindingLayout, KernelBody, KernelDescriptor, MemoryClass};
 
 pub(super) fn estimated_module_text_capacity(desc: &KernelDescriptor) -> usize {
