@@ -57,7 +57,7 @@ pub(crate) fn fixture_member_access() -> (Vec<u32>, Vec<u32>) {
 /// ```
 pub(crate) fn fixture_array_subscript() -> (Vec<u32>, Vec<u32>) {
     let tok_types = c_kinds(
-         INT IDENTIFIER ASSIGN IDENTIFIER LBRACKET INTEGER RBRACKET SEMICOLON",
+        "INT IDENTIFIER ASSIGN IDENTIFIER LBRACKET INTEGER RBRACKET SEMICOLON",
     );
     let tok_lens = vec![1; tok_types.len()];
     (tok_types, tok_lens)

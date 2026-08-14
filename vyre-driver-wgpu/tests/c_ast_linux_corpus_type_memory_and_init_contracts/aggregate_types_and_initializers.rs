@@ -1,6 +1,7 @@
 use super::kind_at::*;
 use crate::c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, row_indices, run_gpu_pg_lower_with_count as run_gpu_pg_lower,
+    assert_full_pipeline_parity, kind_at, lexeme_indices, node_count_from_vast, row_indices,
+    run_gpu_pg_lower_with_count as run_gpu_pg_lower,
 };
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{

@@ -48,7 +48,7 @@ pub(crate) fn fixture_attribute_aligned_on_label() -> Fixture {
 /// ```
 pub(crate) fn fixture_multiple_attributes_in_compound() -> Fixture {
     c_tokens(
-        "void h ( ) { __attribute__ ( ( section ( ".data" ) ) ) __attribute__ ( ( used ) \
+        "void h ( ) { __attribute__ ( ( section ( \".data\" ) ) ) __attribute__ ( ( used ) \
          ) int sym = 0 ; }",
     )
 }

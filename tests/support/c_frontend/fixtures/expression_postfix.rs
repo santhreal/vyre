@@ -26,7 +26,7 @@ pub(crate) fn chained_arrow_fixture() -> (Vec<u32>, Vec<u32>) {
 pub(crate) fn mixed_postfix_fixture() -> (Vec<u32>, Vec<u32>) {
     // a[0].b->c;
     let tok_types = c_kinds(
-         IDENTIFIER LBRACKET INTEGER RBRACKET DOT IDENTIFIER ARROW IDENTIFIER SEMICOLON",
+        "IDENTIFIER LBRACKET INTEGER RBRACKET DOT IDENTIFIER ARROW IDENTIFIER SEMICOLON",
     );
     let tok_lens = vec![1; tok_types.len()];
     (tok_types, tok_lens)

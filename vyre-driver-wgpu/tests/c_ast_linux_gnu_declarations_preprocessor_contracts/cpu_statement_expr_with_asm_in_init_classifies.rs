@@ -6,7 +6,7 @@ use super::*;
 #[test]
 pub(crate) fn cpu_statement_expr_with_asm_in_init_classifies() {
     let fix = fixture_statement_expr_with_asm_in_init();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
 
     assert_eq!(
         word_at(&typed, 1 * VAST_STRIDE_U32),
@@ -80,7 +80,7 @@ pub(crate) fn fixture_macro_shaped_declaration_list_head() -> Fixture {
 #[test]
 pub(crate) fn cpu_macro_shaped_declaration_define_per_cpu_classifies() {
     let fix = fixture_macro_shaped_declaration_define_per_cpu();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
 
     assert_eq!(
         row_indices(&typed, node_kind::CALL),

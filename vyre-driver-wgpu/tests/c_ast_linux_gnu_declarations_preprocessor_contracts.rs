@@ -29,8 +29,9 @@ use vyre_primitives::wire::{
 mod c_frontend;
 mod c_ast_gpu_parity_support;
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, row_indices, word_at, Fixture, FixtureToken,
-    VAST_STRIDE_U32,
+    assert_full_pipeline_parity, assert_pg_preserves_fixture_row, build_fixture, classify,
+    row_indices, word_at, Fixture, FixtureToken, FLAGS_FIELD, ORDINARY_FLAG_DECL, TYPEDEF_FLAG_DECL,
+    TYPEDEF_FLAG_VISIBLE, VAST_STRIDE_U32,
 };
 use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
@@ -51,60 +52,9 @@ use vyre_libs::parsing::c::preprocess::expansion::opt_conditional_mask_with_dire
 use vyre_libs::parsing::c::preprocess::reference_c_preprocessor_directive_metadata;
 use vyre_primitives::predicate::node_kind;
 use vyre_reference::value::Value;
-const PG_STRIDE_U32: usize = 6;
-const FLAGS_FIELD: usize = 7;
-const TYPEDEF_FLAG_VISIBLE: u32 = 1;
-const TYPEDEF_FLAG_DECL: u32 = 1 << 1;
-const ORDINARY_FLAG_DECL: u32 = 1 << 2;
 // ---------------------------------------------------------------------------
 // Local helpers
 // ---------------------------------------------------------------------------
-fn pg_word_at(buf: &[u8], idx: usize, field: usize) -> u32 {
-    word_at(buf, idx * PG_STRIDE_U32 + field)
-}
-fn assert_pg_preserves_row(
-    typed_vast: &[u8],
-    pg: &[u8],
-    fix: &Fixture,
-    idx: usize,
-    expected_kind: u32,
-) {
-    assert_eq!(
-        pg_word_at(pg, idx, 0),
-        expected_kind,
-        "PG kind mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 1),
-        fix.tok_starts[idx],
-        "PG span_start mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 2),
-        fix.tok_starts[idx] + fix.tok_lens[idx],
-        "PG span_end mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 3),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 1),
-        "PG parent mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 4),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 2),
-        "PG first_child mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 5),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 3),
-        "PG next_sibling mismatch at row {idx}"
-    );
-}
-fn classify_fixture(fix: &Fixture) -> Vec<u8> {
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    reference_c11_classify_vast_node_kinds(&annotated)
-}
 /// Build a [`Fixture`] from explicit lexemes, skipping whitespace in the
 /// token lists (so the VAST builder sees only real tokens) while preserving
 /// newlines in the source string for preprocessor-aware tests.

@@ -1,7 +1,9 @@
 use super::classify::*;
 use crate::c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, row_indices, run_gpu_pg_lower, Fixture,
+    assert_full_pipeline_parity, assert_pg_preserves_fixture_row, classify, row_indices,
+    run_gpu_pg_lower, Fixture,
 };
+use crate::c_frontend::expression_pipeline::assert_shape_none;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
@@ -146,7 +148,7 @@ fn pg_lower_preserves_member_access_rows() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
     let pg = reference_ast_to_pg_nodes(&typed);
 
-    assert_pg_preserves_row(&typed, &pg, &fix, 6, C_AST_KIND_MEMBER_ACCESS_EXPR);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 6, C_AST_KIND_MEMBER_ACCESS_EXPR);
 }
 
 #[test]
@@ -157,7 +159,7 @@ fn pg_lower_preserves_ptr_member_access_rows() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
     let pg = reference_ast_to_pg_nodes(&typed);
 
-    assert_pg_preserves_row(&typed, &pg, &fix, 6, C_AST_KIND_MEMBER_ACCESS_EXPR);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 6, C_AST_KIND_MEMBER_ACCESS_EXPR);
 }
 
 #[test]
@@ -168,7 +170,7 @@ fn pg_lower_preserves_cast_expr_rows() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
     let pg = reference_ast_to_pg_nodes(&typed);
 
-    assert_pg_preserves_row(&typed, &pg, &fix, 5, C_AST_KIND_CAST_EXPR);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 5, C_AST_KIND_CAST_EXPR);
 }
 
 #[test]
@@ -179,8 +181,8 @@ fn pg_lower_preserves_nested_conditional_rows() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
     let pg = reference_ast_to_pg_nodes(&typed);
 
-    assert_pg_preserves_row(&typed, &pg, &fix, 6, C_AST_KIND_CONDITIONAL_EXPR);
-    assert_pg_preserves_row(&typed, &pg, &fix, 8, C_AST_KIND_CONDITIONAL_EXPR);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 6, C_AST_KIND_CONDITIONAL_EXPR);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 8, C_AST_KIND_CONDITIONAL_EXPR);
 }
 
 #[test]
@@ -191,7 +193,7 @@ fn pg_lower_preserves_array_compound_literal_rows() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
     let pg = reference_ast_to_pg_nodes(&typed);
 
-    assert_pg_preserves_row(&typed, &pg, &fix, 9, C_AST_KIND_COMPOUND_LITERAL_EXPR);
+    assert_pg_preserves_fixture_row(&typed, &pg, &fix, 9, C_AST_KIND_COMPOUND_LITERAL_EXPR);
 }
 
 // ---------------------------------------------------------------------------

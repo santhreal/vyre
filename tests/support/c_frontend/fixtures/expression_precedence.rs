@@ -43,7 +43,7 @@ pub(crate) fn compound_assignment_fixture() -> (Vec<u32>, Vec<u32>) {
 pub(crate) fn ternary_looser_than_assignment_fixture() -> (Vec<u32>, Vec<u32>) {
     // a = b ? c : d;
     let tok_types = c_kinds(
-         IDENTIFIER ASSIGN IDENTIFIER QUESTION IDENTIFIER COLON IDENTIFIER SEMICOLON",
+        "IDENTIFIER ASSIGN IDENTIFIER QUESTION IDENTIFIER COLON IDENTIFIER SEMICOLON",
     );
     unit_lens_fixture(tok_types)
 }
@@ -60,7 +60,7 @@ pub(crate) fn ternary_right_assoc_fixture() -> (Vec<u32>, Vec<u32>) {
 pub(crate) fn comma_boundary_fixture() -> (Vec<u32>, Vec<u32>) {
     // a = b, c = d;
     let tok_types = c_kinds(
-         IDENTIFIER ASSIGN IDENTIFIER COMMA IDENTIFIER ASSIGN IDENTIFIER SEMICOLON",
+        "IDENTIFIER ASSIGN IDENTIFIER COMMA IDENTIFIER ASSIGN IDENTIFIER SEMICOLON",
     );
     unit_lens_fixture(tok_types)
 }

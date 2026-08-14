@@ -48,7 +48,7 @@ pub(crate) fn fixture_asm_multiple_output_input_operands() -> Fixture {
 /// asm ("" : : : "memory", "cc");
 /// ```
 pub(crate) fn fixture_asm_memory_and_cc_clobbers() -> Fixture {
-    c_tokens("asm ( "" : : : "memory" , "cc" ) ;")
+    c_tokens("asm ( \"\" : : : \"memory\" , \"cc\" ) ;")
 }
 
 /// ```c
@@ -107,12 +107,12 @@ pub(crate) fn fixture_asm_symbolic_names_and_earlyclobber() -> Fixture {
 /// __asm__ __volatile__ ("rdtsc" : "=A" (ticks));
 /// ```
 pub(crate) fn fixture_asm_extended_output_only() -> Fixture {
-    c_tokens("__asm__ __volatile__ ( "rdtsc" : "=A" ( ticks ) ) ;")
+    c_tokens("__asm__ __volatile__ ( \"rdtsc\" : \"=A\" ( ticks ) ) ;")
 }
 
 /// ```c
 /// asm goto ("" :::: label1, label2, label3);
 /// ```
 pub(crate) fn fixture_asm_goto_three_labels() -> Fixture {
-    c_tokens("asm goto ( "" : : : : label1 , label2 , label3 ) ;")
+    c_tokens("asm goto ( \"\" : : : : label1 , label2 , label3 ) ;")
 }

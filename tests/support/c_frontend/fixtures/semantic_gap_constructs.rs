@@ -42,7 +42,7 @@ pub(crate) fn fixture_parameter_with_attribute() -> Fixture {
 /// void foo(void) __asm__("real_foo");
 /// ```
 pub(crate) fn fixture_asm_alias() -> Fixture {
-    c_tokens("void foo ( void ) __asm__ ( "real_foo" ) ;")
+    c_tokens("void foo ( void ) __asm__ ( \"real_foo\" ) ;")
 }
 
 /// ```c
