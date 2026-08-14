@@ -7,21 +7,12 @@
 //! pins the WGSL emit pattern that keeps both backends in agreement.
 use super::*;
 use vyre_lower::descriptor_builder::{
-    SlotCount,
-    body,
-    descriptor,
-    effect,
-    global_ro,
-    global_rw,
-    lit,
-    op,
+    body, descriptor, effect, global_ro, global_rw, lit, op, SlotCount,
 };
 
 fn byte_load_desc(element_type: DataType) -> KernelDescriptor {
     descriptor("byte_load")
-        .slots([
-            global_ro(0, element_type, "source").with_count(64),
-        ])
+        .slots([global_ro(0, element_type, "source").with_count(64)])
         .body(
             body()
                 .ops([
@@ -145,12 +136,14 @@ fn i8_load_global_emits_byte_extract_with_sign_extend() {
 
 fn byte_store_desc(element_type: DataType) -> KernelDescriptor {
     descriptor("byte_store")
-        .slots([
-            global_rw(0, element_type, "out").with_count(64),
-        ])
+        .slots([global_rw(0, element_type, "out").with_count(64)])
         .body(
             body()
-                .ops([lit(0, 0), lit(1, 1), effect(KernelOpKind::StoreGlobal, [0, 0, 1])])
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
+                ])
                 .literals([LiteralValue::U32(7), LiteralValue::U32(0xab)]),
         )
         .build()
@@ -160,36 +153,15 @@ fn byte_store_desc(element_type: DataType) -> KernelDescriptor {
 fn u8_store_global_emits_byte_rmw_with_clear_and_merge() {
     let desc = byte_store_desc(DataType::U8);
     let module = emit(&desc).unwrap();
-    let entry = module.entry_points.first().expect("entry point");
-    let arena = &entry.function.expressions;
-
-    let has_bitwise_not = arena.iter().any(|(_, expr)| {
-        matches!(
-            expr,
-            naga::Expression::Unary {
-                op: naga::UnaryOperator::BitwiseNot,
-                ..
-            }
-        )
-    });
     assert!(
-        has_bitwise_not,
+        entry_has_unary(&module, naga::UnaryOperator::BitwiseNot),
         "U8 byte-store must invert the lane mask via BitwiseNot to clear the target byte"
     );
-    let has_inclusive_or = arena.iter().any(|(_, expr)| {
-        matches!(
-            expr,
-            naga::Expression::Binary {
-                op: naga::BinaryOperator::InclusiveOr,
-                ..
-            }
-        )
-    });
     assert!(
-        has_inclusive_or,
+        entry_has_binary(&module, naga::BinaryOperator::InclusiveOr),
         "U8 byte-store must merge cleared word with new byte via InclusiveOr"
     );
-    let store_count = entry
+    let store_count = module.entry_points[0]
         .function
         .body
         .iter()
@@ -207,19 +179,8 @@ fn i8_store_global_uses_same_rmw_path_as_u8() {
     // affects loads.
     let desc = byte_store_desc(DataType::I8);
     let module = emit(&desc).unwrap();
-    let entry = module.entry_points.first().expect("entry point");
-    let arena = &entry.function.expressions;
-    let has_bitwise_not = arena.iter().any(|(_, expr)| {
-        matches!(
-            expr,
-            naga::Expression::Unary {
-                op: naga::UnaryOperator::BitwiseNot,
-                ..
-            }
-        )
-    });
     assert!(
-        has_bitwise_not,
+        entry_has_unary(&module, naga::UnaryOperator::BitwiseNot),
         "I8 byte-store must invert the lane mask via BitwiseNot, same as U8"
     );
 }
@@ -257,9 +218,7 @@ fn u32_store_global_unchanged_by_byte_rmw_path() {
 /// in `naga_type_buffer_followup::bytes_buffers`.
 fn cast_to_bytes_desc() -> KernelDescriptor {
     descriptor("cast_to_bytes")
-        .slots([
-            global_rw(0, DataType::U32, "out").with_count(1),
-        ])
+        .slots([global_rw(0, DataType::U32, "out").with_count(1)])
         .body(
             body()
                 .ops([
@@ -267,9 +226,13 @@ fn cast_to_bytes_desc() -> KernelDescriptor {
                     lit(0, 0),
                     // result 1: cast that u32 -> Bytes. This is the invalid op that
                     // must fail closed, NOT silently emit a u32 `As` conversion.
-                    op(KernelOpKind::Cast {
+                    op(
+                        KernelOpKind::Cast {
                             target: DataType::Bytes,
-                        }, [0], 1),
+                        },
+                        [0],
+                        1,
+                    ),
                 ])
                 .literal(LiteralValue::U32(0xab)),
         )

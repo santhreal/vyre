@@ -191,7 +191,11 @@ mod tests {
                         lit(0, 0),
                         lit(1, 1),
                         op(KernelOpKind::LoadGlobal, [0, 0], 2),
-                        op(KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add), [0, 1], 3),
+                        op(
+                            KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add),
+                            [0, 1],
+                            3,
+                        ),
                         op(KernelOpKind::LoadGlobal, [0, 3], 4),
                     ])
                     .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),

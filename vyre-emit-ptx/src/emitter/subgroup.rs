@@ -5,11 +5,11 @@
 //! Ballot, shuffle, and broadcast are single instructions and are emitted
 //! from the op dispatch directly.
 
-use std::fmt::Write as _;
-use vyre_foundation::ir::SubgroupReduceOp;
 use super::BodyCtx;
 use crate::reg::{PtxType, Reg};
 use crate::EmitError;
+use std::fmt::Write as _;
+use vyre_foundation::ir::SubgroupReduceOp;
 
 impl BodyCtx<'_> {
     pub(super) fn subgroup_lane_mask(&self) -> u32 {

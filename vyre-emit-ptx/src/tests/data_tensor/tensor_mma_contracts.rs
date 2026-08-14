@@ -1,5 +1,5 @@
 use super::*;
-use vyre_lower::descriptor_builder::{SlotCount, body, descriptor, effect, global_wo, lit};
+use vyre_lower::descriptor_builder::{body, descriptor, effect, global_wo, lit, SlotCount};
 
 #[test]
 fn matrix_mma_emits_real_mma_sync_and_binds_all_four_results() {
@@ -14,14 +14,7 @@ fn matrix_mma_emits_real_mma_sync_and_binds_all_four_results() {
         ops.push(lit(id, id));
     }
     ops.push(KernelOp {
-        kind: KernelOpKind::MatrixMma {
-            shape: MatrixMmaShape::M16N8K16,
-            a_layout: MatrixMmaLayout::RowMajor,
-            b_layout: MatrixMmaLayout::ColMajor,
-            a_type: MatrixMmaElement::F16,
-            b_type: MatrixMmaElement::F16,
-            accum_type: MatrixMmaElement::F32,
-        },
+        kind: f16_mma_kind(),
         operands: (0..10).collect(),
         result: Some(10),
     });

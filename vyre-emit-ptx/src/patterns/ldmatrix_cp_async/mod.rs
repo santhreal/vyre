@@ -120,21 +120,17 @@ mod tests {
     use super::*;
     use vyre_foundation::ir::DataType;
     use vyre_lower::descriptor_builder::{
-        body,
-        descriptor,
-        effect,
-        global_ro,
-        global_rw,
-        lit,
-        op,
-        shared_rw,
+        body, descriptor, effect, global_ro, global_rw, lit, op, shared_rw,
     };
     use vyre_lower::{KernelDescriptor, LiteralValue};
 
     fn cp_async_kernel() -> KernelDescriptor {
         // load(global, 0) → r0; store(shared, 0, r0)
         descriptor("cp_async")
-            .slots([global_ro(0, DataType::F32, "g"), shared_rw(1, DataType::F32, 64, "s")])
+            .slots([
+                global_ro(0, DataType::F32, "g"),
+                shared_rw(1, DataType::F32, 64, "s"),
+            ])
             .dispatch(64, 1, 1)
             .body(
                 body()

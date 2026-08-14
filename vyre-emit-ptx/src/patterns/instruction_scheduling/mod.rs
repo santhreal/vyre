@@ -122,10 +122,18 @@ mod tests {
         let mut ops = vec![lit(0, 0)];
         for i in 1..length {
             ops.push(lit(1, 100 + i as u32));
-            ops.push(op(KernelOpKind::BinOpKind(BinOp::Add), [(i - 1) as u32, 100 + i as u32], i as u32));
+            ops.push(op(
+                KernelOpKind::BinOpKind(BinOp::Add),
+                [(i - 1) as u32, 100 + i as u32],
+                i as u32,
+            ));
         }
         descriptor("chain")
-            .body(body().ops(ops).literals([LiteralValue::U32(0), LiteralValue::U32(1)]))
+            .body(
+                body()
+                    .ops(ops)
+                    .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+            )
             .build()
     }
 

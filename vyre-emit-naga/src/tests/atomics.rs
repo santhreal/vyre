@@ -6,19 +6,20 @@ use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, o
 fn atomic_add_emits_statement() {
     use vyre_foundation::ir::AtomicOp;
     let desc = descriptor("atomic_add")
-        .slots([
-            global_rw(0, DataType::U32, "counter"),
-        ])
+        .slots([global_rw(0, DataType::U32, "counter")])
         .dispatch(64, 1, 1)
         .body(
             body()
                 .ops([
                     lit(0, 0),
                     lit(1, 1),
-                    effect(KernelOpKind::Atomic {
-                        op: AtomicOp::Add,
-                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-                    }, [0, 0, 1]),
+                    effect(
+                        KernelOpKind::Atomic {
+                            op: AtomicOp::Add,
+                            ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+                        },
+                        [0, 0, 1],
+                    ),
                 ])
                 .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
         )
@@ -52,18 +53,19 @@ fn atomic_add_emits_statement() {
 fn atomic_fetch_nand_emits_compare_exchange_loop() {
     use vyre_foundation::ir::AtomicOp;
     let desc = descriptor("k")
-        .slots([
-            global_rw(0, DataType::U32, "b"),
-        ])
+        .slots([global_rw(0, DataType::U32, "b")])
         .body(
             body()
                 .ops([
                     lit(0, 0),
                     lit(1, 1),
-                    effect(KernelOpKind::Atomic {
-                        op: AtomicOp::FetchNand,
-                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-                    }, [0, 0, 1]),
+                    effect(
+                        KernelOpKind::Atomic {
+                            op: AtomicOp::FetchNand,
+                            ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+                        },
+                        [0, 0, 1],
+                    ),
                 ])
                 .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
         )
@@ -78,19 +80,21 @@ fn atomic_fetch_nand_emits_compare_exchange_loop() {
 fn atomic_compare_exchange_emits_statement() {
     use vyre_foundation::ir::AtomicOp;
     let desc = descriptor("atomic_cx")
-        .slots([
-            global_rw(0, DataType::U32, "counter"),
-        ])
+        .slots([global_rw(0, DataType::U32, "counter")])
         .dispatch(64, 1, 1)
         .body(
             body()
                 .ops([
                     lit(0, 0),
                     lit(1, 1),
-                    op(KernelOpKind::Atomic {
-                        op: AtomicOp::CompareExchange,
-                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-                    }, [0, 0, 0, 1], 2),
+                    op(
+                        KernelOpKind::Atomic {
+                            op: AtomicOp::CompareExchange,
+                            ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+                        },
+                        [0, 0, 0, 1],
+                        2,
+                    ),
                 ])
                 .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
         )

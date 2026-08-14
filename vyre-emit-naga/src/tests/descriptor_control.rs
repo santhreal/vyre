@@ -1,22 +1,18 @@
 //! Test: descriptor control.
 use super::*;
 use vyre_lower::descriptor_builder::{
-    SlotCount,
-    body,
-    descriptor,
-    effect,
-    global_ro,
-    global_rw,
-    lit,
-    op,
-    slot,
+    body, descriptor, effect, global_ro, global_rw, lit, op, slot, SlotCount,
 };
 
 /// Build `literal -> Cast(target)` so the emitted module's 64-bit backing
 /// `Compose(vec2<u32>)` can be inspected for the high-word extension policy.
 fn cast_widen_desc(literal: LiteralValue, target: DataType) -> KernelDescriptor {
     descriptor("cast_widen")
-        .body(body().ops([lit(0, 0), op(KernelOpKind::Cast { target }, [0], 1)]).literal(literal))
+        .body(
+            body()
+                .ops([lit(0, 0), op(KernelOpKind::Cast { target }, [0], 1)])
+                .literal(literal),
+        )
         .build()
 }
 
@@ -740,18 +736,8 @@ fn u64_bitwise_not_emits_valid_componentwise_wgsl() {
     Validator::new(ValidationFlags::all(), Capabilities::all())
         .validate(&module)
         .unwrap_or_else(|e| panic!("u64 BitNot: INVALID WGSL: {e:?}"));
-    let entry = module.entry_points.first().expect("entry point");
-    let has_bitwise_not = entry.function.expressions.iter().any(|(_, e)| {
-        matches!(
-            e,
-            naga::Expression::Unary {
-                op: naga::UnaryOperator::BitwiseNot,
-                ..
-            }
-        )
-    });
     assert!(
-        has_bitwise_not,
+        entry_has_unary(&module, naga::UnaryOperator::BitwiseNot),
         "u64 BitNot must emit a componentwise BitwiseNot over the vec2<u32> backing"
     );
 }
@@ -1064,16 +1050,18 @@ fn signed_i32_arithmetic_shift_right_emits_valid_wgsl() {
     // real signed shift and run naga's validator, if the emitter coerced the
     // shift amount to i32 (to match the signed left), the module is invalid WGSL.
     let desc = descriptor("signed_shr")
-        .slots([
-            global_rw(0, DataType::I32, "out").with_count(1),
-        ])
+        .slots([global_rw(0, DataType::I32, "out").with_count(1)])
         .body(
             body()
                 .ops([
                     lit(0, 0),
-                    op(KernelOpKind::Cast {
-                        target: DataType::I32,
-                    }, [0], 1),
+                    op(
+                        KernelOpKind::Cast {
+                            target: DataType::I32,
+                        },
+                        [0],
+                        1,
+                    ),
                     lit(1, 2),
                     op(KernelOpKind::BinOpKind(BinOp::Shr), [1, 2], 3),
                     lit(2, 4),
@@ -1244,9 +1232,12 @@ fn descriptor_trap_emits_sidecar_atomic_path() {
             body()
                 .ops([
                     lit(0, 0),
-                    effect(KernelOpKind::Trap {
-                        tag: "page-fault".into(),
-                    }, [0]),
+                    effect(
+                        KernelOpKind::Trap {
+                            tag: "page-fault".into(),
+                        },
+                        [0],
+                    ),
                 ])
                 .literal(LiteralValue::U32(7)),
         )
@@ -1275,16 +1266,15 @@ fn descriptor_resume_is_runtime_marker_not_unsupported() {
 #[test]
 fn descriptor_wide_literal_opaque_emits_from_payload() {
     let desc = descriptor("opaque-lit")
-        .body(
-            body()
-                .ops([
-                    op(KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
-                    extension_id: 1,
-                    extension_kind: "vyre.literal.u64".to_owned(),
-                    payload: 42u64.to_le_bytes().to_vec(),
-                })), [], 0),
-                ]),
-        )
+        .body(body().ops([op(
+            KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
+                extension_id: 1,
+                extension_kind: "vyre.literal.u64".to_owned(),
+                payload: 42u64.to_le_bytes().to_vec(),
+            })),
+            [],
+            0,
+        )]))
         .build();
     emit(&desc).expect("known opaque wide literal must emit from descriptor payload");
 }
@@ -1299,19 +1289,23 @@ fn descriptor_structured_for_loop_emits_naga_loop() {
                 .ops([
                     lit(0, 0),
                     lit(1, 1),
-                    effect(KernelOpKind::StructuredForLoop {
-                        loop_var: "i".into(),
-                    }, [0, 1, 0]),
-                ])
-                .children([
-                    body()
-                        .ops([
-                            op(KernelOpKind::LoopIndex {
+                    effect(
+                        KernelOpKind::StructuredForLoop {
                             loop_var: "i".into(),
-                        }, [], 2),
-                            effect(KernelOpKind::StoreGlobal, [0, 2, 2]),
-                        ]),
+                        },
+                        [0, 1, 0],
+                    ),
                 ])
+                .children([body().ops([
+                    op(
+                        KernelOpKind::LoopIndex {
+                            loop_var: "i".into(),
+                        },
+                        [],
+                        2,
+                    ),
+                    effect(KernelOpKind::StoreGlobal, [0, 2, 2]),
+                ])])
                 .literals([LiteralValue::U32(0), LiteralValue::U32(4)]),
         )
         .build();
@@ -1335,10 +1329,14 @@ fn atomic_result_can_feed_later_descriptor_ops() {
                 .ops([
                     lit(0, 0),
                     lit(1, 1),
-                    op(KernelOpKind::Atomic {
-                        op: AtomicOp::Add,
-                        ordering: MemoryOrdering::SeqCst,
-                    }, [0, 0, 1], 2),
+                    op(
+                        KernelOpKind::Atomic {
+                            op: AtomicOp::Add,
+                            ordering: MemoryOrdering::SeqCst,
+                        },
+                        [0, 0, 1],
+                        2,
+                    ),
                     effect(KernelOpKind::StoreGlobal, [0, 0, 2]),
                 ])
                 .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
@@ -1356,16 +1354,15 @@ fn atomic_result_can_feed_later_descriptor_ops() {
 fn opaque_u64_literal_above_u32_max_emits_as_u64() {
     let value: u64 = 1u64 << 40; // 0x10000000000, above u32::MAX
     let desc = descriptor("opaque-u64-wide")
-        .body(
-            body()
-                .ops([
-                    op(KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
-                    extension_id: 1,
-                    extension_kind: "vyre.literal.u64".to_owned(),
-                    payload: value.to_le_bytes().to_vec(),
-                })), [], 0),
-                ]),
-        )
+        .body(body().ops([op(
+            KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
+                extension_id: 1,
+                extension_kind: "vyre.literal.u64".to_owned(),
+                payload: value.to_le_bytes().to_vec(),
+            })),
+            [],
+            0,
+        )]))
         .build();
     // Before the fix: hard-errors with InvalidDescriptor("u64 literal ... exceeds u32::MAX").
     // After the fix: emits Literal::U64(0x10000000000) successfully.
@@ -1412,9 +1409,14 @@ fn uniform_and_constant_bindings_both_emit_read_only_storage_not_uniform() {
         (MemoryClass::Constant, "Constant"),
     ] {
         let desc = descriptor("address_space")
-            .slots([
-                slot(0, DataType::U32, class, BindingVisibility::ReadOnly, "params").with_count(1),
-            ])
+            .slots([slot(
+                0,
+                DataType::U32,
+                class,
+                BindingVisibility::ReadOnly,
+                "params",
+            )
+            .with_count(1)])
             .dispatch(64, 1, 1)
             .build();
 

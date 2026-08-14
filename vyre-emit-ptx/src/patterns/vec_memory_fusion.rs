@@ -229,7 +229,9 @@ pub(super) mod tests {
     ) -> KernelOp {
         match kind {
             MemoryFusionKind::Load => op(KernelOpKind::LoadGlobal, [slot, index_id], result),
-            MemoryFusionKind::Store => effect(KernelOpKind::StoreGlobal, [slot, index_id, value_id]),
+            MemoryFusionKind::Store => {
+                effect(KernelOpKind::StoreGlobal, [slot, index_id, value_id])
+            }
         }
     }
 

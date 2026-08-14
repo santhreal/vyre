@@ -5,9 +5,9 @@
 //! entry point returns `None` when the constant has no profitable form, and
 //! the caller then falls back to the general lowering in `binop`.
 
-use std::fmt::Write as _;
 use super::BodyCtx;
 use crate::reg::{PtxType, Reg};
+use std::fmt::Write as _;
 
 impl BodyCtx<'_> {
     pub(super) fn emit_small_u32_const_mul(&mut self, value: Reg, constant: u32) -> Option<Reg> {

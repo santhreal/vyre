@@ -1,13 +1,6 @@
 use super::*;
 use vyre_lower::descriptor_builder::{
-    SlotCount,
-    body,
-    descriptor,
-    effect,
-    global_ro,
-    global_wo,
-    lit,
-    op,
+    body, descriptor, effect, global_ro, global_wo, lit, op, SlotCount,
 };
 
 #[test]
@@ -22,9 +15,13 @@ fn bool_global_load_uses_word_load_then_predicate_set() {
                 .ops([
                     lit(0, 0),
                     op(KernelOpKind::LoadGlobal, [0, 0], 1),
-                    op(KernelOpKind::Cast {
-                        target: DataType::U32,
-                    }, [1], 2),
+                    op(
+                        KernelOpKind::Cast {
+                            target: DataType::U32,
+                        },
+                        [1],
+                        2,
+                    ),
                     effect(KernelOpKind::StoreGlobal, [1, 0, 2]),
                 ])
                 .literal(LiteralValue::U32(0)),

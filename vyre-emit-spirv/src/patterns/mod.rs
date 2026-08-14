@@ -124,7 +124,7 @@ impl std::fmt::Display for SpirvAuditReport {
 mod audit_tests {
     use super::*;
     use vyre_lower::descriptor_builder::{body, descriptor, op};
-    use vyre_lower::{KernelOpKind};
+    use vyre_lower::KernelOpKind;
 
     #[test]
     fn empty_kernel_yields_no_findings() {

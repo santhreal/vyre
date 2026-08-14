@@ -1,5 +1,5 @@
 use super::*;
-use vyre_lower::descriptor_builder::{SlotCount, body, descriptor, effect, global_rw, lit, op};
+use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op, SlotCount};
 
 #[test]
 fn emit_uniform_load_uses_readonly_global_addressing() {
@@ -20,22 +20,15 @@ fn emit_uniform_load_uses_readonly_global_addressing() {
 
 #[test]
 fn emit_hoists_ready_pure_op_into_vector_load_gap() {
+    let mut ops = four_load_chain(KernelOpKind::LoadGlobal);
+    ops.extend([
+        lit(2, 9),
+        op(KernelOpKind::BinOpKind(BinOp::Add), [9, 1], 10),
+        effect(KernelOpKind::StoreGlobal, [1, 0, 8]),
+    ]);
     let s = emit(&two_slot_u32_kernel(
         "scheduled_vector_load_gap",
-        vec![
-            lit(0, 0),
-            lit(1, 1),
-            op(KernelOpKind::LoadGlobal, [0, 0], 2),
-            op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 3),
-            op(KernelOpKind::LoadGlobal, [0, 3], 4),
-            op(KernelOpKind::BinOpKind(BinOp::Add), [3, 1], 5),
-            op(KernelOpKind::LoadGlobal, [0, 5], 6),
-            op(KernelOpKind::BinOpKind(BinOp::Add), [5, 1], 7),
-            op(KernelOpKind::LoadGlobal, [0, 7], 8),
-            lit(2, 9),
-            op(KernelOpKind::BinOpKind(BinOp::Add), [9, 1], 10),
-            effect(KernelOpKind::StoreGlobal, [1, 0, 8]),
-        ],
+        ops,
         vec![
             LiteralValue::U32(0),
             LiteralValue::U32(1),

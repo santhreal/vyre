@@ -8,12 +8,13 @@
 //! with no error and no wrong-looking output. Silent desynchronization is the
 //! worst failure mode available here, so the emitter refuses the shape instead.
 
-use std::sync::Arc;
-
 use vyre_emit_ptx::PtxEmitOptions;
-use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::MemoryOrdering;
+
+#[path = "emit_probe/probe.rs"]
+mod emit_probe;
+use emit_probe::{lower_and_emit, region_program};
 
 /// One store plus one barrier, with `nested` deciding whether the barrier sits
 /// inside the loop body or at dispatch level. Everything else is identical, so a
@@ -34,16 +35,10 @@ fn barrier_program(nested: bool) -> Program {
             fence,
         ]
     };
-    Program::wrapped(
-        vec![
-            vyre_foundation::ir::BufferDecl::read_write("state", 0, DataType::U32).with_count(256),
-        ],
-        [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from("grid-sync-loop-refusal-probe"),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+    region_program(
+        "grid-sync-loop-refusal-probe",
+        vec![BufferDecl::read_write("state", 0, DataType::U32).with_count(256)],
+        body,
     )
 }
 
@@ -54,12 +49,9 @@ fn barrier_program(nested: bool) -> Program {
 /// barrier outright, nested or not, and the loop-nesting rule below would never
 /// be reached.
 fn emit(program: &Program) -> Result<String, String> {
-    let descriptor = vyre_lower::lower_verified(program)
-        .map(|lowered| lowered.descriptor)
-        .map_err(|error| format!("lower: {error:?}"))?;
     let mut options = PtxEmitOptions::default();
     options.cooperative_grid_sync = true;
-    vyre_emit_ptx::emit_with_options(&descriptor, options).map_err(|error| format!("{error:?}"))
+    lower_and_emit(program, options)
 }
 
 /// A GridSync inside a loop body is refused, and the refusal names the

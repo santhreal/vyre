@@ -1,5 +1,5 @@
 use super::*;
-use vyre_lower::descriptor_builder::{SlotCount, body, descriptor, global_rw, lit, op};
+use vyre_lower::descriptor_builder::{body, descriptor, global_rw, lit, op, SlotCount};
 
 #[test]
 fn select_emits_selp_with_correct_dtype() {
@@ -40,10 +40,14 @@ fn atomic_compare_exchange_emits_atom_global_cas_b32() {
                     // cmp
                     lit(2, 2),
                     // new
-                    op(KernelOpKind::Atomic {
+                    op(
+                        KernelOpKind::Atomic {
                             op: AtomicOp::CompareExchange,
                             ordering: MemoryOrdering::SeqCst,
-                        }, [0, 0, 1, 2], 3),
+                        },
+                        [0, 0, 1, 2],
+                        3,
+                    ),
                 ])
                 .literals([
                     LiteralValue::U32(0),

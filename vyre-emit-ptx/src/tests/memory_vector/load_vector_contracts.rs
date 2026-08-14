@@ -1,32 +1,15 @@
 use super::*;
 use vyre_lower::descriptor_builder::{
-    SlotCount,
-    body,
-    descriptor,
-    effect,
-    global_ro,
-    global_wo,
-    lit,
-    op,
-    slot,
+    body, descriptor, effect, global_ro, global_wo, lit, op, slot, SlotCount,
 };
 
 #[test]
 fn emit_fuses_four_adjacent_u32_loads_to_ptx_vector_load() {
+    let mut ops = four_load_chain(KernelOpKind::LoadGlobal);
+    ops.push(effect(KernelOpKind::StoreGlobal, [1, 0, 8]));
     let s = emit(&two_slot_u32_kernel(
         "vec_load",
-        vec![
-            lit(0, 0),
-            lit(1, 1),
-            op(KernelOpKind::LoadGlobal, [0, 0], 2),
-            op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 3),
-            op(KernelOpKind::LoadGlobal, [0, 3], 4),
-            op(KernelOpKind::BinOpKind(BinOp::Add), [3, 1], 5),
-            op(KernelOpKind::LoadGlobal, [0, 5], 6),
-            op(KernelOpKind::BinOpKind(BinOp::Add), [5, 1], 7),
-            op(KernelOpKind::LoadGlobal, [0, 7], 8),
-            effect(KernelOpKind::StoreGlobal, [1, 0, 8]),
-        ],
+        ops,
         vec![LiteralValue::U32(0), LiteralValue::U32(1)],
     ))
     .unwrap();
@@ -49,28 +32,28 @@ fn emit_fuses_four_adjacent_load_constant_ops_to_ptx_vector_load() {
     // `is_vector_load_op` excluded `LoadConstant`, silently emitting 4× scalar
     // `ld.global.u32` (a 4× memory-transaction Law-7 pessimization on exactly
     // the buffers the promote pass targets).
+    let mut ops = four_load_chain(KernelOpKind::LoadConstant);
+    ops.extend([
+        op(KernelOpKind::BinOpKind(BinOp::Add), [2, 4], 9),
+        op(KernelOpKind::BinOpKind(BinOp::Add), [9, 6], 10),
+        op(KernelOpKind::BinOpKind(BinOp::Add), [10, 8], 11),
+        effect(KernelOpKind::StoreGlobal, [1, 0, 11]),
+    ]);
     let desc = descriptor("vec_load_constant")
         .slots([
-            slot(0, DataType::U32, MemoryClass::Constant, BindingVisibility::ReadOnly, "input").with_count(16),
+            slot(
+                0,
+                DataType::U32,
+                MemoryClass::Constant,
+                BindingVisibility::ReadOnly,
+                "input",
+            )
+            .with_count(16),
             global_wo(1, DataType::U32, "output").with_count(16),
         ])
         .body(
             body()
-                .ops([
-                    lit(0, 0),
-                    lit(1, 1),
-                    op(KernelOpKind::LoadConstant, [0, 0], 2),
-                    op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 3),
-                    op(KernelOpKind::LoadConstant, [0, 3], 4),
-                    op(KernelOpKind::BinOpKind(BinOp::Add), [3, 1], 5),
-                    op(KernelOpKind::LoadConstant, [0, 5], 6),
-                    op(KernelOpKind::BinOpKind(BinOp::Add), [5, 1], 7),
-                    op(KernelOpKind::LoadConstant, [0, 7], 8),
-                    op(KernelOpKind::BinOpKind(BinOp::Add), [2, 4], 9),
-                    op(KernelOpKind::BinOpKind(BinOp::Add), [9, 6], 10),
-                    op(KernelOpKind::BinOpKind(BinOp::Add), [10, 8], 11),
-                    effect(KernelOpKind::StoreGlobal, [1, 0, 11]),
-                ])
+                .ops(ops)
                 .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
         )
         .build();
@@ -214,7 +197,14 @@ fn constant_binding_loads_fuse_to_plain_global_vector_load_never_nc() {
         id: "const_no_vec".into(),
         bindings: BindingLayout {
             slots: vec![
-                slot(0, DataType::U32, MemoryClass::Constant, BindingVisibility::ReadOnly, "const_input").with_count(16),
+                slot(
+                    0,
+                    DataType::U32,
+                    MemoryClass::Constant,
+                    BindingVisibility::ReadOnly,
+                    "const_input",
+                )
+                .with_count(16),
                 global_wo(1, DataType::U32, "output").with_count(4),
             ],
         },

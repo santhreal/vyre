@@ -4,12 +4,12 @@ use smallvec::SmallVec;
 use vyre_foundation::ir::DataType;
 use vyre_lower::{KernelBody, KernelOpKind};
 
-use crate::index_facts::IndexFacts;
-use super::type_suffix::is_ptx_vectorizable_dtype;
 use super::operand_decode::{read_store_operands, read_two_operands};
-use super::schedule::{is_schedulable_pure_op, is_scheduling_fence};
 use super::operand_use_scan::body_descendants_read_operand;
+use super::schedule::{is_schedulable_pure_op, is_scheduling_fence};
+use super::type_suffix::is_ptx_vectorizable_dtype;
 use super::BodyCtx;
+use crate::index_facts::IndexFacts;
 use crate::reg::{write_reg_tuple, PtxType};
 use crate::EmitError;
 

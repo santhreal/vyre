@@ -1,6 +1,6 @@
 //! Test: scalar ops.
 use super::*;
-use vyre_lower::descriptor_builder::{SlotCount, body, descriptor, effect, global_wo, lit, op};
+use vyre_lower::descriptor_builder::{body, descriptor, effect, global_wo, lit, op, SlotCount};
 
 #[test]
 fn emit_ends_with_return() {
@@ -203,7 +203,10 @@ fn unop_reciprocal_emits_strict_or_approx_rcp() {
     let kernel = descriptor("reciprocal")
         .body(
             body()
-                .ops([lit(0, 0), op(KernelOpKind::UnOpKind(UnOp::Reciprocal), [0], 1)])
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::UnOpKind(UnOp::Reciprocal), [0], 1),
+                ])
                 .literal(LiteralValue::F32(4.0)),
         )
         .build();
@@ -236,16 +239,11 @@ fn local_invocation_id_emits_tid_x() {
 fn workgroup_id_emits_ctaid() {
     let kernel = descriptor("wid")
         .dispatch(64, 1, 1)
-        .body(
-            body()
-                .ops([
-                    KernelOp {
-                        kind: KernelOpKind::WorkgroupId,
-                        operands: vec![1], // y axis
-                        result: Some(0),
-                    },
-                ]),
-        )
+        .body(body().ops([KernelOp {
+            kind: KernelOpKind::WorkgroupId,
+            operands: vec![1], // y axis
+            result: Some(0),
+        }]))
         .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("%ctaid.y"));
@@ -257,7 +255,10 @@ fn trap_emits_lane_exit() {
     let kernel = descriptor("k")
         .body(
             body()
-                .ops([lit(0, 0), effect(KernelOpKind::Trap { tag: "t".into() }, [0])])
+                .ops([
+                    lit(0, 0),
+                    effect(KernelOpKind::Trap { tag: "t".into() }, [0]),
+                ])
                 .literal(LiteralValue::U32(0)),
         )
         .build();

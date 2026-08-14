@@ -4,13 +4,13 @@ use smallvec::SmallVec;
 use vyre_foundation::ir::BinOp;
 use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
-use crate::index_facts::IndexFacts;
+use super::operand_use_scan::body_descendants_read_operand;
 use super::schedule::{
     is_latency_load, is_schedulable_pure_op, is_scheduling_fence, op_reads_operand,
     operand_is_immediate,
 };
-use super::operand_use_scan::body_descendants_read_operand;
 use super::BodyCtx;
+use crate::index_facts::IndexFacts;
 use crate::reg::PtxType;
 use crate::EmitError;
 

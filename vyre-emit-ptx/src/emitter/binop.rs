@@ -6,12 +6,12 @@
 //! strength reduction is not here: it lives in `const_strength_reduction`
 //! and runs before this fallback.
 
-use std::fmt::Write as _;
-use vyre_foundation::ir::BinOp;
 use super::type_suffix::ptx_binop_suffix;
 use super::BodyCtx;
 use crate::reg::{PtxType, Reg};
 use crate::EmitError;
+use std::fmt::Write as _;
+use vyre_foundation::ir::BinOp;
 
 impl BodyCtx<'_> {
     pub(super) fn emit_binop(

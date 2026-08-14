@@ -218,9 +218,13 @@ mod tests {
     #[test]
     fn if_with_global_store_remains_safe_candidate() {
         let desc = descriptor("store_in_if")
-            .slots([
-                slot(0, vyre_foundation::ir::DataType::U32, vyre_lower::MemoryClass::Global, vyre_lower::BindingVisibility::ReadWrite, "out"),
-            ])
+            .slots([slot(
+                0,
+                vyre_foundation::ir::DataType::U32,
+                vyre_lower::MemoryClass::Global,
+                vyre_lower::BindingVisibility::ReadWrite,
+                "out",
+            )])
             .dispatch(64, 1, 1)
             .body(
                 body()
@@ -243,9 +247,13 @@ mod tests {
     #[test]
     fn if_with_atomic_flagged_unsafe() {
         let desc = descriptor("atomic_in_if")
-            .slots([
-                slot(0, vyre_foundation::ir::DataType::U32, vyre_lower::MemoryClass::Global, vyre_lower::BindingVisibility::ReadWrite, "out"),
-            ])
+            .slots([slot(
+                0,
+                vyre_foundation::ir::DataType::U32,
+                vyre_lower::MemoryClass::Global,
+                vyre_lower::BindingVisibility::ReadWrite,
+                "out",
+            )])
             .dispatch(64, 1, 1)
             .body(
                 body()
@@ -254,15 +262,14 @@ mod tests {
                         lit(1, 1),
                         effect(KernelOpKind::StructuredIfThen, [0, 0]),
                     ])
-                    .children([
-                        body()
-                            .ops([
-                                op(KernelOpKind::Atomic {
+                    .children([body().ops([op(
+                        KernelOpKind::Atomic {
                             op: vyre_foundation::ir::AtomicOp::Add,
                             ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-                        }, [0, 0, 1], 2),
-                            ]),
-                    ])
+                        },
+                        [0, 0, 1],
+                        2,
+                    )])])
                     .literals([LiteralValue::Bool(true), LiteralValue::U32(7)]),
             )
             .build();
@@ -282,10 +289,7 @@ mod tests {
                         lit(0, 0),
                         effect(KernelOpKind::StructuredIfThenElse, [0, 0, 1]),
                     ])
-                    .children([
-                        body().op(lit(0, 10)),
-                        body().ops([lit(0, 20), lit(0, 21)]),
-                    ])
+                    .children([body().op(lit(0, 10)), body().ops([lit(0, 20), lit(0, 21)])])
                     .literal(LiteralValue::Bool(true)),
             )
             .build();

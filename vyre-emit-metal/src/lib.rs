@@ -594,15 +594,7 @@ mod tests {
     use super::*;
     use vyre_foundation::ir::{DataType, Expr, Node, Program};
     use vyre_lower::descriptor_builder::{
-        SlotCount,
-        body,
-        descriptor,
-        effect,
-        global_ro,
-        global_rw,
-        lit,
-        op,
-        shared_rw,
+        body, descriptor, effect, global_ro, global_rw, lit, op, shared_rw, SlotCount,
     };
     use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
@@ -616,7 +608,11 @@ mod tests {
             .dispatch(64, 1, 1)
             .body(
                 body()
-                    .ops([lit(0, 0), lit(1, 1), effect(KernelOpKind::StoreGlobal, [0, 0, 1])])
+                    .ops([
+                        lit(0, 0),
+                        lit(1, 1),
+                        effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
+                    ])
                     .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
             )
             .build()
@@ -687,7 +683,9 @@ mod tests {
     #[test]
     fn workgroup_slot_is_not_a_metal_buffer_binding() {
         let mut desc = one_store_kernel();
-        desc.bindings.slots.push(shared_rw(1 << 24, DataType::U32, 4, "tile"));
+        desc.bindings
+            .slots
+            .push(shared_rw(1 << 24, DataType::U32, 4, "tile"));
         desc.bindings.slots.sort_by_key(|slot| slot.slot);
         let artifact = emit_artifact(&desc).unwrap();
         assert_eq!(artifact.bindings.len(), 1);

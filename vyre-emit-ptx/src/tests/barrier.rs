@@ -50,14 +50,12 @@ fn nested_barrier_kernel_keeps_lanes_live_and_predicates_global_store() {
                     lit(0, 1),
                     effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
                 ])
-                .children([
-                    body()
-                        .ops([
-                            effect(KernelOpKind::Barrier {
+                .children([body().ops([effect(
+                    KernelOpKind::Barrier {
                         ordering: MemoryOrdering::SeqCst,
-                    }, []),
-                        ]),
-                ])
+                    },
+                    [],
+                )])])
                 .literal(LiteralValue::U32(7)),
         )
         .build();
@@ -102,18 +100,19 @@ fn grid_sync_in_loop_kernel() -> KernelDescriptor {
                 .ops([
                     lit(0, 0),
                     lit(1, 1),
-                    effect(KernelOpKind::StructuredForLoop {
-                        loop_var: "iter".into(),
-                    }, [0, 1, 0]),
+                    effect(
+                        KernelOpKind::StructuredForLoop {
+                            loop_var: "iter".into(),
+                        },
+                        [0, 1, 0],
+                    ),
                 ])
-                .children([
-                    body()
-                        .ops([
-                            effect(KernelOpKind::Barrier {
+                .children([body().ops([effect(
+                    KernelOpKind::Barrier {
                         ordering: MemoryOrdering::GridSync,
-                    }, []),
-                        ]),
-                ])
+                    },
+                    [],
+                )])])
                 .literals([LiteralValue::U32(0), LiteralValue::U32(4)]),
         )
         .build()

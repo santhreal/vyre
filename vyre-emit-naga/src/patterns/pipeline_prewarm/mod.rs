@@ -126,7 +126,9 @@ mod tests {
         for i in 0..60 {
             ops.push(lit(0, i));
         }
-        let kernel = descriptor("big").body(body().ops(ops).literal(LiteralValue::U32(0))).build();
+        let kernel = descriptor("big")
+            .body(body().ops(ops).literal(LiteralValue::U32(0)))
+            .build();
         let h = analyze(&kernel);
         assert!(h.should_prewarm);
         assert!(h.reason.contains("op-count"));
@@ -134,7 +136,9 @@ mod tests {
 
     #[test]
     fn many_binding_kernel_warrants_prewarm() {
-        let kernel = descriptor("many_bindings").slots((0..6).map(binding)).build();
+        let kernel = descriptor("many_bindings")
+            .slots((0..6).map(binding))
+            .build();
         let h = analyze(&kernel);
         assert!(h.should_prewarm);
         assert!(h.reason.contains("binding-count"));

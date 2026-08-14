@@ -138,25 +138,17 @@ mod tests {
     use vyre_lower::{KernelDescriptor, LiteralValue};
 
     fn fma_kernel(fma_count: u32, workgroup_x: u32) -> KernelDescriptor {
-        let mut ops = vec![
-            lit(0, 0),
-            lit(1, 1),
-            lit(2, 2),
-        ];
+        let mut ops = vec![lit(0, 0), lit(1, 1), lit(2, 2)];
         for i in 0..fma_count {
             ops.push(op(KernelOpKind::Fma, [0, 1, 2], 3 + i));
         }
         descriptor("fma_chain")
             .dispatch(workgroup_x, 1, 1)
-            .body(
-                body()
-                    .ops(ops)
-                    .literals([
-                        LiteralValue::F32(1.0),
-                        LiteralValue::F32(2.0),
-                        LiteralValue::F32(3.0),
-                    ]),
-            )
+            .body(body().ops(ops).literals([
+                LiteralValue::F32(1.0),
+                LiteralValue::F32(2.0),
+                LiteralValue::F32(3.0),
+            ]))
             .build()
     }
 

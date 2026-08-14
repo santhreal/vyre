@@ -11,9 +11,9 @@
 use naga::{
     BinaryOperator, Block, Expression, Literal, LocalVariable, ScalarKind, Span, Statement, Type,
 };
-use rustc_hash::FxHashSet;
 use vyre_lower::{KernelBody, KernelOp};
 
+use super::carrier_scope::CarrierSeed;
 use super::BodyBuilder;
 use crate::EmitError;
 
@@ -49,31 +49,8 @@ impl<'a> BodyBuilder<'a> {
         // value instead of dangling on an SSA handle that is out of
         // scope.
         let prior_carriers = self.snapshot_loop_carriers();
-        let child_idx = op.operands.get(2).copied().unwrap_or(u32::MAX);
-        let new_targets = if let Some(child) = body.child_bodies.get(child_idx as usize) {
-            self.collect_loop_carried_ids(body, op, child)
-        } else {
-            FxHashSet::default()
-        };
-        // Pre-loop init for any carrier whose id was bound before the
-        // loop in the parent's SSA scope: we need to seed the local
-        // with that value so iteration 0 reads the pre-loop initialiser.
-        // Pre-size from `new_targets`: at most one (id, handle) per
-        // tracked carrier, so we never resize during the seed scan.
-        let mut pre_init: Vec<(u32, naga::Handle<Expression>)> =
-            Vec::with_capacity(new_targets.len());
-        for id in &new_targets {
-            self.loop_carrier_targets.insert(*id);
-            // Resolve the pre-loop value of `id` in the CURRENT (parent) scope.
-            // Critical: the cached handle in `self.values` may be a `Load`
-            // whose `Statement::Emit` lives inside an outer loop's body  -  out
-            // of scope at this nested-loop's pre-init Store site.  The helper
-            // synthesizes a fresh `LocalVariable + Load` here when `id` is a
-            // carrier so the resulting handle is in scope where pre_init Stores.
-            if let Some(handle) = self.value_handle_for_id(*id) {
-                pre_init.push((*id, handle));
-            }
-        }
+        let new_targets = self.collect_loop_carried_ids(body, op);
+        let pre_init = self.register_carrier_targets(&new_targets);
 
         let from = self.value_operand(op, 0)?;
         let mut to = self.value_operand(op, 1)?;
@@ -113,75 +90,20 @@ impl<'a> BodyBuilder<'a> {
             });
         }
 
-        let bound_local = self.function.local_variables.append(
-            LocalVariable {
-                name: Some(format!("{loop_var}_end")),
-                ty: index_ty,
-                init: None,
-            },
-            Span::UNDEFINED,
-        );
-        let bound_pointer = self.append_expr(Expression::LocalVariable(bound_local));
-        self.function.body.push(
-            Statement::Store {
-                pointer: bound_pointer,
-                value: to,
-            },
-            Span::UNDEFINED,
-        );
+        let bound_local = self.allocate_local_seeded(Some(format!("{loop_var}_end")), index_ty, to);
+        let index_local = self.allocate_local_seeded(Some(loop_var.to_string()), index_ty, from);
 
-        let index_local = self.function.local_variables.append(
-            LocalVariable {
-                name: Some(loop_var.to_string()),
-                ty: index_ty,
-                init: None,
-            },
-            Span::UNDEFINED,
-        );
-        let index_pointer = self.append_expr(Expression::LocalVariable(index_local));
-        self.function.body.push(
-            Statement::Store {
-                pointer: index_pointer,
-                value: from,
-            },
-            Span::UNDEFINED,
-        );
-
-        // Q7: pre-allocate carriers for loop-carried ids and seed them
-        // from the pre-loop SSA value (if the parent body had bound the
-        // same id beforehand  -  common shape: `Let("hash", u32(seed))`
-        // outside the loop, `Assign("hash", ...)` inside).
-        for (id, init_handle) in &pre_init {
-            let local = self.allocate_carrier_local(*id, init_handle);
-            let pointer = self.append_expr(Expression::LocalVariable(local));
-            self.function.body.push(
-                Statement::Store {
-                    pointer,
-                    value: *init_handle,
-                },
-                Span::UNDEFINED,
-            );
-        }
+        // Q7: seed the loop-carried ids from the pre-loop SSA value (if the
+        // parent body had bound the same id beforehand  -  common shape:
+        // `Let("hash", u32(seed))` outside the loop, `Assign("hash", ...)`
+        // inside). The loop index type already decided each carrier's type, so
+        // the seed Store goes in verbatim.
+        self.store_carrier_seeds(&pre_init, CarrierSeed::Verbatim);
 
         let previous_local = self.loop_locals.insert(loop_var.clone(), index_local);
         let previous_type = self.loop_types.insert(loop_var.clone(), index_ty);
         let body_result = self.loop_body_block(body, op, index_local, bound_local);
-        match previous_local {
-            Some(previous) => {
-                self.loop_locals.insert(loop_var.clone(), previous);
-            }
-            None => {
-                self.loop_locals.remove(loop_var);
-            }
-        }
-        match previous_type {
-            Some(previous) => {
-                self.loop_types.insert(loop_var.clone(), previous);
-            }
-            None => {
-                self.loop_types.remove(loop_var);
-            }
-        }
+        self.restore_loop_bindings(loop_var, previous_local, previous_type);
         let loop_body = body_result?;
         let (continuing, break_if) =
             self.loop_continuing_block(index_local, bound_local, index_ty)?;
@@ -195,20 +117,12 @@ impl<'a> BodyBuilder<'a> {
         );
 
         // Q7: after the loop closes, rebind every loop-carried id to a
-        // fresh `Load` from its carrier local, in the parent block. The
-        // load's `Statement::Emit` is appended via `append_expr` so any
-        // post-loop reader resolves the operand to the loaded value
-        // instead of an in-loop SSA handle that is now out of scope.
-        for id in &new_targets {
-            if let Some(local) = self.loop_carrier_locals.get(id).copied() {
-                let pointer = self.append_expr(Expression::LocalVariable(local));
-                let load = self.append_expr(Expression::Load { pointer });
-                self.values.insert(*id, load);
-            }
-        }
-        // Restore prior carrier state so a sibling loop in the same
-        // parent body sees a clean slate.
-        self.restore_loop_carriers(prior_carriers);
+        // fresh `Load` from its carrier local, in the parent block, so any
+        // post-loop reader resolves the operand to the loaded value instead
+        // of an in-loop SSA handle that is now out of scope. Restoring the
+        // prior carrier state leaves a sibling loop in the same parent body a
+        // clean slate.
+        self.publish_carriers(&new_targets, prior_carriers);
         Ok(())
     }
 

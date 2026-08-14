@@ -1,20 +1,42 @@
 use super::*;
 use vyre_lower::descriptor_builder::{body, descriptor, lit, op};
 
-#[test]
-fn cast_emits_cvt_with_target_dtype() {
-    let kernel = descriptor("cast")
+/// A single-cast kernel: seed one literal, cast it to `target`.
+fn cast_kernel(id: &str, seed: LiteralValue, target: DataType) -> KernelDescriptor {
+    descriptor(id)
+        .body(
+            body()
+                .ops([lit(0, 0), op(KernelOpKind::Cast { target }, [0], 1)])
+                .literal(seed),
+        )
+        .build()
+}
+
+/// A chained-cast kernel: seed one literal, cast it to `first`, then cast that
+/// result to `second`. Casting through an intermediate width is the only way to
+/// reach a wide or narrow source operand from a u32 literal.
+fn chained_cast_kernel(
+    id: &str,
+    seed: LiteralValue,
+    first: DataType,
+    second: DataType,
+) -> KernelDescriptor {
+    descriptor(id)
         .body(
             body()
                 .ops([
                     lit(0, 0),
-                    op(KernelOpKind::Cast {
-                        target: DataType::F32,
-                    }, [0], 1),
+                    op(KernelOpKind::Cast { target: first }, [0], 1),
+                    op(KernelOpKind::Cast { target: second }, [1], 2),
                 ])
-                .literal(LiteralValue::U32(7)),
+                .literal(seed),
         )
-        .build();
+        .build()
+}
+
+#[test]
+fn cast_emits_cvt_with_target_dtype() {
+    let kernel = cast_kernel("cast", LiteralValue::U32(7), DataType::F32);
     let s = emit(&kernel).unwrap();
     assert!(s.contains("cvt.rn.f32.u32"));
 }
@@ -22,18 +44,7 @@ fn cast_emits_cvt_with_target_dtype() {
 /// U32 → U64 must zero-extend with `cvt.u64.u32`, never silently reinterpret.
 #[test]
 fn cast_u32_to_u64_zero_extends() {
-    let kernel = descriptor("cast_u32_u64")
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::Cast {
-                        target: DataType::U64,
-                    }, [0], 1),
-                ])
-                .literal(LiteralValue::U32(7)),
-        )
-        .build();
+    let kernel = cast_kernel("cast_u32_u64", LiteralValue::U32(7), DataType::U64);
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("cvt.u64.u32"),
@@ -45,21 +56,12 @@ fn cast_u32_to_u64_zero_extends() {
 /// `cvt.u32.u64` (NOT a silent bit reinterpret).
 #[test]
 fn cast_u64_to_u32_truncates_low_word() {
-    let kernel = descriptor("cast_u64_u32")
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::Cast {
-                        target: DataType::U64,
-                    }, [0], 1),
-                    op(KernelOpKind::Cast {
-                        target: DataType::U32,
-                    }, [1], 2),
-                ])
-                .literal(LiteralValue::U32(9)),
-        )
-        .build();
+    let kernel = chained_cast_kernel(
+        "cast_u64_u32",
+        LiteralValue::U32(9),
+        DataType::U64,
+        DataType::U32,
+    );
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("cvt.u32.u64"),
@@ -72,21 +74,12 @@ fn cast_u64_to_u32_truncates_low_word() {
 /// closed.
 #[test]
 fn cast_u64_to_i32_narrows_low_word() {
-    let kernel = descriptor("cast_u64_i32")
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::Cast {
-                        target: DataType::U64,
-                    }, [0], 1),
-                    op(KernelOpKind::Cast {
-                        target: DataType::I32,
-                    }, [1], 2),
-                ])
-                .literal(LiteralValue::U32(9)),
-        )
-        .build();
+    let kernel = chained_cast_kernel(
+        "cast_u64_i32",
+        LiteralValue::U32(9),
+        DataType::U64,
+        DataType::I32,
+    );
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("cvt.u32.u64"),
@@ -98,21 +91,12 @@ fn cast_u64_to_i32_narrows_low_word() {
 /// reference `value != 0`: never just the low word.
 #[test]
 fn cast_u64_to_bool_tests_full_width() {
-    let kernel = descriptor("cast_u64_bool")
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::Cast {
-                        target: DataType::U64,
-                    }, [0], 1),
-                    op(KernelOpKind::Cast {
-                        target: DataType::Bool,
-                    }, [1], 2),
-                ])
-                .literal(LiteralValue::U32(9)),
-        )
-        .build();
+    let kernel = chained_cast_kernel(
+        "cast_u64_bool",
+        LiteralValue::U32(9),
+        DataType::U64,
+        DataType::Bool,
+    );
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("setp.ne.u64"),
@@ -124,21 +108,12 @@ fn cast_u64_to_bool_tests_full_width() {
 /// full 64-bit two's-complement pattern.
 #[test]
 fn cast_i32_to_u64_sign_extends() {
-    let kernel = descriptor("cast_i32_u64")
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::Cast {
-                        target: DataType::I32,
-                    }, [0], 1),
-                    op(KernelOpKind::Cast {
-                        target: DataType::U64,
-                    }, [1], 2),
-                ])
-                .literal(LiteralValue::U32(3)),
-        )
-        .build();
+    let kernel = chained_cast_kernel(
+        "cast_i32_u64",
+        LiteralValue::U32(3),
+        DataType::I32,
+        DataType::U64,
+    );
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("cvt.s64.s32"),
@@ -152,21 +127,12 @@ fn cast_i32_to_u64_sign_extends() {
 /// errored with `UnsupportedDataType(I64)`.
 #[test]
 fn cast_i32_to_i64_sign_extends() {
-    let kernel = descriptor("cast_i32_i64")
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::Cast {
-                        target: DataType::I32,
-                    }, [0], 1),
-                    op(KernelOpKind::Cast {
-                        target: DataType::I64,
-                    }, [1], 2),
-                ])
-                .literal(LiteralValue::U32(3)),
-        )
-        .build();
+    let kernel = chained_cast_kernel(
+        "cast_i32_i64",
+        LiteralValue::U32(3),
+        DataType::I32,
+        DataType::I64,
+    );
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("cvt.s64.s32"),
@@ -178,18 +144,7 @@ fn cast_i32_to_i64_sign_extends() {
 /// unsigned twin of the sign-extend above.
 #[test]
 fn cast_u32_to_i64_zero_extends() {
-    let kernel = descriptor("cast_u32_i64")
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::Cast {
-                        target: DataType::I64,
-                    }, [0], 1),
-                ])
-                .literal(LiteralValue::U32(9)),
-        )
-        .build();
+    let kernel = cast_kernel("cast_u32_i64", LiteralValue::U32(9), DataType::I64);
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("cvt.u64.u32"),
@@ -199,18 +154,7 @@ fn cast_u32_to_i64_zero_extends() {
 
 #[test]
 fn f32_to_bool_cast_uses_unordered_not_equal_for_nan_truthiness() {
-    let kernel = descriptor("cast_f32_bool")
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::Cast {
-                        target: DataType::Bool,
-                    }, [0], 1),
-                ])
-                .literal(LiteralValue::F32(f32::NAN)),
-        )
-        .build();
+    let kernel = cast_kernel("cast_f32_bool", LiteralValue::F32(f32::NAN), DataType::Bool);
 
     let s = emit(&kernel).unwrap();
     assert!(
@@ -242,18 +186,7 @@ fn f32_not_equal_comparison_uses_unordered_predicate_for_nan_truthiness() {
 
 #[test]
 fn bool_to_f32_cast_materializes_predicate_before_numeric_conversion() {
-    let kernel = descriptor("cast_bool_f32")
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::Cast {
-                        target: DataType::F32,
-                    }, [0], 1),
-                ])
-                .literal(LiteralValue::Bool(true)),
-        )
-        .build();
+    let kernel = cast_kernel("cast_bool_f32", LiteralValue::Bool(true), DataType::F32);
 
     let s = emit(&kernel).unwrap();
     assert!(
@@ -264,18 +197,7 @@ fn bool_to_f32_cast_materializes_predicate_before_numeric_conversion() {
 
 #[test]
 fn bool_to_i32_cast_materializes_predicate_word() {
-    let kernel = descriptor("cast_bool_i32")
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::Cast {
-                        target: DataType::I32,
-                    }, [0], 1),
-                ])
-                .literal(LiteralValue::Bool(true)),
-        )
-        .build();
+    let kernel = cast_kernel("cast_bool_i32", LiteralValue::Bool(true), DataType::I32);
 
     let s = emit(&kernel).unwrap();
     assert!(
@@ -285,13 +207,7 @@ fn bool_to_i32_cast_materializes_predicate_word() {
 }
 
 fn f32_cast_kernel(target: DataType) -> KernelDescriptor {
-    descriptor("cast_f32")
-        .body(
-            body()
-                .ops([lit(0, 0), op(KernelOpKind::Cast { target }, [0], 1)])
-                .literal(LiteralValue::F32(3.5)),
-        )
-        .build()
+    cast_kernel("cast_f32", LiteralValue::F32(3.5), target)
 }
 
 /// A float source has no defined narrowing integer conversion. `from_dtype`
@@ -343,13 +259,7 @@ fn f32_to_permitted_targets_still_emit() {
 /// exercise the integer narrowing path (`from_dtype` collapses u8/u16->u32 and
 /// i8/i16->i32, so a same-width identity check would skip the truncation).
 fn u32_cast_kernel(target: DataType) -> KernelDescriptor {
-    descriptor("cast_u32")
-        .body(
-            body()
-                .ops([lit(0, 0), op(KernelOpKind::Cast { target }, [0], 1)])
-                .literal(LiteralValue::U32(300)),
-        )
-        .build()
+    cast_kernel("cast_u32", LiteralValue::U32(300), target)
 }
 
 /// Unsigned narrowing `u32 -> u8/u16` must TRUNCATE to the low byte/half via the
