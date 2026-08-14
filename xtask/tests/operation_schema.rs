@@ -7,12 +7,33 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 use serde_json::Value;
+use vyre_foundation::operation::{classify_operation_id, OperationRegistry, OperationTier};
 
 fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("Fix: xtask must remain directly under the workspace root")
         .to_path_buf()
+}
+
+/// Workspace member crate names, read from the root manifest at run time.
+fn workspace_members() -> std::collections::BTreeSet<String> {
+    let manifest = fs::read_to_string(workspace_root().join("Cargo.toml"))
+        .expect("Fix: workspace root manifest must be readable");
+    let parsed: toml::Value =
+        toml::from_str(&manifest).expect("Fix: workspace root manifest must be valid TOML");
+    parsed["workspace"]["members"]
+        .as_array()
+        .expect("Fix: [workspace] must declare members")
+        .iter()
+        .filter_map(|member| member.as_str())
+        .map(|path| {
+            path.rsplit('/')
+                .next()
+                .unwrap_or(path)
+                .to_string()
+        })
+        .collect()
 }
 
 fn schema_path() -> PathBuf {
@@ -160,71 +181,80 @@ fn schema_rows_cover_every_required_operation_contract() {
         assert!(operation["composition_chain"].is_array());
     }
 }
-
-/// Runtime operations share the canonical semantic-operation authority.
+/// Every operation id namespaces the crate that owns the registration.
 ///
-/// This prevents signature-only records from disappearing behind the
-/// Program-backed operation count.
+/// WHY: `vyre-driver` registered `core.indirect_dispatch`, `io.dma_from_nvme`,
+/// `io.write_back_to_nvme`, `mem.zerocopy_map` and `mem.unmap` as operations
+/// carrying a signature and no program. A host-side runtime capability has no
+/// program to lower and no fixture to compare against, so those five ids were a
+/// second identity for capabilities that already live on the backend capability
+/// surface and in `vyre-runtime`. `classify_operation_id` now returns `Unknown`
+/// for a dotted id and `OperationRegistry` refuses it, so re-adding one turns
+/// this red at registry construction.
+///
+/// The member list is the live registry, not a literal, so a newly registered
+/// violation is judged without editing this test.
+///
+/// What it does not catch: an id that names a real crate other than the one it
+/// is registered in. `structure-gate`'s `op-id-namespace` rule owns that case,
+/// because it reads the file each registration lives in.
 #[test]
-fn runtime_dialect_contracts_are_typed_and_fail_closed_without_reference_fallback() {
+fn every_registered_operation_id_namespaces_its_owning_crate() {
+    let members = workspace_members();
+    let registry = OperationRegistry::global();
+
+    assert!(
+        registry.iter().len() > 100,
+        "Fix: xtask must link every operation crate; saw only {} registrations, so this rule is judging nothing",
+        registry.iter().len()
+    );
+
+    let mut findings = Vec::new();
+    for operation in registry.iter() {
+        let Some((crate_name, rest)) = operation.id.split_once("::") else {
+            findings.push(format!(
+                "`{}` carries no `crate::` namespace; an operation id names its owning crate, and a host capability is reached through the driver capability surface instead",
+                operation.id
+            ));
+            continue;
+        };
+        if crate_name.is_empty() || rest.is_empty() {
+            findings.push(format!("`{}` has an empty namespace segment", operation.id));
+            continue;
+        }
+        if crate_name.starts_with("vyre-") && !members.contains(crate_name) {
+            findings.push(format!(
+                "`{}` claims workspace crate `{crate_name}`, which is not a workspace member",
+                operation.id
+            ));
+        }
+        if classify_operation_id(operation.id) == OperationTier::Unknown {
+            findings.push(format!(
+                "`{}` classifies as Unknown; its namespace names no operation-owning crate",
+                operation.id
+            ));
+        }
+    }
+
+    assert!(
+        findings.is_empty(),
+        "{} operation id namespace violation(s):\n  - {}",
+        findings.len(),
+        findings.join("\n  - ")
+    );
+}
+
+/// The catalog tier vocabulary carries no retired spelling.
+#[test]
+fn schema_tier_counts_use_only_live_tier_spellings() {
     let schema = read_schema();
-    let operations = schema["operations"].as_array().unwrap();
-    let expected = [
-        (
-            "core.indirect_dispatch",
-            &["GpuBufferHandle<[u32;3]>"][..],
-            &[][..],
-        ),
-        (
-            "io.dma_from_nvme",
-            &["i32", "u64", "u64"][..],
-            &["GpuBufferHandle"][..],
-        ),
-        (
-            "io.write_back_to_nvme",
-            &["GpuBufferHandle", "i32", "u64"][..],
-            &[][..],
-        ),
-        ("mem.unmap", &["GpuBufferHandle"][..], &[][..]),
-        ("mem.zerocopy_map", &["i32"][..], &["GpuBufferHandle"][..]),
-    ];
-    assert_eq!(schema["tier_counts"]["runtime"], expected.len());
-    for (id, expected_inputs, expected_outputs) in expected {
-        let operation = operations
-            .iter()
-            .find(|operation| operation["id"] == id)
-            .unwrap_or_else(|| panic!("Fix: runtime operation `{id}` must be cataloged"));
-        assert_eq!(operation["tier"], "runtime");
-        assert_eq!(operation["signature"]["kind"], "dialect_parameters");
-        let inputs = operation["signature"]["inputs"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|parameter| parameter["data_type"].as_str().unwrap())
-            .collect::<Vec<_>>();
-        let outputs = operation["signature"]["outputs"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|parameter| parameter["data_type"].as_str().unwrap())
-            .collect::<Vec<_>>();
-        assert_eq!(inputs, expected_inputs);
-        assert_eq!(outputs, expected_outputs);
-        assert_eq!(operation["features"], serde_json::json!(["default"]));
-        assert_eq!(operation["oracle"]["reference_eval"], false);
-        assert_eq!(
-            operation["backend_support"]["reference"]["status"],
-            "not_applicable"
+    let tier_counts = schema["tier_counts"].as_object().unwrap();
+
+    for tier in tier_counts.keys() {
+        assert!(
+            ["foundation_ir", "intrinsic", "libs", "external"].contains(&tier.as_str()),
+            "Fix: `{tier}` is not a live OperationTier spelling"
         );
-        assert_eq!(
-            operation["backend_support"]["cuda"]["status"],
-            "experimental"
-        );
-        assert_eq!(
-            operation["backend_support"]["wgpu"]["status"],
-            "experimental"
-        );
-        assert_eq!(operation["composition_chain"], serde_json::json!([]));
     }
 }
 

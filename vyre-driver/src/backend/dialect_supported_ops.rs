@@ -42,34 +42,39 @@ pub fn dialect_only_supported_ops() -> &'static HashSet<OpId> {
 mod tests {
     use super::*;
 
+    /// The semantic half is the registry, not a driver-local list.
+    ///
+    /// The driver used to register five host capabilities as operations so this
+    /// set would contain them. It now advertises exactly what the two
+    /// operation-owning crates registered, so a set built from a hardcoded id
+    /// list would be the defect.
     #[test]
-    fn dialect_set_contains_io_ops() {
+    fn semantic_set_mirrors_the_operation_registry() {
         let ops = dialect_only_supported_ops();
-        for op in [
-            "io.dma_from_nvme",
-            "io.write_back_to_nvme",
-            "mem.zerocopy_map",
-            "mem.unmap",
-        ] {
+        let registry = OperationRegistry::global();
+
+        assert_eq!(ops.len(), registry.iter().len());
+        for operation in registry.iter() {
             assert!(
-                ops.iter().any(|o| o.as_ref() == op),
-                "dialect set missing {op}; saw {:?}",
-                ops.iter().map(|o| o.as_ref()).collect::<Vec<_>>().len()
+                ops.iter().any(|id| id.as_ref() == operation.id),
+                "semantic set is missing registered operation `{}`",
+                operation.id
             );
         }
     }
 
+    /// The union is exactly its two sources, with no third contributor.
     #[test]
-    fn union_includes_both_sources() {
+    fn union_is_exactly_language_plus_semantic() {
         let union = dialect_and_language_supported_ops();
-        assert!(union.iter().any(|o| o.as_ref() == "vyre.node.store"));
-        assert!(union.iter().any(|o| o.as_ref() == "io.dma_from_nvme"));
-    }
+        let language = super::super::validation::default_supported_ops();
+        let semantic = dialect_only_supported_ops();
 
-    #[test]
-    fn union_size_exceeds_language_alone() {
-        let lang = super::super::validation::default_supported_ops().len();
-        let union = dialect_and_language_supported_ops().len();
-        assert!(union > lang);
+        assert!(union.contains(&OpId::from("vyre.node.store")));
+        for id in language.iter().chain(semantic.iter()) {
+            assert!(union.contains(id), "union dropped `{id}`");
+        }
+        let expected: HashSet<&OpId> = language.iter().chain(semantic.iter()).collect();
+        assert_eq!(union.len(), expected.len());
     }
 }

@@ -26,7 +26,7 @@ MANIFEST = Path("docs/DOCS.toml")
 # (xtask/src/operation_schema.rs SCHEMA_VERSION) and pins the same number;
 # its test the_python_contract_pins_the_same_operation_schema_version fails
 # when this line drifts from it.
-OPERATION_SCHEMA_VERSION = 3
+OPERATION_SCHEMA_VERSION = 4
 
 
 class ContractError(Exception):

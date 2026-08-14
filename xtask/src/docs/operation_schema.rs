@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use vyre::ir::{Node, Program};
 use vyre_foundation::algebra::algebraic_law_registry::AlgebraicLawRegistration;
 use vyre_foundation::operation::classify_operation_id as classify_op_id;
-use vyre_foundation::operation::OperationTier;
 
 use crate::release::conformance_matrix::read_conformance_required_op_matrix;
 
@@ -23,7 +22,7 @@ const MAX_SCHEMA_BYTES: u64 = 16_777_216;
 /// `the_python_contract_pins_the_same_operation_schema_version` fails when the
 /// two drift; that drift shipped once already, with the generator on 3 and the
 /// script still demanding 2.
-pub(crate) const SCHEMA_VERSION: u32 = 3;
+pub(crate) const SCHEMA_VERSION: u32 = 4;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub(crate) struct OperationSchema {
@@ -101,7 +100,6 @@ pub(crate) struct CompositionStep {
 struct LiveEntry {
     id: &'static str,
     signature: Option<&'static vyre_foundation::dialect_lookup::Signature>,
-    tier: OperationTier,
     build: Option<fn() -> Program>,
     category: Option<&'static str>,
     has_inputs: bool,
@@ -295,7 +293,6 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
         .map(|entry| LiveEntry {
             id: entry.id,
             signature: entry.signature,
-            tier: entry.tier,
             build: entry.build,
             category: entry.category(),
             has_inputs: entry.test_inputs.is_some(),
@@ -347,23 +344,14 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
         if tier == "unknown" {
             errors.push(format!("operation `{}` has an unknown tier", entry.id));
         }
-        let runtime_operation = matches!(entry.tier, OperationTier::Runtime);
-        let features = if runtime_operation {
-            vec!["default".to_string()]
-        } else {
-            feature_route(entry.id, &category)
-        };
+        let features = feature_route(entry.id, &category);
         if features.is_empty() {
             errors.push(format!(
                 "operation `{}` has no enabling feature route",
                 entry.id
             ));
         }
-        let crate_name = if runtime_operation {
-            "vyre-driver"
-        } else {
-            entry.id.split("::").next().unwrap_or("")
-        };
+        let crate_name = entry.id.split("::").next().unwrap_or("");
         match manifest_features.get(crate_name) {
             Some(available) => {
                 for feature in &features {
@@ -682,17 +670,11 @@ fn category_from_id(id: &str) -> String {
         .nth(1)
         .or_else(|| id.split('.').next())
         .filter(|value| !value.is_empty())
-        .unwrap_or("runtime")
+        .unwrap_or("uncategorized")
         .to_string()
 }
 
 fn feature_route(id: &str, category: &str) -> Vec<String> {
-    if classify_op_id(id).matrix_value() == "runtime" {
-        return vec!["default".to_string()];
-    }
-    if id.starts_with("vyre-intrinsics::") {
-        return vec!["hardware".to_string()];
-    }
     if id.starts_with("vyre-primitives::") {
         let domain = id.split("::").nth(1).unwrap_or(category);
         let feature = if domain == "vfs" { "parsing" } else { domain };
@@ -723,7 +705,6 @@ fn read_manifest_features(
     let mut catalog = BTreeMap::new();
     for crate_name in [
         "vyre-driver",
-        "vyre-intrinsics",
         "vyre-primitives",
         "vyre-libs",
     ] {

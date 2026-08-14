@@ -1,33 +1,10 @@
 //! Shared OP_MATRIX release-backend row classification.
 
-pub(crate) const RUNTIME_DIALECT_CONTRACT_OPS: &[&str] = &[
-    "core.indirect_dispatch",
-    "io.dma_from_nvme",
-    "io.write_back_to_nvme",
-    "mem.unmap",
-    "mem.zerocopy_map",
-];
-
-pub(crate) fn count_runtime_dialect_contract_rows(rows: &[String]) -> usize {
+pub(crate) fn count_supported_release_backend_rows(rows: &[String]) -> usize {
     rows.iter()
         .filter(|row| {
-            let Some((op, backend, status)) = parse_release_backend_row(row) else {
-                return false;
-            };
-            RUNTIME_DIALECT_CONTRACT_OPS.contains(&op)
-                && ((backend == "reference" && status == "not_applicable")
-                    || (matches!(backend, "cuda" | "wgpu") && status == "experimental"))
-        })
-        .count()
-}
-
-pub(crate) fn count_non_runtime_supported_release_backend_rows(rows: &[String]) -> usize {
-    rows.iter()
-        .filter(|row| {
-            let Some((op, _backend, status)) = parse_release_backend_row(row) else {
-                return false;
-            };
-            !RUNTIME_DIALECT_CONTRACT_OPS.contains(&op) && status == "supported"
+            parse_release_backend_row(row)
+                .is_some_and(|(_op, _backend, status)| status == "supported")
         })
         .count()
 }

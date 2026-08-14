@@ -2,7 +2,7 @@
 //!
 //! Spec: `docs/lego-block-rule.md` (the LEGO substrate enforcement loop).
 //!
-//! For every registered op (vyre-libs + vyre-intrinsics inventories):
+//! For every registered op (vyre-libs + vyre-primitives inventories):
 //!
 //! 1. Build the op's `Program`.
 //! 2. Walk the entry-body Node tree:
@@ -65,11 +65,6 @@ impl Verdict {
 pub(crate) fn run(_args: &[String]) {
     let mut verdicts: Vec<Verdict> = Vec::new();
     for entry in vyre_foundation::operation::OperationRegistry::global().iter() {
-        // A runtime-owned operation is dispatch, not IR: it is registered with
-        // no neutral builder on purpose, so there is no complexity to budget.
-        if entry.tier == vyre_foundation::operation::OperationTier::Runtime {
-            continue;
-        }
         let program = entry.program().unwrap_or_else(|| {
             panic!(
                 "Fix: canonical operation `{}` provides no neutral builder; register one or remove the registration",

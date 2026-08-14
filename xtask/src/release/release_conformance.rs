@@ -6,10 +6,7 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::release::release_backend_rows::{
-    count_non_runtime_supported_release_backend_rows, count_runtime_dialect_contract_rows,
-    RUNTIME_DIALECT_CONTRACT_OPS,
-};
+use crate::release::release_backend_rows::count_supported_release_backend_rows;
 use serde::{Deserialize, Serialize};
 
 const MIN_RELEASE_OP_PAIRS: usize = 49;
@@ -57,9 +54,7 @@ struct BackendConformanceArtifact {
     catalog_covered_op_count: usize,
     missing_catalog_ops: Vec<String>,
     release_backend_row_count: usize,
-    non_runtime_supported_release_backend_row_count: usize,
-    runtime_dialect_contract_row_count: usize,
-    runtime_dialect_contract_ops: Vec<&'static str>,
+    supported_release_backend_row_count: usize,
     release_backend_rows: Vec<String>,
     missing_release_backend_rows: Vec<String>,
     op_matrix_blocked_release_count: usize,
@@ -214,9 +209,7 @@ fn run_backend_conformance(
     let missing_catalog_ops = catalog
         .required_ops
         .iter()
-        .filter(|op| {
-            !seen_ops.contains(op.as_str()) && !RUNTIME_DIALECT_CONTRACT_OPS.contains(&op.as_str())
-        })
+        .filter(|op| !seen_ops.contains(op.as_str()))
         .cloned()
         .collect::<Vec<_>>();
     let catalog_covered_op_count = catalog
@@ -244,24 +237,12 @@ fn run_backend_conformance(
             catalog.missing_release_backend_rows.len()
         ));
     }
-    let runtime_dialect_contract_row_count =
-        count_runtime_dialect_contract_rows(&catalog.release_backend_rows);
-    let non_runtime_supported_release_backend_row_count =
-        count_non_runtime_supported_release_backend_rows(&catalog.release_backend_rows);
-    let expected_runtime_rows = RUNTIME_DIALECT_CONTRACT_OPS.len().saturating_mul(3);
-    if runtime_dialect_contract_row_count != expected_runtime_rows {
+    let supported_release_backend_row_count =
+        count_supported_release_backend_rows(&catalog.release_backend_rows);
+    let expected_supported_rows = catalog.required_ops.len().saturating_mul(3);
+    if supported_release_backend_row_count != expected_supported_rows {
         blockers.push(format!(
-            "OP_MATRIX declares {runtime_dialect_contract_row_count} Category C runtime dialect contract row(s), expected {expected_runtime_rows}"
-        ));
-    }
-    let expected_non_runtime_supported_rows = catalog
-        .required_ops
-        .len()
-        .saturating_sub(RUNTIME_DIALECT_CONTRACT_OPS.len())
-        .saturating_mul(3);
-    if non_runtime_supported_release_backend_row_count != expected_non_runtime_supported_rows {
-        blockers.push(format!(
-            "OP_MATRIX declares {non_runtime_supported_release_backend_row_count} supported non-runtime release backend row(s), expected {expected_non_runtime_supported_rows}"
+            "OP_MATRIX declares {supported_release_backend_row_count} supported release backend row(s), expected {expected_supported_rows}"
         ));
     }
     let expected_release_backend_rows = catalog.required_ops.len().saturating_mul(3);
@@ -301,9 +282,7 @@ fn run_backend_conformance(
         catalog_covered_op_count,
         missing_catalog_ops,
         release_backend_row_count: catalog.release_backend_rows.len(),
-        non_runtime_supported_release_backend_row_count,
-        runtime_dialect_contract_row_count,
-        runtime_dialect_contract_ops: RUNTIME_DIALECT_CONTRACT_OPS.to_vec(),
+        supported_release_backend_row_count,
         release_backend_rows: catalog.release_backend_rows,
         missing_release_backend_rows: catalog.missing_release_backend_rows,
         op_matrix_blocked_release_count: catalog.blocked_release_rows.len(),

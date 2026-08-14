@@ -5,10 +5,7 @@ use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
-use crate::release::release_backend_rows::{
-    count_non_runtime_supported_release_backend_rows, count_runtime_dialect_contract_rows,
-    RUNTIME_DIALECT_CONTRACT_OPS,
-};
+use crate::release::release_backend_rows::count_supported_release_backend_rows;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use vyre_driver::backend::{backend_dispatches, registered_backends_by_precedence_slice};
@@ -18,7 +15,6 @@ use vyre_driver_cuda as _;
 use vyre_driver_reference as _;
 use vyre_driver_spirv as _;
 use vyre_driver_wgpu as _;
-use vyre_intrinsics as _;
 use vyre_libs as _;
 use vyre_primitives as _;
 
@@ -50,9 +46,7 @@ struct ConformanceMatrix {
     catalog_covered_op_count: usize,
     missing_catalog_ops: Vec<String>,
     release_backend_row_count: usize,
-    non_runtime_supported_release_backend_row_count: usize,
-    runtime_dialect_contract_row_count: usize,
-    runtime_dialect_contract_ops: Vec<&'static str>,
+    supported_release_backend_row_count: usize,
     pub(crate) release_backend_rows: Vec<String>,
     release_backend_case_rows: Vec<ReleaseBackendCaseRow>,
     required_case_classes: Vec<&'static str>,
@@ -253,9 +247,7 @@ pub(crate) fn run(args: &[String]) {
     let missing_catalog_ops = catalog
         .required_ops
         .iter()
-        .filter(|op| {
-            !ids.contains(op.as_str()) && !RUNTIME_DIALECT_CONTRACT_OPS.contains(&op.as_str())
-        })
+        .filter(|op| !ids.contains(op.as_str()))
         .cloned()
         .collect::<Vec<_>>();
     let catalog_covered_op_count = catalog
@@ -308,24 +300,12 @@ pub(crate) fn run(args: &[String]) {
             catalog.missing_release_backend_rows.len()
         ));
     }
-    let runtime_dialect_contract_row_count =
-        count_runtime_dialect_contract_rows(&catalog.release_backend_rows);
-    let non_runtime_supported_release_backend_row_count =
-        count_non_runtime_supported_release_backend_rows(&catalog.release_backend_rows);
-    let expected_runtime_rows = RUNTIME_DIALECT_CONTRACT_OPS.len().saturating_mul(3);
-    if runtime_dialect_contract_row_count != expected_runtime_rows {
+    let supported_release_backend_row_count =
+        count_supported_release_backend_rows(&catalog.release_backend_rows);
+    let expected_supported_rows = catalog.required_ops.len().saturating_mul(3);
+    if supported_release_backend_row_count != expected_supported_rows {
         blockers.push(format!(
-            "OP_MATRIX declares {runtime_dialect_contract_row_count} Category C runtime dialect contract row(s), expected {expected_runtime_rows}"
-        ));
-    }
-    let expected_non_runtime_supported_rows = catalog
-        .required_ops
-        .len()
-        .saturating_sub(RUNTIME_DIALECT_CONTRACT_OPS.len())
-        .saturating_mul(3);
-    if non_runtime_supported_release_backend_row_count != expected_non_runtime_supported_rows {
-        blockers.push(format!(
-            "OP_MATRIX declares {non_runtime_supported_release_backend_row_count} supported non-runtime release backend row(s), expected {expected_non_runtime_supported_rows}"
+            "OP_MATRIX declares {supported_release_backend_row_count} supported release backend row(s), expected {expected_supported_rows}"
         ));
     }
     let expected_release_backend_rows = catalog.required_ops.len().saturating_mul(3);
@@ -400,16 +380,14 @@ pub(crate) fn run(args: &[String]) {
         ));
     }
     let matrix = ConformanceMatrix {
-        schema_version: 4,
+        schema_version: 5,
         op_count: entries.len(),
         distinct_op_count: ids.len(),
         catalog_required_op_count: catalog.required_ops.len(),
         catalog_covered_op_count,
         missing_catalog_ops,
         release_backend_row_count: catalog.release_backend_rows.len(),
-        non_runtime_supported_release_backend_row_count,
-        runtime_dialect_contract_row_count,
-        runtime_dialect_contract_ops: RUNTIME_DIALECT_CONTRACT_OPS.to_vec(),
+        supported_release_backend_row_count,
         release_backend_rows: catalog.release_backend_rows,
         case_class_blocker_count: release_backend_case_rows
             .iter()
@@ -1384,7 +1362,7 @@ mod tests {
     #[test]
     fn release_backend_case_rows_accept_non_supported_rows_with_unsupported_diagnostic() {
         let spec = OpMatrixReleaseBackendSpec {
-            op_id: "core.indirect_dispatch".to_string(),
+            op_id: "vyre-libs::scan::prefix_sum_u32".to_string(),
             backend: "cuda".to_string(),
             status: "not_applicable".to_string(),
             test_paths: Vec::new(),

@@ -22,14 +22,12 @@ not replace those stacks; it sits above selected targets as a contract layer.
 
 ## How do I add an operation?
 
-Choose the operation tier first:
+Choose the operation category first:
 
-| Tier | Crate | When to use it |
+| Category | Crate | When to use it |
 | --- | --- | --- |
-| Intrinsic | `vyre-intrinsics` | Needs a dedicated hardware lowering and reference arm |
-| Primitive | `vyre-primitives` | Reusable `fn(...) -> Program` used by multiple libraries |
-| Library | `vyre-libs` | Product composition over primitives |
-| Runtime dialect | `vyre-driver` registry | Driver-owned runtime ops only |
+| C, hardware intrinsic | `vyre-primitives`, under `src/hardware/` | Needs a dedicated hardware lowering and reference arm |
+| A, composition | `vyre-libs` | Reusable `fn(...) -> Program` built from existing IR variants |
 
 Follow [`docs/ops-catalog.md`](ops-catalog.md) and
 [`docs/ARCHITECTURE.md`](ARCHITECTURE.md). Regenerate

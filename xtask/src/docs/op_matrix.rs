@@ -312,7 +312,7 @@ fn record_for_registered_id(
         ));
     }
 
-    let mut record = OpRecord {
+    let record = OpRecord {
         family: id.to_string(),
         tier,
         owners: owner_paths(id, tier),
@@ -329,31 +329,14 @@ fn record_for_registered_id(
         bench_targets: Vec::new(),
     };
 
-    if tier == OpTier::Runtime {
-        record.reference = "not_applicable";
-        record.cuda = "experimental";
-        record.wgpu = "experimental";
-        record.spirv = "experimental";
-    }
-
     Ok(record)
 }
 
 fn owner_paths(id: &str, tier: OpTier) -> Vec<String> {
     match tier {
-        OpTier::Intrinsic => vec!["vyre-intrinsics/src/hardware".to_string()],
-        OpTier::Primitive => {
-            let domain = id
-                .strip_prefix("vyre-primitives::")
-                .and_then(|rest| rest.split("::").next())
-                .unwrap_or("unknown");
-            vec![format!("vyre-primitives/src/{domain}")]
-        }
+        OpTier::Intrinsic => vec![namespace_source_dir(id)],
         OpTier::Library => {
-            let domain = id
-                .strip_prefix("vyre-libs::")
-                .and_then(|rest| rest.split("::").next())
-                .unwrap_or("unknown");
+            let domain = namespace_domain(id, "vyre-libs::");
             let owner = match domain {
                 "optim" => "vyre-libs/src/nn/optim".to_string(),
                 "quant" => "vyre-libs/src/nn/quant".to_string(),
@@ -362,32 +345,45 @@ fn owner_paths(id: &str, tier: OpTier) -> Vec<String> {
             };
             vec![owner]
         }
-        OpTier::Runtime => {
-            if id.starts_with("core.") {
-                vec!["vyre-driver/src/registry/core_indirect.rs".to_string()]
-            } else {
-                vec!["vyre-driver/src/registry/io.rs".to_string()]
-            }
-        }
         OpTier::External => vec!["docs/optimization/README.md".to_string()],
         OpTier::Foundation | OpTier::Unknown => Vec::new(),
         _ => Vec::new(),
     }
 }
 
+/// `vyre-primitives::graph::toposort` becomes `vyre-primitives/src/graph`.
+///
+/// Read from the id so a namespace move carries its owner path with it instead
+/// of leaving a second hardcoded crate name in this generator.
+fn namespace_source_dir(id: &str) -> String {
+    match id.split_once("::") {
+        Some((crate_name, rest)) => {
+            let domain = rest.split("::").next().unwrap_or("unknown");
+            format!("{crate_name}/src/{domain}")
+        }
+        None => String::new(),
+    }
+}
+
+fn namespace_domain<'a>(id: &'a str, prefix: &str) -> &'a str {
+    id.strip_prefix(prefix)
+        .and_then(|rest| rest.split("::").next())
+        .unwrap_or("unknown")
+}
+
 fn test_paths(id: &str, tier: OpTier) -> Vec<String> {
     let mut tests = match tier {
-        OpTier::Intrinsic => vec!["vyre-intrinsics/tests/hardware_conform.rs".to_string()],
-        OpTier::Primitive => vec!["vyre-primitives/tests/integration.rs".to_string()],
+        OpTier::Intrinsic => {
+            let crate_name = id.split_once("::").map_or("", |(name, _)| name);
+            let domain = id.split("::").nth(1).unwrap_or("");
+            if domain == "hardware" {
+                vec![format!("{crate_name}/tests/hardware_conform.rs")]
+            } else {
+                vec![format!("{crate_name}/tests/integration.rs")]
+            }
+        }
         OpTier::Library | OpTier::External => {
             vec!["vyre-libs/tests/universal_harness.rs".to_string()]
-        }
-        OpTier::Runtime => {
-            if id.starts_with("core.") {
-                vec!["vyre-driver/src/registry/core_indirect.rs".to_string()]
-            } else {
-                vec!["vyre-driver/src/registry/io.rs".to_string()]
-            }
         }
         OpTier::Foundation | OpTier::Unknown => Vec::new(),
         _ => Vec::new(),
@@ -396,19 +392,13 @@ fn test_paths(id: &str, tier: OpTier) -> Vec<String> {
     tests
 }
 
-fn release_notes(id: &str, tier: OpTier) -> String {
+fn release_notes(_id: &str, tier: OpTier) -> String {
     match tier {
         OpTier::Intrinsic => {
-            "Source-backed row generated from vyre-intrinsics::operation_catalog; every intrinsic id must stay in the hardware namespace and pass hardware_conform.".to_string()
-        }
-        OpTier::Primitive => {
-            "Source-backed row generated from vyre-primitives::operation_catalog; primitive ids must stay in the Tier 2.5 namespace.".to_string()
+            "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform.".to_string()
         }
         OpTier::Library => {
             "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace.".to_string()
-        }
-        OpTier::Runtime => {
-            "Source-backed row generated from vyre-driver::registry; backend lowering support is opt-in and must be promoted by changing this generated contract.".to_string()
         }
         OpTier::External => {
             "Source-backed row generated from vyre-foundation::operation for an external consumer crate.".to_string()
@@ -448,11 +438,11 @@ fn validate_records(records: &[OpRecord]) -> Result<(), String> {
                 ));
             }
             // ROADMAP S7: an op id's namespace classification must match
-            // its row's declared tier. A Tier-2.5 record must not carry
-            // `vyre-libs::` ops, and a Tier-3 record must not carry
+            // its row's declared tier. A Category C record must not carry
+            // `vyre-libs::` ops, and a Category A record must not carry
             // `vyre-primitives::` ops. Mismatches were the root cause of
-            // the original S7 finding (some primitives shipped under
-            // Tier-3 ids, making op truth ambiguous to the matrix).
+            // the original S7 finding (some intrinsics shipped under
+            // Category A ids, making op truth ambiguous to the matrix).
             let observed = classify_op_id(op);
             if observed != OpTier::Unknown && tier_id_mismatch(record.tier, observed) {
                 return Err(format!(
@@ -467,12 +457,12 @@ fn validate_records(records: &[OpRecord]) -> Result<(), String> {
     Ok(())
 }
 
-/// Two operation tiers mismatch when one is `Primitive` and the other
+/// Two operation tiers mismatch when one is `Intrinsic` and the other
 /// is `Library` (or vice versa), the ownership distinction guarded here.
 fn tier_id_mismatch(declared: OpTier, observed: OpTier) -> bool {
     matches!(
         (declared, observed),
-        (OpTier::Primitive, OpTier::Library) | (OpTier::Library, OpTier::Primitive)
+        (OpTier::Intrinsic, OpTier::Library) | (OpTier::Library, OpTier::Intrinsic)
     )
 }
 
@@ -483,11 +473,11 @@ fn render_matrix(records: &[OpRecord]) -> String {
     out.push_str(
         "# Do not hand-edit generated rows; change the source registry or generator instead.\n\n",
     );
-    out.push_str("schema = 1\n\n");
+    out.push_str("schema = 2\n\n");
     out.push_str("backend_status_values = [\n");
     out.push_str("  \"supported\",\n  \"experimental\",\n  \"not_applicable\",\n  \"blocked_release\",\n]\n\n");
     out.push_str("tier_values = [\n");
-    out.push_str("  \"foundation_ir\",\n  \"intrinsic\",\n  \"primitive\",\n  \"libs\",\n  \"runtime\",\n  \"external\",\n]\n\n");
+    out.push_str("  \"foundation_ir\",\n  \"intrinsic\",\n  \"libs\",\n  \"external\",\n]\n\n");
     out.push_str(SCAN_CONSTRUCT_MATRIX);
 
     for record in records {

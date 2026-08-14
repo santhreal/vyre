@@ -75,14 +75,10 @@ impl SemanticOperation {
 pub enum OperationTier {
     /// Foundation IR or built-in operation.
     Foundation,
-    /// Hardware-facing semantic intrinsic.
+    /// Category C hardware intrinsic owned by `vyre-primitives`.
     Intrinsic,
-    /// Reusable backend-neutral primitive.
-    Primitive,
-    /// Library composition over typed IR.
+    /// Category A library composition over typed IR, owned by `vyre-libs`.
     Library,
-    /// Runtime-owned semantic operation.
-    Runtime,
     /// External extension operation.
     External,
     /// Identifier does not match an accepted semantic namespace.
@@ -96,9 +92,7 @@ impl OperationTier {
         match self {
             Self::Foundation => "foundation_ir",
             Self::Intrinsic => "intrinsic",
-            Self::Primitive => "primitive",
             Self::Library => "libs",
-            Self::Runtime => "runtime",
             Self::External => "external",
             Self::Unknown => "unknown",
         }
@@ -106,16 +100,18 @@ impl OperationTier {
 }
 
 /// Classify one operation identity by its canonical namespace.
+///
+/// The namespace names the crate that owns the registration, so an id whose
+/// prefix names no operation-owning crate classifies as [`OperationTier::Unknown`]
+/// and [`OperationRegistry`] refuses it. Host-side runtime capabilities are
+/// reached through the driver and runtime capability surfaces, not through an
+/// operation id, so `core.`, `io.` and `mem.` are not accepted namespaces.
 #[must_use]
 pub fn classify_operation_id(id: &str) -> OperationTier {
-    if id.starts_with("vyre-intrinsics::hardware::") {
+    if id.starts_with("vyre-primitives::") {
         OperationTier::Intrinsic
-    } else if id.starts_with("vyre-primitives::") {
-        OperationTier::Primitive
     } else if id.starts_with("vyre-libs::") {
         OperationTier::Library
-    } else if id.starts_with("core.") || id.starts_with("io.") || id.starts_with("mem.") {
-        OperationTier::Runtime
     } else if id
         .split_once("::")
         .is_some_and(|(crate_name, _)| !crate_name.is_empty() && !crate_name.starts_with("vyre-"))
@@ -248,7 +244,7 @@ impl OperationRegistration {
         )
     }
 
-    /// Construct a reusable primitive registration.
+    /// Construct a Category C registration owned by `vyre-primitives`.
     #[must_use]
     pub const fn primitive(
         id: &'static str,
@@ -258,7 +254,7 @@ impl OperationRegistration {
     ) -> Self {
         Self::new(
             id,
-            OperationTier::Primitive,
+            OperationTier::Intrinsic,
             Some(build),
             test_inputs,
             expected_output,

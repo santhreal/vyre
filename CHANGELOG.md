@@ -72,39 +72,28 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   F16, BF16, and F32 inputs retain F32 internal math. Guarded rows in the final
   structural tile cannot read padding, change state, or appear in truncated
   output.
-- `vyre-lower` now publishes the structured body walk
-  (`analyses::structured_walk`) and the kernel pattern audit
-  (`pattern_audit`) it already owned internally. The PTX emitter's
-  `ldmatrix_cp_async` and `predicated_execution` passes call the walk instead
-  of each keeping a copy, so one traversal serves every backend judgment built
-  on it.
-- `vyre-primitives::math::symmetric_eigen_jacobi` is now a registered semantic
-  operation with its own fixtures. It was documented and composed as a child
-  region by `tensor_train_decompose` but had no `OperationRegistration`, so the
-  conformance harnesses never executed it on its own and the operation schema
-  recorded it as unregistered. The witness is a block-diagonal 4x4 with the
-  simple spectrum {7, 2, 11, 13}, whose Jacobi sweep terminates on exact zeros
-  rather than converging, and the oracle is the f64 CPU reference rounded to
-  f32. Declared tolerance is 1 ULP.
-
-- A `tree-rules` job in `.github/workflows/gates.yml` runs four rules that had
-  been written down and never invoked: no orphan crate directory outside
-  `[workspace.members]`, no crate-root `#![allow(missing_docs)]` against the
-  workspace deny floor, the three-OS by two-toolchain matrix in `ci.yml` with
-  no no-GPU escape hatch, and the behavior contracts of the documentation
-  authority validator that `xtask docs-check` runs. The job needs no toolchain.
 
 ### Changed
 
-- Public API snapshots for `vyre-debug`, `vyre-driver`, `vyre-driver-cuda`,
-  `vyre-emit-naga`, `vyre-emit-ptx`, `vyre-emit-spirv`, and `vyre-libs` now
-  match their live surfaces. `vyre-debug` drops the `scan_explain` report,
-  error, exactness, and factor-role types that left with the scan product.
-  `vyre-libs` folds `graph::ast_walk_preorder` and `graph::ast_walk_postorder`
-  into one `graph::ast_walk` module and publishes `scan::pack_haystack_u32`.
-  The emitters and drivers publish the megakernel frontier plan error, the
-  neutral execution planner, and device capability constants that had shipped
-  without a snapshot refresh.
+- `vyre_foundation::allocation::reserve_exact_cleared` is public and is now the
+  single owner of the clear-then-refill reservation idiom. It was `pub(crate)`
+  in `vyre-primitives`, so seven other crates hand-rolled it as
+  `try_reserve(target - capacity())`. That form derives the additional count
+  from capacity instead of length, so a warm buffer whose capacity is between
+  `target / 2` and `target` stayed short and the following fill reallocated.
+  Thirteen reserve sites across the drivers, the runtime, the wire decoder, the
+  C preprocessor scratch path, and the tensor-train scratch retention now route
+  through `reserve_exact_cleared` or, where the buffer keeps its contents,
+  through the existing `allocation::try_reserve_vec_to_capacity`.
+  `scripts/check_no_under_reserve.sh` runs in the `tree-rules` gate job.
+- The standalone `vyre-intrinsics` package is gone. Its nine Category C
+  hardware intrinsics now live in `vyre-primitives/src/hardware/` behind the
+  crate's `hardware` feature, and every op id moved from
+  `vyre-intrinsics::hardware::<op>` to `vyre-primitives::hardware::<op>`.
+  `vyre-primitives` is the single Category C home; the region helper is
+  `vyre_primitives::hardware::region`. The archived
+  `docs/migration-vyre-ops-to-intrinsics.md` page is removed; the Category A
+  and C classification rule it carried is owned by `docs/lego-block-rule.md`.
 - The standalone `vyre-harness` package is gone. Semantic operation identity,
   tier classification, and registration now live in `vyre-foundation`; library
   fixture views live in `vyre-libs`; conformance execution and parity policy
@@ -133,53 +122,21 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 - C typedef row phases remain canonical callable operations. The operation
   matrix marks them as inlined callees whose execution coverage belongs to
   fixture-backed parent operations.
-- Modules no longer carry placeholder names. `common.rs`, `helpers.rs`,
-  `core.rs`, and `types.rs` throughout the workspace were renamed for their
-  contents, folded into their single consumer, or split by concern. Published
-  paths that moved include `vyre_foundation::ir::model::types` to
-  `ir::model::spec_types`, `ir_inner::model::program::core` to
-  `program::definition`, and `vyre_reference::dual_impls::common` to
-  `dual_impls::evaluator`.
-- Functions no longer end in `_ext`. Where the suffixed spelling was the only
-  one, it is gone: `classic_ac_bounded_ranges_suffix3_presence_program_ext`,
-  its two by-region siblings, and the `_filtered` variant now drop it. Where a
-  pair exists, the longer name states the extra argument:
-  `build_ac_bounded_ranges_program_ext` is
-  `build_ac_bounded_ranges_program_with_subgroup_coalesce`,
-  `build_regex_dfa_pipeline_ext` is
-  `build_regex_dfa_pipeline_with_subgroup_coalesce`, and `Node::async_load_ext`
-  is `Node::async_load_gpu_driven` against the tag-only host-driven
-  `Node::async_load`.
 
 ### Removed
 
-- Ten scripts under `scripts/` are gone. `check_abstraction.sh`,
-  `check_graph_single_source_contracts.sh`, and `check_no_fixed_sleeps.sh`
-  restated a check that `xtask abstraction-gate`, the workspace test run, and
-  the `hygiene-matrix` resource-bound scan already perform.
-  `check_consumers.sh`, `check_surgec_dispatch_invariants.sh`, and
-  `bench_index.sh` read trees outside this repository, so they reported on
-  nothing a checkout contains. `generate_certs.sh` called a `vyre-conform run`
-  subcommand that does not exist, `check_publish_gate.sh` enforced a deleted
-  `docs/PUBLISH_GATE.md`, `check_required_ci_jobs.sh` required four job names
-  no workflow declares, and `install_lego_quick_hook.sh` wrote a pre-commit
-  hook that resolves a monorepo path this repository does not have.
-
-- The `vyre-frontend-c` crate has left this workspace. A C compiler is not a
-  Vyre component, and the C parsing, semantic, and lowering operations Vyre
-  actually uses are Category A compositions already owned by `vyre-libs`. The
-  departed crate was the separate tree-sitter CPU pipeline over the same
-  language. It now lives on its own as `c-frontend` with a path dependency on
-  `vyre-foundation`, and is parked until Vyre is mature enough to take a source
-  frontend as a product. The `c_source_to_ir` example, the three
-  `frontend.c.parser.*` benchmark cases, and the reference-driver
-  `c_frontend_ir_execution` test went with it; the C AST traversal release
-  workload stays and is now attributed to `vyre-libs`, which owns its compute.
-- `vyre-lower::descriptor_builder` is no longer part of the published surface.
-  It builds kernel-descriptor fixtures and every one of its 42 consumers is a
-  test in one of the four emitter crates, so it now sits behind the
-  `test-fixtures` feature that those crates enable as a dev-dependency. A
-  published build no longer carries test scaffolding.
+- `OperationTier::Primitive` and `OperationTier::Runtime` are gone.
+  `vyre-primitives::` classifies as `OperationTier::Intrinsic`, the only Category C
+  tier, and the operation-matrix spelling is `intrinsic`.
+- `vyre-driver` no longer registers `core.indirect_dispatch`, `io.dma_from_nvme`,
+  `io.write_back_to_nvme`, `mem.zerocopy_map` or `mem.unmap`, and
+  `vyre_driver::registry::INDIRECT_DISPATCH_OP_ID` is gone with them. A host-side
+  runtime capability has no program to lower and no fixture to compare, so it
+  carries no operation identity; indirect dispatch is reached through
+  `RequiredCapabilities` and `VyreBackend::supports_indirect_dispatch`, and NVMe
+  ingest and zero-copy mapping through the `vyre-runtime` io_uring driver. The
+  registry now refuses an id whose namespace names no owning crate, so the
+  fixture-coverage exemption for those five ids is gone too.
 - Self-substrate no longer publishes source-text validators for deleted
   C-frontend test files or parser release artifacts. Diagnostic and
   preprocessing conformance now belongs to the live frontend and conformance
@@ -198,17 +155,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   semantic pass registration generators. Test-only operation registration,
   algebraic-law derive, no-op builder marker, and generated decoder stubs are
   gone.
-- The `vyre-scan` product crate has left the platform workspace, and the
-  `vyre::scan` re-export is gone with it. Scanning is a product built on the
-  platform, not a member of it.
 
 ### Fixed
-
-- `scripts/run_volume_sweep_shard.sh` now runs each volume oracle matrix target
-  against the crate that owns it. It discovered targets across vyre-foundation,
-  vyre-primitives, and vyre-reference and passed all of them to
-  `-p vyre-primitives`, so every shard of the default four failed on the first
-  target that lives elsewhere. Discovery no longer needs ripgrep.
 
 - Driver decorators now preserve the concrete backend device profile, including
   device-timestamp capability and timing quality.

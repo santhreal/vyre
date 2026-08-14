@@ -47,8 +47,7 @@ dispatch route. Metal is active on supported Apple targets. See
 | Public facade | `vyre` | Canonical graph compilation, artifact sessions, feature-gated target selection. |
 | Stable contracts | `vyre-spec` | Frozen cross-engine analysis, soundness, and interchange schemas. |
 | IR, registry, optimizer | `vyre-foundation` | `Program`, `ProgramGraph`, validation, serialization, semantic operation identity, diagnostics, backend-neutral optimization passes. |
-| Hardware operations | `vyre-intrinsics` | Category C operation builders. Folding into `vyre-primitives`; see the target structure below. |
-| Reusable operations | `vyre-primitives` | Shared composition builders. Becoming Category C only; see below. |
+| Reusable operations | `vyre-primitives` | Category C hardware intrinsic builders under `src/hardware/`, plus the shared composition builders that still await the Category A move; see below. |
 | Library compositions | `vyre-libs` | Product-facing Category A compositions. Becoming the single Category A home; see below. |
 | Compiler self-use | `vyre-self-substrate` | GPU execution of compiler passes plus scheduling solvers. Narrowing to the pass engine; see below. |
 | Whole-program compiler | `vyre-megakernel` | Bounded legal whole-graph schedules, immutable artifacts, target payloads. |
@@ -84,6 +83,18 @@ Every registered operation is one of two categories. There is no third.
   execution exists only in explicitly named reference, parity, and
   conformance oracle seams.
 
+A host-side runtime capability is not an operation and is not registered.
+Indirect dispatch, NVMe ingest and write-back, and zero-copy mapping and
+unmapping have no `Program` to lower and no fixture to compare, so they
+carry no operation id and no tier. They are reached through the backend
+capability surface in `vyre-driver` (`VyreBackend`, `DeviceProfile`,
+`AdapterCaps`, `RequiredCapabilities`) and through `vyre-runtime`'s
+io_uring ingest driver. `vyre-driver` registered five such ids
+(`core.indirect_dispatch`, `io.dma_from_nvme`, `io.write_back_to_nvme`,
+`mem.zerocopy_map`, `mem.unmap`) as signature-only records with no
+builder; that was one capability holding a second identity, and the
+registry now refuses an id whose namespace names no owning crate.
+
 `vyre-foundation::operation::OperationRegistry` is the semantic operation
 authority. One registration owns the operation ID, version, tier,
 signature, neutral builder, fixtures, laws, tolerance, derived effects,
@@ -110,10 +121,10 @@ current tree.
 Two operation crates, one per category. Nothing else registers
 operations.
 
-- `vyre-primitives` owns Category C: strict hardware intrinsics only.
-  It absorbs `vyre-intrinsics`; the name then means what it says. An op
-  that does not require both a dedicated emitter arm and a dedicated
-  interpreter arm does not belong here.
+- `vyre-primitives` owns Category C: strict hardware intrinsics only,
+  under `src/hardware/`. The standalone hardware crate was absorbed on
+  2026-08-13. An op that does not require both a dedicated emitter arm
+  and a dedicated interpreter arm does not belong here.
 - `vyre-libs` owns every Category A composition: today's Tier 3 product
   ops, today's Tier 2.5 primitive domains, and the generic compositions
   currently parked in `vyre-self-substrate`. Public, feature-gated per
@@ -152,9 +163,11 @@ math outright. It is not a duplicate: the GPU crate imports those
 functions and adds dispatch around them, so one implementation keeps one
 home. What the three `*substrate*` names share is the word, not the code.
 
-Registry impact: `OperationTier::Primitive` becomes
-`OperationTier::Intrinsic`; every registration site and
-`check-tier-deps`' tier table move with it.
+Registry impact, landed: `OperationTier::Primitive` merged into
+`OperationTier::Intrinsic`, so `vyre-primitives::` classifies as
+`Intrinsic` and the operation-matrix spelling is `intrinsic`.
+`OperationTier::Runtime` is gone with the five driver registrations, and
+`check-tier-deps`' tier table moves with the crate fold.
 
 ## Whole-program artifact pipeline
 
