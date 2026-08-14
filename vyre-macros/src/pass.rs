@@ -1,4 +1,4 @@
-use crate::parse_helpers;
+use crate::arg_parsers;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::parse::{Parse, ParseStream};
@@ -31,18 +31,18 @@ impl Parse for PassArgs {
 
         while !input.is_empty() {
             let key: syn::Ident = input.parse()?;
-            let key_name = parse_helpers::reject_duplicate_key(&mut seen_keys, &key)?;
+            let key_name = arg_parsers::reject_duplicate_key(&mut seen_keys, &key)?;
             input.parse::<Token![=]>()?;
             match key_name.as_str() {
                 "name" => name = Some(input.parse()?),
                 "requires" => {
-                    requires = parse_helpers::parse_litstr_array(
+                    requires = arg_parsers::parse_litstr_array(
                         input,
                         "pass metadata arrays accept only string literals. Fix: use [\"analysis_name\"].",
                     )?
                 }
                 "invalidates" => {
-                    invalidates = parse_helpers::parse_litstr_array(
+                    invalidates = arg_parsers::parse_litstr_array(
                         input,
                         "pass metadata arrays accept only string literals. Fix: use [\"analysis_name\"].",
                     )?
@@ -50,7 +50,7 @@ impl Parse for PassArgs {
                 "phase" => phase = Some(input.parse()?),
                 "boundary_class" => boundary_class = Some(input.parse()?),
                 "requires_caps" => {
-                    requires_caps = parse_helpers::parse_litstr_array(
+                    requires_caps = arg_parsers::parse_litstr_array(
                         input,
                         "pass metadata arrays accept only string literals. Fix: use [\"analysis_name\"].",
                     )?
