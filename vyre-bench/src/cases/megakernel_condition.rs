@@ -4,10 +4,11 @@ use crate::api::case::{
     DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
-use crate::api::resident::{
-    dispatch_artifact_timed, input_bytes_total, transfer_accounting, ResidentInputPool,
-};
+use crate::api::resident::{dispatch_artifact_timed, ResidentInputPool};
 use crate::api::suite::SuiteKind;
+use crate::cases::resident_queue::{
+    account, queue_buffers, reference_metrics, resident_pool_sets_metric, timed_reference,
+};
 use rayon::prelude::*;
 use std::sync::Arc;
 use vyre_foundation::ir::{Expr, Node};
@@ -80,32 +81,20 @@ impl BenchCase for MegakernelCondition {
             SLOT_COUNT,
             &[handler],
         );
-        let control_bytes = resident_work_queue::encode_control(false, 1, 0)
-            .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
         let mut expected_fired = 0u32;
         let ring_bytes = condition_ring(SLOT_COUNT, &mut expected_fired)?;
-        let debug_bytes = resident_work_queue::encode_empty_debug_log(
-            resident_work_queue::debug::RECORD_CAPACITY,
-        )
-        .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
-        let io_bytes = resident_work_queue::io::try_encode_empty_io_queue(
-            resident_work_queue::io::IO_SLOT_COUNT,
-        )
-        .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
-        let inputs = vec![control_bytes, ring_bytes, debug_bytes, io_bytes];
-        let input_bytes_total = input_bytes_total(&inputs);
-        let resident = ResidentInputPool::upload_optional(
+        let queue = queue_buffers(
             ctx,
-            &inputs,
+            ring_bytes,
             RESIDENT_SAMPLE_SETS,
             "megakernel condition bench",
         )?;
         Ok(Box::new(MegakernelConditionPrepared {
             program,
-            inputs,
-            input_bytes_total,
+            inputs: queue.inputs,
+            input_bytes_total: queue.input_bytes_total,
             expected_fired,
-            resident,
+            resident: queue.resident,
         }))
     }
 
@@ -135,37 +124,30 @@ impl BenchCase for MegakernelCondition {
             &prepared.inputs,
             &config,
         )?;
-        let resident_used = dispatch.resident_used;
-        let elapsed = dispatch.timed.wall_ns;
-        let dispatch_ns = dispatch.timed.device_ns;
-        let outputs = dispatch.timed.outputs;
-        let output_bytes_total = outputs.iter().map(Vec::len).sum::<usize>() as u64;
-        let accounting = transfer_accounting(
-            prepared.input_bytes_total,
-            output_bytes_total,
-            resident_used,
-        );
-        let device_ns = dispatch_ns.unwrap_or(elapsed);
-        let start_ref = std::time::Instant::now();
-        let baseline_outputs = simulate_condition_outputs(&prepared.inputs)?;
-        let baseline_ns = start_ref.elapsed().as_nanos() as u64;
+        let sample = account(dispatch, prepared.input_bytes_total);
+        let (baseline, baseline_ns) =
+            timed_reference(|| simulate_condition_outputs(&prepared.inputs));
+        let baseline_outputs = baseline?;
         let baseline_output_bytes = baseline_outputs.iter().map(Vec::len).sum::<usize>() as u64;
-        let baseline_bytes_touched = prepared
-            .input_bytes_total
-            .saturating_add(baseline_output_bytes);
 
         Ok(BenchRun {
             metrics: BenchMetrics {
-                wall_ns: Some(elapsed),
-                dispatch_ns,
+                wall_ns: Some(sample.wall_ns),
+                dispatch_ns: sample.dispatch_ns,
                 input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(output_bytes_total),
-                bytes_touched: Some(accounting.bytes_touched),
-                bytes_read: Some(accounting.bytes_read),
-                bytes_written: Some(accounting.bytes_written),
+                output_bytes: Some(sample.output_bytes_total),
+                bytes_touched: Some(sample.accounting.bytes_touched),
+                bytes_read: Some(sample.accounting.bytes_read),
+                bytes_written: Some(sample.accounting.bytes_written),
                 atomic_op_count: Some(u64::from(SLOT_COUNT + prepared.expected_fired)),
-                wall_throughput_gb_s: Some(gb_per_second(accounting.bytes_touched, elapsed)),
-                device_throughput_gb_s: Some(gb_per_second(accounting.bytes_touched, device_ns)),
+                wall_throughput_gb_s: Some(gb_per_second(
+                    sample.accounting.bytes_touched,
+                    sample.wall_ns,
+                )),
+                device_throughput_gb_s: Some(gb_per_second(
+                    sample.accounting.bytes_touched,
+                    sample.device_ns,
+                )),
                 custom: vec![
                     MetricPoint {
                         name: "megakernel_condition_slots".to_string(),
@@ -177,29 +159,18 @@ impl BenchCase for MegakernelCondition {
                     },
                     MetricPoint {
                         name: "megakernel_condition_slots_per_sec_x1000".to_string(),
-                        value: rate_per_second_x1000(u64::from(SLOT_COUNT), device_ns),
+                        value: rate_per_second_x1000(u64::from(SLOT_COUNT), sample.device_ns),
                     },
-                    MetricPoint {
-                        name: "megakernel_resident_input_pool_sets".to_string(),
-                        value: if resident_used {
-                            RESIDENT_SAMPLE_SETS as u64
-                        } else {
-                            0
-                        },
-                    },
+                    resident_pool_sets_metric(sample.resident_used, RESIDENT_SAMPLE_SETS),
                 ],
                 ..Default::default()
             },
-            baseline_metrics: Some(BenchMetrics {
-                wall_ns: Some(baseline_ns),
-                input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(baseline_output_bytes),
-                bytes_touched: Some(baseline_bytes_touched),
-                bytes_read: Some(prepared.input_bytes_total),
-                bytes_written: Some(baseline_output_bytes),
-                ..Default::default()
-            }),
-            outputs,
+            baseline_metrics: Some(reference_metrics(
+                baseline_ns,
+                prepared.input_bytes_total,
+                baseline_output_bytes,
+            )),
+            outputs: sample.outputs,
             baseline_outputs: Some(baseline_outputs),
         })
     }

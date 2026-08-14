@@ -96,6 +96,7 @@ pub(crate) mod queue_traverse_plan;
 pub mod reduce_sum;
 pub mod regex_bt;
 pub mod release_workloads;
+pub(crate) mod resident_queue;
 pub mod rust_frontend;
 pub mod scan_ac_irregular;
 pub(crate) mod skewed_graph;
