@@ -28,7 +28,7 @@ pub fn vyre_debug::naga_dump::dump_naga_module(module: &naga::ir::Module) -> vyr
 pub fn vyre_debug::naga_trace::failure_trace(module: &naga::ir::Module, error: &naga::valid::ValidationError) -> vyre_debug::naga_trace::FailureTrace
 pub fn vyre_debug::naga_trace::failure_trace_wgsl(module: &naga::ir::Module, info: &naga::valid::ModuleInfo, err: &naga::back::wgsl::Error) -> vyre_debug::naga_trace::FailureTrace
 pub fn vyre_debug::naga_trace::load_bind_result_log(path: &str) -> core::result::Result<alloc::vec::Vec<vyre_emit_naga::BindResultEntry>, vyre_debug::naga_trace::BindResultLogError>
-pub fn vyre_debug::source_walker::walk_source_assigns<F>(program: &vyre_foundation::ir_inner::model::program::definition::Program, callback: F) where F: core::ops::function::FnMut(&str, alloc::vec::Vec<alloc::string::String>)
+pub fn vyre_debug::source_assignments::walk_source_assigns<F>(program: &vyre_foundation::ir_inner::model::program::definition::Program, callback: F) where F: core::ops::function::FnMut(&str, alloc::vec::Vec<alloc::string::String>)
 pub fn vyre_debug::wgsl::dump_wgsl(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
 pub fn vyre_debug::wgsl::dump_wgsl_with_lines(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
 pub mod vyre_debug
@@ -40,7 +40,7 @@ pub mod vyre_debug::descriptor_dump
 pub mod vyre_debug::fixtures
 pub mod vyre_debug::naga_dump
 pub mod vyre_debug::naga_trace
-pub mod vyre_debug::source_walker
+pub mod vyre_debug::source_assignments
 pub mod vyre_debug::wgsl
 pub struct vyre_debug::ArtifactReport
 pub struct vyre_debug::CarrierSummary
