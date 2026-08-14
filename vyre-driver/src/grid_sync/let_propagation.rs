@@ -21,7 +21,6 @@ fn collect_global_let_bindings(nodes: &[Node], map: &mut std::collections::HashM
             Node::Region { body, .. } => {
                 collect_global_let_bindings(&body[..], map);
             }
-            // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
             _ => {}
         }
     }
@@ -49,7 +48,6 @@ fn collect_locally_defined_vars(nodes: &[Node], vars: &mut std::collections::Has
             Node::Region { body, .. } => {
                 collect_locally_defined_vars(&body[..], vars);
             }
-            // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
             _ => {}
         }
     }
@@ -171,7 +169,6 @@ fn collect_node_referenced_vars(node: &Node, vars: &mut std::collections::HashSe
         Node::Trap { address, .. } => {
             collect_referenced_vars(address, vars);
         }
-        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => {}
     }
 }

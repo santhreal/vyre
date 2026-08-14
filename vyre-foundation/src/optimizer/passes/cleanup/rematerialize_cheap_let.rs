@@ -176,7 +176,6 @@ fn recurse_into_children(node: Node, changed: &mut bool) -> Node {
                 body: std::sync::Arc::new(rewrite_sequence(body_vec, changed)),
             }
         }
-        // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
         other => other,
     }
 }
@@ -407,7 +406,6 @@ fn scan_for_candidate(nodes: &[Node], found: &mut bool) {
             }
             Node::Loop { body, .. } | Node::Block(body) => scan_for_candidate(body, found),
             Node::Region { body, .. } => scan_for_candidate(body, found),
-            // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
             _ => {}
         }
     }

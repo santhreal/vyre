@@ -172,7 +172,6 @@ fn analyse_node(node: &Node, hints: &PrecisionHints, count: &mut usize) {
                 analyse_node(n, hints, count);
             }
         }
-        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => {}
     }
 }

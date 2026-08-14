@@ -254,7 +254,6 @@ pub(crate) fn step_nodes_frame<'a>(
                 extension.debug_identity()
             )));
         }
-        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => {
             return Err(ReferenceError::new("hashmap reference interpreter encountered an unknown node variant. Fix: add explicit reference semantics for the new Node before dispatch."));
         }

@@ -405,7 +405,6 @@ impl LowerCtx {
                 });
                 Ok(())
             }
-            // Unknown variant is refused rather than assumed harmless.
             other => Err(LowerError::UnsupportedConstruct(format!(
                 "node `{}` has no KernelDescriptor lowering. Fix: add a KernelOpKind mapping before routing this program through vyre-lower.",
                 node_op_id(other)

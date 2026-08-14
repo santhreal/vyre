@@ -367,7 +367,6 @@ fn rewrite_node(
             source_region: source_region.clone(),
             body: Arc::new(rewrite_nodes(body.as_ref(), state)?),
         }]),
-        // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
         other => Ok(vec![other.clone()]),
     }
 }

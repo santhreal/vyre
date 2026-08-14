@@ -160,7 +160,6 @@ fn rewrite_node(node: &Node, plan: SubgroupReductionPlan) -> Cow<'_, [Node]> {
             Cow::Borrowed(_) => Cow::Borrowed(std::slice::from_ref(node)),
             Cow::Owned(b) => Cow::Owned(vec![Node::block(b)]),
         },
-        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => Cow::Borrowed(std::slice::from_ref(node)),
     }
 }

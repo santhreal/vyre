@@ -88,7 +88,6 @@ fn node_has_transcendental(node: &Node) -> bool {
         | Node::Resume { .. }
         | Node::Return => false,
         Node::Opaque(_) => false,
-        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => false,
     }
 }

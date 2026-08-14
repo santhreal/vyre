@@ -185,6 +185,11 @@ duplicate_lines = 834
 total_lines = 58675
 
 [[crate]]
+name = "vyre-test-support"
+duplicate_lines = 11
+total_lines = 0
+
+[[crate]]
 name = "vyre-spec"
 duplicate_lines = 446
 total_lines = 9439

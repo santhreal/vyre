@@ -200,7 +200,6 @@ fn elide_in_node_with_ctx(node: Node, loop_ctx: Option<(&str, u32)>, changed: &m
                 body: std::sync::Arc::new(body_vec),
             }
         }
-        // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
         other => other,
     }
 }
@@ -249,7 +248,6 @@ fn has_redundant_guard_with_ctx(node: &Node, loop_ctx: Option<(&str, u32)>) -> b
             .iter()
             .any(|n| has_redundant_guard_with_ctx(n, loop_ctx)),
         Node::Region { body, .. } => body.iter().any(|n| has_redundant_guard_with_ctx(n, None)),
-        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => false,
     }
 }

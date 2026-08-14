@@ -122,7 +122,6 @@ where
                     walk(body, env, current_loop_path, callback);
                     env.pop();
                 }
-                // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
                 _ => {}
             }
         }

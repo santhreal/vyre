@@ -252,7 +252,6 @@ impl ArenaCtx {
                 // Wrappers carry no Exprs at this level; their nested
                 // bodies are walked by the recursion below.
             }
-            // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
             _ => {
                 return Err(EncodeError::Unsupported(
                     "Fix: ExprArena encoder hit an unknown Node variant; \
@@ -279,7 +278,6 @@ impl ArenaCtx {
             Node::Region { body, .. } => {
                 self.encode_scope(body.as_slice())?;
             }
-            // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
             _ => {}
         }
         Ok(())

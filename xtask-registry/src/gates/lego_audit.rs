@@ -315,7 +315,6 @@ fn walk(node: &Node, inside_composed: bool, state: &mut Walk) {
                 walk(child, inside_composed, state);
             }
         }
-        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => {}
     }
 }
@@ -418,7 +417,6 @@ fn fingerprint_node(node: &Node, out: &mut Vec<u8>) {
             fingerprint_expr(address, out);
         }
         Node::Resume { .. } => out.push(0x0F),
-        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => out.push(0x80),
     }
 }

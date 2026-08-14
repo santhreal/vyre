@@ -422,7 +422,6 @@ fn has_barrier(nodes: &[Node]) -> bool {
         Node::If {
             then, otherwise, ..
         } => has_barrier(then) || has_barrier(otherwise),
-        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => false,
     })
 }

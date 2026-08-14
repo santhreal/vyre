@@ -99,7 +99,6 @@ where
                 body: Arc::new(f(body_vec)),
             }
         }
-        // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
         other => other,
     }
 }

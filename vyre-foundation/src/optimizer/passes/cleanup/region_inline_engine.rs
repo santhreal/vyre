@@ -141,7 +141,6 @@ fn inline_nodes_into(nodes: Vec<Node>, threshold: usize, out: &mut Vec<Node>) {
                     otherwise: new_otherwise,
                 }));
             }
-            // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
             other => staged.push(Staged::Keep(other)),
         }
     }
@@ -210,7 +209,6 @@ fn count_nodes_capped(nodes: &[Node], threshold: usize) -> usize {
                 Node::Region { body, .. } => {
                     stack.push(body);
                 }
-                // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
                 _ => {}
             }
         }

@@ -33,36 +33,35 @@ fn program_with_local_in_unrollable_body() -> Program {
     )
 }
 
-#[test]
-fn loop_unroll_isolates_per_iteration_locals() {
-    let program = program_with_local_in_unrollable_body();
+/// Both shapes must survive unrolling: `label` names the case, `program` builds
+/// it, and the checks are shared so the second case cannot drift from the first.
+fn unroll_preserves_output(label: &str, program: Program) {
     let inputs: [Value; 0] = []; // `out` is the only buffer and it is an output.
 
     let original = vyre_reference::reference_eval(&program, &inputs)
-        .expect("original loop is well-scoped and must run");
+        .unwrap_or_else(|e| panic!("{label}: original loop must be well-scoped and run: {e}"));
     assert_eq!(
         original,
         vec![Value::from(102u32.to_le_bytes().to_vec())],
-        "out[0] == last iteration's x = 2 + 100"
+        "{label}: out[0] == last iteration's x = 2 + 100"
     );
 
     let result = LoopUnroll::transform(program);
     assert!(
         result.changed,
-        "the small Let-bearing loop must actually unroll (else this test locks nothing)"
+        "{label}: the small Let-bearing loop must actually unroll (else this locks nothing)"
     );
 
     // The unrolled program must STILL validate and run. If loop_unroll
     // flat-spliced the three `let x` copies into the enclosing sequence instead
     // of giving each its own Block scope, they would be duplicate sibling
-    // bindings the validator rejects -- reference_eval errors and this panics.
-    let after = vyre_reference::reference_eval(&result.program, &inputs).expect(
-        "loop_unroll must give each duplicated `let x` its own iteration scope; \
-         flat-splicing them produces a duplicate sibling binding (V032)",
-    );
+    // bindings the validator rejects and reference_eval would error.
+    let after = vyre_reference::reference_eval(&result.program, &inputs).unwrap_or_else(|e| {
+        panic!("{label}: each duplicated `let x` needs its own iteration scope (V032): {e}")
+    });
     assert_eq!(
         after, original,
-        "unrolled program must preserve observable output"
+        "{label}: unrolled program must preserve observable output"
     );
 }
 
@@ -92,30 +91,11 @@ fn program_with_local_inside_a_region_body() -> Program {
 }
 
 #[test]
+fn loop_unroll_isolates_per_iteration_locals() {
+    unroll_preserves_output("plain body", program_with_local_in_unrollable_body());
+}
+
+#[test]
 fn loop_unroll_isolates_locals_declared_inside_a_region_body() {
-    let program = program_with_local_inside_a_region_body();
-    let inputs: [Value; 0] = [];
-
-    let original = vyre_reference::reference_eval(&program, &inputs)
-        .expect("original loop is well-scoped and must run");
-    assert_eq!(
-        original,
-        vec![Value::from(102u32.to_le_bytes().to_vec())],
-        "out[0] == last iteration's x = 2 + 100"
-    );
-
-    let result = LoopUnroll::transform(program);
-    assert!(
-        result.changed,
-        "the small Let-bearing loop must actually unroll (else this test locks nothing)"
-    );
-
-    let after = vyre_reference::reference_eval(&result.program, &inputs).expect(
-        "a `let` inside a region body is a sibling binding, so each unrolled \
-         iteration needs its own scope (V032)",
-    );
-    assert_eq!(
-        after, original,
-        "unrolled program must preserve observable output"
-    );
+    unroll_preserves_output("region body", program_with_local_inside_a_region_body());
 }

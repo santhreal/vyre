@@ -114,7 +114,6 @@ fn cross_workgroup_buffers(nodes: &[Node], out: &mut FxHashSet<Ident>) {
             }
             Node::Loop { body, .. } | Node::Block(body) => cross_workgroup_buffers(body, out),
             Node::Region { body, .. } => cross_workgroup_buffers(body, out),
-            // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
             _ => {}
         }
     }

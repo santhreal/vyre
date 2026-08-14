@@ -103,7 +103,6 @@ pub(super) fn collect_carrier_names(
                     walk(inner, incoming_scope, loop_var, seen, order, local_lets);
                     local_lets.pop();
                 }
-                // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
                 _ => {}
             }
         }

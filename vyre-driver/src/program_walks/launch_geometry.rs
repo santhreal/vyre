@@ -47,7 +47,6 @@ fn node_uses_launch_geometry_ids(node: &Node) -> bool {
         | Node::ReduceScatter { .. }
         | Node::Broadcast { .. }
         | Node::Opaque(_) => false,
-        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => false,
     }
 }

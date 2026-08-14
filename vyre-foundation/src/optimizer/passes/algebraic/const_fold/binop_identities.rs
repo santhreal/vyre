@@ -878,7 +878,6 @@ pub(super) fn fold_mod_lookbehind(
                     tag: tag.clone(),
                 });
             }
-            // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
             _ => out.push(node.clone()),
         }
     }

@@ -551,7 +551,6 @@ fn rewrite_node<D: ArenaDeltaLookup + ?Sized>(node: &Node, deltas: &D, counter: 
         | Node::AsyncWait { .. }
         | Node::Resume { .. }
         | Node::Opaque(_) => node.clone(),
-        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => node.clone(),
     }
 }

@@ -103,7 +103,6 @@ fn body_rebinds_var_with_nested_policy(
         Node::Region { body, .. } => {
             body_rebinds_var_with_nested_policy(body, var, nested_same_name_rebinds)
         }
-        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => false,
     })
 }

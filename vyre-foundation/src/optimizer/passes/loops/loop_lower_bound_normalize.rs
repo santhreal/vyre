@@ -272,7 +272,6 @@ fn substitute_var_in_node(node: Node, from: &Ident, to: &Ident, offset: &Expr) -
             address: Box::new(substitute_var_in_expr(*address, from, to, offset)),
             tag,
         },
-        // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
         other => other,
     }
 }

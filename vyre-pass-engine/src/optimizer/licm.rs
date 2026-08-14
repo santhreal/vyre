@@ -105,7 +105,6 @@ fn rewrite_scope(body: &[Node], read_only: &FxHashSet<Ident>) -> Vec<Node> {
                 source_region: source_region.clone(),
                 body: Arc::new(rewrite_scope(body.as_slice(), read_only)),
             }),
-            // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
             other => out.push(other.clone()),
         }
     }

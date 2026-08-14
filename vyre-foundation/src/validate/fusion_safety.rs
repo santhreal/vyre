@@ -82,7 +82,6 @@ fn validate_sequence(nodes: &[Node], errors: &mut Vec<ValidationError>) {
             Node::Region { body, .. } => {
                 validate_sequence(body, errors);
             }
-            // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
             _ => {
                 let mut accesses = NodeAccesses::default();
                 collect_node_accesses(node, &mut accesses);

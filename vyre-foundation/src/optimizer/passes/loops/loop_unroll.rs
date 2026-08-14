@@ -130,7 +130,6 @@ fn rewrite_node(node: &Node) -> Cow<'_, [Node]> {
                 body: Arc::new(body),
             }]),
         },
-        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => Cow::Borrowed(std::slice::from_ref(node)),
     }
 }

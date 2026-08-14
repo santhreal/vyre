@@ -640,7 +640,6 @@ fn collect_composition(
                 collect_composition(child, depth, all_ids, out);
             }
         }
-        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => {}
     }
 }

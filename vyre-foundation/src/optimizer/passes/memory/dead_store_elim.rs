@@ -284,7 +284,6 @@ fn has_redundant_store_pair(node: &Node) -> bool {
         }
         Node::Loop { body, .. } | Node::Block(body) => body,
         Node::Region { body, .. } => body.as_ref(),
-        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => return false,
     };
     contains_buffer_pair(body)

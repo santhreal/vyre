@@ -210,7 +210,6 @@ fn recurse_children(node: Node, read_only: &FxHashSet<Ident>, changed: &mut bool
                 body: Arc::new(hoist_in_body(body_vec, read_only, changed)),
             }
         }
-        // Passthrough: correct for a leaf, and the nesting variants above are exactly the ones `transform::visit::child_bodies` lists.
         other => other,
     }
 }
@@ -284,7 +283,6 @@ fn has_candidate(node: &Node, read_only: &FxHashSet<crate::ir::Ident>) -> bool {
         Node::Loop { body, .. } => body.iter().any(|n| has_candidate(n, read_only)),
         Node::Block(body) => body.iter().any(|n| has_candidate(n, read_only)),
         Node::Region { body, .. } => body.iter().any(|n| has_candidate(n, read_only)),
-        // Leaf case: the nesting variants above are exactly the ones `transform::visit::child_bodies` lists, so an unknown variant has no child statements to visit.
         _ => false,
     }
 }
