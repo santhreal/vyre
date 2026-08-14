@@ -23,6 +23,8 @@ pub(crate) use vyre_primitives::wire::decode_f32_le_bytes_all as f32_words;
 
 pub(crate) use vyre_primitives::wire::pack_u16_slice as u16_bytes;
 
+pub(crate) use vyre_primitives::wire::decode_u16_le_bytes_all as u16_words;
+
 /// F32 words from an oracle output value.
 pub(crate) fn f32_words_of(value: &Value) -> Vec<f32> {
     f32_words(&value.to_bytes())
