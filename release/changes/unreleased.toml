@@ -1064,3 +1064,8 @@ text = "Two suites close the classes above from the tree at run time. The Naga s
 id = "gridsync-naga-duplication-pins-lowered-to-measured"
 category = "Changed"
 text = "Three duplication pins record what the tree measures after the owners above: `vyre-driver` 1047 to 994 duplicated lines, `vyre-emit-naga` 221 to 155, and `vyre-reference` 743 to 676, each with `total_lines` measured. A pin with room under it hides the next copy."
+
+[[fragments]]
+id = "cuda-resident-dispatcher-named-for-what-it-holds"
+category = "Changed"
+text = "`vyre_driver_cuda::optimizer` is `vyre_driver_cuda::resident_dispatcher`. The module holds no optimization pass: it holds `CudaProgramDispatcher`, the resident buffer pool, the static-upload cache and their eviction policy. Optimization semantics live in `vyre-foundation`, so an `optimizer` module inside a concrete driver crate named the caller rather than the contents, and four private helpers were named after the file instead of their work. The `CudaProgramDispatcher` re-export at the crate root is unchanged."

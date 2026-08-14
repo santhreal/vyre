@@ -1182,6 +1182,13 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `vyre-driver` 1047 to 994 duplicated lines, `vyre-emit-naga` 221 to 155, and
   `vyre-reference` 743 to 676, each with `total_lines` measured. A pin with
   room under it hides the next copy.
+- `vyre_driver_cuda::optimizer` is `vyre_driver_cuda::resident_dispatcher`. The
+  module holds no optimization pass: it holds `CudaProgramDispatcher`, the
+  resident buffer pool, the static-upload cache and their eviction policy.
+  Optimization semantics live in `vyre-foundation`, so an `optimizer` module
+  inside a concrete driver crate named the caller rather than the contents, and
+  four private helpers were named after the file instead of their work. The
+  `CudaProgramDispatcher` re-export at the crate root is unchanged.
 
 ### Removed
 

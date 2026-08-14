@@ -55,16 +55,16 @@ mod numeric;
 /// `(CudaDeviceCaps, KernelResourceUsage)`. The runtime feeds the result
 /// into `AutotuneStore` (I3) so subsequent dispatches reuse the choice.
 pub mod occupancy;
-/// Self-hosted optimizer GPU dispatcher  -  runs the
-/// `vyre-pass-engine::optimizer` passes (DCE, CSE, const-fold,
-/// validator) on CUDA. External parity tests reach in via the
-/// `CudaProgramDispatcher` re-export below.
-pub mod optimizer;
 mod pipeline;
 /// CUDA profiler range integration for Nsight/NVTX without mandatory NVTX linkage.
 pub mod profiler;
 /// CUDA regex hardware-comparison evidence.
 pub mod regex_hardware_comparison;
+/// CUDA-resident `ProgramDispatcher`: allocate once, upload once, dispatch
+/// many times against the same device buffers. This is the persistent
+/// execution path the pass engine's multi-pass pipeline runs on. External
+/// parity tests reach in through the `CudaProgramDispatcher` re-export below.
+pub mod resident_dispatcher;
 /// Repeated execution over persistent CUDA-resident graph state.
 pub mod resident_graph_session;
 mod stream;
@@ -154,11 +154,11 @@ pub use megakernel_speedup_gate::{
     CudaMegakernelSpeedupGateError, CudaMegakernelSpeedupProof, CudaMegakernelSpeedupSample,
     MEGAKERNEL_SPEEDUP_EVIDENCE_CSV_HEADER,
 };
-pub use optimizer::CudaProgramDispatcher;
 pub use regex_hardware_comparison::{
     cuda_regex_hardware_comparison_evidence, cuda_regex_software_fallback_comparison_evidence,
     CudaRegexHardwareComparisonEvidence, CUDA_REGEX_HARDWARE_COMPARISON_SCHEMA_VERSION,
 };
+pub use resident_dispatcher::CudaProgramDispatcher;
 pub use resident_graph_session::{
     format_validated_cuda_resident_graph_session_evidence_csv, plan_cuda_resident_graph_session,
     resident_graph_session_speedup_sample, CudaResidentGraphReadback,
