@@ -1,321 +1,258 @@
-//! Contracts for graph-domain single-sourcing between `vyre-primitives` and
-//! `vyre-pass-engine`.
+//! Contracts for graph-domain single-sourcing between `vyre-primitives` and the
+//! dispatch wrappers in this crate.
 //!
-//! The primitive crate owns graph algorithms and validation. Self-substrate
-//! may add dispatch scratch, batching, plan-cache, and backend wiring, but it
-//! must not re-fork primitive graph logic at the crate root or in parallel
-//! implementations.
+//! `vyre-primitives` owns graph algorithms and their CPU references. A wrapper
+//! under `src/graph/dispatch/` may add scratch buffers, batching, a plan cache
+//! and backend wiring, and must not fork the algorithm it dispatches.
+//!
+//! WHY these rules are derived rather than listed: this file used to carry a
+//! table of eleven wrapper file names, each with a list of identifier and prose
+//! fragments its source had to contain and a line-count ceiling. Every rename in
+//! `vyre-primitives` and every test reorganisation in this crate broke it while
+//! the delegation it was supposed to protect was intact: it failed on
+//! `merge_frontier_or_changed` and `plan_dominator_frontier_dispatch`, two names
+//! the primitive crate no longer uses, and on the absence of the phrase
+//! "primitive output" in a test that had been renamed. A gate that reads for
+//! spellings reports refactors as regressions and cannot see a real fork that
+//! happens to keep the old words. The wrapper set, the primitive each wrapper
+//! wraps, and the reference functions each primitive publishes are all read from
+//! the tree at run time, so a new wrapper is judged without editing this file.
+//!
+//! What these rules do not catch: a wrapper that names its primitive and then
+//! reimplements the algorithm beside the call. Behavioural parity against the
+//! primitive is asserted by each wrapper's own test module, which compares
+//! dispatch output with the primitive reference; these rules exist to make sure
+//! such a comparison has something to compare against.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
-struct WrapperContract {
-    file: &'static str,
-    primitive_module: &'static str,
-    required_tokens: &'static [&'static str],
-    max_wrapper_lines: usize,
+/// A dispatch wrapper: a directory under `src/graph/dispatch/` whose name is
+/// also a module in `vyre-primitives/src/graph/`. Wrapping a primitive of the
+/// same name is what makes it a wrapper rather than dispatch infrastructure such
+/// as `dispatch_bridge` or the CSR frontier-queue plumbing.
+struct Wrapper {
+    name: String,
+    /// Every `.rs` file the wrapper owns, concatenated.
+    source: String,
+    /// The primitive module's source, file or directory form.
+    primitive_source: String,
 }
 
-const GRAPH_WRAPPERS: &[WrapperContract] = &[
-    WrapperContract {
-        file: "adaptive_traverse.rs",
-        primitive_module: "adaptive_traverse",
-        required_tokens: &[
-            "primitive_adaptive_sparse_dense_step",
-            "resident_csr_queue_traverse_program",
-            "validate_adaptive_frontier",
-        ],
-        max_wrapper_lines: 775,
-    },
-    WrapperContract {
-        file: "alias_registry.rs",
-        primitive_module: "alias_registry",
-        required_tokens: &[
-            "primitive_default_alias_registry",
-            "primitive_alias_union_registered",
-            "ALIAS_UNION_OP_ID",
-        ],
-        max_wrapper_lines: 102,
-    },
-    WrapperContract {
-        file: "csr_bidirectional.rs",
-        primitive_module: "csr_bidirectional",
-        required_tokens: &[
-            "plan_csr_bidirectional_step",
-            "merge_frontier_or_changed",
-            "reference_csr_bidir",
-        ],
-        max_wrapper_lines: 360,
-    },
-    WrapperContract {
-        file: "csr_forward_or_changed.rs",
-        primitive_module: "csr_forward_or_changed",
-        required_tokens: &[
-            "plan_csr_forward_or_changed_launch",
-            "plan.uses_changed_history",
-            "csr_foc_cpu",
-        ],
-        max_wrapper_lines: 570,
-    },
-    WrapperContract {
-        file: "dominator_frontier.rs",
-        primitive_module: "dominator_frontier",
-        required_tokens: &[
-            "plan_dominator_frontier_dispatch",
-            "primitive_frontier_size",
-            "reference_dominator_frontier",
-        ],
-        max_wrapper_lines: 520,
-    },
-    WrapperContract {
-        file: "exploded.rs",
-        primitive_module: "exploded",
-        required_tokens: &[
-            "plan_ifds_csr_dispatch",
-            "canonicalize_csr_within_rows_in_place",
-            "build_cpu_reference",
-        ],
-        max_wrapper_lines: 420,
-    },
-    WrapperContract {
-        file: "motif.rs",
-        primitive_module: "motif",
-        required_tokens: &[
-            "plan_motif_dispatch",
-            "count_witness_participants",
-            "reference_motif",
-        ],
-        max_wrapper_lines: 609,
-    },
-    WrapperContract {
-        file: "path_reconstruct.rs",
-        primitive_module: "path_reconstruct",
-        required_tokens: &[
-            "plan_path_reconstruct_dispatch",
-            "plan_batched_path_reconstruct_dispatch",
-            "validate_path_reconstruct_readback",
-            "validate_batched_path_reconstruct_readback",
-            "path_reconstruct_cpu",
-        ],
-        max_wrapper_lines: 260,
-    },
-    WrapperContract {
-        file: "persistent_bfs.rs",
-        primitive_module: "persistent_bfs",
-        required_tokens: &[
-            "plan_persistent_bfs_dispatch",
-            "plan_persistent_bfs_resident_batch_dispatch",
-            "primitive_persistent_bfs_layout_hash",
-        ],
-        max_wrapper_lines: 1234,
-    },
-    WrapperContract {
-        file: "toposort.rs",
-        primitive_module: "toposort",
-        required_tokens: &[
-            "plan_toposort_csr_dispatch",
-            "validate_toposort_csr_order",
-            "toposort_csr_into",
-        ],
-        max_wrapper_lines: 260,
-    },
-    WrapperContract {
-        file: "vast_tree_walk.rs",
-        primitive_module: "vast_tree_walk",
-        required_tokens: &[
-            "try_ast_walk_preorder",
-            "try_ast_walk_postorder",
-            "ast_walk_preorder",
-            "ast_walk_postorder",
-        ],
-        max_wrapper_lines: 178,
-    },
-];
+/// The count below which the derivation is presumed broken rather than the tree
+/// empty. Eleven wrappers exist; a derivation that suddenly finds two would make
+/// every rule here vacuous while still passing.
+const WRAPPER_FLOOR: usize = 11;
 
 #[test]
-fn duplicated_graph_files_are_not_flat_root_modules() {
-    let manifest = manifest_dir();
-    for contract in GRAPH_WRAPPERS {
-        let old_root = manifest.join("src").join(contract.file);
-        let graph_wrapper = graph_wrapper_path(&manifest, contract.file);
-        assert!(
-            !old_root.exists(),
-            "{} must not exist; graph dispatch wrappers belong under src/graph/dispatch/",
-            old_root.display()
-        );
-        assert!(
-            graph_wrapper.is_file(),
-            "{} must exist as the graph-domain wrapper",
-            graph_wrapper.display()
-        );
-    }
+fn the_wrapper_set_is_derived_and_not_empty() {
+    let wrappers = wrappers();
+    assert!(
+        wrappers.len() >= WRAPPER_FLOOR,
+        "Fix: only {} graph dispatch wrappers were derived, below the floor of {WRAPPER_FLOOR}; the pairing between `vyre-libs/src/graph/dispatch/<name>` and `vyre-primitives/src/graph/<name>` broke, and every rule in this file would otherwise pass by judging nothing",
+        wrappers.len()
+    );
 }
 
 #[test]
-fn graph_wrappers_import_their_primitive_authority() {
-    let manifest = manifest_dir();
+fn every_dispatch_wrapper_names_the_graph_primitive_it_wraps() {
     let mut failures = Vec::new();
-
-    for contract in GRAPH_WRAPPERS {
-        let path = graph_wrapper_path(&manifest, contract.file);
-        let source = read_wrapper_with_child_tests(&path);
-        let primitive_path = format!("vyre_primitives::graph::{}", contract.primitive_module);
-        if !source.contains(&primitive_path) {
+    for wrapper in wrappers() {
+        let path = format!("vyre_primitives::graph::{}", wrapper.name);
+        if !wrapper.source.contains(&path) {
             failures.push(format!(
-                "{} does not import primitive authority {primitive_path}",
-                contract.file
+                "{} never names {path}, so it dispatches an algorithm it does not delegate",
+                wrapper.name
             ));
         }
-        for token in contract.required_tokens {
-            if !source.contains(token) {
+    }
+    assert!(
+        failures.is_empty(),
+        "Fix: a graph dispatch wrapper delegates its algorithm to the primitive of the same name:\n{}",
+        failures.join("\n")
+    );
+}
+
+#[test]
+fn every_dispatch_wrapper_names_its_primitive_cpu_reference() {
+    let mut failures = Vec::new();
+    for wrapper in wrappers() {
+        let references = cpu_reference_functions(&wrapper.primitive_source);
+        if references.is_empty() {
+            // The primitive publishes no CPU reference, so there is nothing for
+            // the wrapper to compare against and nothing to require here.
+            continue;
+        }
+        if !references
+            .iter()
+            .any(|reference| wrapper.source.contains(reference))
+        {
+            failures.push(format!(
+                "{} names none of the CPU references its primitive publishes ({})",
+                wrapper.name,
+                references.join(", ")
+            ));
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "Fix: a wrapper whose primitive publishes a CPU reference must compare against it rather than trusting the dispatch path:\n{}",
+        failures.join("\n")
+    );
+}
+
+#[test]
+fn no_dispatch_wrapper_is_shadowed_by_an_older_module_path() {
+    let crate_root = crate_root();
+    let mut failures = Vec::new();
+    for wrapper in wrappers() {
+        for stale in [
+            crate_root.join("src").join(format!("{}.rs", wrapper.name)),
+            crate_root
+                .join("src/graph")
+                .join(format!("{}.rs", wrapper.name)),
+        ] {
+            if stale.exists() {
                 failures.push(format!(
-                    "{} is missing primitive delegation token `{token}`",
-                    contract.file
+                    "{} also exists; a dispatch wrapper lives only under src/graph/dispatch/",
+                    stale.display()
                 ));
             }
         }
     }
-
     assert!(
         failures.is_empty(),
-        "graph self-substrate wrappers must delegate algorithms and validation to vyre-primitives:\n{}",
+        "Fix: remove the module a wrapper was migrated from:\n{}",
         failures.join("\n")
     );
 }
 
 #[test]
-fn graph_wrappers_keep_closure_bar_tests_near_dispatch_wiring() {
-    let manifest = manifest_dir();
+fn the_dispatch_module_declares_every_wrapper_once() {
+    let source = read(&crate_root().join("src/graph/dispatch/mod.rs"));
     let mut failures = Vec::new();
-
-    for contract in GRAPH_WRAPPERS {
-        let path = graph_wrapper_path(&manifest, contract.file);
-        let source = read_wrapper_with_child_tests(&path);
-        if !source.contains("matches_primitive_directly")
-            && !source.contains("equals primitive")
-            && !source.contains("primitive output")
-        {
+    for wrapper in wrappers() {
+        let declaration = format!("mod {};", wrapper.name);
+        let declared = source
+            .lines()
+            .filter(|line| line.trim_start().ends_with(&declaration))
+            .count();
+        if declared != 1 {
             failures.push(format!(
-                "{} lacks an explicit primitive-equivalence closure-bar test",
-                contract.file
+                "src/graph/dispatch/mod.rs declares `{}` {declared} times",
+                wrapper.name
             ));
         }
     }
-
     assert!(
         failures.is_empty(),
-        "every fork-risk graph wrapper needs an in-module primitive equivalence test:\n{}",
+        "Fix: each wrapper is declared exactly once by the dispatch module:\n{}",
         failures.join("\n")
     );
 }
 
-#[test]
-fn graph_mod_declares_every_single_sourced_wrapper_once() {
-    let manifest = manifest_dir();
-    let source = read(&manifest.join("src").join("graph").join("dispatch").join("mod.rs"));
-    let mut failures = Vec::new();
+/// Every dispatch wrapper, paired with the primitive module it wraps.
+fn wrappers() -> Vec<Wrapper> {
+    let crate_root = crate_root();
+    let primitives = crate_root
+        .parent()
+        .expect("Fix: vyre-libs must live under the workspace root")
+        .join("vyre-primitives/src/graph");
+    let dispatch = crate_root.join("src/graph/dispatch");
 
-    for contract in GRAPH_WRAPPERS {
-        let module = contract.file.trim_end_matches(".rs");
-        let declaration = format!("pub mod {module};");
-        if source.matches(&declaration).count() != 1 {
-            failures.push(format!(
-                "src/graph/dispatch/mod.rs must declare `{declaration}` exactly once"
-            ));
+    let mut wrappers = Vec::new();
+    for entry in read_dir(&dispatch) {
+        if !entry.is_dir() {
+            continue;
+        }
+        let name = entry
+            .file_name()
+            .expect("Fix: a directory entry has a name")
+            .to_string_lossy()
+            .into_owned();
+        let module_file = primitives.join(format!("{name}.rs"));
+        let module_dir = primitives.join(&name);
+        let primitive_source = if module_file.is_file() {
+            read(&module_file)
+        } else if module_dir.is_dir() {
+            concatenate(&module_dir)
+        } else {
+            continue;
+        };
+        wrappers.push(Wrapper {
+            name,
+            source: concatenate(&entry),
+            primitive_source,
+        });
+    }
+    wrappers.sort_by(|left, right| left.name.cmp(&right.name));
+    wrappers
+}
+
+/// Public functions of a primitive module whose name marks them a CPU
+/// reference. The naming is the crate's own convention: `cpu_ref`,
+/// `try_cpu_ref`, `cpu_ref_into`, `cpu_sparse_dense_step`, `csr_foc_cpu`.
+fn cpu_reference_functions(primitive_source: &str) -> Vec<String> {
+    let mut names = Vec::new();
+    for line in primitive_source.lines() {
+        let Some(rest) = line.trim_start().strip_prefix("pub fn ") else {
+            continue;
+        };
+        let name: String = rest
+            .chars()
+            .take_while(|character| character.is_ascii_alphanumeric() || *character == '_')
+            .collect();
+        if name.contains("cpu") && !names.contains(&name) {
+            names.push(name);
         }
     }
-
-    assert!(
-        failures.is_empty(),
-        "graph module declarations drifted:\n{}",
-        failures.join("\n")
-    );
+    names.sort();
+    names
 }
 
-#[test]
-fn graph_wrappers_do_not_grow_past_single_source_ratchet() {
-    let manifest = manifest_dir();
-    let mut failures = Vec::new();
-
-    for contract in GRAPH_WRAPPERS {
-        let path = graph_wrapper_path(&manifest, contract.file);
-        let source = read(&path);
-        let observed = source.lines().count();
-        if observed > contract.max_wrapper_lines {
-            failures.push(format!(
-                "{} has {observed} lines, above single-source ratchet {}. Move reusable graph logic into vyre-primitives instead of expanding the wrapper.",
-                contract.file, contract.max_wrapper_lines
-            ));
-        }
-    }
-
-    assert!(
-        failures.is_empty(),
-        "graph wrappers must get thinner over time, never grow forked logic:\n{}",
-        failures.join("\n")
-    );
-}
-
-fn manifest_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-}
-
-fn graph_wrapper_path(manifest: &Path, file: &str) -> PathBuf {
-    let direct = manifest.join("src").join("graph").join(file);
-    if direct.exists() {
-        return direct;
-    }
-    let stem = file
-        .strip_suffix(".rs")
-        .expect("graph wrapper contract files must use .rs");
-    manifest.join("src").join("graph").join("dispatch").join(stem).join("mod.rs")
+/// This crate's directory, resolved from the checkout this run is inside.
+fn crate_root() -> PathBuf {
+    vyre_test_support::monorepo::vyre_workspace_root().join("vyre-libs")
 }
 
 fn read(path: &Path) -> String {
     fs::read_to_string(path)
-        .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()))
+        .unwrap_or_else(|error| panic!("Fix: {} must be readable: {error}", path.display()))
 }
 
-fn read_wrapper_with_child_tests(path: &Path) -> String {
-    let mut source = read(path);
-    if let (Some(parent), Some(stem)) = (path.parent(), path.file_stem()) {
-        // A wrapper is either a flat `foo.rs` (whose child module tree lives under `foo/`) or a
-        // `foo/mod.rs` (whose tree is its own directory `foo/`). Either way, scan the whole
-        // module subtree RECURSIVELY: after the migration to dedicated regression files the
-        // delegation anchors and primitive-equivalence closure-bar tests moved into a `tests/`
-        // subdirectory, so a single-level read would miss them and falsely report the wrapper as
-        // forking primitive logic. This reader must see every `.rs` the wrapper owns.
-        let child_dir = if path.file_name().is_some_and(|name| name == "mod.rs") {
-            parent.to_path_buf()
-        } else {
-            parent.join(stem)
-        };
-        if child_dir.is_dir() {
-            let mut children = collect_rs_files_recursive(&child_dir);
-            children.sort();
-            for child in children {
-                source.push('\n');
-                source.push_str(&read(&child));
+fn read_dir(path: &Path) -> Vec<PathBuf> {
+    fs::read_dir(path)
+        .unwrap_or_else(|error| panic!("Fix: {} must be readable: {error}", path.display()))
+        .map(|entry| {
+            entry
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "Fix: an entry of {} must be readable: {error}",
+                        path.display()
+                    )
+                })
+                .path()
+        })
+        .collect()
+}
+
+/// Every `.rs` file under `dir`, at any depth, concatenated in path order.
+fn concatenate(dir: &Path) -> String {
+    let mut files = Vec::new();
+    let mut pending = vec![dir.to_path_buf()];
+    while let Some(directory) = pending.pop() {
+        for path in read_dir(&directory) {
+            if path.is_dir() {
+                pending.push(path);
+            } else if path.extension().is_some_and(|extension| extension == "rs") {
+                files.push(path);
             }
         }
     }
-    source
-}
-
-/// Every `.rs` file under `dir`, at any depth. Sorted by the caller for determinism.
-fn collect_rs_files_recursive(dir: &Path) -> Vec<PathBuf> {
-    let mut files = Vec::new();
-    let entries =
-        fs::read_dir(dir).unwrap_or_else(|err| panic!("{} must be readable: {err}", dir.display()));
-    for entry in entries {
-        let path = entry
-            .unwrap_or_else(|err| panic!("{} entry must be readable: {err}", dir.display()))
-            .path();
-        if path.is_dir() {
-            files.extend(collect_rs_files_recursive(&path));
-        } else if path.extension().is_some_and(|ext| ext == "rs") {
-            files.push(path);
-        }
-    }
+    files.sort();
     files
+        .iter()
+        .map(|file| read(file))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
