@@ -31,6 +31,40 @@ pub fn run(package: &str, args: &[String]) -> ! {
     std::process::exit(status.code().unwrap_or(1));
 }
 
+/// Run a delegated binary's `main`: help, argument count, then dispatch.
+///
+/// Both delegated crates are entered the same way, because `xtask` enters them
+/// the same way: it hands the whole argument vector to a binary whose only job
+/// is to resolve `args[1]` against its own table. Each `main` used to spell
+/// that out, so the two could disagree about which exit code an unimplemented
+/// subcommand gets, and CI reads that code.
+pub fn run_delegated_main(
+    package: &str,
+    purpose: &str,
+    implemented: &[(&'static str, fn(&[String]))],
+) {
+    let args: Vec<String> = std::env::args().collect();
+    if args
+        .iter()
+        .skip(1)
+        .any(|arg| arg == "--help" || arg == "-h")
+    {
+        print_dispatch_help(package, purpose, implemented.iter().map(|(name, _)| *name));
+        return;
+    }
+    if args.len() < 2 {
+        eprintln!("Fix: missing subcommand. Run `cargo xtask --help`.");
+        std::process::exit(1);
+    }
+    if !crate::subcommands::dispatch(implemented, args[1].as_str(), &args) {
+        eprintln!(
+            "Fix: `{}` is not implemented in {package}. Run `cargo xtask --help`.",
+            args[1]
+        );
+        std::process::exit(1);
+    }
+}
+
 /// Print a delegated binary's help: how to invoke it, and what it dispatches.
 ///
 /// `xtask` is the documented entry point, so this help exists to answer `--help`

@@ -559,3 +559,8 @@ text = "The release conformance facts derived from `docs/optimization/OP_MATRIX.
 id = "evidence-commands-share-their-argument-and-artifact-plumbing"
 category = "Changed"
 text = "Every evidence-producing xtask subcommand parses `--output`, reports the written artifact and chooses its exit code through one owner in `xtask::output_arg`. Each command used to carry its own copy of the option loop, the usage-error exit, the parent-directory creation and the wrote-then-exit epilogue, so exit 2 for a usage error and exit 1 for a failing gate were a dozen separate decisions that CI reads as one contract. `parse_output_and_flag_arg` covers the commands that take a second valueless flag, `parsed_or_exit` maps a usage error to exit 2, `report_evidence_artifact` prints the path and exits 1 on a non-empty blocker list, and `write_json` now creates the parent directory itself rather than each caller doing it first. Help text, blocker text and exit codes are unchanged."
+
+[[fragments]]
+id = "delegated-binaries-share-one-main"
+category = "Changed"
+text = "`xtask::delegate::run_delegated_main` owns what a delegated binary's `main` does: answer `--help` from the callee's own dispatch table, reject a missing subcommand, then resolve the name. `xtask-registry` and `xtask-evidence` each wrote that out, including the exit code for an unimplemented subcommand, so the two entry points could disagree about a contract that `xtask` and CI read as one. Each `main` is now a single call naming the package and why `xtask` routes there, and the `dispatch` wrapper each crate exported for its own `main` alone is gone. Help text, error text and exit codes are unchanged."
