@@ -1,5 +1,5 @@
 use super::super::DirectivePayload;
-use super::disk_common::{
+use super::disk_cache_files::{
     disk_cache_tmp_path, parsed_ast_cache_dir, publish_disk_cache_file,
     read_disk_cache_file_bounded, remove_disk_cache_file,
 };

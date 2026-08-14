@@ -1,5 +1,5 @@
 use super::super::*;
-use super::support::RecordingResidentDispatcher;
+use super::recording_dispatcher::RecordingResidentDispatcher;
 
 #[test]
 fn resident_query_initializes_queue_len_on_device() {

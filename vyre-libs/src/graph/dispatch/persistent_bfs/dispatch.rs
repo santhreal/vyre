@@ -1,4 +1,4 @@
-use super::state::{copy_frontier_seed_into, PersistentBfsGpuScratch};
+use super::resident_scratch::{copy_frontier_seed_into, PersistentBfsGpuScratch};
 
 use crate::dispatch_buffers::decode_u32_output_exact;
 use crate::graph::dispatch::dispatch_bridge::{refresh_keyed_dispatch_inputs, DispatchInput};

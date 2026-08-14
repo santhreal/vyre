@@ -1,5 +1,4 @@
 //! Attention sub-dialect: softmax + scaled dot-product + GQA + RoPE + MLA.
-mod attention;
 pub mod flash_attention;
 pub mod flash_attention_2;
 mod gated_delta;
@@ -13,12 +12,12 @@ pub mod partial_rope;
 pub mod planner;
 pub mod qk_gain;
 pub mod quest;
+mod scaled_dot_product;
 mod softmax;
 mod tiled_online_softmax;
 mod token_to_head;
 pub mod turboquant;
 
-pub use attention::{attention, attention_reference, try_attention_reference, Attention};
 pub use flash_attention::flash_attention;
 pub use flash_attention_2::{flash_attention_2, flash_attention_2_reference};
 pub use gated_delta::{chunked_gated_delta, recurrent_gated_delta, RecurrentGatedDeltaError};
@@ -34,6 +33,7 @@ pub use planner::{
 };
 pub use qk_gain::qk_gain;
 pub use quest::quest_paging;
+pub use scaled_dot_product::{attention, attention_reference, try_attention_reference, Attention};
 pub use softmax::{softmax, softmax_reference, Softmax};
 pub use token_to_head::{attention_token_to_head, attention_token_to_head_typed};
 pub use turboquant::turboquant_attention;

@@ -1,4 +1,4 @@
 //! Broadcast sub-dialect: element-wise shape broadcasts.
-mod broadcast;
+mod scalar_broadcast;
 
-pub use broadcast::broadcast;
+pub use scalar_broadcast::broadcast;

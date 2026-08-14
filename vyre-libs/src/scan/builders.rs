@@ -225,7 +225,7 @@ mod packed_byte_dedup_lock {
     //! word_idx), byte_offset) & 0xFF` byte-extract pattern landed in
     //! vyre-libs over time (scan/nfa, scan/literal_set, parsing/c/
     //! preprocess/gpu_if_expression/byte_load,
-    //! parsing/c/preprocess/gpu_filter/program_helpers). Tasks #21,
+    //! parsing/c/preprocess/gpu_filter/keep_mask). Tasks #21,
     //! #22, #26 were marked completed previously while three of those
     //! copies were still alive. This test prevents the next
     //! regression: it walks `vyre-libs/src/**/*.rs` for the

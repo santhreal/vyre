@@ -207,10 +207,10 @@ inventory::submit! {
             let bg = [0xFFFF_0000u32];
             let atlas = [0u32, 0, 0, 0, 0, 255, 128, 255];
             vec![vec![
-                crate::visual::byte_helpers::u32_words_to_le_bytes(&glyphs),
-                crate::visual::byte_helpers::u32_words_to_le_bytes(&fg),
-                crate::visual::byte_helpers::u32_words_to_le_bytes(&bg),
-                crate::visual::byte_helpers::u32_words_to_le_bytes(&atlas),
+                crate::visual::u32_word_bytes::u32_words_to_le_bytes(&glyphs),
+                crate::visual::u32_word_bytes::u32_words_to_le_bytes(&fg),
+                crate::visual::u32_word_bytes::u32_words_to_le_bytes(&bg),
+                crate::visual::u32_word_bytes::u32_words_to_le_bytes(&atlas),
                 vec![0u8; 4 * 4],
             ]]
         }),
@@ -221,7 +221,7 @@ inventory::submit! {
             //   b = (0*128 + 255*127 + 128) * 257 >> 16 = 127
             //   a = (255*128 + 255*127 + 128) * 257 >> 16 = 255
             let expected = [0xFFFF_0000u32, 0xFF00_00FF, 0xFF7F_0080, 0xFF00_00FF];
-            vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&expected)]]
+            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&expected)]]
         }),
     )
     .with_category("visual")

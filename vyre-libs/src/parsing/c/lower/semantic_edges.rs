@@ -8,11 +8,11 @@ use crate::parsing::c::parse::vast::{
 };
 use vyre_foundation::ir::{Expr, Node};
 
-mod gpu_helpers;
 mod gpu_resolution;
 pub(crate) mod model;
 #[cfg(any(test, feature = "cpu-parity"))]
 mod reference;
+mod root_node_resolution;
 #[cfg(test)]
 mod tests;
 
@@ -22,5 +22,5 @@ pub(super) use model::SemanticEdge;
 #[cfg(any(test, feature = "cpu-parity"))]
 pub(super) use reference::resolved_semantic_edges;
 
-use gpu_helpers::*;
 use model::*;
+use root_node_resolution::*;

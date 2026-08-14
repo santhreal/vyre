@@ -212,8 +212,8 @@ inventory::submit! {
             let fg = [0x8000_00FFu32, 0xFF00_FF00u32]; // RGBA: R=255 A=128; R=0 G=255 A=255
             let bg = [0xFF_FF0000u32, 0xFFFF_FFFFu32]; // RGBA: B=255 A=255; white A=255
             vec![vec![
-                crate::visual::byte_helpers::u32_words_to_le_bytes(&fg),
-                crate::visual::byte_helpers::u32_words_to_le_bytes(&bg),
+                crate::visual::u32_word_bytes::u32_words_to_le_bytes(&fg),
+                crate::visual::u32_word_bytes::u32_words_to_le_bytes(&bg),
                 vec![0u8; 8],   // output
             ]]
         }),
@@ -227,7 +227,7 @@ inventory::submit! {
             // Pixel 1: fg fully opaque → output == fg
             //   out = 0xFF00FF00 (green)
             let expected = [0xFF7F_00FFu32, 0xFF00_FF00u32];
-            vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&expected)]]
+            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&expected)]]
         }),
     )
     .with_category("visual")

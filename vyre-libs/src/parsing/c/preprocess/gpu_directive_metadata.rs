@@ -59,7 +59,7 @@
 //! to `0` and conditionally overwritten by exactly the matching
 //! keyword arm (matches are mutually exclusive by length+content).
 
-use super::gpu_directive_parse_shared::{
+use super::gpu_directive_parse_program::{
     keyword_match_expr, push_found_hash, push_hash_scan, push_keyword_bytes, push_keyword_start,
     runtime_sized_input, source_buffer_element, token_column, DirectiveSourceLayout,
 };
@@ -125,7 +125,7 @@ fn gpu_directive_metadata_with_source_layout(
 
     // ---- per-thread classify body (loop-free, mutation-free) ----
     //
-    // Directive-line scan stages come from `gpu_directive_parse_shared`; this
+    // Directive-line scan stages come from `gpu_directive_parse_program`; this
     // builder only chooses the binding namespace and the stage order. Reading
     // the keyword bytes before the found-hash flag is this classifier's own
     // ordering and is deliberately not centralized.

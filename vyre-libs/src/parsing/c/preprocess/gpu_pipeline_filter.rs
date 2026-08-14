@@ -9,12 +9,12 @@ mod compact;
 mod full_comment;
 #[path = "gpu_filter/host.rs"]
 mod host;
+#[path = "gpu_filter/keep_mask.rs"]
+mod keep_mask;
 #[path = "gpu_filter/line_programs.rs"]
 mod line_programs;
 #[path = "gpu_filter/preflight.rs"]
 mod preflight;
-#[path = "gpu_filter/program_helpers.rs"]
-mod program_helpers;
 #[path = "gpu_filter/scratch.rs"]
 mod scratch;
 #[path = "gpu_filter/simple_block.rs"]

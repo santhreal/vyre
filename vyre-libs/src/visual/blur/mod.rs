@@ -401,14 +401,14 @@ inventory::submit! {
             // 4×4 all-white → blurred all-white (identity for uniform).
             let pixels = vec![0xFFFF_FFFFu32; 16];
             vec![vec![
-                crate::visual::byte_helpers::u32_words_to_le_bytes(&pixels),     // input
+                crate::visual::u32_word_bytes::u32_words_to_le_bytes(&pixels),     // input
                 vec![0u8; 64],         // output (scratch for horizontal pass)
             ]]
         }),
         Some(|| {
             // All-white blurred → all-white (±1).
             let pixels = vec![0xFFFF_FFFFu32; 16];
-            vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&pixels)]]
+            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&pixels)]]
         }),
     )
     .with_category("visual")

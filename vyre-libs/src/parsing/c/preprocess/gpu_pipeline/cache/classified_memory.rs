@@ -5,7 +5,7 @@ use super::super::byte_lru_cache::{ByteBoundLruCache, ByteLruPanicLabels};
 use super::super::classified_size::classified_tokens_bytes;
 use super::super::ClassifiedTokens;
 #[cfg(test)]
-use super::disk_common::source_hash128;
+use super::disk_cache_files::source_hash128;
 
 const CLASSIFIED_CACHE_MAX_ENTRIES: usize = 4096;
 const CLASSIFIED_CACHE_MAX_BYTES: usize = 512 * 1024 * 1024;

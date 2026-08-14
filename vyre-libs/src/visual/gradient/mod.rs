@@ -329,7 +329,7 @@ inventory::submit! {
             // Pixel 0: pure red, Pixel 3: pure blue.
             // Exact values depend on interpolation rounding.
             let expected = [0xFF_0000FFu32, 0xFF_5500AAu32, 0xFF_AA0055u32, 0xFF_FF0000u32];
-            vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&expected)]]
+            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&expected)]]
         }),
     )
     .with_category("visual")

@@ -1,5 +1,5 @@
 use super::super::*;
-use super::support::RecordingResidentDispatcher;
+use super::recording_dispatcher::RecordingResidentDispatcher;
 
 #[test]
 fn resident_query_buckets_graph_sized_capacity_from_frontier_popcount() {

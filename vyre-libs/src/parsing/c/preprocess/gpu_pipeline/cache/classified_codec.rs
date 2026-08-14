@@ -1,6 +1,6 @@
 use super::super::ClassifiedTokens;
 use super::classified_memory::ClassifiedCacheKey;
-use super::disk_common::CLASSIFIED_DISK_MAGIC;
+use super::disk_cache_files::CLASSIFIED_DISK_MAGIC;
 
 pub(crate) fn encode_classified(
     key: &ClassifiedCacheKey,

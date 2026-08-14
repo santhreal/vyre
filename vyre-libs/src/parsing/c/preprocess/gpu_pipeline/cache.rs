@@ -4,8 +4,8 @@ mod classified_codec;
 mod classified_disk;
 #[path = "cache/classified_memory.rs"]
 mod classified_memory;
-#[path = "cache/disk_common.rs"]
-mod disk_common;
+#[path = "cache/disk_cache_files.rs"]
+mod disk_cache_files;
 #[path = "cache/payload_codec.rs"]
 mod payload_codec;
 #[path = "cache/payload_disk.rs"]
@@ -22,7 +22,7 @@ pub(super) use classified_disk::{load_classified_from_disk, store_classified_to_
 pub(super) use classified_memory::{
     cached_classified_tokens, classified_cache_key_from_hash, insert_classified_tokens,
 };
-pub(super) use disk_common::source_hash128;
+pub(super) use disk_cache_files::source_hash128;
 pub(super) use payload_disk::{load_payloads_from_disk, store_payloads_to_disk};
 pub(super) use payload_keys::production_payloads_cache_key_from_hash;
 pub(super) use payload_memory::{cached_payloads, insert_payloads};
@@ -34,7 +34,7 @@ pub(super) use classified_memory::classified_cache_key;
 #[cfg(test)]
 pub(super) use classified_memory::ClassifiedCacheKey;
 #[cfg(test)]
-pub(super) use disk_common::{
+pub(super) use disk_cache_files::{
     cache_key_stem, read_disk_cache_file_bounded_with_limit, CLASSIFIED_DISK_MAGIC,
 };
 #[cfg(test)]

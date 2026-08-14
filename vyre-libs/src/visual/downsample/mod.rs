@@ -229,13 +229,13 @@ inventory::submit! {
             // 4×4 all-white → 2×2 all-white
             let input = vec![0xFFFF_FFFFu32; 16];
             vec![vec![
-                crate::visual::byte_helpers::u32_words_to_le_bytes(&input),
+                crate::visual::u32_word_bytes::u32_words_to_le_bytes(&input),
                 vec![0u8; 16],
             ]]
         }),
         Some(|| {
             let expected = vec![0xFFFF_FFFFu32; 4];
-            vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&expected)]]
+            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&expected)]]
         }),
     )
     .with_category("visual")

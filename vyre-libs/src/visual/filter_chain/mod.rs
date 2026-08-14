@@ -256,12 +256,12 @@ inventory::submit! {
         Some(|| {
             // Identity transform: all params = 1.0/0.0 → output == input.
             let pixels = [0xFF_804020u32, 0xFF_FF0000, 0xFF_00FF00, 0xFF_0000FF];
-            vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&pixels)]]
+            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&pixels)]]
         }),
         Some(|| {
             // Identity: output == input.
             let pixels = [0xFF_804020u32, 0xFF_FF0000, 0xFF_00FF00, 0xFF_0000FF];
-            vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&pixels)]]
+            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&pixels)]]
         }),
     )
     .with_category("visual")

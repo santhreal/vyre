@@ -22,7 +22,7 @@ pub(in crate::scan) mod bounded_ranges;
 mod count_program;
 
 #[cfg(test)]
-pub(crate) mod test_helpers;
+pub(crate) mod test_dispatch_and_decode;
 
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use bounded_ranges::classic_ac_bounded_ranges_scan;

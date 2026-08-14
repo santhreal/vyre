@@ -1,4 +1,6 @@
-use super::super::state::{adaptive_four_russians_layout_hash, adaptive_traversal_layout_hash};
+use super::super::resident_scratch::{
+    adaptive_four_russians_layout_hash, adaptive_traversal_layout_hash,
+};
 use super::super::*;
 
 #[test]

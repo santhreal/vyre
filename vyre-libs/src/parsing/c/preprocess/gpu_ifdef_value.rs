@@ -41,7 +41,7 @@
 //! check is bounded by the candidate macro-name length. One compiled
 //! program handles every macro-table size and identifier length.
 
-use super::gpu_directive_parse_shared::{
+use super::gpu_directive_parse_program::{
     push_c_identifier_span, push_directive_row_bounds, push_hash_and_keyword_start,
     push_keyword_end, push_ws_skip_from_expr, runtime_sized_input, source_buffer_element,
     token_column, DirectiveSourceLayout,

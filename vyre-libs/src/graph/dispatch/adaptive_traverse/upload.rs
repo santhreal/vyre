@@ -1,4 +1,4 @@
-use super::state::{adaptive_four_russians_layout_hash, adaptive_traversal_layout_hash};
+use super::resident_scratch::{adaptive_four_russians_layout_hash, adaptive_traversal_layout_hash};
 use super::{
     ResidentAdaptiveFourRussiansDenseGraph, ResidentAdaptiveSparseQueueGraph,
     ResidentAdaptiveTraversalGraph,

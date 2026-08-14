@@ -25,7 +25,6 @@ use vyre_foundation::ir::Expr;
 
 /// Two-pass separable Gaussian blur (composes `math::conv1d`).
 pub mod blur;
-pub(crate) mod byte_helpers;
 /// Character-cell grid expansion for terminal and text surfaces.
 pub mod cell_grid;
 /// Porter-Duff alpha compositing.
@@ -42,6 +41,7 @@ pub mod glyph_grid;
 pub mod gradient;
 /// GPU-computed box shadow with SDF falloff.
 pub mod shadow;
+pub(crate) mod u32_word_bytes;
 /// 2× nearest-neighbor upsample for the half-resolution blur return path.
 pub mod upsample;
 

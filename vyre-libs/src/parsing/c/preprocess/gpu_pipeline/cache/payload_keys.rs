@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use super::disk_common::cache_key_stem;
+use super::disk_cache_files::cache_key_stem;
 #[cfg(test)]
-use super::disk_common::source_hash128;
+use super::disk_cache_files::source_hash128;
 
 // ---------------------------------------------------------------
 // Disk-backed cache for Stage 3 directive payloads (T030 second

@@ -380,7 +380,7 @@ pub fn anchored_window_extract_program(
 #[cfg(all(test, feature = "matching-regex", feature = "matching-dfa"))]
 mod tests {
     use super::*;
-    use crate::scan::classic_ac::test_helpers::with_reference_dispatch_lanes;
+    use crate::scan::classic_ac::test_dispatch_and_decode::with_reference_dispatch_lanes;
     use crate::scan::regex_dfa::build_regex_dfa_pipeline;
 
     const MAX_MATCHES: u32 = 4096;

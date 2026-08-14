@@ -1,6 +1,6 @@
 use super::super::scan::PrefixScanScratch;
 use super::compact::{compact_comment_filtered_bytes, CommentCompactScratch};
-use super::program_helpers::{
+use super::keep_mask::{
     combine_keep_mask_program, singleton_u32_read_buffer, source_byte_load_or_zero,
     source_bytes_input_buffer, u32_rw_buffer, wrap_gpu_filter_program,
 };

@@ -1,5 +1,5 @@
 use super::super::*;
-use super::support::RecordingBatchDispatcher;
+use super::recording_dispatcher::RecordingBatchDispatcher;
 use crate::graph::dispatch::csr_frontier_queue_resident::upload_resident_csr_queue_graph;
 use crate::graph::dispatch::csr_frontier_queue_scratch::{
     resident_csr_queue_split_low_grid, STRIDED_FORWARD_MIN_ROW_DEGREE,

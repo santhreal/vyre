@@ -1,5 +1,5 @@
 use super::{
-    program_helpers::source_byte_load, TRANSFORM_BLOCK_COMMENT, TRANSFORM_LINE_COMMENT,
+    keep_mask::source_byte_load, TRANSFORM_BLOCK_COMMENT, TRANSFORM_LINE_COMMENT,
     TRANSFORM_LINE_SPLICE, TRANSFORM_LITERAL_QUOTE,
 };
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};

@@ -1,5 +1,5 @@
 use super::super::*;
-use super::support::{traversal_graph, RecordingResidentDispatcher};
+use super::recording_dispatcher::{traversal_graph, RecordingResidentDispatcher};
 
 #[test]
 fn sparse_dense_zero_frontier_returns_zero_without_resident_work_or_cache() {

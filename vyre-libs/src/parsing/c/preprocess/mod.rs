@@ -39,7 +39,7 @@ mod gpu_define_parse_tests;
 /// Phase 17a: directive kind classification. Phase 17b will add the
 /// shunting-yard conditional evaluator in the same module.
 pub mod gpu_directive_metadata;
-mod gpu_directive_parse_shared;
+mod gpu_directive_parse_program;
 /// GPU `#if` / `#elif` expression evaluator. Phase 17b.4: per-thread
 /// iterative shunting-yard parser using fixed-depth value/operator
 /// stacks. Composes the literal scan, char-constant scan, and

@@ -1,4 +1,4 @@
-use super::state::AdaptiveTraversalResidentScratch;
+use super::resident_scratch::AdaptiveTraversalResidentScratch;
 use super::{
     AdaptiveTraversalMode, ResidentAdaptiveFourRussiansDenseGraph,
     ResidentAdaptiveSparseQueueGraph, ResidentAdaptiveTraversalGraph,

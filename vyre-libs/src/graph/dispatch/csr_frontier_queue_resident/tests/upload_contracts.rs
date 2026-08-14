@@ -1,5 +1,5 @@
 use super::super::*;
-use super::support::RecordingResidentDispatcher;
+use super::recording_dispatcher::RecordingResidentDispatcher;
 use crate::graph::dispatch::csr_frontier_queue_scratch::STRIDED_FORWARD_MIN_ROW_DEGREE;
 use vyre_foundation::program_dispatch::DispatchError;
 

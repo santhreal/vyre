@@ -4,9 +4,11 @@ use std::sync::Mutex;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::dominator_frontier::cpu_ref as reference_dominator_frontier;
 
-mod support;
+mod dispatcher_doubles;
 
-use support::{DominatorDispatcher, DominatorInputShapeDispatcher, RecordingDominatorDispatcher};
+use dispatcher_doubles::{
+    DominatorDispatcher, DominatorInputShapeDispatcher, RecordingDominatorDispatcher,
+};
 
 #[test]
 fn checked_reference_surfaces_bad_seed_width() {

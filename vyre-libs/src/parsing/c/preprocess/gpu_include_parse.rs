@@ -41,7 +41,7 @@
 //! Outputs (all U32, one element per token):
 //!   - `path_start_out`, `path_len_out`, `is_system_out`.
 
-use super::gpu_directive_parse_shared::{
+use super::gpu_directive_parse_program::{
     directive_program_from_parse_with_source_layout, push_bounded_byte_scan_until,
     push_directive_row_bounds, push_hash_and_keyword_start, push_keyword_end,
     push_ws_skip_from_expr, safe_source_byte_expr, DirectiveOutputColumn, DirectiveSourceLayout,

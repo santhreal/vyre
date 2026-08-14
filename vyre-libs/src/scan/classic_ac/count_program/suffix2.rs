@@ -124,7 +124,7 @@ mod tests {
     use super::*;
     use crate::fixture_bytes::bytes_to_u32 as decode_u32;
     use crate::fixture_bytes::pack_haystack_u32;
-    use crate::scan::classic_ac::test_helpers::with_reference_dispatch_lanes;
+    use crate::scan::classic_ac::test_dispatch_and_decode::with_reference_dispatch_lanes;
     use crate::scan::classic_ac::{
         classic_ac_candidate_end_byte_mask_words, classic_ac_compile, classic_ac_scan_counts,
     };
