@@ -278,8 +278,8 @@ fn strict_observable_rejects_index_at_exact_buffer_end() {
 fn strict_observable_accepts_last_valid_index() {
     let mut ctrl = ResidentWorkQueue::encode_control(false, 0, 2).unwrap();
     write_word(&mut ctrl, (control::OBSERVABLE_BASE + 1) as usize, 0xBEEF);
-    let val =
-        ResidentWorkQueue::try_read_observable(&ctrl, 1).expect("index 1 must be valid for 2 observables");
+    let val = ResidentWorkQueue::try_read_observable(&ctrl, 1)
+        .expect("index 1 must be valid for 2 observables");
     assert_eq!(val, 0xBEEF);
 }
 
@@ -425,4 +425,3 @@ fn slot_word_layout_priority_is_word_3() {
         "priority must be at word 3 and default to NORMAL"
     );
 }
-

@@ -38,7 +38,8 @@ fn watchdog_health_flags_active_queue_without_drain_progress() {
 
     let mut current_control = previous_control.clone();
     let mut current_ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
-    ResidentWorkQueue::publish_slot(&mut current_ring, 0, 7, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
+    ResidentWorkQueue::publish_slot(&mut current_ring, 0, 7, opcode::ATOMIC_ADD, &[1, 2, 3])
+        .unwrap();
     let stalled = RingTelemetry::decode(&current_control, &current_ring).health_since(&previous);
     assert_eq!(stalled.done_delta, 0);
     assert_eq!(stalled.queue_depth, 1);
