@@ -236,6 +236,16 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Fixed
 
+- Documentation builds again. Sixteen intra-doc links resolved to nothing, and
+  because the workspace denies `broken_intra_doc_links` that made `cargo doc`
+  fail outright for `vyre-driver`, `vyre-foundation`, `vyre-libs`,
+  `vyre-primitives`, `vyre-self-substrate`, and `vyre-conform`. A module's inner
+  documentation merges with the outer comment at its declaration, so a link
+  written against a sibling by bare name resolves in the parent module instead;
+  those links now carry a full path. Links that pointed at items compiled only
+  under `cpu-parity` name the item as code instead of linking it.
+- `vyre-lints` exposes `Allowlist::default` and `Allowlist::measured_roots`,
+  which the recorded public API surface had not captured.
 - Driver decorators now preserve the concrete backend device profile, including
   device-timestamp capability and timing quality.
 - Enforced benchmark contract failures now retain correctness, timing metrics,

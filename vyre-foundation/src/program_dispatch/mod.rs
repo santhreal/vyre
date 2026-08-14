@@ -2,22 +2,21 @@
 //! `Program` and a backend that can run one.
 //!
 //! A caller encodes its own data into buffers, builds a `Program` that computes
-//! the answer, and asks a [`ProgramDispatcher`] to run it. The returned bytes
+//! the answer, and asks a [`crate::program_dispatch::ProgramDispatcher`] to run it. The returned bytes
 //! are the result. Foundation owns the seam because it is stated entirely in
 //! `Program` and buffer terms and because every layer above needs it: the GPU
 //! pass engine replays optimizer passes through it, the composition library
 //! runs its device-resident solvers through it, and each concrete backend
 //! implements it.
 //!
-//! The seam lived in the pass engine, which put it above the composition
-//! library that also needed it. Nothing there was engine-specific, so the whole
-//! contract moves down rather than being spelled a second time. The host-side
+//! The seam sits below the composition library, which needs it as much as the
+//! pass engine does, and it is stated without reference to either. The host-side
 //! byte marshalling that goes with it is `vyre_libs::dispatch_buffers`, which
 //! cannot live here because it delegates to `vyre_primitives::wire`.
 
 use crate::ir::{BufferAccess, BufferDecl, Program};
 
-/// The buffers an [`ProgramDispatcher`] returns, in declared order.
+/// The buffers a [`ProgramDispatcher`] returns, in declared order.
 ///
 /// The trait contract is "the declared outputs in the same canonical order", which
 /// means every writable storage buffer. Workgroup scratch is never a dispatch

@@ -35,7 +35,7 @@
 //! adds a dependency tree that conflicts with vyre's "every dep is a
 //! supply-chain risk" stance.
 //!
-//! [`EGraph`] behavior lives in `egraph`, its dense-index and reserve
+//! [`crate::optimizer::eqsat::EGraph`] behavior lives in `egraph`, its dense-index and reserve
 //! bookkeeping in `class_index`, the rewrite loop in `saturation`, the
 //! device-fact rule adapter in `device_aware_rule`, and cost extraction in
 //! `extraction`. The public types stay declared here so their rendered

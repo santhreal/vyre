@@ -1,6 +1,6 @@
 //! Canonical semantic-operation view for this crate's Category C intrinsics.
 //!
-//! Builders submit foundation-owned [`OperationRegistration`] values. This
+//! Builders submit foundation-owned [`vyre_foundation::operation::OperationRegistration`] values. This
 //! module retains the feature-gated view without owning a second operation
 //! identity or fixture schema.
 

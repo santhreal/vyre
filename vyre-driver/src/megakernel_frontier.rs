@@ -11,7 +11,7 @@
 //! backend without the neutral policy knowing it. The composition is decided
 //! entirely by graph shape, wave bytes, and budgets, so it belongs here; a
 //! backend supplies only its telemetry and, through
-//! [`MegakernelExecutionPlanner`], its own plan cache.
+//! [`crate::megakernel_execution::MegakernelExecutionPlanner`], its own plan cache.
 
 use crate::accounting::{
     checked_add_u64_count as checked_add, checked_mul_u64_count as checked_mul,

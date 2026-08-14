@@ -12,7 +12,7 @@
 //! `FusedWave` where the CUDA fork answered a per-launch topology, and any
 //! backend that had not written the check itself would have been handed an
 //! unlaunchable plan. The check is a property of the device, not of CUDA, so it
-//! is [`MegakernelDeviceCapabilities`] here and every backend inherits it.
+//! is [`crate::megakernel_execution::MegakernelDeviceCapabilities`] here and every backend inherits it.
 
 const WARP_SPARSE_DENSITY: f64 = 0.03125;
 const SPARSE_DENSITY: f64 = 0.125;

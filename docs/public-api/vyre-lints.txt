@@ -1,12 +1,15 @@
+impl core::default::Default for vyre_lints::allowlist::Allowlist
 impl vyre_lints::allowlist::Allowlist
 impl vyre_lints::drift::AgeResolver for vyre_lints::drift::GitBlameResolver
 impl vyre_lints::drift::GitBlameResolver
 pub const vyre_lints::drift::DEFAULT_AGE_BUDGET_DAYS: i64
 pub enum vyre_lints::ViolationKind
 pub fn vyre_lints::allowlist::Allowlist::contains(&self, workspace_relative_path: &str) -> bool
+pub fn vyre_lints::allowlist::Allowlist::default() -> Self
 pub fn vyre_lints::allowlist::Allowlist::empty() -> Self
 pub fn vyre_lints::allowlist::Allowlist::is_empty(&self) -> bool
 pub fn vyre_lints::allowlist::Allowlist::len(&self) -> usize
+pub fn vyre_lints::allowlist::Allowlist::measured_roots(&self) -> &[alloc::string::String]
 pub fn vyre_lints::allowlist::load(path: &std::path::Path) -> anyhow::Result<vyre_lints::allowlist::Allowlist>
 pub fn vyre_lints::consumer_coupling::scan_tree(root: &std::path::Path) -> anyhow::Result<alloc::vec::Vec<vyre_lints::Violation>>
 pub fn vyre_lints::drift::AgeResolver::age(&self, allowlist_path: &std::path::Path, exempt_path: &str) -> core::option::Option<(i64, alloc::string::String)>

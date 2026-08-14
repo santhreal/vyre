@@ -23,7 +23,7 @@
 //!   `flows_to_not_via` silently shared the same emitted Program.
 //!
 //! Soundness: identical to the one BFS step `flows_to` provides  -
-//! [`MayOver`](super::super::dataflow::Soundness::MayOver) on a single
+//! [`MayOver`](vyre_spec::soundness::Soundness::MayOver) on a single
 //! step, `Exact` when iterated to fixpoint with sanitizer gating.
 
 use vyre_foundation::ir::Program;
