@@ -4,7 +4,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use crate::{
     builder::{check_tensors, BuildOptions},
-    linear_algebra_substrate::MatmulBias,
+    math::linalg::MatmulBias,
     region::{tag_program, wrap_anonymous},
     tensor_ref::{TensorRef, TensorRefError},
 };

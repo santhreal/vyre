@@ -99,7 +99,7 @@ fn run_with_metrics_tracks_expression_only_rewrites() {
 }
 
 #[test]
-fn scheduler_fact_substrate_reuses_read_only_passes_and_invalidates_mutations() {
+fn scheduler_fact_cache_reuses_read_only_passes_and_invalidates_mutations() {
     let scheduler = PassScheduler::with_passes(vec![
         ProgramPassKind::new(TestPass {
             metadata: PassMetadata::new("read_a", &[], &[]),
@@ -123,7 +123,7 @@ fn scheduler_fact_substrate_reuses_read_only_passes_and_invalidates_mutations() 
 
     let report = scheduler
         .run_with_metrics(trivial_program())
-        .expect("Fix: scheduler fact-substrate metric run must converge");
+        .expect("Fix: scheduler fact-cache metric run must converge");
     let first_iter = report
         .passes
         .iter()
@@ -132,29 +132,29 @@ fn scheduler_fact_substrate_reuses_read_only_passes_and_invalidates_mutations() 
     assert_eq!(first_iter.len(), 4);
 
     assert_eq!(first_iter[0].pass, "read_a");
-    assert!(first_iter[0].fact_substrate_recomputed);
-    assert!(!first_iter[0].fact_substrate_reused);
-    assert!(!first_iter[0].fact_substrate_invalidated);
+    assert!(first_iter[0].fact_cache_recomputed);
+    assert!(!first_iter[0].fact_cache_reused);
+    assert!(!first_iter[0].fact_cache_invalidated);
 
     assert_eq!(first_iter[1].pass, "read_b");
-    assert!(first_iter[1].fact_substrate_reused);
-    assert!(!first_iter[1].fact_substrate_recomputed);
-    assert!(!first_iter[1].fact_substrate_invalidated);
+    assert!(first_iter[1].fact_cache_reused);
+    assert!(!first_iter[1].fact_cache_recomputed);
+    assert!(!first_iter[1].fact_cache_invalidated);
 
     assert_eq!(first_iter[2].pass, "mutate_a");
-    assert!(first_iter[2].fact_substrate_reused);
-    assert!(!first_iter[2].fact_substrate_recomputed);
-    assert!(first_iter[2].fact_substrate_invalidated);
+    assert!(first_iter[2].fact_cache_reused);
+    assert!(!first_iter[2].fact_cache_recomputed);
+    assert!(first_iter[2].fact_cache_invalidated);
 
     assert_eq!(first_iter[3].pass, "mutate_b");
-    assert!(!first_iter[3].fact_substrate_reused);
-    assert!(first_iter[3].fact_substrate_recomputed);
-    assert!(first_iter[3].fact_substrate_invalidated);
+    assert!(!first_iter[3].fact_cache_reused);
+    assert!(first_iter[3].fact_cache_recomputed);
+    assert!(first_iter[3].fact_cache_invalidated);
 
     assert_eq!(
         first_iter
             .iter()
-            .filter(|metric| metric.fact_substrate_recomputed)
+            .filter(|metric| metric.fact_cache_recomputed)
             .count(),
         2,
         "initial read and post-mutation pass should be the only first-iteration fact recomputes"
@@ -162,7 +162,7 @@ fn scheduler_fact_substrate_reuses_read_only_passes_and_invalidates_mutations() 
     assert_eq!(
         first_iter
             .iter()
-            .filter(|metric| metric.fact_substrate_reused)
+            .filter(|metric| metric.fact_cache_reused)
             .count(),
         2,
         "read_b and mutate_a should reuse the scheduler-owned facts"
@@ -170,7 +170,7 @@ fn scheduler_fact_substrate_reuses_read_only_passes_and_invalidates_mutations() 
     assert_eq!(
         first_iter
             .iter()
-            .filter(|metric| metric.fact_substrate_invalidated)
+            .filter(|metric| metric.fact_cache_invalidated)
             .count(),
         2,
         "each landed mutation should invalidate the scheduler-owned facts once"

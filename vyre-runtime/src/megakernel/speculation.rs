@@ -11,7 +11,7 @@ use vyre_driver::speculate::{
     record_speculative_variant_race, SpeculativeVariantDecision, SpeculativeVariantKeys,
     SpeculativeVariantRace,
 };
-use vyre_driver::speculation_substrate::{
+use vyre_driver::speculation_verdict::{
     decide_speculation, SpeculationObservation, SpeculationVerdict,
 };
 

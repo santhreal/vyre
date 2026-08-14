@@ -2,7 +2,7 @@ use super::{CachedToposortProgram, ToposortGpuScratch};
 use crate::graph::dispatch_bridge::{
     dispatch_single_u32_output_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::toposort::{
     plan_toposort_csr_dispatch, validate_toposort_csr_order, ToposortCsrDispatchPlan,
     ToposortCsrError, ToposortCsrStaticInputKey, TOPOSORT_INDEGREE_SCRATCH_BUFFER,
@@ -22,7 +22,7 @@ use vyre_primitives::graph::toposort::{
 /// rejects the primitive, or the returned order is not a full permutation of
 /// `0..node_count` (cycle or malformed backend output).
 pub fn topo_order_csr_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     node_count: u32,
     offsets: &[u32],
     targets: &[u32],
@@ -42,7 +42,7 @@ pub fn topo_order_csr_via(
 
 /// Topologically sort a dependency graph through the dispatcher using caller-owned scratch.
 pub fn topo_order_csr_via_with_scratch(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     node_count: u32,
     offsets: &[u32],
     targets: &[u32],
@@ -57,7 +57,7 @@ pub fn topo_order_csr_via_with_scratch(
 
 /// Topologically sort a dependency graph into caller-owned output storage.
 pub fn topo_order_csr_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     node_count: u32,
     offsets: &[u32],
     targets: &[u32],

@@ -1,6 +1,6 @@
 use super::*;
-use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use std::sync::Mutex;
 use vyre_foundation::ir::Program;
 
@@ -10,7 +10,7 @@ struct BidirDispatcher {
     outputs: Vec<Vec<u8>>,
 }
 
-impl OptimizerDispatcher for BidirDispatcher {
+impl ProgramDispatcher for BidirDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -37,7 +37,7 @@ struct StaticBidirInputRecordingDispatcher {
     edge_targets: Mutex<Vec<Vec<u32>>>,
 }
 
-impl OptimizerDispatcher for StaticBidirInputRecordingDispatcher {
+impl ProgramDispatcher for StaticBidirInputRecordingDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -47,7 +47,7 @@ impl OptimizerDispatcher for StaticBidirInputRecordingDispatcher {
         self.edge_targets
             .lock()
             .expect("Fix: bidirectional static-input recorder mutex should not be poisoned")
-            .push(crate::hardware::dispatch_buffers::read_u32s(&inputs[2]));
+            .push(vyre_libs::dispatch_buffers::read_u32s(&inputs[2]));
         Ok(self.outputs.clone())
     }
 }
@@ -281,7 +281,7 @@ fn via_step_refreshes_static_inputs_when_same_shape_graph_content_changes() {
 fn via_step_uses_bridge_zero_inputs_for_graph_scratch() {
     struct InspectingDispatcher;
 
-    impl OptimizerDispatcher for InspectingDispatcher {
+    impl ProgramDispatcher for InspectingDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -359,7 +359,7 @@ fn via_step_rejects_mismatched_edge_arrays() {
 fn via_step_empty_graph_is_validated_by_primitive_and_does_not_dispatch() {
     struct NoDispatch;
 
-    impl OptimizerDispatcher for NoDispatch {
+    impl ProgramDispatcher for NoDispatch {
         fn dispatch(
             &self,
             _program: &Program,
@@ -380,7 +380,7 @@ fn via_step_empty_graph_is_validated_by_primitive_and_does_not_dispatch() {
 fn closure_rejects_bad_seed_without_clobbering_reusable_buffers() {
     struct NoDispatch;
 
-    impl OptimizerDispatcher for NoDispatch {
+    impl ProgramDispatcher for NoDispatch {
         fn dispatch(
             &self,
             _program: &Program,
@@ -420,7 +420,7 @@ fn closure_rejects_bad_seed_without_clobbering_reusable_buffers() {
 fn closure_zero_iters_validates_and_returns_seed_without_program_or_dispatch() {
     struct NoDispatch;
 
-    impl OptimizerDispatcher for NoDispatch {
+    impl ProgramDispatcher for NoDispatch {
         fn dispatch(
             &self,
             _program: &Program,
@@ -461,7 +461,7 @@ fn closure_zero_iters_validates_and_returns_seed_without_program_or_dispatch() {
 fn closure_empty_graph_validates_and_returns_empty_without_program_or_dispatch() {
     struct NoDispatch;
 
-    impl OptimizerDispatcher for NoDispatch {
+    impl ProgramDispatcher for NoDispatch {
         fn dispatch(
             &self,
             _program: &Program,

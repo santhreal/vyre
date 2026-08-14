@@ -1,4 +1,4 @@
-use crate::optimizer::dispatcher::DispatchError;
+use vyre_foundation::program_dispatch::DispatchError;
 use vyre_primitives::math::quantized::i4_packed_words;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

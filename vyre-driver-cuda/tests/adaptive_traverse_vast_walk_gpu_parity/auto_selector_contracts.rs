@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn cuda_resident_adaptive_auto_selects_sparse_queue_for_tiny_frontier() {
     let backend = live_dispatcher();
-    let dispatcher = vyre_driver_cuda::CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = vyre_driver_cuda::CudaProgramDispatcher::new(&backend);
     let node_count = 128u32;
     let mut edge_offsets = Vec::with_capacity(node_count as usize + 1);
     let mut edge_targets = Vec::with_capacity(node_count as usize);
@@ -81,7 +81,7 @@ fn cuda_resident_adaptive_auto_selects_sparse_queue_for_tiny_frontier() {
 
 fn cuda_resident_adaptive_auto_selects_sparse_dense_for_dense_frontier() {
     let backend = live_dispatcher();
-    let dispatcher = vyre_driver_cuda::CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = vyre_driver_cuda::CudaProgramDispatcher::new(&backend);
     let node_count = 32u32;
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let edge_targets = Vec::new();

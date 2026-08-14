@@ -27,10 +27,10 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Op id for the Sinkhorn dispatch clustering primitive.
 pub const OP_ID: &str = "vyre-libs::self_substrate::sinkhorn_dispatch_clustering";
@@ -363,7 +363,7 @@ pub fn sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32)
 /// [`DispatchError::BackendError`] when the backend returns malformed output.
 #[allow(clippy::too_many_arguments)]
 pub fn sinkhorn_clustering_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     region_features: &[f32],
     cluster_centroids: &[f32],
     region_weights: &[f32],
@@ -394,7 +394,7 @@ pub fn sinkhorn_clustering_via(
 /// Run Sinkhorn dispatch clustering through a concrete GPU dispatcher into caller-owned storage.
 #[allow(clippy::too_many_arguments)]
 pub fn sinkhorn_clustering_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     region_features: &[f32],
     cluster_centroids: &[f32],
     region_weights: &[f32],
@@ -427,7 +427,7 @@ pub fn sinkhorn_clustering_via_into(
 /// caller-owned dispatch and assignment storage.
 #[allow(clippy::too_many_arguments)]
 pub fn sinkhorn_clustering_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     region_features: &[f32],
     cluster_centroids: &[f32],
     region_weights: &[f32],
@@ -684,7 +684,7 @@ mod tests {
         outputs: Vec<Vec<u8>>,
     }
 
-    impl OptimizerDispatcher for SinkhornDispatcher {
+    impl ProgramDispatcher for SinkhornDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -812,9 +812,9 @@ mod tests {
         // Real-backend output shape: [u, v, out_assignments] (the decoder reads the THIRD buffer).
         let dispatcher = SinkhornDispatcher {
             outputs: vec![
-                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 0]),
-                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 0]),
-                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 1]),
+                vyre_libs::dispatch_buffers::u32_slice_to_le_bytes(&[0, 0]),
+                vyre_libs::dispatch_buffers::u32_slice_to_le_bytes(&[0, 0]),
+                vyre_libs::dispatch_buffers::u32_slice_to_le_bytes(&[0, 1]),
             ],
         };
         let mut out = Vec::with_capacity(4);
@@ -842,9 +842,9 @@ mod tests {
         // Real-backend output shape: [u, v, out_assignments] (the decoder reads the THIRD buffer).
         let dispatcher = SinkhornDispatcher {
             outputs: vec![
-                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 0]),
-                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 0]),
-                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 1]),
+                vyre_libs::dispatch_buffers::u32_slice_to_le_bytes(&[0, 0]),
+                vyre_libs::dispatch_buffers::u32_slice_to_le_bytes(&[0, 0]),
+                vyre_libs::dispatch_buffers::u32_slice_to_le_bytes(&[0, 1]),
             ],
         };
         let mut scratch = SinkhornDispatchGpuScratch::default();
@@ -898,10 +898,10 @@ mod tests {
         // A backend returning more than the 3 writable buffers (u, v, out_assignments) is malformed.
         let dispatcher = SinkhornDispatcher {
             outputs: vec![
-                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0]),
-                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0]),
-                crate::dispatch_buffers::u32_slice_to_le_bytes(&[1]),
-                crate::dispatch_buffers::u32_slice_to_le_bytes(&[9]),
+                vyre_libs::dispatch_buffers::u32_slice_to_le_bytes(&[0]),
+                vyre_libs::dispatch_buffers::u32_slice_to_le_bytes(&[0]),
+                vyre_libs::dispatch_buffers::u32_slice_to_le_bytes(&[1]),
+                vyre_libs::dispatch_buffers::u32_slice_to_le_bytes(&[9]),
             ],
         };
         let err =
@@ -918,8 +918,8 @@ mod tests {
         // Correct 3-output shape but the out_assignments buffer (index 2) has a trailing byte.
         let dispatcher = SinkhornDispatcher {
             outputs: vec![
-                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0]),
-                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0]),
+                vyre_libs::dispatch_buffers::u32_slice_to_le_bytes(&[0]),
+                vyre_libs::dispatch_buffers::u32_slice_to_le_bytes(&[0]),
                 vec![0, 0, 0, 0, 1],
             ],
         };

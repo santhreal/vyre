@@ -197,7 +197,7 @@ owner = 'self-substrate'
 layer = 'scheduler'
 owned = 'Use Vyre primitives to implement scheduler, graph, coverage, and optimization support.'
 non_owned = 'Device drivers, artifact envelope schema authorship, frontends.'
-allowed_dependencies = ['vyre-foundation', 'vyre-primitives']
+allowed_dependencies = ['vyre-foundation', 'vyre-libs', 'vyre-primitives']
 profile = 'scheduler'
 
 [package.vyre-conform-spec]

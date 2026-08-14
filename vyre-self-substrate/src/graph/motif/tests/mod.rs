@@ -1,6 +1,6 @@
 use super::*;
-use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use std::sync::Mutex;
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::motif::{
@@ -13,7 +13,7 @@ struct MotifDispatcher {
     outputs: Vec<Vec<u8>>,
 }
 
-impl OptimizerDispatcher for MotifDispatcher {
+impl ProgramDispatcher for MotifDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -36,7 +36,7 @@ struct RecordingMotifDispatcher {
     edge_targets: Mutex<Vec<Vec<u32>>>,
 }
 
-impl OptimizerDispatcher for RecordingMotifDispatcher {
+impl ProgramDispatcher for RecordingMotifDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -53,7 +53,7 @@ impl OptimizerDispatcher for RecordingMotifDispatcher {
         self.edge_targets
             .lock()
             .expect("Fix: motif recording mutex should not be poisoned")
-            .push(crate::hardware::dispatch_buffers::read_u32s(&inputs[2]));
+            .push(vyre_libs::dispatch_buffers::read_u32s(&inputs[2]));
         Ok(self.outputs.clone())
     }
 }

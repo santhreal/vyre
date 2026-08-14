@@ -871,7 +871,7 @@ pub fn vyre_runtime::resident_work_queue::scheduler::priority_scan_body_with_str
 pub fn vyre_runtime::resident_work_queue::scheduler::write_default_priority_offsets(control_bytes: &mut [u8], total_slots: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::speculation::PairedSpeculationWindow::is_empty(&self) -> bool
 pub fn vyre_runtime::resident_work_queue::speculation::PairedSpeculationWindow::len(&self) -> u32
-pub fn vyre_runtime::resident_work_queue::speculation::PairedSpeculationWindow::observation(&self) -> vyre_driver::speculation_substrate::SpeculationObservation
+pub fn vyre_runtime::resident_work_queue::speculation::PairedSpeculationWindow::observation(&self) -> vyre_driver::speculation_verdict::SpeculationObservation
 pub fn vyre_runtime::resident_work_queue::speculation::PairedSpeculationWindow::record_sample(&mut self, store: &mut vyre_driver::autotune_store::AutotuneStore, keys: vyre_driver::speculate::SpeculativeVariantKeys<'_>, sample: vyre_runtime::resident_work_queue::speculation::PairedSpeculationSample) -> vyre_runtime::resident_work_queue::speculation::PairedSpeculationUpdate
 pub fn vyre_runtime::resident_work_queue::task::TaskQueueSnapshot::from_tasks(tasks: &[vyre_runtime::resident_work_queue::task::TaskWorkItem]) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::resident_work_queue::task::TaskQueueSnapshot::try_apply_to_launch_request(&self, request: vyre_runtime::resident_work_queue::policy::ResidentLaunchRequest) -> core::result::Result<vyre_runtime::resident_work_queue::policy::ResidentLaunchRequest, vyre_driver::backend::error::BackendError>
@@ -1609,9 +1609,9 @@ pub vyre_runtime::resident_work_queue::PairedSpeculationSample::conservative_rec
 pub vyre_runtime::resident_work_queue::PairedSpeculationSample::speculative_compile_ns: u64
 pub vyre_runtime::resident_work_queue::PairedSpeculationSample::speculative_dispatch_ns: u64
 pub vyre_runtime::resident_work_queue::PairedSpeculationSample::speculative_record: vyre_driver::autotune_store::AutotuneRecord
-pub vyre_runtime::resident_work_queue::PairedSpeculationUpdate::observation: vyre_driver::speculation_substrate::SpeculationObservation
+pub vyre_runtime::resident_work_queue::PairedSpeculationUpdate::observation: vyre_driver::speculation_verdict::SpeculationObservation
 pub vyre_runtime::resident_work_queue::PairedSpeculationUpdate::race_decision: vyre_driver::speculate::SpeculativeVariantDecision
-pub vyre_runtime::resident_work_queue::PairedSpeculationUpdate::verdict: vyre_driver::speculation_substrate::SpeculationVerdict
+pub vyre_runtime::resident_work_queue::PairedSpeculationUpdate::verdict: vyre_driver::speculation_verdict::SpeculationVerdict
 pub vyre_runtime::resident_work_queue::PriorityDrainReason::AgedPromotionCounterExhausted
 pub vyre_runtime::resident_work_queue::PriorityDrainReason::AgedPromotionCounterNearLimit
 pub vyre_runtime::resident_work_queue::PriorityDrainReason::None
@@ -2338,9 +2338,9 @@ pub vyre_runtime::resident_work_queue::speculation::PairedSpeculationSample::con
 pub vyre_runtime::resident_work_queue::speculation::PairedSpeculationSample::speculative_compile_ns: u64
 pub vyre_runtime::resident_work_queue::speculation::PairedSpeculationSample::speculative_dispatch_ns: u64
 pub vyre_runtime::resident_work_queue::speculation::PairedSpeculationSample::speculative_record: vyre_driver::autotune_store::AutotuneRecord
-pub vyre_runtime::resident_work_queue::speculation::PairedSpeculationUpdate::observation: vyre_driver::speculation_substrate::SpeculationObservation
+pub vyre_runtime::resident_work_queue::speculation::PairedSpeculationUpdate::observation: vyre_driver::speculation_verdict::SpeculationObservation
 pub vyre_runtime::resident_work_queue::speculation::PairedSpeculationUpdate::race_decision: vyre_driver::speculate::SpeculativeVariantDecision
-pub vyre_runtime::resident_work_queue::speculation::PairedSpeculationUpdate::verdict: vyre_driver::speculation_substrate::SpeculationVerdict
+pub vyre_runtime::resident_work_queue::speculation::PairedSpeculationUpdate::verdict: vyre_driver::speculation_verdict::SpeculationVerdict
 pub vyre_runtime::resident_work_queue::task::TaskPriority::Critical = 0
 pub vyre_runtime::resident_work_queue::task::TaskPriority::High = 1
 pub vyre_runtime::resident_work_queue::task::TaskPriority::Idle = 4

@@ -7,7 +7,7 @@ use crate::graph::dispatch_bridge::{
     dispatch_single_u32_output_from_prepared_into, fingerprint_u32_slice,
     refresh_keyed_dispatch_inputs, DispatchInput, U32SliceFingerprint,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned GPU dispatch scratch for union-find emission.
 #[derive(Debug, Default)]
@@ -50,7 +50,7 @@ pub fn union_find_alias_program(
 ///
 /// Propagates any [`DispatchError`] surfaced by the dispatcher.
 pub fn union_find_alias_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     parent_init: &[u32],
     edge_a: &[u32],
     edge_b: &[u32],
@@ -68,7 +68,7 @@ pub fn union_find_alias_via(
 /// Returns [`DispatchError`] when inputs are malformed, dispatch fails, or the
 /// backend returns a malformed parent buffer.
 pub fn union_find_alias_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     parent_init: &[u32],
     edge_a: &[u32],
     edge_b: &[u32],
@@ -93,7 +93,7 @@ pub fn union_find_alias_via_into(
 /// Returns [`DispatchError`] when inputs are malformed, dispatch fails, or the
 /// backend returns a malformed parent buffer.
 pub fn union_find_alias_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     parent_init: &[u32],
     edge_a: &[u32],
     edge_b: &[u32],

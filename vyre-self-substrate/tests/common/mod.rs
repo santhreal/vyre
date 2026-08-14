@@ -66,14 +66,14 @@ pub(crate) fn fixed_sdiv_by_positive(numerator: u32, denominator: u32) -> u32 {
 
 use vyre_foundation::ir::{BufferAccess, Program};
 use vyre_reference::value::Value;
-use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
-/// The one canonical `OptimizerDispatcher` that actually EXECUTES a vyre Program (rather than
+/// The one canonical `ProgramDispatcher` that actually EXECUTES a vyre Program (rather than
 /// hand-writing a per-op CPU oracle like `optimizer::dispatcher::oracle::CpuOracleDispatcher`,
 /// which only recognizes `persistent_bfs` / `exploded`). Backing the dispatch boundary with
 /// `vyre_reference::reference_eval` lets every `*_via` production entry point be tested end to end
 /// against its `_cpu` oracle without a GPU backend, the "reference dispatcher" the
-/// `OptimizerDispatcher` trait doc anticipates.
+/// `ProgramDispatcher` trait doc anticipates.
 ///
 /// ONE PLACE: every `_via` end-to-end parity test uses THIS dispatcher rather than re-deriving the
 /// (subtle) buffer-bridging rule below.
@@ -99,7 +99,7 @@ use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatc
 /// (subtle) buffer-bridging rule (and it is the SAME rule the production backend uses).
 pub(crate) struct ReferenceEvalDispatcher;
 
-impl OptimizerDispatcher for ReferenceEvalDispatcher {
+impl ProgramDispatcher for ReferenceEvalDispatcher {
     fn dispatch(
         &self,
         program: &Program,

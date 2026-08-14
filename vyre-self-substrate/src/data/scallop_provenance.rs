@@ -53,10 +53,10 @@
 //! See `vyre-primitives::math::scallop_join::PROVENANCE_SELF_CONSUMER`
 //! for the cross-link from the primitive's docs back here.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_foundation::ir::Program;
 use vyre_primitives::math::scallop_join;
 
@@ -187,7 +187,7 @@ pub fn lineage_for_output_into(closure: &[u32], n: u32, out: u32, row: &mut Vec<
 }
 
 /// Build the provenance program once via [`build_provenance_program`],
-/// dispatch it through the supplied `OptimizerDispatcher`, and return
+/// dispatch it through the supplied `ProgramDispatcher`, and return
 /// the converged `n*n` lineage matrix.
 ///
 /// The GPU path runs the entire fixpoint as one dispatch (the
@@ -197,11 +197,11 @@ pub fn lineage_for_output_into(closure: &[u32], n: u32, out: u32, row: &mut Vec<
 ///
 /// # Errors
 ///
-/// Propagates any [`crate::optimizer::dispatcher::DispatchError`]
+/// Propagates any [`vyre_foundation::program_dispatch::DispatchError`]
 /// surfaced by the dispatcher.
 #[allow(clippy::too_many_arguments)]
 pub fn provenance_closure_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     state: &[u32],
     join_rules: &[u32],
     n: u32,
@@ -222,7 +222,7 @@ pub fn provenance_closure_via(
 /// Dispatch provenance closure into caller-owned storage.
 #[allow(clippy::too_many_arguments)]
 pub fn provenance_closure_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     state: &[u32],
     join_rules: &[u32],
     n: u32,
@@ -245,7 +245,7 @@ pub fn provenance_closure_via_into(
 /// storage.
 #[allow(clippy::too_many_arguments)]
 pub fn provenance_closure_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     state: &[u32],
     join_rules: &[u32],
     n: u32,
@@ -338,13 +338,13 @@ pub fn lineage_for_output_slice(closure: &[u32], n: u32, out: u32) -> &[u32] {
 mod tests {
     #![allow(clippy::identity_op, clippy::erasing_op)]
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
 
     struct ProvenanceDispatcher {
         outputs: Vec<Vec<u8>>,
     }
 
-    impl OptimizerDispatcher for ProvenanceDispatcher {
+    impl ProgramDispatcher for ProvenanceDispatcher {
         fn dispatch(
             &self,
             _program: &Program,

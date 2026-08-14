@@ -156,6 +156,7 @@ graph TD
   C27 --> C24
   C27 --> C29
   C29 --> C17
+  C29 --> C20
   C29 --> C25
   C33 --> C3
   C33 --> C7
@@ -292,6 +293,7 @@ graph TD
 | `vyre-runtime` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
 | `vyre-runtime` | `vyre-self-substrate` | optional scheduler and analysis substrate | None | `always` | `normal` | `true` | `true` | `private` | `self-substrate` |
 | `vyre-self-substrate` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
+| `vyre-self-substrate` | `vyre-libs` | product operation builders | None | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `vyre-self-substrate` | `vyre-primitives` | reusable semantic Program builders | None | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
 | `xtask-evidence` | `vyre-bench` | benchmark workloads and evidence | None | `always` | `normal` | `false` | `true` | `private` | `benchmarks` |
 | `xtask-evidence` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |

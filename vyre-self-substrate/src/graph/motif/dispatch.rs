@@ -7,7 +7,7 @@ use vyre_primitives::graph::motif::{
 use crate::graph::dispatch_bridge::{
     dispatch_two_u32_outputs_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Dispatcher-backed motif match.
 ///
@@ -16,7 +16,7 @@ use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 /// Propagates dispatch failures and rejects malformed CSR or
 /// truncated readback.
 pub fn match_motif_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -38,7 +38,7 @@ pub fn match_motif_via(
 
 /// Dispatcher-backed motif match into caller-owned storage.
 pub fn match_motif_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -61,7 +61,7 @@ pub fn match_motif_via_into(
 
 /// Dispatcher-backed motif match into caller-owned dispatch and output storage.
 pub fn match_motif_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -179,7 +179,7 @@ fn refresh_motif_inputs(
 ///
 /// Returns [`DispatchError`] when graph validation or backend execution fails.
 pub fn motif_matches_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -204,7 +204,7 @@ pub fn motif_matches_via(
 ///
 /// Returns [`DispatchError`] when graph validation or backend execution fails.
 pub fn motif_participation_count_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],

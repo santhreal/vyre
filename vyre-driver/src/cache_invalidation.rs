@@ -9,8 +9,8 @@ use vyre_self_substrate::do_calculus_change_impact::{
     predict_impact_via_into, DoCalculusImpactScratch,
 };
 #[cfg(feature = "self-substrate-adapters")]
-use vyre_self_substrate::optimizer::dispatcher::{
-    DispatchError as SelfSubstrateDispatchError, OptimizerDispatcher,
+use vyre_foundation::program_dispatch::{
+    DispatchError as SelfSubstrateDispatchError, ProgramDispatcher,
 };
 #[cfg(feature = "self-substrate-adapters")]
 use vyre_self_substrate::scallop_provenance::provenance_closure_via_into;
@@ -59,7 +59,7 @@ pub struct CacheInvalidationScratch {
 /// explicitly disable `self-substrate-adapters` fail loudly instead of running
 /// a hidden reference cache-invalidation path.
 pub fn impacted_entries_into(
-    #[cfg(feature = "self-substrate-adapters")] dispatcher: &dyn OptimizerDispatcher,
+    #[cfg(feature = "self-substrate-adapters")] dispatcher: &dyn ProgramDispatcher,
     intervention_mask: &[u32],
     rule_adj: &[u32],
     state: &[u32],
@@ -182,7 +182,7 @@ pub fn impacted_entries_into(
 /// Compute a 0/1 impact mask using temporary scratch.
 #[must_use]
 pub fn impacted_entries(
-    #[cfg(feature = "self-substrate-adapters")] dispatcher: &dyn OptimizerDispatcher,
+    #[cfg(feature = "self-substrate-adapters")] dispatcher: &dyn ProgramDispatcher,
     intervention_mask: &[u32],
     rule_adj: &[u32],
     state: &[u32],
@@ -230,7 +230,7 @@ mod tests {
 
     struct EchoStateDispatcher;
 
-    impl OptimizerDispatcher for EchoStateDispatcher {
+    impl ProgramDispatcher for EchoStateDispatcher {
         fn dispatch(
             &self,
             _program: &Program,

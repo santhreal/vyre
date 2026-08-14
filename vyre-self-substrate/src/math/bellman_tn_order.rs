@@ -13,10 +13,10 @@
 use vyre_foundation::ir::Program;
 use vyre_primitives::math::bellman_shortest_path::bellman_shortest_path;
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::fixpoint::persistent_fixpoint::PERSISTENT_FIXPOINT_WORKGROUP_SIZE;
 
 /// Canonical self-substrate op ID for the Bellman TN order.
@@ -73,7 +73,7 @@ pub fn bellman_tn_order_program(
 /// buffers.
 #[allow(clippy::too_many_arguments)]
 pub fn bellman_tn_order_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     src: &[u32],
     dst: &[u32],
     weight: &[u32],
@@ -103,7 +103,7 @@ pub fn bellman_tn_order_via(
 /// Propagates dispatch failures and rejects malformed edge or distance buffers.
 #[allow(clippy::too_many_arguments)]
 pub fn bellman_tn_order_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     src: &[u32],
     dst: &[u32],
     weight: &[u32],
@@ -134,7 +134,7 @@ pub fn bellman_tn_order_via_into(
 /// Propagates dispatch failures and rejects malformed edge or distance buffers.
 #[allow(clippy::too_many_arguments)]
 pub fn bellman_tn_order_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     src: &[u32],
     dst: &[u32],
     weight: &[u32],
@@ -248,12 +248,12 @@ pub fn bellman_tn_order_via_with_scratch_into(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_primitives::math::bellman_shortest_path::cpu_ref;
 
     struct BellmanDispatcher;
 
-    impl OptimizerDispatcher for BellmanDispatcher {
+    impl ProgramDispatcher for BellmanDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -262,12 +262,12 @@ mod tests {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 6);
-            let dist = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-            let next_dist = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
-            let changed = crate::hardware::dispatch_buffers::read_u32s(&inputs[2]);
-            let src = crate::hardware::dispatch_buffers::read_u32s(&inputs[3]);
-            let dst = crate::hardware::dispatch_buffers::read_u32s(&inputs[4]);
-            let weight = crate::hardware::dispatch_buffers::read_u32s(&inputs[5]);
+            let dist = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let next_dist = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+            let changed = vyre_libs::dispatch_buffers::read_u32s(&inputs[2]);
+            let src = vyre_libs::dispatch_buffers::read_u32s(&inputs[3]);
+            let dst = vyre_libs::dispatch_buffers::read_u32s(&inputs[4]);
+            let weight = vyre_libs::dispatch_buffers::read_u32s(&inputs[5]);
             assert_eq!(dist, next_dist);
             // The invariant is a CLEARED flag buffer of whatever width the routed
             // program declares, not a one-word buffer. Pinning `vec![0]` here would
@@ -317,7 +317,7 @@ mod tests {
             n_nodes: usize,
         }
 
-        impl OptimizerDispatcher for CapturingDispatcher {
+        impl ProgramDispatcher for CapturingDispatcher {
             fn dispatch(
                 &self,
                 _program: &Program,
@@ -325,7 +325,7 @@ mod tests {
                 grid_override: Option<[u32; 3]>,
             ) -> Result<Vec<Vec<u8>>, DispatchError> {
                 *self.changed_words.borrow_mut() =
-                    crate::hardware::dispatch_buffers::read_u32s(&inputs[2]).len();
+                    vyre_libs::dispatch_buffers::read_u32s(&inputs[2]).len();
                 *self.grid.borrow_mut() = grid_override;
                 Ok(vec![u32_slice_to_le_bytes(&vec![0_u32; self.n_nodes])])
             }
@@ -593,7 +593,7 @@ mod tests {
     fn bellman_tn_order_via_empty_edges_returns_initial_dist_without_dispatch() {
         struct NoDispatch;
 
-        impl OptimizerDispatcher for NoDispatch {
+        impl ProgramDispatcher for NoDispatch {
             fn dispatch(
                 &self,
                 _program: &Program,

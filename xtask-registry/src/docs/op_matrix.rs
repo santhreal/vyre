@@ -340,7 +340,7 @@ fn owner_paths(id: &str, tier: OpTier) -> Vec<String> {
             let owner = match domain {
                 "optim" => "vyre-libs/src/nn/optim".to_string(),
                 "quant" => "vyre-libs/src/nn/quant".to_string(),
-                "substrate" => "vyre-libs/src/substrate_catalog.rs".to_string(),
+                "builder" => "vyre-libs/src/builder_catalog.rs".to_string(),
                 _ => format!("vyre-libs/src/{domain}"),
             };
             vec![owner]

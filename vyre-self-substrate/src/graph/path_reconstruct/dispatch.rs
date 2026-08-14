@@ -8,7 +8,7 @@ use vyre_primitives::graph::path_reconstruct::{
 use crate::graph::dispatch_bridge::{
     dispatch_two_u32_outputs_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// GPU dispatch wrapper around the `reconstruct_path` CPU oracle. Returns the
 /// number of valid entries written to `scratch` (zero-padded to
@@ -18,7 +18,7 @@ use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 ///
 /// Propagates dispatch failures and rejects malformed readback.
 pub fn reconstruct_path_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     parent: &[u32],
     target: u32,
     max_depth: u32,
@@ -37,7 +37,7 @@ pub fn reconstruct_path_via(
 
 /// GPU dispatch wrapper around the path-reconstruction primitive with caller-owned dispatch scratch.
 pub fn reconstruct_path_via_with_scratch(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     parent: &[u32],
     target: u32,
     max_depth: u32,
@@ -122,7 +122,7 @@ pub fn reconstruct_path_via_with_scratch(
 ///
 /// Returns [`DispatchError`] when validation or backend execution fails.
 pub fn path_to_root_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     parent: &[u32],
     target: u32,
     max_depth: u32,
@@ -143,7 +143,7 @@ pub fn path_to_root_via(
 ///
 /// Propagates path-reconstruction dispatch failures.
 pub fn reconstruct_paths_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     parent: &[u32],
     targets: &[u32],
     max_depth: u32,
@@ -165,7 +165,7 @@ pub fn reconstruct_paths_via(
 
 /// GPU dispatch wrapper around batched parent-walk into caller-owned output storage.
 pub fn reconstruct_paths_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     parent: &[u32],
     targets: &[u32],
     max_depth: u32,

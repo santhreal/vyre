@@ -6,11 +6,11 @@
 //! 1D convolution primitive shipped to users, keeping the recursion thesis
 //! intact while giving the scheduler a stable signal.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_foundation::ir::Node;
 #[cfg(test)]
 use vyre_primitives::math::conv1d::cpu_conv1d;
@@ -44,7 +44,7 @@ pub fn latency_smoothing_node(input: &str, output: &str, weights: &str, params: 
 /// buffer contract, `sigma` is not a positive finite value, backend dispatch
 /// fails, or readback is malformed.
 pub fn smooth_latency_trace_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     latency_fixed: &[u32],
     radius: u32,
     sigma: f32,
@@ -61,7 +61,7 @@ pub fn smooth_latency_trace_via(
 /// Returns [`DispatchError`] on invalid smoothing parameters, dispatch failure,
 /// or malformed backend output.
 pub fn smooth_latency_trace_via_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     latency_fixed: &[u32],
     radius: u32,
     sigma: f32,
@@ -85,7 +85,7 @@ pub fn smooth_latency_trace_via_into(
 /// Returns [`DispatchError`] on invalid smoothing parameters, dispatch failure,
 /// or malformed backend output.
 pub fn smooth_latency_trace_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     latency_fixed: &[u32],
     radius: u32,
     sigma: f32,

@@ -1,5 +1,5 @@
 use crate::ir::{Ident, Node, Program};
-use crate::optimizer::fact_substrate::{FactSubstrate, UseFacts};
+use crate::optimizer::fact_cache::{FactCache, UseFacts};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use rustc_hash::FxHashSet;
 use std::sync::Arc;
@@ -114,8 +114,8 @@ fn live_buffers(program: &Program) -> LiveBufferSet<'_> {
 /// every buffer live, so `transform` returns before building `staged`), so
 /// `buffer_reads`/`buffer_writes` capture the complete reference surface.
 fn referenced_buffers(staged: &Program) -> FxHashSet<Ident> {
-    let substrate = FactSubstrate::derive_use_only(staged);
-    let use_facts = substrate
+    let facts = FactCache::derive_use_only(staged);
+    let use_facts = facts
         .use_facts()
         .unwrap_or_else(|| unreachable!("derive_use_only contract: use_facts is always populated"));
     use_facts
@@ -127,8 +127,8 @@ fn referenced_buffers(staged: &Program) -> FxHashSet<Ident> {
 }
 
 fn cached_live_buffer_idents(program: &Program) -> FxHashSet<Ident> {
-    let substrate = FactSubstrate::derive_use_only_cached(program);
-    let use_facts = substrate.use_facts().unwrap_or_else(|| {
+    let facts = FactCache::derive_use_only_cached(program);
+    let use_facts = facts.use_facts().unwrap_or_else(|| {
         unreachable!("derive_use_only_cached contract: use_facts is always populated")
     });
     compute_live_buffer_idents(program, use_facts)

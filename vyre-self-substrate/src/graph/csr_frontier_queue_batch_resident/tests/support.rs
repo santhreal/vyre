@@ -1,5 +1,5 @@
-use crate::optimizer::dispatcher::{
-    DispatchError, OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
+use vyre_foundation::program_dispatch::{
+    DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
 use std::cell::{Cell, RefCell};
 use vyre_foundation::ir::Program;
@@ -13,7 +13,7 @@ pub(super) struct RecordingBatchDispatcher {
     pub(super) freed: RefCell<Vec<u64>>,
 }
 
-impl OptimizerDispatcher for RecordingBatchDispatcher {
+impl ProgramDispatcher for RecordingBatchDispatcher {
     fn dispatch(
         &self,
         _program: &Program,

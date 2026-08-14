@@ -169,6 +169,23 @@ pub fn vyre_libs::decode::ziftsieve_gpu(input: &str, output: &str, seq_literal_s
 pub fn vyre_libs::descriptor::BufferDescriptor::new(name: alloc::string::String, access: vyre_spec::buffer_access::BufferAccess, dtype: vyre_spec::data_type::DataType, count: u32) -> Self
 pub fn vyre_libs::descriptor::ProgramDescriptor::from_program(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> Self
 pub fn vyre_libs::descriptor::ProgramDescriptor::new(buffer_count: usize, workgroup_size: [u32; 3], buffers: alloc::vec::Vec<vyre_libs::descriptor::BufferDescriptor>, rw_bytes_lower_bound: usize, entry_node_count: usize) -> Self
+pub fn vyre_libs::dispatch_buffers::ceil_div_u32(n: u32, d: u32) -> u32
+pub fn vyre_libs::dispatch_buffers::checked_product_count(left: u32, right: u32, left_name: &str, right_name: &str, context: &str) -> core::result::Result<usize, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::dispatch_buffers::checked_square_cells(n: u32, context: &str) -> core::result::Result<usize, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::dispatch_buffers::decode_f32_input_aligned(bytes: &[u8], context: &str) -> core::result::Result<alloc::vec::Vec<f32>, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::dispatch_buffers::decode_f32_output_exact(bytes: &[u8], expected_words: usize, context: &str, out: &mut alloc::vec::Vec<f32>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::dispatch_buffers::decode_i32_output_exact(bytes: &[u8], expected_words: usize, context: &str, out: &mut alloc::vec::Vec<i32>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::dispatch_buffers::decode_u32_input_aligned(bytes: &[u8], context: &str) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::dispatch_buffers::decode_u32_output_exact(bytes: &[u8], expected_words: usize, context: &str, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::dispatch_buffers::ensure_input_slots(inputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>, count: usize)
+pub fn vyre_libs::dispatch_buffers::f32_slice_to_le_bytes(values: &[f32]) -> alloc::vec::Vec<u8>
+pub fn vyre_libs::dispatch_buffers::read_f32s(bytes: &[u8]) -> alloc::vec::Vec<f32>
+pub fn vyre_libs::dispatch_buffers::read_u32s(bytes: &[u8]) -> alloc::vec::Vec<u32>
+pub fn vyre_libs::dispatch_buffers::u32_word_bytes(count: usize, context: &str) -> core::result::Result<usize, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::dispatch_buffers::write_f32_slice_le_bytes(out: &mut alloc::vec::Vec<u8>, values: &[f32])
+pub fn vyre_libs::dispatch_buffers::write_u32_slice_le_bytes(out: &mut alloc::vec::Vec<u8>, values: &[u32])
+pub fn vyre_libs::dispatch_buffers::write_zero_bytes(out: &mut alloc::vec::Vec<u8>, len: usize)
+pub fn vyre_libs::dispatch_buffers::write_zero_u32_words(out: &mut alloc::vec::Vec<u8>, count: usize, context: &str) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::graph::ast_walk(order: vyre_primitives::graph::vast_tree_walk::VastWalkOrder, nodes: &str, out: &str, node_count: u32, out_cap: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::graph::ast_walk::ast_walk(order: vyre_primitives::graph::vast_tree_walk::VastWalkOrder, nodes: &str, out: &str, node_count: u32, out_cap: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::graph::ast_walk::ast_walk_postorder(out: &str, node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -556,6 +573,7 @@ pub mod vyre_libs::decode::inflate
 pub mod vyre_libs::decode::streaming
 pub mod vyre_libs::decode::ziftsieve
 pub mod vyre_libs::descriptor
+pub mod vyre_libs::dispatch_buffers
 pub mod vyre_libs::graph
 pub mod vyre_libs::graph::ast_walk
 pub mod vyre_libs::hash
@@ -698,6 +716,7 @@ pub use vyre_libs::decode::hex_decode_table
 pub use vyre_libs::decode::ziftsieve::ZiftsieveExtract
 pub use vyre_libs::decode::ziftsieve::ziftsieve_reference_extract_literals
 pub use vyre_libs::decode::ziftsieve_reference_extract_literals
+pub use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes
 pub use vyre_libs::graph::VastWalkOrder
 pub use vyre_libs::graph::ast_walk::VastWalkOrder
 pub use vyre_libs::operation_catalog::reparent_program_children

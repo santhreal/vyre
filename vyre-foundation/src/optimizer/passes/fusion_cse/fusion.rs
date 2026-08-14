@@ -431,9 +431,9 @@ fn fuse_nodes_with_counts(
 }
 
 fn cached_var_uses(program: &Program) -> Arc<FxHashMap<Ident, usize>> {
-    let substrate =
-        crate::optimizer::fact_substrate::FactSubstrate::derive_use_only_cached(program);
-    substrate.use_counts.clone().unwrap_or_default()
+    let facts =
+        crate::optimizer::fact_cache::FactCache::derive_use_only_cached(program);
+    facts.use_counts.clone().unwrap_or_default()
 }
 
 fn fuse_control_flow_node(

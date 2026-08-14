@@ -75,6 +75,42 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Changed
 
+- "Substrate" now names one thing: the GPU pass engine. Four modules that
+  borrowed the word for unrelated concepts are renamed to what they are.
+  `vyre_driver::speculation_substrate` is `vyre_driver::speculation_verdict`.
+  `vyre_foundation::optimizer::fact_substrate::FactSubstrate` is
+  `fact_cache::FactCache`, and the scheduler metrics it feeds are
+  `fact_cache_reused` / `_recomputed` / `_invalidated`.
+  `vyre-libs`' `substrate_catalog` is `builder_catalog`, and the two shared
+  child-region ops it registers moved from the `vyre-libs::substrate::`
+  namespace to `vyre-libs::builder::`. `vyre-libs`' `linear_algebra_substrate`
+  was a three-line re-export of `math::linalg` and is gone; its two callers
+  import from the owner directly.
+- `structure-gate` resolves the workspace root from the environment at run time
+  instead of from `env!("CARGO_MANIFEST_DIR")`. A shared cargo target directory
+  hands one compiled gate binary to every worktree, so the baked path made a
+  gate run inside a worktree report the main checkout's tree and hide the
+  worktree's own findings.
+- The dispatch seam moved below the composition library.
+  `vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher` is
+  `vyre_foundation::program_dispatch::ProgramDispatcher`, and `DispatchError`,
+  `ResidentDispatchStep`, `ResidentReadRange`, `ResidentStaticBufferSet`, and
+  `declared_dispatch_outputs` moved with it. The trait only speaks `Program`,
+  buffers, and resident handles, so nothing about it was engine-specific, and
+  every crate that dispatches a `Program` needed it above the pass engine.
+  `vyre_driver_cuda::CudaOptimizerDispatcher` follows the trait and is
+  `CudaProgramDispatcher`. The host-side byte marshalling that goes with the
+  seam is `vyre_libs::dispatch_buffers` rather than a second module in
+  `vyre-foundation`, because it delegates to `vyre_primitives::wire`, which
+  foundation sits below. Its former `#[cfg(test)]` helpers
+  (`f32_slice_to_le_bytes`, `decode_u32_input_aligned`,
+  `decode_f32_input_aligned`, `read_u32s`, `read_f32s`) are unconditional now
+  that their callers are in another crate. The scalar oracle that shared the old
+  `dispatcher.rs` file is `vyre_self_substrate::optimizer::cpu_oracle`, still
+  gated on `cpu-parity`. Public API snapshots for `vyre-foundation`,
+  `vyre-libs`, `vyre-self-substrate`, `vyre-driver-cuda`, and
+  `vyre-driver-wgpu` are refreshed for the move.
+
 - `vyre_foundation::allocation::reserve_exact_cleared` is public and is now the
   single owner of the clear-then-refill reservation idiom. It was `pub(crate)`
   in `vyre-primitives`, so seven other crates hand-rolled it as

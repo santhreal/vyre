@@ -12,7 +12,7 @@ use common::live_backend;
 use std::{thread, time::Instant};
 
 use vyre::ir::{Expr, Node, Program};
-use vyre_driver_cuda::CudaOptimizerDispatcher;
+use vyre_driver_cuda::CudaProgramDispatcher;
 use vyre_self_substrate::optimizer::pipeline_resident::gpu_pipeline_resident;
 
 fn synthetic_chain_program(n: usize) -> Program {
@@ -83,7 +83,7 @@ fn cuda_persistent_pipeline_correctness() {
     // Smoke test: a simple program goes through the persistent path
     // and produces a correct result.
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
 
     // let dead = 99
     // let live = 1 + 2     // foldable to 3
@@ -135,7 +135,7 @@ fn cuda_persistent_pipeline_correctness() {
 #[test]
 fn cuda_persistent_pipeline_reuses_static_buffers_on_warm_run() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let p = synthetic_wide_program(1_000);
 
     backend.reset_telemetry();
@@ -172,7 +172,7 @@ fn cuda_persistent_pipeline_scaling_bench() {
 
 fn cuda_persistent_pipeline_scaling_bench_body() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
 
     println!("\n=== CUDA persistent-pipeline scaling vs CPU ===");
     println!(

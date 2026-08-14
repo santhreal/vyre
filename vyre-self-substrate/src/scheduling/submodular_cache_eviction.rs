@@ -53,11 +53,11 @@
 //! evict every pipeline whose picked == 0
 //! ```
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::hardware::scratch::reserve_vec_capacity_or_panic;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_primitives::math::submodular_greedy::argmax_of_marginals_cpu;
 use vyre_primitives::math::submodular_greedy::{argmax_of_marginals, NO_WINNER};
@@ -136,7 +136,7 @@ pub fn reference_select_retention_set_into(
 /// Returns [`DispatchError::BadInputs`] when `gains.len() != n`, `k > n`, `n == 0`, dispatch
 /// output is missing/truncated, or backend dispatch fails.
 pub fn select_retention_set_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     gains: &mut [u32],
     n: u32,
     k: u32,
@@ -148,7 +148,7 @@ pub fn select_retention_set_via(
 
 /// Compute the retention set through dispatch into caller-owned storage.
 pub fn select_retention_set_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     gains: &mut [u32],
     n: u32,
     k: u32,
@@ -161,7 +161,7 @@ pub fn select_retention_set_via_into(
 /// Compute the retention set through dispatch into caller-owned dispatch and
 /// output storage.
 pub fn select_retention_set_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     gains: &mut [u32],
     n: u32,
     k: u32,
@@ -209,7 +209,7 @@ pub fn select_retention_set_via_with_scratch_into(
 }
 
 fn dispatch_argmax_step_with_scratch(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     gains: &[u32],
     picked: &[u32],
     n: u32,
@@ -263,11 +263,11 @@ pub fn greedy_quality_bound(optimum: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
 
     struct ArgmaxDispatcher;
 
-    impl OptimizerDispatcher for ArgmaxDispatcher {
+    impl ProgramDispatcher for ArgmaxDispatcher {
         fn dispatch(
             &self,
             _program: &vyre_foundation::ir::Program,
@@ -280,11 +280,11 @@ mod tests {
                     inputs.len()
                 )));
             };
-            let gains = crate::hardware::dispatch_buffers::decode_u32_input_aligned(
+            let gains = vyre_libs::dispatch_buffers::decode_u32_input_aligned(
                 gains_bytes,
                 "argmax test dispatcher",
             )?;
-            let picked = crate::hardware::dispatch_buffers::decode_u32_input_aligned(
+            let picked = vyre_libs::dispatch_buffers::decode_u32_input_aligned(
                 picked_bytes,
                 "argmax test dispatcher",
             )?;
@@ -298,7 +298,7 @@ mod tests {
 
     struct ExtraOutputDispatcher;
 
-    impl OptimizerDispatcher for ExtraOutputDispatcher {
+    impl ProgramDispatcher for ExtraOutputDispatcher {
         fn dispatch(
             &self,
             _program: &vyre_foundation::ir::Program,
@@ -315,7 +315,7 @@ mod tests {
 
     struct TrailingBytesDispatcher;
 
-    impl OptimizerDispatcher for TrailingBytesDispatcher {
+    impl ProgramDispatcher for TrailingBytesDispatcher {
         fn dispatch(
             &self,
             _program: &vyre_foundation::ir::Program,

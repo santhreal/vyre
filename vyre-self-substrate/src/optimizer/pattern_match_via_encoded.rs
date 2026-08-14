@@ -20,12 +20,12 @@
 //! All the hardcoding below is a fixed instance of that more general
 //! kernel.
 //!
-//! No host-reference escape in production. `OptimizerDispatcher` injects the
+//! No host-reference escape in production. `ProgramDispatcher` injects the
 //! backend; the same kernel runs unchanged on wgpu + CUDA.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use super::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use super::encode::EncodeError;
 use super::expr_arena::{encode_expr_arena, expr_kind, ExprArenaEncoding};
 
@@ -87,7 +87,7 @@ impl std::error::Error for PatternMatchError {}
 /// the rewritten Program with simplified BinOps.
 pub fn gpu_algebraic_identities(
     program: Program,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
 ) -> Result<Program, PatternMatchError> {
     let arena = encode_expr_arena(&program).map_err(PatternMatchError::Encode)?;
     if arena.expr_count == 0 {
@@ -103,7 +103,7 @@ pub fn gpu_algebraic_identities(
 #[cfg(test)]
 fn run_pattern_kernel_into(
     arena: &ExprArenaEncoding,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     actions: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
     let mut scratch = PatternKernelScratch::default();
@@ -112,7 +112,7 @@ fn run_pattern_kernel_into(
 
 fn run_pattern_kernel_with_scratch_into(
     arena: &ExprArenaEncoding,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scratch: &mut PatternKernelScratch,
     actions: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
@@ -1379,13 +1379,13 @@ fn rewrite_expr(expr: &Expr, actions: &[u32], counter: &mut u32) -> Expr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
 
     struct PatternDispatcher {
         outputs: Vec<Vec<u8>>,
     }
 
-    impl OptimizerDispatcher for PatternDispatcher {
+    impl ProgramDispatcher for PatternDispatcher {
         fn dispatch(
             &self,
             _program: &Program,

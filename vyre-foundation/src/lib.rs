@@ -163,6 +163,10 @@ pub mod pass_substrate;
 /// provenance, autotune, and accuracy guard decisions.
 pub mod execution_plan;
 
+/// Program dispatch seam: the boundary between building a `Program` and
+/// running one on a backend.
+pub mod program_dispatch;
+
 /// Foundation-owned IR and Program wire failures.
 pub mod error;
 pub use error::{IrError, IrResult};

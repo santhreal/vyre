@@ -7,10 +7,10 @@
 //! host loops in each pass.
 
 use super::decode_first_output;
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::reduce::{
     all::reduce_all, any::reduce_any, count_non_zero::reduce_count_non_zero,
     histogram::histogram_atomic_scatter, max::reduce_max, min::reduce_min,
@@ -55,7 +55,7 @@ pub enum ReductionMetric {
 /// Returns [`DispatchError`] when input length exceeds the primitive index
 /// space, dispatch fails, or scalar readback is malformed.
 pub fn reduce_metric_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     metric: ReductionMetric,
     values: &[u32],
 ) -> Result<u32, DispatchError> {
@@ -69,7 +69,7 @@ pub fn reduce_metric_via(
 ///
 /// Returns [`DispatchError`] when validation, dispatch, or readback fails.
 pub fn reduce_metric_via_with_scratch(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     metric: ReductionMetric,
     values: &[u32],
     scratch: &mut ReductionMetricsGpuScratch,
@@ -103,7 +103,7 @@ pub fn reduce_metric_via_with_scratch(
 ///
 /// Returns [`DispatchError`] when dispatch or readback fails.
 pub fn reduce_sum_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     values: &[u32],
 ) -> Result<u32, DispatchError> {
     reduce_metric_via(dispatcher, ReductionMetric::Sum, values)
@@ -115,7 +115,7 @@ pub fn reduce_sum_via(
 ///
 /// Returns [`DispatchError`] when dispatch or readback fails.
 pub fn reduce_max_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     values: &[u32],
 ) -> Result<u32, DispatchError> {
     reduce_metric_via(dispatcher, ReductionMetric::Max, values)
@@ -127,7 +127,7 @@ pub fn reduce_max_via(
 ///
 /// Returns [`DispatchError`] when dispatch or readback fails.
 pub fn reduce_min_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     values: &[u32],
 ) -> Result<u32, DispatchError> {
     reduce_metric_via(dispatcher, ReductionMetric::Min, values)
@@ -139,7 +139,7 @@ pub fn reduce_min_via(
 ///
 /// Returns [`DispatchError`] when dispatch or readback fails.
 pub fn reduce_count_non_zero_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     values: &[u32],
 ) -> Result<u32, DispatchError> {
     reduce_metric_via(dispatcher, ReductionMetric::CountNonZero, values)
@@ -151,7 +151,7 @@ pub fn reduce_count_non_zero_via(
 ///
 /// Returns [`DispatchError`] when dispatch or readback fails.
 pub fn reduce_any_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     values: &[u32],
 ) -> Result<bool, DispatchError> {
     Ok(reduce_metric_via(dispatcher, ReductionMetric::Any, values)? != 0)
@@ -163,7 +163,7 @@ pub fn reduce_any_via(
 ///
 /// Returns [`DispatchError`] when dispatch or readback fails.
 pub fn reduce_all_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     values: &[u32],
 ) -> Result<bool, DispatchError> {
     Ok(reduce_metric_via(dispatcher, ReductionMetric::All, values)? != 0)
@@ -176,7 +176,7 @@ pub fn reduce_all_via(
 /// Returns [`DispatchError`] when offsets are malformed, segment count is
 /// unsupported by the primitive, dispatch fails, or readback is malformed.
 pub fn segment_reduce_sum_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     input: &[u32],
     segment_offsets: &[u32],
 ) -> Result<Vec<u32>, DispatchError> {
@@ -198,7 +198,7 @@ pub fn segment_reduce_sum_via(
 ///
 /// Returns [`DispatchError`] when validation, dispatch, or readback fails.
 pub fn segment_reduce_sum_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     input: &[u32],
     segment_offsets: &[u32],
     scratch: &mut ReductionMetricsGpuScratch,
@@ -232,7 +232,7 @@ pub fn segment_reduce_sum_via_with_scratch_into(
 /// Returns [`DispatchError`] when count/bin dimensions are zero or too large,
 /// dispatch fails, or readback is malformed.
 pub fn histogram_atomic_scatter_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     input: &[u32],
     num_bins: u32,
 ) -> Result<Vec<u32>, DispatchError> {
@@ -388,12 +388,12 @@ fn decode_scalar(outputs: &[Vec<u8>], context: &'static str) -> Result<u32, Disp
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     struct ReduceDispatcher;
 
-    impl OptimizerDispatcher for ReduceDispatcher {
+    impl ProgramDispatcher for ReduceDispatcher {
         fn dispatch(
             &self,
             program: &Program,
@@ -408,7 +408,7 @@ mod tests {
                     _ => None,
                 })
                 .expect("Fix: reduction primitive should expose a region generator");
-            let values = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
+            let values = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
             match op_id {
                 vyre_primitives::reduce::sum::OP_ID => {
                     assert_scalar_metric_dispatch(
@@ -467,7 +467,7 @@ mod tests {
                 vyre_primitives::reduce::segment_reduce::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     assert_eq!(program.workgroup_size(), [256, 1, 1]);
-                    let offsets = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
+                    let offsets = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
                     Ok(vec![u32_slice_to_le_bytes(&primitive_segment_reduce_sum(
                         &values, &offsets,
                     ))])

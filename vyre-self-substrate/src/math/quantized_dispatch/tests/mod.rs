@@ -10,7 +10,7 @@ use super::*;
 
 struct QuantizedDispatcher;
 
-impl OptimizerDispatcher for QuantizedDispatcher {
+impl ProgramDispatcher for QuantizedDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -19,7 +19,7 @@ impl OptimizerDispatcher for QuantizedDispatcher {
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
         assert_eq!(grid_override, Some([1, 1, 1]));
         assert_eq!(inputs.len(), 2);
-        let packed = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
+        let packed = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
         let lane_count = inputs[1].len() / std::mem::size_of::<i32>();
         let mut out = Vec::new();
         unpack_i4x8_cpu_into(&packed, lane_count as u32, &mut out);
@@ -29,7 +29,7 @@ impl OptimizerDispatcher for QuantizedDispatcher {
 
 struct QuantizedDotDispatcher;
 
-impl OptimizerDispatcher for QuantizedDotDispatcher {
+impl ProgramDispatcher for QuantizedDotDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -39,10 +39,10 @@ impl OptimizerDispatcher for QuantizedDotDispatcher {
         assert_eq!(grid_override, Some([1, 1, 1]));
         // Four input-consuming buffers (lhs/rhs/lhs_scale/rhs_scale RO); `out` is backend-allocated.
         assert_eq!(inputs.len(), 4);
-        let lhs = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-        let rhs = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
-        let lhs_scale = crate::hardware::dispatch_buffers::read_f32s(&inputs[2])[0];
-        let rhs_scale = crate::hardware::dispatch_buffers::read_f32s(&inputs[3])[0];
+        let lhs = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+        let rhs = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+        let lhs_scale = vyre_libs::dispatch_buffers::read_f32s(&inputs[2])[0];
+        let rhs_scale = vyre_libs::dispatch_buffers::read_f32s(&inputs[3])[0];
         let logical_lane_count = (lhs.len() as u32 - 1) * 8
             + if lhs.last().copied().unwrap_or(0) == 0 {
                 8
@@ -59,7 +59,7 @@ struct MalformedDotDispatcher {
     outputs: Vec<Vec<u8>>,
 }
 
-impl OptimizerDispatcher for MalformedDotDispatcher {
+impl ProgramDispatcher for MalformedDotDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -72,7 +72,7 @@ impl OptimizerDispatcher for MalformedDotDispatcher {
 
 struct QuantizedMatvecDispatcher;
 
-impl OptimizerDispatcher for QuantizedMatvecDispatcher {
+impl ProgramDispatcher for QuantizedMatvecDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -81,9 +81,9 @@ impl OptimizerDispatcher for QuantizedMatvecDispatcher {
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
         // Three input-consuming buffers (weights/x/row_scales RO); `out` is backend-allocated.
         assert_eq!(inputs.len(), 3);
-        let weights = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-        let x = crate::hardware::dispatch_buffers::read_f32s(&inputs[1]);
-        let row_scales = crate::hardware::dispatch_buffers::read_f32s(&inputs[2]);
+        let weights = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+        let x = vyre_libs::dispatch_buffers::read_f32s(&inputs[1]);
+        let row_scales = vyre_libs::dispatch_buffers::read_f32s(&inputs[2]);
         let rows = row_scales.len() as u32;
         let cols = x.len() as u32;
         assert_eq!(grid_override, Some([rows, 1, 1]));
@@ -94,7 +94,7 @@ impl OptimizerDispatcher for QuantizedMatvecDispatcher {
 
 struct QuantizedBatchedMatvecDispatcher;
 
-impl OptimizerDispatcher for QuantizedBatchedMatvecDispatcher {
+impl ProgramDispatcher for QuantizedBatchedMatvecDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -103,9 +103,9 @@ impl OptimizerDispatcher for QuantizedBatchedMatvecDispatcher {
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
         // Three input-consuming buffers (weights/x_batches/row_scales RO); `out` is backend-allocated.
         assert_eq!(inputs.len(), 3);
-        let weights = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-        let x_batches = crate::hardware::dispatch_buffers::read_f32s(&inputs[1]);
-        let row_scales = crate::hardware::dispatch_buffers::read_f32s(&inputs[2]);
+        let weights = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+        let x_batches = vyre_libs::dispatch_buffers::read_f32s(&inputs[1]);
+        let row_scales = vyre_libs::dispatch_buffers::read_f32s(&inputs[2]);
         let Some([rows, batch, 1]) = grid_override else {
             panic!("Fix: batched matvec dispatch must launch with [rows, batch, 1].");
         };
@@ -129,7 +129,7 @@ impl OptimizerDispatcher for QuantizedBatchedMatvecDispatcher {
 
 struct QuantizedBatchedMatmulDispatcher;
 
-impl OptimizerDispatcher for QuantizedBatchedMatmulDispatcher {
+impl ProgramDispatcher for QuantizedBatchedMatmulDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -139,10 +139,10 @@ impl OptimizerDispatcher for QuantizedBatchedMatmulDispatcher {
         // Four input-consuming buffers (weights/activations/row_scales/batch_scales RO); `out` is
         // backend-allocated.
         assert_eq!(inputs.len(), 4);
-        let weights = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-        let activations = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
-        let row_scales = crate::hardware::dispatch_buffers::read_f32s(&inputs[2]);
-        let batch_scales = crate::hardware::dispatch_buffers::read_f32s(&inputs[3]);
+        let weights = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+        let activations = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+        let row_scales = vyre_libs::dispatch_buffers::read_f32s(&inputs[2]);
+        let batch_scales = vyre_libs::dispatch_buffers::read_f32s(&inputs[3]);
         let rows = row_scales.len() as u32;
         let batch = batch_scales.len() as u32;
         let Some([grid_x, 1, 1]) = grid_override else {
@@ -168,7 +168,7 @@ impl OptimizerDispatcher for QuantizedBatchedMatmulDispatcher {
 
 struct QuantizedBatchedMatmulTop1Dispatcher;
 
-impl OptimizerDispatcher for QuantizedBatchedMatmulTop1Dispatcher {
+impl ProgramDispatcher for QuantizedBatchedMatmulTop1Dispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -178,10 +178,10 @@ impl OptimizerDispatcher for QuantizedBatchedMatmulTop1Dispatcher {
         // Four input-consuming buffers (weights/activations/row_scales/batch_scales RO); the single
         // `out` buffer is backend-allocated.
         assert_eq!(inputs.len(), 4);
-        let weights = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-        let activations = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
-        let row_scales = crate::hardware::dispatch_buffers::read_f32s(&inputs[2]);
-        let batch_scales = crate::hardware::dispatch_buffers::read_f32s(&inputs[3]);
+        let weights = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+        let activations = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+        let row_scales = vyre_libs::dispatch_buffers::read_f32s(&inputs[2]);
+        let batch_scales = vyre_libs::dispatch_buffers::read_f32s(&inputs[3]);
         let rows = row_scales.len() as u32;
         let batch = batch_scales.len() as u32;
         assert_eq!(grid_override, Some([ceil_div_u32(batch, 64), 1, 1]));

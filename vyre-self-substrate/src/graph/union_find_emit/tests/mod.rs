@@ -1,6 +1,6 @@
 use super::*;
-use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::union_find::{union_find_dispatch_grid, union_find_program};
 
@@ -30,7 +30,7 @@ fn substrate_no_longer_emits_target_text() {
 
 struct UnionFindDispatcher;
 
-impl OptimizerDispatcher for UnionFindDispatcher {
+impl ProgramDispatcher for UnionFindDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -38,9 +38,9 @@ impl OptimizerDispatcher for UnionFindDispatcher {
         grid_override: Option<[u32; 3]>,
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
         assert_eq!(inputs.len(), 3);
-        let mut parent = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-        let edge_a = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
-        let edge_b = crate::hardware::dispatch_buffers::read_u32s(&inputs[2]);
+        let mut parent = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+        let edge_a = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+        let edge_b = vyre_libs::dispatch_buffers::read_u32s(&inputs[2]);
         assert_eq!(
             grid_override,
             Some(union_find_dispatch_grid(edge_a.len() as u32))
@@ -189,7 +189,7 @@ fn union_find_alias_via_rejects_malformed_parent_links() {
 fn union_find_alias_via_rejects_empty_parent_with_edges_before_dispatch() {
     struct NoDispatch;
 
-    impl OptimizerDispatcher for NoDispatch {
+    impl ProgramDispatcher for NoDispatch {
         fn dispatch(
             &self,
             _program: &Program,
@@ -210,7 +210,7 @@ fn union_find_alias_via_rejects_empty_parent_with_edges_before_dispatch() {
 fn union_find_alias_via_empty_edges_returns_parent_without_dispatch() {
     struct NoDispatch;
 
-    impl OptimizerDispatcher for NoDispatch {
+    impl ProgramDispatcher for NoDispatch {
         fn dispatch(
             &self,
             _program: &Program,

@@ -3,12 +3,12 @@
 use std::collections::HashSet;
 
 use crate::hardware::scratch::reserve_hash_set as reserve_graph_hash_set;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Free each resident handle at most once while still attempting every unique
 /// handle after the first backend failure.
 pub(crate) fn free_unique_resident_handles(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     handles: &[u64],
     context: &'static str,
 ) -> Result<(), DispatchError> {
@@ -43,7 +43,7 @@ mod tests {
         fail_on: Option<u64>,
     }
 
-    impl OptimizerDispatcher for RecordingFreeDispatcher {
+    impl ProgramDispatcher for RecordingFreeDispatcher {
         fn dispatch(
             &self,
             _program: &Program,

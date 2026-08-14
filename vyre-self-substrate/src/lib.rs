@@ -125,7 +125,7 @@ mod test_support;
 /// Self-hosted optimizer keystone  -  the encoder + GPU passes that run
 /// the compiler against its own substrate. Exposed at the lib root so
 /// external consumers (driver-cuda parity tests, conform runners) can
-/// reach `OptimizerDispatcher`, the per-pass `*_via_encoded` entry
+/// reach `ProgramDispatcher`, the per-pass `*_via_encoded` entry
 /// points, and optimizer contract metadata without descending into
 /// private module paths.
 pub mod optimizer;
@@ -178,8 +178,6 @@ pub use math::{
     tensor_train_compression,
 };
 
-#[cfg(feature = "optimizer")]
-pub(crate) use hardware::dispatch_buffers;
 #[cfg(feature = "optimizer")]
 pub use hardware::{
     device_resident_token_fact_graph, gpu_probe_contract, memory_ownership_contract,

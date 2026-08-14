@@ -279,13 +279,11 @@ pub const vyre_driver::pipeline::cache::PipelineFeatureFlags::PUSH_CONSTANTS: Se
 pub const vyre_driver::pipeline::cache::PipelineFeatureFlags::SPECULATIVE: Self
 pub const vyre_driver::pipeline::cache::PipelineFeatureFlags::SUBGROUP_OPS: Self
 pub const vyre_driver::pipeline::cache::PipelineFeatureFlags::TENSOR_CORES: Self
-pub const vyre_driver::registry::INDIRECT_DISPATCH_OP_ID: &str
-pub const vyre_driver::registry::core_indirect::INDIRECT_DISPATCH_OP_ID: &str
 pub const vyre_driver::shape_prediction::MAX_HISTORY: usize
 pub const vyre_driver::speculate::COUNTER_TAIL_BYTES: usize
 pub const vyre_driver::speculate::DEFAULT_THRESHOLD_PCT: u32
-pub const vyre_driver::speculation_substrate::MIN_ADOPT_SAVINGS_BPS: u64
-pub const vyre_driver::speculation_substrate::MIN_DISPATCHES_FOR_VERDICT: u32
+pub const vyre_driver::speculation_verdict::MIN_ADOPT_SAVINGS_BPS: u64
+pub const vyre_driver::speculation_verdict::MIN_DISPATCHES_FOR_VERDICT: u32
 pub const vyre_driver::trace_jit_policy::TRACE_JIT_HOT_SHAPE_THRESHOLD: u32
 pub const vyre_driver::trace_jit_policy::TRACE_JIT_MIN_CONFIDENCE_BPS: u32
 pub const vyre_driver::tuner::Q16_ONE: u32
@@ -351,7 +349,7 @@ pub enum vyre_driver::result_compaction::ResultCompactionError
 pub enum vyre_driver::shadow::ConformanceError
 pub enum vyre_driver::speculate::SpeculationMode
 pub enum vyre_driver::speculate::SpeculativeVariantKind
-pub enum vyre_driver::speculation_substrate::SpeculationVerdict
+pub enum vyre_driver::speculation_verdict::SpeculationVerdict
 pub enum vyre_driver::strategy::LoweredExpr
 pub enum vyre_driver::strategy::PrecisionLoweringPlan
 pub enum vyre_driver::trace_jit_policy::TraceJitDecision
@@ -1165,7 +1163,7 @@ pub fn vyre_driver::speculate::dispatch_prefilter_confirm<B, F>(backend: &B, spe
 pub fn vyre_driver::speculate::encode_counter_tail(report: vyre_driver::speculate::SpeculationReport) -> [u8; 8]
 pub fn vyre_driver::speculate::parse_counter_tail(output_bytes: &[u8]) -> core::option::Option<vyre_driver::speculate::SpeculationReport>
 pub fn vyre_driver::speculate::record_speculative_variant_race(store: &mut vyre_driver::autotune_store::AutotuneStore, keys: vyre_driver::speculate::SpeculativeVariantKeys<'_>, race: vyre_driver::speculate::SpeculativeVariantRace) -> vyre_driver::speculate::SpeculativeVariantDecision
-pub fn vyre_driver::speculation_substrate::decide_speculation(obs: vyre_driver::speculation_substrate::SpeculationObservation) -> vyre_driver::speculation_substrate::SpeculationVerdict
+pub fn vyre_driver::speculation_verdict::decide_speculation(obs: vyre_driver::speculation_verdict::SpeculationObservation) -> vyre_driver::speculation_verdict::SpeculationVerdict
 pub fn vyre_driver::strategy::LoweringStrategy::can_apply(&self, caps: &vyre_foundation::validate::options::BackendCapabilities, op: &vyre_spec::bin_op::BinOp) -> bool
 pub fn vyre_driver::strategy::LoweringStrategy::lower(&self, op: &vyre_spec::bin_op::BinOp, left: &vyre_foundation::ir_inner::model::generated::Expr, right: &vyre_foundation::ir_inner::model::generated::Expr) -> vyre_driver::strategy::LoweredExpr
 pub fn vyre_driver::strategy::LoweringStrategy::name(&self) -> &str
@@ -1294,10 +1292,8 @@ pub mod vyre_driver::pipeline::hashing
 pub mod vyre_driver::pipeline_fusion
 pub mod vyre_driver::program_walks
 pub mod vyre_driver::registry
-pub mod vyre_driver::registry::core_indirect
 pub mod vyre_driver::registry::enforce
 pub mod vyre_driver::registry::intrinsic_adapter
-pub mod vyre_driver::registry::io
 pub mod vyre_driver::registry::migration
 pub mod vyre_driver::registry::mutation
 pub mod vyre_driver::reservation_policy
@@ -1310,7 +1306,7 @@ pub mod vyre_driver::shadow
 pub mod vyre_driver::shape_prediction
 pub mod vyre_driver::specialization
 pub mod vyre_driver::speculate
-pub mod vyre_driver::speculation_substrate
+pub mod vyre_driver::speculation_verdict
 pub mod vyre_driver::strategy
 pub mod vyre_driver::subgroup
 pub mod vyre_driver::trace_jit_policy
@@ -1524,7 +1520,7 @@ pub struct vyre_driver::speculate::SpeculativeDispatchPlan<'a>
 pub struct vyre_driver::speculate::SpeculativeVariantDecision
 pub struct vyre_driver::speculate::SpeculativeVariantKeys<'a>
 pub struct vyre_driver::speculate::SpeculativeVariantRace
-pub struct vyre_driver::speculation_substrate::SpeculationObservation
+pub struct vyre_driver::speculation_verdict::SpeculationObservation
 pub struct vyre_driver::subgroup::SubgroupCaps
 pub struct vyre_driver::trace_jit_policy::TraceJitInputs
 pub struct vyre_driver::transfer_accounting::TransferAccountingPolicy
@@ -2841,14 +2837,14 @@ pub vyre_driver::speculate::SpeculativeVariantRace::conservative_record: vyre_dr
 pub vyre_driver::speculate::SpeculativeVariantRace::speculative_compile_ns: u64
 pub vyre_driver::speculate::SpeculativeVariantRace::speculative_dispatch_ns: u64
 pub vyre_driver::speculate::SpeculativeVariantRace::speculative_record: vyre_driver::autotune_store::AutotuneRecord
-pub vyre_driver::speculation_substrate::SpeculationObservation::baseline_dispatches: u32
-pub vyre_driver::speculation_substrate::SpeculationObservation::baseline_mean_ns: u64
-pub vyre_driver::speculation_substrate::SpeculationObservation::side_compile_cost_ns: u64
-pub vyre_driver::speculation_substrate::SpeculationObservation::speculative_dispatches: u32
-pub vyre_driver::speculation_substrate::SpeculationObservation::speculative_mean_ns: u64
-pub vyre_driver::speculation_substrate::SpeculationVerdict::Adopt
-pub vyre_driver::speculation_substrate::SpeculationVerdict::KeepRacing
-pub vyre_driver::speculation_substrate::SpeculationVerdict::Reject
+pub vyre_driver::speculation_verdict::SpeculationObservation::baseline_dispatches: u32
+pub vyre_driver::speculation_verdict::SpeculationObservation::baseline_mean_ns: u64
+pub vyre_driver::speculation_verdict::SpeculationObservation::side_compile_cost_ns: u64
+pub vyre_driver::speculation_verdict::SpeculationObservation::speculative_dispatches: u32
+pub vyre_driver::speculation_verdict::SpeculationObservation::speculative_mean_ns: u64
+pub vyre_driver::speculation_verdict::SpeculationVerdict::Adopt
+pub vyre_driver::speculation_verdict::SpeculationVerdict::KeepRacing
+pub vyre_driver::speculation_verdict::SpeculationVerdict::Reject
 pub vyre_driver::strategy::LoweredExpr::Emitted
 pub vyre_driver::strategy::LoweredExpr::Expr(vyre_foundation::ir_inner::model::generated::Expr)
 pub vyre_driver::strategy::PrecisionLoweringPlan::DefaultF32

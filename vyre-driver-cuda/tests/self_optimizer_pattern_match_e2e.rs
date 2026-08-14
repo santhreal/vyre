@@ -5,7 +5,7 @@
 
 mod common;
 
-use common::{live_backend, CudaOptimizerDispatcher};
+use common::{live_backend, CudaProgramDispatcher};
 use vyre::ir::{BinOp, Expr, Node, Program};
 use vyre_self_substrate::optimizer::pattern_match_via_encoded::gpu_algebraic_identities;
 
@@ -26,7 +26,7 @@ fn first_let_value(p: &Program) -> Expr {
 #[test]
 fn cuda_add_zero_left_collapses() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::add(Expr::u32(0), Expr::var("a")),
@@ -39,7 +39,7 @@ fn cuda_add_zero_left_collapses() {
 #[test]
 fn cuda_mul_zero_absorbs() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::mul(Expr::u32(0), Expr::var("a")),
@@ -52,7 +52,7 @@ fn cuda_mul_zero_absorbs() {
 #[test]
 fn cuda_mul_one_collapses() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::mul(Expr::var("a"), Expr::u32(1)),
@@ -65,7 +65,7 @@ fn cuda_mul_one_collapses() {
 #[test]
 fn cuda_unrelated_binop_passes_through() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher { backend: &backend };
     let p = wrapped(vec![Node::let_bind(
         "x",
         Expr::sub(Expr::var("a"), Expr::u32(1)),

@@ -1,8 +1,8 @@
 use crate::graph::resident_handles::free_unique_resident_handles;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 fn free_adaptive_graph<const N: usize>(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     handles: &[u64; N],
     label: &'static str,
 ) -> Result<(), DispatchError> {
@@ -17,7 +17,7 @@ macro_rules! impl_adaptive_graph_free {
             /// # Errors
             ///
             /// Returns the first backend free failure after attempting all handles.
-            pub fn free(self, dispatcher: &dyn OptimizerDispatcher) -> Result<(), DispatchError> {
+            pub fn free(self, dispatcher: &dyn ProgramDispatcher) -> Result<(), DispatchError> {
                 free_adaptive_graph(dispatcher, &self.handles, $label)
             }
         }
@@ -96,7 +96,7 @@ impl ResidentAdaptiveFourRussiansDenseGraph {
     /// # Errors
     ///
     /// Returns the backend free failure, if any.
-    pub fn free(self, dispatcher: &dyn OptimizerDispatcher) -> Result<(), DispatchError> {
+    pub fn free(self, dispatcher: &dyn ProgramDispatcher) -> Result<(), DispatchError> {
         dispatcher.free_resident(self.lut_handle)
     }
 }

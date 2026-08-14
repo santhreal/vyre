@@ -20,12 +20,13 @@
 pub mod canonicalize_via_encoded;
 pub mod const_fold_via_encoded;
 pub mod const_prop;
+#[cfg(any(test, feature = "cpu-parity"))]
+pub mod cpu_oracle;
 pub mod cross_scope_cse;
 pub mod cse_via_encoded;
 pub mod dce_program;
 pub mod dce_via_encoded;
 pub mod dead_branch;
-pub mod dispatcher;
 pub mod encode;
 pub mod expr_arena;
 pub mod licm;
@@ -111,14 +112,14 @@ fn build_encoded_analysis_program(
 
 fn run_encoded_analysis_kernel(
     arena: &expr_arena::ExprArenaEncoding,
-    dispatcher: &dyn dispatcher::OptimizerDispatcher,
+    dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher,
     inputs: &mut Vec<Vec<u8>>,
     output: &mut Vec<u32>,
     build_program: fn(u32) -> vyre_foundation::ir::Program,
     stage: &str,
     output_name: &str,
-) -> Result<(), dispatcher::DispatchError> {
-    use crate::dispatch_buffers::{
+) -> Result<(), vyre_foundation::program_dispatch::DispatchError> {
+    use vyre_libs::dispatch_buffers::{
         decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
     };
     let count = arena.expr_count;
@@ -126,7 +127,7 @@ fn run_encoded_analysis_kernel(
     let output_bytes = words
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
-            dispatcher::DispatchError::BadInputs(format!(
+            vyre_foundation::program_dispatch::DispatchError::BadInputs(format!(
                 "Fix: {stage} output byte count overflows usize for expr_count={count}."
             ))
         })?;
@@ -143,7 +144,7 @@ fn run_encoded_analysis_kernel(
         Some([count.div_ceil(256), 1, 1]),
     )?;
     if outputs.len() != 1 {
-        return Err(dispatcher::DispatchError::BackendError(format!(
+        return Err(vyre_foundation::program_dispatch::DispatchError::BackendError(format!(
             "Fix: {stage} dispatch expected exactly one {output_name} output, got {}.",
             outputs.len()
         )));

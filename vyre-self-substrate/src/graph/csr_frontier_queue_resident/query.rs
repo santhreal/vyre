@@ -4,7 +4,7 @@ use super::{
 };
 use vyre_primitives::graph::csr_frontier_queue::validate_frontier_queue_query;
 
-use crate::dispatch_buffers::u32_word_bytes;
+use vyre_libs::dispatch_buffers::u32_word_bytes;
 use crate::graph::csr_frontier_queue_programs::{
     resident_csr_queue_len_init_program, resident_csr_queue_materializer_programs,
     resident_csr_queue_split_low_program, resident_csr_queue_traverse_program,
@@ -17,13 +17,13 @@ use crate::graph::csr_frontier_queue_scratch::{
     FrontierWordPrefixScratch, ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind,
 };
 use crate::graph::dispatch_bridge::alloc_resident_buffers;
-use crate::optimizer::dispatcher::{
-    DispatchError, OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
+use vyre_foundation::program_dispatch::{
+    DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
 
 /// Run one sparse frontier query over a resident CSR graph.
 pub fn run_resident_csr_queue_query_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     graph: &ResidentCsrQueueGraph,
     scratch: &mut ResidentCsrQueueScratch,
     frontier_words: &[u32],
@@ -306,7 +306,7 @@ pub fn run_resident_csr_queue_query_into(
 }
 
 fn ensure_scratch(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scratch: &mut ResidentCsrQueueScratch,
     words: usize,
     queue_capacity: u32,

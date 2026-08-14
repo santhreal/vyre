@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn cuda_resident_adaptive_sparse_queue_path_uses_self_substrate_api() {
     let backend = live_dispatcher();
-    let dispatcher = vyre_driver_cuda::CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = vyre_driver_cuda::CudaProgramDispatcher::new(&backend);
     let node_count = 8u32;
     let edge_offsets = vec![0, 2, 2, 2, 5, 5, 5, 5, 5];
     let edge_targets = vec![1, 2, 4, 5, 6];
@@ -59,7 +59,7 @@ fn cuda_resident_adaptive_sparse_queue_path_uses_self_substrate_api() {
 #[test]
 fn cuda_resident_adaptive_sparse_queue_csr_only_upload_skips_dense_rows() {
     let backend = live_dispatcher();
-    let dispatcher = vyre_driver_cuda::CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = vyre_driver_cuda::CudaProgramDispatcher::new(&backend);
     let node_count = 8u32;
     let edge_offsets = vec![0, 2, 2, 2, 5, 5, 5, 5, 5];
     let edge_targets = vec![1, 2, 4, 5, 6];
@@ -118,7 +118,7 @@ fn cuda_resident_adaptive_sparse_queue_csr_only_upload_skips_dense_rows() {
 #[test]
 fn cuda_resident_adaptive_sparse_queue_word_prefix_handles_large_frontier() {
     let backend = live_dispatcher();
-    let dispatcher = vyre_driver_cuda::CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = vyre_driver_cuda::CudaProgramDispatcher::new(&backend);
     let node_count = 9_000u32;
     let mut edge_offsets = Vec::with_capacity(node_count as usize + 1);
     let mut edge_targets = Vec::with_capacity(node_count as usize);

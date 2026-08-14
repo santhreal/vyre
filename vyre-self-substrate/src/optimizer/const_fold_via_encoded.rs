@@ -9,7 +9,7 @@
 //! `build_const_fold_program` function constructs a vyre `Program`
 //! that scans the arena bottom-up, marking each foldable Expr in a
 //! `foldable[]` u32 buffer and writing its computed value into a
-//! `value[]` u32 buffer. The `OptimizerDispatcher` runs that Program
+//! `value[]` u32 buffer. The `ProgramDispatcher` runs that Program
 //! on the GPU; the decoder walks the IR and rewrites every foldable
 //! Expr into a literal.
 //!
@@ -21,11 +21,11 @@
 use std::sync::Arc;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 
-use super::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use super::encode::EncodeError;
 use super::expr_arena::{encode_expr_arena, expr_kind, ExprArenaEncoding};
 
@@ -61,7 +61,7 @@ impl std::error::Error for ConstFoldError {}
 /// computed literal value.
 pub fn gpu_const_fold(
     program: Program,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
 ) -> Result<Program, ConstFoldError> {
     let arena = encode_expr_arena(&program).map_err(ConstFoldError::Encode)?;
     if arena.expr_count == 0 {
@@ -86,7 +86,7 @@ pub fn gpu_const_fold(
 #[cfg(test)]
 fn run_const_fold_kernel_into(
     arena: &ExprArenaEncoding,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     foldable: &mut Vec<u32>,
     value: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
@@ -96,7 +96,7 @@ fn run_const_fold_kernel_into(
 
 fn run_const_fold_kernel_with_scratch_into(
     arena: &ExprArenaEncoding,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scratch: &mut ConstFoldKernelScratch,
     foldable: &mut Vec<u32>,
     value: &mut Vec<u32>,
@@ -1028,13 +1028,13 @@ fn decide(expr: &Expr, id: u32, foldable: &[u32], value: &[u32]) -> Expr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
 
     struct ConstFoldDispatcher {
         outputs: Vec<Vec<u8>>,
     }
 
-    impl OptimizerDispatcher for ConstFoldDispatcher {
+    impl ProgramDispatcher for ConstFoldDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -1197,7 +1197,7 @@ mod tests {
             grid_x_values: std::cell::RefCell<Vec<u32>>,
             expr_count: u32,
         }
-        impl OptimizerDispatcher for GridCapture {
+        impl ProgramDispatcher for GridCapture {
             fn dispatch(
                 &self,
                 _program: &Program,

@@ -5,24 +5,24 @@ use vyre_foundation::pass_substrate::dataflow_fixpoint as foundation_dataflow;
 
 use super::scc_substrate::write_pivot_bitsets;
 use super::{SccComponentsGpuScratch, Semiring, SemiringGemmGpuScratch};
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
 use crate::hardware::scratch::reserve_vec_capacity;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// GPU dispatch wrapper around the primitive semiring GEMM program for an
 /// arbitrary semiring.
 ///
 /// # Errors
 ///
-/// Returns [`crate::optimizer::dispatcher::DispatchError`] when dimensions
+/// Returns [`vyre_foundation::program_dispatch::DispatchError`] when dimensions
 /// overflow, inputs do not match the declared matrix shape, dispatch fails,
 /// or readback does not contain the `m * n` output matrix.
 #[allow(clippy::too_many_arguments)]
 pub fn semiring_gemm_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     a: &[u32],
     b: &[u32],
     m: u32,
@@ -43,7 +43,7 @@ pub fn semiring_gemm_via(
 /// Multiply matrices over the selected semiring through a dispatcher into caller-owned storage.
 #[allow(clippy::too_many_arguments)]
 pub fn semiring_gemm_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     a: &[u32],
     b: &[u32],
     m: u32,
@@ -59,7 +59,7 @@ pub fn semiring_gemm_via_into(
 /// Multiply matrices over the selected semiring using caller-owned dispatch scratch.
 #[allow(clippy::too_many_arguments)]
 pub fn semiring_gemm_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     a: &[u32],
     b: &[u32],
     m: u32,
@@ -130,7 +130,7 @@ pub fn semiring_gemm_via_with_scratch_into(
 
 /// Boolean-OR semiring specialisation of [`semiring_gemm_via`].
 pub fn semiring_gemm_via_bool_or(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     a: &[u32],
     b: &[u32],
     m: u32,
@@ -142,7 +142,7 @@ pub fn semiring_gemm_via_bool_or(
 
 /// Min-plus semiring specialisation of [`semiring_gemm_via`].
 pub fn semiring_gemm_via_min_plus(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     a: &[u32],
     b: &[u32],
     m: u32,
@@ -154,7 +154,7 @@ pub fn semiring_gemm_via_min_plus(
 
 /// Lineage (provenance OR) semiring specialisation of [`semiring_gemm_via`].
 pub fn semiring_gemm_via_lineage(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     a: &[u32],
     b: &[u32],
     m: u32,
@@ -168,7 +168,7 @@ pub fn semiring_gemm_via_lineage(
 // GPU dispatcher wrappers (`*_via`)
 // ─────────────────────────────────────────────────────────────────────
 //
-// Each wrapper takes an `OptimizerDispatcher` and routes closure steps through
+// Each wrapper takes an `ProgramDispatcher` and routes closure steps through
 // vyre dispatch. The host currently owns the fixed-point loop and convergence
 // check; each matrix-power step is backend-dispatched via semiring GEMM.
 
@@ -178,7 +178,7 @@ pub fn semiring_gemm_via_lineage(
 ///
 /// Propagates semiring-GEMM dispatch failures.
 pub fn reachability_closure_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     n: u32,
     max_iters: u32,
@@ -195,7 +195,7 @@ pub fn reachability_closure_via(
 ///
 /// Propagates semiring-GEMM dispatch failures.
 pub fn reachability_closure_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     n: u32,
     _max_iters: u32,
@@ -220,7 +220,7 @@ pub fn reachability_closure_via_into(
 ///
 /// Propagates semiring-GEMM dispatch failures.
 pub fn reachability_closure_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     n: u32,
     _max_iters: u32,
@@ -257,7 +257,7 @@ pub fn reachability_closure_via_with_scratch_into(
 ///
 /// Propagates semiring-GEMM dispatch failures.
 pub fn lineage_closure_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     n: u32,
     max_iters: u32,
@@ -288,7 +288,7 @@ pub fn lineage_closure_via(
 ///
 /// Propagates semiring-GEMM dispatch failures.
 pub fn shortest_path_closure_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     n: u32,
     max_iters: u32,
@@ -319,7 +319,7 @@ pub fn shortest_path_closure_via(
 ///
 /// Propagates reachability closure dispatch failures.
 pub fn forward_backward_bitsets_for_pivot_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     pivot: u32,
     n: u32,
@@ -370,7 +370,7 @@ pub fn forward_backward_bitsets_for_pivot_via(
 ///
 /// Propagates closure or SCC-decompose dispatch failures.
 pub fn scc_components_via_substrate_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     n: u32,
 ) -> Result<Vec<u32>, DispatchError> {
@@ -392,7 +392,7 @@ pub fn scc_components_via_substrate_via(
 ///
 /// Propagates closure or SCC-decompose dispatch failures.
 pub fn scc_components_via_substrate_with_scratch_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     n: u32,
     scratch: &mut SccComponentsGpuScratch,
@@ -408,7 +408,7 @@ pub fn scc_components_via_substrate_with_scratch_via(
 ///
 /// Propagates closure or SCC-decompose dispatch failures.
 pub fn scc_components_via_substrate_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
     n: u32,
     scratch: &mut SccComponentsGpuScratch,
@@ -514,14 +514,14 @@ mod tests {
     use super::{
         scc_components_via_substrate_with_scratch_into, semiring_gemm_via, semiring_gemm_via_into,
     };
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
     struct SemiringDispatcher {
         outputs: Vec<Vec<u8>>,
     }
 
-    impl OptimizerDispatcher for SemiringDispatcher {
+    impl ProgramDispatcher for SemiringDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -544,7 +544,7 @@ mod tests {
         cursor: Cell<usize>,
     }
 
-    impl OptimizerDispatcher for SequenceDispatcher {
+    impl ProgramDispatcher for SequenceDispatcher {
         fn dispatch(
             &self,
             _program: &Program,

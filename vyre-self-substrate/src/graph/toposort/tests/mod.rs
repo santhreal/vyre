@@ -1,6 +1,6 @@
 use super::*;
-use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use std::sync::Mutex;
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::toposort::{
@@ -91,7 +91,7 @@ fn all_reachable_satisfies_query() {
 
 struct ToposortDispatcher;
 
-impl OptimizerDispatcher for ToposortDispatcher {
+impl ProgramDispatcher for ToposortDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -108,8 +108,8 @@ fn dispatch_with_primitive_csr_oracle(
 ) -> Result<Vec<Vec<u8>>, DispatchError> {
     assert_eq!(grid_override, Some([1, 1, 1]));
     assert_eq!(inputs.len(), 5);
-    let offsets = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-    let targets = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
+    let offsets = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+    let targets = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
     let n = offsets.len() - 1;
     let mut out = Vec::with_capacity(n);
     toposort_csr_into(n as u32, &offsets, &targets, &mut out).map_err(|err| {
@@ -125,7 +125,7 @@ struct RecordingToposortDispatcher {
     calls: Mutex<Vec<Vec<Vec<u8>>>>,
 }
 
-impl OptimizerDispatcher for RecordingToposortDispatcher {
+impl ProgramDispatcher for RecordingToposortDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -308,7 +308,7 @@ fn topo_order_csr_via_rejects_cycle_like_partial_output() {
 fn topo_order_csr_via_uses_primitive_order_contract() {
     struct InvertedOrderDispatcher;
 
-    impl OptimizerDispatcher for InvertedOrderDispatcher {
+    impl ProgramDispatcher for InvertedOrderDispatcher {
         fn dispatch(
             &self,
             _program: &Program,

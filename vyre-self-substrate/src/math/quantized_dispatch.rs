@@ -6,12 +6,12 @@
 
 mod shapes;
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, decode_f32_output_exact, decode_i32_output_exact, ensure_input_slots,
     write_f32_slice_le_bytes, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::hardware::dispatch_program_cache::ProgramCache;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use shapes::{expect_one_output, validate_batched_packed_matmul_shape};
 use vyre_foundation::ir::Program;
 use vyre_primitives::math::quantized::{

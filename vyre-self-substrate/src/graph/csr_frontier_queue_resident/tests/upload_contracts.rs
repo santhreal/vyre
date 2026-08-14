@@ -1,7 +1,7 @@
 use super::super::*;
 use super::support::RecordingResidentDispatcher;
 use crate::graph::csr_frontier_queue_scratch::STRIDED_FORWARD_MIN_ROW_DEGREE;
-use crate::optimizer::dispatcher::DispatchError;
+use vyre_foundation::program_dispatch::DispatchError;
 
 #[test]
 fn zero_edge_graph_uploads_padded_resident_edge_buffers() {

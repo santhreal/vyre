@@ -1,5 +1,5 @@
 use super::*;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use vyre_foundation::ir::Program;
@@ -36,7 +36,7 @@ fn dispatch_input_writer_encodes_zero_and_little_endian_slots_in_place() {
 fn input_slot_shell_drops_stale_dispatch_slots_on_shape_shrink() {
     let mut inputs = vec![vec![0xAA; 4], vec![0xBB; 8], vec![0xCC; 12], vec![0xDD; 16]];
 
-    crate::dispatch_buffers::ensure_input_slots(&mut inputs, 2);
+    vyre_libs::dispatch_buffers::ensure_input_slots(&mut inputs, 2);
 
     assert_eq!(inputs.len(), 2);
     assert_eq!(inputs[0], vec![0xAA; 4]);
@@ -136,7 +136,7 @@ impl RecordingResidentUploadDispatcher {
     }
 }
 
-impl OptimizerDispatcher for RecordingResidentUploadDispatcher {
+impl ProgramDispatcher for RecordingResidentUploadDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -236,7 +236,7 @@ impl FailingResidentAllocDispatcher {
     }
 }
 
-impl OptimizerDispatcher for FailingResidentAllocDispatcher {
+impl ProgramDispatcher for FailingResidentAllocDispatcher {
     fn dispatch(
         &self,
         _program: &Program,

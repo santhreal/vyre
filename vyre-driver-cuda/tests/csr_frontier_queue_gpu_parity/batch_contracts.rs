@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn cuda_resident_csr_queue_batch_runs_many_queries_with_one_sync() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 8u32;
     let queue_capacity = 8u32;
     let edge_offsets = vec![0, 2, 2, 2, 5, 5, 5, 5, 5];
@@ -142,7 +142,7 @@ fn cuda_resident_csr_queue_batch_runs_many_queries_with_one_sync() {
 #[test]
 fn cuda_resident_csr_queue_batch_splits_skewed_high_degree_rows() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 64u32;
     let queue_capacity = 1024u32;
     let (edge_offsets, edge_targets, edge_kind_mask) = skewed_high_degree_graph(node_count);
@@ -236,7 +236,7 @@ fn cuda_resident_csr_queue_batch_splits_skewed_high_degree_rows() {
 #[test]
 fn cuda_resident_csr_queue_budgeted_batch_shards_before_allocation() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 8u32;
     let queue_capacity = 8u32;
     let edge_offsets = vec![0, 2, 2, 2, 5, 5, 5, 5, 5];

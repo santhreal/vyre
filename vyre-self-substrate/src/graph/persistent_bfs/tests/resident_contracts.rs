@@ -1,8 +1,8 @@
 use super::super::state::PersistentBfsPlanCache;
 use super::super::*;
 use super::linear_graph;
-use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher, ResidentReadRange};
+use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentReadRange};
 use std::cell::{Cell, RefCell};
 use vyre_foundation::ir::Program;
 
@@ -28,7 +28,7 @@ impl ResidentPersistentBfsDispatcher {
     }
 }
 
-impl OptimizerDispatcher for ResidentPersistentBfsDispatcher {
+impl ProgramDispatcher for ResidentPersistentBfsDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -73,7 +73,7 @@ impl OptimizerDispatcher for ResidentPersistentBfsDispatcher {
     fn upload_resident_many_sequence_read_ranges_into(
         &self,
         uploads: &[(u64, &[u8])],
-        steps: &[crate::optimizer::dispatcher::ResidentDispatchStep<'_>],
+        steps: &[vyre_foundation::program_dispatch::ResidentDispatchStep<'_>],
         read_ranges: &[ResidentReadRange],
         outputs: &mut Vec<Vec<u8>>,
     ) -> Result<(), DispatchError> {

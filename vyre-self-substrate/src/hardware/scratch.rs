@@ -4,7 +4,7 @@
 //! reservation policy here prevents each domain from growing its own unchecked
 //! `Vec::reserve` variant and keeps allocation failures actionable.
 
-use crate::optimizer::dispatcher::DispatchError;
+use vyre_foundation::program_dispatch::DispatchError;
 use std::collections::HashSet;
 use std::hash::{BuildHasher, Hash};
 

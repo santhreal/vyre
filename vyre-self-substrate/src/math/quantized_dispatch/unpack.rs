@@ -11,7 +11,7 @@ use super::*;
 /// wrong, byte-count arithmetic overflows, dispatch fails, or backend readback
 /// is malformed.
 pub fn unpack_i4x8_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     packed_words: &[u32],
     lane_count: u32,
 ) -> Result<Vec<i32>, DispatchError> {
@@ -33,7 +33,7 @@ pub fn unpack_i4x8_via(
 ///
 /// Returns [`DispatchError`] under the same conditions as [`unpack_i4x8_via`].
 pub fn unpack_i4x8_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     packed_words: &[u32],
     lane_count: u32,
     scratch: &mut QuantizedUnpackGpuScratch,

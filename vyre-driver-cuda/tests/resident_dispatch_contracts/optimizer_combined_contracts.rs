@@ -4,7 +4,7 @@ use super::*;
 fn optimizer_combined_upload_sequence_read_fences_once() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let program = Program::wrapped(
         vec![
             BufferDecl::read("input", 0, DataType::U32).with_count(4),
@@ -87,7 +87,7 @@ fn optimizer_combined_upload_sequence_read_fences_once() {
 fn optimizer_combined_duplicate_sequence_uploads_fuse_before_kernel_launch() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let program = Program::wrapped(
         vec![
             BufferDecl::read("input", 0, DataType::U32).with_count(4),
@@ -158,7 +158,7 @@ fn optimizer_combined_duplicate_sequence_uploads_fuse_before_kernel_launch() {
 fn optimizer_combined_duplicate_fills_keep_last_value_before_readback() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let handle = dispatcher
         .alloc_resident(16)
         .expect("Fix: optimizer duplicate-fill allocation failed.");
@@ -195,7 +195,7 @@ fn optimizer_combined_duplicate_fills_keep_last_value_before_readback() {
 fn optimizer_combined_upload_sequence_read_ranges_compacts_d2h_bytes() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let program = Program::wrapped(
         vec![
             BufferDecl::read("input", 0, DataType::U32).with_count(4),

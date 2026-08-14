@@ -27,7 +27,7 @@ pub(super) struct RecordingIfdsOracle {
     pub(super) intra_src_blocks: Mutex<Vec<Vec<u32>>>,
 }
 
-impl OptimizerDispatcher for RecordingIfdsOracle {
+impl ProgramDispatcher for RecordingIfdsOracle {
     fn dispatch(
         &self,
         program: &Program,
@@ -38,7 +38,7 @@ impl OptimizerDispatcher for RecordingIfdsOracle {
             self.intra_src_blocks
                 .lock()
                 .expect("Fix: IFDS recording mutex should not be poisoned")
-                .push(crate::hardware::dispatch_buffers::read_u32s(&inputs[1]));
+                .push(vyre_libs::dispatch_buffers::read_u32s(&inputs[1]));
         }
         self.inner.dispatch(program, inputs, grid_override)
     }
@@ -50,7 +50,7 @@ pub(super) struct MalformedIfdsDispatcher {
     pub(super) outputs: Vec<Vec<u8>>,
 }
 
-impl OptimizerDispatcher for MalformedIfdsDispatcher {
+impl ProgramDispatcher for MalformedIfdsDispatcher {
     fn dispatch(
         &self,
         _program: &Program,

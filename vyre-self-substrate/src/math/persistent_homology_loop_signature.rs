@@ -46,12 +46,12 @@
 //! cache-aware loop optimizer. Vyre is the first GPU substrate to
 //! compute it via persistent homology.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, u32_slice_to_le_bytes,
 };
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::hardware::scratch::reserve_vec_capacity_or_panic;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_primitives::topology::vietoris_rips::extract_edges_cpu;
 use vyre_primitives::topology::vietoris_rips::vietoris_rips_edge_filter;
@@ -112,7 +112,7 @@ pub fn reference_region_loop_skeleton_into(
 /// Returns [`DispatchError`] when the shape is invalid, the backend rejects
 /// the primitive, or the backend returns a malformed edge-mask buffer.
 pub fn region_loop_skeleton_fixed_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     dist_matrix_fixed: &[u32],
     epsilon_fixed: u32,
     n: u32,
@@ -130,7 +130,7 @@ pub fn region_loop_skeleton_fixed_via(
 /// Returns [`DispatchError`] when input or backend output violates the
 /// primitive contract.
 pub fn region_loop_skeleton_fixed_via_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     dist_matrix_fixed: &[u32],
     epsilon_fixed: u32,
     n: u32,
@@ -399,7 +399,7 @@ mod fixed_via_tests {
 
     struct SkeletonDispatcher;
 
-    impl OptimizerDispatcher for SkeletonDispatcher {
+    impl ProgramDispatcher for SkeletonDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -409,8 +409,8 @@ mod fixed_via_tests {
             assert_eq!(grid_override, Some([1, 1, 1]));
             // Real-backend contract: dist_matrix RO, epsilon RO, edge_mask plain-RW (zero slot) = 3.
             assert_eq!(inputs.len(), 3);
-            let dist = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-            let epsilon = crate::hardware::dispatch_buffers::read_u32s(&inputs[1])[0];
+            let dist = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let epsilon = vyre_libs::dispatch_buffers::read_u32s(&inputs[1])[0];
             let n = integer_sqrt(dist.len());
             let mut mask = vec![0u32; dist.len()];
             for i in 0..n {

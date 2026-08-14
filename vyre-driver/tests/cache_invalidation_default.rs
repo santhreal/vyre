@@ -6,11 +6,11 @@
 
 use vyre_driver::cache_invalidation::{impacted_entries_into, CacheInvalidationScratch};
 use vyre_foundation::ir::Program;
-use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 struct EchoStateDispatcher;
 
-impl OptimizerDispatcher for EchoStateDispatcher {
+impl ProgramDispatcher for EchoStateDispatcher {
     fn dispatch(
         &self,
         _program: &Program,

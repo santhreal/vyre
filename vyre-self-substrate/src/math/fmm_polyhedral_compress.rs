@@ -41,13 +41,13 @@
 //! Higher-moment FMM compression belongs in distinct registered ops so
 //! each multipole order has an explicit schema and test oracle.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
 #[cfg(test)]
 use crate::hardware::scratch::reserve_vec_capacity_or_panic;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::math::fmm::{l2p_zeroth_f32_step, m2l_zeroth_f32_step, p2m_zeroth_f32_step};
 
 /// Caller-owned GPU dispatch scratch for zeroth-moment FMM compression.
@@ -247,7 +247,7 @@ pub fn fmm_compress_pairwise_into(
 /// Returns [`DispatchError`] for malformed shapes, oversized buffers, dispatch rejection, or
 /// malformed backend output.
 pub fn aggregate_to_cells_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scores: &[f32],
     cell_assignment: &[u32],
 ) -> Result<Vec<f32>, DispatchError> {
@@ -270,7 +270,7 @@ pub fn aggregate_to_cells_via(
 /// Returns [`DispatchError`] for malformed shapes, oversized buffers, dispatch rejection, or
 /// malformed backend output.
 pub fn aggregate_to_cells_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scores: &[f32],
     cell_assignment: &[u32],
     scratch: &mut FmmPolyhedralGpuScratch,
@@ -312,7 +312,7 @@ pub fn aggregate_to_cells_via_with_scratch_into(
 ///
 /// Returns [`DispatchError`] for malformed shape, dispatch failure, or malformed backend output.
 pub fn translate_to_targets_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     cell_moments: &[f32],
     cell_distances: &[f32],
 ) -> Result<Vec<f32>, DispatchError> {
@@ -334,7 +334,7 @@ pub fn translate_to_targets_via(
 ///
 /// Returns [`DispatchError`] for malformed shape, dispatch failure, or malformed backend output.
 pub fn translate_to_targets_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     cell_moments: &[f32],
     cell_distances: &[f32],
     scratch: &mut FmmPolyhedralGpuScratch,
@@ -375,7 +375,7 @@ pub fn translate_to_targets_via_with_scratch_into(
 ///
 /// Returns [`DispatchError`] for malformed shape, dispatch failure, or malformed backend output.
 pub fn evaluate_at_regions_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     cell_local: &[f32],
     cell_assignment: &[u32],
     n: u32,
@@ -399,7 +399,7 @@ pub fn evaluate_at_regions_via(
 ///
 /// Returns [`DispatchError`] for malformed shape, dispatch failure, or malformed backend output.
 pub fn evaluate_at_regions_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     cell_local: &[f32],
     cell_assignment: &[u32],
     n: u32,
@@ -451,7 +451,7 @@ pub fn evaluate_at_regions_via_with_scratch_into(
 ///
 /// Returns [`DispatchError`] for malformed inputs, dispatch failure, or malformed backend output.
 pub fn fmm_compress_pairwise_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scores: &[f32],
     cell_assignment: &[u32],
     cell_distances: &[f32],
@@ -477,7 +477,7 @@ pub fn fmm_compress_pairwise_via(
 ///
 /// Returns [`DispatchError`] for malformed inputs, dispatch failure, or malformed backend output.
 pub fn fmm_compress_pairwise_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scores: &[f32],
     cell_assignment: &[u32],
     cell_distances: &[f32],
@@ -630,7 +630,7 @@ fn require_first_output<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::f32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::f32_slice_to_le_bytes;
     use std::cell::Cell;
 
     fn approx_eq(a: f64, b: f64) -> bool {
@@ -747,7 +747,7 @@ mod tests {
         calls: Cell<usize>,
     }
 
-    impl OptimizerDispatcher for FmmDispatcher {
+    impl ProgramDispatcher for FmmDispatcher {
         fn dispatch(
             &self,
             _program: &vyre_foundation::ir::Program,
@@ -774,11 +774,11 @@ mod tests {
                 inputs.len()
             )));
         };
-        let scores = crate::hardware::dispatch_buffers::decode_f32_input_aligned(
+        let scores = vyre_libs::dispatch_buffers::decode_f32_input_aligned(
             score_bytes,
             "FMM test dispatcher",
         )?;
-        let cells = crate::hardware::dispatch_buffers::decode_u32_input_aligned(
+        let cells = vyre_libs::dispatch_buffers::decode_u32_input_aligned(
             cell_bytes,
             "FMM test dispatcher",
         )?;
@@ -797,11 +797,11 @@ mod tests {
                 inputs.len()
             )));
         };
-        let moments = crate::hardware::dispatch_buffers::decode_f32_input_aligned(
+        let moments = vyre_libs::dispatch_buffers::decode_f32_input_aligned(
             moment_bytes,
             "FMM test dispatcher",
         )?;
-        let distances = crate::hardware::dispatch_buffers::decode_f32_input_aligned(
+        let distances = vyre_libs::dispatch_buffers::decode_f32_input_aligned(
             distance_bytes,
             "FMM test dispatcher",
         )?;
@@ -825,11 +825,11 @@ mod tests {
                 inputs.len()
             )));
         };
-        let local = crate::hardware::dispatch_buffers::decode_f32_input_aligned(
+        let local = vyre_libs::dispatch_buffers::decode_f32_input_aligned(
             local_bytes,
             "FMM test dispatcher",
         )?;
-        let cells = crate::hardware::dispatch_buffers::decode_u32_input_aligned(
+        let cells = vyre_libs::dispatch_buffers::decode_u32_input_aligned(
             cell_bytes,
             "FMM test dispatcher",
         )?;

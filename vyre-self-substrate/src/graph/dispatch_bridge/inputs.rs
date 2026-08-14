@@ -1,5 +1,5 @@
-use crate::dispatch_buffers::{ensure_input_slots, write_u32_slice_le_bytes, write_zero_u32_words};
-use crate::optimizer::dispatcher::DispatchError;
+use vyre_libs::dispatch_buffers::{ensure_input_slots, write_u32_slice_le_bytes, write_zero_u32_words};
+use vyre_foundation::program_dispatch::DispatchError;
 
 /// Stable fingerprint for a u32 dispatch slice.
 ///

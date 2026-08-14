@@ -1207,17 +1207,17 @@ impl vyre_driver::VyreBackend for WgpuBackend {
     }
 }
 
-impl vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher for WgpuBackend {
+impl vyre_foundation::program_dispatch::ProgramDispatcher for WgpuBackend {
     fn dispatch(
         &self,
         program: &Program,
         inputs: &[Vec<u8>],
         grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, vyre_self_substrate::optimizer::dispatcher::DispatchError> {
+    ) -> Result<Vec<Vec<u8>>, vyre_foundation::program_dispatch::DispatchError> {
         let mut config = vyre_driver::DispatchConfig::default();
         config.grid_override = grid_override;
         vyre_driver::VyreBackend::dispatch(self, program, inputs, &config).map_err(|error| {
-            vyre_self_substrate::optimizer::dispatcher::DispatchError::BackendError(
+            vyre_foundation::program_dispatch::DispatchError::BackendError(
                 error.to_string(),
             )
         })

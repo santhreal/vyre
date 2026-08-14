@@ -8,6 +8,7 @@
   },
   "category_counts": {
     "bitset": 23,
+    "builder": 2,
     "decode": 9,
     "fixpoint": 2,
     "geom": 2,
@@ -26,12 +27,186 @@
     "representation": 1,
     "scan": 2,
     "security": 22,
-    "substrate": 2,
     "text": 6,
     "vfs": 1,
     "visual": 11
   },
   "operations": [
+    {
+      "id": "vyre-libs::builder::indexed_map",
+      "tier": "libs",
+      "category": "builder",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "input",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "out",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "full"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::builder::indexed_map",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::builder::indexed_map",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::builder::strided_accumulate",
+      "tier": "libs",
+      "category": "builder",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "values",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 0,
+            "name": "scratch",
+            "access": "Workgroup",
+            "memory": "Shared",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "out",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "full"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::builder::strided_accumulate",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::builder::strided_accumulate",
+          "registered": true
+        }
+      ]
+    },
     {
       "id": "vyre-libs::decode::base64",
       "tier": "libs",
@@ -3299,7 +3474,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::strided_accumulate",
+          "operation": "vyre-libs::builder::strided_accumulate",
           "registered": true
         },
         {
@@ -4544,7 +4719,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::strided_accumulate",
+          "operation": "vyre-libs::builder::strided_accumulate",
           "registered": true
         },
         {
@@ -4833,7 +5008,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::indexed_map",
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         }
       ]
@@ -5900,7 +6075,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::indexed_map",
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         }
       ]
@@ -6319,7 +6494,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::strided_accumulate",
+          "operation": "vyre-libs::builder::strided_accumulate",
           "registered": true
         },
         {
@@ -6421,7 +6596,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::indexed_map",
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         }
       ]
@@ -8326,7 +8501,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::indexed_map",
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         }
       ]
@@ -9054,7 +9229,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::strided_accumulate",
+          "operation": "vyre-libs::builder::strided_accumulate",
           "registered": true
         },
         {
@@ -9064,7 +9239,7 @@
         },
         {
           "depth": 1,
-          "operation": "anonymous::vyre-libs::substrate::strided_writeback",
+          "operation": "anonymous::vyre-libs::builder::strided_writeback",
           "registered": false
         }
       ]
@@ -9636,7 +9811,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::strided_accumulate",
+          "operation": "vyre-libs::builder::strided_accumulate",
           "registered": true
         },
         {
@@ -9646,7 +9821,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::strided_accumulate",
+          "operation": "vyre-libs::builder::strided_accumulate",
           "registered": true
         },
         {
@@ -9656,7 +9831,7 @@
         },
         {
           "depth": 1,
-          "operation": "anonymous::vyre-libs::substrate::strided_writeback",
+          "operation": "anonymous::vyre-libs::builder::strided_writeback",
           "registered": false
         }
       ]
@@ -14634,7 +14809,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::indexed_map",
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         }
       ]
@@ -15506,7 +15681,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::indexed_map",
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         }
       ]
@@ -15607,7 +15782,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::substrate::indexed_map",
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         }
       ]
@@ -18634,181 +18809,6 @@
         {
           "depth": 1,
           "operation": "vyre-primitives::bitset::and",
-          "registered": true
-        }
-      ]
-    },
-    {
-      "id": "vyre-libs::substrate::indexed_map",
-      "tier": "libs",
-      "category": "substrate",
-      "signature": {
-        "kind": "program_buffers",
-        "buffers": [
-          {
-            "binding": 0,
-            "name": "input",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 4,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 1,
-            "name": "out",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 4,
-            "pipeline_live_out": true
-          }
-        ],
-        "inputs": [],
-        "outputs": [],
-        "attributes": [],
-        "bytes_extraction": false
-      },
-      "features": [
-        "full"
-      ],
-      "oracle": {
-        "reference_eval": true,
-        "flat_reference_facet": false,
-        "fixture_inputs": true,
-        "expected_output": true,
-        "tolerance_ulp": 0
-      },
-      "backend_support": {
-        "cuda": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        },
-        "reference": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        },
-        "wgpu": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        }
-      },
-      "target_facets": [
-        "cuda",
-        "spirv",
-        "wgpu"
-      ],
-      "laws": [],
-      "composition_chain": [
-        {
-          "depth": 0,
-          "operation": "vyre-libs::substrate::indexed_map",
-          "registered": true
-        },
-        {
-          "depth": 1,
-          "operation": "vyre-libs::substrate::indexed_map",
-          "registered": true
-        }
-      ]
-    },
-    {
-      "id": "vyre-libs::substrate::strided_accumulate",
-      "tier": "libs",
-      "category": "substrate",
-      "signature": {
-        "kind": "program_buffers",
-        "buffers": [
-          {
-            "binding": 0,
-            "name": "values",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 4,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 0,
-            "name": "scratch",
-            "access": "Workgroup",
-            "memory": "Shared",
-            "element": "U32",
-            "count": 4,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 1,
-            "name": "out",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 1,
-            "pipeline_live_out": true
-          }
-        ],
-        "inputs": [],
-        "outputs": [],
-        "attributes": [],
-        "bytes_extraction": false
-      },
-      "features": [
-        "full"
-      ],
-      "oracle": {
-        "reference_eval": true,
-        "flat_reference_facet": false,
-        "fixture_inputs": true,
-        "expected_output": true,
-        "tolerance_ulp": 0
-      },
-      "backend_support": {
-        "cuda": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        },
-        "reference": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        },
-        "wgpu": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth.rs"
-          ]
-        }
-      },
-      "target_facets": [
-        "cuda",
-        "spirv",
-        "wgpu"
-      ],
-      "laws": [],
-      "composition_chain": [
-        {
-          "depth": 0,
-          "operation": "vyre-libs::substrate::strided_accumulate",
-          "registered": true
-        },
-        {
-          "depth": 1,
-          "operation": "vyre-libs::substrate::strided_accumulate",
           "registered": true
         }
       ]

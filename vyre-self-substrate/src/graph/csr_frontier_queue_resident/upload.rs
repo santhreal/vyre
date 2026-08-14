@@ -3,11 +3,11 @@ use crate::graph::csr_frontier_queue_scratch::resident_csr_queue_high_degree_sou
 use vyre_primitives::graph::csr_frontier_queue::validate_csr_queue_graph;
 
 use crate::graph::dispatch_bridge::{upload_resident_dispatch_inputs, DispatchInput};
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Upload a CSR graph into resident device buffers once.
 pub fn upload_resident_csr_queue_graph(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],

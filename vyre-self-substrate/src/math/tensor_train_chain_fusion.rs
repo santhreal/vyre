@@ -10,12 +10,12 @@
 //! This module uses `vyre-primitives::math::tensor_train::tt_contract_step`
 //! (the same Program shipped to users) to analyze Vyre's own IR.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
 use crate::hardware::scratch::reserve_vec_capacity;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::math::tensor_train::tt_contract_step;
 #[cfg(test)]
 use vyre_primitives::math::tensor_train::tt_contract_step_cpu;
@@ -84,7 +84,7 @@ pub fn reference_fusion_pressure(shared_buffer_ranks: &[u32]) -> f64 {
 /// result would overflow the primitive's u32 lanes, dispatch fails, or the backend returns a
 /// truncated output buffer.
 pub fn fusion_pressure_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     shared_buffer_ranks: &[u32],
 ) -> Result<f64, DispatchError> {
     let mut scratch = TensorTrainFusionGpuScratch::default();
@@ -94,7 +94,7 @@ pub fn fusion_pressure_via(
 /// Compute fusion pressure through the GPU-dispatchable TT contraction
 /// primitive using caller-owned dispatch and intermediate storage.
 pub fn fusion_pressure_via_with_scratch(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     shared_buffer_ranks: &[u32],
     scratch: &mut TensorTrainFusionGpuScratch,
 ) -> Result<f64, DispatchError> {
@@ -181,7 +181,7 @@ pub fn fusion_pressure_via_with_scratch(
 ///
 /// Propagates [`fusion_pressure_via`] dispatch and input-shape failures.
 pub fn should_fuse_chain_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     shared_buffer_ranks: &[u32],
     threshold_per_link: f64,
 ) -> Result<bool, DispatchError> {
@@ -194,7 +194,7 @@ pub fn should_fuse_chain_via(
 }
 
 fn dispatch_tt_step_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     acc_in: &[u32],
     core_slice: &[u32],
     r_prev: u32,
@@ -259,7 +259,7 @@ pub fn should_fuse_chain(shared_buffer_ranks: &[u32], threshold_per_link: f64) -
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())
@@ -267,7 +267,7 @@ mod tests {
 
     struct ReferenceDispatcher;
 
-    impl OptimizerDispatcher for ReferenceDispatcher {
+    impl ProgramDispatcher for ReferenceDispatcher {
         fn dispatch(
             &self,
             program: &vyre_foundation::ir::Program,
@@ -280,11 +280,11 @@ mod tests {
                     inputs.len()
                 )));
             };
-            let acc = crate::hardware::dispatch_buffers::decode_u32_input_aligned(
+            let acc = vyre_libs::dispatch_buffers::decode_u32_input_aligned(
                 acc_bytes,
                 "TT test dispatcher",
             )?;
-            let core = crate::hardware::dispatch_buffers::decode_u32_input_aligned(
+            let core = vyre_libs::dispatch_buffers::decode_u32_input_aligned(
                 core_bytes,
                 "TT test dispatcher",
             )?;

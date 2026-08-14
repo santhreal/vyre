@@ -1,6 +1,6 @@
 use crate::graph::plan_cache::GraphPlanCache;
 use crate::graph::resident_handles::free_unique_resident_handles;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey;
 
 pub(super) use vyre_primitives::graph::adaptive_traverse::{
@@ -44,7 +44,7 @@ impl AdaptiveTraversalResidentScratch {
     /// # Errors
     ///
     /// Returns the first backend free failure after attempting all handles.
-    pub fn free(&mut self, dispatcher: &dyn OptimizerDispatcher) -> Result<(), DispatchError> {
+    pub fn free(&mut self, dispatcher: &dyn ProgramDispatcher) -> Result<(), DispatchError> {
         let Some(handles) = self.handles.take() else {
             let mut scratch_handles = [0_u64; 5];
             let mut scratch_count = 0;

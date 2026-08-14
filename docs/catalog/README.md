@@ -5,6 +5,7 @@ These pages are generated browsing views of `docs/generated/OP_SCHEMA.json`. The
 | subsystem | operations |
 | --- | ---: |
 | [`bitset`](bitset.md) | 23 |
+| [`builder`](builder.md) | 2 |
 | [`decode`](decode.md) | 9 |
 | [`fixpoint`](fixpoint.md) | 2 |
 | [`geom`](geom.md) | 2 |
@@ -25,7 +26,6 @@ These pages are generated browsing views of `docs/generated/OP_SCHEMA.json`. The
 | [`representation`](representation.md) | 1 |
 | [`scan`](scan.md) | 1 |
 | [`security`](security.md) | 22 |
-| [`substrate`](substrate.md) | 2 |
 | [`text`](text.md) | 6 |
 | [`vfs`](vfs.md) | 1 |
 | [`visual`](visual.md) | 11 |

@@ -5,7 +5,7 @@
 mod common;
 
 use common::live_dispatcher;
-use vyre_driver_cuda::{CudaBackend, CudaOptimizerDispatcher};
+use vyre_driver_cuda::{CudaBackend, CudaProgramDispatcher};
 use vyre_self_substrate::adaptive_traverse::{
     adaptive_traverse_resident_sparse_queue_step_with_scratch_into,
     upload_resident_adaptive_sparse_queue_graph, AdaptiveTraversalPlanCacheSnapshot,
@@ -18,7 +18,7 @@ const ALLOW_MASKS: [u32; 8] = [0, 1, 2, 4, 3, 5, 6, 7];
 #[test]
 fn generated_resident_adaptive_sparse_queue_atomic_matrix_matches_csr_oracle_on_live_cuda() {
     let backend = live_dispatcher();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
 
     run_generated_sparse_queue_matrix(&backend, &dispatcher, 512, "atomic-node-scan", 3);
 }
@@ -26,14 +26,14 @@ fn generated_resident_adaptive_sparse_queue_atomic_matrix_matches_csr_oracle_on_
 #[test]
 fn generated_resident_adaptive_sparse_queue_word_prefix_matrix_matches_csr_oracle_on_live_cuda() {
     let backend = live_dispatcher();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
 
     run_generated_sparse_queue_matrix(&backend, &dispatcher, 8_193, "word-prefix", 4);
 }
 
 fn run_generated_sparse_queue_matrix(
     backend: &CudaBackend,
-    dispatcher: &CudaOptimizerDispatcher<'_>,
+    dispatcher: &CudaProgramDispatcher<'_>,
     node_count: u32,
     materializer_name: &str,
     kernels_per_case: u64,

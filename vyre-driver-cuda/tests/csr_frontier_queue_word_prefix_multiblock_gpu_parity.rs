@@ -5,7 +5,7 @@
 mod common;
 
 use common::{bytes_u32, live_backend};
-use vyre_driver_cuda::{CudaBackend, CudaOptimizerDispatcher};
+use vyre_driver_cuda::{CudaBackend, CudaProgramDispatcher};
 use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::csr_frontier_queue::{
     csr_queue_forward_traverse_cpu, frontier_to_queue_cpu,
@@ -23,7 +23,7 @@ const ALLOW_MASKS: [u32; 8] = [0, 1, 2, 4, 3, 5, 6, 7];
 #[test]
 fn generated_resident_csr_queue_word_prefix_multiblock_matches_cpu_oracle_on_live_cuda() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     assert!(
         bitset_words(NODE_COUNT) > 1024,
         "Fix: this test must exercise more than one word-prefix scan block."
@@ -116,7 +116,7 @@ fn assert_multi_case_telemetry(backend: &CudaBackend) {
 #[test]
 fn generated_resident_csr_queue_many_block_word_prefix_uses_block_offset_scan_on_live_cuda() {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     assert!(
         bitset_words(MANY_BLOCK_NODE_COUNT) > 8 * 1024,
         "Fix: this test must exercise the many-block word-prefix offset-scan path."

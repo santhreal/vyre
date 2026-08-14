@@ -43,11 +43,11 @@
 //! count by orders of magnitude with provably-correct disjointness
 //! (the greedy schedule never picks two overlapping rewrites).
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     checked_product_count, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::parsing::planar_rewrite::planar_rewrite_schedule;
 #[cfg(test)]
 use vyre_primitives::parsing::planar_rewrite::reference_planar_rewrite_schedule;
@@ -90,7 +90,7 @@ pub fn schedule_disjoint_rewrites(candidates: &[u32], h: u32, w: u32, k: u32) ->
 /// Returns [`DispatchError`] when shape validation fails, `k == 0`, or the
 /// backend returns malformed output.
 pub fn schedule_disjoint_rewrites_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     candidates: &[u32],
     h: u32,
     w: u32,
@@ -107,7 +107,7 @@ pub fn schedule_disjoint_rewrites_via(
 ///
 /// Returns [`DispatchError`] when validation or backend execution fails.
 pub fn schedule_disjoint_rewrites_via_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     candidates: &[u32],
     h: u32,
     w: u32,
@@ -133,7 +133,7 @@ pub fn schedule_disjoint_rewrites_via_into(
 ///
 /// Returns [`DispatchError`] when validation or backend execution fails.
 pub fn schedule_disjoint_rewrites_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     candidates: &[u32],
     h: u32,
     w: u32,
@@ -199,7 +199,7 @@ pub fn batch_reduction_ratio(candidate_count: u32, scheduled_count: u32) -> f64 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     #[test]
@@ -239,7 +239,7 @@ mod tests {
 
     struct PlanarDispatcher;
 
-    impl OptimizerDispatcher for PlanarDispatcher {
+    impl ProgramDispatcher for PlanarDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -248,7 +248,7 @@ mod tests {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 2);
-            let candidates = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
+            let candidates = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
             let n = integer_sqrt(candidates.len());
             let chosen = reference_planar_rewrite_schedule(&candidates, n as u32, n as u32, 2);
             Ok(vec![u32_slice_to_le_bytes(&chosen)])

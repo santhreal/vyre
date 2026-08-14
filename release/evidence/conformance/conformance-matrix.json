@@ -625,12 +625,12 @@
     "vyre-libs::security::xss_escape:reference:supported",
     "vyre-libs::security::xss_escape:cuda:supported",
     "vyre-libs::security::xss_escape:wgpu:supported",
-    "vyre-libs::substrate::indexed_map:reference:supported",
-    "vyre-libs::substrate::indexed_map:cuda:supported",
-    "vyre-libs::substrate::indexed_map:wgpu:supported",
-    "vyre-libs::substrate::strided_accumulate:reference:supported",
-    "vyre-libs::substrate::strided_accumulate:cuda:supported",
-    "vyre-libs::substrate::strided_accumulate:wgpu:supported",
+    "vyre-libs::builder::indexed_map:reference:supported",
+    "vyre-libs::builder::indexed_map:cuda:supported",
+    "vyre-libs::builder::indexed_map:wgpu:supported",
+    "vyre-libs::builder::strided_accumulate:reference:supported",
+    "vyre-libs::builder::strided_accumulate:cuda:supported",
+    "vyre-libs::builder::strided_accumulate:wgpu:supported",
     "vyre-libs::visual::blur:reference:supported",
     "vyre-libs::visual::blur:cuda:supported",
     "vyre-libs::visual::blur:wgpu:supported",
@@ -29752,7 +29752,7 @@
       "blockers": []
     },
     {
-      "op_id": "vyre-libs::substrate::indexed_map",
+      "op_id": "vyre-libs::builder::indexed_map",
       "backend": "reference",
       "status": "supported",
       "test_paths": [
@@ -29799,7 +29799,7 @@
       "blockers": []
     },
     {
-      "op_id": "vyre-libs::substrate::indexed_map",
+      "op_id": "vyre-libs::builder::indexed_map",
       "backend": "cuda",
       "status": "supported",
       "test_paths": [
@@ -29846,7 +29846,7 @@
       "blockers": []
     },
     {
-      "op_id": "vyre-libs::substrate::indexed_map",
+      "op_id": "vyre-libs::builder::indexed_map",
       "backend": "wgpu",
       "status": "supported",
       "test_paths": [
@@ -29893,7 +29893,7 @@
       "blockers": []
     },
     {
-      "op_id": "vyre-libs::substrate::strided_accumulate",
+      "op_id": "vyre-libs::builder::strided_accumulate",
       "backend": "reference",
       "status": "supported",
       "test_paths": [
@@ -29940,7 +29940,7 @@
       "blockers": []
     },
     {
-      "op_id": "vyre-libs::substrate::strided_accumulate",
+      "op_id": "vyre-libs::builder::strided_accumulate",
       "backend": "cuda",
       "status": "supported",
       "test_paths": [
@@ -29987,7 +29987,7 @@
       "blockers": []
     },
     {
-      "op_id": "vyre-libs::substrate::strided_accumulate",
+      "op_id": "vyre-libs::builder::strided_accumulate",
       "backend": "wgpu",
       "status": "supported",
       "test_paths": [
@@ -54928,14 +54928,14 @@
       "tolerance_ulp": 0
     },
     {
-      "id": "vyre-libs::substrate::indexed_map",
+      "id": "vyre-libs::builder::indexed_map",
       "requires_fixture": true,
       "has_test_inputs": true,
       "has_expected_output": true,
       "tolerance_ulp": 0
     },
     {
-      "id": "vyre-libs::substrate::strided_accumulate",
+      "id": "vyre-libs::builder::strided_accumulate",
       "requires_fixture": true,
       "has_test_inputs": true,
       "has_expected_output": true,

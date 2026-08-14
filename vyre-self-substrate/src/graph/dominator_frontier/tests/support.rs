@@ -5,7 +5,7 @@ pub(super) struct DominatorDispatcher {
     pub(super) outputs: Vec<Vec<u8>>,
 }
 
-impl OptimizerDispatcher for DominatorDispatcher {
+impl ProgramDispatcher for DominatorDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -25,7 +25,7 @@ impl OptimizerDispatcher for DominatorDispatcher {
 
 pub(super) struct DominatorInputShapeDispatcher;
 
-impl OptimizerDispatcher for DominatorInputShapeDispatcher {
+impl ProgramDispatcher for DominatorInputShapeDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -53,7 +53,7 @@ pub(super) struct RecordingDominatorDispatcher {
     pub(super) output: Vec<u8>,
 }
 
-impl OptimizerDispatcher for RecordingDominatorDispatcher {
+impl ProgramDispatcher for RecordingDominatorDispatcher {
     fn dispatch(
         &self,
         _program: &Program,

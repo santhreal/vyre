@@ -460,11 +460,12 @@ Use Vyre primitives to implement scheduler, graph, coverage, and optimization su
 - Path: `vyre-self-substrate`
 - Owner: `self-substrate`
 - Layer: `scheduler`
-- Internal production dependencies: `vyre-foundation`, `vyre-primitives`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs`, `vyre-primitives`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-libs` | product operation builders | `private` | `product-libraries` |
 | `vyre-primitives` | reusable semantic Program builders | `public` | `primitive-library` |
 
 ### `vyre-spec`

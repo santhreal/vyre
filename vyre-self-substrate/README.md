@@ -49,7 +49,7 @@ Use Vyre primitives to implement scheduler, graph, coverage, and optimization su
 ### Boundaries
 
 The `self-substrate` owner maintains this `scheduler` crate at `vyre-self-substrate`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-primitives`.
+Its allowed internal production dependencies are: `vyre-foundation`, `vyre-libs`, `vyre-primitives`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

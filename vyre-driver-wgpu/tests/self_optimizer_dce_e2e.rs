@@ -1,8 +1,8 @@
 //! End-to-end test: vyre's DCE pass running as a vyre Program on the
 //! GPU through the canonical `WgpuBackend::dispatch` API.
 //!
-//! No CPU fallback. The test wires a `WgpuOptimizerDispatcher` that
-//! satisfies the `vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher`
+//! No CPU fallback. The test wires a `WgpuProgramDispatcher` that
+//! satisfies the `vyre_foundation::program_dispatch::ProgramDispatcher`
 //! trait and calls `gpu_dce`. Result is asserted fingerprint-equal to
 //! the foundation CPU `dce` pass on the same input  -  proving the
 //! self-hosted GPU pass is semantically identical, with the substrate
@@ -19,21 +19,21 @@ use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::optimizer::fingerprint_program;
 use vyre_foundation::optimizer::passes::fusion_cse::dce::engine::dce as cpu_dce_oracle;
 use vyre_self_substrate::optimizer::dce_via_encoded::gpu_dce;
-use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Wraps a live `WgpuBackend` and adapts its `dispatch` API to the
-/// `OptimizerDispatcher` trait the self-hosted optimizer expects.
-struct WgpuOptimizerDispatcher<'a> {
+/// `ProgramDispatcher` trait the self-hosted optimizer expects.
+struct WgpuProgramDispatcher<'a> {
     backend: &'a WgpuBackend,
 }
 
-impl<'a> WgpuOptimizerDispatcher<'a> {
+impl<'a> WgpuProgramDispatcher<'a> {
     fn new(backend: &'a WgpuBackend) -> Self {
         Self { backend }
     }
 }
 
-impl<'a> OptimizerDispatcher for WgpuOptimizerDispatcher<'a> {
+impl<'a> ProgramDispatcher for WgpuProgramDispatcher<'a> {
     fn dispatch(
         &self,
         program: &Program,
@@ -53,7 +53,7 @@ fn wrapped(entry: Vec<Node>) -> Program {
 
 fn assert_gpu_dce_matches_cpu_oracle(entry: Vec<Node>) {
     let backend = live_backend();
-    let dispatcher = WgpuOptimizerDispatcher::new(&backend);
+    let dispatcher = WgpuProgramDispatcher::new(&backend);
 
     let oracle_in = wrapped(entry.clone());
     let test_in = wrapped(entry);

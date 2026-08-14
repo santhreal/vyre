@@ -1,7 +1,7 @@
-//! CUDA-resident `OptimizerDispatcher`  -  the fast path for the
+//! CUDA-resident `ProgramDispatcher`  -  the fast path for the
 //! self-hosted optimizer.
 //!
-//! Implements the persistent surface of `OptimizerDispatcher`: alloc
+//! Implements the persistent surface of `ProgramDispatcher`: alloc
 //! once, upload once, dispatch many times against the same resident
 //! buffers, read back at the end. This bypasses the per-call sync
 //! overhead the borrowed `dispatch` API has, which is the dominant
@@ -19,8 +19,8 @@ use vyre_driver::accounting::checked_add_u64_lazy;
 use vyre_driver::input_identity::{domain_separated_exact_input_key, ExactInputKey};
 use vyre_driver::DispatchConfig;
 use vyre_foundation::ir::Program;
-use vyre_self_substrate::optimizer::dispatcher::{
-    DispatchError, OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
+use vyre_foundation::program_dispatch::{
+    DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
     ResidentStaticBufferSet,
 };
 
@@ -47,7 +47,7 @@ fn reserve_optimizer_vec<T>(
 
 /// Optimizer dispatcher backed by CUDA-resident buffers.
 ///
-/// Holds a borrow on a live [`CudaBackend`]. All `OptimizerDispatcher`
+/// Holds a borrow on a live [`CudaBackend`]. All `ProgramDispatcher`
 /// trait methods route through the backend's resident-buffer surface
 /// when the persistent path applies; the borrowed `dispatch` method
 /// still exists for transitions between passes that haven't been
@@ -63,11 +63,11 @@ fn reserve_optimizer_vec<T>(
 /// pass optimizer that allocates 14+ buffers per pipeline run, this
 /// drops alloc cost from ~50ms/run on the first call to ~µs on
 /// every subsequent call.
-pub struct CudaOptimizerDispatcher<'a> {
+pub struct CudaProgramDispatcher<'a> {
     backend: &'a CudaBackend,
     /// `local id -> owned handle` for resident buffers we allocated.
     ///
-    /// The `OptimizerDispatcher` contract passes bare `u64` ids across its
+    /// The `ProgramDispatcher` contract passes bare `u64` ids across its
     /// boundary, so the real owner-qualified handle is retained here and
     /// looked up again on the way back in. A handle is never rebuilt from a
     /// bare id: that is the fabrication this table exists to prevent.
@@ -91,8 +91,8 @@ pub struct CudaOptimizerDispatcher<'a> {
     max_static_cached_bytes: u64,
 }
 
-impl<'a> CudaOptimizerDispatcher<'a> {
-    /// Wrap a live `CudaBackend` for use as an `OptimizerDispatcher`.
+impl<'a> CudaProgramDispatcher<'a> {
+    /// Wrap a live `CudaBackend` for use as an `ProgramDispatcher`.
     pub fn new(backend: &'a CudaBackend) -> Self {
         Self::with_pool_budget(
             backend,
@@ -395,9 +395,9 @@ impl<'a> CudaOptimizerDispatcher<'a> {
 #[cfg(test)]
 #[allow(clippy::items_after_test_module)]
 mod tests {
-    use vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher;
+    use vyre_foundation::program_dispatch::ProgramDispatcher;
 
-    use super::CudaOptimizerDispatcher;
+    use super::CudaProgramDispatcher;
     use crate::backend::CudaBackend;
 
     #[test]
@@ -407,7 +407,7 @@ mod tests {
         let baseline = backend.resident_allocated_bytes();
 
         {
-            let dispatcher = CudaOptimizerDispatcher::new_with_pool_budget_for_tests(&backend, 64);
+            let dispatcher = CudaProgramDispatcher::new_with_pool_budget_for_tests(&backend, 64);
             let first = dispatcher
                 .alloc_resident(64)
                 .expect("Fix: first resident optimizer allocation must succeed.");
@@ -457,7 +457,7 @@ mod tests {
 
         {
             let dispatcher =
-                CudaOptimizerDispatcher::new_with_pool_budget_for_tests(&backend, expected_h2d * 4);
+                CudaProgramDispatcher::new_with_pool_budget_for_tests(&backend, expected_h2d * 4);
             backend.reset_telemetry();
             let cold = dispatcher
                 .acquire_resident_static_uploads(0x4355_4441_5354_4154, &[&payload_a, &payload_b])
@@ -508,7 +508,7 @@ mod tests {
     fn cuda_optimizer_resident_clear_uses_device_memset_not_h2d_upload() {
         let backend = CudaBackend::acquire()
             .expect("Fix: CUDA backend acquisition must succeed on the GPU-required test host.");
-        let dispatcher = CudaOptimizerDispatcher::new_with_pool_budget_for_tests(&backend, 4096);
+        let dispatcher = CudaProgramDispatcher::new_with_pool_budget_for_tests(&backend, 4096);
         let handle = dispatcher
             .alloc_resident(64)
             .expect("Fix: resident clear test allocation must succeed.");
@@ -569,14 +569,14 @@ fn cuda_optimizer_resident_pool_budget_bytes(total_memory_bytes: u64) -> u64 {
     total_memory_bytes / CUDA_OPTIMIZER_RESIDENT_POOL_BUDGET_DENOMINATOR
 }
 
-impl<'a> Drop for CudaOptimizerDispatcher<'a> {
+impl<'a> Drop for CudaProgramDispatcher<'a> {
     fn drop(&mut self) {
         self.drain_static_upload_cache();
         self.drain_pool();
     }
 }
 
-impl<'a> OptimizerDispatcher for CudaOptimizerDispatcher<'a> {
+impl<'a> ProgramDispatcher for CudaProgramDispatcher<'a> {
     fn dispatch(
         &self,
         program: &Program,

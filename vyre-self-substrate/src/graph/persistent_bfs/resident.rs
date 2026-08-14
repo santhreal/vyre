@@ -3,11 +3,11 @@ use super::state::{
     PersistentBfsResidentScratch, ResidentBfsGraph,
 };
 
-use crate::dispatch_buffers::{u32_word_bytes, write_u32_slice_le_bytes};
+use vyre_libs::dispatch_buffers::{u32_word_bytes, write_u32_slice_le_bytes};
 use crate::graph::dispatch_bridge::{
     resident_dispatch_three_u32_outputs_into, upload_resident_dispatch_inputs, DispatchInput,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher, ResidentReadRange};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentReadRange};
 use vyre_primitives::graph::persistent_bfs::{
     persistent_bfs_layout_hash as primitive_persistent_bfs_layout_hash,
     plan_persistent_bfs_resident_batch_dispatch, plan_persistent_bfs_resident_dispatch,
@@ -25,7 +25,7 @@ use vyre_primitives::graph::persistent_bfs::{
 ///
 /// Rejects malformed CSR shapes or dispatchers without resident-buffer support.
 pub fn upload_resident_bfs_graph(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -88,7 +88,7 @@ pub fn upload_resident_bfs_graph(
 /// width is unchanged.
 #[allow(clippy::too_many_arguments)]
 pub fn bfs_expand_resident_graph_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     graph: &ResidentBfsGraph,
     frontier_in: &[u32],
     allow_mask: u32,
@@ -195,7 +195,7 @@ pub fn bfs_expand_resident_graph_with_scratch_into(
 /// output/change state.
 #[allow(clippy::too_many_arguments)]
 pub fn bfs_expand_resident_graph_batch_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     graph: &ResidentBfsGraph,
     frontier_inputs: &[u32],
     query_count: usize,
@@ -341,7 +341,7 @@ pub fn bfs_expand_resident_graph_batch_with_scratch_into(
 /// four buffers (frontier_in, frontier_out, changed, converged), batch queries
 /// use three (frontier_in, frontier_out, changed).
 pub(super) fn ensure_resident_query_handles(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scratch: &mut PersistentBfsResidentScratch,
     byte_lengths: &[usize],
 ) -> Result<Vec<u64>, DispatchError> {

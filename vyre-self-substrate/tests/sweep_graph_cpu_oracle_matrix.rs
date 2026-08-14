@@ -22,7 +22,7 @@ use vyre_self_substrate::exploded::{
 use vyre_self_substrate::graph::csr_bidirectional::reference_bidirectional_step;
 use vyre_self_substrate::graph::csr_forward_or_changed::reference_forward_step_with_change_flag;
 use vyre_self_substrate::graph::persistent_bfs::bfs_expand;
-use vyre_self_substrate::optimizer::dispatcher::oracle::CpuOracleDispatcher;
+use vyre_self_substrate::optimizer::cpu_oracle::CpuOracleDispatcher;
 
 /// Shapes per substrate-wrapper family. The wrappers delegate to the primitive
 /// references swept below, so they need breadth, not depth.

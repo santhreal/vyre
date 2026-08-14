@@ -9,7 +9,7 @@ mod common;
 
 use common::live_backend;
 use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver_cuda::CudaOptimizerDispatcher;
+use vyre_driver_cuda::CudaProgramDispatcher;
 use vyre_self_substrate::optimizer::pipeline_resident::gpu_pipeline_resident;
 
 /// Bind `x` to a non-literal value (`Load(input, 0)`) so const-prop
@@ -32,7 +32,7 @@ fn program_with_x_load_then(value: Expr) -> Program {
 
 fn run_pipeline(p: Program) -> Program {
     let backend = live_backend();
-    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     gpu_pipeline_resident(p, &dispatcher).expect("pipeline must succeed")
 }
 

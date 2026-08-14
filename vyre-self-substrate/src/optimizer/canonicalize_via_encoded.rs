@@ -13,7 +13,7 @@
 
 use vyre_foundation::ir::{Expr, Node, Program};
 
-use super::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use super::encode::EncodeError;
 use super::expr_arena::{encode_expr_arena, expr_kind, ExprArenaEncoding};
 
@@ -45,7 +45,7 @@ impl std::error::Error for CanonicalizeError {}
 /// Run literal-on-right canonicalization on `program`.
 pub fn gpu_canonicalize(
     program: Program,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
 ) -> Result<Program, CanonicalizeError> {
     let arena = encode_expr_arena(&program).map_err(CanonicalizeError::Encode)?;
     if arena.expr_count == 0 {
@@ -61,7 +61,7 @@ pub fn gpu_canonicalize(
 #[cfg(test)]
 fn run_canonicalize_kernel_into(
     arena: &ExprArenaEncoding,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     swap_mask: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
     let mut scratch = CanonicalizeKernelScratch::default();
@@ -70,7 +70,7 @@ fn run_canonicalize_kernel_into(
 
 fn run_canonicalize_kernel_with_scratch_into(
     arena: &ExprArenaEncoding,
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     scratch: &mut CanonicalizeKernelScratch,
     swap_mask: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
@@ -242,13 +242,13 @@ fn rewrite_expr(expr: &Expr, swap_mask: &[u32], counter: &mut u32) -> Expr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
 
     struct CanonicalizeDispatcher {
         outputs: Vec<Vec<u8>>,
     }
 
-    impl OptimizerDispatcher for CanonicalizeDispatcher {
+    impl ProgramDispatcher for CanonicalizeDispatcher {
         fn dispatch(
             &self,
             _program: &Program,

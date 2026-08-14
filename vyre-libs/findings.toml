@@ -1383,7 +1383,7 @@ ONE shared error from the CUDA resident dispatch:
 emitted at vyre-driver-cuda/src/backend/dispatch.rs:229 (and the sibling resident
 paths backend/resident_dispatch/{batch.rs:63, async_dispatch.rs:121, borrowed.rs:103}).
 Call path: the tests call vyre_self_substrate::optimizer::pipeline_resident::
-gpu_pipeline_resident(p, &CudaOptimizerDispatcher), which allocates resident handles
+gpu_pipeline_resident(p, &CudaProgramDispatcher), which allocates resident handles
 for the arena optimizer passes and dispatches. One pass's Program declares 7 buffers
 but gpu_pipeline_resident provides only 3 resident handles -> hard contract violation.
 

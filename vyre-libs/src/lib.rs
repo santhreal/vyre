@@ -103,9 +103,7 @@ pub use tensor_ref::{check_dtype, check_shape, check_unique_names, TensorRef, Te
 
 /// Shared builder helpers every Cat-A composition reuses.
 pub mod builder;
-#[cfg(feature = "math-linalg")]
-pub(crate) mod linear_algebra_substrate;
-mod substrate_catalog;
+mod builder_catalog;
 
 pub use builder::{check_tensors, BuildOptions};
 
@@ -113,6 +111,9 @@ pub mod buffer_names;
 
 /// `ProgramDescriptor`  -  introspection surface for Cat-A Programs.
 pub mod descriptor;
+
+/// Host-side byte marshalling for `ProgramDispatcher` calls.
+pub mod dispatch_buffers;
 
 pub use descriptor::{BufferDescriptor, ProgramDescriptor};
 

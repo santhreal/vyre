@@ -1,8 +1,8 @@
 use super::state::{copy_frontier_seed_into, PersistentBfsGpuScratch};
 
-use crate::dispatch_buffers::decode_u32_output_exact;
+use vyre_libs::dispatch_buffers::decode_u32_output_exact;
 use crate::graph::dispatch_bridge::{refresh_keyed_dispatch_inputs, DispatchInput};
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::persistent_bfs::{
     plan_persistent_bfs_dispatch, validate_persistent_bfs_changed_flag,
     validate_persistent_bfs_converged_flag,
@@ -22,7 +22,7 @@ use vyre_primitives::graph::persistent_bfs::{
 /// shapes or truncated readback.
 #[allow(clippy::too_many_arguments)]
 pub fn bfs_expand_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -49,7 +49,7 @@ pub fn bfs_expand_via(
 /// Dispatcher-backed persistent BFS expansion into caller-owned frontier storage.
 #[allow(clippy::too_many_arguments)]
 pub fn bfs_expand_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -77,7 +77,7 @@ pub fn bfs_expand_via_into(
 /// Dispatcher-backed persistent BFS expansion into caller-owned frontier and dispatch scratch.
 #[allow(clippy::too_many_arguments)]
 pub fn bfs_expand_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],

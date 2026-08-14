@@ -1,7 +1,7 @@
 use super::super::*;
 use super::linear_graph;
-use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use std::cell::RefCell;
 use vyre_foundation::ir::Program;
 
@@ -9,7 +9,7 @@ struct PersistentBfsDispatcher {
     outputs: Vec<Vec<u8>>,
 }
 
-impl OptimizerDispatcher for PersistentBfsDispatcher {
+impl ProgramDispatcher for PersistentBfsDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -32,7 +32,7 @@ struct RecordingPersistentBfsDispatcher {
     edge_targets: RefCell<Vec<Vec<u32>>>,
 }
 
-impl OptimizerDispatcher for RecordingPersistentBfsDispatcher {
+impl ProgramDispatcher for RecordingPersistentBfsDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -48,7 +48,7 @@ impl OptimizerDispatcher for RecordingPersistentBfsDispatcher {
         }
         self.edge_targets
             .borrow_mut()
-            .push(crate::hardware::dispatch_buffers::read_u32s(&inputs[2]));
+            .push(vyre_libs::dispatch_buffers::read_u32s(&inputs[2]));
         Ok(self.outputs.clone())
     }
 }
@@ -57,7 +57,7 @@ struct LargeScratchPersistentBfsDispatcher {
     outputs: Vec<Vec<u8>>,
 }
 
-impl OptimizerDispatcher for LargeScratchPersistentBfsDispatcher {
+impl ProgramDispatcher for LargeScratchPersistentBfsDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -329,7 +329,7 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
 fn via_zero_iters_validates_and_returns_seed_without_dispatch_or_cache() {
     struct NoDispatch;
 
-    impl OptimizerDispatcher for NoDispatch {
+    impl ProgramDispatcher for NoDispatch {
         fn dispatch(
             &self,
             _program: &Program,

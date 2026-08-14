@@ -23,7 +23,7 @@ use std::time::Instant;
 
 use borrowck_reachability_cuda::{corpus, cuda_conflicts, cuda_conflicts_batched, facts, gpu};
 use common::{with_cuda_optimizer_dispatcher, with_live_backend};
-use vyre_driver_cuda::CudaOptimizerDispatcher as CudaResidentDispatcher;
+use vyre_driver_cuda::CudaProgramDispatcher as CudaResidentDispatcher;
 use vyre_frontend_rust::borrowck::{analyze, BorrowFacts, Conflict, ConflictKind, LoanKind};
 
 #[test]

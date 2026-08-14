@@ -27,7 +27,7 @@
 
 use vyre_primitives::math::bellman_shortest_path::cpu_ref;
 use vyre_self_substrate::math::bellman_tn_order::bellman_tn_order_via;
-use vyre_self_substrate::optimizer::dispatcher::DispatchError;
+use vyre_foundation::program_dispatch::DispatchError;
 
 mod common;
 use common::ReferenceEvalDispatcher;

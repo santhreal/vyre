@@ -10,11 +10,11 @@ use vyre_primitives::bitset::popcount::{
     cpu_ref as primitive_popcount, cpu_ref_into as primitive_popcount_into,
 };
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned GPU dispatch scratch for bitset-summary kernels.
 #[derive(Debug, Default)]
@@ -77,7 +77,7 @@ pub fn saturation_ratio(input: &[u32]) -> f64 {
 ///
 /// Propagates dispatcher errors or malformed readback.
 pub fn per_word_popcount_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     input: &[u32],
 ) -> Result<Vec<u32>, DispatchError> {
     let mut out = Vec::new();
@@ -92,7 +92,7 @@ pub fn per_word_popcount_via(
 ///
 /// Propagates dispatcher errors or malformed readback.
 pub fn per_word_popcount_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     input: &[u32],
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
@@ -107,7 +107,7 @@ pub fn per_word_popcount_via_into(
 ///
 /// Propagates dispatcher errors or malformed readback.
 pub fn per_word_popcount_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     input: &[u32],
     scratch: &mut BitsetSummaryGpuScratch,
     out: &mut Vec<u32>,
@@ -147,7 +147,7 @@ pub fn per_word_popcount_via_with_scratch_into(
 ///
 /// Propagates popcount dispatch errors.
 pub fn total_set_bits_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     input: &[u32],
 ) -> Result<u64, DispatchError> {
     let counts = per_word_popcount_via(dispatcher, input)?;
@@ -169,7 +169,7 @@ pub fn total_set_bits_via(
 ///
 /// Propagates popcount dispatch errors.
 pub fn saturation_ratio_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     input: &[u32],
 ) -> Result<f64, DispatchError> {
     if input.is_empty() {
@@ -183,12 +183,12 @@ pub fn saturation_ratio_via(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     struct PopcountDispatcher;
 
-    impl OptimizerDispatcher for PopcountDispatcher {
+    impl ProgramDispatcher for PopcountDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -197,7 +197,7 @@ mod tests {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 2);
-            let input = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
+            let input = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
             assert_eq!(inputs[1].len(), input.len() * std::mem::size_of::<u32>());
             let out: Vec<u32> = input.iter().map(|word| word.count_ones()).collect();
             Ok(vec![u32_slice_to_le_bytes(&out)])

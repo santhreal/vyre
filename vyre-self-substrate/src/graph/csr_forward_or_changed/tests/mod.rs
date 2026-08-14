@@ -1,6 +1,6 @@
 use super::*;
-use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use std::sync::Mutex;
 use vyre_foundation::ir::Program;
 
@@ -10,7 +10,7 @@ struct CsrChangedDispatcher {
     outputs: Vec<Vec<u8>>,
 }
 
-impl OptimizerDispatcher for CsrChangedDispatcher {
+impl ProgramDispatcher for CsrChangedDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -32,7 +32,7 @@ struct RecordingCsrChangedDispatcher {
     frontier_inputs: Mutex<Vec<Vec<u32>>>,
 }
 
-impl OptimizerDispatcher for RecordingCsrChangedDispatcher {
+impl ProgramDispatcher for RecordingCsrChangedDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -42,7 +42,7 @@ impl OptimizerDispatcher for RecordingCsrChangedDispatcher {
         self.frontier_inputs
             .lock()
             .expect("Fix: frontier recording mutex should not be poisoned")
-            .push(crate::hardware::dispatch_buffers::read_u32s(&inputs[5]));
+            .push(vyre_libs::dispatch_buffers::read_u32s(&inputs[5]));
         Ok(self.outputs.clone())
     }
 }
@@ -52,7 +52,7 @@ struct StaticCsrInputRecordingDispatcher {
     edge_targets: Mutex<Vec<Vec<u32>>>,
 }
 
-impl OptimizerDispatcher for StaticCsrInputRecordingDispatcher {
+impl ProgramDispatcher for StaticCsrInputRecordingDispatcher {
     fn dispatch(
         &self,
         _program: &Program,
@@ -62,7 +62,7 @@ impl OptimizerDispatcher for StaticCsrInputRecordingDispatcher {
         self.edge_targets
             .lock()
             .expect("Fix: static input recording mutex should not be poisoned")
-            .push(crate::hardware::dispatch_buffers::read_u32s(&inputs[2]));
+            .push(vyre_libs::dispatch_buffers::read_u32s(&inputs[2]));
         Ok(self.outputs.clone())
     }
 }
@@ -179,7 +179,7 @@ fn gpu_rejects_non_boolean_changed_flag() {
 fn gpu_rejects_bad_seed_width_without_clobbering_frontier() {
     struct NoDispatch;
 
-    impl OptimizerDispatcher for NoDispatch {
+    impl ProgramDispatcher for NoDispatch {
         fn dispatch(
             &self,
             _program: &Program,

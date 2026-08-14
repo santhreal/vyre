@@ -9,7 +9,7 @@ use crate::api::resident::{
 use vyre_driver::autotune_store::{AutotuneRecord, AutotuneStore};
 use vyre_driver::specialization::SpecCacheKey;
 use vyre_driver::speculate::SpeculativeVariantKeys;
-use vyre_driver::speculation_substrate::SpeculationVerdict;
+use vyre_driver::speculation_verdict::SpeculationVerdict;
 use vyre_runtime::resident_work_queue::{
     self, control, slot, PairedSpeculationSample, PairedSpeculationWindow, SLOT_WORDS, STATUS_WORD,
 };

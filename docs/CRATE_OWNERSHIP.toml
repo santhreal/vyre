@@ -663,6 +663,17 @@ boundary = "public"
 seam = "foundation-ir"
 
 [[crate.dependency]]
+package = "vyre-libs"
+purpose = "product operation builders"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "product-libraries"
+
+[[crate.dependency]]
 package = "vyre-primitives"
 purpose = "reusable semantic Program builders"
 features = []

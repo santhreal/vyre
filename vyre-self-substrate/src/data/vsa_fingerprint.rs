@@ -5,11 +5,11 @@
 //! returns the same fingerprint for two semantically-equivalent
 //! Region trees with reordered children  -  beats byte-equal hashing.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_primitives::hash::hypervector::xor_bind_cpu;
 use vyre_primitives::hash::hypervector::{hamming_similarity, hypervector_xor_bind};
@@ -61,7 +61,7 @@ pub fn reference_fingerprint(kind_hv: &[u32], signature_hv: &[u32], region_hv: &
 /// Returns [`DispatchError::BadInputs`] when dimensions are zero or mismatched, dispatch fails, or
 /// a backend returns a truncated output buffer.
 pub fn fingerprint_via(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     kind_hv: &[u32],
     signature_hv: &[u32],
     region_hv: &[u32],
@@ -79,7 +79,7 @@ pub fn fingerprint_via(
 /// Returns [`DispatchError::BadInputs`] when dimensions are zero or mismatched,
 /// dispatch fails, or a backend returns malformed output.
 pub fn fingerprint_via_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     kind_hv: &[u32],
     signature_hv: &[u32],
     region_hv: &[u32],
@@ -104,7 +104,7 @@ pub fn fingerprint_via_into(
 /// Returns [`DispatchError::BadInputs`] when dimensions are zero or mismatched,
 /// dispatch fails, or a backend returns malformed output.
 pub fn fingerprint_via_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     kind_hv: &[u32],
     signature_hv: &[u32],
     region_hv: &[u32],
@@ -157,7 +157,7 @@ fn validate_fingerprint_dims(
 }
 
 fn dispatch_xor_bind_with_scratch_into(
-    dispatcher: &dyn OptimizerDispatcher,
+    dispatcher: &dyn ProgramDispatcher,
     a: &[u32],
     b: &[u32],
     dim_words: u32,
@@ -203,11 +203,11 @@ pub fn lookup_approximate(query: &[u32], cached: &[Vec<u32>], threshold: f32) ->
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
 
     struct XorDispatcher;
 
-    impl OptimizerDispatcher for XorDispatcher {
+    impl ProgramDispatcher for XorDispatcher {
         fn dispatch(
             &self,
             _program: &vyre_foundation::ir::Program,
@@ -220,11 +220,11 @@ mod tests {
                     inputs.len()
                 )));
             };
-            let a = crate::hardware::dispatch_buffers::decode_u32_input_aligned(
+            let a = vyre_libs::dispatch_buffers::decode_u32_input_aligned(
                 a_bytes,
                 "XOR test dispatcher",
             )?;
-            let b = crate::hardware::dispatch_buffers::decode_u32_input_aligned(
+            let b = vyre_libs::dispatch_buffers::decode_u32_input_aligned(
                 b_bytes,
                 "XOR test dispatcher",
             )?;

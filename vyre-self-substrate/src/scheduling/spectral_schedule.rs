@@ -7,11 +7,11 @@
 //! Output: cluster IDs that #19 polyhedral fusion + #22 megakernel
 //! scheduler consume as fusion hints.
 
-use crate::dispatch_buffers::{
+use vyre_libs::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(test)]
 use vyre_primitives::graph::chebyshev_filter::chebyshev_filter_cpu;
 use vyre_primitives::graph::chebyshev_filter::{chebyshev_filter, MAX_K as CHEBYSHEV_MAX_K};
@@ -51,7 +51,7 @@ pub fn reference_fusion_scores(laplacian: &[f32], n: u32) -> Vec<f32> {
 /// Returns [`DispatchError`] when shapes are invalid, the primitive order is
 /// unsupported, or the backend returns malformed output.
 pub fn fusion_scores_fixed_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     laplacian_fixed: &[u32],
     signal_fixed: &[u32],
     coeffs_fixed: &[u32],
@@ -78,7 +78,7 @@ pub fn fusion_scores_fixed_via(
 ///
 /// Returns [`DispatchError`] when shape checks or backend execution fail.
 pub fn fusion_scores_fixed_via_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     laplacian_fixed: &[u32],
     signal_fixed: &[u32],
     coeffs_fixed: &[u32],
@@ -106,7 +106,7 @@ pub fn fusion_scores_fixed_via_into(
 ///
 /// Returns [`DispatchError`] when shape checks or backend execution fail.
 pub fn fusion_scores_fixed_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     laplacian_fixed: &[u32],
     signal_fixed: &[u32],
     coeffs_fixed: &[u32],
@@ -219,7 +219,7 @@ pub fn reference_shape_spectrum(
 /// Returns [`DispatchError`] when the eigenvalue vector is empty, too large
 /// for the primitive lane space, or the backend returns malformed output.
 pub fn shape_spectrum_fixed_via(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     eigenvalues_fixed: &[u32],
     mp_edge_fixed: u32,
 ) -> Result<Vec<u32>, DispatchError> {
@@ -234,7 +234,7 @@ pub fn shape_spectrum_fixed_via(
 ///
 /// Returns [`DispatchError`] when shape checks or backend execution fail.
 pub fn shape_spectrum_fixed_via_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     eigenvalues_fixed: &[u32],
     mp_edge_fixed: u32,
     out: &mut Vec<u32>,
@@ -255,7 +255,7 @@ pub fn shape_spectrum_fixed_via_into(
 ///
 /// Returns [`DispatchError`] when shape checks or backend execution fail.
 pub fn shape_spectrum_fixed_via_with_scratch_into(
-    dispatcher: &impl OptimizerDispatcher,
+    dispatcher: &impl ProgramDispatcher,
     eigenvalues_fixed: &[u32],
     mp_edge_fixed: u32,
     scratch: &mut SpectralScheduleGpuScratch,
@@ -309,7 +309,7 @@ pub fn shape_spectrum_fixed_via_with_scratch_into(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     fn approx_eq_f32(a: f32, b: f32) -> bool {
@@ -352,7 +352,7 @@ mod tests {
 
     struct SpectralDispatcher;
 
-    impl OptimizerDispatcher for SpectralDispatcher {
+    impl ProgramDispatcher for SpectralDispatcher {
         fn dispatch(
             &self,
             _program: &Program,
@@ -363,17 +363,17 @@ mod tests {
                 // mp_edge_clip: eigenvalues RO(0) + mp_edge scalar RO(1) + plain-RW out(2).
                 3 => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let eigenvalues = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-                    let edge = crate::hardware::dispatch_buffers::read_u32s(&inputs[1])[0];
+                    let eigenvalues = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+                    let edge = vyre_libs::dispatch_buffers::read_u32s(&inputs[1])[0];
                     let clipped: Vec<u32> = eigenvalues.into_iter().map(|v| v.min(edge)).collect();
                     Ok(vec![u32_slice_to_le_bytes(&clipped)])
                 }
                 // chebyshev_filter: 3 RO (laplacian/signal/coeffs) + plain-RW output(3)+scratch(4).
                 5 => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let laplacian = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-                    let signal = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
-                    let coeffs = crate::hardware::dispatch_buffers::read_u32s(&inputs[2]);
+                    let laplacian = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+                    let signal = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
+                    let coeffs = vyre_libs::dispatch_buffers::read_u32s(&inputs[2]);
                     assert_eq!(laplacian, vec![1, 0, 0, 1]);
                     assert_eq!(coeffs, vec![1]);
                     Ok(vec![u32_slice_to_le_bytes(&signal)])
