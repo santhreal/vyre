@@ -53,6 +53,9 @@ pub(crate) fn padded_u32_slice_fingerprint(values: &[u32], padded_words: usize) 
     hash
 }
 
+/// The published call shapes of a CSR closure, stated once for every op that
+/// iterates a one-step traversal to a fixpoint.
+pub(crate) mod csr_closure_entry_points;
 /// One BFS step that accumulates into frontier_out and reports changes.
 pub mod csr_forward_or_changed;
 /// One BFS frontier step over ProgramGraph CSR.

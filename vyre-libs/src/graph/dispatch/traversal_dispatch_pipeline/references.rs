@@ -1,7 +1,6 @@
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_primitives::graph::{
     adaptive_traverse::cpu_dense_step,
-    csr_forward_or_changed::cpu_ref_closure_into,
     csr_frontier_degree_sum::{csr_frontier_degree_sum_cpu, try_csr_frontier_degree_sum_cpu},
 };
 
@@ -38,28 +37,9 @@ pub fn try_reference_frontier_degree_sum(
 }
 
 /// CPU closure reference used by self-substrate fixed-point tests.
+///
+/// This pipeline counts nothing and changes nothing about the closure, so the
+/// primitive's borrowing shape is published under the pipeline's name rather
+/// than wrapped in a body that restates its argument list.
 #[cfg(any(test, feature = "cpu-parity"))]
-#[allow(clippy::too_many_arguments)]
-pub fn reference_csr_closure_into(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
-    current: &mut Vec<u32>,
-    next: &mut Vec<u32>,
-) {
-    cpu_ref_closure_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        seed,
-        allow_mask,
-        max_iters,
-        current,
-        next,
-    );
-}
+pub use vyre_primitives::graph::csr_forward_or_changed::cpu_ref_closure_into as reference_csr_closure_into;

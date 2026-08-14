@@ -1,5 +1,7 @@
 #[cfg(any(test, feature = "cpu-parity"))]
 use super::validate::validate_csr_inputs;
+#[cfg(any(test, feature = "cpu-parity"))]
+use crate::graph::csr_closure_entry_points::define_csr_closure_entry_points;
 
 /// CPU reference for one in-place expansion pass.
 #[must_use]
@@ -76,61 +78,16 @@ pub(crate) fn cpu_ref_into(
     changed
 }
 
-/// Iterate the internal `cpu_ref_into` step until the change flag reaches zero or
-/// `max_iters` is exhausted.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_closure(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
-) -> Vec<u32> {
-    let mut current = Vec::new();
-    let mut next = Vec::new();
-    cpu_ref_closure_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        seed,
-        allow_mask,
-        max_iters,
-        &mut current,
-        &mut next,
-    );
-    current
-}
-
-/// Iterate the internal `cpu_ref_into` step using caller-owned frontier buffers.
-#[allow(clippy::too_many_arguments)]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_closure_into(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
-    current: &mut Vec<u32>,
-    next: &mut Vec<u32>,
-) {
-    cpu_ref_closure_into_with_step_hook(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        seed,
-        allow_mask,
-        max_iters,
-        current,
-        next,
-        |_| {},
-    );
+define_csr_closure_entry_points! {
+    allocating: cpu_ref_closure {
+        /// Iterate the internal `cpu_ref_into` step until the change flag reaches zero or
+        /// `max_iters` is exhausted.
+    },
+    borrowing: cpu_ref_closure_into {
+        /// Iterate the internal `cpu_ref_into` step using caller-owned frontier buffers.
+    },
+    hooked: cpu_ref_closure_into_with_step_hook,
+    step_hook: |_| {},
 }
 
 /// Iterate the internal `cpu_ref_into` step with a callback after each attempted expansion.

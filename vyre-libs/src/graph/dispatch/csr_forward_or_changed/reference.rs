@@ -32,66 +32,24 @@ pub fn reference_forward_step_with_change_flag(
     )
 }
 
-/// Iterate `forward_step_with_change_flag` until the change flag
-/// reads 0 or `max_iters` is reached. Returns the saturated
-/// frontier.
-///
-/// This is the substrate path for "expand a Region set to its
-/// forward-reachable closure"  -  the same fixpoint loop the
-/// optimizer used to write by hand, now driven by the primitive's
-/// own change flag.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_forward_closure_via_change_flag(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
-) -> Vec<u32> {
-    let mut current = Vec::new();
-    let mut next = Vec::new();
-    reference_forward_closure_via_change_flag_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        seed,
-        allow_mask,
-        max_iters,
-        &mut current,
-        &mut next,
-    );
-    current
-}
-
-/// Iterate `forward_step_with_change_flag` using caller-owned scratch.
-#[allow(clippy::too_many_arguments)]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_forward_closure_via_change_flag_into(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
-    current: &mut Vec<u32>,
-    next: &mut Vec<u32>,
-) {
-    use crate::telemetry::observability::{bump, graph_dispatch_calls};
-    csr_foc_closure_into_with_step_hook(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        seed,
-        allow_mask,
-        max_iters,
-        current,
-        next,
-        |_| bump(&graph_dispatch_calls),
-    );
+vyre_primitives::define_csr_closure_entry_points! {
+    allocating: reference_forward_closure_via_change_flag {
+        /// Iterate `forward_step_with_change_flag` until the change flag
+        /// reads 0 or `max_iters` is reached. Returns the saturated
+        /// frontier.
+        ///
+        /// This is the substrate path for "expand a Region set to its
+        /// forward-reachable closure": the same fixpoint loop the
+        /// optimizer used to write by hand, now driven by the primitive's
+        /// own change flag.
+    },
+    borrowing: reference_forward_closure_via_change_flag_into {
+        /// Iterate `forward_step_with_change_flag` using caller-owned scratch.
+    },
+    hooked: csr_foc_closure_into_with_step_hook,
+    step_hook: |_| {
+        crate::telemetry::observability::bump(
+            &crate::telemetry::observability::graph_dispatch_calls,
+        )
+    },
 }

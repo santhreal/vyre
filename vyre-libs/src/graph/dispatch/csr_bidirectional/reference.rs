@@ -31,60 +31,20 @@ pub fn reference_bidirectional_step(
     )
 }
 
-/// Iterate `bidirectional_step` to fixpoint or `max_iters`.
-#[must_use]
-#[allow(clippy::too_many_arguments)]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_bidirectional_closure(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
-) -> Vec<u32> {
-    let mut current = Vec::new();
-    let mut next = Vec::new();
-    reference_bidirectional_closure_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        seed,
-        allow_mask,
-        max_iters,
-        &mut current,
-        &mut next,
-    );
-    current
-}
-
-/// Iterate `bidirectional_step` to fixpoint using caller-owned buffers.
-#[allow(clippy::too_many_arguments)]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_bidirectional_closure_into(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    seed: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
-    current: &mut Vec<u32>,
-    next: &mut Vec<u32>,
-) {
-    use crate::telemetry::observability::{bump, graph_dispatch_calls};
-    reference_csr_bidir_closure_into_with_step_hook(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        seed,
-        allow_mask,
-        max_iters,
-        current,
-        next,
-        || bump(&graph_dispatch_calls),
-    );
+vyre_primitives::define_csr_closure_entry_points! {
+    allocating: reference_bidirectional_closure {
+        /// Iterate `bidirectional_step` to fixpoint or `max_iters`.
+    },
+    borrowing: reference_bidirectional_closure_into {
+        /// Iterate `bidirectional_step` to fixpoint using caller-owned buffers.
+        ///
+        /// The composition adds one dispatch-call count per step and nothing
+        /// else: the fixpoint stays owned by the primitive.
+    },
+    hooked: reference_csr_bidir_closure_into_with_step_hook,
+    step_hook: || {
+        crate::telemetry::observability::bump(
+            &crate::telemetry::observability::graph_dispatch_calls,
+        )
+    },
 }
