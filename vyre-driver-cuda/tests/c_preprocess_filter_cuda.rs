@@ -5,38 +5,15 @@
 
 #![cfg(test)]
 
+#[path = "common/c_preprocess_oracles.rs"]
+mod c_preprocess_oracles;
 mod common;
 
+use c_preprocess_oracles::CudaOracle;
 use common::with_live_backend;
-use vyre_driver::DispatchConfig;
-use vyre_driver_cuda::CudaBackend;
 use vyre_libs::parsing::c::preprocess::gpu_comment_strip_mask::reference_gpu_comment_strip_mask;
-use vyre_libs::parsing::c::preprocess::gpu_pipeline::{gpu_filter_source_bytes, ProgramOracle};
+use vyre_libs::parsing::c::preprocess::gpu_pipeline::gpu_filter_source_bytes;
 use vyre_primitives::parsing::line_splice_classify::reference_line_splice_classify;
-
-struct CudaFilterDispatcher<'a>(&'a CudaBackend);
-
-impl ProgramOracle for CudaFilterDispatcher<'_> {
-    fn dispatch(
-        &self,
-        program: &vyre::ir::Program,
-        inputs: &[Vec<u8>],
-    ) -> Result<Vec<Vec<u8>>, String> {
-        self.0
-            .dispatch(program, inputs, &DispatchConfig::default())
-            .map_err(|error| format!("CUDA dispatch: {error}"))
-    }
-
-    fn dispatch_borrowed(
-        &self,
-        program: &vyre::ir::Program,
-        inputs: &[&[u8]],
-    ) -> Result<Vec<Vec<u8>>, String> {
-        self.0
-            .dispatch_borrowed(program, inputs, &DispatchConfig::default())
-            .map_err(|error| format!("CUDA borrowed dispatch: {error}"))
-    }
-}
 
 fn reference_filter_source_bytes(raw: &[u8]) -> Vec<u8> {
     let splice_keep = reference_line_splice_classify(raw);
@@ -88,7 +65,7 @@ fn generated_line_splice_only_source(case: u32, min_len: usize) -> Vec<u8> {
 #[test]
 fn cuda_c_preprocess_filter_u8_generated_corpus_matches_reference() {
     with_live_backend("c preprocess filter u8 generated corpus", |backend| {
-        let dispatcher = CudaFilterDispatcher(backend);
+        let dispatcher = CudaOracle(backend);
         let mut checked_input = 0usize;
         let mut checked_output = 0usize;
         for case in 0..32u32 {
@@ -117,7 +94,7 @@ fn cuda_c_preprocess_filter_u8_generated_corpus_matches_reference() {
 #[test]
 fn cuda_c_preprocess_filter_line_splice_only_matrix_matches_reference() {
     with_live_backend("c preprocess filter line-splice-only matrix", |backend| {
-        let dispatcher = CudaFilterDispatcher(backend);
+        let dispatcher = CudaOracle(backend);
         let mut checked_input = 0usize;
         let mut checked_output = 0usize;
         for case in 0..16u32 {

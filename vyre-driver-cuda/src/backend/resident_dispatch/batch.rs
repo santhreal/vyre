@@ -9,6 +9,7 @@ use vyre_foundation::ir::Program;
 
 use crate::backend::allocations::{DispatchAllocations, HostTransferAllocations};
 use crate::backend::dispatch::CudaBackend;
+use crate::backend::enqueue_cleanup::{abandon_failed_enqueue, FailedEnqueueGuards};
 use crate::backend::launch_params::launch_param_byte_len;
 use crate::backend::module_cache::ModuleCacheKey;
 use crate::backend::ordering::sort_unstable_by_key_if_needed;
@@ -394,34 +395,20 @@ impl CudaBackend {
         let pending = match pending {
             Ok(pending) => pending,
             Err(error) => {
-                let Some(launch_resources) = launch_resources.take() else {
-                    return Err(error);
-                };
-                match crate::stream::synchronize_raw_stream(
+                return Err(abandon_failed_enqueue(
+                    error,
+                    &self.telemetry,
                     stream_raw,
                     "cuStreamSynchronize (resident batch error cleanup)",
-                ) {
-                    Ok(()) => {
-                        self.telemetry.record_sync_point();
-                        return Err(error);
-                    }
-                    Err(sync_error) => {
-                        tracing::error!(
-                            "Fix: failed to synchronize CUDA resident batch stream after enqueue error: {sync_error}. In-flight resident batch resources will not be recycled."
-                        );
-                        std::mem::forget(launch_resources);
-                        if let Some(allocations) = allocations.take() {
-                            std::mem::forget(allocations);
-                        }
-                        if let Some(resident_use) = resident_use.take() {
-                            std::mem::forget(resident_use);
-                        }
-                        if let Some(host_transfers) = host_transfers.take() {
-                            std::mem::forget(host_transfers);
-                        }
-                        return Err(error);
-                    }
-                }
+                    "resident batch",
+                    "enqueue",
+                    FailedEnqueueGuards {
+                        launch_resources: &mut launch_resources,
+                        allocations: &mut allocations,
+                        host_transfers: &mut host_transfers,
+                        resident_use: Some(&mut resident_use),
+                    },
+                ));
             }
         };
         Ok(CudaResidentBatchDispatch {

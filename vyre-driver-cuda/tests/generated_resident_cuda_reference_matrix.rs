@@ -45,3 +45,74 @@ use case_tables::*;
 use generated_f32::*;
 use program_builders::*;
 use resident_reference::*;
+
+/// One case in a resident matrix sweep.
+struct ResidentMatrixCase {
+    /// Case name, reported by every diagnostic the sweep emits.
+    name: &'static str,
+    /// Program under test.
+    program: Program,
+    /// Bindings in declaration order.
+    inputs: Vec<Vec<u8>>,
+}
+
+/// Diff every case against the reference interpreter on the resident release
+/// path, then prove the sweep compared every lane of every case.
+///
+/// The lane total is asserted rather than reported because
+/// [`assert_u32_output_lanes`] returns the number of lanes it actually compared:
+/// handed a truncated or empty output it compares zero and returns zero, which
+/// would leave a sweep green while checking nothing.
+fn assert_resident_u32_sweep(
+    backend: &CudaBackend,
+    fix: &str,
+    cases: impl ExactSizeIterator<Item = ResidentMatrixCase>,
+) {
+    let expected_lanes = cases.len() * LANE_COUNT;
+    let mut checked_lanes = 0usize;
+    for case in cases {
+        let outputs = resident_cuda_reference_outputs(
+            backend,
+            &case.program,
+            &case.inputs,
+            &[OUTPUT_BYTES],
+            case.name,
+        );
+        checked_lanes += assert_u32_output_lanes(
+            case.name,
+            LANE_COUNT,
+            &outputs.resident_cuda,
+            &outputs.reference,
+        );
+    }
+    assert_eq!(checked_lanes, expected_lanes, "{fix}");
+}
+
+/// [`assert_resident_u32_sweep`] for f32 outputs, compared with the strict edge
+/// semantics [`assert_f32_output_lanes`] fixes at `max_ulp`.
+fn assert_resident_f32_sweep(
+    backend: &CudaBackend,
+    fix: &str,
+    max_ulp: u32,
+    cases: impl ExactSizeIterator<Item = ResidentMatrixCase>,
+) {
+    let expected_lanes = cases.len() * LANE_COUNT;
+    let mut checked_lanes = 0usize;
+    for case in cases {
+        let outputs = resident_cuda_reference_outputs(
+            backend,
+            &case.program,
+            &case.inputs,
+            &[OUTPUT_BYTES],
+            case.name,
+        );
+        checked_lanes += assert_f32_output_lanes(
+            case.name,
+            LANE_COUNT,
+            max_ulp,
+            &outputs.resident_cuda,
+            &outputs.reference,
+        );
+    }
+    assert_eq!(checked_lanes, expected_lanes, "{fix}");
+}

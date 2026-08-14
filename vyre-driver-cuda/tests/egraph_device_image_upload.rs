@@ -41,6 +41,39 @@ fn expected_column_snapshot_bytes(layout: CudaEGraphDeviceByteLayout) -> usize {
     .sum()
 }
 
+/// Two literals under e-classes 2 and 1, plus an `add` in e-class 2 over both:
+/// the smallest snapshot with a shared e-class and a nonempty child list, which
+/// is what pins the byte layout.
+fn shared_eclass_add_snapshot() -> GpuEGraphSnapshot {
+    GpuEGraphSnapshot::build([
+        (2u32, "lit", &[][..]),
+        (1u32, "lit", &[][..]),
+        (2u32, "add", &[1u32, 2u32][..]),
+    ])
+}
+
+/// Two literals and two `add` rows over the same operands in the same order, so
+/// rows 30 and 40 are structurally equivalent and nothing else is.
+fn duplicate_add_snapshot() -> GpuEGraphSnapshot {
+    GpuEGraphSnapshot::build([
+        (10u32, "lit", &[][..]),
+        (20u32, "lit", &[][..]),
+        (30u32, "add", &[10u32, 20u32][..]),
+        (40u32, "add", &[10u32, 20u32][..]),
+    ])
+}
+
+/// [`duplicate_add_snapshot`] with row 30 fed both operands from e-class 10, so
+/// the two `add` rows differ in their child list and no pair is equivalent.
+fn distinct_add_snapshot() -> GpuEGraphSnapshot {
+    GpuEGraphSnapshot::build([
+        (10u32, "lit", &[][..]),
+        (20u32, "lit", &[][..]),
+        (30u32, "add", &[10u32, 10u32][..]),
+        (40u32, "add", &[10u32, 20u32][..]),
+    ])
+}
+
 fn assert_span_matches_foundation(
     cuda: CudaEGraphDeviceByteSpan,
     foundation: vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceSpan,
