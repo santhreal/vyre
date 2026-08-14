@@ -5,7 +5,7 @@
 mod common;
 
 use common::with_cuda_optimizer_dispatcher;
-use vyre_self_substrate::csr_bidirectional::{
+use vyre_libs::graph::dispatch::csr_bidirectional::{
     bidirectional_closure_via, bidirectional_step_via, reference_bidirectional_closure,
     reference_bidirectional_step,
 };

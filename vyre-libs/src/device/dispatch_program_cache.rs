@@ -9,7 +9,7 @@
 /// common two-shape alternating path resident without heap allocation across
 /// graph, math, and data wrappers.
 #[derive(Debug)]
-pub struct ProgramCache<K, V> {
+pub(crate) struct ProgramCache<K, V> {
     hot: Option<ProgramCacheEntry<K, V>>,
     warm: Option<ProgramCacheEntry<K, V>>,
     #[cfg(any(test, feature = "test-fixtures"))]
@@ -35,7 +35,7 @@ impl<K, V> Default for ProgramCache<K, V> {
 
 impl<K: Eq, V> ProgramCache<K, V> {
     /// Return the cached value for `key`, building and inserting it on a miss.
-    pub fn get_or_insert_with(&mut self, key: K, build: impl FnOnce() -> V) -> &V {
+    pub(crate) fn get_or_insert_with(&mut self, key: K, build: impl FnOnce() -> V) -> &V {
         if self.hot_matches(&key) {
             return self.hot_value();
         }
@@ -52,7 +52,7 @@ impl<K: Eq, V> ProgramCache<K, V> {
     ///
     /// # Errors
     /// Propagates the error `build` returns; nothing is cached in that case.
-    pub fn get_or_try_insert_with<E>(
+    pub(crate) fn get_or_try_insert_with<E>(
         &mut self,
         key: K,
         build: impl FnOnce() -> Result<V, E>,
@@ -103,7 +103,7 @@ impl<K: Eq, V> ProgramCache<K, V> {
     /// Number of times `build` ran, i.e. cache misses since construction.
     #[cfg(any(test, feature = "test-fixtures"))]
     #[must_use]
-    pub const fn builds(&self) -> usize {
+    pub(crate) const fn builds(&self) -> usize {
         self.builds
     }
 }

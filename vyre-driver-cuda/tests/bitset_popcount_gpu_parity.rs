@@ -1,6 +1,6 @@
 //! Parity test: GPU per-word popcount matches CPU oracle.
 //!
-//! Drives `vyre_self_substrate::bitset_summary::per_word_popcount_via`
+//! Drives `vyre_libs::encoding::bitset_summary::per_word_popcount_via`
 //! against the CPU oracle on real CUDA hardware. Asserts identical
 //! per-word popcount across a battery of inputs.
 
@@ -9,7 +9,7 @@
 mod common;
 
 use common::with_cuda_optimizer_dispatcher;
-use vyre_self_substrate::bitset_summary::{
+use vyre_libs::encoding::bitset_summary::{
     per_word_popcount, per_word_popcount_via, saturation_ratio, saturation_ratio_via,
     total_set_bits, total_set_bits_via,
 };

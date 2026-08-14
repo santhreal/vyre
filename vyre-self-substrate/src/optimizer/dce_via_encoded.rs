@@ -202,7 +202,7 @@ fn write_padded_one_u32_bytes(out: &mut Vec<u8>, buf: &[u32]) {
 mod tests {
     use super::*;
     use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
-    use crate::optimizer::cpu_oracle::CpuOracleDispatcher;
+    use vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher;
     use vyre_foundation::program_dispatch::DispatchError;
     use vyre_foundation::ir::{Expr, Node, Program};
     use vyre_foundation::optimizer::fingerprint_program;
@@ -213,7 +213,8 @@ mod tests {
     }
 
     fn assert_parity(entry: Vec<Node>) {
-        let dispatcher = CpuOracleDispatcher::new();
+        let dispatcher = CpuOracleDispatcher::new()
+            .with_persistent_bfs_alias(crate::optimizer::dce_program::OP_ID);
         let oracle_input = wrapped_program(entry.clone());
         let test_input = wrapped_program(entry);
 

@@ -20,8 +20,6 @@
 pub mod canonicalize_via_encoded;
 pub mod const_fold_via_encoded;
 pub mod const_prop;
-#[cfg(any(test, feature = "cpu-parity"))]
-pub mod cpu_oracle;
 pub mod cross_scope_cse;
 pub mod cse_via_encoded;
 pub mod dce_program;

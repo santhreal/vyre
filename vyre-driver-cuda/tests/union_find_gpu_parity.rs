@@ -10,7 +10,7 @@ mod common;
 
 use common::with_cuda_optimizer_dispatcher;
 use vyre_primitives::graph::union_find::union_find_dispatch_grid;
-use vyre_self_substrate::union_find_emit::{
+use vyre_libs::graph::dispatch::union_find_emit::{
     canonicalize_parent_to_roots, reference_union_find_alias, union_find_alias_via,
 };
 

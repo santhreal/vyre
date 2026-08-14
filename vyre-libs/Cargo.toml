@@ -56,6 +56,7 @@ rule = ["dep:regex"]
 # crate. Each gates one module tree; `all-solvers` turns on the set.
 telemetry = []
 device = []
+graph-dispatch = ["device", "telemetry", "vyre-primitives/math", "vyre-primitives/graph"]
 solvers = ["device", "telemetry", "vyre-primitives/math", "vyre-primitives/topology"]
 encoding = ["device", "telemetry", "vyre-primitives/matching", "vyre-primitives/math", "vyre-primitives/nn", "vyre-primitives/parsing"]
 reasoning = ["analysis", "vyre-primitives/cat", "vyre-primitives/dnnf", "vyre-primitives/zx"]
@@ -348,6 +349,31 @@ required-features = ["cpu-parity", "solvers", "test-fixtures"]
 name = "vietoris_rips_via_reference_parity"
 path = "tests/vietoris_rips_via_reference_parity.rs"
 required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "match_motif_via_reference_parity"
+path = "tests/match_motif_via_reference_parity.rs"
+required-features = ["cpu-parity", "graph-dispatch", "test-fixtures"]
+
+[[test]]
+name = "reconstruct_path_via_reference_parity"
+path = "tests/reconstruct_path_via_reference_parity.rs"
+required-features = ["cpu-parity", "graph-dispatch", "test-fixtures"]
+
+[[test]]
+name = "union_find_alias_via_reference_parity"
+path = "tests/union_find_alias_via_reference_parity.rs"
+required-features = ["cpu-parity", "graph-dispatch", "test-fixtures"]
+
+[[test]]
+name = "graph_single_source_contracts"
+path = "tests/graph_single_source_contracts.rs"
+required-features = ["cpu-parity", "graph-dispatch", "test-fixtures"]
+
+[[test]]
+name = "sweep_graph_cpu_oracle_matrix"
+path = "tests/sweep_graph_cpu_oracle_matrix.rs"
+required-features = ["cpu-parity", "graph-dispatch", "test-fixtures"]
 
 [[test]]
 name = "sweep_text_utf8_oracle_matrix"

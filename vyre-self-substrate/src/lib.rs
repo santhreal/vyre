@@ -101,8 +101,6 @@
 //!   onto disjoint sub-trees via planar non-overlapping selection.
 //!   Drops dispatch count from O(N) sequential to O(log N) batched.
 
-#[cfg(feature = "graph-solvers")]
-pub mod graph;
 
 #[cfg(feature = "optimizer")]
 /// Self-hosted optimizer keystone  -  the encoder + GPU passes that run
@@ -112,13 +110,4 @@ pub mod graph;
 /// points, and optimizer contract metadata without descending into
 /// private module paths.
 pub mod optimizer;
-
-#[cfg(feature = "graph-solvers")]
-pub use graph::{
-    adaptive_traverse, alias_registry, csr_bidirectional, csr_forward_or_changed,
-    csr_frontier_queue_batch_memory, csr_frontier_queue_batch_resident,
-    csr_frontier_queue_resident, dominator_frontier, exploded, level_wave_pass, motif,
-    path_reconstruct, persistent_bfs, structural_kernel_pipeline, toposort,
-    traversal_dispatch_pipeline, union_find_emit, vast_tree_walk,
-};
 

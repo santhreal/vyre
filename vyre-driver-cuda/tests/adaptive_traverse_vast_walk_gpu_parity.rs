@@ -25,7 +25,7 @@ use vyre_primitives::graph::adaptive_traverse::{
 };
 use vyre_primitives::graph::vast_tree_walk::ast_walk_preorder;
 use vyre_primitives::reduce::count::reduce_count;
-use vyre_self_substrate::adaptive_traverse::{
+use vyre_libs::graph::dispatch::adaptive_traverse::{
     adaptive_traverse_resident_graph_auto_step_with_scratch_into,
     adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into,
     adaptive_traverse_resident_graph_step_with_scratch_into,

@@ -5,7 +5,7 @@
 //! hardware intrinsics live in `vyre_primitives::hardware`.
 
 pub mod device_resident_token_fact_graph;
-pub mod dispatch_program_cache;
+pub(crate) mod dispatch_program_cache;
 pub mod gpu_probe_contract;
 pub mod memory_ownership_contract;
-pub mod scratch;
+pub(crate) mod scratch;

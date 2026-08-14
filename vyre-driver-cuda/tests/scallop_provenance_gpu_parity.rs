@@ -5,7 +5,7 @@
 mod common;
 
 use common::with_cuda_optimizer_dispatcher;
-use vyre_self_substrate::scallop_provenance::{
+use vyre_libs::encoding::scallop_provenance::{
     provenance_closure_via, reference_provenance_closure,
 };
 

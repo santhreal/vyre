@@ -24,11 +24,11 @@ use vyre_primitives::graph::csr_queue_delta::{
     csr_queue_delta_strided_enqueue,
 };
 use vyre_primitives::graph::csr_queue_split::CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD;
-use vyre_self_substrate::csr_frontier_queue_batch_resident::{
+use vyre_libs::graph::dispatch::csr_frontier_queue_batch_resident::{
     run_resident_csr_queue_batch_budgeted_into, run_resident_csr_queue_batch_into,
     ResidentCsrQueueBatchScratch,
 };
-use vyre_self_substrate::csr_frontier_queue_resident::{
+use vyre_libs::graph::dispatch::csr_frontier_queue_resident::{
     run_resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
 };
 use vyre_foundation::program_dispatch::{

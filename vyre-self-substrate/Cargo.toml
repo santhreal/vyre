@@ -23,11 +23,10 @@ workspace = true
 [features]
 default = ["optimizer"]
 optimizer = ["vyre-primitives/graph"]
-graph-solvers = ["optimizer", "vyre-libs/telemetry", "vyre-libs/device", "vyre-primitives/math"]
 all-solvers = [
     "vyre-libs/analysis",
     "vyre-libs/encoding",
-    "graph-solvers",
+    "vyre-libs/graph-dispatch",
     "vyre-libs/reasoning",
     "vyre-libs/solvers",
     "vyre-libs/scheduling",
@@ -57,27 +56,7 @@ vyre-libs = { workspace = true, features = ["test-fixtures"] }
 proptest.workspace = true
 
 [[test]]
-name = "sweep_graph_cpu_oracle_matrix"
-path = "tests/sweep_graph_cpu_oracle_matrix.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "match_motif_via_reference_parity"
-path = "tests/match_motif_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
 name = "optimizer_bfs_and_softmax_parity"
 path = "tests/optimizer_bfs_and_softmax_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "reconstruct_path_via_reference_parity"
-path = "tests/reconstruct_path_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "union_find_alias_via_reference_parity"
-path = "tests/union_find_alias_via_reference_parity.rs"
 required-features = ["cpu-parity"]
 
