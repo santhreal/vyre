@@ -332,21 +332,13 @@ impl CudaBackend {
                     for launch_ptrs in launch_ptrs_by_batch.iter_mut() {
                         let mut params_ref = params_ptr;
                         Self::kernel_args_into(launch_ptrs, &mut params_ref, &mut kernel_args)?;
-                        for _ in 0..prepared.fixpoint_iterations {
-                            // SAFETY: stream_raw is the live batch stream and
-                            // outlives the memset enqueued ahead of each launch.
-                            unsafe {
-                                grid_barrier.enqueue_reset(stream_raw)?;
-                            }
-                            self.launch_prevalidated_function(
-                                func,
-                                &mut kernel_args,
-                                &prepared.launch,
-                                stream_raw,
-                                false,
-                                prepared.cooperative,
-                            )?;
-                        }
+                        self.enqueue_grid_sync_fixpoint(
+                            grid_barrier,
+                            func,
+                            &mut kernel_args,
+                            prepared,
+                            stream_raw,
+                        )?;
                     }
                     Ok(())
                 },

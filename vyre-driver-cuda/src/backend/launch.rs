@@ -478,6 +478,45 @@ impl CudaBackend {
         self.record_launch_occupancy(func, launch);
         Ok(())
     }
+
+    /// Enqueue every fixpoint iteration of one grid-synchronized launch sequence.
+    ///
+    /// Each iteration resets the module-scope barrier counter and only then
+    /// launches. That pairing is the whole point: a launch that starts from a
+    /// stale counter finds every barrier already satisfied, so the kernel
+    /// returns success, the driver reports no error, and the only symptom is
+    /// wrong data. Four launch paths enqueue this sequence, and each had written
+    /// the pairing itself.
+    ///
+    /// The lease is borrowed rather than consumed because ending it is a
+    /// separate ordered step that [`GridBarrierLease::launch_then_release`]
+    /// owns; call this from inside that closure.
+    pub(crate) fn enqueue_grid_sync_fixpoint(
+        &self,
+        grid_barrier: &super::dispatch::GridBarrierLease,
+        func: CUfunction,
+        kernel_args: &mut SmallVec<[*mut std::ffi::c_void; 8]>,
+        prepared: &super::plan::CudaDispatchPlan,
+        stream: CUstream,
+    ) -> Result<(), BackendError> {
+        for _ in 0..prepared.fixpoint_iterations {
+            // SAFETY: `stream` is the live stream of the dispatch that took this
+            // lease, and it outlives the memset, which is ordered ahead of the
+            // launch on that same stream.
+            unsafe {
+                grid_barrier.enqueue_reset(stream)?;
+            }
+            self.launch_prevalidated_function(
+                func,
+                kernel_args,
+                &prepared.launch,
+                stream,
+                false,
+                prepared.cooperative,
+            )?;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]

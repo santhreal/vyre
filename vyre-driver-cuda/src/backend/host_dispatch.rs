@@ -648,23 +648,13 @@ impl CudaBackend {
                 stream_raw,
                 "host dispatch grid-sync launch",
                 |grid_barrier| {
-                    for _ in 0..prepared.fixpoint_iterations {
-                        // SAFETY: stream_raw is this dispatch's stream and
-                        // outlives the enqueued memset, which is ordered ahead of
-                        // the launch.
-                        unsafe {
-                            grid_barrier.enqueue_reset(stream_raw)?;
-                        }
-                        self.launch_prevalidated_function(
-                            func,
-                            &mut kernel_args,
-                            &prepared.launch,
-                            stream_raw,
-                            false,
-                            prepared.cooperative,
-                        )?;
-                    }
-                    Ok(())
+                    self.enqueue_grid_sync_fixpoint(
+                        grid_barrier,
+                        func,
+                        &mut kernel_args,
+                        prepared,
+                        stream_raw,
+                    )
                 },
             )?;
             if trace {

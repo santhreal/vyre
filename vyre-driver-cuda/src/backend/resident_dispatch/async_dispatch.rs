@@ -536,25 +536,14 @@ impl CudaBackend {
                 "resident async dispatch grid-sync launch",
                 |grid_barrier| {
                     probe::measure(probe::Phase::LaunchLoop, || {
-                        for _ in 0..prepared.fixpoint_iterations {
-                            // SAFETY: stream_raw is the live resident dispatch
-                            // stream and outlives the memset enqueued ahead of
-                            // the launch.
-                            unsafe {
-                                grid_barrier.enqueue_reset(stream_raw)?;
-                            }
-                            self.launch_prevalidated_function(
-                                func,
-                                &mut kernel_args,
-                                &prepared.launch,
-                                stream_raw,
-                                false,
-                                prepared.cooperative,
-                            )?;
-                        }
-                        Ok::<(), BackendError>(())
-                    })?;
-                    Ok(())
+                        self.enqueue_grid_sync_fixpoint(
+                            grid_barrier,
+                            func,
+                            &mut kernel_args,
+                            prepared,
+                            stream_raw,
+                        )
+                    })
                 },
             )?;
             probe::charge_remainder(
