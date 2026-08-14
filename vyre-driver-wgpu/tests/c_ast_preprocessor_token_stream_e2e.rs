@@ -11,90 +11,22 @@ mod c_ast_gpu_parity_support;
 mod c_frontend;
 mod c_token_support;
 
-use c_grammar_gen::lex_c11_max_munch_kinds;
-use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::tokens::*;
-use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes};
-use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_build_expression_shape_nodes, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_EXPR_ASSOC_NONE, C_EXPR_SHAPE_NONE,
-    C_EXPR_SHAPE_STRIDE_U32,
-};
 use vyre_primitives::predicate::node_kind;
-use vyre_reference::value::Value;
 
 use c_ast_gpu_parity_support::{
-    node_count_from_vast, run_gpu_classifier, run_gpu_expr_shape, run_gpu_pg_lower, word_at,
-    VAST_STRIDE_U32,
+    run_gpu_classifier, run_gpu_expr_shape, run_gpu_pg_lower, word_at, VAST_STRIDE_U32,
 };
-use c_token_support::{assemble, assert_pg_row, find_row_for_lexeme, row_typed_kind, Assembled};
+use c_token_support::{
+    assemble, assert_lex_matches_non_ws, assert_pg_row, assert_shape_none, find_row_for_lexeme,
+    row_typed_kind, run_cpu_pipeline as cpu_pipeline_buffers, Assembled, PipelineOut,
+};
 
-const PG_STRIDE_U32: usize = 6;
-
-fn assert_lex_matches_non_ws(assembled: &Assembled) {
-    let kinds = lex_c11_max_munch_kinds(assembled.source.as_bytes()).expect("lex fixture source");
-    let filtered: Vec<u32> = kinds
-        .into_iter()
-        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
-        .collect();
-    assert_eq!(
-        filtered, assembled.raw_kinds,
-        "hand-built fixture must match max-munch lexer (no fake tokenization)"
-    );
-}
-
-fn run_reference_pg_lower(typed_vast: &[u8]) -> Vec<u8> {
-    let num_nodes = node_count_from_vast(typed_vast);
-    let program = c_lower_ast_to_pg_nodes("vast_nodes", Expr::u32(num_nodes), "pg_nodes");
-    let output_len = num_nodes.saturating_mul(PG_STRIDE_U32 as u32).max(1) as usize * 4;
-    let values = [
-        Value::from(typed_vast.to_vec()),
-        Value::from(vec![0; output_len]),
-    ];
-    let outputs = vyre_reference::reference_eval(&program, &values)
-        .unwrap_or_else(|e| panic!("C AST PG lowerer must execute on CPU: {e}"));
-    assert_eq!(outputs.len(), 1);
-    outputs[0].to_bytes()
-}
-
-struct PipelineOut {
-    raw_vast: Vec<u8>,
-    typed_vast: Vec<u8>,
-    expr_shape: Vec<u8>,
-    pg: Vec<u8>,
-}
-
+/// The CPU pipeline plus this suite's own guard that the fixture's lexemes
+/// re-lex to the kinds it declares.
 fn run_cpu_pipeline(assembled: &Assembled) -> PipelineOut {
     assert_lex_matches_non_ws(assembled);
-    let raw_vast = reference_c11_build_vast_nodes(
-        &assembled.tok_types,
-        &assembled.tok_starts,
-        &assembled.tok_lens,
-    );
-    let typed_vast = reference_c11_classify_vast_node_kinds(&raw_vast);
-    let expr_shape = reference_c11_build_expression_shape_nodes(&raw_vast, &typed_vast);
-    let pg = run_reference_pg_lower(&typed_vast);
-    assert_eq!(
-        pg,
-        reference_ast_to_pg_nodes(&typed_vast),
-        "executable PG lowerer must match byte oracle"
-    );
-    PipelineOut {
-        raw_vast,
-        typed_vast,
-        expr_shape,
-        pg,
-    }
-}
-
-fn assert_shape_none(expr_shape: &[u8], idx: usize) {
-    let base = idx * C_EXPR_SHAPE_STRIDE_U32 as usize;
-    assert_eq!(
-        word_at(expr_shape, base),
-        C_EXPR_SHAPE_NONE,
-        "preproc/structural rows stay shape-none"
-    );
-    assert_eq!(word_at(expr_shape, base + 4), C_EXPR_ASSOC_NONE);
+    cpu_pipeline_buffers(assembled)
 }
 
 #[test]
