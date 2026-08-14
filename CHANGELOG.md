@@ -78,6 +78,21 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `ldmatrix_cp_async` and `predicated_execution` passes call the walk instead
   of each keeping a copy, so one traversal serves every backend judgment built
   on it.
+- `vyre-primitives::math::symmetric_eigen_jacobi` is now a registered semantic
+  operation with its own fixtures. It was documented and composed as a child
+  region by `tensor_train_decompose` but had no `OperationRegistration`, so the
+  conformance harnesses never executed it on its own and the operation schema
+  recorded it as unregistered. The witness is a block-diagonal 4x4 with the
+  simple spectrum {7, 2, 11, 13}, whose Jacobi sweep terminates on exact zeros
+  rather than converging, and the oracle is the f64 CPU reference rounded to
+  f32. Declared tolerance is 1 ULP.
+
+- A `tree-rules` job in `.github/workflows/gates.yml` runs four rules that had
+  been written down and never invoked: no orphan crate directory outside
+  `[workspace.members]`, no crate-root `#![allow(missing_docs)]` against the
+  workspace deny floor, the three-OS by two-toolchain matrix in `ci.yml` with
+  no no-GPU escape hatch, and the behavior contracts of the documentation
+  authority validator that `xtask docs-check` runs. The job needs no toolchain.
 
 ### Changed
 
@@ -138,6 +153,18 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Removed
 
+- Ten scripts under `scripts/` are gone. `check_abstraction.sh`,
+  `check_graph_single_source_contracts.sh`, and `check_no_fixed_sleeps.sh`
+  restated a check that `xtask abstraction-gate`, the workspace test run, and
+  the `hygiene-matrix` resource-bound scan already perform.
+  `check_consumers.sh`, `check_surgec_dispatch_invariants.sh`, and
+  `bench_index.sh` read trees outside this repository, so they reported on
+  nothing a checkout contains. `generate_certs.sh` called a `vyre-conform run`
+  subcommand that does not exist, `check_publish_gate.sh` enforced a deleted
+  `docs/PUBLISH_GATE.md`, `check_required_ci_jobs.sh` required four job names
+  no workflow declares, and `install_lego_quick_hook.sh` wrote a pre-commit
+  hook that resolves a monorepo path this repository does not have.
+
 - The `vyre-frontend-c` crate has left this workspace. A C compiler is not a
   Vyre component, and the C parsing, semantic, and lowering operations Vyre
   actually uses are Category A compositions already owned by `vyre-libs`. The
@@ -176,6 +203,12 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   platform, not a member of it.
 
 ### Fixed
+
+- `scripts/run_volume_sweep_shard.sh` now runs each volume oracle matrix target
+  against the crate that owns it. It discovered targets across vyre-foundation,
+  vyre-primitives, and vyre-reference and passed all of them to
+  `-p vyre-primitives`, so every shard of the default four failed on the first
+  target that lives elsewhere. Discovery no longer needs ripgrep.
 
 - Driver decorators now preserve the concrete backend device profile, including
   device-timestamp capability and timing quality.

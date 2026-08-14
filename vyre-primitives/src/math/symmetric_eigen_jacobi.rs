@@ -482,3 +482,86 @@ pub fn symmetric_eigen_jacobi(a: &str, eigenvectors: &str, eigenvalues: &str, n:
         }],
     )
 }
+
+// Canonical registration.
+//
+// WITNESS: A = [[6,2,0,0],[2,3,0,0],[0,0,12,1],[0,0,1,12]], two disjoint symmetric 2x2 blocks.
+// Spectrum {7, 2, 11, 13}: every eigenvalue is simple and the smallest gap is 2 against a norm
+// of 13, so the eigenbasis is unique up to column sign, and the sign pass below fixes that
+// sign. Every row is strictly diagonally dominant.
+//
+// The block structure is not decoration, it is what makes the fixture pinnable at all. A
+// rotation on (p, q) rewrites only rows and columns p and q, so with the two blocks disjoint
+// the pivot (0,1) leaves A[2,3] untouched and both rotations write their pivot entries as
+// exact zeros with no fill-in. The off-diagonal maximum therefore reaches exactly 0 after two
+// rotations, in f32 and in f64 alike. A dense matrix converges instead of terminating: the f32
+// body stops at JACOBI_EPS (1e-6) and the f64 oracle at 1e-12, leaving off-diagonal residues
+// several decades apart in the `a` output buffer, which is unbounded in ULPs no matter how
+// well separated the spectrum is. `a` is read-write and therefore part of expected_output, so
+// that residue is not something a fixture can look away from.
+//
+// The witness still exercises the whole body: identity seeding of V, the i < j argmax (which
+// picks (0,1) first because |2| > |1|), a rotation with app != aqq, a rotation with app == aqq
+// (the tau = +0 case the t formula handles explicitly), the spectator rows a rotation must not
+// touch, one column the sign pass flips and three it leaves alone, and the diagonal read-out.
+//
+// ORACLE: expected values come from the independent f64 CPU reference
+// `math::tensor_train_decompose::symmetric_eigen_jacobi_into`, run on the same input bytes,
+// then rounded to f32 and sign-canonicalized by the same rule this body applies. They are not
+// captured from a run of the Program under test. Cross-checked analytically: [[6,2],[2,3]] has
+// trace 9 and determinant 14, so its eigenvalues are (9 ± 5)/2 = 7 and 2 with eigenvectors
+// (2,1)/√5 and (1,-2)/√5; [[12,1],[1,12]] has eigenvalues 12 ∓ 1 = 11 and 13 with eigenvectors
+// (1,-1)/√2 and (1,1)/√2.
+//
+// The two -0.0 entries in the eigenvector fixture are the zero rows of column 1 after the sign
+// pass multiplies that column by -1.0; f64 and f32 both produce them.
+//
+// TOLERANCE: 1 ULP. Each output element is produced by exactly one rotation, so the f32 body
+// rounds c and s once each and then evaluates one four-term product per element across the
+// column and row passes: a fixed handful of roundings, not an error that grows with sweep
+// count. Measured against the f64 oracle, 22 of the 24 outputs are bit-identical and the two
+// eigenvalues that are not (2.0 and 13.0, each a sum of two cancelling terms) land 1 ULP low.
+// Nothing here justifies a wider window.
+#[cfg(feature = "inventory-registry")]
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::primitive(
+        OP_ID,
+        || symmetric_eigen_jacobi("a", "evec", "eval", 4),
+        Some(|| {
+            let to_bytes = |vals: &[f32]| crate::wire::pack_f32_slice(vals);
+            // One entry per declared buffer: a (4x4, read-write and overwritten), evec (4x4),
+            // eval (4). The last two are zero-initialized, matching backend zero-allocation.
+            vec![vec![
+                to_bytes(&[
+                    6.0, 2.0, 0.0, 0.0, //
+                    2.0, 3.0, 0.0, 0.0, //
+                    0.0, 0.0, 12.0, 1.0, //
+                    0.0, 0.0, 1.0, 12.0,
+                ]),
+                to_bytes(&[0.0; 16]),
+                to_bytes(&[0.0; 4]),
+            ]]
+        }),
+        Some(|| {
+            let to_bytes = |vals: &[f32]| crate::wire::pack_f32_slice(vals);
+            vec![vec![
+                // a, rotated to exact diagonal form.
+                to_bytes(&[
+                    7.0, 0.0, 0.0, 0.0, //
+                    0.0, 2.0, 0.0, 0.0, //
+                    0.0, 0.0, 11.0, 0.0, //
+                    0.0, 0.0, 0.0, 13.0,
+                ]),
+                // evec, row-major; column k is the eigenvector for eval[k].
+                to_bytes(&[
+                    0.8944272, 0.4472136, 0.0, 0.0, //
+                    0.4472136, -0.8944272, 0.0, 0.0, //
+                    0.0, -0.0, 0.70710677, 0.70710677, //
+                    0.0, -0.0, -0.70710677, 0.70710677,
+                ]),
+                to_bytes(&[7.0, 2.0, 11.0, 13.0]),
+            ]]
+        }),
+    )
+    .with_tolerance(vyre_foundation::operation::TolerancePolicy { f32_ulp: 1 })
+}

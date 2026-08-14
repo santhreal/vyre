@@ -16,7 +16,7 @@ These pages are generated browsing views of `docs/generated/OP_SCHEMA.json`. The
 | [`label`](label.md) | 1 |
 | [`logical`](logical.md) | 5 |
 | [`matching`](matching.md) | 5 |
-| [`math`](math.md) | 77 |
+| [`math`](math.md) | 78 |
 | [`mem`](mem.md) | 2 |
 | [`nn`](nn.md) | 53 |
 | [`opt`](opt.md) | 1 |

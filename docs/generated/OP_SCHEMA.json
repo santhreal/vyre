@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "authority": "canonical OperationRegistration records joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows",
-  "operation_count": 370,
+  "operation_count": 371,
   "tier_counts": {
     "intrinsic": 9,
     "libs": 206,
-    "primitive": 150,
+    "primitive": 151,
     "runtime": 5
   },
   "category_counts": {
@@ -21,7 +21,7 @@
     "label": 1,
     "logical": 5,
     "matching": 4,
-    "math": 77,
+    "math": 78,
     "mem": 2,
     "nn": 71,
     "opt": 1,
@@ -13763,7 +13763,7 @@
             "access": "ReadOnly",
             "memory": "Readonly",
             "element": "U32",
-            "count": 10,
+            "count": 140,
             "pipeline_live_out": false
           },
           {
@@ -13772,7 +13772,7 @@
             "access": "ReadOnly",
             "memory": "Readonly",
             "element": "U32",
-            "count": 1,
+            "count": 41,
             "pipeline_live_out": false
           },
           {
@@ -13823,8 +13823,8 @@
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
-        "fixture_inputs": false,
-        "expected_output": false,
+        "fixture_inputs": true,
+        "expected_output": true,
         "tolerance_ulp": 0
       },
       "backend_support": {
@@ -13882,7 +13882,7 @@
             "access": "ReadOnly",
             "memory": "Readonly",
             "element": "U32",
-            "count": 10,
+            "count": 140,
             "pipeline_live_out": false
           },
           {
@@ -13891,7 +13891,7 @@
             "access": "ReadOnly",
             "memory": "Readonly",
             "element": "U32",
-            "count": 1,
+            "count": 11,
             "pipeline_live_out": false
           },
           {
@@ -13942,8 +13942,8 @@
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
-        "fixture_inputs": false,
-        "expected_output": false,
+        "fixture_inputs": true,
+        "expected_output": true,
         "tolerance_ulp": 0
       },
       "backend_support": {
@@ -14001,7 +14001,7 @@
             "access": "ReadOnly",
             "memory": "Readonly",
             "element": "U32",
-            "count": 10,
+            "count": 140,
             "pipeline_live_out": false
           },
           {
@@ -14034,8 +14034,8 @@
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
-        "fixture_inputs": false,
-        "expected_output": false,
+        "fixture_inputs": true,
+        "expected_output": true,
         "tolerance_ulp": 0
       },
       "backend_support": {
@@ -14088,7 +14088,7 @@
             "access": "ReadOnly",
             "memory": "Readonly",
             "element": "U32",
-            "count": 10,
+            "count": 140,
             "pipeline_live_out": false
           },
           {
@@ -14097,7 +14097,7 @@
             "access": "ReadOnly",
             "memory": "Readonly",
             "element": "U32",
-            "count": 1,
+            "count": 41,
             "pipeline_live_out": false
           },
           {
@@ -14148,8 +14148,8 @@
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
-        "fixture_inputs": false,
-        "expected_output": false,
+        "fixture_inputs": true,
+        "expected_output": true,
         "tolerance_ulp": 0
       },
       "backend_support": {
@@ -14207,7 +14207,7 @@
             "access": "ReadOnly",
             "memory": "Readonly",
             "element": "U32",
-            "count": 10,
+            "count": 140,
             "pipeline_live_out": false
           },
           {
@@ -14216,7 +14216,7 @@
             "access": "ReadOnly",
             "memory": "Readonly",
             "element": "U32",
-            "count": 1,
+            "count": 11,
             "pipeline_live_out": false
           },
           {
@@ -14267,8 +14267,8 @@
       "oracle": {
         "reference_eval": true,
         "flat_reference_facet": false,
-        "fixture_inputs": false,
-        "expected_output": false,
+        "fixture_inputs": true,
+        "expected_output": true,
         "tolerance_ulp": 0
       },
       "backend_support": {
@@ -31313,6 +31313,94 @@
       ]
     },
     {
+      "id": "vyre-primitives::math::symmetric_eigen_jacobi",
+      "tier": "primitive",
+      "category": "math",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "a",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "F32",
+            "count": 16,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "evec",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "F32",
+            "count": 16,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "eval",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "F32",
+            "count": 4,
+            "pipeline_live_out": false
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "math",
+        "inventory-registry"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 1
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-primitives::math::symmetric_eigen_jacobi",
+          "registered": true
+        }
+      ]
+    },
+    {
       "id": "vyre-primitives::math::tensor_network_pair_contract",
       "tier": "primitive",
       "category": "math",
@@ -31516,7 +31604,7 @@
         {
           "depth": 1,
           "operation": "vyre-primitives::math::symmetric_eigen_jacobi",
-          "registered": false
+          "registered": true
         },
         {
           "depth": 1,

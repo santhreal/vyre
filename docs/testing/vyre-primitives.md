@@ -334,6 +334,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --all-features
 | `test` | `sweep_toposort_oracle_matrix` | `vyre-primitives/tests/sweep_toposort_oracle_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test sweep_toposort_oracle_matrix` |
 | `test` | `sweep_toposort_oracle_matrix` | `vyre-primitives/tests/sweep_toposort_oracle_matrix.rs` | `cpu-parity`, `graph` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test sweep_toposort_oracle_matrix` |
 | `test` | `symmetric_eigen_jacobi_parity` | `vyre-primitives/tests/symmetric_eigen_jacobi_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test symmetric_eigen_jacobi_parity` |
+| `test` | `symmetric_eigen_jacobi_registration` | `vyre-primitives/tests/symmetric_eigen_jacobi_registration.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test symmetric_eigen_jacobi_registration` |
 | `test` | `syntax_motif_frontier_compiler` | `vyre-primitives/tests/syntax_motif_frontier_compiler.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test syntax_motif_frontier_compiler` |
 | `test` | `tensor_scc_value_parity` | `vyre-primitives/tests/tensor_scc_value_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test tensor_scc_value_parity` |
 | `test` | `tensor_train_contract_signed_parity` | `vyre-primitives/tests/tensor_train_contract_signed_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test tensor_train_contract_signed_parity` |
