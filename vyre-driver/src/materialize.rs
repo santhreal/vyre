@@ -24,7 +24,7 @@ use vyre_megakernel::{
 
 use crate::{
     BackendError, BindingPlan, BindingSet, BoundResource, Completion, Device, DeviceIdentity,
-    DispatchConfig, Resource, Submission,
+    DispatchConfig, Resource, Submission, TimedDispatchResult,
 };
 
 /// Build the shared "recompile the payload" rejection.
@@ -335,6 +335,37 @@ pub const NEUTRAL_MESSAGES: InstanceMessages = InstanceMessages {
     completion_consumed: || invalid_module("each Submission completion may be consumed only once"),
 };
 
+/// Rejection for a declared input whose canonical value was never bound.
+///
+/// This is the wording two backends already shipped byte-for-byte. It sits
+/// beside [`NEUTRAL_MESSAGES`] rather than inside it because
+/// [`InstanceCore::gather_inputs`] takes the rejection as an argument, so a
+/// backend whose text differs passes its own function and moves nobody else's.
+#[must_use]
+pub fn unbound_input(value: ArtifactValueId, name: &str) -> BackendError {
+    BackendError::InvalidProgram {
+        fix: format!(
+            "Fix: bind canonical artifact value {} for Program buffer `{name}` before submission.",
+            value.0
+        ),
+    }
+}
+
+/// One executable module of a materialized instance, as the shared execution
+/// loop reads it.
+///
+/// A backend's module record also holds its native pipeline and whatever
+/// binding metadata its dialect needs; those stay private to the backend
+/// because the shared loop never touches them. What it does need is the
+/// canonical Program and the payload-declared dispatch config, which every
+/// backend records under the same two names.
+pub trait ExecutableModule {
+    /// Canonical Program this module implements.
+    fn program(&self) -> &Program;
+    /// Dispatch configuration the payload entry declared.
+    fn config(&self) -> &DispatchConfig;
+}
+
 /// Identity and artifact ABI projection every materialized instance keeps.
 ///
 /// The four backends held these six fields under four names, filled them with
@@ -515,6 +546,154 @@ impl InstanceCore {
             consumed: self.messages.completion_consumed,
         })
     }
+
+    /// Route one submission to the host or the resident execution path.
+    ///
+    /// A backend with both paths refuses a binding set that spans them: a
+    /// single dispatch cannot read half its resources from caller memory and
+    /// half from device memory without deciding which side wins for a value
+    /// bound twice, and no backend makes that decision. `mixed` supplies the
+    /// refusal in the backend's own words.
+    ///
+    /// # Errors
+    ///
+    /// Returns the backend's `foreign_artifact` rejection when the bindings
+    /// name another artifact, and `mixed` when they span both paths. A failure
+    /// inside either closure is carried by the returned submission instead,
+    /// because the execution it describes did begin.
+    pub fn route_submission(
+        &self,
+        bindings: &BindingSet,
+        mixed: fn() -> BackendError,
+        host: impl FnOnce(
+            BTreeMap<ArtifactValueId, Vec<u8>>,
+            Option<[u32; 3]>,
+        ) -> Result<Completion, BackendError>,
+        resident: impl FnOnce(
+            &BTreeMap<ArtifactValueId, Resource>,
+            Option<[u32; 3]>,
+        ) -> Result<Completion, BackendError>,
+    ) -> Result<Box<dyn Submission>, BackendError> {
+        self.accept(bindings)?;
+        let invocation_grid = bindings.invocation_grid();
+        let bound = partition_bindings(bindings);
+        if !bound.host.is_empty() && !bound.resident.is_empty() {
+            return Err(mixed());
+        }
+        let result = if bound.resident.is_empty() {
+            host(bound.host, invocation_grid)
+        } else {
+            resident(&bound.resident, invocation_grid)
+        };
+        Ok(self.ready(result))
+    }
+
+    /// Dispatch every module in order and complete the accumulated state.
+    ///
+    /// Device time sums across modules and is reported only when at least one
+    /// module carried a device timer, so a backend that times some modules and
+    /// not others reports the partial sum rather than a total that silently
+    /// omits the untimed work. The accumulation saturates because a wrapped sum
+    /// would report a fast execution.
+    ///
+    /// `dispatch` gathers the module's inputs out of the state read so far and
+    /// runs it; the outputs it returns are absorbed back onto the canonical
+    /// values before the next module reads them.
+    ///
+    /// # Errors
+    ///
+    /// Returns whatever `dispatch` reports, `omitted` for a declared output the
+    /// module did not produce, and the backend's completion rejections when
+    /// execution left a declared value behind.
+    pub fn execute_modules<M: ExecutableModule>(
+        &self,
+        modules: &[M],
+        mut state: BTreeMap<ArtifactValueId, Vec<u8>>,
+        invocation_grid: Option<[u32; 3]>,
+        omitted: fn(usize, &str) -> BackendError,
+        mut dispatch: impl FnMut(
+            &M,
+            &BindingPlan,
+            &DispatchConfig,
+            &BTreeMap<ArtifactValueId, Vec<u8>>,
+        ) -> Result<TimedDispatchResult, BackendError>,
+    ) -> Result<Completion, BackendError> {
+        let mut device_ns = 0_u64;
+        let mut has_device_timing = false;
+        for module in modules {
+            let mut config = module.config().clone();
+            override_grid(&mut config, invocation_grid);
+            let plan = BindingPlan::build(module.program())?;
+            let dispatched = dispatch(module, &plan, &config, &state)?;
+            if let Some(ns) = dispatched.device_ns {
+                device_ns = device_ns.saturating_add(ns);
+                has_device_timing = true;
+            }
+            self.absorb_outputs(
+                &plan,
+                module.program(),
+                &dispatched.outputs,
+                &mut state,
+                omitted,
+            )?;
+        }
+        self.completion(&state, has_device_timing.then_some(device_ns))
+    }
+
+    /// Take the single module a resident submission can run.
+    ///
+    /// Resident bindings are ordered handles for one launch, so a multi-module
+    /// artifact has no place to put the intermediate values its later modules
+    /// would read. `feature` names the refused capability in the backend's own
+    /// words; the backend itself comes from the device generation.
+    ///
+    /// # Errors
+    ///
+    /// Returns `BackendError::UnsupportedFeature` unless `modules` holds
+    /// exactly one module.
+    pub fn single_resident_module<'modules, M>(
+        &self,
+        modules: &'modules [M],
+        feature: &str,
+    ) -> Result<&'modules M, BackendError> {
+        match modules {
+            [module] => Ok(module),
+            _ => Err(BackendError::UnsupportedFeature {
+                name: feature.to_string(),
+                backend: self.device.backend.to_string(),
+            }),
+        }
+    }
+
+    /// Complete a resident dispatch, which starts from empty state.
+    ///
+    /// A resident launch reads its inputs from device memory the caller already
+    /// filled, so nothing is carried in and every completed value comes from
+    /// this dispatch. `messages` supplies the completion rejections, which is
+    /// not always `self.messages`: a backend may word an unproduced resident
+    /// value differently than a host one.
+    ///
+    /// # Errors
+    ///
+    /// Returns `omitted` for a declared output the module did not produce, and
+    /// the `messages` rejections when a declared value is absent afterwards.
+    pub fn resident_completion(
+        &self,
+        plan: &BindingPlan,
+        program: &Program,
+        dispatched: &TimedDispatchResult,
+        omitted: fn(usize, &str) -> BackendError,
+        messages: &InstanceMessages,
+    ) -> Result<Completion, BackendError> {
+        let mut state = BTreeMap::new();
+        self.absorb_outputs(plan, program, &dispatched.outputs, &mut state, omitted)?;
+        Ok(Completion {
+            artifact: self.artifact,
+            outputs: self.project(&self.outputs, &state, messages.missing_output_value)?,
+            retained: self.project(&self.retained, &state, messages.missing_retained_value)?,
+            device_ns: dispatched.device_ns,
+        })
+    }
 }
 
 /// Bound resources split by where their bytes live.
@@ -576,6 +755,41 @@ pub fn override_grid(config: &mut DispatchConfig, grid: Option<[u32; 3]>) {
         config.grid_override = Some(grid);
         config.dispatch_grid = Some(grid);
     }
+}
+
+/// Answer the three [`crate::ArtifactInstance`] identity methods from an
+/// [`InstanceCore`] field named `core`.
+///
+/// Every backend forwards these three the same way, because the identity of a
+/// materialized instance is exactly what its core recorded at materialization.
+/// Only `submit` is a per-backend decision, so this expands to associated items
+/// inside the backend's own `impl ArtifactInstance` block rather than to a whole
+/// impl:
+///
+/// ```ignore
+/// impl ArtifactInstance for CudaArtifactInstance {
+///     vyre_driver::artifact_instance_identity!();
+///
+///     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
+///         // the one method that differs
+///     }
+/// }
+/// ```
+#[macro_export]
+macro_rules! artifact_instance_identity {
+    () => {
+        fn artifact(&self) -> ::vyre_megakernel::Digest {
+            self.core.artifact
+        }
+
+        fn payload(&self) -> ::vyre_megakernel::Digest {
+            self.core.payload
+        }
+
+        fn device(&self) -> &$crate::DeviceIdentity {
+            &self.core.device
+        }
+    };
 }
 
 /// A submission whose execution already finished when it was created.

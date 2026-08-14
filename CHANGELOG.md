@@ -6,6 +6,15 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Added
 
+- `vyre_driver::materialize` now owns the submission routing, the timed
+  multi-module execution loop, the resident single-module guard and completion,
+  and the artifact-instance identity forwarding each concrete materializer
+  repeated. `InstanceCore::route_submission`, `InstanceCore::execute_modules`,
+  `InstanceCore::single_resident_module`, `InstanceCore::resident_completion`,
+  the `ExecutableModule` trait, the `unbound_input` default rejection, and the
+  `artifact_instance_identity!` macro are additive. A backend whose rejection
+  text differs still passes its own function or `InstanceMessages` record, so no
+  message changed.
 - Grouped affine INT4 linear now provides a typed batched program builder that
   dequantizes each immutable weight tile once and reuses it across independent
   resident batch rows. Release evidence measures normalized per-inference
