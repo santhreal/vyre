@@ -63,16 +63,21 @@ reasoning = ["analysis", "vyre-primitives/cat", "vyre-primitives/dnnf", "vyre-pr
 analysis = ["device", "telemetry", "vyre-primitives/effects", "vyre-primitives/math", "vyre-primitives/types"]
 scheduling = ["device", "telemetry", "vyre-primitives/math", "vyre-primitives/parsing"]
 
-"math-linalg" = ["vyre-primitives/math"]
+# Every dialect feature whose module invokes `impl_cat_a_builder_options!`
+# declares that it needs the macro. The macro's own gate then names one
+# feature instead of restating this set, which is what let the set rot into a
+# dead-code warning on a build that enabled none of them.
+"cat-a-builder-options" = []
+"math-linalg" = ["cat-a-builder-options", "vyre-primitives/math"]
 "math-scan" = ["vyre-primitives/math"]
 "math-broadcast" = ["vyre-primitives/math"]
 "math-algebra" = ["vyre-primitives/math"]
 "math-succinct" = ["vyre-primitives/math"]
 "nn-activation" = ["vyre-primitives/nn"]
-"nn-linear" = ["math-linalg", "nn-activation", "vyre-primitives/nn"]
+"nn-linear" = ["cat-a-builder-options", "math-linalg", "nn-activation", "vyre-primitives/nn"]
 "nn-linear-4bit" = ["nn-linear"]
-"nn-norm" = ["math-broadcast", "vyre-primitives/nn"]
-"nn-attention" = ["nn-norm", "math-linalg", "vyre-primitives/nn"]
+"nn-norm" = ["cat-a-builder-options", "math-broadcast", "vyre-primitives/nn"]
+"nn-attention" = ["cat-a-builder-options", "nn-norm", "math-linalg", "vyre-primitives/nn"]
 "nn-moe" = ["nn-attention"]
 "nn-inference" = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-moe"]
 "matching-substring" = ["cpu-parity", "matching-dfa", "vyre-primitives/matching"]

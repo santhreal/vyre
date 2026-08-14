@@ -79,6 +79,12 @@ impl BuildOptions {
     }
 }
 
+/// Generate the shared Cat-A option surface on a typed builder.
+///
+/// Gated on `cat-a-builder-options`, which every dialect feature whose module
+/// invokes this macro declares in `Cargo.toml`. A build that enables none of
+/// them does not compile the macro at all.
+#[cfg(any(test, feature = "cat-a-builder-options"))]
 macro_rules! impl_cat_a_builder_options {
     ($builder:ident) => {
         impl $builder {
@@ -106,6 +112,7 @@ macro_rules! impl_cat_a_builder_options {
     };
 }
 
+#[cfg(any(test, feature = "cat-a-builder-options"))]
 pub(crate) use impl_cat_a_builder_options;
 
 /// Validate a slice of `TensorRef`s against an expected `DataType`

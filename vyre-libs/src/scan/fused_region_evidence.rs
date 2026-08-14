@@ -234,7 +234,7 @@ pub fn fused_region_evidence_program(
 #[cfg(all(test, feature = "matching-regex", feature = "matching-dfa"))]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::pack_haystack_u32;
+    use crate::scan::haystack::pack_haystack_u32;
     use crate::scan::regex_dfa::build_regex_dfa_pipeline;
     use vyre_primitives::wire::pack_u32_slice;
 

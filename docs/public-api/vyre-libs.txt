@@ -531,6 +531,7 @@ pub fn vyre_libs::scan::emit_hit(rule_id: &str, file_id: &str, span_start: &str,
 pub fn vyre_libs::scan::emit_hit_then_compact(rule_id: &str, file_id: &str, span_start: &str, span_len: &str, out_hits: &str, out_cursor: &str) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub fn vyre_libs::scan::emit_hit_then_compact_with_layout(rule_id: &str, file_id: &str, span_start: &str, span_len: &str, out_hits: &str, out_cursor: &str, lane_count: u32, max_hits: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub fn vyre_libs::scan::emit_hit_with_layout(rule_id: &str, file_id: &str, span_start: &str, span_len: &str, out_hits: &str, out_cursor: &str, lane_count: u32, max_hits: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::scan::haystack::pack_haystack_u32(bytes: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_libs::scan::hit_buffer::compact_hits(out_hits: &str, out_cursor: &str, max_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::scan::hit_buffer::compact_hits_with_layout(out_hits: &str, out_cursor: &str, hit_capacity: u32, max_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::scan::hit_buffer::emit_hit(rule_id: &str, file_id: &str, span_start: &str, span_len: &str, out_hits: &str, out_cursor: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -670,6 +671,7 @@ pub mod vyre_libs::scan
 pub mod vyre_libs::scan::builders
 pub mod vyre_libs::scan::classic_ac
 pub mod vyre_libs::scan::dfa
+pub mod vyre_libs::scan::haystack
 pub mod vyre_libs::scan::hit_buffer
 pub mod vyre_libs::scan::post_process
 pub mod vyre_libs::scan::substring

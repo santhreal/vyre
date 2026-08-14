@@ -628,7 +628,7 @@ mod tests {
     /// Proves the emitted kernel and CPU oracle implement identical anchored-window semantics.
     #[test]
     fn extract_program_reference_eval_matches_cpu_oracle() {
-        use crate::fixture_bytes::pack_haystack_u32;
+        use crate::scan::haystack::pack_haystack_u32;
         use vyre_primitives::wire::pack_u32_slice;
 
         let patterns = ["abc", "abcde", "bcd", "x"];

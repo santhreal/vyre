@@ -169,7 +169,7 @@ const WORKGROUP_X: u32 = super::arena_kernel::WORKGROUP_X;
 /// dispatch loop that dominates chain-shaped Programs.
 ///
 /// The level wave itself is
-/// [`super::arena_kernel::build_fused_level_wave_program`]; const-fold
+/// `super::arena_kernel::build_fused_level_wave_program`; const-fold
 /// contributes the `foldable` / `value` outputs at bindings 6 and 7 and
 /// the per-Expr body that writes them.
 #[must_use]

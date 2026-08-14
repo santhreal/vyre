@@ -216,12 +216,12 @@ pub(in crate::scan::classic_ac) fn suffix3_bloom_bit_index_expr(suffix: Expr) ->
 mod tests {
     use super::*;
     use crate::fixture_bytes::bytes_to_u32 as decode_u32;
-    use crate::fixture_bytes::pack_haystack_u32;
     use crate::scan::classic_ac::test_helpers::with_reference_dispatch_lanes;
     use crate::scan::classic_ac::{
         classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
         classic_ac_compile, classic_ac_scan_counts, CLASSIC_AC_SUFFIX2_MASK_WORDS,
     };
+    use crate::scan::haystack::pack_haystack_u32;
     use vyre_primitives::wire::pack_u32_slice;
 
     #[test]

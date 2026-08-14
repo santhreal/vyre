@@ -5,6 +5,7 @@
 //! deliberately owned by upper integration crates.
 
 pub mod builders;
+pub mod haystack;
 pub mod hit_buffer;
 
 #[cfg(feature = "matching-dfa")]
@@ -30,8 +31,6 @@ pub mod regex_dfa;
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
 pub mod regex_region_admission;
 
-#[cfg(feature = "matching-dfa")]
-pub use crate::fixture_bytes::pack_haystack_u32;
 pub use dfa::aho_corasick;
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
 pub use fused_region_evidence::{
@@ -39,6 +38,7 @@ pub use fused_region_evidence::{
     FUSED_EVIDENCE_ADMISSION_BINDING, FUSED_EVIDENCE_MATCHES_BINDING,
     FUSED_EVIDENCE_MATCH_COUNT_BINDING, FUSED_EVIDENCE_PRESENCE_BINDING,
 };
+pub use haystack::pack_haystack_u32;
 pub use hit_buffer::{
     compact_hits, compact_hits_with_layout, emit_hit, emit_hit_then_compact,
     emit_hit_then_compact_with_layout, emit_hit_with_layout, HIT_BUFFER_LIVE_LENGTH,
