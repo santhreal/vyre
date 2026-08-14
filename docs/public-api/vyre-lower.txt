@@ -215,7 +215,7 @@ pub fn vyre_lower::analyses::shared_mem_promote::analyze(desc: &vyre_lower::desc
 pub fn vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan::fits_in_budget(&self) -> bool
 pub fn vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan::sorted_by_speedup(&self) -> alloc::vec::Vec<&vyre_lower::analyses::shared_mem_promote::plan::PromotionCandidate>
 pub fn vyre_lower::analyses::structured_walk::StructuredVisitor::enter_body(&mut self, body: &'a vyre_lower::descriptor::KernelBody, op_index_offset: usize)
-pub fn vyre_lower::analyses::structured_walk::StructuredVisitor::visit_op(&mut self, body: &'a vyre_lower::descriptor::KernelBody, op_index: usize, op: &'a vyre_lower::descriptor::KernelOp)
+pub fn vyre_lower::analyses::structured_walk::StructuredVisitor::visit_op(&mut self, body: &'a vyre_lower::descriptor::KernelBody, producers: &rustc_hash::FxHashMap<u32, &'a vyre_lower::descriptor::KernelOp>, op_index: usize, op: &'a vyre_lower::descriptor::KernelOp)
 pub fn vyre_lower::analyses::structured_walk::branch_at<'a>(body: &'a vyre_lower::descriptor::KernelBody, op: &vyre_lower::descriptor::KernelOp) -> core::option::Option<vyre_lower::analyses::structured_walk::StructuredBranch<'a>>
 pub fn vyre_lower::analyses::structured_walk::walk_structured<'a, V>(root: &'a vyre_lower::descriptor::KernelBody, arms: vyre_lower::analyses::structured_walk::ArmDescent, visitor: &mut V) where V: vyre_lower::analyses::structured_walk::StructuredVisitor<'a>
 pub fn vyre_lower::analyses::texture_promote::analysis::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::texture_promote::plan::TexturePromotionPlan
