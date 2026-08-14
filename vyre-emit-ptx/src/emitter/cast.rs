@@ -5,11 +5,11 @@
 //! rules for casts to and from a predicate. Register-class coercion that a
 //! non-cast instruction needs lives in `coercion`.
 
-use std::fmt::Write as _;
-use vyre_foundation::ir::DataType;
 use super::BodyCtx;
 use crate::reg::{PtxType, Reg};
 use crate::EmitError;
+use std::fmt::Write as _;
+use vyre_foundation::ir::DataType;
 
 impl BodyCtx<'_> {
     pub(super) fn emit_cast(&mut self, src: Reg, target: &DataType) -> Result<Reg, EmitError> {

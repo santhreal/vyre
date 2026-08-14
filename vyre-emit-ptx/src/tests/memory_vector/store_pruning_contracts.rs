@@ -57,7 +57,9 @@ fn vector_store_pruning_keeps_parent_index_used_by_child_body() {
         ],
     );
     let mut kernel = kernel;
-    kernel.body.child_bodies = vec![body().op(effect(KernelOpKind::StoreGlobal, [1, 2, 1])).build()];
+    kernel.body.child_bodies = vec![body()
+        .op(effect(KernelOpKind::StoreGlobal, [1, 2, 1]))
+        .build()];
 
     let s = emit(&kernel).expect(
         "Fix: vector-store index producer pruning must keep parent results read by child bodies.",

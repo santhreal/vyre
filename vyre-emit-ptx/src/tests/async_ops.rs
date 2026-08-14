@@ -1,15 +1,7 @@
 //! Test: async ops.
 use super::*;
 use vyre_lower::descriptor_builder::{
-    SlotCount,
-    body,
-    descriptor,
-    effect,
-    global_ro,
-    global_rw,
-    lit,
-    op,
-    shared_rw,
+    body, descriptor, effect, global_ro, global_rw, lit, op, shared_rw, SlotCount,
 };
 
 #[test]
@@ -25,9 +17,12 @@ fn async_load_emits_bounded_sync_copy() {
                 .ops([
                     lit(0, 0),
                     lit(1, 1),
-                    effect(KernelOpKind::AsyncLoad {
-                        tag: "tile0".into(),
-                    }, [0, 1, 0, 1]),
+                    effect(
+                        KernelOpKind::AsyncLoad {
+                            tag: "tile0".into(),
+                        },
+                        [0, 1, 0, 1],
+                    ),
                 ])
                 .literals([LiteralValue::U32(0), LiteralValue::U32(16)]),
         )
@@ -122,9 +117,12 @@ fn async_store_emits_bounded_sync_copy() {
                 .ops([
                     lit(0, 0),
                     lit(1, 1),
-                    effect(KernelOpKind::AsyncStore {
-                        tag: "tile0".into(),
-                    }, [0, 1, 0, 1]),
+                    effect(
+                        KernelOpKind::AsyncStore {
+                            tag: "tile0".into(),
+                        },
+                        [0, 1, 0, 1],
+                    ),
                 ])
                 .literals([LiteralValue::U32(0), LiteralValue::U32(16)]),
         )

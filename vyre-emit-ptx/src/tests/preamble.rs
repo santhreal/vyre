@@ -1,15 +1,7 @@
 //! Test: preamble.
 use super::*;
 use vyre_lower::descriptor_builder::{
-    SlotCount,
-    body,
-    descriptor,
-    effect,
-    global_ro,
-    global_rw,
-    global_wo,
-    lit,
-    op,
+    body, descriptor, effect, global_ro, global_rw, global_wo, lit, op, SlotCount,
 };
 
 #[test]

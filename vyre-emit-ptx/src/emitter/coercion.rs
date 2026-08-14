@@ -6,9 +6,9 @@
 //! widening for stores, and word-to-predicate narrowing. It owns no
 //! instruction selection; every arithmetic lowering lives elsewhere.
 
-use std::fmt::Write as _;
 use super::BodyCtx;
 use crate::reg::{PtxType, Reg};
+use std::fmt::Write as _;
 
 impl BodyCtx<'_> {
     pub(super) fn canonicalize_f32(&mut self, value: Reg) -> Reg {

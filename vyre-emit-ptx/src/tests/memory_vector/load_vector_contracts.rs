@@ -1,14 +1,6 @@
 use super::*;
 use vyre_lower::descriptor_builder::{
-    SlotCount,
-    body,
-    descriptor,
-    effect,
-    global_ro,
-    global_wo,
-    lit,
-    op,
-    slot,
+    body, descriptor, effect, global_ro, global_wo, lit, op, slot, SlotCount,
 };
 
 #[test]
@@ -51,7 +43,14 @@ fn emit_fuses_four_adjacent_load_constant_ops_to_ptx_vector_load() {
     // the buffers the promote pass targets).
     let desc = descriptor("vec_load_constant")
         .slots([
-            slot(0, DataType::U32, MemoryClass::Constant, BindingVisibility::ReadOnly, "input").with_count(16),
+            slot(
+                0,
+                DataType::U32,
+                MemoryClass::Constant,
+                BindingVisibility::ReadOnly,
+                "input",
+            )
+            .with_count(16),
             global_wo(1, DataType::U32, "output").with_count(16),
         ])
         .body(
@@ -214,7 +213,14 @@ fn constant_binding_loads_fuse_to_plain_global_vector_load_never_nc() {
         id: "const_no_vec".into(),
         bindings: BindingLayout {
             slots: vec![
-                slot(0, DataType::U32, MemoryClass::Constant, BindingVisibility::ReadOnly, "const_input").with_count(16),
+                slot(
+                    0,
+                    DataType::U32,
+                    MemoryClass::Constant,
+                    BindingVisibility::ReadOnly,
+                    "const_input",
+                )
+                .with_count(16),
                 global_wo(1, DataType::U32, "output").with_count(4),
             ],
         },

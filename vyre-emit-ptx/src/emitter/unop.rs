@@ -4,11 +4,11 @@
 //! diagnostic spelling used when an operator has no lowering for the class
 //! it was handed. Casts are a separate concept and live in `cast`.
 
-use std::fmt::Write as _;
-use vyre_foundation::ir::UnOp;
 use super::BodyCtx;
 use crate::reg::{PtxType, Reg};
 use crate::EmitError;
+use std::fmt::Write as _;
+use vyre_foundation::ir::UnOp;
 
 fn unop_name(op: &UnOp) -> &'static str {
     match op {

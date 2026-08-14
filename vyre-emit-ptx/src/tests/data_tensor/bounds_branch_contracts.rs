@@ -1,13 +1,6 @@
 use super::*;
 use vyre_lower::descriptor_builder::{
-    SlotCount,
-    body,
-    descriptor,
-    effect,
-    global_ro,
-    global_wo,
-    lit,
-    op,
+    body, descriptor, effect, global_ro, global_wo, lit, op, SlotCount,
 };
 
 #[test]
@@ -18,15 +11,12 @@ fn runtime_index_load_clamps_against_buffer_length() {
     // stored at `[%rd0 + 4 + slot*4]`.
     let kernel = descriptor("idx_load")
         .slot(global_ro(0, DataType::U32, "input"))
-        .body(
-            body()
-                .ops([
-                    // Use GlobalInvocationId as a non-literal index so the
-                    // immediate fast-path is bypassed and the clamp path runs.
-                    op(KernelOpKind::GlobalInvocationId, [0], 0),
-                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
-                ]),
-        )
+        .body(body().ops([
+            // Use GlobalInvocationId as a non-literal index so the
+            // immediate fast-path is bypassed and the clamp path runs.
+            op(KernelOpKind::GlobalInvocationId, [0], 0),
+            op(KernelOpKind::LoadGlobal, [0, 0], 1),
+        ]))
         .build();
     let s = emit(&kernel).unwrap();
     assert!(

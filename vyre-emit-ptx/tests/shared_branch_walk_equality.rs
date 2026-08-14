@@ -222,7 +222,10 @@ fn check<T: std::fmt::Debug + PartialEq>(
 fn uniformity_walk_reports_the_pinned_branch_sites() {
     let expected: Vec<Vec<(usize, BranchUniformity)>> = vec![
         vec![],
-        vec![(1, BranchUniformity::Uniform), (3, BranchUniformity::Uniform)],
+        vec![
+            (1, BranchUniformity::Uniform),
+            (3, BranchUniformity::Uniform),
+        ],
         vec![(7, BranchUniformity::Uniform)],
         vec![(4, BranchUniformity::Uniform)],
         vec![(1, BranchUniformity::Uniform)],
