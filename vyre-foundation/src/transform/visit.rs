@@ -162,6 +162,43 @@ pub fn child_bodies(node: &Node) -> [&[Node]; 2] {
     }
 }
 
+/// Every operand expression `node` carries directly, in source order.
+///
+/// This is the ONE owner of the question "which node variants carry
+/// expressions", the operand counterpart of [`child_bodies`]. Adding a `Node`
+/// variant fails to compile here, so a variant that gains an expression
+/// position cannot be skipped by a scan or a rewrite in silence.
+///
+/// Leaves return two `None`s, so a caller can flatten unconditionally. The
+/// widest variants carry exactly two operands: `Store` (index, value), `Loop`
+/// (from, to), and the async copies (offset, size).
+#[inline]
+#[must_use]
+pub fn node_operands(node: &Node) -> [Option<&Expr>; 2] {
+    match node {
+        Node::Let { value, .. } | Node::Assign { value, .. } => [Some(value), None],
+        Node::Store { index, value, .. } => [Some(index), Some(value)],
+        Node::If { cond, .. } => [Some(cond), None],
+        Node::Loop { from, to, .. } => [Some(from), Some(to)],
+        Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
+            [Some(offset), Some(size)]
+        }
+        Node::Trap { address, .. } => [Some(address), None],
+        Node::Block(_)
+        | Node::Region { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AllReduce { .. }
+        | Node::AllGather { .. }
+        | Node::ReduceScatter { .. }
+        | Node::Broadcast { .. }
+        | Node::AsyncWait { .. }
+        | Node::Resume { .. }
+        | Node::Opaque(_) => [None, None],
+    }
+}
+
 /// Every operand expression of `expr`, in source order.
 ///
 /// This is the ONE owner of the question "which expression variants contain
@@ -333,6 +370,33 @@ pub fn any_descendant(node: &Node, pred: &mut impl FnMut(&Node) -> bool) -> bool
     false
 }
 
+/// True when any expression anywhere under `nodes` satisfies `pred`.
+///
+/// This is the scan a pass runs to decide whether it has anything to do. Node
+/// nesting comes from [`child_bodies`], operand positions from
+/// [`node_operands`], and sub-expressions from [`expr_children`], so a new
+/// variant in either namespace reaches the scan without an edit at the call
+/// site. A pass that re-derives the three enumerations instead answers "no
+/// candidate" for a position it forgot, and a skipped pass leaves no trace.
+///
+/// The scan short-circuits on the first match.
+#[must_use]
+pub fn any_expr_in(nodes: &[Node], pred: &mut impl FnMut(&Expr) -> bool) -> bool {
+    let mut stack: SmallVec<[&Node; 64]> = SmallVec::new();
+    stack.extend(nodes.iter().rev());
+    while let Some(current) = stack.pop() {
+        for operand in node_operands(current).into_iter().flatten() {
+            if any_subexpr(operand, pred) {
+                return true;
+            }
+        }
+        for body in child_bodies(current).into_iter().rev() {
+            stack.extend(body.iter().rev());
+        }
+    }
+    false
+}
+
 /// Walk all nodes in a program, calling `f` on each.
 ///
 /// The traversal is depth-first and visits every statement node in the
@@ -389,42 +453,9 @@ fn push_node_children_and_exprs<'a>(
         }
     }
 
-    // Which expressions a variant carries is genuinely per-variant.
-    match node {
-        Node::Let { value, .. } | Node::Assign { value, .. } => {
-            expr_stack.push(value);
-        }
-        Node::Store { index, value, .. } => {
-            expr_stack.push(value);
-            expr_stack.push(index);
-        }
-        Node::If { cond, .. } => {
-            expr_stack.push(cond);
-        }
-        Node::Loop { from, to, .. } => {
-            expr_stack.push(to);
-            expr_stack.push(from);
-        }
-        Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
-            expr_stack.push(size);
-            expr_stack.push(offset);
-        }
-        Node::Trap { address, .. } => {
-            expr_stack.push(address);
-        }
-        Node::Block(_)
-        | Node::Region { .. }
-        | Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AllReduce { .. }
-        | Node::AllGather { .. }
-        | Node::ReduceScatter { .. }
-        | Node::Broadcast { .. }
-        | Node::AsyncWait { .. }
-        | Node::Resume { .. }
-        | Node::Opaque(_) => {}
-    }
+    // Operand positions come from the single exhaustive owner. Pushed in
+    // reverse so `drain_expr_stack` pops them in source order.
+    expr_stack.extend(node_operands(node).into_iter().rev().flatten());
 }
 
 /// Visit every expression on `expr_stack` and everything below it.
