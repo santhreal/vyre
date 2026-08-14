@@ -305,10 +305,6 @@ mod native {
             },
         }))
     }
-
-    }
-
-    }
 }
 
 pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
