@@ -346,7 +346,7 @@ fn collect_segment_expr_targets(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grid_sync::test_programs::region;
+    use crate::grid_sync::test_programs::{cross_segment_store_program, region};
     use vyre_foundation::ir::DataType;
     use vyre_foundation::memory_model::MemoryOrdering;
 
@@ -360,16 +360,7 @@ mod tests {
         // instead of overwriting it with a fresh write-only buffer, which would
         // silently zero the earlier segments' slots (recall=0 for every rule
         // whose store is not in the final segment).
-        let out = BufferDecl::output("out", 0, DataType::U32).with_count(4);
-        let program = Program::wrapped(
-            vec![out],
-            [1, 1, 1],
-            vec![
-                region("a", vec![Node::store("out", Expr::u32(0), Expr::u32(0xAA))]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![Node::store("out", Expr::u32(2), Expr::u32(0xBB))]),
-            ],
-        );
+        let program = cross_segment_store_program();
         let segments =
             plan_host_grid_sync_segment_programs(&program).expect("plan host grid-sync segments");
         assert_eq!(segments.len(), 2, "one GridSync barrier -> two segments");

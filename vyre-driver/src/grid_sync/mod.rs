@@ -133,6 +133,24 @@ where
         })
 }
 
+/// The invariant every non-native grid-sync route depends on: a program that
+/// contains a grid-sync barrier splits into at least one segment.
+///
+/// Each route asks this before it commits to threading buffers between
+/// segments, because an empty segment list would otherwise dispatch nothing and
+/// return the caller's untouched output buffers as a successful result.
+fn reject_empty_grid_sync_split<T>(segments: &[T]) -> Result<(), BackendError> {
+    if segments.is_empty() {
+        return Err(BackendError::InvalidProgram {
+            fix: "Fix: program contains GridSync barrier but split_on_grid_sync produced 0 \
+                  segments. This is a grid_sync invariant bug  -  split_on_grid_sync must \
+                  always return at least one segment."
+                .to_string(),
+        });
+    }
+    Ok(())
+}
+
 fn grid_sync_segment_error(
     error: BackendError,
     segment_idx: usize,

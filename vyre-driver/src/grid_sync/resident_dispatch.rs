@@ -8,7 +8,8 @@ use vyre_foundation::ir::{Ident, Program};
 use super::barrier_split::{contains_grid_sync, try_split_on_grid_sync};
 use super::segment_buffers::original_output_names;
 use super::{
-    elapsed_wall_ns, grid_sync_segment_error, reserve_grid_sync_hash_map, reserve_grid_sync_vec,
+    elapsed_wall_ns, grid_sync_segment_error, reject_empty_grid_sync_split,
+    reserve_grid_sync_hash_map, reserve_grid_sync_vec,
 };
 use crate::backend::{
     BackendError, DispatchConfig, OutputBuffers, ResidentDispatchStep, ResidentReadRange, Resource,
@@ -42,14 +43,7 @@ pub fn dispatch_resident_with_grid_sync_split_timed(
         return backend.dispatch_resident_timed(program, resources, config);
     }
     let segments = try_split_on_grid_sync(program)?;
-    if segments.is_empty() {
-        return Err(BackendError::InvalidProgram {
-            fix: "Fix: program contains GridSync barrier but split_on_grid_sync produced 0 \
-                  segments. This is a grid_sync invariant bug  -  split_on_grid_sync must \
-                  always return at least one segment."
-                .to_string(),
-        });
-    }
+    reject_empty_grid_sync_split(&segments)?;
     let started = std::time::Instant::now();
     let mut final_outputs = Vec::new();
     let mut device_ns = Some(0_u64);
@@ -148,14 +142,7 @@ pub fn dispatch_resident_grid_sync_fixpoint_into(
         return backend.dispatch_borrowed_into(program, inputs, config, outputs);
     }
     let segments = try_split_on_grid_sync(program)?;
-    if segments.is_empty() {
-        return Err(BackendError::InvalidProgram {
-            fix: "Fix: program contains GridSync barrier but split_on_grid_sync produced 0 \
-                  segments. This is a grid_sync invariant bug  -  split_on_grid_sync must \
-                  always return at least one segment."
-                .to_string(),
-        });
-    }
+    reject_empty_grid_sync_split(&segments)?;
     crate::observability::record_grid_sync_split(segments.len());
 
     // Allocate one resident resource per non-shared binding (caller inputs
@@ -377,7 +364,9 @@ fn free_resident_program_resources(
 mod tests {
     use super::*;
     use crate::grid_sync::barrier_split::entry_sequence;
-    use crate::grid_sync::test_programs::{buffer, region};
+    use crate::grid_sync::test_programs::{
+        apply_out_stores, cross_segment_store_program, grid_sync_chain,
+    };
     use std::sync::atomic::{AtomicUsize, Ordering};
     use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node};
     use vyre_foundation::memory_model::MemoryOrdering;
@@ -449,17 +438,7 @@ mod tests {
 
     #[test]
     fn resident_split_reuses_same_device_resources_across_segments() {
-        let program = Program::wrapped(
-            vec![buffer()],
-            [1, 1, 1],
-            vec![
-                region("a", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![Node::Return]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("c", vec![Node::Return]),
-            ],
-        );
+        let program = grid_sync_chain(&["a", "b", "c"]);
         let owner = crate::ResidentOwner::new().expect("Fix: owner ids must be available");
         let backend = ResidentReuseBackend {
             calls: AtomicUsize::new(0),
@@ -624,30 +603,7 @@ mod tests {
 
             // Apply the segment's `out` stores IN PLACE  -  never clearing the
             // buffer, so earlier segments' slots persist (the accumulator).
-            fn apply(nodes: &[Node], state: &mut [u8]) {
-                for node in nodes {
-                    match node {
-                        Node::Store {
-                            buffer,
-                            index: Expr::LitU32(i),
-                            value: Expr::LitU32(v),
-                        } if buffer.as_str() == "out" => {
-                            state[(*i as usize) * 4] = (*v & 0xff) as u8;
-                        }
-                        Node::Region { body, .. } => apply(body, state),
-                        Node::Block(body) => apply(body, state),
-                        Node::If {
-                            then, otherwise, ..
-                        } => {
-                            apply(then, state);
-                            apply(otherwise, state);
-                        }
-                        Node::Loop { body, .. } => apply(body, state),
-                        _ => {}
-                    }
-                }
-            }
-            apply(entry_sequence(program), buf.as_mut_slice());
+            apply_out_stores(entry_sequence(program), buf.as_mut_slice());
 
             Ok(TimedDispatchResult {
                 outputs: Vec::new(),
@@ -666,16 +622,7 @@ mod tests {
         // path keeps ONE device `out` buffer bound across both segments, so both
         // slots must survive WITHOUT the host-path accumulator role-rewrite  -
         // the persistent device buffer is never cleared between launches.
-        let out = BufferDecl::output("out", 0, DataType::U32).with_count(4);
-        let program = Program::wrapped(
-            vec![out],
-            [1, 1, 1],
-            vec![
-                region("a", vec![Node::store("out", Expr::u32(0), Expr::u32(0xAA))]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![Node::store("out", Expr::u32(2), Expr::u32(0xBB))]),
-            ],
-        );
+        let program = cross_segment_store_program();
         let backend = ResidentDeviceBackend::new();
         let mut outputs = vec![Vec::new()];
         dispatch_resident_grid_sync_fixpoint_into(
@@ -724,16 +671,7 @@ mod tests {
         // With a fixpoint bound > 1, the whole segment sequence repeats that many
         // times against the same resident buffers (idempotent stores here, so the
         // result is unchanged, but the launch count proves the repeat wiring).
-        let out = BufferDecl::output("out", 0, DataType::U32).with_count(4);
-        let program = Program::wrapped(
-            vec![out],
-            [1, 1, 1],
-            vec![
-                region("a", vec![Node::store("out", Expr::u32(0), Expr::u32(0xAA))]),
-                Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![Node::store("out", Expr::u32(2), Expr::u32(0xBB))]),
-            ],
-        );
+        let program = cross_segment_store_program();
         let backend = ResidentDeviceBackend::new();
         let mut config = DispatchConfig::default();
         config.fixpoint_iterations = Some(3);
