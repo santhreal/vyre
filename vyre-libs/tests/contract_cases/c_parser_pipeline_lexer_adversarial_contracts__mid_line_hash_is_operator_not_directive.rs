@@ -191,25 +191,7 @@ fn lexer_does_not_emit_zero_length_tokens_for_nonempty_source() {
 #[test]
 fn lexer_output_buffers_are_not_all_zeros_for_nonempty_input() {
     let source = b"int x;";
-    let program = c11_lexer(
-        "haystack",
-        "out_tok_types",
-        "out_tok_starts",
-        "out_tok_lens",
-        "out_counts",
-        source.len() as u32,
-    );
-    let haystack_buf = u32_bytes(&haystack_words(source));
-    let zero_buf = vec![0u8; source.len() * 4];
-    let count_zero = vec![0u8; 4];
-    let inputs = [
-        Value::from(haystack_buf),
-        Value::from(zero_buf.clone()),
-        Value::from(zero_buf.clone()),
-        Value::from(zero_buf.clone()),
-        Value::from(count_zero),
-    ];
-    let outputs = vyre_reference::reference_eval(&program, &inputs).expect("lexer must run");
+    let outputs = c11_lexer_outputs(source, source.len() as u32);
     // At least one output buffer must contain non-zero data (the count if nothing else)
     let any_nonzero = outputs.iter().any(|v| v.to_bytes().iter().any(|&b| b != 0));
     assert!(
