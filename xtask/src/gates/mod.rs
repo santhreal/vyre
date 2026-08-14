@@ -11,6 +11,7 @@ pub mod check_tier_deps;
 pub mod dedup_report;
 pub mod dep_drift;
 pub mod dup_scan;
+pub mod feature_isolation;
 pub mod gates;
 pub mod hot_path_scan;
 pub mod hygiene_matrix;

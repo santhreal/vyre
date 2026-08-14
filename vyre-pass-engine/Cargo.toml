@@ -32,13 +32,21 @@ all-solvers = [
     "vyre-libs/scheduling",
     "vyre-libs/telemetry",
 ]
-cpu-parity = ["all-solvers", "vyre-primitives/cpu-parity"]
+# `optimizer` because the parity suite this feature gates imports
+# `vyre_pass_engine::optimizer`. Without the edge, `--features cpu-parity` on its
+# own reserved the suite for a namespace the same selection did not compile.
+cpu-parity = ["all-solvers", "optimizer", "vyre-primitives/cpu-parity"]
 
 [dependencies]
 vyre-foundation.workspace = true
 # Host-side dispatch byte marshalling (`vyre_libs::dispatch_buffers`). The
 # target DAG puts the composition library below the pass engine.
-vyre-libs.workspace = true
+# `default-features = false`: the pass engine uses only `dispatch_buffers` and
+# `graph`, both ungated. Taking the default set would resolve the math/nn/matching
+# primitive domains into every optimizer-only consumer. Declared explicitly rather
+# than through `workspace = true`, which silently ignores `default-features = false`
+# unless the workspace entry states a `default-features` value of its own.
+vyre-libs = { version = "0.7.2", path = "../vyre-libs", default-features = false }
 vyre-primitives = { workspace = true }
 tracing.workspace = true
 rustc-hash.workspace = true
@@ -61,3 +69,16 @@ name = "optimizer_bfs_and_softmax_parity"
 path = "tests/optimizer_bfs_and_softmax_parity.rs"
 required-features = ["cpu-parity"]
 
+# Both suites assert the contract of the `optimizer` namespace, so they cannot
+# build when it is off. Declared rather than wrapped in a file-level `cfg`: cargo
+# then skips them for a selection that lacks the feature instead of failing, and
+# a consumer reads the prerequisite from the manifest.
+[[test]]
+name = "dce_program_back_edge_contract"
+path = "tests/dce_program_back_edge_contract.rs"
+required-features = ["optimizer"]
+
+[[test]]
+name = "dce_dispatch_binding_contract"
+path = "tests/dce_dispatch_binding_contract.rs"
+required-features = ["optimizer"]
