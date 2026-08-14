@@ -322,20 +322,8 @@ mod tests {
         generator.as_str()
     }
 
-    /// The binding names the Sinkhorn dispatch tests build against, with each
-    /// field named once.
-    const SINKHORN_FIXTURE: SinkhornBuffers<'static> = SinkhornBuffers {
-        k: "k",
-        k_t: "kt",
-        a: "a",
-        b: "b",
-        u_curr: "uc",
-        u_next: "un",
-        v: "v",
-        kv: "kv",
-        ktu: "ktu",
-        changed: "changed",
-    };
+    /// The binding names the Sinkhorn dispatch tests build against.
+    const SINKHORN_FIXTURE: SinkhornBuffers<'static> = SinkhornBuffers::CANONICAL;
 
     /// The dispatch facade must emit exactly the primitive's program.
     ///

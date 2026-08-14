@@ -52,6 +52,27 @@ pub struct SinkhornBuffers<'a> {
     pub changed: &'a str,
 }
 
+impl SinkhornBuffers<'static> {
+    /// The canonical binding names for a Sinkhorn program.
+    ///
+    /// A caller that has no naming of its own gets one here instead of
+    /// inventing ten strings, and every program built from it declares the
+    /// same bindings in the same order, which is what makes two such programs
+    /// comparable byte for byte.
+    pub const CANONICAL: Self = Self {
+        k: "k",
+        k_t: "kt",
+        a: "a",
+        b: "b",
+        u_curr: "uc",
+        u_next: "un",
+        v: "v",
+        kv: "kv",
+        ktu: "ktu",
+        changed: "c",
+    };
+}
+
 /// The problem extents and iteration cap one iterative-Sinkhorn program is
 /// built for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -531,18 +552,7 @@ inventory::submit! {
         OP_ID,
         || {
             sinkhorn_iterate(
-                SinkhornBuffers {
-                    k: "k",
-                    k_t: "kt",
-                    a: "a",
-                    b: "b",
-                    u_curr: "uc",
-                    u_next: "un",
-                    v: "v",
-                    kv: "kv",
-                    ktu: "ktu",
-                    changed: "c",
-                },
+                SinkhornBuffers::CANONICAL,
                 SinkhornExtents {
                     m: 2,
                     n: 2,

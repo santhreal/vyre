@@ -1,24 +1,8 @@
 use super::*;
 use std::sync::Arc;
 
-/// The binding names every program test in this module builds against, with
-/// each field named once.
-///
-/// This is the only place in the module the ten names are spelled, so a
-/// transposition of two of them is a one-line diff here rather than a
-/// reordering inside a positional argument list nobody reads.
-const FIXTURE: SinkhornBuffers<'static> = SinkhornBuffers {
-    k: "k",
-    k_t: "kt",
-    a: "a",
-    b: "b",
-    u_curr: "uc",
-    u_next: "un",
-    v: "v",
-    kv: "kv",
-    ktu: "ktu",
-    changed: "c",
-};
+/// The binding names every program test in this module builds against.
+const FIXTURE: SinkhornBuffers<'static> = SinkhornBuffers::CANONICAL;
 
 /// `SinkhornExtents` for `m x n` under an iteration cap.
 fn extents(m: u32, n: u32, max_iterations: u32) -> SinkhornExtents {

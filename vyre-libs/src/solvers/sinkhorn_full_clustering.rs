@@ -32,20 +32,8 @@ pub fn sinkhorn_full_clustering_program(
 mod tests {
     use super::*;
 
-    /// The binding names one region's Sinkhorn program is built against, with
-    /// each field named once.
-    const FIXTURE: SinkhornBuffers<'static> = SinkhornBuffers {
-        k: "k",
-        k_t: "kt",
-        a: "a",
-        b: "b",
-        u_curr: "uc",
-        u_next: "un",
-        v: "v",
-        kv: "kv",
-        ktu: "ktu",
-        changed: "c",
-    };
+    /// The binding names one region's Sinkhorn program is built against.
+    const FIXTURE: SinkhornBuffers<'static> = SinkhornBuffers::CANONICAL;
 
     /// `SinkhornExtents` for `m x n` under an iteration cap.
     fn extents(m: u32, n: u32, max_iterations: u32) -> SinkhornExtents {

@@ -11,18 +11,7 @@ fn sinkhorn_iterate_matches_registered_fixture() {
     let backend = vyre_driver_wgpu::WgpuBackend::acquire()
         .expect("Fix: WGPU sinkhorn contract requires a live GPU backend.");
     let program = sinkhorn_iterate(
-        SinkhornBuffers {
-            k: "k",
-            k_t: "kt",
-            a: "a",
-            b: "b",
-            u_curr: "uc",
-            u_next: "un",
-            v: "v",
-            kv: "kv",
-            ktu: "ktu",
-            changed: "c",
-        },
+        SinkhornBuffers::CANONICAL,
         SinkhornExtents {
             m: 2,
             n: 2,
