@@ -13,7 +13,8 @@ mod c_frontend;
 mod expression_precedence_e2e;
 
 use crate::c_frontend::expression_pipeline::{
-    assert_pg_links_match_vast, assert_pg_preserves_row, assert_shape_row, run_pipeline,
+    assert_pg_links_match_vast, assert_pg_preserves_row, assert_shape_none, assert_shape_rows,
+    run_pipeline, shape_none_row,
 };
 use crate::c_frontend::rows::{
     row_indices_by_stride as row_indices, word_at, SENTINEL, VAST_STRIDE_U32,
@@ -23,8 +24,7 @@ use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_ARRAY_SUBSCRIPT_EXPR, C_AST_KIND_ASSIGN_EXPR, C_AST_KIND_CAST_EXPR,
     C_AST_KIND_CONDITIONAL_EXPR, C_AST_KIND_MEMBER_ACCESS_EXPR, C_EXPR_ASSOC_LEFT,
-    C_EXPR_ASSOC_NONE, C_EXPR_ASSOC_RIGHT, C_EXPR_SHAPE_BINARY, C_EXPR_SHAPE_CONDITIONAL,
-    C_EXPR_SHAPE_NONE,
+    C_EXPR_ASSOC_RIGHT, C_EXPR_SHAPE_BINARY, C_EXPR_SHAPE_CONDITIONAL,
 };
 use vyre_primitives::predicate::node_kind;
 

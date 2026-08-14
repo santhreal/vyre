@@ -5,65 +5,16 @@ fn comma_boundary_preserves_assignment_shapes_and_lowers_to_pg() {
     let (tok_types, tok_lens) = comma_fixture();
     let rows = run_pipeline(&tok_types, &tok_lens);
 
-    // Assignment at index 1: a = b
-    assert_shape_row(
+    // Assignments at 1, 5 and 9; the commas between them are boundaries only.
+    assert_shape_rows(
         &rows.expr_shape,
-        1,
-        C_EXPR_SHAPE_BINARY,
-        TOK_ASSIGN,
-        2,
-        C_EXPR_ASSOC_RIGHT,
-        0,
-        2,
-        SENTINEL,
-    );
-    // Comma at index 3 is an expression boundary, not a shape node.
-    assert_shape_row(
-        &rows.expr_shape,
-        3,
-        C_EXPR_SHAPE_NONE,
-        TOK_COMMA,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
-    // Assignment at index 5: c = d
-    assert_shape_row(
-        &rows.expr_shape,
-        5,
-        C_EXPR_SHAPE_BINARY,
-        TOK_ASSIGN,
-        2,
-        C_EXPR_ASSOC_RIGHT,
-        4,
-        6,
-        SENTINEL,
-    );
-    // Comma at index 7
-    assert_shape_row(
-        &rows.expr_shape,
-        7,
-        C_EXPR_SHAPE_NONE,
-        TOK_COMMA,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
-    // Assignment at index 9: e = f
-    assert_shape_row(
-        &rows.expr_shape,
-        9,
-        C_EXPR_SHAPE_BINARY,
-        TOK_ASSIGN,
-        2,
-        C_EXPR_ASSOC_RIGHT,
-        8,
-        10,
-        SENTINEL,
+        &[
+            (1, C_EXPR_SHAPE_BINARY, TOK_ASSIGN, 2, C_EXPR_ASSOC_RIGHT, 0, 2, SENTINEL),
+            shape_none_row(3, TOK_COMMA),
+            (5, C_EXPR_SHAPE_BINARY, TOK_ASSIGN, 2, C_EXPR_ASSOC_RIGHT, 4, 6, SENTINEL),
+            shape_none_row(7, TOK_COMMA),
+            (9, C_EXPR_SHAPE_BINARY, TOK_ASSIGN, 2, C_EXPR_ASSOC_RIGHT, 8, 10, SENTINEL),
+        ],
     );
 
     assert_eq!(
@@ -83,38 +34,13 @@ fn assignment_chain_right_associativity_shapes_and_lowers_to_pg() {
     let rows = run_pipeline(&tok_types, &tok_lens);
 
     // Right-associative: a = (b = (c = d))
-    assert_shape_row(
+    assert_shape_rows(
         &rows.expr_shape,
-        5,
-        C_EXPR_SHAPE_BINARY,
-        TOK_ASSIGN,
-        2,
-        C_EXPR_ASSOC_RIGHT,
-        4,
-        6,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        3,
-        C_EXPR_SHAPE_BINARY,
-        TOK_ASSIGN,
-        2,
-        C_EXPR_ASSOC_RIGHT,
-        2,
-        5,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        1,
-        C_EXPR_SHAPE_BINARY,
-        TOK_ASSIGN,
-        2,
-        C_EXPR_ASSOC_RIGHT,
-        0,
-        3,
-        SENTINEL,
+        &[
+            (5, C_EXPR_SHAPE_BINARY, TOK_ASSIGN, 2, C_EXPR_ASSOC_RIGHT, 4, 6, SENTINEL),
+            (3, C_EXPR_SHAPE_BINARY, TOK_ASSIGN, 2, C_EXPR_ASSOC_RIGHT, 2, 5, SENTINEL),
+            (1, C_EXPR_SHAPE_BINARY, TOK_ASSIGN, 2, C_EXPR_ASSOC_RIGHT, 0, 3, SENTINEL),
+        ],
     );
 
     assert_eq!(
@@ -133,52 +59,16 @@ fn ternary_nesting_right_associativity_shapes_and_lowers_to_pg() {
     let (tok_types, tok_lens) = ternary_nesting_fixture();
     let rows = run_pipeline(&tok_types, &tok_lens);
 
-    // Inner conditional: b ? c : d
-    assert_shape_row(
+    // Inner conditional b ? c : d at 3, outer a ? (inner) : e at 1; the colons
+    // are boundaries, not shape nodes.
+    assert_shape_rows(
         &rows.expr_shape,
-        3,
-        C_EXPR_SHAPE_CONDITIONAL,
-        TOK_QUESTION,
-        3,
-        C_EXPR_ASSOC_RIGHT,
-        2,
-        4,
-        6,
-    );
-    // Outer conditional: a ? (inner) : e
-    assert_shape_row(
-        &rows.expr_shape,
-        1,
-        C_EXPR_SHAPE_CONDITIONAL,
-        TOK_QUESTION,
-        3,
-        C_EXPR_ASSOC_RIGHT,
-        0,
-        3,
-        8,
-    );
-    // Colons are boundaries, not shape nodes.
-    assert_shape_row(
-        &rows.expr_shape,
-        5,
-        C_EXPR_SHAPE_NONE,
-        TOK_COLON,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        7,
-        C_EXPR_SHAPE_NONE,
-        TOK_COLON,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
+        &[
+            (3, C_EXPR_SHAPE_CONDITIONAL, TOK_QUESTION, 3, C_EXPR_ASSOC_RIGHT, 2, 4, 6),
+            (1, C_EXPR_SHAPE_CONDITIONAL, TOK_QUESTION, 3, C_EXPR_ASSOC_RIGHT, 0, 3, 8),
+            shape_none_row(5, TOK_COLON),
+            shape_none_row(7, TOK_COLON),
+        ],
     );
 
     assert_eq!(
@@ -202,104 +92,19 @@ fn logical_and_bitwise_precedence_shapes_and_lowers_to_pg() {
     let rows = run_pipeline(&tok_types, &tok_lens);
 
     // Precedence ladder (tightest to loosest): * > + > < > == > & > ^ > | > && > ||
-    assert_shape_row(
+    assert_shape_rows(
         &rows.expr_shape,
-        17,
-        C_EXPR_SHAPE_BINARY,
-        TOK_STAR,
-        13,
-        C_EXPR_ASSOC_LEFT,
-        16,
-        18,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        15,
-        C_EXPR_SHAPE_BINARY,
-        TOK_PLUS,
-        12,
-        C_EXPR_ASSOC_LEFT,
-        14,
-        17,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        13,
-        C_EXPR_SHAPE_BINARY,
-        TOK_LT,
-        10,
-        C_EXPR_ASSOC_LEFT,
-        12,
-        15,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        11,
-        C_EXPR_SHAPE_BINARY,
-        TOK_EQ,
-        9,
-        C_EXPR_ASSOC_LEFT,
-        10,
-        13,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        9,
-        C_EXPR_SHAPE_BINARY,
-        TOK_AMP,
-        8,
-        C_EXPR_ASSOC_LEFT,
-        8,
-        11,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        7,
-        C_EXPR_SHAPE_BINARY,
-        TOK_CARET,
-        7,
-        C_EXPR_ASSOC_LEFT,
-        6,
-        9,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        5,
-        C_EXPR_SHAPE_BINARY,
-        TOK_PIPE,
-        6,
-        C_EXPR_ASSOC_LEFT,
-        4,
-        7,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        3,
-        C_EXPR_SHAPE_BINARY,
-        TOK_AND,
-        5,
-        C_EXPR_ASSOC_LEFT,
-        2,
-        5,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        1,
-        C_EXPR_SHAPE_BINARY,
-        TOK_OR,
-        4,
-        C_EXPR_ASSOC_LEFT,
-        0,
-        3,
-        SENTINEL,
+        &[
+            (17, C_EXPR_SHAPE_BINARY, TOK_STAR, 13, C_EXPR_ASSOC_LEFT, 16, 18, SENTINEL),
+            (15, C_EXPR_SHAPE_BINARY, TOK_PLUS, 12, C_EXPR_ASSOC_LEFT, 14, 17, SENTINEL),
+            (13, C_EXPR_SHAPE_BINARY, TOK_LT, 10, C_EXPR_ASSOC_LEFT, 12, 15, SENTINEL),
+            (11, C_EXPR_SHAPE_BINARY, TOK_EQ, 9, C_EXPR_ASSOC_LEFT, 10, 13, SENTINEL),
+            (9, C_EXPR_SHAPE_BINARY, TOK_AMP, 8, C_EXPR_ASSOC_LEFT, 8, 11, SENTINEL),
+            (7, C_EXPR_SHAPE_BINARY, TOK_CARET, 7, C_EXPR_ASSOC_LEFT, 6, 9, SENTINEL),
+            (5, C_EXPR_SHAPE_BINARY, TOK_PIPE, 6, C_EXPR_ASSOC_LEFT, 4, 7, SENTINEL),
+            (3, C_EXPR_SHAPE_BINARY, TOK_AND, 5, C_EXPR_ASSOC_LEFT, 2, 5, SENTINEL),
+            (1, C_EXPR_SHAPE_BINARY, TOK_OR, 4, C_EXPR_ASSOC_LEFT, 0, 3, SENTINEL),
+        ],
     );
 
     assert_eq!(
@@ -324,49 +129,24 @@ fn cast_vs_parenthesized_expression_typing_and_pg_lower() {
         C_AST_KIND_CAST_EXPR,
         "Fix: (int) must classify as cast expression"
     );
-    assert_shape_row(
-        &rows.expr_shape,
-        0,
-        C_EXPR_SHAPE_NONE,
-        TOK_LPAREN,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
-    assert_pg_preserves_row(&rows, 0, C_AST_KIND_CAST_EXPR);
-
     // (b + c); -> parenthesized expression, LPAREN stays raw.
     assert_eq!(
         word_at(&rows.typed_vast, 5 * VAST_STRIDE_U32),
         0,
         "Fix: (b + c) must NOT classify as cast"
     );
-    assert_shape_row(
+
+    // Neither LPAREN carries a shape node; only the plus inside does.
+    assert_shape_rows(
         &rows.expr_shape,
-        5,
-        C_EXPR_SHAPE_NONE,
-        TOK_LPAREN,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
+        &[
+            shape_none_row(0, TOK_LPAREN),
+            shape_none_row(5, TOK_LPAREN),
+            (7, C_EXPR_SHAPE_BINARY, TOK_PLUS, 12, C_EXPR_ASSOC_LEFT, 6, 8, SENTINEL),
+        ],
     );
 
-    // Plus inside parentheses.
-    assert_shape_row(
-        &rows.expr_shape,
-        7,
-        C_EXPR_SHAPE_BINARY,
-        TOK_PLUS,
-        12,
-        C_EXPR_ASSOC_LEFT,
-        6,
-        8,
-        SENTINEL,
-    );
+    assert_pg_preserves_row(&rows, 0, C_AST_KIND_CAST_EXPR);
     assert_pg_preserves_row(&rows, 7, node_kind::BINARY);
     assert_pg_links_match_vast(&rows, 7);
 }
@@ -378,17 +158,7 @@ fn postfix_call_index_member_shapes_and_lowers_to_pg() {
 
     // Postfix operators do not receive expression-shape nodes.
     for idx in [0usize, 6, 11, 15] {
-        assert_shape_row(
-            &rows.expr_shape,
-            idx,
-            C_EXPR_SHAPE_NONE,
-            tok_types[idx],
-            0,
-            C_EXPR_ASSOC_NONE,
-            SENTINEL,
-            SENTINEL,
-            SENTINEL,
-        );
+        assert_shape_none(&rows.expr_shape, idx, tok_types[idx]);
     }
 
     assert_eq!(

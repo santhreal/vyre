@@ -49,60 +49,15 @@ fn cpu_reference_builds_c11_expression_semantic_shape_rows() {
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     let shape = reference_c11_build_expression_shape_nodes(&raw, &typed);
 
-    assert_expr_shape_row(
+    assert_expr_shape_rows(
         &shape,
-        1,
-        C_EXPR_SHAPE_BINARY,
-        TOK_PLUS,
-        12,
-        C_EXPR_ASSOC_LEFT,
-        0,
-        3,
-        u32::MAX,
-    );
-    assert_expr_shape_row(
-        &shape,
-        3,
-        C_EXPR_SHAPE_BINARY,
-        TOK_STAR,
-        13,
-        C_EXPR_ASSOC_LEFT,
-        2,
-        4,
-        u32::MAX,
-    );
-    assert_expr_shape_row(
-        &shape,
-        5,
-        C_EXPR_SHAPE_CONDITIONAL,
-        TOK_QUESTION,
-        3,
-        C_EXPR_ASSOC_RIGHT,
-        1,
-        7,
-        11,
-    );
-    assert_expr_shape_row(
-        &shape,
-        7,
-        C_EXPR_SHAPE_BINARY,
-        TOK_PLUS,
-        12,
-        C_EXPR_ASSOC_LEFT,
-        6,
-        8,
-        u32::MAX,
-    );
-    assert_expr_shape_row(
-        &shape,
-        11,
-        C_EXPR_SHAPE_BINARY,
-        TOK_STAR,
-        13,
-        C_EXPR_ASSOC_LEFT,
-        10,
-        12,
-        u32::MAX,
+        &[
+            (1, C_EXPR_SHAPE_BINARY, TOK_PLUS, 12, C_EXPR_ASSOC_LEFT, 0, 3, u32::MAX),
+            (3, C_EXPR_SHAPE_BINARY, TOK_STAR, 13, C_EXPR_ASSOC_LEFT, 2, 4, u32::MAX),
+            (5, C_EXPR_SHAPE_CONDITIONAL, TOK_QUESTION, 3, C_EXPR_ASSOC_RIGHT, 1, 7, 11),
+            (7, C_EXPR_SHAPE_BINARY, TOK_PLUS, 12, C_EXPR_ASSOC_LEFT, 6, 8, u32::MAX),
+            (11, C_EXPR_SHAPE_BINARY, TOK_STAR, 13, C_EXPR_ASSOC_LEFT, 10, 12, u32::MAX),
+        ],
     );
 }
 

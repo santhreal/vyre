@@ -155,3 +155,45 @@ pub(crate) fn assert_shape_row(
     assert_eq!(word_at(rows, row + 6), second, "second[{idx}]");
     assert_eq!(word_at(rows, row + 7), third, "third[{idx}]");
 }
+
+/// One expected expression-shape row for [`assert_shape_rows`]:
+/// `(idx, shape_kind, raw_operator, precedence, associativity, first, second, third)`.
+pub(crate) type ShapeRow = (usize, u32, u32, u32, u32, u32, u32, u32);
+
+/// The expected row for a token that only closes or separates an expression and
+/// so carries no shape node of its own.
+pub(crate) fn shape_none_row(idx: usize, raw_operator: u32) -> ShapeRow {
+    (
+        idx,
+        C_EXPR_SHAPE_NONE,
+        raw_operator,
+        0,
+        C_EXPR_ASSOC_NONE,
+        SENTINEL,
+        SENTINEL,
+        SENTINEL,
+    )
+}
+
+/// Assert a whole table of expected shape rows in order.
+///
+/// A precedence or associativity contract is a table of rows, so it reads as
+/// one, and each row still goes through [`assert_shape_row`] so a mismatch
+/// names the offending field and row index.
+pub(crate) fn assert_shape_rows(rows: &[u8], expected: &[ShapeRow]) {
+    for &(idx, shape_kind, raw_operator, precedence, associativity, first, second, third) in
+        expected
+    {
+        assert_shape_row(
+            rows,
+            idx,
+            shape_kind,
+            raw_operator,
+            precedence,
+            associativity,
+            first,
+            second,
+            third,
+        );
+    }
+}
