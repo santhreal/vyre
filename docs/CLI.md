@@ -285,8 +285,9 @@ Exit codes: 0 on success, 1 on a gate finding or an unowned subcommand, 2 on inv
 USAGE
   cargo run -p xtask-registry -- <subcommand> [options]
 
-`xtask` assigns these subcommands to this crate because each one reads the live
-operation registry. Run `cargo xtask --help` for every workspace command, and
+`xtask` assigns these subcommands here because each one reads the live operation registry.
+
+Run `cargo xtask --help` for every workspace command, and
 `cargo xtask <subcommand> --help` for one command's options.
 
 SUBCOMMANDS:
@@ -331,9 +332,10 @@ Exit codes: 0 on success, 1 on a gate finding or an unowned subcommand, 2 on inv
 USAGE
   cargo run -p xtask-evidence -- <subcommand> [options]
 
-`xtask` assigns these subcommands to this crate because each one reads recorded
-benchmark or release evidence. Run `cargo xtask --help` for every workspace
-command, and `cargo xtask <subcommand> --help` for one command's options.
+`xtask` assigns these subcommands here because each one reads recorded benchmark or release evidence.
+
+Run `cargo xtask --help` for every workspace command, and
+`cargo xtask <subcommand> --help` for one command's options.
 
 SUBCOMMANDS:
   backend-matrix

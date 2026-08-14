@@ -31,6 +31,34 @@ pub fn run(package: &str, args: &[String]) -> ! {
     std::process::exit(status.code().unwrap_or(1));
 }
 
+/// Print a delegated binary's help: how to invoke it, and what it dispatches.
+///
+/// `xtask` is the documented entry point, so this help exists to answer `--help`
+/// without executing anything and to name what the binary can run. Both
+/// delegated binaries print the same shape, so the shape lives here beside the
+/// delegation rather than being written out again in each `main`.
+///
+/// `subcommands` is expected to come from the callee's own dispatch table, so
+/// the printed roster cannot drift from what it will actually accept.
+pub fn print_dispatch_help(
+    package: &str,
+    purpose: &str,
+    subcommands: impl IntoIterator<Item = &'static str>,
+) {
+    println!("USAGE");
+    println!("  cargo run -p {package} -- <subcommand> [options]");
+    println!();
+    println!("{purpose}");
+    println!();
+    println!("Run `cargo xtask --help` for every workspace command, and");
+    println!("`cargo xtask <subcommand> --help` for one command's options.");
+    println!();
+    println!("SUBCOMMANDS:");
+    for name in subcommands {
+        println!("  {name}");
+    }
+}
+
 /// Cargo binary that is building this process, so the child build matches it.
 fn cargo() -> String {
     std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string())

@@ -10,7 +10,11 @@ use std::process;
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.iter().skip(1).any(|arg| arg == "--help" || arg == "-h") {
-        help();
+        xtask::delegate::print_dispatch_help(
+            "xtask-registry",
+            "`xtask` assigns these subcommands here because each one reads the live operation registry.",
+            xtask_registry::IMPLEMENTED.iter().map(|(name, _)| *name),
+        );
         return;
     }
     if args.len() < 2 {
@@ -23,23 +27,5 @@ fn main() {
             args[1]
         );
         process::exit(1);
-    }
-}
-
-/// Print the roster this binary can dispatch.
-///
-/// The list is read from `IMPLEMENTED` rather than written out here, so a
-/// subcommand added to that table is documented by adding it and cannot drift.
-fn help() {
-    println!("USAGE");
-    println!("  cargo run -p xtask-registry -- <subcommand> [options]");
-    println!();
-    println!("`xtask` assigns these subcommands to this crate because each one reads the live");
-    println!("operation registry. Run `cargo xtask --help` for every workspace command, and");
-    println!("`cargo xtask <subcommand> --help` for one command's options.");
-    println!();
-    println!("SUBCOMMANDS:");
-    for (name, _) in xtask_registry::IMPLEMENTED {
-        println!("  {name}");
     }
 }
