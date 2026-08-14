@@ -11,7 +11,7 @@ use c_grammar_gen::lex_c11_max_munch_kinds;
 use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
 use vyre_libs::parsing::c::lex::tokens::*;
-use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes};
+use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
     c11_classify_vast_node_kinds, reference_c11_build_vast_nodes,
     reference_c11_classify_vast_node_kinds, C_AST_KIND_ASSIGN_EXPR, C_AST_KIND_DO_STMT,

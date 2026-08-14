@@ -9,90 +9,36 @@
 #![allow(deprecated)]
 mod support;
 
-use support::preprocess_stream::{build_token_stream, pack_defined_macros, unpack_u32};
+use support::preprocess_stream::{
+    column_words, cpu_kinds_and_values, padded_defined_macros, run_directive_metadata_stage,
+};
 use vyre_libs::parsing::c::lex::tokens::{TOK_PP_IFDEF, TOK_PP_IFNDEF};
-use vyre_libs::parsing::c::preprocess::gpu_directive_metadata::gpu_directive_metadata;
 use vyre_libs::parsing::c::preprocess::gpu_ifdef_value::gpu_ifdef_value;
-use vyre_libs::parsing::c::preprocess::reference_c_preprocessor_directive_metadata;
-use vyre_primitives::wire::pack_u32_slice as pack_u32_le;
 use vyre_reference::value::Value;
 
 fn run_full_pipeline(source: &[u8], defined_macros: &[&[u8]]) -> (Vec<u32>, Vec<u32>) {
-    let (tok_types, tok_starts, tok_lens) = build_token_stream(source);
-    let n = tok_types.len();
-    let n_padded = n.max(1);
-    // `source` and `macro_names_packed` are declared as packed U32
-    // words in their kernels; pad inputs to multiple-of-4 bytes.
-    let src_padded = (source.len().div_ceil(4) * 4).max(4);
+    let stage = run_directive_metadata_stage(source);
+    let (macro_names_padded, macro_offsets_bytes) = padded_defined_macros(defined_macros);
 
-    // ---- Stage 1: directive_kinds via gpu_directive_metadata ----
-    let mut tt = pack_u32_le(&tok_types);
-    tt.resize(n_padded * 4, 0);
-    let mut ts = pack_u32_le(&tok_starts);
-    ts.resize(n_padded * 4, 0);
-    let mut tl = pack_u32_le(&tok_lens);
-    tl.resize(n_padded * 4, 0);
-    let mut src = source.to_vec();
-    src.resize(src_padded, 0);
-    let dk_init = vec![0u8; n_padded * 4];
-    let dv_init_a = vec![0u8; n_padded * 4];
-
-    let prog_a = gpu_directive_metadata(n as u32, source.len() as u32);
-    let outputs_a = vyre_reference::reference_eval(
-        &prog_a,
-        &[
-            Value::from(tt),
-            Value::from(ts.clone()),
-            Value::from(tl.clone()),
-            Value::from(src.clone()),
-            Value::from(dk_init),
-            Value::from(dv_init_a),
-        ],
-    )
-    .expect("17a kernel eval");
-    let mut directive_kinds_bytes = outputs_a[0].to_bytes().to_vec();
-    directive_kinds_bytes.resize(n_padded * 4, 0);
-
-    // ---- Stage 2: directive_values via gpu_ifdef_value ----
-    let (macro_names, macro_offsets_words) = pack_defined_macros(defined_macros);
-    let mut macro_names_padded = macro_names.clone();
-    let macro_names_pad_len = (macro_names.len().div_ceil(4) * 4).max(4);
-    macro_names_padded.resize(macro_names_pad_len, 0);
-    let macro_offsets_bytes = pack_u32_le(&macro_offsets_words);
-
-    let dv_init_b = vec![0u8; n_padded * 4];
-    let prog_b = gpu_ifdef_value(n as u32, source.len() as u32);
+    let prog_b = gpu_ifdef_value(stage.n as u32, source.len() as u32);
     let outputs_b = vyre_reference::reference_eval(
         &prog_b,
         &[
-            Value::from(ts),
-            Value::from(tl),
-            Value::from(directive_kinds_bytes.clone()),
-            Value::from(src),
+            Value::from(stage.tok_starts_bytes.clone()),
+            Value::from(stage.tok_lens_bytes.clone()),
+            Value::from(stage.directive_kinds_bytes.clone()),
+            Value::from(stage.source_bytes.clone()),
             Value::from(macro_names_padded),
             Value::from(macro_offsets_bytes),
-            Value::from(dv_init_b),
+            Value::from(stage.zero_column()),
         ],
     )
     .expect("17b.1 kernel eval");
 
-    let mut kinds = unpack_u32(&directive_kinds_bytes);
-    kinds.truncate(n);
-    let mut values = unpack_u32(&outputs_b[0].to_bytes());
-    values.truncate(n);
-    (kinds, values)
-}
-
-fn cpu_kinds_and_values(source: &[u8], defined_macros: &[&[u8]]) -> (Vec<u32>, Vec<u32>) {
-    let (tok_types, tok_starts, tok_lens) = build_token_stream(source);
-    reference_c_preprocessor_directive_metadata(
-        &tok_types,
-        &tok_starts,
-        &tok_lens,
-        source,
-        defined_macros,
+    (
+        column_words(&stage.directive_kinds_bytes, stage.n),
+        column_words(&outputs_b[0].to_bytes(), stage.n),
     )
-    .expect("Reference oracle eval")
 }
 
 /// Filter values to only keep ifdef/ifndef rows so we don't get

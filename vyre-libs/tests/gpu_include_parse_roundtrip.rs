@@ -4,10 +4,8 @@
 #![allow(deprecated)]
 mod support;
 
-use support::preprocess_stream::{build_token_stream, unpack_u32};
-use vyre_libs::parsing::c::preprocess::gpu_directive_metadata::gpu_directive_metadata;
+use support::preprocess_stream::{run_directive_metadata_stage, unpack_u32};
 use vyre_libs::parsing::c::preprocess::gpu_include_parse::gpu_include_parse;
-use vyre_primitives::wire::pack_u32_slice as pack_u32_le;
 use vyre_reference::value::Value;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -17,49 +15,20 @@ struct IncludeRow {
 }
 
 fn run_pipeline(source: &[u8]) -> Vec<Option<IncludeRow>> {
-    let (tt, ts, tl) = build_token_stream(source);
-    let n = tt.len();
-    let n_pad = n.max(1);
-    // `source` is now declared as packed U32 words; pad to multiple
-    // of 4 bytes.
-    let src_pad = (source.len().div_ceil(4) * 4).max(4);
-
-    let mut tt_b = pack_u32_le(&tt);
-    tt_b.resize(n_pad * 4, 0);
-    let mut ts_b = pack_u32_le(&ts);
-    ts_b.resize(n_pad * 4, 0);
-    let mut tl_b = pack_u32_le(&tl);
-    tl_b.resize(n_pad * 4, 0);
-    let mut src = source.to_vec();
-    src.resize(src_pad, 0);
-
-    let prog_a = gpu_directive_metadata(n as u32, source.len() as u32);
-    let outputs_a = vyre_reference::reference_eval(
-        &prog_a,
-        &[
-            Value::from(tt_b),
-            Value::from(ts_b.clone()),
-            Value::from(tl_b.clone()),
-            Value::from(src.clone()),
-            Value::from(vec![0u8; n_pad * 4]),
-            Value::from(vec![0u8; n_pad * 4]),
-        ],
-    )
-    .expect("17a kernel eval");
-    let mut dk_bytes = outputs_a[0].to_bytes().to_vec();
-    dk_bytes.resize(n_pad * 4, 0);
+    let stage = run_directive_metadata_stage(source);
+    let n = stage.n;
 
     let prog_b = gpu_include_parse(n as u32, source.len() as u32);
     let outs = vyre_reference::reference_eval(
         &prog_b,
         &[
-            Value::from(ts_b),
-            Value::from(tl_b),
-            Value::from(dk_bytes),
-            Value::from(src),
-            Value::from(vec![0u8; n_pad * 4]),
-            Value::from(vec![0u8; n_pad * 4]),
-            Value::from(vec![0u8; n_pad * 4]),
+            Value::from(stage.tok_starts_bytes.clone()),
+            Value::from(stage.tok_lens_bytes.clone()),
+            Value::from(stage.directive_kinds_bytes.clone()),
+            Value::from(stage.source_bytes.clone()),
+            Value::from(stage.zero_column()),
+            Value::from(stage.zero_column()),
+            Value::from(stage.zero_column()),
         ],
     )
     .expect("17b.7 kernel eval");
