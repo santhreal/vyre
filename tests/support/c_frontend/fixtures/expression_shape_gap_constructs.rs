@@ -5,7 +5,6 @@
 //! driver crate build the same token streams, so the fixtures have one owner
 //! here rather than a copy per crate.
 
-use vyre_libs::parsing::c::lex::tokens::*;
 
 /// ```c
 /// int a = ++x;
@@ -17,57 +16,16 @@ use vyre_libs::parsing::c::lex::tokens::*;
 /// int g = ~t;
 /// int h = !s;
 /// ```
+
+use crate::c_frontend::spelling::c_kinds;
 pub(crate) fn fixture_unary_prefix_and_postfix() -> (Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INC,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_IDENTIFIER,
-        TOK_DEC,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_AMP,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_STAR,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_PLUS,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_MINUS,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_TILDE,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_BANG,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-    ];
+    let tok_types = c_kinds(
+        "INT IDENTIFIER ASSIGN INC IDENTIFIER SEMICOLON INT IDENTIFIER ASSIGN IDENTIFIER \
+         DEC SEMICOLON INT IDENTIFIER ASSIGN AMP IDENTIFIER SEMICOLON INT IDENTIFIER \
+         ASSIGN STAR IDENTIFIER SEMICOLON INT IDENTIFIER ASSIGN PLUS IDENTIFIER SEMICOLON \
+         INT IDENTIFIER ASSIGN MINUS IDENTIFIER SEMICOLON INT IDENTIFIER ASSIGN TILDE \
+         IDENTIFIER SEMICOLON INT IDENTIFIER ASSIGN BANG IDENTIFIER SEMICOLON",
+    );
     let tok_lens = vec![1; tok_types.len()];
     (tok_types, tok_lens)
 }
@@ -76,16 +34,7 @@ pub(crate) fn fixture_unary_prefix_and_postfix() -> (Vec<u32>, Vec<u32>) {
 /// int a = (int)x;
 /// ```
 pub(crate) fn fixture_cast_expr() -> (Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_LPAREN,
-        TOK_INT,
-        TOK_RPAREN,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-    ];
+    let tok_types = c_kinds("INT IDENTIFIER ASSIGN LPAREN INT RPAREN IDENTIFIER SEMICOLON");
     let tok_lens = vec![1; tok_types.len()];
     (tok_types, tok_lens)
 }
@@ -95,22 +44,10 @@ pub(crate) fn fixture_cast_expr() -> (Vec<u32>, Vec<u32>) {
 /// int b = p->m;
 /// ```
 pub(crate) fn fixture_member_access() -> (Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_IDENTIFIER,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_IDENTIFIER,
-        TOK_ARROW,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-    ];
+    let tok_types = c_kinds(
+        "INT IDENTIFIER ASSIGN IDENTIFIER DOT IDENTIFIER SEMICOLON INT IDENTIFIER ASSIGN \
+         IDENTIFIER ARROW IDENTIFIER SEMICOLON",
+    );
     let tok_lens = vec![1; tok_types.len()];
     (tok_types, tok_lens)
 }
@@ -119,16 +56,9 @@ pub(crate) fn fixture_member_access() -> (Vec<u32>, Vec<u32>) {
 /// int a = arr[0];
 /// ```
 pub(crate) fn fixture_array_subscript() -> (Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_IDENTIFIER,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_SEMICOLON,
-    ];
+    let tok_types = c_kinds(
+         INT IDENTIFIER ASSIGN IDENTIFIER LBRACKET INTEGER RBRACKET SEMICOLON",
+    );
     let tok_lens = vec![1; tok_types.len()];
     (tok_types, tok_lens)
 }
@@ -137,25 +67,10 @@ pub(crate) fn fixture_array_subscript() -> (Vec<u32>, Vec<u32>) {
 /// struct S s = { .x = 1, [0] = 2 };
 /// ```
 pub(crate) fn fixture_designated_initializer() -> (Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_LBRACE,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-    ];
+    let tok_types = c_kinds(
+        "STRUCT IDENTIFIER IDENTIFIER ASSIGN LBRACE DOT IDENTIFIER ASSIGN INTEGER COMMA \
+         LBRACKET INTEGER RBRACKET ASSIGN INTEGER RBRACE SEMICOLON",
+    );
     let tok_lens = vec![1; tok_types.len()];
     (tok_types, tok_lens)
 }
@@ -164,23 +79,10 @@ pub(crate) fn fixture_designated_initializer() -> (Vec<u32>, Vec<u32>) {
 /// int a[] = { [0 ... 1] = 2 };
 /// ```
 pub(crate) fn fixture_array_range_designator() -> (Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_LBRACKET,
-        TOK_RBRACKET,
-        TOK_ASSIGN,
-        TOK_LBRACE,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_ELLIPSIS,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-    ];
+    let tok_types = c_kinds(
+        "INT IDENTIFIER LBRACKET RBRACKET ASSIGN LBRACE LBRACKET INTEGER ELLIPSIS INTEGER \
+         RBRACKET ASSIGN INTEGER RBRACE SEMICOLON",
+    );
     let tok_lens = vec![1; tok_types.len()];
     (tok_types, tok_lens)
 }
@@ -189,21 +91,10 @@ pub(crate) fn fixture_array_range_designator() -> (Vec<u32>, Vec<u32>) {
 /// switch(x) { case 1 ... 5: break; }
 /// ```
 pub(crate) fn fixture_gnu_case_range() -> (Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_SWITCH,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_CASE,
-        TOK_INTEGER,
-        TOK_ELLIPSIS,
-        TOK_INTEGER,
-        TOK_COLON,
-        TOK_BREAK,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-    ];
+    let tok_types = c_kinds(
+        "SWITCH LPAREN IDENTIFIER RPAREN LBRACE CASE INTEGER ELLIPSIS INTEGER COLON BREAK \
+         SEMICOLON RBRACE",
+    );
     let tok_lens = vec![1; tok_types.len()];
     (tok_types, tok_lens)
 }

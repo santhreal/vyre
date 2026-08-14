@@ -18,9 +18,15 @@
 //! its backend parity arm both build. Those are not declared here: each root
 //! that needs one includes it with `#[path]`, so a target compiles only the
 //! fixtures it uses.
+//!
+//! `spelling` owns the compact token-stream spellings every fixture is written
+//! in. A stream spelled one token per line reads as a copy of any other stream
+//! that happens to share eight consecutive tokens, which is what the fixture
+//! streams here were measured as.
 
 pub(crate) mod expression_pipeline;
 pub(crate) mod rows;
 pub(crate) mod scope_fixture;
 pub(crate) mod semantic_graph;
+pub(crate) mod spelling;
 pub(crate) mod token_fixture;
