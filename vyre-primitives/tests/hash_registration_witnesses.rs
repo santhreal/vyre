@@ -33,7 +33,10 @@ fn assert_registered_witness(id: &str, expected: Vec<Vec<Vec<u8>>>) {
         .into_iter()
         .map(|value| value.to_bytes())
         .collect::<Vec<_>>();
-        assert_eq!(outputs, *expected_outputs, "CPU witness drift for {id} case {case}");
+        assert_eq!(
+            outputs, *expected_outputs,
+            "CPU witness drift for {id} case {case}"
+        );
     }
 }
 

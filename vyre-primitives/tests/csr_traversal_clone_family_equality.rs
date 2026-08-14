@@ -276,9 +276,9 @@ fn region(dump: &str, from: &str, to: &str) -> String {
         let at = dump
             .find(marker)
             .unwrap_or_else(|| panic!("Fix: canonicalized dump must contain `{marker}`:\n{dump}"));
-        dump[..at]
-            .rfind("Let {")
-            .unwrap_or_else(|| panic!("Fix: `{marker}` must be introduced by a Let binding:\n{dump}"))
+        dump[..at].rfind("Let {").unwrap_or_else(|| {
+            panic!("Fix: `{marker}` must be introduced by a Let binding:\n{dump}")
+        })
     };
     let start = bind_start(from);
     let end = bind_start(to);

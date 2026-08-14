@@ -129,4 +129,3 @@ fn assert_top_region_generator(program: &Program, expected: &str) {
         }
     }
 }
-

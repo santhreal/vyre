@@ -1,6 +1,8 @@
 //! CPU parity references for the adaptive traversal steps.
 
-use super::four_russians::{four_russians_dense_lut_from_adj_rows, four_russians_source_tile_count};
+use super::four_russians::{
+    four_russians_dense_lut_from_adj_rows, four_russians_source_tile_count,
+};
 use super::mode_selection::should_use_dense_with_popcount;
 use crate::bitset::bitset_words;
 

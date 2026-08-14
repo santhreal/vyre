@@ -36,7 +36,11 @@ pub(super) fn dense_cutover_nodes(node_count: u32, threshold_pct: u32) -> u32 {
 }
 
 #[must_use]
-pub(super) fn should_use_dense_with_popcount(popcount: u32, node_count: u32, threshold_pct: u32) -> bool {
+pub(super) fn should_use_dense_with_popcount(
+    popcount: u32,
+    node_count: u32,
+    threshold_pct: u32,
+) -> bool {
     if node_count == 0 {
         return false;
     }
