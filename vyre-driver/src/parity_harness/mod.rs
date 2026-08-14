@@ -155,8 +155,7 @@ pub fn elementwise_program(
 /// A concrete driver's dispatch entry point is not always a trait method, so the
 /// harness takes the call rather than the receiver. That keeps this crate free
 /// of any concrete backend type while still owning everything around the call.
-pub type ParityDispatch<'a> =
-    &'a dyn Fn(&Program, &[&[u8]]) -> Result<Vec<Vec<u8>>, BackendError>;
+pub type ParityDispatch<'a> = &'a dyn Fn(&Program, &[&[u8]]) -> Result<Vec<Vec<u8>>, BackendError>;
 
 /// Dispatch a program whose only output is the zero-initialised buffer at
 /// binding 0, and return that buffer's bytes.
