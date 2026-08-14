@@ -105,6 +105,14 @@ jobs:
         run: bash scripts/check_no_unbounded_external_read.sh
       - name: Production dispatch stays borrowed
         run: bash scripts/check_no_owned_dispatch_hot_paths.sh
+      - name: Blocking waits held at their ceiling
+        run: bash scripts/check_no_hot_path_blocking_wait.sh
+      - name: Ordinary outputs stage through readback rings
+        run: bash scripts/check_direct_readback_ring_default.sh
+      - name: Adding a backend stays one crate plus inventory
+        run: bash scripts/check_backend_extension_contract.sh
+      - name: Status-managed audits tag every finding
+        run: bash scripts/check_audit_status_tags.sh
 
       # `try_reserve(additional)` guarantees `len() + additional`, so deriving
       # `additional` from `capacity()` under-reserves any warm buffer whose

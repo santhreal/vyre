@@ -11,6 +11,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+source scripts/lib/source_scan.sh
 
 failures=0
 
@@ -28,11 +29,14 @@ require_grep() {
     fi
 }
 
-require_rg() {
+# Directory-recursive presence check. This used `rg -q`, which made every one of
+# the 35 per-crate assertions below depend on an optional binary: absent ripgrep
+# failed all of them at once, for the wrong reason.
+require_tree() {
     local pattern="$1"
     local path="$2"
     local message="$3"
-    if ! rg -q "$pattern" "$path"; then
+    if [[ -z "$(vyre_scan_tracked "$pattern" "" "$path")" ]]; then
         fail "$message"
     fi
 }
@@ -55,11 +59,14 @@ require_grep 'registered_backends_by_precedence_slice' "$acquire_file" \
 require_grep 'backend_dispatches' "$acquire_file" \
     "preferred backend acquisition must consult BackendCapability dispatch metadata"
 
-if rg -n '"(cuda|wgpu|spirv|metal|dxil)"' vyre-driver/src/backend/registry >/tmp/vyre-backend-hardcoded-ids.txt; then
-    fail "core backend registry contains concrete backend id literals; new backends must not require editing vyre-driver/src/backend/registry"
-    sed -n '1,20p' /tmp/vyre-backend-hardcoded-ids.txt >&2
+# A failed search here used to mean "no hardcoded ids found", because the result
+# was read as the `if` condition. It also wrote its findings to /tmp, so a gate
+# left a file outside the repository behind.
+hardcoded="$(vyre_scan_tracked '"(cuda|wgpu|spirv|metal|dxil)"' "" vyre-driver/src/backend/registry)"
+if [[ -n "$hardcoded" ]]; then
+    fail "core backend registry contains concrete backend id literals; a new backend must not require editing vyre-driver/src/backend/registry"
+    printf '%s\n' "$hardcoded" | head -n 20 >&2
 fi
-rm -f /tmp/vyre-backend-hardcoded-ids.txt
 
 for crate in vyre-driver-cuda vyre-driver-wgpu vyre-driver-metal vyre-driver-spirv vyre-driver-reference; do
     if [[ ! -f "$crate/Cargo.toml" ]]; then
@@ -74,17 +81,17 @@ for crate in vyre-driver-cuda vyre-driver-wgpu vyre-driver-metal vyre-driver-spi
         "$crate must depend on vyre-driver instead of editing core registry code"
     require_grep 'inventory\.workspace|inventory[[:space:]]*=' "$crate/Cargo.toml" \
         "$crate must depend on inventory for link-time backend registration"
-    require_rg 'impl .*VyreBackend for' "$crate/src" \
+    require_tree 'impl .*VyreBackend for' "$crate/src" \
         "$crate must implement VyreBackend in its own crate"
-    require_rg 'inventory::submit![[:space:]]*\{' "$crate/src" \
+    require_tree 'inventory::submit![[:space:]]*\{' "$crate/src" \
         "$crate must submit backend metadata through inventory::submit!"
-    require_rg 'BackendRegistration[[:space:]]*\{' "$crate/src" \
+    require_tree 'BackendRegistration[[:space:]]*\{' "$crate/src" \
         "$crate must submit BackendRegistration"
-    require_rg 'BackendPrecedence[[:space:]]*\{' "$crate/src" \
+    require_tree 'BackendPrecedence[[:space:]]*\{' "$crate/src" \
         "$crate must submit BackendPrecedence"
-    require_rg 'BackendCapability[[:space:]]*\{' "$crate/src" \
+    require_tree 'BackendCapability[[:space:]]*\{' "$crate/src" \
         "$crate must submit BackendCapability so dispatch ownership is explicit"
-    require_rg 'supported_ops[[:space:]]*:' "$crate/src" \
+    require_tree 'supported_ops[[:space:]]*:' "$crate/src" \
         "$crate BackendRegistration must advertise supported_ops"
 done
 

@@ -1,29 +1,25 @@
 #!/usr/bin/env bash
-# One owner for the question "which tracked Rust sources match this pattern".
+# One owner for the question "which tracked files match this pattern".
 #
-# Five gates each carried their own ripgrep invocation ending in
-# `2>/dev/null || true`. That construct reports an empty result whenever ripgrep
-# is absent or lacks a compiled-in feature, and an empty result is exactly what
-# these gates read as a clean tree. check_no_hot_path_inventory.sh passed on
-# every possible tree for that reason: it asked for -P, this ripgrep build has no
-# PCRE2, every invocation errored, and the error went to /dev/null.
+# Nine gates each carried their own ripgrep invocation. Most ended in
+# `2>/dev/null || true`, which turns a failed search into an empty result, and an
+# empty result is exactly what those gates read as a clean tree.
+# check_no_hot_path_inventory.sh passed on every possible tree for that reason: it
+# asked for -P, this ripgrep build has no PCRE2, every invocation errored, and the
+# error went to /dev/null. Others used `if ! rg -q ...; then continue`, where a
+# failed search skips the file instead of scanning it.
 #
-# git and grep are present wherever the repository is checked out, so neither can
-# fail open the way an optional binary does. A search that genuinely fails is now
-# fatal instead of being indistinguishable from success.
+# git and grep exist wherever the repository is checked out, so neither can fail
+# open the way an optional binary does. A search that genuinely fails is fatal.
 #
 # Tracked files only. A count taken over whatever is on disk can be moved by
 # untracked scratch, which makes a ratchet disagree between a dev tree and CI.
 
-# vyre_scan_tracked <ere> <exclude-path-ere|""> <path>...
-#
-# Prints one `path:line:content` row per match and nothing when there are none.
-# Returns 2, which is fatal under `set -e`, when a scan path does not exist or
-# the search itself fails. A missing scan path is a defect in the rule: a rule
-# whose subject has moved measures nothing while still reporting success.
-vyre_scan_tracked() {
-    local pattern="$1" exclude="$2"
-    shift 2
+# _vyre_scan <grep-mode> <pattern> <exclude-path-ere|""> <path>...
+# grep-mode is -E for a regex or -F for a literal.
+_vyre_scan() {
+    local mode="$1" pattern="$2" exclude="$3"
+    shift 3
 
     local p
     for p in "$@"; do
@@ -47,12 +43,12 @@ vyre_scan_tracked() {
         files="$(printf '%s\n' "$files" | grep -Ev "$exclude")" || true
         [[ -n "$files" ]] || return 0
     fi
+
     # A tracked file can be absent from disk while a parallel edit is in flight.
     # A fresh CI checkout never has one, so this is a dev-tree condition rather
     # than a rule failure, but it is reported: a file dropped from the scan
     # without a word is how a gate quietly stops covering what it names.
-    local present absent=0 f
-    present=""
+    local present="" absent=0 f
     while IFS= read -r f; do
         if [[ -f "$f" ]]; then
             present+="$f"$'\n'
@@ -66,10 +62,9 @@ vyre_scan_tracked() {
     files="${present%$'\n'}"
     [[ -n "$files" ]] || return 0
 
-
     local out
     status=0
-    out="$(printf '%s\n' "$files" | xargs -d '\n' -r grep -EnH -- "$pattern")" || status=$?
+    out="$(printf '%s\n' "$files" | xargs -d '\n' -r grep "$mode" -nH -- "$pattern")" || status=$?
     # grep exits 1 when a file has no match, and xargs exits 123 when one of its
     # grep invocations did. Every other status is a real failure and must not be
     # mistaken for a clean tree, which is the bug this file exists to remove.
@@ -82,8 +77,17 @@ vyre_scan_tracked() {
     printf '%s\n' "$out"
 }
 
-# Rows produced by vyre_scan_tracked, counted. Empty input counts as zero rather
-# than as the one line `wc -l` sees in an empty string.
+# vyre_scan_tracked <ere> <exclude-path-ere|""> <path>...
+# Prints one `path:line:content` row per match, nothing when there are none.
+# Returns 2, fatal under `set -e`, when a scan path is missing or the search fails.
+vyre_scan_tracked() { _vyre_scan -E "$@"; }
+
+# vyre_scan_tracked_fixed <literal> <exclude-path-ere|""> <path>...
+# As above, for a literal needle containing regex metacharacters.
+vyre_scan_tracked_fixed() { _vyre_scan -F "$@"; }
+
+# Rows produced by a scan, counted. Empty input counts as zero rather than as the
+# one line `wc -l` sees in an empty string.
 vyre_scan_count() {
     local rows="$1"
     if [[ -z "$rows" ]]; then
@@ -92,3 +96,29 @@ vyre_scan_count() {
         printf '%s\n' "$rows" | wc -l | tr -d ' '
     fi
 }
+
+# vyre_file_has <ere> <file>  /  vyre_file_has_fixed <literal> <file>
+# Returns 0 on a match and 1 on none, for any file type, tracked or not.
+#
+# A missing file or a failed search EXITS the calling script rather than
+# returning, because `set -e` does not fire inside an `if` condition. Returning a
+# status here would let `if ! vyre_file_has ...` read a broken search as "no
+# match", which is the precise shape of the bug this file removes.
+_vyre_file_has() {
+    local mode="$1" pattern="$2" file="$3"
+    if [[ ! -f "$file" ]]; then
+        printf 'source-scan: file does not exist: %s\n' "$file" >&2
+        printf 'Fix: repoint the rule, or delete it if its subject is gone.\n' >&2
+        exit 2
+    fi
+    local status=0
+    grep -q "$mode" -- "$pattern" "$file" || status=$?
+    if (( status > 1 )); then
+        printf 'source-scan: search failed on %s (status %d)\n' "$file" "$status" >&2
+        exit 2
+    fi
+    return "$status"
+}
+
+vyre_file_has() { _vyre_file_has -E "$@"; }
+vyre_file_has_fixed() { _vyre_file_has -F "$@"; }

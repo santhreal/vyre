@@ -9,13 +9,17 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+source scripts/lib/source_scan.sh
 
 VALID_STATUS='`(open|in_progress|fixed)`'
 violations=0
 managed=0
 
 while IFS= read -r file; do
-  if ! rg -q '^Status legend:' "$file"; then
+  # A failed search must not read as "this file is not status-managed", which is
+  # what `if ! rg -q` did: an unavailable search skipped every file, `managed`
+  # stayed 0, and the gate then blamed the tree for having no managed audits.
+  if ! vyre_file_has '^Status legend:' "$file"; then
     continue
   fi
   managed=$((managed + 1))
@@ -32,7 +36,7 @@ while IFS= read -r file; do
       /^[[:space:]]*[0-9]+\. / { print FNR ":" $0 }
     ' "$file"
   )
-done < <(find audits -maxdepth 1 -type f -name '*.md' | sort)
+done < <(git ls-files -- 'audits/*.md' | sort)
 
 if [[ "$managed" -eq 0 ]]; then
   echo "audit status check: no status-managed audit files found." >&2
