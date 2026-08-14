@@ -7,9 +7,9 @@ pub mod arith;
 /// docs
 pub mod bitwise;
 /// docs
-pub mod evaluator;
-/// docs
 pub mod compare;
+/// docs
+pub mod evaluator;
 /// docs
 pub mod hash;
 mod indexed_reference_impls;

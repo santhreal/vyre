@@ -60,8 +60,7 @@ fn atomic_oob_index_returns_zero() {
         [1, 1, 1],
         Vec::new(),
     );
-    let mut memory =
-        Memory::empty().with_storage("buf", Buffer::new(vec![0xAB; 4], DataType::U32));
+    let mut memory = Memory::empty().with_storage("buf", Buffer::new(vec![0xAB; 4], DataType::U32));
     let result = eval_expr::eval(
         &Expr::atomic_add("buf", Expr::u32(999), Expr::u32(1)),
         &mut zero_invocation(&program),
@@ -84,7 +83,10 @@ fn atomic_on_u64_buffer_touches_lower_half_only() {
     );
     let mut memory = Memory::empty().with_storage(
         "buf",
-        Buffer::new(0x0000_0001_0000_0000u64.to_le_bytes().to_vec(), DataType::U64),
+        Buffer::new(
+            0x0000_0001_0000_0000u64.to_le_bytes().to_vec(),
+            DataType::U64,
+        ),
     );
     let old = eval_expr::eval(
         &Expr::atomic_add("buf", Expr::u32(0), Expr::u32(1)),
@@ -118,8 +120,7 @@ fn multiple_atomics_on_same_location_are_deterministic() {
         [1, 1, 1],
         Vec::new(),
     );
-    let mut memory =
-        Memory::empty().with_storage("buf", Buffer::new(vec![0; 4], DataType::U32));
+    let mut memory = Memory::empty().with_storage("buf", Buffer::new(vec![0; 4], DataType::U32));
     let mut invocation = zero_invocation(&program);
 
     let first = eval_expr::eval(
@@ -204,7 +205,11 @@ fn oob_store_is_silent_noop() {
         ],
     )
     .expect("Fix: OOB store must not panic");
-    assert_eq!(outputs[0].to_bytes(), vec![0; 4], "OOB store must be silent no-op");
+    assert_eq!(
+        outputs[0].to_bytes(),
+        vec![0; 4],
+        "OOB store must be silent no-op"
+    );
 }
 
 #[test]
@@ -221,11 +226,8 @@ fn zero_sized_buffer_load_returns_zero() {
             Expr::load("in", Expr::u32(0)),
         )],
     );
-    let outputs = reference_eval(
-        &program,
-        &[Value::from(vec![]), Value::from(vec![0u8; 4])],
-    )
-    .expect("Fix: zero-sized buffer load must not panic");
+    let outputs = reference_eval(&program, &[Value::from(vec![]), Value::from(vec![0u8; 4])])
+        .expect("Fix: zero-sized buffer load must not panic");
     assert_eq!(
         outputs[0].to_bytes(),
         vec![0; 4],
@@ -237,15 +239,9 @@ fn zero_sized_buffer_load_returns_zero() {
 #[test]
 fn zero_sized_buffer_store_is_noop() {
     let program = Program::wrapped(
-        vec![
-            BufferDecl::output("out", 0, DataType::U32).with_output_byte_range(0..0),
-        ],
+        vec![BufferDecl::output("out", 0, DataType::U32).with_output_byte_range(0..0)],
         [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::u32(0xDEAD_BEEF),
-        )],
+        vec![Node::store("out", Expr::u32(0), Expr::u32(0xDEAD_BEEF))],
     );
     let outputs = reference_eval(&program, &[])
         .expect("Fix: an explicitly empty output range must accept a no-op store");

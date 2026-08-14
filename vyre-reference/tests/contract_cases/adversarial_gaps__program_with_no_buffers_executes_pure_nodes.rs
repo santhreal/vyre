@@ -2,11 +2,7 @@ use super::*;
 
 #[test]
 fn program_with_no_buffers_executes_pure_nodes() {
-    let program = Program::wrapped(
-        vec![],
-        [1, 1, 1],
-        vec![Node::let_bind("x", Expr::u32(42))],
-    );
+    let program = Program::wrapped(vec![], [1, 1, 1], vec![Node::let_bind("x", Expr::u32(42))]);
     let outputs = reference_eval(&program, &[]).expect("Fix: program with no buffers must execute");
     assert!(outputs.is_empty());
 }
@@ -18,8 +14,8 @@ fn store_to_undefined_buffer_errors() {
         [1, 1, 1],
         vec![Node::store("missing", Expr::u32(0), Expr::u32(1))],
     );
-    let err = reference_eval(&program, &[])
-        .expect_err("Fix: store to undefined buffer must be rejected");
+    let err =
+        reference_eval(&program, &[]).expect_err("Fix: store to undefined buffer must be rejected");
     let message = err.to_string();
     assert!(
         message.contains("unknown buffer") || message.contains("missing"),
@@ -205,17 +201,17 @@ fn store_after_conditional_return_is_skipped_when_branch_taken() {
         ],
         [1, 1, 1],
         vec![
-            Node::if_then(
-                Expr::load("cond", Expr::u32(0)),
-                vec![Node::Return],
-            ),
+            Node::if_then(Expr::load("cond", Expr::u32(0)), vec![Node::Return]),
             Node::store("out", Expr::u32(0), Expr::u32(0xDEAD_BEEF)),
         ],
     );
     // cond = 1 (truthy) -> Return executes -> Store is skipped.
     let outputs = reference_eval(
         &program,
-        &[Value::from(1u32.to_le_bytes().to_vec()), Value::from(vec![0u8; 4])],
+        &[
+            Value::from(1u32.to_le_bytes().to_vec()),
+            Value::from(vec![0u8; 4]),
+        ],
     )
     .expect("Fix: conditional return must truncate execution cleanly");
     assert_eq!(outputs[0].to_bytes(), vec![0; 4]);
@@ -281,9 +277,7 @@ fn negative_i32_index_is_rejected_not_wrapped() {
         &program,
         &[Value::from(vec![0xAB; 4]), Value::from(vec![0u8; 4])],
     )
-    .expect_err(
-        "Fix: negative i32 index must be rejected (or wrapped if WGSL parity is desired)",
-    );
+    .expect_err("Fix: negative i32 index must be rejected (or wrapped if WGSL parity is desired)");
     let message = err.to_string();
     assert!(
         message.contains("cannot be represented as u32"),
@@ -371,7 +365,11 @@ fn f32_to_u32_overflow_saturates_to_max() {
 #[test]
 fn f32_to_u32_negative_is_zero() {
     let result = eval_expr_value(&Expr::cast(DataType::U32, Expr::f32(-1.0)));
-    assert_eq!(result, Value::U32(0), "f32->u32 negative must truncate to zero");
+    assert_eq!(
+        result,
+        Value::U32(0),
+        "f32->u32 negative must truncate to zero"
+    );
 }
 
 #[test]
@@ -379,4 +377,3 @@ fn f32_to_u32_nan_is_zero() {
     let result = eval_expr_value(&Expr::cast(DataType::U32, Expr::f32(f32::NAN)));
     assert_eq!(result, Value::U32(0), "f32->u32 NaN must truncate to zero");
 }
-

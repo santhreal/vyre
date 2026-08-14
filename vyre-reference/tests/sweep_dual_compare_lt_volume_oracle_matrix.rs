@@ -6,5 +6,7 @@ mod dual_volume;
 
 #[test]
 fn sweep_dual_compare_lt_volume_oracle_matrix() {
-    dual_volume::assert_volume_oracle("primitive.compare.lt", |left, right| u32::from(left < right));
+    dual_volume::assert_volume_oracle("primitive.compare.lt", |left, right| {
+        u32::from(left < right)
+    });
 }

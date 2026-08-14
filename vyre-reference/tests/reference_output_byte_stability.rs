@@ -48,7 +48,9 @@ fn golden_path() -> PathBuf {
 /// Facets read a fixed-width prefix, so the widest supported operand set is
 /// supplied once and narrower facets ignore the tail.
 fn facet_input(seed: u32) -> Vec<u8> {
-    let left = seed.wrapping_mul(0x85eb_ca6b).rotate_left((seed ^ 0x13) & 31);
+    let left = seed
+        .wrapping_mul(0x85eb_ca6b)
+        .rotate_left((seed ^ 0x13) & 31);
     let right = seed
         .wrapping_mul(0xc2b2_ae35)
         .rotate_right((seed ^ 0x29) & 31);
