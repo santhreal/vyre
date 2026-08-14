@@ -2,7 +2,10 @@
 use std::collections::BTreeMap;
 use vyre_debug::fixtures::loop_carry_smoke;
 use vyre_debug::{carrier_summary, find_uncarriered_assigns};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Node};
+
+#[path = "support/mod.rs"]
+mod support;
 
 #[test]
 fn find_uncarriered_assigns_smoke_program_returns_empty() {
@@ -16,8 +19,7 @@ fn find_uncarriered_assigns_smoke_program_returns_empty() {
 
 #[test]
 fn find_uncarriered_assigns_flags_a_loop_with_no_carrier() {
-    let p = Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(16)],
+    let p = support::program_over_out(
         [64, 1, 1],
         vec![
             Node::let_bind("x", Expr::u32(0)),

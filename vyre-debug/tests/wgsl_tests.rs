@@ -2,19 +2,9 @@
 use vyre_debug::wgsl::{dump_wgsl, dump_wgsl_with_lines};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
-fn minimal_program() -> Program {
-    let buffer =
-        BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(16);
-    Program::wrapped(
-        vec![buffer],
-        [64, 1, 1],
-        vec![Node::Store {
-            buffer: Ident::from("out"),
-            index: Expr::InvocationId { axis: 0 },
-            value: Expr::LitU32(7),
-        }],
-    )
-}
+#[path = "support/mod.rs"]
+mod support;
+use support::minimal_program;
 
 #[test]
 fn dump_wgsl_minimal_program_returns_compute_entry() {

@@ -1,20 +1,10 @@
 //! Test: descriptor dump tests.
 use vyre_debug::{dump_descriptor, DescriptorDumpOptions};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
+use vyre_foundation::ir::{Expr, Ident, Node};
 
-fn minimal_program() -> Program {
-    let buffer =
-        BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(16);
-    Program::wrapped(
-        vec![buffer],
-        [64, 1, 1],
-        vec![Node::Store {
-            buffer: Ident::from("out"),
-            index: Expr::InvocationId { axis: 0 },
-            value: Expr::LitU32(7),
-        }],
-    )
-}
+#[path = "support/mod.rs"]
+mod support;
+use support::minimal_program;
 
 #[test]
 fn dump_descriptor_renders_minimal_program() {
@@ -31,8 +21,7 @@ fn dump_descriptor_renders_minimal_program() {
 
 #[test]
 fn dump_descriptor_op_counts_match_walk() {
-    let p = Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(16)],
+    let p = support::program_over_out(
         [64, 1, 1],
         vec![Node::loop_for(
             "i",
@@ -69,8 +58,7 @@ fn dump_descriptor_op_counts_match_walk() {
 
 #[test]
 fn dump_descriptor_truncates_when_max_ops_per_body_set() {
-    let p = Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(16)],
+    let p = support::program_over_out(
         [64, 1, 1],
         vec![
             Node::store("out", Expr::u32(0), Expr::u32(1)),
