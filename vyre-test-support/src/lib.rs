@@ -1,29 +1,39 @@
 //! Shared test-only harness helpers for the vyre workspace.
 //!
-//! # The registry/coverage CLOSURE gate. ONE definitional home
+//! # The registry/coverage closure gate, one definitional home
 //!
-//! Every vyre crate that ships `pub fn ... -> Program` builders needs the same contract:
-//! each builder must be reachable from its `inventory::submit!` registry OR pinned by a
-//! parity/behavioral test, otherwise a builder can rot, diverge from its GPU/reference
-//! arm, or silently lose coverage with nothing red. Historically each crate shipped its
-//! own ~230-line copy of the enumerator (and 22 crates shipped a *tautology stub* whose doc
-//! claimed adversarial closure coverage while asserting `bytes[0] == bytes[0]`: a Law 6 /
-//! Law 9 evasion). That duplication is itself a ONE-PLACE violation: 26 copies drift.
+//! Every vyre crate that ships `pub fn ... -> Program` builders owes the same
+//! contract: each builder is reachable from that crate's `inventory::submit!`
+//! registry, or it is pinned by a parity/behavioral test. A builder that is
+//! neither still compiles, still appears in the catalogs generated from source,
+//! and still diverges from its reference arm with nothing red.
 //!
-//! [`assert_registry_closure`] is the single canonical enumerator. Each crate's
-//! `tests/adversarial_registry_closure.rs` becomes a thin wrapper:
+//! [`assert_registry_closure`] is the one enumerator. A crate's gate is a
+//! `tests/registry_closure.rs` carrying only that crate's waiver and floor:
 //!
 //! ```ignore
-//! const COVERAGE_WAIVER: &[&str] = &[ /* builder, reason */ ];
+//! const COVERAGE_WAIVER: &[&str] = &[/* uncovered builder, with its reason */];
+//! const BUILDER_FLOOR: usize = 4;
+//!
 //! #[test]
 //! fn every_program_builder_is_tested_registered_or_explicitly_waived() {
-//!     vyre_test_support::assert_registry_closure(env!("CARGO_MANIFEST_DIR"), COVERAGE_WAIVER, 4);
+//!     vyre_test_support::assert_registry_closure(
+//!         env!("CARGO_MANIFEST_DIR"),
+//!         COVERAGE_WAIVER,
+//!         BUILDER_FLOOR,
+//!     );
 //! }
 //! ```
 //!
-//! The enumeration is **feature-independent** (it reads source files as TEXT, never compiling
-//! them), so the gate is green under any feature set, it matches CI regardless of which
-//! `--features` the runner selects. See `BACKLOG.md` WIRING-tautology-closure-25crates.
+//! The candidate set is derived from the crate's tree on each run rather than
+//! listed in the caller, so a builder added tomorrow is judged tomorrow. That
+//! derivation's failure mode is finding nothing: zero builders are trivially
+//! all covered, so `BUILDER_FLOOR` is what makes a broken scan fail instead of
+//! reporting a clean sweep of a nearly empty set.
+//!
+//! The enumeration is feature-independent: it reads source files as TEXT and
+//! never compiles them, so it reports the same builder set whichever features
+//! the runner selects.
 #![forbid(unsafe_code)]
 
 pub mod consumer_boundary;
@@ -180,7 +190,7 @@ pub fn assert_registry_closure(manifest_dir: &str, waiver: &[&str], floor: usize
         unwaived.is_empty(),
         "[{crate_name}] {} Program builder(s) have NO parity/behavioral test AND are NOT registered \
          in the inventory: {unwaived:?}. Fix: add a reference_eval parity test, submit an OperationRegistration, \
-         or add to COVERAGE_WAIVER with a reason. See BACKLOG.md WIRING-tautology-closure-25crates.",
+         or add to COVERAGE_WAIVER with the reason it is permanently uncoverable.",
         unwaived.len()
     );
 
