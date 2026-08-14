@@ -11,15 +11,17 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 mod common;
+
+use c_frontend::reference_lexer::run_c11_lexer;
 use common::{decode_u32_words, u32_bytes};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use c_grammar_gen::lex_c11_max_munch_kinds;
 use vyre::ir::Expr;
-use vyre_libs::parsing::c::lex::lexer::{
-    c11_lexer, c11_lexer_regular_sparse_packed_haystack_with_flags,
-};
+use vyre_libs::parsing::c::lex::lexer::c11_lexer_regular_sparse_packed_haystack_with_flags;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::preprocess::expansion::{
     opt_conditional_mask, opt_dynamic_macro_expansion,
@@ -28,57 +30,6 @@ use vyre_libs::parsing::c::preprocess::{
     c_translation_phase_line_splice, reference_c_preprocessor_directive_metadata,
 };
 use vyre_reference::value::Value;
-
-// ---------------------------------------------------------------------------
-// Byte / word helpers
-// ---------------------------------------------------------------------------
-
-fn haystack_words(source: &[u8]) -> Vec<u32> {
-    source.iter().map(|b| u32::from(*b)).collect()
-}
-
-// ---------------------------------------------------------------------------
-// GPU lexer helper (mirrors c_lexer_parallelization_contract.rs)
-// ---------------------------------------------------------------------------
-
-fn run_c11_lexer(source: &[u8], haystack_len: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>, u32) {
-    let program = c11_lexer(
-        "haystack",
-        "out_tok_types",
-        "out_tok_starts",
-        "out_tok_lens",
-        "out_counts",
-        haystack_len,
-    );
-    let haystack_buf = u32_bytes(&haystack_words(source));
-    let zero_buf = vec![0u8; haystack_len as usize * 4];
-    let count_zero = vec![0u8; 4];
-    let inputs = [
-        Value::from(haystack_buf),
-        Value::from(zero_buf.clone()),
-        Value::from(zero_buf.clone()),
-        Value::from(zero_buf),
-        Value::from(count_zero),
-    ];
-    let outputs = vyre_reference::reference_eval(&program, &inputs)
-        .expect("c11_lexer must execute under the reference oracle");
-    assert_eq!(
-        outputs.len(),
-        4,
-        "expected [tok_types, tok_starts, tok_lens, counts]"
-    );
-    let tok_types = decode_u32_words(&outputs[0].to_bytes());
-    let tok_starts = decode_u32_words(&outputs[1].to_bytes());
-    let tok_lens = decode_u32_words(&outputs[2].to_bytes());
-    let counts = decode_u32_words(&outputs[3].to_bytes());
-    let tok_count = counts.first().copied().unwrap_or(0);
-    (
-        tok_types[..tok_count as usize].to_vec(),
-        tok_starts[..tok_count as usize].to_vec(),
-        tok_lens[..tok_count as usize].to_vec(),
-        tok_count,
-    )
-}
 
 fn run_sparse_c11_lexer_positions(source: &[u8]) -> (Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>) {
     let haystack_len = source.len() as u32;

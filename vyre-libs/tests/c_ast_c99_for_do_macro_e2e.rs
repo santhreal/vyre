@@ -3,6 +3,10 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
+
+use c_frontend::expression_pipeline::run_reference_pg_lower;
 use c_grammar_gen::lex_c11_max_munch_kinds;
 use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
@@ -95,20 +99,6 @@ fn assert_lex_matches_fixture(fixture: &Fixture) {
         filtered, fixture.tok_types,
         "fixture token rows must match max-munch lexer output"
     );
-}
-
-fn run_reference_pg_lower(typed_vast: &[u8]) -> Vec<u8> {
-    let num_nodes = node_count_from_vast(typed_vast);
-    let program = c_lower_ast_to_pg_nodes("vast_nodes", Expr::u32(num_nodes), "pg_nodes");
-    let output_len = num_nodes.saturating_mul(PG_STRIDE_U32 as u32).max(1) as usize * 4;
-    let values = [
-        Value::from(typed_vast.to_vec()),
-        Value::from(vec![0; output_len]),
-    ];
-    let outputs = vyre_reference::reference_eval(&program, &values)
-        .unwrap_or_else(|error| panic!("Fix: C AST PG lowerer must execute on CPU: {error}"));
-    assert_eq!(outputs.len(), 1, "Fix: PG lowerer must emit one buffer");
-    outputs[0].to_bytes()
 }
 
 fn run_program_classifier(raw_vast: &[u8]) -> Vec<u8> {
