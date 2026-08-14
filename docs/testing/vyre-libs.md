@@ -24,7 +24,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --all-features
 ## Feature sets
 
 - Default feature members: `math-linalg`, `math-scan`, `math-broadcast`, `nn-activation`, `nn-linear`, `nn-norm`, `matching-substring`, `matching-dfa`, `hash`, `decode`
-- Available manifest features: `analysis`, `bench`, `c-parser`, `cpu-parity`, `crypto`, `crypto-blake3`, `decode`, `default`, `device`, `encoding`, `full`, `go-parser`, `graph-dispatch`, `hash`, `intern`, `logical`, `matching`, `matching-dfa`, `matching-nfa`, `matching-regex`, `matching-substring`, `math`, `math-algebra`, `math-broadcast`, `math-linalg`, `math-scan`, `math-succinct`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `parsing`, `python-parser`, `reasoning`, `rule`, `scheduling`, `security`, `solvers`, `telemetry`, `test-fixtures`, `text`, `visual`
+- Available manifest features: `analysis`, `bench`, `c-parser`, `cat-a-builder-options`, `cpu-parity`, `crypto`, `crypto-blake3`, `decode`, `default`, `device`, `encoding`, `full`, `go-parser`, `graph-dispatch`, `hash`, `intern`, `logical`, `matching`, `matching-dfa`, `matching-nfa`, `matching-regex`, `matching-substring`, `math`, `math-algebra`, `math-broadcast`, `math-linalg`, `math-scan`, `math-succinct`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `parsing`, `python-parser`, `reasoning`, `rule`, `scheduling`, `security`, `solvers`, `telemetry`, `test-fixtures`, `text`, `visual`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
