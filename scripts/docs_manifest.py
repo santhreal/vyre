@@ -46,10 +46,10 @@ GENERATED_PROVENANCE = {
     "INDEX.md": ("DOCS.toml", "../scripts/docs_manifest.py"),
     "OWNERSHIP.md": ("CRATE_OWNERSHIP.toml", "../scripts/crate_ownership.py"),
     "RELEASE_CHECKLIST.md": ("../release/release-train.toml", "../scripts/release_docs.py"),
-    "generated/OP_INVENTORY.md": ("generated/OP_SCHEMA.json", "../xtask/src/list_ops.rs"),
+    "generated/OP_INVENTORY.md": ("generated/OP_SCHEMA.json", "../xtask-registry/src/docs/list_ops.rs"),
     "optimization/PASSES.md": (
         "../vyre-foundation/src/optimizer.rs",
-        "../xtask/src/optimization_docs.rs",
+        "../xtask-registry/src/docs/optimization_docs.rs",
     ),
 }
 
@@ -74,7 +74,7 @@ def title_for(path: Path) -> str:
 
 def generated_provenance(path: str) -> tuple[str, str] | None:
     if path.startswith("catalog/"):
-        return "generated/OP_SCHEMA.json", "../xtask/src/catalog.rs"
+        return "generated/OP_SCHEMA.json", "../xtask-registry/src/docs/catalog.rs"
     if path.startswith("release/"):
         return "../release/release-train.toml", "../scripts/release_docs.py"
     if path.startswith("testing/"):

@@ -224,9 +224,29 @@ release_status = 'This crate is internal repository and release tooling for the 
 path = 'xtask'
 owner = 'release-tooling'
 layer = 'tooling'
-owned = 'Generate evidence and enforce repository, release, documentation, and architecture contracts.'
-non_owned = 'Production library semantics, device drivers as libraries.'
-allowed_dependencies = ['vyre', 'vyre-bench', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-emit-metal', 'vyre-foundation', 'vyre-intrinsics', 'vyre-libs', 'vyre-lints', 'vyre-lower', 'vyre-primitives', 'vyre-reference', 'vyre-spec']
+owned = 'Own the subcommand registry and every gate that judges the tree from source text, manifests, workflows, and recorded evidence.'
+non_owned = 'Anything that has to observe the live operation registry or a measured benchmark probe, production library semantics, device drivers as libraries.'
+allowed_dependencies = []
+profile = 'tooling'
+
+[package.xtask-registry]
+release_status = 'This crate is internal repository and release tooling for the {vyre_version} train and is not published to crates.io.'
+path = 'xtask-registry'
+owner = 'release-tooling'
+layer = 'tooling'
+owned = 'Own the xtask subcommands that must observe the live operation registry, the primitive catalog behind it, or a linked backend driver.'
+non_owned = 'Gates answerable from source text, benchmark provenance, production library semantics.'
+allowed_dependencies = ['vyre', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-foundation', 'vyre-intrinsics', 'vyre-libs', 'vyre-lints', 'vyre-megakernel', 'vyre-primitives', 'vyre-reference', 'vyre-spec', 'xtask']
+profile = 'tooling'
+
+[package.xtask-evidence]
+release_status = 'This crate is internal repository and release tooling for the {vyre_version} train and is not published to crates.io.'
+path = 'xtask-evidence'
+owner = 'release-tooling'
+layer = 'tooling'
+owned = 'Own the xtask subcommands that decide whether a recorded benchmark or release measurement still describes this tree.'
+non_owned = 'Gates answerable from source text, the live operation registry, production library semantics.'
+allowed_dependencies = ['vyre-bench', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-wgpu', 'xtask']
 profile = 'tooling'
 
 [package.vyre-runtime]

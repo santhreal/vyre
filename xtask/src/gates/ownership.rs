@@ -1,3 +1,8 @@
+//! The lane ownership map, and which lane owns a source path.
+//!
+//! Duplicate and dedup findings are reported against an owner, so a path has to
+//! resolve to exactly one lane.
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;

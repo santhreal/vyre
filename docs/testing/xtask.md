@@ -6,7 +6,7 @@ Run the default crate suite from the workspace root:
 CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask
 ```
 
-Generate evidence and enforce repository, release, documentation, and architecture contracts.
+Own the subcommand registry and every gate that judges the tree from source text, manifests, workflows, and recorded evidence, linking no vyre crate.
 
 The crate lives at `xtask`. The `release-tooling` owner maintains its
 `tooling` testing contract.
@@ -32,6 +32,7 @@ This crate declares no Cargo features.
 | `bin` | `audit_rule_contracts` | `xtask/src/bin/audit_rule_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --bin audit_rule_contracts` |
 | `bin` | `scaffold_rule` | `xtask/src/bin/scaffold_rule.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --bin scaffold_rule` |
 | `bin` | `xtask` | `xtask/src/main.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --bin xtask` |
+| `lib` | `xtask` | `xtask/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask` |
 | `test` | `architecture_docs` | `xtask/tests/architecture_docs.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test architecture_docs` |
 | `test` | `canonical_first_workgroup_guard` | `xtask/tests/canonical_first_workgroup_guard.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test canonical_first_workgroup_guard` |
 | `test` | `cli_docs` | `xtask/tests/cli_docs.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test cli_docs` |

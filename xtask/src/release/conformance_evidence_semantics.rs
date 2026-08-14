@@ -1,3 +1,9 @@
+//! What a recorded conformance matrix artifact has to say to count.
+//!
+//! The artifact is read back as JSON and checked against the backends, gates and
+//! workflows a release requires, without consulting the registry that produced
+//! it.
+
 use serde_json::Value;
 
 const REQUIRED_BACKENDS: &[&str] = &["cuda", "wgpu", "cpu-ref"];
@@ -33,7 +39,8 @@ fn complete_ci_entry(entry: &Value) -> bool {
         && entry.get("artifact_check_present").and_then(Value::as_bool) == Some(true)
 }
 
-pub(crate) fn inspect_conformance_matrix(
+/// Check a recorded conformance matrix against what a release requires.
+pub fn inspect_conformance_matrix(
     context: &str,
     matrix: &Value,
     failures: &mut Vec<String>,
@@ -199,7 +206,7 @@ pub(crate) fn inspect_conformance_matrix(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::release::conformance_matrix::inspect_ci_conformance_gates;
+    use crate::release::conformance_workflows::inspect_ci_conformance_gates;
     use std::path::Path;
 
     fn complete_matrix(workflows: impl Iterator<Item = &'static str>) -> Value {

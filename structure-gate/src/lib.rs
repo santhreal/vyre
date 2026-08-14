@@ -81,6 +81,10 @@ const ALLOWED_MEMBERS: &[&str] = &[
     "vyre-test-support",
     "structure-gate",
     "xtask",
+    // The xtask subcommands that link vyre. Split out so a source edit no
+    // longer rebuilds the compiler before a text-reading gate can run.
+    "xtask-evidence",
+    "xtask-registry",
 ];
 
 /// Source languages and the single crate that owns each frontend.

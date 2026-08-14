@@ -502,7 +502,7 @@ fn hygiene_owner_lane_for_path(path: &str) -> &'static str {
     {
         return "nn_math";
     }
-    if normalized.contains("/xtask/")
+    if is_xtask_tree_path(&normalized)
         || normalized.contains("/vyre-lints/")
         || normalized.contains("/vyre-libs/src/test_support/")
         || normalized.contains("/conform/")
@@ -544,7 +544,7 @@ fn hygiene_surface_for_path(path: &str) -> &'static str {
     if normalized.contains("/examples/") {
         return "example";
     }
-    if normalized.contains("/xtask/src/")
+    if is_xtask_source_path(&normalized)
         || normalized.contains("/scripts/")
         || normalized.contains("/.github/")
     {
@@ -554,6 +554,28 @@ fn hygiene_surface_for_path(path: &str) -> &'static str {
         return "docs";
     }
     "production"
+}
+
+/// Whether a path is inside one of the xtask tooling crates.
+///
+/// The tooling is split across `xtask` and the `xtask-*` crates that link vyre,
+/// and which crate a module ended up in is a dependency-weight decision the
+/// hygiene rules have no stake in. Match the family, not one member of it.
+fn is_xtask_tree_path(normalized: &str) -> bool {
+    normalized.contains("/xtask/") || normalized.contains("/xtask-")
+}
+
+/// Whether a path is xtask source rather than an xtask manifest or README.
+fn is_xtask_source_path(normalized: &str) -> bool {
+    normalized.contains("/xtask/src/") || xtask_crate_source_segment(normalized)
+}
+
+/// Whether `normalized` runs through `xtask-<name>/src/`.
+fn xtask_crate_source_segment(normalized: &str) -> bool {
+    normalized.split("/xtask-").skip(1).any(|tail| {
+        tail.split_once('/')
+            .is_some_and(|(_crate_name, rest)| rest == "src" || rest.starts_with("src/"))
+    })
 }
 
 fn is_cpu_parity_oracle_source(normalized_path: &str) -> bool {
@@ -1113,8 +1135,7 @@ fn scan_root(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
                 | ".git"
                 | ".cargo-target"
                 | "release"
-                | "xtask"
-        )
+        ) && !is_xtask_tree_directory(&name)
     }) {
         let entry = match entry {
             Ok(entry) => entry,
@@ -1207,6 +1228,32 @@ const RELEASE_XTASK_COMMAND_MODULES: &[&str] = &[
     "vyre_release_gate",
 ];
 
+/// Whether a directory name is one of the xtask tooling crates.
+fn is_xtask_tree_directory(name: &str) -> bool {
+    name == "xtask" || name.starts_with("xtask-")
+}
+
+/// The `src` directory of every xtask crate, `xtask` first.
+fn xtask_source_roots(root: &Path) -> Vec<PathBuf> {
+    let mut roots = vec![root.join("xtask/src")];
+    let mut siblings: Vec<PathBuf> = fs::read_dir(root)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.starts_with("xtask-"))
+        })
+        .map(|path| path.join("src"))
+        .filter(|path| path.is_dir())
+        .collect();
+    siblings.sort();
+    roots.extend(siblings);
+    roots
+}
+
 fn scan_release_xtask(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneFinding>) {
     for module in RELEASE_XTASK_COMMAND_MODULES {
         match resolve_xtask_module_source(root, module) {
@@ -1228,21 +1275,24 @@ fn scan_release_xtask(root: &Path, scanned_files: &mut usize, findings: &mut Vec
 /// Find the source file of an xtask command module.
 ///
 /// A command module is either `<module>.rs` or `<module>/mod.rs`, and it sits
-/// either at the top of `xtask/src` or inside one of its group directories.
-/// Which group owns a module is a layout decision this scan has no stake in,
-/// so search the top level and then every group directory instead of pinning
-/// the path a module happens to have today.
+/// either at the top of an xtask crate's `src` or inside one of its group
+/// directories. Neither which group owns a module nor which xtask crate it
+/// ended up in is a layout decision this scan has a stake in, so search every
+/// xtask source root and every group directory under it instead of pinning the
+/// path a module happens to have today.
 fn resolve_xtask_module_source(root: &Path, module: &str) -> Result<PathBuf, String> {
-    let source_root = root.join("xtask/src");
-    let mut search_roots = vec![source_root.clone()];
-    if let Ok(entries) = fs::read_dir(&source_root) {
-        let mut groups: Vec<PathBuf> = entries
-            .flatten()
-            .map(|entry| entry.path())
-            .filter(|path| path.is_dir())
-            .collect();
-        groups.sort();
-        search_roots.extend(groups);
+    let mut search_roots = Vec::new();
+    for source_root in xtask_source_roots(root) {
+        search_roots.push(source_root.clone());
+        if let Ok(entries) = fs::read_dir(&source_root) {
+            let mut groups: Vec<PathBuf> = entries
+                .flatten()
+                .map(|entry| entry.path())
+                .filter(|path| path.is_dir())
+                .collect();
+            groups.sort();
+            search_roots.extend(groups);
+        }
     }
     for base in search_roots {
         let file = base.join(format!("{module}.rs"));
@@ -1849,7 +1899,7 @@ fn line_contains_read_call(line: &str) -> bool {
 
 fn line_contains_unbounded_read(path: &Path, line: &str) -> bool {
     let normalized = path.to_string_lossy();
-    if normalized.contains("/xtask/src/") {
+    if is_xtask_source_path(&normalized.replace('\\', "/")) {
         return false;
     }
     let trimmed = line.trim_start();
@@ -2159,12 +2209,12 @@ fn is_hygiene_rule_source(path: &Path) -> bool {
         "scripts/check_primitive_contract.sh",
         "jules_tickets/_generate.py",
         "jules_tickets/test_dump.py",
-        "xtask/src/release/backend_matrix.rs",
         "xtask/src/release/feature_matrix.rs",
         "xtask/src/gates/hygiene_matrix.rs",
-        "xtask/src/release/optimization_matrix.rs",
-        "xtask/src/release/vyre_release_gate/mod.rs",
-        "xtask/src/gates/whats_similar.rs",
+        "xtask-evidence/src/release/backend_matrix.rs",
+        "xtask-evidence/src/release/vyre_release_gate/mod.rs",
+        "xtask-registry/src/release/optimization_matrix.rs",
+        "xtask-registry/src/gates/whats_similar.rs",
     ]
     .iter()
     .any(|suffix| normalized.ends_with(suffix))
@@ -3134,6 +3184,79 @@ pub fn undocumented() {
                 vec![
                     "docs/optimization/THRESHOLD_POLICY.toml row `fixture` is structural but override_path does not say `not operator configurable`. Fix: separate wire/ABI bounds from runtime knobs."
                 ]
+            );
+        }
+    }
+
+    /// WHY: the xtask tooling is split across `xtask` and the `xtask-*` crates
+    /// that link vyre, and three separate rules key off that: the surface a file
+    /// is classified under, the owner lane it is attributed to, and whether the
+    /// generic source walk skips it. Each rule used to match the literal string
+    /// `xtask`, so moving a module into a sibling crate reclassified it as
+    /// production source under production thresholds. The crate list is read out
+    /// of the workspace manifest at run time, so a fourth xtask crate turns this
+    /// red instead of quietly inheriting the wrong rules.
+    #[test]
+    fn every_xtask_crate_carries_the_release_tooling_rules() {
+        let manifest =
+            fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../Cargo.toml"))
+                .expect("Fix: the workspace manifest must be readable");
+        let crates: Vec<String> = manifest
+            .lines()
+            .filter_map(|line| {
+                line.trim()
+                    .strip_prefix('"')?
+                    .strip_suffix("\",")
+                    .map(str::to_string)
+            })
+            .filter(|member| member == "xtask" || member.starts_with("xtask-"))
+            .collect();
+        assert!(
+            crates.len() >= 3,
+            "expected the xtask family in the workspace roster, found {crates:?}"
+        );
+        for member in &crates {
+            let source = format!("/w/{member}/src/gates/some_gate.rs");
+            assert_eq!(
+                hygiene_surface_for_path(&source),
+                "release_tooling",
+                "Fix: {source} is xtask source and must carry release-tooling thresholds."
+            );
+            assert_eq!(
+                hygiene_owner_lane_for_path(&source),
+                "testing_evidence",
+                "Fix: {source} is xtask source and must be owned by testing_evidence."
+            );
+            assert!(
+                is_xtask_tree_directory(member),
+                "Fix: the generic source walk must skip `{member}`, which the \
+                 release xtask scan already reads."
+            );
+        }
+    }
+
+    /// WHY: `is_xtask_source_path` gates the unbounded-read exemption, so a match
+    /// that is too loose exempts production source from the read cap. A crate
+    /// merely named `xtask-...` outside its `src` tree, and an unrelated crate
+    /// whose path happens to contain the word, must both stay unexempt.
+    #[test]
+    fn the_xtask_source_match_does_not_leak_past_the_src_tree() {
+        for exempt in [
+            "/w/xtask/src/gates/a.rs",
+            "/w/xtask-registry/src/gates/a.rs",
+            "/w/xtask-evidence/src/release/a.rs",
+        ] {
+            assert!(is_xtask_source_path(exempt), "`{exempt}` must be exempt");
+        }
+        for not_exempt in [
+            "/w/xtask-registry/tests/a.rs",
+            "/w/xtask-registry/build.rs",
+            "/w/vyre-libs/src/xtask-notes/a.rs",
+            "/w/vyre-libs/src/a.rs",
+        ] {
+            assert!(
+                !is_xtask_source_path(not_exempt),
+                "`{not_exempt}` is not xtask source and must keep the read cap"
             );
         }
     }

@@ -613,7 +613,8 @@ fn bounded_command_error(stderr: &[u8]) -> String {
     }
 }
 
-pub(crate) fn package_content_evidence_issues(value: &serde_json::Value) -> Vec<String> {
+/// Issues in recorded package-content evidence, or why it cannot be read.
+pub fn package_content_evidence_issues(value: &serde_json::Value) -> Vec<String> {
     let Some(publish_order) = value
         .get("publish_order")
         .and_then(serde_json::Value::as_array)

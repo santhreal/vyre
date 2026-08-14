@@ -3,7 +3,11 @@
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
-pub(crate) fn read_text_bounded(path: &Path, max_bytes: u64, context: &str) -> io::Result<String> {
+/// Read a text file, failing rather than allocating past `max_bytes`.
+///
+/// `context` names the cap in the error, so an operator can tell which reader
+/// refused the file.
+pub fn read_text_bounded(path: &Path, max_bytes: u64, context: &str) -> io::Result<String> {
     let mut reader = std::fs::File::open(path)?.take(max_bytes.saturating_add(1));
     let mut text = String::new();
     reader.read_to_string(&mut text)?;
@@ -32,7 +36,8 @@ pub(crate) fn contains_any(text: &str, needles: &[&str]) -> bool {
     needles.iter().any(|needle| text.contains(needle))
 }
 
-pub(crate) fn resolve_path(base_dir: &Path, path: &str) -> PathBuf {
+/// Resolve `path` against `base_dir` unless it is already absolute.
+pub fn resolve_path(base_dir: &Path, path: &str) -> PathBuf {
     let candidate = PathBuf::from(path);
     if candidate.is_absolute() {
         candidate
@@ -41,7 +46,9 @@ pub(crate) fn resolve_path(base_dir: &Path, path: &str) -> PathBuf {
     }
 }
 
-pub(crate) fn resolve_release_artifact_path(base_dir: &Path, path: &str) -> PathBuf {
+/// Resolve a release artifact path, which is written relative to the workspace
+/// root rather than to the crate that reads it.
+pub fn resolve_release_artifact_path(base_dir: &Path, path: &str) -> PathBuf {
     let candidate = PathBuf::from(path);
     if candidate.is_absolute() {
         return candidate;
@@ -55,7 +62,8 @@ pub(crate) fn resolve_release_artifact_path(base_dir: &Path, path: &str) -> Path
     base_dir.join(candidate)
 }
 
-pub(crate) fn parse_output_arg(
+/// Parse `--output <path>` for `command`, falling back to `default_output`.
+pub fn parse_output_arg(
     args: &[String],
     command: &str,
     description: &str,
@@ -82,7 +90,8 @@ pub(crate) fn parse_output_arg(
     Ok(output.unwrap_or_else(default_output))
 }
 
-pub(crate) fn write_json(path: &Path, value: &impl serde::Serialize) {
+/// Write `value` as pretty JSON, exiting with a `Fix:` message on failure.
+pub fn write_json(path: &Path, value: &impl serde::Serialize) {
     let json = match serde_json::to_string_pretty(value) {
         Ok(json) => json,
         Err(error) => {
@@ -235,5 +244,45 @@ mod tests {
             normalized,
             r#"{"path":"../../../../tools/vyrec/README.md","root":"../../../.."}"#
         );
+    }
+
+    /// WHY: a release artifact path is written relative to the workspace root but
+    /// resolved by a crate whose base directory is one level down, so the two
+    /// resolvers must disagree on exactly the `release/` prefix and agree
+    /// everywhere else. Resolving a release path against the crate directory
+    /// writes evidence into `xtask/release/`, where no reader looks.
+    #[test]
+    fn only_release_prefixed_relative_paths_climb_to_the_workspace_root() {
+        let base = Path::new("/w/xtask");
+        assert_eq!(
+            resolve_release_artifact_path(base, "release/evidence/a.json"),
+            PathBuf::from("/w/release/evidence/a.json")
+        );
+        assert_eq!(
+            resolve_path(base, "release/evidence/a.json"),
+            PathBuf::from("/w/xtask/release/evidence/a.json")
+        );
+        for path in ["docs/a.md", "releases/a.json", "not-release/a.json"] {
+            assert_eq!(
+                resolve_release_artifact_path(base, path),
+                resolve_path(base, path),
+                "`{path}` does not carry the release prefix and must not climb"
+            );
+        }
+    }
+
+    /// WHY: an absolute path is already resolved, and joining a base onto it
+    /// silently produces the base again on Unix. Both resolvers must return it
+    /// unchanged.
+    #[test]
+    fn an_absolute_path_is_returned_unchanged_by_both_resolvers() {
+        let base = Path::new("/w/xtask");
+        for path in ["/tmp/a.json", "/w/release/evidence/a.json"] {
+            assert_eq!(resolve_path(base, path), PathBuf::from(path));
+            assert_eq!(
+                resolve_release_artifact_path(base, path),
+                PathBuf::from(path)
+            );
+        }
     }
 }

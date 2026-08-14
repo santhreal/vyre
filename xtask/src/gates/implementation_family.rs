@@ -2,7 +2,8 @@
 
 /// Return the shared builder family that owns an operation's emitted IR shape.
 #[must_use]
-pub(crate) fn implementation_family_id(op_id: &str) -> Option<&'static str> {
+/// Family id a source path belongs to, used to group similar implementations.
+pub fn implementation_family_id(op_id: &str) -> Option<&'static str> {
     match op_id {
         "vyre-primitives::bitset::and"
         | "vyre-primitives::bitset::and_not"
@@ -133,7 +134,7 @@ pub(crate) fn implementation_family_id(op_id: &str) -> Option<&'static str> {
 
 /// Return whether two registered operations already use one shared implementation family.
 #[must_use]
-pub(crate) fn same_implementation_family(left_id: &str, right_id: &str) -> bool {
+pub fn same_implementation_family(left_id: &str, right_id: &str) -> bool {
     let Some(left_family) = implementation_family_id(left_id) else {
         return false;
     };
@@ -142,7 +143,7 @@ pub(crate) fn same_implementation_family(left_id: &str, right_id: &str) -> bool 
 
 /// Return whether similar scaffolding belongs to deliberately distinct shared families.
 #[must_use]
-pub(crate) fn known_distinct_implementation_families(left_id: &str, right_id: &str) -> bool {
+pub fn known_distinct_implementation_families(left_id: &str, right_id: &str) -> bool {
     let Some(left_family) = implementation_family_id(left_id) else {
         return false;
     };

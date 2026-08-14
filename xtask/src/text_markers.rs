@@ -1,3 +1,9 @@
+//! Word lists that classify a line of prose or a test name.
+//!
+//! Several gates ask whether a test covers a negative or boundary case, or
+//! whether a documentation line states a release rule. They ask it of the same
+//! vocabulary, which is defined here once.
+
 use std::collections::BTreeSet;
 
 pub(crate) const NEGATIVE_MARKERS: &[&str] = &[
@@ -27,7 +33,8 @@ pub(crate) fn contains_any(text: &str, markers: &[&str]) -> bool {
     markers.iter().any(|marker| text.contains(marker))
 }
 
-pub(crate) fn markdown_line_is_release_rule_text(lowered: &str) -> bool {
+/// Whether a lowercased documentation line states a release rule.
+pub fn markdown_line_is_release_rule_text(lowered: &str) -> bool {
     contains_any(
         lowered,
         &[

@@ -28,6 +28,12 @@ members = [
     "conform/vyre-conform-spec",
     "conform/vyre-conform",
     "xtask",
+    # The two xtask crates that link vyre. `xtask` builds and runs one of these
+    # on demand for the subcommands that must observe the live operation
+    # registry or a measured benchmark probe, so a source edit no longer
+    # rebuilds the compiler before a text-reading gate can run.
+    "xtask-registry",
+    "xtask-evidence",
     # Workspace structural gate. Depends on no vyre crate on purpose: it reads
     # source text so it still runs while the workspace does not compile.
     "structure-gate",

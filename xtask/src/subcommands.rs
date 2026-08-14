@@ -10,23 +10,59 @@
 //! and `xtask gates` fails when that obligation is unmet, so a new row cannot
 //! be quietly left unwired.
 
-use crate::bench::{bench_crossback, bench_release, release_benchmarks};
-use crate::docs::{catalog, docs_check, list_ops, op_matrix, operation_schema, optimization_docs};
+use crate::docs::docs_check;
 use crate::gates::{
-    abstraction_gate, check_cat_a, check_tier_deps, dep_drift, dup_scan, gate1, gates,
-    heuristic_audit, hot_path_scan, hygiene_matrix, lego_audit, lego_quick, platform_boundary,
-    verify_rewrite_proofs, whats_similar,
+    check_cat_a, check_tier_deps, dep_drift, dup_scan, gates, hot_path_scan, hygiene_matrix,
+    platform_boundary,
 };
 use crate::release::{
-    backend_matrix, conformance_matrix, feature_matrix, launch_state, metadata_matrix,
-    optimization_corpus, optimization_matrix, package_readiness, release_conformance,
-    release_evidence, release_gate, release_workload_matrix, version_matrix, vyre_release_gate,
+    feature_matrix, launch_state, metadata_matrix, package_readiness, release_conformance,
+    release_gate, release_workload_matrix, version_matrix,
 };
-use crate::{compile, print_composition, shrink, trace_f32};
+use crate::shrink;
+
+/// Which crate implements a subcommand, and therefore what running it costs.
+///
+/// A `Local` subcommand reads source text, manifests, workflows or evidence
+/// files, so it runs in this process against no vyre crate. The other two are
+/// implemented in a crate that links vyre because it has to observe the live
+/// operation registry or a measured benchmark probe; `xtask` builds and runs
+/// that crate on demand instead of linking it.
+#[derive(Clone, Copy)]
+pub enum Home {
+    /// Implemented here. The function is the entry point.
+    Local(fn(&[String])),
+    /// Implemented in `xtask-registry`, which links the operation registry.
+    Registry,
+    /// Implemented in `xtask-evidence`, which links the benchmark harness.
+    Evidence,
+}
+
+impl Home {
+    /// Package that implements the subcommand, or `None` when `xtask` does.
+    #[must_use]
+    pub fn package(self) -> Option<&'static str> {
+        match self {
+            Self::Local(_) => None,
+            Self::Registry => Some("xtask-registry"),
+            Self::Evidence => Some("xtask-evidence"),
+        }
+    }
+}
+
+/// Every subcommand `package` is responsible for, in table order.
+#[must_use]
+pub fn owned_by(package: &str) -> Vec<&'static str> {
+    SUBCOMMANDS
+        .iter()
+        .filter(|entry| entry.home.package() == Some(package))
+        .map(|entry| entry.name)
+        .collect()
+}
 
 /// What a subcommand is for, and therefore what CI owes it.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum Kind {
+pub enum Kind {
     /// Judges the tree and must run on every change. `xtask gates` executes it
     /// and holds it to its pinned baseline.
     Gate,
@@ -45,30 +81,30 @@ pub(crate) enum Kind {
 }
 
 /// One registered subcommand.
-pub(crate) struct Subcommand {
+pub struct Subcommand {
     /// Name as typed on the command line.
-    pub(crate) name: &'static str,
+    pub name: &'static str,
     /// Argument spec shown in help.
-    pub(crate) usage: &'static str,
+    pub usage: &'static str,
     /// One-line description shown in help.
-    pub(crate) help: &'static str,
+    pub help: &'static str,
     /// What CI owes this subcommand.
-    pub(crate) kind: Kind,
+    pub kind: Kind,
     /// Arguments the sweep runs a `Gate` with. Empty means run it bare.
-    pub(crate) ci_args: &'static [&'static str],
-    /// Entry point.
-    pub(crate) run: fn(&[String]),
+    pub ci_args: &'static [&'static str],
+    /// Which crate implements it, and the entry point when that is this one.
+    pub home: Home,
 }
 
 /// Every registered subcommand.
-pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
+pub const SUBCOMMANDS: &[Subcommand] = &[
     Subcommand {
         name: "abstraction-gate",
         usage: "",
         help: "Enforce registered building-block boundaries",
         kind: Kind::Gate,
         ci_args: &[],
-        run: abstraction_gate::run,
+        home: Home::Registry,
     },
     Subcommand {
         name: "backend-matrix",
@@ -76,7 +112,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Probe linked backend release policy",
         kind: Kind::Evidence,
         ci_args: &[],
-        run: backend_matrix::run,
+        home: Home::Evidence,
     },
     Subcommand {
         name: "bench-crossback",
@@ -86,7 +122,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
             "prints a cross-backend performance table for a human; measured release evidence is owned by release-benchmarks",
         ),
         ci_args: &[],
-        run: bench_crossback::run,
+        home: Home::Evidence,
     },
     Subcommand {
         name: "bench-release",
@@ -94,7 +130,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Run the cross-backend release benchmark coordinator",
         kind: Kind::Evidence,
         ci_args: &[],
-        run: bench_release::run,
+        home: Home::Evidence,
     },
     Subcommand {
         name: "catalog",
@@ -102,7 +138,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Emit one markdown table per subsystem under docs/catalog; --check gates drift",
         kind: Kind::Gate,
         ci_args: &["--check"],
-        run: catalog::run,
+        home: Home::Registry,
     },
     Subcommand {
         name: "check-cat-a",
@@ -110,7 +146,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Run every Cat-A pre-merge gate",
         kind: Kind::Composite,
         ci_args: &[],
-        run: check_cat_a::run,
+        home: Home::Local(check_cat_a::run),
     },
     Subcommand {
         name: "check-tier-deps",
@@ -118,7 +154,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Reject upward tier path dependencies",
         kind: Kind::Gate,
         ci_args: &[],
-        run: check_tier_deps::run,
+        home: Home::Local(check_tier_deps::run),
     },
     Subcommand {
         name: "compile",
@@ -126,7 +162,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Emit authenticated payloads through linked target compiler facets",
         kind: Kind::Tool("compiles a caller-supplied wire program to a caller-chosen target"),
         ci_args: &[],
-        run: compile::run,
+        home: Home::Registry,
     },
     Subcommand {
         name: "conformance-matrix",
@@ -134,7 +170,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Enumerate or check release op/backend conformance coverage",
         kind: Kind::Gate,
         ci_args: &["--check"],
-        run: conformance_matrix::run,
+        home: Home::Registry,
     },
     Subcommand {
         name: "dep-drift",
@@ -142,7 +178,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Fail if a manifest pins a workspace-managed dependency to a different version",
         kind: Kind::Gate,
         ci_args: &[],
-        run: dep_drift::run,
+        home: Home::Local(dep_drift::run),
     },
     Subcommand {
         name: "docs-check",
@@ -150,7 +186,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Validate manifest-backed documentation lifecycle and generated navigation",
         kind: Kind::Gate,
         ci_args: &[],
-        run: docs_check::run,
+        home: Home::Local(docs_check::run),
     },
     Subcommand {
         name: "dup-scan",
@@ -158,7 +194,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Measure cross-file duplicate source blocks against the pinned per-crate baseline",
         kind: Kind::Gate,
         ci_args: &[],
-        run: dup_scan::run,
+        home: Home::Local(dup_scan::run),
     },
     Subcommand {
         name: "feature-matrix",
@@ -166,7 +202,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Generate crate feature evidence matrix",
         kind: Kind::Evidence,
         ci_args: &[],
-        run: feature_matrix::run,
+        home: Home::Local(feature_matrix::run),
     },
     Subcommand {
         name: "gate1",
@@ -174,7 +210,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Enforce Gate 1 complexity budget",
         kind: Kind::Gate,
         ci_args: &[],
-        run: gate1::run,
+        home: Home::Registry,
     },
     Subcommand {
         name: "gates",
@@ -182,7 +218,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Run every registered gate and hold it to the pinned baseline",
         kind: Kind::Runner,
         ci_args: &[],
-        run: gates::run,
+        home: Home::Local(gates::run),
     },
     Subcommand {
         name: "heuristic-audit",
@@ -190,7 +226,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Surface hand-rolled heuristics that should be self-consumer calls",
         kind: Kind::Gate,
         ci_args: &[],
-        run: heuristic_audit::run,
+        home: Home::Registry,
     },
     Subcommand {
         name: "hot-path-scan",
@@ -198,7 +234,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Scan files in HOT_PATHS.toml for clone/alloc/lock patterns",
         kind: Kind::Gate,
         ci_args: &[],
-        run: hot_path_scan::run,
+        home: Home::Local(hot_path_scan::run),
     },
     Subcommand {
         name: "hygiene-matrix",
@@ -206,7 +242,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Scan source hygiene release blockers",
         kind: Kind::Gate,
         ci_args: &[],
-        run: hygiene_matrix::run,
+        home: Home::Local(hygiene_matrix::run),
     },
     Subcommand {
         name: "launch-state",
@@ -214,7 +250,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Generate public launch completion state evidence",
         kind: Kind::Evidence,
         ci_args: &[],
-        run: launch_state::run,
+        home: Home::Local(launch_state::run),
     },
     Subcommand {
         name: "lego-audit",
@@ -222,7 +258,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Deeper LEGO-block enforcement and composition baseline management",
         kind: Kind::Gate,
         ci_args: &[],
-        run: lego_audit::run,
+        home: Home::Registry,
     },
     Subcommand {
         name: "lego-quick",
@@ -230,7 +266,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Fast pre-commit boundary checks",
         kind: Kind::Gate,
         ci_args: &["--all"],
-        run: lego_quick::run,
+        home: Home::Registry,
     },
     Subcommand {
         name: "list-ops",
@@ -238,7 +274,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Render or check the schema-derived operation inventory",
         kind: Kind::Gate,
         ci_args: &["--check"],
-        run: list_ops::run,
+        home: Home::Registry,
     },
     Subcommand {
         name: "metadata-matrix",
@@ -246,7 +282,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Generate crate metadata evidence",
         kind: Kind::Evidence,
         ci_args: &[],
-        run: metadata_matrix::run,
+        home: Home::Local(metadata_matrix::run),
     },
     Subcommand {
         name: "op-matrix",
@@ -254,7 +290,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Generate operation/backend coverage evidence",
         kind: Kind::Evidence,
         ci_args: &[],
-        run: op_matrix::run,
+        home: Home::Registry,
     },
     Subcommand {
         name: "operation-schema",
@@ -262,7 +298,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Generate or verify the canonical live operation contract schema",
         kind: Kind::Gate,
         ci_args: &["--check"],
-        run: operation_schema::run,
+        home: Home::Registry,
     },
     Subcommand {
         name: "optimization-corpus",
@@ -270,7 +306,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Generate release optimization corpus manifest",
         kind: Kind::Evidence,
         ci_args: &[],
-        run: optimization_corpus::run,
+        home: Home::Registry,
     },
     Subcommand {
         name: "optimization-docs",
@@ -278,7 +314,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Generate or check the source-owned optimizer pass reference",
         kind: Kind::Gate,
         ci_args: &["--check"],
-        run: optimization_docs::run,
+        home: Home::Registry,
     },
     Subcommand {
         name: "optimization-matrix",
@@ -286,7 +322,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Generate release optimization integration evidence",
         kind: Kind::Evidence,
         ci_args: &[],
-        run: optimization_matrix::run,
+        home: Home::Registry,
     },
     Subcommand {
         name: "package-readiness",
@@ -294,7 +330,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Generate pre-publish package order evidence",
         kind: Kind::Evidence,
         ci_args: &[],
-        run: package_readiness::run,
+        home: Home::Local(package_readiness::run),
     },
     Subcommand {
         name: "platform-boundary",
@@ -302,7 +338,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Fail on consumer names in platform crate docs and comments",
         kind: Kind::Gate,
         ci_args: &[],
-        run: platform_boundary::run,
+        home: Home::Local(platform_boundary::run),
     },
     Subcommand {
         name: "primitive-admission-gate",
@@ -310,7 +346,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Enforce canonical LEGO primitive adoption and exceptions",
         kind: Kind::Gate,
         ci_args: &[],
-        run: |_args| lego_audit::run_primitive_admission_gate(),
+        home: Home::Registry,
     },
     Subcommand {
         name: "print-composition",
@@ -318,7 +354,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Walk an op's Region tree and print its decomposition chain",
         kind: Kind::Tool("walks one operation id supplied by the caller"),
         ci_args: &[],
-        run: print_composition::run,
+        home: Home::Registry,
     },
     Subcommand {
         name: "release-benchmarks",
@@ -326,7 +362,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Generate long-running release benchmark artifacts",
         kind: Kind::Evidence,
         ci_args: &[],
-        run: release_benchmarks::run,
+        home: Home::Evidence,
     },
     Subcommand {
         name: "release-conformance",
@@ -334,7 +370,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Generate real backend conformance artifacts",
         kind: Kind::Evidence,
         ci_args: &[],
-        run: release_conformance::run,
+        home: Home::Local(release_conformance::run),
     },
     Subcommand {
         name: "release-evidence",
@@ -342,7 +378,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Generate cheap structural release evidence artifacts",
         kind: Kind::Evidence,
         ci_args: &[],
-        run: release_evidence::run,
+        home: Home::Evidence,
     },
     Subcommand {
         name: "release-gate",
@@ -350,7 +386,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Pre-publish sanity checks",
         kind: Kind::Composite,
         ci_args: &[],
-        run: release_gate::run,
+        home: Home::Local(release_gate::run),
     },
     Subcommand {
         name: "release-workload-matrix",
@@ -358,7 +394,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Generate cheap release workload family evidence",
         kind: Kind::Evidence,
         ci_args: &[],
-        run: release_workload_matrix::run,
+        home: Home::Local(release_workload_matrix::run),
     },
     Subcommand {
         name: "shrink",
@@ -368,7 +404,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
             "delta-debugs a caller-supplied crashing wire file against a caller-supplied oracle",
         ),
         ci_args: &[],
-        run: shrink::run,
+        home: Home::Local(shrink::run),
     },
     Subcommand {
         name: "trace-f32",
@@ -376,7 +412,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Run an op's test inputs through the reference and dump the expected output",
         kind: Kind::Tool("dumps reference output for one operation id supplied by the caller"),
         ci_args: &[],
-        run: trace_f32::run_cmd,
+        home: Home::Registry,
     },
     Subcommand {
         name: "verify-rewrite-proofs",
@@ -384,7 +420,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Verify optimizer rewrite proof fixtures",
         kind: Kind::Gate,
         ci_args: &[],
-        run: verify_rewrite_proofs::run,
+        home: Home::Registry,
     },
     Subcommand {
         name: "version-matrix",
@@ -392,7 +428,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Generate manifest version matrix",
         kind: Kind::Evidence,
         ci_args: &[],
-        run: version_matrix::run,
+        home: Home::Local(version_matrix::run),
     },
     Subcommand {
         name: "vyre-release-gate",
@@ -400,7 +436,7 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Enforce final or prepublication evidence closure",
         kind: Kind::Gate,
         ci_args: &[],
-        run: vyre_release_gate::run,
+        home: Home::Evidence,
     },
     Subcommand {
         name: "whats-similar",
@@ -408,19 +444,19 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         help: "Duplicate query by IR shape",
         kind: Kind::Gate,
         ci_args: &["--all"],
-        run: whats_similar::run,
+        home: Home::Registry,
     },
 ];
 
 /// Look one subcommand up by name.
 #[must_use]
-pub(crate) fn find(name: &str) -> Option<&'static Subcommand> {
+pub fn find(name: &str) -> Option<&'static Subcommand> {
     SUBCOMMANDS.iter().find(|entry| entry.name == name)
 }
 
 /// Every subcommand the sweep must execute.
 #[must_use]
-pub(crate) fn gates() -> Vec<&'static Subcommand> {
+pub fn gates() -> Vec<&'static Subcommand> {
     SUBCOMMANDS
         .iter()
         .filter(|entry| entry.kind == Kind::Gate)
@@ -429,7 +465,7 @@ pub(crate) fn gates() -> Vec<&'static Subcommand> {
 
 /// Render the help text from the table.
 #[must_use]
-pub(crate) fn help_text() -> String {
+pub fn help_text() -> String {
     let width = SUBCOMMANDS
         .iter()
         .map(|entry| entry.name.len() + entry.usage.len() + 1)
@@ -515,5 +551,42 @@ mod tests {
                 entry.name
             );
         }
+    }
+
+    /// WHY: a delegated row names the crate that has to be built to run it. A
+    /// name that is not a workspace member would only fail at the moment an
+    /// operator invoked the gate, which is the worst place to learn it.
+    #[test]
+    fn every_delegated_subcommand_names_a_workspace_member() {
+        let members = std::fs::read_to_string(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../Cargo.toml"),
+        )
+        .expect("Fix: the workspace manifest must be readable from xtask");
+        for entry in SUBCOMMANDS {
+            let Some(package) = entry.home.package() else {
+                continue;
+            };
+            assert!(
+                members.contains(&format!("\"{package}\"")),
+                "`{}` delegates to `{package}`, which is not a workspace member",
+                entry.name
+            );
+        }
+    }
+
+    /// WHY: `owned_by` is what each delegated crate checks its own dispatch
+    /// against, so the partition has to be total. A row that belongs to no
+    /// package and is not local would be dispatched by nobody.
+    #[test]
+    fn every_subcommand_belongs_to_exactly_one_home() {
+        let delegated: usize = ["xtask-registry", "xtask-evidence"]
+            .iter()
+            .map(|package| owned_by(package).len())
+            .sum();
+        let local = SUBCOMMANDS
+            .iter()
+            .filter(|entry| entry.home.package().is_none())
+            .count();
+        assert_eq!(local + delegated, SUBCOMMANDS.len());
     }
 }

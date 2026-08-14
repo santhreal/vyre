@@ -1,3 +1,8 @@
+//! The ledger of research sources every optimizer pass must cite.
+//!
+//! The ledger is embedded at build time and read back by the gates that check a
+//! pass names a source that exists.
+
 use std::collections::BTreeSet;
 
 use serde::Deserialize;
@@ -39,7 +44,8 @@ pub(crate) struct ResearchSourceEntry {
     pub(crate) digest_material: Option<String>,
 }
 
-pub(crate) fn embedded_research_source_keys() -> Result<BTreeSet<String>, String> {
+/// Every research key the embedded ledger defines.
+pub fn embedded_research_source_keys() -> Result<BTreeSet<String>, String> {
     let ledger = parse_research_source_ledger_text(RESEARCH_SOURCE_LEDGER_TOML)?;
     Ok(research_source_keys(&ledger))
 }

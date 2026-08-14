@@ -2,15 +2,20 @@
 
 use syn::spanned::Spanned;
 
+/// One `use` statement, flattened to its segments.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct UsePath {
-    pub(crate) segments: Vec<String>,
-    pub(crate) line: usize,
-    pub(crate) is_public: bool,
+pub struct UsePath {
+    /// Path segments, `use a::b::c` as `["a","b","c"]`.
+    pub segments: Vec<String>,
+    /// 1-based line the statement starts on.
+    pub line: usize,
+    /// Whether the statement is a `pub use` re-export.
+    pub is_public: bool,
 }
 
 impl UsePath {
-    pub(crate) fn imports_dialect(&self, other_name: &str) -> bool {
+    /// Whether this statement imports from the named sibling dialect.
+    pub fn imports_dialect(&self, other_name: &str) -> bool {
         matches!(
             self.segments.as_slice(),
             [first, second, ..]
@@ -19,12 +24,14 @@ impl UsePath {
     }
 }
 
-pub(crate) fn collect_use_paths(file: &syn::File) -> Vec<UsePath> {
+/// Every `use` statement in a parsed source file, in source order.
+pub fn collect_use_paths(file: &syn::File) -> Vec<UsePath> {
     let mut collector = UsePathCollector::default();
     syn::visit::visit_file(&mut collector, file);
     collector.paths
 }
-pub(crate) fn is_test_source_path(path: &std::path::Path) -> bool {
+/// Whether a path is test code rather than shipped source.
+pub fn is_test_source_path(path: &std::path::Path) -> bool {
     path.components()
         .any(|component| component.as_os_str() == "tests")
         || path

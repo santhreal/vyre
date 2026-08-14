@@ -3,6 +3,7 @@
 
 use vyre_foundation::pass_substrate::dataflow_fixpoint as foundation_dataflow;
 
+#[cfg(any(test, feature = "cpu-parity"))]
 use super::Semiring;
 
 /// Multiply matrices over the selected semiring through the reference oracle.

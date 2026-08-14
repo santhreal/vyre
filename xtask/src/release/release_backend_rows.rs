@@ -1,6 +1,7 @@
 //! Shared OP_MATRIX release-backend row classification.
 
-pub(crate) fn count_supported_release_backend_rows(rows: &[String]) -> usize {
+/// Rows claiming `supported` for an operation.
+pub fn count_supported_release_backend_rows(rows: &[String]) -> usize {
     rows.iter()
         .filter(|row| {
             parse_release_backend_row(row)

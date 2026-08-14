@@ -1,4 +1,11 @@
-pub(crate) fn is_research_key(value: &str) -> bool {
+//! Recognize an optimization research key and find them in prose.
+//!
+//! A research key is the uppercase identifier that ties an optimizer pass to the
+//! source it came from, and it is cited in documentation between backticks.
+
+/// Whether `value` has the shape of a research key: uppercase, digits and
+/// underscores, and not empty.
+pub fn is_research_key(value: &str) -> bool {
     !value.is_empty()
         && value
             .chars()

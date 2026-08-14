@@ -4655,9 +4655,7 @@ checksum = "3ae8337f8a065cfc972643663ea4279e04e7256de865aa66fe25cec5fb912d3f"
 name = "xtask"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "blake3",
- "inventory",
  "proc-macro2",
  "quote",
  "serde",
@@ -4666,23 +4664,50 @@ dependencies = [
  "syn 2.0.117",
  "tempfile",
  "toml",
- "vyre",
+ "walkdir",
+]
+
+[[package]]
+name = "xtask-evidence"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "toml",
  "vyre-bench",
+ "vyre-driver",
+ "vyre-driver-cuda",
+ "vyre-driver-wgpu",
+ "walkdir",
+ "xtask",
+]
+
+[[package]]
+name = "xtask-registry"
+version = "0.1.0"
+dependencies = [
+ "inventory",
+ "serde",
+ "serde_json",
+ "syn 2.0.117",
+ "tempfile",
+ "toml",
+ "vyre",
  "vyre-driver",
  "vyre-driver-cuda",
  "vyre-driver-reference",
  "vyre-driver-spirv",
  "vyre-driver-wgpu",
- "vyre-emit-metal",
  "vyre-foundation",
  "vyre-libs",
  "vyre-lints",
- "vyre-lower",
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
  "walkdir",
+ "xtask",
 ]
 
 [[package]]
