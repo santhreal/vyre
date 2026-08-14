@@ -493,8 +493,12 @@ pub const vyre_foundation::fp_parity::REFERENCE_TRANSCENDENTAL_ULP_BUDGET: u32
 pub const vyre_foundation::ir::DEFAULT_MAX_CALL_DEPTH: usize
 pub const vyre_foundation::ir::DEFAULT_MAX_NESTING_DEPTH: usize
 pub const vyre_foundation::ir::DEFAULT_MAX_NODE_COUNT: usize
+pub const vyre_foundation::ir::EXPR_VARIANT_NAMES: &[&str]
+pub const vyre_foundation::ir::NODE_VARIANT_NAMES: &[&str]
 pub const vyre_foundation::ir::NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION: &str
 pub const vyre_foundation::ir::Program::ROOT_REGION_GENERATOR: &'static str
+pub const vyre_foundation::ir::model::generated::EXPR_VARIANT_NAMES: &[&str]
+pub const vyre_foundation::ir::model::generated::NODE_VARIANT_NAMES: &[&str]
 pub const vyre_foundation::ir::model::program::NODE_KIND_ALL_GATHER: u32
 pub const vyre_foundation::ir::model::program::NODE_KIND_ALL_REDUCE: u32
 pub const vyre_foundation::ir::model::program::NODE_KIND_ASSIGN: u32
@@ -1166,6 +1170,7 @@ pub fn vyre_foundation::ir::eval::fold_cast_literal(target: &vyre_spec::data_typ
 pub fn vyre_foundation::ir::eval::fold_fma_literal(a: &vyre_foundation::ir::Expr, b: &vyre_foundation::ir::Expr, c: &vyre_foundation::ir::Expr) -> core::option::Option<vyre_foundation::ir::Expr>
 pub fn vyre_foundation::ir::eval::fold_literal_tree(expr: &vyre_foundation::ir::Expr) -> core::option::Option<alloc::borrow::Cow<'_, vyre_foundation::ir::Expr>>
 pub fn vyre_foundation::ir::eval::fold_unary_literal(op: &vyre_spec::un_op::UnOp, operand: &vyre_foundation::ir::Expr) -> core::option::Option<vyre_foundation::ir::Expr>
+pub fn vyre_foundation::ir::expr_variant_name(item: &vyre_foundation::ir::Expr) -> &'static str
 pub fn vyre_foundation::ir::inline_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::error::IrResult<vyre_foundation::ir::Program>
 pub fn vyre_foundation::ir::inline_calls_with_mode(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver, unresolved: vyre_foundation::transform::inline::UnresolvedCalls) -> vyre_foundation::error::IrResult<vyre_foundation::ir::Program>
 pub fn vyre_foundation::ir::inline_calls_with_resolver(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver) -> vyre_foundation::error::IrResult<vyre_foundation::ir::Program>
@@ -1179,7 +1184,9 @@ pub fn vyre_foundation::ir::model::expr::ExprNode::stable_fingerprint(&self) -> 
 pub fn vyre_foundation::ir::model::expr::ExprNode::validate_extension(&self) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_foundation::ir::model::expr::ExprNode::wire_payload(&self) -> alloc::vec::Vec<u8>
 pub fn vyre_foundation::ir::model::generated::expr_op_id(item: &vyre_foundation::ir::Expr) -> alloc::string::String
+pub fn vyre_foundation::ir::model::generated::expr_variant_name(item: &vyre_foundation::ir::Expr) -> &'static str
 pub fn vyre_foundation::ir::model::generated::node_op_id(item: &vyre_foundation::ir::Node) -> alloc::string::String
+pub fn vyre_foundation::ir::model::generated::node_variant_name(item: &vyre_foundation::ir::Node) -> &'static str
 pub fn vyre_foundation::ir::model::node::NodeExtension::as_any(&self) -> &dyn core::any::Any
 pub fn vyre_foundation::ir::model::node::NodeExtension::debug_identity(&self) -> &str
 pub fn vyre_foundation::ir::model::node::NodeExtension::extension_kind(&self) -> &'static str
@@ -1196,6 +1203,7 @@ pub fn vyre_foundation::ir::model::program::Scope<K, V>::insert(&mut self, key: 
 pub fn vyre_foundation::ir::model::program::Scope<K, V>::is_empty(&self) -> bool
 pub fn vyre_foundation::ir::model::program::Scope<K, V>::len(&self) -> usize
 pub fn vyre_foundation::ir::model::program::Scope<K, V>::new() -> Self
+pub fn vyre_foundation::ir::node_variant_name(item: &vyre_foundation::ir::Node) -> &'static str
 pub fn vyre_foundation::ir::validate(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
 pub fn vyre_foundation::is_associative(op_id: &str) -> bool
 pub fn vyre_foundation::is_commutative(op_id: &str) -> bool
@@ -2387,6 +2395,7 @@ pub fn vyre_foundation::transform::visit::NodeVisitor::visit_node(&mut self, nod
 pub fn vyre_foundation::transform::visit::any_descendant(node: &vyre_foundation::ir::Node, pred: &mut impl core::ops::function::FnMut(&vyre_foundation::ir::Node) -> bool) -> bool
 pub fn vyre_foundation::transform::visit::child_bodies(node: &vyre_foundation::ir::Node) -> [&[vyre_foundation::ir::Node]; 2]
 pub fn vyre_foundation::transform::visit::collect_call_op_ids(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<alloc::sync::Arc<str>>
+pub fn vyre_foundation::transform::visit::node_shape(node: &vyre_foundation::ir::Node) -> vyre_foundation::transform::visit::NodeShape
 pub fn vyre_foundation::transform::visit::referenced_buffers(program: &vyre_foundation::ir::Program) -> std::collections::hash::set::HashSet<vyre_foundation::ir::Ident>
 pub fn vyre_foundation::transform::visit::walk_exprs(program: &vyre_foundation::ir::Program, f: impl core::ops::function::FnMut(&vyre_foundation::ir::Expr))
 pub fn vyre_foundation::transform::visit::walk_nodes(program: &vyre_foundation::ir::Program, f: impl core::ops::function::FnMut(&vyre_foundation::ir::Node))
@@ -3093,6 +3102,7 @@ pub struct vyre_foundation::transform::compiler::typed_arena::TypedArena
 pub struct vyre_foundation::transform::compiler::typed_arena::TypedArenaOp
 pub struct vyre_foundation::transform::compiler::visitor_walk::VisitorWalkOp
 pub struct vyre_foundation::transform::inline::InlineCtx
+pub struct vyre_foundation::transform::visit::NodeShape
 pub struct vyre_foundation::validate::BackendCapabilities
 pub struct vyre_foundation::validate::LimitState
 pub struct vyre_foundation::validate::ValidationCode(_)
@@ -5188,6 +5198,9 @@ pub vyre_foundation::transform::parallelism::DispatchGroup::Parallel
 pub vyre_foundation::transform::parallelism::DispatchGroup::Parallel::node_indices: alloc::vec::Vec<usize>
 pub vyre_foundation::transform::parallelism::DispatchGroup::Serial
 pub vyre_foundation::transform::parallelism::DispatchGroup::Serial::node_index: usize
+pub vyre_foundation::transform::visit::NodeShape::carries_operands: bool
+pub vyre_foundation::transform::visit::NodeShape::nests_nodes: bool
+pub vyre_foundation::transform::visit::NodeShape::opaque_payload: bool
 pub vyre_foundation::validate::BackendCapabilities::has_dual_issue_fp32_int32: bool
 pub vyre_foundation::validate::BackendCapabilities::has_mul_high: bool
 pub vyre_foundation::validate::BackendCapabilities::has_native_f16: bool

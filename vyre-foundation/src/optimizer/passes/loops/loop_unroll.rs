@@ -197,19 +197,32 @@ fn body_contains_assign(nodes: &[Node]) -> bool {
     })
 }
 
-/// True when any statement under `nodes` declares a local binding.
+/// True when unrolling `nodes` would produce a duplicate sibling binding.
 ///
-/// Child enumeration comes from
-/// [`child_bodies`](crate::transform::visit::child_bodies), the exhaustive
-/// owner. This used to name `If` and `Block` only, so a `Let` inside a nested
-/// `Loop` or `Region` body read as absent and unrolling duplicated the
-/// declaration into every copy.
+/// The hazard is V032, a duplicate `Let` among siblings in one scope, so what
+/// matters is whether a copy of a binding lands beside the original rather than
+/// whether a binding exists anywhere below. `If` arms, `Block` bodies and
+/// `Loop` bodies each open a scope, so a `Let` inside one is a sibling of the
+/// other copies' equivalents, not of the original; descending into `If` and
+/// `Block` is therefore stricter than V032 requires and stays only because
+/// dropping it would let loops unroll that do not unroll today. `Node::Loop` is
+/// excluded and pinned by `does_not_substitute_shadowed_inner_loop_body`.
+///
+/// `Node::Region` is included because a region body is walked without a fresh
+/// scope frame (`validate::nodes`), so on the reading that its bindings are
+/// siblings of the surrounding sequence, isolation is required. No test
+/// observes a failure without it, so this is conservatism, not a fix.
 fn body_declares_locals(nodes: &[Node]) -> bool {
-    nodes.iter().any(|node| {
-        matches!(node, Node::Let { .. })
-            || crate::transform::visit::child_bodies(node)
-                .into_iter()
-                .any(body_declares_locals)
+    nodes.iter().any(|node| match node {
+        Node::Let { .. } => true,
+        Node::If {
+            then, otherwise, ..
+        } => body_declares_locals(then) || body_declares_locals(otherwise),
+        Node::Block(body) => body_declares_locals(body),
+        Node::Region { body, .. } => body_declares_locals(body),
+        // Any other variant either opens its own scope or holds no statements,
+        // so a copy of it cannot introduce a sibling binding at this level.
+        _ => false,
     })
 }
 
