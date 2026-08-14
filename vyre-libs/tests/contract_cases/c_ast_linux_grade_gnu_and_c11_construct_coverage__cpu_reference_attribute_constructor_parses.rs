@@ -10,17 +10,17 @@ fn cpu_reference_attribute_constructor_parses() {
         "constructor attribute fixture must produce a non-empty typed VAST"
     );
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_GNU_ATTRIBUTE),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_GNU_ATTRIBUTE),
         vec![0],
         "__attribute__ must classify as GNU_ATTRIBUTE"
     );
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_ATTRIBUTE_CONSTRUCTOR),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_ATTRIBUTE_CONSTRUCTOR),
         vec![3],
         "constructor must classify as a specific GNU attribute kind"
     );
     assert!(
-        row_indices(&typed, C_AST_KIND_FUNCTION_DEFINITION).contains(&7),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_FUNCTION_DEFINITION).contains(&7),
         "init declarator with a body must classify as FUNCTION_DEFINITION"
     );
 }
@@ -35,12 +35,12 @@ fn cpu_reference_attribute_destructor_parses() {
         "destructor attribute fixture must produce a non-empty typed VAST"
     );
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_GNU_ATTRIBUTE),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_GNU_ATTRIBUTE),
         vec![0],
         "__attribute__ must classify as GNU_ATTRIBUTE"
     );
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_ATTRIBUTE_DESTRUCTOR),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_ATTRIBUTE_DESTRUCTOR),
         vec![3],
         "destructor must classify as a specific GNU attribute kind"
     );
@@ -56,12 +56,12 @@ fn cpu_reference_attribute_mode_parses() {
         "mode attribute fixture must produce a non-empty typed VAST"
     );
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_GNU_ATTRIBUTE),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_GNU_ATTRIBUTE),
         vec![0],
         "__attribute__ must classify as GNU_ATTRIBUTE"
     );
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_ATTRIBUTE_MODE),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_ATTRIBUTE_MODE),
         vec![3],
         "mode must classify as a specific GNU attribute kind"
     );
@@ -77,7 +77,7 @@ fn cpu_reference_attribute_packed_and_aligned() {
         "packed/aligned attribute fixture must produce a non-empty typed VAST"
     );
 
-    let attrs = row_indices(&typed, C_AST_KIND_GNU_ATTRIBUTE);
+    let attrs = row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_GNU_ATTRIBUTE);
     assert!(
         attrs.contains(&1),
         "packed __attribute__ must classify as GNU_ATTRIBUTE"
@@ -88,17 +88,17 @@ fn cpu_reference_attribute_packed_and_aligned() {
     );
 
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_ATTRIBUTE_PACKED),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_ATTRIBUTE_PACKED),
         vec![4],
         "packed must classify as a specific GNU attribute kind"
     );
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_ATTRIBUTE_ALIGNED),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_ATTRIBUTE_ALIGNED),
         vec![17],
         "aligned must classify as a specific GNU attribute kind"
     );
     assert!(
-        row_indices(&typed, node_kind::VARIABLE).contains(&24),
+        row_indices(&typed, VAST_STRIDE_U32, node_kind::VARIABLE).contains(&24),
         "variable l after aligned attribute must classify as VARIABLE"
     );
 }
@@ -113,7 +113,7 @@ fn cpu_reference_computed_goto_parses() {
         "computed goto fixture must produce a non-empty typed VAST"
     );
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_GOTO_STMT),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_GOTO_STMT),
         vec![8],
         "goto must classify as GOTO_STMT"
     );
@@ -131,14 +131,14 @@ fn cpu_reference_label_and_computed_goto_interaction() {
 
     // &&lbl must classify as a label-address expression
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_GNU_LABEL_ADDRESS_EXPR),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_GNU_LABEL_ADDRESS_EXPR),
         vec![10],
         "&&lbl must classify as GNU_LABEL_ADDRESS_EXPR"
     );
 
     // goto *t must keep goto as a jump statement
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_GOTO_STMT),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_GOTO_STMT),
         vec![13],
         "goto must classify as GOTO_STMT"
     );
@@ -168,7 +168,7 @@ fn cpu_reference_stmt_expr_initializer() {
     );
 
     // Both the outer initializer '=' and the inner assignment classify.
-    let assigns = row_indices(&typed, C_AST_KIND_ASSIGN_EXPR);
+    let assigns = row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_ASSIGN_EXPR);
     assert!(
         assigns.contains(&7),
         "assignment inside statement expression must classify as ASSIGN_EXPR"
@@ -230,7 +230,7 @@ fn cpu_reference_alignas_var_parses() {
         "_Alignas must promote to TOK_ALIGNAS"
     );
     assert!(
-        row_indices(&typed, node_kind::VARIABLE).contains(&5),
+        row_indices(&typed, VAST_STRIDE_U32, node_kind::VARIABLE).contains(&5),
         "buf declarator after _Alignas must classify as VARIABLE"
     );
 }

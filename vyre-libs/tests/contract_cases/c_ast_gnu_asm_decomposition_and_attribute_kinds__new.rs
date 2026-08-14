@@ -15,11 +15,9 @@
 #[path = "c_ast_gnu_asm_decomposition_and_attribute_kinds__cpu_reference_classifies_attribute_naked.rs"]
 mod c_ast_gnu_asm_decomposition_and_attribute_kinds_cpu_reference_classifies_attribute_naked;
 
-use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_ASM_CLOBBERS_LIST,
+    C_AST_KIND_ASM_CLOBBERS_LIST,
     C_AST_KIND_ASM_GOTO_LABELS, C_AST_KIND_ASM_INPUT_OPERAND, C_AST_KIND_ASM_OUTPUT_OPERAND,
     C_AST_KIND_ASM_TEMPLATE, C_AST_KIND_ATTRIBUTE_ALIAS, C_AST_KIND_ATTRIBUTE_ALIGNED,
     C_AST_KIND_ATTRIBUTE_NAKED, C_AST_KIND_ATTRIBUTE_SECTION, C_AST_KIND_ATTRIBUTE_UNUSED,
@@ -28,77 +26,8 @@ use vyre_libs::parsing::c::parse::vast::{
 };
 use vyre_primitives::predicate::node_kind;
 
-const VAST_STRIDE_U32: usize = 10;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-#[derive(Clone, Copy)]
-struct FixtureToken {
-    lexeme: &'static str,
-    raw_kind: u32,
-}
-
-impl FixtureToken {
-    const fn new(lexeme: &'static str, raw_kind: u32) -> Self {
-        Self { lexeme, raw_kind }
-    }
-}
-
-struct Fixture {
-    source: String,
-    tok_types: Vec<u32>,
-    tok_starts: Vec<u32>,
-    tok_lens: Vec<u32>,
-}
-
-fn build_fixture(tokens: &[FixtureToken]) -> Fixture {
-    let mut source = String::new();
-    let mut tok_starts = Vec::with_capacity(tokens.len());
-    let mut tok_lens = Vec::with_capacity(tokens.len());
-    let mut raw_kinds = Vec::with_capacity(tokens.len());
-
-    for token in tokens {
-        if !source.is_empty() && !source.ends_with('\n') {
-            source.push(' ');
-        }
-        tok_starts.push(source.len() as u32);
-        source.push_str(token.lexeme);
-        tok_lens.push(token.lexeme.len() as u32);
-        raw_kinds.push(token.raw_kind);
-    }
-
-    let promoted = reference_c_keyword_types(&raw_kinds, &tok_starts, &tok_lens, source.as_bytes());
-
-    Fixture {
-        source,
-        tok_types: promoted,
-        tok_starts,
-        tok_lens,
-    }
-}
-
-fn word_at(buf: &[u8], word: usize) -> u32 {
-    let off = word * 4;
-    u32::from_le_bytes(buf[off..off + 4].try_into().unwrap())
-}
-
-fn row_indices(rows: &[u8], kind: u32) -> Vec<usize> {
-    rows.chunks_exact(VAST_STRIDE_U32 * 4)
-        .enumerate()
-        .filter_map(|(idx, row)| {
-            let row_kind = u32::from_le_bytes(row[0..4].try_into().unwrap());
-            (row_kind == kind).then_some(idx)
-        })
-        .collect()
-}
-
-fn classify(fix: &Fixture) -> Vec<u8> {
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    reference_c11_classify_vast_node_kinds(&annotated)
-}
+use crate::c_frontend::rows::{row_indices_by_stride as row_indices, word_at, VAST_STRIDE_U32};
+use crate::c_frontend::token_fixture::{build_fixture, classify, Fixture, FixtureToken};
 
 // ---------------------------------------------------------------------------
 // Fixture builders  -  GNU attribute-specific kinds
@@ -350,12 +279,12 @@ fn cpu_reference_classifies_attribute_section() {
     let typed = classify(&fix);
 
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_ATTRIBUTE_SECTION),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_ATTRIBUTE_SECTION),
         vec![3],
         "section attribute name must classify as ATTRIBUTE_SECTION"
     );
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_GNU_ATTRIBUTE),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_GNU_ATTRIBUTE),
         vec![0],
         "__attribute__ keyword must classify as GNU_ATTRIBUTE"
     );
@@ -367,7 +296,7 @@ fn cpu_reference_classifies_attribute_weak() {
     let typed = classify(&fix);
 
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_ATTRIBUTE_WEAK),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_ATTRIBUTE_WEAK),
         vec![3],
         "weak attribute name must classify as ATTRIBUTE_WEAK"
     );
@@ -379,7 +308,7 @@ fn cpu_reference_classifies_attribute_alias() {
     let typed = classify(&fix);
 
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_ATTRIBUTE_ALIAS),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_ATTRIBUTE_ALIAS),
         vec![3],
         "alias attribute name must classify as ATTRIBUTE_ALIAS"
     );
@@ -391,7 +320,7 @@ fn cpu_reference_classifies_attribute_aligned() {
     let typed = classify(&fix);
 
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_ATTRIBUTE_ALIGNED),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_ATTRIBUTE_ALIGNED),
         vec![3],
         "aligned attribute name must classify as ATTRIBUTE_ALIGNED"
     );
@@ -403,7 +332,7 @@ fn cpu_reference_classifies_attribute_used() {
     let typed = classify(&fix);
 
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_ATTRIBUTE_USED),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_ATTRIBUTE_USED),
         vec![3],
         "used attribute name must classify as ATTRIBUTE_USED"
     );
@@ -415,7 +344,7 @@ fn cpu_reference_classifies_attribute_unused() {
     let typed = classify(&fix);
 
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_ATTRIBUTE_UNUSED),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_ATTRIBUTE_UNUSED),
         vec![3],
         "unused attribute name must classify as ATTRIBUTE_UNUSED"
     );

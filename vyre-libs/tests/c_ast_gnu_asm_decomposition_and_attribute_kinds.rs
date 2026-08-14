@@ -3,5 +3,8 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
+
 #[path = "contract_cases/c_ast_gnu_asm_decomposition_and_attribute_kinds__new.rs"]
 mod c_ast_gnu_asm_decomposition_and_attribute_kinds_new;

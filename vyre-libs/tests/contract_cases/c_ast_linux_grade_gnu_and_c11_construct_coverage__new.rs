@@ -16,11 +16,9 @@
 #[path = "c_ast_linux_grade_gnu_and_c11_construct_coverage__cpu_reference_attribute_constructor_parses.rs"]
 mod c_ast_linux_grade_gnu_and_c11_construct_coverage_cpu_reference_attribute_constructor_parses;
 
-use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_ASSIGN_EXPR, C_AST_KIND_ATTRIBUTE_ALIGNED,
+    C_AST_KIND_ASSIGN_EXPR, C_AST_KIND_ATTRIBUTE_ALIGNED,
     C_AST_KIND_ATTRIBUTE_CLEANUP, C_AST_KIND_ATTRIBUTE_CONSTRUCTOR,
     C_AST_KIND_ATTRIBUTE_DESTRUCTOR, C_AST_KIND_ATTRIBUTE_MODE, C_AST_KIND_ATTRIBUTE_PACKED,
     C_AST_KIND_FUNCTION_DEFINITION, C_AST_KIND_GNU_ATTRIBUTE, C_AST_KIND_GNU_LABEL_ADDRESS_EXPR,
@@ -28,77 +26,8 @@ use vyre_libs::parsing::c::parse::vast::{
 };
 use vyre_primitives::predicate::node_kind;
 
-const VAST_STRIDE_U32: usize = 10;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-#[derive(Clone, Copy)]
-struct FixtureToken {
-    lexeme: &'static str,
-    raw_kind: u32,
-}
-
-impl FixtureToken {
-    const fn new(lexeme: &'static str, raw_kind: u32) -> Self {
-        Self { lexeme, raw_kind }
-    }
-}
-
-struct Fixture {
-    source: String,
-    tok_types: Vec<u32>,
-    tok_starts: Vec<u32>,
-    tok_lens: Vec<u32>,
-}
-
-fn build_fixture(tokens: &[FixtureToken]) -> Fixture {
-    let mut source = String::new();
-    let mut tok_starts = Vec::with_capacity(tokens.len());
-    let mut tok_lens = Vec::with_capacity(tokens.len());
-    let mut raw_kinds = Vec::with_capacity(tokens.len());
-
-    for token in tokens {
-        if !source.is_empty() && !source.ends_with('\n') {
-            source.push(' ');
-        }
-        tok_starts.push(source.len() as u32);
-        source.push_str(token.lexeme);
-        tok_lens.push(token.lexeme.len() as u32);
-        raw_kinds.push(token.raw_kind);
-    }
-
-    let promoted = reference_c_keyword_types(&raw_kinds, &tok_starts, &tok_lens, source.as_bytes());
-
-    Fixture {
-        source,
-        tok_types: promoted,
-        tok_starts,
-        tok_lens,
-    }
-}
-
-fn word_at(buf: &[u8], word: usize) -> u32 {
-    let off = word * 4;
-    u32::from_le_bytes(buf[off..off + 4].try_into().unwrap())
-}
-
-fn row_indices(rows: &[u8], kind: u32) -> Vec<usize> {
-    rows.chunks_exact(VAST_STRIDE_U32 * 4)
-        .enumerate()
-        .filter_map(|(idx, row)| {
-            let row_kind = u32::from_le_bytes(row[0..4].try_into().unwrap());
-            (row_kind == kind).then_some(idx)
-        })
-        .collect()
-}
-
-fn classify(fix: &Fixture) -> Vec<u8> {
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    reference_c11_classify_vast_node_kinds(&annotated)
-}
+use crate::c_frontend::rows::{row_indices_by_stride as row_indices, word_at, VAST_STRIDE_U32};
+use crate::c_frontend::token_fixture::{build_fixture, classify, Fixture, FixtureToken};
 
 fn kind_at(rows: &[u8], idx: usize) -> u32 {
     word_at(rows, idx * VAST_STRIDE_U32)
@@ -406,7 +335,7 @@ fn cpu_reference_typeof_in_decl_position() {
     );
 
     // Both y and z should classify as variables (declarator identifiers)
-    let vars = row_indices(&typed, node_kind::VARIABLE);
+    let vars = row_indices(&typed, VAST_STRIDE_U32, node_kind::VARIABLE);
     assert!(vars.contains(&4), "y declarator must classify as VARIABLE");
     assert!(vars.contains(&10), "z declarator must classify as VARIABLE");
 }
@@ -421,12 +350,12 @@ fn cpu_reference_attribute_cleanup_parses() {
         "cleanup attribute fixture must produce a non-empty typed VAST"
     );
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_GNU_ATTRIBUTE),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_GNU_ATTRIBUTE),
         vec![0],
         "__attribute__ must classify as GNU_ATTRIBUTE"
     );
     assert_eq!(
-        row_indices(&typed, C_AST_KIND_ATTRIBUTE_CLEANUP),
+        row_indices(&typed, VAST_STRIDE_U32, C_AST_KIND_ATTRIBUTE_CLEANUP),
         vec![3],
         "cleanup must classify as a specific GNU attribute kind"
     );
