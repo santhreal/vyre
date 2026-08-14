@@ -519,3 +519,8 @@ text = "A CSR closure states its call shapes once. Iterating a one-step CSR trav
 id = "csr-graph-removed-public-shapes"
 category = "Removed"
 text = "Three `vyre-primitives` graph shapes are gone, all behind the `graph` feature. `CsrQueueStridedForwardParams` is deleted: the row-strided queue expansion takes the same inputs as the scalar one, so `csr_queue_strided_forward_traverse_with` now accepts `CsrQueueForwardTraverseParams`, whose fields carry the same names. `csr_forward_traverse_with_op_id` and `csr_backward_traverse_with_op_id` are deleted; the direction-parameterized frontier-step reference covers what they were for and nothing called them. Every other CSR closure and queue entry point keeps its exact name, arity and argument order even where it is now generated from a macro or published as a re-export, so a caller that used one of those needs no edit. The default-feature public-API snapshots for `vyre-primitives` and `vyre-libs` are unaffected, since `graph` is not a default feature."
+
+[[fragments]]
+id = "cuda-public-api-snapshot-follows-the-libs-migration"
+category = "Fixed"
+text = "The public-API snapshot for the CUDA driver names the crate its adapter signatures actually come from. Ten of its public items take or return `FrontierTypedPlan`, `DeviceResidentTokenFactGraph`, `MegakernelScaleSample`, and `MegakernelScheduleError`, which moved to `vyre-libs` when the pass engine narrowed to pass execution; the snapshot still spelled them under the pass engine, so the stability gate reported drift on a surface nobody had changed and would have gone on reporting it in front of every real change to that crate."

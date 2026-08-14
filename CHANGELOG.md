@@ -783,6 +783,14 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   existed, and the two layers introduced since had no profile at all, which
   left the generator failing for every crate rather than for the ones that were
   wrong.
+- The public-API snapshot for the CUDA driver names the crate its adapter
+  signatures actually come from. Ten of its public items take or return
+  `FrontierTypedPlan`, `DeviceResidentTokenFactGraph`, `MegakernelScaleSample`,
+  and `MegakernelScheduleError`, which moved to `vyre-libs` when the pass
+  engine narrowed to pass execution; the snapshot still spelled them under the
+  pass engine, so the stability gate reported drift on a surface nobody had
+  changed and would have gone on reporting it in front of every real change to
+  that crate.
 
 ## [0.7.1] - 2026-08-01
 
