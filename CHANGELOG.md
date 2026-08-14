@@ -151,6 +151,19 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   backend keeps the hostile-bytes and trailing-input obligations it had; the
   SPIR-V backend keeps zero-workgroup and trailing-input, and reports rather
   than fails when no Vulkan device is present.
+- The generated bitset and reduce sweeps are two parameterized matrices instead
+  of twenty-five near-identical per-operation files.
+  `sweep_bitset_oracle_matrix` carries one case list and one assertion body per
+  call shape and fails when a registered `vyre-primitives::bitset` operation is
+  neither swept nor exempted to a named suite; `sweep_reduce_oracle_matrix`
+  does the same for the reducers. Every operation now runs the union of the
+  populations the separate files used, and the in-place, exclusive-scan, and
+  `cpu_ref_into` paths are swept for the first time. The CRC and graph-motif
+  oracle matrices no longer restate the implementation they check: they compare
+  against published CRC-32/ISO-HDLC and FNV-1a check vectors, a table-free
+  bit-at-a-time walk, the concatenation law, and an edge-mask dictionary.
+  Program-shape queries and the CSR frontier-step driver each have one owner
+  rather than a copy per suite.
 
 ### Removed
 
@@ -332,6 +345,15 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   with default features and it failed on a missing registration rather than on
   a wrong tolerance. It now requires `math`, `math-linalg`, and the four `nn`
   domains that own those ops.
+- The registered witness programs for
+  `vyre-primitives::math::quantized::i4x8_matvec_f32_scaled` and
+  `i4x8_batched_matvec_f32_scaled` bound their output buffer to a slot named
+  `vector_scale` and sized it for one f32, so every lane above the first wrote
+  out of bounds on the declared fixture. The registry safety rules read that as
+  an out-of-bounds access on valid input, an out-of-bounds access under grid
+  over-fire, and a cross-lane write-write race, three failures for one wrong
+  buffer. Both now name the output `out` and declare only the three input
+  buffers, matching the other packed-INT4 registrations.
 
 ## [0.7.1] - 2026-08-01
 

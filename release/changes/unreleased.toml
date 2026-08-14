@@ -339,6 +339,8 @@ text = "The reference and SPIR-V backends carry a tracked hostile-input closure 
 id = "libs-operation-registry-features"
 category = "Fixed"
 text = "The `vyre-libs` operation-registry target declares the features its assertions need. It pins the numeric tolerance of thirteen registered compositions, eleven of which are only compiled under an `nn` or `math` feature, and it had no manifest entry, so `cargo test -p vyre-libs` built it with default features and it failed on a missing registration rather than on a wrong tolerance. It now requires `math`, `math-linalg`, and the four `nn` domains that own those ops."
+
+[[fragments]]
 id = "quantized-matvec-registered-output"
 category = "Fixed"
 text = "The registered witness programs for `vyre-primitives::math::quantized::i4x8_matvec_f32_scaled` and `i4x8_batched_matvec_f32_scaled` bound their output buffer to a slot named `vector_scale` and sized it for one f32, so every lane above the first wrote out of bounds on the declared fixture. The registry safety rules read that as an out-of-bounds access on valid input, an out-of-bounds access under grid over-fire, and a cross-lane write-write race, three failures for one wrong buffer. Both now name the output `out` and declare only the three input buffers, matching the other packed-INT4 registrations."
