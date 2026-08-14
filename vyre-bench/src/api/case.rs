@@ -749,7 +749,8 @@ pub trait BenchCase: Send + Sync {
     }
 }
 
-fn static_program_bytes_touched(program: &vyre::ir::Program) -> (u64, u64) {
+/// Bytes a case reads and writes per sample, from the program's buffer sizes.
+pub(crate) fn static_program_bytes_touched(program: &vyre::ir::Program) -> (u64, u64) {
     let mut read_bytes = 0_u64;
     let mut write_bytes = 0_u64;
     for buffer in program.buffers() {
