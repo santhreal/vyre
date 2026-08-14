@@ -6,4 +6,4 @@ This page is generated from `docs/generated/OP_SCHEMA.json`. The JSON schema is 
 
 | operation | tier | category | signature | features | oracle | backend support | laws | composition |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `vyre-primitives::label::resolve_family` | `primitive` | `label` | 0:tags:ReadOnly:U32<br>1:nodeset:ReadWrite:U32 | `label`<br>`inventory-registry` | reference=true inputs=true expected=true tolerance=0 ULP | cuda:supported<br>reference:supported<br>wgpu:supported | none declared | vyre-primitives::label::resolve_family |
+| `vyre-primitives::label::resolve_family` | `intrinsic` | `label` | 0:tags:ReadOnly:U32<br>1:nodeset:ReadWrite:U32 | `label`<br>`inventory-registry` | reference=true inputs=true expected=true tolerance=0 ULP | cuda:supported<br>reference:supported<br>wgpu:supported | none declared | vyre-primitives::label::resolve_family |

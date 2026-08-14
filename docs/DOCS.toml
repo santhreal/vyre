@@ -413,19 +413,6 @@ generator = "../xtask-registry/src/docs/catalog.rs"
 nav = true
 
 [[page]]
-path = "catalog/core.md"
-title = "`core` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask-registry/src/docs/catalog.rs"
-nav = true
-
-[[page]]
 path = "catalog/decode.md"
 title = "`decode` operations"
 status = "generated"
@@ -504,19 +491,6 @@ generator = "../xtask-registry/src/docs/catalog.rs"
 nav = true
 
 [[page]]
-path = "catalog/io.md"
-title = "`io` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask-registry/src/docs/catalog.rs"
-nav = true
-
-[[page]]
 path = "catalog/label.md"
 title = "`label` operations"
 status = "generated"
@@ -558,19 +532,6 @@ nav = true
 [[page]]
 path = "catalog/math.md"
 title = "`math` operations"
-status = "generated"
-audience = "extension"
-owner = "operation-registry"
-kind = "reference"
-section = "API and operation reference"
-authority = "generated/OP_SCHEMA.json"
-generation = "generated"
-generator = "../xtask-registry/src/docs/catalog.rs"
-nav = true
-
-[[page]]
-path = "catalog/mem.md"
-title = "`mem` operations"
 status = "generated"
 audience = "extension"
 owner = "operation-registry"
