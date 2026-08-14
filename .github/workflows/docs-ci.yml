@@ -2,9 +2,8 @@ name: Doc CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main]
   pull_request:
-    branches: [ main, master ]
 
 jobs:
   docs:
@@ -18,6 +17,6 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Build Docs
-        run: ./scripts/docs.sh --changed-only
+        run: ./scripts/docs.sh
       - name: Validate CLI documentation
         run: python3 scripts/cli_docs.py --check
