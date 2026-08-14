@@ -249,6 +249,24 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   byte-identical in texture promotion and AoS-to-SoA layout, doc comment
   included, and now lives with the traversal that defines the op shape it
   builds.
+- The Aho-Corasick emit paths in `vyre-libs/src/scan/` read the flat
+  output-record span through one owner. Six builders each wrote their own loop
+  over `out_begin..out_end` binding `pattern_id` from `output_records`, and
+  four of them also wrote their own per-pattern presence write,
+  `presence[rs_base + (pattern_id >> 5)] |= 1 << (pattern_id & 31)`, spelled
+  out node by node: the bounded presence and per-region presence builders, the
+  fused presence-and-positions builder, the anchored region admission walk, and
+  the fused region evidence program. A change to the record layout or to the
+  bitmap indexing had to land in every copy, and a copy that was missed would
+  produce a program that still built, still dispatched, and reported a
+  different set of patterns. `bounded_ranges::output_record_loop_node`,
+  `pattern_bitset_or_node` and its `presence_bit_write_node` form,
+  `match_span_start_nodes`, and `bounded_walk_matched_nodes` now own the record
+  loop, the bitset write, the floored match-start computation, and the
+  accept-gated bounded walk. The emitted IR is unchanged: the presence
+  reference, per-region ground-truth, fused presence-and-positions,
+  transition-walk ownership, region-chain and conformance-matrix suites pass
+  without repinning.
 
 ### Removed
 
@@ -555,6 +573,26 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   interpreter. The leaf table is checked against the operation ids declared
   under `vyre-libs/src/rule` on each run, so a twelfth predicate turns the
   suite red until it is pinned.
+- The conformance certificate regression pin passes, and a future drift in it
+  is attributable. Seven pinned values had been stale long enough that the gate
+  was red on every checkout: the region-chain bundle carries the test operation
+  id in an `Expr::call`, so respelling that id from
+  `vyre-conform.test.identity_u32` to `vyre_conform_test::identity_u32` when
+  the operation and target registries were unified put one more byte in its
+  wire body, 324 to 325, and moved its digest; and all five signatures had
+  moved because the signable body covers `reference_output_blake3`, the digest
+  of what the reference returns, which a wire-identical program can change
+  underneath. Each new signature was reproduced independently from the bundle
+  digest, the corpus digest, and the single output word each program stores
+  before being written down. The test now asserts those words through the same
+  planning and interpreter entry point the issuer uses, so a signature that
+  moves while the words hold is a framing change and one that moves with them
+  is a semantic one, where before either read as an opaque hash mismatch.
+  `tests/_compute_pins.rs`, a second copy of all five bundle builders and the
+  signing body whose only output was the constants to paste, is deleted: a
+  generator that can drift from the test it feeds prints pins for programs
+  nobody is checking, and the failing assertion already names the value to
+  write.
 
 ## [0.7.1] - 2026-08-01
 
