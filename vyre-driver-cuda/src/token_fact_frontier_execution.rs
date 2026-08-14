@@ -498,7 +498,7 @@ mod tests {
         plan_device_resident_token_fact_graph, TokenFactEdge, TokenFactEdgeKind, TokenFactNode,
         TokenFactNodeKind,
     };
-    use vyre_self_substrate::frontier_typed_ir::{
+    use vyre_libs::scheduling::frontier_typed_ir::{
         plan_frontier_typed_ir, FrontierDependency, FrontierDomain, FrontierNode,
     };
 

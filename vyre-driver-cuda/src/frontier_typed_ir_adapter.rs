@@ -6,7 +6,7 @@ use crate::backend::staging_reserve::{
 };
 use vyre_driver::megakernel_barrier::MegakernelWaveDependency;
 use vyre_driver::megakernel_frontier::MegakernelFrontierWave;
-use vyre_self_substrate::frontier_typed_ir::FrontierTypedPlan;
+use vyre_libs::scheduling::frontier_typed_ir::FrontierTypedPlan;
 
 /// CUDA-ready frontier wave input derived from a frontier-typed IR plan.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -186,7 +186,7 @@ const fn dependency_capacity(wave_count: usize) -> usize {
 mod tests {
     use super::*;
     use vyre_driver::megakernel_barrier::plan_megakernel_barriers;
-    use vyre_self_substrate::frontier_typed_ir::{
+    use vyre_libs::scheduling::frontier_typed_ir::{
         plan_frontier_typed_ir, FrontierDependency, FrontierDomain, FrontierNode,
     };
 
@@ -252,7 +252,7 @@ mod tests {
     #[test]
     fn adapter_rejects_overflowing_wave_bytes() {
         let plan = FrontierTypedPlan {
-            waves: vec![vyre_self_substrate::frontier_typed_ir::FrontierWave {
+            waves: vec![vyre_libs::scheduling::frontier_typed_ir::FrontierWave {
                 index: 0,
                 domains: vec![FrontierDomain::Dataflow],
                 node_ids: vec![7],

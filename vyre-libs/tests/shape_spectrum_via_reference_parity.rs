@@ -18,7 +18,7 @@
 #![cfg(feature = "cpu-parity")]
 
 use vyre_primitives::math::spectral_shape::mp_edge_clip_cpu;
-use vyre_self_substrate::spectral_schedule::shape_spectrum_fixed_via;
+use vyre_libs::scheduling::spectral_schedule::shape_spectrum_fixed_via;
 
 use vyre_libs::test_support::ReferenceEvalDispatcher;
 

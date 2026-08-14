@@ -53,10 +53,10 @@
 //! evict every pipeline whose picked == 0
 //! ```
 
-use vyre_libs::dispatch_buffers::{
+use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_libs::device::scratch::reserve_vec_capacity_or_panic;
+use crate::device::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_primitives::math::submodular_greedy::argmax_of_marginals_cpu;
@@ -101,7 +101,7 @@ pub fn reference_select_retention_set_into(
     k: u32,
     picked: &mut Vec<u32>,
 ) {
-    use vyre_libs::telemetry::observability::{bump, submodular_cache_eviction_calls};
+    use crate::telemetry::observability::{bump, submodular_cache_eviction_calls};
     bump(&submodular_cache_eviction_calls);
     assert_eq!(gains.len(), n as usize);
     assert!(k <= n, "Fix: k must not exceed n.");
@@ -128,7 +128,7 @@ pub fn reference_select_retention_set_into(
 /// Compute the retention set through the GPU-dispatchable submodular argmax primitive.
 ///
 /// This is the production path for callers with a concrete backend dispatcher. It performs the
-/// same simple independent-access greedy loop as [`reference_select_retention_set_into`], dispatching
+/// same simple independent-access greedy loop as `reference_select_retention_set_into`, dispatching
 /// `vyre_primitives::math::submodular_greedy::argmax_of_marginals` once per retained item.
 ///
 /// # Errors
@@ -168,7 +168,7 @@ pub fn select_retention_set_via_with_scratch_into(
     scratch: &mut SubmodularEvictionGpuScratch,
     picked: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, submodular_cache_eviction_calls};
+    use crate::telemetry::observability::{bump, submodular_cache_eviction_calls};
     bump(&submodular_cache_eviction_calls);
     if n == 0 {
         return Err(DispatchError::BadInputs(
@@ -263,7 +263,7 @@ pub fn greedy_quality_bound(optimum: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::dispatch_buffers::u32_slice_to_le_bytes;
 
     struct ArgmaxDispatcher;
 
@@ -280,11 +280,11 @@ mod tests {
                     inputs.len()
                 )));
             };
-            let gains = vyre_libs::dispatch_buffers::decode_u32_input_aligned(
+            let gains = crate::dispatch_buffers::decode_u32_input_aligned(
                 gains_bytes,
                 "argmax test dispatcher",
             )?;
-            let picked = vyre_libs::dispatch_buffers::decode_u32_input_aligned(
+            let picked = crate::dispatch_buffers::decode_u32_input_aligned(
                 picked_bytes,
                 "argmax test dispatcher",
             )?;

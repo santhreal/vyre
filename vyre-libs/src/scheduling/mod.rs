@@ -1,4 +1,4 @@
-//! Scheduling, fusion, batching, and dispatch-strategy substrate modules.
+//! Scheduling, fusion, batching, and dispatch-strategy compositions.
 
 pub mod branch_compaction;
 pub mod frontier_partitioning;

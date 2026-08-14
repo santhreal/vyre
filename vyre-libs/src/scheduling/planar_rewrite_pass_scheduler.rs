@@ -43,7 +43,7 @@
 //! count by orders of magnitude with provably-correct disjointness
 //! (the greedy schedule never picks two overlapping rewrites).
 
-use vyre_libs::dispatch_buffers::{
+use crate::dispatch_buffers::{
     checked_product_count, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
@@ -72,7 +72,7 @@ pub struct PlanarRewriteScheduleGpuScratch {
 #[must_use]
 #[cfg(test)]
 pub fn schedule_disjoint_rewrites(candidates: &[u32], h: u32, w: u32, k: u32) -> Vec<u32> {
-    use vyre_libs::telemetry::observability::{bump, planar_rewrite_pass_scheduler_calls};
+    use crate::telemetry::observability::{bump, planar_rewrite_pass_scheduler_calls};
     bump(&planar_rewrite_pass_scheduler_calls);
     assert!(k > 0, "Fix: rewrite footprint k must be > 0.");
     reference_planar_rewrite_schedule(candidates, h, w, k)
@@ -141,7 +141,7 @@ pub fn schedule_disjoint_rewrites_via_with_scratch_into(
     scratch: &mut PlanarRewriteScheduleGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, planar_rewrite_pass_scheduler_calls};
+    use crate::telemetry::observability::{bump, planar_rewrite_pass_scheduler_calls};
     bump(&planar_rewrite_pass_scheduler_calls);
 
     if k == 0 {
@@ -199,7 +199,7 @@ pub fn batch_reduction_ratio(candidate_count: u32, scheduled_count: u32) -> f64 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     #[test]
@@ -248,7 +248,7 @@ mod tests {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 2);
-            let candidates = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
+            let candidates = crate::dispatch_buffers::read_u32s(&inputs[0]);
             let n = integer_sqrt(candidates.len());
             let chosen = reference_planar_rewrite_schedule(&candidates, n as u32, n as u32, 2);
             Ok(vec![u32_slice_to_le_bytes(&chosen)])

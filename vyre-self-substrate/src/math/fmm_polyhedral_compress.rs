@@ -10,7 +10,7 @@
 //! # The self-use
 //!
 //! Vyre's #19 polyhedral fusion (already shipped at
-//! [`crate::polyhedral_fusion`]) computes pairwise
+//! `vyre_libs::scheduling::polyhedral_fusion`) computes pairwise
 //! affine-dependency adjacency over Regions: every pair (i, j) is
 //! checked for fusion eligibility. At N Regions this is N(N-1)/2
 //! comparisons  -  O(N²) memory + compute.

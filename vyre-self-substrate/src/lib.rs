@@ -111,8 +111,6 @@ pub mod graph;
 pub mod logic;
 #[cfg(feature = "math-solvers")]
 pub mod math;
-#[cfg(feature = "scheduling")]
-pub mod scheduling;
 
 #[cfg(feature = "optimizer")]
 /// Self-hosted optimizer keystone  -  the encoder + GPU passes that run
@@ -140,13 +138,6 @@ pub use logic::{
 pub use data::{
     bitset_compression, bitset_summary, matroid_exact_megakernel, matroid_megakernel_scheduler,
     parsing_dispatch_pipeline, scallop_provenance, scallop_provenance_wide, vsa_fingerprint,
-};
-
-#[cfg(feature = "scheduling")]
-pub use scheduling::{
-    branch_compaction, frontier_partitioning, frontier_typed_ir, megakernel_schedule,
-    multi_corpus_batching, planar_rewrite_pass_scheduler, polyhedral_fusion, spectral_schedule,
-    submodular_cache_eviction,
 };
 
 #[cfg(feature = "graph-solvers")]

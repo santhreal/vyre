@@ -7,7 +7,7 @@
 //! Output: cluster IDs that #19 polyhedral fusion + #22 megakernel
 //! scheduler consume as fusion hints.
 
-use vyre_libs::dispatch_buffers::{
+use crate::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
@@ -33,7 +33,7 @@ pub struct SpectralScheduleGpuScratch {
 #[must_use]
 #[cfg(test)]
 pub fn reference_fusion_scores(laplacian: &[f32], n: u32) -> Vec<f32> {
-    use vyre_libs::telemetry::observability::{bump, spectral_schedule_calls};
+    use crate::telemetry::observability::{bump, spectral_schedule_calls};
     bump(&spectral_schedule_calls);
     assert_eq!(laplacian.len(), (n * n) as usize);
     let signal: Vec<f32> = (0..n).map(|_| 1.0 / (n as f32).sqrt()).collect();
@@ -115,7 +115,7 @@ pub fn fusion_scores_fixed_via_with_scratch_into(
     scratch: &mut SpectralScheduleGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use vyre_libs::telemetry::observability::{bump, spectral_schedule_calls};
+    use crate::telemetry::observability::{bump, spectral_schedule_calls};
     bump(&spectral_schedule_calls);
 
     if k_steps > CHEBYSHEV_MAX_K {
@@ -309,7 +309,7 @@ pub fn shape_spectrum_fixed_via_with_scratch_into(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
     fn approx_eq_f32(a: f32, b: f32) -> bool {
@@ -363,17 +363,17 @@ mod tests {
                 // mp_edge_clip: eigenvalues RO(0) + mp_edge scalar RO(1) + plain-RW out(2).
                 3 => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let eigenvalues = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
-                    let edge = vyre_libs::dispatch_buffers::read_u32s(&inputs[1])[0];
+                    let eigenvalues = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                    let edge = crate::dispatch_buffers::read_u32s(&inputs[1])[0];
                     let clipped: Vec<u32> = eigenvalues.into_iter().map(|v| v.min(edge)).collect();
                     Ok(vec![u32_slice_to_le_bytes(&clipped)])
                 }
                 // chebyshev_filter: 3 RO (laplacian/signal/coeffs) + plain-RW output(3)+scratch(4).
                 5 => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let laplacian = vyre_libs::dispatch_buffers::read_u32s(&inputs[0]);
-                    let signal = vyre_libs::dispatch_buffers::read_u32s(&inputs[1]);
-                    let coeffs = vyre_libs::dispatch_buffers::read_u32s(&inputs[2]);
+                    let laplacian = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                    let signal = crate::dispatch_buffers::read_u32s(&inputs[1]);
+                    let coeffs = crate::dispatch_buffers::read_u32s(&inputs[2]);
                     assert_eq!(laplacian, vec![1, 0, 0, 1]);
                     assert_eq!(coeffs, vec![1]);
                     Ok(vec![u32_slice_to_le_bytes(&signal)])

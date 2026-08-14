@@ -16,7 +16,7 @@
 //! tie-break) agrees with `argmax_of_marginals_cpu`.
 #![cfg(feature = "cpu-parity")]
 
-use vyre_self_substrate::submodular_cache_eviction::{
+use vyre_libs::scheduling::submodular_cache_eviction::{
     select_retention_set, select_retention_set_via,
 };
 

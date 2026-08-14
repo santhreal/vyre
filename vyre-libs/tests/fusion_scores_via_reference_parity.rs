@@ -20,7 +20,7 @@
 #![cfg(feature = "cpu-parity")]
 
 use vyre_primitives::graph::chebyshev_filter::chebyshev_filter_cpu;
-use vyre_self_substrate::spectral_schedule::fusion_scores_fixed_via;
+use vyre_libs::scheduling::spectral_schedule::fusion_scores_fixed_via;
 
 use vyre_libs::test_support::ReferenceEvalDispatcher;
 

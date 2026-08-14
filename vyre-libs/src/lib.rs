@@ -128,6 +128,10 @@ pub mod telemetry;
 #[cfg(feature = "device")]
 pub mod device;
 
+/// Scheduling, fusion, batching, and dispatch-strategy compositions.
+#[cfg(feature = "scheduling")]
+pub mod scheduling;
+
 /// Math dialect  -  linear algebra, scans, broadcasting.
 #[cfg(any(
     feature = "math-linalg",

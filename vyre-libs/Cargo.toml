@@ -56,6 +56,7 @@ rule = ["dep:regex"]
 # crate. Each gates one module tree; `all-solvers` turns on the set.
 telemetry = []
 device = []
+scheduling = ["device", "telemetry", "vyre-primitives/math", "vyre-primitives/parsing"]
 
 "math-linalg" = []
 "math-scan" = []
@@ -138,6 +139,26 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [lints]
 workspace = true
+
+[[test]]
+name = "fusion_scores_via_reference_parity"
+path = "tests/fusion_scores_via_reference_parity.rs"
+required-features = ["cpu-parity", "scheduling", "test-fixtures"]
+
+[[test]]
+name = "planar_rewrite_via_reference_parity"
+path = "tests/planar_rewrite_via_reference_parity.rs"
+required-features = ["cpu-parity", "scheduling", "test-fixtures"]
+
+[[test]]
+name = "shape_spectrum_via_reference_parity"
+path = "tests/shape_spectrum_via_reference_parity.rs"
+required-features = ["cpu-parity", "scheduling", "test-fixtures"]
+
+[[test]]
+name = "submodular_retention_via_reference_parity"
+path = "tests/submodular_retention_via_reference_parity.rs"
+required-features = ["cpu-parity", "scheduling", "test-fixtures"]
 
 [[test]]
 name = "sweep_text_utf8_oracle_matrix"

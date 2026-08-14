@@ -14,7 +14,7 @@
 #![cfg(feature = "cpu-parity")]
 
 use vyre_primitives::parsing::planar_rewrite::reference_planar_rewrite_schedule;
-use vyre_self_substrate::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via;
+use vyre_libs::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via;
 
 use vyre_libs::test_support::ReferenceEvalDispatcher;
 
