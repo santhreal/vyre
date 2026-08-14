@@ -18,11 +18,9 @@ use crate::c_frontend::rows::{
 use crate::c_frontend::token_fixture::classify;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_ATTRIBUTE_ALIGNED,
-    C_AST_KIND_ATTRIBUTE_FALLTHROUGH, C_AST_KIND_ATTRIBUTE_UNUSED, C_AST_KIND_GNU_ATTRIBUTE,
-    C_AST_KIND_GNU_STATEMENT_EXPR, C_AST_KIND_IF_STMT, C_AST_KIND_LABEL_STMT,
-    C_AST_KIND_SWITCH_STMT,
+    C_AST_KIND_ATTRIBUTE_ALIGNED, C_AST_KIND_ATTRIBUTE_FALLTHROUGH, C_AST_KIND_ATTRIBUTE_UNUSED,
+    C_AST_KIND_GNU_ATTRIBUTE, C_AST_KIND_GNU_STATEMENT_EXPR, C_AST_KIND_IF_STMT,
+    C_AST_KIND_LABEL_STMT, C_AST_KIND_SWITCH_STMT,
 };
 use vyre_primitives::predicate::node_kind;
 
@@ -135,9 +133,7 @@ pub(crate) fn cpu_attribute_on_if_arm_statement_classifies() {
 #[test]
 pub(crate) fn pg_lower_preserves_attribute_fallthrough_in_switch() {
     let fix = fixture_attribute_fallthrough_statement();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let typed = classify(&fix);
     let pg = reference_ast_to_pg_nodes(&typed);
 
     assert_pg_preserves_row(&typed, &pg, &fix, 7, C_AST_KIND_SWITCH_STMT);
@@ -149,9 +145,7 @@ pub(crate) fn pg_lower_preserves_attribute_fallthrough_in_switch() {
 #[test]
 pub(crate) fn pg_lower_preserves_attribute_unused_in_statement_expr() {
     let fix = fixture_attribute_unused_in_statement_expr();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let typed = classify(&fix);
     let pg = reference_ast_to_pg_nodes(&typed);
 
     assert_pg_preserves_row(&typed, &pg, &fix, 3, C_AST_KIND_GNU_STATEMENT_EXPR);

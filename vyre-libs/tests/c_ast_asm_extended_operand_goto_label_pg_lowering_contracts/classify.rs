@@ -19,10 +19,8 @@ use crate::c_frontend::rows::{
 use crate::c_frontend::token_fixture::classify;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_ASM_CLOBBERS_LIST,
-    C_AST_KIND_ASM_GOTO_LABELS, C_AST_KIND_ASM_INPUT_OPERAND, C_AST_KIND_ASM_OUTPUT_OPERAND,
-    C_AST_KIND_ASM_TEMPLATE, C_AST_KIND_INLINE_ASM,
+    C_AST_KIND_ASM_CLOBBERS_LIST, C_AST_KIND_ASM_GOTO_LABELS, C_AST_KIND_ASM_INPUT_OPERAND,
+    C_AST_KIND_ASM_OUTPUT_OPERAND, C_AST_KIND_ASM_TEMPLATE, C_AST_KIND_INLINE_ASM,
 };
 
 // ---------------------------------------------------------------------------
@@ -147,9 +145,7 @@ pub(crate) fn cpu_asm_goto_three_labels_classifies() {
 #[test]
 pub(crate) fn pg_lower_preserves_asm_multiple_output_input_operands() {
     let fix = fixture_asm_multiple_output_input_operands();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let typed = classify(&fix);
     let pg = reference_ast_to_pg_nodes(&typed);
 
     assert_pg_preserves_row(&typed, &pg, &fix, 0, C_AST_KIND_INLINE_ASM);
@@ -164,9 +160,7 @@ pub(crate) fn pg_lower_preserves_asm_multiple_output_input_operands() {
 #[test]
 pub(crate) fn pg_lower_preserves_asm_memory_and_cc_clobbers() {
     let fix = fixture_asm_memory_and_cc_clobbers();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let typed = classify(&fix);
     let pg = reference_ast_to_pg_nodes(&typed);
 
     assert_pg_preserves_row(&typed, &pg, &fix, 0, C_AST_KIND_INLINE_ASM);
@@ -178,9 +172,7 @@ pub(crate) fn pg_lower_preserves_asm_memory_and_cc_clobbers() {
 #[test]
 pub(crate) fn pg_lower_preserves_asm_goto_multiple_labels() {
     let fix = fixture_asm_goto_multiple_labels();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let typed = classify(&fix);
     let pg = reference_ast_to_pg_nodes(&typed);
 
     assert_pg_preserves_row(&typed, &pg, &fix, 0, C_AST_KIND_INLINE_ASM);

@@ -20,10 +20,8 @@ use crate::c_frontend::rows::{
 use crate::c_frontend::token_fixture::classify;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_BUILTIN_CHOOSE_EXPR,
-    C_AST_KIND_COMPOUND_LITERAL_EXPR, C_AST_KIND_CONDITIONAL_EXPR, C_AST_KIND_INITIALIZER_LIST,
-    C_AST_KIND_MEMBER_ACCESS_EXPR,
+    C_AST_KIND_BUILTIN_CHOOSE_EXPR, C_AST_KIND_COMPOUND_LITERAL_EXPR, C_AST_KIND_CONDITIONAL_EXPR,
+    C_AST_KIND_INITIALIZER_LIST, C_AST_KIND_MEMBER_ACCESS_EXPR,
 };
 use vyre_primitives::predicate::node_kind;
 
@@ -121,9 +119,7 @@ pub(crate) fn cpu_compound_literal_in_ternary_classifies() {
 #[test]
 pub(crate) fn pg_lower_preserves_compound_literal_nested_designated() {
     let fix = fixture_compound_literal_nested_designated();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let typed = classify(&fix);
     let pg = reference_ast_to_pg_nodes(&typed);
 
     for idx in row_indices(&typed, C_AST_KIND_COMPOUND_LITERAL_EXPR) {
@@ -140,9 +136,7 @@ pub(crate) fn pg_lower_preserves_compound_literal_nested_designated() {
 #[test]
 pub(crate) fn pg_lower_preserves_compound_literal_inside_statement_expr() {
     let fix = fixture_compound_literal_inside_statement_expr();
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    let typed = classify(&fix);
     let pg = reference_ast_to_pg_nodes(&typed);
 
     assert_pg_preserves_row(&typed, &pg, &fix, 5, C_AST_KIND_COMPOUND_LITERAL_EXPR);

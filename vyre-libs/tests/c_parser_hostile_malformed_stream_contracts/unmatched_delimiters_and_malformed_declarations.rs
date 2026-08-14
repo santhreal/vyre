@@ -1,4 +1,5 @@
 use super::*;
+use crate::c_frontend::spelling::c_tokens;
 
 #[test]
 fn vast_unmatched_lbrace_rbrace_lparen_mixed_produces_rows() {
@@ -101,16 +102,7 @@ fn malformed_decl_abstract_declarator_in_init_context() {
 #[test]
 fn malformed_decl_empty_parameter_list_parens() {
     // void f(int,) { }
-    let fix = build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ]);
+    let fix = c_tokens("void f ( int , ) { }");
     let typed = classify(&fix);
     assert_eq!(
         row_indices(&typed, C_AST_KIND_FUNCTION_DEFINITION),
@@ -142,14 +134,7 @@ fn malformed_decl_specifier_without_declarator() {
 #[test]
 fn unterminated_attribute_parens_do_not_crash_classifier() {
     // __attribute__((aligned(16
-    let fix = build_fixture(&[
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("aligned", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("16", TOK_INTEGER),
-    ]);
+    let fix = c_tokens("__attribute__ ( ( aligned ( 16");
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     assert_eq!(
@@ -164,14 +149,7 @@ fn unterminated_attribute_parens_do_not_crash_classifier() {
 #[test]
 fn unterminated_attribute_missing_inner_rparen() {
     // __attribute__((section(".text"
-    let fix = build_fixture(&[
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("section", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\".text\"", TOK_STRING),
-    ]);
+    let fix = c_tokens("__attribute__ ( ( section ( \".text\"");
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     assert_ne!(
@@ -188,16 +166,7 @@ fn unterminated_attribute_missing_inner_rparen() {
 #[test]
 fn asm_missing_output_colon_treated_as_template_only() {
     // asm volatile ("foo" : :
-    let fix = build_fixture(&[
-        FixtureToken::new("asm", TOK_IDENTIFIER),
-        FixtureToken::new("volatile", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"foo\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ]);
+    let fix = c_tokens("asm volatile ( \"foo\" : : ) ;");
     let typed = classify(&fix);
     assert_eq!(
         row_indices(&typed, C_AST_KIND_INLINE_ASM),
@@ -215,15 +184,7 @@ fn asm_missing_output_colon_treated_as_template_only() {
 #[test]
 fn asm_unclosed_operand_paren() {
     // asm("mov" : "=r" (out
-    let fix = build_fixture(&[
-        FixtureToken::new("asm", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"mov\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"=r\"", TOK_STRING),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("out", TOK_IDENTIFIER),
-    ]);
+    let fix = c_tokens("asm ( \"mov\" : \"=r\" ( out");
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     // The classifier may or may not see the output operand without a closing paren.
@@ -234,16 +195,7 @@ fn asm_unclosed_operand_paren() {
 #[test]
 fn asm_extra_trailing_colon_does_not_leak_clobber_kind() {
     // asm("nop" :::)
-    let fix = build_fixture(&[
-        FixtureToken::new("asm", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"nop\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ]);
+    let fix = c_tokens("asm ( \"nop\" : : : ) ;");
     let typed = classify(&fix);
     assert_eq!(row_indices(&typed, C_AST_KIND_INLINE_ASM), vec![0]);
     // No clobber strings present; trailing colon alone must not invent clobber rows
@@ -261,14 +213,7 @@ fn asm_extra_trailing_colon_does_not_leak_clobber_kind() {
 #[test]
 fn dotted_expression_outside_initializer_is_member_access() {
     // x .a = 1;
-    let fix = build_fixture(&[
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(".", TOK_DOT),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ]);
+    let fix = c_tokens("x . a = 1 ;");
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     let dots = row_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR);
@@ -282,18 +227,7 @@ fn dotted_expression_outside_initializer_is_member_access() {
 #[test]
 fn designator_chain_without_brace_not_initializer_list() {
     // int a = .b.c = 1;
-    let fix = build_fixture(&[
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new(".", TOK_DOT),
-        FixtureToken::new("b", TOK_IDENTIFIER),
-        FixtureToken::new(".", TOK_DOT),
-        FixtureToken::new("c", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ]);
+    let fix = c_tokens("int a = . b . c = 1 ;");
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     let inits = row_indices(&typed, C_AST_KIND_INITIALIZER_LIST);
@@ -306,15 +240,7 @@ fn designator_chain_without_brace_not_initializer_list() {
 #[test]
 fn bracket_expression_outside_initializer_is_array_subscript_expr() {
     // x[0] = 1;
-    let fix = build_fixture(&[
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ]);
+    let fix = c_tokens("x [ 0 ] = 1 ;");
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     let subs = row_indices(&typed, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR);
@@ -332,19 +258,7 @@ fn bracket_expression_outside_initializer_is_array_subscript_expr() {
 #[test]
 fn case_outside_switch_has_no_switch_case_semantic_edge() {
     // void f() { case 1: return; }
-    let fix = build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("case", TOK_CASE),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("return", TOK_RETURN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ]);
+    let fix = c_tokens("void f ( ) { case 1 : return ; }");
     let typed = classify(&fix);
     assert_eq!(
         row_indices(&typed, C_AST_KIND_CASE_STMT),
@@ -375,18 +289,7 @@ fn case_outside_switch_has_no_switch_case_semantic_edge() {
 #[test]
 fn default_outside_switch_has_no_switch_default_semantic_edge() {
     // void f() { default: break; }
-    let fix = build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("default", TOK_DEFAULT),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("break", TOK_BREAK),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ]);
+    let fix = c_tokens("void f ( ) { default : break ; }");
     let typed = classify(&fix);
     assert_eq!(
         row_indices(&typed, C_AST_KIND_DEFAULT_STMT),

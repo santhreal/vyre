@@ -1,32 +1,10 @@
 use super::*;
+use crate::c_frontend::spelling::c_tokens;
 
 #[test]
 fn multiple_case_same_value_both_get_switch_case_edges() {
     // void f(int x) { switch (x) { case 0: case 0: break; } }
-    let fix = build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("switch", TOK_SWITCH),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("case", TOK_CASE),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("case", TOK_CASE),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("break", TOK_BREAK),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ]);
+    let fix = c_tokens("void f ( int x ) { switch ( x ) { case 0 : case 0 : break ; } }");
     let typed = classify(&fix);
     let cases = row_indices(&typed, C_AST_KIND_CASE_STMT);
     assert_eq!(
@@ -50,34 +28,8 @@ fn multiple_case_same_value_both_get_switch_case_edges() {
 #[test]
 fn nested_switch_case_binds_to_innermost_switch() {
     // void f() { switch (a) { case 1: switch (b) { case 2: break; } } }
-    let fix = build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("switch", TOK_SWITCH),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("case", TOK_CASE),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("switch", TOK_SWITCH),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("b", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("case", TOK_CASE),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("break", TOK_BREAK),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ]);
+    let fix =
+        c_tokens("void f ( ) { switch ( a ) { case 1 : switch ( b ) { case 2 : break ; } } }");
     let typed = classify(&fix);
     let cases = row_indices(&typed, C_AST_KIND_CASE_STMT);
     assert_eq!(cases, vec![10, 18], "outer and inner case");
@@ -96,31 +48,8 @@ fn nested_switch_case_binds_to_innermost_switch() {
 #[test]
 fn goto_forward_then_backward_across_labels() {
     // void f() { goto mid; start: goto end; mid: goto start; end: return; }
-    let fix = build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("goto", TOK_GOTO),
-        FixtureToken::new("mid", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("start", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("goto", TOK_GOTO),
-        FixtureToken::new("end", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("mid", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("goto", TOK_GOTO),
-        FixtureToken::new("start", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("end", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("return", TOK_RETURN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ]);
+    let fix =
+        c_tokens("void f ( ) { goto mid ; start : goto end ; mid : goto start ; end : return ; }");
     let typed = classify(&fix);
     let gotos = row_indices(&typed, C_AST_KIND_GOTO_STMT);
     let labels = row_indices(&typed, C_AST_KIND_LABEL_STMT);
@@ -151,12 +80,7 @@ fn goto_forward_then_backward_across_labels() {
 #[test]
 fn label_colon_on_non_identifier_does_not_crash() {
     // 1: return;  -- numeric literal followed by colon (hostile but lexically valid)
-    let fix = build_fixture(&[
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("return", TOK_RETURN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ]);
+    let fix = c_tokens("1 : return ;");
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     assert!(
@@ -174,29 +98,7 @@ fn label_colon_on_non_identifier_does_not_crash() {
 #[test]
 fn default_before_case_in_switch_both_have_edges() {
     // void f(int x) { switch (x) { default: case 0: break; } }
-    let fix = build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("switch", TOK_SWITCH),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("default", TOK_DEFAULT),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("case", TOK_CASE),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("break", TOK_BREAK),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ]);
+    let fix = c_tokens("void f ( int x ) { switch ( x ) { default : case 0 : break ; } }");
     let typed = classify(&fix);
     let default_idx = row_indices(&typed, C_AST_KIND_DEFAULT_STMT)[0];
     let case_idx = row_indices(&typed, C_AST_KIND_CASE_STMT)[0];
@@ -225,21 +127,7 @@ fn default_before_case_in_switch_both_have_edges() {
 #[test]
 fn struct_with_field_then_malformed_semicolon_gap() {
     // struct S { int x ; ; ; int y ; };
-    let fix = build_fixture(&[
-        FixtureToken::new("struct", TOK_STRUCT),
-        FixtureToken::new("S", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("y", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ]);
+    let fix = c_tokens("struct S { int x ; ; ; int y ; } ;");
     let typed = classify(&fix);
     let fields = row_indices(&typed, C_AST_KIND_FIELD_DECL);
     assert_eq!(

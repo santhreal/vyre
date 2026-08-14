@@ -20,7 +20,7 @@ mod c_frontend;
 
 use c_frontend::rows::{row_indices, word_at, VAST_STRIDE_U32};
 use c_frontend::semantic_graph::{semantic_edge_word, semantic_node_word};
-use c_frontend::token_fixture::{build_fixture, classify, FixtureToken};
+use c_frontend::token_fixture::classify;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::{
     reference_ast_to_pg_nodes, reference_ast_to_pg_semantic_graph, C_AST_PG_EDGE_GOTO_TARGET,
@@ -28,13 +28,12 @@ use vyre_libs::parsing::c::lower::{
     C_AST_PG_EDGE_SWITCH_DEFAULT, C_AST_PG_ROLE_CASE, C_AST_PG_ROLE_DEFAULT, C_AST_PG_ROLE_GOTO,
 };
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR,
-    C_AST_KIND_ASM_CLOBBERS_LIST, C_AST_KIND_ASM_OUTPUT_OPERAND, C_AST_KIND_CASE_STMT,
-    C_AST_KIND_DEFAULT_STMT, C_AST_KIND_FIELD_DECL, C_AST_KIND_FUNCTION_DEFINITION,
-    C_AST_KIND_GNU_ATTRIBUTE, C_AST_KIND_GOTO_STMT, C_AST_KIND_INITIALIZER_LIST,
-    C_AST_KIND_INLINE_ASM, C_AST_KIND_LABEL_STMT, C_AST_KIND_MEMBER_ACCESS_EXPR,
-    C_AST_KIND_POINTER_DECL, C_AST_KIND_SWITCH_STMT,
+    reference_c11_build_vast_nodes, reference_c11_classify_vast_node_kinds,
+    C_AST_KIND_ARRAY_SUBSCRIPT_EXPR, C_AST_KIND_ASM_CLOBBERS_LIST, C_AST_KIND_ASM_OUTPUT_OPERAND,
+    C_AST_KIND_CASE_STMT, C_AST_KIND_DEFAULT_STMT, C_AST_KIND_FIELD_DECL,
+    C_AST_KIND_FUNCTION_DEFINITION, C_AST_KIND_GNU_ATTRIBUTE, C_AST_KIND_GOTO_STMT,
+    C_AST_KIND_INITIALIZER_LIST, C_AST_KIND_INLINE_ASM, C_AST_KIND_LABEL_STMT,
+    C_AST_KIND_MEMBER_ACCESS_EXPR, C_AST_KIND_POINTER_DECL, C_AST_KIND_SWITCH_STMT,
 };
 
 // ---------------------------------------------------------------------------

@@ -68,11 +68,19 @@ pub(crate) fn build_fixture(tokens: &[FixtureToken]) -> Fixture {
     }
 }
 
-/// Typed VAST for a fixture: build, annotate typedef names, classify.
-pub(crate) fn classify(fix: &Fixture) -> Vec<u8> {
+/// Annotated and typed VAST for a fixture: build, annotate typedef names,
+/// classify. Tests that assert typedef flags need the annotated rows as well as
+/// the classified kinds.
+pub(crate) fn annotate_and_classify(fix: &Fixture) -> (Vec<u8>, Vec<u8>) {
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
     let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    reference_c11_classify_vast_node_kinds(&annotated)
+    let typed = reference_c11_classify_vast_node_kinds(&annotated);
+    (annotated, typed)
+}
+
+/// Typed VAST for a fixture: build, annotate typedef names, classify.
+pub(crate) fn classify(fix: &Fixture) -> Vec<u8> {
+    annotate_and_classify(fix).1
 }
 
 /// `c_fixture![("int", TOK_IDENTIFIER), ("x", TOK_IDENTIFIER)]`.
