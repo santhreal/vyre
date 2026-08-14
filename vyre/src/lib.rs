@@ -105,13 +105,13 @@ pub use vyre_megakernel::{
     TargetPayloadFormat, TargetProfile, ValidatedCompileRequest,
 };
 
+/// Domain-neutral tagged byte-range contract.
+pub use vyre_foundation::match_result;
 /// Authenticated artifact admission, materialization, submission, and recovery.
 pub use vyre_runtime::{
     admit_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession, ArtifactSessionError,
     PersistentExecutor, RetainedArtifactSession, RetryClass,
 };
-/// Domain-neutral tagged byte-range contract.
-pub use vyre_foundation::match_result;
 
 pub use vyre_driver::{ArtifactInstance, BindingSet, Completion, DeviceIdentity, Submission};
 

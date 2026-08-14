@@ -737,7 +737,6 @@ fn build_backend_runner(registration: &'static BackendRegistration) -> Option<Ba
             id: registration.id,
             kind: BackendKind::Registered(registration),
         })
-
 }
 
 fn unified_entries() -> Vec<UnifiedEntry> {

@@ -11,9 +11,7 @@ mod native {
         DispatchConfig, ResidentOwner, Submission,
     };
     use vyre_foundation::ir::Program;
-    use vyre_megakernel::{
-        Artifact, ArtifactValueId, Digest, TargetPayload, TargetPayloadFormat,
-    };
+    use vyre_megakernel::{Artifact, ArtifactValueId, Digest, TargetPayload, TargetPayloadFormat};
 
     use crate::runtime::{MetalBackend, MetalTargetModule};
     use crate::target_compiler::METAL_TARGET_FORMAT_VERSION;
@@ -49,11 +47,8 @@ mod native {
             artifact: &Artifact,
             payload: &TargetPayload,
         ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
-            let admitted = materialize::admit(
-                artifact,
-                payload,
-                self.descriptor.target(METAL_BACKEND_ID),
-            )?;
+            let admitted =
+                materialize::admit(artifact, payload, self.descriptor.target(METAL_BACKEND_ID))?;
             let mut modules = Vec::with_capacity(admitted.len());
             for admitted_module in admitted {
                 let target: vyre_emit_metal::MetalArtifact =
@@ -82,11 +77,9 @@ mod native {
                 });
             }
             Ok(Box::new(MetalArtifactInstance {
-                core: self.descriptor.instance(
-                    artifact,
-                    payload,
-                    materialize::NEUTRAL_MESSAGES,
-                ),
+                core: self
+                    .descriptor
+                    .instance(artifact, payload, materialize::NEUTRAL_MESSAGES),
                 backend: Arc::clone(&self.backend),
                 modules,
             }))

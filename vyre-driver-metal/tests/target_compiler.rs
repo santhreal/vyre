@@ -14,9 +14,7 @@ use vyre_foundation::ir::{
     ValueContract, ValueLifetime,
 };
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-use vyre_megakernel::{
-    CompileRequest, Digest, ExternalFacts, SearchBudget, TargetModuleBundle,
-};
+use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget, TargetModuleBundle};
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 fn artifact() -> vyre_megakernel::Artifact {

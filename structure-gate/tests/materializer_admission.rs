@@ -25,8 +25,10 @@ fn a_backend_that_redefines_a_shared_helper_is_a_violation() {
         fn invalid_module(reason: &str) -> BackendError { todo() }
         fn materialize(&self) { materialize::admit(a, p, t) }
     "#;
-    let failures =
-        materializer_admission_failures(&[("vyre-driver-x/src/materializer.rs".into(), source.into())]);
+    let failures = materializer_admission_failures(&[(
+        "vyre-driver-x/src/materializer.rs".into(),
+        source.into(),
+    )]);
     assert_eq!(failures.len(), 1, "expected one failure, got {failures:?}");
     assert!(
         failures[0].contains("defines its own `invalid_module`"),
@@ -40,8 +42,10 @@ fn a_backend_that_redefines_a_shared_helper_is_a_violation() {
 #[test]
 fn a_backend_that_never_calls_admit_is_a_violation() {
     let source = "fn materialize(&self) { self.open_payload_my_own_way() }";
-    let failures =
-        materializer_admission_failures(&[("vyre-driver-y/src/materializer.rs".into(), source.into())]);
+    let failures = materializer_admission_failures(&[(
+        "vyre-driver-y/src/materializer.rs".into(),
+        source.into(),
+    )]);
     assert_eq!(failures.len(), 1, "expected one failure, got {failures:?}");
     assert!(
         failures[0].contains("does not admit its target payload"),

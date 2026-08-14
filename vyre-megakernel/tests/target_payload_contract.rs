@@ -20,7 +20,6 @@ fn diagnostic_path(error: &CompileError) -> Option<&str> {
         .and_then(|location| location.path.as_deref())
 }
 
-
 fn format(version: u16) -> TargetPayloadFormat {
     TargetPayloadFormat::new("test.target-binary", version).expect("fixture format must be valid")
 }
@@ -125,8 +124,14 @@ fn target_payload_rejects_a_different_neutral_artifact_digest() {
     let first = neutral_artifact([8, 1, 1]);
     let second = neutral_artifact([16, 1, 1]);
     assert_ne!(first.digest(), second.digest());
-    let payload = TargetPayload::new(&first, format(1), profile(1), vec![entry_point()], vec![9, 8, 7])
-        .expect("payload must bind to its source artifact");
+    let payload = TargetPayload::new(
+        &first,
+        format(1),
+        profile(1),
+        vec![entry_point()],
+        vec![9, 8, 7],
+    )
+    .expect("payload must bind to its source artifact");
     let mut wrong_envelope = ArtifactEnvelope::new(second);
 
     let error = wrong_envelope
