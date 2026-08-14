@@ -1,3 +1,21 @@
+//! C11 token ids and max-munch lexer patterns for the host oracle.
+//!
+//! The 107 ids below are a copy. `vyre_libs::parsing::c::lex::tokens` owns the
+//! numbering; this file carries the subset [`C11_PATTERNS`] can emit, and every
+//! one of them must hold the owner's value for the same name.
+//!
+//! The copy is deliberate and cannot be collapsed. This crate is a leaf
+//! generator with no vyre dependencies, and `vyre-libs` dev-depends on it as
+//! the host lexer oracle, so consuming the owning table here would invert the
+//! layering and close a dependency cycle over the whole compiler stack for one
+//! integer table.
+//!
+//! What is enforced instead is that the copy cannot drift.
+//! `vyre-libs/tests/c11_token_table_parity.rs` pairs every name here with the
+//! owner's constant through `stringify!`, so a rename on either side stops
+//! compiling, and it derives the emittable set from [`C11_PATTERNS`] at run
+//! time, so a new pattern carrying an id nobody pinned turns that suite red
+//! rather than letting the generated tables stop describing the GPU lexer.
 #![allow(missing_docs)]
 
 use crate::dfa::{DfaBuilder, DfaTable};
