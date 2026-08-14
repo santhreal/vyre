@@ -8,10 +8,8 @@ use serde::Serialize;
 use vyre_foundation::optimizer::corpus::{
     generate_release_corpus, manifest_for, OptimizationCorpusCase, OptimizationCorpusManifest,
 };
-use vyre_foundation::optimizer::pass_catalog::{
-    optimization_catalog, OptimizationCatalogEntryKind,
-};
-use vyre_foundation::optimizer::registered_pass_registrations;
+
+use crate::release::optimizer_pass_rows::{self, OptimizerPassRow};
 
 const REQUIRED_FAMILIES: &[&str] = &[
     "scalar-algebra",
@@ -77,25 +75,8 @@ struct OptimizerPassManifest {
     schema_version: u32,
     executable_passes: usize,
     catalog_entries: usize,
-    entries: Vec<OptimizerPassManifestEntry>,
+    entries: Vec<OptimizerPassRow>,
     blockers: Vec<String>,
-}
-
-#[derive(Debug, Serialize)]
-struct OptimizerPassManifestEntry {
-    id: String,
-    kind: &'static str,
-    owner: &'static str,
-    phase: String,
-    boundary: String,
-    requires: Vec<&'static str>,
-    invalidates: Vec<&'static str>,
-    capabilities: Vec<&'static str>,
-    preserves_abi: bool,
-    invariant: &'static str,
-    termination: &'static str,
-    proof: &'static str,
-    benchmark: &'static str,
 }
 
 pub(crate) fn run(args: &[String]) {
@@ -250,69 +231,13 @@ fn write_case_manifest(
 }
 
 fn write_pass_manifest(parent: &Path) {
-    let registrations = registered_pass_registrations().unwrap_or_else(|error| {
-        eprintln!("Fix: semantic optimizer registry must schedule: {error}");
-        std::process::exit(1);
-    });
-    let metadata = registrations
-        .iter()
-        .map(|registration| (registration.metadata.name, registration.metadata))
-        .collect::<std::collections::BTreeMap<_, _>>();
-    let catalog = optimization_catalog().unwrap_or_else(|error| {
-        eprintln!("Fix: semantic optimizer catalog must resolve: {error}");
-        std::process::exit(1);
-    });
-    let entries = catalog
-        .iter()
-        .map(|entry| {
-            let registered = metadata.get(entry.name);
-            OptimizerPassManifestEntry {
-                id: entry.name.to_string(),
-                kind: match entry.kind {
-                    OptimizationCatalogEntryKind::ExecutablePass => "executable-pass",
-                    OptimizationCatalogEntryKind::SupplementalRule => "supplemental-rule",
-                },
-                owner: entry.owner,
-                phase: format!("{:?}", entry.phase),
-                boundary: format!("{:?}", entry.boundary_class),
-                requires: registered.map_or_else(Vec::new, |row| row.requires.to_vec()),
-                invalidates: registered.map_or_else(Vec::new, |row| row.invalidates.to_vec()),
-                capabilities: entry.requires_caps.to_vec(),
-                preserves_abi: entry.preserves_abi,
-                invariant: entry.invariant,
-                termination: match entry.kind {
-                    OptimizationCatalogEntryKind::ExecutablePass => {
-                        "bounded by the registered scheduler restart and iteration budgets"
-                    }
-                    OptimizationCatalogEntryKind::SupplementalRule => {
-                        "bounded by its owning registered executable pass"
-                    }
-                },
-                proof: match entry.kind {
-                    OptimizationCatalogEntryKind::ExecutablePass => {
-                        "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures"
-                    }
-                    OptimizationCatalogEntryKind::SupplementalRule => {
-                        "owning pass differential and invariant fixtures"
-                    }
-                },
-                benchmark: entry.benchmark,
-            }
-        })
-        .collect::<Vec<_>>();
-    let unique = entries
-        .iter()
-        .map(|entry| entry.id.as_str())
-        .collect::<BTreeSet<_>>();
-    let mut blockers = Vec::new();
-    if unique.len() != entries.len() {
-        blockers.push("optimizer catalog contains duplicate pass or rule ids".to_string());
-    }
+    let (executable_passes, entries) = optimizer_pass_rows::collect();
+    let blockers = optimizer_pass_rows::duplicate_id_blockers(&entries);
     xtask::output_arg::write_json(
         &parent.join("optimizer-pass-manifest.json"),
         &OptimizerPassManifest {
             schema_version: 1,
-            executable_passes: registrations.len(),
+            executable_passes,
             catalog_entries: entries.len(),
             entries,
             blockers,

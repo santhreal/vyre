@@ -7,3 +7,4 @@
 pub mod conformance_matrix;
 pub mod optimization_corpus;
 pub mod optimization_matrix;
+pub mod optimizer_pass_rows;
