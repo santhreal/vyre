@@ -22,10 +22,11 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 
+mod support;
+
+use support::preprocess_stream::{build_token_stream_with, pack_defined_macros, unpack_u32, LineEnds};
 use vyre_foundation::ir::{Expr, Program};
-use vyre_libs::parsing::c::lex::tokens::{
-    TOK_PP_ELIF, TOK_PP_IF, TOK_PP_IFDEF, TOK_PP_IFNDEF, TOK_PREPROC,
-};
+use vyre_libs::parsing::c::lex::tokens::{TOK_PP_ELIF, TOK_PP_IF, TOK_PP_IFDEF, TOK_PP_IFNDEF};
 use vyre_libs::parsing::c::parse::gnu_builtins::gpu_builtin_hash_table_words;
 use vyre_libs::parsing::c::preprocess::expansion::{
     opt_dynamic_macro_expansion, opt_named_macro_expansion,
@@ -57,67 +58,6 @@ enum Layout {
     RawU8,
 }
 
-fn unpack_u32(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect()
-}
-
-/// One `TOK_PREPROC` token per directive row, one sentinel token per other
-/// byte. Mirrors the stream shape the roundtrip suites feed these kernels.
-fn build_token_stream(source: &[u8]) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let mut tok_types = Vec::new();
-    let mut tok_starts = Vec::new();
-    let mut tok_lens = Vec::new();
-    let mut i = 0usize;
-    let mut at_line_start = true;
-    while i < source.len() {
-        if at_line_start {
-            let mut j = i;
-            while j < source.len() && matches!(source[j], b' ' | b'\t' | 0x0B | 0x0C) {
-                j += 1;
-            }
-            if j < source.len() && source[j] == b'#' {
-                let row_start = i;
-                let mut row_end = j;
-                while row_end < source.len() {
-                    if source[row_end] == b'\n' {
-                        if row_end > row_start && source[row_end - 1] == b'\\' {
-                            row_end += 1;
-                            continue;
-                        }
-                        break;
-                    }
-                    if source[row_end] == b'\r' {
-                        if row_end > row_start && source[row_end - 1] == b'\\' {
-                            row_end += 1;
-                            if row_end < source.len() && source[row_end] == b'\n' {
-                                row_end += 1;
-                            }
-                            continue;
-                        }
-                        break;
-                    }
-                    row_end += 1;
-                }
-                tok_types.push(TOK_PREPROC);
-                tok_starts.push(row_start as u32);
-                tok_lens.push((row_end - row_start) as u32);
-                i = row_end;
-                at_line_start = true;
-                continue;
-            }
-        }
-        at_line_start = matches!(source[i], b'\n' | b'\r');
-        tok_types.push(0);
-        tok_starts.push(i as u32);
-        tok_lens.push(1);
-        i += 1;
-    }
-    (tok_types, tok_starts, tok_lens)
-}
-
 fn byte_buffer(bytes: &[u8], layout: Layout) -> Vec<u8> {
     let mut out = bytes.to_vec();
     match layout {
@@ -129,17 +69,6 @@ fn byte_buffer(bytes: &[u8], layout: Layout) -> Vec<u8> {
         }
     }
     out
-}
-
-fn pack_defined_macros(names: &[&[u8]]) -> (Vec<u8>, Vec<u32>) {
-    let mut packed = Vec::new();
-    let mut offsets = Vec::with_capacity(names.len() + 1);
-    offsets.push(0u32);
-    for name in names {
-        packed.extend_from_slice(name);
-        offsets.push(packed.len() as u32);
-    }
-    (packed, offsets)
 }
 
 fn macro_values_with_builtin_hashes(count: usize) -> Vec<u8> {
@@ -158,7 +87,7 @@ struct FamilyRun {
 }
 
 fn run_family(source: &[u8], defined: &[&[u8]], layout: Layout) -> FamilyRun {
-    let (tok_types, tok_starts, tok_lens) = build_token_stream(source);
+    let (tok_types, tok_starts, tok_lens) = build_token_stream_with(source, LineEnds::Tokenized);
     let n = tok_types.len();
     let n_padded = n.max(1);
 
@@ -244,7 +173,7 @@ fn run_family(source: &[u8], defined: &[&[u8]], layout: Layout) -> FamilyRun {
 }
 
 fn cpu_oracle(source: &[u8], defined: &[&[u8]]) -> (Vec<u32>, Vec<u32>) {
-    let (tok_types, tok_starts, tok_lens) = build_token_stream(source);
+    let (tok_types, tok_starts, tok_lens) = build_token_stream_with(source, LineEnds::Tokenized);
     reference_c_preprocessor_directive_metadata(
         &tok_types,
         &tok_starts,

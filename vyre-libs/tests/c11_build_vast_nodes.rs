@@ -7,7 +7,7 @@ mod c_frontend;
 #[path = "../../tests/support/c_frontend/fixtures/vast_builder_token_streams.rs"]
 mod vast_builder_token_streams;
 
-use crate::c_frontend::expression_pipeline::assert_shape_row as assert_expr_shape_row;
+use crate::c_frontend::expression_pipeline::assert_shape_rows as assert_expr_shape_rows;
 use crate::c_frontend::rows::{
     assert_kind, assert_vast_row, row_indices as typed_indices, starts_for_lens, word_at,
     VAST_STRIDE_U32,

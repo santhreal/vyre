@@ -1,6 +1,6 @@
 use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::BenchMetrics;
 use crate::api::suite::SuiteKind;
@@ -38,10 +38,6 @@ impl BenchCase for FlakyCase {
             min_input_bytes: None,
             feature_set: vec![],
         }
-    }
-
-    fn performance_contract(&self) -> Option<PerformanceContract> {
-        None
     }
 
     fn active_in_suite(&self, suite: &SuiteKind) -> bool {

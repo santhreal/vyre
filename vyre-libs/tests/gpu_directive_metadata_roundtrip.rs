@@ -8,92 +8,15 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+mod support;
+
+use support::preprocess_stream::{build_token_stream, unpack_u32};
 use vyre_primitives::wire::pack_u32_slice as pack_u32_le;
-use vyre_libs::parsing::c::lex::tokens::TOK_PREPROC;
 use vyre_libs::parsing::c::preprocess::gpu_directive_metadata::{
     gpu_directive_metadata, gpu_directive_metadata_u8,
 };
 use vyre_libs::parsing::c::preprocess::reference_c_preprocessor_directive_metadata;
 use vyre_reference::value::Value;
-
-fn unpack_u32(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect()
-}
-
-/// Build (tok_types, tok_starts, tok_lens) by scanning `source` for
-/// each `#…<newline>` directive row. Non-directive bytes are not
-/// tokenized  -  we emit one TOK_PREPROC token per directive row plus
-/// optional sentinel non-PREPROC tokens for the gaps so the kernel sees
-/// a realistic mixed stream.
-fn build_token_stream(source: &[u8]) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let mut tok_types = Vec::new();
-    let mut tok_starts = Vec::new();
-    let mut tok_lens = Vec::new();
-    let mut i = 0usize;
-    let mut at_line_start = true;
-    while i < source.len() {
-        if at_line_start
-            && (source[i] == b'#'
-                || source[i..]
-                    .iter()
-                    .take_while(|b| matches!(b, b' ' | b'\t'))
-                    .count()
-                    > 0
-                    && source[i + source[i..]
-                        .iter()
-                        .take_while(|b| matches!(b, b' ' | b'\t'))
-                        .count()
-                        .min(source.len() - i)]
-                        == b'#')
-        {
-            // Find the row end: nearest unsplit newline.
-            let row_start = i;
-            let mut row_end = row_start;
-            while row_end < source.len() {
-                if source[row_end] == b'\n' {
-                    if row_end > row_start && source[row_end - 1] == b'\\' {
-                        row_end += 1;
-                        continue;
-                    }
-                    break;
-                }
-                if source[row_end] == b'\r' {
-                    if row_end > row_start && source[row_end - 1] == b'\\' {
-                        row_end += 1;
-                        if row_end < source.len() && source[row_end] == b'\n' {
-                            row_end += 1;
-                        }
-                        continue;
-                    }
-                    break;
-                }
-                row_end += 1;
-            }
-            tok_types.push(TOK_PREPROC);
-            tok_starts.push(row_start as u32);
-            tok_lens.push((row_end - row_start) as u32);
-            i = row_end;
-            at_line_start = true;
-            continue;
-        }
-        if source[i] == b'\n' || source[i] == b'\r' {
-            at_line_start = true;
-            i += 1;
-            continue;
-        }
-        // Emit a single non-PREPROC sentinel token covering this byte
-        // so the kernel sees mixed token kinds.
-        tok_types.push(0); // Use 0 as a non-TOK_PREPROC sentinel.
-        tok_starts.push(i as u32);
-        tok_lens.push(1);
-        i += 1;
-        at_line_start = false;
-    }
-    (tok_types, tok_starts, tok_lens)
-}
 
 fn run_gpu_kernel(source: &[u8]) -> (Vec<u32>, Vec<u32>) {
     let (tok_types, tok_starts, tok_lens) = build_token_stream(source);

@@ -1,6 +1,6 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::BenchMetrics;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -40,20 +40,6 @@ impl BenchCase for DfaMatch {
             determinism: DeterminismClass::Deterministic,
             owner_crate: "vyre-bench".to_string(),
         }
-    }
-
-    fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: None,
-            min_input_bytes: None,
-            feature_set: vec![],
-        }
-    }
-
-    fn performance_contract(&self) -> Option<PerformanceContract> {
-        None
     }
 
     fn bytes_touched(&self, _prepared: &PreparedCase) -> (u64, u64) {

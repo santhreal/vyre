@@ -5,6 +5,8 @@ use std::path::{Path, PathBuf};
 pub(crate) mod gpu_if_expression;
 #[cfg(feature = "c-parser")]
 pub(crate) mod gpu_pipeline_filter;
+#[cfg(feature = "c-parser")]
+pub(crate) mod preprocess_stream;
 
 pub(crate) fn crate_file(path: &str) -> String {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));

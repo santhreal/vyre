@@ -2,15 +2,15 @@
 
 use super::expression_shape_gap_constructs::*;
 use crate::c_frontend::expression_pipeline::{
-    assert_pg_links_match_vast, assert_pg_preserves_row, assert_shape_row, run_pipeline,
+    assert_pg_links_match_vast, assert_pg_preserves_row, assert_shape_none, run_pipeline,
 };
-use crate::c_frontend::rows::{row_indices_by_stride as row_indices, word_at, SENTINEL, VAST_STRIDE_U32};
+use crate::c_frontend::rows::{row_indices_by_stride as row_indices, word_at, VAST_STRIDE_U32};
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_ARRAY_DECL, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR, C_AST_KIND_ASSIGN_EXPR,
     C_AST_KIND_BREAK_STMT, C_AST_KIND_CASE_STMT, C_AST_KIND_CAST_EXPR,
     C_AST_KIND_MEMBER_ACCESS_EXPR, C_AST_KIND_RANGE_DESIGNATOR_EXPR, C_AST_KIND_SWITCH_STMT,
-    C_AST_KIND_UNARY_EXPR, C_EXPR_ASSOC_NONE, C_EXPR_SHAPE_NONE,
+    C_AST_KIND_UNARY_EXPR,
 };
 use vyre_primitives::predicate::node_kind;
 
@@ -43,94 +43,14 @@ fn prefix_unary_operators_have_unary_expr_kind_and_postfix_inc_dec_stays_unshape
         "postfix -- must not classify as BINARY"
     );
 
-    assert_shape_row(
-        &rows.expr_shape,
-        3,
-        C_EXPR_SHAPE_NONE,
-        TOK_INC,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        10,
-        C_EXPR_SHAPE_NONE,
-        TOK_DEC,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        15,
-        C_EXPR_SHAPE_NONE,
-        TOK_AMP,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        21,
-        C_EXPR_SHAPE_NONE,
-        TOK_STAR,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        27,
-        C_EXPR_SHAPE_NONE,
-        TOK_PLUS,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        33,
-        C_EXPR_SHAPE_NONE,
-        TOK_MINUS,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        39,
-        C_EXPR_SHAPE_NONE,
-        TOK_TILDE,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        45,
-        C_EXPR_SHAPE_NONE,
-        TOK_BANG,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
+    assert_shape_none(&rows.expr_shape, 3, TOK_INC);
+    assert_shape_none(&rows.expr_shape, 10, TOK_DEC);
+    assert_shape_none(&rows.expr_shape, 15, TOK_AMP);
+    assert_shape_none(&rows.expr_shape, 21, TOK_STAR);
+    assert_shape_none(&rows.expr_shape, 27, TOK_PLUS);
+    assert_shape_none(&rows.expr_shape, 33, TOK_MINUS);
+    assert_shape_none(&rows.expr_shape, 39, TOK_TILDE);
+    assert_shape_none(&rows.expr_shape, 45, TOK_BANG);
 }
 
 #[test]
@@ -145,17 +65,7 @@ fn cast_expression_has_cast_expr_kind_and_shape_row() {
     );
 
     assert_pg_preserves_row(&rows, 3, C_AST_KIND_CAST_EXPR);
-    assert_shape_row(
-        &rows.expr_shape,
-        3,
-        C_EXPR_SHAPE_NONE,
-        TOK_LPAREN,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
+    assert_shape_none(&rows.expr_shape, 3, TOK_LPAREN);
 }
 
 #[test]
@@ -176,28 +86,8 @@ fn member_access_has_member_access_expr_kind_and_shape_rows() {
     assert_pg_preserves_row(&rows, 4, C_AST_KIND_MEMBER_ACCESS_EXPR);
     assert_pg_preserves_row(&rows, 11, C_AST_KIND_MEMBER_ACCESS_EXPR);
 
-    assert_shape_row(
-        &rows.expr_shape,
-        4,
-        C_EXPR_SHAPE_NONE,
-        TOK_DOT,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        11,
-        C_EXPR_SHAPE_NONE,
-        TOK_ARROW,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
+    assert_shape_none(&rows.expr_shape, 4, TOK_DOT);
+    assert_shape_none(&rows.expr_shape, 11, TOK_ARROW);
 }
 
 #[test]
@@ -216,17 +106,7 @@ fn array_subscript_has_array_subscript_expr_kind_and_shape_row() {
     );
 
     assert_pg_preserves_row(&rows, 4, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR);
-    assert_shape_row(
-        &rows.expr_shape,
-        4,
-        C_EXPR_SHAPE_NONE,
-        TOK_LBRACKET,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
+    assert_shape_none(&rows.expr_shape, 4, TOK_LBRACKET);
 }
 
 #[test]
@@ -276,39 +156,9 @@ fn designated_initializer_has_explicit_typed_vast_kinds_and_shape_rows() {
     assert_pg_preserves_row(&rows, 7, C_AST_KIND_ASSIGN_EXPR);
     assert_pg_preserves_row(&rows, 13, C_AST_KIND_ASSIGN_EXPR);
 
-    assert_shape_row(
-        &rows.expr_shape,
-        3,
-        C_EXPR_SHAPE_NONE,
-        TOK_ASSIGN,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        5,
-        C_EXPR_SHAPE_NONE,
-        TOK_DOT,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        10,
-        C_EXPR_SHAPE_NONE,
-        TOK_LBRACKET,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
+    assert_shape_none(&rows.expr_shape, 3, TOK_ASSIGN);
+    assert_shape_none(&rows.expr_shape, 5, TOK_DOT);
+    assert_shape_none(&rows.expr_shape, 10, TOK_LBRACKET);
 }
 
 #[test]
@@ -346,28 +196,8 @@ fn array_range_designator_has_range_designator_and_subscript_kinds() {
     assert_pg_preserves_row(&rows, 6, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR);
     assert_pg_preserves_row(&rows, 8, C_AST_KIND_RANGE_DESIGNATOR_EXPR);
 
-    assert_shape_row(
-        &rows.expr_shape,
-        6,
-        C_EXPR_SHAPE_NONE,
-        TOK_LBRACKET,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        8,
-        C_EXPR_SHAPE_NONE,
-        TOK_ELLIPSIS,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
+    assert_shape_none(&rows.expr_shape, 6, TOK_LBRACKET);
+    assert_shape_none(&rows.expr_shape, 8, TOK_ELLIPSIS);
 }
 
 #[test]
@@ -410,26 +240,6 @@ fn gnu_case_range_has_case_stmt_and_range_designator_kinds() {
 
     // Case statement and range designator are not expression-shape nodes,
     // but they still receive shape rows (NONE) in the buffer.
-    assert_shape_row(
-        &rows.expr_shape,
-        5,
-        C_EXPR_SHAPE_NONE,
-        TOK_CASE,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
-    assert_shape_row(
-        &rows.expr_shape,
-        7,
-        C_EXPR_SHAPE_NONE,
-        TOK_ELLIPSIS,
-        0,
-        C_EXPR_ASSOC_NONE,
-        SENTINEL,
-        SENTINEL,
-        SENTINEL,
-    );
+    assert_shape_none(&rows.expr_shape, 5, TOK_CASE);
+    assert_shape_none(&rows.expr_shape, 7, TOK_ELLIPSIS);
 }
