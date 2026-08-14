@@ -280,6 +280,7 @@ fn gpu_directive_metadata_with_source_layout(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_foundation::ir::DataType;
 
     #[test]
     fn op_id_is_canonical_and_stable() {
