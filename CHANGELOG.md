@@ -125,6 +125,19 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   The volume sweep runner had a three-crate list that left one tracked volume
   wave in no shard, and a shard index outside the shard count selected nothing
   and exited 0.
+- The generated bitset and reduce sweeps are two parameterized matrices instead
+  of twenty-five near-identical per-operation files.
+  `sweep_bitset_oracle_matrix` carries one case list and one assertion body per
+  call shape and fails when a registered `vyre-primitives::bitset` operation is
+  neither swept nor exempted to a named suite; `sweep_reduce_oracle_matrix`
+  does the same for the reducers. Every operation now runs the union of the
+  populations the separate files used, and the in-place, exclusive-scan, and
+  `cpu_ref_into` paths are swept for the first time. The CRC and graph-motif
+  oracle matrices no longer restate the implementation they check: they compare
+  against published CRC-32/ISO-HDLC and FNV-1a check vectors, a table-free
+  bit-at-a-time walk, the concatenation law, and an edge-mask dictionary.
+  Program-shape queries and the CSR frontier-step driver each have one owner
+  rather than a copy per suite.
 
 ### Removed
 
@@ -289,6 +302,15 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   owner in `structure-gate`, and the contract asserts the property rather than
   the mechanism: the resolved root must contain the directory the run was
   invoked in.
+- The registered witness programs for
+  `vyre-primitives::math::quantized::i4x8_matvec_f32_scaled` and
+  `i4x8_batched_matvec_f32_scaled` bound their output buffer to a slot named
+  `vector_scale` and sized it for one f32, so every lane above the first wrote
+  out of bounds on the declared fixture. The registry safety rules read that as
+  an out-of-bounds access on valid input, an out-of-bounds access under grid
+  over-fire, and a cross-lane write-write race, three failures for one wrong
+  buffer. Both now name the output `out` and declare only the three input
+  buffers, matching the other packed-INT4 registrations.
 
 ## [0.7.1] - 2026-08-01
 

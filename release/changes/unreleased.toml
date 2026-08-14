@@ -314,3 +314,13 @@ text = "The documentation reference rule read an absolute path in a code span as
 id = "gate-checkout-provenance-runtime"
 category = "Fixed"
 text = "Every gate now resolves the checkout it reports on from the working directory at run time. Two checkouts of this repository that share one cargo target directory compute the same unit hash for a member, so cargo hands one checkout a binary compiled by another; a `VYRE_CHECKOUT_ROOT` declared in `.cargo/config.toml` and read with `env!` was supposed to make the value a fingerprint input and did not, because cargo does not export a `relative = true` config variable to the process it runs. The shared `xtask` binary baked a worktree's path and `dup-scan` therefore read that worktree's pins, reporting this tree's `xtask` at 473 duplicated lines against a pin of 465 while this tree's own file said 411. The variable is gone, the walk has one owner in `structure-gate`, and the contract asserts the property rather than the mechanism: the resolved root must contain the directory the run was invoked in."
+
+[[fragments]]
+id = "quantized-matvec-registered-output"
+category = "Fixed"
+text = "The registered witness programs for `vyre-primitives::math::quantized::i4x8_matvec_f32_scaled` and `i4x8_batched_matvec_f32_scaled` bound their output buffer to a slot named `vector_scale` and sized it for one f32, so every lane above the first wrote out of bounds on the declared fixture. The registry safety rules read that as an out-of-bounds access on valid input, an out-of-bounds access under grid over-fire, and a cross-lane write-write race, three failures for one wrong buffer. Both now name the output `out` and declare only the three input buffers, matching the other packed-INT4 registrations."
+
+[[fragments]]
+id = "primitives-sweep-matrix-owners"
+category = "Changed"
+text = "The generated bitset and reduce sweeps are two parameterized matrices instead of twenty-five near-identical per-operation files. `sweep_bitset_oracle_matrix` carries one case list and one assertion body per call shape and fails when a registered `vyre-primitives::bitset` operation is neither swept nor exempted to a named suite; `sweep_reduce_oracle_matrix` does the same for the reducers. Every operation now runs the union of the populations the separate files used, and the in-place, exclusive-scan, and `cpu_ref_into` paths are swept for the first time. The CRC and graph-motif oracle matrices no longer restate the implementation they check: they compare against published CRC-32/ISO-HDLC and FNV-1a check vectors, a table-free bit-at-a-time walk, the concatenation law, and an edge-mask dictionary. Program-shape queries and the CSR frontier-step driver each have one owner rather than a copy per suite."
