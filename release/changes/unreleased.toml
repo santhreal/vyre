@@ -809,3 +809,18 @@ text = "The duplication baseline pins for vyre-reference and vyre-spec now recor
 id = "duplication-pins-lowered-to-the-merged-tree"
 category = "Changed"
 text = "Twelve duplication pins now sit at what the merged tree measures rather than at what each lane measured in isolation: vyre 40 to 22, vyre-aot 54 to 31, vyre-debug 71 to 54, vyre-driver-cuda 3252 to 3238, vyre-driver-wgpu 4229 to 4017, vyre-foundation 5125 to 5117, vyre-libs 11759 to 11539, vyre-megakernel 60 to 8, vyre-primitives 7145 to 7038, vyre-runtime 412 to 345, vyre-pass-engine 299 to 288. Duplication is measured across files, so collapsing a copy in one crate moves every crate that shared it: vyre-megakernel lost 52 lines it never edited, and vyre-primitives lost 107. A pin left at the isolated measurement would have carried that slack as headroom for the next copy. `total_lines` is measured too, not carried forward, because a stale total makes the ratio it exists to report meaningless."
+
+[[fragments]]
+id = "small-crate-lint-and-fixture-owners"
+category = "Changed"
+text = "The five `vyre-lints` scans share one source walk in `vyre-lints/src/scan.rs`, and the CLI reads a lint registry instead of four near-identical entry points. `ViolationKind` gains `ALL`, `position` and `as_str` so the CLI and the JSON writer read the enum rather than restating it, and a kind that reaches no lint now fails the suite. The CLI reports its declared scan scope under `--print-default-roots`, so the production-root test asserts the property those roots must satisfy instead of restating the list. `raw_ir_in_libs` kept a second workspace-relative path function that disagreed with `vyre-lints/src/paths.rs` on the vyre-libs prefix; it is gone."
+
+[[fragments]]
+id = "small-crate-test-fixture-owners"
+category = "Changed"
+text = "The three `vyre-debug` descriptor and WGSL suites share one program fixture in `vyre-debug/tests/support/mod.rs`. The descriptor a dump renders, the descriptor a diff compares and the WGSL a backend emits are only comparable while their fixtures agree, and the fixture was previously copied byte for byte into each target. `vyre-macros` pass metadata is a table in `vyre-macros/src/pass.rs` rather than three parallel token functions, and the macro test suites take their pass bodies from `vyre-macros/tests/support/mod.rs`."
+
+[[fragments]]
+id = "small-crate-dup-pins-lowered"
+category = "Changed"
+text = "Duplication pins for three crates now record the measured tree: vyre-macros 89 to 41, vyre-lints 66 to 0, vyre-debug 54 to 9. Their total line counts are corrected to the measured values, which were already stale before these changes. A no-op test whose body was a comment claiming to pin a test count is deleted, and the two `raw_ir_in_libs` case files, named for a helper and for one of their own tests, are now named for what they hold."

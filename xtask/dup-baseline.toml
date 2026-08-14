@@ -66,8 +66,8 @@ total_lines = 37430
 
 [[crate]]
 name = "vyre-debug"
-duplicate_lines = 54
-total_lines = 2241
+duplicate_lines = 9
+total_lines = 2227
 
 [[crate]]
 name = "vyre-driver"
@@ -141,8 +141,8 @@ total_lines = 187422
 
 [[crate]]
 name = "vyre-lints"
-duplicate_lines = 66
-total_lines = 3443
+duplicate_lines = 0
+total_lines = 3437
 
 [[crate]]
 name = "vyre-lower"
@@ -151,8 +151,8 @@ total_lines = 13222
 
 [[crate]]
 name = "vyre-macros"
-duplicate_lines = 89
-total_lines = 1991
+duplicate_lines = 41
+total_lines = 2070
 
 [[crate]]
 name = "vyre-megakernel"
