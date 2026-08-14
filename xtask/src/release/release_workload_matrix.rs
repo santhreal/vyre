@@ -4,17 +4,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub(crate) fn run(args: &[String]) {
-    let config = match parse_args(args) {
-        Ok(config) => config,
-        Err(message) => {
-            eprintln!("{message}");
-            std::process::exit(2);
-        }
-    };
+    let (output, enforce) = crate::output_arg::parsed_or_exit(parse_args(args));
     let workspace_root = crate::checkout::checkout_root();
-    let output = config.output.unwrap_or_else(|| {
-        PathBuf::from("release/evidence/benchmarks/release-workload-matrix.json")
-    });
     let runner = cargo_runner(&workspace_root);
     let mut command_args = vec![
         "run".to_string(),
@@ -28,7 +19,7 @@ pub(crate) fn run(args: &[String]) {
         "--output".to_string(),
         output.display().to_string(),
     ];
-    if config.enforce {
+    if enforce {
         command_args.push("--enforce".to_string());
     }
     let status = Command::new(&runner)
@@ -56,43 +47,15 @@ pub(crate) fn run(args: &[String]) {
     }
 }
 
-struct Config {
-    output: Option<PathBuf>,
-    enforce: bool,
-}
-
-fn parse_args(args: &[String]) -> Result<Config, String> {
-    let mut output = None;
-    let mut enforce = false;
-    let mut index = 2;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--output" => {
-                let Some(path) = args.get(index + 1) else {
-                    return Err("Fix: --output requires a path.".to_string());
-                };
-                output = Some(PathBuf::from(path));
-                index += 2;
-            }
-            "--enforce" => {
-                enforce = true;
-                index += 1;
-            }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo xtask release-workload-matrix [--output PATH] [--enforce]\n\n\
-                     Writes the release workload family matrix without running benchmark cases."
-                );
-                std::process::exit(0);
-            }
-            other => {
-                return Err(format!(
-                    "Fix: unknown release-workload-matrix option `{other}`."
-                ));
-            }
-        }
-    }
-    Ok(Config { output, enforce })
+fn parse_args(args: &[String]) -> Result<(PathBuf, bool), String> {
+    crate::output_arg::parse_output_and_flag_arg(
+        args,
+        "release-workload-matrix",
+        "--enforce",
+        "USAGE:\n  cargo xtask release-workload-matrix [--output PATH] [--enforce]\n\n\
+         Writes the release workload family matrix without running benchmark cases.",
+        || PathBuf::from("release/evidence/benchmarks/release-workload-matrix.json"),
+    )
 }
 
 fn cargo_runner(workspace_root: &Path) -> PathBuf {

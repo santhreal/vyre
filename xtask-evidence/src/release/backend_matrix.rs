@@ -307,13 +307,7 @@ const BACKEND_PRODUCTION_SCAN_ROOTS: &[&str] = &[
 ];
 
 pub(crate) fn run(args: &[String]) {
-    let output = match parse_output(args) {
-        Ok(output) => output,
-        Err(message) => {
-            eprintln!("{message}");
-            std::process::exit(2);
-        }
-    };
+    let output = xtask::output_arg::parsed_or_exit(parse_output(args));
     let registrations = vyre_registry_link::backend::live_backend_registry_by_precedence()
         .unwrap_or_else(|error| panic!("backend registry startup failed: {error}"));
     let mut backends = Vec::new();
@@ -432,17 +426,8 @@ pub(crate) fn run(args: &[String]) {
         blockers,
     };
 
-    if let Some(parent) = output.parent() {
-        if let Err(error) = fs::create_dir_all(parent) {
-            eprintln!("Fix: failed to create `{}`: {error}", parent.display());
-            std::process::exit(1);
-        }
-    }
     xtask::output_arg::write_json(&output, &matrix);
-    println!("backend-matrix: wrote {}", output.display());
-    if !matrix.blockers.is_empty() {
-        std::process::exit(1);
-    }
+    xtask::output_arg::report_evidence_artifact("backend-matrix", &output, matrix.blockers.len());
 }
 
 fn collect_cuda_feature_markers(

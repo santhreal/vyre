@@ -2,7 +2,6 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsString;
-use std::fs;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 
@@ -223,13 +222,7 @@ const fn step(package: &'static str, version: &'static str, manifest: &'static s
 }
 
 pub(crate) fn run(args: &[String]) {
-    let output = match parse_output(args) {
-        Ok(output) => output,
-        Err(message) => {
-            eprintln!("{message}");
-            std::process::exit(2);
-        }
-    };
+    let output = crate::output_arg::parsed_or_exit(parse_output(args));
     let vyre_root = crate::checkout::checkout_root();
     let metadata_path = vyre_root.join("release/evidence/metadata/metadata-matrix.json");
     let mut blockers = Vec::new();
@@ -331,17 +324,12 @@ pub(crate) fn run(args: &[String]) {
         package_content_checks,
         blockers,
     };
-    if let Some(parent) = output.parent() {
-        if let Err(error) = fs::create_dir_all(parent) {
-            eprintln!("Fix: failed to create `{}`: {error}", parent.display());
-            std::process::exit(1);
-        }
-    }
     crate::output_arg::write_json(&output, &readiness);
-    println!("package-readiness: wrote {}", output.display());
-    if !readiness.blockers.is_empty() {
-        std::process::exit(1);
-    }
+    crate::output_arg::report_evidence_artifact(
+        "package-readiness",
+        &output,
+        readiness.blockers.len(),
+    );
 }
 
 fn audit_package_contents(

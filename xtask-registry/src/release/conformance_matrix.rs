@@ -146,13 +146,7 @@ const ALLOWED_SCAN_ENGINE_SUPPORT: &[&str] =
     &["supported", "unsupported", "not_applicable", "experimental"];
 
 pub(crate) fn run(args: &[String]) {
-    let (output, check) = match parse_args(args) {
-        Ok(parsed) => parsed,
-        Err(message) => {
-            eprintln!("{message}");
-            std::process::exit(2);
-        }
-    };
+    let (output, check) = xtask::output_arg::parsed_or_exit(parse_args(args));
     let operations = vyre_registry_link::operation::live_operation_registry()
         .iter()
         .collect::<Vec<_>>();
@@ -752,33 +746,14 @@ fn check_against_disk(matrix: &ConformanceMatrix, output: &Path) {
 }
 
 fn parse_args(args: &[String]) -> Result<(PathBuf, bool), String> {
-    let mut output = None;
-    let mut check = false;
-    let mut index = 2;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--output" => {
-                let Some(path) = args.get(index + 1) else {
-                    return Err("Fix: --output requires a path.".to_string());
-                };
-                output = Some(PathBuf::from(path));
-                index += 2;
-            }
-            "--check" => {
-                check = true;
-                index += 1;
-            }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo xtask conformance-matrix [--check] [--output PATH]\n\n\
-                     Writes or checks registered-op and release-backend conformance coverage evidence."
-                );
-                std::process::exit(0);
-            }
-            other => return Err(format!("Fix: unknown conformance-matrix option `{other}`.")),
-        }
-    }
-    Ok((output.unwrap_or_else(default_output), check))
+    xtask::output_arg::parse_output_and_flag_arg(
+        args,
+        "conformance-matrix",
+        "--check",
+        "USAGE:\n  cargo xtask conformance-matrix [--check] [--output PATH]\n\n\
+         Writes or checks registered-op and release-backend conformance coverage evidence.",
+        default_output,
+    )
 }
 
 fn default_output() -> PathBuf {

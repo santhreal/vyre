@@ -69,7 +69,35 @@ pub fn parse_output_arg(
     description: &str,
     default_output: impl FnOnce() -> PathBuf,
 ) -> Result<PathBuf, String> {
+    let usage = format!("USAGE:\n  cargo xtask {command} [--output PATH]\n\n  {description}");
+    parse_output_options(args, command, None, &usage, default_output).map(|(output, _)| output)
+}
+
+/// Parse `--output <path>` plus one valueless `flag` for `command`.
+///
+/// `usage` is printed verbatim for `--help`, because a command with a second
+/// option documents its own option list rather than the one-option shape
+/// `parse_output_arg` renders. The loop itself is the same either way, and the
+/// commands that owned a copy of it each had to be corrected separately.
+pub fn parse_output_and_flag_arg(
+    args: &[String],
+    command: &str,
+    flag: &str,
+    usage: &str,
+    default_output: impl FnOnce() -> PathBuf,
+) -> Result<(PathBuf, bool), String> {
+    parse_output_options(args, command, Some(flag), usage, default_output)
+}
+
+fn parse_output_options(
+    args: &[String],
+    command: &str,
+    flag: Option<&str>,
+    usage: &str,
+    default_output: impl FnOnce() -> PathBuf,
+) -> Result<(PathBuf, bool), String> {
     let mut output = None;
+    let mut flag_set = false;
     let mut index = 2;
     while index < args.len() {
         match args[index].as_str() {
@@ -81,17 +109,64 @@ pub fn parse_output_arg(
                 index += 2;
             }
             "--help" | "-h" => {
-                println!("USAGE:\n  cargo xtask {command} [--output PATH]\n\n  {description}");
+                println!("{usage}");
                 std::process::exit(0);
+            }
+            other if Some(other) == flag => {
+                flag_set = true;
+                index += 1;
             }
             other => return Err(format!("Fix: unknown {command} option `{other}`.")),
         }
     }
-    Ok(output.unwrap_or_else(default_output))
+    Ok((output.unwrap_or_else(default_output), flag_set))
+}
+
+/// Take a parsed command line, or report the usage error and exit 2.
+///
+/// Exit 2 separates a usage error from a gate failure, which exits 1, and CI
+/// reads that difference. A dozen evidence commands wrote the same match out,
+/// so one that returned the wrong code would have read as a failing gate.
+pub fn parsed_or_exit<T>(parsed: Result<T, String>) -> T {
+    match parsed {
+        Ok(value) => value,
+        Err(message) => {
+            eprintln!("{message}");
+            std::process::exit(2);
+        }
+    }
+}
+
+/// Announce a written evidence artifact and exit 1 when it carries blockers.
+///
+/// Every evidence command ends this way: the path is printed so a reader knows
+/// what to open, and a non-empty blocker list is a failing gate. Each command
+/// carried its own copy, so a command that forgot the exit would have written a
+/// blocked artifact and reported success.
+pub fn report_evidence_artifact(command: &str, output: &Path, blockers: usize) {
+    println!("{command}: wrote {}", output.display());
+    if blockers != 0 {
+        std::process::exit(1);
+    }
+}
+
+/// Create `path`'s parent directory, reporting the failure and exiting 1.
+pub fn create_parent_dir(path: &Path) {
+    let Some(parent) = path.parent() else {
+        return;
+    };
+    if let Err(error) = std::fs::create_dir_all(parent) {
+        eprintln!("Fix: failed to create `{}`: {error}", parent.display());
+        std::process::exit(1);
+    }
 }
 
 /// Write `value` as pretty JSON, exiting with a `Fix:` message on failure.
+///
+/// The parent directory is created here, because an artifact writer that has to
+/// remember to create it is one that will eventually forget.
 pub fn write_json(path: &Path, value: &impl serde::Serialize) {
+    create_parent_dir(path);
     let json = match serde_json::to_string_pretty(value) {
         Ok(json) => json,
         Err(error) => {

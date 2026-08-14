@@ -1,6 +1,5 @@
 //! Generate release version-story evidence for Vyre.
 
-use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -87,13 +86,7 @@ struct ReleaseNoteTokenFinding {
 }
 
 pub(crate) fn run(args: &[String]) {
-    let output = match parse_output(args) {
-        Ok(output) => output,
-        Err(message) => {
-            eprintln!("{message}");
-            std::process::exit(2);
-        }
-    };
+    let output = crate::output_arg::parsed_or_exit(parse_output(args));
     let vyre_root = crate::checkout::checkout_root();
     let mut crates = Vec::new();
     let mut collection_blockers = Vec::new();
@@ -193,18 +186,9 @@ pub(crate) fn run(args: &[String]) {
         blockers,
     };
 
-    if let Some(parent) = output.parent() {
-        if let Err(error) = fs::create_dir_all(parent) {
-            eprintln!("Fix: failed to create `{}`: {error}", parent.display());
-            std::process::exit(1);
-        }
-    }
     crate::output_arg::write_json(&output, &matrix);
     write_release_tag_plan(&output, &matrix);
-    println!("version-matrix: wrote {}", output.display());
-    if !matrix.blockers.is_empty() {
-        std::process::exit(1);
-    }
+    crate::output_arg::report_evidence_artifact("version-matrix", &output, matrix.blockers.len());
 }
 
 fn missing_required_release_packages(crates: &[CrateVersion]) -> Vec<String> {

@@ -218,13 +218,7 @@ const THRESHOLD_SUFFIXES: &[&str] = &[
 
 /// The vyre workspace root this build was compiled against.
 pub(crate) fn run(args: &[String]) {
-    let output = match parse_output(args) {
-        Ok(output) => output,
-        Err(message) => {
-            eprintln!("{message}");
-            std::process::exit(2);
-        }
-    };
+    let output = crate::output_arg::parsed_or_exit(parse_output(args));
     let roots = [crate::checkout::checkout_root()];
     let scanned_roots = roots
         .iter()
@@ -277,18 +271,9 @@ pub(crate) fn run(args: &[String]) {
         blockers,
     };
 
-    if let Some(parent) = output.parent() {
-        if let Err(error) = fs::create_dir_all(parent) {
-            eprintln!("Fix: failed to create `{}`: {error}", parent.display());
-            std::process::exit(1);
-        }
-    }
     crate::output_arg::write_json(&output, &matrix);
     write_sibling_artifacts(&output, &matrix);
-    println!("hygiene-matrix: wrote {}", output.display());
-    if !matrix.blockers.is_empty() {
-        std::process::exit(1);
-    }
+    crate::output_arg::report_evidence_artifact("hygiene-matrix", &output, matrix.blockers.len());
 }
 
 fn finding_summary(findings: &[HygieneFinding]) -> Vec<HygieneFindingSummary> {

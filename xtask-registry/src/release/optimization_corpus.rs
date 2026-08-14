@@ -80,13 +80,7 @@ struct OptimizerPassManifest {
 }
 
 pub(crate) fn run(args: &[String]) {
-    let output = match parse_output(args) {
-        Ok(output) => output,
-        Err(message) => {
-            eprintln!("{message}");
-            std::process::exit(2);
-        }
-    };
+    let output = xtask::output_arg::parsed_or_exit(parse_output(args));
     let cases = generate_release_corpus();
     let manifest = manifest_for(&cases);
     if manifest.generated_cases < manifest.required_min_cases
