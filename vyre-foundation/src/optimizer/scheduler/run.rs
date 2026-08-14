@@ -14,8 +14,8 @@ use super::{
 use crate::ir::{BufferDecl, Expr, Node};
 use crate::ir_inner::model::program::Program;
 use crate::optimizer::{
-    fact_cache::FactCache, registered_passes, requirements_satisfied, OptimizerError,
-    PassMetadata, ProgramPassKind, ProgramPassRegistration,
+    fact_cache::FactCache, registered_passes, requirements_satisfied, OptimizerError, PassMetadata,
+    ProgramPassKind, ProgramPassRegistration,
 };
 use crate::perf::PerfScope;
 
@@ -93,6 +93,84 @@ fn introduces_shape_predicate_violations(
     after.iter().any(|violation| !before.contains(violation))
 }
 
+/// Post-condition certificates for one program.
+///
+/// Every enabled gate is a pure function of the program, so a pass that
+/// declines to rewrite leaves all of them valid, and the certificates a landed
+/// rewrite is judged against are the certificates the previous accepted rewrite
+/// already produced. Each field is `None` when its gate is disabled.
+#[derive(Debug, Default)]
+struct GateFacts {
+    cost: Option<crate::optimizer::cost::CostCertificate>,
+    effects: Option<crate::lower::effects::ProgramEffects>,
+    linear_violations: Option<BTreeSet<String>>,
+    shape_violations: Option<BTreeSet<String>>,
+}
+
+impl GateFacts {
+    /// Effect-row bits, or zero when effect enforcement is disabled.
+    fn effect_bits(&self) -> u32 {
+        self.effects
+            .map_or(0, crate::lower::effects::ProgramEffects::bits)
+    }
+
+    /// Linear-type violation count, or zero when that gate is disabled.
+    fn linear_violation_count(&self) -> usize {
+        self.linear_violations.as_ref().map_or(0, BTreeSet::len)
+    }
+
+    /// Shape-predicate violation count, or zero when that gate is disabled.
+    fn shape_violation_count(&self) -> usize {
+        self.shape_violations.as_ref().map_or(0, BTreeSet::len)
+    }
+}
+
+/// Which post-condition gate rejected a rewrite.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum GateRejection {
+    Effects,
+    LinearTypes,
+    ShapePredicates,
+    Cost,
+}
+
+impl GateRejection {
+    fn decision(self) -> PassRunDecision {
+        match self {
+            Self::Effects => PassRunDecision::EffectReverted,
+            Self::LinearTypes => PassRunDecision::LinearTypeReverted,
+            Self::ShapePredicates => PassRunDecision::ShapePredicateReverted,
+            Self::Cost => PassRunDecision::CostReverted,
+        }
+    }
+}
+
+/// Gate certificates carried from one pass to the next, keyed by the
+/// fingerprint of the program they describe.
+///
+/// Deriving them costs a whole-program effect walk plus two validation walks
+/// that allocate their diagnostics, and the scheduler used to pay that for
+/// every running pass in every fixpoint iteration even though most passes leave
+/// the program alone.
+///
+/// The key is `Program::fingerprint`, not the pass's own `changed` flag: a pass
+/// may return a rewritten program while reporting no change, and handing that
+/// program the previous program's certificates would judge the next rewrite
+/// against the wrong baseline. Certificates are stored under the fingerprint of
+/// the program they were derived from, and a lookup that does not match
+/// re-derives, so a stale entry can be held but never served.
+#[derive(Debug, Default)]
+struct GateFactState {
+    entry: Option<([u8; 32], GateFacts)>,
+}
+
+impl GateFactState {
+    /// Carry `facts` forward as the certificates of `program`.
+    fn store(&mut self, program: &Program, facts: GateFacts) {
+        self.entry = Some((program.fingerprint(), facts));
+    }
+}
+
 impl PassScheduler {
     /// `tag → pass names that depend on it` (their own name OR a `requires`
     /// entry equals the tag). Computed once per scheduler. Replaces the
@@ -142,11 +220,12 @@ impl PassScheduler {
         let mut last_pass = "<none>";
         let mut dirty = self.initial_dirty_flags();
         let mut next_dirty = vec![false; self.passes.len()];
+        let mut gates = GateFactState::default();
 
         for _ in 0..self.max_iterations {
             next_dirty.fill(false);
             let (next, changed, changed_by) =
-                self.run_once_flags(program, &dirty, &mut next_dirty)?;
+                self.run_once_flags(program, &dirty, &mut next_dirty, &mut gates)?;
             program = next;
             if let Some(name) = changed_by {
                 last_pass = name;
@@ -177,6 +256,7 @@ impl PassScheduler {
         let mut dirty = self.initial_dirty_flags();
         let mut next_dirty = vec![false; self.passes.len()];
         let mut fact_state = SchedulerFactState::default();
+        let mut gates = GateFactState::default();
         let mut metrics = Vec::with_capacity(
             self.execution_order
                 .len()
@@ -192,6 +272,7 @@ impl PassScheduler {
                 iteration,
                 &mut metrics,
                 &mut fact_state,
+                &mut gates,
             )?;
             program = next;
             if let Some(name) = changed_by {
@@ -211,11 +292,104 @@ impl PassScheduler {
         })
     }
 
+    /// True when at least one post-condition gate is enabled.
+    fn enforces_post_conditions(&self) -> bool {
+        self.enforce_cost_monotone
+            || self.enforce_effect_handlers
+            || self.enforce_linear_types
+            || self.enforce_shape_predicates
+    }
+
+    /// Certificates of every enabled gate for `program`, reusing the carried
+    /// ones when they describe a program with the same fingerprint.
+    fn gate_facts_for(&self, state: &mut GateFactState, program: &Program) -> GateFacts {
+        match state.entry.take() {
+            Some((fingerprint, facts)) if fingerprint == program.fingerprint() => facts,
+            _ => self.gate_facts(program),
+        }
+    }
+
+    /// Derive the certificate of every enabled gate for `program`.
+    fn gate_facts(&self, program: &Program) -> GateFacts {
+        GateFacts {
+            cost: self
+                .enforce_cost_monotone
+                .then(|| crate::optimizer::cost::CostCertificate::for_program(program)),
+            effects: self
+                .enforce_effect_handlers
+                .then(|| crate::lower::effects::compute_program_effects(program)),
+            linear_violations: self
+                .enforce_linear_types
+                .then(|| linear_type_violations(program)),
+            shape_violations: self
+                .enforce_shape_predicates
+                .then(|| shape_predicate_violations(program)),
+        }
+    }
+
+    /// Judge one landed rewrite against every enabled gate.
+    ///
+    /// A rewrite may discharge an existing violation but never introduce a new
+    /// one. On acceptance the post-rewrite certificates are returned, because
+    /// they are the pre-rewrite certificates of whatever pass runs next.
+    fn judge_rewrite(
+        &self,
+        before: &GateFacts,
+        after: &Program,
+        allowed_effect_additions: crate::lower::effects::ProgramEffects,
+    ) -> Result<GateFacts, GateRejection> {
+        let effects = self
+            .enforce_effect_handlers
+            .then(|| crate::lower::effects::compute_program_effects(after));
+        if let (Some(before_effects), Some(after_effects)) = (before.effects, effects) {
+            if introduces_forbidden_effects(before_effects, after_effects, allowed_effect_additions)
+            {
+                return Err(GateRejection::Effects);
+            }
+        }
+        let linear_violations = self
+            .enforce_linear_types
+            .then(|| linear_type_violations(after));
+        if let (Some(before_violations), Some(after_violations)) = (
+            before.linear_violations.as_ref(),
+            linear_violations.as_ref(),
+        ) {
+            if introduces_linear_type_violations(before_violations, after_violations) {
+                return Err(GateRejection::LinearTypes);
+            }
+        }
+        let shape_violations = self
+            .enforce_shape_predicates
+            .then(|| shape_predicate_violations(after));
+        if let (Some(before_violations), Some(after_violations)) =
+            (before.shape_violations.as_ref(), shape_violations.as_ref())
+        {
+            if introduces_shape_predicate_violations(before_violations, after_violations) {
+                return Err(GateRejection::ShapePredicates);
+            }
+        }
+        let cost = self
+            .enforce_cost_monotone
+            .then(|| crate::optimizer::cost::CostCertificate::for_program(after));
+        if let (Some(before_cost), Some(after_cost)) = (before.cost.as_ref(), cost.as_ref()) {
+            if !after_cost.dominates_or_equal(before_cost) {
+                return Err(GateRejection::Cost);
+            }
+        }
+        Ok(GateFacts {
+            cost,
+            effects,
+            linear_violations,
+            shape_violations,
+        })
+    }
+
     fn run_once_flags(
         &self,
         mut program: Program,
         dirty: &[bool],
         next_dirty: &mut [bool],
+        gates: &mut GateFactState,
     ) -> Result<(Program, bool, Option<&'static str>), OptimizerError> {
         let mut available = (!self.requirements_prevalidated).then(|| {
             let mut available = FxHashSet::default();
@@ -224,6 +398,7 @@ impl PassScheduler {
         });
         let mut changed = false;
         let mut changed_by = None;
+        let enforce_gates = self.enforces_post_conditions();
         for &pass_index in &self.execution_order {
             let Some(pass) = self.passes.get(pass_index) else {
                 continue;
@@ -246,106 +421,56 @@ impl PassScheduler {
 
             if dirty.get(pass_index).copied().unwrap_or(false) && pass.analyze(&program).should_run
             {
-                let enforce_gates = self.enforce_cost_monotone
-                    || self.enforce_effect_handlers
-                    || self.enforce_linear_types
-                    || self.enforce_shape_predicates;
-                let changed_before = changed;
-                let changed_by_before = changed_by;
-                let before = program.clone();
-                program = if enforce_gates {
-                    let pre_cost = self
-                        .enforce_cost_monotone
-                        .then(|| crate::optimizer::cost::CostCertificate::for_program(&program));
-                    let pre_effects = self
-                        .enforce_effect_handlers
-                        .then(|| crate::lower::effects::compute_program_effects(&program));
-                    let pre_linear_violations = self
-                        .enforce_linear_types
-                        .then(|| linear_type_violations(&program));
-                    let pre_shape_predicate_violations = self
-                        .enforce_shape_predicates
-                        .then(|| shape_predicate_violations(&program));
-                    let pre_snapshot = Clone::clone(&program);
+                // One snapshot serves both the gate rollback and the check for a
+                // pass that reports a rewrite it did not make.
+                let snapshot = program.clone();
+                let (next_program, landed) = if enforce_gates {
+                    let before = self.gate_facts_for(gates, &program);
                     match pass.try_batch_apply(program) {
-                        Ok(result) => {
-                            if result.changed {
-                                let mut rejected = false;
-                                if let Some(pre_effects) = pre_effects {
-                                    let post_effects =
-                                        crate::lower::effects::compute_program_effects(
-                                            &result.program,
-                                        );
-                                    rejected = introduces_forbidden_effects(
-                                        pre_effects,
-                                        post_effects,
-                                        pass.allowed_effect_additions(),
-                                    );
-                                }
-                                if !rejected {
-                                    if let Some(pre_cost) = pre_cost {
-                                        let post_cost =
-                                            crate::optimizer::cost::CostCertificate::for_program(
-                                                &result.program,
-                                            );
-                                        if !post_cost.dominates_or_equal(&pre_cost) {
-                                            rejected = true;
-                                        }
-                                    }
-                                }
-                                if !rejected {
-                                    if let Some(pre_linear_violations) = &pre_linear_violations {
-                                        let post_linear_violations =
-                                            linear_type_violations(&result.program);
-                                        if introduces_linear_type_violations(
-                                            pre_linear_violations,
-                                            &post_linear_violations,
-                                        ) {
-                                            rejected = true;
-                                        }
-                                    }
-                                }
-                                if !rejected {
-                                    if let Some(pre_shape_predicate_violations) =
-                                        &pre_shape_predicate_violations
-                                    {
-                                        let post_shape_predicate_violations =
-                                            shape_predicate_violations(&result.program);
-                                        if introduces_shape_predicate_violations(
-                                            pre_shape_predicate_violations,
-                                            &post_shape_predicate_violations,
-                                        ) {
-                                            rejected = true;
-                                        }
-                                    }
-                                }
-                                if rejected {
-                                    pre_snapshot
-                                } else {
-                                    changed = true;
-                                    changed_by = Some(pass.pass_id());
+                        Ok(result) if result.changed => {
+                            match self.judge_rewrite(
+                                &before,
+                                &result.program,
+                                pass.allowed_effect_additions(),
+                            ) {
+                                Ok(after) => {
                                     next_dirty.fill(true);
-                                    result.program
+                                    // `changed` short-circuits the deep compare:
+                                    // once an earlier pass has landed, whether
+                                    // this one really rewrote anything changes
+                                    // neither return value.
+                                    let landed = changed || result.program != snapshot;
+                                    gates.store(&result.program, after);
+                                    (result.program, landed)
                                 }
-                            } else {
-                                result.program
+                                Err(_rejection) => {
+                                    gates.store(&snapshot, before);
+                                    (snapshot, false)
+                                }
                             }
                         }
-                        Err(_refusal) => pre_snapshot,
+                        Ok(result) => {
+                            gates.store(&snapshot, before);
+                            (result.program, false)
+                        }
+                        Err(_refusal) => {
+                            gates.store(&snapshot, before);
+                            (snapshot, false)
+                        }
                     }
                 } else {
                     let result = pass.batch_apply(program);
                     if result.changed {
-                        changed = true;
-                        changed_by = Some(pass.pass_id());
                         next_dirty.fill(true);
                     }
-                    result.program
+                    let landed = result.changed && (changed || result.program != snapshot);
+                    (result.program, landed)
                 };
-                if changed != changed_before && program == before {
-                    changed = changed_before;
-                    changed_by = changed_by_before;
+                if landed {
+                    changed = true;
+                    changed_by = Some(pass.pass_id());
                 }
+                program = next_program;
             }
             if let Some(available) = available.as_mut() {
                 available.insert(metadata.name);
@@ -359,7 +484,7 @@ impl PassScheduler {
         clippy::too_many_lines,
         reason = "scheduler metric collection keeps before/after counters colocated with pass execution"
     )]
-    pub(crate) fn run_once_with_metrics(
+    fn run_once_with_metrics(
         &self,
         mut program: Program,
         dirty: &[bool],
@@ -367,6 +492,7 @@ impl PassScheduler {
         iteration: usize,
         metrics: &mut Vec<PassRunMetric>,
         fact_state: &mut SchedulerFactState,
+        gates: &mut GateFactState,
     ) -> Result<(Program, bool, Option<&'static str>), OptimizerError> {
         let mut available = (!self.requirements_prevalidated).then(|| {
             let mut available = FxHashSet::default();
@@ -376,6 +502,7 @@ impl PassScheduler {
         let mut changed = false;
         let mut changed_by = None;
         let mut cached_allocation_estimate: Option<IrAllocationEstimate> = None;
+        let enforce_gates = self.enforces_post_conditions();
 
         for &pass_index in &self.execution_order {
             let Some(pass) = self.passes.get(pass_index) else {
@@ -453,180 +580,88 @@ impl PassScheduler {
                     }
                     continue;
                 }
-                let before = program.clone();
+                // One snapshot serves both the gate rollback and the check for a
+                // pass that reports a rewrite it did not make.
+                let snapshot = program.clone();
                 metric.ran = true;
                 let perf_scope = PerfScope::start("vyre-foundation", metadata.name);
-                let mut landed_changed = false;
-                let enforce_gates = self.enforce_cost_monotone
-                    || self.enforce_effect_handlers
-                    || self.enforce_linear_types
-                    || self.enforce_shape_predicates;
-                program = if enforce_gates {
-                    let pre_cost_for_gate = self
-                        .enforce_cost_monotone
-                        .then(|| crate::optimizer::cost::CostCertificate::for_program(&program));
-                    let pre_effects_for_gate = if self.enforce_effect_handlers {
-                        crate::lower::effects::compute_program_effects(&program)
-                    } else {
-                        crate::lower::effects::ProgramEffects::empty()
-                    };
-                    if self.enforce_effect_handlers {
-                        metric.effect_bits_before = pre_effects_for_gate.bits();
-                    }
-                    let pre_linear_violations_for_gate = if self.enforce_linear_types {
-                        linear_type_violations(&program)
-                    } else {
-                        BTreeSet::new()
-                    };
-                    if self.enforce_linear_types {
-                        metric.linear_type_violations_before = pre_linear_violations_for_gate.len();
-                    }
-                    let pre_shape_predicate_violations_for_gate = if self.enforce_shape_predicates {
-                        shape_predicate_violations(&program)
-                    } else {
-                        BTreeSet::new()
-                    };
-                    if self.enforce_shape_predicates {
-                        metric.shape_predicate_violations_before =
-                            pre_shape_predicate_violations_for_gate.len();
-                    }
-                    let pre_snapshot_for_gate = Clone::clone(&program);
-
+                let (next_program, landed_changed) = if enforce_gates {
+                    let before = self.gate_facts_for(gates, &program);
+                    metric.effect_bits_before = before.effect_bits();
+                    metric.linear_type_violations_before = before.linear_violation_count();
+                    metric.shape_predicate_violations_before = before.shape_violation_count();
                     let result = pass.try_batch_apply(program);
                     metric.runtime_ns = u128::from(perf_scope.finish().elapsed_ns);
                     match result {
                         Ok(result) if result.changed => {
-                            let post_effects = if self.enforce_effect_handlers {
-                                crate::lower::effects::compute_program_effects(&result.program)
-                            } else {
-                                crate::lower::effects::ProgramEffects::empty()
-                            };
-                            if self.enforce_effect_handlers
-                                && introduces_forbidden_effects(
-                                    pre_effects_for_gate,
-                                    post_effects,
-                                    pass.allowed_effect_additions(),
-                                )
-                            {
-                                metric.decision = PassRunDecision::EffectReverted;
-                                metric.effect_bits_after = pre_effects_for_gate.bits();
-                                metric.linear_type_violations_after =
-                                    pre_linear_violations_for_gate.len();
-                                metric.shape_predicate_violations_after =
-                                    pre_shape_predicate_violations_for_gate.len();
-                                pre_snapshot_for_gate
-                            } else if self.enforce_linear_types
-                                && introduces_linear_type_violations(
-                                    &pre_linear_violations_for_gate,
-                                    &linear_type_violations(&result.program),
-                                )
-                            {
-                                metric.decision = PassRunDecision::LinearTypeReverted;
-                                metric.effect_bits_after = pre_effects_for_gate.bits();
-                                metric.linear_type_violations_after =
-                                    pre_linear_violations_for_gate.len();
-                                metric.shape_predicate_violations_after =
-                                    pre_shape_predicate_violations_for_gate.len();
-                                pre_snapshot_for_gate
-                            } else if self.enforce_shape_predicates
-                                && introduces_shape_predicate_violations(
-                                    &pre_shape_predicate_violations_for_gate,
-                                    &shape_predicate_violations(&result.program),
-                                )
-                            {
-                                metric.decision = PassRunDecision::ShapePredicateReverted;
-                                metric.effect_bits_after = pre_effects_for_gate.bits();
-                                metric.linear_type_violations_after =
-                                    pre_linear_violations_for_gate.len();
-                                metric.shape_predicate_violations_after =
-                                    pre_shape_predicate_violations_for_gate.len();
-                                pre_snapshot_for_gate
-                            } else if let Some(pre_cost) = pre_cost_for_gate {
-                                let post_cost =
-                                    crate::optimizer::cost::CostCertificate::for_program(
-                                        &result.program,
-                                    );
-                                if post_cost.dominates_or_equal(&pre_cost) {
-                                    landed_changed = true;
-                                    metric.decision = PassRunDecision::Changed;
-                                    metric.effect_bits_after = post_effects.bits();
-                                    if self.enforce_linear_types {
-                                        metric.linear_type_violations_after =
-                                            linear_type_violations(&result.program).len();
-                                    }
-                                    if self.enforce_shape_predicates {
-                                        metric.shape_predicate_violations_after =
-                                            shape_predicate_violations(&result.program).len();
-                                    }
-                                    result.program
-                                } else {
-                                    // Cost-monotone-down violation: a tracked dimension
-                                    // increased without an explicit refusal. Drop the
-                                    // rewrite, restore the pre-snapshot. The metrics
-                                    // captured below reflect the post-revert shape.
-                                    metric.decision = PassRunDecision::CostReverted;
-                                    metric.effect_bits_after = pre_effects_for_gate.bits();
+                            match self.judge_rewrite(
+                                &before,
+                                &result.program,
+                                pass.allowed_effect_additions(),
+                            ) {
+                                Ok(after) => {
+                                    let landed = result.program != snapshot;
+                                    metric.decision = if landed {
+                                        PassRunDecision::Changed
+                                    } else {
+                                        PassRunDecision::RanUnchanged
+                                    };
+                                    metric.effect_bits_after = after.effect_bits();
                                     metric.linear_type_violations_after =
-                                        pre_linear_violations_for_gate.len();
+                                        after.linear_violation_count();
                                     metric.shape_predicate_violations_after =
-                                        pre_shape_predicate_violations_for_gate.len();
-                                    pre_snapshot_for_gate
+                                        after.shape_violation_count();
+                                    gates.store(&result.program, after);
+                                    (result.program, landed)
                                 }
-                            } else {
-                                landed_changed = true;
-                                metric.decision = PassRunDecision::Changed;
-                                metric.effect_bits_after = post_effects.bits();
-                                if self.enforce_linear_types {
+                                Err(rejection) => {
+                                    // A tracked post-condition regressed without
+                                    // an explicit refusal. Drop the rewrite and
+                                    // restore the snapshot; the counters below
+                                    // describe the post-revert program.
+                                    metric.decision = rejection.decision();
+                                    metric.effect_bits_after = before.effect_bits();
                                     metric.linear_type_violations_after =
-                                        linear_type_violations(&result.program).len();
-                                }
-                                if self.enforce_shape_predicates {
+                                        before.linear_violation_count();
                                     metric.shape_predicate_violations_after =
-                                        shape_predicate_violations(&result.program).len();
+                                        before.shape_violation_count();
+                                    gates.store(&snapshot, before);
+                                    (snapshot, false)
                                 }
-                                result.program
                             }
                         }
                         Ok(result) => {
-                            metric.decision = if result.changed {
-                                PassRunDecision::Changed
-                            } else {
-                                PassRunDecision::RanUnchanged
-                            };
-                            metric.effect_bits_after = pre_effects_for_gate.bits();
-                            metric.linear_type_violations_after =
-                                pre_linear_violations_for_gate.len();
+                            metric.decision = PassRunDecision::RanUnchanged;
+                            metric.effect_bits_after = before.effect_bits();
+                            metric.linear_type_violations_after = before.linear_violation_count();
                             metric.shape_predicate_violations_after =
-                                pre_shape_predicate_violations_for_gate.len();
-                            result.program
+                                before.shape_violation_count();
+                            gates.store(&snapshot, before);
+                            (result.program, false)
                         }
                         Err(refusal) => {
                             metric.decision = PassRunDecision::Refused;
                             metric.refusal_kind = Some(refusal.kind());
-                            metric.effect_bits_after = pre_effects_for_gate.bits();
-                            metric.linear_type_violations_after =
-                                pre_linear_violations_for_gate.len();
+                            metric.effect_bits_after = before.effect_bits();
+                            metric.linear_type_violations_after = before.linear_violation_count();
                             metric.shape_predicate_violations_after =
-                                pre_shape_predicate_violations_for_gate.len();
-                            pre_snapshot_for_gate
+                                before.shape_violation_count();
+                            gates.store(&snapshot, before);
+                            (snapshot, false)
                         }
                     }
                 } else {
                     let result = pass.batch_apply(program);
                     metric.runtime_ns = u128::from(perf_scope.finish().elapsed_ns);
-                    if result.changed {
-                        landed_changed = true;
-                        metric.decision = PassRunDecision::Changed;
-                        result.program
+                    let landed = result.changed && result.program != snapshot;
+                    metric.decision = if landed {
+                        PassRunDecision::Changed
                     } else {
-                        metric.decision = PassRunDecision::RanUnchanged;
-                        result.program
-                    }
+                        PassRunDecision::RanUnchanged
+                    };
+                    (result.program, landed)
                 };
-                if landed_changed && program == before {
-                    landed_changed = false;
-                    metric.decision = PassRunDecision::RanUnchanged;
-                }
+                program = next_program;
                 let after_stats = *program.stats();
                 let after_allocations = if landed_changed {
                     estimate_ir_allocations(&program)
