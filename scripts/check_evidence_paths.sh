@@ -23,7 +23,12 @@
 # be trusted at release time. An artifact that authoritatively cites deleted
 # symbols certifies against fiction.
 #
-# SCOPE: every `path` string at any depth, in every JSON under release/evidence.
+# SCOPE: every string leaf, at any depth, in every JSON under release/evidence
+# whose value is shaped like a filesystem path. Shape is three conditions: no
+# whitespace, a last component carrying a file extension the tree actually uses,
+# and either a `/` or a nearest enclosing key named `path`, because bare sibling
+# filenames are cited that way.
+#
 # Deliberately NOT just `findings`, and deliberately not just objects sitting
 # directly inside a top-level array. When this gate was written the tree carried
 # 185 stale citations across 16 artifacts, and only 8 of those were in a
@@ -38,6 +43,22 @@
 # among them sat on an artifact's own root object: an unexpanded ${SANTH_ROOT}
 # template naming a README in another repository. A gate that reads most of a
 # document reports a clean tree it did not measure.
+#
+# Reading only the key `path` was the same mistake one level up. That key names
+# 629 citations; the shape rule names 3404. The rest sit under `manifest`,
+# `artifact`, `evidence_link`, `source_artifact`, `workflow` and bare array
+# members, and nine of them were dead: four generated manifest inventories still
+# listed a crate that had been folded into another, at a Cargo.toml that no
+# longer exists. A key allowlist is a hardcoded member table, so it stops
+# covering the next schema that cites a file under a name nobody added here.
+#
+# THE EXTENSION VOCABULARY IS DERIVED FROM THE TREE AT RUN TIME, from the
+# extensions that occur among its own files, never from a literal list. The
+# first `.cu` file added to the workspace extends this gate in the same commit,
+# with nobody editing this script. It is also what keeps the shape rule off
+# version strings, op ids and schema ids: `1.2.0`, `vyre-primitives::hardware`
+# and `vyre-conform-input-envelope-v1` end in nothing the tree uses as an
+# extension.
 #
 # PATH RESOLUTION, three conventions in use, all of them live:
 #   absolute            taken as-is (the hygiene scanners emit absolute paths)
@@ -90,26 +111,56 @@ present="$(mktemp)"
 ignored="$(mktemp)"
 trap 'rm -f "$cited" "$present" "$ignored"' EXIT
 
+# The extension vocabulary comes from the tree itself. Tracked files answer it
+# inside a checkout; a fixture tree need not be one, so fall back to a walk that
+# skips build output.
+if git -C "$WORKSPACE_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+  tree_files() { git -C "$WORKSPACE_ROOT" ls-files; }
+else
+  tree_files() {
+    find "$WORKSPACE_ROOT" -type f -not -path '*/.git/*' -not -path '*/target/*' -print
+  }
+fi
+
+extensions="$(
+  tree_files \
+    | sed -n 's|.*/||; s|^.*\.\([A-Za-z0-9][A-Za-z0-9]*\)$|\1|p' \
+    | tr 'A-Z' 'a-z' \
+    | LC_ALL=C sort -u \
+    | jq -R -s 'split("\n") | map(select(length > 0))'
+)"
+
+if [[ "$extensions" == "[]" ]]; then
+  printf 'evidence path contract: no file extension occurs under %s, so the citation vocabulary cannot be derived. Fix: point WORKSPACE_ROOT at the workspace being certified.\n' \
+    "$WORKSPACE_ROOT" >&2
+  exit 1
+fi
+
 # Every (artifact, location, path) citation in the evidence tree. One line each,
-# tab separated. Any `path` string at any depth qualifies, and the location is
-# the jq-style route to the object that carries it, so a citation stays
-# addressable no matter how deeply the schema nests it.
+# tab separated. The location is the full jq-style route to the string itself,
+# including the key that carries it, so two citations on one object stay
+# distinguishable and a citation stays addressable however deeply a schema nests
+# it.
 : > "$cited"
 while IFS= read -r artifact; do
-  jq -r --arg artifact "$artifact" '
+  jq -r --arg artifact "$artifact" --argjson exts "$extensions" '
     . as $root
-    | [paths]
+    | [paths(type == "string")]
     | .[]
-    | select(.[-1] == "path")
     | . as $route
     | ($root | getpath($route)) as $value
-    | select(($value | type) == "string")
     | select($value != "")
-    | ($route[:-1]
+    | select($value | test("[[:space:]]") | not)
+    | ($route | map(select(type == "string")) | last) as $key
+    | select(($value | test("/")) or $key == "path")
+    | ($value | sub("/+$"; "") | split("/") | last | split(".")) as $parts
+    | select(($parts | length) > 1)
+    | select($exts | index($parts | last | ascii_downcase))
+    | ($route
         | map(if type == "number" then "[\(.)]" else ".\(.)" end)
         | join("")
         | sub("^\\."; "")) as $location
-    | "\($artifact)\t\(if $location == "" then "<root>" else $location end)\t\($value)"
+    | "\($artifact)\t\($location)\t\($value)"
   ' "$artifact" >> "$cited"
 done < <(find "$EVIDENCE_DIR" -type f -name '*.json' -print | LC_ALL=C sort)
 

@@ -34,11 +34,11 @@ struct ReleaseTrain {
     cuda_release_path: bool,
 }
 
-#[derive(Debug, Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 struct PublishStep {
-    package: &'static str,
+    package: String,
     version: &'static str,
-    manifest: &'static str,
+    manifest: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -79,147 +79,186 @@ struct PackageContentCheck {
     blockers: Vec<String>,
 }
 
-fn publish_order() -> Vec<PublishStep> {
-    vec![
-        // First: no internal vyre dependencies, only third-party ones. It was dropped from
-        // the train after 0.6.2 and went stale on crates.io while every sibling advanced,
-        // which is why in-workspace consumers had to pin it path-only. A crate that is
-        // already public stays current with the train.
-        step(
-            "vyre-grammar-gen",
-            release_train::vyre_version(),
-            "vyre-grammar-gen/Cargo.toml",
-        ),
-        step(
-            "vyre-macros",
-            release_train::vyre_version(),
-            "vyre-macros/Cargo.toml",
-        ),
-        step(
-            "vyre-spec",
-            release_train::vyre_version(),
-            "vyre-spec/Cargo.toml",
-        ),
-        step(
-            "vyre-lints",
-            release_train::vyre_version(),
-            "vyre-lints/Cargo.toml",
-        ),
-        step(
-            "vyre-foundation",
-            release_train::vyre_version(),
-            "vyre-foundation/Cargo.toml",
-        ),
-        step(
-            "vyre-lower",
-            release_train::vyre_version(),
-            "vyre-lower/Cargo.toml",
-        ),
-        step(
-            "vyre-megakernel",
-            release_train::vyre_version(),
-            "vyre-megakernel/Cargo.toml",
-        ),
-        step(
-            "vyre-emit-ptx",
-            release_train::vyre_version(),
-            "vyre-emit-ptx/Cargo.toml",
-        ),
-        step(
-            "vyre-primitives",
-            release_train::vyre_version(),
-            "vyre-primitives/Cargo.toml",
-        ),
-        step(
-            "vyre-reference",
-            release_train::vyre_version(),
-            "vyre-reference/Cargo.toml",
-        ),
-        step(
-            "vyre-pass-engine",
-            release_train::vyre_version(),
-            "vyre-pass-engine/Cargo.toml",
-        ),
-        step(
-            "vyre-driver",
-            release_train::vyre_version(),
-            "vyre-driver/Cargo.toml",
-        ),
-        step(
-            "vyre-runtime",
-            release_train::vyre_version(),
-            "vyre-runtime/Cargo.toml",
-        ),
-        step(
-            "vyre-emit-naga",
-            release_train::vyre_version(),
-            "vyre-emit-naga/Cargo.toml",
-        ),
-        step(
-            "vyre-emit-spirv",
-            release_train::vyre_version(),
-            "vyre-emit-spirv/Cargo.toml",
-        ),
-        step(
-            "vyre-emit-metal",
-            release_train::vyre_version(),
-            "vyre-emit-metal/Cargo.toml",
-        ),
-        step(
-            "vyre-driver-cuda",
-            release_train::vyre_version(),
-            "vyre-driver-cuda/Cargo.toml",
-        ),
-        step(
-            "vyre-driver-wgpu",
-            release_train::vyre_version(),
-            "vyre-driver-wgpu/Cargo.toml",
-        ),
-        step(
-            "vyre-driver-metal",
-            release_train::vyre_version(),
-            "vyre-driver-metal/Cargo.toml",
-        ),
-        step(
-            "vyre-driver-spirv",
-            release_train::vyre_version(),
-            "vyre-driver-spirv/Cargo.toml",
-        ),
-        step(
-            "vyre-driver-reference",
-            release_train::vyre_version(),
-            "vyre-driver-reference/Cargo.toml",
-        ),
-        step(
-            "vyre-libs",
-            release_train::vyre_version(),
-            "vyre-libs/Cargo.toml",
-        ),
-        step(
-            "vyre-safetensors",
-            release_train::vyre_version(),
-            "vyre-safetensors/Cargo.toml",
-        ),
-        step("vyre", release_train::vyre_version(), "vyre/Cargo.toml"),
-        step(
-            "vyre-debug",
-            release_train::vyre_version(),
-            "vyre-debug/Cargo.toml",
-        ),
-        step(
-            "vyre-aot",
-            release_train::vyre_version(),
-            "vyre-aot/Cargo.toml",
-        ),
-    ]
+/// Publish order, derived from the manifests rather than listed.
+///
+/// WHY THIS IS DERIVED. This was a hardcoded `vec![]` of 26 steps, and it went
+/// stale in silence. Moving library code into `vyre-libs` gave it five new
+/// consumers, and because the table still held it at index 21 the recorded
+/// evidence certified an order that publishes `vyre-pass-engine`,
+/// `vyre-driver`, `vyre-runtime`, `vyre-driver-cuda` and `vyre-driver-wgpu`
+/// against a `vyre-libs` version crates.io does not have yet. The artifact read
+/// `blockers: []` throughout, because it had been generated before those edges
+/// existed and nothing regenerated it. A table of member names cannot notice a
+/// new edge; the manifests that carry the edge can.
+///
+/// THE DOMAIN is every crate the metadata matrix calls publishable, so
+/// publishability stays one decision owned by `cargo metadata`. THE EDGES are
+/// the same ones the order check enforces: a `[dependencies]` or
+/// `[build-dependencies]` entry with a local path and a crates.io version whose
+/// name is another member of the domain. `[dev-dependencies]` are excluded here
+/// for the reason `collect_dependency_edges` documents: cargo strips a
+/// path-only dev-dependency from the published manifest, so it never constrains
+/// publish order, and several are deliberately path-only to break a cycle.
+///
+/// FAIL CLOSED, two ways. A manifest the metadata matrix names but disk does not
+/// have is a blocker rather than a skipped node, because a missing crate would
+/// otherwise drop out of the order and out of every check keyed on it. A member
+/// the sort cannot emit is a blocker naming it and the dependency still holding
+/// it, which is what a cycle among publishable crates looks like; the remaining
+/// members are appended in name order so the artifact still records them, and
+/// the non-empty blocker list makes the command exit non-zero. Nothing here
+/// picks an order it cannot justify.
+///
+/// Ties break on crate name, so the emitted order is a function of the tree and
+/// two runs on one tree agree byte for byte.
+fn publish_order(
+    root: &Path,
+    metadata_path: &Path,
+    blockers: &mut Vec<String>,
+) -> (Vec<PublishStep>, BTreeSet<String>) {
+    let members = publishable_members(metadata_path, root, blockers);
+    let domain = members.keys().cloned().collect::<BTreeSet<_>>();
+
+    let mut pending = BTreeMap::<String, BTreeSet<String>>::new();
+    for (package, manifest) in &members {
+        pending.insert(
+            package.clone(),
+            internal_dependencies(root, manifest, &domain, blockers),
+        );
+    }
+
+    let mut order = Vec::with_capacity(pending.len());
+    let mut published = BTreeSet::<String>::new();
+    while let Some(package) = pending
+        .iter()
+        .find(|(_, dependencies)| dependencies.is_subset(&published))
+        .map(|(package, _)| package.clone())
+    {
+        pending.remove(&package);
+        let manifest = manifest_of(&members, &package);
+        published.insert(package.clone());
+        order.push(PublishStep {
+            package,
+            version: release_train::vyre_version(),
+            manifest,
+        });
+    }
+
+    for (package, dependencies) in &pending {
+        let blocking = dependencies
+            .difference(&published)
+            .cloned()
+            .collect::<Vec<_>>();
+        blockers.push(format!(
+            "publish order cannot be derived for `{package}`: it depends on {}, none of which can publish before it, so the publishable crates contain a dependency cycle",
+            blocking.join(", ")
+        ));
+    }
+    for package in pending.keys() {
+        order.push(PublishStep {
+            package: package.clone(),
+            version: release_train::vyre_version(),
+            manifest: manifest_of(&members, package),
+        });
+    }
+
+    (order, domain)
 }
 
-const fn step(package: &'static str, version: &'static str, manifest: &'static str) -> PublishStep {
-    PublishStep {
-        package,
-        version,
-        manifest,
+fn manifest_of(members: &BTreeMap<String, String>, package: &str) -> String {
+    members
+        .get(package)
+        .cloned()
+        .unwrap_or_else(|| format!("{package}/Cargo.toml"))
+}
+
+/// Publishable crates and their manifests, as the metadata matrix records them.
+///
+/// A manifest that is not on disk is a blocker, never a dropped node: a crate
+/// silently missing from the order would also go missing from the manifest,
+/// dependency-edge and archive-content checks that iterate it.
+fn publishable_members(
+    metadata_path: &Path,
+    root: &Path,
+    blockers: &mut Vec<String>,
+) -> BTreeMap<String, String> {
+    let Some(value) = read_metadata_matrix(metadata_path, blockers) else {
+        return BTreeMap::new();
+    };
+    let mut members = BTreeMap::new();
+    for package in value
+        .get("packages")
+        .and_then(serde_json::Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|package| {
+            package
+                .get("release_kind")
+                .and_then(serde_json::Value::as_str)
+                == Some("publishable-crate")
+        })
+    {
+        let Some(name) = package.get("name").and_then(serde_json::Value::as_str) else {
+            blockers.push(format!(
+                "{} lists a publishable crate with no name",
+                metadata_path.display()
+            ));
+            continue;
+        };
+        let Some(manifest) = package.get("manifest").and_then(serde_json::Value::as_str) else {
+            blockers.push(format!(
+                "{} lists publishable crate `{name}` with no manifest",
+                metadata_path.display()
+            ));
+            continue;
+        };
+        if !root.join(manifest).is_file() {
+            blockers.push(format!(
+                "publishable crate `{name}` names manifest `{manifest}`, which is not on disk. Fix: regenerate the metadata matrix, or restore the crate"
+            ));
+            continue;
+        }
+        members.insert(name.to_string(), manifest.to_string());
     }
+    members
+}
+
+/// In-workspace dependencies of one crate that constrain when it can publish.
+///
+/// The predicate matches `collect_dependency_edges` exactly, so the order this
+/// produces and the order check that validates it read the same edges from the
+/// same manifests through separate code. A disagreement between them is a real
+/// failure and shows up as an order blocker rather than as silence.
+fn internal_dependencies(
+    root: &Path,
+    manifest: &str,
+    domain: &BTreeSet<String>,
+    blockers: &mut Vec<String>,
+) -> BTreeSet<String> {
+    let manifest_path = root.join(manifest);
+    let Some(value) = read_manifest(&manifest_path, blockers) else {
+        return BTreeSet::new();
+    };
+    let workspace_dependencies = workspace_dependencies(&manifest_path, blockers);
+    let mut dependencies = BTreeSet::new();
+    for table_name in ["dependencies", "build-dependencies"] {
+        let Some(table) = value.get(table_name).and_then(toml::Value::as_table) else {
+            continue;
+        };
+        for (dependency, spec) in table {
+            if !domain.contains(dependency) {
+                continue;
+            }
+            if dependency_has_local_path(spec, &workspace_dependencies, dependency).is_none() {
+                continue;
+            }
+            if dependency_version(spec, &workspace_dependencies, dependency).is_none() {
+                continue;
+            }
+            dependencies.insert(dependency.clone());
+        }
+    }
+    dependencies
 }
 
 pub(crate) fn run(args: &[String]) {
@@ -233,12 +272,16 @@ pub(crate) fn run(args: &[String]) {
     let vyre_root = crate::checkout::checkout_root();
     let metadata_path = vyre_root.join("release/evidence/metadata/metadata-matrix.json");
     let mut blockers = Vec::new();
-    let metadata_packages = metadata_publishable_packages(&metadata_path, &mut blockers);
-    let publish_order = publish_order();
+    let (publish_order, metadata_packages) =
+        publish_order(&vyre_root, &metadata_path, &mut blockers);
     let ordered_packages = publish_order
         .iter()
-        .map(|step| step.package.to_string())
+        .map(|step| step.package.clone())
         .collect::<BTreeSet<_>>();
+    // The sort's own totality check. Its domain IS the metadata publishable set,
+    // so a difference in either direction means the sort dropped or invented a
+    // member, which no correct derivation can do. Keeping it means a defect in
+    // the sort surfaces here instead of as a quietly shorter release.
     let missing_metadata_packages = metadata_packages
         .difference(&ordered_packages)
         .cloned()
@@ -249,24 +292,24 @@ pub(crate) fn run(args: &[String]) {
         .collect::<Vec<_>>();
     for package in &missing_metadata_packages {
         blockers.push(format!(
-            "metadata publishable package `{package}` is missing from publish_order"
+            "metadata publishable package `{package}` is missing from the derived publish order"
         ));
     }
     for package in &extra_metadata_packages {
         blockers.push(format!(
-            "publish_order package `{package}` is not publishable in metadata matrix"
+            "derived publish order package `{package}` is not publishable in metadata matrix"
         ));
     }
 
     let order_index = publish_order
         .iter()
         .enumerate()
-        .map(|(index, step)| (step.package, index))
+        .map(|(index, step)| (step.package.clone(), index))
         .collect::<BTreeMap<_, _>>();
     let mut dependency_order_edges = Vec::new();
     let mut versioned_local_dependencies = Vec::new();
     for (consumer_index, step) in publish_order.iter().enumerate() {
-        let manifest = vyre_root.join(step.manifest);
+        let manifest = vyre_root.join(&step.manifest);
         check_manifest_package(step, &manifest, &mut blockers);
         collect_dependency_edges(
             step,
@@ -377,7 +420,7 @@ fn audit_package_contents(
             "--list",
             "--allow-dirty",
             "--manifest-path",
-            step.manifest,
+            step.manifest.as_str(),
         ])
         .output();
     match output {
@@ -420,7 +463,7 @@ fn cargo_package_patch_args(
     step: &PublishStep,
     publish_order: &[PublishStep],
 ) -> Result<Vec<OsString>, String> {
-    let manifest = root.join(step.manifest);
+    let manifest = root.join(&step.manifest);
     let text = crate::output_arg::read_text_bounded(&manifest, MAX_MANIFEST_BYTES, "")
         .map_err(|error| format!("failed to read `{}`: {error}", manifest.display()))?;
     let value = toml::from_str::<toml::Value>(&text)
@@ -434,7 +477,7 @@ fn cargo_package_patch_args(
     let local_manifests = publish_order
         .iter()
         .filter(|candidate| candidate.package != step.package)
-        .map(|candidate| (candidate.package, candidate))
+        .map(|candidate| (candidate.package.as_str(), candidate))
         .collect::<BTreeMap<_, _>>();
     let mut patches = BTreeMap::<String, PathBuf>::new();
     for table_name in ["dependencies", "dev-dependencies", "build-dependencies"] {
@@ -454,7 +497,7 @@ fn cargo_package_patch_args(
                 continue;
             }
             let Some(crate_dir) = root
-                .join(candidate.manifest)
+                .join(&candidate.manifest)
                 .parent()
                 .map(Path::to_path_buf)
             else {
@@ -732,7 +775,7 @@ pub fn package_content_evidence_issues(value: &serde_json::Value) -> Vec<String>
     issues
 }
 
-fn metadata_publishable_packages(path: &Path, blockers: &mut Vec<String>) -> BTreeSet<String> {
+fn read_metadata_matrix(path: &Path, blockers: &mut Vec<String>) -> Option<serde_json::Value> {
     let text = match crate::output_arg::read_text_bounded(path, MAX_JSON_BYTES, "") {
         Ok(text) => text,
         Err(error) => {
@@ -740,33 +783,19 @@ fn metadata_publishable_packages(path: &Path, blockers: &mut Vec<String>) -> BTr
                 "failed to read metadata matrix `{}`: {error}",
                 path.display()
             ));
-            return BTreeSet::new();
+            return None;
         }
     };
-    let value = match serde_json::from_str::<serde_json::Value>(&text) {
-        Ok(value) => value,
+    match serde_json::from_str::<serde_json::Value>(&text) {
+        Ok(value) => Some(value),
         Err(error) => {
             blockers.push(format!(
                 "failed to parse metadata matrix `{}`: {error}",
                 path.display()
             ));
-            return BTreeSet::new();
+            None
         }
-    };
-    value
-        .get("packages")
-        .and_then(serde_json::Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter(|package| {
-            package
-                .get("release_kind")
-                .and_then(serde_json::Value::as_str)
-                == Some("publishable-crate")
-        })
-        .filter_map(|package| package.get("name").and_then(serde_json::Value::as_str))
-        .map(str::to_string)
-        .collect()
+    }
 }
 
 fn check_manifest_package(step: &PublishStep, manifest: &Path, blockers: &mut Vec<String>) {
@@ -778,23 +807,23 @@ fn check_manifest_package(step: &PublishStep, manifest: &Path, blockers: &mut Ve
         blockers.push(format!("{} has no [package] table", manifest.display()));
         return;
     };
-    if package.get("name").and_then(toml::Value::as_str) != Some(step.package) {
+    if package.get("name").and_then(toml::Value::as_str) != Some(step.package.as_str()) {
         blockers.push(format!(
-            "{} package.name does not match publish_order `{}`",
+            "{} package.name does not match the derived publish order `{}`",
             manifest.display(),
             step.package
         ));
     }
     if package_version(package) != Some(step.version) {
         blockers.push(format!(
-            "{} package.version does not match publish_order `{}`",
+            "{} package.version does not match the derived publish order `{}`",
             manifest.display(),
             step.version
         ));
     }
     if package.get("publish").and_then(toml::Value::as_bool) == Some(false) {
         blockers.push(format!(
-            "{} is publish=false but appears in publish_order",
+            "{} is publish=false but appears in the derived publish order",
             step.package
         ));
     }
@@ -804,7 +833,7 @@ fn collect_dependency_edges(
     step: &PublishStep,
     consumer_index: usize,
     manifest: &Path,
-    order_index: &BTreeMap<&'static str, usize>,
+    order_index: &BTreeMap<String, usize>,
     dependency_order_edges: &mut Vec<DependencyEdge>,
     versioned_local_dependencies: &mut Vec<VersionedLocalDependency>,
     blockers: &mut Vec<String>,
@@ -855,7 +884,7 @@ fn collect_dependency_edges(
                 },
             });
             if table_name != "dev-dependencies" {
-                if let Some(dependency_index) = order_index.get(dependency.as_str()) {
+                if let Some(dependency_index) = order_index.get(dependency) {
                     dependency_order_edges.push(DependencyEdge {
                         package: step.package.to_string(),
                         dependency: dependency.clone(),
@@ -864,7 +893,7 @@ fn collect_dependency_edges(
                     });
                     if *dependency_index >= consumer_index {
                         blockers.push(format!(
-                            "publish_order puts `{}` before dependency `{dependency}`",
+                            "derived publish order puts `{}` before dependency `{dependency}`",
                             step.package
                         ));
                     }
