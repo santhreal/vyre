@@ -12,8 +12,8 @@
 
 use crate::docs::docs_check;
 use crate::gates::{
-    check_cat_a, check_tier_deps, dep_drift, dup_scan, feature_isolation, gates, hot_path_scan,
-    hygiene_matrix, platform_boundary,
+    check_cat_a, check_tier_deps, dep_drift, dup_scan, feature_isolation, hot_path_scan,
+    hygiene_matrix, platform_boundary, sweep,
 };
 use crate::release::{
     feature_matrix, launch_state, metadata_matrix, package_readiness, release_conformance,
@@ -283,7 +283,7 @@ pub const SUBCOMMANDS: &[Subcommand] = &[
         help: "Run every registered gate and hold it to the pinned baseline",
         kind: Kind::Runner,
         ci_args: &[],
-        home: Home::Local(gates::run),
+        home: Home::Local(sweep::run),
     },
     Subcommand {
         name: "heuristic-audit",

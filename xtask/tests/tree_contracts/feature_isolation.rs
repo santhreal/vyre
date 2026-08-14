@@ -257,7 +257,9 @@ fn an_unjudged_selection_names_which_kind_it_is() {
 
     assert_eq!(failures.len(), 3, "{failures:?}");
     assert!(
-        failures.iter().any(|failure| failure.contains("a new member is unjudged")),
+        failures
+            .iter()
+            .any(|failure| failure.contains("a new member is unjudged")),
         "{failures:?}"
     );
     assert!(
