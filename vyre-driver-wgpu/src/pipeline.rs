@@ -787,6 +787,9 @@ pub(crate) mod binding;
 /// reusable pipeline wrapper can mirror the layout exactly when
 /// creating bind groups. Misalignment is a validation error.
 pub(crate) mod bindings_reflection;
+/// Which cached pipeline entries a rule-graph change reaches. Shared by the
+/// in-memory and on-disk invalidation paths so both act on one mask.
+pub(crate) mod cache_impact;
 /// `CompiledPipeline` trait dispatch entrypoints. Split out so the parent
 /// pipeline module does not own both compilation and execution mechanics.
 pub(crate) mod compiled_dispatch;
@@ -806,7 +809,6 @@ pub(crate) mod descriptor_metadata;
 pub(crate) mod disk_cache;
 /// Sibling of `disk_cache`  -  cache invalidation triggered by source
 /// edits, adapter changes, or feature-flag flips.
-#[path = "pipeline/disk_cache_invalidation.rs"]
 pub(crate) mod disk_cache_invalidation;
 /// Trimmed output readback. Owns the contract that `output_byte_range`
 /// transfers only meaningful bytes instead of whole output allocations.

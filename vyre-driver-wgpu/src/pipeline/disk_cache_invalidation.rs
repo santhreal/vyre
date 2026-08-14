@@ -3,30 +3,18 @@ use std::path::{Path, PathBuf};
 #[cfg(test)]
 use std::sync::{Mutex, OnceLock};
 
-pub(crate) fn invalidate_impacted(
-    dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher,
-    intervention_mask: &[u32],
-    rule_adj: &[u32],
-    state: &[u32],
-    join_rules: &[u32],
-    n: u32,
-    max_iterations: u32,
-    pipeline_lineage_cell: &[u32],
+/// Delete the on-disk cache entries `impact_mask` marks as reached.
+///
+/// `impact_mask` is one entry per `cache_keys` slot, as produced by
+/// [`crate::pipeline::cache_impact::RuleImpactQuery::impact_mask`]. Computing it
+/// is not this function's decision: it used to take the whole rule graph and run
+/// the reachability walk itself, which meant the disk cache and the in-memory
+/// cache each decided what "impacted" meant.
+pub(crate) fn remove_impacted_entries(
+    impact_mask: &[u32],
     cache_keys: &[String],
 ) -> std::io::Result<()> {
     let dir = disk_pipeline_cache_dir();
-    let impact_mask = vyre_driver::cache_invalidation::impacted_entries(
-        dispatcher,
-        intervention_mask,
-        rule_adj,
-        state,
-        join_rules,
-        n,
-        max_iterations,
-        pipeline_lineage_cell,
-    )
-    .map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error.to_string()))?;
-
     for (i, &is_impacted) in impact_mask.iter().enumerate() {
         if is_impacted != 0 {
             if let Some(key) = cache_keys.get(i) {

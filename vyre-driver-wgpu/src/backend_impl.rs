@@ -286,6 +286,12 @@ impl WgpuBackend {
     }
 
     /// Invalidate compiled pipeline artifacts selected by a rule-impact mask.
+    ///
+    /// # Errors
+    ///
+    /// Returns a backend error when the packed rule graph is inconsistent with
+    /// the declared rule count.
+    #[allow(clippy::too_many_arguments)]
     pub fn invalidate_impacted_pipeline_cache(
         &self,
         intervention_mask: &[u32],
@@ -297,8 +303,7 @@ impl WgpuBackend {
         pipeline_lineage_cell: &[u32],
         pipeline_keys: &[[u8; 32]],
     ) -> Result<(), vyre_driver::BackendError> {
-        let final_impact_mask = vyre_driver::cache_invalidation::impacted_entries(
-            self,
+        let impact_mask = crate::pipeline::cache_impact::RuleImpactQuery {
             intervention_mask,
             rule_adj,
             state,
@@ -306,10 +311,10 @@ impl WgpuBackend {
             n,
             max_iterations,
             pipeline_lineage_cell,
-        )
-        .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        }
+        .impact_mask(self)?;
         self.pipeline_cache
-            .invalidate_impacted(&final_impact_mask, pipeline_keys);
+            .invalidate_impacted(&impact_mask, pipeline_keys);
         Ok(())
     }
 
@@ -347,6 +352,12 @@ impl WgpuBackend {
     }
 
     /// Invalidate disk-cached pipeline artifacts selected by a rule-impact mask.
+    ///
+    /// # Errors
+    ///
+    /// Returns a backend error when the rule graph is inconsistent, or when a
+    /// selected cache file cannot be removed.
+    #[allow(clippy::too_many_arguments)]
     pub fn invalidate_impacted_disk_cache(
         &self,
         intervention_mask: &[u32],
@@ -358,8 +369,7 @@ impl WgpuBackend {
         pipeline_lineage_cell: &[u32],
         cache_keys: &[String],
     ) -> Result<(), vyre_driver::BackendError> {
-        crate::pipeline::disk_cache::invalidate_impacted(
-            self,
+        let impact_mask = crate::pipeline::cache_impact::RuleImpactQuery {
             intervention_mask,
             rule_adj,
             state,
@@ -367,9 +377,10 @@ impl WgpuBackend {
             n,
             max_iterations,
             pipeline_lineage_cell,
-            cache_keys,
-        )
-        .map_err(|e| vyre_driver::BackendError::new(e.to_string()))
+        }
+        .impact_mask(self)?;
+        crate::pipeline::disk_cache::remove_impacted_entries(&impact_mask, cache_keys)
+            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))
     }
 
     /// Create the backend if a GPU adapter is available.
