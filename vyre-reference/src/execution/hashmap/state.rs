@@ -9,6 +9,7 @@ use super::{
     step::step_round_robin,
     sync::{live_waiting_count, release_barrier_if_ready, verify_uniform_control_flow},
 };
+use crate::execution::async_transfer::AsyncTransfer;
 use crate::ReferenceError;
 use crate::{
     value::Value,
@@ -117,16 +118,8 @@ pub(crate) struct HashmapInvocation<'a> {
     pub(crate) waiting_at_barrier: bool,
     pub(crate) uniform_checks: Vec<(usize, bool)>,
     pub(crate) frames: Vec<Frame<'a>>,
-    pub(crate) pending_async: FxHashMap<Arc<str>, HashmapAsyncTransfer>,
+    pub(crate) pending_async: FxHashMap<Arc<str>, AsyncTransfer>,
     pub(crate) op_cache: crate::execution::call::OpCache,
-}
-
-pub(crate) enum HashmapAsyncTransfer {
-    Copy {
-        destination: String,
-        start: usize,
-        payload: Vec<u8>,
-    },
 }
 
 impl<'a> HashmapInvocation<'a> {
@@ -154,7 +147,7 @@ impl<'a> HashmapInvocation<'a> {
     pub(crate) fn begin_async(
         &mut self,
         tag: &str,
-        transfer: HashmapAsyncTransfer,
+        transfer: AsyncTransfer,
     ) -> Result<(), ReferenceError> {
         if self.pending_async.contains_key(tag) {
             return Err(ReferenceError::new(format!(
@@ -165,10 +158,7 @@ impl<'a> HashmapInvocation<'a> {
         Ok(())
     }
 
-    pub(crate) fn finish_async(
-        &mut self,
-        tag: &str,
-    ) -> Result<HashmapAsyncTransfer, ReferenceError> {
+    pub(crate) fn finish_async(&mut self, tag: &str) -> Result<AsyncTransfer, ReferenceError> {
         self.pending_async.remove(tag).ok_or_else(|| ReferenceError::new(format!(
             "async wait for tag `{tag}` has no matching async transfer. Fix: emit AsyncLoad or AsyncStore before AsyncWait."
         )))

@@ -10,10 +10,11 @@ use vyre_foundation::ir::{Expr, Node, Program};
 
 use crate::ReferenceError;
 use crate::{
+    execution::async_transfer::{self, AsyncTransfer},
     execution::expr as eval_expr,
     execution::node_tree::{contains_barrier, node_id},
     oob,
-    workgroup::{AsyncTransfer, Frame, Invocation, Memory},
+    workgroup::{Frame, Invocation, Memory},
 };
 
 /// Execute one scheduling step for an invocation.
@@ -357,11 +358,7 @@ fn eval_async_load(
     ensure_writable_buffer(memory, program, request.destination)?;
     invocation.begin_async(
         request.tag,
-        AsyncTransfer::Copy {
-            destination: request.destination.into(),
-            start: 0,
-            payload,
-        },
+        AsyncTransfer::load(request.destination, payload),
     )
 }
 
@@ -389,11 +386,7 @@ fn eval_async_store(
     ensure_writable_buffer(memory, program, request.destination)?;
     invocation.begin_async(
         request.tag,
-        AsyncTransfer::Copy {
-            destination: request.destination.into(),
-            start,
-            payload,
-        },
+        AsyncTransfer::store(request.destination, start, payload),
     )
 }
 
@@ -414,16 +407,7 @@ fn eval_byte_count(
     program: &Program,
 ) -> Result<usize, ReferenceError> {
     let value = eval_expr::eval(expr, invocation, memory, program)?;
-    usize::try_from(value.try_as_u64().ok_or_else(|| {
-        ReferenceError::new(format!(
-            "{label} cannot be represented as u64. Fix: use an in-range non-negative byte count."
-        ))
-    })?)
-    .map_err(|_| {
-        ReferenceError::new(format!(
-            "{label} exceeds host usize. Fix: reduce the async transfer span."
-        ))
-    })
+    async_transfer::byte_count(&value, label)
 }
 
 fn read_bytes(
@@ -433,17 +417,7 @@ fn read_bytes(
     start: usize,
     byte_count: usize,
 ) -> Result<Vec<u8>, ReferenceError> {
-    let buffer = resolve_buffer(memory, program, source)?;
-    let bytes = buffer
-        .bytes
-        .read()
-        .unwrap_or_else(|error| error.into_inner());
-    let mut payload = vec![0; byte_count];
-    if start < bytes.len() {
-        let available = (bytes.len() - start).min(byte_count);
-        payload[..available].copy_from_slice(&bytes[start..start + available]);
-    }
-    Ok(payload)
+    Ok(resolve_buffer(memory, program, source)?.read_window(start, byte_count))
 }
 
 fn ensure_writable_buffer(
@@ -459,25 +433,9 @@ fn apply_async_transfer(
     memory: &mut Memory,
     program: &Program,
 ) -> Result<(), ReferenceError> {
-    match transfer {
-        AsyncTransfer::Copy {
-            destination,
-            start,
-            payload,
-        } => {
-            let buffer = eval_expr::buffer_mut(memory, program, &destination)?;
-            let mut bytes = buffer
-                .bytes
-                .write()
-                .unwrap_or_else(|error| error.into_inner());
-            if start >= bytes.len() {
-                return Ok(());
-            }
-            let write_len = payload.len().min(bytes.len() - start);
-            bytes[start..start + write_len].copy_from_slice(&payload[..write_len]);
-            Ok(())
-        }
-    }
+    let buffer = eval_expr::buffer_mut(memory, program, transfer.destination())?;
+    transfer.apply_to(buffer);
+    Ok(())
 }
 
 fn resolve_buffer<'a>(

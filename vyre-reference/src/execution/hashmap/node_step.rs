@@ -3,9 +3,10 @@ use super::super::state::HashmapInvocationSnapshot;
 use super::super::{
     eval_expr,
     memory::{buffer_mut, HashmapMemory},
-    state::{HashmapAsyncTransfer, HashmapInvocation},
+    state::HashmapInvocation,
     sync::{contains_barrier, node_id},
 };
+use crate::execution::async_transfer::{self, AsyncTransfer};
 use crate::execution::call::{callable_signature, invoke_signature, resolve_call};
 use crate::ReferenceError;
 use crate::{oob, value::Value, workgroup::Frame};
@@ -321,7 +322,7 @@ fn eval_async_load(
     invocation: &mut HashmapInvocation<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
-) -> Result<HashmapAsyncTransfer, ReferenceError> {
+) -> Result<AsyncTransfer, ReferenceError> {
     let start = eval_byte_count(
         offset,
         "async load source offset",
@@ -340,11 +341,7 @@ fn eval_async_load(
     )?;
     let payload = read_bytes(memory, source, start, byte_count)?;
     ensure_buffer_exists(memory, destination)?;
-    Ok(HashmapAsyncTransfer::Copy {
-        destination: destination.to_string(),
-        start: 0,
-        payload,
-    })
+    Ok(AsyncTransfer::load(destination, payload))
 }
 
 fn eval_async_store(
@@ -355,7 +352,7 @@ fn eval_async_store(
     invocation: &mut HashmapInvocation<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
-) -> Result<HashmapAsyncTransfer, ReferenceError> {
+) -> Result<AsyncTransfer, ReferenceError> {
     let start = eval_byte_count(
         offset,
         "async store destination offset",
@@ -374,11 +371,7 @@ fn eval_async_store(
     )?;
     let payload = read_bytes(memory, source, 0, byte_count)?;
     ensure_buffer_exists(memory, destination)?;
-    Ok(HashmapAsyncTransfer::Copy {
-        destination: destination.to_string(),
-        start,
-        payload,
-    })
+    Ok(AsyncTransfer::store(destination, start, payload))
 }
 
 fn eval_byte_count(
@@ -395,74 +388,29 @@ fn eval_byte_count(
         #[cfg(feature = "subgroup-ops")]
         snapshots,
     )?;
-    usize::try_from(value.try_as_u64().ok_or_else(|| {
-        ReferenceError::new(format!(
-            "{label} cannot be represented as u64. Fix: use an in-range non-negative byte count."
-        ))
-    })?)
-    .map_err(|_| {
-        ReferenceError::new(format!(
-            "{label} exceeds host usize. Fix: reduce the async transfer span."
-        ))
-    })
+    async_transfer::byte_count(&value, label)
 }
 
-/// Read `byte_count` bytes from a reference buffer at `start`, zero-padding a short tail.
-///
-/// # Panics
-/// Panics when the buffer's byte lock is poisoned. A poisoned lock means a writer
-/// panicked mid-store, and reading past it would let the CPU oracle emit corrupt
-/// golden values the conform gate then trusts.
 fn read_bytes(
     memory: &HashmapMemory,
     source: &str,
     start: usize,
     byte_count: usize,
 ) -> Result<Vec<u8>, ReferenceError> {
-    let buffer = super::super::memory::resolve_buffer(memory, source)?;
-    let bytes = buffer
-        .bytes
-        .read()
-        .unwrap_or_else(|_| panic!("reference Buffer byte lock was poisoned"));
-    let mut payload = vec![0; byte_count];
-    if start < bytes.len() {
-        let available = (bytes.len() - start).min(byte_count);
-        payload[..available].copy_from_slice(&bytes[start..start + available]);
-    }
-    Ok(payload)
+    Ok(super::super::memory::resolve_buffer(memory, source)?.read_window(start, byte_count))
 }
 
 fn ensure_buffer_exists(memory: &HashmapMemory, name: &str) -> Result<(), ReferenceError> {
     super::super::memory::resolve_buffer(memory, name).map(|_| ())
 }
 
-/// Apply a queued async transfer to a reference buffer.
-///
-/// # Panics
-/// Panics when the buffer's byte lock is poisoned; see the reading counterpart.
 fn apply_async_transfer(
-    transfer: HashmapAsyncTransfer,
+    transfer: AsyncTransfer,
     memory: &mut HashmapMemory,
 ) -> Result<(), ReferenceError> {
-    match transfer {
-        HashmapAsyncTransfer::Copy {
-            destination,
-            start,
-            payload,
-        } => {
-            let buffer = buffer_mut(memory, &destination)?;
-            let mut bytes = buffer
-                .bytes
-                .write()
-                .unwrap_or_else(|_| panic!("reference Buffer byte lock was poisoned"));
-            if start >= bytes.len() {
-                return Ok(());
-            }
-            let write_len = payload.len().min(bytes.len() - start);
-            bytes[start..start + write_len].copy_from_slice(&payload[..write_len]);
-            Ok(())
-        }
-    }
+    let buffer = buffer_mut(memory, transfer.destination())?;
+    transfer.apply_to(buffer);
+    Ok(())
 }
 
 #[cfg(test)]
@@ -518,7 +466,7 @@ mod tests {
     /// path inside `apply_async_transfer`.
     #[test]
     fn apply_async_transfer_fails_closed_on_poisoned_buffer_lock() {
-        use super::super::super::state::HashmapAsyncTransfer;
+        use super::AsyncTransfer;
         let buffer = Buffer::new(vec![0xcd_u8; 8], DataType::U32);
         let poisoner = buffer.bytes.clone();
         let _ = std::thread::spawn(move || {
@@ -533,11 +481,7 @@ mod tests {
 
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             super::apply_async_transfer(
-                HashmapAsyncTransfer::Copy {
-                    destination: "dst".to_string(),
-                    start: 0,
-                    payload: vec![0x11, 0x22, 0x33, 0x44],
-                },
+                AsyncTransfer::store("dst", 0, vec![0x11, 0x22, 0x33, 0x44]),
                 &mut memory,
             )
         }));

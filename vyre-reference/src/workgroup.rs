@@ -9,6 +9,7 @@ use std::convert::Infallible;
 use std::ops::ControlFlow::{self, Continue};
 use std::sync::Arc;
 
+use crate::execution::async_transfer::AsyncTransfer;
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 use vyre_foundation::ir::model::expr::GeneratorRef;
@@ -622,16 +623,6 @@ impl<'a> Invocation<'a> {
     pub(crate) fn frames_mut(&mut self) -> &mut Vec<Frame<'a>> {
         &mut self.frames
     }
-}
-
-/// Deferred byte-copy transfer for the workgroup reference scheduler.
-pub(crate) enum AsyncTransfer {
-    /// Copy `payload` into `destination` starting at byte offset `start`.
-    Copy {
-        destination: Arc<str>,
-        start: usize,
-        payload: Vec<u8>,
-    },
 }
 
 #[cfg(test)]
