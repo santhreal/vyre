@@ -20,15 +20,15 @@
 //!
 //! Both paths produce the same IR.
 
-use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
-
 use crate::builder::{
-    check_tensors, strided_accumulate_child, strided_writeback_child, BuildOptions,
+    check_same_shape, check_tensors, checked_element_count, strided_accumulate_child,
+    strided_writeback_child, BuildOptions,
 };
 use crate::nn::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
 use crate::region::wrap;
 use crate::tensor_ref::{TensorRef, TensorRefError};
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 /// Canonical op id; matches the region generator name so conformance
 /// certificates stay self-describing.
@@ -74,32 +74,11 @@ impl Softmax {
             OP_ID,
             &[(&self.input, DataType::F32), (&self.output, DataType::F32)],
         )?;
-        if self.input.shape != self.output.shape {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.output.name.as_str().to_string(),
-                found: self.output.shape.to_vec(),
-                expected: self.input.shape.to_vec(),
-                op: OP_ID,
-            });
-        }
-        let n = self
-            .input
-            .element_count()
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: self.input.name_str().to_string(),
-                shape: self.input.shape.to_vec(),
-            })?;
-        // V7-CORR-012: reject n=0 so the first Expr::load(input, 0)
-        // sentinel is not an out-of-bounds read. softmax(∅) is
-        // undefined; the builder surfaces the error explicitly.
-        if n == 0 {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.input.name.as_str().to_string(),
-                found: self.input.shape.to_vec(),
-                expected: vec![1],
-                op: OP_ID,
-            });
-        }
+        check_same_shape(OP_ID, &self.input, &self.output)?;
+        // V7-CORR-012: the nonzero floor `checked_element_count` enforces is what
+        // keeps the first `Expr::load(input, 0)` sentinel in bounds. softmax(∅)
+        // is undefined; the builder surfaces the error explicitly.
+        let n = checked_element_count(OP_ID, &self.input)?;
 
         let generator = self.options.region_generator.unwrap_or(OP_ID);
         Ok(softmax_tiled_program(
