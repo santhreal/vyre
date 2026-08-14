@@ -406,6 +406,11 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
+feature = "cat-a-builder-options"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
 feature = "cpu-parity"
 outcome = "compiles"
 
