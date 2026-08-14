@@ -1,7 +1,7 @@
 //! CSR frontier expansion over an in-place accumulator bitset.
 
-#[path = "csr_forward_or_changed/batch_shared.rs"]
-mod batch_shared;
+#[path = "csr_forward_or_changed/batched_frontier_words.rs"]
+mod batched_frontier_words;
 #[path = "csr_forward_or_changed/body.rs"]
 mod body;
 #[path = "csr_forward_or_changed/cpu_ref.rs"]

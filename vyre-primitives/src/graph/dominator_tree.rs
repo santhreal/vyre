@@ -31,8 +31,8 @@
 mod program;
 
 #[cfg(any(test, feature = "cpu-parity"))]
-#[path = "dominator_tree/alloc_helpers.rs"]
-mod alloc_helpers;
+#[path = "dominator_tree/dominator_vec_growth.rs"]
+mod dominator_vec_growth;
 
 #[cfg(any(test, feature = "cpu-parity"))]
 #[path = "dominator_tree/lengauer_tarjan.rs"]

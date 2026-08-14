@@ -1,4 +1,4 @@
-use super::alloc_helpers::{push_dominator_vec, resize_dominator_vec};
+use super::dominator_vec_growth::{push_dominator_vec, resize_dominator_vec};
 use super::lengauer_tarjan::{
     lengauer_tarjan_idoms, try_lengauer_tarjan_idoms, try_lengauer_tarjan_idoms_into,
     DominatorTreeCpuScratch,
