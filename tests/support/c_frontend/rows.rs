@@ -53,6 +53,22 @@ pub(crate) fn assert_kind(rows: &[u8], idx: usize, kind: u32) {
     assert_eq!(word_at(rows, idx * VAST_STRIDE_U32), kind, "kind[{idx}]");
 }
 
+/// Assert the VAST row at `idx` carries `kind` and the three tree links.
+pub(crate) fn assert_vast_row(
+    rows: &[u8],
+    idx: usize,
+    kind: u32,
+    parent: u32,
+    first_child: u32,
+    next_sibling: u32,
+) {
+    let row = idx * VAST_STRIDE_U32;
+    assert_eq!(word_at(rows, row), kind, "kind[{idx}]");
+    assert_eq!(word_at(rows, row + 1), parent, "parent[{idx}]");
+    assert_eq!(word_at(rows, row + 2), first_child, "first_child[{idx}]");
+    assert_eq!(word_at(rows, row + 3), next_sibling, "next_sibling[{idx}]");
+}
+
 pub(crate) fn pg_word_at(buf: &[u8], idx: usize, field: usize) -> u32 {
     word_at(buf, idx * PG_STRIDE_U32 + field)
 }

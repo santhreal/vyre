@@ -685,3 +685,13 @@ required-features = ["c-parser"]
 name = "c_ast_declarator_matrix_contracts"
 path = "tests/c_ast_declarator_matrix_contracts.rs"
 required-features = ["c-parser"]
+
+[[test]]
+name = "c11_build_vast_nodes"
+path = "tests/c11_build_vast_nodes.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c11_ast_corpus_complete_constructs"
+path = "tests/c11_ast_corpus_complete_constructs.rs"
+required-features = ["c-parser"]
