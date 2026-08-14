@@ -25,6 +25,7 @@ pub const vyre_emit_ptx::patterns::instruction_scheduling::LONG_CHAIN_THRESHOLD:
 pub const vyre_emit_ptx::patterns::predicated_execution::PREDICATION_OP_THRESHOLD: u32
 pub enum vyre_emit_ptx::EmitError
 pub enum vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile
+pub enum vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionKind
 pub fn vyre_emit_ptx::ComputeCapability::default() -> Self
 pub fn vyre_emit_ptx::PtxEmitOptions::default() -> Self
 pub fn vyre_emit_ptx::PtxEmitOptions::for_target(target: vyre_emit_ptx::ComputeCapability) -> Self
@@ -51,16 +52,14 @@ pub fn vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile::dims(&self) 
 pub fn vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile::supported_on(&self, target: vyre_emit_ptx::ComputeCapability) -> bool
 pub fn vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan::candidate_count(&self) -> usize
 pub fn vyre_emit_ptx::patterns::tensor_core_fragment::analyze(desc: &vyre_lower::descriptor::KernelDescriptor, target: vyre_emit_ptx::ComputeCapability) -> vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan
-pub fn vyre_emit_ptx::patterns::vec_load_fusion::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_ptx::patterns::vec_load_fusion::FusionPlan
-pub fn vyre_emit_ptx::patterns::vec_store_fusion::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_ptx::patterns::vec_store_fusion::FusionPlan
+pub fn vyre_emit_ptx::patterns::vec_memory_fusion::analyze(desc: &vyre_lower::descriptor::KernelDescriptor, kind: vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionKind) -> vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionPlan
 pub mod vyre_emit_ptx
 pub mod vyre_emit_ptx::patterns
 pub mod vyre_emit_ptx::patterns::instruction_scheduling
 pub mod vyre_emit_ptx::patterns::ldmatrix_cp_async
 pub mod vyre_emit_ptx::patterns::predicated_execution
 pub mod vyre_emit_ptx::patterns::tensor_core_fragment
-pub mod vyre_emit_ptx::patterns::vec_load_fusion
-pub mod vyre_emit_ptx::patterns::vec_store_fusion
+pub mod vyre_emit_ptx::patterns::vec_memory_fusion
 pub struct vyre_emit_ptx::ComputeCapability
 pub struct vyre_emit_ptx::PtxEmitOptions
 pub struct vyre_emit_ptx::patterns::PtxAuditReport
@@ -72,10 +71,8 @@ pub struct vyre_emit_ptx::patterns::predicated_execution::PredicationCandidate
 pub struct vyre_emit_ptx::patterns::predicated_execution::PredicationPlan
 pub struct vyre_emit_ptx::patterns::tensor_core_fragment::TensorCoreCandidate
 pub struct vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan
-pub struct vyre_emit_ptx::patterns::vec_load_fusion::FusionCandidate
-pub struct vyre_emit_ptx::patterns::vec_load_fusion::FusionPlan
-pub struct vyre_emit_ptx::patterns::vec_store_fusion::FusionCandidate
-pub struct vyre_emit_ptx::patterns::vec_store_fusion::FusionPlan
+pub struct vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionCandidate
+pub struct vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionPlan
 pub vyre_emit_ptx::ComputeCapability::major: u32
 pub vyre_emit_ptx::ComputeCapability::minor: u32
 pub vyre_emit_ptx::EmitError::InvalidBinding
@@ -95,8 +92,8 @@ pub vyre_emit_ptx::patterns::PtxAuditReport::predication: vyre_emit_ptx::pattern
 pub vyre_emit_ptx::patterns::PtxAuditReport::scheduling: vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints
 pub vyre_emit_ptx::patterns::PtxAuditReport::target: vyre_emit_ptx::ComputeCapability
 pub vyre_emit_ptx::patterns::PtxAuditReport::tensor_core: vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan
-pub vyre_emit_ptx::patterns::PtxAuditReport::vec_load: vyre_emit_ptx::patterns::vec_load_fusion::FusionPlan
-pub vyre_emit_ptx::patterns::PtxAuditReport::vec_store: vyre_emit_ptx::patterns::vec_store_fusion::FusionPlan
+pub vyre_emit_ptx::patterns::PtxAuditReport::vec_load: vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionPlan
+pub vyre_emit_ptx::patterns::PtxAuditReport::vec_store: vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionPlan
 pub vyre_emit_ptx::patterns::instruction_scheduling::DependencyChain::length: u32
 pub vyre_emit_ptx::patterns::instruction_scheduling::DependencyChain::start_op_index: usize
 pub vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints::kernel_id: alloc::string::String
@@ -126,15 +123,11 @@ pub vyre_emit_ptx::patterns::tensor_core_fragment::TensorCoreCandidate::fragment
 pub vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan::candidates: alloc::vec::Vec<vyre_emit_ptx::patterns::tensor_core_fragment::TensorCoreCandidate>
 pub vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan::kernel_id: alloc::string::String
 pub vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan::target_sm: alloc::string::String
-pub vyre_emit_ptx::patterns::vec_load_fusion::FusionCandidate::alignment_bytes: u32
-pub vyre_emit_ptx::patterns::vec_load_fusion::FusionCandidate::binding_slot: u32
-pub vyre_emit_ptx::patterns::vec_load_fusion::FusionCandidate::element_type: vyre_spec::data_type::DataType
-pub vyre_emit_ptx::patterns::vec_load_fusion::FusionCandidate::first_load_idx: usize
-pub vyre_emit_ptx::patterns::vec_load_fusion::FusionCandidate::group_size: u8
-pub vyre_emit_ptx::patterns::vec_load_fusion::FusionPlan::candidates: alloc::vec::Vec<vyre_emit_ptx::patterns::vec_load_fusion::FusionCandidate>
-pub vyre_emit_ptx::patterns::vec_store_fusion::FusionCandidate::alignment_bytes: u32
-pub vyre_emit_ptx::patterns::vec_store_fusion::FusionCandidate::binding_slot: u32
-pub vyre_emit_ptx::patterns::vec_store_fusion::FusionCandidate::element_type: vyre_spec::data_type::DataType
-pub vyre_emit_ptx::patterns::vec_store_fusion::FusionCandidate::first_store_idx: usize
-pub vyre_emit_ptx::patterns::vec_store_fusion::FusionCandidate::group_size: u8
-pub vyre_emit_ptx::patterns::vec_store_fusion::FusionPlan::candidates: alloc::vec::Vec<vyre_emit_ptx::patterns::vec_store_fusion::FusionCandidate>
+pub vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionCandidate::alignment_bytes: u32
+pub vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionCandidate::binding_slot: u32
+pub vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionCandidate::element_type: vyre_spec::data_type::DataType
+pub vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionCandidate::first_op_idx: usize
+pub vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionCandidate::group_size: u8
+pub vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionKind::Load
+pub vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionKind::Store
+pub vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionPlan::candidates: alloc::vec::Vec<vyre_emit_ptx::patterns::vec_memory_fusion::MemoryFusionCandidate>

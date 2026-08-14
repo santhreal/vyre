@@ -104,6 +104,23 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   that shared a name with the trait method shadowed it. Callers import
   `vyre_lower::pattern_audit::PatternAudit` and use `finding_count` and
   `has_any`.
+- `vyre-emit-ptx` publishes one vector memory fusion module instead of two.
+  `patterns::vec_load_fusion` and `patterns::vec_store_fusion` were facades
+  over the same detector whose only difference was spelling one field
+  `first_load_idx` and `first_store_idx`; both are replaced by
+  `patterns::vec_memory_fusion` with `analyze(desc, MemoryFusionKind)`,
+  `MemoryFusionCandidate::first_op_idx`, and `MemoryFusionPlan`.
+  `PtxAuditReport::vec_load` and `::vec_store` keep their names and now share
+  that one plan type.
+- The four emitter crates no longer open with their own `#![allow(...)]`
+  block. Every lint named in those blocks is already allowed by
+  `[workspace.lints]`, which all four crates inherit.
+- Emitter test descriptors are built through
+  `vyre_lower::descriptor_builder`, which gains `binop`, `load_global`,
+  `store_global`, and neutral emission-target capability fixtures
+  (`workgroup_limits`, `permissive_workgroup_limits`,
+  `all_subgroup_capabilities`, `emission_target`, `target_without_subgroups`)
+  behind its existing `test-fixtures` feature.
 - Public API snapshots for `vyre-debug`, `vyre-driver`, `vyre-driver-cuda`,
   `vyre-emit-naga`, `vyre-emit-ptx`, `vyre-emit-spirv`, and `vyre-libs` now
   match their live surfaces. `vyre-debug` drops the `scan_explain` report,

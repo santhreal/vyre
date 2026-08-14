@@ -10,9 +10,7 @@ pub mod instruction_scheduling;
 pub mod ldmatrix_cp_async;
 pub mod predicated_execution;
 pub mod tensor_core_fragment;
-pub mod vec_load_fusion;
-mod vec_memory_fusion;
-pub mod vec_store_fusion;
+pub mod vec_memory_fusion;
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -36,8 +34,8 @@ pub fn audit(desc: &KernelDescriptor, target: ComputeCapability) -> PtxAuditRepo
         kernel_id: desc.id.clone(),
         target,
         predication: predicated_execution::analyze(desc),
-        vec_load: vec_load_fusion::analyze(desc),
-        vec_store: vec_store_fusion::analyze(desc),
+        vec_load: vec_memory_fusion::analyze(desc, vec_memory_fusion::MemoryFusionKind::Load),
+        vec_store: vec_memory_fusion::analyze(desc, vec_memory_fusion::MemoryFusionKind::Store),
         async_copy: ldmatrix_cp_async::analyze(desc, target),
         tensor_core: tensor_core_fragment::analyze(desc, target),
         scheduling: instruction_scheduling::analyze(desc),
@@ -57,9 +55,9 @@ pub struct PtxAuditReport {
     /// Predicated-execution opportunities.
     pub predication: predicated_execution::PredicationPlan,
     /// Vector-load fusion opportunities.
-    pub vec_load: vec_load_fusion::FusionPlan,
+    pub vec_load: vec_memory_fusion::MemoryFusionPlan,
     /// Vector-store fusion opportunities.
-    pub vec_store: vec_store_fusion::FusionPlan,
+    pub vec_store: vec_memory_fusion::MemoryFusionPlan,
     /// Asynchronous-copy opportunities.
     pub async_copy: ldmatrix_cp_async::AsyncCopyPlan,
     /// Matrix-fragment opportunities.
@@ -115,8 +113,8 @@ impl PtxAuditReport {
                 kernel_id: String::new(),
                 candidates: vec![],
             },
-            vec_load: vec_load_fusion::FusionPlan { candidates: vec![] },
-            vec_store: vec_store_fusion::FusionPlan { candidates: vec![] },
+            vec_load: vec_memory_fusion::MemoryFusionPlan::default(),
+            vec_store: vec_memory_fusion::MemoryFusionPlan::default(),
             async_copy: ldmatrix_cp_async::AsyncCopyPlan {
                 kernel_id: String::new(),
                 target_supports_cp_async: false,

@@ -1,14 +1,34 @@
-//! Shared PTX vector memory fusion chain detector.
+//! Vector memory-fusion chain detection for PTX.
+//!
+//! NVIDIA GPUs move 8 or 16 bytes per transaction with `ld.global.v2/v4` and
+//! `st.global.v2/v4` instead of 2 or 4 scalar 4-byte accesses. This detects
+//! the chains that qualify: 2 or 4 consecutive `LoadGlobal`/`LoadConstant` or
+//! `StoreGlobal` ops that read or write one binding slot at indices
+//! `i, i+1, i+2, [i+3]`, with no intervening op other than the
+//! index-increment `Add`s. The emitter consumes the same chain shape and
+//! binds every scalar result id to the vector instruction's registers.
+//!
+//! The load and store sides differ only in which operand carries the index
+//! and whether there is a value operand, so [`MemoryFusionKind`] carries that
+//! difference and one detector serves both. A caller that wants only one side
+//! passes only that kind.
+//!
+//! `alignment_bytes` is a requirement, not a guarantee: the host allocator
+//! must satisfy it for the fused access to be valid.
 
 use crate::emitter::schedule::{is_schedulable_pure_op, is_scheduling_fence};
 use crate::index_facts::IndexFacts;
 use rustc_hash::FxHashMap;
+use serde::{Deserialize, Serialize};
 use vyre_foundation::ir::DataType;
 use vyre_lower::{BindingSlot, KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum MemoryFusionKind {
+/// Which side of memory a fusion chain accesses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MemoryFusionKind {
+    /// Consecutive reads, fusible into `ld.global.v2/v4`.
     Load,
+    /// Consecutive writes, fusible into `st.global.v2/v4`.
     Store,
 }
 
@@ -39,20 +59,33 @@ impl MemoryFusionKind {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct MemoryFusionCandidate {
-    pub(super) first_op_idx: usize,
-    pub(super) group_size: u8,
-    pub(super) binding_slot: u32,
-    pub(super) element_type: DataType,
-    pub(super) alignment_bytes: u32,
+/// One chain of consecutive scalar accesses that could be merged into a
+/// single PTX vector access.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MemoryFusionCandidate {
+    /// Op-index of the first access in the chain.
+    pub first_op_idx: usize,
+    /// Number of accesses in the chain. Only 2 and 4 occur; PTX has no `v3`.
+    pub group_size: u8,
+    /// Binding slot every access in the chain touches.
+    pub binding_slot: u32,
+    /// Element type taken from the binding.
+    pub element_type: DataType,
+    /// Base-pointer alignment the fused access requires, in bytes:
+    /// `group_size * element_size`.
+    pub alignment_bytes: u32,
 }
 
+/// Fusion opportunities of one kind for one kernel.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct MemoryFusionPlan {
+    /// Chains eligible for fusion, in op order.
+    pub candidates: Vec<MemoryFusionCandidate>,
+}
+
+/// Detect fusible chains of the given kind.
 #[must_use]
-pub(super) fn analyze_memory_fusion(
-    desc: &KernelDescriptor,
-    kind: MemoryFusionKind,
-) -> Vec<MemoryFusionCandidate> {
+pub fn analyze(desc: &KernelDescriptor, kind: MemoryFusionKind) -> MemoryFusionPlan {
     let binding_by_slot: FxHashMap<u32, &BindingSlot> = desc
         .bindings
         .slots
@@ -61,7 +94,7 @@ pub(super) fn analyze_memory_fusion(
         .collect();
     let mut candidates = Vec::new();
     walk(&desc.body, &binding_by_slot, kind, &mut candidates);
-    candidates
+    MemoryFusionPlan { candidates }
 }
 
 fn walk(
@@ -235,9 +268,9 @@ pub(super) mod tests {
     }
 
     /// A v2 load chain starting at op 2 and a v2 store chain starting at
-    /// op 5, so a facade that asks for the wrong kind reports the wrong
-    /// first-op index instead of an empty plan.
-    pub(in crate::patterns) fn mixed_load_and_store_chains() -> KernelDescriptor {
+    /// op 5, so asking for the wrong kind reports the wrong first-op index
+    /// instead of an empty plan.
+    fn mixed_load_and_store_chains() -> KernelDescriptor {
         kernel(
             vec![
                 binding(0, "in", BindingVisibility::ReadOnly),
@@ -256,11 +289,33 @@ pub(super) mod tests {
         )
     }
 
+    /// One kind must not report the other kind's chain, or `vec_load` and
+    /// `vec_store` on the audit report would carry the same findings.
+    #[test]
+    fn the_load_kind_reports_only_the_load_chain() {
+        let plan = analyze(&mixed_load_and_store_chains(), MemoryFusionKind::Load);
+        assert_eq!(plan.candidates.len(), 1);
+        assert_eq!(plan.candidates[0].first_op_idx, 2);
+        assert_eq!(plan.candidates[0].group_size, 2);
+        assert_eq!(plan.candidates[0].binding_slot, 0);
+        assert_eq!(plan.candidates[0].alignment_bytes, 8);
+    }
+
+    #[test]
+    fn the_store_kind_reports_only_the_store_chain() {
+        let plan = analyze(&mixed_load_and_store_chains(), MemoryFusionKind::Store);
+        assert_eq!(plan.candidates.len(), 1);
+        assert_eq!(plan.candidates[0].first_op_idx, 5);
+        assert_eq!(plan.candidates[0].group_size, 2);
+        assert_eq!(plan.candidates[0].binding_slot, 1);
+        assert_eq!(plan.candidates[0].alignment_bytes, 8);
+    }
+
     fn only_candidate(
         desc: &KernelDescriptor,
         kind: MemoryFusionKind,
     ) -> Option<MemoryFusionCandidate> {
-        let mut found = analyze_memory_fusion(desc, kind);
+        let mut found = analyze(desc, kind).candidates;
         assert!(found.len() <= 1, "{kind:?}: expected at most one candidate");
         found.pop()
     }
@@ -269,7 +324,7 @@ pub(super) mod tests {
     fn empty_body_has_no_candidates() {
         for kind in KINDS {
             let desc = chain(kind, 0, 1);
-            assert!(analyze_memory_fusion(&desc, kind).is_empty(), "{kind:?}");
+            assert!(analyze(&desc, kind).candidates.is_empty(), "{kind:?}");
         }
     }
 
@@ -277,7 +332,7 @@ pub(super) mod tests {
     fn single_access_has_no_candidate() {
         for kind in KINDS {
             let desc = chain(kind, 1, 1);
-            assert!(analyze_memory_fusion(&desc, kind).is_empty(), "{kind:?}");
+            assert!(analyze(&desc, kind).candidates.is_empty(), "{kind:?}");
         }
     }
 
@@ -319,7 +374,7 @@ pub(super) mod tests {
     fn non_unit_stride_does_not_chain() {
         for kind in KINDS {
             let desc = chain(kind, 2, 2);
-            assert!(analyze_memory_fusion(&desc, kind).is_empty(), "{kind:?}");
+            assert!(analyze(&desc, kind).candidates.is_empty(), "{kind:?}");
         }
     }
 
@@ -340,7 +395,7 @@ pub(super) mod tests {
                 ],
                 vec![LiteralValue::U32(0), LiteralValue::U32(1)],
             );
-            assert!(analyze_memory_fusion(&desc, kind).is_empty(), "{kind:?}");
+            assert!(analyze(&desc, kind).candidates.is_empty(), "{kind:?}");
         }
     }
 
@@ -364,7 +419,7 @@ pub(super) mod tests {
                 ],
                 vec![LiteralValue::U32(0), LiteralValue::U32(1)],
             );
-            assert!(analyze_memory_fusion(&desc, kind).is_empty(), "{kind:?}");
+            assert!(analyze(&desc, kind).candidates.is_empty(), "{kind:?}");
         }
     }
 
@@ -422,6 +477,6 @@ pub(super) mod tests {
                 LiteralValue::U32(11),
             ],
         );
-        assert!(analyze_memory_fusion(&desc, kind).is_empty());
+        assert!(analyze(&desc, kind).candidates.is_empty());
     }
 }
