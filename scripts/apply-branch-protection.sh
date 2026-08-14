@@ -35,7 +35,6 @@ mapfile -t CONTEXTS < <(
       print line
     }
   ' "$DOC" \
-    | grep -v '^reproducible$' \
     | sort -u
 )
 

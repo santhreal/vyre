@@ -982,9 +982,6 @@ fn parse_required_ci_statuses(vyre_root: &Path) -> (Vec<String>, Vec<String>) {
         let Some((status, _)) = stripped.split_once('`') else {
             continue;
         };
-        if status == "reproducible" {
-            continue;
-        }
         statuses.insert(status.to_string());
     }
     (statuses.into_iter().collect(), Vec::new())

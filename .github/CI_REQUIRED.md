@@ -18,9 +18,10 @@ This list is enforced by branch protection rules (see `scripts/apply-branch-prot
 ## From `gpu-parity.yml` (run on self-hosted GPU runner)
 - `GPU release gate`
 
-## From `reproducible-build.yml` (nightly schedule)
-- `reproducible`  -  nightly gate; not blocking on individual PRs but tracked in cycle reports.
-
 ## Scheduled or Manual Deep Gates
+
+Not blocking on individual PRs. Tracked in cycle reports.
+
 - `fuzz.yml`  -  full fuzz lane once active fuzz targets exist.
 - `mutation-testing.yml`  -  weekly zero-survivor gate once restored from `workflows-paused`.
+- `reproducible-build.yml`  -  nightly `reproducible` gate once restored from `workflows-paused`.
