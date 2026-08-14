@@ -1,4 +1,4 @@
-//! Test: descriptor diff tests.
+//! Descriptor diffing reports no change for identical descriptors and names the ops DCE removed.
 use vyre_debug::descriptor_diff::diff_descriptors;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
