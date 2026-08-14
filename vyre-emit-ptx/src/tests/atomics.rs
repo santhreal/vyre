@@ -2,6 +2,18 @@
 use super::*;
 use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op, shared_rw};
 
+/// The shared-memory variant: `slot 0` is a 256-element workgroup bin array.
+fn shared_atomic_kernel(atomic_op: AtomicOp) -> KernelDescriptor {
+    atomic_kernel(
+        "shared_atomic",
+        shared_rw(0, DataType::U32, 256, "wg_bins"),
+        256,
+        atomic_op,
+        MemoryOrdering::SeqCst,
+        1,
+    )
+}
+
 #[test]
 fn nested_if_inside_for_emits_correct_label_nesting() {
     // for { if { ... } }
@@ -12,19 +24,17 @@ fn nested_if_inside_for_emits_correct_label_nesting() {
                 .ops([
                     lit(0, 0),
                     lit(1, 1),
-                    effect(KernelOpKind::StructuredForLoop {
-                        loop_var: "i".into(),
-                    }, [0, 1, 0]),
+                    effect(
+                        KernelOpKind::StructuredForLoop {
+                            loop_var: "i".into(),
+                        },
+                        [0, 1, 0],
+                    ),
                 ])
-                .children([
-                    body()
-                        .ops([
-                            lit(0, 10),
-                            effect(KernelOpKind::StructuredIfThen, [10, 0]),
-                        ])
-                        .child(empty_child_body())
-                        .literal(LiteralValue::Bool(true)),
-                ])
+                .children([body()
+                    .ops([lit(0, 10), effect(KernelOpKind::StructuredIfThen, [10, 0])])
+                    .child(empty_child_body())
+                    .literal(LiteralValue::Bool(true))])
                 .literals([LiteralValue::U32(0), LiteralValue::U32(8)]),
         )
         .build();
@@ -35,46 +45,28 @@ fn nested_if_inside_for_emits_correct_label_nesting() {
 
 #[test]
 fn atomic_add_emits_atom_global_add_u32() {
-    use vyre_foundation::ir::AtomicOp;
-    let kernel = descriptor("atomic_add")
-        .slot(global_rw(0, DataType::U32, "counter"))
-        .dispatch(64, 1, 1)
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    lit(1, 1),
-                    op(KernelOpKind::Atomic {
-                        op: AtomicOp::Add,
-                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-                    }, [0, 0, 1], 2),
-                ])
-                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
-        )
-        .build();
+    let kernel = atomic_kernel(
+        "atomic_add",
+        global_rw(0, DataType::U32, "counter"),
+        64,
+        AtomicOp::Add,
+        MemoryOrdering::SeqCst,
+        1,
+    );
     let s = emit(&kernel).unwrap();
     assert!(s.contains("atom.global.add.u32"));
 }
 
 #[test]
 fn atomic_exchange_emits_atom_global_exch_b32() {
-    use vyre_foundation::ir::AtomicOp;
-    let kernel = descriptor("atomic_exchange")
-        .slot(global_rw(0, DataType::U32, "slot"))
-        .dispatch(64, 1, 1)
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    lit(1, 1),
-                    op(KernelOpKind::Atomic {
-                        op: AtomicOp::Exchange,
-                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-                    }, [0, 0, 1], 2),
-                ])
-                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
-        )
-        .build();
+    let kernel = atomic_kernel(
+        "atomic_exchange",
+        global_rw(0, DataType::U32, "slot"),
+        64,
+        AtomicOp::Exchange,
+        MemoryOrdering::SeqCst,
+        1,
+    );
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("atom.global.exch.b32"),
@@ -88,28 +80,19 @@ fn atomic_exchange_emits_atom_global_exch_b32() {
 
 #[test]
 fn atomic_bitwise_emits_atom_global_b32_suffix() {
-    use vyre_foundation::ir::AtomicOp;
     for (atomic_op, mnemonic) in [
         (AtomicOp::And, "and"),
         (AtomicOp::Or, "or"),
         (AtomicOp::Xor, "xor"),
     ] {
-        let kernel = descriptor("atomic_bitwise")
-            .slot(global_rw(0, DataType::U32, "slot"))
-            .dispatch(64, 1, 1)
-            .body(
-                body()
-                    .ops([
-                        lit(0, 0),
-                        lit(1, 1),
-                        op(KernelOpKind::Atomic {
-                            op: atomic_op,
-                            ordering: vyre_foundation::memory_model::MemoryOrdering::Relaxed,
-                        }, [0, 0, 1], 2),
-                    ])
-                    .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
-            )
-            .build();
+        let kernel = atomic_kernel(
+            "atomic_bitwise",
+            global_rw(0, DataType::U32, "slot"),
+            64,
+            atomic_op,
+            MemoryOrdering::Relaxed,
+            1,
+        );
         let s = emit(&kernel).unwrap();
         assert!(
             s.contains(&format!("atom.global.{mnemonic}.b32")),
@@ -120,7 +103,6 @@ fn atomic_bitwise_emits_atom_global_b32_suffix() {
 
 #[test]
 fn atomic_bitwise_bool_operand_materializes_u32_before_atom() {
-    use vyre_foundation::ir::AtomicOp;
     let kernel = descriptor("atomic_bool_to_b32")
         .slot(global_rw(0, DataType::U32, "slot"))
         .dispatch(64, 1, 1)
@@ -131,10 +113,14 @@ fn atomic_bitwise_bool_operand_materializes_u32_before_atom() {
                     lit(1, 1),
                     lit(1, 2),
                     op(KernelOpKind::BinOpKind(BinOp::Eq), [1, 2], 3),
-                    op(KernelOpKind::Atomic {
-                        op: AtomicOp::Or,
-                        ordering: vyre_foundation::memory_model::MemoryOrdering::Relaxed,
-                    }, [0, 0, 3], 4),
+                    op(
+                        KernelOpKind::Atomic {
+                            op: AtomicOp::Or,
+                            ordering: MemoryOrdering::Relaxed,
+                        },
+                        [0, 0, 3],
+                        4,
+                    ),
                 ])
                 .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
         )
@@ -156,50 +142,18 @@ fn atomic_bitwise_bool_operand_materializes_u32_before_atom() {
 
 #[test]
 fn atomic_min_max_emit_correct_mnemonic() {
-    use vyre_foundation::ir::AtomicOp;
     for (atomic_op, mnemonic) in [(AtomicOp::Min, "min"), (AtomicOp::Max, "max")] {
-        let kernel = descriptor("atomic_minmax")
-            .slot(global_rw(0, DataType::U32, "b"))
-            .dispatch(64, 1, 1)
-            .body(
-                body()
-                    .ops([
-                        lit(0, 0),
-                        lit(1, 1),
-                        op(KernelOpKind::Atomic {
-                            op: atomic_op,
-                            ordering: vyre_foundation::memory_model::MemoryOrdering::Relaxed,
-                        }, [0, 0, 1], 2),
-                    ])
-                    .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
-            )
-            .build();
+        let kernel = atomic_kernel(
+            "atomic_minmax",
+            global_rw(0, DataType::U32, "b"),
+            64,
+            atomic_op,
+            MemoryOrdering::Relaxed,
+            7,
+        );
         let s = emit(&kernel).unwrap();
         assert!(s.contains(&format!("atom.global.{mnemonic}.u32")));
     }
-}
-
-/// Build a kernel whose only atomic targets a SHARED (workgroup) binding.
-///
-/// `slot 0` is the shared bin array, indexed by the literal `0`, incremented by
-/// the literal `1`.
-fn shared_atomic_kernel(atomic_op: vyre_foundation::ir::AtomicOp) -> KernelDescriptor {
-    descriptor("shared_atomic")
-        .slot(shared_rw(0, DataType::U32, 256, "wg_bins"))
-        .dispatch(256, 1, 1)
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    lit(1, 1),
-                    op(KernelOpKind::Atomic {
-                            op: atomic_op,
-                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-                    }, [0, 0, 1], 2),
-                ])
-                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
-        )
-        .build()
 }
 
 /// An atomic on a workgroup-shared binding must lower to `atom.shared.*`
@@ -218,7 +172,6 @@ fn shared_atomic_kernel(atomic_op: vyre_foundation::ir::AtomicOp) -> KernelDescr
 /// into shared memory requires an atomic increment on shared memory.
 #[test]
 fn atomic_add_on_shared_binding_emits_atom_shared_not_atom_global() {
-    use vyre_foundation::ir::AtomicOp;
     let s = emit(&shared_atomic_kernel(AtomicOp::Add))
         .expect("Fix: an atomic on a workgroup-shared binding must emit, not error");
 
@@ -247,7 +200,6 @@ fn atomic_add_on_shared_binding_emits_atom_shared_not_atom_global() {
 /// addresses the wrong location.
 #[test]
 fn shared_atomic_address_is_a_shared_window_offset_from_the_shared_symbol() {
-    use vyre_foundation::ir::AtomicOp;
     let s = emit(&shared_atomic_kernel(AtomicOp::Add))
         .expect("Fix: an atomic on a workgroup-shared binding must emit, not error");
 
@@ -279,7 +231,6 @@ fn shared_atomic_address_is_a_shared_window_offset_from_the_shared_symbol() {
 /// keep faulting.
 #[test]
 fn every_shared_atomic_rmw_mnemonic_uses_the_shared_state_space() {
-    use vyre_foundation::ir::AtomicOp;
     for (op, expected) in [
         (AtomicOp::Add, "atom.shared.add.u32"),
         (AtomicOp::Or, "atom.shared.or.b32"),

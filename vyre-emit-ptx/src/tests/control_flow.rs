@@ -1,17 +1,28 @@
 //! Test: control flow.
 use super::*;
-use vyre_lower::descriptor_builder::{SlotCount, body, descriptor, effect, global_rw, lit};
+use vyre_lower::descriptor_builder::{
+    body, descriptor, effect, global_rw, lit, KernelDescriptorBuilder, SlotCount,
+};
+
+/// 64-thread kernel writing into one read-write `out` slot of `count` u32s.
+/// The caller supplies the body.
+fn predication_kernel(id: &str, count: u32) -> KernelDescriptorBuilder {
+    descriptor(id)
+        .slot(global_rw(0, DataType::U32, "out").with_count(count))
+        .dispatch(64, 1, 1)
+}
 
 #[test]
 fn region_op_passes_through_with_comment() {
     let kernel = descriptor("region")
         .body(
             body()
-                .ops([
-                    effect(KernelOpKind::Region {
-                    generator: "vyre.libs.test".into(),
-                }, [0]),
-                ])
+                .ops([effect(
+                    KernelOpKind::Region {
+                        generator: "vyre.libs.test".into(),
+                    },
+                    [0],
+                )])
                 .child(body()),
         )
         .build();
@@ -61,9 +72,7 @@ fn structured_if_then_else_emits_else_label_and_unconditional_jump() {
 
 #[test]
 fn short_if_then_store_is_predicated_without_branch() {
-    let kernel = descriptor("if_store")
-        .slot(global_rw(0, DataType::U32, "out").with_count(1))
-        .dispatch(64, 1, 1)
+    let kernel = predication_kernel("if_store", 1)
         .body(
             body()
                 .ops([
@@ -93,9 +102,7 @@ fn short_if_then_store_is_predicated_without_branch() {
 
 #[test]
 fn short_if_then_literal_store_body_is_predicated_without_branch() {
-    let kernel = descriptor("if_literal_store")
-        .slot(global_rw(0, DataType::U32, "out").with_count(1))
-        .dispatch(64, 1, 1)
+    let kernel = predication_kernel("if_literal_store", 1)
         .body(
             body()
                 .ops([
@@ -103,14 +110,9 @@ fn short_if_then_literal_store_body_is_predicated_without_branch() {
                     lit(1, 1),
                     effect(KernelOpKind::StructuredIfThen, [0, 0]),
                 ])
-                .children([
-                    body()
-                        .ops([
-                            lit(0, 20),
-                            effect(KernelOpKind::StoreGlobal, [0, 1, 20]),
-                        ])
-                        .literal(LiteralValue::U32(13)),
-                ])
+                .children([body()
+                    .ops([lit(0, 20), effect(KernelOpKind::StoreGlobal, [0, 1, 20])])
+                    .literal(LiteralValue::U32(13))])
                 .literals([LiteralValue::Bool(true), LiteralValue::U32(0)]),
         )
         .build();
@@ -127,9 +129,7 @@ fn short_if_then_literal_store_body_is_predicated_without_branch() {
 
 #[test]
 fn short_if_then_two_store_body_is_fully_predicated_without_branch() {
-    let kernel = descriptor("if_two_stores")
-        .slot(global_rw(0, DataType::U32, "out").with_count(2))
-        .dispatch(64, 1, 1)
+    let kernel = predication_kernel("if_two_stores", 2)
         .body(
             body()
                 .ops([
@@ -137,16 +137,14 @@ fn short_if_then_two_store_body_is_fully_predicated_without_branch() {
                     lit(1, 1),
                     effect(KernelOpKind::StructuredIfThen, [0, 0]),
                 ])
-                .children([
-                    body()
-                        .ops([
-                            lit(0, 20),
-                            effect(KernelOpKind::StoreGlobal, [0, 1, 20]),
-                            lit(1, 21),
-                            effect(KernelOpKind::StoreGlobal, [0, 1, 21]),
-                        ])
-                        .literals([LiteralValue::U32(13), LiteralValue::U32(17)]),
-                ])
+                .children([body()
+                    .ops([
+                        lit(0, 20),
+                        effect(KernelOpKind::StoreGlobal, [0, 1, 20]),
+                        lit(1, 21),
+                        effect(KernelOpKind::StoreGlobal, [0, 1, 21]),
+                    ])
+                    .literals([LiteralValue::U32(13), LiteralValue::U32(17)])])
                 .literals([LiteralValue::Bool(true), LiteralValue::U32(0)]),
         )
         .build();
@@ -163,9 +161,7 @@ fn short_if_then_two_store_body_is_fully_predicated_without_branch() {
 
 #[test]
 fn short_if_else_stores_are_dual_predicated_without_reconvergence_branch() {
-    let kernel = descriptor("if_else_store")
-        .slot(global_rw(0, DataType::U32, "out").with_count(1))
-        .dispatch(64, 1, 1)
+    let kernel = predication_kernel("if_else_store", 1)
         .body(
             body()
                 .ops([
@@ -201,9 +197,7 @@ fn short_if_else_stores_are_dual_predicated_without_reconvergence_branch() {
 
 #[test]
 fn short_if_else_literal_store_bodies_are_dual_predicated_without_branch() {
-    let kernel = descriptor("if_else_literal_store")
-        .slot(global_rw(0, DataType::U32, "out").with_count(1))
-        .dispatch(64, 1, 1)
+    let kernel = predication_kernel("if_else_literal_store", 1)
         .body(
             body()
                 .ops([
@@ -213,16 +207,10 @@ fn short_if_else_literal_store_bodies_are_dual_predicated_without_branch() {
                 ])
                 .children([
                     body()
-                        .ops([
-                            lit(0, 20),
-                            effect(KernelOpKind::StoreGlobal, [0, 1, 20]),
-                        ])
+                        .ops([lit(0, 20), effect(KernelOpKind::StoreGlobal, [0, 1, 20])])
                         .literal(LiteralValue::U32(21)),
                     body()
-                        .ops([
-                            lit(0, 21),
-                            effect(KernelOpKind::StoreGlobal, [0, 1, 21]),
-                        ])
+                        .ops([lit(0, 21), effect(KernelOpKind::StoreGlobal, [0, 1, 21])])
                         .literal(LiteralValue::U32(34)),
                 ])
                 .literals([LiteralValue::Bool(true), LiteralValue::U32(0)]),
@@ -249,9 +237,12 @@ fn structured_for_loop_emits_head_label_setp_and_jump_back() {
                 .ops([
                     lit(0, 0),
                     lit(1, 1),
-                    effect(KernelOpKind::StructuredForLoop {
-                        loop_var: "i".into(),
-                    }, [0, 1, 0]),
+                    effect(
+                        KernelOpKind::StructuredForLoop {
+                            loop_var: "i".into(),
+                        },
+                        [0, 1, 0],
+                    ),
                 ])
                 .child(empty_child_body())
                 .literals([LiteralValue::U32(0), LiteralValue::U32(64)]),
