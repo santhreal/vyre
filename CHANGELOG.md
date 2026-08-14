@@ -155,6 +155,18 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   semantic pass registration generators. Test-only operation registration,
   algebraic-law derive, no-op builder marker, and generated decoder stubs are
   gone.
+- `scripts/check_warning_budget.sh` is gone. It read its baseline from
+  `.internals/baselines/warning_budget.txt`, a gitignored path with no file, so
+  it exited on `cat` from any clean checkout; it counted cargo's per-crate
+  summary lines as warnings; and `|| true` after the pipe reported zero warnings
+  for a build that failed. `strict.yml` already builds the workspace
+  `--all-targets --all-features` under `RUSTFLAGS: -D warnings`, so the enforced
+  ceiling is zero and a budget above it was slack.
+- `scripts/check_tier_b_rule_contracts.sh` is gone. It required a
+  repository-root `rules/` tree with `README.md`, `SCHEMA.md`, `op/` and `kat/`
+  subdirectories, none of which exist here or in this repository's history, and
+  its second rule scanned `vyre-libs/src/matching/`, which does not exist,
+  behind `2>/dev/null || true`. Audit rows 113 through 116 are `open` again.
 
 ### Fixed
 
