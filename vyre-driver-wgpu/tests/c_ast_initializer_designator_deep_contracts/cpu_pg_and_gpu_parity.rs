@@ -7,26 +7,26 @@ fn cpu_nested_field_array_designator_materialises_all_kinds() {
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST),
+        row_indices(&typed, C_AST_KIND_INITIALIZER_LIST),
         vec![4, 16],
         "outer and inner initializer lists must materialise"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR),
+        row_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR),
         vec![5, 13, 17],
         ".a, .b, .c designators must classify as MEMBER_ACCESS_EXPR"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR),
+        row_indices(&typed, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR),
         vec![7],
         "[0] array designator must classify as ARRAY_SUBSCRIPT_EXPR"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_ASSIGN_EXPR),
+        row_indices(&typed, C_AST_KIND_ASSIGN_EXPR),
         vec![10, 15, 19],
         "designator assignments must classify as ASSIGN_EXPR"
     );
-    let literals = typed_indices(&typed, node_kind::LITERAL);
+    let literals = row_indices(&typed, node_kind::LITERAL);
     assert!(literals.contains(&8), "index literal 0 must be LITERAL");
     assert!(literals.contains(&11), "value literal 1 must be LITERAL");
     assert!(literals.contains(&20), "value literal 2 must be LITERAL");
@@ -46,22 +46,22 @@ fn cpu_range_designator_materialises_range_expr() {
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_RANGE_DESIGNATOR_EXPR),
+        row_indices(&typed, C_AST_KIND_RANGE_DESIGNATOR_EXPR),
         vec![9],
         "ellipsis ... must classify as RANGE_DESIGNATOR_EXPR"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST),
+        row_indices(&typed, C_AST_KIND_INITIALIZER_LIST),
         vec![6],
         "brace must be an initializer list"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR),
+        row_indices(&typed, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR),
         vec![7, 15],
         "[0 ... 3] and [5] must classify as ARRAY_SUBSCRIPT_EXPR"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_ASSIGN_EXPR),
+        row_indices(&typed, C_AST_KIND_ASSIGN_EXPR),
         vec![12, 18],
         "designator assignments must classify as ASSIGN_EXPR"
     );
@@ -74,22 +74,22 @@ fn cpu_union_field_designator_classifies() {
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_UNION_DECL),
+        row_indices(&typed, C_AST_KIND_UNION_DECL),
         vec![0],
         "union keyword must classify as UNION_DECL"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST),
+        row_indices(&typed, C_AST_KIND_INITIALIZER_LIST),
         vec![4],
         "union initializer brace must be an initializer list"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR),
+        row_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR),
         vec![5],
         ".f designator must classify as MEMBER_ACCESS_EXPR"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_ASSIGN_EXPR),
+        row_indices(&typed, C_AST_KIND_ASSIGN_EXPR),
         vec![7],
         "designator `=` must classify as ASSIGN_EXPR"
     );
@@ -107,21 +107,21 @@ fn cpu_mixed_positional_designated_suppresses_declaration_assign() {
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST),
+        row_indices(&typed, C_AST_KIND_INITIALIZER_LIST),
         vec![4],
         "brace must be an initializer list"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR),
+        row_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR),
         vec![7],
         ".b designator must classify as MEMBER_ACCESS_EXPR"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_ASSIGN_EXPR),
+        row_indices(&typed, C_AST_KIND_ASSIGN_EXPR),
         vec![9],
         "only designator `=` must be ASSIGN_EXPR; declaration `=` is suppressed"
     );
-    let literals = typed_indices(&typed, node_kind::LITERAL);
+    let literals = row_indices(&typed, node_kind::LITERAL);
     assert!(literals.contains(&5), "plain literal `1` must be LITERAL");
     assert!(
         literals.contains(&10),
@@ -140,27 +140,27 @@ fn cpu_compound_literal_nested_materialises() {
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_COMPOUND_LITERAL_EXPR),
+        row_indices(&typed, C_AST_KIND_COMPOUND_LITERAL_EXPR),
         vec![8],
         "compound literal (struct S){{...}} must be a first-class node"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST),
+        row_indices(&typed, C_AST_KIND_INITIALIZER_LIST),
         vec![4, 12],
         "outer and compound-literal initializer lists must materialise"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR),
+        row_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR),
         vec![5, 13],
         ".inner and .x designators must classify as MEMBER_ACCESS_EXPR"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_ASSIGN_EXPR),
+        row_indices(&typed, C_AST_KIND_ASSIGN_EXPR),
         vec![7, 15],
         "designator assignments must classify as ASSIGN_EXPR"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_STRUCT_DECL),
+        row_indices(&typed, C_AST_KIND_STRUCT_DECL),
         vec![0, 9],
         "both struct keywords must classify as STRUCT_DECL"
     );
@@ -173,16 +173,16 @@ fn cpu_declaration_initializer_assignment_suppression() {
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
     assert!(
-        typed_indices(&typed, C_AST_KIND_ASSIGN_EXPR).is_empty(),
+        row_indices(&typed, C_AST_KIND_ASSIGN_EXPR).is_empty(),
         "declaration initializer `=` must be suppressed: no ASSIGN_EXPR nodes allowed"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST),
+        row_indices(&typed, C_AST_KIND_INITIALIZER_LIST),
         vec![3],
         "brace initializer list must still materialise"
     );
     assert_eq!(
-        typed_indices(&typed, node_kind::LITERAL),
+        row_indices(&typed, node_kind::LITERAL),
         vec![4],
         "literal `1` must classify as LITERAL"
     );
@@ -200,12 +200,12 @@ fn cpu_designator_assignment_classification() {
         "declaration initializer `=` must be suppressed"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_ASSIGN_EXPR),
+        row_indices(&typed, C_AST_KIND_ASSIGN_EXPR),
         vec![7],
         "designator `=` must classify as ASSIGN_EXPR"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR),
+        row_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR),
         vec![5],
         ".a designator must classify as MEMBER_ACCESS_EXPR"
     );
@@ -218,31 +218,31 @@ fn cpu_string_char_array_nested_initialization() {
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_ARRAY_DECL),
+        row_indices(&typed, C_AST_KIND_ARRAY_DECL),
         vec![5],
         "data[4] array declarator must classify as ARRAY_DECL"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_FIELD_DECL),
+        row_indices(&typed, C_AST_KIND_FIELD_DECL),
         vec![4],
         "field `data` must classify as FIELD_DECL"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST),
+        row_indices(&typed, C_AST_KIND_INITIALIZER_LIST),
         vec![12],
         "outer designated initializer brace must be an initializer list"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR),
+        row_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR),
         vec![13],
         ".data designator must classify as MEMBER_ACCESS_EXPR"
     );
     assert_eq!(
-        typed_indices(&typed, C_AST_KIND_ASSIGN_EXPR),
+        row_indices(&typed, C_AST_KIND_ASSIGN_EXPR),
         vec![15],
         "designator `=` must classify as ASSIGN_EXPR"
     );
-    let literals = typed_indices(&typed, node_kind::LITERAL);
+    let literals = row_indices(&typed, node_kind::LITERAL);
     assert!(
         literals.contains(&16),
         "string literal must classify as LITERAL; got {literals:?}"

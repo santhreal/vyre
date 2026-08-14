@@ -6,10 +6,10 @@ fn cpu_reference_array_initializer_list_materialises_initializer_list() {
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
-    let lists = typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST);
+    let lists = row_indices(&typed, C_AST_KIND_INITIALIZER_LIST);
     assert_eq!(lists, vec![6], "array initializer list must be one node");
 
-    let literals = typed_indices(&typed, node_kind::LITERAL);
+    let literals = row_indices(&typed, node_kind::LITERAL);
     assert!(
         literals.len() >= 3,
         "three integer literals must appear; got {literals:?}"
@@ -22,10 +22,10 @@ fn cpu_reference_struct_initializer_list_materialises_fields_and_list() {
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
-    let lists = typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST);
+    let lists = row_indices(&typed, C_AST_KIND_INITIALIZER_LIST);
     assert_eq!(lists, vec![4], "struct initializer list must be one node");
 
-    let fields = typed_indices(&typed, C_AST_KIND_FIELD_DECL);
+    let fields = row_indices(&typed, C_AST_KIND_FIELD_DECL);
     assert!(
         fields.is_empty(),
         "field decls only appear inside record bodies, not initializers"
@@ -38,10 +38,10 @@ fn cpu_reference_union_designated_init_materialises_member_access() {
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
-    let lists = typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST);
+    let lists = row_indices(&typed, C_AST_KIND_INITIALIZER_LIST);
     assert_eq!(lists, vec![4], "union initializer list must be one node");
 
-    let designators = typed_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR);
+    let designators = row_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR);
     assert!(
         !designators.is_empty(),
         "dot designator .i must surface; got {designators:?}"
@@ -54,14 +54,14 @@ fn cpu_reference_enum_declaration_and_init_preserves_enumerator_kinds() {
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
-    let enumerators = typed_indices(&typed, C_AST_KIND_ENUMERATOR_DECL);
+    let enumerators = row_indices(&typed, C_AST_KIND_ENUMERATOR_DECL);
     assert_eq!(
         enumerators,
         vec![3, 7, 9],
         "RED, GREEN, BLUE must all be enumerator decls"
     );
 
-    let assigns = typed_indices(&typed, C_AST_KIND_ASSIGN_EXPR);
+    let assigns = row_indices(&typed, C_AST_KIND_ASSIGN_EXPR);
     assert!(
         assigns.contains(&4),
         "RED = 0 must be an assignment expression"
@@ -72,7 +72,7 @@ fn cpu_reference_enum_declaration_and_init_preserves_enumerator_kinds() {
     );
 
     // Second declaration: enum Color c = GREEN;
-    let vars = typed_indices(&typed, node_kind::VARIABLE);
+    let vars = row_indices(&typed, node_kind::VARIABLE);
     assert!(vars.contains(&16), "variable c must type as VARIABLE");
 }
 
@@ -82,19 +82,19 @@ fn cpu_reference_nested_designator_mixed_materialises_all_lists() {
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
-    let init_lists = typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST);
+    let init_lists = row_indices(&typed, C_AST_KIND_INITIALIZER_LIST);
     assert!(
         init_lists.len() >= 3,
         "outer, middle, and inner initializer lists must all materialise; got {init_lists:?}"
     );
 
-    let array_designators = typed_indices(&typed, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR);
+    let array_designators = row_indices(&typed, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR);
     assert!(
         array_designators.len() >= 3,
         "array designators [0], [1], [2] must surface; got {array_designators:?}"
     );
 
-    let member_access = typed_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR);
+    let member_access = row_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR);
     assert!(
         member_access.len() >= 4,
         "dot designators .name, .dims, .x, .y must surface; got {member_access:?}"
@@ -107,21 +107,21 @@ fn cpu_reference_compound_literal_materialises_initializer_list() {
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
-    let compounds = typed_indices(&typed, C_AST_KIND_COMPOUND_LITERAL_EXPR);
+    let compounds = row_indices(&typed, C_AST_KIND_COMPOUND_LITERAL_EXPR);
     assert_eq!(
         compounds,
         vec![4],
         "compound literal expr must be a first-class node"
     );
 
-    let lists = typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST);
+    let lists = row_indices(&typed, C_AST_KIND_INITIALIZER_LIST);
     assert_eq!(
         lists,
         vec![8],
         "compound literal body must be an initializer list"
     );
 
-    let assigns = typed_indices(&typed, C_AST_KIND_ASSIGN_EXPR);
+    let assigns = row_indices(&typed, C_AST_KIND_ASSIGN_EXPR);
     assert!(
         assigns.len() >= 2,
         ".w = 10 and .h = 20 must be assignment exprs; got {assigns:?}"
@@ -134,14 +134,14 @@ fn cpu_reference_compound_literal_in_call_materialises_call_and_compound() {
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
-    let calls = typed_indices(&typed, node_kind::CALL);
+    let calls = row_indices(&typed, node_kind::CALL);
     assert_ne!(
         calls.len(),
         0,
         "function call f(...) must materialise; got {calls:?}"
     );
 
-    let compounds = typed_indices(&typed, C_AST_KIND_COMPOUND_LITERAL_EXPR);
+    let compounds = row_indices(&typed, C_AST_KIND_COMPOUND_LITERAL_EXPR);
     assert_ne!(
         compounds.len(),
         0,
@@ -160,8 +160,8 @@ fn pg_lowering_preserves_spans_and_tree_links_for_array_initializer() {
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     let pg = run_reference_pg_lower(&typed);
 
-    for idx in typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST) {
-        assert_pg_preserves_kind_span_and_links(
+    for idx in row_indices(&typed, C_AST_KIND_INITIALIZER_LIST) {
+        assert_pg_preserves_row_and_kind(
             &typed,
             &pg,
             &tok_starts,
@@ -170,8 +170,8 @@ fn pg_lowering_preserves_spans_and_tree_links_for_array_initializer() {
             C_AST_KIND_INITIALIZER_LIST,
         );
     }
-    for idx in typed_indices(&typed, node_kind::LITERAL) {
-        assert_pg_preserves_kind_span_and_links(
+    for idx in row_indices(&typed, node_kind::LITERAL) {
+        assert_pg_preserves_row_and_kind(
             &typed,
             &pg,
             &tok_starts,
@@ -189,8 +189,8 @@ fn pg_lowering_preserves_spans_and_tree_links_for_struct_initializer() {
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     let pg = run_reference_pg_lower(&typed);
 
-    for idx in typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST) {
-        assert_pg_preserves_kind_span_and_links(
+    for idx in row_indices(&typed, C_AST_KIND_INITIALIZER_LIST) {
+        assert_pg_preserves_row_and_kind(
             &typed,
             &pg,
             &tok_starts,
@@ -199,8 +199,8 @@ fn pg_lowering_preserves_spans_and_tree_links_for_struct_initializer() {
             C_AST_KIND_INITIALIZER_LIST,
         );
     }
-    for idx in typed_indices(&typed, node_kind::LITERAL) {
-        assert_pg_preserves_kind_span_and_links(
+    for idx in row_indices(&typed, node_kind::LITERAL) {
+        assert_pg_preserves_row_and_kind(
             &typed,
             &pg,
             &tok_starts,
@@ -218,8 +218,8 @@ fn pg_lowering_preserves_spans_and_tree_links_for_union_designated_init() {
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     let pg = run_reference_pg_lower(&typed);
 
-    for idx in typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST) {
-        assert_pg_preserves_kind_span_and_links(
+    for idx in row_indices(&typed, C_AST_KIND_INITIALIZER_LIST) {
+        assert_pg_preserves_row_and_kind(
             &typed,
             &pg,
             &tok_starts,
@@ -228,8 +228,8 @@ fn pg_lowering_preserves_spans_and_tree_links_for_union_designated_init() {
             C_AST_KIND_INITIALIZER_LIST,
         );
     }
-    for idx in typed_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR) {
-        assert_pg_preserves_kind_span_and_links(
+    for idx in row_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR) {
+        assert_pg_preserves_row_and_kind(
             &typed,
             &pg,
             &tok_starts,
@@ -238,8 +238,8 @@ fn pg_lowering_preserves_spans_and_tree_links_for_union_designated_init() {
             C_AST_KIND_MEMBER_ACCESS_EXPR,
         );
     }
-    for idx in typed_indices(&typed, C_AST_KIND_ASSIGN_EXPR) {
-        assert_pg_preserves_kind_span_and_links(
+    for idx in row_indices(&typed, C_AST_KIND_ASSIGN_EXPR) {
+        assert_pg_preserves_row_and_kind(
             &typed,
             &pg,
             &tok_starts,
@@ -257,8 +257,8 @@ fn pg_lowering_preserves_spans_and_tree_links_for_enum_declaration() {
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     let pg = run_reference_pg_lower(&typed);
 
-    for idx in typed_indices(&typed, C_AST_KIND_ENUMERATOR_DECL) {
-        assert_pg_preserves_kind_span_and_links(
+    for idx in row_indices(&typed, C_AST_KIND_ENUMERATOR_DECL) {
+        assert_pg_preserves_row_and_kind(
             &typed,
             &pg,
             &tok_starts,
@@ -267,8 +267,8 @@ fn pg_lowering_preserves_spans_and_tree_links_for_enum_declaration() {
             C_AST_KIND_ENUMERATOR_DECL,
         );
     }
-    for idx in typed_indices(&typed, C_AST_KIND_ASSIGN_EXPR) {
-        assert_pg_preserves_kind_span_and_links(
+    for idx in row_indices(&typed, C_AST_KIND_ASSIGN_EXPR) {
+        assert_pg_preserves_row_and_kind(
             &typed,
             &pg,
             &tok_starts,
@@ -286,8 +286,8 @@ fn pg_lowering_preserves_spans_and_tree_links_for_nested_designators() {
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     let pg = run_reference_pg_lower(&typed);
 
-    for idx in typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST) {
-        assert_pg_preserves_kind_span_and_links(
+    for idx in row_indices(&typed, C_AST_KIND_INITIALIZER_LIST) {
+        assert_pg_preserves_row_and_kind(
             &typed,
             &pg,
             &tok_starts,
@@ -296,8 +296,8 @@ fn pg_lowering_preserves_spans_and_tree_links_for_nested_designators() {
             C_AST_KIND_INITIALIZER_LIST,
         );
     }
-    for idx in typed_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR) {
-        assert_pg_preserves_kind_span_and_links(
+    for idx in row_indices(&typed, C_AST_KIND_MEMBER_ACCESS_EXPR) {
+        assert_pg_preserves_row_and_kind(
             &typed,
             &pg,
             &tok_starts,
@@ -306,8 +306,8 @@ fn pg_lowering_preserves_spans_and_tree_links_for_nested_designators() {
             C_AST_KIND_MEMBER_ACCESS_EXPR,
         );
     }
-    for idx in typed_indices(&typed, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR) {
-        assert_pg_preserves_kind_span_and_links(
+    for idx in row_indices(&typed, C_AST_KIND_ARRAY_SUBSCRIPT_EXPR) {
+        assert_pg_preserves_row_and_kind(
             &typed,
             &pg,
             &tok_starts,
@@ -325,8 +325,8 @@ fn pg_lowering_preserves_spans_and_tree_links_for_compound_literal() {
     let typed = reference_c11_classify_vast_node_kinds(&raw);
     let pg = run_reference_pg_lower(&typed);
 
-    for idx in typed_indices(&typed, C_AST_KIND_COMPOUND_LITERAL_EXPR) {
-        assert_pg_preserves_kind_span_and_links(
+    for idx in row_indices(&typed, C_AST_KIND_COMPOUND_LITERAL_EXPR) {
+        assert_pg_preserves_row_and_kind(
             &typed,
             &pg,
             &tok_starts,
@@ -335,8 +335,8 @@ fn pg_lowering_preserves_spans_and_tree_links_for_compound_literal() {
             C_AST_KIND_COMPOUND_LITERAL_EXPR,
         );
     }
-    for idx in typed_indices(&typed, C_AST_KIND_INITIALIZER_LIST) {
-        assert_pg_preserves_kind_span_and_links(
+    for idx in row_indices(&typed, C_AST_KIND_INITIALIZER_LIST) {
+        assert_pg_preserves_row_and_kind(
             &typed,
             &pg,
             &tok_starts,
@@ -345,8 +345,8 @@ fn pg_lowering_preserves_spans_and_tree_links_for_compound_literal() {
             C_AST_KIND_INITIALIZER_LIST,
         );
     }
-    for idx in typed_indices(&typed, C_AST_KIND_ASSIGN_EXPR) {
-        assert_pg_preserves_kind_span_and_links(
+    for idx in row_indices(&typed, C_AST_KIND_ASSIGN_EXPR) {
+        assert_pg_preserves_row_and_kind(
             &typed,
             &pg,
             &tok_starts,
