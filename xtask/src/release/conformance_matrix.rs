@@ -2,17 +2,24 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::io::{self, Read};
+use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::release::release_backend_rows::{
     count_non_runtime_supported_release_backend_rows, count_runtime_dialect_contract_rows,
     RUNTIME_DIALECT_CONTRACT_OPS,
 };
+use crate::release::conformance_op_matrix::{
+    read_conformance_required_op_matrix, OpMatrixReleaseBackendSpec,
+};
+use crate::release::conformance_workflows::{
+    ci_status_defined, inspect_ci_conformance_gates, inspect_fail_closed_fanins,
+    inspect_path_filtered_required_workflows, inspect_required_workflow_triggers,
+    parse_required_ci_statuses, CiConformanceGate,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use vyre_driver::backend::{backend_dispatches, registered_backends_by_precedence_slice};
-use walkdir::WalkDir;
 
 use vyre_driver_cuda as _;
 use vyre_driver_reference as _;
@@ -108,15 +115,6 @@ struct ConformanceCaseClassEvidence {
     source: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub(crate) struct CiConformanceGate {
-    pub(crate) workflow: String,
-    read_error: Option<String>,
-    pub(crate) gate: String,
-    present: bool,
-    command_present: bool,
-    artifact_check_present: bool,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 struct ScanConformanceRowEvidence {
@@ -457,152 +455,6 @@ pub(crate) fn run(args: &[String]) {
     }
 }
 
-pub(crate) struct OpMatrixCatalog {
-    pub(crate) required_ops: BTreeSet<String>,
-    pub(crate) release_backend_rows: Vec<String>,
-    pub(crate) release_backend_specs: Vec<OpMatrixReleaseBackendSpec>,
-    pub(crate) missing_release_backend_rows: Vec<String>,
-    pub(crate) blocked_release_rows: Vec<String>,
-    pub(crate) errors: Vec<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct OpMatrixReleaseBackendSpec {
-    pub(crate) op_id: String,
-    pub(crate) backend: String,
-    pub(crate) status: String,
-    pub(crate) test_paths: Vec<String>,
-    pub(crate) test_case_classes: BTreeSet<&'static str>,
-}
-
-pub(crate) fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog {
-    let matrix_path = vyre_root.join("docs/optimization/OP_MATRIX.toml");
-    let text = match read_text_bounded(&matrix_path) {
-        Ok(text) => text,
-        Err(error) => {
-            return OpMatrixCatalog {
-                required_ops: BTreeSet::new(),
-                release_backend_rows: Vec::new(),
-                release_backend_specs: Vec::new(),
-                missing_release_backend_rows: Vec::new(),
-                blocked_release_rows: Vec::new(),
-                errors: vec![format!(
-                    "could not read OP_MATRIX at {}: {error}",
-                    matrix_path.display()
-                )],
-            };
-        }
-    };
-    let value = match toml::from_str::<toml::Value>(&text) {
-        Ok(value) => value,
-        Err(error) => {
-            return OpMatrixCatalog {
-                required_ops: BTreeSet::new(),
-                release_backend_rows: Vec::new(),
-                release_backend_specs: Vec::new(),
-                missing_release_backend_rows: Vec::new(),
-                blocked_release_rows: Vec::new(),
-                errors: vec![format!(
-                    "could not parse OP_MATRIX at {}: {error}",
-                    matrix_path.display()
-                )],
-            };
-        }
-    };
-    let rows = match value.get("op").and_then(toml::Value::as_array) {
-        Some(rows) => rows,
-        None => {
-            return OpMatrixCatalog {
-                required_ops: BTreeSet::new(),
-                release_backend_rows: Vec::new(),
-                release_backend_specs: Vec::new(),
-                missing_release_backend_rows: Vec::new(),
-                blocked_release_rows: Vec::new(),
-                errors: vec![format!(
-                    "OP_MATRIX at {} has no [[op]] array",
-                    matrix_path.display()
-                )],
-            };
-        }
-    };
-    if rows.is_empty() {
-        return OpMatrixCatalog {
-            required_ops: BTreeSet::new(),
-            release_backend_rows: Vec::new(),
-            release_backend_specs: Vec::new(),
-            missing_release_backend_rows: Vec::new(),
-            blocked_release_rows: Vec::new(),
-            errors: vec![format!(
-                "OP_MATRIX at {} has zero op rows",
-                matrix_path.display()
-            )],
-        };
-    }
-    let mut required_ops = BTreeSet::new();
-    let mut release_backend_rows = Vec::new();
-    let mut release_backend_specs = Vec::new();
-    let mut missing_release_backend_rows = Vec::new();
-    let mut blocked_release_rows = Vec::new();
-    for row in rows {
-        let tier = row.get("tier").and_then(toml::Value::as_str).unwrap_or("");
-        if tier == "foundation_ir" {
-            continue;
-        }
-        let family = row
-            .get("family")
-            .and_then(toml::Value::as_str)
-            .unwrap_or("<unknown>");
-        for backend in ["reference", "cuda", "wgpu"] {
-            if row.get(backend).and_then(toml::Value::as_str) == Some("blocked_release") {
-                blocked_release_rows.push(format!("{family}:{backend}"));
-            }
-        }
-        let Some(row_ops) = row.get("ops").and_then(toml::Value::as_array) else {
-            continue;
-        };
-        let test_paths = row
-            .get("tests")
-            .and_then(toml::Value::as_array)
-            .map(|tests| {
-                tests
-                    .iter()
-                    .filter_map(toml::Value::as_str)
-                    .map(str::to_string)
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default();
-        let test_case_classes = classify_conformance_case_classes(vyre_root, &test_paths);
-        for op in row_ops {
-            if let Some(op) = op.as_str() {
-                required_ops.insert(op.to_string());
-                for backend in ["reference", "cuda", "wgpu"] {
-                    match row.get(backend).and_then(toml::Value::as_str) {
-                        Some("blocked_release") => {}
-                        Some(status) if !status.trim().is_empty() => {
-                            release_backend_rows.push(format!("{op}:{backend}:{status}"));
-                            release_backend_specs.push(OpMatrixReleaseBackendSpec {
-                                op_id: op.to_string(),
-                                backend: backend.to_string(),
-                                status: status.to_string(),
-                                test_paths: test_paths.clone(),
-                                test_case_classes: test_case_classes.clone(),
-                            });
-                        }
-                        _ => missing_release_backend_rows.push(format!("{op}:{backend}")),
-                    }
-                }
-            }
-        }
-    }
-    OpMatrixCatalog {
-        required_ops,
-        release_backend_rows,
-        release_backend_specs,
-        missing_release_backend_rows,
-        blocked_release_rows,
-        errors: Vec::new(),
-    }
-}
 
 fn release_backend_case_rows(
     specs: &[OpMatrixReleaseBackendSpec],
@@ -714,30 +566,6 @@ fn required_case_classes_for_status(status: &str) -> Vec<&'static str> {
     }
 }
 
-fn classify_conformance_case_classes(
-    vyre_root: &Path,
-    test_paths: &[String],
-) -> BTreeSet<&'static str> {
-    let mut classes = BTreeSet::new();
-    for test_path in test_paths {
-        let path = vyre_root.join(test_path);
-        let text = read_text_bounded(&path).unwrap_or_default();
-        let lowered = format!("{test_path}\n{text}").to_ascii_lowercase();
-        classes.extend(crate::text_markers::classify_text(
-            &lowered,
-            &[
-                ("negative", crate::text_markers::NEGATIVE_MARKERS),
-                ("boundary", crate::text_markers::BOUNDARY_MARKERS),
-                (
-                    "adversarial",
-                    &["adversarial", "hostile", "malformed", "fuzz"],
-                ),
-                ("unsupported_diagnostic", &["unsupported", "not_applicable"]),
-            ],
-        ));
-    }
-    classes
-}
 
 fn read_scan_conformance_matrix(
     vyre_root: &Path,
@@ -891,275 +719,6 @@ fn is_even_hex(value: &str) -> bool {
     !value.is_empty() && value.len() % 2 == 0 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
-pub(crate) fn inspect_ci_conformance_gates(vyre_root: &Path) -> Vec<CiConformanceGate> {
-    vec![
-        inspect_ci_gate(
-            vyre_root,
-            ".github/workflows/gpu-parity.yml",
-            "GPU release gate",
-            "cargo_full run --release --bin xtask -- release-conformance --backend all",
-            "vyre-release-benchmark-evidence",
-        ),
-        inspect_ci_gate(
-            vyre_root,
-            ".github/workflows/conform.yml",
-            "Conform release gate",
-            "cargo_full run --bin xtask -- conformance-matrix",
-            "conformance-matrix.json",
-        ),
-        inspect_ci_gate(
-            vyre_root,
-            ".github/workflows/ci.yml",
-            "CI release gate",
-            "cargo_full run --bin xtask -- release-evidence",
-            "release/evidence/**/*.json",
-        ),
-        inspect_ci_gate(
-            vyre_root,
-            ".github/workflows/architectural-invariants.yml",
-            "Architecture release gate",
-            "cargo_full run -p xtask -- op-matrix --check",
-            "scripts/architecture_docs.py . --check",
-        ),
-        inspect_ci_gate(
-            vyre_root,
-            "scripts/apply-branch-protection.sh",
-            "required_status_checks",
-            ".github/CI_REQUIRED.md",
-            "gh \"${args[@]}\"",
-        ),
-    ]
-}
-
-fn inspect_ci_gate(
-    vyre_root: &Path,
-    workflow: &str,
-    gate: &str,
-    command: &str,
-    artifact_marker: &str,
-) -> CiConformanceGate {
-    let workflow_path = vyre_root.join(workflow);
-    let (text, read_error) = match read_text_bounded(&workflow_path) {
-        Ok(text) => (text, None),
-        Err(error) => (String::new(), Some(error.to_string())),
-    };
-    CiConformanceGate {
-        workflow: workflow_path.display().to_string(),
-        read_error,
-        gate: gate.to_string(),
-        present: text.contains(gate),
-        command_present: text.contains(command),
-        artifact_check_present: text.contains(artifact_marker),
-    }
-}
-
-fn parse_required_ci_statuses(vyre_root: &Path) -> (Vec<String>, Vec<String>) {
-    let path = vyre_root.join(".github/CI_REQUIRED.md");
-    let text = match read_text_bounded(&path) {
-        Ok(text) => text,
-        Err(error) => {
-            return (
-                Vec::new(),
-                vec![format!(
-                    "could not read required CI status manifest `{}`: {error}",
-                    path.display()
-                )],
-            );
-        }
-    };
-    let mut statuses = BTreeSet::new();
-    let mut skip_rest = false;
-    for line in text.lines() {
-        if line.starts_with("## Scheduled or Manual Deep Gates") {
-            skip_rest = true;
-        }
-        if skip_rest {
-            continue;
-        }
-        let Some(stripped) = line.strip_prefix("- `") else {
-            continue;
-        };
-        let Some((status, _)) = stripped.split_once('`') else {
-            continue;
-        };
-        statuses.insert(status.to_string());
-    }
-    (statuses.into_iter().collect(), Vec::new())
-}
-
-fn ci_status_defined(vyre_root: &Path, status: &str, scan_errors: &mut Vec<String>) -> bool {
-    let workflow_root = vyre_root.join(".github/workflows");
-    if !workflow_root.is_dir() {
-        scan_errors.push(format!(
-            "workflow root `{}` is not a directory while searching status `{status}`",
-            workflow_root.display()
-        ));
-        return false;
-    }
-    for entry in WalkDir::new(&workflow_root)
-        .into_iter()
-        .filter_entry(|entry| {
-            let name = entry.file_name().to_string_lossy();
-            !matches!(name.as_ref(), "target" | ".git")
-        })
-    {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(error) => {
-                scan_errors.push(format!(
-                    "could not walk workflow tree `{}` while searching status `{status}`: {error}",
-                    workflow_root.display()
-                ));
-                continue;
-            }
-        };
-        let path = entry.path();
-        let Some(extension) = path.extension().and_then(|ext| ext.to_str()) else {
-            continue;
-        };
-        if !matches!(extension, "yml" | "yaml") {
-            continue;
-        }
-        let text = match read_text_bounded(path) {
-            Ok(text) => text,
-            Err(error) => {
-                scan_errors.push(format!(
-                    "could not read workflow `{}` while searching status `{status}`: {error}",
-                    path.display()
-                ));
-                continue;
-            }
-        };
-        if text.contains(&format!("name: {status}"))
-            || text.contains(&format!("  {status}:"))
-            || text.contains(&format!("    name: {status}"))
-        {
-            return true;
-        }
-    }
-    false
-}
-
-fn inspect_path_filtered_required_workflows(vyre_root: &Path) -> Vec<String> {
-    let mut findings = Vec::new();
-    for workflow in REQUIRED_WORKFLOWS {
-        let path = vyre_root.join(workflow);
-        let Ok(text) = read_text_bounded(&path) else {
-            continue;
-        };
-        let trigger_prefix = text
-            .split_once("\njobs:")
-            .map_or(text.as_str(), |(prefix, _)| prefix);
-        if trigger_prefix.lines().any(|line| {
-            let trimmed = line.trim_start();
-            trimmed.starts_with("paths:") || trimmed.starts_with("paths-ignore:")
-        }) {
-            findings.push(path.display().to_string());
-        }
-    }
-    findings
-}
-
-fn inspect_required_workflow_triggers(vyre_root: &Path) -> Vec<String> {
-    let mut missing = Vec::new();
-    for workflow in REQUIRED_WORKFLOWS {
-        let path = vyre_root.join(workflow);
-        let Ok(text) = read_text_bounded(&path) else {
-            missing.push(format!("{}:unreadable", path.display()));
-            continue;
-        };
-        let trigger_prefix = text
-            .split_once("\njobs:")
-            .map_or(text.as_str(), |(prefix, _)| prefix);
-        let has_pull_request = trigger_prefix.lines().any(|line| {
-            let trimmed = line.trim();
-            trimmed == "pull_request:" || trimmed.starts_with("pull_request:")
-        });
-        let has_push = trigger_prefix.lines().any(|line| {
-            let trimmed = line.trim();
-            trimmed == "push:" || trimmed.starts_with("push:")
-        });
-        let has_main_branch = trigger_prefix.lines().any(|line| {
-            let trimmed = line.trim();
-            trimmed.starts_with("branches:")
-                && (trimmed.contains("[main]")
-                    || trimmed.contains("[\"main\"]")
-                    || trimmed.contains("[ 'main' ]")
-                    || trimmed.contains("[ \"main\" ]")
-                    || trimmed == "branches: main"
-                    || trimmed == "branches: [ main ]")
-        });
-        if !(has_pull_request && has_push && has_main_branch) {
-            missing.push(format!(
-                "{}:pull_request={has_pull_request},push={has_push},main_branch={has_main_branch}",
-                path.display()
-            ));
-        }
-    }
-    missing
-}
-
-fn inspect_fail_closed_fanins(vyre_root: &Path) -> Vec<String> {
-    let mut missing = Vec::new();
-    for (workflow, job_name) in [
-        (".github/workflows/ci.yml", "CI release gate"),
-        (".github/workflows/conform.yml", "Conform release gate"),
-        (".github/workflows/gpu-parity.yml", "GPU release gate"),
-    ] {
-        let path = vyre_root.join(workflow);
-        let Ok(text) = read_text_bounded(&path) else {
-            missing.push(format!("{}:{job_name}", path.display()));
-            continue;
-        };
-        let Some(section) = workflow_job_section(&text, job_name) else {
-            missing.push(format!("{}:{job_name}", path.display()));
-            continue;
-        };
-        if !(section.contains("if: ${{ always() }}")
-            && section.contains(".result")
-            && section.contains("exit 1"))
-        {
-            missing.push(format!("{}:{job_name}", path.display()));
-        }
-    }
-    missing
-}
-
-const REQUIRED_WORKFLOWS: &[&str] = &[
-    ".github/workflows/ci.yml",
-    ".github/workflows/bench.yml",
-    ".github/workflows/architectural-invariants.yml",
-    ".github/workflows/conform.yml",
-    ".github/workflows/gpu-parity.yml",
-];
-
-fn workflow_job_section<'a>(workflow: &'a str, job_name: &str) -> Option<&'a str> {
-    let marker = format!("name: {job_name}");
-    let name_index = workflow.find(&marker)?;
-    let job_start = workflow[..name_index]
-        .rfind("\n  ")
-        .map_or(0, |index| index + 1);
-    let rest = &workflow[job_start..];
-    let mut section_end = rest.len();
-    for (offset, _) in rest.match_indices("\n  ") {
-        if offset == 0 {
-            continue;
-        }
-        let candidate = &rest[offset + 3..];
-        let Some(first) = candidate.chars().next() else {
-            continue;
-        };
-        if first.is_whitespace() {
-            continue;
-        }
-        let first_line = candidate.lines().next().unwrap_or_default();
-        if first_line.contains(':') {
-            section_end = offset;
-            break;
-        }
-    }
-    Some(&rest[..section_end])
-}
 
 fn strip_toml_comment_lines(text: &str) -> String {
     text.lines()
@@ -1303,20 +862,11 @@ fn default_output() -> PathBuf {
 }
 
 fn read_text_bounded(path: &Path) -> io::Result<String> {
-    let mut reader =
-        fs::File::open(path)?.take(MAX_CONFORMANCE_EVIDENCE_TEXT_BYTES.saturating_add(1));
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > MAX_CONFORMANCE_EVIDENCE_TEXT_BYTES {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "{} exceeds {MAX_CONFORMANCE_EVIDENCE_TEXT_BYTES} byte conformance evidence read cap",
-                path.display()
-            ),
-        ));
-    }
-    Ok(text)
+    crate::output_arg::read_text_bounded(
+        path,
+        MAX_CONFORMANCE_EVIDENCE_TEXT_BYTES,
+        "conformance evidence",
+    )
 }
 
 #[cfg(test)]

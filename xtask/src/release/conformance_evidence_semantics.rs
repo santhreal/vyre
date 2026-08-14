@@ -199,7 +199,7 @@ pub(crate) fn inspect_conformance_matrix(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::release::conformance_matrix::inspect_ci_conformance_gates;
+    use crate::release::conformance_workflows::inspect_ci_conformance_gates;
     use std::path::Path;
 
     fn complete_matrix(workflows: impl Iterator<Item = &'static str>) -> Value {

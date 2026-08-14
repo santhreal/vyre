@@ -333,7 +333,7 @@ fn run_backend_conformance(
 
 // `OpMatrixCatalog` and its reader live in `conformance_matrix`: one owner, one
 // reader, so a second copy here cannot drift from the matrix again.
-use crate::release::conformance_matrix::read_conformance_required_op_matrix;
+use crate::release::conformance_op_matrix::read_conformance_required_op_matrix;
 
 struct ParsedPairs {
     pairs: Vec<PairResult>,

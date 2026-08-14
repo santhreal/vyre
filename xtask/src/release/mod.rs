@@ -8,6 +8,8 @@
 pub(crate) mod backend_matrix;
 pub(crate) mod conformance_evidence_semantics;
 pub(crate) mod conformance_matrix;
+pub(crate) mod conformance_op_matrix;
+pub(crate) mod conformance_workflows;
 pub(crate) mod feature_matrix;
 pub(crate) mod launch_contract;
 pub(crate) mod launch_state;

@@ -11,7 +11,7 @@ use vyre_foundation::algebra::algebraic_law_registry::AlgebraicLawRegistration;
 use vyre_foundation::operation::classify_operation_id as classify_op_id;
 use vyre_foundation::operation::OperationTier;
 
-use crate::release::conformance_matrix::read_conformance_required_op_matrix;
+use crate::release::conformance_op_matrix::read_conformance_required_op_matrix;
 
 const DEFAULT_OUTPUT: &str = "docs/generated/OP_SCHEMA.json";
 const MAX_SCHEMA_BYTES: u64 = 16_777_216;
