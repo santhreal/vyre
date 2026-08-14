@@ -311,7 +311,7 @@ pub(crate) fn check_single_benchmark_report(
 #[cfg(test)]
 mod benchmark_backend_tests {
     use super::*;
-    use crate::report_fixture::{cpu_sota_baseline, percentile_metrics};
+    use crate::report_fixture::{cpu_sota_baseline, hidden_invalid_case, percentile_metrics};
 
     #[test]
     fn single_benchmark_report_rejects_explicit_blockers() {
@@ -447,21 +447,18 @@ mod benchmark_backend_tests {
         let report = serde_json::json!({
             "selected_backend": "wgpu",
             "summary": {"failed": 0},
-            "cases": [
-                {
-                    "id": "release.condition_eval.1m",
-                    "backend_id": "wgpu",
-                    "status": "pass",
-                    "correctness": {
-                        "Invalid": {
-                            "reason": "CUDA/WGPU output mismatch at row 17"
-                        }
-                    },
-                    "contract": cpu_sota_baseline(&["wgpu"], 100.0),
-                    "metrics": percentile_metrics([10, 11, 12], [2000, 2001, 2002]),
-                    "performance": {"contract_passed": true, "speedup_x": 200.0}
-                }
-            ]
+            "cases": [hidden_invalid_case(
+                "release.condition_eval.1m",
+                "wgpu",
+                [
+                    ("contract", cpu_sota_baseline(&["wgpu"], 100.0)),
+                    ("metrics", percentile_metrics([10, 11, 12], [2000, 2001, 2002])),
+                    (
+                        "performance",
+                        serde_json::json!({"contract_passed": true, "speedup_x": 200.0}),
+                    ),
+                ],
+            )]
         });
         let mut failures = Vec::new();
 
@@ -561,10 +558,7 @@ pub(crate) fn check_backend_matrix_schema(
     matrix: &serde_json::Value,
     failures: &mut Vec<String>,
 ) {
-    let schema_version = matrix
-        .get("schema_version")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
+    let schema_version = u64_field(matrix, "schema_version", 0);
     if schema_version < 2 {
         failures.push(format!(
             "requirement `{requirement_id}` backend matrix schema_version is {schema_version}, expected >= 2"

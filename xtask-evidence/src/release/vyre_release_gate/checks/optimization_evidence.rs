@@ -140,26 +140,13 @@ pub(crate) fn check_readme_contract(
             "requirement `{requirement_id}` {product} README has no example block"
         ));
     }
-    let blockers = value
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let blockers = array_len(value, "blockers");
     if blockers != 0 {
         failures.push(format!(
             "requirement `{requirement_id}` {product} README contract reports {blockers} blocker(s)"
         ));
     }
 }
-pub(crate) const REQUIRED_BENCHMARKED_OPTIMIZATION_FAMILIES: &[&str] = &[
-    "scalar-algebra",
-    "strength-reduction",
-    "fusion-cse",
-    "dead-code",
-    "memory-dataflow",
-    "loop-transform",
-    "control-flow",
-    "canonicalization",
-];
 pub(crate) fn check_before_after_benchmark_report(
     requirement: &Requirement,
     base_dir: &Path,

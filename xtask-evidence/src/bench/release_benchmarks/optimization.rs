@@ -3,6 +3,8 @@ use std::path::Path;
 
 use serde_json::{json, Value};
 
+use vyre_foundation::optimizer::corpus::RELEASE_OPTIMIZATION_FAMILIES;
+
 use crate::bench::benchmark_evidence_semantics::cuda_release_axes_source_artifact_issues;
 
 use super::evidence_schema::{
@@ -384,16 +386,7 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
     let specs = [(
         "foundation.optimizer.impact",
         "release/evidence/optimization/optimizer-impact-cuda.json",
-        vec![
-            "scalar-algebra",
-            "strength-reduction",
-            "fusion-cse",
-            "dead-code",
-            "memory-dataflow",
-            "loop-transform",
-            "control-flow",
-            "canonicalization",
-        ],
+        RELEASE_OPTIMIZATION_FAMILIES.to_vec(),
         vec![
             "optimizer_input_nodes",
             "optimizer_output_nodes",
@@ -401,16 +394,7 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
         ],
         vec!["optimizer_input_nodes", "optimizer_output_nodes"],
     )];
-    let required_pass_families = vec![
-        "scalar-algebra",
-        "strength-reduction",
-        "fusion-cse",
-        "dead-code",
-        "memory-dataflow",
-        "loop-transform",
-        "control-flow",
-        "canonicalization",
-    ];
+    let required_pass_families = RELEASE_OPTIMIZATION_FAMILIES.to_vec();
     let required_case_count = specs.len();
     let mut blockers = Vec::new();
     let mut covered_pass_families = Vec::new();

@@ -23,12 +23,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         "megakernel-paired-speculation",
         failures,
     );
-    let Some(matrix) = first_json_evidence(
-        requirement,
-        base_dir,
-        "release-workload-matrix.json",
-        failures,
-    ) else {
+    let Some(matrix) = release_workload_matrix(requirement, base_dir, failures) else {
         return;
     };
     let has_megakernel = matrix
@@ -43,10 +38,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         .and_then(|family| family.get("matched_cases"))
         .and_then(serde_json::Value::as_array)
         .is_some_and(|cases| !cases.is_empty());
-    let blockers = matrix
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let blockers = array_len(&matrix, "blockers");
     if !has_megakernel {
         failures.push(
             "requirement `megakernel-default` has no active megakernel-queued-batches workload in the release matrix"

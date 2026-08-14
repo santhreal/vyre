@@ -1,7 +1,7 @@
 //! Status rows read against the artifacts that must prove them.
 
 use super::*;
-use crate::report_fixture::{cpu_sota_baseline, cpu_sota_baseline_for};
+use crate::report_fixture::{cpu_sota_baseline, cpu_sota_baseline_for, hidden_invalid_case};
 
 #[test]
 fn backend_suite_artifact_status_rejects_stale_artifact_metadata() {
@@ -202,18 +202,7 @@ fn backend_suite_artifact_status_rejects_summary_failed_count_hidden_by_pass_sta
     let artifact = serde_json::json!({
         "selected_backend": "cuda",
         "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-        "cases": [
-            {
-                "id": "release.condition_eval.1m",
-                "backend_id": "cuda",
-                "status": "pass",
-                "correctness": {
-                    "Invalid": {
-                        "reason": "CUDA/WGPU output mismatch at row 17"
-                    }
-                }
-            }
-        ]
+        "cases": [hidden_invalid_case("release.condition_eval.1m", "cuda", [])]
     });
 
     assert_eq!(

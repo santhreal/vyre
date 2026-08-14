@@ -331,6 +331,7 @@ pub(super) struct Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::report_fixture::hidden_invalid_case;
 
     use tempfile::TempDir;
 
@@ -727,18 +728,7 @@ mod tests {
                 "selected_backend": "wgpu",
                 "source_fingerprint": current_test_source_fingerprint(dir.path()),
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                "cases": [
-                    {
-                        "id": "release.condition_eval.1m",
-                        "backend_id": "wgpu",
-                        "status": "pass",
-                        "correctness": {
-                            "Invalid": {
-                                "reason": "CUDA/WGPU output mismatch at row 17"
-                            }
-                        }
-                    }
-                ]
+                "cases": [hidden_invalid_case("release.condition_eval.1m", "wgpu", [])]
             }),
         );
 

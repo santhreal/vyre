@@ -254,10 +254,7 @@ pub(crate) fn check_workload_matrix_artifact_coverage(
                 requirement.id
             ));
         }
-        let workload_number = family
-            .get("release_plan_workload")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
+        let workload_number = u64_field(family, "release_plan_workload", 0);
         if workload_number == 0 || !workload_numbers.insert(workload_number) {
             failures.push(format!(
                 "requirement `{}` workload family `{id}` has invalid or duplicate release_plan_workload `{workload_number}`",

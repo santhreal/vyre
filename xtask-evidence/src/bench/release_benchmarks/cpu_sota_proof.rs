@@ -345,7 +345,9 @@ fn cpu_sota_component_proof_case(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::report_fixture::{case_summary, cpu_sota_contract};
+    use crate::report_fixture::{
+        case_summary, cpu_sota_contract, hidden_invalid_case, percentile_metrics,
+    };
 
     use std::fs;
 
@@ -438,24 +440,21 @@ mod tests {
                 "schema_version": 2,
                 "selected_backend": "cuda",
                 "summary": case_summary(1, 0),
-                "cases": [
-                    {
-                        "id": "release.condition_eval.1m",
-                        "backend_id": "cuda",
-                        "status": "pass",
-                        "correctness": {
-                            "Invalid": {
-                                "reason": "CUDA/WGPU output mismatch at row 17"
-                            }
-                        },
-                        "metrics": {
-                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                            "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002}
-                        },
-                        "contract": cpu_sota_contract("release condition eval", &["cuda"]),
-                        "performance": {"contract_passed": true, "speedup_x": 200.0}
-                    }
-                ]
+                "cases": [hidden_invalid_case(
+                    "release.condition_eval.1m",
+                    "cuda",
+                    [
+                        ("metrics", percentile_metrics([10, 11, 12], [2000, 2001, 2002])),
+                        (
+                            "contract",
+                            cpu_sota_contract("release condition eval", &["cuda"]),
+                        ),
+                        (
+                            "performance",
+                            json!({"contract_passed": true, "speedup_x": 200.0}),
+                        ),
+                    ],
+                )]
             }))
             .expect("Fix: serialize hidden-invalid CUDA benchmark artifact JSON."),
         )

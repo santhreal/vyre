@@ -8,21 +8,12 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     else {
         return;
     };
-    let scanned = matrix
-        .get("scanned_files")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let blockers = matrix
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let scanned = u64_field(&matrix, "scanned_files", 0);
+    let blockers = array_len(&matrix, "blockers");
     if scanned == 0 {
         failures.push("requirement `release-hygiene` scanned zero source files".to_string());
     }
-    let finding_count = matrix
-        .get("findings")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
+    let finding_count = array_len(&matrix, "findings");
     let summary_count = matrix
         .get("finding_summary")
         .and_then(serde_json::Value::as_array)

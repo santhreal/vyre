@@ -937,7 +937,8 @@ pub(super) fn nonblank_str(value: &Value) -> Option<&str> {
 mod tests {
     use super::*;
     use crate::report_fixture::{
-        case_summary, cpu_sota_contract, cuda_cached_metrics, host_environment,
+        case_summary, cpu_sota_contract, cuda_cached_metrics, hidden_invalid_case,
+        host_environment, launched_percentile_metrics,
     };
 
     use tempfile::TempDir;
@@ -1778,25 +1779,24 @@ mod tests {
                 "schema_version": 2,
                 "selected_backend": "wgpu",
                 "summary": case_summary(1, 0),
-                "cases": [
-                    {
-                        "id": "release.condition_eval.1m",
-                        "backend_id": "wgpu",
-                        "status": "pass",
-                        "correctness": {
-                            "Invalid": {
-                                "reason": "CUDA/WGPU output mismatch at row 17"
-                            }
-                        },
-                        "metrics": {
-                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                            "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002},
-                            "kernel_launches": {"samples": 1, "p50": 1}
-                        },
-                        "contract": cpu_sota_contract("release condition eval", &["wgpu"]),
-                        "performance": {"contract_passed": true, "speedup_x": 200.0}
-                    }
-                ]
+                "cases": [hidden_invalid_case(
+                    "release.condition_eval.1m",
+                    "wgpu",
+                    [
+                        (
+                            "metrics",
+                            launched_percentile_metrics([10, 11, 12], [2000, 2001, 2002], 1),
+                        ),
+                        (
+                            "contract",
+                            cpu_sota_contract("release condition eval", &["wgpu"]),
+                        ),
+                        (
+                            "performance",
+                            json!({"contract_passed": true, "speedup_x": 200.0}),
+                        ),
+                    ],
+                )]
             }))
             .expect("Fix: serialize hidden-invalid WGPU benchmark artifact JSON."),
         )

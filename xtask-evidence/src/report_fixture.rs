@@ -103,6 +103,38 @@ pub(crate) fn cpu_sota_case(
     })
 }
 
+/// The correctness reason every hidden-failure fixture reports.
+pub(crate) const HIDDEN_INVALID_REASON: &str = "CUDA/WGPU output mismatch at row 17";
+
+/// One case the runner recorded as `pass` whose correctness evidence says the
+/// output was wrong, plus whatever measured fields the reader under test needs
+/// before it will look at correctness at all.
+///
+/// Four readers reject this shape and each carried its own copy of it, keyed on
+/// a reason string spelled out four times. A reader that started reporting the
+/// reason differently would have been corrected in one copy, and the other
+/// three would have gone on asserting the old text against a fixture that no
+/// longer produced it.
+pub(crate) fn hidden_invalid_case(
+    id: &str,
+    backend_id: &str,
+    measured: impl IntoIterator<Item = (&'static str, Value)>,
+) -> Value {
+    let mut case = json!({
+        "id": id,
+        "backend_id": backend_id,
+        "status": "pass",
+        "correctness": {"Invalid": {"reason": HIDDEN_INVALID_REASON}}
+    });
+    let fields = case
+        .as_object_mut()
+        .expect("Fix: hidden_invalid_case builds a JSON object.");
+    for (key, value) in measured {
+        fields.insert(key.to_string(), value);
+    }
+    case
+}
+
 /// Wall and baseline wall timings as `[p50, p95, p99]`, each declaring the thirty
 /// samples the release gate demands before it will read a percentile.
 pub(crate) fn percentile_metrics(wall_ns: [u64; 3], baseline_wall_ns: [u64; 3]) -> Value {
