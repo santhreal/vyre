@@ -1,5 +1,5 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
+    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
@@ -63,16 +63,6 @@ impl BenchCase for MegakernelCondition {
 
     fn suites(&self) -> &'static [SuiteKind] {
         SUITES
-    }
-
-    fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: None,
-            min_input_bytes: None,
-            feature_set: vec![],
-        }
     }
 
     fn performance_contract(&self) -> Option<PerformanceContract> {
@@ -422,10 +412,6 @@ fn verify_condition_outputs(outputs: &[Vec<u8>]) -> Result<Correctness, BenchErr
     }
     Ok(Correctness::Exact)
 }
-
-
-
-
 
 inventory::submit! {
     &MegakernelCondition as &'static dyn BenchCase

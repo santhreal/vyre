@@ -1,5 +1,5 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
+    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
@@ -22,16 +22,6 @@ impl BenchCase for Matmul {
             workload: WorkloadClass::Micro,
             determinism: DeterminismClass::Deterministic,
             owner_crate: "vyre-bench".to_string(),
-        }
-    }
-
-    fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: None,
-            min_input_bytes: None,
-            feature_set: vec![],
         }
     }
 

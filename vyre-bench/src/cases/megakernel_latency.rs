@@ -1,5 +1,5 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
+    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
@@ -50,16 +50,6 @@ impl BenchCase for MegakernelLatency {
             workload: WorkloadClass::Macro,
             determinism: DeterminismClass::Deterministic,
             owner_crate: "vyre-runtime".to_string(),
-        }
-    }
-
-    fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: None,
-            min_input_bytes: None,
-            feature_set: vec![],
         }
     }
 
@@ -340,10 +330,6 @@ fn published_ring(slot_count: u32) -> Result<Vec<u8>, BenchError> {
     }
     Ok(ring)
 }
-
-
-
-
 
 fn simulate_sharded_once_outputs(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, BenchError> {
     if inputs.len() != 4 {

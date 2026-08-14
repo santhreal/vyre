@@ -1,5 +1,5 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
+    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
     BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
@@ -56,16 +56,6 @@ impl BenchCase for MegakernelTruth {
 
     fn suites(&self) -> &'static [crate::api::suite::SuiteKind] {
         SUITES
-    }
-
-    fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: None,
-            min_input_bytes: None,
-            feature_set: vec![],
-        }
     }
 
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {

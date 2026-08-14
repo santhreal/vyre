@@ -1,5 +1,5 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchId, BenchLayer, BenchMetadata, BenchRequirements, BenchRun,
+    BenchCase, BenchContext, BenchId, BenchLayer, BenchMetadata, BenchRun,
     Correctness, DeterminismClass, WorkloadClass,
 };
 use crate::api::metric::BenchMetrics;
@@ -32,16 +32,6 @@ impl BenchCase for RegisterExhaustionCase {
 
     fn suites(&self) -> &'static [SuiteKind] {
         REGISTER_EXHAUSTION_SUITES
-    }
-
-    fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: None,
-            min_input_bytes: None,
-            feature_set: vec![],
-        }
     }
 
     fn prepare(

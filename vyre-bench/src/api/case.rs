@@ -713,7 +713,19 @@ pub trait BenchCase: Send + Sync {
         let suites = self.suites();
         suites.is_empty() || suites.contains(suite)
     }
-    fn requirements(&self) -> BenchRequirements;
+    /// GPU micro-benchmark defaults: needs a device, no network, no size floor.
+    ///
+    /// A case overrides this only when it has a VRAM floor, an input floor, a
+    /// feature set, or no device need at all.
+    fn requirements(&self) -> BenchRequirements {
+        BenchRequirements {
+            needs_gpu: true,
+            needs_network: false,
+            min_vram_bytes: None,
+            min_input_bytes: None,
+            feature_set: vec![],
+        }
+    }
     fn performance_contract(&self) -> Option<PerformanceContract> {
         None
     }

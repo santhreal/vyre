@@ -1,6 +1,6 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{input_bytes_total, transfer_accounting, ResidentInputSet};
@@ -35,20 +35,6 @@ impl BenchCase for ElementwiseBench {
             determinism: DeterminismClass::Deterministic,
             owner_crate: "vyre-bench".to_string(),
         }
-    }
-
-    fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: None,
-            min_input_bytes: None,
-            feature_set: vec![],
-        }
-    }
-
-    fn performance_contract(&self) -> Option<PerformanceContract> {
-        None
     }
 
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {

@@ -3,7 +3,7 @@ use std::time::Instant;
 
 use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::suite::SuiteKind;
@@ -130,10 +130,6 @@ impl BenchCase for LexerSmallStateTransition {
                 "sparse-gpu-lexer-ir".to_string(),
             ],
         }
-    }
-
-    fn performance_contract(&self) -> Option<PerformanceContract> {
-        None
     }
 
     fn bytes_touched(&self, prepared: &PreparedCase) -> (u64, u64) {
