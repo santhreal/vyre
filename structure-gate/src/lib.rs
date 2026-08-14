@@ -15,6 +15,26 @@
 //! Any third crate that registers an operation splits an operation identity in
 //! two, which is the defect this gate exists to make impossible. A tier
 //! boundary is not a reason to re-register a kernel under a second id.
+//!
+//! Re-verifying a change to this gate means running `cargo test -p
+//! structure-gate`, which rebuilds first. The contract tests read the live tree
+//! when they run but carry their rules from when they were built, so a test
+//! binary already sitting in the shared target directory answers today's tree
+//! with yesterday's rules. Invoking
+//! `<target>/debug/deps/structure_gate-<hash>` by hand after restoring a
+//! mutated source file reported the mutated result against a byte-identical
+//! restored source. Read the result of a run that compiled, and nothing else.
+//!
+//! What this scan does not see: an operation id handed to a `macro_rules!`
+//! parameter and registered inside the macro body, when the macro is invoked
+//! from another file. `vyre-primitives/src/bitset/mod.rs` passes
+//! `op_id: "vyre-primitives::bitset::xor"` to a macro defined in
+//! `bitset/binary_word.rs`, and `vyre-libs/src/logical/mod.rs` registers
+//! `vyre-libs::logical::xor` through the same shape, so neither id enters the
+//! model and that identity collision goes unreported. Resolving it needs a
+//! crate-wide pass pairing macro definitions with their invocation sites, which
+//! a per-file parser cannot do. An id written inline or through a file-local
+//! `const` is read, wherever in the file the `const` sits.
 
 #![forbid(unsafe_code)]
 
@@ -508,19 +528,24 @@ const CONSTRUCTOR_TIERS: &[(&str, Option<&str>)] = &[
 /// `#[cfg(feature = "test-utils")]` is not mistaken for a test gate.
 fn strip_cfg_test_items(text: &str) -> Cow<'_, str> {
     const ATTR: &str = "#[cfg(";
-    if !text.contains(ATTR) {
-        return Cow::Borrowed(text);
-    }
     let mut out: Option<String> = None;
-    let mut cursor = 0usize;
-    while let Some(offset) = text[cursor..].find(ATTR) {
-        let attr_start = cursor + offset;
+    // Text not yet copied into `out`, and where the next attribute is looked
+    // for. They are separate: a non-test `#[cfg(...)]` moves the search past
+    // its predicate but keeps every byte, and sharing one cursor for both
+    // deleted the whole file up to the last non-test attribute. That silently
+    // dropped the `const` an id resolved through, so a real registration
+    // became no registration and the rules below judged a registry they could
+    // not see.
+    let mut kept_from = 0usize;
+    let mut search = 0usize;
+    while let Some(offset) = text[search..].find(ATTR) {
+        let attr_start = search + offset;
         let predicate_start = attr_start + ATTR.len() - 1;
         let Some(predicate_end) = match_delimited(text, predicate_start, b'(', b')') else {
             break;
         };
         if !mentions_test(&text[predicate_start + 1..predicate_end]) {
-            cursor = predicate_end + 1;
+            search = predicate_end + 1;
             continue;
         }
         let Some(attr_end) = text[predicate_end..].find(']').map(|at| predicate_end + at) else {
@@ -530,12 +555,13 @@ fn strip_cfg_test_items(text: &str) -> Cow<'_, str> {
             break;
         };
         out.get_or_insert_with(String::new)
-            .push_str(&text[cursor..attr_start]);
-        cursor = item_end;
+            .push_str(&text[kept_from..attr_start]);
+        kept_from = item_end;
+        search = item_end;
     }
     match out {
         Some(mut kept) => {
-            kept.push_str(&text[cursor..]);
+            kept.push_str(&text[kept_from..]);
             Cow::Owned(kept)
         }
         None => Cow::Borrowed(text),
@@ -543,21 +569,31 @@ fn strip_cfg_test_items(text: &str) -> Cow<'_, str> {
 }
 
 /// Byte index of the delimiter closing the one that opens at `open`.
+///
+/// Delimiters inside a string, char literal, raw string or comment are text:
+/// counting them ends a `#[cfg(test)] mod tests { .. }` at a `}` written inside
+/// a string and leaves the rest of the test module in the scanned text.
 fn match_delimited(text: &str, open: usize, opener: u8, closer: u8) -> Option<usize> {
     let bytes = text.as_bytes();
     if bytes.get(open) != Some(&opener) {
         return None;
     }
     let mut depth = 0usize;
-    for (index, byte) in bytes.iter().enumerate().skip(open) {
-        if *byte == opener {
+    let mut index = open;
+    while index < bytes.len() {
+        if let Some(span) = opaque_span(text, index) {
+            index += span;
+            continue;
+        }
+        if bytes[index] == opener {
             depth += 1;
-        } else if *byte == closer {
+        } else if bytes[index] == closer {
             depth -= 1;
             if depth == 0 {
                 return Some(index);
             }
         }
+        index += 1;
     }
     None
 }
@@ -646,22 +682,41 @@ fn first_argument<'a>(after: &'a str, call: &str) -> Option<&'a str> {
 
 /// Argument `index` of a constructor call, as written.
 ///
-/// Splits on top-level commas only, so a nested `Some(f(a, b))` argument does
-/// not shift the count.
+/// Splits on top-level commas only: `()`, `[]` and `{}` nest, and a comma
+/// inside a string, char, raw string or comment is text rather than a
+/// separator. Reading the id out of argument zero is how a registration enters
+/// the gate's model, so a boundary read one argument early drops the
+/// registration outright and the rules below then report a registry they never
+/// saw.
+///
+/// `<` and `>` are ordinary characters. Counting them as delimiters was worse
+/// than ignoring them: registration builders are closures, so `->`, `<` and
+/// `>` appear as operators constantly, one unbalanced occurrence left the depth
+/// permanently wrong, and a `->` dropped the depth far enough that the `)`
+/// closing a nested `Some(` was read as the end of the whole call. The cost is
+/// that a generic written with a top-level comma outside any delimiter pair -
+/// a bare `Vec::<u8, Global>::new()` argument - would split; no registration in
+/// the tree writes one.
 fn nth_argument<'a>(after: &'a str, call: &str, index: usize) -> Option<&'a str> {
     let open = after.find(call)? + call.len();
     let rest = &after[open..];
+    let bytes = rest.as_bytes();
     let mut depth = 0usize;
     let mut start = 0usize;
     let mut argument = 0usize;
-    for (offset, byte) in rest.char_indices() {
-        match byte {
-            '(' | '[' | '{' | '<' => depth += 1,
-            ')' | ']' | '}' | '>' if depth > 0 => depth -= 1,
-            ')' => {
+    let mut offset = 0usize;
+    while offset < bytes.len() {
+        if let Some(span) = opaque_span(rest, offset) {
+            offset += span;
+            continue;
+        }
+        match bytes[offset] {
+            b'(' | b'[' | b'{' => depth += 1,
+            b')' | b']' | b'}' if depth > 0 => depth -= 1,
+            b')' => {
                 return (argument == index).then(|| rest[start..offset].trim());
             }
-            ',' if depth == 0 => {
+            b',' if depth == 0 => {
                 if argument == index {
                     return Some(rest[start..offset].trim());
                 }
@@ -670,8 +725,144 @@ fn nth_argument<'a>(after: &'a str, call: &str, index: usize) -> Option<&'a str>
             }
             _ => {}
         }
+        offset += 1;
     }
     None
+}
+
+/// Byte length of the span starting at `at` whose interior is not code: a line
+/// or block comment, a string, a char literal, or any prefixed or raw form of
+/// those. `None` when ordinary code starts there.
+///
+/// The gate reads source text without compiling it, so nothing else
+/// distinguishes a comma inside `", "` from an argument separator.
+fn opaque_span(text: &str, at: usize) -> Option<usize> {
+    let rest = &text[at..];
+    if let Some(body) = rest.strip_prefix("//") {
+        return Some(2 + body.find('\n').map_or(body.len(), |end| end + 1));
+    }
+    if rest.starts_with("/*") {
+        return Some(block_comment_len(rest));
+    }
+    if rest.starts_with('"') {
+        return Some(escaped_string_len(rest));
+    }
+    if rest.starts_with('\'') {
+        return char_literal_len(rest);
+    }
+    prefixed_literal_len(text, at)
+}
+
+/// Byte length of the block comment starting at `rest`, which nests in Rust.
+fn block_comment_len(rest: &str) -> usize {
+    let bytes = rest.as_bytes();
+    let mut depth = 0usize;
+    let mut offset = 0usize;
+    while offset + 1 < bytes.len() {
+        if bytes[offset] == b'/' && bytes[offset + 1] == b'*' {
+            depth += 1;
+            offset += 2;
+        } else if bytes[offset] == b'*' && bytes[offset + 1] == b'/' {
+            depth -= 1;
+            offset += 2;
+            if depth == 0 {
+                return offset;
+            }
+        } else {
+            offset += 1;
+        }
+    }
+    rest.len()
+}
+
+/// Byte length of the backslash-escaped string starting at `rest`.
+///
+/// An unterminated literal consumes the remaining text: the alternative is to
+/// resume scanning inside a string, where every delimiter is misread.
+fn escaped_string_len(rest: &str) -> usize {
+    let bytes = rest.as_bytes();
+    let mut offset = 1usize;
+    while offset < bytes.len() {
+        match bytes[offset] {
+            b'\\' => offset += 2,
+            b'"' => return offset + 1,
+            _ => offset += 1,
+        }
+    }
+    rest.len()
+}
+
+/// Byte length of the char literal starting at `rest`, or `None` when the quote
+/// opens a lifetime or a loop label instead.
+fn char_literal_len(rest: &str) -> Option<usize> {
+    let body = &rest[1..];
+    if let Some(escape) = body.strip_prefix('\\') {
+        let escaped = if escape.starts_with('u') {
+            escape.find('}')? + 1
+        } else {
+            escape.chars().next()?.len_utf8()
+        };
+        return Some(2 + escaped + escape[escaped..].find('\'')? + 1);
+    }
+    let literal = body.chars().next()?.len_utf8();
+    body[literal..]
+        .starts_with('\'')
+        .then_some(literal + 2)
+}
+
+/// Byte length of a literal carrying a `r`, `b` or `c` prefix, including every
+/// raw form. `None` when the bytes are an ordinary identifier such as `bytes`
+/// or `crc32`.
+fn prefixed_literal_len(text: &str, at: usize) -> Option<usize> {
+    let bytes = text.as_bytes();
+    if at > 0 && (bytes[at - 1].is_ascii_alphanumeric() || bytes[at - 1] == b'_') {
+        return None;
+    }
+    let rest = &text[at..];
+    let prefix = rest
+        .bytes()
+        .take(2)
+        .take_while(|byte| matches!(*byte, b'r' | b'b' | b'c'))
+        .count();
+    if prefix == 0 {
+        return None;
+    }
+    let body = &rest[prefix..];
+    if rest[..prefix].contains('r') {
+        let hashes = body.bytes().take_while(|byte| *byte == b'#').count();
+        let quoted = &body[hashes..];
+        if !quoted.starts_with('"') {
+            return None;
+        }
+        return Some(prefix + hashes + raw_string_len(quoted, hashes));
+    }
+    if body.starts_with('"') {
+        return Some(prefix + escaped_string_len(body));
+    }
+    if body.starts_with('\'') {
+        return char_literal_len(body).map(|len| prefix + len);
+    }
+    None
+}
+
+/// Byte length of the raw string opening at `quoted`, closed by a quote
+/// followed by `hashes` hash marks. Raw strings honour no escape.
+fn raw_string_len(quoted: &str, hashes: usize) -> usize {
+    let bytes = quoted.as_bytes();
+    let mut offset = 1usize;
+    while offset < bytes.len() {
+        if bytes[offset] == b'"'
+            && quoted[offset + 1..]
+                .bytes()
+                .take_while(|byte| *byte == b'#')
+                .count()
+                >= hashes
+        {
+            return offset + 1 + hashes;
+        }
+        offset += 1;
+    }
+    quoted.len()
 }
 
 /// Byte offset just past the struct literal that opens in `body`.
@@ -679,17 +870,25 @@ fn nth_argument<'a>(after: &'a str, call: &str, index: usize) -> Option<&'a str>
 /// Registration fields hold closures, so the first `}` is almost never the end
 /// of the literal. Counting depth is what keeps `id:` and `tier:` inside the
 /// scanned window; stopping at the first brace silently drops most
-/// registrations and makes every registration rule pass on an empty set.
+/// registrations and makes every registration rule pass on an empty set. A
+/// brace inside a string, char literal, raw string or comment is text and does
+/// not count.
 fn struct_literal_end(body: &str) -> usize {
+    let bytes = body.as_bytes();
     let mut depth = 0usize;
     let mut opened = false;
-    for (offset, byte) in body.char_indices() {
-        match byte {
-            '{' => {
+    let mut offset = 0usize;
+    while offset < bytes.len() {
+        if let Some(span) = opaque_span(body, offset) {
+            offset += span;
+            continue;
+        }
+        match bytes[offset] {
+            b'{' => {
                 depth += 1;
                 opened = true;
             }
-            '}' => {
+            b'}' => {
                 depth = depth.saturating_sub(1);
                 if opened && depth == 0 {
                     return offset + 1;
@@ -697,25 +896,43 @@ fn struct_literal_end(body: &str) -> usize {
             }
             _ => {}
         }
+        offset += 1;
     }
     body.len()
 }
 
 /// Map every `const NAME: &str = "value";` in a file to its literal.
+///
+/// Read over the whole text rather than line by line: a long id is wrapped
+/// onto the line after the `=`, and a line-bound scan resolved none of those,
+/// so every registration whose id came through such a const was dropped. The
+/// declared type must name `str`, which keeps `const fn` bodies and const
+/// generic parameters out of the map.
 fn string_consts(text: &str) -> BTreeMap<String, String> {
+    const KEYWORD: &str = "const ";
     let mut consts = BTreeMap::new();
-    for line in text.lines() {
-        let line = line.trim();
-        let Some(rest) = line.strip_prefix("const ").or_else(|| {
-            line.strip_prefix("pub const ")
-                .or_else(|| line.strip_prefix("pub(crate) const "))
-        }) else {
+    let mut cursor = 0usize;
+    while let Some(offset) = text[cursor..].find(KEYWORD) {
+        let start = cursor + offset + KEYWORD.len();
+        cursor = start;
+        let Some(end) = text[start..].find(';') else {
+            break;
+        };
+        let Some((declared, value)) = text[start..start + end].split_once('=') else {
             continue;
         };
-        let Some((name, value)) = rest.split_once('=') else {
+        let Some((name, declared_type)) = declared.split_once(':') else {
             continue;
         };
-        let name = name.split(':').next().unwrap_or(name).trim();
+        let name = name.trim();
+        if !declared_type.contains("str")
+            || name.is_empty()
+            || !name
+                .chars()
+                .all(|character| character.is_alphanumeric() || character == '_')
+        {
+            continue;
+        }
         if let Some(literal) = string_literal(value) {
             consts.insert(name.to_string(), literal);
         }
@@ -1315,6 +1532,304 @@ inventory::submit! {
             parsed,
             vec![(
                 "vyre-libs::hash::adler32".to_string(),
+                Some("Library".to_string())
+            )]
+        );
+    }
+
+    /// WHY this group: `nth_argument` decides where one constructor argument
+    /// ends, and `parse_registrations` reads the operation id out of argument
+    /// zero. Every shape the splitter misreads is an operation the gate never
+    /// judges, and a registry the gate cannot see is a registry it reports
+    /// clean. The splitter counted `<` and `>` as delimiters and read no
+    /// literal or comment, so one `<`, one `->`, one quoted comma or one
+    /// commented comma moved every later argument boundary.
+    ///
+    /// What this group does not pin: a generic written with a top-level comma
+    /// outside any delimiter pair, such as a bare `Vec::<u8, Global>::new()`
+    /// argument. `<` and `>` are ordinary characters on purpose, because Rust
+    /// writes them as comparison, shift and return-arrow tokens far more often
+    /// than as a balanced pair.
+    #[test]
+    fn a_top_level_comma_separates_arguments() {
+        let call = "::primitive(OP_ID, builder, None)";
+
+        assert_eq!(nth_argument(call, "::primitive(", 0), Some("OP_ID"));
+        assert_eq!(nth_argument(call, "::primitive(", 1), Some("builder"));
+        assert_eq!(nth_argument(call, "::primitive(", 2), Some("None"));
+    }
+
+    #[test]
+    fn a_nested_call_in_the_first_argument_does_not_shift_the_count() {
+        let call = r#"::new(op_id("bitset", "xor"), OperationTier::Intrinsic)"#;
+
+        assert_eq!(
+            nth_argument(call, "::new(", 0),
+            Some(r#"op_id("bitset", "xor")"#)
+        );
+        assert_eq!(
+            nth_argument(call, "::new(", 1),
+            Some("OperationTier::Intrinsic")
+        );
+    }
+
+    /// A single `<` used to raise the depth for the rest of the call, so every
+    /// later comma read as nested and every argument after it disappeared.
+    #[test]
+    fn a_comparison_operator_is_not_an_opening_delimiter() {
+        let call = "::library(OP_ID, |n| n < 4, None)";
+
+        assert_eq!(nth_argument(call, "::library(", 1), Some("|n| n < 4"));
+        assert_eq!(nth_argument(call, "::library(", 2), Some("None"));
+    }
+
+    /// `->` lowered the depth, so the `)` closing a nested `Some(` was read as
+    /// the `)` closing the constructor: the argument came back missing its own
+    /// closing paren and every later argument came back as nothing.
+    #[test]
+    fn a_return_arrow_is_not_a_closing_delimiter() {
+        let call = "::new(OP_ID, OperationTier::Library, Some(|| -> Vec<u32> { vec![1] }), None)";
+
+        assert_eq!(
+            nth_argument(call, "::new(", 2),
+            Some("Some(|| -> Vec<u32> { vec![1] })")
+        );
+        assert_eq!(nth_argument(call, "::new(", 3), Some("None"));
+    }
+
+    /// A generic argument carries its own comma. It is not a separator because
+    /// it sits inside the parentheses of the argument it belongs to.
+    #[test]
+    fn a_generic_argument_comma_is_not_a_separator() {
+        let call = "::new(OP_ID, OperationTier::Library, Some(pairs::<String, u32>), None)";
+
+        assert_eq!(
+            nth_argument(call, "::new(", 2),
+            Some("Some(pairs::<String, u32>)")
+        );
+        assert_eq!(nth_argument(call, "::new(", 3), Some("None"));
+    }
+
+    #[test]
+    fn a_comma_inside_a_string_literal_is_not_a_separator() {
+        let call = r#"::library(OP_ID, ", ", None)"#;
+
+        assert_eq!(nth_argument(call, "::library(", 1), Some(r#"", ""#));
+        assert_eq!(nth_argument(call, "::library(", 2), Some("None"));
+    }
+
+    #[test]
+    fn a_parenthesis_inside_a_string_literal_does_not_close_the_call() {
+        let call = r#"::library(OP_ID, "f(", None)"#;
+
+        assert_eq!(nth_argument(call, "::library(", 1), Some(r#""f(""#));
+        assert_eq!(nth_argument(call, "::library(", 2), Some("None"));
+    }
+
+    #[test]
+    fn an_escaped_quote_does_not_end_a_string_literal() {
+        let call = r#"::library(OP_ID, "a\", b(", None)"#;
+
+        assert_eq!(nth_argument(call, "::library(", 1), Some(r#""a\", b(""#));
+        assert_eq!(nth_argument(call, "::library(", 2), Some("None"));
+    }
+
+    #[test]
+    fn a_nested_closure_is_one_argument() {
+        let call = "::library(OP_ID, |graph| move |node| visit(graph, node), None)";
+
+        assert_eq!(
+            nth_argument(call, "::library(", 1),
+            Some("|graph| move |node| visit(graph, node)")
+        );
+        assert_eq!(nth_argument(call, "::library(", 2), Some("None"));
+    }
+
+    #[test]
+    fn a_raw_string_argument_is_read_whole() {
+        let call = "::library(OP_ID, r#\"a, b)\"#, None)";
+
+        assert_eq!(nth_argument(call, "::library(", 1), Some("r#\"a, b)\"#"));
+        assert_eq!(nth_argument(call, "::library(", 2), Some("None"));
+    }
+
+    /// A comment sits inside the argument it interrupts, so the boundaries of
+    /// the arguments after it must not move.
+    #[test]
+    fn a_comma_in_a_comment_is_not_a_separator() {
+        let line_comment = "::library(\n    OP_ID, // one, two\n    builder,\n    None,\n)";
+        let block_comment = "::library(OP_ID, /* one, two */ builder, None)";
+
+        assert_eq!(nth_argument(line_comment, "::library(", 0), Some("OP_ID"));
+        assert_eq!(nth_argument(line_comment, "::library(", 2), Some("None"));
+        assert_eq!(nth_argument(block_comment, "::library(", 2), Some("None"));
+    }
+
+    #[test]
+    fn a_char_literal_comma_is_not_a_separator() {
+        let call = "::library(OP_ID, ',', None)";
+
+        assert_eq!(nth_argument(call, "::library(", 1), Some("','"));
+        assert_eq!(nth_argument(call, "::library(", 2), Some("None"));
+    }
+
+    /// Adversarial case for the literal scanner itself: `'static` and a loop
+    /// label open no char literal, so the scanner must not swallow the text up
+    /// to the next quote.
+    #[test]
+    fn a_lifetime_is_not_a_char_literal() {
+        let call = "::library(OP_ID, |text: &'static str| text.len(), None)";
+
+        assert_eq!(
+            nth_argument(call, "::library(", 1),
+            Some("|text: &'static str| text.len()")
+        );
+        assert_eq!(nth_argument(call, "::library(", 2), Some("None"));
+    }
+
+    #[test]
+    fn an_escaped_quote_char_literal_is_read_whole() {
+        let call = r"::library(OP_ID, '\'', None)";
+
+        assert_eq!(nth_argument(call, "::library(", 1), Some(r"'\''"));
+        assert_eq!(nth_argument(call, "::library(", 2), Some("None"));
+    }
+
+    /// WHY: stripping a `#[cfg(test)]` item used to delete every byte before
+    /// the last non-test `#[cfg(...)]` attribute in the file, because one
+    /// cursor served both "where to search next" and "what is still uncopied".
+    /// The deleted span held the `const` the id resolved through, so a real
+    /// registration became no registration. This is the shape of
+    /// `vyre-primitives/src/hash/adler32.rs`: a const id, a feature-gated
+    /// production registration, then a test module.
+    #[test]
+    fn a_non_test_cfg_attribute_keeps_the_text_before_it() {
+        let parsed = parse_registrations(
+            r#"
+            pub const ADLER32_OP_ID: &str = "vyre-primitives::hash::adler32";
+
+            #[cfg(feature = "inventory-registry")]
+            inventory::submit! {
+                OperationRegistration::primitive(ADLER32_OP_ID, builder)
+            }
+
+            #[cfg(test)]
+            mod tests {
+                fn fixture() {
+                    OperationRegistration::library("test::reference_echo");
+                }
+            }
+            "#,
+        );
+
+        assert_eq!(
+            parsed,
+            vec![(
+                "vyre-primitives::hash::adler32".to_string(),
+                Some("Intrinsic".to_string())
+            )]
+        );
+    }
+
+    /// A long id is written on the line after the `=`. A line-bound const scan
+    /// resolved none of those, and the registration was dropped in silence.
+    #[test]
+    fn a_const_id_wrapped_onto_the_next_line_is_resolved() {
+        let parsed = parse_registrations(
+            r#"
+            pub const I4_MATVEC_F32_SCALED_OP_ID: &str =
+                "vyre-primitives::math::quantized::i4x8_matvec_f32_scaled";
+
+            inventory::submit! {
+                OperationRegistration::primitive(I4_MATVEC_F32_SCALED_OP_ID, builder)
+            }
+            "#,
+        );
+
+        assert_eq!(
+            parsed,
+            vec![(
+                "vyre-primitives::math::quantized::i4x8_matvec_f32_scaled".to_string(),
+                Some("Intrinsic".to_string())
+            )]
+        );
+    }
+
+    /// Adversarial case for the const scan: reading the whole text rather than
+    /// one line at a time reaches every `const`, including one whose value only
+    /// measures a string. The declared type is what says an id, so a `usize`
+    /// const resolves nothing even when a well-formed id sits in its value.
+    #[test]
+    fn a_const_that_is_not_a_string_resolves_no_id() {
+        let parsed = parse_registrations(
+            r#"
+            const OP_ID: usize = "vyre-libs::hash::adler32".len();
+
+            inventory::submit! {
+                OperationRegistration::primitive(OP_ID, builder)
+            }
+            "#,
+        );
+
+        assert_eq!(parsed, Vec::new());
+    }
+
+    /// A brace inside a string literal used to end the struct literal early,
+    /// which truncated the scanned window before `id:` and dropped the
+    /// registration. The literal here carries one unbalanced `}`, which is what
+    /// a brace-counting scan cannot survive.
+    #[test]
+    fn a_brace_inside_a_string_does_not_end_the_struct_literal() {
+        let parsed = parse_registrations(
+            r#"
+            inventory::submit! {
+                vyre_foundation::operation::OperationRegistration {
+                    build: Some(|| shader("fn main() }")),
+                    tier: vyre_foundation::operation::OperationTier::Library,
+                    id: "vyre-libs::text::format",
+                }
+            }
+            "#,
+        );
+
+        assert_eq!(
+            parsed,
+            vec![(
+                "vyre-libs::text::format".to_string(),
+                Some("Library".to_string())
+            )]
+        );
+    }
+
+    /// The item a `#[cfg(test)]` gates ends at its matching brace, and a brace
+    /// written inside a string is not that brace. Ending the module early left
+    /// its tail in the scanned text, and the fixture registration in that tail
+    /// was counted as a production operation.
+    #[test]
+    fn a_brace_inside_a_test_module_string_does_not_end_the_module_early() {
+        let parsed = parse_registrations(
+            r#"
+            fn install() {
+                OperationRegistration::library("vyre-libs::hash::crc32");
+            }
+
+            #[cfg(test)]
+            mod tests {
+                fn shader() -> &'static str {
+                    "fn main() }"
+                }
+
+                fn fixture() {
+                    OperationRegistration::library("test::reference_echo");
+                }
+            }
+            "#,
+        );
+
+        assert_eq!(
+            parsed,
+            vec![(
+                "vyre-libs::hash::crc32".to_string(),
                 Some("Library".to_string())
             )]
         );
