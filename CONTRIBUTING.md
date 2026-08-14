@@ -91,13 +91,27 @@ Repository discipline, CI, review metadata, or community files:
 bash scripts/check_repo_hygiene.sh
 ```
 
+Oracle-matrix sweep, or a `[[test]]` entry's `required-features`:
+
+```bash
+bash scripts/run_sweep_oracle_matrix.sh
+bash scripts/run_volume_sweep_shard.sh 0 1
+```
+
+Both are merge gates in the `feature-gated-sweeps` job of
+`.github/workflows/gates.yml`. `ci.yml` tests the workspace with default
+features, so a sweep whose `required-features` name a non-default feature runs
+nowhere else. The roster and the features come from
+`scripts/lib/sweep_targets.py`, which reads tracked `<crate>/tests/sweep_*.rs`
+and each crate's own `[[test]]` entries, so a new sweep is picked up without an
+edit to either script. Pass a shard index and count to split the volume waves
+locally; `0 1` runs all of them, which is what CI does.
+
 ## Manual Tools
 
 These are run by hand. No workflow invokes them, and none is a merge gate.
 
 - `bash scripts/bench_smoke.sh` runs the canonical vyre-bench smoke suite and prints JSON.
-- `bash scripts/run_sweep_oracle_matrix.sh` runs every `sweep_*_oracle_matrix` integration test with the features its crate requires.
-- `bash scripts/run_volume_sweep_shard.sh [shard] [count]` runs one shard of the 16k-case `sweep_*_volume_oracle_matrix` targets across vyre-foundation, vyre-primitives, and vyre-reference.
 - `bash scripts/install_wire_precommit_hook.sh` installs `scripts/wire_ci_local.sh` as the pre-push hook, which blocks a push when the wire-surface fmt, clippy, check, or test steps fail.
 
 ## LEGO Block Rules
