@@ -24,8 +24,8 @@ use super::ifds_queue_should_use_row_strided;
 mod metrics;
 mod support;
 
-use metrics::{queue_closure_baseline_metric_points, queue_closure_metric_points};
 use crate::cases::queue_stage::{QueueClosureSequenceRun, ResidentQueueClosureSpec};
+use metrics::{queue_closure_baseline_metric_points, queue_closure_metric_points};
 #[cfg(not(test))]
 use support::ifds_skewed_queue_closure_oracle;
 #[cfg(test)]
@@ -42,7 +42,6 @@ const QUEUE_CLOSURE_SUITES: &[SuiteKind] = &[
     SuiteKind::Honest,
 ];
 const QUEUE_CLOSURE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
-
 
 pub(in crate::cases::dataflow_irregular) struct DataflowIfdsSkewedQueueClosurePrepared {
     pub(in crate::cases::dataflow_irregular) reset_program: Program,

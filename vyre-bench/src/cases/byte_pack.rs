@@ -23,7 +23,9 @@ pub(crate) fn decode_u64_words(bytes: &[u8], context: &str) -> Result<Vec<u64>, 
 /// buffers still says which one was short.
 pub(crate) fn read_word(bytes: &[u8], word_index: u32, context: &str) -> Result<u32, BenchError> {
     let (offset, end) = word_range(word_index).ok_or_else(|| {
-        BenchError::CorrectnessViolation(format!("{context} word index {word_index} overflowed usize"))
+        BenchError::CorrectnessViolation(format!(
+            "{context} word index {word_index} overflowed usize"
+        ))
     })?;
     let word = bytes.get(offset..end).ok_or_else(|| {
         BenchError::CorrectnessViolation(format!(
@@ -42,7 +44,9 @@ pub(crate) fn write_word(
     context: &str,
 ) -> Result<(), BenchError> {
     let (offset, end) = word_range(word_index).ok_or_else(|| {
-        BenchError::ExecutionFailed(format!("{context} word index {word_index} overflowed usize"))
+        BenchError::ExecutionFailed(format!(
+            "{context} word index {word_index} overflowed usize"
+        ))
     })?;
     let slot = bytes.get_mut(offset..end).ok_or_else(|| {
         BenchError::ExecutionFailed(format!(

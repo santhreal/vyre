@@ -1,17 +1,17 @@
 //! Sparse output compaction count release case: its IR program, candidate flag
 //! predicate, and resident batch dispatch path.
 
+use super::registration::{gpu_requirements, RELEASE_SUITES};
+use super::run_assembly::{
+    bench_run_from_timed_with_accounting, encode_u32_words, resident_reset_transfer_accounting,
+};
+use super::synthetic_oracle::mixed_release_index;
 use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::MetricPoint;
 use crate::api::resident::{input_bytes_total, ResidentInputPool};
-use super::registration::{gpu_requirements, RELEASE_SUITES};
-use super::run_assembly::{
-    bench_run_from_timed_with_accounting, encode_u32_words, resident_reset_transfer_accounting,
-};
-use super::synthetic_oracle::mixed_release_index;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 pub struct SparseOutputCompactionCount;

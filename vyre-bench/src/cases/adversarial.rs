@@ -1,6 +1,6 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchId, BenchLayer, BenchMetadata, BenchRun,
-    Correctness, DeterminismClass, WorkloadClass,
+    BenchCase, BenchContext, BenchId, BenchLayer, BenchMetadata, BenchRun, Correctness,
+    DeterminismClass, WorkloadClass,
 };
 use crate::api::metric::BenchMetrics;
 use crate::api::suite::SuiteKind;

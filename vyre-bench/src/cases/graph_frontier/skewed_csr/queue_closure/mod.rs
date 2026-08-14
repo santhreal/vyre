@@ -22,12 +22,11 @@ use super::support::{
 
 mod metrics;
 
-use metrics::{queue_closure_baseline_metric_points, queue_closure_metric_points};
 use crate::cases::queue_stage::{QueueClosureSequenceRun, ResidentQueueClosureSpec};
+use metrics::{queue_closure_baseline_metric_points, queue_closure_metric_points};
 
 pub(super) const GRAPH_QUEUE_CLOSURE_MAX_ITERS: u32 = 128;
 pub(super) const GRAPH_QUEUE_CLOSURE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
-
 
 pub(super) struct GraphCsrSkewedQueueClosurePrepared {
     pub(super) reset_program: Program,

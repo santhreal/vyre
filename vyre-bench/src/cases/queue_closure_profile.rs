@@ -378,5 +378,4 @@ mod tests {
         assert_eq!(rejected_capacity, CASES);
         assert_eq!(rejected_sum, CASES);
     }
-
 }

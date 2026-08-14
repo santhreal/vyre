@@ -46,4 +46,3 @@ pub(crate) fn sparse_queue_capacity(
         ))
     })
 }
-

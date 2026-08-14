@@ -1,11 +1,11 @@
 //! Assembly of `BenchRun` records from timed dispatch results: transfer accounting,
 //! release flow metrics, and output word encoding.
 
+use super::synthetic_count::SyntheticPattern;
 use crate::api::case::{BenchError, BenchRun};
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::TransferAccounting;
 use crate::cases::byte_pack::gb_per_second;
-use super::synthetic_count::SyntheticPattern;
 
 pub(super) fn resident_reset_transfer_accounting(
     input_bytes_total: u64,

@@ -88,7 +88,8 @@ fn dispatch_resident_conditional_sequence(
     }
 
     let reset_resources = resident.resources_for_indices(prepared.reset_indices, subject)?;
-    let condition_resources = resident.resources_for_indices(prepared.condition_indices, subject)?;
+    let condition_resources =
+        resident.resources_for_indices(prepared.condition_indices, subject)?;
     let steps = [
         ResidentDispatchStep {
             program: &prepared.reset_program,
@@ -319,7 +320,6 @@ pub(crate) fn pattern_streams(
     })
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -450,7 +450,10 @@ mod tests {
         let with = conditional_bench_run(&prepared, true, sample());
         let without = conditional_bench_run(&prepared, false, sample());
 
-        assert_eq!(with.baseline_outputs.as_deref(), Some(&prepared.baseline_output[..]));
+        assert_eq!(
+            with.baseline_outputs.as_deref(),
+            Some(&prepared.baseline_output[..])
+        );
         assert!(without.baseline_outputs.is_none());
     }
 

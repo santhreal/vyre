@@ -3,10 +3,13 @@ use super::super::fixture::{
 };
 use super::super::queue::{
     ifds_queue_closure_inputs, ifds_queue_should_use_row_strided, ifds_skewed_queue_closure_oracle,
-    };
-use proptest::prelude::*;
+};
 use crate::cases::mix32;
-use crate::cases::queue_stage::{QUEUE_CLOSURE_QUEUE_A_INDEX, QUEUE_CLOSURE_QUEUE_B_INDEX, QUEUE_CLOSURE_SEED_LEN_INDEX, QUEUE_CLOSURE_SEED_QUEUE_INDEX};
+use crate::cases::queue_stage::{
+    QUEUE_CLOSURE_QUEUE_A_INDEX, QUEUE_CLOSURE_QUEUE_B_INDEX, QUEUE_CLOSURE_SEED_LEN_INDEX,
+    QUEUE_CLOSURE_SEED_QUEUE_INDEX,
+};
+use proptest::prelude::*;
 
 fn generated_ifds_fixture(
     node_count: u32,
@@ -339,4 +342,3 @@ fn generated_ugly_hub_edges(node_count: u32, hub: u32, case: u32) -> Vec<(u32, u
 
     edges
 }
-

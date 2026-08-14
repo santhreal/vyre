@@ -1,8 +1,6 @@
 //! Public release macro descriptors and generated-case construction shared by Criterion
 //! entrypoints and coverage tests.
 
-use crate::api::metric::digest64_buffers;
-use crate::api::resident::input_bytes_total;
 use super::families::{release_macro_workloads, release_macro_workloads_for_family};
 use super::metadata_condition::METADATA_RECORDS;
 use super::run_assembly::encode_u32_words;
@@ -12,6 +10,8 @@ use super::synthetic_oracle::{
     synthetic_cpu_count, synthetic_inputs,
 };
 use super::synthetic_programs::build_synthetic_release_program;
+use crate::api::metric::digest64_buffers;
+use crate::api::resident::input_bytes_total;
 use vyre::ir::Program;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

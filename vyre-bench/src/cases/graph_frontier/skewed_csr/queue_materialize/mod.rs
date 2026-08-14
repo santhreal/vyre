@@ -28,8 +28,8 @@ use super::support::{
 
 mod sequence;
 
+use crate::cases::queue_stage::QUEUE_RESET_GRID;
 use sequence::{dispatch_host_queue_sequence, dispatch_resident_queue_sequence};
-use crate::cases::queue_stage::{QUEUE_RESET_GRID};
 
 pub(super) const GRAPH_QUEUE_ROW_STRIDED_MIN_DEGREE: u32 =
     CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE

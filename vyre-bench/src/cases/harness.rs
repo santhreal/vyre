@@ -95,7 +95,12 @@ impl<P: 'static> BenchCase for HarnessCase<P> {
             id: self.id(),
             name: self.workload.name.to_string(),
             description: self.workload.summary.to_string(),
-            tags: self.workload.tags.iter().map(|tag| (*tag).to_string()).collect(),
+            tags: self
+                .workload
+                .tags
+                .iter()
+                .map(|tag| (*tag).to_string())
+                .collect(),
             layer: self.workload.layer.clone(),
             workload: self.workload.workload.clone(),
             determinism: self.workload.determinism.clone(),

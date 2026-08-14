@@ -143,10 +143,17 @@ mod tests {
 
     #[test]
     fn collapse_report_emits_one_line_per_recorded_stage() {
-        let report = schema("flame_test", vec![case(
-            "vyre-libs::nn::softmax",
-            &[("optimize_ns", 100, 100), ("lower_ns", 200, 200), ("dispatch_ns", 50, 50)],
-        )]);
+        let report = schema(
+            "flame_test",
+            vec![case(
+                "vyre-libs::nn::softmax",
+                &[
+                    ("optimize_ns", 100, 100),
+                    ("lower_ns", 200, 200),
+                    ("dispatch_ns", 50, 50),
+                ],
+            )],
+        );
         let out = collapse_report(&report);
         // Stage order follows STAGE_KEYS_ORDERED, so optimize before
         // lower before dispatch.
@@ -160,17 +167,23 @@ vyre;vyre-libs::nn::softmax;dispatch 50
 
     #[test]
     fn collapse_report_skips_stages_with_zero_p50() {
-        let report = schema("flame_test", vec![case(
-            "vyre-libs::nn::softmax",
-            &[("optimize_ns", 0, 0), ("lower_ns", 200, 200)],
-        )]);
+        let report = schema(
+            "flame_test",
+            vec![case(
+                "vyre-libs::nn::softmax",
+                &[("optimize_ns", 0, 0), ("lower_ns", 200, 200)],
+            )],
+        );
         let out = collapse_report(&report);
         assert_eq!(out, "vyre;vyre-libs::nn::softmax;lower 200\n");
     }
 
     #[test]
     fn collapse_report_skips_stages_with_no_sample() {
-        let report = schema("flame_test", vec![case("vyre-libs::nn::softmax", &[("optimize_ns", 50, 50)])]);
+        let report = schema(
+            "flame_test",
+            vec![case("vyre-libs::nn::softmax", &[("optimize_ns", 50, 50)])],
+        );
         let out = collapse_report(&report);
         // Only recorded stages emit flame-graph stacks; absent metrics
         // are intentionally absent from this visualization.
@@ -179,10 +192,13 @@ vyre;vyre-libs::nn::softmax;dispatch 50
 
     #[test]
     fn collapse_report_handles_multiple_cases_in_input_order() {
-        let report = schema("flame_test", vec![
-            case("a", &[("optimize_ns", 10, 10)]),
-            case("b", &[("optimize_ns", 20, 20)]),
-        ]);
+        let report = schema(
+            "flame_test",
+            vec![
+                case("a", &[("optimize_ns", 10, 10)]),
+                case("b", &[("optimize_ns", 20, 20)]),
+            ],
+        );
         let out = collapse_report(&report);
         assert_eq!(out, "vyre;a;optimize 10\nvyre;b;optimize 20\n");
     }
@@ -196,10 +212,13 @@ vyre;vyre-libs::nn::softmax;dispatch 50
 
     #[test]
     fn write_collapsed_returns_line_count_and_writes_same_bytes() {
-        let report = schema("flame_test", vec![case(
-            "vyre-libs::nn::softmax",
-            &[("optimize_ns", 100, 100), ("lower_ns", 200, 200)],
-        )]);
+        let report = schema(
+            "flame_test",
+            vec![case(
+                "vyre-libs::nn::softmax",
+                &[("optimize_ns", 100, 100), ("lower_ns", 200, 200)],
+            )],
+        );
         let mut buf = Vec::new();
         let lines = write_collapsed(&report, &mut buf).expect("Fix: write must not fail");
         assert_eq!(lines, 2);
@@ -208,10 +227,13 @@ vyre;vyre-libs::nn::softmax;dispatch 50
 
     #[test]
     fn collapse_report_json_multi_case() {
-        let report = schema("flame_test", vec![
-            case("a", &[("optimize_ns", 10, 10)]),
-            case("b", &[("optimize_ns", 20, 20)]),
-        ]);
+        let report = schema(
+            "flame_test",
+            vec![
+                case("a", &[("optimize_ns", 10, 10)]),
+                case("b", &[("optimize_ns", 20, 20)]),
+            ],
+        );
         let out = collapse_report_json(&report);
         let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
         assert!(parsed.is_array());
@@ -226,10 +248,17 @@ vyre;vyre-libs::nn::softmax;dispatch 50
 
     #[test]
     fn collapse_report_json_single_case() {
-        let report = schema("flame_test", vec![case(
-            "vyre-libs::nn::softmax",
-            &[("optimize_ns", 100, 100), ("lower_ns", 200, 200), ("dispatch_ns", 50, 50)],
-        )]);
+        let report = schema(
+            "flame_test",
+            vec![case(
+                "vyre-libs::nn::softmax",
+                &[
+                    ("optimize_ns", 100, 100),
+                    ("lower_ns", 200, 200),
+                    ("dispatch_ns", 50, 50),
+                ],
+            )],
+        );
         let out = collapse_report_json(&report);
         let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
         let arr = parsed.as_array().unwrap();
@@ -248,7 +277,10 @@ vyre;vyre-libs::nn::softmax;dispatch 50
 
     #[test]
     fn collapse_report_json_missing_stage() {
-        let report = schema("flame_test", vec![case("vyre-libs::nn::softmax", &[("optimize_ns", 50, 50)])]);
+        let report = schema(
+            "flame_test",
+            vec![case("vyre-libs::nn::softmax", &[("optimize_ns", 50, 50)])],
+        );
         let out = collapse_report_json(&report);
         let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
         let arr = parsed.as_array().unwrap();
