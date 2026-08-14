@@ -923,7 +923,7 @@ pub(super) fn nonblank_str(value: &Value) -> Option<&str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::report_fixture::{case_summary, cpu_sota_contract};
+    use crate::report_fixture::{case_summary, cpu_sota_contract};
 
     use tempfile::TempDir;
 

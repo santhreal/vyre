@@ -348,6 +348,7 @@ pub(crate) fn check_single_benchmark_report(
 #[cfg(test)]
 mod benchmark_backend_tests {
     use super::*;
+    use crate::report_fixture::{cpu_sota_baseline, percentile_metrics};
 
     #[test]
     fn single_benchmark_report_rejects_explicit_blockers() {
@@ -395,13 +396,7 @@ mod benchmark_backend_tests {
 
     #[test]
     fn single_benchmark_report_rejects_wrong_backend_cpu_sota_contract() {
-        let requirement = Requirement {
-            id: "proof-workloads-12".to_string(),
-            title: "proof workloads".to_string(),
-            status: "required".to_string(),
-            evidence: Vec::new(),
-            minimum_evidence: 0,
-        };
+        let requirement = Requirement::required("proof-workloads-12", "proof workloads");
         let report = serde_json::json!({
             "selected_backend": "wgpu",
             "summary": {"failed": 0},
@@ -410,19 +405,8 @@ mod benchmark_backend_tests {
                     "id": "release.condition_eval.1m",
                     "backend_id": "wgpu",
                     "status": "pass",
-                    "contract": {
-                        "baselines": [
-                            {
-                                "class": "CpuSota",
-                                "backend_ids": ["cuda"],
-                                "min_speedup_x": 100.0
-                            }
-                        ]
-                    },
-                    "metrics": {
-                        "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                        "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2100, "p99": 2200}
-                    },
+                    "contract": cpu_sota_baseline(&["cuda"], 100.0),
+                    "metrics": percentile_metrics([10, 11, 12], [2000, 2100, 2200]),
                     "performance": {"contract_passed": true, "speedup_x": 200.0}
                 }
             ]
@@ -448,13 +432,7 @@ mod benchmark_backend_tests {
 
     #[test]
     fn single_benchmark_report_preserves_failed_case_reason() {
-        let requirement = Requirement {
-            id: "wgpu-fallback".to_string(),
-            title: "wgpu fallback".to_string(),
-            status: "required".to_string(),
-            evidence: Vec::new(),
-            minimum_evidence: 0,
-        };
+        let requirement = Requirement::required("wgpu-fallback", "wgpu fallback");
         let report = serde_json::json!({
             "selected_backend": "wgpu",
             "summary": {"failed": 1},
@@ -468,19 +446,8 @@ mod benchmark_backend_tests {
                             "reason": "Performance contract failed: sparse output compaction count requires 100.00x over optimized CPU fired-rule collection over predicate masks, observed 86.90x"
                         }
                     },
-                    "contract": {
-                        "baselines": [
-                            {
-                                "class": "CpuSota",
-                                "backend_ids": ["cuda", "wgpu"],
-                                "min_speedup_x": 100.0
-                            }
-                        ]
-                    },
-                    "metrics": {
-                        "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                        "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002}
-                    },
+                    "contract": cpu_sota_baseline(&["cuda", "wgpu"], 100.0),
+                    "metrics": percentile_metrics([10, 11, 12], [1000, 1001, 1002]),
                     "performance": null
                 }
             ]
@@ -513,13 +480,7 @@ mod benchmark_backend_tests {
 
     #[test]
     fn single_benchmark_report_rejects_hidden_failed_case_summary_zero() {
-        let requirement = Requirement {
-            id: "wgpu-fallback".to_string(),
-            title: "wgpu fallback".to_string(),
-            status: "required".to_string(),
-            evidence: Vec::new(),
-            minimum_evidence: 0,
-        };
+        let requirement = Requirement::required("wgpu-fallback", "wgpu fallback");
         let report = serde_json::json!({
             "selected_backend": "wgpu",
             "summary": {"failed": 0},
@@ -533,19 +494,8 @@ mod benchmark_backend_tests {
                             "reason": "CUDA/WGPU output mismatch at row 17"
                         }
                     },
-                    "contract": {
-                        "baselines": [
-                            {
-                                "class": "CpuSota",
-                                "backend_ids": ["wgpu"],
-                                "min_speedup_x": 100.0
-                            }
-                        ]
-                    },
-                    "metrics": {
-                        "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                        "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002}
-                    },
+                    "contract": cpu_sota_baseline(&["wgpu"], 100.0),
+                    "metrics": percentile_metrics([10, 11, 12], [2000, 2001, 2002]),
                     "performance": {"contract_passed": true, "speedup_x": 200.0}
                 }
             ]
@@ -572,13 +522,7 @@ mod benchmark_backend_tests {
 
     #[test]
     fn single_benchmark_report_rejects_stale_summary_passed_count() {
-        let requirement = Requirement {
-            id: "wgpu-fallback".to_string(),
-            title: "wgpu fallback".to_string(),
-            status: "required".to_string(),
-            evidence: Vec::new(),
-            minimum_evidence: 0,
-        };
+        let requirement = Requirement::required("wgpu-fallback", "wgpu fallback");
         let report = serde_json::json!({
             "selected_backend": "wgpu",
             "summary": {"total_cases": 1, "passed": 0, "failed": 0},
@@ -587,19 +531,8 @@ mod benchmark_backend_tests {
                     "id": "release.condition_eval.1m",
                     "backend_id": "wgpu",
                     "status": "pass",
-                    "contract": {
-                        "baselines": [
-                            {
-                                "class": "CpuSota",
-                                "backend_ids": ["wgpu"],
-                                "min_speedup_x": 100.0
-                            }
-                        ]
-                    },
-                    "metrics": {
-                        "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                        "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002}
-                    },
+                    "contract": cpu_sota_baseline(&["wgpu"], 100.0),
+                    "metrics": percentile_metrics([10, 11, 12], [2000, 2001, 2002]),
                     "performance": {"contract_passed": true, "speedup_x": 200.0}
                 }
             ]

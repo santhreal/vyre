@@ -32,3 +32,18 @@ pub(super) struct Requirement {
     pub(super) evidence: Vec<String>,
     pub(super) minimum_evidence: usize,
 }
+
+impl Requirement {
+    /// A required requirement carrying no evidence paths, for a check that is
+    /// handed the evidence directly.
+    #[cfg(test)]
+    pub(super) fn required(id: &str, title: &str) -> Self {
+        Self {
+            id: id.to_string(),
+            title: title.to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+            minimum_evidence: 0,
+        }
+    }
+}

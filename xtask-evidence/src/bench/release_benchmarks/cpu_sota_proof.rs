@@ -341,7 +341,7 @@ fn cpu_sota_component_proof_case(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::report_fixture::{case_summary, cpu_sota_contract};
+    use crate::report_fixture::{case_summary, cpu_sota_contract};
 
     use std::fs;
 
