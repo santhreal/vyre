@@ -231,8 +231,9 @@ fn ptx_emits_cooperative_grid_barrier_not_cta_downgrade() {
     // programs cooperatively). The PTX must contain the whole-grid machinery, NOT
     // a silent downgrade to a CTA-scope `bar.sync 0`: a module-scope arrival
     // counter, a global atomic on it, and global memory fences.
-    let ptx = program_to_ptx(&program, &default_config())
-        .unwrap_or_else(|e| panic!("Fix: CUDA must lower GridSync to a cooperative grid barrier: {e}"));
+    let ptx = program_to_ptx(&program, &default_config()).unwrap_or_else(|e| {
+        panic!("Fix: CUDA must lower GridSync to a cooperative grid barrier: {e}")
+    });
     assert_ptx_is_ascii("GridSync", &ptx);
     assert!(
         ptx.contains(".global .align 4 .u32 _vyre_grid_barrier[1];"),

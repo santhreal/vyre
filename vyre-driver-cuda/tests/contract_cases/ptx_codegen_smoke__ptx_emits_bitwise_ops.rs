@@ -35,9 +35,10 @@ fn ptx_emits_bitwise_ops() {
 #[test]
 fn grouped_int4_affine_ptx_masks_power_of_two_modulo() {
     let spec = vyre_libs::nn::linear::QuantizedLinear4BitSpec::affine_grouped(256, 4096, 64);
-    let program =
-        vyre_libs::nn::linear::linear_4bit_affine_grouped_typed(&spec, "x", "w", "scale", "zp", "b", "out")
-            .expect("Fix: grouped INT4 affine release program must build.");
+    let program = vyre_libs::nn::linear::linear_4bit_affine_grouped_typed(
+        &spec, "x", "w", "scale", "zp", "b", "out",
+    )
+    .expect("Fix: grouped INT4 affine release program must build.");
     let ptx = program_to_ptx_for_sm(&program, &default_config(), 90)
         .expect("Fix: grouped INT4 affine release program must lower to PTX.");
 
@@ -54,9 +55,10 @@ fn grouped_int4_affine_ptx_masks_power_of_two_modulo() {
 #[test]
 fn grouped_int4_affine_ptx_broadcasts_packed_weight_words() {
     let spec = vyre_libs::nn::linear::QuantizedLinear4BitSpec::affine_grouped(256, 4096, 64);
-    let program =
-        vyre_libs::nn::linear::linear_4bit_affine_grouped_typed(&spec, "x", "w", "scale", "zp", "b", "out")
-            .expect("Fix: grouped INT4 affine release program must build.");
+    let program = vyre_libs::nn::linear::linear_4bit_affine_grouped_typed(
+        &spec, "x", "w", "scale", "zp", "b", "out",
+    )
+    .expect("Fix: grouped INT4 affine release program must build.");
     let ptx = program_to_ptx_for_sm(&program, &default_config(), 90)
         .expect("Fix: grouped INT4 affine release program must lower to PTX.");
 

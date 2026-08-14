@@ -55,10 +55,7 @@ fn run(backend: &CudaBackend, narrow: DataType, wide: DataType) -> Vec<u32> {
     let buffers = vec![ParityInput::u32_words("input", &ins)];
     let count = ins.len() as u32;
     let program = elementwise_program(wide.clone(), &buffers, count, &|loads| {
-        Expr::cast(
-            wide.clone(),
-            Expr::cast(narrow.clone(), loads[0].clone()),
-        )
+        Expr::cast(wide.clone(), Expr::cast(narrow.clone(), loads[0].clone()))
     });
     let bytes = dispatch_single_output(
         &|program, inputs| backend.dispatch_borrowed(program, inputs, &DispatchConfig::default()),

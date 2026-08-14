@@ -7,7 +7,6 @@ mod common;
 use common::self_optimizer::{body_of, run_pipeline};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-
 /// Make a Program where `seed` is bound to a non-literal Load so it
 /// survives const-prop, then a Loop body uses Var(seed) in an
 /// invariant Let. LICM should hoist the invariant Let above the

@@ -1,209 +1,209 @@
 //! Live CUDA parity for packed INT4 quantized primitives.
+//!
+//! The CPU references these contracts diff against are the ones
+//! `vyre-primitives` ships behind `cpu-parity`. This file used to carry a
+//! private reimplementation of every one of them plus its own little-endian
+//! packing, so a correction to a shipped oracle left the CUDA arm asserting
+//! bit-exact equality against a definition nobody ships. What stays local is
+//! the setup the CUDA arm owns: the lane patterns, the shape tables, the
+//! deterministic generators and the binding order the programs are dispatched
+//! with, each with one owner below.
 
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
+use vyre_primitives::math::quantized::pack_i4x8_cpu;
+use vyre_primitives::wire::{
+    decode_f32_le_bytes_all, decode_i32_le_bytes_all, pack_f32_slice, pack_u32_slice,
+};
 
-fn pack_i4x8(values: &[i32]) -> Vec<u32> {
-    let mut out = vec![0_u32; values.len().div_ceil(8)];
-    for (index, &value) in values.iter().enumerate() {
-        let clamped = value.clamp(-8, 7);
-        let nibble = (clamped as i8 as u8) & 0x0f;
-        let word = index / 8;
-        let shift = (index % 8) * 4;
-        out[word] |= u32::from(nibble) << shift;
-    }
-    out
+/// Signed INT4 lane pattern the fixed-shape contracts cycle for weights and for
+/// the left dot operand. Spans both nibble extremes so a sign-extension defect
+/// in the packed lane decode cannot pass.
+const WEIGHT_PATTERN: [i32; 16] = [-8, -3, -1, 0, 1, 3, 7, 6, 5, 4, 2, -2, -4, -6, -7, -5];
+
+/// Signed INT4 lane pattern the fixed-shape contracts cycle for activations and
+/// for the right dot operand.
+const ACTIVATION_PATTERN: [i32; 16] = [7, 5, 3, 1, -1, -3, -5, -7, 6, 4, 2, 0, -2, -4, -6, -8];
+
+/// Lane counts the fixed-pattern dot contracts sweep: sub-word, word-aligned,
+/// word+1, and multi-word tails.
+const DOT_LANE_COUNTS: [u32; 9] = [1, 7, 8, 9, 16, 31, 32, 33, 65];
+
+/// `(rows, cols)` shapes the fixed-pattern matvec contract sweeps.
+const MATVEC_SHAPES: [(u32, u32); 7] = [(1, 1), (2, 7), (3, 8), (4, 9), (5, 17), (6, 33), (7, 65)];
+
+/// `(batch, rows, cols)` shapes the fixed-pattern batched contracts sweep.
+const BATCHED_SHAPES: [(u32, u32, u32); 7] = [
+    (1, 1, 1),
+    (2, 2, 7),
+    (3, 3, 8),
+    (4, 4, 9),
+    (5, 5, 17),
+    (6, 6, 33),
+    (3, 7, 65),
+];
+
+/// Lane counts the generated release sweep covers. Wider than
+/// [`DOT_LANE_COUNTS`]: it adds 2, 15 and 96 so the generated corpus crosses a
+/// second word boundary the fixed patterns stop short of.
+const GENERATED_DOT_LANE_COUNTS: [u32; 12] = [1, 2, 7, 8, 9, 15, 16, 31, 32, 33, 65, 96];
+
+/// `(rows, cols)` shapes the generated matvec sweep covers. Adds the exactly
+/// word-aligned `(3, 64)` case that [`MATVEC_SHAPES`] does not carry.
+const GENERATED_MATVEC_SHAPES: [(u32, u32); 8] = [
+    (1, 1),
+    (2, 7),
+    (3, 8),
+    (4, 9),
+    (5, 17),
+    (6, 33),
+    (3, 64),
+    (7, 65),
+];
+
+/// `(batch, rows, cols)` shapes the generated batched sweeps cover. The wide
+/// tails use smaller batches than [`BATCHED_SHAPES`] so the generated corpus
+/// stays within one dispatch while still reaching 65 columns.
+const GENERATED_BATCHED_SHAPES: [(u32, u32, u32); 7] = [
+    (1, 1, 1),
+    (2, 2, 7),
+    (3, 3, 8),
+    (4, 4, 9),
+    (5, 5, 17),
+    (3, 6, 33),
+    (2, 7, 65),
+];
+
+fn cuda_backend() -> CudaBackend {
+    CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.")
 }
 
-fn extract_i4(packed: &[u32], lane: usize) -> i32 {
-    let word = packed.get(lane / 8).copied().unwrap_or(0);
-    let nibble = ((word >> ((lane % 8) * 4)) & 0x0f) as i32;
-    if nibble & 0x8 == 0 {
-        nibble
-    } else {
-        nibble - 16
-    }
+/// `count` lane rows cycled from `pattern`, each row starting `stride` lanes
+/// further into the pattern so no two rows share a lane sequence.
+fn cycled_rows(pattern: &[i32], count: u32, lanes: u32, stride: usize) -> Vec<Vec<i32>> {
+    (0..count as usize)
+        .map(|index| {
+            pattern
+                .iter()
+                .copied()
+                .cycle()
+                .skip(index * stride)
+                .take(lanes as usize)
+                .collect()
+        })
+        .collect()
 }
 
-fn dot_scaled_oracle(
-    lhs_packed: &[u32],
-    rhs_packed: &[u32],
-    lhs_scale: f32,
-    rhs_scale: f32,
-    lane_count: u32,
-) -> f32 {
-    let mut acc = 0.0_f32;
-    for lane in 0..lane_count as usize {
-        acc += extract_i4(lhs_packed, lane) as f32 * extract_i4(rhs_packed, lane) as f32;
-    }
-    acc * lhs_scale * rhs_scale
-}
-
-fn dot_i32_oracle(lhs_packed: &[u32], rhs_packed: &[u32], lane_count: u32) -> i32 {
-    let mut acc = 0_i32;
-    for lane in 0..lane_count as usize {
-        acc += extract_i4(lhs_packed, lane) * extract_i4(rhs_packed, lane);
-    }
-    acc
-}
-
+/// Pack one INT4 row per entry, padding every row to the packed word stride the
+/// INT4 matrix programs bind.
 fn pack_i4_matrix_rows(rows: &[Vec<i32>]) -> Vec<u32> {
     let cols = rows.first().map_or(0, Vec::len);
     let words_per_row = cols.div_ceil(8);
     let mut out = Vec::with_capacity(rows.len() * words_per_row);
     for row in rows {
-        let mut packed = pack_i4x8(row);
+        let mut packed = pack_i4x8_cpu(row);
         packed.resize(words_per_row, 0);
         out.extend_from_slice(&packed);
     }
     out
 }
 
-fn matvec_scaled_oracle(
-    weights_packed: &[u32],
-    x: &[f32],
-    scales: &[f32],
-    rows: u32,
-    cols: u32,
-) -> Vec<f32> {
-    let words_per_row = (cols as usize).div_ceil(8);
-    let mut out = vec![0.0_f32; rows as usize];
-    for row in 0..rows as usize {
-        let mut acc = 0.0_f32;
-        let row_words = &weights_packed[row * words_per_row..];
-        for col in 0..cols as usize {
-            acc += extract_i4(row_words, col) as f32 * x[col];
-        }
-        out[row] = acc * scales[row];
-    }
-    out
+/// Row scales the fixed-shape contracts bind, one distinct power-of-two-exact
+/// value per row so a row/scale mispairing cannot cancel out.
+fn patterned_row_scales(rows: u32) -> Vec<f32> {
+    (0..rows)
+        .map(|row| 0.125_f32 + row as f32 * 0.0625)
+        .collect()
 }
 
-fn batched_matvec_scaled_oracle(
-    weights_packed: &[u32],
-    x_batches: &[f32],
-    scales: &[f32],
+/// Batch scales the fixed-shape batched matmul contracts bind.
+fn patterned_batch_scales(batch: u32) -> Vec<f32> {
+    (0..batch)
+        .map(|batch_index| 0.25_f32 + batch_index as f32 * 0.03125)
+        .collect()
+}
+
+/// Packed operands for one batched packed-activation INT4 matmul shape.
+struct BatchedMatmulInputs {
+    weights_packed: Vec<u32>,
+    activations_packed: Vec<u32>,
+    row_scales: Vec<f32>,
+    batch_scales: Vec<f32>,
+}
+
+impl BatchedMatmulInputs {
+    /// Bindings in the order `i4x8_batched_matmul_*` declares them.
+    fn bindings(&self) -> Vec<Vec<u8>> {
+        vec![
+            pack_u32_slice(&self.weights_packed),
+            pack_u32_slice(&self.activations_packed),
+            pack_f32_slice(&self.row_scales),
+            pack_f32_slice(&self.batch_scales),
+        ]
+    }
+}
+
+/// Fixed-pattern operands for one batched matmul shape.
+fn patterned_batched_matmul_inputs(batch: u32, rows: u32, cols: u32) -> BatchedMatmulInputs {
+    BatchedMatmulInputs {
+        weights_packed: pack_i4_matrix_rows(&cycled_rows(&WEIGHT_PATTERN, rows, cols, 5)),
+        activations_packed: pack_i4_matrix_rows(&cycled_rows(&ACTIVATION_PATTERN, batch, cols, 7)),
+        row_scales: patterned_row_scales(rows),
+        batch_scales: patterned_batch_scales(batch),
+    }
+}
+
+/// Generated operands for one batched matmul shape at `seed`.
+fn generated_batched_matmul_inputs(
     batch: u32,
     rows: u32,
     cols: u32,
-) -> Vec<f32> {
-    let mut out = Vec::with_capacity((batch * rows) as usize);
-    for batch_index in 0..batch as usize {
-        let x_start = batch_index * cols as usize;
-        let x_end = x_start + cols as usize;
-        out.extend(matvec_scaled_oracle(
-            weights_packed,
-            &x_batches[x_start..x_end],
-            scales,
+    seed: u32,
+) -> BatchedMatmulInputs {
+    BatchedMatmulInputs {
+        weights_packed: pack_i4_matrix_rows(&generated_i4_rows(
             rows,
             cols,
-        ));
+            seed.wrapping_mul(149) + 31,
+        )),
+        activations_packed: pack_i4_matrix_rows(&generated_i4_rows(
+            batch,
+            cols,
+            seed.wrapping_mul(151) + 37,
+        )),
+        row_scales: generated_positive_scales(rows as usize, seed + 41),
+        batch_scales: generated_positive_scales(batch as usize, seed + 43),
     }
-    out
 }
 
-fn batched_packed_matmul_scaled_oracle(
-    weights_packed: &[u32],
-    activation_batches_packed: &[u32],
-    row_scales: &[f32],
-    batch_scales: &[f32],
-    batch: u32,
-    rows: u32,
-    cols: u32,
-) -> Vec<f32> {
-    let words_per_row = (cols as usize).div_ceil(8);
-    let mut out = vec![0.0_f32; (batch * rows) as usize];
-    for batch_index in 0..batch as usize {
-        let activation_words = &activation_batches_packed[batch_index * words_per_row..];
-        for row in 0..rows as usize {
-            let weight_words = &weights_packed[row * words_per_row..];
-            let mut acc = 0.0_f32;
-            for col in 0..cols as usize {
-                acc +=
-                    extract_i4(weight_words, col) as f32 * extract_i4(activation_words, col) as f32;
-            }
-            out[batch_index * rows as usize + row] =
-                acc * row_scales[row] * batch_scales[batch_index];
-        }
-    }
-    out
-}
-
-fn batched_packed_matmul_top1_scaled_oracle(
-    weights_packed: &[u32],
-    activation_batches_packed: &[u32],
-    row_scales: &[f32],
-    batch_scales: &[f32],
-    batch: u32,
-    rows: u32,
-    cols: u32,
-) -> (Vec<f32>, Vec<u32>) {
-    let logits = batched_packed_matmul_scaled_oracle(
-        weights_packed,
-        activation_batches_packed,
-        row_scales,
-        batch_scales,
-        batch,
-        rows,
-        cols,
-    );
-    let mut scores = vec![f32::MIN; batch as usize];
-    let mut indices = vec![0_u32; batch as usize];
-    for batch_index in 0..batch as usize {
-        let row_start = batch_index * rows as usize;
-        for row in 0..rows as usize {
-            let score = logits[row_start + row];
-            if score > scores[batch_index] {
-                scores[batch_index] = score;
-                indices[batch_index] = row as u32;
-            }
-        }
-    }
+/// Split the packed top-1 output into scores then row indices, the layout
+/// `i4x8_batched_matmul_top1_f32_scaled` writes.
+fn split_top1(bytes: &[u8], batch: u32) -> (Vec<f32>, Vec<u32>) {
+    let packed = read_f32_lanes(bytes, (batch * 2) as usize);
+    let scores = packed[..batch as usize].to_vec();
+    let indices = packed[batch as usize..]
+        .iter()
+        .map(|index| *index as u32)
+        .collect();
     (scores, indices)
 }
 
-fn pack_u32(words: &[u32]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(words.len() * 4);
-    for word in words {
-        out.extend_from_slice(&word.to_le_bytes());
-    }
-    out
-}
-
-fn pack_f32(words: &[f32]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(words.len() * 4);
-    for word in words {
-        out.extend_from_slice(&word.to_le_bytes());
-    }
-    out
-}
-
 fn read_f32(bytes: &[u8]) -> f32 {
-    f32::from_le_bytes(
-        bytes
-            .get(0..4)
-            .expect("Fix: CUDA INT4 scaled dot must emit one f32.")
-            .try_into()
-            .expect("Fix: f32 CUDA output must be exactly four bytes."),
-    )
+    *decode_f32_le_bytes_all(bytes)
+        .first()
+        .expect("Fix: CUDA INT4 scaled dot must emit one f32.")
 }
 
 fn read_i32(bytes: &[u8]) -> i32 {
-    i32::from_le_bytes(
-        bytes
-            .get(0..4)
-            .expect("Fix: CUDA INT4 dot must emit one i32.")
-            .try_into()
-            .expect("Fix: i32 CUDA output must be exactly four bytes."),
-    )
+    *decode_i32_le_bytes_all(bytes)
+        .first()
+        .expect("Fix: CUDA INT4 dot must emit one i32.")
 }
 
-fn read_f32_vec(bytes: &[u8], count: usize) -> Vec<f32> {
-    bytes
-        .chunks_exact(4)
-        .take(count)
-        .map(|chunk| f32::from_le_bytes(chunk.try_into().expect("Fix: f32 chunk is four bytes.")))
-        .collect()
+fn read_f32_lanes(bytes: &[u8], count: usize) -> Vec<f32> {
+    let mut lanes = decode_f32_le_bytes_all(bytes);
+    lanes.truncate(count);
+    lanes
 }
 
 fn generated_i4_values(len: usize, seed: u32) -> Vec<i32> {

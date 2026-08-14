@@ -60,7 +60,9 @@ impl QueueGraph<'_> {
             self.edge_targets,
             self.edge_kind_mask,
         )
-        .unwrap_or_else(|error| panic!("Fix: {context} resident CSR queue graph upload failed: {error:?}"))
+        .unwrap_or_else(|error| {
+            panic!("Fix: {context} resident CSR queue graph upload failed: {error:?}")
+        })
     }
 }
 
@@ -423,11 +425,11 @@ impl ResidentQueueSession {
 
     /// Free the scratch and the graph.
     pub(super) fn close(mut self, dispatcher: &CudaProgramDispatcher<'_>) {
-        self.scratch
-            .free(dispatcher)
-            .unwrap_or_else(|error| panic!("Fix: {} scratch cleanup failed: {error:?}", self.context));
-        self.graph
-            .free(dispatcher)
-            .unwrap_or_else(|error| panic!("Fix: {} graph cleanup failed: {error:?}", self.context));
+        self.scratch.free(dispatcher).unwrap_or_else(|error| {
+            panic!("Fix: {} scratch cleanup failed: {error:?}", self.context)
+        });
+        self.graph.free(dispatcher).unwrap_or_else(|error| {
+            panic!("Fix: {} graph cleanup failed: {error:?}", self.context)
+        });
     }
 }

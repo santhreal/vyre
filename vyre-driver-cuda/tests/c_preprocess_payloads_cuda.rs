@@ -5,51 +5,15 @@
 
 #![cfg(test)]
 
+#[path = "common/c_preprocess_oracles.rs"]
+mod c_preprocess_oracles;
 mod common;
 
+use c_preprocess_oracles::{CudaOracle, ReferenceOracle};
 use common::with_live_backend;
-use vyre::ir::Program;
-use vyre_driver::DispatchConfig;
-use vyre_driver_cuda::CudaBackend;
 use vyre_libs::parsing::c::preprocess::gpu_pipeline::{
     gpu_extract_directive_payloads, gpu_tokenize_and_classify, DirectivePayload, ProgramOracle,
 };
-use vyre_reference::value::Value;
-
-struct RefDispatcher;
-
-impl ProgramOracle for RefDispatcher {
-    fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
-        let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
-        let outputs = vyre_reference::reference_eval(program, &values)
-            .map_err(|error| format!("reference_eval: {error}"))?;
-        Ok(outputs.into_iter().map(|value| value.to_bytes()).collect())
-    }
-
-    fn requires_output_inputs(&self) -> bool {
-        true
-    }
-}
-
-struct CudaPayloadDispatcher<'a>(&'a CudaBackend);
-
-impl ProgramOracle for CudaPayloadDispatcher<'_> {
-    fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
-        self.0
-            .dispatch(program, inputs, &DispatchConfig::default())
-            .map_err(|error| format!("CUDA dispatch: {error}"))
-    }
-
-    fn dispatch_borrowed(
-        &self,
-        program: &Program,
-        inputs: &[&[u8]],
-    ) -> Result<Vec<Vec<u8>>, String> {
-        self.0
-            .dispatch_borrowed(program, inputs, &DispatchConfig::default())
-            .map_err(|error| format!("CUDA borrowed dispatch: {error}"))
-    }
-}
 
 fn payloads(
     dispatcher: &dyn ProgramOracle,
@@ -72,8 +36,8 @@ fn meaningful_payload_count(payloads: &[DirectivePayload]) -> usize {
 #[test]
 fn cuda_c_preprocess_payloads_match_reference() {
     with_live_backend("c preprocess directive payloads", |backend| {
-        let cuda_dispatcher = CudaPayloadDispatcher(backend);
-        let reference_dispatcher = RefDispatcher;
+        let cuda_dispatcher = CudaOracle(backend);
+        let reference_dispatcher = ReferenceOracle;
         let source = br#"
 #define FOO 42
 #define MAX(a,b) ((a)>(b)?(a):(b))

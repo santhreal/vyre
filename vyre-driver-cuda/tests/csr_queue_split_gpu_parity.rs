@@ -6,6 +6,9 @@ mod common;
 
 use common::{bytes_u32, live_backend, u32_bytes};
 use vyre_driver_cuda::CudaProgramDispatcher;
+use vyre_foundation::program_dispatch::{
+    ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
+};
 use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::csr_queue_split::{
     csr_queue_split_low_dispatch_grid, csr_queue_split_low_forward_traverse,
@@ -13,9 +16,6 @@ use vyre_primitives::graph::csr_queue_split::{
 };
 use vyre_primitives::graph::csr_queue_strided::{
     csr_queue_strided_forward_dispatch_grid, csr_queue_strided_forward_traverse,
-};
-use vyre_foundation::program_dispatch::{
-    ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
 
 #[test]

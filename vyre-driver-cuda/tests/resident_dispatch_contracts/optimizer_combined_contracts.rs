@@ -2,34 +2,14 @@ use super::*;
 
 #[test]
 fn optimizer_combined_upload_sequence_read_fences_once() {
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
+    let backend = acquire();
     let dispatcher = CudaProgramDispatcher::new(&backend);
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(4),
-            BufferDecl::output("out", 1, DataType::U32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::gid_x(),
-            Expr::add(Expr::load("input", Expr::gid_x()), Expr::u32(7)),
-        )],
-    );
-    let input = dispatcher
-        .alloc_resident(16)
-        .expect("Fix: optimizer combined path input allocation failed.");
-    let output = dispatcher
-        .alloc_resident(16)
-        .expect("Fix: optimizer combined path output allocation failed.");
-    let input_bytes = u32_bytes(&[1, 2, 3, 4]);
+    let program = add_program("input", "out", 7);
+    let input = dispatcher_lane(&dispatcher, "input");
+    let output = dispatcher_lane(&dispatcher, "output");
+    let input_bytes = seed_bytes();
     let handle_ids = [input, output];
-    let steps = [ResidentDispatchStep {
-        program: &program,
-        handle_ids: &handle_ids,
-        grid_override: None,
-    }];
+    let steps = [dispatcher_step(&program, &handle_ids)];
 
     backend.reset_telemetry();
     let mut outputs = vec![Vec::with_capacity(64)];
@@ -74,46 +54,20 @@ fn optimizer_combined_upload_sequence_read_fences_once() {
         "Fix: combined resident path must count the final resident readback bytes."
     );
 
-    dispatcher
-        .free_resident(input)
-        .expect("Fix: combined path input free failed.");
-    dispatcher
-        .free_resident(output)
-        .expect("Fix: combined path output free failed.");
+    free_dispatcher_lanes(&dispatcher, &[(input, "input"), (output, "output")]);
 }
 
 #[test]
-
 fn optimizer_combined_duplicate_sequence_uploads_fuse_before_kernel_launch() {
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
+    let backend = acquire();
     let dispatcher = CudaProgramDispatcher::new(&backend);
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(4),
-            BufferDecl::output("out", 1, DataType::U32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::gid_x(),
-            Expr::add(Expr::load("input", Expr::gid_x()), Expr::u32(7)),
-        )],
-    );
-    let input = dispatcher
-        .alloc_resident(16)
-        .expect("Fix: optimizer duplicate-upload input allocation failed.");
-    let output = dispatcher
-        .alloc_resident(16)
-        .expect("Fix: optimizer duplicate-upload output allocation failed.");
-    let first_input = u32_bytes(&[1, 2, 3, 4]);
+    let program = add_program("input", "out", 7);
+    let input = dispatcher_lane(&dispatcher, "input");
+    let output = dispatcher_lane(&dispatcher, "output");
+    let first_input = seed_bytes();
     let second_input = u32_bytes(&[10, 11, 12, 13]);
     let handle_ids = [input, output];
-    let steps = [ResidentDispatchStep {
-        program: &program,
-        handle_ids: &handle_ids,
-        grid_override: None,
-    }];
+    let steps = [dispatcher_step(&program, &handle_ids)];
 
     backend.reset_telemetry();
     let mut outputs = vec![Vec::with_capacity(64)];
@@ -146,28 +100,20 @@ fn optimizer_combined_duplicate_sequence_uploads_fuse_before_kernel_launch() {
         telemetry.host_to_device_bytes
     );
 
-    dispatcher
-        .free_resident(input)
-        .expect("Fix: duplicate-upload path input free failed.");
-    dispatcher
-        .free_resident(output)
-        .expect("Fix: duplicate-upload path output free failed.");
+    free_dispatcher_lanes(&dispatcher, &[(input, "input"), (output, "output")]);
 }
 
 #[test]
 fn optimizer_combined_duplicate_fills_keep_last_value_before_readback() {
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
+    let backend = acquire();
     let dispatcher = CudaProgramDispatcher::new(&backend);
-    let handle = dispatcher
-        .alloc_resident(16)
-        .expect("Fix: optimizer duplicate-fill allocation failed.");
+    let handle = dispatcher_lane(&dispatcher, "fill target");
 
     backend.reset_telemetry();
     let mut outputs = vec![Vec::with_capacity(64)];
     dispatcher
         .fill_upload_resident_many_sequence_read_many_into(
-            &[(handle, 16, 0x11), (handle, 16, 0xA5)],
+            &[(handle, LANE_BYTES, 0x11), (handle, LANE_BYTES, 0xA5)],
             &[],
             &[],
             &[handle],
@@ -177,7 +123,7 @@ fn optimizer_combined_duplicate_fills_keep_last_value_before_readback() {
 
     assert_eq!(
         outputs,
-        vec![vec![0xA5; 16]],
+        vec![vec![0xA5; LANE_BYTES]],
         "Fix: duplicate sequence fills to the same handle must preserve last-fill semantics."
     );
     assert_eq!(
@@ -186,42 +132,19 @@ fn optimizer_combined_duplicate_fills_keep_last_value_before_readback() {
         "Fix: duplicate resident fills must remain device-side memset work, not H2D uploads."
     );
 
-    dispatcher
-        .free_resident(handle)
-        .expect("Fix: duplicate-fill path handle free failed.");
+    free_dispatcher_lanes(&dispatcher, &[(handle, "fill target")]);
 }
 
 #[test]
 fn optimizer_combined_upload_sequence_read_ranges_compacts_d2h_bytes() {
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
+    let backend = acquire();
     let dispatcher = CudaProgramDispatcher::new(&backend);
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(4),
-            BufferDecl::output("out", 1, DataType::U32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::gid_x(),
-            Expr::add(Expr::load("input", Expr::gid_x()), Expr::u32(7)),
-        )],
-    );
-
-    let input = dispatcher
-        .alloc_resident(16)
-        .expect("Fix: optimizer compact-read input allocation failed.");
-    let output = dispatcher
-        .alloc_resident(16)
-        .expect("Fix: optimizer compact-read output allocation failed.");
-    let input_bytes = u32_bytes(&[1, 2, 3, 4]);
+    let program = add_program("input", "out", 7);
+    let input = dispatcher_lane(&dispatcher, "input");
+    let output = dispatcher_lane(&dispatcher, "output");
+    let input_bytes = seed_bytes();
     let handle_ids = [input, output];
-    let steps = [ResidentDispatchStep {
-        program: &program,
-        handle_ids: &handle_ids,
-        grid_override: None,
-    }];
+    let steps = [dispatcher_step(&program, &handle_ids)];
     let read_ranges = [ResidentReadRange {
         handle_id: output,
         byte_offset: 4,
@@ -257,10 +180,5 @@ fn optimizer_combined_upload_sequence_read_ranges_compacts_d2h_bytes() {
         "Fix: compact resident readback must transfer only requested bytes, not the full 16-byte output buffer."
     );
 
-    dispatcher
-        .free_resident(input)
-        .expect("Fix: compact path input free failed.");
-    dispatcher
-        .free_resident(output)
-        .expect("Fix: compact path output free failed.");
+    free_dispatcher_lanes(&dispatcher, &[(input, "input"), (output, "output")]);
 }

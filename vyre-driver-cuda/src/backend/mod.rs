@@ -24,6 +24,8 @@ pub(crate) mod cuda_graph_replay;
 pub mod dispatch;
 /// Per-dispatch host and device phase attribution for the timed dispatch path.
 pub(crate) mod dispatch_phase_probe;
+/// Release path shared by every dispatch enqueue that fails partway through.
+pub(crate) mod enqueue_cleanup;
 /// Host-borrowed buffer dispatch path.
 pub(crate) mod host_dispatch;
 /// Checked CUDA host-memory registration boundary.

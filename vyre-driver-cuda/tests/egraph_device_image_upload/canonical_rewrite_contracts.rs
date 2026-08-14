@@ -151,12 +151,7 @@ fn egraph_structural_canonicalization_round_discovers_and_rewrites_live_cuda_ima
 fn egraph_signature_refresh_exposes_post_rewrite_structural_duplicates() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let snapshot = GpuEGraphSnapshot::build([
-        (10u32, "lit", &[][..]),
-        (20u32, "lit", &[][..]),
-        (30u32, "add", &[10u32, 10u32][..]),
-        (40u32, "add", &[10u32, 20u32][..]),
-    ]);
+    let snapshot = distinct_add_snapshot();
     let image = snapshot
         .try_pack_device_image()
         .expect("Fix: valid foundation e-graph image must pack.");

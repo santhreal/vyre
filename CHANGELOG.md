@@ -717,6 +717,59 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   emits what every former copy emitted. Seven files that reimplemented
   little-endian `pack`/`unpack` read `vyre_primitives::wire::pack_u32_slice`
   and `decode_u32_le_bytes_all`, the crate that owns that layout.
+- The CUDA resident dispatch contract family states its setup once. Five files
+  asserted against a four-lane u32 resident buffer seeded [1, 2, 3, 4], an
+  elementwise add or multiply over one wrapped workgroup, and a readback
+  expectation that depends on whether the borrowed host-buffer fallback is
+  opted in, and each file carried its own copy of all three: the lane width,
+  the seed, the program shapes, the sequence-step and read-range literals, the
+  borrowed-fallback predicate, and the native compact-readback telemetry block.
+  `vyre-driver-cuda/tests/resident_dispatch_contracts/support.rs` now owns
+  them. A copy that had already drifted is what the split cost:
+  `repeated_sequence_contracts.rs` carried a second test with the same name as
+  the parent's release-path contract, asserting the same borrowed-fallback
+  counter over a multiply program but never checking the output lanes, so a run
+  where the multiply lowering wrote wrong values reported green. The surviving
+  contract now sweeps both the add and the multiply program and asserts the
+  lanes for each.
+- The generated CUDA reference matrices share one sweep runner. Six files each
+  carried the same runner loop: dispatch a case on the direct and the compiled
+  CUDA path, diff both against the reference interpreter, accumulate the lanes
+  each comparison actually checked, and assert the total against cases times
+  lanes times two. Fifteen copies of that loop, five copies of the guarded lane
+  store, two copies of the six comparison-word builders
+  `vyre-driver-cuda/tests/common/mod.rs` already exported, and per-dtype
+  program builders that differed only in which buffer types they declared.
+  `vyre-driver-cuda/tests/common/mod.rs` now owns `generated_lane_program`,
+  `guarded_generated_store`, `guarded_generated_store_at`,
+  `GeneratedMatrixCase`, `assert_u32_matrix_sweep` and
+  `assert_f32_matrix_sweep`, and the binding order every matrix depends on is
+  fixed in one place instead of restated per file. Case tables, adversarial
+  corpora and ULP bounds stay local, because they differ on purpose. Three
+  sweeps got stronger rather than shorter: the scalar bool tables, the cast
+  table split by output dtype, and each of them now asserts its own lane
+  coverage, where a single combined total let one group's over-count hide
+  another's shortfall.
+- The generated CUDA resident reference matrices share one sweep runner and one
+  program builder. Five contract files each carried their own runner loop over
+  the resident dispatch path, and `program_builders.rs` carried thirteen
+  near-identical guarded-store program builders that differed only in the
+  declared buffer types. The parent now owns `ResidentMatrixCase`,
+  `assert_resident_u32_sweep` and `assert_resident_f32_sweep`, and the builders
+  delegate to `resident_lane_program`. The in-place atomic reduction builder is
+  deliberately left standalone: it binds its accumulator read-write, performs
+  no guarded store, and is checked against a different reference, so folding it
+  into an output sweep would assert something else. The lane-coverage totals
+  are now asserted per table rather than combined, which stops one table's
+  shortfall from being hidden by another's surplus.
+- The CUDA C-preprocessing parity tests share their two dispatchers. The
+  payload, tokenize, macro-expansion and filter files each declared a private
+  reference dispatcher that evaluates the program on the host and a private
+  CUDA dispatcher that runs it on the device once owned and once borrowed, four
+  copies of each. `vyre-driver-cuda/tests/common/c_preprocess_oracles.rs` now
+  owns `ReferenceOracle` and `CudaOracle`; the parity assertion each file makes
+  stays in that file, because the two arms being compared are the point of the
+  test.
 
 ### Removed
 
@@ -1192,6 +1245,39 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   independently through `nodes::validate_nodes`, which is the only thing the
   property is for; mutating the production walk to skip the last statement of a
   body turns it red.
+- The live CUDA INT4 parity contracts diff against the CPU oracles
+  `vyre-primitives` publishes behind `cpu-parity`, not against a private
+  reimplementation of them.
+  `vyre-driver-cuda/tests/int4_quantized_gpu_parity.rs` carried its own
+  packed-nibble pack and extract, its own dot, matvec, batched matvec, batched
+  matmul and top-1 references, and its own little-endian word packing and
+  reading, all asserted bit-exactly. A correction to a shipped oracle therefore
+  left the CUDA arm pinning bit-equality against a definition nobody ships, and
+  the GPU could have matched a stale reference while diverging from the product
+  one. The lane patterns, shape tables, deterministic generators and binding
+  order stay local to the CUDA arm, each with one owner, and the shape tables
+  that genuinely differ between the fixed-pattern and generated sweeps now say
+  so by name instead of reading as drift.
+- A failed CUDA enqueue is cleaned up by one function. Four sites, two in the
+  resident async dispatch path, one in the resident batch path and one in the
+  host dispatch path, each carried the same ordering decision written out by
+  hand: synchronize the stream so the device is no longer reading the buffers,
+  record the sync point in telemetry, release the launch resource lease, drop
+  the resident in-flight guard, then forget the allocations that the device may
+  still own. That ordering is the whole correctness argument, and four copies
+  of it can drift one at a time, with the failure landing as a use-after-free
+  on the abandon path where nothing routine exercises it.
+  `vyre-driver-cuda/src/backend/enqueue_cleanup.rs` now owns
+  `FailedEnqueueGuards` and `abandon_failed_enqueue`, which perform that
+  sequence once and return the same error text the four sites produced.
+- The CUDA e-graph device-image upload contracts build their snapshots from
+  named fixtures, and `assert_span_matches_foundation` has one definition.
+  `upload_layout_contracts.rs` redefined that helper identically to the
+  parent's, so the parent's copy was shadowed and a correction to it would have
+  silently missed one file. Seven inline snapshot literals across four files
+  were three distinct shapes, now `shared_eclass_add_snapshot`,
+  `duplicate_add_snapshot` and `distinct_add_snapshot`, each documented with
+  the property it exists to exercise.
 
 ## [0.7.1] - 2026-08-01
 

@@ -10,8 +10,8 @@ use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::memory_model::MemoryOrdering;
-use vyre_reference::value::Value;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_reference::value::Value;
 
 /// Default generated-matrix lane count for live CUDA/reference differential tests.
 pub(crate) const GENERATED_LANE_COUNT: usize = 512;
@@ -430,6 +430,126 @@ pub(crate) fn gt_word(lhs: Expr, rhs: Expr) -> Expr {
 
 pub(crate) fn ge_word(lhs: Expr, rhs: Expr) -> Expr {
     compare_word(lhs, rhs, Expr::ge)
+}
+
+/// A generated-matrix program: `reads` bound at 0..n, one `out` buffer last,
+/// every buffer at the generated lane count and the generated workgroup width.
+///
+/// Binding order is the contract the reference interpreter and both CUDA paths
+/// agree on, so it is fixed here rather than restated per matrix file.
+pub(crate) fn generated_lane_program(
+    reads: &[(&str, DataType)],
+    output: DataType,
+    body: Vec<Node>,
+) -> Program {
+    let lanes = GENERATED_LANE_COUNT as u32;
+    let mut buffers: Vec<BufferDecl> = reads
+        .iter()
+        .enumerate()
+        .map(|(binding, (name, ty))| {
+            BufferDecl::read(*name, binding as u32, ty.clone()).with_count(lanes)
+        })
+        .collect();
+    buffers.push(BufferDecl::output("out", reads.len() as u32, output).with_count(lanes));
+    Program::wrapped(buffers, [GENERATED_WORKGROUP_SIZE_X, 1, 1], body)
+}
+
+/// Store `value` at the lane index in `out`, guarded so a launch rounded up to
+/// the workgroup width writes nothing past the declared lane count.
+pub(crate) fn guarded_generated_store(value: Expr) -> Vec<Node> {
+    guarded_generated_store_at(Expr::var("idx"), value)
+}
+
+/// [`guarded_generated_store`] writing to `index` instead of the lane index, for
+/// the permutation matrices whose whole point is a nonidentity destination.
+pub(crate) fn guarded_generated_store_at(index: Expr, value: Expr) -> Vec<Node> {
+    vec![
+        Node::let_bind("idx", Expr::gid_x()),
+        Node::if_then(
+            Expr::lt(Expr::var("idx"), Expr::u32(GENERATED_LANE_COUNT as u32)),
+            vec![Node::store("out", index, value)],
+        ),
+    ]
+}
+
+/// One case in a generated CUDA/reference matrix sweep.
+pub(crate) struct GeneratedMatrixCase {
+    /// Case name, reported by every diagnostic the sweep emits.
+    pub(crate) name: &'static str,
+    /// Program under test.
+    pub(crate) program: Program,
+    /// Bindings in declaration order.
+    pub(crate) inputs: Vec<Vec<u8>>,
+}
+
+/// Diff every case against the reference interpreter on both the direct and the
+/// compiled CUDA path, then prove the sweep compared every lane of every case.
+///
+/// The lane total is asserted rather than reported because
+/// [`assert_u32_output_lanes`] returns the number of lanes it actually compared:
+/// handed a truncated or empty output it compares zero and returns zero, which
+/// would leave a sweep green while checking nothing.
+pub(crate) fn assert_u32_matrix_sweep(
+    backend: &CudaBackend,
+    sweep: &str,
+    coverage: &str,
+    cases: impl ExactSizeIterator<Item = GeneratedMatrixCase>,
+) {
+    let expected_lanes = cases.len() * GENERATED_LANE_COUNT * 2;
+    let mut checked_lanes = 0usize;
+    for case in cases {
+        let outputs = cuda_reference_outputs(backend, &case.program, &case.inputs, case.name);
+        checked_lanes += assert_u32_output_lanes(
+            case.name,
+            GENERATED_LANE_COUNT,
+            &outputs.direct_cuda,
+            &outputs.reference,
+        );
+        checked_lanes += assert_u32_output_lanes(
+            case.name,
+            GENERATED_LANE_COUNT,
+            &outputs.compiled_cuda,
+            &outputs.reference,
+        );
+    }
+    assert_eq!(
+        checked_lanes, expected_lanes,
+        "Fix: generated CUDA {sweep} matrix must keep {coverage} across direct and compiled paths."
+    );
+}
+
+/// [`assert_u32_matrix_sweep`] for f32 outputs, compared with the strict edge
+/// semantics [`assert_f32_output_lanes`] fixes at `max_ulp`.
+pub(crate) fn assert_f32_matrix_sweep(
+    backend: &CudaBackend,
+    sweep: &str,
+    coverage: &str,
+    max_ulp: u32,
+    cases: impl ExactSizeIterator<Item = GeneratedMatrixCase>,
+) {
+    let expected_lanes = cases.len() * GENERATED_LANE_COUNT * 2;
+    let mut checked_lanes = 0usize;
+    for case in cases {
+        let outputs = cuda_reference_outputs(backend, &case.program, &case.inputs, case.name);
+        checked_lanes += assert_f32_output_lanes(
+            case.name,
+            GENERATED_LANE_COUNT,
+            max_ulp,
+            &outputs.direct_cuda,
+            &outputs.reference,
+        );
+        checked_lanes += assert_f32_output_lanes(
+            case.name,
+            GENERATED_LANE_COUNT,
+            max_ulp,
+            &outputs.compiled_cuda,
+            &outputs.reference,
+        );
+    }
+    assert_eq!(
+        checked_lanes, expected_lanes,
+        "Fix: generated CUDA {sweep} matrix must keep {coverage} across direct and compiled paths."
+    );
 }
 
 /// Adversarial u32 corpus shared by generated cast/FMA matrices.

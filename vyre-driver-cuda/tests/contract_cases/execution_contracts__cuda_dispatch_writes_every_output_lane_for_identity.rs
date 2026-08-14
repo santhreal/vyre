@@ -37,27 +37,17 @@ fn cuda_dispatch_conv2d_identity_box_matches_fixture() {
     let program = vyre_libs::math::conv::conv2d_3x3_direct("input", "kernel", "output", 4, 4)
         .expect("Fix: conv2d fixture program must build.");
     let input = f32_bytes(&[
-        1.0, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0,
+        1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
     ]);
     let kernel = f32_bytes(&[1.0; 9]);
     let expected = vec![
-        2.0, 2.0, 1.0, 0.0,
-        2.0, 3.0, 2.0, 1.0,
-        1.0, 2.0, 3.0, 2.0,
-        0.0, 1.0, 2.0, 2.0,
+        2.0, 2.0, 1.0, 0.0, 2.0, 3.0, 2.0, 1.0, 1.0, 2.0, 3.0, 2.0, 0.0, 1.0, 2.0, 2.0,
     ];
 
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend must acquire on the GPU-required host.");
     let outputs = backend
-        .dispatch(
-            &program,
-            &[input, kernel],
-            &DispatchConfig::default(),
-        )
+        .dispatch(&program, &[input, kernel], &DispatchConfig::default())
         .expect("Fix: CUDA conv2d dispatch must complete.");
     let actual = bytes_to_f32(&outputs[0]);
 
@@ -86,11 +76,7 @@ fn cuda_dispatch_fft_circular_convolution_matches_fixture() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend must acquire on the GPU-required host.");
     let outputs = backend
-        .dispatch(
-            &program,
-            &[signal, kernel],
-            &DispatchConfig::default(),
-        )
+        .dispatch(&program, &[signal, kernel], &DispatchConfig::default())
         .expect("Fix: CUDA FFT convolution dispatch must complete.");
     let actual = bytes_to_f32(&outputs[0]);
 
@@ -323,9 +309,7 @@ fn cuda_signed_mod_round_trips_after_foundation_started_allowing_it() {
             &[i32_bytes(&[7]), i32_bytes(&[3])],
             &DispatchConfig::default(),
         )
-        .expect(
-            "Fix: signed modulo must dispatch cleanly now that foundation allows signed Mod.",
-        );
+        .expect("Fix: signed modulo must dispatch cleanly now that foundation allows signed Mod.");
     // 7 % 3 == 1 (signed mod, host and device agree on positive operands).
     assert_eq!(
         outputs,
@@ -384,7 +368,11 @@ fn cuda_honors_zero_length_output_byte_range() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend must acquire on the GPU-required host.");
     let outputs = backend
-        .dispatch(&program, &[u32_bytes(&[0, 0, 0, 0])], &DispatchConfig::default())
+        .dispatch(
+            &program,
+            &[u32_bytes(&[0, 0, 0, 0])],
+            &DispatchConfig::default(),
+        )
         .expect("Fix: CUDA dispatch must allow output_byte_range=0..0 without readback.");
 
     assert_eq!(
@@ -421,4 +409,3 @@ fn cuda_honors_nonzero_output_byte_range_offset() {
         "Fix: CUDA output_byte_range=4..12 must return only the requested middle words."
     );
 }
-

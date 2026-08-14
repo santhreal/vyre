@@ -3,10 +3,11 @@
 mod common;
 
 use common::{
-    assert_u32_output_lanes, cuda_reference_outputs, i32_bytes, live_backend,
-    GENERATED_LANE_COUNT as LANE_COUNT, GENERATED_WORKGROUP_SIZE_X as WORKGROUP_SIZE_X,
+    assert_u32_matrix_sweep, eq_word, ge_word, generated_lane_program, gt_word,
+    guarded_generated_store, i32_bytes, le_word, live_backend, lt_word, ne_word,
+    GeneratedMatrixCase, GENERATED_LANE_COUNT as LANE_COUNT,
 };
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{DataType, Expr, Program};
 
 const ADVERSARIAL_I32_SEEDS: &[i32] = &[
     0,
@@ -59,30 +60,6 @@ struct I32UnaryCase {
 enum I32RhsKind {
     Mixed,
     DefinedDivisor,
-}
-
-fn eq_word(left: Expr, right: Expr) -> Expr {
-    Expr::select(Expr::eq(left, right), Expr::u32(1), Expr::u32(0))
-}
-
-fn ne_word(left: Expr, right: Expr) -> Expr {
-    Expr::select(Expr::ne(left, right), Expr::u32(1), Expr::u32(0))
-}
-
-fn lt_word(left: Expr, right: Expr) -> Expr {
-    Expr::select(Expr::lt(left, right), Expr::u32(1), Expr::u32(0))
-}
-
-fn le_word(left: Expr, right: Expr) -> Expr {
-    Expr::select(Expr::le(left, right), Expr::u32(1), Expr::u32(0))
-}
-
-fn gt_word(left: Expr, right: Expr) -> Expr {
-    Expr::select(Expr::gt(left, right), Expr::u32(1), Expr::u32(0))
-}
-
-fn ge_word(left: Expr, right: Expr) -> Expr {
-    Expr::select(Expr::ge(left, right), Expr::u32(1), Expr::u32(0))
 }
 
 fn wrapping_negate_i32(value: Expr) -> Expr {
@@ -226,30 +203,18 @@ fn generated_i32_binary_matrix_matches_reference_on_live_cuda() {
     let backend = live_backend();
     let lhs = adversarial_i32_values(0x3141_5926);
 
-    let mut checked_lanes = 0usize;
-    for case in I32_BINARY_CASES {
-        let rhs = adversarial_i32_rhs(case.rhs, &lhs, 0x2718_2818);
-        let program = i32_binary_program(case);
-        let inputs = vec![i32_bytes(&lhs), i32_bytes(&rhs)];
-        let outputs = cuda_reference_outputs(&backend, &program, &inputs, case.name);
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.direct_cuda,
-            &outputs.reference,
-        );
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.compiled_cuda,
-            &outputs.reference,
-        );
-    }
-
-    assert_eq!(
-        checked_lanes,
-        I32_BINARY_CASES.len() * LANE_COUNT * 2,
-        "Fix: generated CUDA i32 binary matrix must keep every adversarial lane active across direct and compiled paths."
+    assert_u32_matrix_sweep(
+        &backend,
+        "i32 binary",
+        "every adversarial lane active",
+        I32_BINARY_CASES.iter().map(|case| GeneratedMatrixCase {
+            name: case.name,
+            program: i32_binary_program(case),
+            inputs: vec![
+                i32_bytes(&lhs),
+                i32_bytes(&adversarial_i32_rhs(case.rhs, &lhs, 0x2718_2818)),
+            ],
+        }),
     );
 }
 
@@ -258,70 +223,40 @@ fn generated_i32_unary_matrix_matches_reference_on_live_cuda() {
     let backend = live_backend();
     let input = adversarial_i32_values(0x1618_0339);
 
-    let mut checked_lanes = 0usize;
-    for case in I32_UNARY_CASES {
-        let program = i32_unary_program(case);
-        let inputs = vec![i32_bytes(&input)];
-        let outputs = cuda_reference_outputs(&backend, &program, &inputs, case.name);
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.direct_cuda,
-            &outputs.reference,
-        );
-        checked_lanes += assert_u32_output_lanes(
-            case.name,
-            LANE_COUNT,
-            &outputs.compiled_cuda,
-            &outputs.reference,
-        );
-    }
-
-    assert_eq!(
-        checked_lanes,
-        I32_UNARY_CASES.len() * LANE_COUNT * 2,
-        "Fix: generated CUDA i32 unary matrix must keep every adversarial lane active across direct and compiled paths."
+    assert_u32_matrix_sweep(
+        &backend,
+        "i32 unary",
+        "every adversarial lane active",
+        I32_UNARY_CASES.iter().map(|case| GeneratedMatrixCase {
+            name: case.name,
+            program: i32_unary_program(case),
+            inputs: vec![i32_bytes(&input)],
+        }),
     );
 }
 
+/// `out[idx] = build(lhs[idx], rhs[idx])` over two i32 buffers.
 fn i32_binary_program(case: &I32BinaryCase) -> Program {
     let idx = Expr::var("idx");
     let value = (case.build)(
         Expr::load("lhs", idx.clone()),
         Expr::load("rhs", idx.clone()),
     );
-    Program::wrapped(
-        vec![
-            BufferDecl::read("lhs", 0, DataType::I32).with_count(LANE_COUNT as u32),
-            BufferDecl::read("rhs", 1, DataType::I32).with_count(LANE_COUNT as u32),
-            BufferDecl::output("out", 2, case.output.clone()).with_count(LANE_COUNT as u32),
-        ],
-        [WORKGROUP_SIZE_X, 1, 1],
-        guarded_store(value),
+    generated_lane_program(
+        &[("lhs", DataType::I32), ("rhs", DataType::I32)],
+        case.output.clone(),
+        guarded_generated_store(value),
     )
 }
 
+/// `out[idx] = build(input[idx])` over one i32 buffer.
 fn i32_unary_program(case: &I32UnaryCase) -> Program {
-    let idx = Expr::var("idx");
-    let value = (case.build)(Expr::load("input", idx));
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::I32).with_count(LANE_COUNT as u32),
-            BufferDecl::output("out", 1, case.output.clone()).with_count(LANE_COUNT as u32),
-        ],
-        [WORKGROUP_SIZE_X, 1, 1],
-        guarded_store(value),
+    let value = (case.build)(Expr::load("input", Expr::var("idx")));
+    generated_lane_program(
+        &[("input", DataType::I32)],
+        case.output.clone(),
+        guarded_generated_store(value),
     )
-}
-
-fn guarded_store(value: Expr) -> Vec<Node> {
-    vec![
-        Node::let_bind("idx", Expr::gid_x()),
-        Node::if_then(
-            Expr::lt(Expr::var("idx"), Expr::u32(LANE_COUNT as u32)),
-            vec![Node::store("out", Expr::var("idx"), value)],
-        ),
-    ]
 }
 
 fn adversarial_i32_values(salt: u32) -> Vec<i32> {

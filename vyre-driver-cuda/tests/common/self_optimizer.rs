@@ -81,9 +81,7 @@ pub(crate) fn binds_let(out: &Program, name: &str) -> bool {
 
 /// Whether any `Let` binding at all survived the pipeline.
 pub(crate) fn binds_any_let(out: &Program) -> bool {
-    body_of(out)
-        .iter()
-        .any(|n| matches!(n, Node::Let { .. }))
+    body_of(out).iter().any(|n| matches!(n, Node::Let { .. }))
 }
 
 /// Run `p` and read the surviving store's value: the shape every fold and

@@ -18,6 +18,7 @@ use crate::CUDA_BACKEND_ID;
 use super::allocations::{DispatchAllocations, HostTransferAllocations};
 use super::copy::aligned_async_copy_len;
 use super::dispatch::CudaBackend;
+use super::enqueue_cleanup::{abandon_failed_enqueue, FailedEnqueueGuards};
 use super::launch_params::launch_param_byte_len;
 use super::module_cache::ModuleCacheKey;
 use super::output_range::cuda_output_readback_for_binding;
@@ -827,31 +828,20 @@ impl CudaBackend {
             }
         })();
         if let Err(error) = pending {
-            let Some(launch_resources) = launch_resources.take() else {
-                return Err(error);
-            };
-            match crate::stream::synchronize_raw_stream(
+            return Err(abandon_failed_enqueue(
+                error,
+                &self.telemetry,
                 stream_raw,
                 "cuStreamSynchronize (host dispatch error cleanup)",
-            ) {
-                Ok(()) => {
-                    self.telemetry.record_sync_point();
-                    return Err(error);
-                }
-                Err(sync_error) => {
-                    tracing::error!(
-                        "Fix: failed to synchronize CUDA host dispatch stream after enqueue error: {sync_error}. In-flight host dispatch resources will not be recycled."
-                    );
-                    std::mem::forget(launch_resources);
-                    if let Some(allocations) = allocations.take() {
-                        std::mem::forget(allocations);
-                    }
-                    if let Some(host_transfers) = host_transfers.take() {
-                        std::mem::forget(host_transfers);
-                    }
-                    return Err(error);
-                }
-            }
+                "host dispatch",
+                "enqueue",
+                FailedEnqueueGuards {
+                    launch_resources: &mut launch_resources,
+                    allocations: &mut allocations,
+                    host_transfers: &mut host_transfers,
+                    resident_use: None,
+                },
+            ));
         }
         pending
     }

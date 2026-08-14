@@ -19,9 +19,19 @@ use queue_sequence::{
     run_manual_queue_sequence, GraphUpload, ManualQueueHandles, QueueBuild, QueueGraph,
     QueueReadback, ResidentQueueSession,
 };
-use vyre_driver_cuda::{CudaBackend, CudaTelemetrySnapshot};
-use vyre_libs::graph::dispatch::csr_frontier_queue_resident::ResidentCsrQueueGraph;
 use vyre_driver_cuda::CudaProgramDispatcher;
+use vyre_driver_cuda::{CudaBackend, CudaTelemetrySnapshot};
+use vyre_foundation::program_dispatch::{
+    ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
+};
+use vyre_libs::graph::dispatch::csr_frontier_queue_batch_resident::{
+    run_resident_csr_queue_batch_budgeted_into, run_resident_csr_queue_batch_into,
+    ResidentCsrQueueBatchScratch,
+};
+use vyre_libs::graph::dispatch::csr_frontier_queue_resident::ResidentCsrQueueGraph;
+use vyre_libs::graph::dispatch::csr_frontier_queue_resident::{
+    run_resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
+};
 use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::csr_frontier_queue::{
     csr_queue_forward_traverse, csr_queue_forward_traverse_cpu, frontier_to_queue,
@@ -32,16 +42,6 @@ use vyre_primitives::graph::csr_queue_delta::{
     csr_queue_delta_strided_enqueue,
 };
 use vyre_primitives::graph::csr_queue_split::CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD;
-use vyre_libs::graph::dispatch::csr_frontier_queue_batch_resident::{
-    run_resident_csr_queue_batch_budgeted_into, run_resident_csr_queue_batch_into,
-    ResidentCsrQueueBatchScratch,
-};
-use vyre_libs::graph::dispatch::csr_frontier_queue_resident::{
-    run_resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
-};
-use vyre_foundation::program_dispatch::{
-    ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
-};
 
 fn skewed_high_degree_graph(node_count: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     assert!(

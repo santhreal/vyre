@@ -3,12 +3,13 @@
 mod common;
 
 use common::{
-    assert_f32_output_lanes, assert_u32_output_lanes, bool_bytes, cuda_reference_outputs,
-    f32_bytes, generated_bool_cast_values, generated_f32_cast_values, generated_f32_fma_values,
-    generated_i32_cast_values, generated_u32_cast_values, i32_bytes, live_backend, u32_bytes,
-    GENERATED_LANE_COUNT as LANE_COUNT, GENERATED_WORKGROUP_SIZE_X as WORKGROUP_SIZE_X,
+    assert_f32_matrix_sweep, assert_u32_matrix_sweep, bool_bytes, f32_bytes,
+    generated_bool_cast_values, generated_f32_cast_values, generated_f32_fma_values,
+    generated_i32_cast_values, generated_lane_program, generated_u32_cast_values,
+    guarded_generated_store, i32_bytes, live_backend, u32_bytes, GeneratedMatrixCase,
+    GENERATED_LANE_COUNT as LANE_COUNT,
 };
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{DataType, Expr, Program};
 
 const MAX_F32_ULP: u32 = 1;
 
@@ -136,32 +137,66 @@ const CAST_CASES: &[CastCase] = &[
     },
 ];
 
+/// The four cast source corpora, one per input dtype.
+struct CastCorpora {
+    words: Vec<u32>,
+    signed: Vec<i32>,
+    floats: Vec<f32>,
+    predicates: Vec<bool>,
+}
+
+impl CastCorpora {
+    fn generate() -> Self {
+        Self {
+            words: generated_u32_cast_values(LANE_COUNT),
+            signed: generated_i32_cast_values(LANE_COUNT),
+            floats: generated_f32_cast_values(LANE_COUNT),
+            predicates: generated_bool_cast_values(LANE_COUNT),
+        }
+    }
+
+    fn bytes(&self, input: CastInput) -> Vec<u8> {
+        match input {
+            CastInput::U32 => u32_bytes(&self.words),
+            CastInput::I32 => i32_bytes(&self.signed),
+            CastInput::F32 => f32_bytes(&self.floats),
+            CastInput::Bool => bool_bytes(&self.predicates),
+        }
+    }
+}
+
 #[test]
 fn generated_cast_matrix_matches_reference_on_live_cuda() {
     let backend = live_backend();
-    let u32_input = generated_u32_cast_values(LANE_COUNT);
-    let i32_input = generated_i32_cast_values(LANE_COUNT);
-    let f32_input = generated_f32_cast_values(LANE_COUNT);
-    let bool_input = generated_bool_cast_values(LANE_COUNT);
-    let mut checked_lanes = 0usize;
+    let corpora = CastCorpora::generate();
+    // The output dtype picks the comparison, so the table is swept in two
+    // groups: f32 results under the arithmetic ULP bound, every other result
+    // bit-exact. Each group asserts its own lane coverage, so neither can hide
+    // a shortfall in the other behind a combined total.
+    let (float_results, word_results): (Vec<&CastCase>, Vec<&CastCase>) = CAST_CASES
+        .iter()
+        .partition(|case| matches!(case.output_type, DataType::F32));
 
-    for case in CAST_CASES {
-        let program = cast_program(case);
-        let inputs = vec![match case.input {
-            CastInput::U32 => u32_bytes(&u32_input),
-            CastInput::I32 => i32_bytes(&i32_input),
-            CastInput::F32 => f32_bytes(&f32_input),
-            CastInput::Bool => bool_bytes(&bool_input),
-        }];
-        let outputs = cuda_reference_outputs(&backend, &program, &inputs, case.name);
-        checked_lanes += assert_outputs(case, &outputs.direct_cuda, &outputs.reference);
-        checked_lanes += assert_outputs(case, &outputs.compiled_cuda, &outputs.reference);
-    }
-
-    assert_eq!(
-        checked_lanes,
-        CAST_CASES.len() * LANE_COUNT * 2,
-        "Fix: generated CUDA cast matrix must keep every lane active across direct and compiled paths."
+    assert_u32_matrix_sweep(
+        &backend,
+        "cast",
+        "every lane active",
+        word_results.into_iter().map(|case| GeneratedMatrixCase {
+            name: case.name,
+            program: cast_program(case),
+            inputs: vec![corpora.bytes(case.input)],
+        }),
+    );
+    assert_f32_matrix_sweep(
+        &backend,
+        "cast",
+        "every lane active",
+        MAX_F32_ULP,
+        float_results.into_iter().map(|case| GeneratedMatrixCase {
+            name: case.name,
+            program: cast_program(case),
+            inputs: vec![corpora.bytes(case.input)],
+        }),
     );
 }
 
@@ -171,51 +206,33 @@ fn generated_f32_fma_matrix_matches_reference_on_live_cuda() {
     let a = generated_f32_fma_values(LANE_COUNT, 0x1234_5678);
     let b = generated_f32_fma_values(LANE_COUNT, 0x9abc_def0);
     let c = generated_f32_fma_values(LANE_COUNT, 0x0fed_cba9);
-    let program = f32_fma_program();
-    let inputs = vec![f32_bytes(&a), f32_bytes(&b), f32_bytes(&c)];
-    let outputs = cuda_reference_outputs(&backend, &program, &inputs, "f32_fma");
-    let checked_lanes = assert_f32_output_lanes(
-        "f32_fma",
-        LANE_COUNT,
-        MAX_F32_ULP,
-        &outputs.direct_cuda,
-        &outputs.reference,
-    ) + assert_f32_output_lanes(
-        "f32_fma",
-        LANE_COUNT,
-        MAX_F32_ULP,
-        &outputs.compiled_cuda,
-        &outputs.reference,
-    );
 
-    assert_eq!(
-        checked_lanes,
-        LANE_COUNT * 2,
-        "Fix: generated CUDA f32 fma matrix must keep every lane active across direct and compiled paths."
+    assert_f32_matrix_sweep(
+        &backend,
+        "f32 fma",
+        "every lane active",
+        MAX_F32_ULP,
+        [GeneratedMatrixCase {
+            name: "f32_fma",
+            program: f32_fma_program(),
+            inputs: vec![f32_bytes(&a), f32_bytes(&b), f32_bytes(&c)],
+        }]
+        .into_iter(),
     );
 }
 
-fn assert_outputs(case: &CastCase, actual: &[Vec<u8>], expected: &[Vec<u8>]) -> usize {
-    if matches!(case.output_type, DataType::F32) {
-        assert_f32_output_lanes(case.name, LANE_COUNT, MAX_F32_ULP, actual, expected)
-    } else {
-        assert_u32_output_lanes(case.name, LANE_COUNT, actual, expected)
-    }
-}
-
+/// `out[idx] = build(input[idx])` for one cast case.
 fn cast_program(case: &CastCase) -> Program {
-    let idx = Expr::var("idx");
-    let value = (case.build)(Expr::load("input", idx));
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, case.input_type.clone()).with_count(LANE_COUNT as u32),
-            BufferDecl::output("out", 1, case.output_type.clone()).with_count(LANE_COUNT as u32),
-        ],
-        [WORKGROUP_SIZE_X, 1, 1],
-        guarded_store(value),
+    let value = (case.build)(Expr::load("input", Expr::var("idx")));
+    generated_lane_program(
+        &[("input", case.input_type.clone())],
+        case.output_type.clone(),
+        guarded_generated_store(value),
     )
 }
 
+/// `out[idx] = fma(a[idx], b[idx], c[idx])`, the single-rounding contract the
+/// reference interpreter and both CUDA paths have to agree on.
 fn f32_fma_program() -> Program {
     let idx = Expr::var("idx");
     let value = Expr::fma(
@@ -223,24 +240,13 @@ fn f32_fma_program() -> Program {
         Expr::load("b", idx.clone()),
         Expr::load("c", idx),
     );
-    Program::wrapped(
-        vec![
-            BufferDecl::read("a", 0, DataType::F32).with_count(LANE_COUNT as u32),
-            BufferDecl::read("b", 1, DataType::F32).with_count(LANE_COUNT as u32),
-            BufferDecl::read("c", 2, DataType::F32).with_count(LANE_COUNT as u32),
-            BufferDecl::output("out", 3, DataType::F32).with_count(LANE_COUNT as u32),
+    generated_lane_program(
+        &[
+            ("a", DataType::F32),
+            ("b", DataType::F32),
+            ("c", DataType::F32),
         ],
-        [WORKGROUP_SIZE_X, 1, 1],
-        guarded_store(value),
+        DataType::F32,
+        guarded_generated_store(value),
     )
-}
-
-fn guarded_store(value: Expr) -> Vec<Node> {
-    vec![
-        Node::let_bind("idx", Expr::gid_x()),
-        Node::if_then(
-            Expr::lt(Expr::var("idx"), Expr::u32(LANE_COUNT as u32)),
-            vec![Node::store("out", Expr::var("idx"), value)],
-        ),
-    ]
 }

@@ -66,8 +66,8 @@ total_lines = 36044
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 4531
-total_lines = 69251
+duplicate_lines = 3252
+total_lines = 67740
 
 [[crate]]
 name = "vyre-driver-metal"

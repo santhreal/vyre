@@ -19,12 +19,6 @@ use common::{bytes_u32, live_dispatcher, pack_nodes, u32_bytes};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::vast::{walk_preorder_indices, VastNode, NODE_STRIDE_U32, SENTINEL};
-use vyre_primitives::graph::adaptive_traverse::{
-    adaptive_dense_step, adaptive_node_dispatch_grid, adaptive_sparse_dense_step, cpu_dense_step,
-    cpu_sparse_dense_step,
-};
-use vyre_primitives::graph::vast_tree_walk::ast_walk_preorder;
-use vyre_primitives::reduce::count::reduce_count;
 use vyre_libs::graph::dispatch::adaptive_traverse::{
     adaptive_traverse_resident_graph_auto_step_with_scratch_into,
     adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into,
@@ -33,6 +27,12 @@ use vyre_libs::graph::dispatch::adaptive_traverse::{
     upload_resident_adaptive_sparse_queue_graph, upload_resident_adaptive_traversal_graph,
     AdaptiveTraversalMode, AdaptiveTraversalPlanCacheSnapshot, AdaptiveTraversalResidentScratch,
 };
+use vyre_primitives::graph::adaptive_traverse::{
+    adaptive_dense_step, adaptive_node_dispatch_grid, adaptive_sparse_dense_step, cpu_dense_step,
+    cpu_sparse_dense_step,
+};
+use vyre_primitives::graph::vast_tree_walk::ast_walk_preorder;
+use vyre_primitives::reduce::count::reduce_count;
 
 fn bitset_words(node_count: u32) -> u32 {
     node_count.div_ceil(32).max(1)
