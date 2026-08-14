@@ -1,5 +1,6 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
+use crate::test_support::NeverDispatches;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::union_find::{union_find_dispatch_grid, union_find_program};
@@ -187,42 +188,29 @@ fn union_find_alias_via_rejects_malformed_parent_links() {
 
 #[test]
 fn union_find_alias_via_rejects_empty_parent_with_edges_before_dispatch() {
-    struct NoDispatch;
-
-    impl ProgramDispatcher for NoDispatch {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            panic!("Fix: invalid empty-parent union-find input must not dispatch");
-        }
-    }
-
-    let err = union_find_alias_via(&NoDispatch, &[], &[0], &[0])
-        .expect_err("edges against empty parent set must be rejected");
+    let err = union_find_alias_via(
+        &NeverDispatches("Fix: invalid empty-parent union-find input must not dispatch"),
+        &[],
+        &[0],
+        &[0],
+    )
+    .expect_err("edges against empty parent set must be rejected");
     assert!(matches!(err, DispatchError::BadInputs(_)));
     assert!(err.to_string().contains("empty parent set"));
 }
 
 #[test]
 fn union_find_alias_via_empty_edges_returns_parent_without_dispatch() {
-    struct NoDispatch;
-
-    impl ProgramDispatcher for NoDispatch {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            panic!("Fix: empty union-find edge set must not submit a zero-work GPU dispatch");
-        }
-    }
-
     let mut out = Vec::with_capacity(8);
-    union_find_alias_via_into(&NoDispatch, &[0, 1, 2], &[], &[], &mut out)
-        .expect("Fix: empty union-find edge set must return parent_init");
+    union_find_alias_via_into(
+        &NeverDispatches(
+            "Fix: empty union-find edge set must not submit a zero-work GPU dispatch",
+        ),
+        &[0, 1, 2],
+        &[],
+        &[],
+        &mut out,
+    )
+    .expect("Fix: empty union-find edge set must return parent_init");
     assert_eq!(out, vec![0, 1, 2]);
 }

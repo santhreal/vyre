@@ -249,6 +249,7 @@ pub fn bellman_tn_order_via_with_scratch_into(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::test_support::NeverDispatches;
     use vyre_primitives::math::bellman_shortest_path::cpu_ref;
 
     struct BellmanDispatcher;
@@ -591,22 +592,20 @@ mod tests {
 
     #[test]
     fn bellman_tn_order_via_empty_edges_returns_initial_dist_without_dispatch() {
-        struct NoDispatch;
-
-        impl ProgramDispatcher for NoDispatch {
-            fn dispatch(
-                &self,
-                _program: &Program,
-                _inputs: &[Vec<u8>],
-                _grid_override: Option<[u32; 3]>,
-            ) -> Result<Vec<Vec<u8>>, DispatchError> {
-                panic!("Fix: empty Bellman edge set must not submit a zero-work GPU dispatch");
-            }
-        }
-
         let mut out = Vec::with_capacity(8);
-        bellman_tn_order_via_into(&NoDispatch, &[], &[], &[], &[0, u32::MAX], 2, 10, &mut out)
-            .expect("Fix: empty Bellman edge set must return the initial distances");
+        bellman_tn_order_via_into(
+            &NeverDispatches(
+                "Fix: empty Bellman edge set must not submit a zero-work GPU dispatch",
+            ),
+            &[],
+            &[],
+            &[],
+            &[0, u32::MAX],
+            2,
+            10,
+            &mut out,
+        )
+        .expect("Fix: empty Bellman edge set must return the initial distances");
         assert_eq!(out, vec![0, u32::MAX]);
     }
 }
