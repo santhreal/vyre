@@ -34,6 +34,7 @@ pub fn vyre_driver_spirv::backend::SpirvBackend::observability_snapshot() -> vyr
 pub fn vyre_driver_spirv::backend::SpirvBackend::program_fingerprint(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> alloc::vec::Vec<u32>
 pub fn vyre_driver_spirv::backend::SpirvBackend::program_to_spv(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
 pub fn vyre_driver_spirv::backend::SpirvBackend::spv_disk_cache_dir() -> std::path::PathBuf
+pub fn vyre_driver_spirv::registered_backend_id() -> core::option::Option<&'static str>
 pub fn vyre_driver_spirv::spirv_factory() -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::vyre_backend::VyreBackend>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_spirv::spirv_supported_ops() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub mod vyre_driver_spirv

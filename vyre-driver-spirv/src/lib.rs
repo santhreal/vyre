@@ -276,6 +276,19 @@ pub fn spirv_supported_ops() -> &'static std::collections::HashSet<vyre_foundati
     vyre_driver::backend::core_supported_ops()
 }
 
+/// Backend id this crate submits into the backend registry on this target.
+///
+/// WHY: the registration below lives in this crate's object file, and a linker
+/// keeps that object only when a symbol inside it is referenced. Naming the
+/// crate with `use vyre_driver_spirv as _;` references nothing, and reading
+/// [`SPIRV_BACKEND_ID`] is a `const` that inlines at the use site, so neither
+/// keeps the registration. Calling this function does, which is why the backend
+/// registry owner calls it instead of importing the crate for effect.
+#[must_use]
+pub fn registered_backend_id() -> Option<&'static str> {
+    Some(SPIRV_BACKEND_ID)
+}
+
 inventory::submit! {
     BackendRegistration {
         id: SPIRV_BACKEND_ID,
