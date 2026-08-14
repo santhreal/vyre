@@ -435,14 +435,7 @@ fn record_dispatch_unsubmitted_impl(
     )?;
 
     {
-        let timestamp_writes =
-            timestamp_recorder
-                .as_ref()
-                .map(|recorder| wgpu::ComputePassTimestampWrites {
-                    query_set: &recorder.query_set,
-                    beginning_of_pass_write_index: Some(0),
-                    end_of_pass_write_index: Some(1),
-                });
+        let timestamp_writes = timestamp_recorder.as_ref().map(TimestampRecorder::pass_writes);
         let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: Some(request.labels.compute),
             timestamp_writes,

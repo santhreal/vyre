@@ -164,14 +164,7 @@ impl WgpuPipeline {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("vyre asynchronous persistent dispatch"),
         });
-        let timestamp_writes =
-            timestamp_recorder
-                .as_ref()
-                .map(|recorder| wgpu::ComputePassTimestampWrites {
-                    query_set: &recorder.query_set,
-                    beginning_of_pass_write_index: Some(0),
-                    end_of_pass_write_index: Some(1),
-                });
+        let timestamp_writes = timestamp_recorder.as_ref().map(TimestampRecorder::pass_writes);
         self.record_borrowed_persistent_item_with_timestamps(
             device,
             &mut encoder,
@@ -180,9 +173,7 @@ impl WgpuPipeline {
         )?;
         drop(item);
         if let Some(recorder) = &timestamp_recorder {
-            encoder.write_timestamp(&recorder.query_set, 2);
-            encoder.write_timestamp(&recorder.query_set, 3);
-            recorder.resolve(&mut encoder)?;
+            recorder.finish_and_resolve(&mut encoder)?;
         }
         queue.submit(std::iter::once(encoder.finish()));
 
@@ -341,14 +332,7 @@ impl CompiledPipeline for WgpuPipeline {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("vyre timed persistent dispatch"),
         });
-        let timestamp_writes =
-            timestamp_recorder
-                .as_ref()
-                .map(|recorder| wgpu::ComputePassTimestampWrites {
-                    query_set: &recorder.query_set,
-                    beginning_of_pass_write_index: Some(0),
-                    end_of_pass_write_index: Some(1),
-                });
+        let timestamp_writes = timestamp_recorder.as_ref().map(TimestampRecorder::pass_writes);
         self.record_borrowed_persistent_item_with_timestamps(
             device,
             &mut encoder,
@@ -356,9 +340,7 @@ impl CompiledPipeline for WgpuPipeline {
             timestamp_writes,
         )?;
         if let Some(recorder) = &timestamp_recorder {
-            encoder.write_timestamp(&recorder.query_set, 2);
-            encoder.write_timestamp(&recorder.query_set, 3);
-            recorder.resolve(&mut encoder)?;
+            recorder.finish_and_resolve(&mut encoder)?;
         }
         queue.submit(std::iter::once(encoder.finish()));
         let timestamp_profile = timestamp_recorder

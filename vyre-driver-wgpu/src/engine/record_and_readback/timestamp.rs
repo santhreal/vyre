@@ -85,6 +85,29 @@ impl TimestampRecorder {
         }))
     }
 
+    /// Query indices that bracket the compute pass itself.
+    ///
+    /// Queries 0 and 1 are the device-side pass boundary; 2 and 3 are the host
+    /// bracket written into the encoder. Every recording path used to spell the
+    /// pair out, so the query layout was decided in four places.
+    pub(crate) fn pass_writes(&self) -> wgpu::ComputePassTimestampWrites<'_> {
+        wgpu::ComputePassTimestampWrites {
+            query_set: &self.query_set,
+            beginning_of_pass_write_index: Some(0),
+            end_of_pass_write_index: Some(1),
+        }
+    }
+
+    /// Close the host bracket around a fully recorded encoder and resolve.
+    pub(crate) fn finish_and_resolve(
+        &self,
+        encoder: &mut wgpu::CommandEncoder,
+    ) -> Result<(), BackendError> {
+        encoder.write_timestamp(&self.query_set, 2);
+        encoder.write_timestamp(&self.query_set, 3);
+        self.resolve(encoder)
+    }
+
     pub(crate) fn resolve(&self, encoder: &mut wgpu::CommandEncoder) -> Result<(), BackendError> {
         encoder.resolve_query_set(
             &self.query_set,
