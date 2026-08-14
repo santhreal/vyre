@@ -809,3 +809,13 @@ text = "The duplication baseline pins for vyre-reference and vyre-spec now recor
 id = "duplication-pins-lowered-to-the-merged-tree"
 category = "Changed"
 text = "Twelve duplication pins now sit at what the merged tree measures rather than at what each lane measured in isolation: vyre 40 to 22, vyre-aot 54 to 31, vyre-debug 71 to 54, vyre-driver-cuda 3252 to 3238, vyre-driver-wgpu 4229 to 4017, vyre-foundation 5125 to 5117, vyre-libs 11759 to 11539, vyre-megakernel 60 to 8, vyre-primitives 7145 to 7038, vyre-runtime 412 to 345, vyre-pass-engine 299 to 288. Duplication is measured across files, so collapsing a copy in one crate moves every crate that shared it: vyre-megakernel lost 52 lines it never edited, and vyre-primitives lost 107. A pin left at the isolated measurement would have carried that slack as headroom for the next copy. `total_lines` is measured too, not carried forward, because a stale total makes the ratio it exists to report meaningless."
+
+[[fragments]]
+id = "lower-fixture-scaffolding-has-one-owner"
+category = "Changed"
+text = "Which operand position of a structured kernel op names a child body now has one owner on both sides in `vyre-lower`. `child_body_operands` already owned the reading side, but every test fixture that built a branch spelled the operand vector out by hand, so a moved position could go unnoticed on one side; `if_then`, `if_then_else` and `for_loop` in `vyre-lower/src/descriptor_builder.rs` own the writing side and a new test drives each constructor's output through the reader. The shared-memory and constant-buffer promotion analyses both read their load-count precondition through `vyre-lower/src/analyses/load_counts.rs` instead of each carrying its own recursive walk, and a test pins the two to the same answer on a nested body. The three copies of the lowered-loop locator in the lowering tests collapse onto `vyre-lower/src/lower/loop_site.rs`, and `fixture_builders.rs`, whose module was never imported and whose constructors were a second copy of the descriptor builder's, is deleted."
+
+[[fragments]]
+id = "lower-dup-pin-lowered"
+category = "Changed"
+text = "The duplication baseline pin for vyre-lower records the measured tree: 279 to 205 duplicated lines, with `total_lines` measured at 13187. The header block listing rows pinned below their measurement is gone with its only entry."

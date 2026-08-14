@@ -9,17 +9,6 @@
 # progress; edit that crate's row by hand. A crate with duplication and no row
 # fails, so a new crate cannot arrive unmeasured.
 #
-# Rows currently pinned below what the crate measures, each failing on purpose
-# until the work that closes it lands:
-#
-#   vyre-lower  279  measures 285. Duplication here is spread thin rather than
-#                    clustered: the carrier-name and node-lowering walks share
-#                    five shingles, the shared-memory and const-buffer promotion
-#                    analyses share their fixture prologue, and the bank-conflict
-#                    and coalesce analyses share theirs. The six-line excess is
-#                    drift from copies that landed in other crates, not new code
-#                    here, so the fix is to collapse those three pairs.
-#
 # vyre-primitives and vyre-libs sit at their measured values but not at a floor:
 # the iterative-solver and CSR traversal builders in vyre-primitives duplicate
 # against their vyre-libs dispatch partners, and neither side owns the shape yet.
@@ -146,8 +135,8 @@ total_lines = 3443
 
 [[crate]]
 name = "vyre-lower"
-duplicate_lines = 279
-total_lines = 13222
+duplicate_lines = 205
+total_lines = 13187
 
 [[crate]]
 name = "vyre-macros"
