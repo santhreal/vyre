@@ -247,8 +247,6 @@ pub fn classic_ac_bounded_count_prefilter_program(
     state_count: u32,
     max_pattern_len: u32,
 ) -> Program {
-    let i = Expr::var("i");
-    let candidate_byte = load_packed_byte_expr(haystack, i.clone());
     let scan_nodes = count_scan_nodes(
         haystack,
         transitions,
@@ -256,37 +254,7 @@ pub fn classic_ac_bounded_count_prefilter_program(
         match_count,
         max_pattern_len,
     );
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::load(haystack_len, Expr::u32(0))),
-            vec![
-                Node::let_bind("candidate_byte", candidate_byte),
-                Node::let_bind(
-                    "candidate_word",
-                    Expr::load(
-                        candidate_end_mask,
-                        Expr::shr(Expr::var("candidate_byte"), Expr::u32(5)),
-                    ),
-                ),
-                Node::let_bind(
-                    "candidate_bit",
-                    Expr::shl(
-                        Expr::u32(1),
-                        Expr::bitand(Expr::var("candidate_byte"), Expr::u32(31)),
-                    ),
-                ),
-                Node::if_then(
-                    Expr::ne(
-                        Expr::bitand(Expr::var("candidate_word"), Expr::var("candidate_bit")),
-                        Expr::u32(0),
-                    ),
-                    scan_nodes,
-                ),
-            ],
-        ),
-    ];
+    let body = candidate_end_gate_nodes(haystack, haystack_len, candidate_end_mask, scan_nodes);
 
     Program::wrapped(
         vec![
@@ -367,9 +335,9 @@ mod tests {
     use crate::fixture_bytes::bytes_to_u32 as decode_u32;
     use crate::scan::classic_ac::classic_ac_compile;
     use crate::scan::classic_ac::classic_ac_scan_counts;
-    use crate::scan::classic_ac::test_helpers::with_reference_dispatch_lanes;
-    use crate::scan::haystack::pack_haystack_u32;
-    use vyre_primitives::wire::pack_u32_slice;
+    use crate::scan::classic_ac::test_helpers::{
+        ac_dfa_table_inputs, u32_input, with_reference_dispatch_lanes,
+    };
 
     #[test]
     fn bounded_count_program_reference_eval_matches_cpu_count() {
@@ -381,13 +349,12 @@ mod tests {
             build_ac_bounded_count_program(&ac.dfa),
             haystack.len() as u32,
         );
-        let inputs = vec![
-            vyre_reference::value::Value::from(pack_haystack_u32(haystack)),
-            vyre_reference::value::Value::from(pack_u32_slice(&ac.dfa.transitions)),
-            vyre_reference::value::Value::from(pack_u32_slice(&ac.dfa.output_offsets)),
-            vyre_reference::value::Value::from(pack_u32_slice(&[haystack.len() as u32])),
-            vyre_reference::value::Value::from(vec![0_u8; haystack.len() * 4]),
-        ];
+        let mut inputs = ac_dfa_table_inputs(&ac.dfa, haystack);
+        inputs.push(u32_input(&[haystack.len() as u32]));
+        inputs.push(vyre_reference::value::Value::from(vec![
+            0_u8;
+            haystack.len() * 4
+        ]));
         let outputs = vyre_reference::reference_eval(&program, &inputs)
             .expect("Fix: AC bounded count program should evaluate in reference backend.");
 
@@ -418,16 +385,15 @@ mod tests {
             build_ac_bounded_count_prefilter_program(&ac.dfa),
             haystack.len() as u32,
         );
-        let inputs = vec![
-            vyre_reference::value::Value::from(pack_haystack_u32(haystack)),
-            vyre_reference::value::Value::from(pack_u32_slice(&ac.dfa.transitions)),
-            vyre_reference::value::Value::from(pack_u32_slice(&ac.dfa.output_offsets)),
-            vyre_reference::value::Value::from(pack_u32_slice(
-                &classic_ac_candidate_end_byte_mask_words(&ac.dfa),
-            )),
-            vyre_reference::value::Value::from(pack_u32_slice(&[haystack.len() as u32])),
-            vyre_reference::value::Value::from(vec![0_u8; haystack.len() * 4]),
-        ];
+        let mut inputs = ac_dfa_table_inputs(&ac.dfa, haystack);
+        inputs.push(u32_input(&classic_ac_candidate_end_byte_mask_words(
+            &ac.dfa,
+        )));
+        inputs.push(u32_input(&[haystack.len() as u32]));
+        inputs.push(vyre_reference::value::Value::from(vec![
+            0_u8;
+            haystack.len() * 4
+        ]));
         let outputs = vyre_reference::reference_eval(&program, &inputs).expect(
             "Fix: prefiltered AC bounded count program should evaluate in reference backend.",
         );
