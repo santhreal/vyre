@@ -13,11 +13,9 @@
 // Together these gates enforce a composition ratchet: the op catalog
 // grows organically, and every new composition automatically benefits
 // every pipeline that calls it.
-//
-// This module-level doc lives as `//` line comments rather than `//!`
-// inner doc comments because the file is `include!()`-d into the
-// parent test crate; an inner doc on an `include!`-d chunk attaches
-// to the enclosing module and conflicts with chunk-2.
+
+#[path = "composition_discipline__every_op_is_under_complexity_budget.rs"]
+mod composition_discipline_every_op_is_under_complexity_budget;
 
 use vyre::ir::{Expr, Node, Program};
 

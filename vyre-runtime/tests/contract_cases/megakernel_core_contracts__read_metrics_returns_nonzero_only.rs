@@ -1,3 +1,5 @@
+use super::*;
+
 #[test]
 fn read_metrics_returns_nonzero_only() {
     let mut ctrl = vec![0u8; (control::METRICS_BASE as usize + 32) * 4];

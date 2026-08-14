@@ -1,3 +1,5 @@
+use super::*;
+
 #[test]
 fn cpu_reference_attribute_constructor_parses() {
     let fix = fixture_attribute_constructor();

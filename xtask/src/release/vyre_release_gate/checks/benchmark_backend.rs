@@ -1,3 +1,9 @@
+use super::*;
+
+use crate::bench::benchmark_evidence_semantics::{
+    current_freshness_fingerprint_for_report, report_freshness_fingerprint,
+};
+
 pub(crate) fn check_release_bench_targets(
     requirement: &Requirement,
     base_dir: &Path,

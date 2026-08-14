@@ -10,10 +10,7 @@ use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
-mod execution_contracts_cuda_dispatch_writes_every_output_lane_for_identity {
-
-    include!("contract_cases/execution_contracts__cuda_dispatch_writes_every_output_lane_for_identity.rs");
-}
-mod execution_contracts_cuda_large_storage_atomic_sum_crosses_workgroup_boundary {
-    include!("contract_cases/execution_contracts__cuda_large_storage_atomic_sum_crosses_workgroup_boundary.rs");
-}
+#[path = "contract_cases/execution_contracts__cuda_dispatch_writes_every_output_lane_for_identity.rs"]
+mod execution_contracts_cuda_dispatch_writes_every_output_lane_for_identity;
+#[path = "contract_cases/execution_contracts__cuda_large_storage_atomic_sum_crosses_workgroup_boundary.rs"]
+mod execution_contracts_cuda_large_storage_atomic_sum_crosses_workgroup_boundary;

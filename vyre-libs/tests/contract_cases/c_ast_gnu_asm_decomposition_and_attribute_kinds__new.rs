@@ -12,6 +12,8 @@
 //   - identifiers outside attribute contexts are never mis-classified as
 //     attribute-specific kinds.
 
+#[path = "c_ast_gnu_asm_decomposition_and_attribute_kinds__cpu_reference_classifies_attribute_naked.rs"]
+mod c_ast_gnu_asm_decomposition_and_attribute_kinds_cpu_reference_classifies_attribute_naked;
 
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
 use vyre_libs::parsing::c::lex::tokens::*;

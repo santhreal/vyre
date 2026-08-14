@@ -1,3 +1,5 @@
+use super::*;
+
 use crate::bench::benchmark_evidence_semantics::{
     backend_consistency_issues, benchmark_report_has_source_provenance,
     benchmark_source_artifact_paths, contract_backend_issues, cuda_forbidden_telemetry_issues,
@@ -431,7 +433,7 @@ fn check_contract_baselines_apply_to_backend(
     }
 }
 
-fn check_source_fingerprint_shape(
+pub(crate) fn check_source_fingerprint_shape(
     requirement: &Requirement,
     label: &str,
     source_fingerprint: &str,
@@ -470,7 +472,7 @@ fn check_source_fingerprint_shape(
     }
 }
 
-fn check_source_fingerprint_freshness(
+pub(crate) fn check_source_fingerprint_freshness(
     requirement: &Requirement,
     label: &str,
     field: &str,

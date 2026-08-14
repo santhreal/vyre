@@ -13,6 +13,8 @@
 //
 // These tests exercise the CPU reference pipeline (build -> annotate -> classify).
 
+#[path = "c_ast_linux_grade_gnu_and_c11_construct_coverage__cpu_reference_attribute_constructor_parses.rs"]
+mod c_ast_linux_grade_gnu_and_c11_construct_coverage_cpu_reference_attribute_constructor_parses;
 
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
 use vyre_libs::parsing::c::lex::tokens::*;

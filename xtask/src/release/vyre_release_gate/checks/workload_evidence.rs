@@ -1,3 +1,5 @@
+use super::*;
+
 pub(crate) fn check_optimization_analysis_fixture_manifest(
     value: &serde_json::Value,
     failures: &mut Vec<String>,

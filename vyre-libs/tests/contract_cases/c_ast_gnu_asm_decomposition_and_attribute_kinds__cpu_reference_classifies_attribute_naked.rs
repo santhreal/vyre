@@ -1,3 +1,5 @@
+use super::*;
+
 #[test]
 fn cpu_reference_classifies_attribute_naked() {
     let fix = fixture_attribute_naked();

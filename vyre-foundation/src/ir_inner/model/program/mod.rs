@@ -25,9 +25,7 @@ mod scope;
 pub mod stats;
 
 #[cfg(test)]
-mod stats_test {
-    include!("stats_test.rs");
-}
+mod stats_test;
 #[cfg(test)]
 mod tests;
 

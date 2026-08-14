@@ -1,10 +1,12 @@
+use super::*;
+
 use crate::bench::benchmark_evidence_semantics::{
     backend_suite_artifact_status_issues, backend_suite_backend_issue,
     backend_suite_inventory_issues, backend_suite_matrix_coverage_issues,
-    backend_suite_parity_issues, describe_backend_suite_inventory_issue,
-    describe_backend_suite_matrix_coverage_issue, expected_backend_for_suite_evidence,
-    report_status_for_path, BackendSuiteArtifactStatusIssue, BackendSuiteBackendIssue,
-    BackendSuiteParityIssue,
+    backend_suite_parity_issues, current_freshness_fingerprint_for_report,
+    describe_backend_suite_inventory_issue, describe_backend_suite_matrix_coverage_issue,
+    expected_backend_for_suite_evidence, report_freshness_fingerprint, report_status_for_path,
+    BackendSuiteArtifactStatusIssue, BackendSuiteBackendIssue, BackendSuiteParityIssue,
 };
 
 pub(crate) fn check_backend_suite_report(

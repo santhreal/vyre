@@ -754,6 +754,5 @@ fn try_fairness_skew(counters: &[u32]) -> Result<u32, PipelineError> {
 }
 
 #[cfg(test)]
-mod tests {
-    include!("telemetry_tests.rs");
-}
+#[path = "telemetry_tests.rs"]
+mod tests;

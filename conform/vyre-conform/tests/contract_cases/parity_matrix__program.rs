@@ -1,6 +1,10 @@
 // Cross-backend parity matrix: registered backends, wire shapes, and buffer comparison.
-// `#![forbid(unsafe_code)]` was moved to the parent `parity_matrix.rs`
-// because inner attributes cannot ride an `include!`-d chunk.
+// `#![forbid(unsafe_code)]` lives on the parent `parity_matrix.rs` crate root.
+
+#[path = "parity_matrix__synthetic_entries.rs"]
+mod parity_matrix_synthetic_entries;
+
+use parity_matrix_synthetic_entries::*;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;

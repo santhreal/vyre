@@ -44,12 +44,7 @@ fn float_bits(value: Value) -> u32 {
 // 1. Malformed / adversarial Programs
 // ---------------------------------------------------------------------------
 
-mod adversarial_gaps_program_with_no_buffers_executes_pure_nodes {
-
-    include!("contract_cases/adversarial_gaps__program_with_no_buffers_executes_pure_nodes.rs");
-}
-mod adversarial_gaps_subnormal_sqrt_sin_cos_produce_canonical_results {
-    include!(
-        "contract_cases/adversarial_gaps__subnormal_sqrt_sin_cos_produce_canonical_results.rs"
-    );
-}
+#[path = "contract_cases/adversarial_gaps__program_with_no_buffers_executes_pure_nodes.rs"]
+mod adversarial_gaps_program_with_no_buffers_executes_pure_nodes;
+#[path = "contract_cases/adversarial_gaps__subnormal_sqrt_sin_cos_produce_canonical_results.rs"]
+mod adversarial_gaps_subnormal_sqrt_sin_cos_produce_canonical_results;

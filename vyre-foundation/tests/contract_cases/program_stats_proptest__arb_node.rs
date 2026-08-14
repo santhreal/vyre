@@ -1,3 +1,5 @@
+use super::*;
+
 fn arb_node() -> BoxedStrategy<Node> {
     arb_node_with_depth(3)
 }

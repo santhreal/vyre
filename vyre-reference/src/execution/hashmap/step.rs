@@ -1,7 +1,6 @@
 //! Round-robin node stepping and expression-adjacent execution helpers.
-mod node_step {
-    include!("node_step.rs");
-}
+#[path = "node_step.rs"]
+mod node_step;
 pub(crate) use node_step::{eval_call, step_loop_frame, step_nodes_frame};
 
 #[cfg(feature = "subgroup-ops")]

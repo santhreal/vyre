@@ -1,3 +1,5 @@
+use super::*;
+
 #[test]
 fn opaque_malformed_payload_decoder_survives() {
     let malformed = vec![0xDE, 0xAD, 0xBE, 0xEF];

@@ -1,3 +1,5 @@
+use super::*;
+
 pub(crate) fn check_markdown_evidence_path_ready(
     requirement: &Requirement,
     path: &Path,

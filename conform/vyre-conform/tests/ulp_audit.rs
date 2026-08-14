@@ -332,7 +332,5 @@ fn force_link_backend_inventory() {
 // ULP audit dispatches every registered op through a real dispatch-capable
 // backend. Missing concrete GPU drivers must fail loudly instead of compiling
 // this module out.
-mod ulp_audit_release_per_op_f32_ulp_audit {
-
-    include!("contract_cases/ulp_audit__release_per_op_f32_ulp_audit.rs");
-}
+#[path = "contract_cases/ulp_audit__release_per_op_f32_ulp_audit.rs"]
+mod ulp_audit_release_per_op_f32_ulp_audit;

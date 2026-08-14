@@ -1,5 +1,8 @@
 // Core megakernel construction and host protocol contracts.
 
+#[path = "megakernel_core_contracts__read_metrics_returns_nonzero_only.rs"]
+mod megakernel_core_contracts_read_metrics_returns_nonzero_only;
+
 use vyre_foundation::ir::{Node, Program};
 use vyre_runtime::resident_work_queue::protocol::{control, debug, opcode as opcodes, slot};
 use vyre_runtime::resident_work_queue::scheduler;

@@ -1,3 +1,5 @@
+use super::*;
+
 #[test]
 fn adversarial_module_named_tests_inside_a_real_module() {
     let dir = tempfile::tempdir().unwrap();

@@ -1,2 +1,4 @@
 //! Test: gap release contracts.
-include!("gap/release_gap_contracts.rs");
+// #[path] is required: the fragment lives in a subdirectory of this shim file.
+#[path = "gap/release_gap_contracts.rs"]
+mod release_gap_contracts;

@@ -1,3 +1,5 @@
+use super::*;
+
 pub(crate) fn check_hygiene_release_surface_coverage(
     requirement_id: &str,
     matrix: &serde_json::Value,

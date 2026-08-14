@@ -1,4 +1,4 @@
-// (use super::* removed  -  flat-included into wire_roundtrip_proptest_suite scope)
+use super::*;
 
 proptest! {
     #![proptest_config(ProptestConfig {

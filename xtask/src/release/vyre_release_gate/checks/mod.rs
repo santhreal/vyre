@@ -27,11 +27,22 @@ fn check_duplicate_object_rows(
     }
 }
 
-include!("release_evidence.rs");
-include!("workload_evidence.rs");
-include!("benchmark_backend.rs");
-include!("optimization_evidence.rs");
-include!("parser_conformance.rs");
-include!("benchmark_provenance.rs");
-include!("backend_suite.rs");
-include!("markdown_evidence.rs");
+mod backend_suite;
+mod benchmark_backend;
+mod benchmark_provenance;
+mod markdown_evidence;
+mod optimization_evidence;
+mod parser_conformance;
+mod release_evidence;
+mod workload_evidence;
+
+// The check helpers were one module before the split; re-export keeps
+// `checks::<helper>` paths intact for callers and siblings.
+pub(crate) use backend_suite::*;
+pub(crate) use benchmark_backend::*;
+pub(crate) use benchmark_provenance::*;
+pub(crate) use markdown_evidence::*;
+pub(crate) use optimization_evidence::*;
+pub(crate) use parser_conformance::*;
+pub(crate) use release_evidence::*;
+pub(crate) use workload_evidence::*;

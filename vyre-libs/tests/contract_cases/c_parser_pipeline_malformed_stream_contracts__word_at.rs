@@ -4,6 +4,11 @@
 // single-token/minimal inputs, and the invariant that no stage silently
 // produces all-zero or default output for non-empty input.
 
+#[path = "c_parser_pipeline_malformed_stream_contracts__classifier_does_not_emit_all_zeros_for_nonempty_vast.rs"]
+mod c_parser_pipeline_malformed_stream_contracts_classifier_does_not_emit_all_zeros_for_nonempty_vast;
+
+use super::*;
+
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use vyre::ir::Expr;
@@ -19,6 +24,7 @@ use vyre_libs::parsing::c::parse::vast::{
     CReferenceDecodeError, C_EXPR_SHAPE_NONE,
 };
 use vyre_libs::parsing::c::pipeline::stages::C11_AST_MAX_TOK_SCAN;
+use vyre_primitives::predicate::node_kind;
 use vyre_reference::value::Value;
 
 // ---------------------------------------------------------------------------

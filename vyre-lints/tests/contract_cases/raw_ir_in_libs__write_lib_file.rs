@@ -2,10 +2,9 @@
 //
 // Each test writes a synthetic vyre-libs source file to a tempdir,
 // runs the lint, and asserts on the exact violation set.
-//
-// `//` line comments rather than `//!` inner doc  -  this file is
-// `include!()`-d via a parent `raw_ir_in_libs.rs` shim, and inner
-// docs would attach to that parent module.
+
+#[path = "raw_ir_in_libs__adversarial_module_named_tests_inside_a_real_module.rs"]
+mod raw_ir_in_libs_adversarial_module_named_tests_inside_a_real_module;
 
 use std::path::PathBuf;
 use vyre_lints::{run_raw_ir_in_libs, Violation, ViolationKind};

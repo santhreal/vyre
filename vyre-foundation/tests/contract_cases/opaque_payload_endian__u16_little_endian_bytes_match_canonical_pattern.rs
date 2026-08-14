@@ -13,6 +13,9 @@
 // 3. Truncated inputs fail with an actionable diagnostic rather than
 //    silently reading garbage.
 
+#[path = "opaque_payload_endian__canonical_f32_zero_nonzero_with_sign_bit_set_passes_through.rs"]
+mod opaque_payload_endian_canonical_f32_zero_nonzero_with_sign_bit_set_passes_through;
+
 use proptest::prelude::*;
 use vyre_foundation::opaque_payload::canonicalize::{
     canonical_f32_zero, canonical_f64_zero, canonical_regex_flags,

@@ -118,10 +118,7 @@ fn assert_first_diagnostic(
 // 1. String literal adversarial contracts
 // ---------------------------------------------------------------------------
 
-mod c_parser_pipeline_lexer_adversarial_contracts_empty_string_literal_emits_one_string_token_with_len_two {
-
-    include!("contract_cases/c_parser_pipeline_lexer_adversarial_contracts__empty_string_literal_emits_one_string_token_with_len_two.rs");
-}
-mod c_parser_pipeline_lexer_adversarial_contracts_mid_line_hash_is_operator_not_directive {
-    include!("contract_cases/c_parser_pipeline_lexer_adversarial_contracts__mid_line_hash_is_operator_not_directive.rs");
-}
+#[path = "contract_cases/c_parser_pipeline_lexer_adversarial_contracts__empty_string_literal_emits_one_string_token_with_len_two.rs"]
+mod c_parser_pipeline_lexer_adversarial_contracts_empty_string_literal_emits_one_string_token_with_len_two;
+#[path = "contract_cases/c_parser_pipeline_lexer_adversarial_contracts__mid_line_hash_is_operator_not_directive.rs"]
+mod c_parser_pipeline_lexer_adversarial_contracts_mid_line_hash_is_operator_not_directive;

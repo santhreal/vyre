@@ -1,6 +1,9 @@
 // Wire-format round-trip property tests.
 // (allow(dead_code) moved to parent wire_roundtrip_proptest.rs)
 
+#[path = "wire_roundtrip_proptest_support__arb_node.rs"]
+mod wire_roundtrip_proptest_support_arb_node;
+
 use proptest::collection::vec as prop_vec;
 use proptest::prelude::*;
 use smallvec::smallvec;

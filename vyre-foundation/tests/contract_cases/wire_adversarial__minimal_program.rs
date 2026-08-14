@@ -4,6 +4,9 @@
 // max-size stress, opaque-payload cap symmetry, and text-format resilience
 // that are either uncovered or only lightly covered by the existing suite.
 
+#[path = "wire_adversarial__opaque_malformed_payload_decoder_survives.rs"]
+mod wire_adversarial_opaque_malformed_payload_decoder_survives;
+
 use std::sync::Arc;
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};

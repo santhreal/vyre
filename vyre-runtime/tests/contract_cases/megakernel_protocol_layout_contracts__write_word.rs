@@ -8,9 +8,11 @@
 // - Epoch / done counter placement
 // - Packed slot overflow behavior
 
-// `#![allow(clippy::assertions_on_constants)]` was moved to the parent
-// `megakernel_protocol_layout_contracts.rs` because inner attributes
-// cannot ride an `include!`-d chunk.
+#[path = "megakernel_protocol_layout_contracts__slot_word_layout_args_start_at_word_4.rs"]
+mod megakernel_protocol_layout_contracts_slot_word_layout_args_start_at_word_4;
+
+// `#![allow(clippy::assertions_on_constants)]` lives on the parent
+// `megakernel_protocol_layout_contracts.rs` crate root.
 
 use vyre_runtime::resident_work_queue::{
     protocol::{self, control, opcode, slot, ARG0_WORD, ARGS_PER_SLOT, SLOT_WORDS},

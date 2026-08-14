@@ -1,3 +1,5 @@
+use super::*;
+
 /// Op id of the callee the expr-variant bundle calls.
 ///
 /// `Expr::Call` is a real IR variant, so the coverage bundle has to carry one,
@@ -22,7 +24,7 @@ inventory::submit! {
     .with_category("conform")
 }
 
-fn synthetic_entries() -> Vec<UnifiedEntry> {
+pub(crate) fn synthetic_entries() -> Vec<UnifiedEntry> {
     vec![UnifiedEntry {
         id: "vyre-conform::synthetic::expr_variant_contract_bundle",
         build: Some(synthetic_expr_variant_contract_program),
@@ -73,7 +75,9 @@ fn synthetic_zero_output() -> FixtureCases {
     vec![vec![0_u32.to_le_bytes().to_vec()]]
 }
 
-fn expr_variant_rows(entries: &[UnifiedEntry]) -> BTreeMap<&'static str, Vec<&'static str>> {
+pub(crate) fn expr_variant_rows(
+    entries: &[UnifiedEntry],
+) -> BTreeMap<&'static str, Vec<&'static str>> {
     let mut rows = BTreeMap::<&'static str, BTreeSet<&'static str>>::new();
     for entry in entries {
         let variants = expr_variants_in_program(
@@ -268,7 +272,7 @@ fn collect_expr_variants(expr: &vyre::ir::Expr, variants: &mut BTreeSet<&'static
     }
 }
 
-fn assert_valid(op_id: &str, program: &Program, runners: &[BackendRunner]) {
+pub(crate) fn assert_valid(op_id: &str, program: &Program, runners: &[BackendRunner]) {
     if op_id == "vyre-conform::synthetic::expr_variant_contract_bundle" {
         return;
     }
@@ -300,7 +304,7 @@ fn assert_valid(op_id: &str, program: &Program, runners: &[BackendRunner]) {
     );
 }
 
-fn assert_region_chain(op_id: &str, program: &Program) {
+pub(crate) fn assert_region_chain(op_id: &str, program: &Program) {
     let first = program.entry().first().unwrap_or_else(|| {
         panic!(
             "Fix: {} built an empty Program; the semantic operation builder must return a region-wrapped body.",
@@ -317,7 +321,7 @@ fn assert_region_chain(op_id: &str, program: &Program) {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn compare_outputs(
+pub(crate) fn compare_outputs(
     op_id: &'static str,
     backend_a: &'static str,
     backend_b: &'static str,
@@ -346,14 +350,14 @@ fn compare_outputs(
     }
 }
 
-fn hash_program(program: &Program) -> Hash {
+pub(crate) fn hash_program(program: &Program) -> Hash {
     let wire = program.to_wire().unwrap_or_else(|error| {
         panic!("Fix: failed to encode Program wire image for parity hash: {error}")
     });
     blake3::hash(&wire)
 }
 
-fn hash_buffers(buffers: &[Vec<u8>]) -> Hash {
+pub(crate) fn hash_buffers(buffers: &[Vec<u8>]) -> Hash {
     let mut hasher = blake3::Hasher::new();
     for buffer in buffers {
         hasher.update(&(buffer.len() as u64).to_le_bytes());
@@ -362,7 +366,7 @@ fn hash_buffers(buffers: &[Vec<u8>]) -> Hash {
     hasher.finalize()
 }
 
-fn format_divergences(divergences: &[Divergence]) -> String {
+pub(crate) fn format_divergences(divergences: &[Divergence]) -> String {
     let mut message = String::from("Cross-backend parity divergences detected:\n");
     for divergence in divergences {
         message.push_str(&format!(
@@ -379,7 +383,7 @@ fn format_divergences(divergences: &[Divergence]) -> String {
     message
 }
 
-fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
+pub(crate) fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
     if let Some(message) = payload.downcast_ref::<&'static str>() {
         (*message).to_string()
     } else if let Some(message) = payload.downcast_ref::<String>() {

@@ -1,4 +1,4 @@
-// (use super::* removed  -  flat-included into wire_roundtrip_proptest_suite scope)
+use super::*;
 
 #[test]
 fn every_expression_variant_roundtrips_in_one_program() {

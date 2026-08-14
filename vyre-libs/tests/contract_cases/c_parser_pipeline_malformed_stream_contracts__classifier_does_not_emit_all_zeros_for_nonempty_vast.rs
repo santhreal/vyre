@@ -1,3 +1,5 @@
+use super::*;
+
 #[test]
 fn classifier_does_not_emit_all_zeros_for_nonempty_vast() {
     let mut vast = vec![0u32; VAST_STRIDE_U32];
@@ -103,5 +105,3 @@ fn full_pipeline_on_all_delimiters_produces_structural_rows() {
         assert!(end >= start, "PG row {i} must have span_end >= span_start");
     }
 }
-
-use vyre_primitives::predicate::node_kind;

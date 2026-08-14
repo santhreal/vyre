@@ -749,6 +749,5 @@ fn collect_expr_buffer_reads(expr: &Expr, reads: &mut FxHashSet<Ident>) {
 }
 
 #[cfg(test)]
-mod tests {
-    include!("fusion_tests.rs");
-}
+#[path = "fusion_tests.rs"]
+mod tests;

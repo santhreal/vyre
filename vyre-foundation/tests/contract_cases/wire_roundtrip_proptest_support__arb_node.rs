@@ -1,3 +1,10 @@
+#[path = "wire_roundtrip_proptest__every_expression_variant_roundtrips_in_one_program.rs"]
+mod wire_roundtrip_proptest_every_expression_variant_roundtrips_in_one_program;
+#[path = "wire_roundtrip_proptest__program_wire_roundtrip_preserves_structure.rs"]
+mod wire_roundtrip_proptest_program_wire_roundtrip_preserves_structure;
+
+use super::*;
+
 fn arb_node() -> BoxedStrategy<Node> {
     arb_node_with_depth(3)
 }
