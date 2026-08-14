@@ -151,6 +151,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-wgpu -- --ignored --nocaptur
 | `test` | `dispatch_never_cpu_fallback` | `vyre-driver-wgpu/tests/dispatch_never_cpu_fallback.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-wgpu --test dispatch_never_cpu_fallback` |
 | `test` | `dispatch_preemption` | `vyre-driver-wgpu/tests/dispatch_preemption.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-wgpu --test dispatch_preemption` |
 | `test` | `div_zero_shift_mask_parity` | `vyre-driver-wgpu/tests/div_zero_shift_mask_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-wgpu --test div_zero_shift_mask_parity` |
+| `test` | `emitted_wgsl_byte_stability` | `vyre-driver-wgpu/tests/emitted_wgsl_byte_stability.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-wgpu --test emitted_wgsl_byte_stability` |
 | `test` | `every_op_random_inputs` | `vyre-driver-wgpu/tests/every_op_random_inputs.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-wgpu --test every_op_random_inputs` |
 | `test` | `f32_no_contraction_contract` | `vyre-driver-wgpu/tests/f32_no_contraction_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-wgpu --test f32_no_contraction_contract` |
 | `test` | `float_to_int_cast_parity` | `vyre-driver-wgpu/tests/float_to_int_cast_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-wgpu --test float_to_int_cast_parity` |

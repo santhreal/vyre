@@ -35,6 +35,25 @@ const HEADER: &str = "\
 # a change here is a change in what the backend emits.
 ";
 
+/// Render named sections into a corpus, in the order given.
+///
+/// Owns the on-disk shape every artifact golden shares: the header, one
+/// `===== <id>` marker per section, and a newline terminator so a renderer that
+/// omits one cannot run two sections together. Callers whose input set is not
+/// the shared descriptor corpus render through this directly.
+#[must_use]
+pub fn render_sections<'a>(sections: impl IntoIterator<Item = (&'a str, String)>) -> String {
+    let mut out = String::from(HEADER);
+    for (id, rendered) in sections {
+        let _ = writeln!(out, "{CASE_MARKER}{id}");
+        out.push_str(&rendered);
+        if !rendered.ends_with('\n') {
+            out.push('\n');
+        }
+    }
+    out
+}
+
 /// Render every shared success-corpus case through `render`, in corpus order.
 ///
 /// Each descriptor is verified first, so the rendered artifact is the one a
@@ -47,22 +66,20 @@ const HEADER: &str = "\
 /// changed.
 #[must_use]
 pub fn render_success_corpus(render: impl Fn(&KernelDescriptor) -> String) -> String {
-    let mut out = String::from(HEADER);
-    for case in emit_adversarial_corpus::success_cases() {
-        let descriptor = crate::verify_descriptor(&case.descriptor).unwrap_or_else(|failure| {
-            panic!(
-                "Fix: success-corpus case `{}` must pass descriptor verification: {failure:?}",
-                case.id
-            )
-        });
-        let _ = writeln!(out, "{CASE_MARKER}{}", case.id);
-        let rendered = render(&descriptor);
-        out.push_str(&rendered);
-        if !rendered.ends_with('\n') {
-            out.push('\n');
-        }
-    }
-    out
+    let cases = emit_adversarial_corpus::success_cases();
+    let rendered: Vec<(&str, String)> = cases
+        .iter()
+        .map(|case| {
+            let descriptor = crate::verify_descriptor(&case.descriptor).unwrap_or_else(|failure| {
+                panic!(
+                    "Fix: success-corpus case `{}` must pass descriptor verification: {failure:?}",
+                    case.id
+                )
+            });
+            (case.id, render(&descriptor))
+        })
+        .collect();
+    render_sections(rendered)
 }
 
 /// Render bytes as fixed-width hex words, eight per line.

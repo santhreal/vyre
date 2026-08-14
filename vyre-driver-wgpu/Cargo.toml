@@ -58,6 +58,9 @@ libm.workspace = true
 bincode = { workspace = true }
 
 [dev-dependencies]
+# `artifact_golden` (the emitted-WGSL byte-stability harness) is test-only and
+# lives behind this feature, like `descriptor_builder`.
+vyre-lower = { workspace = true, features = ["test-fixtures"] }
 vyre-runtime.workspace = true
 vyre-test-support.workspace = true
 criterion.workspace = true
