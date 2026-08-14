@@ -4,8 +4,14 @@
 //! runs the same keyword promotion the real lexer runs, so a test that writes
 //! `("int", TOK_IDENTIFIER)` still gets `TOK_INT`, and every test file agrees on
 //! how source offsets are laid out.
+//!
+//! A `TOK_WHITESPACE` or `TOK_COMMENT` lexeme lands in the source text and
+//! emits no token, which is what the lexer does with it. That lets a fixture
+//! write the exact source layout a preprocessor-aware or corpus test needs
+//! without the parser seeing rows no real token stream would carry.
 
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
+use vyre_libs::parsing::c::lex::tokens::{TOK_COMMENT, TOK_WHITESPACE};
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
     reference_c11_classify_vast_node_kinds,
@@ -38,6 +44,10 @@ pub(crate) fn build_fixture(tokens: &[FixtureToken]) -> Fixture {
     let mut tok_lens = Vec::with_capacity(tokens.len());
 
     for token in tokens {
+        if token.raw_kind == TOK_WHITESPACE || token.raw_kind == TOK_COMMENT {
+            source.push_str(token.lexeme);
+            continue;
+        }
         if !source.is_empty() && !source.ends_with('\n') {
             source.push(' ');
         }

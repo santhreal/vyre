@@ -9,9 +9,12 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+#[path = "../../tests/support/c_frontend/mod.rs"]
+mod c_frontend;
 mod c_token_support;
 mod common;
-use c_token_support::{haystack_words, run_c11_lexer};
+use c_frontend::rows::haystack_words;
+use c_token_support::run_c11_lexer;
 use common::words_from_bytes;
 
 use c_grammar_gen::lex_c11_max_munch_kinds;
@@ -216,7 +219,7 @@ fn gnu_builtin_keywords_promote_via_gpu_pass() {
         Value::from(bytes(&starts)),
         Value::from(bytes(&lens)),
         Value::from(bytes(&[raw_types.len() as u32])),
-        Value::from(bytes(&haystack_words(source))),
+        Value::from(haystack_words(source)),
         Value::from(bytes(&keyword_map)),
     ];
     let outputs = vyre_reference::reference_eval(&program, &inputs)

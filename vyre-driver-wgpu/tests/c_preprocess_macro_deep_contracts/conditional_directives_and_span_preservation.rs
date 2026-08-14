@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn macro_call_with_trailing_comma_survives_as_call_in_vast() {
-    let a = assemble(&[
+    let a = c_fixture![
         ("int", TOK_INT),
         ("z", TOK_IDENTIFIER),
         (";", TOK_SEMICOLON),
@@ -14,7 +14,7 @@ fn macro_call_with_trailing_comma_survives_as_call_in_vast() {
         (",", TOK_COMMA),
         (")", TOK_RPAREN),
         (";", TOK_SEMICOLON),
-    ]);
+    ];
     let out = run_cpu_pipeline(&a);
     let foo_idx = find_row_for_lexeme(&a, "FOO");
     assert_eq!(
@@ -30,7 +30,7 @@ fn macro_call_with_trailing_comma_survives_as_call_in_vast() {
 
 #[test]
 fn conditional_directives_survive_cpu_pipeline_unexpanded() {
-    let a = assemble(&[
+    let a = c_fixture![
         ("#if defined(X)", TOK_PREPROC),
         ("\n", TOK_WHITESPACE),
         ("#elif 1", TOK_PREPROC),
@@ -42,7 +42,7 @@ fn conditional_directives_survive_cpu_pipeline_unexpanded() {
         ("int", TOK_INT),
         ("w", TOK_IDENTIFIER),
         (";", TOK_SEMICOLON),
-    ]);
+    ];
     let out = run_cpu_pipeline(&a);
     for idx in 0..4 {
         assert_eq!(
@@ -55,14 +55,14 @@ fn conditional_directives_survive_cpu_pipeline_unexpanded() {
             0,
             "typed VAST conditional {idx}"
         );
-        assert_pg_row(&a, &out.pg, &out.typed_vast, idx, 0);
+        assert_pg_row(&a, &out.pg_nodes, &out.typed_vast, idx, 0);
         assert_shape_none(&out.expr_shape, idx);
     }
 }
 
 #[test]
 fn conditional_directives_survive_gpu_pipeline_parity() {
-    let a = assemble(&[
+    let a = c_fixture![
         ("#ifdef FOO", TOK_PREPROC),
         ("\n", TOK_WHITESPACE),
         ("#else", TOK_PREPROC),
@@ -72,7 +72,7 @@ fn conditional_directives_survive_gpu_pipeline_parity() {
         ("float", TOK_FLOAT_KW),
         ("f", TOK_IDENTIFIER),
         (";", TOK_SEMICOLON),
-    ]);
+    ];
     let cpu = run_cpu_pipeline(&a);
     let gpu_typed = run_gpu_classify(&cpu.raw_vast);
     assert_eq!(
@@ -87,7 +87,7 @@ fn conditional_directives_survive_gpu_pipeline_parity() {
     );
     assert_eq!(
         run_gpu_pg_lower(&cpu.typed_vast),
-        cpu.pg,
+        cpu.pg_nodes,
         "GPU PG lower must match CPU"
     );
 }
@@ -215,17 +215,17 @@ fn directive_span_preserved_through_gpu_lexer() {
 
 #[test]
 fn directive_span_preserved_through_pg_lowering() {
-    let a = assemble(&[
+    let a = c_fixture![
         ("#pragma once", TOK_PREPROC),
         ("\n", TOK_WHITESPACE),
         ("double", TOK_DOUBLE),
         ("d", TOK_IDENTIFIER),
         (";", TOK_SEMICOLON),
-    ]);
+    ];
     let out = run_cpu_pipeline(&a);
-    assert_pg_row(&a, &out.pg, &out.typed_vast, 0, 0);
-    let pg_start = word_at(&out.pg, 0 * PG_STRIDE_U32 + 1);
-    let pg_end = word_at(&out.pg, 0 * PG_STRIDE_U32 + 2);
+    assert_pg_row(&a, &out.pg_nodes, &out.typed_vast, 0, 0);
+    let pg_start = word_at(&out.pg_nodes, 0 * PG_STRIDE_U32 + 1);
+    let pg_end = word_at(&out.pg_nodes, 0 * PG_STRIDE_U32 + 2);
     assert_eq!(
         pg_start, a.tok_starts[0],
         "PG span start must match lexer start"

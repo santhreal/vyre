@@ -45,7 +45,7 @@ fn gpu_lexer_preserves_complex_directive_block_as_preproc_rows() {
 
 #[test]
 fn directive_rows_survive_cpu_pipeline_without_expansion() {
-    let a = assemble(&[
+    let a = c_fixture![
         ("#ifndef FOO", TOK_PREPROC),
         ("\n", TOK_WHITESPACE),
         ("#define FOO 1", TOK_PREPROC),
@@ -53,7 +53,7 @@ fn directive_rows_survive_cpu_pipeline_without_expansion() {
         ("int", TOK_INT),
         ("x", TOK_IDENTIFIER),
         (";", TOK_SEMICOLON),
-    ]);
+    ];
     let out = run_cpu_pipeline(&a);
     for idx in [0usize, 1] {
         assert_eq!(
@@ -62,14 +62,14 @@ fn directive_rows_survive_cpu_pipeline_without_expansion() {
             "raw VAST must preserve TOK_PREPROC (no expansion)"
         );
         assert_eq!(row_typed_kind(&out.typed_vast, idx), 0);
-        assert_pg_row(&a, &out.pg, &out.typed_vast, idx, 0);
+        assert_pg_row(&a, &out.pg_nodes, &out.typed_vast, idx, 0);
         assert_shape_none(&out.expr_shape, idx);
     }
 }
 
 #[test]
 fn directive_rows_survive_gpu_pipeline_parity() {
-    let a = assemble(&[
+    let a = c_fixture![
         ("#define M(x) x", TOK_PREPROC),
         ("\n", TOK_WHITESPACE),
         ("int", TOK_INT),
@@ -82,7 +82,7 @@ fn directive_rows_survive_gpu_pipeline_parity() {
         ("42", TOK_INTEGER),
         (")", TOK_RPAREN),
         (";", TOK_SEMICOLON),
-    ]);
+    ];
     let cpu = run_cpu_pipeline(&a);
     let gpu_typed = run_gpu_classify(&cpu.raw_vast);
     assert_eq!(
@@ -97,7 +97,7 @@ fn directive_rows_survive_gpu_pipeline_parity() {
     );
     assert_eq!(
         run_gpu_pg_lower(&cpu.typed_vast),
-        cpu.pg,
+        cpu.pg_nodes,
         "GPU PG lowering must match CPU"
     );
 
@@ -251,7 +251,7 @@ fn macro_replacement_tokens_are_not_expanded_but_later_occurrences_are() {
 
 #[test]
 fn nested_macro_call_shapes_survive_as_calls_in_typed_vast() {
-    let a = assemble(&[
+    let a = c_fixture![
         ("int", TOK_INT),
         ("y", TOK_IDENTIFIER),
         (";", TOK_SEMICOLON),
@@ -267,7 +267,7 @@ fn nested_macro_call_shapes_survive_as_calls_in_typed_vast() {
         (")", TOK_RPAREN),
         (")", TOK_RPAREN),
         (";", TOK_SEMICOLON),
-    ]);
+    ];
     let out = run_cpu_pipeline(&a);
     let outer_idx = find_row_for_lexeme(&a, "OUTER");
     let inner_idx = find_row_for_lexeme(&a, "INNER");

@@ -17,10 +17,12 @@ use vyre_reference::value::Value;
 use super::rows::{
     node_count_from_vast, starts_for_lens, word_at, PG_STRIDE_U32, SENTINEL, VAST_STRIDE_U32,
 };
+use super::token_fixture::Fixture;
 
 pub(crate) struct PipelineRows {
     pub(crate) tok_starts: Vec<u32>,
     pub(crate) tok_lens: Vec<u32>,
+    pub(crate) raw_vast: Vec<u8>,
     pub(crate) typed_vast: Vec<u8>,
     pub(crate) expr_shape: Vec<u8>,
     pub(crate) pg_nodes: Vec<u8>,
@@ -46,9 +48,25 @@ pub(crate) fn run_reference_pg_lower(typed_vast: &[u8]) -> Vec<u8> {
     outputs[0].to_bytes()
 }
 
+/// The pipeline for a token stream whose lexemes are single characters laid out
+/// one unit apart, which is what an expression-shape contract needs.
 pub(crate) fn run_pipeline(tok_types: &[u32], tok_lens: &[u32]) -> PipelineRows {
-    let tok_starts = starts_for_lens(tok_lens);
-    let raw_vast = reference_c11_build_vast_nodes(tok_types, &tok_starts, tok_lens);
+    run_pipeline_from_parts(tok_types, &starts_for_lens(tok_lens), tok_lens)
+}
+
+/// The pipeline for a [`Fixture`], which carries the source offsets its own
+/// lexemes occupy. A preprocessor or corpus contract needs those offsets, not
+/// the unit spacing [`run_pipeline`] derives.
+pub(crate) fn run_pipeline_for_fixture(fix: &Fixture) -> PipelineRows {
+    run_pipeline_from_parts(&fix.tok_types, &fix.tok_starts, &fix.tok_lens)
+}
+
+pub(crate) fn run_pipeline_from_parts(
+    tok_types: &[u32],
+    tok_starts: &[u32],
+    tok_lens: &[u32],
+) -> PipelineRows {
+    let raw_vast = reference_c11_build_vast_nodes(tok_types, tok_starts, tok_lens);
     let typed_vast = reference_c11_classify_vast_node_kinds(&raw_vast);
     let expr_shape = reference_c11_build_expression_shape_nodes(&raw_vast, &typed_vast);
     let pg_nodes = run_reference_pg_lower(&typed_vast);
@@ -59,8 +77,9 @@ pub(crate) fn run_pipeline(tok_types: &[u32], tok_lens: &[u32]) -> PipelineRows 
     );
 
     PipelineRows {
-        tok_starts,
+        tok_starts: tok_starts.to_vec(),
         tok_lens: tok_lens.to_vec(),
+        raw_vast,
         typed_vast,
         expr_shape,
         pg_nodes,

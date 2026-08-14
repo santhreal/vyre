@@ -66,7 +66,7 @@ total_lines = 1534
 
 [[crate]]
 name = "vyre-bench"
-duplicate_lines = 3564
+duplicate_lines = 3563
 total_lines = 37846
 
 [[crate]]
@@ -101,8 +101,8 @@ total_lines = 1974
 
 [[crate]]
 name = "vyre-driver-wgpu"
-duplicate_lines = 6327
-total_lines = 60330
+duplicate_lines = 5956
+total_lines = 60338
 
 [[crate]]
 name = "vyre-emit-metal"
