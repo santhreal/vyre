@@ -192,20 +192,12 @@ impl WgpuPendingDispatch {
         Self::enforce_timeout(started, timeout)?;
         Ok(vyre_driver::TimedDispatchResult {
             outputs,
-            wall_ns: elapsed_nanos_u64(started, "wgpu timed dispatch")?,
+            wall_ns: crate::numeric::WGPU_NUMERIC.elapsed_nanos_u64(started, "timed dispatch")?,
             device_ns,
             enqueue_ns: None,
             wait_ns: None,
         })
     }
-}
-
-fn elapsed_nanos_u64(start: Instant, label: &str) -> Result<u64, vyre_driver::BackendError> {
-    u64::try_from(start.elapsed().as_nanos()).map_err(|source| {
-        vyre_driver::BackendError::new(format!(
-            "{label} elapsed time cannot fit u64 nanoseconds: {source}. Fix: split or timeout the dispatch before telemetry overflows."
-        ))
-    })
 }
 
 fn dispatch_deadline(started: Instant, timeout: Option<Duration>) -> Option<Instant> {
