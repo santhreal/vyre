@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::io::{self, Read};
+use std::io;
 use std::path::{Path, PathBuf};
 
 use toml::Value;
@@ -218,17 +218,9 @@ fn explicit_version(value: &Value) -> Option<String> {
 }
 
 fn read_text_bounded(path: &Path) -> io::Result<String> {
-    let mut reader = fs::File::open(path)?.take(MAX_DEP_DRIFT_MANIFEST_BYTES.saturating_add(1));
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > MAX_DEP_DRIFT_MANIFEST_BYTES {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "{} exceeds {MAX_DEP_DRIFT_MANIFEST_BYTES} byte dependency drift manifest read cap",
-                path.display()
-            ),
-        ));
-    }
-    Ok(text)
+    crate::output_arg::read_text_bounded(
+        path,
+        MAX_DEP_DRIFT_MANIFEST_BYTES,
+        "dependency drift manifest",
+    )
 }

@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::io::{self, Read};
+use std::io;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -778,16 +778,7 @@ fn read_schema(path: &Path) -> Result<OperationSchema, String> {
 }
 
 fn read_text_bounded(path: &Path) -> io::Result<String> {
-    let file = fs::File::open(path)?;
-    if file.metadata()?.len() > MAX_SCHEMA_BYTES {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("{} exceeds {} bytes", path.display(), MAX_SCHEMA_BYTES),
-        ));
-    }
-    let mut text = String::new();
-    file.take(MAX_SCHEMA_BYTES + 1).read_to_string(&mut text)?;
-    Ok(text)
+    xtask::output_arg::read_text_bounded(path, MAX_SCHEMA_BYTES, "operation schema")
 }
 
 #[cfg(test)]

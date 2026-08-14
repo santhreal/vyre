@@ -27,7 +27,7 @@
 
 use xtask::gates::use_paths::{collect_use_paths, is_test_source_path};
 use std::collections::BTreeSet;
-use std::io::{self, Read};
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
 
@@ -373,19 +373,7 @@ fn check_god_files(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
 }
 
 fn read_text_bounded(path: &Path) -> io::Result<String> {
-    let mut reader = std::fs::File::open(path)?.take(MAX_LEGO_QUICK_SOURCE_BYTES.saturating_add(1));
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > MAX_LEGO_QUICK_SOURCE_BYTES {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "{} exceeds {MAX_LEGO_QUICK_SOURCE_BYTES} byte lego quick read cap",
-                path.display()
-            ),
-        ));
-    }
-    Ok(text)
+    xtask::output_arg::read_text_bounded(path, MAX_LEGO_QUICK_SOURCE_BYTES, "lego quick")
 }
 
 #[cfg(test)]

@@ -39,7 +39,7 @@
 //! Intended to run in CI after Gate 1.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::io::{self, Read};
+use std::io;
 use std::path::PathBuf;
 use std::process;
 
@@ -1182,19 +1182,7 @@ fn check_5_god_files() -> usize {
 }
 
 fn read_text_bounded(path: &std::path::Path) -> io::Result<String> {
-    let mut reader = std::fs::File::open(path)?.take(MAX_LEGO_AUDIT_SOURCE_BYTES.saturating_add(1));
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > MAX_LEGO_AUDIT_SOURCE_BYTES {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "{} exceeds {MAX_LEGO_AUDIT_SOURCE_BYTES} byte lego audit read cap",
-                path.display()
-            ),
-        ));
-    }
-    Ok(text)
+    xtask::output_arg::read_text_bounded(path, MAX_LEGO_AUDIT_SOURCE_BYTES, "lego audit")
 }
 
 const COMPOSITION_REGRESSION_EPSILON: f64 = 1.0e-9;

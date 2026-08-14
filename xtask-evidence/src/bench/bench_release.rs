@@ -17,8 +17,7 @@
 //! (R4  -  `DriverObservability::to_audit_log`); this xtask just surfaces
 //! the headline numbers.
 
-use std::fs;
-use std::io::{self, Read};
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Instant;
@@ -235,23 +234,17 @@ fn fatal(message: &str) -> ! {
 }
 
 fn read_text_bounded(path: &Path) -> io::Result<String> {
-    let mut reader = fs::File::open(path)?.take(MAX_BENCH_RELEASE_REPORT_BYTES.saturating_add(1));
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > MAX_BENCH_RELEASE_REPORT_BYTES {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "{} exceeds {MAX_BENCH_RELEASE_REPORT_BYTES} byte release bench report read cap",
-                path.display()
-            ),
-        ));
-    }
-    Ok(text)
+    xtask::output_arg::read_text_bounded(
+        path,
+        MAX_BENCH_RELEASE_REPORT_BYTES,
+        "release bench report",
+    )
 }
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use super::*;
 
     fn write_canonical_axes_fixture(
