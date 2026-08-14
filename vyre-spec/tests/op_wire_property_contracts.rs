@@ -1,6 +1,9 @@
 //! Generated property coverage for builtin and opaque operation wire tags.
 
+mod spec_variants;
+
 use proptest::prelude::*;
+use spec_variants::collective_op_strategy;
 use vyre_spec::extension::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionTernaryOpId, ExtensionUnOpId,
 };
@@ -113,17 +116,6 @@ fn ternary_op_strategy() -> impl Strategy<Value = TernaryOp> {
         Just(TernaryOp::Fma),
         Just(TernaryOp::Select),
         extension_raw_id().prop_map(|raw| TernaryOp::Opaque(ExtensionTernaryOpId(raw))),
-    ]
-}
-
-fn collective_op_strategy() -> impl Strategy<Value = CollectiveOp> {
-    prop_oneof![
-        Just(CollectiveOp::Sum),
-        Just(CollectiveOp::Min),
-        Just(CollectiveOp::Max),
-        Just(CollectiveOp::BitAnd),
-        Just(CollectiveOp::BitOr),
-        Just(CollectiveOp::BitXor),
     ]
 }
 

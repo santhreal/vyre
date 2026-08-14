@@ -5,12 +5,16 @@
 //! metadata never changes byte accounting, never drops capability ordering, and
 //! remains serde-stable across thousands of generated type/contract shapes.
 
+mod spec_variants;
+
 use smallvec::smallvec;
 use vyre_spec::op_signature::SignatureParam;
 use vyre_spec::{
     CapabilityId, CostHint, DataType, DeterminismClass, OpSignature, OperationContract,
     QuantizationScale, QuantizationZeroPoint, SideEffectClass, TypeId,
 };
+
+use spec_variants::{QUANTIZED_STORAGE_TYPES, SCALAR_LEAF_TYPES};
 
 #[test]
 fn generated_op_signatures_with_contracts_round_trip_for_8192_cases() {
@@ -157,53 +161,34 @@ fn generated_contract(seed: u64) -> OperationContract {
 }
 
 fn generated_type(seed: u64) -> DataType {
-    match seed % 28 {
-        0 => DataType::U8,
-        1 => DataType::U16,
-        2 => DataType::U32,
-        3 => DataType::U64,
-        4 => DataType::I8,
-        5 => DataType::I16,
-        6 => DataType::I32,
-        7 => DataType::I64,
-        8 => DataType::Bool,
-        9 => DataType::F16,
-        10 => DataType::BF16,
-        11 => DataType::F32,
-        12 => DataType::F64,
-        13 => DataType::F8E4M3,
-        14 => DataType::F8E5M2,
-        15 => DataType::I4,
-        16 => DataType::FP4,
-        17 => DataType::NF4,
-        18 => DataType::Vec2U32,
-        19 => DataType::Vec4U32,
-        20 => DataType::Bytes,
-        21 => DataType::Tensor,
-        22 => DataType::Handle(TypeId((seed >> 8) as u32)),
-        23 => DataType::Array {
+    let leaves = SCALAR_LEAF_TYPES.len() as u64;
+    let idx = seed % (leaves + 6);
+    if idx < leaves {
+        return SCALAR_LEAF_TYPES[idx as usize].clone();
+    }
+
+    match idx - leaves {
+        0 => DataType::Handle(TypeId((seed >> 8) as u32)),
+        1 => DataType::Array {
             element_size: ((seed >> 13) as usize % 64) + 1,
         },
-        24 => DataType::Vec {
+        2 => DataType::Vec {
             element: Box::new(DataType::U32),
             count: ((seed >> 17) as u8 % 16) + 1,
         },
-        25 => DataType::SparseCsr {
+        3 => DataType::SparseCsr {
             element: Box::new(DataType::F32),
         },
-        26 => DataType::DeviceMesh {
+        4 => DataType::DeviceMesh {
             axes: [((seed >> 19) as u32 % 8) + 1, ((seed >> 23) as u32 % 8) + 1]
                 .as_slice()
                 .into(),
         },
         _ => DataType::Quantized {
-            storage: Box::new(match (seed >> 29) % 5 {
-                0 => DataType::I4,
-                1 => DataType::FP4,
-                2 => DataType::NF4,
-                3 => DataType::U8,
-                _ => DataType::I8,
-            }),
+            storage: Box::new(
+                QUANTIZED_STORAGE_TYPES[(seed >> 29) as usize % QUANTIZED_STORAGE_TYPES.len()]
+                    .clone(),
+            ),
             scale: QuantizationScale::PerGroup {
                 group_size: ((seed >> 31) as u32 % 256) + 1,
             },

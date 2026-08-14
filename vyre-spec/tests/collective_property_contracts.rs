@@ -1,18 +1,10 @@
 //! Generated property coverage for collective operation wire contracts.
 
-use proptest::prelude::*;
-use vyre_spec::{CollectiveOp, CommGroup};
+mod spec_variants;
 
-fn collective_op_strategy() -> impl Strategy<Value = CollectiveOp> {
-    prop_oneof![
-        Just(CollectiveOp::Sum),
-        Just(CollectiveOp::Min),
-        Just(CollectiveOp::Max),
-        Just(CollectiveOp::BitAnd),
-        Just(CollectiveOp::BitOr),
-        Just(CollectiveOp::BitXor),
-    ]
-}
+use proptest::prelude::*;
+use spec_variants::collective_op_strategy;
+use vyre_spec::{CollectiveOp, CommGroup};
 
 proptest! {
     #[test]

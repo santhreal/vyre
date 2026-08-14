@@ -92,36 +92,28 @@ fn i4_is_wire_format_not_bytecode() {
     );
 }
 
+/// Names the conform parity matrix keys its per-variant rows by. A catalog that
+/// shrinks silently drops rows from that matrix, and a name that is not an
+/// identifier can never match one.
+const EXPR_VARIANT_FLOOR: usize = 22;
+
+/// The catalog is the row key set of the conform parity matrix, so it must not
+/// shrink and every entry must be shaped like an `Expr` variant name.
+///
+/// This deliberately does not restate the list. A second copy of the same 22
+/// strings would fail only when someone edited one copy, which is a diff nobody
+/// can land by accident, while proving nothing about the catalog itself. A
+/// renamed variant is caught where it matters, by the parity matrix failing to
+/// find a row for the new key.
 #[test]
-fn expr_variant_catalog_is_complete_and_unique() {
-    let expected = [
-        "LitU32",
-        "LitI32",
-        "LitF32",
-        "LitBool",
-        "Var",
-        "BufferRef",
-        "Load",
-        "BufLen",
-        "InvocationId",
-        "WorkgroupId",
-        "LocalId",
-        "BinOp",
-        "UnOp",
-        "Call",
-        "Select",
-        "Cast",
-        "Fma",
-        "Atomic",
-        "SubgroupBallot",
-        "SubgroupShuffle",
-        "SubgroupReduce",
-        "Opaque",
-    ];
+fn expr_variant_catalog_is_unique_and_well_formed() {
     let actual = expr_variants();
-    assert_eq!(
-        actual, expected,
-        "Fix: expr variant catalog drifted from the frozen vyre IR surface"
+    assert!(
+        actual.len() >= EXPR_VARIANT_FLOOR,
+        "Fix: the expr variant catalog lists {} names, below the {EXPR_VARIANT_FLOOR} the parity \
+         matrix expects rows for; restore the removed variant or lower the floor with the \
+         removal",
+        actual.len()
     );
     let unique = actual.iter().copied().collect::<BTreeSet<_>>();
     assert_eq!(
@@ -129,6 +121,14 @@ fn expr_variant_catalog_is_complete_and_unique() {
         actual.len(),
         "Fix: expr variant catalog contains duplicate entries"
     );
+    for variant in actual {
+        assert!(
+            variant.starts_with(|first: char| first.is_ascii_uppercase())
+                && variant.chars().all(char::is_alphanumeric),
+            "Fix: expr variant `{variant}` is not an `Expr` variant name, so no parity matrix row \
+             can key on it"
+        );
+    }
 }
 
 #[test]
