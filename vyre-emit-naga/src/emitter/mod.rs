@@ -1,15 +1,15 @@
 //! Per-function emit state. Everything below the `BodyBuilder`
 //! boundary lives in topic-specific files (op_dispatch, coercion,
 //! binding_helpers, scalar_ops, async_op, atomic, loops, binop,
-//! op_lookup, setup). This module just defines `BodyBuilder` and
-//! re-exports the entry point.
+//! carrier_scope, op_lookup, setup). This module just defines
+//! `BodyBuilder` and re-exports the entry point.
 
 mod async_op;
 mod atomic;
 mod binding_helpers;
 mod binop;
+mod carrier_scope;
 mod coercion;
-mod loop_carriers;
 mod loops;
 mod op_dispatch;
 mod op_lookup;
