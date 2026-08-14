@@ -3,8 +3,7 @@
 use crate::buffer::BindGroupCache;
 use crate::buffer::{BufferPool, GpuBufferHandle};
 use crate::numeric::WGPU_NUMERIC;
-use crate::pipeline::binding::consumes_host_input;
-use crate::pipeline::element_size_bytes;
+use crate::pipeline::binding::{consumes_host_input, declared_byte_size};
 use crate::pipeline::{BufferBindingInfo, OutputBindingLayout};
 use smallvec::SmallVec;
 use std::sync::Arc;
@@ -333,24 +332,7 @@ fn record_dispatch_unsubmitted_impl(
             }
             (b, output_bytes_u64)
         } else {
-            let element_size = element_size_bytes(&info.element)?;
-            let declared_size = if info.count > 0 {
-                (usize::try_from(info.count).map_err(|_| {
-                    BackendError::new(format!(
-                        "buffer `{}` element count cannot fit host usize. Fix: reduce buffer count or shard the binding.",
-                        info.name
-                    ))
-                })?)
-                    .checked_mul(element_size)
-                    .ok_or_else(|| {
-                        BackendError::new(format!(
-                            "buffer `{}` declared size overflows usize. Fix: reduce buffer count.",
-                            info.name
-                        ))
-                    })?
-            } else {
-                0
-            };
+            let declared_size = declared_byte_size(info)?;
             let (size, contents): (usize, Option<&[u8]>) = match (declared_size, data) {
                 (d, Some(bytes)) if d > 0 => (d.max(bytes.len()), Some(bytes)),
                 (0, Some(bytes)) => (bytes.len(), Some(bytes)),

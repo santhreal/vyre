@@ -17,6 +17,31 @@ pub(crate) fn consumes_host_input(info: &BufferBindingInfo) -> bool {
         && (!info.is_output || info.preserve_input_contents)
 }
 
+/// Bytes a binding declares through its element count, or 0 when it declares none.
+///
+/// The one place that turns `BufferDecl::count` into a host byte length. Three
+/// call paths used to each carry their own overflow guards, so a change to the
+/// element-size rule reached only the paths whoever edited remembered.
+pub(crate) fn declared_byte_size(info: &BufferBindingInfo) -> Result<usize, BackendError> {
+    if info.count == 0 {
+        return Ok(0);
+    }
+    usize::try_from(info.count)
+        .map_err(|_| {
+            BackendError::new(format!(
+                "buffer `{}` element count cannot fit host usize. Fix: reduce buffer count or shard the binding.",
+                info.name
+            ))
+        })?
+        .checked_mul(element_size_bytes(&info.element)?)
+        .ok_or_else(|| {
+            BackendError::new(format!(
+                "buffer `{}` declared size overflows usize. Fix: reduce buffer count.",
+                info.name
+            ))
+        })
+}
+
 /// Required wgpu usage flags for a compiled binding.
 pub(crate) fn usage_for_binding(
     info: &BufferBindingInfo,
@@ -73,20 +98,7 @@ pub(crate) fn validate_handle(
         )));
     }
     if info.count > 0 {
-        let required_bytes = usize::try_from(info.count)
-            .map_err(|_| {
-                BackendError::new(format!(
-                    "buffer `{}` element count cannot fit host usize. Fix: reduce buffer count.",
-                    info.name
-                ))
-            })?
-            .checked_mul(element_size_bytes(&info.element)?)
-            .ok_or_else(|| {
-                BackendError::new(format!(
-                    "buffer `{}` declared size overflows usize. Fix: reduce buffer count.",
-                    info.name
-                ))
-            })?;
+        let required_bytes = declared_byte_size(info)?;
         let required_bytes_u64 =
             WGPU_NUMERIC.usize_to_u64(required_bytes, "required binding bytes")?;
         if handle.allocation_len() < required_bytes_u64 {
