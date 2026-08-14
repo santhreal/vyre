@@ -2,6 +2,7 @@
 
 use super::gpu_parity_signal_function::*;
 use super::*;
+use crate::c_frontend::spelling::c_tokens;
 
 #[test]
 pub(crate) fn cpu_statement_expr_with_asm_in_init_classifies() {
@@ -56,25 +57,11 @@ pub(crate) fn gpu_parity_statement_expr_with_asm_in_init() {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn fixture_macro_shaped_declaration_define_per_cpu() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("DEFINE_PER_CPU", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("DEFINE_PER_CPU ( int , x ) ;")
 }
 
 pub(crate) fn fixture_macro_shaped_declaration_list_head() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("LIST_HEAD", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("name", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("LIST_HEAD ( name ) ;")
 }
 
 #[test]

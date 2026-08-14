@@ -16,6 +16,7 @@ pub(crate) use crate::c_ast_gpu_parity_support::classify;
 use crate::c_ast_gpu_parity_support::{
     assert_full_pipeline_parity, build_fixture, row_indices, Fixture, FixtureToken,
 };
+use crate::c_frontend::spelling::c_tokens;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_ASSIGN_EXPR, C_AST_KIND_COMPOUND_LITERAL_EXPR, C_AST_KIND_INITIALIZER_LIST,
@@ -32,64 +33,12 @@ use vyre_libs::parsing::c::parse::vast::{
 /// struct S { int a; int b; };
 /// struct S s = { .a = 1, .b = 2 };
 pub(crate) fn fixture_designated_initializer_struct() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("S", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("b", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("S", TOK_IDENTIFIER),
-        FixtureToken::new("s", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new(".", TOK_DOT),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new(".", TOK_DOT),
-        FixtureToken::new("b", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("struct S { int a ; int b ; } ; struct S s = { . a = 1 , . b = 2 } ;")
 }
 
 /// int a[2][3] = { [0] = { [1] = 42 } };
 pub(crate) fn fixture_designated_initializer_nested_array() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("3", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("42", TOK_INTEGER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("int a [ 2 ] [ 3 ] = { [ 0 ] = { [ 1 ] = 42 } } ;")
 }
 
 /// void f() {
@@ -97,64 +46,12 @@ pub(crate) fn fixture_designated_initializer_nested_array() -> Fixture {
 ///   g((struct S){ .x = 3 });
 /// }
 pub(crate) fn fixture_compound_literal() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("g", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("S", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new(".", TOK_DOT),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("3", TOK_INTEGER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens("void f ( ) { int * p = ( int [ ] ) { 1 , 2 } ; g ( ( struct S ) { . x = 3 } ) ; }")
 }
 
 /// int (*(*p)[3])(int);
 pub(crate) fn fixture_nested_declarator() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("3", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("int ( * ( * p ) [ 3 ] ) ( int ) ;")
 }
 
 /// __attribute__((used)) int x;
@@ -162,34 +59,10 @@ pub(crate) fn fixture_nested_declarator() -> Fixture {
 ///   __asm__ volatile ("nop" ::: "memory");
 /// }
 pub(crate) fn fixture_asm_attribute_interaction() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("used", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("__asm__", TOK_IDENTIFIER),
-        FixtureToken::new("volatile", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"nop\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"memory\"", TOK_STRING),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens(
+        "__attribute__ ( ( used ) ) int x ; void f ( void ) { __asm__ volatile ( \"nop\" : : : \
+         \"memory\" ) ; }",
+    )
 }
 
 /// void f() {
@@ -286,58 +159,12 @@ pub(crate) fn fixture_control_flow_all() -> Fixture {
 ///   T x;
 /// }
 pub(crate) fn fixture_typedef_shadowing() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("typedef", TOK_IDENTIFIER),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("T", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("T", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("T", TOK_IDENTIFIER),
-        FixtureToken::new("++", TOK_INC),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("g", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("T", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens("typedef int T ; void f ( ) { int T = 1 ; T ++ ; } void g ( ) { T x ; }")
 }
 
 /// int x = ({ int y = 1; y + 2; });
 pub(crate) fn fixture_statement_expression() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("y", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("y", TOK_IDENTIFIER),
-        FixtureToken::new("+", TOK_PLUS),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("int x = ( { int y = 1 ; y + 2 ; } ) ;")
 }
 
 // ---------------------------------------------------------------------------

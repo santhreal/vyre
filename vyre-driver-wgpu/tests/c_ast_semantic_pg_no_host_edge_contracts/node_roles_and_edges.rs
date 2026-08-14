@@ -1,4 +1,5 @@
 use super::*;
+use crate::c_frontend::spelling::c_tokens;
 
 #[test]
 fn gpu_typedef_node_has_declaration_category_and_typedef_role() {
@@ -144,12 +145,7 @@ fn gpu_function_pointer_declarator_marks_function_pointer_role() {
 fn gpu_regular_pointer_declarator_has_pointer_decl_role() {
     // Build a standalone pointer declaration (not a function pointer) to verify
     // the non-function-pointer path.
-    let fix = build_fixture(&[
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ]);
+    let fix = c_tokens("int * p ;");
     let typed = classify(&fix);
     let (gpu_nodes, _gpu_edges) = run_gpu_semantic_lower(&typed);
 

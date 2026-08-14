@@ -1,6 +1,7 @@
 // (use super::* removed  -  parts now share crate-root scope via flat include)
 
 use super::*;
+use crate::c_frontend::spelling::c_tokens;
 
 #[test]
 pub(crate) fn cpu_typedef_shadowed_by_auto_type_variable() {
@@ -46,33 +47,11 @@ pub(crate) fn gpu_parity_typedef_shadowed_by_auto_type() {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn fixture_struct_tag_forward_declaration() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("S", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("typedef", TOK_IDENTIFIER),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("S", TOK_IDENTIFIER),
-        FixtureToken::new("S", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("S", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("struct S ; typedef struct S S ; struct S * p ;")
 }
 
 pub(crate) fn fixture_enum_tag_forward_declaration() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("enum", TOK_IDENTIFIER),
-        FixtureToken::new("E", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("enum", TOK_IDENTIFIER),
-        FixtureToken::new("E", TOK_IDENTIFIER),
-        FixtureToken::new("e", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("enum E ; enum E e ;")
 }
 
 #[test]

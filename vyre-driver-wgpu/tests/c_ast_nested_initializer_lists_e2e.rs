@@ -16,10 +16,8 @@ mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
 
-use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, row_indices, Fixture, FixtureToken,
-};
-use vyre_libs::parsing::c::lex::tokens::*;
+use c_ast_gpu_parity_support::{assert_full_pipeline_parity, row_indices, Fixture};
+use c_frontend::spelling::c_tokens;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
     reference_c11_classify_vast_node_kinds, C_AST_KIND_ARRAY_DECL, C_AST_KIND_INITIALIZER_LIST,
@@ -33,95 +31,17 @@ use vyre_primitives::predicate::node_kind;
 
 /// struct { int a[2]; struct { int b; } s; } x = { {1, 2}, {3} };
 fn fixture_deeply_nested_initializer() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("b", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("s", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("3", TOK_INTEGER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("struct { int a [ 2 ] ; struct { int b ; } s ; } x = { { 1 , 2 } , { 3 } } ;")
 }
 
 /// int a[2][2] = { [0] = {1, 2}, [1] = {3, 4} };
 fn fixture_nested_array_designated_init() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("3", TOK_INTEGER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("4", TOK_INTEGER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("int a [ 2 ] [ 2 ] = { [ 0 ] = { 1 , 2 } , [ 1 ] = { 3 , 4 } } ;")
 }
 
 /// struct T t = { .s.b = 1 };
 fn fixture_deep_designated_init() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("T", TOK_IDENTIFIER),
-        FixtureToken::new("t", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new(".", TOK_DOT),
-        FixtureToken::new("s", TOK_IDENTIFIER),
-        FixtureToken::new(".", TOK_DOT),
-        FixtureToken::new("b", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("struct T t = { . s . b = 1 } ;")
 }
 
 // ---------------------------------------------------------------------------

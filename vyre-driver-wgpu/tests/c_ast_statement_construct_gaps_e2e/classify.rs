@@ -11,10 +11,9 @@
 // A missing GPU adapter is a configuration failure.
 
 use crate::c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, classify, row_indices, word_at, Fixture,
-    FixtureToken, VAST_STRIDE_U32,
+    assert_full_pipeline_parity, classify, row_indices, word_at, Fixture, VAST_STRIDE_U32,
 };
-use vyre_libs::parsing::c::lex::tokens::*;
+use crate::c_frontend::spelling::c_tokens;
 use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_BREAK_STMT, C_AST_KIND_CASE_STMT, C_AST_KIND_CONTINUE_STMT, C_AST_KIND_DEFAULT_STMT,
     C_AST_KIND_DO_STMT, C_AST_KIND_FOR_STMT, C_AST_KIND_GOTO_STMT, C_AST_KIND_IF_STMT,
@@ -28,165 +27,35 @@ use vyre_primitives::predicate::node_kind;
 
 /// void f() { int x; ; }
 pub(crate) fn fixture_empty_statement() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens("void f ( void ) { int x ; ; }")
 }
 
 /// void g() { for (int i = 0; i < 10; i++) { } }
 pub(crate) fn fixture_for_with_declaration() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("g", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("for", TOK_FOR),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("i", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("i", TOK_IDENTIFIER),
-        FixtureToken::new("<", TOK_LT),
-        FixtureToken::new("10", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("i", TOK_IDENTIFIER),
-        FixtureToken::new("++", TOK_INC),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens("void g ( void ) { for ( int i = 0 ; i < 10 ; i ++ ) { } }")
 }
 
 /// void h() { while (1) { label: goto label; } }
 pub(crate) fn fixture_label_goto_inside_while() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("h", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("while", TOK_WHILE),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("label", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("goto", TOK_GOTO),
-        FixtureToken::new("label", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens("void h ( void ) { while ( 1 ) { label : goto label ; } }")
 }
 
 /// void k(int x) { switch (x) { case 1: if (1) { goto end; } end: ; } }
 pub(crate) fn fixture_goto_across_switch_case() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("k", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("switch", TOK_SWITCH),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("case", TOK_CASE),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("if", TOK_IF),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("goto", TOK_GOTO),
-        FixtureToken::new("end", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("end", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens("void k ( int x ) { switch ( x ) { case 1 : if ( 1 ) { goto end ; } end : ; } }")
 }
 
 /// void m(int x) { switch (x) { default: do { continue; } while (0); case 1: break; } return; }
 pub(crate) fn fixture_default_do_break_continue_return() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("m", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("switch", TOK_SWITCH),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("default", TOK_DEFAULT),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("do", TOK_DO),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("continue", TOK_CONTINUE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("while", TOK_WHILE),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("case", TOK_CASE),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("break", TOK_BREAK),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("return", TOK_RETURN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens(
+        "void m ( int x ) { switch ( x ) { default : do { continue ; } while ( 0 ) ; case 1 : \
+         break ; } return ; }",
+    )
 }
 
 /// void n(void) { { { return; } } }
 pub(crate) fn fixture_nested_compound_return() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("n", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("return", TOK_RETURN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens("void n ( void ) { { { return ; } } }")
 }
 
 // ---------------------------------------------------------------------------

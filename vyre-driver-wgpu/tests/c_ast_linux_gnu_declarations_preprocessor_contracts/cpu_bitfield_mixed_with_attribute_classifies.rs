@@ -2,6 +2,7 @@
 
 use super::cpu_nested_designated_init_complex_classifies::*;
 use super::*;
+use crate::c_frontend::spelling::c_tokens;
 
 #[test]
 pub(crate) fn cpu_bitfield_mixed_with_attribute_classifies() {
@@ -55,19 +56,5 @@ pub(crate) fn gpu_parity_bitfield_mixed_with_attribute() {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn fixture_flexible_array_member() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("S", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("n", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("arr", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("struct S { int n ; int arr [ ] ; } ;")
 }

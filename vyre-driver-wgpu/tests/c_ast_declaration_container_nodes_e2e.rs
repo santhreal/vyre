@@ -7,7 +7,7 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 
-use vyre_libs::parsing::c::lex::tokens::*;
+use c_frontend::spelling::c_tokens;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
     reference_c11_classify_vast_node_kinds, C_AST_KIND_BIT_FIELD_DECL, C_AST_KIND_ENUM_DECL,
@@ -21,9 +21,7 @@ const VAST_STRIDE_U32: usize = 10;
 mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-use c_ast_gpu_parity_support::{
-    build_fixture, row_indices, run_gpu_classifier_with_count, Fixture, FixtureToken,
-};
+use c_ast_gpu_parity_support::{row_indices, run_gpu_classifier_with_count, Fixture};
 
 fn classify(fix: &Fixture) -> Vec<u8> {
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
@@ -39,39 +37,10 @@ fn classify(fix: &Fixture) -> Vec<u8> {
 }
 
 fn aggregate_fixture() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("foo", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("unsigned", TOK_IDENTIFIER),
-        FixtureToken::new("flags", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("3", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("union", TOK_IDENTIFIER),
-        FixtureToken::new("cell", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("long", TOK_IDENTIFIER),
-        FixtureToken::new("raw", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("enum", TOK_IDENTIFIER),
-        FixtureToken::new("mode", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("MODE_A", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("MODE_B", TOK_IDENTIFIER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens(
+        "struct foo { int a ; unsigned flags : 3 ; } ; union cell { long raw ; } ; enum mode { \
+         MODE_A = 1 , MODE_B } ;",
+    )
 }
 
 #[test]
@@ -89,19 +58,7 @@ fn aggregate_containers_and_bitfields_are_semantic_rows() {
 
 #[test]
 fn forward_opaque_tags_are_not_flat_keyword_noise() {
-    let fixture = build_fixture(&[
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("opaque", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("union", TOK_IDENTIFIER),
-        FixtureToken::new("payload", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("enum", TOK_IDENTIFIER),
-        FixtureToken::new("state", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ]);
+    let fixture = c_tokens("struct opaque * p ; union payload ; enum state ;");
     let typed = classify(&fixture);
     assert_eq!(row_indices(&typed, C_AST_KIND_STRUCT_DECL), vec![0]);
     assert_eq!(row_indices(&typed, C_AST_KIND_UNION_DECL), vec![5]);
@@ -110,31 +67,9 @@ fn forward_opaque_tags_are_not_flat_keyword_noise() {
 
 #[test]
 fn typedef_and_function_definition_have_distinct_contract_rows() {
-    let fixture = build_fixture(&[
-        FixtureToken::new("typedef", TOK_IDENTIFIER),
-        FixtureToken::new("unsigned", TOK_IDENTIFIER),
-        FixtureToken::new("long", TOK_IDENTIFIER),
-        FixtureToken::new("size_t", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("decl", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("defn", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("return", TOK_IDENTIFIER),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ]);
+    let fixture = c_tokens(
+        "typedef unsigned long size_t ; int decl ( int a ) ; int defn ( int a ) { return a ; }",
+    );
     let typed = classify(&fixture);
     assert_eq!(row_indices(&typed, C_AST_KIND_TYPEDEF_DECL), vec![0]);
     assert_eq!(row_indices(&typed, node_kind::FUNCTION_DECL), vec![6]);
@@ -146,15 +81,7 @@ fn typedef_and_function_definition_have_distinct_contract_rows() {
 
 #[test]
 fn static_assert_is_a_declaration_node() {
-    let fixture = build_fixture(&[
-        FixtureToken::new("_Static_assert", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("\"ok\"", TOK_STRING),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ]);
+    let fixture = c_tokens("_Static_assert ( 1 , \"ok\" ) ;");
     let typed = classify(&fixture);
     assert_eq!(row_indices(&typed, C_AST_KIND_STATIC_ASSERT_DECL), vec![0]);
 }

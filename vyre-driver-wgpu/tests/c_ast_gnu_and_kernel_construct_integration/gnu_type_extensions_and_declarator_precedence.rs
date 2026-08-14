@@ -2,6 +2,7 @@
 
 use super::asm_goto_classifies_template_and_labels::*;
 use super::*;
+use crate::c_frontend::spelling::c_tokens;
 
 #[test]
 fn atomic_qualifier_does_not_misclassify() {
@@ -41,14 +42,7 @@ fn atomic_type_specifier_does_not_misclassify() {
 // ---------------------------------------------------------------------------
 
 fn fixture_typeof_unqual() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__typeof_unqual__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("z", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("__typeof_unqual__ ( int ) z ;")
 }
 
 #[test]
@@ -76,13 +70,7 @@ fn typeof_unqual_promotes_and_declares_variable() {
 // ---------------------------------------------------------------------------
 
 fn fixture_auto_type() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__auto_type", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("42", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("__auto_type x = 42 ;")
 }
 
 #[test]
@@ -106,12 +94,7 @@ fn auto_type_promotes_and_declares_variable() {
 // ---------------------------------------------------------------------------
 
 fn fixture_int128() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("unsigned", TOK_UNSIGNED),
-        FixtureToken::new("__int128", TOK_IDENTIFIER),
-        FixtureToken::new("wide", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("unsigned __int128 wide ;")
 }
 
 #[test]
@@ -135,29 +118,11 @@ fn int128_promotes_and_declares_variable() {
 // ---------------------------------------------------------------------------
 
 fn fixture_declarator_pointer_vs_array() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("4", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("int * a [ 4 ] ;")
 }
 
 fn fixture_declarator_array_vs_pointer() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("b", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("4", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("int ( * b ) [ 4 ] ;")
 }
 
 #[test]
@@ -221,32 +186,7 @@ fn declarator_array_pointer_precedence() {
 // ---------------------------------------------------------------------------
 
 fn fixture_c99_for_declaration() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new("n", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("for", TOK_FOR),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new("i", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("i", TOK_IDENTIFIER),
-        FixtureToken::new("<", TOK_LT),
-        FixtureToken::new("n", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("i", TOK_IDENTIFIER),
-        FixtureToken::new("++", TOK_INC),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens("void f ( int n ) { for ( int i = 0 ; i < n ; i ++ ) { } }")
 }
 
 #[test]
@@ -272,20 +212,7 @@ fn c99_for_declaration_classifies_correctly() {
 // ---------------------------------------------------------------------------
 
 fn fixture_abstract_function_pointer_param() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("foo", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("void foo ( void ( * ) ( int ) ) ;")
 }
 
 #[test]
@@ -320,49 +247,13 @@ fn abstract_function_pointer_param_classifies() {
 // ---------------------------------------------------------------------------
 
 fn fixture_kernel_function_with_attributes() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("static", TOK_STATIC),
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("section", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\".init.text\"", TOK_STRING),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new("foo", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("return", TOK_RETURN),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens(
+        "static __attribute__ ( ( section ( \".init.text\" ) ) ) int foo ( void ) { return 0 ; }",
+    )
 }
 
 fn fixture_kernel_typeof_fnptr_array() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("typeof", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("ops", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("4", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("typeof ( int ) * ( * ops [ 4 ] ) ( void ) ;")
 }
 
 #[test]

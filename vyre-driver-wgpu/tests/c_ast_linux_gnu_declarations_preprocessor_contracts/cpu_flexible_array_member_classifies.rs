@@ -2,6 +2,7 @@
 
 use super::cpu_bitfield_mixed_with_attribute_classifies::*;
 use super::*;
+use crate::c_frontend::spelling::c_tokens;
 
 #[test]
 pub(crate) fn cpu_flexible_array_member_classifies() {
@@ -36,30 +37,7 @@ pub(crate) fn gpu_parity_flexible_array_member() {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn fixture_signal_function() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("signal", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("sig", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("func", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("void ( * signal ( int sig , void ( * func ) ( int ) ) ) ( int ) ;")
 }
 
 #[test]

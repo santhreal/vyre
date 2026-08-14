@@ -10,10 +10,10 @@ mod c_ast_gpu_parity_support;
 mod c_frontend;
 
 use c_ast_gpu_parity_support::{
-    build_fixture, classify, row_indices, run_gpu_semantic_pg_lower as run_gpu_semantic_lower,
-    semantic_edge_word, semantic_node_word, word_at, Fixture, FixtureToken, VAST_STRIDE_U32,
+    classify, row_indices, run_gpu_semantic_pg_lower as run_gpu_semantic_lower, semantic_edge_word,
+    semantic_node_word, word_at, Fixture, VAST_STRIDE_U32,
 };
-use vyre_libs::parsing::c::lex::tokens::*;
+use c_frontend::spelling::c_tokens;
 use vyre_libs::parsing::c::lower::{
     reference_ast_to_pg_semantic_graph, C_AST_PG_CATEGORY_GNU, C_AST_PG_EDGE_PARENT,
     C_AST_PG_ROLE_ASM_CLOBBER, C_AST_PG_ROLE_ASM_GOTO_LABEL, C_AST_PG_ROLE_ASM_INPUT,
@@ -44,27 +44,7 @@ fn fixture_asm_goto() -> Fixture {
 }
 
 fn fixture_attributes() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("section", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\".text\"", TOK_STRING),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("aligned", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("16", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("used", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("probe", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("__attribute__ ( ( section ( \".text\" ) , aligned ( 16 ) , used ) ) int probe ;")
 }
 
 #[test]

@@ -2,6 +2,7 @@
 
 use super::cpu_alignas_on_variable_stays_raw_and_classifies::*;
 use super::*;
+use crate::c_frontend::spelling::c_tokens;
 
 #[test]
 pub(crate) fn cpu_nested_designated_init_complex_classifies() {
@@ -68,33 +69,8 @@ pub(crate) fn gpu_parity_nested_designated_init_complex() {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn fixture_bitfield_mixed_with_attribute() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("Flags", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("unsigned", TOK_IDENTIFIER),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("4", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("packed", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("unsigned", TOK_IDENTIFIER),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("b", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("8", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens(
+        "struct Flags { unsigned int a : 4 ; __attribute__ ( ( packed ) ) unsigned int : 0 ; int \
+         b : 8 ; } ;",
+    )
 }

@@ -2,6 +2,7 @@
 
 use super::cpu_typeof_unqual_simple_classifies::*;
 use super::*;
+use crate::c_frontend::spelling::c_tokens;
 
 #[test]
 pub(crate) fn cpu_alignas_on_variable_stays_raw_and_classifies() {
@@ -59,41 +60,8 @@ pub(crate) fn gpu_parity_aligned_attribute_on_array() {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn fixture_nested_designated_init_complex() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("struct", TOK_STRUCT),
-        FixtureToken::new("Outer", TOK_IDENTIFIER),
-        FixtureToken::new("o", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new(".", TOK_DOT),
-        FixtureToken::new("inner", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new(".", TOK_DOT),
-        FixtureToken::new("arr", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new("...", TOK_ELLIPSIS),
-        FixtureToken::new("3", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new(".", TOK_DOT),
-        FixtureToken::new("flag", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens(
+        "struct Outer o = { . inner = { . arr = { [ 0 ] = 1 , [ 1 ... 3 ] = 2 } , . flag = 1 } } \
+         ;",
+    )
 }

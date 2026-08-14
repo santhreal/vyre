@@ -2,6 +2,7 @@
 
 use super::cpu_enum_tag_forward_declaration::*;
 use super::*;
+use crate::c_frontend::spelling::c_tokens;
 
 #[test]
 pub(crate) fn gpu_parity_attribute_on_function_pointer_typedef() {
@@ -14,14 +15,7 @@ pub(crate) fn gpu_parity_attribute_on_function_pointer_typedef() {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn fixture_auto_type_pointer_init() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__auto_type", TOK_IDENTIFIER),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("&", TOK_AMP),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("__auto_type p = & x ;")
 }
 
 #[test]
@@ -61,29 +55,9 @@ pub(crate) fn gpu_parity_auto_type_pointer_init() {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn fixture_typeof_unqual_simple() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__typeof_unqual__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("__typeof_unqual__ ( int ) x ;")
 }
 
 pub(crate) fn fixture_typeof_array_declarator() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("typeof", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("4", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("arr", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("typeof ( int [ 4 ] ) arr [ 2 ] ;")
 }

@@ -1,6 +1,7 @@
 // (use super::* removed  -  parts now share crate-root scope via flat include)
 
 use super::*;
+use crate::c_frontend::spelling::c_tokens;
 
 #[test]
 pub(crate) fn asm_goto_classifies_template_and_labels() {
@@ -52,70 +53,18 @@ pub(crate) fn asm_extended_io_classifies_operands_and_clobbers() {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn fixture_attribute_cleanup() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("cleanup", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("free", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("__attribute__ ( ( cleanup ( free ) ) ) void * p ;")
 }
 
 pub(crate) fn fixture_attribute_alias() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("alias", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"real_sym\"", TOK_STRING),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("wrapper", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("__attribute__ ( ( alias ( \"real_sym\" ) ) ) void wrapper ( void ) ;")
 }
 
 pub(crate) fn fixture_attribute_aligned_and_section() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("aligned", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("64", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("section", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\".data\"", TOK_STRING),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new("buf", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("8", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens(
+        "__attribute__ ( ( aligned ( 64 ) ) ) __attribute__ ( ( section ( \".data\" ) ) ) int buf \
+         [ 8 ] ;",
+    )
 }
 
 #[test]
@@ -229,84 +178,23 @@ pub(crate) fn computed_goto_classifies_label_address_expr() {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn fixture_builtin_expect() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("if", TOK_IF),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("__builtin_expect", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens("if ( __builtin_expect ( x , 1 ) ) { }")
 }
 
 pub(crate) fn fixture_builtin_constant_p() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("__builtin_constant_p", TOK_BUILTIN_CONSTANT_P),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("int x = __builtin_constant_p ( 1 ) ;")
 }
 
 pub(crate) fn fixture_builtin_choose_expr() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new("y", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("__builtin_choose_expr", TOK_BUILTIN_CHOOSE_EXPR),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("3", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("int y = __builtin_choose_expr ( 1 , 2 , 3 ) ;")
 }
 
 pub(crate) fn fixture_builtin_types_compatible_p() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new("z", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new(
-            "__builtin_types_compatible_p",
-            TOK_BUILTIN_TYPES_COMPATIBLE_P,
-        ),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_INT),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("long", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("int z = __builtin_types_compatible_p ( int , long ) ;")
 }
 
 pub(crate) fn fixture_generic_builtin_call() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("__builtin_clz", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_tokens("void f ( void ) { __builtin_clz ( x ) ; }")
 }
 
 #[test]

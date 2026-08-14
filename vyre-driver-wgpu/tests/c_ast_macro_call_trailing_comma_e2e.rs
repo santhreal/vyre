@@ -6,10 +6,8 @@ mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
 
-use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, row_indices, Fixture, FixtureToken,
-};
-use vyre_libs::parsing::c::lex::tokens::*;
+use c_ast_gpu_parity_support::{assert_full_pipeline_parity, row_indices, Fixture};
+use c_frontend::spelling::c_tokens;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
     reference_c11_classify_vast_node_kinds,
@@ -17,19 +15,7 @@ use vyre_libs::parsing::c::parse::vast::{
 use vyre_primitives::predicate::node_kind;
 
 fn fixture_macro_call_with_trailing_comma() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("v", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("v", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("FOO", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("int v ; v = FOO ( a , ) ;")
 }
 
 #[test]

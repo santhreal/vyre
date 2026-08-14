@@ -2,6 +2,7 @@
 
 use super::gpu_parity_attribute_on_function_pointer_typedef::*;
 use super::*;
+use crate::c_frontend::spelling::c_tokens;
 
 #[test]
 pub(crate) fn cpu_typeof_unqual_simple_classifies() {
@@ -48,33 +49,9 @@ pub(crate) fn gpu_parity_typeof_array_declarator() {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn fixture_alignas_on_variable() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("_Alignas", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("8", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("_Alignas ( 8 ) int x ;")
 }
 
 pub(crate) fn fixture_aligned_attribute_on_array() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("aligned", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("16", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("arr", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("4", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_tokens("__attribute__ ( ( aligned ( 16 ) ) ) int arr [ 4 ] ;")
 }

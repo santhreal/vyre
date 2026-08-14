@@ -31,8 +31,8 @@ mod c_ast_gpu_parity_support;
 mod c_frontend;
 
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, classify, row_indices, void_fn_fixture, word_at,
-    Fixture, FixtureToken, VAST_STRIDE_U32,
+    assert_full_pipeline_parity, classify, row_indices, void_fn_fixture, word_at, Fixture,
+    FixtureToken, VAST_STRIDE_U32,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::gnu_builtins::try_classify_gnu_builtin_name;
