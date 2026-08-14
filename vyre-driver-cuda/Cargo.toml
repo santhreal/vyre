@@ -48,6 +48,10 @@ libc.workspace = true
 
 [dev-dependencies]
 vyre-test-support.workspace = true
+# Byte-stability golden harness (`artifact_golden`) shared with the emitter
+# crates, so the emitted-PTX corpus is pinned the same way emitted artifacts
+# are instead of growing a second comparison spelling.
+vyre-lower = { workspace = true, features = ["test-fixtures"] }
 # Integration tests and benchmarks assert against the lower-layer libraries they
 # exercise. The canonical scan product is a direct dev dependency.
 vyre-libs = { path = "../vyre-libs", features = ["full", "c-parser"] }
