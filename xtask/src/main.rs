@@ -6,6 +6,7 @@ use std::process;
 mod artifact_paths;
 mod bench;
 mod binary;
+mod c_parser_clang_oracle;
 mod compile;
 mod docs;
 mod gates;

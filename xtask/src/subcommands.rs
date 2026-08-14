@@ -22,7 +22,7 @@ use crate::release::{
     optimization_corpus, optimization_matrix, package_readiness, release_conformance,
     release_evidence, release_gate, release_workload_matrix, version_matrix, vyre_release_gate,
 };
-use crate::{compile, print_composition, shrink, trace_f32};
+use crate::{c_parser_clang_oracle, compile, print_composition, shrink, trace_f32};
 
 /// What a subcommand is for, and therefore what CI owes it.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -95,6 +95,16 @@ pub(crate) const SUBCOMMANDS: &[Subcommand] = &[
         kind: Kind::Evidence,
         ci_args: &[],
         run: bench_release::run,
+    },
+    Subcommand {
+        name: "c-parser-clang-oracle",
+        usage: "--corpus DIR --vyre-report PATH [--output PATH]",
+        help: "Cross-check the C frontend's records against a clang AST oracle over a corpus",
+        kind: Kind::Tool(
+            "needs a caller-supplied C corpus, a prior parser report for that corpus, and a clang install on the host",
+        ),
+        ci_args: &[],
+        run: c_parser_clang_oracle::run,
     },
     Subcommand {
         name: "catalog",
