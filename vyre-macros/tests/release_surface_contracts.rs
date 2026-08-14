@@ -20,32 +20,12 @@ use vyre_macros::vyre_pass;
 )]
 pub struct ReleaseSurfacePass;
 
-impl ReleaseSurfacePass {
-    fn analyze_impl(program: &ir::Program) -> optimizer::PassAnalysis {
-        if program.id == 0 {
-            optimizer::PassAnalysis::SKIP
-        } else {
-            optimizer::PassAnalysis::RUN
-        }
-    }
-
-    fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::pass_result(program, true)
-    }
-}
+crate::define_id_gated_pass_body!(ReleaseSurfacePass);
 
 #[vyre_pass(name = "release_surface_defaults", requires = [], invalidates = [])]
 pub struct ReleaseSurfaceDefaultsPass;
 
-impl ReleaseSurfaceDefaultsPass {
-    fn analyze_impl(_program: &ir::Program) -> optimizer::PassAnalysis {
-        optimizer::PassAnalysis::RUN
-    }
-
-    fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::unchanged(program)
-    }
-}
+crate::define_always_run_pass_body!(ReleaseSurfaceDefaultsPass);
 
 #[vyre_pass(
     name = "release_surface_analyze_always",
@@ -55,11 +35,7 @@ impl ReleaseSurfaceDefaultsPass {
 )]
 pub struct ReleaseSurfaceAnalyzeAlwaysPass;
 
-impl ReleaseSurfaceAnalyzeAlwaysPass {
-    fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::unchanged(program)
-    }
-}
+crate::define_unchanged_pass_body!(ReleaseSurfaceAnalyzeAlwaysPass);
 
 macro_rules! define_metadata_matrix_pass {
     (
@@ -79,15 +55,7 @@ macro_rules! define_metadata_matrix_pass {
                                                         )]
         pub struct $type_name;
 
-        impl $type_name {
-            fn analyze_impl(_program: &ir::Program) -> optimizer::PassAnalysis {
-                optimizer::PassAnalysis::RUN
-            }
-
-            fn transform(program: ir::Program) -> optimizer::PassResult {
-                optimizer::unchanged(program)
-            }
-        }
+        crate::define_always_run_pass_body!($type_name);
     };
 }
 
@@ -202,21 +170,7 @@ fn vyre_pass_emits_metadata_trait_impl_and_inventory_registration() {
 fn vyre_pass_default_metadata_is_a_stable_contract() {
     let pass = ReleaseSurfaceDefaultsPass;
     let metadata = optimizer::ProgramPass::metadata(&pass);
-
-    assert_eq!(metadata.name, "release_surface_defaults");
-    assert_eq!(metadata.requires, &[] as &[&str]);
-    assert_eq!(metadata.invalidates, &[] as &[&str]);
-    assert_eq!(metadata.phase, optimizer::PassPhase::Unclassified);
-    assert_eq!(
-        metadata.boundary_class,
-        optimizer::PassBoundaryClass::Unknown
-    );
-    assert_eq!(metadata.requires_caps, &[] as &[&str]);
-    assert!(metadata.preserves_abi);
-    assert_eq!(
-        metadata.cost_model_family,
-        optimizer::CostModelFamily::Unknown
-    );
+    support::assert_default_metadata(&metadata, "release_surface_defaults");
 
     let program = ir::Program { id: 11 };
     assert_eq!(

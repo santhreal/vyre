@@ -1,6 +1,8 @@
 #![allow(clippy::module_name_repetitions)]
 
-use crate::pass::{boundary_class_tokens, cost_model_family_tokens, pass_phase_tokens, PassArgs};
+use crate::pass::{
+    MetadataEnum, PassArgs, PASS_BOUNDARY_CLASS, PASS_COST_MODEL_FAMILY, PASS_PHASE,
+};
 use quote::quote;
 use syn::LitStr;
 
@@ -100,100 +102,157 @@ fn pass_args_reject_non_string_metadata_arrays() {
 #[test]
 fn pass_phase_rejects_consumer_prefixed_phase_names() {
     let phase = LitStr::new("consumer-dataflow", proc_macro2::Span::call_site());
-    let err = pass_phase_tokens(Some(&phase))
+    let err = PASS_PHASE
+        .tokens(Some(&phase))
         .expect_err("Fix: platform pass phases must remain consumer neutral");
 
     assert!(err.to_string().contains("unsupported pass phase"));
     assert!(err.to_string().contains("Fix:"));
 }
 
+/// Every metadata enum the attribute lowers into, so a new one is covered by
+/// the tests below the moment it is declared rather than when someone
+/// remembers to extend a case list.
+const METADATA_ENUMS: &[&MetadataEnum] =
+    &[&PASS_PHASE, &PASS_BOUNDARY_CLASS, &PASS_COST_MODEL_FAMILY];
+
 #[test]
 fn generated_pass_args_matrix_covers_every_metadata_enum_combination() {
-    const PHASES: &[(&str, &str)] = &[
-        ("unclassified", "Unclassified"),
-        ("canonicalization", "Canonicalization"),
-        ("scalar_algebra", "ScalarAlgebra"),
-        ("loop", "Loop"),
-        ("memory", "Memory"),
-        ("fusion_cse", "FusionCse"),
-        ("sync", "Sync"),
-        ("specialization", "Specialization"),
-        ("cleanup", "Cleanup"),
-        ("dataflow", "Dataflow"),
-        ("megakernel", "Megakernel"),
-    ];
-    const BOUNDARIES: &[(&str, &str)] = &[
-        ("unknown", "Unknown"),
-        ("abi_preserving", "AbiPreserving"),
-        ("abi_changing", "AbiChanging"),
-        ("backend_aware", "BackendAware"),
-        ("runtime_aware", "RuntimeAware"),
-        ("domain_specific", "DomainSpecific"),
-    ];
-    const COSTS: &[(&str, &str)] = &[
-        ("unknown", "Unknown"),
-        ("scalar", "Scalar"),
-        ("loop", "Loop"),
-        ("memory", "Memory"),
-        ("fusion", "Fusion"),
-        ("sync", "Sync"),
-        ("dataflow", "Dataflow"),
-        ("megakernel", "Megakernel"),
-    ];
+    let mut visited = std::collections::BTreeSet::new();
+    for (phase, phase_variant) in PASS_PHASE.rows {
+        for (boundary, boundary_variant) in PASS_BOUNDARY_CLASS.rows {
+            for (cost, cost_variant) in PASS_COST_MODEL_FAMILY.rows {
+                for analyze_always in [false, true] {
+                    let analyze = if analyze_always {
+                        quote! { , analyze = "always" }
+                    } else {
+                        quote! {}
+                    };
+                    let tokens = quote! {
+                        name = "generated_parse_case",
+                        requires = ["domtree", "alias"],
+                        invalidates = ["cfg"],
+                        phase = #phase,
+                        boundary_class = #boundary,
+                        requires_caps = ["cuda", "resident"],
+                        preserves_abi = false,
+                        cost_model_family = #cost
+                        #analyze
+                    };
+                    let args = syn::parse2::<PassArgs>(tokens)
+                        .expect("Fix: generated pass metadata parser case should parse");
 
-    let mut assertions = 0usize;
-    for seed in 0usize..4096 {
-        let (phase, phase_variant) = PHASES[seed % PHASES.len()];
-        let (boundary, boundary_variant) = BOUNDARIES[(seed / PHASES.len()) % BOUNDARIES.len()];
-        let (cost, cost_variant) = COSTS[(seed / (PHASES.len() * BOUNDARIES.len())) % COSTS.len()];
-        let analyze = if seed & 1 == 0 {
-            quote! { , analyze = "always" }
-        } else {
-            quote! {}
-        };
-        let tokens = quote! {
-            name = "generated_parse_case",
-            requires = ["domtree", "alias"],
-            invalidates = ["cfg"],
-            phase = #phase,
-            boundary_class = #boundary,
-            requires_caps = ["cuda", "resident"],
-            preserves_abi = false,
-            cost_model_family = #cost
-            #analyze
-        };
-        let args = syn::parse2::<PassArgs>(tokens)
-            .expect("Fix: generated pass metadata parser case should parse");
-
-        assert_eq!(args.name.value(), "generated_parse_case");
-        assert_eq!(args.requires.len(), 2);
-        assert_eq!(args.invalidates.len(), 1);
-        assert_eq!(args.requires_caps.len(), 2);
-        assert_eq!(args.preserves_abi.map(|value| value.value), Some(false));
-        assert_eq!(
-            args.phase.as_ref().map(LitStr::value).as_deref(),
-            Some(phase)
-        );
-        assert_eq!(
-            pass_phase_tokens(args.phase.as_ref())
-                .expect("Fix: generated phase must lower")
-                .to_string(),
-            format!(":: vyre :: optimizer :: PassPhase :: {phase_variant}")
-        );
-        assert_eq!(
-            boundary_class_tokens(args.boundary_class.as_ref())
-                .expect("Fix: generated boundary must lower")
-                .to_string(),
-            format!(":: vyre :: optimizer :: PassBoundaryClass :: {boundary_variant}")
-        );
-        assert_eq!(
-            cost_model_family_tokens(args.cost_model_family.as_ref())
-                .expect("Fix: generated cost family must lower")
-                .to_string(),
-            format!(":: vyre :: optimizer :: CostModelFamily :: {cost_variant}")
-        );
-        assert_eq!(args.analyze_always, seed & 1 == 0);
-        assertions += 10;
+                    assert_eq!(args.name.value(), "generated_parse_case");
+                    assert_eq!(args.requires.len(), 2);
+                    assert_eq!(args.invalidates.len(), 1);
+                    assert_eq!(args.requires_caps.len(), 2);
+                    assert_eq!(args.preserves_abi.map(|value| value.value), Some(false));
+                    assert_eq!(
+                        args.phase.as_ref().map(LitStr::value).as_deref(),
+                        Some(*phase)
+                    );
+                    assert_eq!(
+                        PASS_PHASE
+                            .tokens(args.phase.as_ref())
+                            .expect("Fix: generated phase must lower")
+                            .to_string(),
+                        format!(":: vyre :: optimizer :: PassPhase :: {phase_variant}")
+                    );
+                    assert_eq!(
+                        PASS_BOUNDARY_CLASS
+                            .tokens(args.boundary_class.as_ref())
+                            .expect("Fix: generated boundary must lower")
+                            .to_string(),
+                        format!(":: vyre :: optimizer :: PassBoundaryClass :: {boundary_variant}")
+                    );
+                    assert_eq!(
+                        PASS_COST_MODEL_FAMILY
+                            .tokens(args.cost_model_family.as_ref())
+                            .expect("Fix: generated cost family must lower")
+                            .to_string(),
+                        format!(":: vyre :: optimizer :: CostModelFamily :: {cost_variant}")
+                    );
+                    assert_eq!(args.analyze_always, analyze_always);
+                    visited.insert((*phase, *boundary, *cost, analyze_always));
+                }
+            }
+        }
     }
-    assert_eq!(assertions, 4096 * 10);
+
+    assert_eq!(
+        visited.len(),
+        PASS_PHASE.rows.len()
+            * PASS_BOUNDARY_CLASS.rows.len()
+            * PASS_COST_MODEL_FAMILY.rows.len()
+            * 2
+    );
+}
+
+#[test]
+fn omitted_metadata_argument_lowers_to_the_first_declared_row() {
+    for enumeration in METADATA_ENUMS {
+        let (_, default_variant) = enumeration.rows[0];
+        assert_eq!(
+            enumeration
+                .tokens(None)
+                .expect("Fix: an omitted metadata argument must lower to a default variant")
+                .to_string(),
+            format!(
+                ":: vyre :: optimizer :: {} :: {default_variant}",
+                enumeration.type_name
+            ),
+            "{}",
+            enumeration.argument
+        );
+    }
+}
+
+#[test]
+fn every_rejected_metadata_string_names_every_accepted_string() {
+    for enumeration in METADATA_ENUMS {
+        let literal = LitStr::new("no_such_value", proc_macro2::Span::call_site());
+        let message = enumeration
+            .tokens(Some(&literal))
+            .expect_err("Fix: an unknown metadata string must be rejected")
+            .to_string();
+
+        assert!(
+            message.contains(&format!("unsupported pass {}", enumeration.argument)),
+            "{message}"
+        );
+        assert!(message.contains("Fix:"), "{message}");
+        for (accepted, _) in enumeration.rows {
+            assert!(
+                message.contains(accepted),
+                "{} diagnostic omits `{accepted}`: {message}",
+                enumeration.argument
+            );
+        }
+    }
+}
+
+#[test]
+fn every_metadata_row_declares_a_distinct_string_and_variant() {
+    for enumeration in METADATA_ENUMS {
+        let strings: std::collections::BTreeSet<_> =
+            enumeration.rows.iter().map(|(text, _)| *text).collect();
+        let variants: std::collections::BTreeSet<_> = enumeration
+            .rows
+            .iter()
+            .map(|(_, variant)| *variant)
+            .collect();
+
+        assert_eq!(
+            strings.len(),
+            enumeration.rows.len(),
+            "{}",
+            enumeration.argument
+        );
+        assert_eq!(
+            variants.len(),
+            enumeration.rows.len(),
+            "{}",
+            enumeration.argument
+        );
+    }
 }

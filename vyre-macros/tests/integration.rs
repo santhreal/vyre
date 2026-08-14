@@ -20,41 +20,17 @@ use vyre_macros::{vyre_ast_registry, vyre_pass};
 )]
 pub struct CompileBackedPass;
 
-impl CompileBackedPass {
-    fn analyze_impl(program: &ir::Program) -> optimizer::PassAnalysis {
-        if program.id == 0 {
-            optimizer::PassAnalysis::SKIP
-        } else {
-            optimizer::PassAnalysis::RUN
-        }
-    }
-
-    fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::pass_result(program, true)
-    }
-}
+crate::define_id_gated_pass_body!(CompileBackedPass);
 
 #[vyre_pass(name = "macro_analyze_always", requires = [], invalidates = [], analyze = "always")]
 pub struct AnalyzeAlwaysPass;
 
-impl AnalyzeAlwaysPass {
-    fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::unchanged(program)
-    }
-}
+crate::define_unchanged_pass_body!(AnalyzeAlwaysPass);
 
 #[vyre_pass(name = "macro_defaulted_pass", requires = [], invalidates = [])]
 pub struct DefaultedPass;
 
-impl DefaultedPass {
-    fn analyze_impl(_program: &ir::Program) -> optimizer::PassAnalysis {
-        optimizer::PassAnalysis::RUN
-    }
-
-    fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::unchanged(program)
-    }
-}
+crate::define_always_run_pass_body!(DefaultedPass);
 
 vyre_ast_registry! {
     TestExpr {
@@ -115,23 +91,8 @@ fn vyre_pass_analyze_always_skips_missing_analyze_impl_requirement() {
 
 #[test]
 fn vyre_pass_defaults_are_abi_preserving_unknown_metadata() {
-    let pass = DefaultedPass;
-    let metadata = optimizer::ProgramPass::metadata(&pass);
-
-    assert_eq!(metadata.name, "macro_defaulted_pass");
-    assert_eq!(metadata.requires, &[] as &[&str]);
-    assert_eq!(metadata.invalidates, &[] as &[&str]);
-    assert_eq!(metadata.phase, optimizer::PassPhase::Unclassified);
-    assert_eq!(
-        metadata.boundary_class,
-        optimizer::PassBoundaryClass::Unknown
-    );
-    assert_eq!(metadata.requires_caps, &[] as &[&str]);
-    assert!(metadata.preserves_abi);
-    assert_eq!(
-        metadata.cost_model_family,
-        optimizer::CostModelFamily::Unknown
-    );
+    let metadata = optimizer::ProgramPass::metadata(&DefaultedPass);
+    support::assert_default_metadata(&metadata, "macro_defaulted_pass");
 }
 
 #[test]

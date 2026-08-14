@@ -8,96 +8,94 @@ pub use support::{ir, optimizer};
 
 use vyre_macros::vyre_pass;
 
-macro_rules! define_phase_pass {
-    ($ty:ident, $name:literal, $phase:literal) => {
-        #[vyre_pass(name = $name, requires = [], invalidates = [], phase = $phase, analyze = "always")]
+/// Declare an always-running pass that sets exactly one metadata argument.
+///
+/// The three axes below differ only in which argument they write, so the
+/// argument name is a parameter rather than three copies of the declaration.
+macro_rules! define_single_argument_pass {
+    ($ty:ident, $name:literal, $argument:ident = $value:literal) => {
+        #[vyre_pass(name = $name, requires = [], invalidates = [], $argument = $value, analyze = "always")]
         pub struct $ty;
 
-        impl $ty {
-            fn transform(program: crate::ir::Program) -> crate::optimizer::PassResult {
-                crate::optimizer::unchanged(program)
-            }
-        }
+        crate::define_unchanged_pass_body!($ty);
     };
 }
 
-macro_rules! define_boundary_pass {
-    ($ty:ident, $name:literal, $boundary:literal) => {
-        #[vyre_pass(name = $name, requires = [], invalidates = [], boundary_class = $boundary, analyze = "always")]
-        pub struct $ty;
-
-        impl $ty {
-            fn transform(program: crate::ir::Program) -> crate::optimizer::PassResult {
-                crate::optimizer::unchanged(program)
-            }
-        }
-    };
-}
-
-macro_rules! define_cost_pass {
-    ($ty:ident, $name:literal, $cost:literal) => {
-        #[vyre_pass(name = $name, requires = [], invalidates = [], cost_model_family = $cost, analyze = "always")]
-        pub struct $ty;
-
-        impl $ty {
-            fn transform(program: crate::ir::Program) -> crate::optimizer::PassResult {
-                crate::optimizer::unchanged(program)
-            }
-        }
-    };
-}
-
-define_phase_pass!(PhaseUnclassified, "phase.unclassified", "unclassified");
-define_phase_pass!(
+define_single_argument_pass!(
+    PhaseUnclassified,
+    "phase.unclassified",
+    phase = "unclassified"
+);
+define_single_argument_pass!(
     PhaseCanonicalization,
     "phase.canonicalization",
-    "canonicalization"
+    phase = "canonicalization"
 );
-define_phase_pass!(PhaseScalarAlgebra, "phase.scalar_algebra", "scalar_algebra");
-define_phase_pass!(PhaseLoop, "phase.loop", "loop");
-define_phase_pass!(PhaseMemory, "phase.memory", "memory");
-define_phase_pass!(PhaseFusionCse, "phase.fusion_cse", "fusion_cse");
-define_phase_pass!(PhaseSync, "phase.sync", "sync");
-define_phase_pass!(
+define_single_argument_pass!(
+    PhaseScalarAlgebra,
+    "phase.scalar_algebra",
+    phase = "scalar_algebra"
+);
+define_single_argument_pass!(PhaseLoop, "phase.loop", phase = "loop");
+define_single_argument_pass!(PhaseMemory, "phase.memory", phase = "memory");
+define_single_argument_pass!(PhaseFusionCse, "phase.fusion_cse", phase = "fusion_cse");
+define_single_argument_pass!(PhaseSync, "phase.sync", phase = "sync");
+define_single_argument_pass!(
     PhaseSpecialization,
     "phase.specialization",
-    "specialization"
+    phase = "specialization"
 );
-define_phase_pass!(PhaseCleanup, "phase.cleanup", "cleanup");
-define_phase_pass!(PhaseDataflow, "phase.dataflow", "dataflow");
-define_phase_pass!(PhaseMegakernel, "phase.megakernel", "megakernel");
+define_single_argument_pass!(PhaseCleanup, "phase.cleanup", phase = "cleanup");
+define_single_argument_pass!(PhaseDataflow, "phase.dataflow", phase = "dataflow");
+define_single_argument_pass!(PhaseMegakernel, "phase.megakernel", phase = "megakernel");
 
-define_boundary_pass!(BoundaryUnknown, "boundary.unknown", "unknown");
-define_boundary_pass!(
+define_single_argument_pass!(
+    BoundaryUnknown,
+    "boundary.unknown",
+    boundary_class = "unknown"
+);
+define_single_argument_pass!(
     BoundaryAbiPreserving,
     "boundary.abi_preserving",
-    "abi_preserving"
+    boundary_class = "abi_preserving"
 );
-define_boundary_pass!(BoundaryAbiChanging, "boundary.abi_changing", "abi_changing");
-define_boundary_pass!(
+define_single_argument_pass!(
+    BoundaryAbiChanging,
+    "boundary.abi_changing",
+    boundary_class = "abi_changing"
+);
+define_single_argument_pass!(
     BoundaryBackendAware,
     "boundary.backend_aware",
-    "backend_aware"
+    boundary_class = "backend_aware"
 );
-define_boundary_pass!(
+define_single_argument_pass!(
     BoundaryRuntimeAware,
     "boundary.runtime_aware",
-    "runtime_aware"
+    boundary_class = "runtime_aware"
 );
-define_boundary_pass!(
+define_single_argument_pass!(
     BoundaryDomainSpecific,
     "boundary.domain_specific",
-    "domain_specific"
+    boundary_class = "domain_specific"
 );
 
-define_cost_pass!(CostUnknown, "cost.unknown", "unknown");
-define_cost_pass!(CostScalar, "cost.scalar", "scalar");
-define_cost_pass!(CostLoop, "cost.loop", "loop");
-define_cost_pass!(CostMemory, "cost.memory", "memory");
-define_cost_pass!(CostFusion, "cost.fusion", "fusion");
-define_cost_pass!(CostSync, "cost.sync", "sync");
-define_cost_pass!(CostDataflow, "cost.dataflow", "dataflow");
-define_cost_pass!(CostMegakernel, "cost.megakernel", "megakernel");
+define_single_argument_pass!(CostUnknown, "cost.unknown", cost_model_family = "unknown");
+define_single_argument_pass!(CostScalar, "cost.scalar", cost_model_family = "scalar");
+define_single_argument_pass!(CostLoop, "cost.loop", cost_model_family = "loop");
+define_single_argument_pass!(CostMemory, "cost.memory", cost_model_family = "memory");
+define_single_argument_pass!(CostFusion, "cost.fusion", cost_model_family = "fusion");
+define_single_argument_pass!(CostSync, "cost.sync", cost_model_family = "sync");
+define_single_argument_pass!(
+    CostDataflow,
+    "cost.dataflow",
+    cost_model_family = "dataflow"
+);
+define_single_argument_pass!(
+    CostMegakernel,
+    "cost.megakernel",
+    cost_model_family = "megakernel"
+);
 
 #[test]
 fn vyre_pass_phase_matrix_emits_expected_metadata() {
