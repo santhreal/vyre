@@ -88,6 +88,7 @@ impl inventory::Collect for vyre_driver::registry::migration::Migration
 impl vyre_driver::BackendError
 impl vyre_driver::BackendRegistration
 impl vyre_driver::BindingSet
+impl vyre_driver::Device for vyre_driver::materialize::MaterializerDevice
 impl vyre_driver::DeviceBuffer for vyre_driver::HostShimBuffer
 impl vyre_driver::DispatchConfig
 impl vyre_driver::HostShimBuffer
@@ -131,6 +132,8 @@ impl vyre_driver::graph_capture::ScanGraphCaptureEditClassification
 impl vyre_driver::graph_capture::ScanGraphCaptureEditKind
 impl vyre_driver::launch::LaunchPlan
 impl vyre_driver::launch_fusion::LaunchFusionScratch
+impl vyre_driver::materialize::InstanceCore
+impl vyre_driver::materialize::MaterializerDevice
 impl vyre_driver::megakernel_barrier::MegakernelBarrierScratch
 impl vyre_driver::megakernel_execution::MegakernelDeviceCapabilities
 impl vyre_driver::megakernel_execution::MegakernelExecutionPlanner for vyre_driver::megakernel_execution::NeutralMegakernelExecutionPlanner
@@ -262,6 +265,7 @@ pub const vyre_driver::extraction_cost::HOT_PATH_COST_SCALE_BPS: u32
 pub const vyre_driver::extraction_cost::TENSOR_CORE_COST_SCALE: f32
 pub const vyre_driver::extraction_cost::TENSOR_CORE_COST_SCALE_BPS: u32
 pub const vyre_driver::graph_capture::SCAN_GRAPH_CAPTURE_EDIT_SCHEMA_VERSION: u32
+pub const vyre_driver::materialize::NEUTRAL_MESSAGES: vyre_driver::materialize::InstanceMessages
 pub const vyre_driver::megakernel_execution::MegakernelDeviceCapabilities::FUSION_CAPABLE: Self
 pub const vyre_driver::megakernel_execution::MegakernelDeviceCapabilities::FUSION_INCAPABLE: Self
 pub const vyre_driver::numeric::BASIS_POINTS_DENOMINATOR: u32
@@ -840,9 +844,28 @@ pub fn vyre_driver::launch_fusion::LaunchFusionScratch::new() -> Self
 pub fn vyre_driver::launch_fusion::LaunchFusionScratch::try_with_capacity(stage_count: usize) -> core::result::Result<Self, vyre_driver::launch_fusion::LaunchFusionError>
 pub fn vyre_driver::launch_fusion::plan_launch_fusion(stages: &[vyre_driver::launch_fusion::LaunchFusionStage], max_group_bytes: u64) -> core::result::Result<vyre_driver::launch_fusion::LaunchFusionPlan, vyre_driver::launch_fusion::LaunchFusionError>
 pub fn vyre_driver::launch_fusion::plan_launch_fusion_with_scratch(stages: &[vyre_driver::launch_fusion::LaunchFusionStage], max_group_bytes: u64, scratch: &mut vyre_driver::launch_fusion::LaunchFusionScratch) -> core::result::Result<vyre_driver::launch_fusion::LaunchFusionPlan, vyre_driver::launch_fusion::LaunchFusionError>
+pub fn vyre_driver::materialize::InstanceCore::absorb_outputs(&self, plan: &vyre_driver::binding::BindingPlan, program: &vyre_foundation::ir_inner::model::program::definition::Program, produced: &[alloc::vec::Vec<u8>], state: &mut alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, alloc::vec::Vec<u8>>, missing: fn(usize, &str) -> vyre_driver::BackendError) -> core::result::Result<(), vyre_driver::BackendError>
+pub fn vyre_driver::materialize::InstanceCore::accept(&self, bindings: &vyre_driver::BindingSet) -> core::result::Result<(), vyre_driver::BackendError>
+pub fn vyre_driver::materialize::InstanceCore::completion(&self, state: &alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, alloc::vec::Vec<u8>>, device_ns: core::option::Option<u64>) -> core::result::Result<vyre_driver::Completion, vyre_driver::BackendError>
+pub fn vyre_driver::materialize::InstanceCore::gather_inputs<'state>(&self, plan: &vyre_driver::binding::BindingPlan, program: &vyre_foundation::ir_inner::model::program::definition::Program, state: &'state alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, alloc::vec::Vec<u8>>, unbound: fn(vyre_megakernel::ArtifactValueId, &str) -> vyre_driver::BackendError) -> core::result::Result<alloc::vec::Vec<&'state [u8]>, vyre_driver::BackendError>
+pub fn vyre_driver::materialize::InstanceCore::new(artifact: &vyre_megakernel::Artifact, payload: &vyre_megakernel::envelope::TargetPayload, device: vyre_driver::DeviceIdentity, messages: vyre_driver::materialize::InstanceMessages) -> Self
+pub fn vyre_driver::materialize::InstanceCore::project(&self, values: &alloc::collections::btree::set::BTreeSet<vyre_megakernel::ArtifactValueId>, state: &alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, alloc::vec::Vec<u8>>, missing: fn(vyre_megakernel::ArtifactValueId) -> vyre_driver::BackendError) -> core::result::Result<alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, alloc::vec::Vec<u8>>, vyre_driver::BackendError>
+pub fn vyre_driver::materialize::InstanceCore::ready(&self, result: core::result::Result<vyre_driver::Completion, vyre_driver::BackendError>) -> alloc::boxed::Box<dyn vyre_driver::Submission>
+pub fn vyre_driver::materialize::InstanceCore::value_for_buffer(&self, name: &str) -> core::result::Result<vyre_megakernel::ArtifactValueId, vyre_driver::BackendError>
+pub fn vyre_driver::materialize::MaterializerDevice::identity(&self) -> &vyre_driver::DeviceIdentity
+pub fn vyre_driver::materialize::MaterializerDevice::instance(&self, artifact: &vyre_megakernel::Artifact, payload: &vyre_megakernel::envelope::TargetPayload, messages: vyre_driver::materialize::InstanceMessages) -> vyre_driver::materialize::InstanceCore
+pub fn vyre_driver::materialize::MaterializerDevice::is_healthy(&self) -> bool
+pub fn vyre_driver::materialize::MaterializerDevice::new(identity: vyre_driver::DeviceIdentity, format: vyre_megakernel::envelope::TargetPayloadFormat, profile: vyre_megakernel::envelope::TargetProfile) -> Self
+pub fn vyre_driver::materialize::MaterializerDevice::revocable(identity: vyre_driver::DeviceIdentity, format: vyre_megakernel::envelope::TargetPayloadFormat, profile: vyre_megakernel::envelope::TargetProfile, revoked: alloc::sync::Arc<core::sync::atomic::AtomicBool>) -> Self
+pub fn vyre_driver::materialize::MaterializerDevice::target<'a>(&'a self, backend_id: &'a str) -> vyre_driver::materialize::MaterializerTarget<'a>
+pub fn vyre_driver::materialize::MaterializerDevice::target_format(&self) -> &vyre_megakernel::envelope::TargetPayloadFormat
+pub fn vyre_driver::materialize::MaterializerDevice::target_profile(&self) -> &vyre_megakernel::envelope::TargetProfile
 pub fn vyre_driver::materialize::admit(artifact: &vyre_megakernel::Artifact, payload: &vyre_megakernel::envelope::TargetPayload, target: vyre_driver::materialize::MaterializerTarget<'_>) -> core::result::Result<alloc::vec::Vec<vyre_driver::materialize::AdmittedModule>, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::compile_error(backend: &str, error: impl core::fmt::Display) -> vyre_driver::BackendError
+pub fn vyre_driver::materialize::host_only_bindings(bindings: &vyre_driver::BindingSet, feature: &str, backend: &str) -> core::result::Result<alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, alloc::vec::Vec<u8>>, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::invalid_module(reason: &str) -> vyre_driver::BackendError
+pub fn vyre_driver::materialize::override_grid(config: &mut vyre_driver::DispatchConfig, grid: core::option::Option<[u32; 3]>)
+pub fn vyre_driver::materialize::partition_bindings(bindings: &vyre_driver::BindingSet) -> vyre_driver::materialize::BoundState
 pub fn vyre_driver::materialize::project_resources(artifact: &vyre_megakernel::Artifact) -> vyre_driver::materialize::ResourceProjection
 pub fn vyre_driver::megakernel_barrier::MegakernelBarrierPlanError::arithmetic_overflow(field: &'static str) -> Self
 pub fn vyre_driver::megakernel_barrier::MegakernelBarrierPlanError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1428,6 +1451,10 @@ pub struct vyre_driver::launch_fusion::LaunchFusionPlan
 pub struct vyre_driver::launch_fusion::LaunchFusionScratch
 pub struct vyre_driver::launch_fusion::LaunchFusionStage
 pub struct vyre_driver::materialize::AdmittedModule
+pub struct vyre_driver::materialize::BoundState
+pub struct vyre_driver::materialize::InstanceCore
+pub struct vyre_driver::materialize::InstanceMessages
+pub struct vyre_driver::materialize::MaterializerDevice
 pub struct vyre_driver::materialize::MaterializerTarget<'a>
 pub struct vyre_driver::materialize::ResourceProjection
 pub struct vyre_driver::megakernel_barrier::MegakernelBarrierGroup
@@ -2363,6 +2390,20 @@ pub vyre_driver::launch_fusion::LaunchFusionStage::scratch_bytes: u64
 pub vyre_driver::materialize::AdmittedModule::config: vyre_driver::DispatchConfig
 pub vyre_driver::materialize::AdmittedModule::image: vyre_megakernel::target::TargetModuleImage
 pub vyre_driver::materialize::AdmittedModule::program: alloc::sync::Arc<vyre_foundation::ir_inner::model::program::definition::Program>
+pub vyre_driver::materialize::BoundState::host: alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, alloc::vec::Vec<u8>>
+pub vyre_driver::materialize::BoundState::resident: alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, vyre_driver::Resource>
+pub vyre_driver::materialize::InstanceCore::artifact: vyre_megakernel::Digest
+pub vyre_driver::materialize::InstanceCore::device: vyre_driver::DeviceIdentity
+pub vyre_driver::materialize::InstanceCore::messages: vyre_driver::materialize::InstanceMessages
+pub vyre_driver::materialize::InstanceCore::outputs: alloc::collections::btree::set::BTreeSet<vyre_megakernel::ArtifactValueId>
+pub vyre_driver::materialize::InstanceCore::payload: vyre_megakernel::Digest
+pub vyre_driver::materialize::InstanceCore::retained: alloc::collections::btree::set::BTreeSet<vyre_megakernel::ArtifactValueId>
+pub vyre_driver::materialize::InstanceCore::values: alloc::collections::btree::map::BTreeMap<alloc::string::String, vyre_megakernel::ArtifactValueId>
+pub vyre_driver::materialize::InstanceMessages::completion_consumed: fn() -> vyre_driver::BackendError
+pub vyre_driver::materialize::InstanceMessages::foreign_artifact: fn() -> vyre_driver::BackendError
+pub vyre_driver::materialize::InstanceMessages::missing_output_value: fn(vyre_megakernel::ArtifactValueId) -> vyre_driver::BackendError
+pub vyre_driver::materialize::InstanceMessages::missing_retained_value: fn(vyre_megakernel::ArtifactValueId) -> vyre_driver::BackendError
+pub vyre_driver::materialize::InstanceMessages::unmapped_buffer: fn(&str) -> vyre_driver::BackendError
 pub vyre_driver::materialize::MaterializerTarget::backend_id: &'a str
 pub vyre_driver::materialize::MaterializerTarget::format: &'a vyre_megakernel::envelope::TargetPayloadFormat
 pub vyre_driver::materialize::MaterializerTarget::profile: &'a vyre_megakernel::envelope::TargetProfile

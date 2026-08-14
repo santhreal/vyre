@@ -13,15 +13,19 @@
 //! accepted by another for reasons nobody chose.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{
-    Artifact, ArtifactValueId, FusionRecord, ResourceLifetime, TargetModuleBundle,
+    Artifact, ArtifactValueId, Digest, FusionRecord, ResourceLifetime, TargetModuleBundle,
     TargetModuleImage, TargetPayload, TargetPayloadFormat, TargetProfile,
 };
 
-use crate::{BackendError, DispatchConfig};
+use crate::{
+    BackendError, BindingPlan, BindingSet, BoundResource, Completion, Device, DeviceIdentity,
+    DispatchConfig, Resource, Submission,
+};
 
 /// Build the shared "recompile the payload" rejection.
 #[must_use]
@@ -194,4 +198,399 @@ pub fn project_resources(artifact: &Artifact) -> ResourceProjection {
         }
     }
     projection
+}
+
+/// Device descriptor a concrete materializer reports for its acquired generation.
+///
+/// Every backend recorded the same three fields and answered the same three
+/// accessors from them. Only revocation differed: one backend invalidates its
+/// generation from a device-loss callback, the others stay healthy for the life
+/// of the materializer.
+pub struct MaterializerDevice {
+    identity: DeviceIdentity,
+    format: TargetPayloadFormat,
+    profile: TargetProfile,
+    revoked: Option<Arc<AtomicBool>>,
+}
+
+impl MaterializerDevice {
+    /// Describe a device that stays healthy for the life of the materializer.
+    #[must_use]
+    pub fn new(
+        identity: DeviceIdentity,
+        format: TargetPayloadFormat,
+        profile: TargetProfile,
+    ) -> Self {
+        Self {
+            identity,
+            format,
+            profile,
+            revoked: None,
+        }
+    }
+
+    /// Describe a device whose generation is invalidated when `revoked` is set.
+    #[must_use]
+    pub fn revocable(
+        identity: DeviceIdentity,
+        format: TargetPayloadFormat,
+        profile: TargetProfile,
+        revoked: Arc<AtomicBool>,
+    ) -> Self {
+        Self {
+            identity,
+            format,
+            profile,
+            revoked: Some(revoked),
+        }
+    }
+
+    /// Describe what `backend_id` accepts, for [`admit`].
+    #[must_use]
+    pub fn target<'a>(&'a self, backend_id: &'a str) -> MaterializerTarget<'a> {
+        MaterializerTarget {
+            backend_id,
+            format: &self.format,
+            profile: &self.profile,
+        }
+    }
+
+    /// Record what an instance materialized on this device generation keeps.
+    #[must_use]
+    pub fn instance(
+        &self,
+        artifact: &Artifact,
+        payload: &TargetPayload,
+        messages: InstanceMessages,
+    ) -> InstanceCore {
+        InstanceCore::new(artifact, payload, self.identity.clone(), messages)
+    }
+}
+
+impl Device for MaterializerDevice {
+    fn identity(&self) -> &DeviceIdentity {
+        &self.identity
+    }
+
+    fn target_format(&self) -> &TargetPayloadFormat {
+        &self.format
+    }
+
+    fn target_profile(&self) -> &TargetProfile {
+        &self.profile
+    }
+
+    fn is_healthy(&self) -> bool {
+        self.revoked
+            .as_ref()
+            .is_none_or(|revoked| !revoked.load(Ordering::Acquire))
+    }
+}
+
+/// Rejection text the shared submission path asks its caller for.
+///
+/// The submission path itself is one decision per backend, but the wording of
+/// each rejection is observable and the backends do not agree on it. Passing
+/// the text in keeps every message byte-identical to what the backend shipped
+/// while the control flow around it has one owner.
+#[derive(Clone, Copy, Debug)]
+pub struct InstanceMessages {
+    /// Bindings name an artifact this instance does not implement.
+    pub foreign_artifact: fn() -> BackendError,
+    /// A Program buffer has no canonical artifact value.
+    pub unmapped_buffer: fn(&str) -> BackendError,
+    /// Execution left a declared output value unproduced.
+    pub missing_output_value: fn(ArtifactValueId) -> BackendError,
+    /// Execution left a retained value unpreserved.
+    pub missing_retained_value: fn(ArtifactValueId) -> BackendError,
+    /// A completion was taken from its submission twice.
+    pub completion_consumed: fn() -> BackendError,
+}
+
+/// The rejection text that names nothing target-specific.
+///
+/// Three of the four backends already shipped exactly these strings, so they
+/// are one code path now. A backend whose wording differs supplies its own
+/// record rather than moving anyone else's text.
+pub const NEUTRAL_MESSAGES: InstanceMessages = InstanceMessages {
+    foreign_artifact: || invalid_module("bindings name a different neutral artifact"),
+    unmapped_buffer: |name| {
+        invalid_module(&format!(
+            "Program buffer `{name}` is absent from the canonical artifact ABI"
+        ))
+    },
+    missing_output_value: |value| {
+        invalid_module(&format!(
+            "selected execution did not produce canonical output value {}",
+            value.0
+        ))
+    },
+    missing_retained_value: |value| {
+        invalid_module(&format!(
+            "selected execution did not preserve retained value {}",
+            value.0
+        ))
+    },
+    completion_consumed: || {
+        invalid_module("each Submission completion may be consumed only once")
+    },
+};
+
+/// Identity and artifact ABI projection every materialized instance keeps.
+///
+/// The four backends held these six fields under four names, filled them with
+/// the same eight lines, and reimplemented the same lookups over them.
+pub struct InstanceCore {
+    /// Neutral artifact identity this instance implements.
+    pub artifact: Digest,
+    /// Exact payload identity materialized into this instance.
+    pub payload: Digest,
+    /// Device generation that owns every native handle.
+    pub device: DeviceIdentity,
+    /// Every artifact resource by name.
+    pub values: BTreeMap<String, ArtifactValueId>,
+    /// Resources the artifact reports as outputs.
+    pub outputs: BTreeSet<ArtifactValueId>,
+    /// Resources the artifact retains across dispatches.
+    pub retained: BTreeSet<ArtifactValueId>,
+    /// Rejection text this backend ships.
+    pub messages: InstanceMessages,
+}
+
+impl InstanceCore {
+    /// Record what an instance materialized from `artifact` and `payload` keeps.
+    #[must_use]
+    pub fn new(
+        artifact: &Artifact,
+        payload: &TargetPayload,
+        device: DeviceIdentity,
+        messages: InstanceMessages,
+    ) -> Self {
+        let resources = project_resources(artifact);
+        Self {
+            artifact: artifact.digest(),
+            payload: payload.digest(),
+            device,
+            values: resources.values,
+            outputs: resources.outputs,
+            retained: resources.retained,
+            messages,
+        }
+    }
+
+    /// Reject bindings that name a different artifact than this instance.
+    ///
+    /// # Errors
+    ///
+    /// Returns the backend's `foreign_artifact` rejection when the digests differ.
+    pub fn accept(&self, bindings: &BindingSet) -> Result<(), BackendError> {
+        if bindings.artifact() == self.artifact {
+            return Ok(());
+        }
+        Err((self.messages.foreign_artifact)())
+    }
+
+    /// Resolve the canonical artifact value a Program buffer projects onto.
+    ///
+    /// # Errors
+    ///
+    /// Returns the backend's `unmapped_buffer` rejection when the artifact ABI
+    /// declares no resource under `name`.
+    pub fn value_for_buffer(&self, name: &str) -> Result<ArtifactValueId, BackendError> {
+        self.values
+            .get(name)
+            .copied()
+            .ok_or_else(|| (self.messages.unmapped_buffer)(name))
+    }
+
+    /// Borrow bound host bytes into the input order the binding plan declares.
+    ///
+    /// # Errors
+    ///
+    /// Returns `unmapped_buffer` for a buffer outside the artifact ABI, and
+    /// `unbound` for a declared input whose value was never bound.
+    pub fn gather_inputs<'state>(
+        &self,
+        plan: &BindingPlan,
+        program: &Program,
+        state: &'state BTreeMap<ArtifactValueId, Vec<u8>>,
+        unbound: fn(ArtifactValueId, &str) -> BackendError,
+    ) -> Result<Vec<&'state [u8]>, BackendError> {
+        let input_count = plan
+            .bindings
+            .iter()
+            .filter_map(|binding| binding.input_index)
+            .max()
+            .map_or(0, |index| index + 1);
+        let mut inputs = vec![&[][..]; input_count];
+        for binding in &plan.bindings {
+            let Some(input_index) = binding.input_index else {
+                continue;
+            };
+            let buffer = &program.buffers()[binding.buffer_index];
+            let value = self.value_for_buffer(buffer.name())?;
+            inputs[input_index] = state
+                .get(&value)
+                .map(Vec::as_slice)
+                .ok_or_else(|| unbound(value, buffer.name()))?;
+        }
+        Ok(inputs)
+    }
+
+    /// Write dispatch results back onto the canonical values they implement.
+    ///
+    /// # Errors
+    ///
+    /// Returns `unmapped_buffer` for a buffer outside the artifact ABI, and
+    /// `missing` when the dispatch produced no bytes for a declared output
+    /// index.
+    pub fn absorb_outputs(
+        &self,
+        plan: &BindingPlan,
+        program: &Program,
+        produced: &[Vec<u8>],
+        state: &mut BTreeMap<ArtifactValueId, Vec<u8>>,
+        missing: fn(usize, &str) -> BackendError,
+    ) -> Result<(), BackendError> {
+        for binding in &plan.bindings {
+            let Some(output_index) = binding.output_index else {
+                continue;
+            };
+            let buffer = &program.buffers()[binding.buffer_index];
+            let value = self.value_for_buffer(buffer.name())?;
+            let bytes = produced
+                .get(output_index)
+                .ok_or_else(|| missing(output_index, buffer.name()))?;
+            state.insert(value, bytes.clone());
+        }
+        Ok(())
+    }
+
+    /// Collect `values` out of executed state, rejecting any that is absent.
+    ///
+    /// # Errors
+    ///
+    /// Returns `missing` for the first value execution did not leave in `state`.
+    pub fn project(
+        &self,
+        values: &BTreeSet<ArtifactValueId>,
+        state: &BTreeMap<ArtifactValueId, Vec<u8>>,
+        missing: fn(ArtifactValueId) -> BackendError,
+    ) -> Result<BTreeMap<ArtifactValueId, Vec<u8>>, BackendError> {
+        values
+            .iter()
+            .map(|value| {
+                state
+                    .get(value)
+                    .cloned()
+                    .map(|bytes| (*value, bytes))
+                    .ok_or_else(|| missing(*value))
+            })
+            .collect()
+    }
+
+    /// Build the completion for one execution's final state.
+    ///
+    /// # Errors
+    ///
+    /// Returns `missing_output_value` or `missing_retained_value` when execution
+    /// did not leave a declared value behind.
+    pub fn completion(
+        &self,
+        state: &BTreeMap<ArtifactValueId, Vec<u8>>,
+        device_ns: Option<u64>,
+    ) -> Result<Completion, BackendError> {
+        Ok(Completion {
+            artifact: self.artifact,
+            outputs: self.project(&self.outputs, state, self.messages.missing_output_value)?,
+            retained: self.project(&self.retained, state, self.messages.missing_retained_value)?,
+            device_ns,
+        })
+    }
+
+    /// Wrap an already-finished execution as a submission.
+    #[must_use]
+    pub fn ready(&self, result: Result<Completion, BackendError>) -> Box<dyn Submission> {
+        Box::new(ReadySubmission {
+            result: Some(result),
+            consumed: self.messages.completion_consumed,
+        })
+    }
+}
+
+/// Bound resources split by where their bytes live.
+#[derive(Debug, Default)]
+pub struct BoundState {
+    /// Caller-owned bytes, keyed by canonical value.
+    pub host: BTreeMap<ArtifactValueId, Vec<u8>>,
+    /// Device-resident handles, keyed by canonical value.
+    pub resident: BTreeMap<ArtifactValueId, Resource>,
+}
+
+/// Split a binding set into its host and resident halves.
+///
+/// Every backend walked the same map and sorted it the same way; what they do
+/// with a resident binding is where they differ.
+#[must_use]
+pub fn partition_bindings(bindings: &BindingSet) -> BoundState {
+    let mut bound = BoundState::default();
+    for (value, resource) in bindings.resources() {
+        match resource {
+            BoundResource::Host(bytes) => {
+                bound.host.insert(*value, bytes.clone());
+            }
+            BoundResource::Resident(resource) => {
+                bound.resident.insert(*value, resource.clone());
+            }
+        }
+    }
+    bound
+}
+
+/// Take the bound host bytes on a backend with no resident submission path.
+///
+/// `feature` names the rejected capability in the backend's own words; the
+/// walk and the rejection class are the same wherever it is refused.
+///
+/// # Errors
+///
+/// Returns `BackendError::UnsupportedFeature` when any value is bound to a
+/// device-resident resource.
+pub fn host_only_bindings(
+    bindings: &BindingSet,
+    feature: &str,
+    backend: &str,
+) -> Result<BTreeMap<ArtifactValueId, Vec<u8>>, BackendError> {
+    let bound = partition_bindings(bindings);
+    if bound.resident.is_empty() {
+        return Ok(bound.host);
+    }
+    Err(BackendError::UnsupportedFeature {
+        name: feature.to_string(),
+        backend: backend.to_string(),
+    })
+}
+
+/// Apply a submission-time invocation grid to a payload dispatch config.
+pub fn override_grid(config: &mut DispatchConfig, grid: Option<[u32; 3]>) {
+    if let Some(grid) = grid {
+        config.grid_override = Some(grid);
+        config.dispatch_grid = Some(grid);
+    }
+}
+
+/// A submission whose execution already finished when it was created.
+struct ReadySubmission {
+    result: Option<Result<Completion, BackendError>>,
+    consumed: fn() -> BackendError,
+}
+
+impl Submission for ReadySubmission {
+    fn is_ready(&self) -> bool {
+        true
+    }
+
+    fn wait(mut self: Box<Self>) -> Result<Completion, BackendError> {
+        self.result.take().ok_or_else(self.consumed)?
+    }
 }

@@ -1,50 +1,65 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use vyre_driver::materialize::{self, InstanceCore, InstanceMessages, MaterializerDevice};
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingRole, BindingSet,
-    BoundResource, CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig,
-    ResidentOwner, Submission,
+    CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig, ResidentOwner, Submission,
 };
-use vyre_driver::materialize;
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{
-    Artifact, ArtifactValueId, Digest, TargetPayload,
-    TargetPayloadFormat, TargetProfile,
-};
+use vyre_megakernel::{Artifact, ArtifactValueId, Digest, TargetPayload, TargetPayloadFormat};
 
 use crate::backend::CudaBackend;
 use crate::pipeline::CudaCompiledPipeline;
 use crate::{CudaBackendRegistration, CUDA_BACKEND_ID};
 
-struct CudaDevice {
-    identity: DeviceIdentity,
-    format: TargetPayloadFormat,
-    profile: TargetProfile,
+/// CUDA rejection text. Two strings differ from the neutral wording: this
+/// backend names the digest in a foreign-artifact rejection, and reports an
+/// unpreserved retained value as an unproduced output.
+const MESSAGES: InstanceMessages = InstanceMessages {
+    foreign_artifact: || BackendError::InvalidProgram {
+        fix: "Fix: bind resources against the exact artifact digest owned by this instance."
+            .to_string(),
+    },
+    missing_retained_value: |value| {
+        materialize::invalid_module(&format!(
+            "selected execution did not produce canonical output value {}",
+            value.0
+        ))
+    },
+    ..materialize::NEUTRAL_MESSAGES
+};
+
+/// Rejection for a declared input whose canonical value was never bound.
+fn unbound_input(value: ArtifactValueId, name: &str) -> BackendError {
+    BackendError::InvalidProgram {
+        fix: format!(
+            "Fix: bind canonical artifact value {} for Program buffer `{name}` before submission.",
+            value.0
+        ),
+    }
 }
 
-impl Device for CudaDevice {
-    fn identity(&self) -> &DeviceIdentity {
-        &self.identity
+/// Rejection for a host dispatch that skipped a declared output slot.
+fn omitted_output(output_index: usize, name: &str) -> BackendError {
+    BackendError::InvalidProgram {
+        fix: format!("Fix: CUDA target module omitted output {output_index} for Program buffer `{name}`."),
     }
+}
 
-    fn target_format(&self) -> &TargetPayloadFormat {
-        &self.format
-    }
-
-    fn target_profile(&self) -> &TargetProfile {
-        &self.profile
-    }
-
-    fn is_healthy(&self) -> bool {
-        true
+/// Rejection for a resident dispatch that skipped a declared output slot.
+fn omitted_resident_output(output_index: usize, name: &str) -> BackendError {
+    BackendError::InvalidProgram {
+        fix: format!(
+            "Fix: CUDA resident target module omitted output {output_index} for Program buffer `{name}`."
+        ),
     }
 }
 
 pub(crate) struct CudaMaterializer {
     backend: CudaBackend,
     resident: CudaBackendRegistration,
-    descriptor: CudaDevice,
+    descriptor: MaterializerDevice,
 }
 
 impl ArtifactMaterializer for CudaMaterializer {
@@ -84,11 +99,7 @@ impl ArtifactMaterializer for CudaMaterializer {
         let admitted = materialize::admit(
             artifact,
             payload,
-            materialize::MaterializerTarget {
-                backend_id: CUDA_BACKEND_ID,
-                format: self.descriptor.target_format(),
-                profile: self.descriptor.target_profile(),
-            },
+            self.descriptor.target(CUDA_BACKEND_ID),
         )?;
         let mut modules = Vec::with_capacity(admitted.len());
         for module in admitted {
@@ -120,15 +131,9 @@ impl ArtifactMaterializer for CudaMaterializer {
                 config: module.config,
             });
         }
-        let resources = materialize::project_resources(artifact);
         Ok(Box::new(CudaArtifactInstance {
-            artifact: artifact.digest(),
-            payload: payload.digest(),
-            device: self.descriptor.identity.clone(),
+            core: self.descriptor.instance(artifact, payload, MESSAGES),
             modules,
-            values: resources.values,
-            outputs: resources.outputs,
-            retained: resources.retained,
         }))
     }
 }
@@ -140,62 +145,38 @@ struct CudaExecutableModule {
 }
 
 struct CudaArtifactInstance {
-    artifact: Digest,
-    payload: Digest,
-    device: DeviceIdentity,
+    core: InstanceCore,
     modules: Vec<CudaExecutableModule>,
-    values: BTreeMap<String, ArtifactValueId>,
-    outputs: BTreeSet<ArtifactValueId>,
-    retained: BTreeSet<ArtifactValueId>,
 }
 
 impl ArtifactInstance for CudaArtifactInstance {
     fn artifact(&self) -> Digest {
-        self.artifact
+        self.core.artifact
     }
 
     fn payload(&self) -> Digest {
-        self.payload
+        self.core.payload
     }
 
     fn device(&self) -> &DeviceIdentity {
-        &self.device
+        &self.core.device
     }
 
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
-        if bindings.artifact() != self.artifact {
-            return Err(BackendError::InvalidProgram {
-                fix:
-                    "Fix: bind resources against the exact artifact digest owned by this instance."
-                        .to_string(),
-            });
-        }
+        self.core.accept(&bindings)?;
         let invocation_grid = bindings.invocation_grid();
-        let mut host_state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
-        let mut resident_state = BTreeMap::<ArtifactValueId, vyre_driver::Resource>::new();
-        for (value, resource) in bindings.resources() {
-            match resource {
-                BoundResource::Host(bytes) => {
-                    host_state.insert(*value, bytes.clone());
-                }
-                BoundResource::Resident(resource) => {
-                    resident_state.insert(*value, resource.clone());
-                }
-            }
-        }
-        if !host_state.is_empty() && !resident_state.is_empty() {
+        let bound = materialize::partition_bindings(&bindings);
+        if !bound.host.is_empty() && !bound.resident.is_empty() {
             return Err(materialize::invalid_module(
                 "CUDA artifact submission cannot mix host and resident resources",
             ));
         }
-        let result = if resident_state.is_empty() {
-            self.execute(host_state, invocation_grid)
+        let result = if bound.resident.is_empty() {
+            self.execute(bound.host, invocation_grid)
         } else {
-            self.execute_resident(resident_state, invocation_grid)
+            self.execute_resident(&bound.resident, invocation_grid)
         };
-        Ok(Box::new(ReadySubmission {
-            result: Some(result),
-        }))
+        Ok(self.core.ready(result))
     }
 }
 
@@ -209,69 +190,31 @@ impl CudaArtifactInstance {
         let mut has_device_timing = false;
         for module in &self.modules {
             let mut config = module.config.clone();
-            if let Some(grid) = invocation_grid {
-                config.grid_override = Some(grid);
-                config.dispatch_grid = Some(grid);
-            }
+            materialize::override_grid(&mut config, invocation_grid);
             let plan = BindingPlan::build(&module.program)?;
-            let input_count = plan
-                .bindings
-                .iter()
-                .filter_map(|binding| binding.input_index)
-                .max()
-                .map_or(0, |index| index + 1);
-            let mut inputs = vec![&[][..]; input_count];
-            for binding in &plan.bindings {
-                let Some(input_index) = binding.input_index else {
-                    continue;
-                };
-                let buffer = &module.program.buffers()[binding.buffer_index];
-                let value = self.value_for_buffer(buffer.name())?;
-                inputs[input_index] = state.get(&value).map(Vec::as_slice).ok_or_else(|| {
-                    BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: bind canonical artifact value {} for Program buffer `{}` before submission.",
-                            value.0,
-                            buffer.name()
-                        ),
-                    }
-                })?;
-            }
+            let inputs =
+                self.core
+                    .gather_inputs(&plan, &module.program, &state, unbound_input)?;
             let dispatched = module.pipeline.dispatch_borrowed_timed(&inputs, &config)?;
             if let Some(ns) = dispatched.device_ns {
                 device_ns = device_ns.saturating_add(ns);
                 has_device_timing = true;
             }
-            for binding in &plan.bindings {
-                let Some(output_index) = binding.output_index else {
-                    continue;
-                };
-                let buffer = &module.program.buffers()[binding.buffer_index];
-                let value = self.value_for_buffer(buffer.name())?;
-                let bytes = dispatched.outputs.get(output_index).ok_or_else(|| {
-                    BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA target module omitted output {} for Program buffer `{}`.",
-                            output_index,
-                            buffer.name()
-                        ),
-                    }
-                })?;
-                state.insert(value, bytes.clone());
-            }
+            self.core.absorb_outputs(
+                &plan,
+                &module.program,
+                &dispatched.outputs,
+                &mut state,
+                omitted_output,
+            )?;
         }
-        let outputs = project_outputs(&self.outputs, &state)?;
-        let retained = project_outputs(&self.retained, &state)?;
-        Ok(Completion {
-            artifact: self.artifact,
-            outputs,
-            retained,
-            device_ns: has_device_timing.then_some(device_ns),
-        })
+        self.core
+            .completion(&state, has_device_timing.then_some(device_ns))
     }
+
     fn execute_resident(
         &self,
-        resources: BTreeMap<ArtifactValueId, vyre_driver::Resource>,
+        resources: &BTreeMap<ArtifactValueId, vyre_driver::Resource>,
         invocation_grid: Option<[u32; 3]>,
     ) -> Result<Completion, BackendError> {
         if self.modules.len() != 1 {
@@ -285,7 +228,7 @@ impl CudaArtifactInstance {
         let mut ordered = Vec::with_capacity(plan.bindings.len());
         for binding in resident_resource_bindings(&plan) {
             let buffer = &module.program.buffers()[binding.buffer_index];
-            let value = self.value_for_buffer(buffer.name())?;
+            let value = self.core.value_for_buffer(buffer.name())?;
             let resource = resources
                 .get(&value)
                 .ok_or_else(|| BackendError::InvalidProgram {
@@ -301,36 +244,14 @@ impl CudaArtifactInstance {
             .pipeline
             .dispatch_artifact_resident_timed(&ordered, invocation_grid)?;
         let mut state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
-        for binding in &plan.bindings {
-            let Some(output_index) = binding.output_index else {
-                continue;
-            };
-            let buffer = &module.program.buffers()[binding.buffer_index];
-            let value = self.value_for_buffer(buffer.name())?;
-            let bytes = dispatched.outputs.get(output_index).ok_or_else(|| {
-                BackendError::InvalidProgram {
-                    fix: format!(
-                        "Fix: CUDA resident target module omitted output {output_index} for Program buffer `{}`.",
-                        buffer.name()
-                    ),
-                }
-            })?;
-            state.insert(value, bytes.clone());
-        }
-        Ok(Completion {
-            artifact: self.artifact,
-            outputs: project_outputs(&self.outputs, &state)?,
-            retained: project_outputs(&self.retained, &state)?,
-            device_ns: dispatched.device_ns,
-        })
-    }
-
-    fn value_for_buffer(&self, name: &str) -> Result<ArtifactValueId, BackendError> {
-        self.values.get(name).copied().ok_or_else(|| {
-            materialize::invalid_module(&format!(
-                "Program buffer `{name}` is absent from the canonical artifact ABI"
-            ))
-        })
+        self.core.absorb_outputs(
+            &plan,
+            &module.program,
+            &dispatched.outputs,
+            &mut state,
+            omitted_resident_output,
+        )?;
+        self.core.completion(&state, dispatched.device_ns)
     }
 }
 
@@ -338,22 +259,6 @@ fn resident_resource_bindings(plan: &BindingPlan) -> impl Iterator<Item = &vyre_
     plan.bindings
         .iter()
         .filter(|binding| binding.role != BindingRole::Shared)
-}
-
-struct ReadySubmission {
-    result: Option<Result<Completion, BackendError>>,
-}
-
-impl Submission for ReadySubmission {
-    fn is_ready(&self) -> bool {
-        true
-    }
-
-    fn wait(mut self: Box<Self>) -> Result<Completion, BackendError> {
-        self.result
-            .take()
-            .ok_or_else(|| materialize::invalid_module("each Submission completion may be consumed only once"))?
-    }
 }
 
 pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
@@ -371,40 +276,17 @@ pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, Ba
             inner: backend.clone(),
         },
         backend,
-        descriptor: CudaDevice {
-            identity: DeviceIdentity {
+        descriptor: MaterializerDevice::new(
+            DeviceIdentity {
                 backend: CUDA_BACKEND_ID,
                 device,
                 generation,
             },
             format,
             profile,
-        },
+        ),
     }))
 }
-
-fn project_outputs(
-    expected: &BTreeSet<ArtifactValueId>,
-    state: &BTreeMap<ArtifactValueId, Vec<u8>>,
-) -> Result<BTreeMap<ArtifactValueId, Vec<u8>>, BackendError> {
-    expected
-        .iter()
-        .map(|value| {
-            state
-                .get(value)
-                .cloned()
-                .map(|bytes| (*value, bytes))
-                .ok_or_else(|| {
-                    materialize::invalid_module(&format!(
-                        "selected execution did not produce canonical output value {}",
-                        value.0
-                    ))
-                })
-        })
-        .collect()
-}
-
-
 
 #[cfg(test)]
 mod tests {

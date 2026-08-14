@@ -6,6 +6,13 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Added
 
+- `vyre_driver::materialize` now owns the device descriptor, instance identity,
+  binding split, grid override, and completion projection every concrete
+  materializer repeated. `MaterializerDevice`, `InstanceCore`,
+  `InstanceMessages`, `NEUTRAL_MESSAGES`, `BoundState`, `partition_bindings`,
+  `host_only_bindings`, and `override_grid` are additive. Backends whose
+  rejection text differs from the neutral wording pass their own record, so no
+  message changed.
 - `xtask dup-scan --report [CRATE]` attributes duplicated lines to individual
   files and names the files each one shares shingles with. The gate could report
   that a crate exceeded its pin but not which copy to collapse, so a failure
