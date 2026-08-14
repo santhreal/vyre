@@ -114,6 +114,17 @@ jobs:
       - name: Status-managed audits tag every finding
         run: bash scripts/check_audit_status_tags.sh
 
+      # Program's fields are extracted from source and each must be classified as
+      # serialized or explicitly transient, so a new field turns this red until
+      # someone decides whether it belongs on the wire.
+      - name: Every Program field is serialized or declared transient
+        run: bash scripts/check_ir_wire_field_sync.sh
+
+      # Every load-bearing claim in a doc names the test that proves it. A claim
+      # whose phrase left the doc, or whose test file is gone, fails here.
+      - name: Every doc claim has a proving test
+        run: bash scripts/check_doc_claim_to_test.sh
+
       # `try_reserve(additional)` guarantees `len() + additional`, so deriving
       # `additional` from `capacity()` under-reserves any warm buffer whose
       # capacity sits between `target / 2` and `target`: the call succeeds, the

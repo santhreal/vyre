@@ -44,17 +44,18 @@ description = "Per-dispatch heap-allocation budget claim (audit item #10)."
 [[claim]]
 id = "primitives_lego_substrate"
 doc = "vyre-primitives/README.md"
-phrase = "Tier-2.5 LEGO substrate"
+# Was "Tier-2.5 LEGO substrate", a phrase the README stopped using. The claim
+# itself is unchanged and still stated, so the phrase is repointed at the
+# sentence that carries it rather than the claim being dropped.
+phrase = "reusable Tier 2.5 program builders"
 test = "vyre-primitives/tests/region_adversarial.rs"
-description = "Tier-2.5 LEGO substrate compositional contract claim."
+description = "Tier-2.5 compositional substrate contract claim."
 
-
-[[claim]]
-id = "aot_no_runtime_dependency"
-doc = "vyre-aot/README.md"
-phrase = "removes the entire vyre runtime from the deployed image"
-test = "vyre-aot/tests/compile_smoke.rs"
-description = "AOT-emitted artifacts compile through the full pipeline (compile_smoke.rs)."
+# aot_no_runtime_dependency removed. It required vyre-aot/README.md to contain
+# "removes the entire vyre runtime from the deployed image", and that README makes
+# no claim about runtime removal at all. A manifest of doc claims tracks claims a
+# doc actually makes, so there is nothing here to prove. Restoring the row means
+# first restoring the sentence, with evidence for it.
 
 [[claim]]
 id = "cuda_unsafe_policy"
@@ -63,9 +64,14 @@ phrase = "unsafe FFI"
 test = "vyre-driver-cuda/src/lib.rs"
 description = "CUDA crate documents its unsafe-code policy in lib.rs."
 
-[[claim]]
-id = "tier_b_zero_rust_extensibility"
-doc = "rules/README.md"
-phrase = "No Rust code required"
-test = "rules/op/decode.base64.toml"
-description = "Tier-B rule corpus extensibility  -  zero-Rust contribution path."
+# tier_b_zero_rust_extensibility removed. It pointed at rules/README.md and
+# rules/op/decode.base64.toml, and the repository-root rules/ tree does not
+# exist: there is no rules/op corpus anywhere, and "No Rust code required"
+# survives only inside a 2026-04-28 audit, which is a historical record and not a
+# live claim. Both the doc and the proving artifact are gone, so the row asserted
+# a contract with no subject on either side.
+#
+# Per-crate rule corpora do still exist, in vyre-libs/rules, vyre-lower/rules and
+# vyre-lints/rules. If the zero-Rust op contribution path is still a claim worth
+# gating, it needs a doc that states it and a corpus file that proves it.
+
