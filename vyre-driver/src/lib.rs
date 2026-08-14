@@ -121,6 +121,10 @@ pub mod registry;
 pub mod reservation_policy;
 /// Backend-neutral resident-resource reuse telemetry.
 pub mod residency;
+/// Canonical resident transfer fusion test model shared by the neutral fusion
+/// tests and the concrete driver crates' adapter gates.
+#[cfg(any(test, feature = "test-fixtures"))]
+pub mod resident_transfer_fixtures;
 /// Backend-neutral resident transfer interval fusion.
 pub mod resident_transfer_fusion;
 /// Backend-neutral compact result readback planning.
