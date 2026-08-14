@@ -35,7 +35,7 @@ fn workspace_cli_documentation_is_current() {
     );
     assert_eq!(
         String::from_utf8(output.stdout).expect("Fix: generator output must be UTF-8"),
-        "cli-docs: verified 10 binaries and 72 subcommands\n"
+        "cli-docs: verified 10 binaries and 73 subcommands\n"
     );
 }
 
@@ -64,7 +64,11 @@ fn every_xtask_binary_help_route_exits_zero() {
     }
 }
 
-/// Prevents the historical `scaffold_rule --help` bug from creating a rule literally named `--help`.
+/// Prevents the historical `scaffold_rule --help` bug from creating a rule
+/// literally named `--help`, and pins that the tree it would write is resolved
+/// from the repository root instead of the process working directory. The old
+/// `Path::new("../../../../../rules/launch")` climbed five levels out of the
+/// checkout, so a scaffold landed in whatever tree the clone happened to sit in.
 #[test]
 fn scaffold_help_is_side_effect_free() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
@@ -76,11 +80,17 @@ fn scaffold_help_is_side_effect_free() {
         .output()
         .expect("Fix: scaffold help must launch");
     assert!(output.status.success());
-    assert!(!temp.path().join("a/rules/launch/--help").exists());
-    assert!(!temp
-        .path()
-        .join("a/tests/launch_rule_truth/--help")
-        .exists());
+    assert_eq!(
+        fs::read_dir(temp.path().join("a"))
+            .expect("Fix: fixture directory must be readable")
+            .count(),
+        1,
+        "help must not write anything anywhere near the working directory"
+    );
+    let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("Fix: the xtask manifest directory always has a parent");
+    assert!(!repo_root.join("rules/launch/--help").exists());
 }
 
 /// Preserves status 2 for invalid CLI syntax instead of running partial audits or scaffolds.
