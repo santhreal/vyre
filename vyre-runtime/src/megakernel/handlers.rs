@@ -6,7 +6,7 @@
 
 use vyre_foundation::ir::{Expr, Node};
 
-use super::ir_util::{atomic_load_relaxed, atomic_store_relaxed};
+use super::atomic_relaxed::{atomic_load_relaxed, atomic_store_relaxed};
 use super::protocol::{control, debug, opcode, ARGS_PER_SLOT};
 
 /// Caller-supplied opcode extension wired into the megakernel at

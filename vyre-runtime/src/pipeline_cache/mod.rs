@@ -21,7 +21,7 @@ mod remote;
 mod store;
 
 #[cfg(test)]
-pub(super) mod test_helpers;
+pub(super) mod test_artifact_fixtures;
 
 pub use disk::{DiskCache, DiskCacheDurabilityReport, DiskCacheError};
 pub use fingerprint::PipelineFingerprint;

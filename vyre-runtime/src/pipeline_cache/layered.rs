@@ -156,7 +156,7 @@ impl PipelineCacheStore for LayeredPipelineCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline_cache::test_helpers::tiny_artifact;
+    use crate::pipeline_cache::test_artifact_fixtures::tiny_artifact;
     use crate::pipeline_cache::InMemoryPipelineCache;
 
     #[test]

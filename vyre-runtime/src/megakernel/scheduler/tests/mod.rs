@@ -1,4 +1,4 @@
-use super::super::ir_util::let_names_preorder;
+use super::super::body_preorder::let_names_preorder;
 use super::*;
 
 #[test]

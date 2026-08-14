@@ -1892,7 +1892,7 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-runtime/src/pipeline_cache/test_helpers.rs",
+      "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
       "line": 32,
       "pattern": "unwrap_call",
       "owner_lane": "runtime_megakernel",
@@ -1902,7 +1902,7 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-runtime/src/pipeline_cache/test_helpers.rs",
+      "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
       "line": 35,
       "pattern": "unwrap_call",
       "owner_lane": "runtime_megakernel",
@@ -1912,7 +1912,7 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-runtime/src/pipeline_cache/test_helpers.rs",
+      "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
       "line": 43,
       "pattern": "unwrap_call",
       "owner_lane": "runtime_megakernel",
@@ -1922,7 +1922,7 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-runtime/src/pipeline_cache/test_helpers.rs",
+      "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
       "line": 44,
       "pattern": "unwrap_call",
       "owner_lane": "runtime_megakernel",
@@ -2745,25 +2745,25 @@
       "text": ".unwrap_or_else(|_| panic!(\"pipeline cache shard lock was poisoned\"))"
     },
     {
-      "path": "vyre-runtime/src/pipeline_cache/test_helpers.rs",
+      "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
       "line": 32,
       "pattern": "unwrap_call",
       "text": ".unwrap();"
     },
     {
-      "path": "vyre-runtime/src/pipeline_cache/test_helpers.rs",
+      "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
       "line": 35,
       "pattern": "unwrap_call",
       "text": ".unwrap();"
     },
     {
-      "path": "vyre-runtime/src/pipeline_cache/test_helpers.rs",
+      "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
       "line": 43,
       "pattern": "unwrap_call",
       "text": ".unwrap();"
     },
     {
-      "path": "vyre-runtime/src/pipeline_cache/test_helpers.rs",
+      "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
       "line": 44,
       "pattern": "unwrap_call",
       "text": "compile(&request).unwrap()"

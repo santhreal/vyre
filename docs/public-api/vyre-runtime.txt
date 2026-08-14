@@ -664,6 +664,8 @@ pub fn vyre_runtime::resident_work_queue::RuntimeEvidenceMetricCoverage::missing
 pub fn vyre_runtime::resident_work_queue::TelemetryDecodeCapacityEvidence::is_complete(self) -> bool
 pub fn vyre_runtime::resident_work_queue::TelemetryDecodeScratch::clear(&mut self)
 pub fn vyre_runtime::resident_work_queue::TelemetryDecodeScratch::new() -> Self
+pub fn vyre_runtime::resident_work_queue::atomic_relaxed::atomic_load_relaxed(buffer: &str, index: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_runtime::resident_work_queue::atomic_relaxed::atomic_store_relaxed(name: &str, buffer: &str, index: vyre_foundation::ir_inner::model::generated::Expr, value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Node
 pub fn vyre_runtime::resident_work_queue::automata_worklist::AutomataStateIndex::to_task_work_item(self, task_id: u32, tenant_id: u32, priority: vyre_runtime::resident_work_queue::task::TaskPriority, op_handle: u32, input_handle: u32, output_handle: u32) -> vyre_runtime::resident_work_queue::task::TaskWorkItem
 pub fn vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistEvidence::is_complete(self) -> bool
 pub fn vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistPolicy::default() -> Self
@@ -735,8 +737,6 @@ pub fn vyre_runtime::resident_work_queue::io::try_encode_empty_io_queue_into(slo
 pub fn vyre_runtime::resident_work_queue::io::try_poll_io_requests(io_queue_bytes: &[u8]) -> core::result::Result<alloc::vec::Vec<vyre_runtime::resident_work_queue::io::IoRequest>, vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::io::try_poll_io_requests_into(io_queue_bytes: &[u8], requests: &mut alloc::vec::Vec<vyre_runtime::resident_work_queue::io::IoRequest>) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::io::validate_io_queue_bytes(io_queue_bytes: &[u8]) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::ir_util::atomic_load_relaxed(buffer: &str, index: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
-pub fn vyre_runtime::resident_work_queue::ir_util::atomic_store_relaxed(name: &str, buffer: &str, index: vyre_foundation::ir_inner::model::generated::Expr, value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Node
 pub fn vyre_runtime::resident_work_queue::mixed_work::mixed_work_protocol_evidence(plan: &vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolPlan<'_>) -> core::result::Result<vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolEvidence, vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolError>
 pub fn vyre_runtime::resident_work_queue::mixed_work::validate_mixed_work_protocol(plan: &vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolPlan<'_>) -> core::result::Result<vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolEvidence, vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolError>
 pub fn vyre_runtime::resident_work_queue::mixed_work_protocol_evidence(plan: &vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolPlan<'_>) -> core::result::Result<vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolEvidence, vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolError>
@@ -1041,6 +1041,7 @@ pub mod vyre_runtime::pipeline_cache
 pub mod vyre_runtime::recovery
 pub mod vyre_runtime::replay
 pub mod vyre_runtime::resident_work_queue
+pub mod vyre_runtime::resident_work_queue::atomic_relaxed
 pub mod vyre_runtime::resident_work_queue::automata_worklist
 pub mod vyre_runtime::resident_work_queue::builder
 pub mod vyre_runtime::resident_work_queue::control
@@ -1051,7 +1052,6 @@ pub mod vyre_runtime::resident_work_queue::io
 pub mod vyre_runtime::resident_work_queue::io::io_op
 pub mod vyre_runtime::resident_work_queue::io::io_status
 pub mod vyre_runtime::resident_work_queue::io::io_word
-pub mod vyre_runtime::resident_work_queue::ir_util
 pub mod vyre_runtime::resident_work_queue::mixed_work
 pub mod vyre_runtime::resident_work_queue::opcode
 pub mod vyre_runtime::resident_work_queue::planner

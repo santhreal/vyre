@@ -6,12 +6,14 @@
 
 #[cfg(feature = "megakernel-batch")]
 pub mod advanced;
+pub mod atomic_relaxed;
 pub mod automata_worklist;
+#[cfg(test)]
+mod body_preorder;
 pub mod builder;
 pub mod descriptor;
 pub mod handlers;
 pub mod io;
-pub mod ir_util;
 mod lru_tick_cache;
 pub mod mixed_work;
 pub mod planner;

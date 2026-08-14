@@ -16,8 +16,8 @@ use vyre_foundation::ir::{
 };
 use vyre_megakernel::{
     Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, Digest, TargetEntryPoint,
-    TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess,
-    TargetResourceBinding, TargetResourceMemory,
+    TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
+    TargetResourceMemory,
 };
 use vyre_runtime::{
     admit_artifact, admit_cached_artifact, admit_envelope, classify_backend_error,
