@@ -15,22 +15,10 @@
 //! generalizes the manual gather-class audit (ziftsieve/base64/sketch/simplicial).
 #![cfg(feature = "inventory-registry")]
 
-use vyre_reference::value::Value;
+mod common;
 
-/// The one-workgroup over-fire dispatch floor shared by the over-fire gates: the
-/// largest declared buffer element count plus one whole workgroup of lanes, the
-/// realistic worst case a whole-workgroup GPU dispatch produces past the logical
-/// element count. ONE home so the two over-fire gates cannot drift.
-fn overfire_grid(program: &vyre_foundation::ir::Program) -> u32 {
-    let workgroup_lanes = program.workgroup_size()[0].max(1);
-    let max_count = program
-        .buffers()
-        .iter()
-        .map(vyre_foundation::ir::BufferDecl::count)
-        .max()
-        .unwrap_or(0);
-    max_count.saturating_add(workgroup_lanes)
-}
+use common::overfire_grid;
+use vyre_reference::value::Value;
 
 #[test]
 fn every_registered_primitive_is_oob_clean_on_its_fixtures() {

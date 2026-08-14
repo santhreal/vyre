@@ -80,6 +80,12 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   review it. The obligations come from `vyre_driver::hostile_input_closure`,
   and the ignore rule that asked for a crate-owned name is now satisfied for
   these two crates.
+- `vyre_reference::reference_eval_lane_rotated` executes a program with the
+  workgroup and invocation step order rotated left by a caller-chosen amount.
+  Reversal is a symmetric permutation, so an implementation that confuses lane
+  identity with step position can be made reversal-symmetric and stay wrong; a
+  rotation separates the two and catches a subgroup collective that resolves
+  its peers by physical step position.
 
 ### Changed
 
@@ -401,6 +407,30 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   The duplicate-analysis rule no longer asserts that a signature-only
   registration exists, which the registry refuses by design, and states the set
   equality it relies on instead.
+- The registered witness programs for
+  `vyre-primitives::hardware::subgroup_ballot` and
+  `vyre-primitives::hardware::subgroup_shuffle` passed an unguarded buffer load
+  as the collective's operand, and the reference interpreter resolved a lane's
+  subgroup peers by the position the schedule happened to step them in. Every
+  lane of a subgroup contributes to a collective, so an operand written as
+  `load(buffer, idx)` is a read at every lane index in the subgroup rather than
+  only at the indices a store guard admits: the ballot performed 112
+  out-of-bounds loads and the shuffle 224 on their own declared-valid fixtures,
+  on the natural grid and one workgroup past it. Both now compute the operand
+  into a control-flow-guarded per-lane local and take the collective in uniform
+  control flow, where the participating-lane set is well defined instead of
+  dependent on the active mask of a divergent branch. The interpreter now
+  captures its lane snapshots indexed by lane, so a ballot returns its own
+  subgroup's mask and a shuffle sources the lane it was asked for under any
+  step order; before, a reversed schedule gave lane 0 the mask of the
+  neighbouring subgroup. Category C registrations are enumerated from the
+  registry at run time and run through every safety rule, including reversed
+  and rotated lane orders, so a new intrinsic cannot arrive with a witness
+  program no gate executes.
+- The `vyre_reference::workgroup::Invocation::bind` and `bind_loop_var`
+  documentation examples name `vyre_reference::ReferenceError` instead of
+  `crate::ReferenceError`. A doctest compiles as its own crate, so the old path
+  resolved to nothing and both examples failed to build.
 
 ## [0.7.1] - 2026-08-01
 

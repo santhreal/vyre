@@ -223,6 +223,26 @@ pub fn reference_eval_lane_reversed(
     hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Reversed, None)
 }
 
+/// Execute a program with the workgroup/invocation STEP ORDER rotated left by `by`.
+///
+/// Same purpose as [`reference_eval_lane_reversed`], and strictly stronger on one axis:
+/// reversal is a symmetric permutation, so an implementation that confuses lane identity
+/// with step position can be made reversal-symmetric and still be wrong. A rotation is
+/// asymmetric, so it also catches a collective (ballot, shuffle, reduce) that reads its
+/// peers by step position rather than by lane index. `by` is taken modulo the list
+/// length, so any value is a legal schedule and `0` reproduces [`reference_eval`].
+///
+/// # Errors
+/// Same as [`reference_eval`].
+pub fn reference_eval_lane_rotated(
+    program: &Program,
+    inputs: &[Value],
+    by: u32,
+) -> Result<Vec<Value>, crate::ReferenceError> {
+    let program = program_for_interpreter(program)?;
+    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Rotated(by), None)
+}
+
 /// Differential oracle retained for tests during the generic interpreter transition.
 #[cfg(test)]
 pub fn eval_hashmap_reference(
