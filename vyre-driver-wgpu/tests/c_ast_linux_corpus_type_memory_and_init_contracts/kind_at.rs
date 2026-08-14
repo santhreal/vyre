@@ -13,12 +13,10 @@
 
 use crate::c_ast_gpu_parity_support::{
     assert_full_pipeline_parity, build_fixture, row_indices,
-    run_gpu_pg_lower_with_count as run_gpu_pg_lower, word_at, Fixture, FixtureToken,
-    VAST_STRIDE_U32,
+    run_gpu_pg_lower_with_count as run_gpu_pg_lower, Fixture, FixtureToken,
 };
-pub(crate) use crate::c_ast_gpu_parity_support::{
-    kind_at, lexeme_indices, node_count_from_vast, pg_word_at,
-};
+pub(crate) use crate::c_ast_gpu_parity_support::{kind_at, lexeme_indices, node_count_from_vast};
+use crate::c_frontend::rows::assert_pg_preserves_row;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
@@ -32,46 +30,6 @@ pub(crate) const PG_STRIDE_U32: usize = 6;
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-pub(crate) fn assert_pg_preserves_row(
-    typed_vast: &[u8],
-    pg: &[u8],
-    tok_starts: &[u32],
-    tok_lens: &[u32],
-    idx: usize,
-    expected_kind: u32,
-) {
-    assert_eq!(
-        pg_word_at(pg, idx, 0),
-        expected_kind,
-        "PG kind mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 1),
-        tok_starts[idx],
-        "PG span_start mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 2),
-        tok_starts[idx] + tok_lens[idx],
-        "PG span_end mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 3),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 1),
-        "PG parent mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 4),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 2),
-        "PG first_child mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 5),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 3),
-        "PG next_sibling mismatch at row {idx}"
-    );
-}
 
 // ---------------------------------------------------------------------------
 // Fixtures

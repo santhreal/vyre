@@ -9,11 +9,11 @@ mod c_frontend;
 use c_ast_gpu_parity_support::{
     assert_full_pipeline_parity, build_fixture, row_indices, Fixture, FixtureToken,
 };
+use c_frontend::token_fixture::classify;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_ARRAY_DECL, C_AST_KIND_FUNCTION_DECLARATOR,
-    C_AST_KIND_POINTER_DECL, C_AST_KIND_SIZEOF_EXPR,
+    C_AST_KIND_ARRAY_DECL, C_AST_KIND_FUNCTION_DECLARATOR, C_AST_KIND_POINTER_DECL,
+    C_AST_KIND_SIZEOF_EXPR,
 };
 use vyre_primitives::predicate::node_kind;
 
@@ -56,12 +56,6 @@ fn typedef_over_typeof_unqual_pointer() -> Fixture {
     ])
 }
 
-fn typed_rows(fix: &Fixture) -> Vec<u8> {
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    reference_c11_classify_vast_node_kinds(&annotated)
-}
-
 #[test]
 fn real_typeof_unqual_drives_complex_declarator_shape() {
     let fix = real_typeof_unqual_function_pointer_table();
@@ -71,7 +65,7 @@ fn real_typeof_unqual_drives_complex_declarator_shape() {
     );
     assert_full_pipeline_parity(&fix, "real_typeof_unqual_function_pointer_table");
 
-    let typed = typed_rows(&fix);
+    let typed = classify(&fix);
     assert!(
         row_indices(&typed, C_AST_KIND_SIZEOF_EXPR).contains(&0),
         "__typeof_unqual__ must classify as the typeof operator row"
@@ -100,7 +94,7 @@ fn typedef_over_typeof_unqual_is_visible_to_later_declarators() {
     let fix = typedef_over_typeof_unqual_pointer();
     assert_full_pipeline_parity(&fix, "typedef_over_typeof_unqual_pointer");
 
-    let typed = typed_rows(&fix);
+    let typed = classify(&fix);
     assert!(
         row_indices(&typed, C_AST_KIND_POINTER_DECL).contains(&5),
         "typedef typeof_unqual(int) *alias_t must classify pointer declarator"

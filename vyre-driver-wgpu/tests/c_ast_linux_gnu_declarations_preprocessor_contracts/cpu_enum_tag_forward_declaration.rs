@@ -6,7 +6,7 @@ use super::*;
 #[test]
 pub(crate) fn cpu_enum_tag_forward_declaration() {
     let fix = fixture_enum_tag_forward_declaration();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
 
     assert_eq!(
         word_at(&typed, 0 * VAST_STRIDE_U32),

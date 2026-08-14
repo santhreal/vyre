@@ -6,7 +6,7 @@ use super::*;
 #[test]
 pub(crate) fn cpu_alignas_on_variable_stays_raw_and_classifies() {
     let fix = fixture_alignas_on_variable();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
 
     assert_eq!(fix.tok_types[0], TOK_ALIGNAS, "_Alignas must promote");
     assert_eq!(
@@ -24,7 +24,7 @@ pub(crate) fn cpu_alignas_on_variable_stays_raw_and_classifies() {
 #[test]
 pub(crate) fn cpu_aligned_attribute_on_array_classifies() {
     let fix = fixture_aligned_attribute_on_array();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
 
     assert_eq!(
         row_indices(&typed, C_AST_KIND_GNU_ATTRIBUTE),

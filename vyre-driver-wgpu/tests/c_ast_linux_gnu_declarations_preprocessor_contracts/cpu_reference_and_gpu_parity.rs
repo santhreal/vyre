@@ -6,7 +6,7 @@ use super::*;
 #[test]
 fn cpu_attribute_on_struct_definition_classifies() {
     let fix = fixture_attribute_on_struct_definition();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
 
     assert_eq!(
         row_indices(&typed, C_AST_KIND_GNU_ATTRIBUTE),
@@ -38,7 +38,7 @@ fn cpu_attribute_on_struct_definition_classifies() {
 #[test]
 fn cpu_attribute_on_function_pointer_typedef_classifies() {
     let fix = fixture_attribute_on_function_pointer_typedef();
-    let typed = classify_fixture(&fix);
+    let typed = classify(&fix);
 
     assert_eq!(
         row_indices(&typed, C_AST_KIND_GNU_ATTRIBUTE),

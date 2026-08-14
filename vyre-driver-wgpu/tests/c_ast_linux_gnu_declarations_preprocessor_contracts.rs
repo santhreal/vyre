@@ -32,6 +32,7 @@ use c_ast_gpu_parity_support::{
     assert_full_pipeline_parity, assert_pg_preserves_fixture_row, build_fixture, row_indices,
     word_at, Fixture, FixtureToken, VAST_STRIDE_U32,
 };
+use c_frontend::token_fixture::classify;
 use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
 use vyre_libs::parsing::c::lex::tokens::*;
@@ -56,14 +57,6 @@ const FLAGS_FIELD: usize = 7;
 const TYPEDEF_FLAG_VISIBLE: u32 = 1;
 const TYPEDEF_FLAG_DECL: u32 = 1 << 1;
 const ORDINARY_FLAG_DECL: u32 = 1 << 2;
-// ---------------------------------------------------------------------------
-// Local helpers
-// ---------------------------------------------------------------------------
-fn classify_fixture(fix: &Fixture) -> Vec<u8> {
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    reference_c11_classify_vast_node_kinds(&annotated)
-}
 /// Build a [`Fixture`] from explicit lexemes, skipping whitespace in the
 /// token lists (so the VAST builder sees only real tokens) while preserving
 /// newlines in the source string for preprocessor-aware tests.

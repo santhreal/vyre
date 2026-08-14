@@ -6,9 +6,15 @@
     clippy::if_same_then_else,
     clippy::unnecessary_cast
 )]
+#[path = "../../tests/support/c_frontend/fixtures/vast_builder_token_streams.rs"]
+mod vast_builder_token_streams;
 use c_grammar_gen::lex_c11_max_munch_kinds;
 use proptest::prelude::*;
 use std::sync::OnceLock;
+use vast_builder_token_streams::{
+    declarator_initializer_fixture, expression_operator_fixture,
+    function_pointer_array_prototype_fixture,
+};
 use vyre::ir::{Expr, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
@@ -144,192 +150,6 @@ fn gnu_c_stress_fixture_source_and_tokens() -> (String, Vec<u32>, Vec<u32>, Vec<
         raw_kinds.push(token.raw_kind);
     }
     (source, raw_kinds, starts, lens)
-}
-fn c_expression_operator_fixture_tokens() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_IDENTIFIER,
-        TOK_ARROW,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_SIZEOF,
-        TOK_LPAREN,
-        TOK_STAR,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-        TOK_IF,
-        TOK_LPAREN,
-        TOK_IDENTIFIER,
-        TOK_GE,
-        TOK_IDENTIFIER,
-        TOK_AND,
-        TOK_IDENTIFIER,
-        TOK_NE,
-        TOK_INTEGER,
-        TOK_QUESTION,
-        TOK_INTEGER,
-        TOK_COLON,
-        TOK_INTEGER,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_IDENTIFIER,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_SLASH_EQ,
-        TOK_INTEGER,
-        TOK_SEMICOLON,
-        TOK_IDENTIFIER,
-        TOK_LSHIFT,
-        TOK_INTEGER,
-        TOK_SEMICOLON,
-        TOK_IDENTIFIER,
-        TOK_PERCENT,
-        TOK_INTEGER,
-        TOK_SEMICOLON,
-        TOK_IDENTIFIER,
-        TOK_LBRACKET,
-        TOK_IDENTIFIER,
-        TOK_RBRACKET,
-        TOK_SEMICOLON,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_MINUS,
-        TOK_IDENTIFIER,
-        TOK_PLUS,
-        TOK_STAR,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_INC,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_IDENTIFIER,
-        TOK_AMP,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-    ];
-    let tok_lens = vec![
-        2, 2, 5, 1, 6, 1, 1, 2, 1, 1, 2, 1, 5, 2, 3, 2, 3, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, 5, 2, 1,
-        1, 3, 2, 1, 1, 3, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 4, 1, 1, 1,
-    ];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
-}
-fn c_declarator_initializer_fixture_tokens() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_LBRACE,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_CONST,
-        TOK_CHAR_KW,
-        TOK_STAR,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_LONG,
-        TOK_IDENTIFIER,
-        TOK_LBRACKET,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_SEMICOLON,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-        TOK_ENUM,
-        TOK_IDENTIFIER,
-        TOK_LBRACE,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_IDENTIFIER,
-        TOK_COMMA,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_LPAREN,
-        TOK_INT,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_STAR,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_INT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_LPAREN,
-        TOK_INT,
-        TOK_STAR,
-        TOK_RPAREN,
-        TOK_IDENTIFIER,
-        TOK_SEMICOLON,
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_LPAREN,
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_RPAREN,
-        TOK_LBRACE,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_INTEGER,
-        TOK_COMMA,
-        TOK_DOT,
-        TOK_IDENTIFIER,
-        TOK_ASSIGN,
-        TOK_STRING,
-        TOK_RBRACE,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![
-        6, 5, 1, 3, 1, 1, 5, 4, 1, 4, 1, 4, 6, 1, 1, 1, 1, 1, 1, 4, 5, 1, 3, 1, 1, 1, 5, 1, 4, 1,
-        1, 1, 1, 3, 2, 1, 3, 1, 1, 3, 1, 1, 1, 3, 1, 1, 1, 3, 1, 1, 1, 1, 6, 5, 1, 1, 1, 6, 5, 1,
-        1, 1, 1, 1, 1, 1, 1, 4, 1, 3, 1, 1,
-    ];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
-}
-fn c_function_pointer_array_prototype_fixture_tokens() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let tok_types = vec![
-        TOK_INT,
-        TOK_LPAREN,
-        TOK_STAR,
-        TOK_IDENTIFIER,
-        TOK_LBRACKET,
-        TOK_STATIC,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_RPAREN,
-        TOK_LPAREN,
-        TOK_STRUCT,
-        TOK_IDENTIFIER,
-        TOK_STAR,
-        TOK_IDENTIFIER,
-        TOK_COMMA,
-        TOK_CONST,
-        TOK_CHAR_KW,
-        TOK_IDENTIFIER,
-        TOK_LBRACKET,
-        TOK_STATIC,
-        TOK_INTEGER,
-        TOK_RBRACKET,
-        TOK_RPAREN,
-        TOK_SEMICOLON,
-    ];
-    let tok_lens = vec![
-        3, 1, 1, 8, 1, 6, 1, 1, 1, 1, 6, 4, 1, 4, 1, 5, 4, 4, 1, 6, 2, 1, 1, 1,
-    ];
-    let tok_starts = starts_for_lens(&tok_lens);
-    (tok_types, tok_starts, tok_lens)
 }
 fn entry() -> SemanticOperation {
     all_entries()
