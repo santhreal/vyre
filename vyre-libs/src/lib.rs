@@ -250,6 +250,10 @@ pub(crate) mod fixture_bytes;
 /// downstream dialects do not submit through this path.
 pub(crate) mod test_migration;
 
+/// Program composition helpers for parity suites, in-tree and downstream.
+#[cfg(any(test, feature = "test-fixtures"))]
+pub mod test_support;
+
 /// Re-export the small set of vyre types every composition function
 /// returns. Consumers can `use vyre_libs::prelude::*` and get the API
 /// plus the types it returns.

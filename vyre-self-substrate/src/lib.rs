@@ -118,9 +118,6 @@ pub mod scheduling;
 #[cfg(feature = "telemetry")]
 pub mod telemetry;
 
-#[cfg(all(test, feature = "data"))]
-mod test_support;
-
 #[cfg(feature = "optimizer")]
 /// Self-hosted optimizer keystone  -  the encoder + GPU passes that run
 /// the compiler against its own substrate. Exposed at the lib root so

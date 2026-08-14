@@ -85,6 +85,9 @@ vyre-test-support.workspace = true
 # (resolver 2 keeps it out of production builds of dependents).
 vyre-primitives = { path = "../vyre-primitives", features = ["cpu-parity"], default-features = false }
 vyre-reference = { path = "../vyre-reference" }
+# `vyre_libs::test_support` program-sequence helper, gated the same way as the
+# primitives oracles above: dev builds only.
+vyre-libs = { workspace = true, features = ["test-fixtures"] }
 proptest.workspace = true
 
 [[test]]

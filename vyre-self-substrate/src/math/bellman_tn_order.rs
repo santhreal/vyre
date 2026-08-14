@@ -448,7 +448,7 @@ mod tests {
         let p2 = bellman_tn_order_program("s", "d", "w", "dist2", "nd2", "c2", 4, 4, 5);
         let p3 = bellman_tn_order_program("s", "d", "w", "dist3", "nd3", "c3", 4, 4, 5);
 
-        let final_p = crate::test_support::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
+        let final_p = vyre_libs::test_support::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
         // Assert we have at least 3 regions
         let region_count = final_p
             .entry()

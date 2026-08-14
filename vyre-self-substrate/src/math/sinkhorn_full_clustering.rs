@@ -76,7 +76,7 @@ mod tests {
             "k3", "kt3", "a3", "b3", "uc3", "un3", "v3", "kv3", "ktu3", "c3", 2, 2, 1,
         );
 
-        let final_p = crate::test_support::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
+        let final_p = vyre_libs::test_support::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
         let region_count = final_p
             .entry()
             .iter()
