@@ -1,7 +1,7 @@
 // Integration test module for the containing Vyre package.
 
 use super::expression_shape_gap_constructs::*;
-use super::support::{
+use super::gpu_expr_shape_runners::{
     run_gpu_expr_shape, run_gpu_pg_lower, run_reference_pg_lower, starts_for_lens,
 };
 use vyre_libs::parsing::c::parse::vast::{
