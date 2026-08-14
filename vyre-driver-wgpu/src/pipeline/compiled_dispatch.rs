@@ -17,6 +17,7 @@ use vyre_driver::{
 use crate::engine::record_and_readback::timestamp::{
     collect_timestamp_profile, PendingTimestampProfile, TimestampRecorder,
 };
+use crate::numeric::WGPU_NUMERIC;
 use crate::pipeline::output_slots::resize_vec_with;
 use crate::pipeline::WgpuPipeline;
 use crate::staging_reserve::{reserve_pipeline_vec, reserve_smallvec, reserve_vec};
@@ -104,10 +105,12 @@ impl WgpuPendingPersistentDispatch {
         enforce_actual_output_budget(&self.config, outputs.as_slice())?;
         let device_ns = collect_timestamp_profile(self.timestamp_profile, self.timestamp_deadline)?
             .map(|profile| profile.dispatch_ns);
-        let wait_ns = checked_elapsed_ns(wait_started, "WGPU persistent asynchronous wait")?;
+        let wait_ns =
+            WGPU_NUMERIC.elapsed_nanos_u64(wait_started, "persistent asynchronous wait")?;
         Ok(TimedDispatchResult {
             outputs,
-            wall_ns: checked_elapsed_ns(self.started, "WGPU persistent asynchronous dispatch")?,
+            wall_ns: WGPU_NUMERIC
+                .elapsed_nanos_u64(self.started, "persistent asynchronous dispatch")?,
             device_ns,
             enqueue_ns: Some(self.enqueue_ns),
             wait_ns: Some(wait_ns),
@@ -163,14 +166,9 @@ impl WgpuPipeline {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("vyre asynchronous persistent dispatch"),
         });
-        let timestamp_writes =
-            timestamp_recorder
-                .as_ref()
-                .map(|recorder| wgpu::ComputePassTimestampWrites {
-                    query_set: &recorder.query_set,
-                    beginning_of_pass_write_index: Some(0),
-                    end_of_pass_write_index: Some(1),
-                });
+        let timestamp_writes = timestamp_recorder
+            .as_ref()
+            .map(TimestampRecorder::pass_writes);
         self.record_borrowed_persistent_item_with_timestamps(
             device,
             &mut encoder,
@@ -179,9 +177,7 @@ impl WgpuPipeline {
         )?;
         drop(item);
         if let Some(recorder) = &timestamp_recorder {
-            encoder.write_timestamp(&recorder.query_set, 2);
-            encoder.write_timestamp(&recorder.query_set, 3);
-            recorder.resolve(&mut encoder)?;
+            recorder.finish_and_resolve(&mut encoder)?;
         }
         queue.submit(std::iter::once(encoder.finish()));
 
@@ -245,15 +241,16 @@ impl WgpuPipeline {
             }
         };
 
-        let enqueue_ns =
-            match checked_elapsed_ns(enqueue_started, "WGPU persistent asynchronous enqueue") {
-                Ok(elapsed) => elapsed,
-                Err(error) => {
-                    let fence = queue.submit(std::iter::empty::<wgpu::CommandBuffer>());
-                    crate::runtime::device::poll_device_wait_for(device, fence)?;
-                    return Err(error);
-                }
-            };
+        let enqueue_ns = match WGPU_NUMERIC
+            .elapsed_nanos_u64(enqueue_started, "persistent asynchronous enqueue")
+        {
+            Ok(elapsed) => elapsed,
+            Err(error) => {
+                let fence = queue.submit(std::iter::empty::<wgpu::CommandBuffer>());
+                crate::runtime::device::poll_device_wait_for(device, fence)?;
+                return Err(error);
+            }
+        };
         Ok(WgpuPendingPersistentDispatch {
             pipeline: Arc::clone(self),
             resolved,
@@ -340,14 +337,9 @@ impl CompiledPipeline for WgpuPipeline {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("vyre timed persistent dispatch"),
         });
-        let timestamp_writes =
-            timestamp_recorder
-                .as_ref()
-                .map(|recorder| wgpu::ComputePassTimestampWrites {
-                    query_set: &recorder.query_set,
-                    beginning_of_pass_write_index: Some(0),
-                    end_of_pass_write_index: Some(1),
-                });
+        let timestamp_writes = timestamp_recorder
+            .as_ref()
+            .map(TimestampRecorder::pass_writes);
         self.record_borrowed_persistent_item_with_timestamps(
             device,
             &mut encoder,
@@ -355,15 +347,13 @@ impl CompiledPipeline for WgpuPipeline {
             timestamp_writes,
         )?;
         if let Some(recorder) = &timestamp_recorder {
-            encoder.write_timestamp(&recorder.query_set, 2);
-            encoder.write_timestamp(&recorder.query_set, 3);
-            recorder.resolve(&mut encoder)?;
+            recorder.finish_and_resolve(&mut encoder)?;
         }
         queue.submit(std::iter::once(encoder.finish()));
         let timestamp_profile = timestamp_recorder
             .map(TimestampRecorder::map_async)
             .transpose()?;
-        let enqueue_ns = checked_elapsed_ns(enqueue_started, "WGPU persistent enqueue")?;
+        let enqueue_ns = WGPU_NUMERIC.elapsed_nanos_u64(enqueue_started, "persistent enqueue")?;
 
         let wait_started = Instant::now();
         self.raise_if_trapped(&resolved.inputs, device, queue, deadline)?;
@@ -372,11 +362,11 @@ impl CompiledPipeline for WgpuPipeline {
         enforce_actual_output_budget(config, outputs.as_slice())?;
         let device_ns = collect_timestamp_profile(timestamp_profile, timestamp_deadline)?
             .map(|profile| profile.dispatch_ns);
-        let wait_ns = checked_elapsed_ns(wait_started, "WGPU persistent wait")?;
+        let wait_ns = WGPU_NUMERIC.elapsed_nanos_u64(wait_started, "persistent wait")?;
 
         Ok(TimedDispatchResult {
             outputs,
-            wall_ns: checked_elapsed_ns(started, "WGPU persistent timed dispatch")?,
+            wall_ns: WGPU_NUMERIC.elapsed_nanos_u64(started, "persistent timed dispatch")?,
             device_ns,
             enqueue_ns: Some(enqueue_ns),
             wait_ns: Some(wait_ns),
@@ -556,7 +546,8 @@ impl CompiledPipeline for WgpuPipeline {
                     .then_some(self.workgroup_shape),
             },
         )?;
-        let enqueue_ns = checked_elapsed_ns(enqueue_started, "WGPU compiled timed enqueue")?;
+        let enqueue_ns =
+            WGPU_NUMERIC.elapsed_nanos_u64(enqueue_started, "compiled timed enqueue")?;
 
         let wait_started = Instant::now();
         let deadline = config
@@ -567,11 +558,11 @@ impl CompiledPipeline for WgpuPipeline {
             None => pending.await_timed_result()?,
         };
         enforce_actual_output_budget(config, outputs.as_slice())?;
-        let wait_ns = checked_elapsed_ns(wait_started, "WGPU compiled timed wait")?;
+        let wait_ns = WGPU_NUMERIC.elapsed_nanos_u64(wait_started, "compiled timed wait")?;
 
         Ok(TimedDispatchResult {
             outputs,
-            wall_ns: checked_elapsed_ns(started, "WGPU compiled timed dispatch")?,
+            wall_ns: WGPU_NUMERIC.elapsed_nanos_u64(started, "compiled timed dispatch")?,
             device_ns,
             enqueue_ns: Some(enqueue_ns),
             wait_ns: Some(wait_ns),
@@ -686,39 +677,10 @@ impl CompiledPipeline for WgpuPipeline {
         }
         let (device, queue) = &*self.device_queue;
         self.raise_if_trapped(&input_handles, device, queue, deadline)?;
-        resize_vec_with(
-            outputs,
-            output_handles.len(),
-            Vec::new,
-            "borrowed dispatch output slots",
-        )?;
-        for ((handle, output), bytes) in output_handles
-            .iter()
-            .zip(self.output_bindings.iter())
-            .zip(outputs.iter_mut())
-        {
-            crate::pipeline::output_readback::read_trimmed_output(
-                handle,
-                output,
-                device,
-                &self.staging_pool,
-                queue,
-                "persistent pipeline output",
-                deadline,
-                bytes,
-            )?;
-        }
+        self.readback_persistent_outputs(&output_handles, deadline, outputs)?;
         enforce_actual_output_budget(config, outputs.as_slice())?;
         Ok(())
     }
-}
-
-fn checked_elapsed_ns(started: Instant, label: &'static str) -> Result<u64, BackendError> {
-    u64::try_from(started.elapsed().as_nanos()).map_err(|source| {
-        BackendError::new(format!(
-            "{label} elapsed time cannot fit u64 nanoseconds: {source}. Fix: split or timeout the dispatch before telemetry overflows."
-        ))
-    })
 }
 
 #[cfg(test)]

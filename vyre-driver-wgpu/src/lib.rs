@@ -23,6 +23,7 @@ pub mod buffer;
 mod capabilities;
 mod descriptor_mapping;
 mod device_buffer;
+mod dispatch_timeout;
 pub mod emit;
 pub mod engine;
 pub mod ext;

@@ -5,11 +5,12 @@ use std::sync::Arc;
 use vyre_driver::BackendError;
 
 use super::binding::{
-    clear_outputs_for_bound, consumes_host_input, usage_for_binding, validate_handle,
+    accepts_params_handle, clear_outputs_for_bound, consumes_host_input, declared_byte_size,
+    usage_for_binding, validate_handle,
 };
 use crate::buffer::{BindGroupCacheStats, GpuBufferHandle};
 use crate::numeric::WGPU_NUMERIC;
-use crate::pipeline::{element_size_bytes, BufferBindingInfo, WgpuPipeline};
+use crate::pipeline::{BufferBindingInfo, WgpuPipeline};
 
 /// One persistent dispatch record for batched queue submission.
 pub struct DispatchItem<'a> {
@@ -442,12 +443,7 @@ impl WgpuPipeline {
                 })?;
                 output_index += 1;
                 handle
-            } else if matches!(
-                info.kind,
-                vyre_foundation::ir::MemoryKind::Uniform | vyre_foundation::ir::MemoryKind::Push
-            ) && item.params.is_some()
-                && !params_used
-            {
+            } else if accepts_params_handle(info) && item.params.is_some() && !params_used {
                 params_used = true;
                 let Some(params) = item.params else {
                     return Err(BackendError::new(
@@ -628,24 +624,7 @@ pub(crate) fn binding_padded_size(
     info: &BufferBindingInfo,
     data: Option<&[u8]>,
 ) -> Result<usize, BackendError> {
-    let declared_size = if info.count > 0 {
-        usize::try_from(info.count)
-            .map_err(|_| {
-                BackendError::new(format!(
-                    "buffer `{}` element count cannot fit host usize. Fix: reduce buffer count.",
-                    info.name
-                ))
-            })?
-            .checked_mul(element_size_bytes(&info.element)?)
-            .ok_or_else(|| {
-                BackendError::new(format!(
-                    "buffer `{}` declared size overflows usize. Fix: reduce buffer count.",
-                    info.name
-                ))
-            })?
-    } else {
-        0
-    };
+    let declared_size = declared_byte_size(info)?;
     if let (declared, Some(bytes)) = (declared_size, data) {
         if declared > 0 && bytes.len() > declared {
             return Err(BackendError::new(format!(

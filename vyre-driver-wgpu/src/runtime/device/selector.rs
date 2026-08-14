@@ -1,6 +1,6 @@
-//! Adapter selection + enumeration (C5 refactor).
+//! Adapter selection and enumeration.
 //!
-//! The legacy [`super::device::cached_device`] singleton picks the
+//! The [`super::acquire::cached_device`] singleton picks the
 //! first adapter `wgpu::Instance::request_adapter` returns  -  fine for
 //! a single-GPU dev box, useless for multi-GPU servers that need to
 //! choose a specific device by vendor, index, or power preference.
@@ -329,7 +329,7 @@ pub fn init_device_for_adapter(
     wgpu::AdapterInfo,
     crate::runtime::device::EnabledFeatures,
 )> {
-    super::device::wait_for_gpu(acquire_gpu_for_adapter(index))
+    super::acquire::wait_for_gpu(acquire_gpu_for_adapter(index))
 }
 
 /// Recreate a device on the same adapter identity used by an existing backend.
@@ -345,7 +345,7 @@ pub(crate) fn init_device_for_adapter_identity(
     wgpu::AdapterInfo,
     crate::runtime::device::EnabledFeatures,
 )> {
-    super::device::wait_for_gpu(acquire_gpu_for_adapter_identity(identity))
+    super::acquire::wait_for_gpu(acquire_gpu_for_adapter_identity(identity))
 }
 
 async fn acquire_gpu_for_adapter_identity(
@@ -366,7 +366,7 @@ async fn acquire_gpu_for_adapter_identity(
                     info.name, info.device_type
                 )));
             }
-            return super::device::request_device_for_adapter(adapter, "vyre device (recovered)")
+            return super::acquire::request_device_for_adapter(adapter, "vyre device (recovered)")
                 .await;
         }
     }
@@ -417,7 +417,7 @@ pub async fn acquire_gpu_for_adapter(
             info.name, info.device_type
         )));
     }
-    super::device::request_device_for_adapter(adapter, "vyre device (selected)").await
+    super::acquire::request_device_for_adapter(adapter, "vyre device (selected)").await
 }
 
 /// Read the `VYRE_ADAPTER_INDEX` env override. `None` when unset.

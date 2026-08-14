@@ -1,3 +1,4 @@
+use crate::dispatch_timeout::{deadline, enforce_budget, reject_unserviceable};
 use crate::pipeline::wgpu_launch_limits;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -57,20 +58,12 @@ impl WgpuPendingDispatch {
         run_prefetch(prefetch);
         let outputs = match kind {
             WgpuPendingKind::Ready(outputs) => outputs,
-            WgpuPendingKind::Readback(pending) => match dispatch_deadline(started, timeout) {
+            WgpuPendingKind::Readback(pending) => match deadline(started, timeout) {
                 Some(deadline) => pending.await_result_until(deadline)?,
                 None => pending.await_result()?,
             },
         };
-        if let Some(deadline) = timeout {
-            let elapsed = started.elapsed();
-            if elapsed > deadline {
-                return Err(vyre_driver::BackendError::new(format!(
-                    "dispatch exceeded configured timeout: took {elapsed:?}, budget {deadline:?}. \
-                     Fix: raise DispatchConfig.timeout or split the program into smaller chunks."
-                )));
-            }
-        }
+        enforce_budget(started, timeout, "dispatch exceeded configured timeout")?;
         Ok(outputs)
     }
 
@@ -91,20 +84,12 @@ impl WgpuPendingDispatch {
                 vyre_driver::backend::replace_output_buffers_preserving_slots(ready, outputs);
                 Ok(())
             }
-            WgpuPendingKind::Readback(pending) => match dispatch_deadline(started, timeout) {
+            WgpuPendingKind::Readback(pending) => match deadline(started, timeout) {
                 Some(deadline) => pending.await_into_until(outputs, deadline),
                 None => pending.await_into(outputs),
             },
         }?;
-        if let Some(deadline) = timeout {
-            let elapsed = started.elapsed();
-            if elapsed > deadline {
-                return Err(vyre_driver::BackendError::new(format!(
-                    "dispatch exceeded configured timeout: took {elapsed:?}, budget {deadline:?}. \
-                     Fix: raise DispatchConfig.timeout or split the program into smaller chunks."
-                )));
-            }
-        }
+        enforce_budget(started, timeout, "dispatch exceeded configured timeout")?;
         Ok(())
     }
 
@@ -130,12 +115,12 @@ impl WgpuPendingDispatch {
                 }
                 Ok(())
             }
-            WgpuPendingKind::Readback(pending) => match dispatch_deadline(started, timeout) {
+            WgpuPendingKind::Readback(pending) => match deadline(started, timeout) {
                 Some(deadline) => pending.await_mapped_outputs_until(visitor, deadline),
                 None => pending.await_mapped_outputs(visitor),
             },
         }?;
-        Self::enforce_timeout(started, timeout)
+        enforce_budget(started, timeout, "dispatch exceeded configured timeout")
     }
 
     fn is_ready_inner(&self) -> bool {
@@ -143,22 +128,6 @@ impl WgpuPendingDispatch {
             WgpuPendingKind::Ready(_) => true,
             WgpuPendingKind::Readback(pending) => pending.is_ready(),
         }
-    }
-
-    fn enforce_timeout(
-        started: Instant,
-        timeout: Option<Duration>,
-    ) -> Result<(), vyre_driver::BackendError> {
-        if let Some(deadline) = timeout {
-            let elapsed = started.elapsed();
-            if elapsed > deadline {
-                return Err(vyre_driver::BackendError::new(format!(
-                    "dispatch exceeded configured timeout: took {elapsed:?}, budget {deadline:?}. \
-                     Fix: raise DispatchConfig.timeout or split the program into smaller chunks."
-                )));
-            }
-        }
-        Ok(())
     }
 
     pub(crate) fn await_timed_owned(
@@ -174,7 +143,7 @@ impl WgpuPendingDispatch {
         run_prefetch(prefetch);
         let (outputs, device_ns) = match kind {
             WgpuPendingKind::Ready(outputs) => (outputs, None),
-            WgpuPendingKind::Readback(pending) => match dispatch_deadline(started, timeout) {
+            WgpuPendingKind::Readback(pending) => match deadline(started, timeout) {
                 Some(deadline) => pending.await_timed_result_until(deadline)?,
                 None => pending.await_timed_result()?,
             },
@@ -189,38 +158,15 @@ impl WgpuPendingDispatch {
                 measured_device_ns,
             );
         }
-        Self::enforce_timeout(started, timeout)?;
+        enforce_budget(started, timeout, "dispatch exceeded configured timeout")?;
         Ok(vyre_driver::TimedDispatchResult {
             outputs,
-            wall_ns: elapsed_nanos_u64(started, "wgpu timed dispatch")?,
+            wall_ns: crate::numeric::WGPU_NUMERIC.elapsed_nanos_u64(started, "timed dispatch")?,
             device_ns,
             enqueue_ns: None,
             wait_ns: None,
         })
     }
-}
-
-fn elapsed_nanos_u64(start: Instant, label: &str) -> Result<u64, vyre_driver::BackendError> {
-    u64::try_from(start.elapsed().as_nanos()).map_err(|source| {
-        vyre_driver::BackendError::new(format!(
-            "{label} elapsed time cannot fit u64 nanoseconds: {source}. Fix: split or timeout the dispatch before telemetry overflows."
-        ))
-    })
-}
-
-fn dispatch_deadline(started: Instant, timeout: Option<Duration>) -> Option<Instant> {
-    timeout.and_then(|duration| started.checked_add(duration))
-}
-
-fn reject_unserviceable_timeout(
-    timeout: Option<Duration>,
-) -> Result<(), vyre_driver::BackendError> {
-    if matches!(timeout, Some(timeout) if timeout <= Duration::from_millis(100)) {
-        return Err(vyre_driver::BackendError::new(
-            "dispatch cancelled before WGPU pipeline compilation because DispatchConfig.timeout is below the backend's serviceable queue/readback window. Fix: raise DispatchConfig.timeout or use an already compiled persistent pipeline.",
-        ));
-    }
-    Ok(())
 }
 
 impl vyre_driver::PendingDispatch for WgpuPendingDispatch {
@@ -306,30 +252,16 @@ impl WgpuBackend {
                 launch_feedback: None,
             });
         }
-        reject_unserviceable_timeout(config.timeout)?;
+        reject_unserviceable(config.timeout)?;
 
         let dispatch_arena = self.dispatch_arena_snapshot();
-        let pipeline = crate::pipeline::WgpuPipeline::compile_with_device_queue(
-            program,
-            config,
-            self.adapter_info.clone(),
-            self.enabled_features,
-            self.current_device_queue(),
-            Arc::clone(&dispatch_arena),
-            self.current_persistent_pool(),
-            self.pipeline_cache.clone(),
-            self.bind_group_layout_cache.clone(),
-        )?;
+        let pipeline = self.compile_pipeline(program, config, None)?;
 
-        if let Some(deadline) = config.timeout {
-            let elapsed = started.elapsed();
-            if elapsed > deadline {
-                return Err(vyre_driver::BackendError::new(format!(
-                    "dispatch cancelled after DispatchConfig.timeout before GPU submission: took {elapsed:?}, budget {deadline:?}. \
-                     Fix: raise DispatchConfig.timeout or split the program into smaller chunks."
-                )));
-            }
-        }
+        enforce_budget(
+            started,
+            config.timeout,
+            "dispatch cancelled before GPU submission",
+        )?;
 
         let workgroup_count = pipeline.workgroups_for_dispatch(config)?;
         let launch_feedback = if capture_timing {
@@ -391,17 +323,10 @@ struct PipelinePrefetch {
 
 impl PipelinePrefetch {
     fn run(self) {
-        if let Err(error) = crate::pipeline::WgpuPipeline::compile_with_device_queue(
-            &self.program,
-            &self.config,
-            self.backend.adapter_info.clone(),
-            self.backend.enabled_features,
-            self.backend.current_device_queue(),
-            self.backend.dispatch_arena_snapshot(),
-            self.backend.current_persistent_pool(),
-            self.backend.pipeline_cache.clone(),
-            self.backend.bind_group_layout_cache.clone(),
-        ) {
+        if let Err(error) = self
+            .backend
+            .compile_pipeline(&self.program, &self.config, None)
+        {
             tracing::debug!(
                 target: "vyre.wgpu.pipeline.prefetch",
                 error = %error,

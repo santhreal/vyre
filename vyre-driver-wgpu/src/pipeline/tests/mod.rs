@@ -59,7 +59,6 @@ impl PipelineHarness {
     fn compile(
         &self,
         program: &Program,
-        arena: Arc<DispatchArena>,
         pool: BufferPool,
     ) -> Result<Arc<WgpuPipeline>, BackendError> {
         WgpuPipeline::compile_with_device_queue(
@@ -68,24 +67,37 @@ impl PipelineHarness {
             self.adapter_info.clone(),
             self.enabled_features,
             self.device_queue.clone(),
-            arena,
             pool,
             self.pipeline_cache.clone(),
             self.layout_cache.clone(),
+            None,
         )
     }
 
-    /// Compile against `arena` and the pool that arena owns, so buffer Arc
-    /// identities match between compile-time bindings and run-time recording.
-    /// A separate `BufferPool::new()` would make every dispatch a
-    /// bind-group-cache miss.
+    /// Compile against the pool `arena` owns, so buffer Arc identities match
+    /// between compile-time bindings and run-time recording. A separate
+    /// `BufferPool::new()` would make every dispatch a bind-group-cache miss.
     fn compile_on_arena(
         &self,
         program: &Program,
         arena: &Arc<DispatchArena>,
     ) -> Result<Arc<WgpuPipeline>, BackendError> {
-        self.compile(program, Arc::clone(arena), arena.pool().clone())
+        self.compile(program, arena.pool().clone())
     }
+}
+
+/// A one-node program storing `value` at index 0 of a `count`-element `u32`
+/// output buffer named `name`.
+///
+/// The minimum program that produces an observable output. Six contract tests
+/// spelled it out, so a change to the fixture shape had to be applied six
+/// times or the tests stopped exercising the same program.
+fn stores_u32(name: &str, count: u32, value: u32) -> Program {
+    Program::wrapped(
+        vec![BufferDecl::output(name, 0, DataType::U32).with_count(count)],
+        [1, 1, 1],
+        vec![Node::store(name, Expr::u32(0), Expr::u32(value))],
+    )
 }
 
 /// One direct dispatch through the shared record path. Every pipeline contract

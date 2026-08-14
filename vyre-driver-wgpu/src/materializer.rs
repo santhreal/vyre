@@ -139,18 +139,13 @@ impl ArtifactMaterializer for WgpuMaterializer {
                     }
                 })
                 .collect();
-            let pipeline = WgpuPipeline::compile_target_with_device_queue(
+            let pipeline = self.backend.compile_pipeline(
                 &program,
-                &target.wgsl,
-                &module.image.descriptor,
                 &config,
-                self.backend.adapter_info.clone(),
-                self.backend.enabled_features,
-                self.backend.current_device_queue(),
-                self.backend.dispatch_arena_snapshot(),
-                self.backend.current_persistent_pool(),
-                Arc::clone(&self.backend.pipeline_cache),
-                Arc::clone(&self.backend.bind_group_layout_cache),
+                Some(crate::pipeline::AuthenticatedTarget {
+                    wgsl: &target.wgsl,
+                    descriptor: &module.image.descriptor,
+                }),
             )?;
             let resident_slots = pipeline
                 .persistent_resource_names()

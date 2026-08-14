@@ -10,11 +10,7 @@ fn prerecorded_replay_writes_the_same_output_as_direct_dispatch() {
     let harness = PipelineHarness::new("pre-recorded dispatch replay test");
     let arena = harness.arena();
 
-    let program = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(4)],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
-    );
+    let program = stores_u32("out", 4, 7);
 
     let pipeline = harness
         .compile_on_arena(&program, &arena)
@@ -61,11 +57,7 @@ fn prerecorded_second_replay_is_a_structured_error() {
     let harness = PipelineHarness::new("pre-recorded dispatch resubmit test");
     let arena = harness.arena();
 
-    let program = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(3))],
-    );
+    let program = stores_u32("out", 1, 3);
 
     let pipeline = harness
         .compile_on_arena(&program, &arena)
