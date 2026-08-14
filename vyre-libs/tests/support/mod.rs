@@ -8,9 +8,13 @@ pub(crate) mod gpu_pipeline_filter;
 #[cfg(feature = "c-parser")]
 pub(crate) mod preprocess_stream;
 
+/// This crate's directory, resolved from the working directory at run time.
+pub(crate) fn crate_dir() -> PathBuf {
+    vyre_test_support::monorepo::vyre_workspace_root().join("vyre-libs")
+}
+
 pub(crate) fn crate_file(path: &str) -> String {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    fs::read_to_string(manifest.join(path)).unwrap_or_else(|error| {
+    fs::read_to_string(crate_dir().join(path)).unwrap_or_else(|error| {
         panic!("failed to read {path}: {error}");
     })
 }
@@ -70,7 +74,7 @@ pub(crate) fn assert_no_cpu_named_api_exports(
     extra_trait_markers: &[&str],
     failure_message: &str,
 ) {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join(relative_root);
+    let root = crate_dir().join(relative_root);
     let mut files = Vec::new();
     collect_rs_files(&root, read_context, &mut files);
 

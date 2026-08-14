@@ -7,9 +7,7 @@ use vyre_foundation::validate::ValidationCode;
 
 #[test]
 fn every_registered_validation_code_is_cataloged() {
-    let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("foundation must live below the workspace root");
+    let workspace_root = vyre_test_support::monorepo::vyre_workspace_root();
     let markdown = fs::read_to_string(workspace_root.join("docs/error-codes.md"))
         .expect("canonical error-code catalog must be readable");
     let documented = markdown

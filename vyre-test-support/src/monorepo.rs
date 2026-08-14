@@ -19,9 +19,9 @@
 //!
 //! # How resolution works
 //!
-//! [`vyre_workspace_root`] is always available: this crate is a direct child of
-//! the vyre workspace root, so its own `CARGO_MANIFEST_DIR` fixes the answer
-//! whatever the tree sits inside.
+//! [`vyre_workspace_root`] delegates to `structure_gate::workspace_root`, which
+//! walks up from the working directory at run time. It is the one owner of that
+//! answer, so no test resolves the checkout from a compiled-in path.
 //!
 //! [`santh_root`] takes the first of these that works:
 //!
@@ -54,17 +54,23 @@ const SANTH_ROOT_MARKER: &str = "tools/vyrec/src";
 /// Path, relative to the monorepo root, holding the dataflow crates.
 const DATAFLOW_RELATIVE: &str = "libs/dataflow";
 
-/// Root of the vyre cargo workspace.
+/// Root of the vyre cargo workspace, resolved from the working directory.
 ///
-/// This crate lives at `<workspace root>/vyre-test-support`, so the answer is
-/// the parent of its manifest directory. It does not depend on where the
-/// workspace itself sits.
+/// Delegates to [`structure_gate::workspace_root`], the one owner of "which
+/// checkout am I reporting on". Never compiled in: every checkout of this
+/// repository shares one cargo target directory, cargo hashes a member by its
+/// path relative to the workspace root and checks freshness by mtime, so two
+/// checkouts compute the same unit hash and hand each other compiled binaries.
+/// A path fixed at compile time then names whichever tree built last, and a
+/// test that reads docs, pins, fixtures or golden files through it audits that
+/// tree while claiming to describe this one.
+///
+/// # Panics
+///
+/// Panics when no ancestor of the working directory declares a `[workspace]`.
 #[must_use]
 pub fn vyre_workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("vyre-test-support must live directly under the vyre workspace root")
-        .to_path_buf()
+    structure_gate::workspace_root()
 }
 
 /// Root of the monorepo hosting vyre and its sibling products, if there is one.

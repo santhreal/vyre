@@ -5,12 +5,10 @@
 //! be baselined or removed.
 
 use std::collections::HashSet;
-use std::path::PathBuf;
 
 #[test]
 fn ci_workflows_reference_existing_scripts() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest.parent().unwrap();
+    let workspace_root = vyre_test_support::monorepo::vyre_workspace_root();
     let workflows_dir = workspace_root.join(".github/workflows");
     if !workflows_dir.is_dir() {
         return;
@@ -72,8 +70,7 @@ fn ci_workflows_reference_existing_scripts() {
 
 #[test]
 fn frozen_trait_contract_files_exist() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest.parent().unwrap();
+    let workspace_root = vyre_test_support::monorepo::vyre_workspace_root();
 
     let contracts = [
         ("VyreBackend", "vyre-driver/src/backend/vyre_backend.rs"),
@@ -112,8 +109,7 @@ fn frozen_trait_contract_files_exist() {
 
 #[test]
 fn frozen_trait_script_is_executable() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest.parent().unwrap();
+    let workspace_root = vyre_test_support::monorepo::vyre_workspace_root();
     let script = workspace_root.join("scripts/check_trait_freeze.sh");
     assert!(
         script.exists(),

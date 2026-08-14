@@ -16,11 +16,9 @@ fn fixture_root() -> PathBuf {
 fn write_fixture(root: &Path, source: &str) {
     let _ = fs::remove_dir_all(root);
     fs::create_dir_all(root.join("src")).expect("Fix: feature fixture source must be creatable");
-    let substrate = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let foundation = substrate
-        .parent()
-        .expect("Fix: the crate directory must have a workspace parent")
-        .join("vyre-foundation");
+    let workspace = vyre_test_support::monorepo::vyre_workspace_root();
+    let substrate = workspace.join("vyre-pass-engine");
+    let foundation = workspace.join("vyre-foundation");
     fs::write(
         root.join("Cargo.toml"),
         format!(

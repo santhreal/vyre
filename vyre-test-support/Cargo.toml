@@ -13,6 +13,12 @@ keywords = ["vyre", "testing", "harness", "coverage", "registry"]
 categories = ["development-tools::testing"]
 publish = false
 
+# Path-only, publish = false on both sides. `structure_gate::workspace_root` is
+# the one owner of "which checkout am I reporting on", so `monorepo` delegates
+# to it rather than resolving a second time.
+[dependencies]
+structure-gate = { path = "../structure-gate" }
+
 [dev-dependencies]
 tempfile.workspace = true
 

@@ -452,11 +452,7 @@ fn registered_ops() -> Vec<RegisteredOp> {
 }
 
 fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(Path::parent)
-        .expect("Fix: conform crate must live two levels below the workspace root.")
-        .to_path_buf()
+    structure_gate::workspace_root()
 }
 
 fn read_toml(path: &Path) -> Value {

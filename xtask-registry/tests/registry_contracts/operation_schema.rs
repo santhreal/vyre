@@ -1,17 +1,14 @@
 //! Canonical live operation schema contract tests.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{Command, Output};
 
 use serde_json::Value;
 use vyre_foundation::operation::{classify_operation_id, OperationRegistry, OperationTier};
 
 fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: xtask must remain directly under the workspace root")
-        .to_path_buf()
+    structure_gate::workspace_root()
 }
 
 /// Workspace member crate names, read from the root manifest at run time.
@@ -25,12 +22,7 @@ fn workspace_members() -> std::collections::BTreeSet<String> {
         .expect("Fix: [workspace] must declare members")
         .iter()
         .filter_map(|member| member.as_str())
-        .map(|path| {
-            path.rsplit('/')
-                .next()
-                .unwrap_or(path)
-                .to_string()
-        })
+        .map(|path| path.rsplit('/').next().unwrap_or(path).to_string())
         .collect()
 }
 

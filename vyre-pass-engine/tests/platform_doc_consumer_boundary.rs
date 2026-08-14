@@ -1,15 +1,10 @@
 //! Workspace-level platform documentation boundary contract.
 
-use std::path::Path;
-
 use std::process::Command;
 
 #[test]
 fn platform_crate_docs_and_comments_do_not_name_consumers() {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let workspace = manifest
-        .parent()
-        .expect("vyre-pass-engine should live directly under the workspace root");
+    let workspace = vyre_test_support::monorepo::vyre_workspace_root();
     let script = workspace.join("scripts/check_platform_consumer_docs.sh");
 
     let output = Command::new("bash")
@@ -65,10 +60,7 @@ fn platform_crate_docs_and_comments_do_not_name_consumers() {
 /// retain a dead index row, and private plans cannot enter public navigation.
 #[test]
 fn docs_index_covers_every_public_markdown_document() {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let workspace = manifest
-        .parent()
-        .expect("vyre-pass-engine should live directly under the workspace root");
+    let workspace = vyre_test_support::monorepo::vyre_workspace_root();
     let script = workspace.join("scripts/check_docs_index.sh");
 
     let output = Command::new("bash")
@@ -129,10 +121,7 @@ fn docs_index_covers_every_public_markdown_document() {
 /// signpost is sent to a file that is not there.
 #[test]
 fn public_docs_never_link_unreachable_targets() {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let workspace = manifest
-        .parent()
-        .expect("vyre-pass-engine should live directly under the workspace root");
+    let workspace = vyre_test_support::monorepo::vyre_workspace_root();
     let script = workspace.join("scripts/check_docs_links.sh");
 
     let output = Command::new("bash")

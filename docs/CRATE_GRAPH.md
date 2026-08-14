@@ -163,6 +163,8 @@ graph TD
   C28 --> C20
   C28 --> C24
   C28 --> C25
+  C31 --> C0
+  C32 --> C0
   C33 --> C3
   C33 --> C7
   C33 --> C8
@@ -305,6 +307,8 @@ graph TD
 | `vyre-runtime` | `vyre-libs` | composition trees the megakernel planner plans against | None | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |
 | `vyre-runtime` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
 | `vyre-runtime` | `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | None | `always` | `normal` | `true` | `true` | `private` | `pass-engine` |
+| `vyre-test-support` | `structure-gate` | run-time workspace root resolution, so no test resolves the checkout from a compiled-in path | None | `always` | `normal` | `false` | `true` | `public` | `release-tooling` |
+| `xtask` | `structure-gate` | workspace roster and structural rules, and the run-time checkout root every gate reports on | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
 | `xtask-evidence` | `vyre-bench` | benchmark workloads and evidence | None | `always` | `normal` | `false` | `true` | `private` | `benchmarks` |
 | `xtask-evidence` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
 | `xtask-evidence` | `vyre-driver-cuda` | native accelerator backend execution | None | `always` | `normal` | `false` | `true` | `private` | `cuda-driver` |

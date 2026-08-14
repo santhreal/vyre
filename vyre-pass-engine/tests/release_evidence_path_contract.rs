@@ -2,7 +2,6 @@
 //!
 //! Every cited release-evidence path must resolve to an owned artifact.
 
-use std::path::Path;
 use std::process::Command;
 
 /// Every filesystem path cited inside `release/evidence` must resolve on disk.
@@ -12,10 +11,7 @@ use std::process::Command;
 /// evidence that points to files no reader can open.
 #[test]
 fn release_evidence_cites_only_paths_that_exist() {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let workspace = manifest
-        .parent()
-        .expect("vyre-pass-engine should live directly under the workspace root");
+    let workspace = vyre_test_support::monorepo::vyre_workspace_root();
     let script = workspace.join("scripts/check_evidence_paths.sh");
 
     let output = Command::new("bash")
@@ -55,10 +51,7 @@ fn release_evidence_cites_only_paths_that_exist() {
 /// would leave the contract above passing and meaningless.
 #[test]
 fn evidence_path_gate_fails_on_a_citation_that_does_not_resolve() {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let workspace = manifest
-        .parent()
-        .expect("vyre-pass-engine should live directly under the workspace root");
+    let workspace = vyre_test_support::monorepo::vyre_workspace_root();
     let script = workspace.join("scripts/check_evidence_paths.sh");
 
     let fixture = std::env::temp_dir().join("vyre_evidence_path_gate_red_fixture");
@@ -117,10 +110,7 @@ fn evidence_path_gate_fails_on_a_citation_that_does_not_resolve() {
 /// in public history and must NOT be reported.
 #[test]
 fn evidence_path_gate_reports_a_cited_path_that_is_gitignored() {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let workspace = manifest
-        .parent()
-        .expect("vyre-pass-engine should live directly under the workspace root");
+    let workspace = vyre_test_support::monorepo::vyre_workspace_root();
     let script = workspace.join("scripts/check_evidence_paths.sh");
 
     let fixture = std::env::temp_dir().join("vyre_evidence_path_gate_ignored_fixture");

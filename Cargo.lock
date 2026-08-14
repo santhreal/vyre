@@ -3453,6 +3453,7 @@ dependencies = [
  "rand_core 0.6.4",
  "serde",
  "serde_json",
+ "structure-gate",
  "tempfile",
  "thiserror 2.0.19",
  "toml",
@@ -3989,6 +3990,7 @@ dependencies = [
 name = "vyre-test-support"
 version = "0.7.2"
 dependencies = [
+ "structure-gate",
  "tempfile",
 ]
 
@@ -4695,6 +4697,7 @@ dependencies = [
  "inventory",
  "serde",
  "serde_json",
+ "structure-gate",
  "syn 2.0.117",
  "tempfile",
  "toml",

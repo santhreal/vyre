@@ -14,7 +14,8 @@ use std::path::PathBuf;
 use vyre_lower::artifact_golden;
 
 fn golden_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/golden/success_corpus.spv.hex")
+    vyre_test_support::monorepo::vyre_workspace_root()
+        .join("vyre-emit-spirv/tests/golden/success_corpus.spv.hex")
 }
 
 fn render_corpus() -> String {

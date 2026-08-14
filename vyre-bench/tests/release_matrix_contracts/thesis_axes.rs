@@ -2,10 +2,8 @@ use super::*;
 
 #[test]
 fn release_suite_proves_compiler_grade_gpu_thesis_axes() {
-    let manifest_path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: vyre-bench must live under the workspace root")
-        .join("release/evidence/benchmarks/compiler-grade-thesis-workloads.json");
+    let manifest_path =
+        workspace_root().join("release/evidence/benchmarks/compiler-grade-thesis-workloads.json");
     let manifest: Value = serde_json::from_str(
         &std::fs::read_to_string(&manifest_path)
             .expect("Fix: compiler-grade thesis benchmark manifest must be readable"),
@@ -38,10 +36,7 @@ fn release_suite_proves_compiler_grade_gpu_thesis_axes() {
         let evidence_artifact = axis["evidence_artifact"]
             .as_str()
             .expect("Fix: every thesis benchmark axis needs an evidence artifact");
-        let artifact_path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("Fix: vyre-bench must live under the workspace root")
-            .join(evidence_artifact);
+        let artifact_path = workspace_root().join(evidence_artifact);
         assert!(
             artifact_path.exists(),
             "Fix: thesis benchmark axis `{axis_id}` references missing artifact `{evidence_artifact}`."

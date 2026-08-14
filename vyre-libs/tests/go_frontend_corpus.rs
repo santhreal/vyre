@@ -32,7 +32,7 @@ struct Counts {
 }
 
 fn fixtures_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/go")
+    vyre_test_support::monorepo::vyre_workspace_root().join("vyre-libs/tests/fixtures/go")
 }
 
 fn gpu_counts(source: &str) -> Counts {

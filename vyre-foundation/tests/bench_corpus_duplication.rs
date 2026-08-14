@@ -10,8 +10,7 @@ use std::process::Command;
 
 #[test]
 fn checked_in_corpus_duplicates_match_manifest_policy() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest.parent().unwrap();
+    let workspace_root = vyre_test_support::monorepo::vyre_workspace_root();
     let checker = workspace_root.join("benches/competition/scripts/check_corpora.py");
     assert!(
         checker.is_file(),
@@ -33,8 +32,7 @@ fn checked_in_corpus_duplicates_match_manifest_policy() {
 
 #[test]
 fn bench_corpus_does_not_duplicate_test_fixtures() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest.parent().unwrap();
+    let workspace_root = vyre_test_support::monorepo::vyre_workspace_root();
 
     let bench_corpus = workspace_root.join("benches/competition/corpora");
     let fixture_dirs = [
@@ -64,8 +62,8 @@ fn bench_corpus_does_not_duplicate_test_fixtures() {
                 for fp in fix_paths {
                     duplicates.push(format!(
                         "{} duplicates {}",
-                        bp.strip_prefix(workspace_root).unwrap().display(),
-                        fp.strip_prefix(workspace_root).unwrap().display()
+                        bp.strip_prefix(&workspace_root).unwrap().display(),
+                        fp.strip_prefix(&workspace_root).unwrap().display()
                     ));
                 }
             }

@@ -23,14 +23,17 @@ use std::path::PathBuf;
 
 use vyre_driver::materialize::{self, MaterializerTarget};
 use vyre_foundation::ir::ProgramGraph;
-use vyre_lower::artifact_golden::{assert_matches_golden, contains_case, render_sections, write_golden};
+use vyre_lower::artifact_golden::{
+    assert_matches_golden, contains_case, render_sections, write_golden,
+};
 use vyre_lower::program_stability_corpus::{self, StabilityCase};
 use vyre_megakernel::{
     Artifact, CompileRequest, Digest, ExternalFacts, SearchBudget, TargetCompiler, TargetPayload,
 };
 
 fn golden_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/golden/emitted_ptx_corpus.ptx")
+    vyre_test_support::monorepo::vyre_workspace_root()
+        .join("vyre-driver-cuda/tests/golden/emitted_ptx_corpus.ptx")
 }
 
 /// Wrap one corpus program in the single-node graph the artifact route expects.
@@ -39,7 +42,10 @@ fn golden_path() -> PathBuf {
 /// external values, so the corpus does not restate that contract per case.
 fn artifact_for(case: &StabilityCase) -> Artifact {
     let graph = ProgramGraph::from_program("main", case.program.clone()).unwrap_or_else(|error| {
-        panic!("Fix: corpus case `{}` must form a graph node: {error}", case.id)
+        panic!(
+            "Fix: corpus case `{}` must form a graph node: {error}",
+            case.id
+        )
     });
     let request = CompileRequest::new(
         graph,

@@ -96,7 +96,7 @@ Own the subcommand registry and every gate that judges the tree from source text
 ### Boundaries
 
 The `release-tooling` owner maintains this `tooling` crate at `xtask`.
-Its allowed internal production dependencies are: None.
+Its allowed internal production dependencies are: `structure-gate`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

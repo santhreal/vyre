@@ -134,10 +134,10 @@ const GRAPH_WRAPPERS: &[WrapperContract] = &[
 
 #[test]
 fn duplicated_graph_files_are_not_flat_root_modules() {
-    let manifest = manifest_dir();
+    let libs_dir = crate_dir();
     for contract in GRAPH_WRAPPERS {
-        let old_root = manifest.join("src").join(contract.file);
-        let graph_wrapper = graph_wrapper_path(&manifest, contract.file);
+        let old_root = libs_dir.join("src").join(contract.file);
+        let graph_wrapper = graph_wrapper_path(&libs_dir, contract.file);
         assert!(
             !old_root.exists(),
             "{} must not exist; graph dispatch wrappers belong under src/graph/dispatch/",
@@ -153,11 +153,11 @@ fn duplicated_graph_files_are_not_flat_root_modules() {
 
 #[test]
 fn graph_wrappers_import_their_primitive_authority() {
-    let manifest = manifest_dir();
+    let libs_dir = crate_dir();
     let mut failures = Vec::new();
 
     for contract in GRAPH_WRAPPERS {
-        let path = graph_wrapper_path(&manifest, contract.file);
+        let path = graph_wrapper_path(&libs_dir, contract.file);
         let source = read_wrapper_with_child_tests(&path);
         let primitive_path = format!("vyre_primitives::graph::{}", contract.primitive_module);
         if !source.contains(&primitive_path) {
@@ -185,11 +185,11 @@ fn graph_wrappers_import_their_primitive_authority() {
 
 #[test]
 fn graph_wrappers_keep_closure_bar_tests_near_dispatch_wiring() {
-    let manifest = manifest_dir();
+    let libs_dir = crate_dir();
     let mut failures = Vec::new();
 
     for contract in GRAPH_WRAPPERS {
-        let path = graph_wrapper_path(&manifest, contract.file);
+        let path = graph_wrapper_path(&libs_dir, contract.file);
         let source = read_wrapper_with_child_tests(&path);
         if !source.contains("matches_primitive_directly")
             && !source.contains("equals primitive")
@@ -211,8 +211,14 @@ fn graph_wrappers_keep_closure_bar_tests_near_dispatch_wiring() {
 
 #[test]
 fn graph_mod_declares_every_single_sourced_wrapper_once() {
-    let manifest = manifest_dir();
-    let source = read(&manifest.join("src").join("graph").join("dispatch").join("mod.rs"));
+    let libs_dir = crate_dir();
+    let source = read(
+        &libs_dir
+            .join("src")
+            .join("graph")
+            .join("dispatch")
+            .join("mod.rs"),
+    );
     let mut failures = Vec::new();
 
     for contract in GRAPH_WRAPPERS {
@@ -234,11 +240,11 @@ fn graph_mod_declares_every_single_sourced_wrapper_once() {
 
 #[test]
 fn graph_wrappers_do_not_grow_past_single_source_ratchet() {
-    let manifest = manifest_dir();
+    let libs_dir = crate_dir();
     let mut failures = Vec::new();
 
     for contract in GRAPH_WRAPPERS {
-        let path = graph_wrapper_path(&manifest, contract.file);
+        let path = graph_wrapper_path(&libs_dir, contract.file);
         let source = read(&path);
         let observed = source.lines().count();
         if observed > contract.max_wrapper_lines {
@@ -256,19 +262,24 @@ fn graph_wrappers_do_not_grow_past_single_source_ratchet() {
     );
 }
 
-fn manifest_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+fn crate_dir() -> PathBuf {
+    vyre_test_support::monorepo::vyre_workspace_root().join("vyre-libs")
 }
 
-fn graph_wrapper_path(manifest: &Path, file: &str) -> PathBuf {
-    let direct = manifest.join("src").join("graph").join(file);
+fn graph_wrapper_path(crate_dir: &Path, file: &str) -> PathBuf {
+    let direct = crate_dir.join("src").join("graph").join(file);
     if direct.exists() {
         return direct;
     }
     let stem = file
         .strip_suffix(".rs")
         .expect("graph wrapper contract files must use .rs");
-    manifest.join("src").join("graph").join("dispatch").join(stem).join("mod.rs")
+    crate_dir
+        .join("src")
+        .join("graph")
+        .join("dispatch")
+        .join(stem)
+        .join("mod.rs")
 }
 
 fn read(path: &Path) -> String {

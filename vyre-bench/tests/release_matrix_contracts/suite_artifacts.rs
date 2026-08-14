@@ -4,9 +4,7 @@ use super::*;
 /// prove every release workload on real NVIDIA hardware.
 #[test]
 fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
-    let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: vyre-bench must live under the workspace root");
+    let workspace = workspace_root();
     let suite_path = workspace.join("release/evidence/benchmarks/cuda-release-suite.json");
     let suite = read_json(&suite_path);
     let matrix =
@@ -224,9 +222,7 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
 /// preserve its own exact historical workload-family inventory.
 #[test]
 fn wgpu_fallback_suite_covers_executable_release_workload_families() {
-    let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: vyre-bench must live under the workspace root");
+    let workspace = workspace_root();
     let suite = read_json(&workspace.join("release/evidence/benchmarks/wgpu-fallback-suite.json"));
     assert_eq!(
         suite["schema_version"], 3,

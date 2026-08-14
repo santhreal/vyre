@@ -489,7 +489,11 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 - Path: `vyre-test-support`
 - Owner: `test-support`
 - Layer: `test-tooling`
-- Internal production dependencies: None
+- Internal production dependencies: `structure-gate`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `structure-gate` | run-time workspace root resolution, so no test resolves the checkout from a compiled-in path | `public` | `release-tooling` |
 
 ### `xtask`
 
@@ -498,7 +502,11 @@ Own the subcommand registry and every gate that judges the tree from source text
 - Path: `xtask`
 - Owner: `release-tooling`
 - Layer: `tooling`
-- Internal production dependencies: None
+- Internal production dependencies: `structure-gate`
+
+| Dependency | Purpose | Boundary | Owning seam |
+| --- | --- | --- | --- |
+| `structure-gate` | workspace roster and structural rules, and the run-time checkout root every gate reports on | `private` | `release-tooling` |
 
 ### `xtask-evidence`
 

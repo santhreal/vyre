@@ -12,11 +12,7 @@ use std::path::PathBuf;
 use vyre_driver::backend::ErrorCode;
 
 fn catalog_path() -> PathBuf {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("workspace root")
-        .to_path_buf();
-    root.join("docs/error-codes.md")
+    vyre_test_support::monorepo::vyre_workspace_root().join("docs/error-codes.md")
 }
 
 fn parse_catalog(path: &PathBuf) -> BTreeMap<String, u32> {

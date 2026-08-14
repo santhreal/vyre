@@ -677,6 +677,17 @@ owner = "test-support"
 layer = "test-tooling"
 responsibility = "Provide shared deterministic fixtures and assertions for workspace tests."
 
+[[crate.dependency]]
+package = "structure-gate"
+purpose = "run-time workspace root resolution, so no test resolves the checkout from a compiled-in path"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "release-tooling"
+
 [[crate]]
 package = "vyre-pass-engine"
 path = "vyre-pass-engine"
@@ -902,6 +913,17 @@ path = "xtask"
 owner = "release-tooling"
 layer = "tooling"
 responsibility = "Own the subcommand registry and every gate that judges the tree from source text, manifests, workflows, and recorded evidence, linking no vyre crate."
+
+[[crate.dependency]]
+package = "structure-gate"
+purpose = "workspace roster and structural rules, and the run-time checkout root every gate reports on"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "release-tooling"
 
 [[crate]]
 package = "xtask-registry"

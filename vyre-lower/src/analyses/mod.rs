@@ -109,7 +109,8 @@ mod dedup_guard {
     // src/analyses/ (the table must live only in this module).
     #[test]
     fn child_body_operands_has_single_owner() {
-        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/analyses");
+        let dir =
+            vyre_test_support::monorepo::vyre_workspace_root().join("vyre-lower/src/analyses");
         let mut hits = Vec::new();
         visit(&dir, &mut hits);
         hits.sort();

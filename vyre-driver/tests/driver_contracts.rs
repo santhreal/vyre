@@ -1,7 +1,6 @@
 //! Driver error, capability, validation, and fixture contracts.
 
 use std::collections::HashSet;
-use std::path::PathBuf;
 
 use vyre_driver::backend::{validate_program, BackendError, VyreBackend};
 use vyre_foundation::ir::{Node, OpId, Program};
@@ -186,8 +185,8 @@ fn validation_rejects_unsupported_operation() {
 /// This verifies the fixture directory exists and is readable.
 #[test]
 fn external_fixture_is_loadable() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let fixture = manifest.join("tests/fixtures/unsupported_op.txt");
+    let fixture = vyre_test_support::monorepo::vyre_workspace_root()
+        .join("vyre-driver/tests/fixtures/unsupported_op.txt");
     assert!(
         fixture.exists(),
         "external fixture must exist at {fixture:?}"
@@ -199,8 +198,8 @@ fn external_fixture_is_loadable() {
 /// A test that actually uses the external fixture to drive behavior.
 #[test]
 fn external_fixture_drives_validation_rejection() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let fixture = manifest.join("tests/fixtures/unsupported_op.txt");
+    let fixture = vyre_test_support::monorepo::vyre_workspace_root()
+        .join("vyre-driver/tests/fixtures/unsupported_op.txt");
     let op_id = std::fs::read_to_string(&fixture)
         .unwrap()
         .trim()
