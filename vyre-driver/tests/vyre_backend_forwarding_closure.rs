@@ -28,7 +28,6 @@
 
 use std::collections::BTreeSet;
 use std::fs;
-use std::path::PathBuf;
 
 /// Dispatch-surface methods the grid-sync wrapper deliberately does not
 /// specialize, with the reason each is safe to leave alone.
@@ -48,7 +47,8 @@ const DISPATCH_VIA_SELF_ROUTING_DEFAULT: &[(&str, &str)] = &[
 ];
 
 fn source(relative: &str) -> String {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(relative);
+    let path =
+        vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")).join(relative);
     fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("cannot read {}: {error}", path.display()))
 }

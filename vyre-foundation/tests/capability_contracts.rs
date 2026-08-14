@@ -11,7 +11,7 @@
 //! This file is the one owner.
 
 use std::collections::BTreeSet;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use proptest::prelude::*;
 use vyre_foundation::ir::{
@@ -154,10 +154,7 @@ fn assert_reports(error: &MissingCapability, capability: &str) {
 
 #[test]
 fn subgroup_reduction_requires_subgroup_ops() {
-    let program = scalar_program(vec![Node::let_bind(
-        "s",
-        Expr::subgroup_add(Expr::u32(1)),
-    )]);
+    let program = scalar_program(vec![Node::let_bind("s", Expr::subgroup_add(Expr::u32(1)))]);
     assert!(
         scan(&program).subgroup_ops,
         "subgroup_add must set subgroup_ops"
@@ -575,7 +572,7 @@ fn enforcement_cases() -> Vec<EnforcementCase> {
 /// equal to the crate's real surface, so it is the one place a new capability
 /// field or a new advertised parameter is guaranteed to appear.
 fn api_snapshot() -> PathBuf {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let manifest = vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME"));
     manifest
         .ancestors()
         .map(|directory| directory.join("docs/public-api/vyre-foundation.txt"))

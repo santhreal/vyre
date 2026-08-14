@@ -251,7 +251,8 @@ fn every_generated_leaf_carries_the_shared_frame_under_its_own_op_id() {
 /// finds nothing would otherwise report perfect coverage of an empty set.
 #[test]
 fn the_leaf_table_covers_every_rule_operation_declared_in_the_tree() {
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/rule");
+    let root =
+        vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")).join("src/rule");
     let mut sources = vec![root.with_extension("rs")];
     for entry in std::fs::read_dir(&root).expect("Fix: vyre-libs/src/rule must be readable") {
         let path = entry

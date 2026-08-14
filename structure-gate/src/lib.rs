@@ -526,6 +526,41 @@ fn read_source_bounded(path: &Path) -> std::io::Result<String> {
     Ok(text)
 }
 
+/// The checkout-relative directory of a workspace member, by package name.
+///
+/// A member's directory is not always its package name: `vyre-conform` lives at
+/// `conform/vyre-conform`. The roster is read from the root manifest at run
+/// time, so a gate that needs its own crate directory gets it without a
+/// compiled-in manifest path, which would name whichever checkout built the
+/// binary.
+///
+/// # Panics
+/// Panics when no member directory's manifest declares `package`.
+#[must_use]
+pub fn member_directory(root: &Path, package: &str) -> PathBuf {
+    for member in workspace_members(root) {
+        let manifest = root.join(&member).join("Cargo.toml");
+        let Ok(text) = read_source_bounded(&manifest) else {
+            continue;
+        };
+        let declared = toml::from_str::<toml::Table>(&text).ok().and_then(|table| {
+            Value::Table(table)
+                .get("package")
+                .and_then(|package| package.get("name"))
+                .and_then(Value::as_str)
+                .map(str::to_string)
+        });
+        if declared.as_deref() == Some(package) {
+            return root.join(member);
+        }
+    }
+    panic!(
+        "Fix: no workspace member under {} declares package `{package}`; the roster in the root \
+         Cargo.toml is what this resolves against.",
+        root.display()
+    )
+}
+
 fn workspace_members(root: &Path) -> Vec<String> {
     let manifest = root.join("Cargo.toml");
     let text = read_source_bounded(&manifest)

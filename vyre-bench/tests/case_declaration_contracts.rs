@@ -171,6 +171,11 @@ fn a_declared_memory_floor_is_nonzero() {
     );
 }
 
+/// This crate's directory in the checkout the run was invoked in.
+fn crate_root() -> PathBuf {
+    vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME"))
+}
+
 fn crate_source_files() -> Vec<PathBuf> {
     fn walk(dir: &Path, found: &mut Vec<PathBuf>) {
         let entries = std::fs::read_dir(dir)
@@ -186,10 +191,7 @@ fn crate_source_files() -> Vec<PathBuf> {
     }
 
     let mut found = Vec::new();
-    walk(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
-        &mut found,
-    );
+    walk(&crate_root().join("src"), &mut found);
     found.sort();
     assert!(
         found.len() > 50,
@@ -213,7 +215,7 @@ fn crate_source_files() -> Vec<PathBuf> {
 /// does not match: it reads the clock through `duration_since`, never `elapsed`.
 #[test]
 fn only_the_metric_owner_narrows_a_measured_span() {
-    let owner = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/api/metric.rs");
+    let owner = crate_root().join("src/api/metric.rs");
     let offenders: Vec<String> = crate_source_files()
         .into_iter()
         .filter(|path| *path != owner)
@@ -265,7 +267,7 @@ fn no_nanosecond_count_is_narrowed_by_a_truncating_cast() {
 /// the pattern is the downcast immediately followed by `ok_or_else`.
 #[test]
 fn only_the_case_api_words_a_failed_payload_downcast() {
-    let owner = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/api/case.rs");
+    let owner = crate_root().join("src/api/case.rs");
     let offenders: Vec<String> = crate_source_files()
         .into_iter()
         .filter(|path| *path != owner)

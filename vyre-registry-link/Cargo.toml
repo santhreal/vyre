@@ -36,6 +36,10 @@ vyre-primitives = { workspace = true, optional = true, features = ["hardware"] }
 # The rules read the workspace member list to find registration-submitting
 # crates, instead of carrying a list that goes stale in silence.
 toml = { workspace = true }
+# Resolves the checkout root from the working directory. A compiled-in manifest
+# path names whichever checkout built the binary, and every checkout here shares
+# one target directory.
+structure-gate = { path = "../structure-gate" }
 
 [features]
 # The default is every registry and every declared driver, so this crate's own

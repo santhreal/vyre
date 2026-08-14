@@ -98,7 +98,7 @@ fn normalize(path: PathBuf) -> Normalized {
 }
 
 fn families() -> Vec<Normalized> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let root = vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME"));
     let mut paths = Vec::new();
     for relative in ROOTS {
         collect_rs(&root.join(relative), &mut paths);
@@ -286,7 +286,7 @@ fn duplicated_line_budget_holds() {
 /// Every distinct pair of files sharing at least one shingle, crate-relative and
 /// sorted, so a newly duplicating file is named by the failure itself.
 fn duplicated_pairs(occupancy: &Occupancy) -> Vec<String> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let root = vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME"));
     let mut pairs: Vec<(usize, usize)> = Vec::new();
     for (f, starts) in occupancy.shared.iter().enumerate() {
         for peers in starts.values() {
@@ -302,7 +302,7 @@ fn duplicated_pairs(occupancy: &Occupancy) -> Vec<String> {
     let name = |i: usize| {
         occupancy.files[i]
             .path
-            .strip_prefix(root)
+            .strip_prefix(&root)
             .unwrap_or(&occupancy.files[i].path)
             .display()
             .to_string()

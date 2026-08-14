@@ -21,7 +21,7 @@
 #![allow(dead_code)]
 
 use std::collections::BTreeSet;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use vyre_spec::{AtomicOp, BinOp, DataType, TernaryOp, UnOp};
 
@@ -196,7 +196,7 @@ pub(crate) fn public_api_variant_names(enum_name: &str) -> BTreeSet<String> {
 }
 
 fn vyre_spec_api_snapshot() -> PathBuf {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let manifest = vyre_test_support::monorepo::vyre_workspace_root();
     manifest
         .ancestors()
         .map(|directory| directory.join("docs/public-api/vyre-spec.txt"))

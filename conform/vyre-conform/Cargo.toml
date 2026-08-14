@@ -69,3 +69,7 @@ vyre-spec = { workspace = true }
 # reports on the tree cargo was invoked in. publish = false on both sides.
 structure-gate = { path = "../../structure-gate" }
 toml = { workspace = true }
+# The frozen-surface variant tables under `tests/support` are shared by source
+# with vyre-spec and vyre-foundation, so they name one crate for the run-time
+# checkout root and every including crate carries it.
+vyre-test-support.workspace = true
