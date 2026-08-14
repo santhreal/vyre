@@ -23,8 +23,8 @@ use vyre_libs::dispatch_buffers::{
 };
 
 use super::dce_program::build_dce_bfs_program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use super::encode::{apply_live_mask, encode_program, EncodeError, EncodedProgram, ROOT_GRAPH_ID};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 #[derive(Debug, Default)]
 struct DceKernelScratch {
@@ -60,10 +60,7 @@ impl std::error::Error for DceError {}
 /// Run DCE on `program` by encoding it into a ProgramGraph, dispatching
 /// `persistent_bfs` through `dispatcher`, and rewriting the input from
 /// the live-mask the dispatcher returns.
-pub fn gpu_dce(
-    program: Program,
-    dispatcher: &dyn ProgramDispatcher,
-) -> Result<Program, DceError> {
+pub fn gpu_dce(program: Program, dispatcher: &dyn ProgramDispatcher) -> Result<Program, DceError> {
     let encoded = encode_program(&program).map_err(DceError::Encode)?;
     let mut scratch = DceKernelScratch::default();
     let mut live = Vec::with_capacity(encoded.node_count as usize);
@@ -201,12 +198,12 @@ fn write_padded_one_u32_bytes(out: &mut Vec<u8>, buf: &[u32]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher;
-    use vyre_foundation::program_dispatch::DispatchError;
     use vyre_foundation::ir::{Expr, Node, Program};
     use vyre_foundation::optimizer::fingerprint_program;
     use vyre_foundation::optimizer::passes::fusion_cse::dce::engine::dce as oracle_cpu_dce;
+    use vyre_foundation::program_dispatch::DispatchError;
+    use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher;
 
     fn wrapped_program(entry: Vec<Node>) -> Program {
         Program::wrapped(Vec::new(), [1, 1, 1], entry)

@@ -113,26 +113,8 @@ fn fold_i32_binop(op: BinOp, l: i32, r: i32) -> Option<FoldResult> {
 /// with `Var(name)` replaced by `LitU32(value)` wherever `name` was
 /// let-bound to a literal in an enclosing scope.
 pub fn apply_const_prop(program: &Program) -> Program {
-    let body: Vec<Node> = match program.entry() {
-        [Node::Region { body, .. }] => body.as_ref().clone(),
-        entry => entry.to_vec(),
-    };
     let mut env = ConstEnv::default();
-    let new_body = rewrite_scope(&body, &mut env);
-
-    let new_entry = match program.entry() {
-        [Node::Region {
-            generator,
-            source_region,
-            ..
-        }] => vec![Node::Region {
-            generator: generator.clone(),
-            source_region: source_region.clone(),
-            body: Arc::new(new_body),
-        }],
-        _ => new_body,
-    };
-    program.with_rewritten_entry(new_entry)
+    super::rewrite_program_entry(program, |body| rewrite_scope(body, &mut env))
 }
 
 /// What `Var(name)` resolves to in the current scope.

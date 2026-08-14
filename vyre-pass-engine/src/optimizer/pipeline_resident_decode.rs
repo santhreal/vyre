@@ -15,10 +15,8 @@
 //! this priority is sound  -  the three passes are independent at the
 //! Expr level for the rules currently shipped.
 
-use std::sync::Arc;
-
 use rustc_hash::FxHashMap;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::pattern_match_via_encoded::rewrite_action as ra;
 
@@ -160,9 +158,11 @@ impl SparseArenaDeltas {
         for record in record_words.chunks_exact(5) {
             let id = record[0];
             if id >= expr_count {
-                return Err(vyre_foundation::program_dispatch::DispatchError::BadInputs(format!(
+                return Err(vyre_foundation::program_dispatch::DispatchError::BadInputs(
+                    format!(
                     "Fix: {context} compact arena record id {id} exceeds expr_count {expr_count}."
-                )));
+                ),
+                ));
             }
             let delta = ArenaDeltaRecord {
                 swap_mask: record[1],
@@ -174,9 +174,9 @@ impl SparseArenaDeltas {
                 continue;
             }
             if overrides.insert(id, delta).is_some() {
-                return Err(vyre_foundation::program_dispatch::DispatchError::BadInputs(format!(
-                    "Fix: {context} compact arena emitted duplicate expr id {id}."
-                )));
+                return Err(vyre_foundation::program_dispatch::DispatchError::BadInputs(
+                    format!("Fix: {context} compact arena emitted duplicate expr id {id}."),
+                ));
             }
         }
 
@@ -437,8 +437,11 @@ pub fn apply_combined_arena_deltas_with_lookup<D: ArenaDeltaLookup + ?Sized>(
     program: &Program,
     deltas: &D,
 ) -> Program {
-    let mut counter = 0u32;
-    super::rewrite_program_entry(program, |body| rewrite_scope(body, deltas, &mut counter))
+    super::rewrite_walk::rewrite_program_with_expr_rewriter(program, |expr, counter| {
+        super::rewrite_walk::rewrite_simple_expr_postorder(expr, counter, &mut |rebuilt, id| {
+            arena_delta_decision(rebuilt, id, deltas)
+        })
+    })
 }
 
 /// Apply compressed bitset arena deltas.
@@ -453,237 +456,84 @@ pub fn apply_combined_arena_deltas_bitsets(
     apply_combined_arena_deltas_with_lookup(program, &deltas)
 }
 
-fn rewrite_scope<D: ArenaDeltaLookup + ?Sized>(
-    body: &[Node],
-    deltas: &D,
-    counter: &mut u32,
-) -> Vec<Node> {
-    let prefix_len = super::encode::reachable_prefix_len(body);
-    let mut out = Vec::with_capacity(prefix_len);
-    for node in &body[..prefix_len] {
-        out.push(rewrite_node(node, deltas, counter));
-    }
-    out
-}
-
-fn rewrite_node<D: ArenaDeltaLookup + ?Sized>(node: &Node, deltas: &D, counter: &mut u32) -> Node {
-    match node {
-        Node::Let { name, value: e } => {
-            Node::let_bind(name.clone(), rewrite_expr(e, deltas, counter))
-        }
-        Node::Assign { name, value: e } => {
-            Node::assign(name.clone(), rewrite_expr(e, deltas, counter))
-        }
-        Node::Store {
-            buffer,
-            index,
-            value: e,
-        } => Node::store(
-            buffer.clone(),
-            rewrite_expr(index, deltas, counter),
-            rewrite_expr(e, deltas, counter),
-        ),
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => Node::if_then_else(
-            rewrite_expr(cond, deltas, counter),
-            rewrite_scope(then, deltas, counter),
-            rewrite_scope(otherwise, deltas, counter),
-        ),
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => Node::loop_for(
-            var.clone(),
-            rewrite_expr(from, deltas, counter),
-            rewrite_expr(to, deltas, counter),
-            rewrite_scope(body, deltas, counter),
-        ),
-        Node::AsyncLoad {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } => Node::AsyncLoad {
-            source: source.clone(),
-            destination: destination.clone(),
-            offset: Box::new(rewrite_expr(offset, deltas, counter)),
-            size: Box::new(rewrite_expr(size, deltas, counter)),
-            tag: tag.clone(),
-        },
-        Node::AsyncStore {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } => Node::AsyncStore {
-            source: source.clone(),
-            destination: destination.clone(),
-            offset: Box::new(rewrite_expr(offset, deltas, counter)),
-            size: Box::new(rewrite_expr(size, deltas, counter)),
-            tag: tag.clone(),
-        },
-        Node::Trap { address, tag } => Node::Trap {
-            address: Box::new(rewrite_expr(address, deltas, counter)),
-            tag: tag.clone(),
-        },
-        Node::Block(body) => Node::Block(rewrite_scope(body, deltas, counter)),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => Node::Region {
-            generator: generator.clone(),
-            source_region: source_region.clone(),
-            body: Arc::new(rewrite_scope(body.as_slice(), deltas, counter)),
-        },
-        Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncWait { .. }
-        | Node::Resume { .. }
-        | Node::Opaque(_) => node.clone(),
-        _ => node.clone(),
-    }
-}
-
-fn rewrite_expr<D: ArenaDeltaLookup + ?Sized>(expr: &Expr, deltas: &D, counter: &mut u32) -> Expr {
-    match expr {
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => {
-            let id = *counter as usize;
-            *counter += 1;
-            decide_leaf(expr, id, deltas)
-        }
-        Expr::Load { buffer, index } => {
-            let new_index = rewrite_expr(index, deltas, counter);
-            *counter += 1;
-            // Loads are not foldable / not pattern-matched / not
-            // canonicalized.
-            Expr::Load {
-                buffer: buffer.clone(),
-                index: Box::new(new_index),
-            }
-        }
+/// The resident pipeline's rewrite decision for the Expr the postorder walk
+/// rebuilt at arena id `id`.
+///
+/// Three arena passes are decoded in one walk, in the priority order this
+/// module documents: const-fold, then the pattern-match rewrite action, then
+/// the canonicalize operand swap.
+fn arena_delta_decision<D: ArenaDeltaLookup + ?Sized>(rebuilt: Expr, id: u32, deltas: &D) -> Expr {
+    let id = id as usize;
+    match rebuilt {
         Expr::BinOp { op, left, right } => {
-            let new_left = rewrite_expr(left, deltas, counter);
-            let new_right = rewrite_expr(right, deltas, counter);
-            let id = *counter as usize;
-            *counter += 1;
-
-            // Priority 1: const-fold. The kernel writes the folded
-            // u32 result into `value[id]`. For comparison BinOps the
-            // result is semantically Bool  -  emit LitBool so dead-
-            // branch and downstream type-aware passes see the right
-            // shape. For arithmetic BinOps emit LitU32.
             if deltas.foldable(id) == 1 {
                 let raw = deltas.value(id);
-                use vyre_foundation::ir::BinOp;
+                // A comparison BinOp is semantically Bool, so emit `LitBool`:
+                // dead-branch and the other type-aware passes downstream read
+                // the literal's shape, not just its bits.
                 let bool_result = matches!(
                     op,
                     BinOp::Eq | BinOp::Ne | BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge
                 );
-                if bool_result {
-                    return Expr::LitBool(raw != 0);
-                }
-                return Expr::LitU32(raw);
+                return if bool_result {
+                    Expr::LitBool(raw != 0)
+                } else {
+                    Expr::LitU32(raw)
+                };
             }
-            // Priority 2: pattern-match rewrite.
             match deltas.rewrite_action(id) {
-                ra::REPLACE_WITH_LEFT => return new_left,
-                ra::REPLACE_WITH_RIGHT => return new_right,
+                ra::REPLACE_WITH_LEFT => return *left,
+                ra::REPLACE_WITH_RIGHT => return *right,
                 ra::REPLACE_WITH_LIT_ZERO => return Expr::LitU32(0),
                 ra::REPLACE_WITH_LIT_TRUE => return Expr::LitBool(true),
                 ra::REPLACE_WITH_LIT_FALSE => return Expr::LitBool(false),
                 ra::REPLACE_WITH_LEFT_INNER_LEFT => {
-                    if let Expr::BinOp { left: inner_l, .. } = &new_left {
-                        return inner_l.as_ref().clone();
+                    if let Expr::BinOp { left: inner, .. } = left.as_ref() {
+                        return inner.as_ref().clone();
                     }
                 }
                 ra::REPLACE_WITH_LEFT_INNER_RIGHT => {
-                    if let Expr::BinOp { right: inner_r, .. } = &new_left {
-                        return inner_r.as_ref().clone();
+                    if let Expr::BinOp { right: inner, .. } = left.as_ref() {
+                        return inner.as_ref().clone();
                     }
                 }
                 _ => {}
             }
-            // Priority 3: canonicalize swap.
             if deltas.swap_mask(id) == 1 {
                 Expr::BinOp {
-                    op: *op,
-                    left: Box::new(new_right),
-                    right: Box::new(new_left),
+                    op,
+                    left: right,
+                    right: left,
                 }
             } else {
-                Expr::BinOp {
-                    op: *op,
-                    left: Box::new(new_left),
-                    right: Box::new(new_right),
-                }
+                Expr::BinOp { op, left, right }
             }
         }
         Expr::UnOp { op, operand } => {
-            let new_operand = rewrite_expr(operand, deltas, counter);
-            let id = *counter as usize;
-            *counter += 1;
             if deltas.foldable(id) == 1 {
                 return Expr::LitU32(deltas.value(id));
             }
-            // UnOp pattern-match: REPLACE_WITH_GRAND_OPERAND fires
-            // for `~~x = x`, `--x = x`, `!!x = x`. The grand-child is
-            // `new_operand`'s own operand; we descend one level.
+            // `REPLACE_WITH_GRAND_OPERAND` fires for `~~x`, `--x`, `!!x`; the
+            // surviving Expr is one level below the rebuilt operand.
             if deltas.rewrite_action(id) == ra::REPLACE_WITH_GRAND_OPERAND {
-                if let Expr::UnOp { operand: inner, .. } = &new_operand {
+                if let Expr::UnOp { operand: inner, .. } = operand.as_ref() {
                     return inner.as_ref().clone();
                 }
             }
-            Expr::UnOp {
-                op: op.clone(),
-                operand: Box::new(new_operand),
+            Expr::UnOp { op, operand }
+        }
+        other => {
+            // Loads, selects, and FMAs are never folded, matched, or swapped by
+            // the V1 rule sets; they keep their rebuilt children.
+            if matches!(
+                other,
+                Expr::Load { .. } | Expr::Select { .. } | Expr::Fma { .. }
+            ) {
+                other
+            } else {
+                decide_leaf(&other, id, deltas)
             }
         }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            let nc = rewrite_expr(cond, deltas, counter);
-            let nt = rewrite_expr(true_val, deltas, counter);
-            let nf = rewrite_expr(false_val, deltas, counter);
-            *counter += 1;
-            Expr::Select {
-                cond: Box::new(nc),
-                true_val: Box::new(nt),
-                false_val: Box::new(nf),
-            }
-        }
-        Expr::Fma { a, b, c } => {
-            let na = rewrite_expr(a, deltas, counter);
-            let nb = rewrite_expr(b, deltas, counter);
-            let nc = rewrite_expr(c, deltas, counter);
-            *counter += 1;
-            Expr::Fma {
-                a: Box::new(na),
-                b: Box::new(nb),
-                c: Box::new(nc),
-            }
-        }
-        _ => expr.clone(),
     }
 }
 
@@ -765,7 +615,10 @@ mod tests {
         )
         .expect_err("compact arena record count must match record words exactly");
         assert!(
-            matches!(err, vyre_foundation::program_dispatch::DispatchError::BadInputs(_)),
+            matches!(
+                err,
+                vyre_foundation::program_dispatch::DispatchError::BadInputs(_)
+            ),
             "unexpected error: {err:?}"
         );
     }

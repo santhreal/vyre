@@ -18,16 +18,15 @@
 //! tests (extension follow-up  -  for V1 we run through the real
 //! `WgpuBackend` in the driver-wgpu integration test crate).
 
-use std::sync::Arc;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use vyre_libs::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use super::encode::EncodeError;
 use super::expr_arena::{encode_expr_arena, expr_kind, ExprArenaEncoding};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 #[derive(Debug, Default)]
 struct ConstFoldKernelScratch {
@@ -79,7 +78,7 @@ pub fn gpu_const_fold(
     )
     .map_err(ConstFoldError::Dispatch)?;
     Ok(rewrite_program_with_folded_values(
-        program, &arena, &foldable, &value,
+        program, &foldable, &value,
     ))
 }
 
@@ -162,113 +161,31 @@ fn run_const_fold_kernel_with_scratch_into(
 }
 
 /// Workgroup size for the level-parallel const-fold kernel.
-const WORKGROUP_X: u32 = 256;
+const WORKGROUP_X: u32 = super::arena_kernel::WORKGROUP_X;
 
 /// Build the FUSED const-fold analysis Program: a single dispatch that
 /// internally iterates `level` from 0..=`max_depth`, with a workgroup-
 /// scope barrier between levels. Eliminates the per-level host
 /// dispatch loop that dominates chain-shaped Programs.
 ///
-/// Single-workgroup design (`workgroup_size = [256, 1, 1]`, grid =
-/// `[1, 1, 1]`). Each thread strides over `expr_count` exprs in
-/// chunks of 256 per outer-level iteration. Workgroup-scope `SeqCst`
-/// barrier between levels ensures stores from level `k` are visible
-/// to reads at level `k+1`.
-///
-/// Buffer layout (caller-supplied resident handles, in order):
-///   0: arena_kinds (RO)
-///   1: arena_arg0  (RO)
-///   2: arena_arg1  (RO)
-///   3: arena_arg2  (RO)
-///   4: arena_depths (RO)
-///   5: max_depth_buf (RO; single u32 = max depth in arena)
-///   6: foldable    (RW; init zeros)
-///   7: value       (RW; init zeros)
-///
-/// Constraints:
-///   - `expr_count` may be larger than `WORKGROUP_X`; the kernel
-///     strides via an inner Loop. Single-workgroup means workgroup-
-///     scope barriers (SeqCst) are sufficient  -  no GridSync needed.
-///   - `max_depth_iter_cap` is the static upper bound on the outer
-///     Loop in the IR. The actual depth is read from `max_depth_buf`
-///     at runtime; the kernel breaks out early when `level >
-///     max_depth`. Caller passes a generous bound (e.g. `expr_count`).
+/// The level wave itself is
+/// [`super::arena_kernel::build_fused_level_wave_program`]; const-fold
+/// contributes the `foldable` / `value` outputs at bindings 6 and 7 and
+/// the per-Expr body that writes them.
 #[must_use]
 pub fn build_const_fold_program_fused(expr_count: u32, max_depth_iter_cap: u32) -> Program {
-    let buffers = vec![
-        BufferDecl::storage("arena_kinds", 0, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg0", 1, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg1", 2, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg2", 3, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_depths", 4, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("max_depth_buf", 5, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(1),
-        BufferDecl::storage("foldable", 6, BufferAccess::ReadWrite, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("value", 7, BufferAccess::ReadWrite, DataType::U32)
-            .with_count(expr_count.max(1)),
-    ];
-
-    // Number of stride chunks needed to cover all exprs with WORKGROUP_X
-    // threads. Static upper bound  -  the kernel re-checks `i < expr_count`
-    // each iteration so over-shoot is safe.
-    let chunk_cap = (expr_count + WORKGROUP_X - 1) / WORKGROUP_X;
-
-    // Per-level body: each thread strides over its share of exprs and
-    // runs `per_expr_body` against any expr at the current level.
-    let chunk_loop = Node::loop_for(
-        "chunk",
-        Expr::u32(0),
-        Expr::u32(chunk_cap.max(1)),
+    let count = expr_count.max(1);
+    super::arena_kernel::build_fused_level_wave_program(
+        expr_count,
+        max_depth_iter_cap,
         vec![
-            Node::let_bind(
-                "i",
-                Expr::add(
-                    Expr::gid_x(),
-                    Expr::mul(Expr::var("chunk"), Expr::u32(WORKGROUP_X)),
-                ),
-            ),
-            Node::if_then(
-                Expr::lt(Expr::var("i"), Expr::u32(expr_count)),
-                vec![
-                    Node::let_bind("my_depth", Expr::load("arena_depths", Expr::var("i"))),
-                    Node::if_then(
-                        Expr::eq(Expr::var("my_depth"), Expr::var("level")),
-                        per_expr_body(),
-                    ),
-                ],
-            ),
+            BufferDecl::storage("foldable", 6, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(count),
+            BufferDecl::storage("value", 7, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(count),
         ],
-    );
-
-    let outer = Node::loop_for(
-        "level",
-        Expr::u32(0),
-        Expr::u32(max_depth_iter_cap.max(1)),
-        vec![
-            // Early-out: if level > max_depth, skip the body. No way
-            // to break the loop early in the IR, so we just gate the
-            // body. The barrier still fires; cheap.
-            Node::let_bind("md", Expr::load("max_depth_buf", Expr::u32(0))),
-            Node::if_then(
-                Expr::le(Expr::var("level"), Expr::var("md")),
-                vec![chunk_loop],
-            ),
-            // Workgroup-scope barrier: stores from this level visible
-            // to reads at level+1. Single-workgroup design means this
-            // is sufficient  -  no GridSync needed.
-            Node::Barrier {
-                ordering: vyre_foundation::MemoryOrdering::SeqCst,
-            },
-        ],
-    );
-
-    Program::wrapped(buffers, [WORKGROUP_X, 1, 1], vec![outer])
+        per_expr_body(),
+    )
 }
 
 /// Build the const-fold analysis Program. Level-parallel kernel: each
@@ -277,24 +194,17 @@ pub fn build_const_fold_program_fused(expr_count: u32, max_depth_iter_cap: u32) 
 /// dispatches once per level (0..=max_depth), with foldable + value
 /// buffers persisting their state across dispatches.
 pub fn build_const_fold_program(expr_count: u32) -> Program {
-    let buffers = vec![
-        BufferDecl::storage("arena_kinds", 0, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg0", 1, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg1", 2, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg2", 3, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
+    let count = expr_count.max(1);
+    let mut buffers = super::arena_kernel::arena_row_buffers(expr_count, 0);
+    buffers.extend([
         BufferDecl::storage("arena_depths", 4, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
+            .with_count(count),
         BufferDecl::storage("current_level", 5, BufferAccess::ReadOnly, DataType::U32)
             .with_count(1),
         BufferDecl::storage("foldable", 6, BufferAccess::ReadWrite, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("value", 7, BufferAccess::ReadWrite, DataType::U32)
-            .with_count(expr_count.max(1)),
-    ];
+            .with_count(count),
+        BufferDecl::storage("value", 7, BufferAccess::ReadWrite, DataType::U32).with_count(count),
+    ]);
 
     let body = vec![
         Node::let_bind("i", Expr::gid_x()),
@@ -781,247 +691,36 @@ fn bin_op_body() -> Vec<Node> {
 
 fn rewrite_program_with_folded_values(
     program: Program,
-    arena: &ExprArenaEncoding,
     foldable: &[u32],
     value: &[u32],
 ) -> Program {
-    let mut counter = 0u32;
-    super::rewrite_program_entry(&program, |body| {
-        rewrite_scope(body, arena, foldable, value, &mut counter)
+    super::rewrite_walk::rewrite_program_with_expr_rewriter(&program, |expr, counter| {
+        super::rewrite_walk::rewrite_simple_expr_postorder(expr, counter, &mut |rebuilt, id| {
+            fold_decision(rebuilt, id, foldable, value)
+        })
     })
 }
 
-fn rewrite_scope(
-    body: &[Node],
-    arena: &ExprArenaEncoding,
-    foldable: &[u32],
-    value: &[u32],
-    counter: &mut u32,
-) -> Vec<Node> {
-    let prefix_len = super::encode::reachable_prefix_len(body);
-    let mut out = Vec::with_capacity(prefix_len);
-    for node in &body[..prefix_len] {
-        out.push(rewrite_node(node, arena, foldable, value, counter));
+/// Const-fold's rewrite decision for the Expr the postorder walk rebuilt at
+/// arena id `id`.
+///
+/// `BinOp` and `UnOp` collapse to the literal the kernel computed. A leaf
+/// collapses too unless it already is a literal: V1 folds to `LitU32`, so an
+/// `i32`/`f32`/`bool` literal would lose its type. `Load`, `Select`, and `Fma`
+/// are never marked foldable by the kernel and keep their rebuilt children.
+fn fold_decision(rebuilt: Expr, id: u32, foldable: &[u32], value: &[u32]) -> Expr {
+    if foldable[id as usize] != 1 {
+        return rebuilt;
     }
-    out
-}
-
-fn rewrite_node(
-    node: &Node,
-    arena: &ExprArenaEncoding,
-    foldable: &[u32],
-    value: &[u32],
-    counter: &mut u32,
-) -> Node {
-    match node {
-        Node::Let { name, value: e } => Node::let_bind(
-            name.clone(),
-            rewrite_expr(e, arena, foldable, value, counter),
-        ),
-        Node::Assign { name, value: e } => Node::assign(
-            name.clone(),
-            rewrite_expr(e, arena, foldable, value, counter),
-        ),
-        Node::Store {
-            buffer,
-            index,
-            value: e,
-        } => Node::store(
-            buffer.clone(),
-            rewrite_expr(index, arena, foldable, value, counter),
-            rewrite_expr(e, arena, foldable, value, counter),
-        ),
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => Node::if_then_else(
-            rewrite_expr(cond, arena, foldable, value, counter),
-            rewrite_scope(then, arena, foldable, value, counter),
-            rewrite_scope(otherwise, arena, foldable, value, counter),
-        ),
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => Node::loop_for(
-            var.clone(),
-            rewrite_expr(from, arena, foldable, value, counter),
-            rewrite_expr(to, arena, foldable, value, counter),
-            rewrite_scope(body, arena, foldable, value, counter),
-        ),
-        Node::AsyncLoad {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } => Node::AsyncLoad {
-            source: source.clone(),
-            destination: destination.clone(),
-            offset: Box::new(rewrite_expr(offset, arena, foldable, value, counter)),
-            size: Box::new(rewrite_expr(size, arena, foldable, value, counter)),
-            tag: tag.clone(),
-        },
-        Node::AsyncStore {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } => Node::AsyncStore {
-            source: source.clone(),
-            destination: destination.clone(),
-            offset: Box::new(rewrite_expr(offset, arena, foldable, value, counter)),
-            size: Box::new(rewrite_expr(size, arena, foldable, value, counter)),
-            tag: tag.clone(),
-        },
-        Node::Trap { address, tag } => Node::Trap {
-            address: Box::new(rewrite_expr(address, arena, foldable, value, counter)),
-            tag: tag.clone(),
-        },
-        Node::Block(body) => Node::Block(rewrite_scope(body, arena, foldable, value, counter)),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => Node::Region {
-            generator: generator.clone(),
-            source_region: source_region.clone(),
-            body: Arc::new(rewrite_scope(
-                body.as_slice(),
-                arena,
-                foldable,
-                value,
-                counter,
-            )),
-        },
-        // No-Expr-payload Nodes pass through.
-        Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncWait { .. }
-        | Node::Resume { .. }
-        | Node::Opaque(_) => node.clone(),
-        // Future variants  -  leave untouched.
-        _ => node.clone(),
-    }
-}
-
-#[allow(clippy::only_used_in_recursion)]
-fn rewrite_expr(
-    expr: &Expr,
-    arena: &ExprArenaEncoding,
-    foldable: &[u32],
-    value: &[u32],
-    counter: &mut u32,
-) -> Expr {
-    // Determine this Expr's id by mirroring the encoder's post-order
-    // walk: recurse into children first, then this Expr's own slot.
-    match expr {
-        Expr::LitU32(_)
+    match rebuilt {
+        Expr::Load { .. }
+        | Expr::Select { .. }
+        | Expr::Fma { .. }
+        | Expr::LitU32(_)
         | Expr::LitI32(_)
         | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => {
-            let id = *counter;
-            *counter += 1;
-            decide(expr, id, foldable, value)
-        }
-        Expr::Load { buffer, index } => {
-            let new_index = rewrite_expr(index, arena, foldable, value, counter);
-            let id = *counter;
-            *counter += 1;
-            // Loads are not foldable; reuse the rewritten index.
-            let _ = (foldable, value, id);
-            Expr::Load {
-                buffer: buffer.clone(),
-                index: Box::new(new_index),
-            }
-        }
-        Expr::BinOp { op, left, right } => {
-            let new_left = rewrite_expr(left, arena, foldable, value, counter);
-            let new_right = rewrite_expr(right, arena, foldable, value, counter);
-            let id = *counter;
-            *counter += 1;
-            if foldable[id as usize] == 1 {
-                Expr::LitU32(value[id as usize])
-            } else {
-                Expr::BinOp {
-                    op: *op,
-                    left: Box::new(new_left),
-                    right: Box::new(new_right),
-                }
-            }
-        }
-        Expr::UnOp { op, operand } => {
-            let new_operand = rewrite_expr(operand, arena, foldable, value, counter);
-            let id = *counter;
-            *counter += 1;
-            if foldable[id as usize] == 1 {
-                Expr::LitU32(value[id as usize])
-            } else {
-                Expr::UnOp {
-                    op: op.clone(),
-                    operand: Box::new(new_operand),
-                }
-            }
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            let new_cond = rewrite_expr(cond, arena, foldable, value, counter);
-            let new_true = rewrite_expr(true_val, arena, foldable, value, counter);
-            let new_false = rewrite_expr(false_val, arena, foldable, value, counter);
-            let id = *counter;
-            *counter += 1;
-            let _ = (foldable, value, id);
-            Expr::Select {
-                cond: Box::new(new_cond),
-                true_val: Box::new(new_true),
-                false_val: Box::new(new_false),
-            }
-        }
-        Expr::Fma { a, b, c } => {
-            let na = rewrite_expr(a, arena, foldable, value, counter);
-            let nb = rewrite_expr(b, arena, foldable, value, counter);
-            let nc = rewrite_expr(c, arena, foldable, value, counter);
-            let id = *counter;
-            *counter += 1;
-            let _ = (foldable, value, id);
-            Expr::Fma {
-                a: Box::new(na),
-                b: Box::new(nb),
-                c: Box::new(nc),
-            }
-        }
-        // Unsupported Expr variants pass through unchanged. The
-        // encoder bails on these, so we never reach this arm during
-        // a Program the encoder accepted.
-        _ => expr.clone(),
-    }
-}
-
-fn decide(expr: &Expr, id: u32, foldable: &[u32], value: &[u32]) -> Expr {
-    if foldable[id as usize] == 1 {
-        // V1: only u32 literals fold from the kernel. Other literal
-        // kinds ride through their own encode → lit branch as future
-        // extensions.
-        match expr {
-            Expr::LitU32(_) | Expr::LitI32(_) | Expr::LitF32(_) | Expr::LitBool(_) => expr.clone(),
-            _ => Expr::LitU32(value[id as usize]),
-        }
-    } else {
-        expr.clone()
+        | Expr::LitBool(_) => rebuilt,
+        _ => Expr::LitU32(value[id as usize]),
     }
 }
 
@@ -1076,18 +775,7 @@ mod tests {
         }
     }
 
-    fn one_expr_arena() -> ExprArenaEncoding {
-        ExprArenaEncoding {
-            expr_count: 1,
-            kinds: vec![expr_kind::LIT_U32],
-            arg0: vec![0],
-            arg1: vec![0],
-            arg2: vec![0],
-            depths: vec![0],
-            max_depth: 0,
-            ..ExprArenaEncoding::default()
-        }
-    }
+    use super::super::arena_kernel::single_lit_u32_arena as one_expr_arena;
 
     #[test]
     fn kernel_into_decodes_exact_outputs_into_reused_buffers() {
