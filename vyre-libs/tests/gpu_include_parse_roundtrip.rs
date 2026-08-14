@@ -2,58 +2,13 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+mod support;
+
+use support::preprocess_stream::{build_token_stream, unpack_u32};
 use vyre_primitives::wire::pack_u32_slice as pack_u32_le;
-use vyre_libs::parsing::c::lex::tokens::TOK_PREPROC;
 use vyre_libs::parsing::c::preprocess::gpu_directive_metadata::gpu_directive_metadata;
 use vyre_libs::parsing::c::preprocess::gpu_include_parse::gpu_include_parse;
 use vyre_reference::value::Value;
-
-fn unpack_u32(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect()
-}
-
-fn build_token_stream(source: &[u8]) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let mut tt = Vec::new();
-    let mut ts = Vec::new();
-    let mut tl = Vec::new();
-    let mut i = 0usize;
-    let mut at_line_start = true;
-    while i < source.len() {
-        if at_line_start {
-            let mut j = i;
-            while j < source.len() && matches!(source[j], b' ' | b'\t') {
-                j += 1;
-            }
-            if j < source.len() && source[j] == b'#' {
-                let row_start = i;
-                let mut row_end = j;
-                while row_end < source.len() && source[row_end] != b'\n' {
-                    row_end += 1;
-                }
-                tt.push(TOK_PREPROC);
-                ts.push(row_start as u32);
-                tl.push((row_end - row_start) as u32);
-                i = row_end;
-                at_line_start = true;
-                continue;
-            }
-        }
-        if source[i] == b'\n' {
-            at_line_start = true;
-            i += 1;
-            continue;
-        }
-        tt.push(0);
-        ts.push(i as u32);
-        tl.push(1);
-        i += 1;
-        at_line_start = false;
-    }
-    (tt, ts, tl)
-}
 
 #[derive(Debug, PartialEq, Eq)]
 struct IncludeRow {
