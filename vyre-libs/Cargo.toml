@@ -56,6 +56,7 @@ rule = ["dep:regex"]
 # crate. Each gates one module tree; `all-solvers` turns on the set.
 telemetry = []
 device = []
+solvers = ["device", "telemetry", "vyre-primitives/math", "vyre-primitives/topology"]
 encoding = ["device", "telemetry", "vyre-primitives/matching", "vyre-primitives/math", "vyre-primitives/nn", "vyre-primitives/parsing"]
 reasoning = ["analysis", "vyre-primitives/cat", "vyre-primitives/dnnf", "vyre-primitives/zx"]
 analysis = ["device", "telemetry", "vyre-primitives/effects", "vyre-primitives/math", "vyre-primitives/types"]
@@ -252,6 +253,101 @@ required-features = ["cpu-parity", "encoding", "analysis", "test-fixtures"]
 name = "self_consumer_conform"
 path = "tests/self_consumer_conform.rs"
 required-features = ["cpu-parity", "encoding", "test-fixtures"]
+
+[[test]]
+name = "bellman_shortest_path_via_reference_parity"
+path = "tests/bellman_shortest_path_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "fmm_compress_pairwise_via_reference_parity"
+path = "tests/fmm_compress_pairwise_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "fmm_polyhedral_via_reference_parity"
+path = "tests/fmm_polyhedral_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "kfac_via_reference_parity"
+path = "tests/kfac_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "multigrid_matroid_via_reference_parity"
+path = "tests/multigrid_matroid_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "mz_project_via_reference_parity"
+path = "tests/mz_project_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "natural_config_gradient_via_reference_parity"
+path = "tests/natural_config_gradient_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "natural_gradient_via_reference_parity"
+path = "tests/natural_gradient_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "quantized_via_reference_parity"
+path = "tests/quantized_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "sheaf_heterophilic_via_reference_parity"
+path = "tests/sheaf_heterophilic_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "sheaf_spectrum_via_reference_parity"
+path = "tests/sheaf_spectrum_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "sinkhorn_via_reference_parity"
+path = "tests/sinkhorn_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "smooth_latency_trace_via_reference_parity"
+path = "tests/smooth_latency_trace_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "smooth_matroid_flow_via_reference_parity"
+path = "tests/smooth_matroid_flow_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "softmax_pick_config_via_reference_parity"
+path = "tests/softmax_pick_config_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "tensor_train_chain_fusion_via_reference_parity"
+path = "tests/tensor_train_chain_fusion_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "tensor_train_compress_via_reference_parity"
+path = "tests/tensor_train_compress_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "transport_residual_via_reference_parity"
+path = "tests/transport_residual_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
+
+[[test]]
+name = "vietoris_rips_via_reference_parity"
+path = "tests/vietoris_rips_via_reference_parity.rs"
+required-features = ["cpu-parity", "solvers", "test-fixtures"]
 
 [[test]]
 name = "sweep_text_utf8_oracle_matrix"

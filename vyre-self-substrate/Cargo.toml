@@ -24,19 +24,12 @@ workspace = true
 default = ["optimizer"]
 optimizer = ["vyre-primitives/graph"]
 graph-solvers = ["optimizer", "vyre-libs/telemetry", "vyre-libs/device", "vyre-primitives/math"]
-math-solvers = [
-    "optimizer",
-    "vyre-libs/telemetry",
-    "vyre-libs/device",
-    "vyre-primitives/math",
-    "vyre-primitives/topology",
-]
 all-solvers = [
     "vyre-libs/analysis",
     "vyre-libs/encoding",
     "graph-solvers",
     "vyre-libs/reasoning",
-    "math-solvers",
+    "vyre-libs/solvers",
     "vyre-libs/scheduling",
     "vyre-libs/telemetry",
 ]
@@ -69,48 +62,8 @@ path = "tests/sweep_graph_cpu_oracle_matrix.rs"
 required-features = ["cpu-parity"]
 
 [[test]]
-name = "bellman_shortest_path_via_reference_parity"
-path = "tests/bellman_shortest_path_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "fmm_compress_pairwise_via_reference_parity"
-path = "tests/fmm_compress_pairwise_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "fmm_polyhedral_via_reference_parity"
-path = "tests/fmm_polyhedral_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "kfac_via_reference_parity"
-path = "tests/kfac_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
 name = "match_motif_via_reference_parity"
 path = "tests/match_motif_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "multigrid_matroid_via_reference_parity"
-path = "tests/multigrid_matroid_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "mz_project_via_reference_parity"
-path = "tests/mz_project_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "natural_config_gradient_via_reference_parity"
-path = "tests/natural_config_gradient_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "natural_gradient_via_reference_parity"
-path = "tests/natural_gradient_via_reference_parity.rs"
 required-features = ["cpu-parity"]
 
 [[test]]
@@ -119,67 +72,12 @@ path = "tests/optimizer_bfs_and_softmax_parity.rs"
 required-features = ["cpu-parity"]
 
 [[test]]
-name = "quantized_via_reference_parity"
-path = "tests/quantized_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
 name = "reconstruct_path_via_reference_parity"
 path = "tests/reconstruct_path_via_reference_parity.rs"
 required-features = ["cpu-parity"]
 
 [[test]]
-name = "sheaf_heterophilic_via_reference_parity"
-path = "tests/sheaf_heterophilic_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "sheaf_spectrum_via_reference_parity"
-path = "tests/sheaf_spectrum_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "sinkhorn_via_reference_parity"
-path = "tests/sinkhorn_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "smooth_latency_trace_via_reference_parity"
-path = "tests/smooth_latency_trace_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "smooth_matroid_flow_via_reference_parity"
-path = "tests/smooth_matroid_flow_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "softmax_pick_config_via_reference_parity"
-path = "tests/softmax_pick_config_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "tensor_train_chain_fusion_via_reference_parity"
-path = "tests/tensor_train_chain_fusion_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "tensor_train_compress_via_reference_parity"
-path = "tests/tensor_train_compress_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "transport_residual_via_reference_parity"
-path = "tests/transport_residual_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
 name = "union_find_alias_via_reference_parity"
 path = "tests/union_find_alias_via_reference_parity.rs"
-required-features = ["cpu-parity"]
-
-[[test]]
-name = "vietoris_rips_via_reference_parity"
-path = "tests/vietoris_rips_via_reference_parity.rs"
 required-features = ["cpu-parity"]
 

@@ -77,7 +77,7 @@ fn optimizer_feature_is_standalone_and_excludes_unrequested_solver_domains() {
 
     write_fixture(
         &root,
-        "use vyre_self_substrate::math::tensor_train_compression;\nfn main() { let _ = tensor_train_compression::TT_MAX_RANK; }\n",
+        "use vyre_libs::solvers::tensor_train_compression;\nfn main() { let _ = tensor_train_compression::TT_MAX_RANK; }\n",
     );
     let rejected = cargo(&root, &["check", "--quiet"]);
     assert!(

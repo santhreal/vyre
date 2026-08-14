@@ -144,6 +144,10 @@ pub mod reasoning;
 #[cfg(feature = "encoding")]
 pub mod encoding;
 
+/// Numerical solver, autotuning, and spectral compositions.
+#[cfg(feature = "solvers")]
+pub mod solvers;
+
 /// Math dialect  -  linear algebra, scans, broadcasting.
 #[cfg(any(
     feature = "math-linalg",

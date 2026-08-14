@@ -103,8 +103,6 @@
 
 #[cfg(feature = "graph-solvers")]
 pub mod graph;
-#[cfg(feature = "math-solvers")]
-pub mod math;
 
 #[cfg(feature = "optimizer")]
 /// Self-hosted optimizer keystone  -  the encoder + GPU passes that run
@@ -124,12 +122,3 @@ pub use graph::{
     traversal_dispatch_pipeline, union_find_emit, vast_tree_walk,
 };
 
-#[cfg(feature = "math-solvers")]
-pub use math::{
-    amg_pass_solver, bellman_tn_order, differentiable_autotune, fmm_polyhedral_compress,
-    kfac_autotune_step, mori_zwanzig_region_coarsen, multigrid_matroid_solver,
-    natural_gradient_autotuner, persistent_homology_loop_signature, qsvt_matrix_function_fusion,
-    sheaf_heterophilic_dispatch, sheaf_spectral_clustering, sinkhorn_dispatch_clustering,
-    sinkhorn_full_clustering, tensor_network_fusion_order, tensor_train_chain_fusion,
-    tensor_train_compression,
-};
