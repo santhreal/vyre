@@ -106,8 +106,8 @@ pub(crate) fn single_store_desc(id: &str) -> KernelDescriptor {
         .build()
 }
 
-mod naga_block_probe;
-pub(crate) use naga_block_probe::{block_has_atomic, block_has_loop};
+mod naga_probe;
+pub(crate) use naga_probe::{block_has_atomic, block_has_loop, entry_has_binary, entry_has_unary};
 
 mod atomics;
 mod binop;

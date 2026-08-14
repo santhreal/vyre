@@ -153,36 +153,15 @@ fn byte_store_desc(element_type: DataType) -> KernelDescriptor {
 fn u8_store_global_emits_byte_rmw_with_clear_and_merge() {
     let desc = byte_store_desc(DataType::U8);
     let module = emit(&desc).unwrap();
-    let entry = module.entry_points.first().expect("entry point");
-    let arena = &entry.function.expressions;
-
-    let has_bitwise_not = arena.iter().any(|(_, expr)| {
-        matches!(
-            expr,
-            naga::Expression::Unary {
-                op: naga::UnaryOperator::BitwiseNot,
-                ..
-            }
-        )
-    });
     assert!(
-        has_bitwise_not,
+        entry_has_unary(&module, naga::UnaryOperator::BitwiseNot),
         "U8 byte-store must invert the lane mask via BitwiseNot to clear the target byte"
     );
-    let has_inclusive_or = arena.iter().any(|(_, expr)| {
-        matches!(
-            expr,
-            naga::Expression::Binary {
-                op: naga::BinaryOperator::InclusiveOr,
-                ..
-            }
-        )
-    });
     assert!(
-        has_inclusive_or,
+        entry_has_binary(&module, naga::BinaryOperator::InclusiveOr),
         "U8 byte-store must merge cleared word with new byte via InclusiveOr"
     );
-    let store_count = entry
+    let store_count = module.entry_points[0]
         .function
         .body
         .iter()
@@ -200,19 +179,8 @@ fn i8_store_global_uses_same_rmw_path_as_u8() {
     // affects loads.
     let desc = byte_store_desc(DataType::I8);
     let module = emit(&desc).unwrap();
-    let entry = module.entry_points.first().expect("entry point");
-    let arena = &entry.function.expressions;
-    let has_bitwise_not = arena.iter().any(|(_, expr)| {
-        matches!(
-            expr,
-            naga::Expression::Unary {
-                op: naga::UnaryOperator::BitwiseNot,
-                ..
-            }
-        )
-    });
     assert!(
-        has_bitwise_not,
+        entry_has_unary(&module, naga::UnaryOperator::BitwiseNot),
         "I8 byte-store must invert the lane mask via BitwiseNot, same as U8"
     );
 }

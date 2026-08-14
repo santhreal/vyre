@@ -736,18 +736,8 @@ fn u64_bitwise_not_emits_valid_componentwise_wgsl() {
     Validator::new(ValidationFlags::all(), Capabilities::all())
         .validate(&module)
         .unwrap_or_else(|e| panic!("u64 BitNot: INVALID WGSL: {e:?}"));
-    let entry = module.entry_points.first().expect("entry point");
-    let has_bitwise_not = entry.function.expressions.iter().any(|(_, e)| {
-        matches!(
-            e,
-            naga::Expression::Unary {
-                op: naga::UnaryOperator::BitwiseNot,
-                ..
-            }
-        )
-    });
     assert!(
-        has_bitwise_not,
+        entry_has_unary(&module, naga::UnaryOperator::BitwiseNot),
         "u64 BitNot must emit a componentwise BitwiseNot over the vec2<u32> backing"
     );
 }
