@@ -260,13 +260,13 @@ inventory::submit! {
             // 4×4 all-white scene → glass blur → all-white.
             let pixels = vec![0xFFFF_FFFFu32; 16];
             vec![vec![
-                crate::visual::byte_helpers::u32_words_to_le_bytes(&pixels),
+                crate::visual::u32_word_bytes::u32_words_to_le_bytes(&pixels),
                 vec![0u8; 64],
             ]]
         }),
         Some(|| {
             let pixels = vec![0xFFFF_FFFFu32; 16];
-            vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&pixels)]]
+            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&pixels)]]
         }),
     )
     .with_category("visual")

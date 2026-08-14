@@ -1,4 +1,4 @@
-//! G6  -  Per-commit snapshot persistence.
+//! Per-commit snapshot persistence.
 //!
 //! Verifies that `execute_suite` persists a snapshot JSON under
 //! `snapshots/<commit>.json` and that the file is parseable back into

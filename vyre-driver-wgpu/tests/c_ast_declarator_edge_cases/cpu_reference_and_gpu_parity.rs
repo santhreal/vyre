@@ -1,5 +1,5 @@
+use super::declarator_fixtures::*;
 use super::struct_fixtures::*;
-use super::support::*;
 use crate::c_ast_gpu_parity_support::{
     row_indices as typed_indices, run_gpu_classifier_with_count as run_gpu_classifier,
     run_gpu_vast_builder_from_parts as run_gpu_vast_builder, word_at, VAST_STRIDE_U32,

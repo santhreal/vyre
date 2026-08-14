@@ -1,4 +1,4 @@
-//! Test: cli tests.
+//! `vyre-debug find-dangling` exit codes and JSON output through the shipped binary.
 use assert_cmd::Command;
 use predicates::prelude::*;
 

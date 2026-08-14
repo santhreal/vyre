@@ -87,7 +87,7 @@ pub mod ir {
     pub use crate::validate::depth::{
         LimitState, DEFAULT_MAX_CALL_DEPTH, DEFAULT_MAX_NESTING_DEPTH, DEFAULT_MAX_NODE_COUNT,
     };
-    pub use crate::validate::validate::validate;
+    pub use crate::validate::rule_pipeline::validate;
     pub use crate::validate::validation_error::ValidationError;
 }
 
@@ -178,4 +178,4 @@ pub use error::{IrError, IrResult};
 /// `pub(crate)` because they are an internal contract  -  no consumer
 /// outside vyre-foundation should depend on these helpers.
 #[cfg(test)]
-pub(crate) mod test_util;
+pub(crate) mod test_region_body;

@@ -49,8 +49,8 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
-use super::attention::direct_attention_program;
 use super::planner::plan_flash_attention_scalar;
+use super::scaled_dot_product::direct_attention_program;
 use crate::region::wrap_anonymous;
 use vyre_primitives::nn::attention_stability::{
     bounded_exp_arg, bounded_score, flush_tiny, positive_denominator,

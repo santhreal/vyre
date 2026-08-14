@@ -30,7 +30,7 @@
 //! shape independent of translation-unit size without truncating long
 //! clang-valid macro identifiers or parameter lists.
 
-use super::gpu_directive_parse_shared::{
+use super::gpu_directive_parse_program::{
     directive_program_from_parse_with_source_layout, push_bounded_byte_scan_until,
     push_c_identifier_span, push_directive_row_bounds, push_hash_and_keyword_start,
     push_keyword_end, push_ws_skip_from_expr, safe_source_byte_expr,

@@ -335,7 +335,7 @@ mod tests {
         let result = LoopPeelPass::transform(program_with_entry(entry));
         assert!(result.changed, "peeling must fire");
 
-        let body = crate::test_util::region_body(&result.program);
+        let body = crate::test_region_body::region_body(&result.program);
 
         // Full store sequence across the peeled program, in document order.
         // The peeled prologue runs `then[i:=0]` (store 0,99) then `rest[i:=0]`

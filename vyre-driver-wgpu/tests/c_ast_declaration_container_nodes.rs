@@ -8,5 +8,5 @@ mod c_frontend;
 mod declaration_container_nodes;
 #[path = "c_ast_declaration_container_nodes/gpu.rs"]
 mod gpu;
-#[path = "c_ast_declaration_container_nodes/support.rs"]
-mod support;
+#[path = "c_ast_declaration_container_nodes/gpu_classify_runners.rs"]
+mod gpu_classify_runners;

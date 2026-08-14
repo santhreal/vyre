@@ -3,7 +3,7 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use super::batch_shared::checked_batched_frontier_words;
+use super::batched_frontier_words::checked_batched_frontier_words;
 use super::layout::{CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE, OP_ID};
 use crate::graph::program_graph::{word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START};
 

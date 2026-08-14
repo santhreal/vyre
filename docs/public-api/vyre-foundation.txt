@@ -650,10 +650,10 @@ pub const vyre_foundation::validate::limits::MAX_BFS_QUEUE: u32
 pub const vyre_foundation::validate::limits::MAX_DFA_STATES: u32
 pub const vyre_foundation::validate::limits::MAX_GRAPH_EDGES: usize
 pub const vyre_foundation::validate::limits::MAX_GRAPH_NODES: usize
-pub const vyre_foundation::validate::validate::DEFAULT_MAX_CALL_DEPTH: usize
-pub const vyre_foundation::validate::validate::DEFAULT_MAX_EXPR_DEPTH: usize
-pub const vyre_foundation::validate::validate::DEFAULT_MAX_NESTING_DEPTH: usize
-pub const vyre_foundation::validate::validate::DEFAULT_MAX_NODE_COUNT: usize
+pub const vyre_foundation::validate::rule_pipeline::DEFAULT_MAX_CALL_DEPTH: usize
+pub const vyre_foundation::validate::rule_pipeline::DEFAULT_MAX_EXPR_DEPTH: usize
+pub const vyre_foundation::validate::rule_pipeline::DEFAULT_MAX_NESTING_DEPTH: usize
+pub const vyre_foundation::validate::rule_pipeline::DEFAULT_MAX_NODE_COUNT: usize
 pub const vyre_foundation::validate::validation_error::ValidationCode::V056: Self
 pub const vyre_foundation::vast::HEADER_LEN: usize
 pub const vyre_foundation::vast::NODE_STRIDE_U32: usize
@@ -2443,11 +2443,11 @@ pub fn vyre_foundation::validate::options::ValidationOptions<'a>::with_backend(s
 pub fn vyre_foundation::validate::options::ValidationOptions<'a>::with_backend_capabilities(self, backend_capabilities: vyre_foundation::validate::options::BackendCapabilities) -> Self
 pub fn vyre_foundation::validate::options::ValidationOptions<'a>::with_shadowing(self, allow_shadowing: bool) -> Self
 pub fn vyre_foundation::validate::report::ValidationReport::is_ok(&self) -> bool
+pub fn vyre_foundation::validate::rule_pipeline::fma_f32_violations(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
+pub fn vyre_foundation::validate::rule_pipeline::validate(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
+pub fn vyre_foundation::validate::rule_pipeline::validate_with_options(program: &vyre_foundation::ir::Program, options: vyre_foundation::validate::options::ValidationOptions<'_>) -> vyre_foundation::validate::report::ValidationReport
 pub fn vyre_foundation::validate::shape_predicate::check_shape_predicates(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
 pub fn vyre_foundation::validate::validate(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
-pub fn vyre_foundation::validate::validate::fma_f32_violations(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
-pub fn vyre_foundation::validate::validate::validate(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
-pub fn vyre_foundation::validate::validate::validate_with_options(program: &vyre_foundation::ir::Program, options: vyre_foundation::validate::options::ValidationOptions<'_>) -> vyre_foundation::validate::report::ValidationReport
 pub fn vyre_foundation::validate::validate_with_options(program: &vyre_foundation::ir::Program, options: vyre_foundation::validate::options::ValidationOptions<'_>) -> vyre_foundation::validate::report::ValidationReport
 pub fn vyre_foundation::validate::validation_error::ValidationCode::as_str(&self) -> &str
 pub fn vyre_foundation::validate::validation_error::ValidationCode::deserialize<D>(deserializer: D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error> where D: serde_core::de::Deserializer<'de>
@@ -2832,8 +2832,8 @@ pub mod vyre_foundation::validate::limits
 pub mod vyre_foundation::validate::linear_type
 pub mod vyre_foundation::validate::options
 pub mod vyre_foundation::validate::report
+pub mod vyre_foundation::validate::rule_pipeline
 pub mod vyre_foundation::validate::shape_predicate
-pub mod vyre_foundation::validate::validate
 pub mod vyre_foundation::validate::validation_error
 pub mod vyre_foundation::vast
 pub mod vyre_foundation::visit

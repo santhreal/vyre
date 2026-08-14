@@ -30,15 +30,15 @@ This crate declares no Cargo features.
 | `example` | `vyre_debug_release_surface` | `vyre-debug/examples/vyre_debug_release_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --example vyre_debug_release_surface` |
 | `lib` | `vyre_debug` | `vyre-debug/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug` |
 | `test` | `artifact_report` | `vyre-debug/tests/artifact_report.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test artifact_report` |
-| `test` | `carriers_tests` | `vyre-debug/tests/carriers_tests.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test carriers_tests` |
-| `test` | `cli_tests` | `vyre-debug/tests/cli_tests.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test cli_tests` |
-| `test` | `dangling_tests` | `vyre-debug/tests/dangling_tests.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test dangling_tests` |
-| `test` | `descriptor_diff_tests` | `vyre-debug/tests/descriptor_diff_tests.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test descriptor_diff_tests` |
-| `test` | `descriptor_dump_tests` | `vyre-debug/tests/descriptor_dump_tests.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test descriptor_dump_tests` |
+| `test` | `cli_find_dangling_exit_codes` | `vyre-debug/tests/cli_find_dangling_exit_codes.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test cli_find_dangling_exit_codes` |
+| `test` | `dangling_ref_contracts` | `vyre-debug/tests/dangling_ref_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test dangling_ref_contracts` |
+| `test` | `descriptor_diff_contracts` | `vyre-debug/tests/descriptor_diff_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test descriptor_diff_contracts` |
+| `test` | `descriptor_dump_contracts` | `vyre-debug/tests/descriptor_dump_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test descriptor_dump_contracts` |
 | `test` | `generated_descriptor_diff_matrix` | `vyre-debug/tests/generated_descriptor_diff_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test generated_descriptor_diff_matrix` |
+| `test` | `loop_carrier_contracts` | `vyre-debug/tests/loop_carrier_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test loop_carrier_contracts` |
 | `test` | `registry_closure` | `vyre-debug/tests/registry_closure.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test registry_closure` |
 | `test` | `well_formed_lowering_contracts` | `vyre-debug/tests/well_formed_lowering_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test well_formed_lowering_contracts` |
-| `test` | `wgsl_tests` | `vyre-debug/tests/wgsl_tests.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test wgsl_tests` |
+| `test` | `wgsl_dump_contracts` | `vyre-debug/tests/wgsl_dump_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-debug --test wgsl_dump_contracts` |
 
 ## Test classes
 

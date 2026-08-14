@@ -9,8 +9,8 @@
 //! The macro surface contains the foundation-owned AST registry generator and
 //! the canonical semantic optimizer pass registration attribute.
 
+mod arg_parsers;
 mod ast_registry;
-mod parse_helpers;
 mod pass;
 
 use proc_macro::TokenStream;

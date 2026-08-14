@@ -8,12 +8,12 @@ use std::sync::Arc;
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
+use super::atomic_relaxed::atomic_load_relaxed;
 use super::handlers::{claimed_slot_bindings, claimed_slot_body, load_miss_body, OpcodeHandler};
 use super::io::{
     io_word, IO_DESTINATION_CAPABILITY_TABLE, IO_QUEUE_DMA_TAG, IO_SLOT_COUNT, IO_SLOT_WORDS,
     IO_SOURCE_CAPABILITY_TABLE,
 };
-use super::ir_util::atomic_load_relaxed;
 use super::protocol::*;
 use super::workspace_adapter::ResidentWorkspaceAdapter;
 mod cache;

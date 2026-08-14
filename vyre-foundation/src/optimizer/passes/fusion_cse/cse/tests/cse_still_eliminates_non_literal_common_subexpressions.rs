@@ -21,7 +21,7 @@ fn cse_still_eliminates_non_literal_common_subexpressions() -> Result<(), String
     ));
     let optimized = cse(program);
     // The second let_bind should reuse `x` instead of re-loading.
-    let body = crate::test_util::region_body(&optimized);
+    let body = crate::test_region_body::region_body(&optimized);
     match &body[1] {
         Node::Let { value, .. } => {
             assert!(

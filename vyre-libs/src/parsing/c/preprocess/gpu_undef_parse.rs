@@ -28,7 +28,7 @@
 //! extraction is in `load_byte_u32`. Macro-name extraction is bounded
 //! by the directive row length, not by a compile-time identifier cap.
 
-use super::gpu_directive_parse_shared::{
+use super::gpu_directive_parse_program::{
     directive_program_from_parse_with_source_layout, push_c_identifier_span,
     push_directive_row_bounds, push_hash_and_keyword_start, push_keyword_end,
     push_ws_skip_from_expr, DirectiveOutputColumn, DirectiveSourceLayout, DirectiveThreadLayout,

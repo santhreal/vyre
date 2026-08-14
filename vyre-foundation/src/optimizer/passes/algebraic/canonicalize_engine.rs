@@ -403,7 +403,7 @@ mod tests {
             E::add(E::u32(3), E::var("a")),
         )]);
         let canonical = run(p);
-        let body = crate::test_util::region_body(&canonical);
+        let body = crate::test_region_body::region_body(&canonical);
         match &body[0] {
             Node::Store { value, .. } => match value {
                 Expr::BinOp { left, right, .. } => {
@@ -461,7 +461,7 @@ mod tests {
                 _ => {}
             }
         }
-        let entry_body = crate::test_util::region_body(&canonical);
+        let entry_body = crate::test_region_body::region_body(&canonical);
         match &entry_body[0] {
             Node::Store { value, .. } => find_mul_and_check(value),
             other => panic!("expected Store, got {other:?}"),
@@ -480,7 +480,7 @@ mod tests {
         // because both operands are the same Var).
         let p = scalar_out_prog(vec![Node::let_bind("t", E::eq(E::var("a"), E::var("a")))]);
         let canonical = run(p);
-        let entry_body = crate::test_util::region_body(&canonical);
+        let entry_body = crate::test_region_body::region_body(&canonical);
         match &entry_body[0] {
             Node::Let { value, .. } => match value {
                 Expr::BinOp {
@@ -504,7 +504,7 @@ mod tests {
         // not fold it to a bool literal. The Ne node is preserved.
         let p = scalar_out_prog(vec![Node::let_bind("t", E::ne(E::var("a"), E::var("a")))]);
         let canonical = run(p);
-        let entry_body = crate::test_util::region_body(&canonical);
+        let entry_body = crate::test_region_body::region_body(&canonical);
         match &entry_body[0] {
             Node::Let { value, .. } => match value {
                 Expr::BinOp {
@@ -577,7 +577,7 @@ mod tests {
     fn eq_different_vars_unchanged() {
         let p = scalar_out_prog(vec![Node::let_bind("t", E::eq(E::var("a"), E::var("b")))]);
         let canonical = run(p);
-        let entry_body = crate::test_util::region_body(&canonical);
+        let entry_body = crate::test_region_body::region_body(&canonical);
         match &entry_body[0] {
             Node::Let { value, .. } => match value {
                 Expr::BinOp {

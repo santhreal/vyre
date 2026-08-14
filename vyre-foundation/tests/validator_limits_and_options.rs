@@ -1,4 +1,6 @@
-//! Regression coverage for F-IR-12..20 validator findings.
+//! Validator limits, backend capability checks, and opt-in options: cast targets,
+//! atomic access modes, duplicate and shadowed lets, store-index and expression-depth
+//! caps, the wire framing cap, and narrowing-cast warning severity.
 
 use std::sync::Arc;
 

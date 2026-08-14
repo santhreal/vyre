@@ -1,5 +1,5 @@
 use super::super::*;
-use super::support::{traversal_graph, RecordingResidentDispatcher};
+use super::recording_dispatcher::{traversal_graph, RecordingResidentDispatcher};
 
 #[test]
 fn sparse_dense_resident_step_does_not_upload_popcount_zero_seed() {

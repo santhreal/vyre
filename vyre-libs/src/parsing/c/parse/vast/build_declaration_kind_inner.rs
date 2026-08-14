@@ -26,7 +26,7 @@ use super::build::{
     vast_row_base_expr, vast_row_field_expr, vast_row_kind_from_base_expr,
     vast_row_parent_from_base_expr,
 };
-use super::helpers::*;
+use super::token_grammar::*;
 use super::*;
 
 pub(super) fn emit_declaration_kind_for_index_inner(

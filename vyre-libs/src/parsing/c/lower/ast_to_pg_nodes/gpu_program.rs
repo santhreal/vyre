@@ -11,9 +11,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use super::*;
 
 mod classification;
-mod context;
 mod edge_store;
 mod node_rows;
+mod semantic_context_nodes;
 mod semantic_graph;
 mod sizing;
 mod structural_nodes;
@@ -25,9 +25,9 @@ pub use semantic_graph::{
 pub use structural_nodes::c_lower_ast_to_pg_nodes;
 
 use classification::*;
-use context::*;
 use edge_store::*;
 use node_rows::*;
+use semantic_context_nodes::*;
 use sizing::infer_node_count_words;
 
 /// Malformed byte input for CPU oracle decoding.

@@ -19,9 +19,9 @@ use super::byte_exprs::{
 };
 
 mod dense;
-mod parallel_common;
 mod ranked;
 mod regular;
+mod regular_parallel_mode;
 mod scan_bounds;
 mod sparse;
 

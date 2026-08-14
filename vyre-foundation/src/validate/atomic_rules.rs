@@ -32,7 +32,7 @@ use rustc_hash::FxHashMap;
 /// # Examples
 ///
 /// `validate_atomic` is `pub(crate)`; it runs as part of
-/// [`crate::validate::validate::validate`] whenever a program contains an
+/// [`crate::validate::rule_pipeline::validate`] whenever a program contains an
 /// `Expr::Atomic`. See the unit tests on that function for a runnable
 /// example covering the U32 / U64 atomic surface and the invalid-op
 /// rejection paths.

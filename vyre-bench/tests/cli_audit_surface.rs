@@ -1,4 +1,4 @@
-//! CLI audit capabilities through the shipped binary.
+//! The shipped binary exposes case listing and snapshot diff as auditable JSON.
 
 use std::process::{Command, Output};
 

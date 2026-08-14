@@ -5,9 +5,9 @@ use std::sync::Mutex;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::exploded::build_cpu_reference;
 
-mod support;
+mod ifds_doubles;
 
-use support::{canonical_expected, MalformedIfdsDispatcher, RecordingIfdsOracle};
+use ifds_doubles::{canonical_expected, MalformedIfdsDispatcher, RecordingIfdsOracle};
 
 /// Two procs, 2 blocks each, 2 facts each. One intra edge per
 /// proc, no inter, no flow. The CSR row count must equal the

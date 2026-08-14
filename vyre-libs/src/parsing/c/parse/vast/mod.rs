@@ -7,9 +7,8 @@
 mod build;
 mod build_declaration_kind_inner;
 mod classify;
-mod decl_context_common;
+mod decl_context_row_access;
 mod expr_shape;
-mod helpers;
 mod phase_witness;
 #[cfg(any(test, feature = "cpu-parity"))]
 mod ref_classify;
@@ -19,6 +18,7 @@ mod ref_decode_err;
 mod ref_expr_shape;
 #[cfg(any(test, feature = "cpu-parity"))]
 mod ref_typedef;
+mod token_grammar;
 mod typedef_ann;
 
 pub use build::{c11_build_vast_nodes, c11_build_vast_nodes_uses_global_last_child};

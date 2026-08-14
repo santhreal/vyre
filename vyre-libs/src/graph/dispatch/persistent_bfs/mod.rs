@@ -10,7 +10,7 @@ mod dispatch;
 #[cfg(any(test, feature = "cpu-parity"))]
 mod reference;
 mod resident;
-mod state;
+mod resident_scratch;
 #[cfg(test)]
 mod tests;
 
@@ -18,7 +18,7 @@ pub use dispatch::*;
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use reference::*;
 pub use resident::*;
-pub use state::{
+pub use resident_scratch::{
     PersistentBfsGpuScratch, PersistentBfsPlanCacheSnapshot, PersistentBfsResidentScratch,
     ResidentBfsGraph,
 };

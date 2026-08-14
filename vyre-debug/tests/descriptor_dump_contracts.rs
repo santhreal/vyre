@@ -1,4 +1,4 @@
-//! Test: descriptor dump tests.
+//! Descriptor dump rendering: op counts, truncation, and literal-section options.
 use vyre_debug::{dump_descriptor, DescriptorDumpOptions};
 use vyre_foundation::ir::{Expr, Ident, Node};
 

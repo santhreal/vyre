@@ -367,8 +367,7 @@ mod tests {
     use crate::fixture_bytes::bytes_to_u32 as decode_u32;
     use crate::scan::classic_ac::classic_ac_compile;
     use crate::scan::classic_ac::classic_ac_scan_counts;
-    use crate::scan::classic_ac::test_helpers::with_reference_dispatch_lanes;
-    use crate::scan::haystack::pack_haystack_u32;
+    use crate::scan::classic_ac::test_dispatch_and_decode::with_reference_dispatch_lanes;
     use vyre_primitives::wire::pack_u32_slice;
 
     #[test]

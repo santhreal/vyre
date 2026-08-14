@@ -39,7 +39,7 @@ impl PipelineFingerprint {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline_cache::test_helpers::{artifact_for_program, tiny_artifact};
+    use crate::pipeline_cache::test_artifact_fixtures::{artifact_for_program, tiny_artifact};
     use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
     #[test]

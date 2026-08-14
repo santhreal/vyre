@@ -1,4 +1,4 @@
-//! Test: carriers tests.
+//! Loop-carrier detection: uncarriered assigns are flagged and carrier summaries match the descriptor walk.
 use std::collections::BTreeMap;
 use vyre_debug::fixtures::loop_carry_smoke;
 use vyre_debug::{carrier_summary, find_uncarriered_assigns};

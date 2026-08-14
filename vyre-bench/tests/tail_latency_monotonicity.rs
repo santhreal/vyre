@@ -1,4 +1,4 @@
-//! Tail latency test.
+//! Reported tail-latency percentiles rise monotonically.
 #![allow(missing_docs, clippy::field_reassign_with_default)]
 
 use vyre_bench::api::suite::SuiteKind;

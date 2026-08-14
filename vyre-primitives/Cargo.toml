@@ -199,8 +199,13 @@ path = "tests/adversarial_text_char_class.rs"
 required-features = ["text"]
 
 [[test]]
-name = "adversarial_text_extra"
-path = "tests/adversarial_text_extra.rs"
+name = "adversarial_text_byte_histogram"
+path = "tests/adversarial_text_byte_histogram.rs"
+required-features = ["text", "cpu-parity"]
+
+[[test]]
+name = "adversarial_text_utf8_shape_counts"
+path = "tests/adversarial_text_utf8_shape_counts.rs"
 required-features = ["text", "cpu-parity"]
 
 [[test]]

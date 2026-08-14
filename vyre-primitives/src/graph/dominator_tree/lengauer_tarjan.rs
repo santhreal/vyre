@@ -1,7 +1,7 @@
 // CPU reference oracles  (#[cfg(test)] / feature = "cpu-parity")
 // ------------------------------------------------------------------
 
-use super::alloc_helpers::{push_dominator_vec, resize_dominator_vec};
+use super::dominator_vec_growth::{push_dominator_vec, resize_dominator_vec};
 
 /// Lengauer–Tarjan exact immediate dominators.
 ///

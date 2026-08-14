@@ -267,7 +267,7 @@ mod ir_program_tests {
     #[test]
     fn visit_step_program_validates() {
         let prog = visit_step_program("co", "c", "stack", "po", "pc");
-        let errors = crate::validate::validate::validate(&prog);
+        let errors = crate::validate::rule_pipeline::validate(&prog);
         assert!(errors.is_empty(), "visitor IR must validate: {errors:?}");
     }
 

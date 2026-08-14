@@ -3,7 +3,7 @@
 //! The executor calls these helpers between round-robin steps to preserve the
 //! reference interpreter's workgroup-wide barrier semantics.
 
-use super::state::HashmapInvocation;
+use super::invocation::HashmapInvocation;
 use crate::ReferenceError;
 use smallvec::SmallVec;
 use vyre_foundation::ir::BufferDecl;

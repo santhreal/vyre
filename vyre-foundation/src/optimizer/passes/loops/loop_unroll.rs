@@ -323,7 +323,7 @@ mod tests {
         .run(program)
         .expect("Fix: loop unroll should converge");
 
-        let body = crate::test_util::region_body(&optimized);
+        let body = crate::test_region_body::region_body(&optimized);
         assert_eq!(body.len(), 3);
         for (index, node) in body.iter().enumerate() {
             assert!(matches!(
@@ -372,7 +372,7 @@ mod tests {
         );
 
         let optimized = LoopUnroll::transform(program).program;
-        let body = crate::test_util::region_body(&optimized);
+        let body = crate::test_region_body::region_body(&optimized);
         assert_eq!(body.len(), 12);
         assert!(matches!(
             &body[11],
@@ -399,7 +399,7 @@ mod tests {
 
         let result = LoopUnroll::transform(program);
         assert!(!result.changed);
-        let body = crate::test_util::region_body(&result.program);
+        let body = crate::test_region_body::region_body(&result.program);
 
         assert!(matches!(&body[0], Node::Loop { .. }));
     }
@@ -419,7 +419,7 @@ mod tests {
 
         let result = LoopUnroll::transform(program);
         assert!(!result.changed);
-        let body = crate::test_util::region_body(&result.program);
+        let body = crate::test_region_body::region_body(&result.program);
         assert!(matches!(&body[0], Node::Loop { .. }));
     }
 
@@ -442,7 +442,7 @@ mod tests {
         );
 
         let optimized = LoopUnroll::transform(program).program;
-        let body = crate::test_util::region_body(&optimized);
+        let body = crate::test_region_body::region_body(&optimized);
         assert_eq!(body.len(), 2);
         assert!(matches!(
             &body[0],

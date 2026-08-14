@@ -7,12 +7,12 @@ use crate::region::wrap_anonymous;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::build::*;
-use super::helpers::*;
+use super::token_grammar::*;
 use super::*;
 
 mod annotate;
-mod annotation_helpers;
 mod decl_contexts;
+mod decl_prefix_starts;
 mod global_fast;
 mod haystack_words;
 mod precomputed_visible_type;
@@ -29,8 +29,8 @@ pub use annotate::{
     c11_annotate_typedef_names_precomputed_scope,
     c11_annotate_typedef_names_precomputed_scope_packed_haystack,
 };
-pub use annotation_helpers::c11_precompute_vast_decl_prefix_starts;
 pub use decl_contexts::c11_precompute_vast_decl_contexts;
+pub use decl_prefix_starts::c11_precompute_vast_decl_prefix_starts;
 pub use global_fast::c11_annotate_global_typedef_names_fast;
 pub use precomputed_visible_type::{
     c11_precompute_vast_visible_type, c11_precompute_vast_visible_type_packed_haystack,

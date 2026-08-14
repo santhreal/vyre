@@ -811,7 +811,10 @@ pub fn try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coale
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scan::classic_ac::test_helpers::{decode_match_triples, pattern_lengths};
+    use crate::fixture_bytes::pack_haystack_u32;
+    use crate::scan::classic_ac::test_dispatch_and_decode::{
+        decode_match_triples, pattern_lengths,
+    };
     use crate::scan::classic_ac::{
         classic_ac_bounded_ranges_scan, classic_ac_candidate_end_byte_mask_words,
         classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,

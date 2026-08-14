@@ -1,4 +1,4 @@
-//! G10  -  Cross-backend matrix.
+//! Cross-backend matrix.
 //!
 //! Verifies that registered dispatch-capable backends can each run
 //! the elementwise case independently, producing consistent results.

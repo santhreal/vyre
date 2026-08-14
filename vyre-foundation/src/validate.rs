@@ -33,11 +33,11 @@ pub mod options;
 /// stay within the limits of the target GPU adapter.
 pub mod limits;
 
-/// The main validate entry point.
+/// The rule pipeline: every validation rule, driven over one preorder walk.
 ///
 /// `validate` is the top-level function that runs every validation pass
 /// and returns a vector of errors (empty on success).
-pub mod validate;
+pub mod rule_pipeline;
 
 /// Validation report containing hard failures and warnings.
 pub mod report;
@@ -82,13 +82,13 @@ pub use options::{BackendCapabilities, BackendValidationCapabilities, Validation
 pub use report::{ValidationReport, ValidationWarning};
 /// Re-export of the focused `Fma` f32-operand check emit backends run
 /// before lowering (see [`validate::fma_f32_violations`]).
-pub use validate::fma_f32_violations;
+pub use rule_pipeline::fma_f32_violations;
 /// Re-export of the top-level validation function.
 ///
 /// This is the stable entry point called by frontends before handing a
 /// `Program` to a backend.
-pub use validate::validate;
-pub use validate::validate_with_options;
+pub use rule_pipeline::validate;
+pub use rule_pipeline::validate_with_options;
 /// Re-export of the structured validation issue model.
 pub use validation_error::{
     ValidationCode, ValidationError, ValidationLocation, ValidationPhase, ValidationTraceEvent,

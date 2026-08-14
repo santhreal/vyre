@@ -301,7 +301,7 @@ mod ir_program_tests {
     #[test]
     fn fnv1a_program_validates() {
         let prog = fnv1a_program("input", "out", 8);
-        let errors = crate::validate::validate::validate(&prog);
+        let errors = crate::validate::rule_pipeline::validate(&prog);
         assert!(
             errors.is_empty(),
             "string_interner fnv1a IR must validate: {errors:?}"
@@ -325,7 +325,7 @@ mod ir_program_tests {
         // len == 0 is the empty-string contract: the output buffer
         // receives EMPTY_STRING_ID (0) and the loop runs zero times.
         let prog = fnv1a_program("input", "out", 0);
-        let errors = crate::validate::validate::validate(&prog);
+        let errors = crate::validate::rule_pipeline::validate(&prog);
         assert!(
             errors.is_empty(),
             "empty-input IR must validate: {errors:?}"

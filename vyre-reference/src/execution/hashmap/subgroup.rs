@@ -5,8 +5,8 @@
 
 #[cfg(feature = "subgroup-ops")]
 use super::{
+    invocation::{HashmapInvocation, HashmapInvocationSnapshot},
     memory::HashmapMemory,
-    state::{HashmapInvocation, HashmapInvocationSnapshot},
     step::eval_expr_snapshot,
 };
 #[cfg(feature = "subgroup-ops")]

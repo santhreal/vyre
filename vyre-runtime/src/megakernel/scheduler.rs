@@ -19,7 +19,7 @@
 //! This prevents priority inversion where a flood of CRITICAL slots
 //! starves NORMAL/"background" work indefinitely.
 
-use super::ir_util::{atomic_load_relaxed, atomic_store_relaxed};
+use super::atomic_relaxed::{atomic_load_relaxed, atomic_store_relaxed};
 use super::protocol::*;
 use vyre_foundation::ir::{Expr, Node};
 

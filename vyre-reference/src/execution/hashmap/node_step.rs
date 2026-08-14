@@ -1,9 +1,9 @@
 #[cfg(feature = "subgroup-ops")]
-use super::super::state::HashmapInvocationSnapshot;
+use super::super::invocation::HashmapInvocationSnapshot;
 use super::super::{
     eval_expr,
+    invocation::HashmapInvocation,
     memory::{buffer_mut, HashmapMemory},
-    state::HashmapInvocation,
     sync::{contains_barrier, node_id},
 };
 use crate::execution::async_transfer::{self, AsyncTransfer};

@@ -1,5 +1,5 @@
 use super::super::*;
-use super::support::{traversal_graph, RecordingResidentDispatcher};
+use super::recording_dispatcher::{traversal_graph, RecordingResidentDispatcher};
 
 #[test]
 fn sparse_queue_resident_step_initializes_queue_len_on_device() {

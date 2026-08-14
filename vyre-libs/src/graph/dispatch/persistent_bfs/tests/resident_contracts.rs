@@ -1,4 +1,4 @@
-use super::super::state::PersistentBfsPlanCache;
+use super::super::resident_scratch::PersistentBfsPlanCache;
 use super::super::*;
 use super::linear_graph;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;

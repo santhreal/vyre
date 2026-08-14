@@ -8,8 +8,8 @@ use crate::region::wrap_anonymous;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::build_declaration_kind_inner::emit_declaration_kind_for_index_inner;
-use super::helpers::*;
 use super::phase_witness::{PHASE_WITNESS_ROWS, PHASE_WITNESS_SOURCE_LEN};
+use super::token_grammar::*;
 use super::*;
 
 mod declaration_kind;

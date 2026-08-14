@@ -72,7 +72,7 @@ mod stack;
 #[cfg(test)]
 mod tests;
 
-use super::gpu_directive_parse_shared::{
+use super::gpu_directive_parse_program::{
     push_directive_row_bounds, push_hash_and_keyword_start, push_keyword_end,
     push_ws_skip_from_expr, runtime_sized_input, token_column,
 };

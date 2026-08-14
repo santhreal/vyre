@@ -15,13 +15,13 @@ mod common;
 mod optimizer_combined_contracts;
 #[path = "resident_dispatch_contracts/repeated_sequence_contracts.rs"]
 mod repeated_sequence_contracts;
+#[path = "resident_dispatch_contracts/resident_lane_fixture.rs"]
+mod resident_lane_fixture;
 #[path = "resident_dispatch_contracts/sequence_readback_contracts.rs"]
 mod sequence_readback_contracts;
-#[path = "resident_dispatch_contracts/support.rs"]
-mod support;
 
 use common::{bytes_u32, u32_bytes};
-use support::*;
+use resident_lane_fixture::*;
 
 use vyre_driver::{DispatchConfig, Resource, VyreBackend};
 use vyre_driver_cuda::{

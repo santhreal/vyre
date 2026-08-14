@@ -1,4 +1,4 @@
-use super::super::ir_util::{let_names_preorder, walk_body_preorder};
+use super::super::body_preorder::{let_names_preorder, walk_body_preorder};
 use super::*;
 
 fn async_load_bindings(nodes: &[Node]) -> Vec<(String, String, String)> {

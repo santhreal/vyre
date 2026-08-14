@@ -254,7 +254,7 @@ mod ir_program_tests {
     #[test]
     fn alloc_program_validates_against_ir_validator() {
         let prog = alloc_program("arena", "out", 4);
-        let errors = crate::validate::validate::validate(&prog);
+        let errors = crate::validate::rule_pipeline::validate(&prog);
         assert!(
             errors.is_empty(),
             "typed_arena IR must validate: {errors:?}"

@@ -1,6 +1,6 @@
-use super::super::state::AdaptiveTraversalPlanCache;
+use super::super::resident_scratch::AdaptiveTraversalPlanCache;
 use super::super::*;
-use super::support::RecordingResidentDispatcher;
+use super::recording_dispatcher::RecordingResidentDispatcher;
 
 #[test]
 fn generated_adaptive_resident_free_releases_each_handle_once_in_first_seen_order() {

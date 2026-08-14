@@ -209,7 +209,7 @@ fn opaque_expr_is_validated_through_extension_hook() {
             Node::Return,
         ],
     );
-    assert!(vyre_foundation::validate::validate::validate(&program).is_empty());
+    assert!(vyre_foundation::validate::rule_pipeline::validate(&program).is_empty());
 }
 
 #[test]

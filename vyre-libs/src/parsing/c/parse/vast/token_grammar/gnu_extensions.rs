@@ -1,5 +1,5 @@
 use super::super::*;
-use super::tokens::balanced_or;
+use super::token_sets::balanced_or;
 use crate::parsing::c::lex::tokens::*;
 use vyre_foundation::ir::Expr;
 

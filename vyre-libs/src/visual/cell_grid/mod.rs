@@ -189,7 +189,7 @@ inventory::submit! {
             // bits [7:0] are red and [31:24] are alpha.
             let cells = [0xFF00_00FFu32, 0xFF00_FF00, 0xFFFF_0000, 0xFFFF_FFFF];
             vec![vec![
-                crate::visual::byte_helpers::u32_words_to_le_bytes(&cells),
+                crate::visual::u32_word_bytes::u32_words_to_le_bytes(&cells),
                 vec![0u8; 16 * 4],
             ]]
         }),
@@ -206,7 +206,7 @@ inventory::submit! {
                 B, B, W, W,
                 B, B, W, W,
             ];
-            vec![vec![crate::visual::byte_helpers::u32_words_to_le_bytes(&expected)]]
+            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&expected)]]
         }),
     )
     .with_category("visual")

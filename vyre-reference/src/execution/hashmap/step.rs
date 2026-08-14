@@ -4,8 +4,8 @@ mod node_step;
 pub(crate) use node_step::{eval_call, step_loop_frame, step_nodes_frame};
 
 #[cfg(feature = "subgroup-ops")]
-use super::state::HashmapInvocationSnapshot;
-use super::{memory::HashmapMemory, state::HashmapInvocation};
+use super::invocation::HashmapInvocationSnapshot;
+use super::{invocation::HashmapInvocation, memory::HashmapMemory};
 use crate::ReferenceError;
 use crate::{value::Value, workgroup::Frame};
 
@@ -163,7 +163,7 @@ fn capture_invocation_snapshots(
 #[cfg(all(test, feature = "subgroup-ops"))]
 mod tests {
     use super::capture_invocation_snapshots;
-    use crate::execution::hashmap::state::HashmapInvocation;
+    use crate::execution::hashmap::invocation::HashmapInvocation;
     use crate::value::Value;
     use crate::workgroup::InvocationIds;
     use std::sync::Arc;

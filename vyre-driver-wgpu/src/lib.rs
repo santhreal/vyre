@@ -177,7 +177,7 @@ impl BackendValidationCapabilities for WgpuBackend {
                 | DataType::I16
                 | DataType::I32
                 // I64 is backed by the SAME `vec2<u32>` emulation as U64 (see
-                // `binding_helpers`/`setup` buffer lowering and the op_dispatch
+                // `operand_binding`/`setup` buffer lowering and the op_dispatch
                 // cast path, which treat `U64 | I64` identically and sign-extend
                 // the high word for a signed source). Omitting it here falsely
                 // rejected `i32 -> i64` casts the emitter and hardware handle

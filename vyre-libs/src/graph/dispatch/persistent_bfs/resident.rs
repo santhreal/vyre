@@ -1,4 +1,4 @@
-use super::state::{
+use super::resident_scratch::{
     copy_frontier_batch_seed_and_clear_changed, copy_frontier_seed_into,
     PersistentBfsResidentScratch, ResidentBfsGraph,
 };

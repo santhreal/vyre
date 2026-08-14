@@ -1,4 +1,4 @@
-//! G7  -  Thermal normalization.
+//! Thermal normalization.
 //!
 //! Verifies that the NVML probe captures temperature and clock metrics, and
 //! that the `thermal_unstable` custom metric is populated per-sample.

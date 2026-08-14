@@ -1,4 +1,4 @@
 //! Substring-search sub-dialect.
-mod substring;
+mod brute_force_search;
 
-pub use substring::{substring_search, SCAN_SUBSTRING_OP_ID};
+pub use brute_force_search::{substring_search, SCAN_SUBSTRING_OP_ID};

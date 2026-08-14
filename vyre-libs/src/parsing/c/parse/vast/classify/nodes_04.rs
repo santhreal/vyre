@@ -1,4 +1,4 @@
-use super::super::decl_context_common;
+use super::super::decl_context_row_access;
 use super::*;
 
 pub(super) fn extend(
@@ -17,28 +17,28 @@ pub(super) fn extend(
                 Expr::var("decl_ctx_scan_start"),
                 t.clone(),
                 vec![
-                    decl_context_common::bind_vast_node_base(
+                    decl_context_row_access::bind_vast_node_base(
                         "decl_ctx_base",
                         Expr::var("decl_ctx_scan"),
                     ),
-                    decl_context_common::bind_vast_node_kind(
+                    decl_context_row_access::bind_vast_node_kind(
                         "decl_ctx_kind",
                         vast_nodes,
                         "decl_ctx_base",
                     ),
-                    decl_context_common::bind_vast_node_field(
+                    decl_context_row_access::bind_vast_node_field(
                         "decl_ctx_typedef_flags",
                         vast_nodes,
                         "decl_ctx_base",
                         VAST_TYPEDEF_FLAGS_FIELD,
                     ),
-                    decl_context_common::bind_vast_node_field(
+                    decl_context_row_access::bind_vast_node_field(
                         "decl_ctx_symbol_hash",
                         vast_nodes,
                         "decl_ctx_base",
                         VAST_TYPEDEF_SYMBOL_FIELD,
                     ),
-                    decl_context_common::bind_vast_node_parent(
+                    decl_context_row_access::bind_vast_node_parent(
                         "decl_ctx_parent",
                         vast_nodes,
                         "decl_ctx_base",
@@ -135,11 +135,11 @@ pub(super) fn extend(
                     Node::if_then(
                         Expr::var("decl_ctx_attr_after_reset"),
                         vec![
-                            decl_context_common::bind_vast_node_base(
+                            decl_context_row_access::bind_vast_node_base(
                                 "decl_ctx_attr_base",
                                 Expr::var("decl_ctx_attr_scan"),
                             ),
-                            decl_context_common::bind_vast_node_kind(
+                            decl_context_row_access::bind_vast_node_kind(
                                 "decl_ctx_attr_kind",
                                 vast_nodes,
                                 "decl_ctx_attr_base",
@@ -150,7 +150,7 @@ pub(super) fn extend(
                                     &[TOK_IDENTIFIER, TOK_CONST],
                                 ),
                                 vec![
-                                    decl_context_common::bind_vast_node_parent(
+                                    decl_context_row_access::bind_vast_node_parent(
                                         "decl_ctx_attr_parent",
                                         vast_nodes,
                                         "decl_ctx_attr_base",
@@ -164,7 +164,7 @@ pub(super) fn extend(
                                     ),
                                     Node::let_bind(
                                         "decl_ctx_attr_parent_base",
-                                        decl_context_common::vast_node_base(Expr::select(
+                                        decl_context_row_access::vast_node_base(Expr::select(
                                             Expr::var("decl_ctx_attr_parent_valid"),
                                             Expr::var("decl_ctx_attr_parent"),
                                             t.clone(),
@@ -174,7 +174,7 @@ pub(super) fn extend(
                                         "decl_ctx_attr_parent_kind",
                                         Expr::select(
                                             Expr::var("decl_ctx_attr_parent_valid"),
-                                            decl_context_common::load_vast_node_kind(
+                                            decl_context_row_access::load_vast_node_kind(
                                                 vast_nodes,
                                                 Expr::var("decl_ctx_attr_parent_base"),
                                             ),
@@ -185,7 +185,7 @@ pub(super) fn extend(
                                         "decl_ctx_attr_parent_parent",
                                         Expr::select(
                                             Expr::var("decl_ctx_attr_parent_valid"),
-                                            decl_context_common::load_vast_node_parent(
+                                            decl_context_row_access::load_vast_node_parent(
                                                 vast_nodes,
                                                 Expr::var("decl_ctx_attr_parent_base"),
                                             ),
@@ -201,7 +201,7 @@ pub(super) fn extend(
                                     ),
                                     Node::let_bind(
                                         "decl_ctx_attr_parent_parent_base",
-                                        decl_context_common::vast_node_base(Expr::select(
+                                        decl_context_row_access::vast_node_base(Expr::select(
                                             Expr::var("decl_ctx_attr_parent_parent_valid"),
                                             Expr::var("decl_ctx_attr_parent_parent"),
                                             t.clone(),
@@ -211,7 +211,7 @@ pub(super) fn extend(
                                         "decl_ctx_attr_parent_parent_kind",
                                         Expr::select(
                                             Expr::var("decl_ctx_attr_parent_parent_valid"),
-                                            decl_context_common::load_vast_node_kind(
+                                            decl_context_row_access::load_vast_node_kind(
                                                 vast_nodes,
                                                 Expr::var("decl_ctx_attr_parent_parent_base"),
                                             ),
@@ -222,7 +222,7 @@ pub(super) fn extend(
                                         "decl_ctx_attr_grandparent",
                                         Expr::select(
                                             Expr::var("decl_ctx_attr_parent_parent_valid"),
-                                            decl_context_common::load_vast_node_parent(
+                                            decl_context_row_access::load_vast_node_parent(
                                                 vast_nodes,
                                                 Expr::var("decl_ctx_attr_parent_parent_base"),
                                             ),
@@ -242,11 +242,11 @@ pub(super) fn extend(
                                             Expr::u32(0),
                                         ),
                                         vec![
-                                            decl_context_common::bind_vast_node_base(
+                                            decl_context_row_access::bind_vast_node_base(
                                                 "decl_ctx_attr_prev_base",
                                                 Expr::var("decl_ctx_attr_prev_scan"),
                                             ),
-                                            decl_context_common::bind_vast_node_parent(
+                                            decl_context_row_access::bind_vast_node_parent(
                                                 "decl_ctx_attr_prev_parent",
                                                 vast_nodes,
                                                 "decl_ctx_attr_prev_base",
@@ -258,7 +258,7 @@ pub(super) fn extend(
                                                 ),
                                                 vec![Node::assign(
                                                     "decl_ctx_attr_prefix_kind",
-                                                    decl_context_common::load_vast_node_kind(
+                                                    decl_context_row_access::load_vast_node_kind(
                                                         vast_nodes,
                                                         Expr::var("decl_ctx_attr_prev_base"),
                                                     ),
@@ -266,7 +266,7 @@ pub(super) fn extend(
                                             ),
                                         ],
                                     ),
-                                    decl_context_common::bind_vast_node_field(
+                                    decl_context_row_access::bind_vast_node_field(
                                         "decl_ctx_attr_symbol",
                                         vast_nodes,
                                         "decl_ctx_attr_base",

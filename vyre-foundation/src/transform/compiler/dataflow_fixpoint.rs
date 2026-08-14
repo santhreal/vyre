@@ -298,7 +298,7 @@ mod ir_program_tests {
             "successors",
             "changed_flag",
         );
-        let errors = crate::validate::validate::validate(&prog);
+        let errors = crate::validate::rule_pipeline::validate(&prog);
         assert!(errors.is_empty(), "dataflow IR must validate: {errors:?}");
     }
 

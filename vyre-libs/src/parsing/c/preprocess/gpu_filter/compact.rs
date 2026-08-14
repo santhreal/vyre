@@ -1,6 +1,6 @@
 use super::super::scan::{inclusive_prefix_scan_u32_into, PrefixScanScratch};
 use super::host::read_output_u32;
-use super::program_helpers::byte_compact_program;
+use super::keep_mask::byte_compact_program;
 use super::scratch::{copy_output_bytes, write_zero_bytes};
 use super::FilteredBytes;
 use crate::parsing::c::preprocess::gpu_pipeline::ProgramOracle;

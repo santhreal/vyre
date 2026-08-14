@@ -1,7 +1,7 @@
 use super::super::ClassifiedTokens;
 use super::classified_codec::{decode_classified, encode_classified};
 use super::classified_memory::ClassifiedCacheKey;
-use super::disk_common::{
+use super::disk_cache_files::{
     classified_disk_path, disk_cache_tmp_path, parsed_ast_cache_dir, publish_disk_cache_file,
     read_disk_cache_file_bounded, remove_disk_cache_file,
 };

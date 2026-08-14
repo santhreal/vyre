@@ -1,4 +1,4 @@
-//! Test: dangling tests.
+//! Dangling-reference detection agrees with the verifier verdict across nesting depths.
 use vyre_debug::find_dangling_refs;
 use vyre_debug::fixtures::loop_carry_smoke;
 use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
