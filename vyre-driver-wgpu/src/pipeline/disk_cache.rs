@@ -13,8 +13,8 @@ use vyre_foundation::serial::wire::framing::WIRE_FORMAT_VERSION;
 use crate::staging_reserve::reserve_backend_vec;
 
 #[cfg(test)]
-pub(crate) use super::disk_cache_invalidation::set_test_disk_pipeline_cache_root;
-pub(crate) use super::disk_cache_invalidation::{
+pub(crate) use super::disk_cache_entries::set_test_disk_pipeline_cache_root;
+pub(crate) use super::disk_cache_entries::{
     cache_entry_path, disk_pipeline_cache_dir, remove_impacted_entries, CompiledPipelineMetadata,
     DiskPipelineMetadata,
 };

@@ -807,9 +807,9 @@ pub(crate) mod descriptor_metadata;
 /// `persist_compiled_pipeline_cache` to skip Naga + Tint + driver
 /// linkage for unchanged programs across `./cargo_full test` cycles.
 pub(crate) mod disk_cache;
-/// Sibling of `disk_cache`  -  cache invalidation triggered by source
-/// edits, adapter changes, or feature-flag flips.
-pub(crate) mod disk_cache_invalidation;
+/// Sibling of `disk_cache`  -  on-disk entry paths, entry metadata, and
+/// entry removal for the disk cache.
+pub(crate) mod disk_cache_entries;
 /// Trimmed output readback. Owns the contract that `output_byte_range`
 /// transfers only meaningful bytes instead of whole output allocations.
 pub(crate) mod output_readback;
