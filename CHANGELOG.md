@@ -10,6 +10,10 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   files and names the files each one shares shingles with. The gate could report
   that a crate exceeded its pin but not which copy to collapse, so a failure
   named a crate and left the search manual.
+- `MegakernelBarrierPlan::from_groups` derives the global barrier count from the
+  groups it is given. The count was open-coded at both construction sites, so a
+  caller that re-grouped waves, such as the frontier memory-budget splitter,
+  could report a barrier count that no longer matched its own groups.
 - Grouped affine INT4 linear now provides a typed batched program builder that
   dequantizes each immutable weight tile once and reuses it across independent
   resident batch rows. Release evidence measures normalized per-inference

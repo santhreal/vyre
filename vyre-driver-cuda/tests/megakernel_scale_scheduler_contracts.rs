@@ -1,9 +1,9 @@
 //! CUDA telemetry to scale-aware megakernel scheduler contracts.
 
-use vyre_driver::megakernel_barrier::MegakernelWaveDependency;
 use vyre_driver::megakernel_execution::{
     MegakernelExecutionTopology, MegakernelGraphShape, MegakernelMemoryBudget,
 };
+use vyre_driver::megakernel_fixtures::DIAMOND_DEPENDENCIES;
 use vyre_driver::megakernel_frontier::MegakernelFrontierWave;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::{
@@ -216,24 +216,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
                 output_bytes: large.readback_bytes / 4,
             },
         ],
-        &[
-            MegakernelWaveDependency {
-                before: 0,
-                after: 1,
-            },
-            MegakernelWaveDependency {
-                before: 0,
-                after: 2,
-            },
-            MegakernelWaveDependency {
-                before: 1,
-                after: 3,
-            },
-            MegakernelWaveDependency {
-                before: 2,
-                after: 3,
-            },
-        ],
+        DIAMOND_DEPENDENCIES,
         large.readback_bytes.saturating_mul(64),
         launch_ns,
         schedule[1],

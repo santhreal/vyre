@@ -442,14 +442,7 @@ fn split_barrier_groups_to_memory_budget(
     for group in barriers.groups {
         split_one_barrier_group_to_memory_budget(group, waves, group_budget_bytes, &mut groups)?;
     }
-    Ok(MegakernelBarrierPlan {
-        global_barriers: if groups.is_empty() {
-            0
-        } else {
-            groups.len() - 1
-        },
-        groups,
-    })
+    Ok(MegakernelBarrierPlan::from_groups(groups))
 }
 
 fn split_one_barrier_group_to_memory_budget(
@@ -550,6 +543,9 @@ mod tests {
         MegakernelFrontierMemoryPlanError, MegakernelFrontierWave,
     };
     use crate::megakernel_barrier::{MegakernelBarrierScratch, MegakernelWaveDependency};
+    use crate::megakernel_fixtures::{
+        DIAMOND_DEPENDENCIES, DIAMOND_WAVES, OUTPUT_HEAVY_WAVES, OVERFLOW_WAVES, THREE_SMALL_WAVES,
+    };
     use crate::megakernel_execution::{
         MegakernelDeviceCapabilities, MegakernelExecutionSample, MegakernelExecutionTopology,
         MegakernelGraphShape, NeutralMegakernelExecutionPlanner,
@@ -559,46 +555,8 @@ mod tests {
     fn frontier_memory_plan_uses_peak_barrier_group_memory() {
         let mut scratch = MegakernelBarrierScratch::default();
         let plan = plan_megakernel_frontier_memory_with_scratch(
-            &[
-                MegakernelFrontierWave {
-                    frontier_bytes: 1_024,
-                    scratch_bytes: 512,
-                    output_bytes: 256,
-                },
-                MegakernelFrontierWave {
-                    frontier_bytes: 2_048,
-                    scratch_bytes: 1_024,
-                    output_bytes: 512,
-                },
-                MegakernelFrontierWave {
-                    frontier_bytes: 4_096,
-                    scratch_bytes: 2_048,
-                    output_bytes: 1_024,
-                },
-                MegakernelFrontierWave {
-                    frontier_bytes: 8_192,
-                    scratch_bytes: 4_096,
-                    output_bytes: 2_048,
-                },
-            ],
-            &[
-                MegakernelWaveDependency {
-                    before: 0,
-                    after: 1,
-                },
-                MegakernelWaveDependency {
-                    before: 0,
-                    after: 2,
-                },
-                MegakernelWaveDependency {
-                    before: 1,
-                    after: 3,
-                },
-                MegakernelWaveDependency {
-                    before: 2,
-                    after: 3,
-                },
-            ],
+            DIAMOND_WAVES,
+            DIAMOND_DEPENDENCIES,
             16_000,
             128 * 1024,
             1 << 20,
@@ -619,18 +577,7 @@ mod tests {
     fn frontier_memory_uses_static_group_output_to_amortize_readback() {
         let mut scratch = MegakernelBarrierScratch::default();
         let plan = plan_megakernel_frontier_memory_with_scratch(
-            &[
-                MegakernelFrontierWave {
-                    frontier_bytes: 1_024,
-                    scratch_bytes: 512,
-                    output_bytes: 3_072,
-                },
-                MegakernelFrontierWave {
-                    frontier_bytes: 1_024,
-                    scratch_bytes: 512,
-                    output_bytes: 3_072,
-                },
-            ],
+            OUTPUT_HEAVY_WAVES,
             &[],
             16_000,
             128 * 1024,
@@ -646,25 +593,9 @@ mod tests {
     #[test]
     fn frontier_memory_splits_independent_layers_to_fit_fused_budget() {
         let mut scratch = MegakernelBarrierScratch::default();
-        let waves = [
-            MegakernelFrontierWave {
-                frontier_bytes: 10,
-                scratch_bytes: 10,
-                output_bytes: 10,
-            },
-            MegakernelFrontierWave {
-                frontier_bytes: 10,
-                scratch_bytes: 10,
-                output_bytes: 10,
-            },
-            MegakernelFrontierWave {
-                frontier_bytes: 10,
-                scratch_bytes: 10,
-                output_bytes: 10,
-            },
-        ];
+        let waves = THREE_SMALL_WAVES;
         let plan =
-            plan_megakernel_frontier_memory_with_scratch(&waves, &[], 0, 100, 4_096, &mut scratch)
+            plan_megakernel_frontier_memory_with_scratch(waves, &[], 0, 100, 4_096, &mut scratch)
                 .expect("Fix: independent frontier waves should split into budget-fit chunks.");
 
         assert_eq!(plan.barriers.groups.len(), 3);
@@ -740,18 +671,7 @@ mod tests {
     fn frontier_memory_fails_loudly_on_wave_byte_overflow() {
         let mut scratch = MegakernelBarrierScratch::default();
         let error = plan_megakernel_frontier_memory_with_scratch(
-            &[
-                MegakernelFrontierWave {
-                    frontier_bytes: u64::MAX,
-                    scratch_bytes: 1,
-                    output_bytes: 1,
-                },
-                MegakernelFrontierWave {
-                    frontier_bytes: 1,
-                    scratch_bytes: 1,
-                    output_bytes: 1,
-                },
-            ],
+            OVERFLOW_WAVES,
             &[],
             2,
             u64::MAX,
@@ -949,18 +869,7 @@ mod tests {
             },
             1,
             1,
-            &[
-                MegakernelFrontierWave {
-                    frontier_bytes: u64::MAX,
-                    scratch_bytes: 1,
-                    output_bytes: 1,
-                },
-                MegakernelFrontierWave {
-                    frontier_bytes: 1,
-                    scratch_bytes: 1,
-                    output_bytes: 1,
-                },
-            ],
+            OVERFLOW_WAVES,
             &[],
             u64::MAX,
             250.0,

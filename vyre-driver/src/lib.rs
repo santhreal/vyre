@@ -189,6 +189,10 @@ pub mod launch_fusion;
 pub mod megakernel_barrier;
 /// Backend-neutral persistent megakernel execution planning.
 pub mod megakernel_execution;
+/// Canonical megakernel wave-policy corpora shared by the neutral planner tests
+/// and the concrete driver crates' parity gates.
+#[cfg(any(test, feature = "test-fixtures"))]
+pub mod megakernel_fixtures;
 /// Backend-neutral megakernel frontier memory planning.
 pub mod megakernel_frontier;
 /// Backend-neutral resident-graph multi-query execution planning.
