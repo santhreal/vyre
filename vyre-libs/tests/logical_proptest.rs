@@ -2,12 +2,11 @@
 
 #![cfg(feature = "logical")]
 #![allow(deprecated)]
+
+mod common;
+use common::u32_bytes as bytes;
 use proptest::prelude::*;
 use vyre_reference::value::Value;
-
-fn bytes(words: &[u32]) -> Vec<u8> {
-    words.iter().flat_map(|word| word.to_le_bytes()).collect()
-}
 
 fn run(program: &vyre::Program, a: &[u32; 4], b: &[u32; 4]) -> [u32; 4] {
     let outputs = vyre_reference::reference_eval(

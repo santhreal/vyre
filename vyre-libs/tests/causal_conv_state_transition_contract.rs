@@ -2,6 +2,9 @@
 
 #![forbid(unsafe_code)]
 
+mod common;
+use common::{f32_bytes, f32_words_of as decode_f32};
+
 use vyre::ir::{
     BufferAccess, DataType, GraphInput, GraphOutput, Program, ProgramGraph, ShapeDim,
     ValueContract, ValueLifetime,
@@ -10,21 +13,6 @@ use vyre_libs::nn::conv::{
     depthwise_causal_conv1d, depthwise_causal_conv1d_update, CausalConvActivation,
 };
 use vyre_reference::value::Value;
-
-fn f32_bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
-
-fn decode_f32(value: &Value) -> Vec<f32> {
-    value
-        .to_bytes()
-        .chunks_exact(4)
-        .map(|word| f32::from_le_bytes(word.try_into().expect("Fix: exact f32 word")))
-        .collect()
-}
 
 fn update(input: &[f32], state: &[f32], weight: &[f32]) -> (Vec<f32>, Vec<f32>) {
     let program = depthwise_causal_conv1d_update(

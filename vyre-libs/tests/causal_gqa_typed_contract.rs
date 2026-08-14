@@ -2,25 +2,15 @@
 
 #![forbid(unsafe_code)]
 
+mod common;
+use common::{bf16_bytes, bf16_word};
+
 use vyre::ir::DataType;
 use vyre_libs::nn::attention::gqa_attention_causal_typed;
 use vyre_reference::value::Value;
 
-fn bf16_word(value: f32) -> u16 {
-    let bits = value.to_bits();
-    let rounding_bias = 0x7fff + ((bits >> 16) & 1);
-    ((bits.wrapping_add(rounding_bias)) >> 16) as u16
-}
-
 fn bf16_value(value: f32) -> f32 {
     f32::from_bits(u32::from(bf16_word(value)) << 16)
-}
-
-fn bf16_bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| bf16_word(*value).to_le_bytes())
-        .collect()
 }
 
 fn decode_words(value: &Value) -> Vec<u16> {

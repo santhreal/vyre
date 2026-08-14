@@ -2,21 +2,12 @@
 
 #![forbid(unsafe_code)]
 
+mod common;
+use common::{u16_bytes as bytes, u16_words_of as words};
+
 use vyre::ir::DataType;
 use vyre_libs::nn::attention::{kv_cache_append_typed, KvCacheAppendError};
 use vyre_reference::value::Value;
-
-fn bytes(words: &[u16]) -> Vec<u8> {
-    words.iter().flat_map(|word| word.to_le_bytes()).collect()
-}
-
-fn words(value: &Value) -> Vec<u16> {
-    value
-        .to_bytes()
-        .chunks_exact(size_of::<u16>())
-        .map(|word| u16::from_le_bytes(word.try_into().expect("Fix: exact 16-bit word")))
-        .collect()
-}
 
 #[allow(clippy::too_many_arguments)]
 fn execute_bf16(

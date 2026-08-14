@@ -2,23 +2,11 @@
 
 #![forbid(unsafe_code)]
 
+mod common;
+use common::{f32_bytes as bytes, f32_words_of as decode};
+
 use vyre_libs::nn::attention::{kv_cache_append, KvCacheAppendError};
 use vyre_reference::value::Value;
-
-fn bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
-
-fn decode(value: &Value) -> Vec<f32> {
-    value
-        .to_bytes()
-        .chunks_exact(4)
-        .map(|word| f32::from_le_bytes(word.try_into().expect("Fix: exact f32 word")))
-        .collect()
-}
 
 #[allow(clippy::too_many_arguments)]
 fn execute(

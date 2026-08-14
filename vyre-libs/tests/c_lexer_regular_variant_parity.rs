@@ -13,6 +13,8 @@
 //! dense base's list (real token bytes, not `!is_empty`). A directive-free source is
 //! used so the `no_directives` variants agree with the full base.
 #![cfg(feature = "c-parser")]
+
+use common::decode_u32_words as decode;
 mod common;
 
 use common::u32_bytes as bytes;
@@ -35,13 +37,6 @@ fn packed_haystack(source: &[u8]) -> Vec<u8> {
     let mut packed = vec![0u8; source.len().max(1).div_ceil(4) * 4];
     packed[..source.len()].copy_from_slice(source);
     packed
-}
-
-fn decode(bytes_out: &[u8]) -> Vec<u32> {
-    bytes_out
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
-        .collect()
 }
 
 /// Run a lexer program and normalize its token columns to a canonical

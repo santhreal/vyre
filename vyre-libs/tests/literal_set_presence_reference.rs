@@ -7,6 +7,9 @@
 //! and no absent pattern set (precision). This is the per-output-mode equivalent
 //! of `bounded_ranges_suffix3_prefilter_reference_eval_matches_cpu_oracle`.
 
+mod common;
+use common::decode_u32_words as decode_u32;
+
 use std::collections::BTreeSet;
 
 use vyre_libs::scan::classic_ac::{
@@ -58,13 +61,6 @@ fn random_haystack(rng: &mut Lcg) -> Vec<u8> {
     let len = rng.below(160); // 0..=159 bytes, includes empty + sub-pattern lengths
     (0..len)
         .map(|_| ALPHABET[rng.below(ALPHABET.len() as u32) as usize])
-        .collect()
-}
-
-fn decode_u32(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
         .collect()
 }
 

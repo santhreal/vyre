@@ -2,28 +2,17 @@
 
 #![forbid(unsafe_code)]
 
+mod common;
+use common::{f32_bytes, f32_words as decode_f32};
+
 use vyre::ir::DataType;
 use vyre_libs::nn::norm::{gated_rms_norm, gated_rms_norm_with_weight_dtype, GatedRmsNormError};
 use vyre_reference::value::Value;
-
-fn f32_bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
 
 fn u16_bytes(values: &[u16]) -> Vec<u8> {
     values
         .iter()
         .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
-
-fn decode_f32(bytes: &[u8]) -> Vec<f32> {
-    bytes
-        .chunks_exact(4)
-        .map(|word| f32::from_le_bytes(word.try_into().expect("Fix: exact f32 word")))
         .collect()
 }
 

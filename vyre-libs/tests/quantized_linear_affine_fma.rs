@@ -2,29 +2,18 @@
 
 #![cfg(feature = "nn-linear-4bit")]
 
+mod common;
+use common::{f32_bytes, f32_words as decode_f32};
+
 use vyre_libs::nn::linear::{linear_4bit_affine_grouped_typed, QuantizedLinear4BitSpec};
 use vyre_reference::value::Value;
 
 const MAX_ABS_DRIFT: f32 = 1.0e-4;
 
-fn f32_bytes(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
-
 fn u32_bytes(values: &[u32]) -> Vec<u8> {
     values
         .iter()
         .flat_map(|value| value.to_le_bytes())
-        .collect()
-}
-
-fn decode_f32(bytes: &[u8]) -> Vec<f32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| f32::from_le_bytes(chunk.try_into().expect("four-byte f32 chunk")))
         .collect()
 }
 
