@@ -42,14 +42,14 @@ full = [
 ]
 bench = []
 cpu-parity = ["vyre-primitives/cpu-parity"]
-hash = []
+hash = ["vyre-primitives/hash"]
 math = ["math-linalg", "math-scan", "math-broadcast", "math-algebra", "math-succinct"]
 nn = ["nn-activation", "nn-linear", "nn-norm", "nn-attention"]
 matching = ["matching-substring", "matching-dfa"]
 crypto = ["crypto-blake3"]
-decode = ["vyre-primitives/cpu-parity"]
+decode = ["vyre-primitives/cpu-parity", "vyre-primitives/decode", "vyre-primitives/matching"]
 text = []
-logical = ["math-broadcast"]
+logical = ["math-broadcast", "vyre-primitives/bitset"]
 rule = ["dep:regex"]
 
 # Compiler self-use composition domains, migrated out of the GPU pass engine
@@ -63,36 +63,41 @@ reasoning = ["analysis", "vyre-primitives/cat", "vyre-primitives/dnnf", "vyre-pr
 analysis = ["device", "telemetry", "vyre-primitives/effects", "vyre-primitives/math", "vyre-primitives/types"]
 scheduling = ["device", "telemetry", "vyre-primitives/math", "vyre-primitives/parsing"]
 
-"math-linalg" = []
-"math-scan" = []
-"math-broadcast" = []
-"math-algebra" = []
-"math-succinct" = []
-"nn-activation" = []
-"nn-linear" = ["math-linalg", "nn-activation"]
+"math-linalg" = ["vyre-primitives/math"]
+"math-scan" = ["vyre-primitives/math"]
+"math-broadcast" = ["vyre-primitives/math"]
+"math-algebra" = ["vyre-primitives/math"]
+"math-succinct" = ["vyre-primitives/math"]
+"nn-activation" = ["vyre-primitives/nn"]
+"nn-linear" = ["math-linalg", "nn-activation", "vyre-primitives/nn"]
 "nn-linear-4bit" = ["nn-linear"]
-"nn-norm" = ["math-broadcast"]
-"nn-attention" = ["nn-norm", "math-linalg"]
+"nn-norm" = ["math-broadcast", "vyre-primitives/nn"]
+"nn-attention" = ["nn-norm", "math-linalg", "vyre-primitives/nn"]
 "nn-moe" = ["nn-attention"]
 "nn-inference" = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-moe"]
-"matching-substring" = ["cpu-parity", "matching-dfa"]
-"matching-dfa" = ["cpu-parity"]
-"matching-nfa" = ["matching-dfa"]
+"matching-substring" = ["cpu-parity", "matching-dfa", "vyre-primitives/matching"]
+"matching-dfa" = ["cpu-parity", "vyre-primitives/matching"]
+"matching-nfa" = ["matching-dfa", "vyre-primitives/nfa"]
 "matching-regex" = ["matching-nfa", "dep:regex-syntax"]
-"intern" = []
+"intern" = ["vyre-primitives/hash"]
 "crypto-blake3" = ["hash"]
-"visual" = []
+"visual" = ["vyre-primitives/visual", "vyre-primitives/math"]
 "parsing" = ["c-parser", "go-parser", "python-parser"]
-"c-parser" = ["matching-substring", "matching-dfa", "matching-nfa"]
+"c-parser" = ["matching-substring", "matching-dfa", "matching-nfa", "vyre-primitives/parsing", "vyre-primitives/predicate"]
 "go-parser" = []
-"python-parser" = []
+"python-parser" = ["vyre-primitives/parsing"]
 "test-fixtures" = ["dep:vyre-reference"]
-security = []
+security = ["vyre-primitives/label", "vyre-primitives/predicate"]
 
 [dependencies]
 vyre-foundation = { workspace = true, features = ["serde"] }
 vyre-spec.workspace = true
-vyre-primitives = { workspace = true, features = ["text", "matching", "decode", "math", "nn", "hash", "parsing", "graph", "bitset", "reduce", "label", "predicate", "fixpoint", "nfa", "inventory-registry", "geom", "opt", "topology", "visual"] }
+# Only the primitive domains the ungated module trees need: `graph` for
+# `src/graph/ast_walk.rs`, `text` for `src/text/char_class.rs`, and
+# `inventory-registry` so primitive op registrations populate the catalog.
+# Every other domain rides the vyre-libs feature that gates its consumer, so a
+# consumer enabling one composition feature does not resolve the whole substrate.
+vyre-primitives = { workspace = true, features = ["graph", "text", "inventory-registry"] }
 smallvec.workspace = true
 inventory.workspace = true
 serde.workspace = true

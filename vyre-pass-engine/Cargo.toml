@@ -41,7 +41,12 @@ cpu-parity = ["all-solvers", "optimizer", "vyre-primitives/cpu-parity"]
 vyre-foundation.workspace = true
 # Host-side dispatch byte marshalling (`vyre_libs::dispatch_buffers`). The
 # target DAG puts the composition library below the pass engine.
-vyre-libs.workspace = true
+# `default-features = false`: the pass engine uses only `dispatch_buffers` and
+# `graph`, both ungated. Taking the default set would resolve the math/nn/matching
+# primitive domains into every optimizer-only consumer. Declared explicitly rather
+# than through `workspace = true`, which silently ignores `default-features = false`
+# unless the workspace entry states a `default-features` value of its own.
+vyre-libs = { version = "0.7.2", path = "../vyre-libs", default-features = false }
 vyre-primitives = { workspace = true }
 tracing.workspace = true
 rustc-hash.workspace = true
