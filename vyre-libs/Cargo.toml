@@ -577,3 +577,11 @@ required-features = ["matching-regex"]
 name = "parsing_walker_clone_family"
 path = "tests/parsing_walker_clone_family.rs"
 required-features = ["parsing"]
+
+# C-frontend CPU contract families migrated out of the backend driver crate.
+# The driver keeps only the GPU-parity arm of each family; the CPU arm builds
+# the same fixtures from `tests/support/c_frontend` and needs `c-parser`.
+[[test]]
+name = "c_parser_hostile_malformed_stream_contracts"
+path = "tests/c_parser_hostile_malformed_stream_contracts.rs"
+required-features = ["c-parser"]
