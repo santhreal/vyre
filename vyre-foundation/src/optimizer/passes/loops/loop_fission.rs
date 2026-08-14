@@ -43,8 +43,8 @@
 
 use super::{collect_touched_buffers, legality};
 use crate::ir::{Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 use rustc_hash::FxHashSet;
 
 /// Fission a `Node::Loop` with a buffer-disjoint partitionable body
@@ -62,87 +62,68 @@ impl LoopFission {
     /// Skip programs without a fissionable Loop.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        if !program.stats().has_node_loop() {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut is_fissionable_loop))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_LOOP],
+            &mut is_fissionable_loop,
+        )
     }
 
     /// Walk the entry tree and split fissionable Loops.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| fission_in_body(entry, &mut changed));
-        PassResult { program, changed }
+        driver::rewrite_entry_bodies(program, &mut fission_in_body)
     }
 }
 
-fn fission_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
-    let body: Vec<Node> = body.into_iter().map(|n| recurse(n, changed)).collect();
+/// Split every fissionable `Loop` in `body` into a prefix and a suffix loop.
+///
+/// This is a body rule rather than a node rule because the two loops replace
+/// one node as siblings, and a `Block` around them would be new IR that no
+/// later pass removes.
+fn fission_in_body(body: &[Node]) -> Option<Vec<Node>> {
     let mut out: Vec<Node> = Vec::with_capacity(body.len());
+    let mut split_any = false;
     for node in body {
-        match node {
-            Node::Loop {
-                var,
-                from,
-                to,
-                body: loop_body,
-            } => {
-                let bounds_ok = matches!(from, Expr::LitU32(_)) && matches!(to, Expr::LitU32(_));
-                if !bounds_ok {
-                    out.push(Node::Loop {
-                        var,
-                        from,
-                        to,
-                        body: loop_body,
-                    });
-                    continue;
-                }
-                if let Some((prefix, suffix)) = try_partition(&loop_body, &var) {
-                    *changed = true;
-                    let fresh_var = freshen(&var, &loop_body);
-                    let renamed_suffix: Vec<Node> = suffix
-                        .into_iter()
-                        .map(|n| legality::rename_var_in_node(n, &var, &fresh_var))
-                        .collect();
-                    out.push(Node::Loop {
-                        var: var.clone(),
-                        from: from.clone(),
-                        to: to.clone(),
-                        body: prefix,
-                    });
-                    out.push(Node::Loop {
-                        var: fresh_var,
-                        from,
-                        to,
-                        body: renamed_suffix,
-                    });
-                } else {
-                    out.push(Node::Loop {
-                        var,
-                        from,
-                        to,
-                        body: loop_body,
-                    });
-                }
-            }
-            other => out.push(other),
+        let Node::Loop {
+            var,
+            from,
+            to,
+            body: loop_body,
+        } = node
+        else {
+            out.push(node.clone());
+            continue;
+        };
+        let bounds_ok = matches!(from, Expr::LitU32(_)) && matches!(to, Expr::LitU32(_));
+        if !bounds_ok {
+            out.push(node.clone());
+            continue;
         }
+        let Some((prefix, suffix)) = try_partition(loop_body, var) else {
+            out.push(node.clone());
+            continue;
+        };
+        split_any = true;
+        let fresh_var = freshen(var, loop_body);
+        let renamed_suffix: Vec<Node> = suffix
+            .into_iter()
+            .map(|n| legality::rename_var_in_node(n, var, &fresh_var))
+            .collect();
+        out.push(Node::Loop {
+            var: var.clone(),
+            from: from.clone(),
+            to: to.clone(),
+            body: prefix,
+        });
+        out.push(Node::Loop {
+            var: fresh_var,
+            from: from.clone(),
+            to: to.clone(),
+            body: renamed_suffix,
+        });
     }
-    out
-}
-
-fn recurse(node: Node, changed: &mut bool) -> Node {
-    let recursed = node_map::map_children(node, &mut |child| recurse(child, changed));
-    node_map::map_body(recursed, &mut |body| fission_in_body(body, changed))
+    split_any.then_some(out)
 }
 
 /// True iff `nodes` contains an op whose ordering or cross-thread

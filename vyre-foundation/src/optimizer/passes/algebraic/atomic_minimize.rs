@@ -4,10 +4,11 @@
 //!
 //! Op id: `vyre-foundation::optimizer::passes::atomic_minimize`.
 
-use crate::ir::{AtomicOp, Expr, Node, Program, SubgroupReduceOp};
+use crate::ir::{AtomicOp, Expr, Program};
 use crate::memory_model::MemoryOrdering;
+use crate::optimizer::rewrite::rewrite_program;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use smallvec::SmallVec;
+use crate::transform::visit::any_expr_in;
 
 /// Replace identity-op Relaxed atomics with plain loads.
 #[derive(Debug, Default)]
@@ -28,9 +29,12 @@ impl AtomicMinimizePass {
         if program.stats().atomic_op_count == 0 {
             return PassAnalysis::SKIP;
         }
-        let mut found = false;
-        scan_for_identity_candidate(program.entry(), &mut found);
-        if found {
+        // The scan enumerates node nesting, node operands, and expression
+        // operands through the three owners in `transform::visit`. The
+        // hand-written scan this replaces ended in a catch-all node arm, so an
+        // identity atomic reachable only through `Trap::address` or an async
+        // copy offset made this report SKIP and the pass never ran.
+        if any_expr_in(program.entry(), &mut is_identity_relaxed_atomic) {
             PassAnalysis::RUN
         } else {
             PassAnalysis::SKIP
@@ -40,374 +44,43 @@ impl AtomicMinimizePass {
     /// Walk the program and collapse identity atomics.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            entry
-                .into_iter()
-                .flat_map(|node| rewrite_node_multi(node, &mut changed))
-                .collect()
+        // `rewrite_program` owns the borrow-preserving structural walk: an
+        // entry with no candidate comes back as the same allocation, which the
+        // owned rebuild this replaces could not do. Its descent is exhaustive,
+        // where the owned rewriter passed an unrecognised operand-carrying
+        // variant through untouched.
+        let (program, changed) = rewrite_program(program, |expr| match expr {
+            Expr::Atomic { buffer, index, .. } if is_identity_relaxed_atomic(expr) => {
+                Some(Expr::Load {
+                    buffer: buffer.clone(),
+                    index: index.clone(),
+                })
+            }
+            _ => None,
         });
         PassResult { program, changed }
     }
 }
 
-#[expect(
-    clippy::too_many_lines,
-    reason = "atomic minimization keeps hoisting/rewrite cases colocated with Node reconstruction"
-)]
-fn rewrite_node_multi(node: Node, changed: &mut bool) -> Vec<Node> {
-    match node {
-        Node::Let { name, value } => vec![Node::Let {
-            name,
-            value: rewrite_expr(value, changed),
-        }],
-        Node::Assign { name, value } => vec![Node::Assign {
-            name,
-            value: rewrite_expr(value, changed),
-        }],
-        Node::Store {
-            buffer,
-            index,
+/// True when `expr` is an atomic whose read-modify-write leaves memory as it
+/// found it, so the atomic carries no more meaning than a plain load.
+///
+/// Both side conditions are load-bearing. `Relaxed` is the only ordering that
+/// carries no fence, so collapsing any other ordering would drop the
+/// synchronization the program asked for. An `expected` operand makes the
+/// expression a compare-exchange, whose result reports whether the comparison
+/// succeeded rather than the value that was read.
+fn is_identity_relaxed_atomic(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::Atomic {
+            op,
             value,
-        } => vec![Node::Store {
-            buffer,
-            index: rewrite_expr(index, changed),
-            value: rewrite_expr(value, changed),
-        }],
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => vec![Node::If {
-            cond: rewrite_expr(cond, changed),
-            then: then
-                .into_iter()
-                .flat_map(|node| rewrite_node_multi(node, changed))
-                .collect(),
-            otherwise: otherwise
-                .into_iter()
-                .flat_map(|node| rewrite_node_multi(node, changed))
-                .collect(),
-        }],
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => vec![Node::Loop {
-            var,
-            from: rewrite_expr(from, changed),
-            to: rewrite_expr(to, changed),
-            body: body
-                .into_iter()
-                .flat_map(|node| rewrite_node_multi(node, changed))
-                .collect(),
-        }],
-        Node::Block(body) => vec![Node::Block(
-            body.into_iter()
-                .flat_map(|node| rewrite_node_multi(node, changed))
-                .collect(),
-        )],
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let body_vec: Vec<Node> = match std::sync::Arc::try_unwrap(body) {
-                Ok(v) => v,
-                Err(arc) => (*arc).clone(),
-            };
-            vec![Node::Region {
-                generator,
-                source_region,
-                body: std::sync::Arc::new(
-                    body_vec
-                        .into_iter()
-                        .flat_map(|node| rewrite_node_multi(node, changed))
-                        .collect(),
-                ),
-            }]
-        }
-        Node::AsyncLoad {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } => vec![Node::AsyncLoad {
-            source,
-            destination,
-            tag,
-            offset: Box::new(rewrite_expr(*offset, changed)),
-            size: Box::new(rewrite_expr(*size, changed)),
-        }],
-        Node::AsyncStore {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } => vec![Node::AsyncStore {
-            source,
-            destination,
-            tag,
-            offset: Box::new(rewrite_expr(*offset, changed)),
-            size: Box::new(rewrite_expr(*size, changed)),
-        }],
-        Node::Trap { address, tag } => vec![Node::Trap {
-            address: Box::new(rewrite_expr(*address, changed)),
-            tag,
-        }],
-        other => vec![other],
-    }
-}
-
-#[expect(
-    clippy::too_many_lines,
-    reason = "owned expression rewriter avoids recursive drop/clone on deep generated atomic expressions"
-)]
-fn rewrite_expr(expr: Expr, changed: &mut bool) -> Expr {
-    enum Frame {
-        Expr(Expr),
-        Load {
-            buffer: crate::ir::Ident,
-        },
-        BinOp {
-            op: crate::ir::BinOp,
-        },
-        UnOp {
-            op: crate::ir::UnOp,
-        },
-        Call {
-            op_id: crate::ir::Ident,
-            argc: usize,
-        },
-        Select,
-        Cast {
-            target: crate::ir::DataType,
-        },
-        Fma,
-        Atomic {
-            op: AtomicOp,
-            buffer: crate::ir::Ident,
-            ordering: MemoryOrdering,
-            has_expected: bool,
-        },
-        SubgroupBallot,
-        SubgroupShuffle,
-        SubgroupReduce(SubgroupReduceOp),
-    }
-
-    let mut stack = vec![Frame::Expr(expr)];
-    let mut results = Vec::new();
-
-    while let Some(frame) = stack.pop() {
-        match frame {
-            Frame::Expr(expr) => match expr {
-                Expr::Load { buffer, index } => {
-                    stack.push(Frame::Load { buffer });
-                    stack.push(Frame::Expr(*index));
-                }
-                Expr::BinOp { op, left, right } => {
-                    stack.push(Frame::BinOp { op });
-                    stack.push(Frame::Expr(*right));
-                    stack.push(Frame::Expr(*left));
-                }
-                Expr::UnOp { op, operand } => {
-                    stack.push(Frame::UnOp { op });
-                    stack.push(Frame::Expr(*operand));
-                }
-                Expr::Call { op_id, args } => {
-                    let argc = args.len();
-                    stack.push(Frame::Call { op_id, argc });
-                    stack.extend(args.into_iter().rev().map(Frame::Expr));
-                }
-                Expr::Select {
-                    cond,
-                    true_val,
-                    false_val,
-                } => {
-                    stack.push(Frame::Select);
-                    stack.push(Frame::Expr(*false_val));
-                    stack.push(Frame::Expr(*true_val));
-                    stack.push(Frame::Expr(*cond));
-                }
-                Expr::Cast { target, value } => {
-                    stack.push(Frame::Cast { target });
-                    stack.push(Frame::Expr(*value));
-                }
-                Expr::Fma { a, b, c } => {
-                    stack.push(Frame::Fma);
-                    stack.push(Frame::Expr(*c));
-                    stack.push(Frame::Expr(*b));
-                    stack.push(Frame::Expr(*a));
-                }
-                Expr::Atomic {
-                    op,
-                    buffer,
-                    index,
-                    expected,
-                    value,
-                    ordering,
-                } => {
-                    let has_expected = expected.is_some();
-                    stack.push(Frame::Atomic {
-                        op,
-                        buffer,
-                        ordering,
-                        has_expected,
-                    });
-                    stack.push(Frame::Expr(*value));
-                    if let Some(expected) = expected {
-                        stack.push(Frame::Expr(*expected));
-                    }
-                    stack.push(Frame::Expr(*index));
-                }
-                Expr::SubgroupBallot { cond } => {
-                    stack.push(Frame::SubgroupBallot);
-                    stack.push(Frame::Expr(*cond));
-                }
-                Expr::SubgroupShuffle { value, lane } => {
-                    stack.push(Frame::SubgroupShuffle);
-                    stack.push(Frame::Expr(*lane));
-                    stack.push(Frame::Expr(*value));
-                }
-                Expr::SubgroupReduce { op, value } => {
-                    stack.push(Frame::SubgroupReduce(op));
-                    stack.push(Frame::Expr(*value));
-                }
-                terminal => results.push(terminal),
-            },
-            Frame::Load { buffer } => {
-                let index = pop_owned_expr_result(&mut results, "load index");
-                results.push(Expr::Load {
-                    buffer,
-                    index: Box::new(index),
-                });
-            }
-            Frame::BinOp { op } => {
-                let right = pop_owned_expr_result(&mut results, "binary rhs");
-                let left = pop_owned_expr_result(&mut results, "binary lhs");
-                results.push(Expr::BinOp {
-                    op,
-                    left: Box::new(left),
-                    right: Box::new(right),
-                });
-            }
-            Frame::UnOp { op } => {
-                let operand = pop_owned_expr_result(&mut results, "unary operand");
-                results.push(Expr::UnOp {
-                    op,
-                    operand: Box::new(operand),
-                });
-            }
-            Frame::Call { op_id, argc } => {
-                let start = results.len().checked_sub(argc).unwrap_or_else(|| {
-                    unreachable!(
-                        "Fix: atomic_minimize owned rewriter lost call args; stack state is inconsistent."
-                    )
-                });
-                let args = results.drain(start..).collect();
-                results.push(Expr::Call { op_id, args });
-            }
-            Frame::Select => {
-                let false_val = pop_owned_expr_result(&mut results, "select false value");
-                let true_val = pop_owned_expr_result(&mut results, "select true value");
-                let cond = pop_owned_expr_result(&mut results, "select condition");
-                results.push(Expr::Select {
-                    cond: Box::new(cond),
-                    true_val: Box::new(true_val),
-                    false_val: Box::new(false_val),
-                });
-            }
-            Frame::Cast { target } => {
-                let value = pop_owned_expr_result(&mut results, "cast value");
-                results.push(Expr::Cast {
-                    target,
-                    value: Box::new(value),
-                });
-            }
-            Frame::Fma => {
-                let c = pop_owned_expr_result(&mut results, "fma c");
-                let b = pop_owned_expr_result(&mut results, "fma b");
-                let a = pop_owned_expr_result(&mut results, "fma a");
-                results.push(Expr::Fma {
-                    a: Box::new(a),
-                    b: Box::new(b),
-                    c: Box::new(c),
-                });
-            }
-            Frame::Atomic {
-                op,
-                buffer,
-                ordering,
-                has_expected,
-            } => {
-                let value = pop_owned_expr_result(&mut results, "atomic value");
-                let expected = if has_expected {
-                    Some(pop_owned_expr_result(&mut results, "atomic expected"))
-                } else {
-                    None
-                };
-                let index = pop_owned_expr_result(&mut results, "atomic index");
-                if expected.is_none()
-                    && ordering == MemoryOrdering::Relaxed
-                    && is_identity_atomic(op, &value)
-                {
-                    *changed = true;
-                    results.push(Expr::Load {
-                        buffer,
-                        index: Box::new(index),
-                    });
-                } else {
-                    results.push(Expr::Atomic {
-                        op,
-                        buffer,
-                        index: Box::new(index),
-                        expected: expected.map(Box::new),
-                        value: Box::new(value),
-                        ordering,
-                    });
-                }
-            }
-            Frame::SubgroupBallot => {
-                let cond = pop_owned_expr_result(&mut results, "subgroup ballot condition");
-                results.push(Expr::SubgroupBallot {
-                    cond: Box::new(cond),
-                });
-            }
-            Frame::SubgroupShuffle => {
-                let lane = pop_owned_expr_result(&mut results, "subgroup shuffle lane");
-                let value = pop_owned_expr_result(&mut results, "subgroup shuffle value");
-                results.push(Expr::SubgroupShuffle {
-                    value: Box::new(value),
-                    lane: Box::new(lane),
-                });
-            }
-            Frame::SubgroupReduce(op) => {
-                let value = pop_owned_expr_result(&mut results, "subgroup reduce value");
-                results.push(Expr::SubgroupReduce {
-                    op,
-                    value: Box::new(value),
-                });
-            }
-        }
-    }
-
-    match results.pop() {
-        Some(result) => result,
-        None => unreachable!(
-            "Fix: atomic_minimize owned rewriter produced no expression result; stack state is inconsistent."
-        ),
-    }
-}
-
-fn pop_owned_expr_result(results: &mut Vec<Expr>, context: &'static str) -> Expr {
-    results.pop().unwrap_or_else(|| {
-        unreachable!(
-            "Fix: atomic_minimize owned rewriter lost {context}; stack state is inconsistent."
-        )
-    })
+            expected: None,
+            ordering: MemoryOrdering::Relaxed,
+            ..
+        } if is_identity_atomic(*op, value)
+    )
 }
 
 fn is_identity_atomic(op: AtomicOp, value: &Expr) -> bool {
@@ -420,150 +93,10 @@ fn is_identity_atomic(op: AtomicOp, value: &Expr) -> bool {
     )
 }
 
-fn scan_for_identity_candidate(nodes: &[Node], found: &mut bool) {
-    for node in nodes {
-        if *found {
-            return;
-        }
-        scan_node_for_identity(node, found);
-    }
-}
-
-fn scan_node_for_identity(node: &Node, found: &mut bool) {
-    match node {
-        Node::Let { value, .. } | Node::Assign { value, .. } => {
-            scan_expr_for_identity(value, found);
-        }
-        Node::Store { index, value, .. } => {
-            scan_expr_for_identity(index, found);
-            scan_expr_for_identity(value, found);
-        }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            scan_expr_for_identity(cond, found);
-            scan_for_identity_candidate(then, found);
-            scan_for_identity_candidate(otherwise, found);
-        }
-        Node::Loop { from, to, body, .. } => {
-            scan_expr_for_identity(from, found);
-            scan_expr_for_identity(to, found);
-            scan_for_identity_candidate(body, found);
-        }
-        Node::Block(body) => scan_for_identity_candidate(body, found),
-        Node::Region { body, .. } => scan_for_identity_candidate(body, found),
-        _ => {}
-    }
-}
-
-fn scan_expr_for_identity(expr: &Expr, found: &mut bool) {
-    if *found {
-        return;
-    }
-    let mut stack: SmallVec<[&Expr; 32]> = SmallVec::new();
-    stack.push(expr);
-    while let Some(expr) = stack.pop() {
-        if *found {
-            return;
-        }
-        match expr {
-            Expr::Atomic {
-                op,
-                value,
-                expected,
-                ordering,
-                index,
-                ..
-            } => {
-                if expected.is_none()
-                    && *ordering == MemoryOrdering::Relaxed
-                    && is_identity_atomic(*op, value)
-                {
-                    *found = true;
-                    return;
-                }
-                push_expr_child(&mut stack, value);
-                if let Some(expected) = expected.as_deref() {
-                    push_expr_child(&mut stack, expected);
-                }
-                push_expr_child(&mut stack, index);
-            }
-            _ => push_expr_children(&mut stack, expr),
-        }
-    }
-}
-
-fn push_expr_child<'a>(stack: &mut SmallVec<[&'a Expr; 32]>, child: &'a Expr) {
-    stack.push(child);
-}
-
-fn push_expr_children<'a>(stack: &mut SmallVec<[&'a Expr; 32]>, expr: &'a Expr) {
-    match expr {
-        Expr::BinOp { left, right, .. } => {
-            push_expr_child(stack, right);
-            push_expr_child(stack, left);
-        }
-        Expr::UnOp { operand, .. } => push_expr_child(stack, operand),
-        Expr::Call { args, .. } => {
-            stack.extend(args.iter().rev());
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            push_expr_child(stack, false_val);
-            push_expr_child(stack, true_val);
-            push_expr_child(stack, cond);
-        }
-        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
-            push_expr_child(stack, value);
-        }
-        Expr::Fma { a, b, c } => {
-            push_expr_child(stack, c);
-            push_expr_child(stack, b);
-            push_expr_child(stack, a);
-        }
-        Expr::SubgroupBallot { cond } => push_expr_child(stack, cond),
-        Expr::SubgroupShuffle { value, lane } => {
-            push_expr_child(stack, lane);
-            push_expr_child(stack, value);
-        }
-        Expr::Load { index, .. } => push_expr_child(stack, index),
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            push_expr_child(stack, value);
-            if let Some(expected) = expected.as_deref() {
-                push_expr_child(stack, expected);
-            }
-            push_expr_child(stack, index);
-        }
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => {}
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident};
+    use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node};
 
     fn buf() -> BufferDecl {
         BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)
@@ -584,44 +117,18 @@ mod tests {
         }
     }
 
+    /// Node nesting comes from the `child_bodies` owner behind `walk_nodes`,
+    /// so a `Let` in a body shape this helper never named is still found.
     fn extract_let_value(p: &Program, name: &str) -> Expr {
-        fn walk<'a>(nodes: &'a [Node], target: &str) -> Option<&'a Expr> {
-            for n in nodes {
-                match n {
-                    Node::Let { name, value } if name.as_str() == target => return Some(value),
-                    Node::Block(body) => {
-                        if let Some(found) = walk(body, target) {
-                            return Some(found);
-                        }
-                    }
-                    Node::Region { body, .. } => {
-                        if let Some(found) = walk(body.as_ref(), target) {
-                            return Some(found);
-                        }
-                    }
-                    Node::If {
-                        then, otherwise, ..
-                    } => {
-                        if let Some(found) = walk(then, target) {
-                            return Some(found);
-                        }
-                        if let Some(found) = walk(otherwise, target) {
-                            return Some(found);
-                        }
-                    }
-                    Node::Loop { body, .. } => {
-                        if let Some(found) = walk(body, target) {
-                            return Some(found);
-                        }
-                    }
-                    _ => {}
+        let mut found = None;
+        crate::transform::visit::walk_nodes(p, |node| {
+            if let Node::Let { name: bound, value } = node {
+                if bound.as_str() == name {
+                    found = Some(value.clone());
                 }
             }
-            None
-        }
-        walk(p.entry(), name)
-            .cloned()
-            .unwrap_or_else(|| panic!("expected Let `{name}` in entry tree"))
+        });
+        found.unwrap_or_else(|| panic!("expected Let `{name}` in entry tree"))
     }
 
     #[test]
@@ -878,14 +385,6 @@ mod tests {
     }
 
     fn expr_contains(expr: &Expr, mut predicate: impl FnMut(&Expr) -> bool) -> bool {
-        let mut stack: SmallVec<[&Expr; 32]> = SmallVec::new();
-        stack.push(expr);
-        while let Some(expr) = stack.pop() {
-            if predicate(expr) {
-                return true;
-            }
-            push_expr_children(&mut stack, expr);
-        }
-        false
+        crate::transform::visit::any_subexpr(expr, &mut predicate)
     }
 }

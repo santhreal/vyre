@@ -1,6 +1,9 @@
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::rewrite::push_expr_children;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::visit::{
+    expr_buffer_ref, for_each_descendant, node_buffer_refs, node_operands, ExprBufferRef,
+};
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
 use std::sync::Arc;
@@ -621,10 +624,13 @@ fn try_fuse_regions(r1: &Node, r2: &Node, buffers: &[crate::ir::BufferDecl]) -> 
         },
     ) = (r1, r2)
     {
-        let writes1 = collect_buffer_writes(b1);
-        let reads2 = collect_buffer_reads(b2);
-        let writes2 = collect_buffer_writes(b2);
-        let reads1 = collect_buffer_reads(b1);
+        let side1 = buffer_sets(b1);
+        let side2 = buffer_sets(b2);
+        // An opaque payload can name any buffer, so neither the sharing test nor
+        // the size estimate below is answerable for it.
+        if !side1.complete || !side2.complete {
+            return None;
+        }
 
         let mut shared = false;
         let mut dim1 = 1u32;
@@ -633,15 +639,15 @@ fn try_fuse_regions(r1: &Node, r2: &Node, buffers: &[crate::ir::BufferDecl]) -> 
         for buf in buffers {
             let rank = if buf.count() > 0 { buf.count() } else { 1 };
             let buf_ident = Ident::from(buf.name());
-            if writes1.contains(&buf_ident) {
+            if side1.writes.contains(&buf_ident) {
                 dim1 = dim1.saturating_mul(rank);
-                if reads2.contains(&buf_ident) {
+                if side2.reads.contains(&buf_ident) {
                     shared = true;
                 }
             }
-            if writes2.contains(&buf_ident) {
+            if side2.writes.contains(&buf_ident) {
                 dim2 = dim2.saturating_mul(rank);
-                if reads1.contains(&buf_ident) {
+                if side1.reads.contains(&buf_ident) {
                     shared = true;
                 }
             }
@@ -665,83 +671,62 @@ fn try_fuse_regions(r1: &Node, r2: &Node, buffers: &[crate::ir::BufferDecl]) -> 
     None
 }
 
-pub(super) fn collect_buffer_writes(nodes: &[Node]) -> FxHashSet<Ident> {
-    let mut writes = FxHashSet::default();
-    for node in nodes {
-        let _ = crate::visit::node_map::any_descendant(node, &mut |n| {
-            match n {
-                Node::Store { buffer, .. } => {
-                    writes.insert(buffer.clone());
-                }
-                Node::AsyncLoad { destination, .. } | Node::AsyncStore { destination, .. } => {
-                    writes.insert(destination.clone());
-                }
-                _ => {}
-            }
-            false
-        });
-    }
-    writes
+/// Every buffer a node sequence reads and every buffer it writes.
+#[derive(Debug, Default)]
+pub(super) struct BufferSets {
+    /// Buffers read, by name or through an operand expression.
+    pub reads: FxHashSet<Ident>,
+    /// Buffers written, by name or through an atomic operand.
+    pub writes: FxHashSet<Ident>,
+    /// False when an opaque node or expression under the sequence can name a
+    /// buffer core cannot see, which makes both sets a LOWER BOUND.
+    pub complete: bool,
 }
 
-pub(super) fn collect_buffer_reads(nodes: &[Node]) -> FxHashSet<Ident> {
-    let mut reads = FxHashSet::default();
+/// The buffers `nodes` reads and writes, collected in one walk.
+///
+/// Two walks used to answer this, one per direction, and each restated the
+/// per-variant list of buffer positions and ended it in `_ => {}`. Both
+/// therefore reported that the four collective variants touch nothing and that
+/// an atomic only reads. The positions are now
+/// [`node_buffer_refs`](crate::transform::visit::node_buffer_refs) and
+/// [`expr_buffer_ref`](crate::transform::visit::expr_buffer_ref)'s decision, so
+/// a new variant is a compile error in one place rather than a silently empty
+/// dependency set.
+pub(super) fn buffer_sets(nodes: &[Node]) -> BufferSets {
+    let mut sets = BufferSets {
+        complete: true,
+        ..BufferSets::default()
+    };
     for node in nodes {
-        let _ = crate::visit::node_map::any_descendant(node, &mut |n| {
-            match n {
-                Node::Let { value, .. } | Node::Assign { value, .. } => {
-                    collect_expr_buffer_reads(value, &mut reads);
-                }
-                Node::Store { index, value, .. } => {
-                    collect_expr_buffer_reads(index, &mut reads);
-                    collect_expr_buffer_reads(value, &mut reads);
-                }
-                Node::AsyncLoad {
-                    source,
-                    offset,
-                    size,
-                    ..
-                }
-                | Node::AsyncStore {
-                    source,
-                    offset,
-                    size,
-                    ..
-                } => {
-                    reads.insert(source.clone());
-                    collect_expr_buffer_reads(offset, &mut reads);
-                    collect_expr_buffer_reads(size, &mut reads);
-                }
-                Node::IndirectDispatch { count_buffer, .. } => {
-                    reads.insert(count_buffer.clone());
-                }
-                Node::Trap { address, .. } => {
-                    collect_expr_buffer_reads(address, &mut reads);
-                }
-                Node::If { cond, .. } => {
-                    collect_expr_buffer_reads(cond, &mut reads);
-                }
-                Node::Loop { from, to, .. } => {
-                    collect_expr_buffer_reads(from, &mut reads);
-                    collect_expr_buffer_reads(to, &mut reads);
-                }
-                _ => {}
+        for_each_descendant(node, &mut |current| {
+            let refs = node_buffer_refs(current);
+            sets.reads.extend(refs.reads.into_iter().flatten().cloned());
+            sets.writes
+                .extend(refs.writes.into_iter().flatten().cloned());
+            sets.complete &= refs.complete;
+            for operand in node_operands(current).into_iter().flatten() {
+                collect_expr_buffer_refs(operand, &mut sets);
             }
-            false
         });
     }
-    reads
+    sets
 }
 
-fn collect_expr_buffer_reads(expr: &Expr, reads: &mut FxHashSet<Ident>) {
+fn collect_expr_buffer_refs(expr: &Expr, sets: &mut BufferSets) {
     let mut stack: SmallVec<[&Expr; 16]> = SmallVec::new();
     stack.push(expr);
     while let Some(expr) = stack.pop() {
-        match expr {
-            Expr::Load { buffer, .. } | Expr::BufLen { buffer } | Expr::Atomic { buffer, .. } => {
-                reads.insert(buffer.clone());
+        match expr_buffer_ref(expr) {
+            ExprBufferRef::None => {}
+            ExprBufferRef::Read(buffer) => {
+                sets.reads.insert(buffer.clone());
             }
-            _ => {}
+            ExprBufferRef::ReadWrite(buffer) => {
+                sets.reads.insert(buffer.clone());
+                sets.writes.insert(buffer.clone());
+            }
+            ExprBufferRef::Unknown => sets.complete = false,
         }
         push_expr_children(expr, &mut stack);
     }

@@ -47,9 +47,9 @@
 //!     impure constructs.
 
 use crate::ir::{Expr, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::passes::expr_is_observably_free_with;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 
 /// Drop the inner `Node::If` and merge its condition into the outer's
 /// via logical AND.
@@ -69,125 +69,64 @@ impl BranchCoalesce {
     /// pair matching the rule.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        // Coalescing rewrites require an If; absent any If the
-        // recursive walk would find nothing to coalesce.
-        if !program
-            .stats()
-            .has_any_node_kind(crate::ir::stats::NODE_KIND_IF)
-        {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut is_coalesceable_if))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_IF],
+            &mut is_coalesceable_if,
+        )
     }
 
     /// Walk the program; replace every coalesceable nested If with a
     /// single If carrying the conjoined predicate.
+    ///
+    /// The driver rewrites children first, so a deeply-nested
+    /// `If(c1) { If(c2) { If(c3) { .. } } }` chain coalesces bottom-up in one
+    /// run.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            entry
-                .into_iter()
-                .map(|n| rewrite_node(n, &mut changed))
-                .collect()
-        });
-        PassResult { program, changed }
+        driver::rewrite_entry_nodes(program, &mut coalesce_if)
     }
 }
 
-/// Recurse into `node`'s descendants, then attempt to coalesce at
-/// `node` itself. Children are rewritten first so deeply-nested
-/// `If(c1) { If(c2) { If(c3) { ... } } }` chains coalesce bottom-up
-/// in a single pass.
-fn rewrite_node(node: Node, changed: &mut bool) -> Node {
-    let recursed = node_map::map_children(node, &mut |child| rewrite_node(child, changed));
-    let recursed = node_map::map_body(recursed, &mut |body| {
-        body.into_iter().map(|n| rewrite_node(n, changed)).collect()
-    });
-    coalesce_if(recursed, changed)
-}
-
-/// Apply the coalesce rule to `node` if it matches; otherwise return
-/// it unchanged.
-fn coalesce_if(node: Node, changed: &mut bool) -> Node {
+/// The coalesced form of `node`, or `None` when the rule does not apply.
+///
+/// Legality is [`is_coalesceable_if`]'s decision, not restated here. The two
+/// used to be written out separately, once as the analysis matcher and once as
+/// a ladder of guards inside the rewriter that reconstructed the node it had
+/// just taken apart at every non-matching step, so the pass could be scheduled
+/// on a program its rewriter then declined.
+fn coalesce_if(node: &Node) -> Option<Vec<Node>> {
+    if !is_coalesceable_if(node) {
+        return None;
+    }
     let Node::If {
         cond: outer_cond,
         then,
         otherwise,
     } = node
     else {
-        return node_unchanged_helper(node);
+        return None;
     };
-    if !otherwise.is_empty() || then.len() != 1 {
-        return Node::If {
-            cond: outer_cond,
-            then,
-            otherwise,
-        };
-    }
-    let mut then_iter = then.into_iter();
-    let inner = then_iter
-        .next()
-        .unwrap_or_else(|| unreachable!("then.len() == 1 by guard above"));
-    let Node::If {
+    let Some(Node::If {
         cond: inner_cond,
         then: inner_then,
-        otherwise: inner_otherwise,
-    } = inner
+        ..
+    }) = then.first()
     else {
-        return Node::If {
-            cond: outer_cond,
-            then: vec![inner],
-            otherwise,
-        };
+        return None;
     };
-    if !inner_otherwise.is_empty() {
-        return Node::If {
-            cond: outer_cond,
-            then: vec![Node::If {
-                cond: inner_cond,
-                then: inner_then,
-                otherwise: inner_otherwise,
-            }],
-            otherwise,
-        };
-    }
-    if !expr_is_observably_free_with(&outer_cond, true, true)
-        || !expr_is_observably_free_with(&inner_cond, true, true)
-    {
-        return Node::If {
-            cond: outer_cond,
-            then: vec![Node::If {
-                cond: inner_cond,
-                then: inner_then,
-                otherwise: inner_otherwise,
-            }],
-            otherwise,
-        };
-    }
-    *changed = true;
-    Node::If {
-        cond: Expr::and(outer_cond, inner_cond),
-        then: inner_then,
-        otherwise,
-    }
+    Some(vec![Node::If {
+        cond: Expr::and(outer_cond.clone(), inner_cond.clone()),
+        then: inner_then.clone(),
+        otherwise: otherwise.clone(),
+    }])
 }
 
-fn node_unchanged_helper(node: Node) -> Node {
-    node
-}
-
-/// Cheap matcher used by `analyze`: true iff `node` is an outer-If
-/// whose body is a single inner-If with empty otherwise. Keeps the
-/// scheduler from running `transform` on programs that have no work.
+/// True iff `node` is an outer-If whose body is a single inner-If with an empty
+/// otherwise and both predicates observably free.
+///
+/// The one owner of the rule's legality: the analysis asks it whether the pass
+/// has work, and the rewrite asks it whether to fire.
 fn is_coalesceable_if(node: &Node) -> bool {
     let Node::If {
         cond: outer_cond,

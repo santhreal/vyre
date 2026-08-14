@@ -12,6 +12,7 @@ use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::Program;
 use smallvec::SmallVec;
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -162,6 +163,425 @@ pub fn child_bodies(node: &Node) -> [&[Node]; 2] {
     }
 }
 
+/// `node` with each body slot replaced by `map`'s result for that slot.
+///
+/// This is the borrowed, change-reporting counterpart of
+/// [`node_map::map_body`](crate::visit::node_map::map_body), and the ONE owner
+/// of "which body slots does this variant have" in the rebuild direction.
+/// `child_bodies` answers the same question for a read-only scan, but a scan
+/// cannot say what to do with a slot it changed, so a rebuild that re-derives
+/// the slot list can descend into a body and then drop it.
+///
+/// A variant with no body is returned borrowed without calling `map`, and a
+/// variant with one body has `map` called once: a one-slot variant must not see
+/// the empty second slice `child_bodies` pads its answer with, because a rule
+/// that rewrites a whole body would then be handed a body that does not exist.
+///
+/// The node is rebuilt only when a slot came back owned, and the rebuild clones
+/// the variant's own operands rather than its bodies, so an unchanged subtree
+/// costs nothing.
+#[must_use]
+pub(crate) fn map_bodies_cow<'a>(
+    node: &'a Node,
+    map: &mut impl FnMut(&'a [Node]) -> Cow<'a, [Node]>,
+) -> Cow<'a, Node> {
+    match node {
+        Node::If {
+            cond,
+            then,
+            otherwise,
+        } => {
+            let then_body = map(then);
+            let otherwise_body = map(otherwise);
+            if matches!(then_body, Cow::Borrowed(_)) && matches!(otherwise_body, Cow::Borrowed(_)) {
+                return Cow::Borrowed(node);
+            }
+            Cow::Owned(Node::If {
+                cond: cond.clone(),
+                then: then_body.into_owned(),
+                otherwise: otherwise_body.into_owned(),
+            })
+        }
+        Node::Loop {
+            var,
+            from,
+            to,
+            body,
+        } => match map(body) {
+            Cow::Borrowed(_) => Cow::Borrowed(node),
+            Cow::Owned(body) => Cow::Owned(Node::Loop {
+                var: var.clone(),
+                from: from.clone(),
+                to: to.clone(),
+                body,
+            }),
+        },
+        Node::Block(body) => match map(body) {
+            Cow::Borrowed(_) => Cow::Borrowed(node),
+            Cow::Owned(body) => Cow::Owned(Node::Block(body)),
+        },
+        Node::Region {
+            generator,
+            source_region,
+            body,
+        } => match map(body) {
+            Cow::Borrowed(_) => Cow::Borrowed(node),
+            Cow::Owned(body) => Cow::Owned(Node::Region {
+                generator: generator.clone(),
+                source_region: source_region.clone(),
+                body: Arc::new(body),
+            }),
+        },
+        Node::Let { .. }
+        | Node::Assign { .. }
+        | Node::Store { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AllReduce { .. }
+        | Node::AllGather { .. }
+        | Node::ReduceScatter { .. }
+        | Node::Broadcast { .. }
+        | Node::AsyncLoad { .. }
+        | Node::AsyncStore { .. }
+        | Node::AsyncWait { .. }
+        | Node::Trap { .. }
+        | Node::Resume { .. }
+        | Node::Opaque(_) => Cow::Borrowed(node),
+    }
+}
+
+/// Every operand expression `node` carries directly, in source order.
+///
+/// This is the ONE owner of the question "which node variants carry
+/// expressions", the operand counterpart of [`child_bodies`]. Adding a `Node`
+/// variant fails to compile here, so a variant that gains an expression
+/// position cannot be skipped by a scan or a rewrite in silence.
+///
+/// Leaves return two `None`s, so a caller can flatten unconditionally. The
+/// widest variants carry exactly two operands: `Store` (index, value), `Loop`
+/// (from, to), and the async copies (offset, size).
+#[inline]
+#[must_use]
+pub(crate) fn node_operands(node: &Node) -> [Option<&Expr>; 2] {
+    match node {
+        Node::Let { value, .. } | Node::Assign { value, .. } => [Some(value), None],
+        Node::Store { index, value, .. } => [Some(index), Some(value)],
+        Node::If { cond, .. } => [Some(cond), None],
+        Node::Loop { from, to, .. } => [Some(from), Some(to)],
+        Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
+            [Some(offset), Some(size)]
+        }
+        Node::Trap { address, .. } => [Some(address), None],
+        Node::Block(_)
+        | Node::Region { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AllReduce { .. }
+        | Node::AllGather { .. }
+        | Node::ReduceScatter { .. }
+        | Node::Broadcast { .. }
+        | Node::AsyncWait { .. }
+        | Node::Resume { .. }
+        | Node::Opaque(_) => [None, None],
+    }
+}
+
+/// The buffers a node names directly, split by direction.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct BufferRefs<'a> {
+    /// Buffers read by name, in source order.
+    pub reads: [Option<&'a Ident>; 2],
+    /// Buffers written by name, in source order.
+    pub writes: [Option<&'a Ident>; 2],
+    /// False when the node carries an opaque payload whose buffer references
+    /// core cannot enumerate, which makes the two arrays a LOWER BOUND. A
+    /// caller whose answer has to be sound must then treat the node as touching
+    /// every buffer rather than none.
+    pub complete: bool,
+}
+
+impl<'a> BufferRefs<'a> {
+    const NONE: Self = Self {
+        reads: [None, None],
+        writes: [None, None],
+        complete: true,
+    };
+
+    const fn read(buffer: &'a Ident) -> Self {
+        Self {
+            reads: [Some(buffer), None],
+            ..Self::NONE
+        }
+    }
+
+    const fn write(buffer: &'a Ident) -> Self {
+        Self {
+            writes: [Some(buffer), None],
+            ..Self::NONE
+        }
+    }
+
+    const fn read_write(read: &'a Ident, write: &'a Ident) -> Self {
+        Self {
+            reads: [Some(read), None],
+            writes: [Some(write), None],
+            complete: true,
+        }
+    }
+}
+
+/// Which buffers `node` names, and in which direction.
+///
+/// This is the ONE owner of "what does this statement do to a buffer BY NAME".
+/// A buffer reached through an operand expression is not here: that is
+/// [`node_operands`] followed by [`expr_buffer_ref`], and the two answers
+/// compose. Adding a `Node` variant fails to compile here.
+///
+/// The four collective variants are the reason this exists. They name their
+/// operands as buffers and carry no operand expression at all, so every
+/// dependency walk that answered this question with a per-variant match ending
+/// in `_ => {}` reported that an `AllReduce` touches nothing.
+#[must_use]
+pub(crate) fn node_buffer_refs(node: &Node) -> BufferRefs<'_> {
+    match node {
+        Node::Store { buffer, .. } => BufferRefs::write(buffer),
+        Node::AsyncLoad {
+            source,
+            destination,
+            ..
+        }
+        | Node::AsyncStore {
+            source,
+            destination,
+            ..
+        } => BufferRefs::read_write(source, destination),
+        Node::IndirectDispatch { count_buffer, .. } => BufferRefs::read(count_buffer),
+        // In place on every rank: each contributes its own copy of `buffer` and
+        // receives the combined one. `Broadcast` reads it on the root rank and
+        // writes it on the others, which is the same pair of names.
+        Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
+            BufferRefs::read_write(buffer, buffer)
+        }
+        Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
+            BufferRefs::read_write(input, output)
+        }
+        Node::Let { .. }
+        | Node::Assign { .. }
+        | Node::If { .. }
+        | Node::Loop { .. }
+        | Node::Trap { .. }
+        | Node::AsyncWait { .. }
+        | Node::Resume { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::Block(_)
+        | Node::Region { .. } => BufferRefs::NONE,
+        Node::Opaque(_) => BufferRefs {
+            complete: false,
+            ..BufferRefs::NONE
+        },
+    }
+}
+
+/// What an expression does to the buffer it names.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum ExprBufferRef<'a> {
+    /// Names no buffer.
+    None,
+    /// Reads the named buffer, or reads its metadata.
+    Read(&'a Ident),
+    /// Reads and writes the named buffer: an atomic read-modify-write.
+    ReadWrite(&'a Ident),
+    /// An out-of-tree extension, whose buffer references core cannot enumerate.
+    /// A caller whose answer has to be sound must treat it as touching every
+    /// buffer.
+    Unknown,
+}
+
+/// The buffer `expr` names, and what it does to it.
+///
+/// The expression half of [`node_buffer_refs`]. `Expr::Atomic` is the case every
+/// buffer-set walk in this crate had recorded as a pure read, which is the
+/// direction that loses: a dependency walk that believes an atomic only reads
+/// sees no conflict with a store to the same buffer.
+#[must_use]
+pub(crate) fn expr_buffer_ref(expr: &Expr) -> ExprBufferRef<'_> {
+    match expr {
+        Expr::Atomic { buffer, .. } => ExprBufferRef::ReadWrite(buffer),
+        Expr::Load { buffer, .. } | Expr::BufLen { buffer } | Expr::BufferRef { buffer } => {
+            ExprBufferRef::Read(buffer)
+        }
+        Expr::LitU32(_)
+        | Expr::LitI32(_)
+        | Expr::LitF32(_)
+        | Expr::LitBool(_)
+        | Expr::Var(_)
+        | Expr::InvocationId { .. }
+        | Expr::WorkgroupId { .. }
+        | Expr::LocalId { .. }
+        | Expr::BinOp { .. }
+        | Expr::UnOp { .. }
+        | Expr::Call { .. }
+        | Expr::Select { .. }
+        | Expr::Cast { .. }
+        | Expr::Fma { .. }
+        | Expr::SubgroupBallot { .. }
+        | Expr::SubgroupShuffle { .. }
+        | Expr::SubgroupReduce { .. }
+        | Expr::SubgroupLocalId
+        | Expr::SubgroupSize => ExprBufferRef::None,
+        Expr::Opaque(_) => ExprBufferRef::Unknown,
+    }
+}
+
+/// Every operand expression of `expr`, in source order.
+///
+/// This is the ONE owner of the question "which expression variants contain
+/// other expressions", the [`child_bodies`] of the value namespace. Adding an
+/// `Expr` variant fails to compile in [`expr_children`], and that failure is
+/// the mechanism that keeps every expression walk in the crate correct.
+///
+/// At most three operands are held inline and the argument list of an
+/// [`Expr::Call`] is borrowed as a slice, so enumerating children allocates
+/// nothing. The whole record is `Copy`.
+#[derive(Debug, Clone, Copy)]
+pub struct ExprChildren<'a> {
+    /// Fixed operand positions, in source order. `None` is an absent optional
+    /// operand (`Expr::Atomic::expected`) and is skipped by [`Self::iter`].
+    direct: [Option<&'a Expr>; 3],
+    /// Call arguments, in source order. Empty for every other variant.
+    args: &'a [Expr],
+}
+
+impl<'a> ExprChildren<'a> {
+    const NONE: Self = Self {
+        direct: [None, None, None],
+        args: &[],
+    };
+
+    const fn one(first: &'a Expr) -> Self {
+        Self {
+            direct: [Some(first), None, None],
+            args: &[],
+        }
+    }
+
+    const fn two(first: &'a Expr, second: &'a Expr) -> Self {
+        Self {
+            direct: [Some(first), Some(second), None],
+            args: &[],
+        }
+    }
+
+    const fn three(first: &'a Expr, second: &'a Expr, third: &'a Expr) -> Self {
+        Self {
+            direct: [Some(first), Some(second), Some(third)],
+            args: &[],
+        }
+    }
+
+    /// The operands in source order.
+    ///
+    /// The iterator is double-ended, so a stack-based walk that wants children
+    /// popped in source order pushes `iter().rev()`.
+    pub fn iter(self) -> impl DoubleEndedIterator<Item = &'a Expr> + Clone {
+        self.direct.into_iter().flatten().chain(self.args.iter())
+    }
+}
+
+/// The operands of `expr`, in source order.
+///
+/// Exhaustive with no catch-all arm, deliberately. Adding an `Expr` variant
+/// fails to compile here, and that failure is the point: it forces the author
+/// to say which of the new variant's positions a walk owes a visit. A walk that
+/// re-derives this with its own `match expr` ending in `_ => {}` classifies a
+/// new variant as a leaf, which is how an operand stops being renamed,
+/// substituted, counted as a live use, or folded.
+#[inline]
+#[must_use]
+pub fn expr_children(expr: &Expr) -> ExprChildren<'_> {
+    match expr {
+        Expr::LitU32(_)
+        | Expr::LitI32(_)
+        | Expr::LitF32(_)
+        | Expr::LitBool(_)
+        | Expr::Var(_)
+        | Expr::BufferRef { .. }
+        | Expr::BufLen { .. }
+        | Expr::InvocationId { .. }
+        | Expr::WorkgroupId { .. }
+        | Expr::LocalId { .. }
+        | Expr::SubgroupLocalId
+        | Expr::SubgroupSize
+        | Expr::Opaque(_) => ExprChildren::NONE,
+        Expr::Load { index, .. }
+        | Expr::UnOp { operand: index, .. }
+        | Expr::Cast { value: index, .. }
+        | Expr::SubgroupBallot { cond: index }
+        | Expr::SubgroupReduce { value: index, .. } => ExprChildren::one(index),
+        Expr::BinOp { left, right, .. } => ExprChildren::two(left, right),
+        Expr::SubgroupShuffle { value, lane } => ExprChildren::two(value, lane),
+        Expr::Select {
+            cond,
+            true_val,
+            false_val,
+        } => ExprChildren::three(cond, true_val, false_val),
+        Expr::Fma { a, b, c } => ExprChildren::three(a, b, c),
+        Expr::Atomic {
+            index,
+            expected,
+            value,
+            ..
+        } => ExprChildren {
+            direct: [Some(index), expected.as_deref(), Some(value)],
+            args: &[],
+        },
+        Expr::Call { args, .. } => ExprChildren {
+            direct: [None, None, None],
+            args,
+        },
+    }
+}
+
+/// True when `expr` or any sub-expression satisfies `pred`.
+///
+/// Children come from [`expr_children`], so a new operand-carrying variant is
+/// covered without touching this function. The walk is an explicit worklist,
+/// short-circuiting on the first match, so an adversarially deep expression
+/// cannot overflow the native stack.
+#[must_use]
+pub fn any_subexpr(expr: &Expr, pred: &mut impl FnMut(&Expr) -> bool) -> bool {
+    let mut stack: SmallVec<[&Expr; 32]> = SmallVec::new();
+    stack.push(expr);
+    while let Some(current) = stack.pop() {
+        if pred(current) {
+            return true;
+        }
+        stack.extend(expr_children(current).iter().rev());
+    }
+    false
+}
+
+/// Visit `expr` and every sub-expression below it, in source pre-order.
+///
+/// This is the collector counterpart of [`any_subexpr`]: it visits every node
+/// rather than stopping at the first match, so a collector cannot accidentally
+/// be written on an early-exit search and lose the operands after the first
+/// hit. Children come from [`expr_children`], so a new operand-carrying variant
+/// is covered without touching this function, and the walk is an explicit
+/// worklist so an adversarially deep expression cannot overflow the native
+/// stack.
+pub fn for_each_subexpr<'a>(expr: &'a Expr, visit: &mut impl FnMut(&'a Expr)) {
+    let mut stack: SmallVec<[&'a Expr; 32]> = SmallVec::new();
+    stack.push(expr);
+    while let Some(current) = stack.pop() {
+        visit(current);
+        stack.extend(expr_children(current).iter().rev());
+    }
+}
+
 /// True when `node` or any descendant satisfies `pred`.
 ///
 /// Children come from [`child_bodies`], so a new nesting variant is covered
@@ -179,6 +599,80 @@ pub fn any_descendant(node: &Node, pred: &mut impl FnMut(&Node) -> bool) -> bool
     while let Some(current) = stack.pop() {
         if pred(current) {
             return true;
+        }
+        for body in child_bodies(current).into_iter().rev() {
+            stack.extend(body.iter().rev());
+        }
+    }
+    false
+}
+
+/// Call `f` on `node` and on every node nested under it.
+///
+/// The visiting counterpart of [`any_descendant`], which four call sites in this
+/// crate obtained by handing `any_descendant` a predicate that always returned
+/// `false` and discarding the result. That spelling works only for as long as
+/// nobody makes the predicate answer `true`: the search stops on the first
+/// match, so a visitor written that way turns into a visitor of a prefix, with
+/// no diagnostic. The same defect once cost this crate a liveness bug.
+pub(crate) fn for_each_descendant(node: &Node, f: &mut impl FnMut(&Node)) {
+    // The predicate never reports a match, so the scan runs to exhaustion.
+    let _: bool = any_descendant(node, &mut |current| {
+        f(current);
+        false
+    });
+}
+
+/// True when any expression anywhere under `nodes` satisfies `pred`.
+///
+/// This is the scan a pass runs to decide whether it has anything to do. Node
+/// nesting comes from [`child_bodies`], operand positions from
+/// [`node_operands`], and sub-expressions from [`expr_children`], so a new
+/// variant in either namespace reaches the scan without an edit at the call
+/// site. A pass that re-derives the three enumerations instead answers "no
+/// candidate" for a position it forgot, and a skipped pass leaves no trace.
+///
+/// The scan short-circuits on the first match.
+#[must_use]
+pub(crate) fn any_expr_in(nodes: &[Node], pred: &mut impl FnMut(&Expr) -> bool) -> bool {
+    let mut stack: SmallVec<[&Node; 64]> = SmallVec::new();
+    stack.extend(nodes.iter().rev());
+    while let Some(current) = stack.pop() {
+        for operand in node_operands(current).into_iter().flatten() {
+            if any_subexpr(operand, pred) {
+                return true;
+            }
+        }
+        for body in child_bodies(current).into_iter().rev() {
+            stack.extend(body.iter().rev());
+        }
+    }
+    false
+}
+
+/// True when `pred` holds for `nodes` itself or for any body nested under it.
+///
+/// A pass whose candidate is a RELATION between siblings, rather than a
+/// property of one node, cannot use [`any_descendant`]: two adjacent loops are
+/// invisible from either loop alone. Such a pass needs the enclosing body, and
+/// the bodies come from [`child_bodies`] so a new nesting variant reaches the
+/// scan. `loop_fusion` re-derived the nesting list here and ended it in
+/// `_ => return false`, which would have reported "no fusable pair" for a
+/// variant that later gains a body.
+///
+/// The scan short-circuits on the first match.
+#[must_use]
+pub(crate) fn any_body(nodes: &[Node], pred: &mut impl FnMut(&[Node]) -> bool) -> bool {
+    if pred(nodes) {
+        return true;
+    }
+    let mut stack: SmallVec<[&Node; 64]> = SmallVec::new();
+    stack.extend(nodes.iter().rev());
+    while let Some(current) = stack.pop() {
+        for body in child_bodies(current) {
+            if !body.is_empty() && pred(body) {
+                return true;
+            }
         }
         for body in child_bodies(current).into_iter().rev() {
             stack.extend(body.iter().rev());
@@ -243,106 +737,27 @@ fn push_node_children_and_exprs<'a>(
         }
     }
 
-    // Which expressions a variant carries is genuinely per-variant.
-    match node {
-        Node::Let { value, .. } | Node::Assign { value, .. } => {
-            expr_stack.push(value);
-        }
-        Node::Store { index, value, .. } => {
-            expr_stack.push(value);
-            expr_stack.push(index);
-        }
-        Node::If { cond, .. } => {
-            expr_stack.push(cond);
-        }
-        Node::Loop { from, to, .. } => {
-            expr_stack.push(to);
-            expr_stack.push(from);
-        }
-        Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
-            expr_stack.push(size);
-            expr_stack.push(offset);
-        }
-        Node::Trap { address, .. } => {
-            expr_stack.push(address);
-        }
-        Node::Block(_)
-        | Node::Region { .. }
-        | Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AllReduce { .. }
-        | Node::AllGather { .. }
-        | Node::ReduceScatter { .. }
-        | Node::Broadcast { .. }
-        | Node::AsyncWait { .. }
-        | Node::Resume { .. }
-        | Node::Opaque(_) => {}
-    }
+    // Operand positions come from the single exhaustive owner. Pushed in
+    // reverse so `drain_expr_stack` pops them in source order.
+    expr_stack.extend(node_operands(node).into_iter().rev().flatten());
 }
 
+/// Visit every expression on `expr_stack` and everything below it.
+///
+/// Children come from [`expr_children`]. The hand-written enumeration this
+/// replaces classified `SubgroupBallot`, `SubgroupShuffle`, and
+/// `SubgroupReduce` as leaves, so `walk_exprs` and `walk_nodes_and_exprs`
+/// never saw a subgroup operand: a `Load` inside `subgroup_add(load(b, i))`
+/// did not count as a buffer reference, and a `Call` inside a shuffle lane was
+/// invisible to `collect_call_op_ids`, which is how the inliner decides which
+/// operations a program depends on.
 fn drain_expr_stack<'a>(
     expr_stack: &mut SmallVec<[&'a Expr; 128]>,
     mut visit: impl FnMut(&'a Expr),
 ) {
     while let Some(expr) = expr_stack.pop() {
         visit(expr);
-        match expr {
-            Expr::Load { index, .. } => expr_stack.push(index),
-            Expr::LitU32(_)
-            | Expr::LitI32(_)
-            | Expr::LitF32(_)
-            | Expr::LitBool(_)
-            | Expr::Var(_)
-            | Expr::BufferRef { .. }
-            | Expr::BufLen { .. }
-            | Expr::InvocationId { .. }
-            | Expr::WorkgroupId { .. }
-            | Expr::LocalId { .. }
-            | Expr::SubgroupLocalId
-            | Expr::SubgroupSize
-            | Expr::SubgroupBallot { .. }
-            | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupReduce { .. }
-            | Expr::Opaque(_) => {}
-            Expr::BinOp { left, right, .. } => {
-                expr_stack.push(right);
-                expr_stack.push(left);
-            }
-            Expr::Fma { a, b, c, .. } => {
-                expr_stack.push(c);
-                expr_stack.push(b);
-                expr_stack.push(a);
-            }
-            Expr::UnOp { operand, .. } => expr_stack.push(operand),
-            Expr::Call { args, .. } => {
-                for arg in args.iter().rev() {
-                    expr_stack.push(arg);
-                }
-            }
-            Expr::Select {
-                cond,
-                true_val,
-                false_val,
-            } => {
-                expr_stack.push(false_val);
-                expr_stack.push(true_val);
-                expr_stack.push(cond);
-            }
-            Expr::Cast { value, .. } => expr_stack.push(value),
-            Expr::Atomic {
-                index,
-                expected,
-                value,
-                ..
-            } => {
-                expr_stack.push(value);
-                if let Some(expected) = expected {
-                    expr_stack.push(expected);
-                }
-                expr_stack.push(index);
-            }
-        }
+        expr_stack.extend(expr_children(expr).iter().rev());
     }
 }
 

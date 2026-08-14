@@ -35,8 +35,8 @@
 //! emits unreachable code, codegen pays for the branch.
 
 use crate::ir::{Expr, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 
 /// Drop the dead arm of `Node::If` with a compile-time-known boolean.
 #[derive(Debug, Default)]
@@ -54,62 +54,38 @@ impl IfConstantBranchEliminatePass {
     /// Skip programs without any `If` whose condition is a literal bool.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        if !program
-            .stats()
-            .has_any_node_kind(crate::ir::stats::NODE_KIND_IF)
-        {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut is_constant_if))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_IF],
+            &mut is_constant_if,
+        )
     }
 
     /// Walk the entry tree; replace constant-condition `Node::If` with
     /// the surviving arm wrapped in a `Node::Block`.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            entry
-                .into_iter()
-                .map(|node| eliminate_node(node, &mut changed))
-                .collect()
-        });
-        PassResult { program, changed }
+        driver::rewrite_entry_nodes(program, &mut surviving_arm)
     }
 }
 
-/// Recurse into `node`'s descendants. After recursion, if `node` is itself
-/// an `If` with a literal-bool condition, replace it with the surviving
-/// arm wrapped in a `Block`.
-fn eliminate_node(node: Node, changed: &mut bool) -> Node {
-    let recursed = node_map::map_children(node, &mut |child| eliminate_node(child, changed));
-    match recursed {
+/// The surviving arm of a constant-condition `If`, wrapped in a `Block`.
+///
+/// The `Block` keeps the arm's bindings in the scope the branch gave them,
+/// which is why the dead arm can go without a scope analysis.
+fn surviving_arm(node: &Node) -> Option<Vec<Node>> {
+    match node {
         Node::If {
             cond: Expr::LitBool(true),
             then,
-            otherwise: _,
-        } => {
-            *changed = true;
-            Node::Block(then)
-        }
+            ..
+        } => Some(vec![Node::Block(then.clone())]),
         Node::If {
             cond: Expr::LitBool(false),
-            then: _,
             otherwise,
-        } => {
-            *changed = true;
-            Node::Block(otherwise)
-        }
-        // Only `If` has a constant branch to eliminate; children are already rewritten by the caller, so any other variant, known or not, is returned as it stands.
-        other => other,
+            ..
+        } => Some(vec![Node::Block(otherwise.clone())]),
+        _ => None,
     }
 }
 

@@ -30,8 +30,8 @@
 //!     dropping the loop first lets the downstream pass take a faster path.
 
 use crate::ir::{Expr, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 
 /// Drop loops whose `from..to` range is empty at compile time.
 #[derive(Debug, Default)]
@@ -46,45 +46,21 @@ impl LoopTripZeroEliminatePass {
     /// Skip programs without any compile-time-empty loop.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        if !program.stats().has_node_loop() {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut is_empty_loop))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_LOOP],
+            &mut is_empty_loop,
+        )
     }
 
     /// Walk the entry tree; replace every `Node::Loop` with empty trip
-    /// count by `Node::Block(vec![])`. Recurses into bodies so nested
-    /// empty loops are also caught.
+    /// count by `Node::Block(vec![])`. The driver recurses into bodies, so a
+    /// nested empty loop is caught in the same run.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            entry
-                .into_iter()
-                .map(|node| eliminate_node(node, &mut changed))
-                .collect()
-        });
-        PassResult { program, changed }
-    }
-}
-
-/// Recurse into `node`'s descendants. After recursion, if `node` itself
-/// is a literal-bounded empty Loop, replace it with `Block(vec![])`.
-fn eliminate_node(node: Node, changed: &mut bool) -> Node {
-    let recursed = node_map::map_children(node, &mut |child| eliminate_node(child, changed));
-    if is_empty_loop(&recursed) {
-        *changed = true;
-        Node::Block(Vec::new())
-    } else {
-        recursed
+        driver::rewrite_entry_nodes(program, &mut |node| {
+            is_empty_loop(node).then(|| vec![Node::Block(Vec::new())])
+        })
     }
 }
 

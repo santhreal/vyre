@@ -41,8 +41,8 @@
 //!   not by this pass.
 
 use crate::ir::{BinOp, Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 
 /// Tighten `Node::Loop` upper bound when the body is one inner-If
 /// whose predicate guards `Var(loop_var) < LitU32(n)` for some `n <
@@ -63,43 +63,21 @@ impl LoopBoundTighten {
     /// matching tighten-eligible Loop.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        if !program.stats().has_node_loop() {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut is_tighten_eligible))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_LOOP],
+            &mut is_tighten_eligible,
+        )
     }
 
     /// Rewrite every tighten-eligible Loop in the program tree.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            entry
-                .into_iter()
-                .map(|n| rewrite_node(n, &mut changed))
-                .collect()
-        });
-        PassResult { program, changed }
+        driver::rewrite_entry_nodes(program, &mut tighten_if_eligible)
     }
 }
 
-fn rewrite_node(node: Node, changed: &mut bool) -> Node {
-    let recursed = node_map::map_children(node, &mut |child| rewrite_node(child, changed));
-    let recursed = node_map::map_body(recursed, &mut |body| {
-        body.into_iter().map(|n| rewrite_node(n, changed)).collect()
-    });
-    tighten_if_eligible(recursed, changed)
-}
-
-fn tighten_if_eligible(node: Node, changed: &mut bool) -> Node {
+fn tighten_if_eligible(node: &Node) -> Option<Vec<Node>> {
     let Node::Loop {
         var,
         from,
@@ -107,37 +85,18 @@ fn tighten_if_eligible(node: Node, changed: &mut bool) -> Node {
         body,
     } = node
     else {
-        return node_unchanged_helper(node);
+        return None;
     };
-    let Some((upper_lit, predicate_lit, real_body)) =
-        match_tighten_pattern(&var, &from, &to, &body)
-    else {
-        return Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        };
-    };
+    let (upper_lit, predicate_lit, real_body) = match_tighten_pattern(var, from, to, body)?;
     if predicate_lit >= upper_lit {
-        return Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        };
+        return None;
     }
-    *changed = true;
-    Node::Loop {
-        var,
-        from,
+    Some(vec![Node::Loop {
+        var: var.clone(),
+        from: from.clone(),
         to: Expr::u32(predicate_lit),
         body: real_body,
-    }
-}
-
-fn node_unchanged_helper(node: Node) -> Node {
-    node
+    }])
 }
 
 fn match_tighten_pattern(

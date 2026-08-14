@@ -149,80 +149,32 @@ fn collect_node_access(root: &Node, access: &mut AccessSet) {
     }
 }
 
+/// Record every buffer `expr` reads, plus the read-modify-write of an atomic.
+///
+/// Operand positions come from [`crate::transform::visit::expr_children`], the
+/// one exhaustive owner. The copy this replaces classified
+/// `Expr::SubgroupBallot`, `Expr::SubgroupShuffle`, and `Expr::SubgroupReduce`
+/// as leaves, so a buffer read inside a subgroup operand never entered the read
+/// set: `store(out, i, subgroup_add(load(acc, i)))` reported reading nothing,
+/// so a sibling statement writing `acc` looked non-conflicting and both landed
+/// in one parallel dispatch group, reordering that read across the write.
 fn collect_expr_reads(expr: &Expr, access: &mut AccessSet) {
-    let mut stack = SmallVec::<[&Expr; 32]>::new();
-    stack.push(expr);
-    while let Some(expr) = stack.pop() {
-        match expr {
-            Expr::Load { buffer, index } => {
-                access.reads.insert(buffer.clone());
-                stack.push(index);
-            }
-            Expr::BufLen { buffer } => {
-                access.reads.insert(buffer.clone());
-            }
-            // A buffer argument binds a callee parameter, and a callee
-            // parameter is a read-only or uniform buffer by declaration, so
-            // the callee can only read through it.
-            Expr::BufferRef { buffer } => {
-                access.reads.insert(buffer.clone());
-            }
-            Expr::BinOp { left, right, .. } => {
-                stack.push(left);
-                stack.push(right);
-            }
-            Expr::UnOp { operand, .. } => stack.push(operand),
-            Expr::Call { args, .. } => {
-                stack.extend(args);
-            }
-            Expr::Select {
-                cond,
-                true_val,
-                false_val,
-            } => {
-                stack.push(cond);
-                stack.push(true_val);
-                stack.push(false_val);
-            }
-            Expr::Cast { value, .. } => stack.push(value),
-            Expr::Fma { a, b, c } => {
-                stack.push(a);
-                stack.push(b);
-                stack.push(c);
-            }
-            Expr::Atomic {
-                buffer,
-                index,
-                expected,
-                value,
-                ..
-            } => {
-                access.reads.insert(buffer.clone());
-                access.writes.insert(buffer.clone());
-                stack.push(index);
-                if let Some(expected) = expected {
-                    stack.push(expected);
-                }
-                stack.push(value);
-            }
-            Expr::LitU32(_)
-            | Expr::LitI32(_)
-            | Expr::LitF32(_)
-            | Expr::LitBool(_)
-            | Expr::Var(_)
-            | Expr::InvocationId { .. }
-            | Expr::WorkgroupId { .. }
-            | Expr::LocalId { .. }
-            | Expr::SubgroupLocalId
-            | Expr::SubgroupSize
-            | Expr::SubgroupBallot { .. }
-            | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupReduce { .. } => {}
-            Expr::Opaque(_) => {
-                access.serial_boundary = true;
-            }
+    crate::transform::visit::for_each_subexpr(expr, &mut |expr| match expr {
+        // A buffer argument binds a callee parameter, and a callee parameter is
+        // a read-only or uniform buffer by declaration, so the callee can only
+        // read through it.
+        Expr::Load { buffer, .. } | Expr::BufLen { buffer } | Expr::BufferRef { buffer } => {
+            access.reads.insert(buffer.clone());
         }
-    }
+        Expr::Atomic { buffer, .. } => {
+            access.reads.insert(buffer.clone());
+            access.writes.insert(buffer.clone());
+        }
+        Expr::Opaque(_) => access.serial_boundary = true,
+        // Every other variant names no buffer of its own; its operands are
+        // reached by the owning walk.
+        _ => {}
+    });
 }
 
 /// Parallelism analysis test suite.

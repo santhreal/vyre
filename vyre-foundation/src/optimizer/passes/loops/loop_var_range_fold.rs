@@ -55,9 +55,9 @@
 
 use super::substitution::body_rebinds_var;
 use crate::ir::{BinOp, Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::program_shape_facts::ProgramShapeFacts;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 
 /// Fold loop-induction-range-determined `If` conditions.
 #[derive(Debug, Default)]
@@ -72,24 +72,17 @@ impl LoopVarRangeFoldPass {
     /// Skip programs without a foldable If inside a Loop.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        // The fold rule requires both an If AND a Loop; if either is
-        // absent the pass cannot fire. Compose the bitset check for
-        // both kinds before paying the recursive walk.
         use crate::ir::stats::{NODE_KIND_IF, NODE_KIND_LOOP};
-        let stats = program.stats();
-        if !stats.has_any_node_kind(NODE_KIND_LOOP) || !stats.has_any_node_kind(NODE_KIND_IF) {
+        let required = [NODE_KIND_LOOP, NODE_KIND_IF];
+        // Deriving the shape facts walks the program, so the O(1) kind filter
+        // comes first: without both a Loop and an If there is nothing to fold.
+        if !driver::carries_every_kind(program, &required) {
             return PassAnalysis::SKIP;
         }
         let shape_facts = ProgramShapeFacts::derive_cached(program);
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut |node| has_foldable_if(node, &shape_facts)))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(program, &required, &mut |node| {
+            has_foldable_if(node, &shape_facts)
+        })
     }
 
     /// Walk the entry tree and fold every range-determined If.

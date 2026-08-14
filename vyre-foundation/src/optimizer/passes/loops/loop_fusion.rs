@@ -55,8 +55,8 @@
 
 use super::{collect_touched_buffers, collect_var_reads, legality};
 use crate::ir::{Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 use rustc_hash::FxHashSet;
 
 /// Fuse adjacent `Node::Loop` siblings under the buffer-disjoint
@@ -74,41 +74,30 @@ use rustc_hash::FxHashSet;
 pub struct LoopFusion;
 
 impl LoopFusion {
-    /// Skip when no body has a fusable pair. Checks both the
-    /// top-level entry vec (transform fuses adjacent siblings there
-    /// too) and every nested If/Loop/Block/Region body.
+    /// Skip when no body has a fusable pair.
+    ///
+    /// The candidate is a relation between two adjacent siblings, so the scan
+    /// has to see each enclosing body rather than each node.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        // Fusion needs at least two adjacent Loops; absent any Loop
-        // at all the recursive walk has nothing to find.
-        if !program.stats().has_node_loop() {
-            return PassAnalysis::SKIP;
-        }
-        if body_has_fusable_pair(program.entry())
-            || program
-                .entry()
-                .iter()
-                .any(|n| node_map::any_descendant(n, &mut has_fusable_pair))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidate_bodies(
+            program,
+            &[crate::ir::stats::NODE_KIND_LOOP],
+            &mut body_has_fusable_pair,
+        )
     }
 
     /// Walk the program; fuse every fusable adjacent Loop pair found.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| fuse_in_body(entry, &mut changed));
-        PassResult { program, changed }
+        driver::rewrite_entry_bodies(program, &mut fuse_in_body)
     }
 }
 
-fn fuse_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
-    let body: Vec<Node> = body.into_iter().map(|n| recurse(n, changed)).collect();
+fn fuse_in_body(body: &[Node]) -> Option<Vec<Node>> {
     let mut out: Vec<Node> = Vec::with_capacity(body.len());
-    let mut iter = body.into_iter().peekable();
+    let mut fused_any = false;
+    let mut iter = body.iter().peekable();
     while let Some(node) = iter.next() {
         let Node::Loop {
             var: var_a,
@@ -117,81 +106,60 @@ fn fuse_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
             body: body_a,
         } = node
         else {
-            out.push(node);
+            out.push(node.clone());
             continue;
         };
-        let next_is_fusable = matches!(iter.peek(), Some(Node::Loop { .. }));
-        if !next_is_fusable {
-            out.push(Node::Loop {
-                var: var_a,
-                from: from_a,
-                to: to_a,
-                body: body_a,
-            });
-            continue;
-        }
-        let Some(Node::Loop {
-            var: var_b,
-            from: from_b,
-            to: to_b,
-            body: body_b,
-        }) = iter.next()
-        else {
-            unreachable!("peek confirmed Loop above");
-        };
-        if !pair_is_fusable(
-            &LoopRef {
-                var: &var_a,
-                from: &from_a,
-                to: &to_a,
-                body: &body_a,
-            },
-            &LoopRef {
-                var: &var_b,
-                from: &from_b,
-                to: &to_b,
-                body: &body_b,
-            },
-        ) {
-            // Cannot fuse  -  emit the first loop, push the second back
-            // for the next iteration to consider against its successor.
-            out.push(Node::Loop {
-                var: var_a,
-                from: from_a,
-                to: to_a,
-                body: body_a,
-            });
-            // We can't actually push back into a Peekable<vec::IntoIter>;
-            // emit body_b as-is. Re-fusion across the missed pair will
-            // happen on the next pass-scheduler iteration if applicable.
-            out.push(Node::Loop {
+        let Some(
+            next @ Node::Loop {
                 var: var_b,
                 from: from_b,
                 to: to_b,
                 body: body_b,
-            });
+            },
+        ) = iter.peek().copied()
+        else {
+            out.push(node.clone());
+            continue;
+        };
+        if !pair_is_fusable(
+            &LoopRef {
+                var: var_a,
+                from: from_a,
+                to: to_a,
+                body: body_a,
+            },
+            &LoopRef {
+                var: var_b,
+                from: from_b,
+                to: to_b,
+                body: body_b,
+            },
+        ) {
+            // Cannot fuse: emit both loops and move past the second. It gets
+            // its chance against its own successor on the scheduler's next
+            // iteration, which is what makes this rule reach a fixpoint
+            // without a pushback buffer.
+            out.push(node.clone());
+            out.push(next.clone());
+            iter.next();
             continue;
         }
-        let mut fused = body_a;
-        let renamed_body_b: Vec<Node> = body_b
-            .into_iter()
-            .map(|n| legality::rename_var_in_node(n, &var_b, &var_a))
-            .collect();
-        fused.extend(renamed_body_b);
-        *changed = true;
+        iter.next();
+        let mut fused = body_a.clone();
+        fused.extend(
+            body_b
+                .iter()
+                .map(|n| legality::rename_var_in_node(n.clone(), var_b, var_a)),
+        );
+        fused_any = true;
         out.push(Node::Loop {
-            var: var_a,
-            from: from_a,
-            to: to_a,
+            var: var_a.clone(),
+            from: from_a.clone(),
+            to: to_a.clone(),
             body: fused,
         });
     }
-    out
-}
-
-fn recurse(node: Node, changed: &mut bool) -> Node {
-    let recursed = node_map::map_children(node, &mut |child| recurse(child, changed));
-    node_map::map_body(recursed, &mut |body| fuse_in_body(body, changed))
+    fused_any.then_some(out)
 }
 
 fn bounds_match(from_a: &Expr, to_a: &Expr, from_b: &Expr, to_b: &Expr) -> bool {
@@ -328,20 +296,6 @@ fn fusion_has_scalar_dependency(body_a: &[Node], body_b: &[Node]) -> bool {
     // A scalar written by one body and touched by the other is a cross-loop
     // dependency the interleaving would violate.
     !writes_a.is_disjoint(&refs_b) || !writes_b.is_disjoint(&refs_a)
-}
-
-fn has_fusable_pair(node: &Node) -> bool {
-    let body: &[Node] = match node {
-        Node::If {
-            then, otherwise, ..
-        } => {
-            return body_has_fusable_pair(then) || body_has_fusable_pair(otherwise);
-        }
-        Node::Loop { body, .. } | Node::Block(body) => body,
-        Node::Region { body, .. } => body.as_ref(),
-        _ => return false,
-    };
-    body_has_fusable_pair(body)
 }
 
 fn body_has_fusable_pair(body: &[Node]) -> bool {

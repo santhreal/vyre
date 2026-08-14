@@ -23,6 +23,7 @@
 
 pub mod algebraic;
 pub mod cleanup;
+pub(crate) mod driver;
 pub mod fusion_cse;
 pub mod loops;
 pub mod memory;

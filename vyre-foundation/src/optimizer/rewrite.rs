@@ -1,73 +1,23 @@
 #![allow(clippy::expect_used)]
 use crate::ir::{BinOp, Expr, Node, Program};
+use crate::transform::visit::{any_subexpr, expr_children};
 use smallvec::SmallVec;
 use std::borrow::Cow;
 use std::sync::Arc;
 
+/// Push every operand of `expr` onto an order-insensitive worklist.
+///
+/// Positions come from [`expr_children`], the one exhaustive owner, so a new
+/// operand-carrying variant reaches every scan built on this without an edit
+/// here.
 pub(crate) fn push_expr_children<'a>(expr: &'a Expr, stack: &mut SmallVec<[&'a Expr; 16]>) {
-    match expr {
-        Expr::Load { index, .. } | Expr::UnOp { operand: index, .. } => stack.push(index),
-        Expr::BinOp { left, right, .. } => {
-            stack.push(left);
-            stack.push(right);
-        }
-        Expr::Call { args, .. } => stack.extend(args),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            stack.push(cond);
-            stack.push(true_val);
-            stack.push(false_val);
-        }
-        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => stack.push(value),
-        Expr::Fma { a, b, c } => {
-            stack.push(a);
-            stack.push(b);
-            stack.push(c);
-        }
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            stack.push(index);
-            if let Some(expected) = expected {
-                stack.push(expected);
-            }
-            stack.push(value);
-        }
-        Expr::SubgroupBallot { cond } => stack.push(cond),
-        Expr::SubgroupShuffle { value, lane } => {
-            stack.push(value);
-            stack.push(lane);
-        }
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => {}
-    }
+    stack.extend(expr_children(expr).iter());
 }
+
 pub(crate) fn expr_contains_atomic(expr: &Expr) -> bool {
-    let mut stack = SmallVec::<[&Expr; 16]>::from_slice(&[expr]);
-    while let Some(candidate) = stack.pop() {
-        if matches!(candidate, Expr::Atomic { .. }) {
-            return true;
-        }
-        push_expr_children(candidate, &mut stack);
-    }
-    false
+    any_subexpr(expr, &mut |candidate| {
+        matches!(candidate, Expr::Atomic { .. })
+    })
 }
 
 /// Run an expression-rewrite closure over every node in \`program\`.
@@ -307,66 +257,11 @@ pub(crate) fn rewrite_expr<'a>(
         match frame {
             Frame::Expr(e) => {
                 stack.push(Frame::Assemble(e));
-                match e {
-                    Expr::LitU32(_)
-                    | Expr::LitI32(_)
-                    | Expr::LitF32(_)
-                    | Expr::LitBool(_)
-                    | Expr::Var(_)
-                    | Expr::BufferRef { .. }
-                    | Expr::BufLen { .. }
-                    | Expr::InvocationId { .. }
-                    | Expr::WorkgroupId { .. }
-                    | Expr::LocalId { .. }
-                    | Expr::SubgroupLocalId
-                    | Expr::SubgroupSize
-                    | Expr::Opaque(_) => {}
-                    Expr::Load { index, .. } => stack.push(Frame::Expr(index)),
-                    Expr::BinOp { left, right, .. } => {
-                        stack.push(Frame::Expr(right));
-                        stack.push(Frame::Expr(left));
-                    }
-                    Expr::UnOp { operand, .. } => stack.push(Frame::Expr(operand)),
-                    Expr::Call { args, .. } => {
-                        for arg in args.iter().rev() {
-                            stack.push(Frame::Expr(arg));
-                        }
-                    }
-                    Expr::Select {
-                        cond,
-                        true_val,
-                        false_val,
-                    } => {
-                        stack.push(Frame::Expr(false_val));
-                        stack.push(Frame::Expr(true_val));
-                        stack.push(Frame::Expr(cond));
-                    }
-                    Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
-                        stack.push(Frame::Expr(value));
-                    }
-                    Expr::Fma { a, b, c } => {
-                        stack.push(Frame::Expr(c));
-                        stack.push(Frame::Expr(b));
-                        stack.push(Frame::Expr(a));
-                    }
-                    Expr::Atomic {
-                        index,
-                        expected,
-                        value,
-                        ..
-                    } => {
-                        stack.push(Frame::Expr(value));
-                        if let Some(expected) = expected {
-                            stack.push(Frame::Expr(expected));
-                        }
-                        stack.push(Frame::Expr(index));
-                    }
-                    Expr::SubgroupBallot { cond } => stack.push(Frame::Expr(cond)),
-                    Expr::SubgroupShuffle { value, lane } => {
-                        stack.push(Frame::Expr(lane));
-                        stack.push(Frame::Expr(value));
-                    }
-                }
+                // Operand positions and their order come from the one
+                // exhaustive owner. Pushed in reverse so the children assemble
+                // in source order, which is the order `Frame::Assemble` pops
+                // its results in.
+                stack.extend(expr_children(e).iter().rev().map(Frame::Expr));
             }
             Frame::Assemble(e) => {
                 let rewritten = match e {

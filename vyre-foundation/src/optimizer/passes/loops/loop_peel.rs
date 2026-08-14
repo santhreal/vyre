@@ -29,8 +29,8 @@
 
 use super::substitution::{body_writes_loop_var, substitute_nodes};
 use crate::ir::{BinOp, Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 
 /// Peel the first iteration of guarded loops.
 #[derive(Debug, Default)]
@@ -45,67 +45,41 @@ impl LoopPeelPass {
     /// Quick scan: skip programs without any peelable loop.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        // O(1) fast-path via the cached node-kind bitset.
-        if !program.stats().has_node_loop() {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut is_peelable_loop))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_LOOP],
+            &mut is_peelable_loop,
+        )
     }
 
     /// Walk the entry tree; peel every peelable loop.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            entry
-                .into_iter()
-                .flat_map(|node| peel_node(node, &mut changed))
-                .collect()
-        });
-        PassResult { program, changed }
+        driver::rewrite_entry_nodes(program, &mut peel_node)
     }
 }
 
-/// Recurse into `node`'s descendants, then try to peel this node itself.
-/// Returns one or two nodes (peeled body + remaining loop).
-fn peel_node(node: Node, changed: &mut bool) -> Vec<Node> {
-    let recursed = node_map::map_children(node, &mut |child| {
-        let peeled = peel_node(child, changed);
-        if peeled.len() == 1 {
-            peeled.into_iter().next().unwrap_or(Node::Block(Vec::new()))
-        } else {
-            Node::Block(peeled)
-        }
-    });
-
-    if let Node::Loop {
-        ref var,
-        ref from,
-        ref to,
-        ref body,
-    } = recursed
-    {
-        if let Some((peeled_body, rest_body)) = try_peel(var, from, to, body) {
-            *changed = true;
-            let remaining = Node::Loop {
-                var: var.clone(),
-                from: Expr::u32(1),
-                to: to.clone(),
-                body: rest_body,
-            };
-            return vec![Node::Block(peeled_body), remaining];
-        }
-    }
-
-    vec![recursed]
+/// The peeled first iteration followed by the loop over the remaining range.
+fn peel_node(node: &Node) -> Option<Vec<Node>> {
+    let Node::Loop {
+        var,
+        from,
+        to,
+        body,
+    } = node
+    else {
+        return None;
+    };
+    let (peeled_body, rest_body) = try_peel(var, from, to, body)?;
+    Some(vec![
+        Node::Block(peeled_body),
+        Node::Loop {
+            var: var.clone(),
+            from: Expr::u32(1),
+            to: to.clone(),
+            body: rest_body,
+        },
+    ])
 }
 
 /// Try to match the A28 peeling pattern:

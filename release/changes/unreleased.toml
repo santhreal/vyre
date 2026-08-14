@@ -879,3 +879,18 @@ text = "The seven `foundation.*` micro benchmark cases are rows on one owner, `v
 id = "bench-dup-pin-lowered"
 category = "Changed"
 text = "The vyre-bench duplication pin records the measured tree: 2485 to 2179 duplicated lines, with total_lines corrected from 37430 to the measured 37504."
+
+[[fragments]]
+id = "optimizer-passes-have-one-descent-and-one-candidate-scan"
+category = "Changed"
+text = "Every structural optimizer pass in `vyre-foundation` now holds its rewrite rule and nothing else. Eighteen analysis bodies restated the same shape, an O(1) node-kind bitset filter followed by a scan of the entry tree for a candidate, and sixteen transforms restated a recursive descent plus the same changed-flag bookkeeping; both are stated once in `vyre-foundation/src/optimizer/passes/driver.rs`. Three of those descents applied themselves to every child twice, once through the child map and again through the body map, which is `2^depth` node visits for a nest of that depth. The descent also preserves borrows: the owned entry walk the passes used cannot report `no change`, so each of them rebuilt the whole entry tree on every run and dropped the cached facts behind it, including on the runs that changed nothing. A pass whose rule does not fire now hands back the caller's program unchanged, which is the common case under the optimizer fixpoint. Legality is stated once per pass instead of twice, so an analysis can no longer schedule a pass for a node its own rewrite then declines."
+
+[[fragments]]
+id = "collective-and-atomic-buffer-dependencies-are-visible-to-fusion"
+category = "Fixed"
+text = "Region fusion reads which buffers each side touches, and both of the walks that answered it enumerated buffer positions per node variant and ended in a catch-all. Neither had an arm for the four collective statements, which name their operands as buffers and carry no operand expression at all, so an all-reduce, all-gather, reduce-scatter or broadcast was reported as touching nothing; an atomic read-modify-write was reported as a pure read. The positions are now owned exhaustively in `vyre-foundation/src/transform/visit.rs`, where adding a variant fails to compile, one walk collects both directions, and a node carrying an opaque payload reports the sets as a lower bound rather than as empty, which declines the fusion instead of guessing at it. The test that should have caught this compared two inline copies of the walk against each other and never called the production one."
+
+[[fragments]]
+id = "foundation-duplication-pin-lowered-to-measured"
+category = "Changed"
+text = "The `vyre-foundation` duplication pin sits at what the tree measures, 5125 down to 4350 duplicated lines over 160 files, with the total line count corrected from a stale 95984 to a measured 94924. A pin with room under it hides the next copy."
