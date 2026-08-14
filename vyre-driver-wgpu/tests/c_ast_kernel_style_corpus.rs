@@ -10,8 +10,7 @@ mod c_frontend;
 
 use c_ast_gpu_parity_support::{
     build_fixture, kind_at, lexeme_indices, row_indices, run_gpu_classifier,
-    run_gpu_scoped_typedef_annotation, run_gpu_vast_builder_from_parts, word_at, Fixture,
-    FixtureToken,
+    run_gpu_scoped_typedef_annotation, run_gpu_vast_builder_from_parts, Fixture, FixtureToken,
 };
 use c_grammar_gen::lex_c11_max_munch_kinds;
 use vyre_libs::parsing::c::lex::tokens::*;
@@ -25,8 +24,7 @@ use vyre_libs::parsing::c::parse::vast::{
 use vyre_primitives::predicate::node_kind;
 
 use c_frontend::rows::{
-    assert_words_eq, flags_at, FLAGS_FIELD as TYPEDEF_FLAGS_FIELD, ORDINARY_FLAG_DECL,
-    TYPEDEF_FLAG_DECL, TYPEDEF_FLAG_VISIBLE, VAST_STRIDE_U32,
+    assert_words_eq, flags_at, ORDINARY_FLAG_DECL, TYPEDEF_FLAG_DECL, TYPEDEF_FLAG_VISIBLE,
 };
 
 fn fixture_token_stream() -> Fixture {

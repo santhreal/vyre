@@ -2,6 +2,8 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
+#[path = "../../tests/support/c_frontend/fixtures/asm_extended_operands.rs"]
+mod asm_extended_operands;
 #[allow(dead_code)]
 mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
@@ -35,33 +37,10 @@ fn assert_gnu_role(nodes: &[u8], idx: usize, kind: u32, role: u32) {
     assert_eq!(semantic_node_word(nodes, idx, 7), role, "role[{idx}]");
 }
 
+use asm_extended_operands::asm_goto_full_operands;
+
 fn fixture_asm_goto() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("asm", TOK_IDENTIFIER),
-        FixtureToken::new("goto", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"jmp %l0\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"=r\"", TOK_STRING),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("out", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"r\"", TOK_STRING),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("in", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"memory\"", TOK_STRING),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("\"cc\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("fail", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("ok", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    asm_goto_full_operands()
 }
 
 fn fixture_attributes() -> Fixture {

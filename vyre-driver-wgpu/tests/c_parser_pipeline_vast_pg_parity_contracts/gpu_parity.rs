@@ -2,14 +2,7 @@ use super::*;
 
 #[test]
 fn gpu_expr_shape_parity_on_ternary() {
-    let fix = build_fixture(&[
-        ("a", TOK_IDENTIFIER),
-        ("?", TOK_QUESTION),
-        ("b", TOK_IDENTIFIER),
-        (":", TOK_COLON),
-        ("c", TOK_IDENTIFIER),
-        (";", TOK_SEMICOLON),
-    ]);
+    let fix = lexeme_fixture("a ? b : c ;");
     let raw = run_cpu_vast_builder(&fix);
     let typed = run_cpu_classifier(&raw);
     let shape_cpu = run_cpu_expr_shape(&raw, &typed);
@@ -22,14 +15,7 @@ fn gpu_expr_shape_parity_on_ternary() {
 
 #[test]
 fn gpu_expr_shape_parity_on_assignment_chain() {
-    let fix = build_fixture(&[
-        ("a", TOK_IDENTIFIER),
-        ("=", TOK_ASSIGN),
-        ("b", TOK_IDENTIFIER),
-        ("=", TOK_ASSIGN),
-        ("c", TOK_IDENTIFIER),
-        (";", TOK_SEMICOLON),
-    ]);
+    let fix = lexeme_fixture("a = b = c ;");
     let raw = run_cpu_vast_builder(&fix);
     let typed = run_cpu_classifier(&raw);
     let shape_cpu = run_cpu_expr_shape(&raw, &typed);
@@ -46,52 +32,31 @@ fn gpu_expr_shape_parity_on_assignment_chain() {
 
 #[test]
 fn gpu_parity_single_token_identifier() {
-    let fix = build_fixture(&[("x", TOK_IDENTIFIER)]);
+    let fix = lexeme_fixture("x");
     assert_full_pipeline_parity(&fix, "single_token_identifier");
 }
 
 #[test]
 fn gpu_parity_single_delimiter_pair() {
-    let fix = build_fixture(&[("(", TOK_LPAREN), (")", TOK_RPAREN)]);
+    let fix = lexeme_fixture("( )");
     assert_full_pipeline_parity(&fix, "single_delimiter_pair");
 }
 
 #[test]
 fn gpu_parity_keyword_only_stream() {
-    let fix = build_fixture(&[
-        ("if", TOK_IF),
-        ("else", TOK_ELSE),
-        ("while", TOK_WHILE),
-        ("for", TOK_FOR),
-        ("return", TOK_RETURN),
-    ]);
+    let fix = lexeme_fixture("if else while for return");
     assert_full_pipeline_parity(&fix, "keyword_only_stream");
 }
 
 #[test]
 fn gpu_parity_operator_only_stream() {
-    let fix = build_fixture(&[
-        ("+", TOK_PLUS),
-        ("-", TOK_MINUS),
-        ("*", TOK_STAR),
-        ("/", TOK_SLASH),
-        ("%", TOK_PERCENT),
-        ("&", TOK_AMP),
-        ("|", TOK_PIPE),
-        ("^", TOK_CARET),
-    ]);
+    let fix = lexeme_fixture("+ - * / % & | ^");
     assert_full_pipeline_parity(&fix, "operator_only_stream");
 }
 
 #[test]
 fn gpu_parity_punctuation_only_stream() {
-    let fix = build_fixture(&[
-        (";", TOK_SEMICOLON),
-        (",", TOK_COMMA),
-        (".", TOK_DOT),
-        ("->", TOK_ARROW),
-        ("...", TOK_ELLIPSIS),
-    ]);
+    let fix = lexeme_fixture("; , . -> ...");
     assert_full_pipeline_parity(&fix, "punctuation_only_stream");
 }
 
@@ -101,11 +66,7 @@ fn gpu_parity_punctuation_only_stream() {
 
 #[test]
 fn gpu_vast_builder_nonempty_input_produces_nonempty_output() {
-    let fix = build_fixture(&[
-        ("int", TOK_INT),
-        ("x", TOK_IDENTIFIER),
-        (";", TOK_SEMICOLON),
-    ]);
+    let fix = lexeme_fixture("int x ;");
     let gpu_raw = run_gpu_vast_builder(&fix);
     assert!(
         !gpu_raw.is_empty(),

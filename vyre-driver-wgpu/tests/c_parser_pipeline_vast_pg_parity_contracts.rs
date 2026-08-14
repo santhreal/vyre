@@ -11,6 +11,7 @@
 mod c_frontend;
 
 use c_frontend::rows::assert_words_eq;
+use c_frontend::spelling::raw_kind_of_lexeme;
 use std::sync::OnceLock;
 
 use vyre::ir::Expr;
@@ -81,6 +82,19 @@ fn build_fixture(lexemes: &[(&str, u32)]) -> Fixture {
         tok_starts,
         tok_lens,
     }
+}
+
+/// A fixture from a whitespace-separated C source spelling.
+///
+/// The kind of each lexeme comes from the shared lexeme table, and
+/// [`build_fixture`] runs the keyword promotion, so a spelling cannot disagree
+/// with the keyword table the lexer uses.
+fn lexeme_fixture(spelling: &str) -> Fixture {
+    let lexemes: Vec<(&str, u32)> = spelling
+        .split_whitespace()
+        .map(|lexeme| (lexeme, raw_kind_of_lexeme(lexeme)))
+        .collect();
+    build_fixture(&lexemes)
 }
 
 fn gpu_backend() -> &'static WgpuBackend {

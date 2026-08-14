@@ -6,6 +6,8 @@
 #![cfg(feature = "c-parser")]
 #![allow(clippy::erasing_op)]
 #![allow(deprecated)]
+#[path = "../../tests/support/c_frontend/fixtures/asm_extended_operands.rs"]
+mod asm_extended_operands;
 mod c_ast_gpu_parity_support;
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
@@ -29,22 +31,10 @@ use vyre_primitives::predicate::node_kind;
 // Fixture builders
 // ---------------------------------------------------------------------------
 
+use asm_extended_operands::{asm_goto_two_labels, asm_volatile_mov_one_clobber};
+
 fn fixture_asm_goto_multiple_labels() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("__asm__", TOK_IDENTIFIER),
-        FixtureToken::new("goto", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"jmp %l0\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("fail", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("ok", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    asm_goto_two_labels("__asm__", TOK_IDENTIFIER, "\"jmp %l0\"")
 }
 
 fn fixture_asm_with_multiple_clobbers() -> Fixture {
@@ -64,26 +54,7 @@ fn fixture_asm_with_multiple_clobbers() -> Fixture {
 }
 
 fn fixture_asm_extended_with_input_output() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("asm", TOK_IDENTIFIER),
-        FixtureToken::new("volatile", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("\"mov %1, %0\"", TOK_STRING),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"=a\"", TOK_STRING),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("out", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"r\"", TOK_STRING),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("in", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("\"rax\"", TOK_STRING),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    asm_volatile_mov_one_clobber("\"rax\"")
 }
 
 fn fixture_attribute_before_variable() -> Fixture {
