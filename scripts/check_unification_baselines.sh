@@ -30,11 +30,23 @@ cd "$ROOT"
 mode="${1:-enforce}"
 
 # Each row: name@@pattern@@search_paths@@floor
+#
+# Every declared path MUST exist. A path that has been moved or deleted used to
+# be dropped silently, so the row scanned less than it claimed and scored 0,
+# which is at or below every floor. Three of these five rows were in exactly
+# that state: `vyre-driver-wgpu/src/lowering`, `vyre-foundation/src/
+# cpu_references.rs` and `vyre-driver/src/self_substrate` had all been moved,
+# and the rows reading them passed by measuring nothing.
 ROWS=(
     "P-DELETE-1__match_on_Node@@^[[:space:]]*match node[[:space:]]+\\{@@vyre-foundation/src/validate vyre-foundation/src/transform@@18"
-    "P-DELETE-10__buffer_access_auto@@BufferAccess::(infer|auto|derive_from)@@vyre-foundation/src/lower vyre-driver-wgpu/src/lowering vyre-runtime/src/megakernel@@0"
-    "P-UNIFY-2__cpu_references@@fn cpu_reference\\b@@vyre-foundation/src/cpu_references.rs vyre-reference/src/dialect_dispatch.rs@@0"
-    "P-UNIFY-4__fusion_planning@@fn (plan_fusion|fuse_programs|tensor_network_fusion_order)\\b@@vyre-foundation/src/optimizer vyre-driver/src/self_substrate vyre-runtime/src/megakernel@@0"
+    "P-DELETE-10__buffer_access_auto@@BufferAccess::(infer|auto|derive_from)@@vyre-foundation/src/lower vyre-driver-wgpu/src vyre-runtime/src/megakernel@@0"
+    "P-UNIFY-2__cpu_references@@fn cpu_reference\\b@@vyre-foundation/src vyre-reference/src@@0"
+    # Floor 1, not 0: the unification this row tracks is ACHIEVED. There is
+    # exactly one fusion-planning entry point and it lives in
+    # vyre-foundation/src/execution_plan/fusion/fuse.rs. The previous 0 was
+    # never measured, because all three declared paths had moved; the row
+    # scanned nothing. A second entry point anywhere fails this row.
+    "P-UNIFY-4__fusion_planning@@fn (plan_fusion|fuse_programs|tensor_network_fusion_order)\\b@@vyre-foundation/src/execution_plan vyre-self-substrate/src vyre-runtime/src/megakernel@@1"
     "P-UNIFY-1b__cache_in_wgpu@@impl PipelineCacheStore for@@vyre-driver-wgpu/src@@0"
 )
 
@@ -48,16 +60,19 @@ for row in "${ROWS[@]}"; do
     floor=$(printf '%s' "$row" | awk -F'@@' '{print $4}')
     # shellcheck disable=SC2206
     path_arr=( $paths )
-    valid_paths=()
+    missing=()
     for p in "${path_arr[@]}"; do
-        [[ -e "$p" ]] && valid_paths+=("$p")
+        [[ -e "$p" ]] || missing+=("$p")
     done
+    if (( ${#missing[@]} > 0 )); then
+        errors+=("$name: declared path(s) do not exist: ${missing[*]}")
+        report+=("$name: UNMEASURABLE, missing ${missing[*]}")
+        continue
+    fi
     count=0
-    if (( ${#valid_paths[@]} > 0 )); then
-        if hits=$(grep -rnE "$pattern" --include='*.rs' "${valid_paths[@]}" 2>/dev/null | grep -vE '/tests/|_tests\.rs:|test_fixtures' || true); then
-            if [[ -n "$hits" ]]; then
-                count=$(printf '%s\n' "$hits" | wc -l | tr -d ' ')
-            fi
+    if hits=$(grep -rnE "$pattern" --include='*.rs' "${path_arr[@]}" 2>/dev/null | grep -vE '/tests/|_tests\.rs:|test_fixtures' || true); then
+        if [[ -n "$hits" ]]; then
+            count=$(printf '%s\n' "$hits" | wc -l | tr -d ' ')
         fi
     fi
     report+=("$name: $count (floor=$floor)")
