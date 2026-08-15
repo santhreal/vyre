@@ -17,35 +17,34 @@ fn rem_u32(divisor: u32) -> Expr {
     }
 }
 
-/// Wrapping-`u32` evaluator over exactly the node subset that the modulo
-/// rewrite and Granlund-Montgomery division produce: {Var, LitU32, Add, Sub,
-/// Mul, Shr, Shl, BitAnd, Mod, MulHigh}. `MulHigh` matches the crate's own
-/// definition: `((a as u64) * (b as u64)) >> 32`.
+/// Unsigned evaluator for the node subset the strength-reduction rewrites
+/// produce.
+///
+/// Operator semantics come from the crate's own literal folder rather than a
+/// restatement of it, so a test can never prove a rewrite correct against an
+/// operator the rest of the crate defines differently.
 pub(super) fn eval_u32(expr: &Expr, x: u32) -> u32 {
     match expr {
         Expr::LitU32(v) => *v,
         Expr::LitI32(v) => *v as u32,
         Expr::Var(_) => x,
-        Expr::BinOp { op, left, right } => {
-            let l = eval_u32(left, x);
-            let r = eval_u32(right, x);
-            match op {
-                BinOp::Add => l.wrapping_add(r),
-                BinOp::Sub => l.wrapping_sub(r),
-                BinOp::Mul => l.wrapping_mul(r),
-                BinOp::Shr => l.wrapping_shr(r),
-                BinOp::Shl => l.wrapping_shl(r),
-                BinOp::BitAnd => l & r,
-                BinOp::Mod => l % r,
-                BinOp::MulHigh => ((u64::from(l)).wrapping_mul(u64::from(r)) >> 32) as u32,
-                other => panic!("unexpected binop in modulo eval: {other:?}"),
-            }
-        }
-        Expr::UnOp {
-            op: UnOp::Negate,
-            operand,
-        } => eval_u32(operand, x).wrapping_neg(),
-        other => panic!("unexpected node in modulo eval: {other:?}"),
+        Expr::BinOp { op, left, right } => folded_u32(crate::ir_eval::fold_binary_literal(
+            op,
+            &Expr::u32(eval_u32(left, x)),
+            &Expr::u32(eval_u32(right, x)),
+        )),
+        Expr::UnOp { op, operand } => folded_u32(crate::ir_eval::fold_unary_literal(
+            op,
+            &Expr::u32(eval_u32(operand, x)),
+        )),
+        other => panic!("unexpected node in strength-reduce eval: {other:?}"),
+    }
+}
+
+fn folded_u32(folded: Option<Expr>) -> u32 {
+    match folded {
+        Some(Expr::LitU32(value)) => value,
+        other => panic!("literal folder produced no u32: {other:?}"),
     }
 }
 

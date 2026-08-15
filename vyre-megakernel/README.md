@@ -23,7 +23,7 @@ Any other normal or build dependency requires an ownership-registry change.
 Run the checked-in behavior from `vyre-megakernel/tests/artifact_contract.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-megakernel --test artifact_contract
+./cargo_full test -p vyre-megakernel --test artifact_contract
 ```
 
 ### Features

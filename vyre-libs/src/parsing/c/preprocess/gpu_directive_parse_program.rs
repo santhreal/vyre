@@ -211,6 +211,72 @@ pub(super) fn push_ws_skip_from_expr(
     ));
 }
 
+/// Bindings one bounded horizontal-whitespace skip leaves in scope.
+///
+/// The `#if` evaluator walks a directive payload of unknown length, so its
+/// whitespace runs are a bounded kernel loop rather than the straight-line
+/// prefix chain [`push_ws_skip_from_expr`] emits. Each of its eight runs used
+/// to carry its own spelling of the loop, the latch, the byte load and the
+/// four-byte whitespace table; the table is [`horizontal_ws_flag`] and the
+/// loop is [`payload_ws_skip`]. Only the binding names differ per run,
+/// because a straight-line kernel cannot reuse one name across scopes.
+pub(super) struct PayloadWsSkip<'a> {
+    /// Loop induction variable.
+    pub(super) loop_var: &'a str,
+    /// Latch set once the cursor reaches a non-whitespace byte.
+    pub(super) done_var: &'a str,
+    /// Byte read at the cursor.
+    pub(super) byte_var: &'a str,
+    /// Whitespace flag derived from `byte_var`.
+    pub(super) flag_var: &'a str,
+    /// Cursor advanced past each whitespace byte.
+    pub(super) pos_var: &'a str,
+    /// Exclusive byte bound of the row being scanned.
+    pub(super) end_var: &'a str,
+    /// Iteration bound, which is the row's byte length.
+    pub(super) len_var: &'a str,
+}
+
+/// Advance `pos_var` past a horizontal-whitespace run inside one row.
+///
+/// The loop runs `len_var` times and stops early on the first non-whitespace
+/// byte or at `end_var`, so it terminates on every input without a loop-carried
+/// condition the region-scope phi merge cannot see.
+pub(super) fn payload_ws_skip(
+    names: &PayloadWsSkip<'_>,
+    load_byte: impl Fn(Expr) -> Expr,
+) -> Vec<Node> {
+    vec![
+        Node::let_bind(names.done_var, Expr::u32(0)),
+        Node::loop_for(
+            names.loop_var,
+            Expr::u32(0),
+            Expr::var(names.len_var),
+            vec![Node::if_then(
+                Expr::and(
+                    Expr::eq(Expr::var(names.done_var), Expr::u32(0)),
+                    Expr::lt(Expr::var(names.pos_var), Expr::var(names.end_var)),
+                ),
+                vec![
+                    Node::let_bind(names.byte_var, load_byte(Expr::var(names.pos_var))),
+                    Node::let_bind(
+                        names.flag_var,
+                        horizontal_ws_flag(Expr::var(names.byte_var)),
+                    ),
+                    Node::if_then_else(
+                        Expr::eq(Expr::var(names.flag_var), Expr::u32(1)),
+                        vec![Node::assign(
+                            names.pos_var,
+                            Expr::add(Expr::var(names.pos_var), Expr::u32(1)),
+                        )],
+                        vec![Node::assign(names.done_var, Expr::u32(1))],
+                    ),
+                ],
+            )],
+        ),
+    ]
+}
+
 /// Leading horizontal-whitespace run, `#`, and the byte index of that `#`.
 ///
 /// `prefix` names the byte and whitespace-flag bindings this stage leaves in

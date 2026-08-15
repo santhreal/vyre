@@ -56,6 +56,8 @@ pub(crate) fn is_decl_prefix_token(token: Expr) -> Expr {
             TOK_TYPEDEF,
             TOK_EXTERN,
             TOK_STATIC,
+            TOK_AUTO,
+            TOK_REGISTER,
             TOK_INLINE,
             TOK_CONST,
             TOK_RESTRICT,
@@ -127,6 +129,12 @@ pub(crate) fn is_decl_prefix_reset_token(token: Expr) -> Expr {
     )
 }
 
+/// Token after an identifier that lets the identifier be a declarator name.
+///
+/// `]` is deliberately absent: the identifier in `int a[N];` is followed by `]`
+/// and is an array bound, not a declarator. `:` is absent for the same reason a
+/// caller also tests it separately, `name:` being a label or a bit-field width.
+/// `__attribute__` is present: `int x __attribute__((aligned(8)));` declares `x`.
 pub(crate) fn is_declarator_follower_token(token: Expr) -> Expr {
     any_token_eq(
         token,
@@ -142,31 +150,12 @@ pub(crate) fn is_declarator_follower_token(token: Expr) -> Expr {
     )
 }
 
-pub(crate) fn is_declaration_candidate_follower_token(token: Expr) -> Expr {
-    any_token_eq(
-        token,
-        &[
-            TOK_SEMICOLON,
-            TOK_COMMA,
-            TOK_ASSIGN,
-            TOK_LPAREN,
-            TOK_LBRACKET,
-            TOK_COLON,
-            TOK_RPAREN,
-            TOK_RBRACKET,
-            TOK_GNU_ATTRIBUTE,
-        ],
-    )
-}
-
+/// Token before an identifier that rules the identifier out as a declarator name.
+///
+/// `struct`, `union` and `enum` make the identifier a tag; `.` and `->` make it a
+/// member name; `goto` makes it a label, so `goto done;` must not read `done` as
+/// a declarator even though `;` follows it.
 pub(crate) fn is_declaration_previous_disqualifier_token(token: Expr) -> Expr {
-    any_token_eq(
-        token,
-        &[TOK_STRUCT, TOK_UNION, TOK_ENUM, TOK_DOT, TOK_ARROW],
-    )
-}
-
-pub(crate) fn is_precomputed_declaration_previous_disqualifier_token(token: Expr) -> Expr {
     any_token_eq(
         token,
         &[

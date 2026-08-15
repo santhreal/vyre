@@ -473,6 +473,14 @@ fn assert_pinned(actual: &[(String, String)], pinned: &[(&str, &str)]) {
 /// across that move, and the define/undef/include rows never budged, which is
 /// what distinguishes a reshape from a semantic change.
 ///
+/// The 8 `gpu_if_expression*` rows moved a second time when the `#if`
+/// evaluator's inline integer-literal scan was routed onto
+/// `c_int_literal_grammar`. That move is a semantic fix, not a reshape: the
+/// inline copy accumulated digits with wrapping `u32` arithmetic and consumed a
+/// type suffix after a radix prefix that had no digits, where both the standalone
+/// scanner and the CPU `consume_integer` saturate and reject. The behavior tests
+/// above stayed green, and no other kernel's rows budged.
+///
 /// A merge that only rehomes code leaves every one of these untouched.
 const DIRECTIVE_FAMILY_PINS: &[(&str, &str)] = &[
     (
@@ -493,11 +501,11 @@ const DIRECTIVE_FAMILY_PINS: &[(&str, &str)] = &[
     ),
     (
         "gpu_if_expression(0,0)",
-        "c51a5457d074b293d7dd3f75a0d9c1e2b5415592ae1ca4e812141e4bcec88088",
+        "30c1f93866e8454b2014f0ab966e41dec5f8569b7a1b7b237a53faa9a1b4a080",
     ),
     (
         "gpu_if_expression_u8(0,0)",
-        "7ce9503db2ade7eeffd8e3d8ea578660ad0c741e6e8dae76aa570853464d92e4",
+        "b2efc06f7dcf0f4559391d937638a9efa05e48a0511bf0cc7e6a44d294ef74bd",
     ),
     (
         "gpu_define_parse(0,0)",
@@ -541,11 +549,11 @@ const DIRECTIVE_FAMILY_PINS: &[(&str, &str)] = &[
     ),
     (
         "gpu_if_expression(1,1)",
-        "d70fa8c9c9cc611ffb3427a31d2516ff4c99625fc9eeb2d8c27f23ae9918dc44",
+        "3cd75d7769bf1efa3d1d3e343d09fc14285464850672c98225a0748498742003",
     ),
     (
         "gpu_if_expression_u8(1,1)",
-        "0e0a29ae745bc65440cb8daa49a1685cf2523af3316f47faf11f2b7790f652d4",
+        "0d4869eb74d5e6c2300a87da397875f30faa3ba080b1e27840dc44799caafc9a",
     ),
     (
         "gpu_define_parse(1,1)",
@@ -589,11 +597,11 @@ const DIRECTIVE_FAMILY_PINS: &[(&str, &str)] = &[
     ),
     (
         "gpu_if_expression(3,16)",
-        "9aac34e69e9e1d6f61c5f2416ffe83aec42ff73a1f73c56d03517af14f0ad937",
+        "4f161dc21a0f6d0b4194cc0591952e28536ebf5c9e7f45d8649abe017f7c074d",
     ),
     (
         "gpu_if_expression_u8(3,16)",
-        "9f17ac6b28830b79f897e68c2d094e5f56d2f4013525fb5074577b5b108f7ef9",
+        "87234d3f1c35ade7b589041d76a06c1d303ad2b1dcb68094c09e2ae9c3943f5f",
     ),
     (
         "gpu_define_parse(3,16)",
@@ -637,11 +645,11 @@ const DIRECTIVE_FAMILY_PINS: &[(&str, &str)] = &[
     ),
     (
         "gpu_if_expression(64,4096)",
-        "2cc32318a202fabce958e0dfef2446ecd3bb75ebbc6cd959feef78957dd5e70e",
+        "2929f7f857d4ba0e38c7e7ce20cde67b39413f7d3af3e23f99b06824a035813e",
     ),
     (
         "gpu_if_expression_u8(64,4096)",
-        "1f933a49c9fb43ceb4f4d27c0654f7842004d67189ebca8f27cdc59dc8a515c4",
+        "8f48d832be74b94c2a2fa519d8b1d70c595b588013434ad085e38b82a9c538b6",
     ),
     (
         "gpu_define_parse(64,4096)",

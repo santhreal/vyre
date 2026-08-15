@@ -22,6 +22,10 @@
 //!     an integer literal at this position"  -  the caller treats this
 //!     the same way the CPU `consume_integer` returns `None`.
 
+use super::c_int_literal_grammar::{
+    push_digit_value, push_radix_class, push_saturating_digit_accumulate, push_suffix_class,
+    suffix_advance_expr, suffix_matched_expr, DigitValue, SuffixClass,
+};
 use super::gpu_source_bytes::{
     literal_scan_common_buffers, literal_scan_program, packed_source_byte_len_expr,
     safe_load_source_byte_expr,
@@ -59,398 +63,172 @@ pub fn gpu_int_literal_scan() -> Program {
     let safe_load =
         |addr: Expr| -> Expr { safe_load_source_byte_expr(addr, source_byte_len.clone()) };
 
+    let mut scan: Vec<Node> = vec![
+        Node::let_bind("start", Expr::load("start_pos", Expr::u32(0))),
+        // Determine radix and digits-start.
+        Node::let_bind("b0", safe_load(Expr::var("start"))),
+        Node::let_bind("b1", safe_load(Expr::add(Expr::var("start"), Expr::u32(1)))),
+    ];
+    push_radix_class(&mut scan, "b0", "b1", "radix", "digit_start_offset");
+    scan.extend([
+        Node::let_bind(
+            "digits_start",
+            Expr::add(Expr::var("start"), Expr::var("digit_start_offset")),
+        ),
+        Node::let_bind("idx", Expr::var("digits_start")),
+        Node::let_bind("value", Expr::u32(0)),
+        Node::let_bind("done_digits", Expr::u32(0)),
+    ]);
+
+    let mut digit_step: Vec<Node> = vec![
+        Node::let_bind("byte", safe_load(Expr::var("idx"))),
+        Node::let_bind(
+            "next_byte",
+            safe_load(Expr::add(Expr::var("idx"), Expr::u32(1))),
+        ),
+    ];
+    push_digit_value(
+        &mut digit_step,
+        &DigitValue {
+            byte_var: "byte",
+            dec_var: "is_dec_digit",
+            hex_lower_var: "is_hex_lower",
+            hex_upper_var: "is_hex_upper",
+            value_var: "raw_digit",
+        },
+    );
+    digit_step.push(Node::let_bind(
+        "digit_in_range",
+        Expr::select(
+            Expr::lt(Expr::var("raw_digit"), Expr::var("radix")),
+            Expr::u32(1),
+            Expr::u32(0),
+        ),
+    ));
+    // A digit separator is only a separator when a digit of this radix follows
+    // it, so the byte after the cursor is decoded too.
+    push_digit_value(
+        &mut digit_step,
+        &DigitValue {
+            byte_var: "next_byte",
+            dec_var: "next_is_dec_digit",
+            hex_lower_var: "next_is_hex_lower",
+            hex_upper_var: "next_is_hex_upper",
+            value_var: "next_raw_digit",
+        },
+    );
+    digit_step.extend([Node::let_bind(
+        "separator_in_range",
+        Expr::select(
+            Expr::and(
+                Expr::eq(Expr::var("byte"), Expr::u32(b'\'' as u32)),
+                Expr::lt(Expr::var("next_raw_digit"), Expr::var("radix")),
+            ),
+            Expr::u32(1),
+            Expr::u32(0),
+        ),
+    )]);
+
+    let mut fold: Vec<Node> = Vec::new();
+    push_saturating_digit_accumulate(
+        &mut fold,
+        "value",
+        "radix",
+        "raw_digit",
+        "separator_in_range",
+    );
+    fold.push(Node::assign(
+        "idx",
+        Expr::add(Expr::var("idx"), Expr::u32(1)),
+    ));
+    digit_step.push(Node::if_then_else(
+        Expr::or(
+            Expr::eq(Expr::var("digit_in_range"), Expr::u32(1)),
+            Expr::eq(Expr::var("separator_in_range"), Expr::u32(1)),
+        ),
+        fold,
+        vec![Node::assign("done_digits", Expr::u32(1))],
+    ));
+
+    scan.push(Node::loop_for(
+        "k",
+        Expr::u32(0),
+        Expr::u32(MAX_DIGITS),
+        vec![Node::if_then(
+            Expr::eq(Expr::var("done_digits"), Expr::u32(0)),
+            digit_step,
+        )],
+    ));
+
+    let suffix = SuffixClass {
+        byte_var: "sb",
+        next_byte_var: "sb1",
+        single_var: "is_single_suffix",
+        z_var: "is_z_suffix",
+        wb_var: "is_wb_suffix",
+    };
+    let mut suffix_step: Vec<Node> = vec![
+        Node::let_bind("sb", safe_load(Expr::var("idx"))),
+        Node::let_bind("sb1", safe_load(Expr::add(Expr::var("idx"), Expr::u32(1)))),
+    ];
+    push_suffix_class(&mut suffix_step, &suffix);
+    suffix_step.push(Node::if_then_else(
+        suffix_matched_expr(&suffix),
+        vec![Node::assign(
+            "idx",
+            Expr::add(Expr::var("idx"), suffix_advance_expr(&suffix)),
+        )],
+        vec![Node::assign("done_suffix", Expr::u32(1))],
+    ));
+
+    scan.extend([
+        Node::let_bind(
+            "saw_digits",
+            Expr::select(
+                Expr::gt(Expr::var("idx"), Expr::var("digits_start")),
+                Expr::u32(1),
+                Expr::u32(0),
+            ),
+        ),
+        // If no digits at all → not a literal. Bytes consumed = 0.
+        // Otherwise consume up to MAX_SUFFIX trailing suffix bytes.
+        Node::let_bind("done_suffix", Expr::u32(0)),
+        Node::if_then(
+            Expr::eq(Expr::var("saw_digits"), Expr::u32(1)),
+            vec![Node::loop_for(
+                "s",
+                Expr::u32(0),
+                Expr::u32(MAX_SUFFIX),
+                vec![Node::if_then(
+                    Expr::eq(Expr::var("done_suffix"), Expr::u32(0)),
+                    suffix_step,
+                )],
+            )],
+        ),
+        // Compute consumed bytes. If saw_digits is false, emit 0.
+        Node::let_bind(
+            "consumed",
+            Expr::select(
+                Expr::eq(Expr::var("saw_digits"), Expr::u32(1)),
+                Expr::sub(Expr::var("idx"), Expr::var("start")),
+                Expr::u32(0),
+            ),
+        ),
+        Node::let_bind(
+            "value_final",
+            Expr::select(
+                Expr::eq(Expr::var("saw_digits"), Expr::u32(1)),
+                Expr::var("value"),
+                Expr::u32(0),
+            ),
+        ),
+        Node::store("value_out", Expr::u32(0), Expr::var("value_final")),
+        Node::store("bytes_consumed_out", Expr::u32(0), Expr::var("consumed")),
+    ]);
+
     let body: Vec<Node> = vec![Node::if_then(
         Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-        vec![
-            Node::let_bind("start", Expr::load("start_pos", Expr::u32(0))),
-            // Determine radix and digits-start.
-            Node::let_bind("b0", safe_load(Expr::var("start"))),
-            Node::let_bind("b1", safe_load(Expr::add(Expr::var("start"), Expr::u32(1)))),
-            Node::let_bind(
-                "is_hex",
-                Expr::select(
-                    Expr::and(
-                        Expr::eq(Expr::var("b0"), Expr::u32(b'0' as u32)),
-                        Expr::or(
-                            Expr::eq(Expr::var("b1"), Expr::u32(b'x' as u32)),
-                            Expr::eq(Expr::var("b1"), Expr::u32(b'X' as u32)),
-                        ),
-                    ),
-                    Expr::u32(1),
-                    Expr::u32(0),
-                ),
-            ),
-            Node::let_bind(
-                "is_bin",
-                Expr::select(
-                    Expr::and(
-                        Expr::eq(Expr::var("b0"), Expr::u32(b'0' as u32)),
-                        Expr::or(
-                            Expr::eq(Expr::var("b1"), Expr::u32(b'b' as u32)),
-                            Expr::eq(Expr::var("b1"), Expr::u32(b'B' as u32)),
-                        ),
-                    ),
-                    Expr::u32(1),
-                    Expr::u32(0),
-                ),
-            ),
-            Node::let_bind(
-                "is_oct",
-                Expr::select(
-                    Expr::and(
-                        Expr::eq(Expr::var("b0"), Expr::u32(b'0' as u32)),
-                        Expr::and(
-                            Expr::eq(Expr::var("is_hex"), Expr::u32(0)),
-                            Expr::eq(Expr::var("is_bin"), Expr::u32(0)),
-                        ),
-                    ),
-                    Expr::u32(1),
-                    Expr::u32(0),
-                ),
-            ),
-            Node::let_bind(
-                "radix",
-                Expr::select(
-                    Expr::eq(Expr::var("is_hex"), Expr::u32(1)),
-                    Expr::u32(16),
-                    Expr::select(
-                        Expr::eq(Expr::var("is_bin"), Expr::u32(1)),
-                        Expr::u32(2),
-                        Expr::select(
-                            Expr::eq(Expr::var("is_oct"), Expr::u32(1)),
-                            Expr::u32(8),
-                            Expr::u32(10),
-                        ),
-                    ),
-                ),
-            ),
-            // Hex/bin advance start by 2; oct/dec advance by 0.
-            Node::let_bind(
-                "digit_start_offset",
-                Expr::select(
-                    Expr::or(
-                        Expr::eq(Expr::var("is_hex"), Expr::u32(1)),
-                        Expr::eq(Expr::var("is_bin"), Expr::u32(1)),
-                    ),
-                    Expr::u32(2),
-                    Expr::u32(0),
-                ),
-            ),
-            Node::let_bind(
-                "digits_start",
-                Expr::add(Expr::var("start"), Expr::var("digit_start_offset")),
-            ),
-            Node::let_bind("idx", Expr::var("digits_start")),
-            Node::let_bind("value", Expr::u32(0)),
-            Node::let_bind("done_digits", Expr::u32(0)),
-            Node::loop_for(
-                "k",
-                Expr::u32(0),
-                Expr::u32(MAX_DIGITS),
-                vec![Node::if_then(
-                    Expr::eq(Expr::var("done_digits"), Expr::u32(0)),
-                    vec![
-                        Node::let_bind("byte", safe_load(Expr::var("idx"))),
-                        Node::let_bind(
-                            "next_byte",
-                            safe_load(Expr::add(Expr::var("idx"), Expr::u32(1))),
-                        ),
-                        // Compute digit value.
-                        Node::let_bind(
-                            "is_dec_digit",
-                            Expr::select(
-                                Expr::and(
-                                    Expr::ge(Expr::var("byte"), Expr::u32(b'0' as u32)),
-                                    Expr::le(Expr::var("byte"), Expr::u32(b'9' as u32)),
-                                ),
-                                Expr::u32(1),
-                                Expr::u32(0),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "is_hex_lower",
-                            Expr::select(
-                                Expr::and(
-                                    Expr::ge(Expr::var("byte"), Expr::u32(b'a' as u32)),
-                                    Expr::le(Expr::var("byte"), Expr::u32(b'f' as u32)),
-                                ),
-                                Expr::u32(1),
-                                Expr::u32(0),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "is_hex_upper",
-                            Expr::select(
-                                Expr::and(
-                                    Expr::ge(Expr::var("byte"), Expr::u32(b'A' as u32)),
-                                    Expr::le(Expr::var("byte"), Expr::u32(b'F' as u32)),
-                                ),
-                                Expr::u32(1),
-                                Expr::u32(0),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "raw_digit",
-                            Expr::select(
-                                Expr::eq(Expr::var("is_dec_digit"), Expr::u32(1)),
-                                Expr::sub(Expr::var("byte"), Expr::u32(b'0' as u32)),
-                                Expr::select(
-                                    Expr::eq(Expr::var("is_hex_lower"), Expr::u32(1)),
-                                    Expr::add(
-                                        Expr::sub(Expr::var("byte"), Expr::u32(b'a' as u32)),
-                                        Expr::u32(10),
-                                    ),
-                                    Expr::select(
-                                        Expr::eq(Expr::var("is_hex_upper"), Expr::u32(1)),
-                                        Expr::add(
-                                            Expr::sub(Expr::var("byte"), Expr::u32(b'A' as u32)),
-                                            Expr::u32(10),
-                                        ),
-                                        // Sentinel: 99 is greater than
-                                        // any valid digit in any radix
-                                        // we support, so the radix-bounds
-                                        // check below rejects this.
-                                        Expr::u32(99),
-                                    ),
-                                ),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "digit_in_range",
-                            Expr::select(
-                                Expr::lt(Expr::var("raw_digit"), Expr::var("radix")),
-                                Expr::u32(1),
-                                Expr::u32(0),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "next_is_dec_digit",
-                            Expr::select(
-                                Expr::and(
-                                    Expr::ge(Expr::var("next_byte"), Expr::u32(b'0' as u32)),
-                                    Expr::le(Expr::var("next_byte"), Expr::u32(b'9' as u32)),
-                                ),
-                                Expr::u32(1),
-                                Expr::u32(0),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "next_is_hex_lower",
-                            Expr::select(
-                                Expr::and(
-                                    Expr::ge(Expr::var("next_byte"), Expr::u32(b'a' as u32)),
-                                    Expr::le(Expr::var("next_byte"), Expr::u32(b'f' as u32)),
-                                ),
-                                Expr::u32(1),
-                                Expr::u32(0),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "next_is_hex_upper",
-                            Expr::select(
-                                Expr::and(
-                                    Expr::ge(Expr::var("next_byte"), Expr::u32(b'A' as u32)),
-                                    Expr::le(Expr::var("next_byte"), Expr::u32(b'F' as u32)),
-                                ),
-                                Expr::u32(1),
-                                Expr::u32(0),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "next_raw_digit",
-                            Expr::select(
-                                Expr::eq(Expr::var("next_is_dec_digit"), Expr::u32(1)),
-                                Expr::sub(Expr::var("next_byte"), Expr::u32(b'0' as u32)),
-                                Expr::select(
-                                    Expr::eq(Expr::var("next_is_hex_lower"), Expr::u32(1)),
-                                    Expr::add(
-                                        Expr::sub(Expr::var("next_byte"), Expr::u32(b'a' as u32)),
-                                        Expr::u32(10),
-                                    ),
-                                    Expr::select(
-                                        Expr::eq(Expr::var("next_is_hex_upper"), Expr::u32(1)),
-                                        Expr::add(
-                                            Expr::sub(
-                                                Expr::var("next_byte"),
-                                                Expr::u32(b'A' as u32),
-                                            ),
-                                            Expr::u32(10),
-                                        ),
-                                        Expr::u32(99),
-                                    ),
-                                ),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "separator_in_range",
-                            Expr::select(
-                                Expr::and(
-                                    Expr::eq(Expr::var("byte"), Expr::u32(b'\'' as u32)),
-                                    Expr::lt(Expr::var("next_raw_digit"), Expr::var("radix")),
-                                ),
-                                Expr::u32(1),
-                                Expr::u32(0),
-                            ),
-                        ),
-                        Node::if_then_else(
-                            Expr::or(
-                                Expr::eq(Expr::var("digit_in_range"), Expr::u32(1)),
-                                Expr::eq(Expr::var("separator_in_range"), Expr::u32(1)),
-                            ),
-                            vec![
-                                // value = value * radix + raw_digit (saturating).
-                                Node::let_bind(
-                                    "sat_limit",
-                                    Expr::div(
-                                        Expr::sub(Expr::u32(u32::MAX), Expr::var("raw_digit")),
-                                        Expr::var("radix"),
-                                    ),
-                                ),
-                                Node::let_bind(
-                                    "would_overflow",
-                                    Expr::select(
-                                        Expr::gt(Expr::var("value"), Expr::var("sat_limit")),
-                                        Expr::u32(1),
-                                        Expr::u32(0),
-                                    ),
-                                ),
-                                Node::assign(
-                                    "value",
-                                    Expr::select(
-                                        Expr::eq(Expr::var("separator_in_range"), Expr::u32(1)),
-                                        Expr::var("value"),
-                                        Expr::select(
-                                            Expr::eq(Expr::var("would_overflow"), Expr::u32(1)),
-                                            Expr::u32(u32::MAX),
-                                            Expr::add(
-                                                Expr::mul(Expr::var("value"), Expr::var("radix")),
-                                                Expr::var("raw_digit"),
-                                            ),
-                                        ),
-                                    ),
-                                ),
-                                Node::assign("idx", Expr::add(Expr::var("idx"), Expr::u32(1))),
-                            ],
-                            vec![Node::assign("done_digits", Expr::u32(1))],
-                        ),
-                    ],
-                )],
-            ),
-            Node::let_bind(
-                "saw_digits",
-                Expr::select(
-                    Expr::gt(Expr::var("idx"), Expr::var("digits_start")),
-                    Expr::u32(1),
-                    Expr::u32(0),
-                ),
-            ),
-            // If no digits at all → not a literal. Bytes consumed = 0.
-            // Otherwise consume up to 4 trailing u/U/l/L/z/Z/wb/WB suffix bytes.
-            Node::let_bind("done_suffix", Expr::u32(0)),
-            Node::if_then(
-                Expr::eq(Expr::var("saw_digits"), Expr::u32(1)),
-                vec![Node::loop_for(
-                    "s",
-                    Expr::u32(0),
-                    Expr::u32(MAX_SUFFIX),
-                    vec![Node::if_then(
-                        Expr::eq(Expr::var("done_suffix"), Expr::u32(0)),
-                        vec![
-                            Node::let_bind("sb", safe_load(Expr::var("idx"))),
-                            Node::let_bind(
-                                "sb1",
-                                safe_load(Expr::add(Expr::var("idx"), Expr::u32(1))),
-                            ),
-                            Node::let_bind(
-                                "is_single_suffix",
-                                Expr::select(
-                                    Expr::or(
-                                        Expr::or(
-                                            Expr::eq(Expr::var("sb"), Expr::u32(b'u' as u32)),
-                                            Expr::eq(Expr::var("sb"), Expr::u32(b'U' as u32)),
-                                        ),
-                                        Expr::or(
-                                            Expr::eq(Expr::var("sb"), Expr::u32(b'l' as u32)),
-                                            Expr::eq(Expr::var("sb"), Expr::u32(b'L' as u32)),
-                                        ),
-                                    ),
-                                    Expr::u32(1),
-                                    Expr::u32(0),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "is_z_suffix",
-                                Expr::select(
-                                    Expr::or(
-                                        Expr::eq(Expr::var("sb"), Expr::u32(b'z' as u32)),
-                                        Expr::eq(Expr::var("sb"), Expr::u32(b'Z' as u32)),
-                                    ),
-                                    Expr::u32(1),
-                                    Expr::u32(0),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "is_wb_suffix",
-                                Expr::select(
-                                    Expr::and(
-                                        Expr::or(
-                                            Expr::eq(Expr::var("sb"), Expr::u32(b'w' as u32)),
-                                            Expr::eq(Expr::var("sb"), Expr::u32(b'W' as u32)),
-                                        ),
-                                        Expr::or(
-                                            Expr::eq(Expr::var("sb1"), Expr::u32(b'b' as u32)),
-                                            Expr::eq(Expr::var("sb1"), Expr::u32(b'B' as u32)),
-                                        ),
-                                    ),
-                                    Expr::u32(1),
-                                    Expr::u32(0),
-                                ),
-                            ),
-                            Node::if_then_else(
-                                Expr::or(
-                                    Expr::or(
-                                        Expr::eq(Expr::var("is_single_suffix"), Expr::u32(1)),
-                                        Expr::eq(Expr::var("is_z_suffix"), Expr::u32(1)),
-                                    ),
-                                    Expr::eq(Expr::var("is_wb_suffix"), Expr::u32(1)),
-                                ),
-                                vec![Node::assign(
-                                    "idx",
-                                    Expr::add(
-                                        Expr::var("idx"),
-                                        Expr::select(
-                                            Expr::eq(Expr::var("is_wb_suffix"), Expr::u32(1)),
-                                            Expr::u32(2),
-                                            Expr::u32(1),
-                                        ),
-                                    ),
-                                )],
-                                vec![Node::assign("done_suffix", Expr::u32(1))],
-                            ),
-                        ],
-                    )],
-                )],
-            ),
-            // Compute consumed bytes. If saw_digits is false, emit 0.
-            Node::let_bind(
-                "consumed",
-                Expr::select(
-                    Expr::eq(Expr::var("saw_digits"), Expr::u32(1)),
-                    Expr::sub(Expr::var("idx"), Expr::var("start")),
-                    Expr::u32(0),
-                ),
-            ),
-            Node::let_bind(
-                "value_final",
-                Expr::select(
-                    Expr::eq(Expr::var("saw_digits"), Expr::u32(1)),
-                    Expr::var("value"),
-                    Expr::u32(0),
-                ),
-            ),
-            Node::store("value_out", Expr::u32(0), Expr::var("value_final")),
-            Node::store("bytes_consumed_out", Expr::u32(0), Expr::var("consumed")),
-        ],
+        scan,
     )];
 
     literal_scan_program(
