@@ -126,8 +126,8 @@ total_lines = 1139
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 3223
-total_lines = 94438
+duplicate_lines = 3055
+total_lines = 94662
 
 [[crate]]
 name = "vyre-frontend-rust"

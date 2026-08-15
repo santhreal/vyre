@@ -3,13 +3,10 @@
 //! before any intervening side-effect could observe the first write.
 //!
 //! Op id: `vyre-foundation::optimizer::passes::dead_store_elim`.
-//! Soundness: `Exact`  -  when no `Load` against the same buffer, no
-//! `Atomic` against the same buffer, no `Store` to a different lane of
-//! the same buffer, no `AsyncLoad`/`AsyncStore` referencing the same
-//! buffer, no `IndirectDispatch`, no `Trap`/`Resume`, no nested
-//! `If`/`Loop`/`Region`/`Block`/`Opaque`, and no `Barrier` separates the
-//! two sibling stores, the earlier store cannot be observed and is
-//! deleted. Cost direction: monotone-down on `node_count`.
+//! Soundness: `Exact`. `memory::alias` owns the proof that nothing in the
+//! gap between the two sibling stores can observe the first write; this pass
+//! contributes only the pairing rule and the deletion. Cost direction:
+//! monotone-down on `node_count`.
 //! Preserves: every analysis. Invalidates: nothing.
 //!
 //! ## Rule
@@ -42,13 +39,14 @@
 //!   - stores to overlapping but not equal indices (no alias model
 //!     yet);
 //!   - stores where the value of the first one is later read via
-//!     `Load(buffer, *)`  -  `expr_touches_buffer` keeps the first
+//!     `Load(buffer, *)`  -  `alias::Interference::Reads` keeps the first
 //!     store alive when any node between the two reads from `buffer`,
 //!     INCLUDING the overwriting store's own index/value subexpressions
 //!     (a read-modify-write like `Store(b,0, Load(b,0)+5)` reads the
 //!     first store before overwriting it, so the first store is live).
 
-use crate::ir::{Expr, Ident, Node, Program};
+use super::alias::{expr_touches_buffer, node_interferes, Interference};
+use crate::ir::{Ident, Node, Program};
 use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 
@@ -103,15 +101,15 @@ fn drop_dead_stores(body: &[Node]) -> Option<Vec<Node>> {
         else {
             continue;
         };
-        // Scan forward over siblings. The `node_observes_buffer` arm below
-        // breaks the instant a sibling could observe `first_buf`'s pre-store
-        // value, so reaching iteration `second_idx` already proves every
-        // earlier sibling took the transparent `_` arm (it did NOT observe
-        // `first_buf`). Re-scanning the `[first_idx+1, second_idx)` gap each
-        // step would therefore be a provably-redundant O(n^2)-per-store
-        // re-walk over the same `node_observes_buffer` predicate -- and it
-        // re-descends nested `If`/`Loop`/`Region` bodies every step. The gap
-        // check lives entirely in the per-sibling match instead.
+        // Scan forward over siblings. The `node_interferes` arm below breaks
+        // the instant a sibling could observe `first_buf`'s pre-store value, so
+        // reaching iteration `second_idx` already proves every earlier sibling
+        // took the transparent `_` arm (it did NOT observe `first_buf`).
+        // Re-scanning the `[first_idx+1, second_idx)` gap each step would
+        // therefore be a provably-redundant O(n^2)-per-store re-walk over the
+        // same predicate -- and it re-descends nested `If`/`Loop`/`Region`
+        // bodies every step. The gap check lives entirely in the per-sibling
+        // match instead.
         for second_idx in (first_idx + 1)..body.len() {
             match &body[second_idx] {
                 Node::Store {
@@ -119,7 +117,10 @@ fn drop_dead_stores(body: &[Node]) -> Option<Vec<Node>> {
                     index: second_idx_expr,
                     value: second_value,
                 } if second_buf == first_buf
-                    && expr_structurally_eq(first_idx_expr, second_idx_expr)
+                    // Structural equality is conservative in the safe
+                    // direction: equal indices are equal at run time, and two
+                    // that only coincide at run time keep both stores.
+                    && first_idx_expr == second_idx_expr
                     // The overwriting store evaluates its index and value
                     // BEFORE writing, so if either reads `first_buf` it observes
                     // the first store's value (e.g. `Store(b,0, Load(b,0)+5)` is
@@ -134,7 +135,7 @@ fn drop_dead_stores(body: &[Node]) -> Option<Vec<Node>> {
                     dropped_any = true;
                     break;
                 }
-                node if node_observes_buffer(node, first_buf) => {
+                node if node_interferes(node, first_buf, Interference::Reads) => {
                     break;
                 }
                 _ => {
@@ -151,103 +152,6 @@ fn drop_dead_stores(body: &[Node]) -> Option<Vec<Node>> {
             .filter_map(|(node, alive)| alive.then(|| node.clone()))
             .collect()
     })
-}
-
-/// True iff any node in `nodes` could read or otherwise observe the
-/// pre-store contents of `buffer`. Conservative: any nested control
-/// flow, barrier, async transfer, atomic, indirect dispatch, trap, or
-/// region is treated as observing the buffer.
-fn any_node_observes_buffer(nodes: &[Node], buffer: &Ident) -> bool {
-    nodes.iter().any(|n| node_observes_buffer(n, buffer))
-}
-
-/// True iff `node` could observe the pre-store contents of `buffer`
-/// before the next sibling store overwrites it.
-fn node_observes_buffer(node: &Node, buffer: &Ident) -> bool {
-    match node {
-        Node::Store {
-            buffer: _target,
-            index,
-            value,
-        } => {
-            // The store's WRITE does not read `buffer`'s pre-store contents,
-            // but its index and value subexpressions are evaluated first and
-            // may Load from `buffer` (e.g. `A[A[j]] = A[k]`). This holds
-            // whether or not the store targets `buffer` itself: a same-buffer
-            // store that addresses or sources from `buffer` still observes the
-            // pre-store value, so an earlier store to it cannot be dropped.
-            // (Previously a same-buffer store short-circuited to `false`,
-            // skipping these subexpression reads, a dead-store miscompile.)
-            expr_touches_buffer(index, buffer) || expr_touches_buffer(value, buffer)
-        }
-        Node::Let { value, .. } | Node::Assign { value, .. } => expr_touches_buffer(value, buffer),
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            expr_touches_buffer(cond, buffer)
-                || any_node_observes_buffer(then, buffer)
-                || any_node_observes_buffer(otherwise, buffer)
-        }
-        Node::Loop { from, to, body, .. } => {
-            expr_touches_buffer(from, buffer)
-                || expr_touches_buffer(to, buffer)
-                || any_node_observes_buffer(body, buffer)
-        }
-        Node::Block(body) => any_node_observes_buffer(body, buffer),
-        Node::Region { body, .. } => any_node_observes_buffer(body.as_ref(), buffer),
-        Node::AllReduce {
-            buffer: collective, ..
-        }
-        | Node::Broadcast {
-            buffer: collective, ..
-        } => collective == buffer,
-        Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
-            input == buffer || output == buffer
-        }
-        Node::Barrier { .. }
-        | Node::AsyncWait { .. }
-        | Node::Resume { .. }
-        | Node::Return
-        | Node::Opaque(_) => true,
-        Node::AsyncLoad {
-            source,
-            destination,
-            offset,
-            size,
-            ..
-        }
-        | Node::AsyncStore {
-            source,
-            destination,
-            offset,
-            size,
-            ..
-        } => {
-            source == buffer
-                || destination == buffer
-                || expr_touches_buffer(offset, buffer)
-                || expr_touches_buffer(size, buffer)
-        }
-        Node::IndirectDispatch { count_buffer, .. } => count_buffer == buffer,
-        Node::Trap { address, .. } => expr_touches_buffer(address, buffer),
-    }
-}
-
-/// True iff `expr` reads from `buffer` or invokes a side-effect that
-/// could observe its pre-store contents.
-fn expr_touches_buffer(expr: &Expr, buffer: &Ident) -> bool {
-    super::expr_touches_buffer(expr, buffer, true)
-}
-
-/// Cheap structural equality between two index expressions. Conservative:
-/// returns `true` only when the two expressions are syntactically
-/// identical (same variant + same children). Equal under this relation
-/// implies equal at runtime; the converse does not hold, so we keep
-/// stores conservatively when the matcher cannot prove equality.
-fn expr_structurally_eq(left: &Expr, right: &Expr) -> bool {
-    left == right
 }
 
 /// Whether the program has any sibling pair of stores to the same

@@ -261,6 +261,14 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   A companion contract reads the fixture directory itself, so a new family is
   red until it either has a case table or is recorded as proven another way
   with the reason.
+- `memory_pass_alias_owner` reads the pass set from the inventory registry at
+  run time, keeps every pass in the memory phase, and asserts none of them
+  changes how many times a program reaches a buffer across a gap node the alias
+  owner reports as interfering. Each probe carries a control with a harmless
+  gap that at least one pass must rewrite, so a pass that simply had nothing to
+  do cannot pass for one that consulted the owner. Registering a third memory
+  pass with its own copy of the analysis turns the suite red on the day it is
+  registered rather than on the day someone diffs two files.
 
 ### Changed
 
@@ -1404,6 +1412,24 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   no scope model, compared against the exact oracle it cannot reproduce under
   shadowing. Removed with it, having no callers left, a wrapper whose body
   forwarded a fixture's source bytes to the sequence.
+- `vyre_foundation::optimizer`'s per-pass fixed-point contract is measured
+  against every registered pass, discovered through
+  `vyre_foundation::optimizer::registered_pass_registrations` and scheduled
+  with the passes it declares a requirement on. The seven pass names it
+  hardcoded were a fifth of the registry and could not go stale loudly: a pass
+  registered afterwards was never held to the contract and nothing said so. The
+  entry-point half is now a declared table, so `canonicalize_engine::run` and
+  `optimize` are each held to the union of what the two suites separately
+  asserted, three runs compared structurally and on the wire with
+  reference-interpreter parity checked on every run.
+- The generated-program corpus and the run-then-compare scaffold the optimizer
+  contract suites draw from have one owner,
+  `contract_cases::optimizer_program_corpus`. Two suites carried a copy each,
+  down to identical recursion depth and branch weights, with two names for the
+  same single-store program builder. Two copies of a generator is not a
+  duplicated helper: the property a suite proves is only as wide as the
+  programs it draws, so a generator that drifts in one file narrows one suite's
+  claim while both stay green.
 - The CUDA backend names `vyre_driver::input_identity::exact_input_key` and
   `ExactInputKey` directly. `vyre_driver_cuda::input_identity` was a module
   whose entire body was a re-export of those two items, and
@@ -1431,6 +1457,20 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   by their graph and rustfmt put every field on its own row. The redundant
   `name: name` half of eighty-four fields the positional-to-named rewrite left
   behind is gone as well.
+- Three concepts that a consumer crate had re-derived now have one owner.
+  `vyre_primitives::graph::exploded::exploded_ifds_case` owns the generated
+  exploded-IFDS graph family both the owner oracle sweep and the consumer
+  dispatch sweep walk; the two copies of its generator had already drifted to
+  different case counts, 1024 against 512, with no reason recorded on either
+  side. `vyre_test_support::ir_regions` owns the three helpers that slice a
+  stretch of generated IR out of a program and compare it against a sibling,
+  which `vyre_primitives` and `vyre_libs` each wrote out; a comparison helper
+  decides what its test can see, so a widened slice in one copy weakened an
+  assertion in a crate whose author never read the change.
+  `vyre_libs::solvers::bellman_tn_order` no longer re-proves the shortest-path
+  relaxation of `vyre_primitives::math::bellman_shortest_path`: what it owes is
+  the routing assertion it already carries, that its composition emits the
+  primitive program unchanged.
 
 ### Removed
 
@@ -2480,6 +2520,36 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   its forward types and adjoint targets from the owner and reports an
   unsupported node by its registry variant name rather than by a `Debug`
   rendering truncated at sixty characters.
+- The buffer-interference proof the memory passes need before they may rewrite
+  across a gap has one owner,
+  `vyre_foundation::optimizer::passes::memory::alias`. `dead_store_elim` and
+  `store_to_load_forward` each carried a full node-by-node copy of it, both
+  exhaustive and both tested, and they disagreed: a compare-exchange against
+  another buffer, which is how a lock is taken, blocked the dead-store proof
+  and did not block the forwarding proof, so a load across a lock acquire was
+  replaced with the value stored before it. Both copies also inspected only the
+  one buffer `Node::Trap` and `Node::IndirectDispatch` name, while both pass
+  module docs promised the node blocks outright; a host effect handler and a
+  launched grid may touch any buffer, and a grid-synchronizing collective is at
+  least a fence. The owner answers all of that once, and what stays per-pass is
+  the one bit that genuinely differs: whether a write to the buffer interferes
+  or only a read. Node descent and buffer naming come from
+  `vyre_foundation::transform::visit`, so a new IR variant fails to compile
+  here rather than defaulting to harmless.
+- `vyre_foundation::scalar_ops` is the single owner of scalar operator
+  semantics. The literal folder in `vyre_foundation::ir_eval` and the
+  storage-graph interpreter in `vyre_foundation::ir_inner::model::node_kind`
+  each carried a full per-width operator table, and the two tables disagreed on
+  more than thirty (operator, width) pairs: the folder retyped integer
+  transcendental, rounding, classification, `Abs` and `Sign` expressions to
+  f32, folded i32 `AbsDiff`, `And`, `Or`, `RotateLeft` and `RotateRight`, f32
+  `Mod`, and bool `BitXor`, all of which `vyre_foundation::validate` rejects,
+  while the interpreter had no answer for u32 `Negate`, the unpack operators,
+  i32 `BitNot`, `Popcount`, `Clz`, `Ctz` and `ReverseBits`, the f32 unary math
+  set, or f32 comparisons. The validator decides every row. f32 `Div` and i32
+  `Shl`/`Shr` are now total, matching IEEE-754 division and the
+  shift-count-modulo-width rule the backends lower to, instead of bailing on
+  NaN, zero or a negative count.
 
 ## [0.7.1] - 2026-08-01
 
