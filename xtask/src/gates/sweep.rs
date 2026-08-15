@@ -661,8 +661,8 @@ mod tests {
     #[test]
     fn a_script_reference_comes_from_a_command_not_from_prose() {
         assert_eq!(
-            referenced_script("        run: bash scripts/check_ci_matrix.sh"),
-            Some("check_ci_matrix.sh")
+            referenced_script("        run: bash scripts/check_feature_msrv.sh"),
+            Some("check_feature_msrv.sh")
         );
         assert_eq!(
             referenced_script("        run: bash scripts/lib/cargo_runner.sh --strict"),

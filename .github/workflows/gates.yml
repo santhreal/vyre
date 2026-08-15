@@ -113,16 +113,11 @@ jobs:
       - name: Contract rules
         run: ./cargo_full run -p xtask --bin xtask -- gates --subset contract-rules
 
-      # What the checkout carries, what the release evidence cites and what the
-      # documents claim about the tree.
+      # What the checkout carries, what the release evidence cites, what the
+      # documents claim about the tree, and the axes the hosted CI matrix
+      # declares.
       - name: Repository rules
         run: ./cargo_full run -p xtask --bin xtask -- gates --subset repo-rules
-
-      # ci.yml must keep the three-OS by two-toolchain matrix, must not carry a
-      # no-GPU escape hatch, and gpu-parity.yml must still exist to own the
-      # parity lane.
-      - name: CI matrix is intact
-        run: bash scripts/check_ci_matrix.sh
 
   feature-msrv:
     name: Every feature compiles alone on the MSRV

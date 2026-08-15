@@ -1,10 +1,10 @@
 # Script assertion ledger
 
-`scripts/` holds 37 tracked files: 27 shell scripts and 10 Python scripts.
+`scripts/` holds 36 tracked files: 26 shell scripts and 10 Python scripts.
 Each one is recorded below with its assertions, what makes it exit nonzero, every
 caller found in the tree, whether the files it reads still exist, and the gate
-that owns its assertions after the port. The rows carry 155 assertions and
-38 findings.
+that owns its assertions after the port. The rows carry 148 assertions and
+35 findings.
 
 A script leaves this document by being deleted: its rule belongs to a registered
 gate, so the row is a record of a port that is finished, not of a file that still
@@ -12,7 +12,7 @@ runs. The ledger is empty when the registry owns every rule.
 
 ## Totals
 
-- Files: 37. Assertions: 155. Findings: 38.
+- Files: 36. Assertions: 148. Findings: 35.
 - Files whose subject is partly or wholly gone: 2.
 - Files nothing invokes: 12.
 
@@ -44,32 +44,18 @@ Subject: present.
 
 Invoked by: nothing; named in .github/CI_REQUIRED.md, .github/CODEOWNERS and six release evidence artifacts that record it as the source of the branch protection state.
 
-Gate: xtask/src/gates/ci_contract.rs for every assertion; the gh mutation is not a gate and stays a manual operator action.
+Gate: xtask/src/gates/ci_contract.rs owns every assertion, and the script runs the `ci-required` gate before it applies anything. What is left is the gh mutation and its payload, which is an operator action against the GitHub API and not a rule. The six assertions about the workflow set that used to run only when an operator applied branch protection by hand are now a gate the sweep runs on every push, so this row has no findings left.
 
 Assertions:
 
-- .github/CI_REQUIRED.md exists and parses to at least one required status context.
-- Every listed context is defined by a workflow, by job name or job id.
-- Five required workflows exist and run on pull_request and push to main.
-- None of those five uses a path filter, which would let a required check be skipped.
-- ci.yml, conform.yml and gpu-parity.yml each carry a fan-in job with `if: always()`, a `.result` test and `exit 1`, so a skipped dependency fails closed.
-- The repository is santhreal/vyre and gh is available before anything is applied.
+- gh is available and the repository is santhreal/vyre before anything is applied.
+- The `ci-required` gate passes.
 
 Exits nonzero on:
 
-- missing CI_REQUIRED.md
 - gh missing
 - wrong repository
-- no contexts parsed
-- a context no workflow defines
-- a required workflow missing or wrongly triggered
-- a path filter on a required workflow
-- a fan-in job that is not fail-closed
-
-Findings:
-
-- This is the only place the CI_REQUIRED contract is checked, and it is checked only when an operator applies branch protection by hand. Six assertions about the workflow set therefore run on no schedule.
-- .github/CI_REQUIRED.md has historically named reproducible-build.yml and mutation-testing.yml, which live under .github/workflows-paused/, so the context assertion is the one that catches that.
+- a failing `ci-required` gate
 
 ### `scripts/architecture_docs.py`
 
@@ -188,31 +174,6 @@ Exits nonzero on:
 Findings:
 
 - The budget is parsed with awk over TOML text rather than a TOML reader, so a budget declared inline or with a comment on the line is read wrongly or not at all.
-
-### `scripts/check_ci_matrix.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/ci_contract.rs.
-
-Assertions:
-
-- .github/workflows/ci.yml exists, contains a `matrix:` key, and mentions ubuntu-latest, macos-latest, windows-latest, stable and nightly.
-- ci.yml contains no no-GPU escape hatch (`no-gpu`, `gpu-feature`, `vyre-driver-wgpu/no-gpu`).
-- .github/workflows/gpu-parity.yml exists.
-
-Exits nonzero on:
-
-- missing ci.yml or gpu-parity.yml
-- missing OS or toolchain string
-- no matrix key
-- escape hatch present
-
-Findings:
-
-- The OS and toolchain assertions are substring searches over the whole file, so a commented-out line or an unrelated mention satisfies them. `stable` also matches `unstable`. The gate cannot distinguish a declared matrix axis from prose, so it passes on a workflow whose matrix lost an axis. The repair is to parse the YAML and read the matrix axes.
 
 ### `scripts/check_cuda_parity_perf_gate.sh`
 
@@ -1015,7 +976,7 @@ The `findings` column is the count with the injection applied, given the pin in
 | `layering` | Add `("invented", true)` to `NEUTRAL_LAYERS`. | gate errors: a decision no member uses is an allowance nothing needs |
 | `layering` | Add `"not-a-crate"` to `BACKEND_APIS`. | gate errors: a boundary named after a crate the workspace never resolves cannot be crossed |
 | `neutral-crates` | Add `naga.workspace = true` to `[dependencies]` in `vyre-primitives/Cargo.toml`. | 1 to 2, and the dotted form is what the shell rule could not see |
-| `neutral-crates` | Add `vyre-ir = "0.1"` to `vyre-bench/competitors/Cargo.toml`, which cargo never loads. | 1 to 2 |
+| `neutral-crates` | Add `vyre-ir = "0.1"` to `vyre-foundation/fuzz/Cargo.toml`, which the workspace excludes and cargo never loads with the graph. | 1 to 2 |
 | `neutral-crates` | Add `"vyre-gone"` to `NEUTRAL_CRATES`. | gate errors: a neutrality rule over a manifest that does not exist reports success forever |
 
 Three of these are negative controls rather than injections: the reindented

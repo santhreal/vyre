@@ -47,6 +47,14 @@ name = "check-tier-deps"
 findings = 0
 
 [[gate]]
+name = "ci-matrix"
+findings = 0
+
+[[gate]]
+name = "ci-required"
+findings = 0
+
+[[gate]]
 name = "cli-docs"
 findings = 0
 

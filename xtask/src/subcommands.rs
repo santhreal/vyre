@@ -171,6 +171,8 @@ pub static SUBSETS: &[Subset] = &[
             "contract-in-source",
             "evidence-paths",
             "invariant-paths",
+            "ci-matrix",
+            "ci-required",
         ],
     },
 ];

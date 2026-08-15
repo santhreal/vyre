@@ -1,7 +1,8 @@
 # Required CI Jobs for Branch Protection
 
 All jobs listed below are **required** to pass before a PR can merge into `main`.
-This list is enforced by branch protection rules (see `scripts/apply-branch-protection.sh`).
+The `ci-required` gate holds this list to the workflows that define it, and
+`scripts/apply-branch-protection.sh` applies it to the branch.
 
 ## From `ci.yml` (run on every PR + push to main)
 - `CI release gate`

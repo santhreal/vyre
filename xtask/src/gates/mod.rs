@@ -10,6 +10,7 @@
 
 pub mod audit_status;
 pub mod check_tier_deps;
+pub mod ci_contract;
 pub mod dedup_report;
 pub mod dep_drift;
 pub mod doc_contract;
@@ -54,6 +55,8 @@ use crate::gate::Gate;
 pub static GATES: &[&dyn Gate] = &[
     &audit_status::AuditStatus,
     &check_tier_deps::CheckTierDeps,
+    &ci_contract::CiMatrix,
+    &ci_contract::CiRequired,
     &dep_drift::DepDrift,
     &doc_contract::ContractInSource,
     &doc_contract::DocClaims,
