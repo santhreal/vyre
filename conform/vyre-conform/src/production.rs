@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 
 use thiserror::Error;
-use vyre_driver::BackendRegistration;
+use vyre_driver::{BackendRegistration, DispatchConfig, VyreBackend};
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
 use vyre_runtime::artifact_admission::{ArtifactSession, ArtifactSessionError};
@@ -21,6 +21,9 @@ pub enum ProductionError {
     /// Artifact materialization or submission failed.
     #[error(transparent)]
     Runtime(#[from] ArtifactSessionError),
+    /// Backend acquisition or dispatch failed on the non-artifact route.
+    #[error("backend dispatch route failed: {0}")]
+    Dispatch(String),
 }
 
 /// Materialized production artifact used for repeated conformance submissions.
@@ -86,5 +89,88 @@ impl ProductionSession {
             .map_err(ArtifactSessionError::from)?;
         let completion = self.session.submit_and_wait(bindings)?;
         Ok(self.session.ordered_outputs(&completion)?)
+    }
+}
+
+/// How one program is executed on one backend.
+///
+/// A backend that registers a target compiler and a materializer is exercised
+/// through the production artifact route, which is the path a caller's program
+/// takes in a release. The reference oracle registers neither: it interprets a
+/// neutral program and has no target payload to authenticate or materialize.
+/// Demanding a facet a registration declares absent measures the registration
+/// rather than the operation, so the route follows what the registration says it
+/// has.
+pub enum ExecutionRoute {
+    /// Compiled, authenticated and materialized target artifact.
+    Artifact(ProductionSession),
+    /// The backend's own dispatch entry point, for a backend with no artifact.
+    Dispatch {
+        /// Acquired backend.
+        backend: Box<dyn VyreBackend>,
+        /// Program dispatched on every submission.
+        program: Program,
+    },
+}
+
+impl ExecutionRoute {
+    /// Open the route `registration` declares it supports for `program`.
+    ///
+    /// The artifact route needs both a target compiler and a materializer, so it
+    /// is taken only when the registration declares both. A registration missing
+    /// either has no artifact to submit, and the backend's own dispatch entry
+    /// point is the route it does have.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProductionError`] when compilation, materialization or backend
+    /// acquisition fails.
+    pub fn open(
+        program: &Program,
+        registration: &'static BackendRegistration,
+    ) -> Result<Self, ProductionError> {
+        if registration.target_compiler.is_some() && registration.materializer.is_some() {
+            return ProductionSession::compile(program, registration).map(Self::Artifact);
+        }
+        let backend = registration
+            .acquire()
+            .map_err(|error| ProductionError::Dispatch(error.to_string()))?;
+        Ok(Self::Dispatch {
+            backend,
+            program: program.clone(),
+        })
+    }
+
+    /// Submit caller inputs and return writable buffers in binding order.
+    ///
+    /// `config` carries the invocation grid the program needs. The artifact
+    /// route ignores it: a materialized artifact was compiled with its grid
+    /// already bound. The dispatch route needs it, because a neutral program
+    /// dispatched under the default grid executes one invocation and leaves
+    /// every other output element at zero.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProductionError`] when the backend cannot execute the inputs.
+    pub fn submit(
+        &self,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+    ) -> Result<Vec<Vec<u8>>, ProductionError> {
+        match self {
+            Self::Artifact(session) => session.submit(inputs),
+            Self::Dispatch { backend, program } => backend
+                .dispatch_borrowed(program, inputs, config)
+                .map_err(|error| ProductionError::Dispatch(error.to_string())),
+        }
+    }
+
+    /// What a passing case on this route proves, in the words a report records.
+    #[must_use]
+    pub const fn proof(&self) -> &'static str {
+        match self {
+            Self::Artifact(_) => "through canonical artifact submission",
+            Self::Dispatch { .. } => "through backend dispatch of the neutral program",
+        }
     }
 }

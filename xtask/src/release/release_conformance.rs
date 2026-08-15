@@ -18,6 +18,16 @@ use serde::{Deserialize, Serialize};
 const MIN_RELEASE_OP_PAIRS: usize = 49;
 const MAX_RELEASE_CONFORMANCE_TEXT_BYTES: u64 = 8_388_608;
 
+/// Shape version of a per-backend conformance artifact.
+///
+/// A recorded artifact outlives the struct that wrote it, so a reader that only
+/// deserializes cannot tell a stale shape from a corrupt file: three artifacts
+/// carried a row-count field under its former name and reported as unparseable
+/// JSON. Every rename or removal in `BackendConformanceArtifact` raises this,
+/// and an artifact recorded under a lower version is reported as stale rather
+/// than read.
+const ARTIFACT_SCHEMA_VERSION: u32 = 4;
+
 #[derive(Debug, Deserialize, Serialize)]
 struct PairResult {
     op_id: String,
@@ -181,13 +191,14 @@ fn audit(workspace_root: &Path, config: &Config) -> Inspection {
                 continue;
             }
         };
-        let recorded: BackendConformanceArtifact = match serde_json::from_str(&recorded) {
+        let recorded = match recorded_artifact(&recorded) {
             Ok(value) => value,
-            Err(error) => {
+            Err(reason) => {
                 inspection.blocked(
                     artifact,
-                    format!("{backend_id} conformance evidence is not readable as a conformance artifact: {error}"),
-                    "Regenerate it with --write. A conformance artifact nothing can parse records nothing.",
+                    format!("{backend_id} conformance evidence {reason}"),
+                    "Regenerate it with --write. A conformance artifact this reader cannot read \
+                     records nothing.",
                 );
                 continue;
             }
@@ -502,7 +513,7 @@ fn artifact_body(
     assessed: Assessment,
 ) -> BackendConformanceArtifact {
     BackendConformanceArtifact {
-        schema_version: 3,
+        schema_version: ARTIFACT_SCHEMA_VERSION,
         backend_id: backend_id.to_string(),
         command,
         stdout_diagnostics,
@@ -1002,6 +1013,28 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     )
 }
 
+/// Read a recorded artifact, or say which of the two ways it is unreadable.
+///
+/// The version is read before the shape so that an artifact written by an older
+/// producer is reported as stale, with the version it carries, instead of as a
+/// missing field on a struct the reader happens to hold today.
+fn recorded_artifact(text: &str) -> Result<BackendConformanceArtifact, String> {
+    let version = serde_json::from_str::<serde_json::Value>(text)
+        .ok()
+        .and_then(|value| value.get("schema_version")?.as_u64());
+    match version {
+        Some(version) if version as u32 != ARTIFACT_SCHEMA_VERSION => {
+            return Err(format!(
+                "was recorded under artifact schema {version}, and this reader holds schema \
+                 {ARTIFACT_SCHEMA_VERSION}"
+            ))
+        }
+        _ => {}
+    }
+    serde_json::from_str(text)
+        .map_err(|error| format!("is not readable as a conformance artifact: {error}"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1111,6 +1144,125 @@ mod tests {
                 .iter()
                 .any(|error| error.contains("empty output_digest")),
             "Fix: validation must reject summaries without output_digest; errors={errors:?}"
+        );
+    }
+
+    /// Every field name a current artifact carries, sorted.
+    ///
+    /// WHY: a recorded artifact is read back by a later build, so a rename here
+    /// silently turns committed evidence into an unparseable file. This list and
+    /// `ARTIFACT_SCHEMA_VERSION` move together: change the shape and the suite is
+    /// red until the version records that it changed.
+    const RECORDED_FIELDS: &[&str] = &[
+        "backend_id",
+        "blockers",
+        "catalog_covered_op_count",
+        "catalog_required_op_count",
+        "command",
+        "diff_schema_version",
+        "diff_summaries",
+        "diff_summary_count",
+        "diff_summary_errors",
+        "distinct_op_count",
+        "duplicate_op_ids",
+        "failed_pairs",
+        "missing_catalog_ops",
+        "missing_release_backend_rows",
+        "op_matrix_blocked_release_count",
+        "op_matrix_blocked_release_rows",
+        "op_matrix_errors",
+        "pairs",
+        "passed_pairs",
+        "release_backend_row_count",
+        "release_backend_rows",
+        "schema_version",
+        "stdout_diagnostics",
+        "supported_release_backend_row_count",
+        "total_pairs",
+    ];
+
+    fn recorded_shape() -> serde_json::Value {
+        let assessed = Assessment {
+            blockers: Vec::new(),
+            catalog: crate::release::conformance_op_matrix::OpMatrixCatalog::default(),
+            coverage: crate::release::conformance_op_matrix::OpMatrixCoverage::default(),
+            distinct_op_count: 0,
+            duplicate_op_ids: Vec::new(),
+            failed_pairs: 0,
+            diff_summaries: Vec::new(),
+            diff_summary_errors: Vec::new(),
+        };
+        serde_json::to_value(artifact_body(
+            "reference",
+            "vyre-conform".to_string(),
+            Vec::new(),
+            Vec::new(),
+            assessed,
+        ))
+        .expect("an artifact serializes")
+    }
+
+    #[test]
+    fn the_recorded_shape_is_the_one_the_version_names() {
+        let shape = recorded_shape();
+        let mut fields: Vec<&str> = shape
+            .as_object()
+            .expect("an artifact is a JSON object")
+            .keys()
+            .map(String::as_str)
+            .collect();
+        fields.sort_unstable();
+
+        assert_eq!(
+            fields, RECORDED_FIELDS,
+            "the conformance artifact shape changed. Raise ARTIFACT_SCHEMA_VERSION so a recorded \
+             artifact of the old shape is reported as stale, then record the new field set here."
+        );
+        assert_eq!(
+            shape["schema_version"].as_u64(),
+            Some(u64::from(ARTIFACT_SCHEMA_VERSION)),
+            "a written artifact must carry the version this reader requires"
+        );
+    }
+
+    #[test]
+    fn a_current_artifact_reads_back() {
+        let text = recorded_shape().to_string();
+
+        let read = recorded_artifact(&text).expect("a current artifact reads back");
+
+        assert_eq!(read.schema_version, ARTIFACT_SCHEMA_VERSION);
+        assert_eq!(read.backend_id, "reference");
+    }
+
+    #[test]
+    fn an_artifact_of_an_older_shape_is_reported_as_stale() {
+        let mut shape = recorded_shape();
+        let object = shape.as_object_mut().expect("an artifact is a JSON object");
+        object.insert("schema_version".to_string(), serde_json::json!(3));
+        let renamed = object
+            .remove("supported_release_backend_row_count")
+            .expect("the row count is recorded");
+        object.insert(
+            "non_runtime_supported_release_backend_row_count".to_string(),
+            renamed,
+        );
+
+        let reason = recorded_artifact(&shape.to_string()).expect_err("a stale shape is rejected");
+
+        assert!(
+            reason.contains("schema 3") && reason.contains(&ARTIFACT_SCHEMA_VERSION.to_string()),
+            "a stale artifact must name both versions, got: {reason}"
+        );
+    }
+
+    #[test]
+    fn a_file_that_is_not_json_reports_the_parse_error() {
+        let reason = recorded_artifact("{").expect_err("truncated JSON is rejected");
+
+        assert!(
+            reason.contains("not readable as a conformance artifact"),
+            "got: {reason}"
         );
     }
 }

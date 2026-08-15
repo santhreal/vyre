@@ -1,10 +1,9 @@
 {
+  "source_fingerprint": "git:0b11b7db89e1ba783f74ea8641e8532faa6df0bb:dirty=true:worktree=86a71632761ba0549a8c1afb5adcbc4b376893e34dc155b33faac1e6f0ca39d0",
   "schema_version": 2,
   "command": "cargo_full run --bin xtask -- release-conformance",
   "requested_backends": [
-    "cuda",
-    "wgpu",
-    "cpu-ref"
+    "reference"
   ],
   "required_artifacts": [
     "cuda-conformance.json",
@@ -15,19 +14,19 @@
     {
       "path": "cuda-conformance.json",
       "exists": true,
-      "bytes": 327443,
+      "bytes": 327401,
       "read_error": null
     },
     {
       "path": "wgpu-conformance.json",
       "exists": true,
-      "bytes": 327443,
+      "bytes": 327401,
       "read_error": null
     },
     {
       "path": "reference-conformance.json",
       "exists": true,
-      "bytes": 329588,
+      "bytes": 334419,
       "read_error": null
     }
   ],

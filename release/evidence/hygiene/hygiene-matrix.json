@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:3356274ef6472913070264718bbc2ed30b6b9490:dirty=true:worktree=59fc35f455859d98a29fddf840ef45b51758163a2e7fe10958fc497788707a74",
+  "source_fingerprint": "git:0b11b7db89e1ba783f74ea8641e8532faa6df0bb:dirty=true:worktree=29468ae2431fb89bb9e4162b237cbf34f21f3b132998656dc4a5238315b4ec02",
   "schema_version": 5,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4581,
+  "scanned_files": 4579,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -2479,7 +2479,7 @@
     },
     {
       "path": "conform/vyre-conform/src/reference_parity.rs",
-      "line": 96,
+      "line": 105,
       "pattern": "expect_call",
       "owner_lane": "testing_evidence",
       "surface": "production",
@@ -2669,7 +2669,7 @@
     },
     {
       "path": "vyre-primitives/tests/shared_owner_closure.rs",
-      "line": 594,
+      "line": 609,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -2679,7 +2679,7 @@
     },
     {
       "path": "vyre-primitives/tests/shared_owner_closure.rs",
-      "line": 617,
+      "line": 632,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3039,7 +3039,7 @@
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 245,
+      "line": 249,
       "pattern": "placeholder_text",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -3049,7 +3049,7 @@
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 248,
+      "line": 252,
       "pattern": "placeholder_text",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -3990,9 +3990,9 @@
     },
     {
       "path": "conform/vyre-conform/src/reference_parity.rs",
-      "line": 96,
+      "line": 105,
       "pattern": "expect_call",
-      "text": ".expect(\"production session initialized\")"
+      "text": ".expect(\"execution route opened\")"
     },
     {
       "path": "vyre-libs/src/graph/dispatch/adaptive_traverse/tests/sparse_queue_materializer_contracts.rs",
@@ -4122,14 +4122,14 @@
     },
     {
       "path": "vyre-primitives/tests/shared_owner_closure.rs",
-      "line": 594,
+      "line": 609,
       "pattern": "source_inspection_test",
       "text": "test `no_op_re_asserts_the_routing_obligations_privately` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "no_op_re_asserts_the_routing_obligations_privately"
     },
     {
       "path": "vyre-primitives/tests/shared_owner_closure.rs",
-      "line": 617,
+      "line": 632,
       "pattern": "source_inspection_test",
       "text": "test `the_source_walk_reaches_the_modules_every_gate_above_depends_on` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "the_source_walk_reaches_the_modules_every_gate_above_depends_on"
@@ -4348,13 +4348,13 @@
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 245,
+      "line": 249,
       "pattern": "placeholder_text",
       "text": "/// platform is prose and compiles nothing. That also drops the placeholder"
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 248,
+      "line": 252,
       "pattern": "placeholder_text",
       "text": "/// accepts only `[a-z0-9_]` there, so anything else is a placeholder rather than"
     },

@@ -6,7 +6,7 @@ use crate::proof_scheduler::panic_message;
 use crate::replay_capsule::build_replay_capsule;
 use vyre_foundation::fp_parity::{compare_output_buffers, BufferParity};
 use vyre_conform::witness_plan::plan_witness_inputs_into;
-use vyre_conform::{convergence_lens, ProductionSession};
+use vyre_conform::{convergence_lens, ExecutionRoute};
 use vyre_conform_spec::ConformanceResult;
 
 pub(crate) fn compare_backend_against_reference(
@@ -14,17 +14,26 @@ pub(crate) fn compare_backend_against_reference(
     prepared: &PreparedEntry,
 ) -> ConformanceResult {
     let backend_id = backend.id.to_string();
+    if backend.reference_oracle && !prepared.expected_is_recorded {
+        return ConformanceResult {
+            op_id: prepared.id.into(),
+            backend_id,
+            passed: false,
+            message: "the backend under test is the reference interpreter and this operation records no expected outputs, so the comparison would be that interpreter against itself. Fix: record expected_output bytes for this operation, or prove it on a backend that is not the oracle.".to_string(),
+            replay_capsule: None,
+        };
+    }
     let mut checked_cases = 0usize;
-    let production = if prepared.convergence_max_iterations.is_none() {
-        match ProductionSession::compile(&prepared.program, backend) {
-            Ok(session) => Some(session),
+    let route = if prepared.convergence_max_iterations.is_none() {
+        match ExecutionRoute::open(&prepared.program, backend) {
+            Ok(route) => Some(route),
             Err(error) => {
                 return ConformanceResult {
                     op_id: prepared.id.into(),
                     backend_id,
                     passed: false,
                     message: format!(
-                        "production compiler route failed before case execution: {error}. Fix: repair graph compilation, target payload emission, or materialization."
+                        "execution route failed before case execution: {error}. Fix: repair graph compilation, target payload emission, materialization, or backend dispatch."
                     ),
                     replay_capsule: None,
                 };
@@ -91,10 +100,10 @@ pub(crate) fn compare_backend_against_reference(
                 };
             }
             let dispatch_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                production
+                route
                     .as_ref()
-                    .expect("production session initialized")
-                    .submit(&backend_inputs)
+                    .expect("execution route opened")
+                    .submit(&backend_inputs, &prepared.dispatch_config)
             }));
             match dispatch_result {
                 Ok(Ok(outputs)) => {
@@ -147,13 +156,15 @@ pub(crate) fn compare_backend_against_reference(
         checked_cases += 1;
     }
 
+    let proof = route.as_ref().map_or(
+        "through the production fixpoint artifact route",
+        ExecutionRoute::proof,
+    );
     ConformanceResult {
         op_id: prepared.id.into(),
         backend_id,
         passed: true,
-        message: format!(
-            "{checked_cases} witness case(s) matched vyre-reference through canonical artifact submission"
-        ),
+        message: format!("{checked_cases} witness case(s) matched vyre-reference {proof}"),
         replay_capsule: None,
     }
 }

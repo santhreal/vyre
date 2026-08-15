@@ -165,6 +165,7 @@ mod tests {
             cases: vec![vec![input.clone()]],
             reference_cases: vec![vec![reference_output.clone()]],
             convergence_max_iterations: None,
+            expected_is_recorded: true,
         };
 
         let capsule = build_replay_capsule(
@@ -235,6 +236,7 @@ mod tests {
             cases: vec![vec![]],
             reference_cases: vec![vec![vec![0]]],
             convergence_max_iterations: None,
+            expected_is_recorded: true,
         };
         let failure = ConformanceResult {
             op_id: "test.failure".into(),

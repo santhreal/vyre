@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:3356274ef6472913070264718bbc2ed30b6b9490:dirty=true:worktree=59fc35f455859d98a29fddf840ef45b51758163a2e7fe10958fc497788707a74",
+  "source_fingerprint": "git:0b11b7db89e1ba783f74ea8641e8532faa6df0bb:dirty=true:worktree=29468ae2431fb89bb9e4162b237cbf34f21f3b132998656dc4a5238315b4ec02",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -851,9 +851,9 @@
     },
     {
       "path": "conform/vyre-conform/src/reference_parity.rs",
-      "line": 96,
+      "line": 105,
       "pattern": "expect_call",
-      "text": ".expect(\"production session initialized\")"
+      "text": ".expect(\"execution route opened\")"
     },
     {
       "path": "xtask/src/fixture_checkout.rs",

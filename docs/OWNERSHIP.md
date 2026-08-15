@@ -542,7 +542,7 @@ Own the xtask subcommands that must observe the live operation registry, the pri
 - Path: `xtask-registry`
 - Owner: `release-tooling`
 - Layer: `tooling`
-- Internal production dependencies: `vyre`, `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-lints`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-spec`, `xtask`
+- Internal production dependencies: `vyre`, `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-spec`, `xtask`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -550,7 +550,6 @@ Own the xtask subcommands that must observe the live operation registry, the pri
 | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `private` | `backend-contract` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `private` | `foundation-ir` |
 | `vyre-libs` | product operation builders | `private` | `product-libraries` |
-| `vyre-lints` | source policy enforcement | `private` | `lint-policy` |
 | `vyre-megakernel` | neutral artifact compilation and target payload contracts | `private` | `megakernel-compiler` |
 | `vyre-primitives` | reusable semantic Program builders | `private` | `primitive-library` |
 | `vyre-reference` | independent semantic oracle execution | `private` | `reference-semantics` |

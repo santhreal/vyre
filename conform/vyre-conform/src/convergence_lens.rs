@@ -8,7 +8,7 @@ use vyre::ir::{BufferAccess, Program};
 use vyre_driver::BackendRegistration;
 use vyre_reference::value::Value;
 
-use crate::ProductionSession;
+use crate::ExecutionRoute;
 
 /// Error from the convergence loop.
 #[derive(Debug)]
@@ -61,10 +61,14 @@ pub fn run_fixpoint_to_convergence(
         changed_name,
         words,
     );
-    let transfer_session = ProductionSession::compile(program, backend)
+    let transfer_session = ExecutionRoute::open(program, backend)
         .map_err(|error| ConvergenceError::Dispatch(error.to_string()))?;
-    let bitset_session = ProductionSession::compile(&bitset_program, backend)
+    let transfer_config = crate::dispatch_grid::config_for_program(program)
+        .map_err(ConvergenceError::IncompatibleLayout)?;
+    let bitset_session = ExecutionRoute::open(&bitset_program, backend)
         .map_err(|error| ConvergenceError::Dispatch(error.to_string()))?;
+    let bitset_config = crate::dispatch_grid::config_for_program(&bitset_program)
+        .map_err(ConvergenceError::IncompatibleLayout)?;
 
     let mut state: Vec<Vec<u8>> = Vec::with_capacity(inputs.len());
     state.extend(inputs.iter().cloned());
@@ -82,7 +86,7 @@ pub fn run_fixpoint_to_convergence(
     for _ in 0..max_iterations {
         let borrowed: Vec<&[u8]> = state.iter().map(Vec::as_slice).collect();
         let transfer_outputs = transfer_session
-            .submit(&borrowed)
+            .submit(&borrowed, &transfer_config)
             .map_err(|e| ConvergenceError::Dispatch(e.to_string()))?;
         merge_rw(&mut state, transfer_outputs.as_slice(), program);
 
@@ -92,7 +96,7 @@ pub fn run_fixpoint_to_convergence(
             let next = &state[next_idx][..];
             let bitset_inputs = [current, next, &changed_buf[..]];
             let bitset_outputs = bitset_session
-                .submit(&bitset_inputs)
+                .submit(&bitset_inputs, &bitset_config)
                 .map_err(|e| ConvergenceError::Dispatch(e.to_string()))?;
 
             if let Some(flag) = bitset_outputs.first() {

@@ -16,7 +16,7 @@
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 
 use vyre_foundation::ir::GeneratorRef;
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::math::eigenvector_column_sign";
@@ -103,6 +103,10 @@ pub fn eigenvector_column_sign_region(parent_op_id: &str, eigenvectors: &str, n:
 }
 
 /// Build a standalone column-sign canonicalization Program.
+///
+/// The matrix is read and rewritten in place, so it is declared read-write: a
+/// buffer declared as an output is not a witness input, and the caller's matrix
+/// would never reach the program.
 #[must_use]
 pub fn eigenvector_column_sign(eigenvectors: &str, n: u32) -> Program {
     let cells = match crate::operand_shape::square_matrix_cells(OP_ID, n) {
@@ -112,7 +116,10 @@ pub fn eigenvector_column_sign(eigenvectors: &str, n: u32) -> Program {
         }
     };
     Program::wrapped(
-        vec![BufferDecl::output(eigenvectors, 0, DataType::F32).with_count(cells)],
+        vec![
+            BufferDecl::storage(eigenvectors, 0, BufferAccess::ReadWrite, DataType::F32)
+                .with_count(cells),
+        ],
         [1, 1, 1],
         vec![wrap_anonymous_region(
             OP_ID,

@@ -9607,6 +9607,11 @@
           "depth": 0,
           "operation": "vyre-libs::nn::skip_gate",
           "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::builder::indexed_map",
+          "registered": true
         }
       ]
     },
@@ -10294,6 +10299,11 @@
         {
           "depth": 0,
           "operation": "vyre-libs::optim::ema_apply",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         }
       ]
@@ -11850,8 +11860,8 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-primitives::text::line_index",
-          "registered": true
+          "operation": "anonymous::c_lex_resolve_digraph_at_token",
+          "registered": false
         }
       ]
     },
@@ -11975,8 +11985,8 @@
         },
         {
           "depth": 2,
-          "operation": "vyre-primitives::text::line_index",
-          "registered": true
+          "operation": "anonymous::c_lex_resolve_digraph_at_token",
+          "registered": false
         }
       ]
     },
@@ -27661,7 +27671,7 @@
             "memory": "Global",
             "element": "F32",
             "count": 4,
-            "pipeline_live_out": true
+            "pipeline_live_out": false
           }
         ],
         "inputs": [],

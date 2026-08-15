@@ -2696,6 +2696,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 
 ### Fixed
 
+- The conformance runner exercises each backend through the route its
+  registration declares. A backend that registers a target compiler and a
+  materializer takes the production artifact route, as before; the reference
+  interpreter registers neither and is now dispatched directly, instead of
+  failing every one of its 356 pairs on a materializer its registration says it
+  does not have. The dispatch route submits under the invocation grid the
+  program needs, because a neutral program dispatched under the default grid
+  executes one invocation and leaves every other output element at zero. A pair
+  whose backend is the reference interpreter and whose operation records no
+  expected outputs now fails with that reason, because comparing the
+  interpreter against itself is not evidence.
 - The wrapper rule reads an instruction, not any sentence containing the word
   cargo. A comment is a finding when a run verb comes before the command and
   the command is quoted as code, because prose says a full cargo build while an
@@ -4208,6 +4219,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   registry at run time and run through every safety rule, including reversed
   and rotated lane orders, so a new intrinsic cannot arrive with a witness
   program no gate executes.
+- eigenvector_column_sign declared the matrix it rewrites in place as an output
+  buffer. An output buffer is not a witness input, so the caller matrix never
+  reached the program: the operation read zeros, wrote zeros, and its recorded
+  expected outputs were unreachable. The buffer is read-write, which is what
+  the body does.
 - The per-file line ratchet holds ceilings for files that exist. Forty-eight
   rows named files that had already been split away, one row excluded the whole
   resident runtime tree while its restructure was pending, and twenty-three
@@ -4232,6 +4248,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   scanned and a renamed module kept its row while resolving to nothing, which
   reads as coverage. The set is the tree now, and one owner answers whether a
   path holds test source for both the workspace walk and the tooling walk.
+- vyre-registry-link enables every domain of vyre-primitives instead of the
+  hardware domain alone. Linking one domain left the operation registry partial
+  in every binary that reads it: the release conformance run covered 356 of 359
+  registered operations and reported the geometry and optimization operations
+  the op matrix requires as missing, when they were only unlinked.
 - The crate ownership registry records the feature selection each dependency
   edge is built with. The `xtask-registry` to `vyre-libs` row named no features
   while the edge enables `full` and `matching-regex`, so the derived crate

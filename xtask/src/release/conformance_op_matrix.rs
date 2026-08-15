@@ -9,6 +9,7 @@ use std::path::Path;
 use crate::release::conformance_evidence_semantics::read_conformance_text;
 
 /// What `docs/optimization/OP_MATRIX.toml` requires of a release.
+#[derive(Default)]
 pub struct OpMatrixCatalog {
     /// Operations the matrix requires a release to cover.
     pub required_ops: BTreeSet<String>,
@@ -176,6 +177,7 @@ pub fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog 
 /// set is the live registry, and a per-backend conformance run, whose observed
 /// set is the op ids the run emitted. The observed set differs, the matrix they
 /// are judged against does not, so the judging happens here once.
+#[derive(Default)]
 pub struct OpMatrixCoverage {
     /// Operations the matrix requires a release to cover.
     pub catalog_required_op_count: usize,

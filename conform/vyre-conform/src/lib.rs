@@ -20,5 +20,5 @@ pub use bundle_cert::{
 };
 pub use cert::{issue_certificate, verify_structural, CertificateError, IssueInput};
 pub use minimizer::CounterexampleMinimizer;
-pub use production::{ProductionError, ProductionSession};
+pub use production::{ExecutionRoute, ProductionError, ProductionSession};
 pub use prover::{LawProver, LawVerdict};

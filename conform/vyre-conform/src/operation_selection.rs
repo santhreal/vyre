@@ -23,6 +23,12 @@ pub(crate) struct PreparedEntry {
     pub(crate) reference_cases: FixtureCases,
     pub(crate) input_plan: WitnessInputPlan,
     pub(crate) convergence_max_iterations: Option<u32>,
+    /// Whether the expected outputs are a recorded fixture rather than the
+    /// reference interpreter's own output for this program.
+    ///
+    /// A backend that is the reference interpreter can only be compared against
+    /// something else, so what a case proves depends on this.
+    pub(crate) expected_is_recorded: bool,
 }
 
 pub(crate) fn select_entries(
@@ -132,6 +138,7 @@ pub(crate) fn prepare_entry(entry: UnifiedEntry) -> Result<PreparedEntry, String
         reference_cases,
         input_plan,
         convergence_max_iterations,
+        expected_is_recorded: entry.expected_output.is_some(),
     })
 }
 

@@ -663,7 +663,7 @@ seam = "product-libraries"
 [[crate.dependency]]
 package = "vyre-primitives"
 purpose = "primitive operation registrations"
-features = ["hardware"]
+features = ["all-lego"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = true
@@ -1092,17 +1092,6 @@ optional = false
 default_features = true
 boundary = "private"
 seam = "product-libraries"
-
-[[crate.dependency]]
-package = "vyre-lints"
-purpose = "source policy enforcement"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "lint-policy"
 
 [[crate.dependency]]
 package = "vyre-primitives"

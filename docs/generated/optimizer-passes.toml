@@ -1,4 +1,4 @@
-# Generated from the live vyre-foundation optimizer registry by `cargo xtask optimization-docs --write`.
+# Generated from the live vyre-foundation optimizer registry by `./cargo_full run --bin xtask -- optimization-docs --write`.
 # Edit the pass registration metadata, not this file. The optimizer has one semantic layer
 # before verified lowering; concrete target strategy is not registered in this catalog.
 schema_version = 1
