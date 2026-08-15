@@ -1,14 +1,18 @@
 # Pinned finding count of every registered gate, written by
 # `xtask gates --write-baseline`.
 #
-# `output_lines` is the combined stdout and stderr line count, used as the
-# finding count. More lines than the pin fails; fewer is reported so the pin
-# can be lowered here. A gate that exits nonzero fails outright: no row makes
-# a failing gate legal, and the writer refuses to record one.
+# `findings` is the number of things a gate found wrong. More findings than the
+# pin fails; fewer is reported so the pin can be lowered here. A gate that exits
+# nonzero fails outright: no row makes a failing gate legal, and the writer
+# refuses to record one.
 
 [[gate]]
 name = "abstraction-gate"
 output_lines = 32
+
+[[gate]]
+name = "audit-status"
+findings = 0
 
 [[gate]]
 name = "catalog"
@@ -47,8 +51,36 @@ name = "heuristic-audit"
 output_lines = 6
 
 [[gate]]
+name = "hot-path-blocking-wait"
+findings = 6
+
+[[gate]]
+name = "hot-path-inventory"
+findings = 12
+
+[[gate]]
+name = "hot-path-nested-rows"
+findings = 28
+
+[[gate]]
+name = "hot-path-owned-dispatch"
+findings = 114
+
+[[gate]]
+name = "hot-path-reserve"
+findings = 1
+
+[[gate]]
 name = "hot-path-scan"
 output_lines = 170
+
+[[gate]]
+name = "hot-path-unbounded-cache"
+findings = 6
+
+[[gate]]
+name = "hot-path-unbounded-read"
+findings = 1
 
 [[gate]]
 name = "hygiene-matrix"
@@ -63,8 +95,28 @@ name = "lego-quick"
 output_lines = 13292
 
 [[gate]]
+name = "lint-expect-fix"
+findings = 360
+
+[[gate]]
+name = "lint-missing-docs-override"
+findings = 0
+
+[[gate]]
+name = "lint-unsafe-budget"
+findings = 0
+
+[[gate]]
+name = "lint-unsafe-justification"
+findings = 2
+
+[[gate]]
 name = "list-ops"
 output_lines = 1
+
+[[gate]]
+name = "operation-names"
+findings = 7
 
 [[gate]]
 name = "operation-schema"
@@ -81,6 +133,22 @@ output_lines = 1
 [[gate]]
 name = "primitive-admission-gate"
 output_lines = 3
+
+[[gate]]
+name = "proptest-coverage"
+findings = 0
+
+[[gate]]
+name = "repo-hygiene"
+findings = 2
+
+[[gate]]
+name = "shader-source"
+findings = 0
+
+[[gate]]
+name = "single-backlog"
+findings = 0
 
 [[gate]]
 name = "verify-rewrite-proofs"

@@ -23,7 +23,7 @@ set -euo pipefail
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
-budget_file="scripts/unsafe_budget.txt"
+budget_file="xtask/unsafe-budget.txt"
 
 if [[ ! -f "$budget_file" ]]; then
     echo "unsafe-budget gate: $budget_file is missing." >&2
