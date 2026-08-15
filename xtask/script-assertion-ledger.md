@@ -2358,3 +2358,59 @@ Findings:
 - It exports CARGO_INCREMENTAL=0, a build-affecting variable outside .cargo/config.toml, with a comment saying it mirrors CI. If local and CI builds must agree, that belongs in the config file.
 - The determinism check previously ended in `|| true`, so two identically failing runs diffed empty and reported success. That repair is the shape to keep: determinism is only meaningful across two runs that passed.
 
+## Injection matrix
+
+Every ported gate has to go red on the same input the script it replaced failed
+on. The gate lanes are one atomic cutover and nothing in it compiles alone, so
+these injections run once against the merged tree. Each row is one edit, the gate
+that must go red, and the number it must move to. Apply the edit, run the gate,
+confirm the number, revert the edit, confirm the pin again. A gate that stays
+green under its injection is not covering the assertion it inherited, whatever its
+pin says.
+
+The `findings` column is the count with the injection applied, given the pin in
+`xtask/gate-baselines.toml` at the time of writing.
+
+| Gate | Injection | Findings |
+| --- | --- | --- |
+| `backend-extension` | In `vyre-driver-wgpu/src/backend_impl.rs`, delete the `BackendPrecedence` inventory submission block. | 0 to 1 |
+| `backend-extension` | In `vyre-driver/src/backend/registry/acquire.rs`, rename `registered_backends_by_precedence_slice` at its definition and its call. | 0 to 1 |
+| `backend-extension` | Add `let id = "cuda";` to any file under `vyre-driver/src/backend/registry/`. | 0 to 1 |
+| `readback-ring` | In `vyre-driver-wgpu/src/engine/record_and_readback.rs`, rename `.arm_ticket(` to `.arm(` at its definition and its call sites. | 0 to 1 |
+| `readback-ring` | In `vyre-driver-wgpu/src/lib.rs`, replace `ReadbackRingSet::new()` with `ReadbackRingSet::default()`. | 0 to 1 |
+| `program-wire-fields` | Add `pub scratch_hint: u32,` to `Program` in `vyre-foundation/src/ir_inner/model/program/definition.rs`. | 0 to 1 |
+| `program-wire-fields` | Delete every mention of `workgroup_size` from `vyre-foundation/src/serial/wire/encode/to_wire.rs` and `decode/from_wire.rs`. | 0 to 1 |
+| `program-wire-fields` | Rename `pub struct Program` to `pub struct ProgramInner`. | gate errors, which is the intended outcome: the declaration is located, not named, so losing it is unmeasurable rather than clean |
+| `frozen-contracts` | Add a method to `pub trait ExprVisitor` in `vyre-foundation/src/visit/expr.rs`. | 1 to 2 |
+| `frozen-contracts` | Delete `docs/frozen-traits/MutationClass.txt`. | 1 to 2 |
+| `frozen-contracts` | Reindent the body of `pub enum AlgebraicLaw` by four spaces. | stays 1; indentation is not part of the contract |
+| `file-size` | Append 200 blank lines to `vyre-foundation/src/optimizer/fact_cache.rs` (measured 570, cap 599). | 75 to 76 |
+| `file-size` | Append 60 lines to `vyre-libs/src/decode/inflate.rs` (measured 554, cap 582). | 75 to 76 |
+| `file-size` | Add a row to the audit ceilings naming `vyre-does-not-exist/src/lib.rs`. | 75 to 76 |
+| `gpu-loudness` | Add `#[cfg(not(feature = "gpu"))]` above a test in `vyre-driver-wgpu/tests/` with no loud abort within ten lines above or twenty below. | 2 to 3 |
+| `gpu-loudness` | Add `if adapter.is_err() { return; }` to a test body. | 2 to 3 |
+| `gpu-loudness` | Add `Backend::acquire_or_panic();` five lines below an existing finding site in `conform/vyre-conform/tests/cert_artifact/prove_failure_contracts.rs`. | 2 to 1, which is the allowance working rather than a failure |
+| `unification` | Add a second `pub fn child_bodies` to any file under `vyre-foundation/src`. | 0 to 2, because a row over its ceiling reports every site |
+| `unification` | Add `BufferAccess::infer(` to a file under `vyre-runtime/src/megakernel`. | 0 to 1 |
+| `unification` | Rename the directory `vyre-foundation/src/execution_plan` and update its `mod` declaration. | 0 to 1, reported as a path that does not exist rather than as a clean row |
+| `evidence-paths` | In any artifact under `release/evidence`, change one cited path to a filename that does not exist but keeps a tree extension. | 18 to 19 |
+| `evidence-paths` | Add `"manifest": "target/debug/build.rs"` to an artifact object, with `target/` gitignored. | 18 to 19, in the gitignored class rather than the missing class |
+| `evidence-paths` | Change a cited path to `1.2.0`. | stays 18; a version string is not a citation |
+| `invariant-paths` | In `vyre-spec/src/invariants.rs`, change a cited conformance test path to one that does not exist. | 0 to 1 |
+| `doc-claims` | In `contracts/doc_claims_manifest.toml`, change one `phrase` to text its document does not contain. | 0 to 1 |
+| `doc-claims` | Delete the `test` key from one claim. | 0 to 1, reported as an incomplete row rather than as a missing test |
+| `hot-path-owned-dispatch` | Add a `.dispatch(` call taking an owned row to a file under `vyre-runtime/src`. | 114 to 116, one finding for the occurrence and one for its being unreviewed |
+| `hot-path-inventory` | Delete a reviewed allowlist entry that currently matches an occurrence. | 12 to 13 |
+| `hot-path-unbounded-read` | Add `fs::read_to_string(` to a file under `vyre-driver/src` outside the reviewed cache modules. | 1 to 3 |
+| `lint-unsafe-budget` | Add `#![allow(unsafe_code)]` to a crate root not in the reviewed budget. | 0 to 1 |
+| `lint-unsafe-justification` | Add an `unsafe {` block with no SAFETY comment above it. | 2 to 3 |
+| `lint-missing-docs-override` | Add `#![allow(missing_docs)]` to any crate root. | 0 to 1 |
+| `proptest-coverage` | Delete two property-test files, taking the count from 182 to 180 against the floor of 181. | 0 to 1 |
+| `audit-status` | Remove one status tag from a row in a status-managed audit document. | 0 to 1 |
+| `repo-hygiene` | Add a second `BACKLOG.md` under any crate directory and track it. | 2 to 3 |
+| `shader-source` | Add `out.push_str("@compute");` to a file under `vyre-driver-wgpu/src`. | 0 to 1 |
+
+Three of these are negative controls rather than injections: the reindented
+frozen enum, the version string cited as a path, and the loud abort added beside a
+loudness finding. A gate that moves on those is over-reporting, which mutes it
+just as surely as under-reporting.
