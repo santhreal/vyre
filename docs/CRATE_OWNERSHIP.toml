@@ -168,17 +168,6 @@ boundary = "public"
 seam = "foundation-ir"
 
 [[crate.dependency]]
-package = "vyre-macros"
-purpose = "compile-time registration generation"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "registration-macros"
-
-[[crate.dependency]]
 package = "vyre-megakernel"
 purpose = "whole-graph compilation and immutable artifact contracts"
 features = []
@@ -199,17 +188,6 @@ optional = true
 default_features = true
 boundary = "private"
 seam = "product-libraries"
-
-[[crate.dependency]]
-package = "vyre-pass-engine"
-purpose = "optimizer pass execution as dispatched Vyre Programs"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = true
-default_features = true
-boundary = "private"
-seam = "pass-engine"
 
 [[crate.dependency]]
 package = "vyre-spec"
@@ -1270,17 +1248,6 @@ optional = false
 default_features = true
 boundary = "public"
 seam = "megakernel-compiler"
-
-[[crate.dependency]]
-package = "vyre-pass-engine"
-purpose = "optimizer pass execution as dispatched Vyre Programs"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = true
-default_features = true
-boundary = "private"
-seam = "pass-engine"
 
 [[crate]]
 package = "vyre-safetensors"

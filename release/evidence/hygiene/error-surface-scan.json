@@ -87,6 +87,24 @@
       "text": "panic!(\"Fix: {label} must reject a zero workgroup dimension before dispatch.\")"
     },
     {
+      "path": "vyre-driver/src/self_optimizer_bench.rs",
+      "line": 114,
+      "pattern": "expect_call",
+      "text": "vyre_foundation::optimizer::optimize(program).expect(\"registered optimizer must converge\");"
+    },
+    {
+      "path": "vyre-driver/src/self_optimizer_bench.rs",
+      "line": 137,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: the scaling bench must be able to spawn its CPU oracle worker\")"
+    },
+    {
+      "path": "vyre-driver/src/self_optimizer_bench.rs",
+      "line": 139,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: the CPU optimizer oracle must not panic on a scaling-bench fixture\")"
+    },
+    {
       "path": "vyre-driver/src/parity_harness/mod.rs",
       "line": 131,
       "pattern": "documented_panic_contract",
@@ -333,6 +351,18 @@
       "text": "panic!("
     },
     {
+      "path": "vyre-test-support/src/ir_regions.rs",
+      "line": 51,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|| panic!(\"Fix: canonicalized dump must contain `{marker}`:\\n{dump}\"));"
+    },
+    {
+      "path": "vyre-test-support/src/ir_regions.rs",
+      "line": 53,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"Fix: `{marker}` must be introduced by a Let binding:\\n{dump}\")"
+    },
+    {
       "path": "vyre-test-support/src/consumer_boundary.rs",
       "line": 136,
       "pattern": "documented_panic_contract",
@@ -382,19 +412,19 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 244,
+      "line": 249,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 263,
+      "line": 268,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 343,
+      "line": 348,
       "pattern": "documented_panic_contract",
       "text": "let path = entry.expect(\"source entry must be readable\").path();"
     },

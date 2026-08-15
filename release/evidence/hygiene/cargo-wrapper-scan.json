@@ -37,8 +37,139 @@
       "line": 169,
       "pattern": "raw_workspace_cargo",
       "text": "Fix: regenerate the witness via `cargo xtask trace-f32 {}` or repair the reference.\","
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 29,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly miri setup"
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 30,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly miri test -p vyre-spec --lib"
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 31,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly miri test -p vyre-foundation --lib"
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 32,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly miri test -p vyre -p vyre-reference --lib --no-default-features"
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 29,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly miri setup"
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 30,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly miri test -p vyre-spec --lib"
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 31,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly miri test -p vyre-foundation --lib"
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 32,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly miri test -p vyre -p vyre-reference --lib --no-default-features"
     }
   ],
-  "release_blocking_findings": [],
-  "blockers": []
+  "release_blocking_findings": [
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 29,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 30,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 31,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 32,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 29,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 30,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 31,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 32,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    }
+  ],
+  "blockers": [
+    "8 release-blocking `cargo-wrapper` finding(s) remain"
+  ]
 }
