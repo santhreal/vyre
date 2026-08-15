@@ -101,7 +101,7 @@ total_lines = 1900
 
 [[crate]]
 name = "vyre-driver-wgpu"
-duplicate_lines = 2820
+duplicate_lines = 2351
 total_lines = 55943
 
 [[crate]]
