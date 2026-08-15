@@ -167,7 +167,7 @@ impl MatmulTiledCore {
             dtype,
             a_tile_name: "matmul_a_tile",
             b_tile_name: "matmul_b_tile",
-            mma_capabilities: MmaCapabilityRecord::ptx_sm80(),
+            mma_capabilities: MmaCapabilityRecord::all_descriptor_mma_shapes(),
         })
     }
 }
