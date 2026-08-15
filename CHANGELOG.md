@@ -296,6 +296,14 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   itself. The derivation refuses to run against a repository with fewer than
   two local branches or no integration branch, because a check that silently
   derives nothing is the same defect as no check.
+- `the_optimizer_expression_rewrite_reaches_every_operand_slot` puts the
+  optimizer's expression rewrite inside the owner-closure suite that previously
+  checked only the three reference-mode walks. It plants a uniquely-bound
+  literal read in one operand slot at a time, taking the slot set from the
+  variant registry rather than from a list in the test, and requires the
+  registered propagating pass to fold it. Reintroducing the pre-collapse
+  private walk fails it at the async-copy offset, which is the position the two
+  copies actually disagreed about.
 
 ### Changed
 
@@ -1583,6 +1591,11 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `docs/testing/STRUCTURAL_GATES.toml`: the resident queue materializer variant
   scan and the published quantized entry-point scan. Each asserts the absence
   of a case or a row, which no execution of the covered code can witness.
+- `vyre_foundation::optimizer::passes::loops::substitution` no longer
+  re-exports `vyre_foundation::transform::subst` under a second path; the loop
+  passes name the owner. A module whose body is a re-export is not an owner,
+  and it leaves a reader with a question that has no answer: which of the two
+  paths is the real one.
 
 ### Removed
 
@@ -2694,6 +2707,30 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   contract now derives the workspace member list at run time and fails when a
   member has no classified testing guide row, or when a row names a crate the
   workspace no longer has.
+- `vyre_foundation::transform::rewrite_walk::rewrite_node` is the only
+  rewriting enumeration of `Node`, which it already claimed to be.
+  `vyre_foundation::optimizer::rewrite` carried a second exhaustive match over
+  every variant, and the pair had diverged: the owner descended into an async
+  copy's `offset` and `size` and the copy did not, so every pass routed through
+  the optimizer's whole-program expression rewrite left those two expression
+  positions alone. The by-value copies in
+  `vyre_foundation::optimizer::passes::algebraic::const_fold::reaching_def_propagate`
+  and `vyre_foundation::optimizer::passes::loops::loop_lower_bound_normalize`
+  are gone as well; each ended in a catch-all arm, so a `Node` variant added
+  later would have been walked as a leaf and its children never substituted,
+  which for a substitution is a stale variable reference rather than a missed
+  optimization. Lower-bound normalization now calls
+  `vyre_foundation::transform::subst`, which already owned that rewrite and
+  additionally refuses to substitute into a nested loop that rebinds the name.
+- Inlining reaches a call inside a subgroup operand.
+  `vyre_foundation::transform::inline` enumerated `Expr` itself and classified
+  `SubgroupBallot`, `SubgroupShuffle` and `SubgroupReduce` as carrying nothing,
+  so a call in one of those operands was handed back verbatim: the program kept
+  an `Expr::Call` that inlining exists to refuse, and where unresolved calls
+  are kept deliberately, that call's own arguments were never inlined either.
+  Operand positions now come from the one owner. Because that walk is
+  bottom-up, a call site is reached with its arguments already inlined, so the
+  argument loop that walked every argument a second time is gone.
 
 ## [0.7.1] - 2026-08-01
 
