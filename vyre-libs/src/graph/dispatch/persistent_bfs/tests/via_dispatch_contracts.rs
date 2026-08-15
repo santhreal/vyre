@@ -103,7 +103,7 @@ fn linear_expand_into(
                 edge_kind_mask: &msk,
             },
             allow_mask: 0xFFFF_FFFF,
-            max_iters: max_iters,
+            max_iters,
         },
         seed,
         frontier,
@@ -129,7 +129,7 @@ fn linear_expand_with_scratch(
                 edge_kind_mask: &msk,
             },
             allow_mask: 0xFFFF_FFFF,
-            max_iters: max_iters,
+            max_iters,
         },
         seed,
         scratch,
@@ -154,7 +154,7 @@ fn linear_expand(
                 edge_kind_mask: &msk,
             },
             allow_mask: 0xFFFF_FFFF,
-            max_iters: max_iters,
+            max_iters,
         },
         seed,
     )
@@ -250,7 +250,7 @@ fn via_large_graph_allocates_changed_active_scratch_without_extra_outputs() {
         &dispatcher,
         CsrClosureInputs {
             graph: CsrGraphView {
-                node_count: node_count,
+                node_count,
                 edge_offsets: &edge_offsets,
                 edge_targets: &[],
                 edge_kind_mask: &[],
@@ -334,7 +334,7 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
                 graph: CsrGraphView {
                     node_count: 4,
                     edge_offsets: &edge_offsets,
-                    edge_targets: edge_targets,
+                    edge_targets,
                     edge_kind_mask: &edge_kind_mask,
                 },
                 allow_mask: 0xFFFF_FFFF,

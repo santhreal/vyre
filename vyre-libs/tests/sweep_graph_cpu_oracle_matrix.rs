@@ -432,13 +432,13 @@ fn generated_csr_and_persistent_bfs_oracles_cover_4096_shapes() {
         let actual_bfs = persistent_bfs::cpu_ref(
             CsrClosureInputs {
                 graph: CsrGraphView {
-                    node_count: node_count,
+                    node_count,
                     edge_offsets: &offsets,
                     edge_targets: &targets,
                     edge_kind_mask: &masks,
                 },
-                allow_mask: allow_mask,
-                max_iters: max_iters,
+                allow_mask,
+                max_iters,
             },
             &frontier,
         );
@@ -460,13 +460,13 @@ fn generated_csr_backward_or_changed_oracles_cover_4096_shapes() {
         let (closure, _changed) = csr_backward_or_changed::cpu_ref_closure(
             CsrClosureInputs {
                 graph: CsrGraphView {
-                    node_count: node_count,
+                    node_count,
                     edge_offsets: &offsets,
                     edge_targets: &targets,
                     edge_kind_mask: &masks,
                 },
-                allow_mask: allow_mask,
-                max_iters: max_iters,
+                allow_mask,
+                max_iters,
             },
             &frontier,
         );
@@ -633,13 +633,13 @@ fn sweep_persistent_bfs_matches_independent_oracle_matrix() {
         let actual = bfs_expand(
             CsrClosureInputs {
                 graph: CsrGraphView {
-                    node_count: node_count,
+                    node_count,
                     edge_offsets: &offsets,
                     edge_targets: &targets,
                     edge_kind_mask: &masks,
                 },
-                allow_mask: allow_mask,
-                max_iters: max_iters,
+                allow_mask,
+                max_iters,
             },
             &frontier,
         );

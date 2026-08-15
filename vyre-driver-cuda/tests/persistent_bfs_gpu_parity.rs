@@ -42,12 +42,35 @@ fn cuda_bfs_expand_via_matches_reference_chain() {
         let dispatcher = CudaProgramDispatcher { backend };
         let (n, off, tgt, msk) = linear_chain(8);
         let seed = vec![0b0000_0001u32]; // node 0 only
-        let (gpu_out, gpu_changed, gpu_converged) =
-            bfs_expand_via(&dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: n, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: n }, &seed)
-                .expect("GPU bfs_expand_via dispatch");
-        let (reference_out, reference) =
-            try_bfs_expand_converged(CsrClosureInputs { graph: CsrGraphView { node_count: n, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: n }, &seed)
-                .expect("reference persistent BFS convergence");
+        let (gpu_out, gpu_changed, gpu_converged) = bfs_expand_via(
+            &dispatcher,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: n,
+                    edge_offsets: &off,
+                    edge_targets: &tgt,
+                    edge_kind_mask: &msk,
+                },
+                allow_mask: 0xFFFF_FFFF,
+                max_iters: n,
+            },
+            &seed,
+        )
+        .expect("GPU bfs_expand_via dispatch");
+        let (reference_out, reference) = try_bfs_expand_converged(
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: n,
+                    edge_offsets: &off,
+                    edge_targets: &tgt,
+                    edge_kind_mask: &msk,
+                },
+                allow_mask: 0xFFFF_FFFF,
+                max_iters: n,
+            },
+            &seed,
+        )
+        .expect("reference persistent BFS convergence");
         assert_eq!(
             gpu_out, reference_out,
             "frontier_out diverged on chain n={n}; gpu={gpu_out:?} reference={reference_out:?}"
@@ -78,21 +101,96 @@ fn cuda_bfs_expand_via_respects_allow_mask() {
         let seed = vec![0b0001u32];
 
         // allow_mask = 1 -> only k=1 edges followed: 0->1, 1->3. Reach {0,1,3}.
-        let (gpu_out, _, _) =
-            bfs_expand_via(&dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: n, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0b0001, max_iters: n }, &seed).expect("dispatch");
-        let (reference_out, _) = reference_bfs_expand(CsrClosureInputs { graph: CsrGraphView { node_count: n, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0b0001, max_iters: n }, &seed);
+        let (gpu_out, _, _) = bfs_expand_via(
+            &dispatcher,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: n,
+                    edge_offsets: &off,
+                    edge_targets: &tgt,
+                    edge_kind_mask: &msk,
+                },
+                allow_mask: 0b0001,
+                max_iters: n,
+            },
+            &seed,
+        )
+        .expect("dispatch");
+        let (reference_out, _) = reference_bfs_expand(
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: n,
+                    edge_offsets: &off,
+                    edge_targets: &tgt,
+                    edge_kind_mask: &msk,
+                },
+                allow_mask: 0b0001,
+                max_iters: n,
+            },
+            &seed,
+        );
         assert_eq!(gpu_out, reference_out, "allow_mask=1 divergence");
 
         // allow_mask = 2 -> only k=2 edges: 0->2. Reach {0,2}.
-        let (gpu_out, _, _) =
-            bfs_expand_via(&dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: n, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0b0010, max_iters: n }, &seed).expect("dispatch");
-        let (reference_out, _) = reference_bfs_expand(CsrClosureInputs { graph: CsrGraphView { node_count: n, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0b0010, max_iters: n }, &seed);
+        let (gpu_out, _, _) = bfs_expand_via(
+            &dispatcher,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: n,
+                    edge_offsets: &off,
+                    edge_targets: &tgt,
+                    edge_kind_mask: &msk,
+                },
+                allow_mask: 0b0010,
+                max_iters: n,
+            },
+            &seed,
+        )
+        .expect("dispatch");
+        let (reference_out, _) = reference_bfs_expand(
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: n,
+                    edge_offsets: &off,
+                    edge_targets: &tgt,
+                    edge_kind_mask: &msk,
+                },
+                allow_mask: 0b0010,
+                max_iters: n,
+            },
+            &seed,
+        );
         assert_eq!(gpu_out, reference_out, "allow_mask=2 divergence");
 
         // allow_mask = 3 -> both kinds: 0->1, 0->2, 1->3. Reach {0,1,2,3}.
-        let (gpu_out, _, _) =
-            bfs_expand_via(&dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: n, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0b0011, max_iters: n }, &seed).expect("dispatch");
-        let (reference_out, _) = reference_bfs_expand(CsrClosureInputs { graph: CsrGraphView { node_count: n, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0b0011, max_iters: n }, &seed);
+        let (gpu_out, _, _) = bfs_expand_via(
+            &dispatcher,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: n,
+                    edge_offsets: &off,
+                    edge_targets: &tgt,
+                    edge_kind_mask: &msk,
+                },
+                allow_mask: 0b0011,
+                max_iters: n,
+            },
+            &seed,
+        )
+        .expect("dispatch");
+        let (reference_out, _) = reference_bfs_expand(
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: n,
+                    edge_offsets: &off,
+                    edge_targets: &tgt,
+                    edge_kind_mask: &msk,
+                },
+                allow_mask: 0b0011,
+                max_iters: n,
+            },
+            &seed,
+        );
         assert_eq!(gpu_out, reference_out, "allow_mask=3 divergence");
     });
 }
@@ -106,12 +204,35 @@ fn cuda_bfs_expand_via_saturated_seed_reports_no_change() {
             let (n, off, tgt, msk) = linear_chain(4);
             // Seed = full chain already.
             let seed = vec![0b1111u32];
-            let (_gpu_out, gpu_changed, gpu_converged) =
-                bfs_expand_via(&dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: n, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: n }, &seed)
-                    .expect("dispatch");
-            let (_reference_out, reference) =
-                try_bfs_expand_converged(CsrClosureInputs { graph: CsrGraphView { node_count: n, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: n }, &seed)
-                    .expect("reference persistent BFS convergence");
+            let (_gpu_out, gpu_changed, gpu_converged) = bfs_expand_via(
+                &dispatcher,
+                CsrClosureInputs {
+                    graph: CsrGraphView {
+                        node_count: n,
+                        edge_offsets: &off,
+                        edge_targets: &tgt,
+                        edge_kind_mask: &msk,
+                    },
+                    allow_mask: 0xFFFF_FFFF,
+                    max_iters: n,
+                },
+                &seed,
+            )
+            .expect("dispatch");
+            let (_reference_out, reference) = try_bfs_expand_converged(
+                CsrClosureInputs {
+                    graph: CsrGraphView {
+                        node_count: n,
+                        edge_offsets: &off,
+                        edge_targets: &tgt,
+                        edge_kind_mask: &msk,
+                    },
+                    allow_mask: 0xFFFF_FFFF,
+                    max_iters: n,
+                },
+                &seed,
+            )
+            .expect("reference persistent BFS convergence");
             assert_eq!(gpu_changed, reference.changed);
             assert_eq!(gpu_changed, 0);
             assert_eq!(gpu_converged, u32::from(reference.converged));
@@ -148,9 +269,20 @@ fn cuda_resident_bfs_graph_matches_reference_across_repeated_queries() {
                     &mut frontier,
                 )
                 .expect("resident graph BFS query");
-                let (reference_out, reference) =
-                    try_bfs_expand_converged(CsrClosureInputs { graph: CsrGraphView { node_count: n, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: n }, &seed_words)
-                        .expect("reference persistent BFS convergence");
+                let (reference_out, reference) = try_bfs_expand_converged(
+                    CsrClosureInputs {
+                        graph: CsrGraphView {
+                            node_count: n,
+                            edge_offsets: &off,
+                            edge_targets: &tgt,
+                            edge_kind_mask: &msk,
+                        },
+                        allow_mask: 0xFFFF_FFFF,
+                        max_iters: n,
+                    },
+                    &seed_words,
+                )
+                .expect("reference persistent BFS convergence");
                 assert_eq!(frontier, reference_out);
                 assert_eq!(changed, reference.changed);
                 assert_eq!(converged, u32::from(reference.converged));
@@ -211,8 +343,19 @@ fn cuda_resident_bfs_graph_batch_matches_reference() {
             let mut expected_frontiers = Vec::with_capacity(seeds.len());
             let mut expected_changed = Vec::with_capacity(seeds.len());
             for seed in seeds {
-                let (frontier, changed) =
-                    reference_bfs_expand(CsrClosureInputs { graph: CsrGraphView { node_count: n, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: n }, &[seed]);
+                let (frontier, changed) = reference_bfs_expand(
+                    CsrClosureInputs {
+                        graph: CsrGraphView {
+                            node_count: n,
+                            edge_offsets: &off,
+                            edge_targets: &tgt,
+                            edge_kind_mask: &msk,
+                        },
+                        allow_mask: 0xFFFF_FFFF,
+                        max_iters: n,
+                    },
+                    &[seed],
+                );
                 expected_frontiers.extend_from_slice(&frontier);
                 expected_changed.push(changed);
             }

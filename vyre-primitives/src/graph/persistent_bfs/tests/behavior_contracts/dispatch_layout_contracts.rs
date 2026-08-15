@@ -241,7 +241,7 @@ fn large_dispatch_plans_cover_every_node_with_parallel_grid() {
     let plan = plan_persistent_bfs_dispatch(
         CsrClosureInputs {
             graph: CsrGraphView {
-                node_count: node_count,
+                node_count,
                 edge_offsets: &edge_offsets,
                 edge_targets: &edge_targets,
                 edge_kind_mask: &edge_kind_mask,

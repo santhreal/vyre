@@ -204,7 +204,7 @@ fn fallible_cpu_ref_matches_compatibility_oracle_on_generated_chains() {
         let expected = cpu_ref(
             CsrClosureInputs {
                 graph: CsrGraphView {
-                    node_count: node_count,
+                    node_count,
                     edge_offsets: &offsets,
                     edge_targets: &targets,
                     edge_kind_mask: &masks,
@@ -217,7 +217,7 @@ fn fallible_cpu_ref_matches_compatibility_oracle_on_generated_chains() {
         let actual = try_cpu_ref(
             CsrClosureInputs {
                 graph: CsrGraphView {
-                    node_count: node_count,
+                    node_count,
                     edge_offsets: &offsets,
                     edge_targets: &targets,
                     edge_kind_mask: &masks,
@@ -272,13 +272,13 @@ fn generated_try_cpu_ref_into_with_scratch_matches_allocating_reference() {
         let expected = try_cpu_ref(
             CsrClosureInputs {
                 graph: CsrGraphView {
-                    node_count: node_count,
+                    node_count,
                     edge_offsets: &offsets,
                     edge_targets: &targets,
                     edge_kind_mask: &masks,
                 },
-                allow_mask: allow_mask,
-                max_iters: max_iters,
+                allow_mask,
+                max_iters,
             },
             &seed,
         )
@@ -286,13 +286,13 @@ fn generated_try_cpu_ref_into_with_scratch_matches_allocating_reference() {
         let changed = try_cpu_ref_into_with_scratch(
             CsrClosureInputs {
                 graph: CsrGraphView {
-                    node_count: node_count,
+                    node_count,
                     edge_offsets: &offsets,
                     edge_targets: &targets,
                     edge_kind_mask: &masks,
                 },
-                allow_mask: allow_mask,
-                max_iters: max_iters,
+                allow_mask,
+                max_iters,
             },
             &seed,
             &mut frontier,
@@ -462,13 +462,13 @@ fn converged_changed_flag_matches_sticky_oracle_on_generated_chains() {
             let (sticky_frontier, sticky_changed) = try_cpu_ref(
                 CsrClosureInputs {
                     graph: CsrGraphView {
-                        node_count: node_count,
+                        node_count,
                         edge_offsets: &offsets,
                         edge_targets: &targets,
                         edge_kind_mask: &masks,
                     },
                     allow_mask: 0xFFFF_FFFF,
-                    max_iters: max_iters,
+                    max_iters,
                 },
                 &seed,
             )
@@ -476,13 +476,13 @@ fn converged_changed_flag_matches_sticky_oracle_on_generated_chains() {
             let (converged_frontier, outcome) = try_cpu_ref_converged(
                 CsrClosureInputs {
                     graph: CsrGraphView {
-                        node_count: node_count,
+                        node_count,
                         edge_offsets: &offsets,
                         edge_targets: &targets,
                         edge_kind_mask: &masks,
                     },
                     allow_mask: 0xFFFF_FFFF,
-                    max_iters: max_iters,
+                    max_iters,
                 },
                 &seed,
             )

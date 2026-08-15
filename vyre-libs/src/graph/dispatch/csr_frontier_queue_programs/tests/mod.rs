@@ -180,7 +180,7 @@ fn forward_or_changed_program(max_iters: u32) -> Program {
             edge_kind_mask: &masks,
         },
         allow_mask: ALLOW_MASK,
-        max_iters: max_iters,
+        max_iters,
     })
     .expect("Fix: forward-or-changed fixture must be a valid CSR graph")
     .program()

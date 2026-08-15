@@ -92,7 +92,7 @@ fn linear_closure(
                 edge_kind_mask: &msk,
             },
             allow_mask: 0xFFFF_FFFF,
-            max_iters: max_iters,
+            max_iters,
         },
         &[0b0001],
     )
@@ -115,7 +115,7 @@ fn linear_closure_into(
                 edge_kind_mask: &msk,
             },
             allow_mask: 0xFFFF_FFFF,
-            max_iters: max_iters,
+            max_iters,
         },
         &[0b0001],
         frontier,
@@ -142,8 +142,8 @@ fn linear_closure_with_scratch(
                 edge_targets: &tgt,
                 edge_kind_mask: &msk,
             },
-            allow_mask: allow_mask,
-            max_iters: max_iters,
+            allow_mask,
+            max_iters,
         },
         seed,
         scratch,
@@ -295,7 +295,7 @@ fn gpu_refreshes_static_inputs_when_same_shape_graph_content_changes() {
                 graph: CsrGraphView {
                     node_count: 4,
                     edge_offsets: &edge_offsets,
-                    edge_targets: edge_targets,
+                    edge_targets,
                     edge_kind_mask: &edge_kind_mask,
                 },
                 allow_mask: 0xFFFF_FFFF,
@@ -441,7 +441,7 @@ fn generated_gpu_seed_copy_bounds_to_primitive_frontier_words() {
                 &dispatcher,
                 CsrClosureInputs {
                     graph: CsrGraphView {
-                        node_count: node_count,
+                        node_count,
                         edge_offsets: &edge_offsets,
                         edge_targets: &[],
                         edge_kind_mask: &[],

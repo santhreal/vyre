@@ -114,7 +114,7 @@ fn linear_closure_with_scratch(
                 edge_kind_mask: &msk,
             },
             allow_mask: 0xFFFF_FFFF,
-            max_iters: max_iters,
+            max_iters,
         },
         seed,
         scratch,

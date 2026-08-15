@@ -252,13 +252,13 @@ fn assert_device_matches_oracle(
     let (frontier, outcome) = try_cpu_ref_converged(
         CsrClosureInputs {
             graph: CsrGraphView {
-                node_count: node_count,
-                edge_offsets: edge_offsets,
-                edge_targets: edge_targets,
-                edge_kind_mask: edge_kind_mask,
+                node_count,
+                edge_offsets,
+                edge_targets,
+                edge_kind_mask,
             },
-            allow_mask: allow_mask,
-            max_iters: max_iters,
+            allow_mask,
+            max_iters,
         },
         frontier_in,
     )
@@ -457,13 +457,13 @@ fn grid_sync_converged_word_matches_oracle_through_the_closure_split_entry() {
         let (_, oracle) = try_cpu_ref_converged(
             CsrClosureInputs {
                 graph: CsrGraphView {
-                    node_count: node_count,
+                    node_count,
                     edge_offsets: &offsets,
                     edge_targets: &targets,
                     edge_kind_mask: &masks,
                 },
                 allow_mask: 0xFFFF_FFFF,
-                max_iters: max_iters,
+                max_iters,
             },
             &seed,
         )
@@ -554,13 +554,13 @@ fn assert_batch_device_matches_oracle(
         let (frontier, outcome) = try_cpu_ref_converged(
             CsrClosureInputs {
                 graph: CsrGraphView {
-                    node_count: node_count,
-                    edge_offsets: edge_offsets,
-                    edge_targets: edge_targets,
-                    edge_kind_mask: edge_kind_mask,
+                    node_count,
+                    edge_offsets,
+                    edge_targets,
+                    edge_kind_mask,
                 },
-                allow_mask: allow_mask,
-                max_iters: max_iters,
+                allow_mask,
+                max_iters,
             },
             seed,
         )
@@ -707,13 +707,13 @@ fn assert_device_density_matches_oracle(
     let (frontier, _outcome, active) = try_cpu_ref_density(
         CsrClosureInputs {
             graph: CsrGraphView {
-                node_count: node_count,
-                edge_offsets: edge_offsets,
-                edge_targets: edge_targets,
-                edge_kind_mask: edge_kind_mask,
+                node_count,
+                edge_offsets,
+                edge_targets,
+                edge_kind_mask,
             },
-            allow_mask: allow_mask,
-            max_iters: max_iters,
+            allow_mask,
+            max_iters,
         },
         frontier_in,
     )
@@ -884,13 +884,13 @@ fn assert_batch_device_density_matches_oracle(
         let (_frontier, _outcome, active) = try_cpu_ref_density(
             CsrClosureInputs {
                 graph: CsrGraphView {
-                    node_count: node_count,
-                    edge_offsets: edge_offsets,
-                    edge_targets: edge_targets,
-                    edge_kind_mask: edge_kind_mask,
+                    node_count,
+                    edge_offsets,
+                    edge_targets,
+                    edge_kind_mask,
                 },
-                allow_mask: allow_mask,
-                max_iters: max_iters,
+                allow_mask,
+                max_iters,
             },
             seed,
         )
