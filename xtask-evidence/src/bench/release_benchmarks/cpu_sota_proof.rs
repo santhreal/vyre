@@ -89,7 +89,7 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
             .and_then(nonblank_str)
             .map(str::to_string);
         if let Some(fingerprint) = &report_source_fingerprint {
-            if !crate::bench::benchmark_evidence_semantics::source_fingerprint_issues(fingerprint)
+            if !xtask::source_provenance::issues(fingerprint)
                 .is_empty()
             {
                 blockers.push(format!(

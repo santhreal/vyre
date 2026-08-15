@@ -608,7 +608,7 @@ pub(super) fn inspect_backend_suite_artifact(
     }
     match &source_fingerprint {
         Some(fingerprint)
-            if !crate::bench::benchmark_evidence_semantics::source_fingerprint_issues(
+            if !xtask::source_provenance::issues(
                 fingerprint,
             )
             .is_empty() =>

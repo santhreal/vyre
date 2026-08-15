@@ -225,23 +225,6 @@ pub(crate) enum CudaForbiddenTelemetryIssue {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum SourceFingerprintIssue {
-    DirtyUnknownState {
-        source_fingerprint: String,
-    },
-    DirtyMissingWorktree {
-        source_fingerprint: String,
-    },
-    DirtyUnknownWorktree {
-        source_fingerprint: String,
-    },
-    DirtyInvalidWorktree {
-        source_fingerprint: String,
-        worktree: String,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum SourceFingerprintFreshnessIssue {
     Mismatch {
         source_fingerprint: String,

@@ -14,10 +14,6 @@ pub(crate) fn non_empty_str(value: &Value) -> Option<&str> {
     value.as_str().filter(|value| !value.trim().is_empty())
 }
 
-pub(crate) fn is_blake3_hex_digest(value: &str) -> bool {
-    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
-}
-
 pub(crate) fn nonnegative_json_number_as_u64(value: &Value) -> Option<u64> {
     value.as_u64().or_else(|| {
         value

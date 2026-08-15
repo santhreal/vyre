@@ -2747,6 +2747,18 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   commit would carry: tracked files plus new files no rule excludes, so a copy
   still counts before it is committed. Running the gate outside a git checkout
   now fails with that as the remedy instead of measuring whatever is on disk.
+- An artifact under `release/evidence` is written only when the tree it records
+  can be identified. The recorder captures one `git:<commit>:dirty=false` or
+  `git:<commit>:dirty=true:worktree=<digest>` fingerprint per run, stamps it at
+  the head of the artifact, and refuses to write when git names no commit,
+  cannot tell whether the tree is dirty, or cannot digest a dirty worktree.
+  Those three states used to be recorded as `unknown` inside an otherwise
+  well-formed fingerprint and left for a later reader to discover. Comparison
+  reads the body under the stamp, because the tree an artifact was recorded
+  from is not a divergence from the tree reading it, and regenerating an
+  unchanged body keeps the fingerprint it already carried. The judge that names
+  an imprecise fingerprint has one home in `xtask::source_provenance`, used by
+  the recorder before it writes and by every reader of recorded provenance.
 - `docs-check` and `feature-matrix` pass. The generated testing guide for
   `vyre-registry-link` had no row in the documentation manifest, and
   `vyre-test-support` declared features with no explicit default policy. A tree
