@@ -16,6 +16,7 @@
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::optimizer::passes::loops::loop_fusion::LoopFusion;
+use vyre_foundation::transform::visit::child_bodies;
 
 /// A loop over `0..4` writing `value` into `buffer`.
 ///
@@ -53,18 +54,22 @@ fn program_with_one_fusable_pair(count: usize, pair_at: usize) -> Program {
 }
 
 /// Sibling `Node::Loop` count directly under the program's entry region.
+///
+/// Descent is [`child_bodies`], the one owner of which variants nest, so this
+/// counts the loops under whatever wrapper `Program::wrapped` puts them in
+/// without naming that wrapper. `Node::Loop` stops the descent, which is what
+/// makes the answer "sibling loops" rather than "every loop anywhere".
 fn top_level_loops(program: &Program) -> usize {
-    program
-        .entry()
-        .iter()
-        .map(|node| match node {
-            Node::Region { body, .. } => {
-                body.iter().filter(|n| matches!(n, Node::Loop { .. })).count()
-            }
-            Node::Loop { .. } => 1,
-            _ => 0,
-        })
-        .sum()
+    fn loops_in(nodes: &[Node]) -> usize {
+        nodes
+            .iter()
+            .map(|node| match node {
+                Node::Loop { .. } => 1,
+                other => child_bodies(other).into_iter().map(loops_in).sum(),
+            })
+            .sum()
+    }
+    loops_in(program.entry())
 }
 
 /// WHY: the fusable pair must be found at every offset, not only at an even

@@ -1,3 +1,4 @@
+use super::buffer_table::put_memory_regions_with_scratch;
 use super::*;
 use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

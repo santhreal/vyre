@@ -2097,6 +2097,29 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   actions complete and zero blockers, so the gate every sweep runs with no
   arguments could not pass before the version it guards had shipped. The
   removed `--prepublish` flag is rejected rather than ignored.
+- `transform::visit` is split by what is being visited. `node` owns the
+  per-variant `Node` decisions a traversal cannot re-derive safely - which
+  bodies a variant nests, which scalar name it binds and what it does to that
+  name, which operands it evaluates, which buffers it names and in which
+  direction - `expr` owns the same for the value namespace, and `walk` owns the
+  traversals, which are written entirely against those two and restate neither.
+  Every item is re-exported from `transform::visit`, so no caller changes. The
+  file was 1789 lines against an 829-line cap, and every match in it is
+  exhaustive with no catch-all arm on purpose, which is the mechanism that
+  makes a new IR variant a compile error rather than a silent leaf
+  classification; one file that size hides which of those decisions a reader is
+  looking at.
+- Six IR and serialization files are split along the seam their contents
+  already had. `BufferDecl` keeps its own file and the two records it carries
+  move out with the tests that own their grammar, `linear_type` and
+  `shape_predicate`. Program metadata separates the bounded wire-hash fallback
+  and the canonical buffer key, which decides program equality, from the
+  `Program` methods that call them. Type checking separates the one static type
+  walker from what each operator accepts in each operand position. The wire
+  encoder and decoder each grow a `buffer_table` module holding the
+  buffer-table and memory-region halves, which mirror each other and were the
+  two largest blocks in either file. `Ident` moves out of the expression
+  module. No signature changes and no re-exports removed.
 
 ### Removed
 
