@@ -7,12 +7,11 @@ use vyre_foundation::execution_plan::ExecutionPlan;
 
 /// Target backend category chosen by the router.
 ///
-/// There is no CPU route. Vyre executes compute on a device; the only host
-/// arithmetic in the workspace is `vyre-reference`, which is a parity oracle
-/// and is never reached through this enum. A `CpuSimd` variant was declared
-/// here and documented as an opt-in diagnostic route, and no executor arm ever
-/// ran it: what a route nobody serves buys is a caller that believes a
-/// degradation path exists.
+/// There is no host execution route. Vyre executes compute on a device; the
+/// only host arithmetic in the workspace is `vyre-reference`, which is a parity
+/// oracle and is never reached through this enum. Every category here is a
+/// device, and a workload that cannot be placed on one is an error naming the
+/// missing capability rather than a category.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum RoutingDecision {

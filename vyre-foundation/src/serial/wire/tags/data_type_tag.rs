@@ -31,7 +31,7 @@ pub(crate) const DATA_TYPE_TAG_OPAQUE: u8 = 0x80;
 ///
 /// `Ok(u8)` containing the tag value. Scalar and tensor types map to a single
 /// byte; `Array` maps to tag `12` and the caller must follow up with the
-/// `element_size` payload via [`put_data_type`].
+/// `element_size` payload via the crate-private `put_data_type` encoder.
 ///
 /// # Errors
 ///

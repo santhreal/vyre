@@ -104,15 +104,10 @@ fn shared_policy_owns_strategy_and_route_boundaries() {
     assert!(policy.use_persistent_runtime(65));
     assert!(!policy.recommend_autotune(64));
     assert!(policy.recommend_autotune(65));
-    assert_eq!(
-        policy.route(64, (1 << 16) - 1),
-        PolicyRoute::PersistentMegakernel
-    );
-    assert_eq!(policy.route(64, 1 << 16), PolicyRoute::PersistentMegakernel);
-    assert_eq!(
-        policy.route(1025, 1 << 16),
-        PolicyRoute::PersistentMegakernel
-    );
+    // `route` took a `static_bytes` argument that only ever fed a host-executing
+    // route whose predicate ignored it. Both remaining answers are device routes.
+    assert_eq!(policy.route(64), PolicyRoute::PersistentMegakernel);
+    assert_eq!(policy.route(1025), PolicyRoute::PersistentMegakernel);
 }
 
 #[test]

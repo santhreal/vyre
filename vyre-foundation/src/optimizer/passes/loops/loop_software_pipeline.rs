@@ -60,6 +60,7 @@
 //!   the `Var(name)` read  -  no Load (other than via name), no
 //!   Atomic, no Call, no Opaque, no Subgroup.
 
+use crate::transform::visit;
 use crate::ir::{BinOp, Expr, Ident, Node, Program};
 use crate::optimizer::program_soa::ProgramFacts;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
@@ -393,7 +394,13 @@ fn node_has_pipelinable_loop(node: &Node, facts: &ProgramFacts) -> bool {
         }
         Node::Block(body) => body.iter().any(|n| node_has_pipelinable_loop(n, facts)),
         Node::Region { body, .. } => body.iter().any(|n| node_has_pipelinable_loop(n, facts)),
-        _ => false,
+        // A variant this match does not name may still carry child bodies.
+        // `child_bodies` owns which slots exist, so a loop nested under a new
+        // variant is found instead of skipped.
+        _ => visit::child_bodies(node)
+            .into_iter()
+            .flatten()
+            .any(|n| node_has_pipelinable_loop(n, facts)),
     }
 }
 

@@ -403,11 +403,10 @@ pub const fn vyre_foundation::execution_plan::SchedulingPolicy::fused_over_dispa
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::legal_workgroup_x_ceiling(&self, caps: &vyre_foundation::optimizer::ctx::AdapterCaps) -> u32
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::padded_slot_count(&self, slot_count: u32, workgroup_size_x: u32) -> u32
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::recommend_autotune(&self, node_count: usize) -> bool
-pub const fn vyre_foundation::execution_plan::SchedulingPolicy::route(&self, node_count: usize, static_bytes: u64) -> vyre_foundation::execution_plan::PolicyRoute
+pub const fn vyre_foundation::execution_plan::SchedulingPolicy::route(&self, node_count: usize) -> vyre_foundation::execution_plan::PolicyRoute
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::select_unroll_depth(&self, loop_trip_count: core::option::Option<u32>, caps: &vyre_foundation::optimizer::ctx::AdapterCaps) -> u32
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::select_vector_pack_bits(&self, element_bits: u32, caps: &vyre_foundation::optimizer::ctx::AdapterCaps) -> u32
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::standard() -> Self
-pub const fn vyre_foundation::execution_plan::SchedulingPolicy::use_cpu_fast_path(&self, _node_count: usize, _static_bytes: u64) -> bool
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::use_persistent_megakernel(&self, _node_count: usize) -> bool
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::use_persistent_runtime(&self, _node_count: usize) -> bool
 pub const fn vyre_foundation::execution_plan::SchedulingPolicy::worker_workgroup_size(&self, worker_count: u32, max_workgroup_size_x: u32) -> u32
@@ -834,7 +833,6 @@ pub fn vyre_foundation::fp_parity::compare_operation_outputs(op_id: &str, progra
 pub fn vyre_foundation::fp_parity::compare_output_buffers(program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> vyre_foundation::fp_parity::BufferParity
 pub fn vyre_foundation::fp_parity::effective_tolerance(op_id: &str, program: &vyre_foundation::ir::Program) -> u32
 pub fn vyre_foundation::fp_parity::f32_buffer_matches(bytes_a: &[u8], bytes_b: &[u8], tolerance: u32) -> bool
-pub fn vyre_foundation::fp_parity::f32_buffer_max_ulp(bytes_a: &[u8], bytes_b: &[u8]) -> core::option::Option<u32>
 pub fn vyre_foundation::fp_parity::f32_ulp_tolerance(program: &vyre_foundation::ir::Program) -> u32
 pub fn vyre_foundation::fp_parity::max_output_ulp(program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> core::option::Option<u32>
 pub fn vyre_foundation::fp_parity::ulp_distance(left: f32, right: f32) -> core::option::Option<u32>
@@ -2056,11 +2054,12 @@ pub fn vyre_foundation::optimizer::passes::memory::decode_scan_fuse::DecodeScanF
 pub fn vyre_foundation::optimizer::passes::memory::decode_scan_fuse::DecodeScanFuse::supports_planar_batching(&self) -> bool
 pub fn vyre_foundation::optimizer::passes::memory::decode_scan_fuse::DecodeScanFuse::transform(&self, program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::memory::decode_scan_fuse::DecodeScanFuse::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
+pub fn vyre_foundation::optimizer::passes::memory::decode_scan_fuse::DecodeScanFuse::transform_for_adapter(program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::ctx::AdapterCaps) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::memory::decode_scan_fuse::DecodeScanFuse::try_batch_apply(&self, program: vyre_foundation::ir::Program) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::memory::decode_scan_fuse::DecodeScanFuse::try_transform(&self, program: vyre_foundation::ir::Program) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
-pub fn vyre_foundation::optimizer::passes::memory::decode_scan_fuse::candidate_handoffs(program: &vyre_foundation::ir::Program) -> rustc_hash::FxHashMap<vyre_foundation::ir::Ident, u32>
-pub fn vyre_foundation::optimizer::passes::memory::decode_scan_fuse::count_opportunities(program: &vyre_foundation::ir::Program) -> usize
-pub fn vyre_foundation::optimizer::passes::memory::decode_scan_fuse::run(program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
+pub fn vyre_foundation::optimizer::passes::memory::decode_scan_fuse::candidate_handoffs(program: &vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::ctx::AdapterCaps) -> rustc_hash::FxHashMap<vyre_foundation::ir::Ident, u32>
+pub fn vyre_foundation::optimizer::passes::memory::decode_scan_fuse::count_opportunities(program: &vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::ctx::AdapterCaps) -> usize
+pub fn vyre_foundation::optimizer::passes::memory::decode_scan_fuse::run(program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::ctx::AdapterCaps) -> vyre_foundation::ir::Program
 pub fn vyre_foundation::optimizer::passes::memory::read_only_load_hoist::ReadOnlyLoadHoistPass::allowed_effect_additions(&self) -> vyre_foundation::lower::effects::ProgramEffects
 pub fn vyre_foundation::optimizer::passes::memory::read_only_load_hoist::ReadOnlyLoadHoistPass::analyze(&self, program: &vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassAnalysis
 pub fn vyre_foundation::optimizer::passes::memory::read_only_load_hoist::ReadOnlyLoadHoistPass::apply_rewrite_batch(&self, program: vyre_foundation::ir::Program, _batch: &vyre_foundation::optimizer::planar_batch::RewriteBatch) -> vyre_foundation::optimizer::PassResult
@@ -3540,7 +3539,6 @@ pub vyre_foundation::execution_plan::PlanError::RuntimeSizedBuffer::element: vyr
 pub vyre_foundation::execution_plan::PlanError::RuntimeSizedBuffer::name: alloc::string::String
 pub vyre_foundation::execution_plan::PlanError::Validation
 pub vyre_foundation::execution_plan::PlanError::Validation::issues: alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
-pub vyre_foundation::execution_plan::PolicyRoute::CpuSimd
 pub vyre_foundation::execution_plan::PolicyRoute::GpuPipeline
 pub vyre_foundation::execution_plan::PolicyRoute::PersistentMegakernel
 pub vyre_foundation::execution_plan::ProvenancePlan::emit_region_trace: bool

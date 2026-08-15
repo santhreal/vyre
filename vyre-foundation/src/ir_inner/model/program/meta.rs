@@ -741,100 +741,41 @@ impl Program {
     }
 
     /// Return the peak computational intensity found in any instruction.
+    ///
+    /// Two hand-written descents used to stand here, `node_intensity` over
+    /// `Node` and `expr_intensity` over `Expr`, each naming the positions it
+    /// recursed into and each ending in `_ => OpIntensity::Free`. The node one
+    /// named neither async copy nor `Trap`, so the expressions in an async
+    /// copy's `offset` and `size` and in a trap address were scored `Free` no
+    /// matter what they contained, and a program whose only heavy work sat there
+    /// reported as free. The expression one had the same hole for any variant it
+    /// had not been told about.
+    ///
+    /// Descent belongs to
+    /// [`for_each_expr`](crate::transform::visit::for_each_expr), the one walk
+    /// that reaches every operand of every node and every sub-expression of
+    /// every operand. What is left here is the scoring rule, which is per
+    /// expression and does not need to see its children: the walk offers the
+    /// children separately and `max` over the whole visit is the same answer the
+    /// recursive `max` produced, in one pass rather than one pass per depth.
     #[must_use]
     pub fn peak_intensity(&self) -> OpIntensity {
         let mut peak = OpIntensity::Free;
-        for node in self.entry() {
-            peak = peak.max(Self::node_intensity(node));
-        }
+        crate::transform::visit::for_each_expr(self.entry(), |expr| {
+            peak = peak.max(Self::expr_intensity(expr));
+        });
         peak
     }
 
-    fn node_intensity(node: &crate::ir::Node) -> OpIntensity {
-        use crate::ir::Node;
-        match node {
-            Node::Let { value, .. } | Node::Assign { value, .. } => Self::expr_intensity(value),
-            Node::Store { index, value, .. } => {
-                Self::expr_intensity(index).max(Self::expr_intensity(value))
-            }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                let mut p = Self::expr_intensity(cond);
-                for n in then {
-                    p = p.max(Self::node_intensity(n));
-                }
-                for n in otherwise {
-                    p = p.max(Self::node_intensity(n));
-                }
-                p
-            }
-            Node::Loop { from, to, body, .. } => {
-                let mut p = Self::expr_intensity(from).max(Self::expr_intensity(to));
-                for n in body {
-                    p = p.max(Self::node_intensity(n));
-                }
-                p
-            }
-            Node::Block(nodes) => {
-                let mut p = OpIntensity::Free;
-                for n in nodes {
-                    p = p.max(Self::node_intensity(n));
-                }
-                p
-            }
-            Node::Region { body, .. } => {
-                let mut p = OpIntensity::Free;
-                for n in body.iter() {
-                    p = p.max(Self::node_intensity(n));
-                }
-                p
-            }
-            _ => OpIntensity::Free,
-        }
-    }
-
+    /// Intensity of `expr` itself, ignoring its children.
     fn expr_intensity(expr: &crate::ir::Expr) -> OpIntensity {
         use crate::ir::Expr;
         match expr {
-            Expr::BinOp { op, left, right } => op
-                .intensity()
-                .max(Self::expr_intensity(left))
-                .max(Self::expr_intensity(right)),
-            Expr::UnOp { operand, .. } => Self::expr_intensity(operand),
-            Expr::Load { index, .. } => Self::expr_intensity(index),
-            Expr::Select {
-                cond,
-                true_val,
-                false_val,
-            } => Self::expr_intensity(cond)
-                .max(Self::expr_intensity(true_val))
-                .max(Self::expr_intensity(false_val)),
-            Expr::Cast { value, .. } => Self::expr_intensity(value),
-            Expr::Fma { a, b, c } => Self::expr_intensity(a)
-                .max(Self::expr_intensity(b))
-                .max(Self::expr_intensity(c)),
-            Expr::Atomic {
-                index,
-                value,
-                expected,
-                ..
-            } => {
-                let mut p = Self::expr_intensity(index).max(Self::expr_intensity(value));
-                if let Some(e) = expected {
-                    p = p.max(Self::expr_intensity(e));
-                }
-                p.max(OpIntensity::Heavy)
-            }
-            Expr::SubgroupBallot { cond } => Self::expr_intensity(cond).max(OpIntensity::Heavy),
-            Expr::SubgroupShuffle { value, lane } => Self::expr_intensity(value)
-                .max(Self::expr_intensity(lane))
-                .max(OpIntensity::Heavy),
-            Expr::SubgroupReduce { value, .. } => {
-                Self::expr_intensity(value).max(OpIntensity::Heavy)
-            }
+            Expr::BinOp { op, .. } => op.intensity(),
+            Expr::Atomic { .. }
+            | Expr::SubgroupBallot { .. }
+            | Expr::SubgroupShuffle { .. }
+            | Expr::SubgroupReduce { .. } => OpIntensity::Heavy,
             _ => OpIntensity::Free,
         }
     }

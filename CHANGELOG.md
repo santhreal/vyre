@@ -317,16 +317,16 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   private walk fails it at the async-copy offset, which is the position the two
   copies actually disagreed about.
 - `vyre_foundation::fp_parity::max_output_ulp` reports the largest ULP distance
-  over a program's F32 output slots, and `f32_buffer_max_ulp` does the same for
-  one packed buffer. The conform ULP audit carried its own copy of that walk:
-  it decided per slot from `program.buffers()` while reading
-  `output_buffer_indices` for the mapping, so a program whose outputs were not
-  declared in slot order was audited against the wrong element type, and a
-  saturated distance read as a measurement rather than as an incomparable pair.
-  The gate and the audit now read the slots through one owner, and the one
-  place they legitimately differ is documented on the function: an audit treats
-  two NaNs as agreeing because a backend chooses its own payload, and the gate
-  does not.
+  over a program's declared F32 output slots. Output-slot alignment is one
+  internal walk shared with the tolerance comparison. The conform ULP audit
+  carried its own copy of that walk: it decided per slot from
+  `program.buffers()` while reading `output_buffer_indices` for the mapping, so
+  a program whose outputs were not declared in slot order was audited against
+  the wrong element type, and a saturated distance read as a measurement rather
+  than as an incomparable pair. The gate and the audit now read the slots
+  through one owner, and the one place they legitimately differ is documented
+  on the function: an audit treats two NaNs as agreeing because a backend
+  chooses its own payload, and the gate does not.
 - `vyre_test_support::binop_parity::assert_covers_every_synthetic_op` and
   `assert_covers_every_total_op` fail when a backend parity suite has no
   reference arm for an op the shared table declares, or names one the table
@@ -1762,6 +1762,14 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   the recompile instruction the other five give; and `executable_module!`
   answers the two `ExecutableModule` methods every backend stored under the
   same two field names.
+- The decode-scan fusion pass takes its workgroup promotion budget from the
+  caller's capability record instead of a fixed constant. `run`,
+  `count_opportunities` and `candidate_handoffs` take an `AdapterCaps`, and
+  `DecodeScanFuse::transform_for_adapter` promotes against a named target while
+  `DecodeScanFuse::transform` keeps the conservative profile, so the default
+  path is byte-identical. Previously every target was capped at the lowest
+  reported shared-memory figure, which refused a handoff a reported budget
+  allows.
 - `InstanceCore::absorb_outputs` and `InstanceCore::resident_completion` take
   the dispatch result by value and move each output buffer into the value map
   instead of cloning it. Callers owned the result and dropped it, so the copy
@@ -1845,15 +1853,19 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   without either crate naming it. Four flagged entries were kept because they
   are used through workspace-root shared test files included by path, which a
   crate-scoped search cannot see.
-- `RoutingDecision::CpuSimd` is gone from `vyre-runtime`. Vyre executes compute
-  on a device; the only host arithmetic in the workspace is `vyre-reference`,
-  which is a parity oracle and not a route. No executor arm ever served the
-  variant and the standard policy rewrote every suggestion to the persistent
-  megakernel regardless, so what the declaration bought was a caller that
-  believed a degradation path existed. The routing contract test asserted one
-  plan did not pick that route; it now asserts the router declares no host
-  route at all, reading the variant set and the module text from source so a
-  route added back under any spelling fails on arrival.
+- Routing has no host arm. `PolicyRoute::CpuSimd`, `RoutingDecision::CpuSimd`,
+  `ExecutionPolicy::use_cpu_fast_path` and the two host fast-path thresholds
+  that only fed it are gone, and `ExecutionPolicy::route` no longer takes a
+  byte count the deleted predicate was its only reader of. Vyre executes
+  compute on a device; the only host arithmetic in the workspace is
+  `vyre-reference`, which is a parity oracle and not a route. No executor arm
+  ever served the variant and the standard policy rewrote every suggestion to
+  the persistent megakernel regardless, so what the declaration bought was a
+  caller that believed a degradation path existed. The routing contract test
+  asserted that one plan did not pick that route. A workspace gate now
+  recognises a routing enum by its own variants, wherever it is declared, and
+  fails on a variant naming host execution or a route with no recorded
+  executor, so a route added back under a fresh enum name fails on arrival.
 - `vyre_conform::fp_parity` is gone. It re-exported eleven names from
   `vyre_foundation::fp_parity` verbatim and added nothing, so the parity policy
   had two paths and a reader could not tell which was the owner. Every caller

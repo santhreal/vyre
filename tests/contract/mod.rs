@@ -5,7 +5,9 @@
 //! executes cross-crate invariants without a dedicated workspace test crate.
 
 mod claims_inventory_smoke;
+mod device_only_routing;
 mod foundation_validate_contract;
+mod node_child_descent_owner;
 mod public_api_surface;
 mod xtask_help_smoke;
 

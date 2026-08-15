@@ -52,8 +52,8 @@ pub fn fold_literal_tree(expr: &Expr) -> Option<Cow<'_, Expr>> {
 /// Fold one binary operator applied to literal operands.
 ///
 /// `None` means "do not rewrite": either an operand is not a literal, or
-/// [`crate::scalar_ops`] has no defined answer at that width, in which case
-/// the expression must survive to validation rather than acquire a value the
+/// the private `scalar_ops` module has no defined answer at that width, in which
+/// case the expression must survive to validation rather than acquire a value the
 /// unoptimized program never produces.
 #[must_use]
 pub fn fold_binary_literal(op: &BinOp, left: &Expr, right: &Expr) -> Option<Expr> {

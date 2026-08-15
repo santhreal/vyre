@@ -47,6 +47,7 @@
 //! literal-bound implication today.
 
 use super::substitution::body_writes_loop_var;
+use crate::transform::visit;
 use crate::ir::{BinOp, Expr, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 
@@ -248,7 +249,14 @@ fn has_redundant_guard_with_ctx(node: &Node, loop_ctx: Option<(&str, u32)>) -> b
             .iter()
             .any(|n| has_redundant_guard_with_ctx(n, loop_ctx)),
         Node::Region { body, .. } => body.iter().any(|n| has_redundant_guard_with_ctx(n, None)),
-        _ => false,
+        // A variant this match does not name may still carry child bodies.
+        // `child_bodies` owns which slots exist, so a new nesting variant is
+        // searched instead of skipped. It carries no loop context: only the
+        // arms above establish one.
+        _ => visit::child_bodies(node)
+            .into_iter()
+            .flatten()
+            .any(|n| has_redundant_guard_with_ctx(n, None)),
     }
 }
 

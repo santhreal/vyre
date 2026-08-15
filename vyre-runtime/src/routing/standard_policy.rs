@@ -21,8 +21,7 @@ impl RoutingPolicy for StandardPolicy {
         // evidence records which suggestion it started from. Asking the policy
         // rather than answering `PersistentMegakernel` outright keeps the
         // explanation honest about what was consulted.
-        let suggested =
-            SchedulingPolicy::standard().route(plan.fusion.node_count, plan.memory.static_bytes);
+        let suggested = SchedulingPolicy::standard().route(plan.fusion.node_count);
         RoutingExplanation {
             policy: self.name(),
             decision: RoutingDecision::PersistentMegakernel,

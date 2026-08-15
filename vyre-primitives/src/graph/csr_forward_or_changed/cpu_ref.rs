@@ -1,6 +1,7 @@
 #[cfg(any(test, feature = "cpu-parity"))]
 use super::validate::validate_csr_inputs;
 use crate::graph::csr_closure_entry_points::define_csr_closure_entry_points;
+#[cfg(any(test, feature = "cpu-parity"))]
 use crate::graph::csr_closure_inputs::CsrClosureInputs;
 
 /// CPU reference for one in-place expansion pass.

@@ -22,8 +22,8 @@ pub struct RegionId(pub u32);
 
 /// Scalar value carried by the generic interpreter.
 ///
-/// The operator semantics over these values live in [`crate::scalar_ops`],
-/// which the literal folder shares, so the interpreter and the folder cannot
+/// The operator semantics over these values live in the private `scalar_ops`
+/// module, which the literal folder shares, so the interpreter and the folder cannot
 /// answer differently.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq)]
