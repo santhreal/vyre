@@ -18,12 +18,10 @@
 //! through later const-fold passes (or dead-store elimination if the
 //! Var-bound let becomes unused).
 
-use std::sync::Arc;
-
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::model::spec_types::{BinOp, UnOp};
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
-use vyre_foundation::visit::node_map;
+use vyre_foundation::transform::rewrite_walk::NodeRewrite;
 
 /// The post-substitution folder splits between u32-result ops and
 /// bool-result ops. The caller picks the right folder based on the
@@ -114,8 +112,13 @@ fn fold_i32_binop(op: BinOp, l: i32, r: i32) -> Option<FoldResult> {
 /// with `Var(name)` replaced by `LitU32(value)` wherever `name` was
 /// let-bound to a literal in an enclosing scope.
 pub fn apply_const_prop(program: &Program) -> Program {
-    let mut env = ConstEnv::default();
-    super::rewrite_program_entry(program, |body| rewrite_scope(body, &mut env))
+    let mut walk = ConstProp {
+        env: ConstEnv::default(),
+        binds: None,
+    };
+    super::rewrite_program_entry(program, |body| {
+        super::rewrite_walk::rewrite_scope(body, &mut walk)
+    })
 }
 
 /// What `Var(name)` resolves to in the current scope.
@@ -192,107 +195,48 @@ impl ConstEnv {
     }
 }
 
-fn rewrite_scope(body: &[Node], env: &mut ConstEnv) -> Vec<Node> {
-    let prefix_len = super::encode::reachable_prefix_len(body);
-    let mut out = Vec::with_capacity(prefix_len);
-    for node in &body[..prefix_len] {
-        out.push(rewrite_node(node, env));
-    }
-    out
+/// Constant propagation as a policy over the one structural node rewrite.
+///
+/// Each variant's contribution is a scoping rule, not a rebuild rule: which
+/// bindings a child body may see and which it must not. Those rules attach to
+/// the position the walk offers, so the pass never enumerates `Node` itself and
+/// a variant added to the IR is descended into rather than treated as inert.
+struct ConstProp {
+    env: ConstEnv,
+    /// The name the current node binds, recorded once its value has been
+    /// rewritten. `Let` and `Assign` must see only enclosing-scope literals in
+    /// their own right-hand side, so the binding cannot be recorded before the
+    /// operand hook runs.
+    binds: Option<Ident>,
 }
 
-fn rewrite_node(node: &Node, env: &mut ConstEnv) -> Node {
-    match node {
-        Node::Let { name, value } => {
-            let new_value = rewrite_expr(value, env);
-            // Record the binding *after* rewriting the RHS so the
-            // RHS sees only enclosing-scope lits (no self-reference).
-            env.record(name.clone(), &new_value);
-            Node::let_bind(name.clone(), new_value)
+impl NodeRewrite for ConstProp {
+    fn enter(&mut self, node: &Node) {
+        self.binds = match node {
+            Node::Let { name, .. } | Node::Assign { name, .. } => Some(name.clone()),
+            _ => None,
+        };
+    }
+
+    fn operand(&mut self, expr: &Expr) -> Option<Expr> {
+        let rewritten = rewrite_expr(expr, &self.env);
+        if let Some(name) = self.binds.take() {
+            self.env.record(name, &rewritten);
         }
-        Node::Assign { name, value } => {
-            let new_value = rewrite_expr(value, env);
-            // Assign mutates the binding; record the new value (or
-            // drop if non-literal) for downstream uses.
-            env.record(name.clone(), &new_value);
-            Node::assign(name.clone(), new_value)
+        (rewritten != *expr).then_some(rewritten)
+    }
+
+    /// Every body-bearing variant restores the bindings it entered with, and a
+    /// `Loop` additionally drops the induction variable, which shadows any
+    /// enclosing constant of the same name for the body's duration.
+    fn body(&mut self, parent: &Node, body: &[Node]) -> Option<Vec<Node>> {
+        let saved = self.env.snapshot();
+        if let Node::Loop { var, .. } = parent {
+            self.env.bindings.remove(var);
         }
-        Node::Store {
-            buffer,
-            index,
-            value,
-        } => Node::store(
-            buffer.clone(),
-            rewrite_expr(index, env),
-            rewrite_expr(value, env),
-        ),
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            let new_cond = rewrite_expr(cond, env);
-            // Each branch sees the parent's bindings on entry but its
-            // own additions are scoped to that branch only.
-            let saved = env.snapshot();
-            let new_then = rewrite_scope(then, env);
-            env.restore(saved.clone());
-            let new_otherwise = rewrite_scope(otherwise, env);
-            env.restore(saved);
-            Node::if_then_else(new_cond, new_then, new_otherwise)
-        }
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => {
-            let new_from = rewrite_expr(from, env);
-            let new_to = rewrite_expr(to, env);
-            // Loop-iter var shadows any enclosing constant  -  remove
-            // it from the env for the body's duration.
-            let saved = env.snapshot();
-            env.bindings.remove(var);
-            let new_body = rewrite_scope(body, env);
-            env.restore(saved);
-            Node::loop_for(var.clone(), new_from, new_to, new_body)
-        }
-        Node::Block(body) => {
-            let saved = env.snapshot();
-            let new_body = rewrite_scope(body, env);
-            env.restore(saved);
-            Node::Block(new_body)
-        }
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let saved = env.snapshot();
-            let new_body = rewrite_scope(body.as_slice(), env);
-            env.restore(saved);
-            Node::Region {
-                generator: generator.clone(),
-                source_region: source_region.clone(),
-                body: Arc::new(new_body),
-            }
-        }
-        // A variant this pass has no operand rule for. Its bodies are still
-        // rewritten, through `visit::node_map::map_body` and its `child_bodies`
-        // owner: the wildcard this replaces returned the node unchanged, so a
-        // fifth body-bearing variant would have switched const propagation off
-        // for everything inside it. `Node` is `#[non_exhaustive]`, so this crate
-        // cannot write the match exhaustively and the default has to be right
-        // rather than absent.
-        other => {
-            let saved = env.snapshot();
-            let rebuilt = node_map::map_body(other.clone(), &mut |body| {
-                env.restore(saved.clone());
-                rewrite_scope(&body, env)
-            });
-            env.restore(saved);
-            rebuilt
-        }
+        let rewritten = super::rewrite_walk::rewrite_scope_opt(body, self);
+        self.env.restore(saved);
+        rewritten
     }
 }
 

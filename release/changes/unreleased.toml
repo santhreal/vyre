@@ -1673,3 +1673,8 @@ text = "User-facing crate READMEs, `docs/ARCHITECTURE.md`, `GOAL.md`, `THESIS.md
 id = "data-type-element-owner"
 category = "Changed"
 text = "`vyre-test-support` states which flat `DataType` forms exist in one ungated module, `data_type_elements`. The list sat inside `data_type_variants`, which is gated behind `ir-fixtures`, so a suite that wanted the flat element list had to enable a feature that pulls `vyre-foundation` into its dev graph; for `vyre-spec`, a leaf crate that declares `DataType` in the first place, that meant building the whole compiler to read a list of discriminants. `vyre-spec` is now a plain dependency of `vyre-test-support` and `ir-fixtures` means `vyre-foundation` plus `smallvec`. The IR fixture table builds its flat leaves from the same module, so the two tables cannot disagree about which element types exist."
+
+[[fragments]]
+id = "pass-engine-scope-walk-one-owner"
+category = "Changed"
+text = "The pass engine has one scope walk. `optimizer::rewrite_walk` owns the encoder's reachable-prefix truncation and the borrow-preserving rebuild, and const propagation, cross-scope CSE, encoded CSE and the encoded-order rewrite call it. Four copies of the same loop stood beside each other and three of them discarded the walk's unchanged answer, so a pass that propagated nothing still deep-copied every nested body it visited. Constant propagation also stopped enumerating `Node` itself: it is a policy over the one structural node rewrite, so a body-bearing variant added to the IR is descended into instead of switching propagation off for everything inside it."

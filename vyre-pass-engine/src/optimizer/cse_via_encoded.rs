@@ -28,7 +28,7 @@
 
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
-use vyre_foundation::transform::rewrite_walk::{self, NodeRewrite};
+use vyre_foundation::transform::rewrite_walk::NodeRewrite;
 use vyre_primitives::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_mix_word_expr};
 
 use vyre_libs::dispatch_buffers::{
@@ -709,14 +709,10 @@ struct LetDedupeWalker<'a, C: CanonicalLookup + ?Sized> {
 
 impl<C: CanonicalLookup + ?Sized> LetDedupeWalker<'_, C> {
     fn rewrite_scope(&mut self, body: &[Node]) -> Vec<Node> {
-        let prefix_len = super::encode::reachable_prefix_len(body);
         // Entering a scope starts a fresh map, so a duplicate only dedupes
         // against a sibling binding that is still live where it is read.
         let enclosing = std::mem::take(&mut self.scope);
-        let mut out = Vec::with_capacity(prefix_len);
-        for node in &body[..prefix_len] {
-            out.push(rewrite_walk::rewrite_node(node, self).unwrap_or_else(|| node.clone()));
-        }
+        let out = super::rewrite_walk::rewrite_scope(body, self);
         self.scope = enclosing;
         out
     }
