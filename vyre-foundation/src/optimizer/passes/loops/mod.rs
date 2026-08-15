@@ -47,6 +47,50 @@ pub mod loop_unroll;
 /// elision via the structural loop range).
 pub mod loop_var_range_fold;
 mod substitution;
+/// Shared IR fixtures for the loop restructuring passes' own tests.
+#[cfg(test)]
+mod test_fixtures;
+
+/// Every scalar name an expression anywhere in `nodes` reads, name-sorted.
+///
+/// This is the read set every loop restructuring pass asks about before it
+/// reorders statements, and it is the public form of [`collect_var_reads`].
+#[must_use]
+pub fn var_reads(nodes: &[crate::ir::Node]) -> Vec<crate::ir::Ident> {
+    let mut set = rustc_hash::FxHashSet::default();
+    collect_var_reads(nodes, &mut set);
+    sorted_names(set)
+}
+
+/// Every buffer any statement in `nodes` touches, name-sorted.
+///
+/// Reads and writes are collapsed because the disjointness question the loop
+/// passes ask cares only about overlap. This is the public form of
+/// [`collect_touched_buffers`].
+#[must_use]
+pub fn touched_buffers(nodes: &[crate::ir::Node]) -> Vec<crate::ir::Ident> {
+    let mut set = rustc_hash::FxHashSet::default();
+    collect_touched_buffers(nodes, &mut set);
+    sorted_names(set)
+}
+
+/// Every name any statement in `nodes` binds, nested scopes included,
+/// name-sorted.
+///
+/// This is the set the loop passes intersect with a read set to decide whether a
+/// binding is live across a restructuring boundary.
+#[must_use]
+pub fn bound_names(nodes: &[crate::ir::Node]) -> Vec<crate::ir::Ident> {
+    let mut set = rustc_hash::FxHashSet::default();
+    legality::collect_bound_names(nodes, &mut set);
+    sorted_names(set)
+}
+
+fn sorted_names(set: rustc_hash::FxHashSet<crate::ir::Ident>) -> Vec<crate::ir::Ident> {
+    let mut out: Vec<crate::ir::Ident> = set.into_iter().collect();
+    out.sort_by(|left, right| left.as_str().cmp(right.as_str()));
+    out
+}
 
 /// Every name read by an expression anywhere in `nodes`, nested scopes included.
 ///

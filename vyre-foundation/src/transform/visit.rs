@@ -289,6 +289,44 @@ pub fn node_operands(node: &Node) -> [Option<&Expr>; 2] {
     }
 }
 
+/// The scalar name a statement binds, or `None` when it binds nothing.
+///
+/// `Node::Let` and `Node::Assign` bind their target and `Node::Loop` binds its
+/// induction variable; every other variant binds no scalar. `Node::AsyncLoad`
+/// and the collectives name buffers, which is a different question answered by
+/// [`node_buffer_refs`].
+///
+/// This is the ONE owner of the question, and the match has no catch-all arm.
+/// The hand-written versions this replaces each ended in a `_` arm reporting
+/// "binds nothing", so a variant that gains a binding position would let a pass
+/// hoist, fuse, or inline across a live rebinding while every existing test
+/// still passed.
+#[inline]
+#[must_use]
+pub fn node_bound_name(node: &Node) -> Option<&Ident> {
+    match node {
+        Node::Let { name, .. } | Node::Assign { name, .. } => Some(name),
+        Node::Loop { var, .. } => Some(var),
+        Node::Store { .. }
+        | Node::If { .. }
+        | Node::Block(_)
+        | Node::Region { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AllReduce { .. }
+        | Node::AllGather { .. }
+        | Node::ReduceScatter { .. }
+        | Node::Broadcast { .. }
+        | Node::AsyncLoad { .. }
+        | Node::AsyncStore { .. }
+        | Node::AsyncWait { .. }
+        | Node::Trap { .. }
+        | Node::Resume { .. }
+        | Node::Opaque(_) => None,
+    }
+}
+
 /// Every sub-expression of every node in `nodes` and in every nested body.
 ///
 /// The slice-taking companion of [`for_each_node`], for an analysis outside this

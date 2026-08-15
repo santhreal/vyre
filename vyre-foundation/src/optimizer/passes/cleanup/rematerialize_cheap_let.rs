@@ -188,18 +188,16 @@ fn can_rematerialize_let(name: &str, value: &Expr, tail: &[Node]) -> bool {
 
 /// True iff `node` (or any descendant) rebinds `name`.
 ///
-/// Descent comes from [`any_descendant`], the one owner of which node variants
-/// nest; the per-node question left here is only which shapes bind a name. The
-/// match this replaces restated the nesting list, so a name rebound inside a
-/// body-bearing variant it did not name read as never rebound and the pass would
-/// inline a stale first definition across the rebinding.
+/// Descent comes from [`any_descendant`] and the per-node answer from
+/// [`node_bound_name`](crate::transform::visit::node_bound_name), the two owners
+/// of "which variants nest" and "which variants bind". The match this replaces
+/// restated both lists and ended in `_ => false`, so a rebinding it did not name
+/// read as never rebound and the pass inlined a stale first definition across the
+/// rebinding.
 fn node_reassigns(node: &Node, name: &str) -> bool {
-    any_descendant(node, &mut |candidate| match candidate {
-        Node::Assign { name: bound, .. } | Node::Let { name: bound, .. } => {
-            bound.as_str() == name
-        }
-        Node::Loop { var, .. } => var.as_str() == name,
-        _ => false,
+    any_descendant(node, &mut |candidate| {
+        crate::transform::visit::node_bound_name(candidate)
+            .is_some_and(|bound| bound.as_str() == name)
     })
 }
 
