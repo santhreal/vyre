@@ -196,9 +196,13 @@ fn audit_pass_on_program(
     let pre_cost = CostCertificate::for_program(&program);
     let pass_name = pass.metadata().name;
 
+    // The audit judges the rewrite a pass performs, not the device it targets,
+    // so it runs every pass against the same explicit fallback profile.
+    let audit_adapter = crate::optimizer::AdapterCaps::conservative();
+
     // Run try_transform  -  if the pass returns Err, it's an explicit refusal,
     // which is fine and means no further checks on this run.
-    let result = match pass.try_transform(program) {
+    let result = match pass.try_transform(program, &audit_adapter) {
         Ok(result) => result,
         Err(_refusal) => return Vec::new(),
     };
@@ -229,7 +233,7 @@ fn audit_pass_on_program(
     }
 
     if IDEMPOTENCE_REQUIRED.contains(&pass_name) {
-        match pass.try_transform(result.program) {
+        match pass.try_transform(result.program, &audit_adapter) {
             Ok(second) if second.changed => {
                 findings.push(PassInvariantFinding::IdempotenceViolation {
                     pass: pass_name,

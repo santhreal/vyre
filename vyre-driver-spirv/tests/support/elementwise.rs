@@ -28,7 +28,7 @@ fn add_body() -> Vec<Node> {
 }
 
 /// `out[i] = a[i] + b[i]` over `count` u32 lanes, inputs at bindings 0 and 1.
-pub fn elementwise_add_program(count: u32) -> Program {
+pub(crate) fn elementwise_add_program(count: u32) -> Program {
     Program::wrapped(
         vec![
             BufferDecl::read("a", 0, DataType::U32).with_count(count),
@@ -45,7 +45,7 @@ pub fn elementwise_add_program(count: u32) -> Program {
 /// A backend that binds host inputs by raw binding order rather than through the
 /// binding plan feeds the first input buffer into the output slot here, so the
 /// answer differs from [`elementwise_add_program`] only when that bug is present.
-pub fn output_first_elementwise_add_program(count: u32) -> Program {
+pub(crate) fn output_first_elementwise_add_program(count: u32) -> Program {
     Program::wrapped(
         vec![
             BufferDecl::output("out", 0, DataType::U32).with_count(count),
@@ -58,7 +58,7 @@ pub fn output_first_elementwise_add_program(count: u32) -> Program {
 }
 
 /// `out[i] = a[i] * 2 + 1` over `count` u32 lanes.
-pub fn elementwise_fma_program(count: u32) -> Program {
+pub(crate) fn elementwise_fma_program(count: u32) -> Program {
     Program::wrapped(
         vec![
             BufferDecl::read("a", 0, DataType::U32).with_count(count),
@@ -77,13 +77,13 @@ pub fn elementwise_fma_program(count: u32) -> Program {
 }
 
 /// Little-endian bytes for `values`.
-pub fn u32_values_to_bytes(values: &[u32]) -> Vec<u8> {
+pub(crate) fn u32_values_to_bytes(values: &[u32]) -> Vec<u8> {
     values.iter().flat_map(|value| value.to_le_bytes()).collect()
 }
 
 /// `bytes` decoded as little-endian u32 lanes. A trailing partial word is
 /// dropped, which is why every caller also asserts the buffer lengths agree.
-pub fn bytes_to_u32_values(bytes: &[u8]) -> Vec<u32> {
+pub(crate) fn bytes_to_u32_values(bytes: &[u8]) -> Vec<u32> {
     bytes
         .chunks_exact(4)
         .map(|word| u32::from_le_bytes([word[0], word[1], word[2], word[3]]))

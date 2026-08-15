@@ -23,7 +23,7 @@ use super::suite_inspect::{
 
 const MATRIX_ARTIFACT: &str = "release/evidence/benchmarks/release-workload-matrix.json";
 
-pub struct ReleaseBenchmarksGate;
+pub(crate) struct ReleaseBenchmarksGate;
 
 impl Gate for ReleaseBenchmarksGate {
     fn name(&self) -> &'static str {

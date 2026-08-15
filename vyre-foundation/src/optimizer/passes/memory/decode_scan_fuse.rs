@@ -133,7 +133,8 @@ fn cross_workgroup_buffers(nodes: &[Node], out: &mut FxHashSet<Ident>) {
 #[vyre_pass(
     name = "decode_scan_fuse",
     requires = [],
-    invalidates = ["buffer_layout", "fusion"]
+    invalidates = ["buffer_layout", "fusion"],
+    adapter_dependent = true
 )]
 pub struct DecodeScanFuse;
 
@@ -148,7 +149,11 @@ impl DecodeScanFuse {
         }
     }
 
-    /// Promote storage handoff buffers to workgroup memory.
+    /// Promote storage handoff buffers to workgroup memory for no known device.
+    ///
+    /// The conservative profile is the fallback for a caller that has not
+    /// named an adapter, and naming it here is the point: the scheduler
+    /// supplies the real one through `transform_for_adapter`.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
         Self::transform_for_adapter(program, &AdapterCaps::conservative())

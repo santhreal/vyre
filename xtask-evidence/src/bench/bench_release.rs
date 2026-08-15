@@ -33,7 +33,7 @@ const MAX_BENCH_RELEASE_REPORT_BYTES: u64 = 16_777_216;
 const DEFAULT_EVIDENCE_DIR: &str = "release/evidence/benchmarks";
 
 /// Holds the quotable release axes to the CUDA evidence they claim to come from.
-pub struct BenchReleaseGate;
+pub(crate) struct BenchReleaseGate;
 
 impl Gate for BenchReleaseGate {
     fn name(&self) -> &'static str {
