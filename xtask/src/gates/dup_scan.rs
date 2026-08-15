@@ -724,7 +724,7 @@ mod tests {
         fs::write(dir.join("crate-a/src/lib.rs"), &block).expect("write");
         fs::write(dir.join("crate-b/src/lib.rs"), &block).expect("write");
 
-        let reports = report(&dir, Some("crate-a"));
+        let reports = report_for(&dir, Some("crate-a")).expect("the fixture checkout is reportable");
         assert_eq!(reports.len(), 1, "only the filtered crate is reported");
         assert_eq!(reports[0].path, "crate-a/src/lib.rs");
         assert_eq!(reports[0].duplicate_lines, SHINGLE);
