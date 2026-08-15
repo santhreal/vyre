@@ -1,6 +1,5 @@
 pub mod candidate;
 pub mod case;
-pub mod competitor;
 pub mod metric;
 pub mod resident;
 pub mod score;

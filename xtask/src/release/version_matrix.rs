@@ -599,7 +599,7 @@ fn collect_dependency_table(
 fn expected_dependency_version(dependency: &str) -> Option<(&'static str, &'static str)> {
     if matches!(
         dependency,
-        "vyre-conform" | "vyre-bench" | "vyre-bench-competitors" | "vyre-foundation-fuzz"
+        "vyre-conform" | "vyre-bench" | "vyre-foundation-fuzz"
     ) {
         return None;
     }

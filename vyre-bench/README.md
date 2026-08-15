@@ -11,7 +11,7 @@ available native implementation for that class.
 
 ```
 vyre-bench
-├── api/           # Core types: BenchCase trait, metrics, suites, competitor API
+├── api/           # Core types: BenchCase trait, metrics, candidates, suites
 ├── cases/         # Benchmark implementations (one file per workload)
 ├── runner/        # Execution engine, snapshot diffing, execute_suite()
 ├── report/        # JSON schema, scorecard generation
@@ -122,20 +122,6 @@ The `bench-regression.yml` workflow runs on every PR and push to `main`:
 
 Result JSON follows the `vyre-bench.result.v1` schema. See [SCHEMA.md](SCHEMA.md) for full documentation.
 
-## Competitor Matrix
-
-Competitors are declared in `competitors.toml` with pinned versions:
-
-```toml
-[[competitor]]
-name = "hashbrown"
-crate = "hashbrown"
-version = "=0.16.1"
-workloads = ["hashtable.openaddr.build_probe.10m"]
-```
-
-The `CompetitorRun` trait in `src/api/competitor.rs` enables side-by-side A/B comparisons.
-
 ## Dashboard
 
 `vyre-bench dashboard --output dashboard/` generates:
@@ -151,7 +137,6 @@ The `CompetitorRun` trait in `src/api/competitor.rs` enables side-by-side A/B co
 2. Add `inventory::submit! { &MyWorkload as &'static dyn BenchCase }` at the bottom
 3. Register in `src/cases/mod.rs`
 4. Run `./cargo_full test -p vyre-bench` to verify integration
-5. Add the competitor entry to `competitors.toml` if applicable
 
 ## Release evidence
 

@@ -396,7 +396,7 @@ fn release_kind(name: &str, publish: Option<bool>) -> &'static str {
     }
     if matches!(
         name,
-        "xtask" | "vyre-bench" | "vyre-bench-competitors" | "vyre-conform" | "vyre-foundation-fuzz"
+        "xtask" | "vyre-bench" | "vyre-conform" | "vyre-foundation-fuzz"
     ) {
         "internal-tooling"
     } else if publish == Some(false) {

@@ -21,18 +21,6 @@ use crate::gates::scan::Tree;
 /// Dependency tables a manifest can declare, at the top level or under a target.
 const DEP_TABLES: &[&str] = &["dependencies", "dev-dependencies", "build-dependencies"];
 
-/// Manifests outside `workspace.members` that are held open for review.
-///
-/// `vyre-bench/competitors` builds third-party comparison binaries and is not
-/// part of the workspace graph. The entry is reported rather than silently
-/// honoured, because an allowance nobody sees is how an orphan crate stops being
-/// noticed.
-///
-/// The shell form also excluded `target-codex/package`, which is a build output
-/// directory and never tracked, so that allowance could not match any manifest
-/// this gate reads.
-const REVIEWED_ORPHANS: &[&str] = &["vyre-bench/competitors"];
-
 /// Every manifest on disk is a workspace member or its own workspace root.
 pub struct WorkspaceMembership;
 
@@ -42,7 +30,7 @@ impl Gate for WorkspaceMembership {
     }
 
     fn help(&self) -> &'static str {
-        "every Cargo.toml is a workspace member, its own workspace, or a reviewed orphan"
+        "every Cargo.toml is a workspace member or its own workspace root"
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
@@ -57,7 +45,6 @@ impl Gate for WorkspaceMembership {
             ));
         }
         let excluded = excluded_directories(&tree)?;
-        let mut claimed: BTreeSet<&str> = BTreeSet::new();
         let mut counted = 0usize;
 
         for manifest in manifests(&tree) {
@@ -72,35 +59,13 @@ impl Gate for WorkspaceMembership {
             if table.contains_key("workspace") {
                 continue;
             }
-            match REVIEWED_ORPHANS.iter().find(|entry| **entry == directory) {
-                Some(reviewed) => {
-                    claimed.insert(*reviewed);
-                    report.find(Finding::in_file(
-                        &manifest,
-                        "crate is outside workspace.members under a reviewed allowance",
-                        "add it to workspace.members, give it its own [workspace], or delete it; \
-                         the allowance keeps it visible rather than accepted",
-                    ));
-                }
-                None => report.find(Finding::in_file(
-                    &manifest,
-                    "crate is in neither workspace.members nor workspace.exclude and \
-                     declares no [workspace] of its own",
-                    "add the directory to workspace.members, or give the crate its own \
-                     [workspace] table so cargo treats it as separate",
-                )),
-            }
-        }
-
-        for reviewed in REVIEWED_ORPHANS {
-            if !claimed.contains(reviewed) {
-                report.find(Finding::in_file(
-                    "xtask/src/gates/manifest_contract.rs",
-                    format!("reviewed orphan `{reviewed}` names no manifest"),
-                    "delete the allowance; an entry matching nothing records a rule \
-                     that stopped covering what it names",
-                ));
-            }
+            report.find(Finding::in_file(
+                &manifest,
+                "crate is in neither workspace.members nor workspace.exclude and \
+                 declares no [workspace] of its own",
+                "add the directory to workspace.members, or give the crate its own \
+                 [workspace] table so cargo treats it as separate",
+            ));
         }
 
         report.note(format!("{counted} manifest(s) accounted for"));

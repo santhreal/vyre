@@ -16,8 +16,6 @@
 
 #![forbid(unsafe_code)]
 
-use std::collections::BTreeSet;
-
 use structure_gate::{
     category_home_failures, frontend_owner_failures, operation_identity_failures,
     registration_owner_failures, registry_link_failures, roster_failures, scan,
@@ -99,29 +97,17 @@ fn each_source_language_has_one_frontend() {
 }
 
 /// The workspace roster is a reviewed, closed list.
+///
+/// This is also what keeps a product out of the platform: a product consumes the
+/// compiler, so a member that ships one makes the facade depend on it, and the
+/// only way such a crate becomes a member is by being added to the reviewed
+/// roster. The direct edge is held separately by the `layering` gate, which
+/// names the facade as substrate-neutral.
 #[test]
 fn the_workspace_roster_matches_the_reviewed_list() {
     let failures = roster_failures(&workspace().members);
 
     assert!(failures.is_empty(), "{}", report("roster", &failures));
-}
-
-/// A member that ships a product rather than a compiler layer is not a member.
-///
-/// A product consumes the platform. Keeping one inside the workspace makes the
-/// facade depend on it, which is how `vyre` came to pull a corpus scanner into
-/// every consumer of the compiler.
-#[test]
-fn no_product_crate_ships_inside_the_platform_workspace() {
-    let workspace = workspace();
-    let members: BTreeSet<&str> = workspace.members.iter().map(String::as_str).collect();
-
-    for product in ["vyre-scan"] {
-        assert!(
-            !members.contains(product),
-            "`{product}` is a product built on Vyre, not a layer of it; it belongs outside this workspace"
-        );
-    }
 }
 
 /// The scan finds registrations at all.
