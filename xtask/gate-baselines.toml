@@ -131,6 +131,10 @@ name = "hygiene-matrix"
 findings = 0
 
 [[gate]]
+name = "invariant-paths"
+findings = 0
+
+[[gate]]
 name = "launch-state"
 findings = 0
 

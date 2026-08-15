@@ -50,6 +50,7 @@ pub static GATES: &[&dyn Gate] = &[
     &dep_drift::DepDrift,
     &dup_scan::DupScan,
     &evidence_paths::EvidencePaths,
+    &evidence_paths::InvariantPaths,
     &feature_isolation::FeatureIsolation,
     &file_size::FileSize,
     &frozen_contract::BackendExtension,

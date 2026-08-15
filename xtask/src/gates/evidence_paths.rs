@@ -115,6 +115,73 @@ impl Gate for EvidencePaths {
     }
 }
 
+/// Every conformance test an invariant descriptor cites exists.
+///
+/// A broken pointer means a test was renamed or deleted without updating the
+/// invariant that cites it. Recording the pointer as known-missing is not an
+/// option: an invariant that cites nothing asserts nothing.
+pub struct InvariantPaths;
+
+impl Gate for InvariantPaths {
+    fn name(&self) -> &'static str {
+        "invariant-paths"
+    }
+
+    fn help(&self) -> &'static str {
+        "conformance tests cited by invariant descriptors that do not exist"
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        const INVARIANTS: &str = "vyre-spec/src/invariants.rs";
+        /// The path in a doc comment showing the citation form, not a citation.
+        const EXAMPLE: &str = "conform/tests/<file>.rs";
+
+        let tree = Tree::open(&ctx.root)?;
+        let text = tree.read(INVARIANTS)?;
+        let mut report = Report::clean();
+        let mut cited = BTreeSet::new();
+        for (line, number) in cited_conform_paths(&text) {
+            if line == EXAMPLE {
+                continue;
+            }
+            if !cited.insert(line.clone()) {
+                continue;
+            }
+            if !tree.absolute(&line).is_file() {
+                report.find(Finding::at(
+                    INVARIANTS,
+                    number,
+                    format!("the invariant cites a conformance test that does not exist: {line}"),
+                    "restore the test, or delete the invariant entry; a citation of nothing \
+                     documents a broken pointer instead of asserting the invariant",
+                ));
+            }
+        }
+        report.note(format!("{} cited conformance test(s)", cited.len()));
+        Ok(report)
+    }
+}
+
+/// Conformance test paths cited in the text, with the line each sits on.
+fn cited_conform_paths(text: &str) -> Vec<(String, u32)> {
+    let mut found = Vec::new();
+    for (number, line) in crate::gates::scan::numbered(text) {
+        let mut from = 0;
+        while let Some(at) = line[from..].find("conform/") {
+            let start = from + at;
+            let end = line[start..]
+                .find(|character| character == ':' || character == '"')
+                .map_or(line.len(), |offset| start + offset);
+            let candidate = &line[start..end];
+            if let Some(cut) = candidate.find(".rs") {
+                found.push((candidate[..cut + 3].to_string(), number));
+            }
+            from = start + "conform/".len();
+        }
+    }
+    found
+}
+
 /// Extensions that occur among the tree's own files, lowercased.
 fn extension_vocabulary(tree: &Tree) -> BTreeSet<String> {
     tree.paths()
