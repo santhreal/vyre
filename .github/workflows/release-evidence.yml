@@ -22,44 +22,42 @@ jobs:
 
       - name: Crate metadata evidence
         run: |
-          ./cargo_full run -p xtask -- metadata-matrix
-          ./cargo_full run -p xtask -- version-matrix
-          ./cargo_full run -p xtask -- feature-matrix
-          ./cargo_full run -p xtask -- package-readiness
+          ./cargo_full run -p xtask -- metadata-matrix --write
+          ./cargo_full run -p xtask -- version-matrix --write
+          ./cargo_full run -p xtask -- feature-matrix --write
+          ./cargo_full run -p xtask -- package-readiness --write
 
       - name: Backend and workload evidence
         run: |
-          ./cargo_full run -p xtask -- backend-matrix
-          ./cargo_full run -p xtask -- release-workload-matrix
-          ./cargo_full run -p xtask -- op-matrix
+          ./cargo_full run -p xtask -- backend-matrix --write
+          ./cargo_full run -p xtask -- release-workload-matrix --write
+          ./cargo_full run -p xtask -- op-matrix --write
 
       - name: Optimization evidence
         run: |
-          ./cargo_full run -p xtask -- optimization-matrix
-          ./cargo_full run -p xtask -- optimization-corpus
+          ./cargo_full run -p xtask -- optimization-matrix --write
+          ./cargo_full run -p xtask -- optimization-corpus --write
 
       - name: Launch state
-        run: ./cargo_full run -p xtask -- launch-state
+        run: ./cargo_full run -p xtask -- launch-state --write
 
       - name: Structural release evidence
-        run: ./cargo_full run -p xtask -- release-evidence
+        run: ./cargo_full run -p xtask -- release-evidence --write
 
   measured-evidence:
     name: Generate measured evidence
     runs-on: ubuntu-latest
-    env:
-      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Backend conformance artifacts
-        run: ./cargo_full run -p xtask -- release-conformance
+        run: ./cargo_full run -p xtask -- release-conformance --write
 
       - name: Release benchmark artifacts
         run: |
-          ./cargo_full run -p xtask -- release-benchmarks
-          ./cargo_full run -p xtask -- bench-release
+          ./cargo_full run -p xtask -- release-benchmarks --write
+          ./cargo_full run -p xtask -- bench-release --write
 
   prepublish:
     name: Composite pre-publish runners

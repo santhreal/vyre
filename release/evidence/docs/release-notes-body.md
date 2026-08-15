@@ -2097,6 +2097,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   actions complete and zero blockers, so the gate every sweep runs with no
   arguments could not pass before the version it guards had shipped. The
   removed `--prepublish` flag is rejected rather than ignored.
+- Five enforcement sites state the contract they enforce instead of citing a
+  document. `structure-gate` names the composition rule at `CATEGORY_A_CRATE`
+  and the one-owner rule at `substrate_home_failures`; `gate1` states its
+  complexity budget and records that the two-caller promotion rule of the
+  deleted composition-policy document is void; the CLI surface contract names
+  the generated README block it counts; and the tree-contract link unit states
+  why two suites stay separate targets. A rule that lives only in a document
+  stops being enforced the day the document is deleted, and four of these cited
+  documents that already were.
 
 ### Removed
 
@@ -3534,3 +3543,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   no reader can resolve and that disagrees with the one the same run computes.
   Freshness is recomputed against the tree the gate is running on; every other
   recorded verdict is replayed unchanged.
+- The workflows named "Generate release evidence", "Generate measured
+  evidence", "Generate release conformance evidence artifacts" and "Generate
+  release benchmark evidence artifacts" pass `--write`. A gate only touches the
+  tree under that flag, so every one of them judged the artifacts already
+  committed and uploaded them unchanged, which is indistinguishable from
+  generating them until the evidence goes stale. The measured-evidence job also
+  stopped forcing `CARGO_BUILD_JOBS=1`; parallelism is declared in
+  `.cargo/config.toml`.
+- `release/evidence/metadata/metadata-matrix.json` and `feature-matrix.json`
+  still listed `vyre-frontend-rust` after the workspace evicted it. An artifact
+  naming a crate the workspace does not have shifts every row after it, so one
+  deleted member reports as a whole tail of drift.

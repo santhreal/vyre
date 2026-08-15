@@ -49,8 +49,10 @@ use walkdir::WalkDir;
 
 pub mod source_scan;
 
-/// Category A owner: every composition. `docs/ARCHITECTURE.md`, "Target
-/// operation crate structure", decided 2026-08-12.
+/// Category A owner: every composition, meaning anything that returns a
+/// `Program` built from existing IR, including compiler-internal domains such
+/// as solvers, encoding, analysis, scheduling, device and graph dispatch. Who
+/// calls it does not move it; only rewriting it in host Rust does.
 const CATEGORY_A_CRATE: &str = "vyre-libs";
 /// Category C owner: strict hardware intrinsics, one emitter arm and one
 /// reference-interpreter arm each. Absorbed the former standalone hardware
@@ -371,8 +373,9 @@ pub fn category_home_failures(registrations: &[Registration]) -> Vec<String> {
 
 /// Reject a second home for the substrate concept.
 ///
-/// `vyre-foundation` owns the name, as `docs/ARCHITECTURE.md` states; anything
-/// else is a second home.
+/// `vyre-foundation` owns the name. A type, trait, or module that restates it
+/// anywhere else is a second definition of one concept, and the two drift
+/// silently because nothing compares them.
 pub fn substrate_home_failures(paths: &[String]) -> Vec<String> {
     paths
         .iter()

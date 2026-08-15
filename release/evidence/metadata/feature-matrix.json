@@ -273,17 +273,6 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
-      "name": "vyre-frontend-rust",
-      "manifest": "vyre-frontend-rust/Cargo.toml",
-      "feature_count": 0,
-      "has_default_feature": false,
-      "default_feature_members": [],
-      "features": [],
-      "malformed_features": [],
-      "unresolved_feature_members": [],
-      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
-    },
-    {
       "name": "vyre-fuzz",
       "manifest": "fuzz/Cargo.toml",
       "feature_count": 0,
@@ -443,18 +432,15 @@
     {
       "name": "vyre-primitives",
       "manifest": "vyre-primitives/Cargo.toml",
-      "feature_count": 30,
+      "feature_count": 25,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
         "all-lego",
         "bitset",
-        "cat",
         "cpu-parity",
         "decode",
         "default",
-        "dnnf",
-        "effects",
         "fixpoint",
         "geom",
         "gpu",
@@ -473,10 +459,8 @@
         "reduce",
         "text",
         "topology",
-        "types",
         "visual",
-        "vyre-foundation",
-        "zx"
+        "vyre-foundation"
       ],
       "malformed_features": [],
       "unresolved_feature_members": [],
