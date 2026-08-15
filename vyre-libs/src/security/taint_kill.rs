@@ -35,11 +35,9 @@ pub fn taint_kill(
     frontier_out: &str,
 ) -> Program {
     let words = bitset_words(node_count);
-    let primitive = bitset_and_not(frontier_in, kill_set, frontier_out, words);
-    Program::wrapped(
-        primitive.buffers().to_vec(),
-        primitive.workgroup_size(),
-        crate::region::reparent_program_children(&primitive, OP_ID),
+    crate::region::tag_program(
+        OP_ID,
+        bitset_and_not(frontier_in, kill_set, frontier_out, words),
     )
 }
 
