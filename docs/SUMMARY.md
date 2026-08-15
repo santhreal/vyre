@@ -9,10 +9,6 @@
 - [Vyre Crate Ownership](OWNERSHIP.md)
 - [Vyre architecture](ARCHITECTURE.md)
 
-# User workflows
-
-- [Command-line interfaces](CLI.md)
-
 # Testing and conformance
 
 - [Testing `structure-gate`](testing/structure-gate.md)

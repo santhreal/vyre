@@ -18,18 +18,15 @@ fn run(executable: &str, args: &[&str]) -> Output {
 #[test]
 fn workspace_cli_documentation_is_current() {
     let root = workspace_root();
-    let output = Command::new("python3")
-        .arg(root.join("scripts/cli_docs.py"))
-        .arg("--check")
-        .output()
-        .expect("Fix: CLI documentation generator must launch with python3");
+    let output = run(env!("CARGO_BIN_EXE_xtask"), &["cli-docs"]);
     assert!(
         output.status.success(),
-        "Fix: regenerate or repair CLI contracts: {}",
+        "Fix: regenerate or repair CLI contracts: {}{}",
+        String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let summary = String::from_utf8(output.stdout).expect("Fix: generator output must be UTF-8");
+    let summary = String::from_utf8(output.stdout).expect("Fix: gate output must be UTF-8");
     let manifest: toml::Value = toml::from_str(
         &fs::read_to_string(root.join("docs/CLI.toml")).expect("Fix: docs/CLI.toml must be readable"),
     )
@@ -55,13 +52,13 @@ fn workspace_cli_documentation_is_current() {
         .sum();
 
     let expected = format!(
-        "cli-docs: verified {} binaries and {documented} subcommands\n",
+        "cli-docs: note: verified {} binaries and {documented} subcommands\n",
         binaries.len()
     );
-    assert_eq!(
-        summary, expected,
-        "Fix: the generator must verify every binary declared in docs/CLI.toml and every \
-         subcommand it wrote into the generated README blocks"
+    assert!(
+        summary.contains(&expected),
+        "Fix: the gate must verify every binary declared in docs/CLI.toml and every \
+         subcommand it wrote into the generated README blocks; it reported:\n{summary}"
     );
 }
 

@@ -25,7 +25,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 ## Lifecycle counts
 
 - current: 1.
-- generated: 39.
+- generated: 38.
 - superseded: 0.
 - archived: 0.
 
@@ -34,7 +34,6 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | Status | Audience | Owner | Kind | Page | Authority | Generation |
 | --- | --- | --- | --- | --- | --- | --- |
 | `current` | `extension` | `architecture` | `ownership` | `ARCHITECTURE.md` | self | manual |
-| `generated` | `user` | `public-facade` | `guide` | `CLI.md` | [CLI.toml](CLI.toml) | generated: [../scripts/cli_docs.py](../scripts/cli_docs.py) |
 | `generated` | `extension` | `architecture` | `ownership` | `CRATE_GRAPH.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../scripts/crate_ownership.py](../scripts/crate_ownership.py) |
 | `generated` | `contributor` | `docs-governance` | `governance` | `INDEX.md` | [DOCS.toml](DOCS.toml) | generated: [../xtask/src/docs/docs_check.rs](../xtask/src/docs/docs_check.rs) |
 | `generated` | `extension` | `architecture` | `ownership` | `OWNERSHIP.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../scripts/crate_ownership.py](../scripts/crate_ownership.py) |

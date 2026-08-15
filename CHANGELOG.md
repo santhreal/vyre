@@ -2061,6 +2061,19 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   described `vyre-primitives` as marker types with no runtime behavior and no
   bench, while it owns the Tier 2.5 substrate and declares the
   `wire_throughput` bench.
+- The command-line contract is a registered gate. `scripts/cli_docs.py`
+  declared the binaries, ran every help route and generated the CLI section of
+  each crate README, and it read the xtask command set by matching a
+  `SUBCOMMANDS` constant that the registry function replaced, so the comparison
+  found nothing and the whole check failed on the constant instead of judging
+  the tree. `xtask cli-docs` runs the routes, derives each command list from
+  the help text a reader sees, and compares the xtask half against the live
+  registry in process. It asks the workspace wrapper for the target directory
+  rather than bare cargo, which is what made it run another checkout's
+  executables. `docs/CLI.md` is deleted: a generated transcript of help output
+  whose generator was retired is stale by construction, and the README sections
+  plus `--help` are the live surface. `scripts/cli_docs.py` and
+  `scripts/lib/cargo_runner.py` are gone.
 - `recurrent_gated_delta` and `chunked_gated_delta` take `&GatedDeltaSpec`,
   which is now public, and the chunked schedule is exported from the module
   that builds it. Each entry point had restated the same sixteen positional

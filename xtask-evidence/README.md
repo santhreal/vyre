@@ -33,7 +33,7 @@ This section is generated from `docs/CLI.toml` and executable help output.
 ./cargo_full run -p xtask-evidence --bin xtask-evidence -- --help
 ```
 
-Commands: `backend-matrix`, `bench-crossback`, `bench-release`, `release-benchmarks`, `release-evidence`, `vyre-release-gate`.
+Commands: `backend-matrix`, `bench-crossback`, `bench-release`, `release-benchmarks`, `release-evidence`, `release-workload-matrix`, `vyre-release-gate`.
 
 Hardware: No accelerator is required; a missing device is reported, not assumed.
 

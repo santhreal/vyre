@@ -1,10 +1,10 @@
 # Script assertion ledger
 
-`scripts/` holds 60 tracked files: 47 shell scripts and 13 Python scripts.
+`scripts/` holds 58 tracked files: 47 shell scripts and 11 Python scripts.
 Each one is recorded below with its assertions, what makes it exit nonzero, every
 caller found in the tree, whether the files it reads still exist, and the gate
-that owns its assertions after the port. The rows carry 230 assertions and
-81 findings.
+that owns its assertions after the port. The rows carry 219 assertions and
+78 findings.
 
 A script leaves this document by being deleted: its rule belongs to a registered
 gate, so the row is a record of a port that is finished, not of a file that still
@@ -12,8 +12,8 @@ runs. The ledger is empty when the registry owns every rule.
 
 ## Totals
 
-- Files: 60. Assertions: 230. Findings: 81.
-- Files whose subject is partly or wholly gone: 8.
+- Files: 58. Assertions: 219. Findings: 78.
+- Files whose subject is partly or wholly gone: 7.
 - Files nothing invokes: 24.
 - Files that assert nothing: 1.
 
@@ -23,7 +23,6 @@ runs. The ledger is empty when the registry owns every rule.
 - `scripts/bench/cross_backend_comparison.sh`
 - `scripts/check_docs_references.py`
 - `scripts/check_platform_consumer_docs.sh`
-- `scripts/cli_docs.py`
 - `scripts/crate_ownership.py`
 - `scripts/final-launch.sh`
 - `scripts/testing_guides.py`
@@ -60,7 +59,6 @@ runs. The ledger is empty when the registry owns every rule.
 - `scripts/bench_smoke.sh`
 
 ## Rows
-
 ### `scripts/apply-branch-protection.sh`
 
 Subject: present.
@@ -888,43 +886,6 @@ Findings:
 - `grep -rn ... 2>/dev/null` reads a failed search as no unsafe blocks.
 - It scans the filesystem from the repository root rather than tracked files, and it runs one `sed -n` per candidate line, so the cost is one process per line of backward scan.
 
-### `scripts/cli_docs.py`
-
-Subject: partly gone: docs/CLI.toml, the crate READMEs and xtask/src/subcommands.rs survive; docs/CLI.md was deleted at b1ed746d1c.
-
-Invoked by: docs-ci.yml, xtask/tests/tree_contracts/cli_docs.rs; named in docs/DOCS.toml, CHANGELOG.md, the changelog fragments and docs_manifest.py.
-
-Gate: xtask/src/gates/doc_contract.rs owns the manifest assertions, the binary inventory, the help routes, the subcommand-registry equality and the generated README blocks, and honours ctx.write; the missing docs/CLI.md is one finding.
-
-Assertions:
-
-- docs/CLI.toml declares schema_version 1 and at least one [[binary]].
-- Every [[binary]] declares package, name, readme, audience, hardware, environment, config, failure and exit_codes.
-- No two rows name the same package and binary.
-- Every audience is public or internal.
-- Every declared readme exists.
-- The declared binary set equals the bin targets cargo metadata reports.
-- cargo build --workspace --bins succeeds.
-- Every help route exits 0, prints non-empty valid UTF-8, and stays under 1 MiB.
-- The xtask subcommand set discovered from its help equals the name rows of xtask/src/subcommands.rs SUBCOMMANDS.
-- docs/CLI.md and the generated CLI block of every declared README match the generated content.
-
-Exits nonzero on:
-
-- any manifest failure
-- an inventory mismatch
-- a failed workspace bin build
-- a help route that exits nonzero or prints nothing
-- an xtask help/dispatch mismatch
-- stale generated CLI documentation
-- a README with only one generated marker
-
-Findings:
-
-- build_bins does environment.setdefault("CARGO_BUILD_JOBS", "1"), which is build configuration set outside .cargo/config.toml. The gate does not set it.
-- docs-ci.yml fails on every tree today: docs/CLI.md does not exist, so the drift comparison reads a missing file.
-- The subcommand-registry assertion parses xtask/src/subcommands.rs with a line-anchored regex on `name: "..."`. The gate reads the registry directly, so a reformatting of that file cannot silently empty the comparison.
-
 ### `scripts/crate_ownership.py`
 
 Subject: partly gone: docs/CRATE_OWNERSHIP.toml survives, and both generated documents docs/CRATE_GRAPH.md and docs/OWNERSHIP.md were deleted at b1ed746d1c.
@@ -1077,22 +1038,6 @@ Exits nonzero on:
 Findings:
 
 - Its one assertion protects an operator's existing hook. It is a local install action, not a tree property, so no gate can own it. It is the one file in this layer whose deletion needs an operator decision about how the hook is installed.
-
-### `scripts/lib/cargo_runner.py`
-
-Subject: present.
-
-Invoked by: release_docs.py chain.
-
-Gate: not ported; superseded by the Rust runner selection.
-
-Assertions:
-
-- Same runner order as the shell half, for Python tooling.
-
-Exits nonzero on:
-
-- never
 
 ### `scripts/lib/cargo_runner.sh`
 

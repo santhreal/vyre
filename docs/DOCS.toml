@@ -58,19 +58,6 @@ generation = "manual"
 nav = true
 
 [[page]]
-path = "CLI.md"
-title = "Command-line interfaces"
-status = "generated"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "CLI.toml"
-generation = "generated"
-generator = "../scripts/cli_docs.py"
-nav = true
-
-[[page]]
 path = "CRATE_GRAPH.md"
 title = "Vyre Crate Graph"
 status = "generated"

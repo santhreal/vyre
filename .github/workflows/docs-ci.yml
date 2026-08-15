@@ -19,4 +19,4 @@ jobs:
       - name: Build Docs
         run: ./scripts/docs.sh
       - name: Validate CLI documentation
-        run: python3 scripts/cli_docs.py --check
+        run: ./cargo_full run -p xtask --bin xtask -- cli-docs

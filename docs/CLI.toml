@@ -21,6 +21,14 @@ environment = "Backend diagnostics honor the driver crate's VYRE_WGPU_TIMESTAMPS
 config = "The demo has no config file. Device and dispatch configuration come from the WGPU backend defaults."
 failure = "Invalid arguments, missing devices, lowering failures, dispatch failures, and malformed output return status 1 with an actionable error."
 exit_codes = "0 on help, version, or exact demo success; 1 on argument, device, dispatch, or output failure."
+example = """
+Run the real GPU smoke path:
+
+```console
+./cargo_full run -p vyre-driver-wgpu --bin vyre-wgpu -- demo
+# vyre demo gpu_u32=42
+```
+"""
 
 [[binary]]
 package = "vyre-conform"
