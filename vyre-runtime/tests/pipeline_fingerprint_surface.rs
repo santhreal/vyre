@@ -88,9 +88,6 @@ fn the_fingerprint_is_the_neutral_artifact_digest() {
             64,
             "the {name} fingerprint hex is not 32 bytes wide"
         );
-        // One type under both paths: the crate-root re-export and the owning
-        // module. A second `PipelineFingerprint` would split callers silently.
-        let _: PipelineFingerprint = vyre_runtime::PipelineFingerprint::of(&artifact);
     }
 }
 

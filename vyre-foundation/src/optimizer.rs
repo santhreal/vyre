@@ -915,8 +915,9 @@ pub fn optimize_with_hot_path_hints(
 /// wire bytes after normalizing declaration order, commutative operands, and
 /// semantically transparent nested blocks.
 ///
-/// This matches `vyre_runtime::PipelineFingerprint::of` byte-for-byte; both
-/// callers route through this helper so the algorithms cannot drift apart.
+/// This matches `vyre_runtime::pipeline_cache::PipelineFingerprint::of`
+/// byte-for-byte; both callers route through this helper so the algorithms
+/// cannot drift apart.
 #[must_use]
 pub fn pipeline_fingerprint_bytes(program: &Program) -> [u8; 32] {
     program.fingerprint()

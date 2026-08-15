@@ -1537,6 +1537,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   traversal answered to two paths; the submodules are private and the re-export
   at `transform::visit` is the one path, which is what its own module
   documentation already claimed.
+- Every runtime type, function and constant has one public path: the module
+  that owns it. The crate root re-exported about thirty items that were already
+  public at `vyre_runtime::replay`, `::tenant`, `::pipeline_cache`,
+  `::artifact_admission`, `::persistent_executor` and `::recovery`, so the
+  published surface carried 122 duplicate entries and a reader had no way to
+  tell which path was canonical. The root re-exports are gone, every caller in
+  the tree names the owning module, and the `vyre` facade re-exports from those
+  module paths rather than from a second index.
 - `vyre_lower::op_facts` was both a module and a function inside it, so a doc
   link to either was ambiguous and `crate::op_facts` resolved to whichever
   rustdoc preferred. The function is `facts_for`, reached as

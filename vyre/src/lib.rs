@@ -107,11 +107,15 @@ pub use vyre_megakernel::{
 
 /// Domain-neutral tagged byte-range contract.
 pub use vyre_foundation::match_result;
-/// Authenticated artifact admission, materialization, submission, and recovery.
-pub use vyre_runtime::{
+/// Retry classification shared by every diagnostic that can be retried.
+pub use vyre_foundation::diagnostics::RetryClass;
+/// Authenticated artifact admission, materialization, and recovery.
+pub use vyre_runtime::artifact_admission::{
     admit_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession, ArtifactSessionError,
-    PersistentExecutor, RetainedArtifactSession, RetryClass,
+    RetainedArtifactSession,
 };
+/// Resident-queue submission against an admitted artifact.
+pub use vyre_runtime::persistent_executor::PersistentExecutor;
 
 pub use vyre_driver::{ArtifactInstance, BindingSet, Completion, DeviceIdentity, Submission};
 

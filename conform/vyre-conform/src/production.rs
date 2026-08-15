@@ -6,7 +6,7 @@ use thiserror::Error;
 use vyre_driver::BackendRegistration;
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
-use vyre_runtime::{ArtifactSession, ArtifactSessionError};
+use vyre_runtime::artifact_admission::{ArtifactSession, ArtifactSessionError};
 
 const MAX_ARTIFACT_BYTES: u64 = 64 * 1024 * 1024;
 const CONFORMANCE_SEARCH_BUDGET: SearchBudget =

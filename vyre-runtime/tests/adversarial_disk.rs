@@ -24,9 +24,8 @@ use std::thread;
 
 use proptest::prelude::*;
 use tempfile::TempDir;
-use vyre_runtime::pipeline_cache::DiskCache;
-use vyre_runtime::{
-    InMemoryPipelineCache, LayeredPipelineCache, PipelineCacheStore, PipelineFingerprint,
+use vyre_runtime::pipeline_cache::{
+    DiskCache, InMemoryPipelineCache, LayeredPipelineCache, PipelineCacheStore, PipelineFingerprint,
 };
 
 // ---------------------------------------------------------------------------
@@ -417,7 +416,7 @@ fn compiles_without_remote_cache_feature() {
 fn remote_cache_in_layered_cache_put_and_get() {
     let dir = TempDir::new().unwrap();
     let disk = Arc::new(DiskCache::new(dir.path()).unwrap());
-    let remote = Arc::new(vyre_runtime::RemoteCache::new("http://127.0.0.1:1"));
+    let remote = Arc::new(vyre_runtime::pipeline_cache::RemoteCache::new("http://127.0.0.1:1"));
 
     let fp = fp_from_seed(3);
 

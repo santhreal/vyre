@@ -1,7 +1,8 @@
 //! Resident work-queue protocol, host mirrors, scheduling policy, and IO.
 //!
 //! Artifact compilation and target selection live in `vyre-megakernel`.
-//! Authenticated execution and recovery live in [`crate::ArtifactSession`].
+//! Authenticated execution and recovery live in
+//! [`crate::artifact_admission::ArtifactSession`].
 //! This module owns only mutable queue policy and wire state.
 
 #[cfg(feature = "megakernel-batch")]

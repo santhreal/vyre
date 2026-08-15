@@ -188,7 +188,7 @@ impl CpuReference {
 
 #[derive(Default)]
 pub(crate) struct CachedArtifactSessions {
-    sessions: BTreeMap<[u8; 32], Arc<vyre_runtime::ArtifactSession>>,
+    sessions: BTreeMap<[u8; 32], Arc<vyre_runtime::artifact_admission::ArtifactSession>>,
     last_fingerprint: Option<[u8; 32]>,
 }
 
@@ -210,7 +210,8 @@ impl BenchContext {
     pub(crate) fn artifact_session_for(
         &self,
         prog: &vyre::ir::Program,
-    ) -> Result<Arc<vyre_runtime::ArtifactSession>, vyre_driver::BackendError> {
+    ) -> Result<Arc<vyre_runtime::artifact_admission::ArtifactSession>, vyre_driver::BackendError>
+    {
         let fingerprint = prog.fingerprint();
         let mut cached = self.artifact_sessions.lock().map_err(|error| {
             vyre_driver::BackendError::new(format!(
@@ -233,7 +234,7 @@ impl BenchContext {
         .validate()
         .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         let session = Arc::new(
-            vyre_runtime::ArtifactSession::compile_with_materializer(
+            vyre_runtime::artifact_admission::ArtifactSession::compile_with_materializer(
                 self.preferred_registration,
                 &request,
                 Arc::clone(&self.materializer),

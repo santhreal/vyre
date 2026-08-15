@@ -14,7 +14,7 @@ cargo add vyre vyre-driver vyre-driver-wgpu vyre-runtime
 ```rust
 use vyre_driver::backend::backend_registration;
 use vyre_driver_wgpu::WGPU_BACKEND_ID;
-use vyre_runtime::ArtifactSession;
+use vyre_runtime::artifact_admission::ArtifactSession;
 
 let registration = backend_registration(WGPU_BACKEND_ID)?;
 let session = ArtifactSession::compile(registration, &request)?;

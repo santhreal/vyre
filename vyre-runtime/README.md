@@ -27,8 +27,8 @@ artifact after device loss.
 
 ```rust
 use vyre_driver::backend::BackendRegistration;
+use vyre_runtime::persistent_executor::{PersistentExecutor, ResidentQueueState};
 use vyre_runtime::resident_work_queue::{self, ResidentWorkQueue};
-use vyre_runtime::{PersistentExecutor, ResidentQueueState};
 
 fn run(
     backend: &'static BackendRegistration,

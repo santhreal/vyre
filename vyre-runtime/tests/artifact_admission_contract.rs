@@ -10,7 +10,7 @@ use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, BoundResource, Completion,
     Device, DeviceIdentity, ResidentOwner, Resource, Submission, VyreBackend,
 };
-use vyre_foundation::diagnostics::DiagnosticStage;
+use vyre_foundation::diagnostics::{DiagnosticStage, RetryClass};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ValueContract, ValueLifetime,
 };
@@ -19,12 +19,15 @@ use vyre_megakernel::{
     TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
     TargetResourceMemory,
 };
-use vyre_runtime::{
-    admit_artifact, admit_cached_artifact, admit_envelope, classify_backend_error,
-    recover_artifact_session, ArtifactAdmissionError, ArtifactSession, InMemoryPipelineCache,
-    PersistentExecutor, PipelineCacheStore, PipelineFingerprint, ResidentQueueState,
-    RetainedArtifactSession, RetryClass,
+use vyre_runtime::artifact_admission::{
+    admit_artifact, admit_cached_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession,
+    RetainedArtifactSession,
 };
+use vyre_runtime::persistent_executor::{PersistentExecutor, ResidentQueueState};
+use vyre_runtime::pipeline_cache::{
+    InMemoryPipelineCache, PipelineCacheStore, PipelineFingerprint,
+};
+use vyre_runtime::recovery::{classify_backend_error, recover_artifact_session};
 
 #[path = "../../tests/support/artifact_fixtures.rs"]
 mod artifact_fixtures;
@@ -799,7 +802,9 @@ fn artifact_recovery_requires_structured_device_loss() {
     let error = recover_artifact_session(&session, permanent).unwrap_err();
     assert!(matches!(
         error,
-        vyre_runtime::ArtifactSessionError::Backend(BackendError::InvalidProgram { .. })
+        vyre_runtime::artifact_admission::ArtifactSessionError::Backend(
+            BackendError::InvalidProgram { .. }
+        )
     ));
 }
 

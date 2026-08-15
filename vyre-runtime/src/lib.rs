@@ -132,29 +132,6 @@ pub mod scheduler;
 /// in the ring protocol.
 pub mod tenant;
 
-pub use replay::{
-    RecordedSlot, ReplayFailureClass, ReplayFailureEvidence, ReplayLogError, ReplayRecord, RingLog,
-};
-pub use tenant::{
-    TenantError, TenantHandle, TenantRegistry, OPCODE_RANGE_PER_TENANT, TENANT_ID_MAX,
-    TENANT_OPCODE_BASE,
-};
-
-#[cfg(feature = "remote-cache")]
-pub use pipeline_cache::RemoteCache;
-pub use pipeline_cache::{
-    DiskCache, DiskCacheError, InMemoryPipelineCache, LayeredPipelineCache,
-    PipelineCacheMetricError, PipelineCacheMetrics, PipelineCacheStore, PipelineFingerprint,
-};
-
-pub use artifact_admission::{
-    admit_artifact, admit_cached_artifact, admit_envelope, AdmittedArtifact,
-    ArtifactAdmissionError, ArtifactSession, ArtifactSessionError, RetainedArtifactSession,
-};
-pub use persistent_executor::{PersistentExecutor, ResidentQueueCompletion, ResidentQueueState};
-pub use recovery::{classify_backend_error, recover_artifact_session};
-pub use vyre_foundation::diagnostics::RetryClass;
-
 /// Linux io_uring integration. Compiled out on macOS / Windows.
 #[cfg(target_os = "linux")]
 #[allow(unsafe_code)]
@@ -333,10 +310,6 @@ impl<'a> UringCompletionPump<'a> {
         Err(PipelineError::NotLinux)
     }
 }
-
-/// Linux-only: host-visible GPU buffer that io_uring can DMA into.
-#[cfg(target_os = "linux")]
-pub use uring::GpuMappedBuffer;
 
 #[cfg(test)]
 mod tests {

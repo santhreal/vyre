@@ -1,7 +1,4 @@
-#[non_exhaustive] pub enum vyre_runtime::DiskCacheError
 #[non_exhaustive] pub enum vyre_runtime::PipelineError
-#[non_exhaustive] pub enum vyre_runtime::ReplayLogError
-#[non_exhaustive] pub enum vyre_runtime::TenantError
 #[non_exhaustive] pub enum vyre_runtime::pipeline_cache::DiskCacheError
 #[non_exhaustive] pub enum vyre_runtime::replay::ReplayLogError
 #[non_exhaustive] pub enum vyre_runtime::resident_work_queue::MixedWorkProtocolError
@@ -35,19 +32,19 @@ impl core::cmp::PartialEq for vyre_runtime::resident_work_queue::resident::Resid
 impl core::convert::From<vyre_driver::backend::error::BackendError> for vyre_runtime::PipelineError
 impl core::convert::From<vyre_megakernel::CompileError> for vyre_runtime::artifact_admission::ArtifactAdmissionError
 impl core::convert::From<vyre_runtime::replay::ReplayLogError> for vyre_runtime::PipelineError
-impl core::default::Default for vyre_runtime::InMemoryPipelineCache
 impl core::default::Default for vyre_runtime::UringCompletionPump<'_>
+impl core::default::Default for vyre_runtime::pipeline_cache::InMemoryPipelineCache
 impl core::default::Default for vyre_runtime::resident_work_queue::ResidentQueueConfig
 impl core::default::Default for vyre_runtime::resident_work_queue::ResidentQueueTelemetry
 impl core::default::Default for vyre_runtime::resident_work_queue::ResidentSizingPolicy
 impl core::default::Default for vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistPolicy
 impl core::default::Default for vyre_runtime::resident_work_queue::policy::ResidentLaunchPolicy
 impl core::default::Default for vyre_runtime::tenant::TenantRegistry
-impl core::error::Error for vyre_runtime::PipelineCacheMetricError
+impl core::error::Error for vyre_runtime::pipeline_cache::PipelineCacheMetricError
 impl core::fmt::Debug for vyre_runtime::resource_residency::ArtifactInstanceBinding
 impl core::fmt::Debug for vyre_runtime::resource_residency::ResourceResidency
 impl core::fmt::Debug for vyre_runtime::tenant::TenantHandle
-impl core::fmt::Display for vyre_runtime::PipelineCacheMetricError
+impl core::fmt::Display for vyre_runtime::pipeline_cache::PipelineCacheMetricError
 impl core::marker::Send for vyre_runtime::uring::ring::IoUringState
 impl core::marker::Send for vyre_runtime::uring::stream::AsyncUringStream<'_>
 impl core::marker::Send for vyre_runtime::uring::stream::GpuMappedBuffer<'_>
@@ -56,22 +53,22 @@ impl core::marker::Sync for vyre_runtime::uring::stream::AsyncUringStream<'_>
 impl core::marker::Sync for vyre_runtime::uring::stream::GpuMappedBuffer<'_>
 impl core::ops::drop::Drop for vyre_runtime::resource_residency::ResourceResidency
 impl core::ops::drop::Drop for vyre_runtime::uring::ring::IoUringState
-impl vyre_runtime::DiskCache
-impl vyre_runtime::InMemoryPipelineCache
-impl vyre_runtime::LayeredPipelineCache
-impl vyre_runtime::PipelineCacheMetricError
-impl vyre_runtime::PipelineCacheMetrics
-impl vyre_runtime::PipelineCacheStore for vyre_runtime::DiskCache
-impl vyre_runtime::PipelineCacheStore for vyre_runtime::InMemoryPipelineCache
-impl vyre_runtime::PipelineCacheStore for vyre_runtime::LayeredPipelineCache
 impl vyre_runtime::PipelineError
-impl vyre_runtime::PipelineFingerprint
-impl vyre_runtime::ReplayFailureEvidence
 impl vyre_runtime::artifact_admission::AdmittedArtifact
 impl vyre_runtime::artifact_admission::ArtifactAdmissionError
 impl vyre_runtime::artifact_admission::ArtifactSession
 impl vyre_runtime::artifact_admission::RetainedArtifactSession
 impl vyre_runtime::persistent_executor::PersistentExecutor
+impl vyre_runtime::pipeline_cache::DiskCache
+impl vyre_runtime::pipeline_cache::InMemoryPipelineCache
+impl vyre_runtime::pipeline_cache::LayeredPipelineCache
+impl vyre_runtime::pipeline_cache::PipelineCacheMetricError
+impl vyre_runtime::pipeline_cache::PipelineCacheMetrics
+impl vyre_runtime::pipeline_cache::PipelineCacheStore for vyre_runtime::pipeline_cache::DiskCache
+impl vyre_runtime::pipeline_cache::PipelineCacheStore for vyre_runtime::pipeline_cache::InMemoryPipelineCache
+impl vyre_runtime::pipeline_cache::PipelineCacheStore for vyre_runtime::pipeline_cache::LayeredPipelineCache
+impl vyre_runtime::pipeline_cache::PipelineFingerprint
+impl vyre_runtime::replay::ReplayFailureEvidence
 impl vyre_runtime::replay::RingLog
 impl vyre_runtime::resident_work_queue::ControlSnapshot
 impl vyre_runtime::resident_work_queue::CountMinSketch
@@ -153,10 +150,10 @@ impl<'a> vyre_runtime::uring::stream::AsyncUringStream<'a>
 impl<'a> vyre_runtime::uring::stream::GpuMappedBuffer<'a>
 impl<R: core::marker::Copy> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>
 impl<R> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec<R>
-pub const fn vyre_runtime::PipelineCacheMetricError::field(&self) -> &'static str
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::envelope(&self) -> &vyre_megakernel::envelope::ArtifactEnvelope
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::neutral(&self) -> &vyre_megakernel::Artifact
 pub const fn vyre_runtime::artifact_admission::ArtifactAdmissionError::diagnostic(&self) -> &vyre_foundation::diagnostics::Diagnostic
+pub const fn vyre_runtime::pipeline_cache::PipelineCacheMetricError::field(&self) -> &'static str
 pub const fn vyre_runtime::resident_work_queue::CountMinSketch::depth(&self) -> usize
 pub const fn vyre_runtime::resident_work_queue::CountMinSketch::width(&self) -> usize
 pub const fn vyre_runtime::resident_work_queue::ResidentGridLimits::new(max_workgroup_size_x: u32, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> Self
@@ -229,9 +226,6 @@ pub const fn vyre_runtime::resource_residency::ArtifactInstanceBinding::byte_len
 pub const fn vyre_runtime::tenant::TenantQuota::bounded(max_outstanding_slots: u64, max_staging_bytes: u64, max_resident_handles: u64) -> Self
 pub const fn vyre_runtime::tenant::TenantQuota::unbounded() -> Self
 pub const fn vyre_runtime::tenant::TenantSelectionScratch::new() -> Self
-pub const vyre_runtime::OPCODE_RANGE_PER_TENANT: u32
-pub const vyre_runtime::TENANT_ID_MAX: u32
-pub const vyre_runtime::TENANT_OPCODE_BASE: u32
 pub const vyre_runtime::replay::HEADER_BYTES: u64
 pub const vyre_runtime::replay::LOG_MAGIC: &[u8; 8]
 pub const vyre_runtime::replay::LOG_VERSION: u32
@@ -415,8 +409,6 @@ pub const vyre_runtime::uring::ring::IOSQE_FIXED_FILE: u8
 pub const vyre_runtime::uring::stream::IORING_OP_READV: u8
 pub const vyre_runtime::uring::stream::IORING_OP_READ_FIXED: u8
 pub const vyre_runtime::uring::stream::IORING_OP_URING_CMD: u8
-pub enum vyre_runtime::ArtifactSessionError
-pub enum vyre_runtime::ReplayFailureClass
 pub enum vyre_runtime::UringPollState
 pub enum vyre_runtime::artifact_admission::ArtifactSessionError
 pub enum vyre_runtime::pipeline_cache::InMemoryEvictionReason
@@ -464,58 +456,15 @@ pub enum vyre_runtime::uring::GpuDirectCapability
 pub enum vyre_runtime::uring::NativeReadPath
 pub enum vyre_runtime::uring::driver::NativeReadPath
 pub enum vyre_runtime::uring::gpudirect::GpuDirectCapability
-pub fn vyre_runtime::DiskCache::durability_report(&self) -> vyre_runtime::pipeline_cache::DiskCacheDurabilityReport
-pub fn vyre_runtime::DiskCache::flush(&self) -> std::io::error::Result<()>
-pub fn vyre_runtime::DiskCache::get(&self, fp: &vyre_runtime::PipelineFingerprint) -> core::option::Option<alloc::vec::Vec<u8>>
-pub fn vyre_runtime::DiskCache::get_arc(&self, fp: &vyre_runtime::PipelineFingerprint) -> core::option::Option<alloc::sync::Arc<alloc::vec::Vec<u8>>>
-pub fn vyre_runtime::DiskCache::in_user_cache() -> core::result::Result<Self, vyre_runtime::DiskCacheError>
-pub fn vyre_runtime::DiskCache::metrics(&self) -> vyre_runtime::PipelineCacheMetrics
-pub fn vyre_runtime::DiskCache::new(root: impl core::convert::Into<std::path::PathBuf>) -> core::result::Result<Self, vyre_runtime::DiskCacheError>
-pub fn vyre_runtime::DiskCache::put(&self, fp: vyre_runtime::PipelineFingerprint, artifact: alloc::vec::Vec<u8>)
-pub fn vyre_runtime::DiskCache::root(&self) -> &std::path::Path
-pub fn vyre_runtime::InMemoryPipelineCache::cached_bytes(&self) -> usize
-pub fn vyre_runtime::InMemoryPipelineCache::default() -> Self
-pub fn vyre_runtime::InMemoryPipelineCache::eviction_reports(&self) -> alloc::vec::Vec<vyre_runtime::pipeline_cache::InMemoryEvictionReport>
-pub fn vyre_runtime::InMemoryPipelineCache::flush(&self) -> std::io::error::Result<()>
-pub fn vyre_runtime::InMemoryPipelineCache::get(&self, fp: &vyre_runtime::PipelineFingerprint) -> core::option::Option<alloc::vec::Vec<u8>>
-pub fn vyre_runtime::InMemoryPipelineCache::get_arc(&self, fp: &vyre_runtime::PipelineFingerprint) -> core::option::Option<alloc::sync::Arc<alloc::vec::Vec<u8>>>
-pub fn vyre_runtime::InMemoryPipelineCache::is_empty(&self) -> bool
-pub fn vyre_runtime::InMemoryPipelineCache::len(&self) -> usize
-pub fn vyre_runtime::InMemoryPipelineCache::metrics(&self) -> vyre_runtime::PipelineCacheMetrics
-pub fn vyre_runtime::InMemoryPipelineCache::new() -> Self
-pub fn vyre_runtime::InMemoryPipelineCache::put(&self, fp: vyre_runtime::PipelineFingerprint, artifact: alloc::vec::Vec<u8>)
-pub fn vyre_runtime::InMemoryPipelineCache::with_limits(max_entries_per_shard: usize, max_bytes_per_shard: usize) -> Self
-pub fn vyre_runtime::LayeredPipelineCache::flush(&self) -> std::io::error::Result<()>
-pub fn vyre_runtime::LayeredPipelineCache::get(&self, fp: &vyre_runtime::PipelineFingerprint) -> core::option::Option<alloc::vec::Vec<u8>>
-pub fn vyre_runtime::LayeredPipelineCache::get_arc(&self, fp: &vyre_runtime::PipelineFingerprint) -> core::option::Option<alloc::sync::Arc<alloc::vec::Vec<u8>>>
-pub fn vyre_runtime::LayeredPipelineCache::metrics(&self) -> vyre_runtime::PipelineCacheMetrics
-pub fn vyre_runtime::LayeredPipelineCache::new(layers: alloc::vec::Vec<alloc::sync::Arc<dyn vyre_runtime::PipelineCacheStore>>) -> Self
-pub fn vyre_runtime::LayeredPipelineCache::promotion_report(&self) -> vyre_runtime::pipeline_cache::LayeredPromotionReport
-pub fn vyre_runtime::LayeredPipelineCache::put(&self, fp: vyre_runtime::PipelineFingerprint, artifact: alloc::vec::Vec<u8>)
-pub fn vyre_runtime::PipelineCacheMetricError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_runtime::PipelineCacheMetricError::message(&self) -> &str
-pub fn vyre_runtime::PipelineCacheMetrics::hit_rate_ppm(&self) -> u32
-pub fn vyre_runtime::PipelineCacheMetrics::try_hit_rate_ppm(&self) -> core::result::Result<u32, vyre_runtime::PipelineCacheMetricError>
-pub fn vyre_runtime::PipelineCacheStore::flush(&self) -> std::io::error::Result<()>
-pub fn vyre_runtime::PipelineCacheStore::get(&self, fp: &vyre_runtime::PipelineFingerprint) -> core::option::Option<alloc::vec::Vec<u8>>
-pub fn vyre_runtime::PipelineCacheStore::get_arc(&self, fp: &vyre_runtime::PipelineFingerprint) -> core::option::Option<alloc::sync::Arc<alloc::vec::Vec<u8>>>
-pub fn vyre_runtime::PipelineCacheStore::metrics(&self) -> vyre_runtime::PipelineCacheMetrics
-pub fn vyre_runtime::PipelineCacheStore::put(&self, fp: vyre_runtime::PipelineFingerprint, artifact: alloc::vec::Vec<u8>)
 pub fn vyre_runtime::PipelineError::from(err: vyre_driver::backend::error::BackendError) -> Self
 pub fn vyre_runtime::PipelineError::from(err: vyre_runtime::replay::ReplayLogError) -> Self
 pub fn vyre_runtime::PipelineError::is_drain_incomplete(&self) -> bool
-pub fn vyre_runtime::PipelineFingerprint::hex(&self) -> alloc::string::String
-pub fn vyre_runtime::PipelineFingerprint::of(artifact: &vyre_megakernel::Artifact) -> Self
-pub fn vyre_runtime::ReplayFailureEvidence::from_backend_error(slot_status: u32, error: &vyre_driver::backend::error::BackendError, output_bytes: &[u8]) -> Self
 pub fn vyre_runtime::UringCompletionPump<'_>::default() -> Self
 pub fn vyre_runtime::UringCompletionPump<'a>::is_shutdown_requested(&self) -> bool
 pub fn vyre_runtime::UringCompletionPump<'a>::new() -> Self
 pub fn vyre_runtime::UringCompletionPump<'a>::poll(&mut self) -> core::result::Result<vyre_runtime::UringPollState, vyre_runtime::PipelineError>
 pub fn vyre_runtime::UringCompletionPump<'a>::request_shutdown(&mut self)
 pub fn vyre_runtime::UringCompletionPump<'a>::with_uring(self, stream: vyre_runtime::uring::stream::AsyncUringStream<'a>) -> Self
-pub fn vyre_runtime::admit_artifact(envelope_bytes: &[u8], required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
-pub fn vyre_runtime::admit_cached_artifact(store: &dyn vyre_runtime::PipelineCacheStore, fingerprint: &vyre_runtime::PipelineFingerprint, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<core::option::Option<vyre_runtime::artifact_admission::AdmittedArtifact>, vyre_runtime::artifact_admission::ArtifactAdmissionError>
-pub fn vyre_runtime::admit_envelope(envelope: vyre_megakernel::envelope::ArtifactEnvelope, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::AdmittedArtifact::into_envelope(self) -> vyre_megakernel::envelope::ArtifactEnvelope
 pub fn vyre_runtime::artifact_admission::AdmittedArtifact::target_payload(&self) -> &vyre_megakernel::envelope::TargetPayload
 pub fn vyre_runtime::artifact_admission::ArtifactAdmissionError::from(source: vyre_megakernel::CompileError) -> Self
@@ -549,24 +498,57 @@ pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::rematerialize(
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::replace_retained(&self, values: alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, alloc::vec::Vec<u8>>) -> core::result::Result<(), vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::submit_and_wait(&self, bindings: vyre_driver::backend::artifact_lifecycle::BindingSet) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::Completion, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::artifact_admission::admit_artifact(envelope_bytes: &[u8], required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
-pub fn vyre_runtime::artifact_admission::admit_cached_artifact(store: &dyn vyre_runtime::PipelineCacheStore, fingerprint: &vyre_runtime::PipelineFingerprint, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<core::option::Option<vyre_runtime::artifact_admission::AdmittedArtifact>, vyre_runtime::artifact_admission::ArtifactAdmissionError>
+pub fn vyre_runtime::artifact_admission::admit_cached_artifact(store: &dyn vyre_runtime::pipeline_cache::PipelineCacheStore, fingerprint: &vyre_runtime::pipeline_cache::PipelineFingerprint, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<core::option::Option<vyre_runtime::artifact_admission::AdmittedArtifact>, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_envelope(envelope: vyre_megakernel::envelope::ArtifactEnvelope, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
-pub fn vyre_runtime::classify_backend_error(error: &vyre_driver::backend::error::BackendError) -> vyre_foundation::diagnostics::RetryClass
 pub fn vyre_runtime::persistent_executor::PersistentExecutor::artifact(&self) -> core::result::Result<vyre_megakernel::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::persistent_executor::PersistentExecutor::device(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::persistent_executor::PersistentExecutor::from_bytes(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, envelope_bytes: &[u8], initial: vyre_runtime::persistent_executor::ResidentQueueState) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::persistent_executor::PersistentExecutor::recover(&self, failure: vyre_driver::backend::error::BackendError) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::persistent_executor::PersistentExecutor::submit_and_wait(&self, state: vyre_runtime::persistent_executor::ResidentQueueState) -> core::result::Result<vyre_runtime::persistent_executor::ResidentQueueCompletion, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::pipeline_cache::DiskCache::durability_report(&self) -> vyre_runtime::pipeline_cache::DiskCacheDurabilityReport
+pub fn vyre_runtime::pipeline_cache::DiskCache::flush(&self) -> std::io::error::Result<()>
+pub fn vyre_runtime::pipeline_cache::DiskCache::get(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::vec::Vec<u8>>
+pub fn vyre_runtime::pipeline_cache::DiskCache::get_arc(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::sync::Arc<alloc::vec::Vec<u8>>>
+pub fn vyre_runtime::pipeline_cache::DiskCache::in_user_cache() -> core::result::Result<Self, vyre_runtime::pipeline_cache::DiskCacheError>
+pub fn vyre_runtime::pipeline_cache::DiskCache::metrics(&self) -> vyre_runtime::pipeline_cache::PipelineCacheMetrics
+pub fn vyre_runtime::pipeline_cache::DiskCache::new(root: impl core::convert::Into<std::path::PathBuf>) -> core::result::Result<Self, vyre_runtime::pipeline_cache::DiskCacheError>
+pub fn vyre_runtime::pipeline_cache::DiskCache::put(&self, fp: vyre_runtime::pipeline_cache::PipelineFingerprint, artifact: alloc::vec::Vec<u8>)
+pub fn vyre_runtime::pipeline_cache::DiskCache::root(&self) -> &std::path::Path
+pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::cached_bytes(&self) -> usize
+pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::default() -> Self
+pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::eviction_reports(&self) -> alloc::vec::Vec<vyre_runtime::pipeline_cache::InMemoryEvictionReport>
+pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::flush(&self) -> std::io::error::Result<()>
+pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::get(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::vec::Vec<u8>>
+pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::get_arc(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::sync::Arc<alloc::vec::Vec<u8>>>
+pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::is_empty(&self) -> bool
+pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::len(&self) -> usize
+pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::metrics(&self) -> vyre_runtime::pipeline_cache::PipelineCacheMetrics
+pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::new() -> Self
+pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::put(&self, fp: vyre_runtime::pipeline_cache::PipelineFingerprint, artifact: alloc::vec::Vec<u8>)
+pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::with_limits(max_entries_per_shard: usize, max_bytes_per_shard: usize) -> Self
+pub fn vyre_runtime::pipeline_cache::LayeredPipelineCache::flush(&self) -> std::io::error::Result<()>
+pub fn vyre_runtime::pipeline_cache::LayeredPipelineCache::get(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::vec::Vec<u8>>
+pub fn vyre_runtime::pipeline_cache::LayeredPipelineCache::get_arc(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::sync::Arc<alloc::vec::Vec<u8>>>
+pub fn vyre_runtime::pipeline_cache::LayeredPipelineCache::metrics(&self) -> vyre_runtime::pipeline_cache::PipelineCacheMetrics
+pub fn vyre_runtime::pipeline_cache::LayeredPipelineCache::new(layers: alloc::vec::Vec<alloc::sync::Arc<dyn vyre_runtime::pipeline_cache::PipelineCacheStore>>) -> Self
+pub fn vyre_runtime::pipeline_cache::LayeredPipelineCache::promotion_report(&self) -> vyre_runtime::pipeline_cache::LayeredPromotionReport
+pub fn vyre_runtime::pipeline_cache::LayeredPipelineCache::put(&self, fp: vyre_runtime::pipeline_cache::PipelineFingerprint, artifact: alloc::vec::Vec<u8>)
+pub fn vyre_runtime::pipeline_cache::PipelineCacheMetricError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_runtime::pipeline_cache::PipelineCacheMetricError::message(&self) -> &str
+pub fn vyre_runtime::pipeline_cache::PipelineCacheMetrics::hit_rate_ppm(&self) -> u32
+pub fn vyre_runtime::pipeline_cache::PipelineCacheMetrics::try_hit_rate_ppm(&self) -> core::result::Result<u32, vyre_runtime::pipeline_cache::PipelineCacheMetricError>
 pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::flush(&self) -> std::io::error::Result<()>
-pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::get(&self, fp: &vyre_runtime::PipelineFingerprint) -> core::option::Option<alloc::vec::Vec<u8>>
-pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::get_arc(&self, fp: &vyre_runtime::PipelineFingerprint) -> core::option::Option<alloc::sync::Arc<alloc::vec::Vec<u8>>>
-pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::metrics(&self) -> vyre_runtime::PipelineCacheMetrics
-pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::put(&self, fp: vyre_runtime::PipelineFingerprint, artifact: alloc::vec::Vec<u8>)
-pub fn vyre_runtime::recover_artifact_session(session: &vyre_runtime::artifact_admission::ArtifactSession, failure: vyre_driver::backend::error::BackendError) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::get(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::vec::Vec<u8>>
+pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::get_arc(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::sync::Arc<alloc::vec::Vec<u8>>>
+pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::metrics(&self) -> vyre_runtime::pipeline_cache::PipelineCacheMetrics
+pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::put(&self, fp: vyre_runtime::pipeline_cache::PipelineFingerprint, artifact: alloc::vec::Vec<u8>)
+pub fn vyre_runtime::pipeline_cache::PipelineFingerprint::hex(&self) -> alloc::string::String
+pub fn vyre_runtime::pipeline_cache::PipelineFingerprint::of(artifact: &vyre_megakernel::Artifact) -> Self
 pub fn vyre_runtime::recovery::classify_backend_error(error: &vyre_driver::backend::error::BackendError) -> vyre_foundation::diagnostics::RetryClass
 pub fn vyre_runtime::recovery::recover_artifact_session(session: &vyre_runtime::artifact_admission::ArtifactSession, failure: vyre_driver::backend::error::BackendError) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
+pub fn vyre_runtime::replay::ReplayFailureEvidence::from_backend_error(slot_status: u32, error: &vyre_driver::backend::error::BackendError, output_bytes: &[u8]) -> Self
 pub fn vyre_runtime::replay::RingLog::append(&mut self, slot: vyre_runtime::replay::RecordedSlot) -> core::result::Result<(), vyre_runtime::replay::ReplayLogError>
-pub fn vyre_runtime::replay::RingLog::append_with_failure(&mut self, slot: vyre_runtime::replay::RecordedSlot, failure: vyre_runtime::ReplayFailureEvidence) -> core::result::Result<(), vyre_runtime::replay::ReplayLogError>
+pub fn vyre_runtime::replay::RingLog::append_with_failure(&mut self, slot: vyre_runtime::replay::RecordedSlot, failure: vyre_runtime::replay::ReplayFailureEvidence) -> core::result::Result<(), vyre_runtime::replay::ReplayLogError>
 pub fn vyre_runtime::replay::RingLog::capacity(&self) -> u64
 pub fn vyre_runtime::replay::RingLog::cursor(&self) -> u64
 pub fn vyre_runtime::replay::RingLog::open(path: impl core::convert::AsRef<std::path::Path>, capacity: u64) -> core::result::Result<Self, vyre_runtime::replay::ReplayLogError>
@@ -1090,26 +1072,6 @@ pub mod vyre_runtime::uring::io_loop
 pub mod vyre_runtime::uring::pump
 pub mod vyre_runtime::uring::ring
 pub mod vyre_runtime::uring::stream
-pub struct vyre_runtime::AdmittedArtifact
-pub struct vyre_runtime::ArtifactAdmissionError
-pub struct vyre_runtime::ArtifactSession
-pub struct vyre_runtime::DiskCache
-pub struct vyre_runtime::GpuMappedBuffer<'a>
-pub struct vyre_runtime::InMemoryPipelineCache
-pub struct vyre_runtime::LayeredPipelineCache
-pub struct vyre_runtime::PersistentExecutor
-pub struct vyre_runtime::PipelineCacheMetricError
-pub struct vyre_runtime::PipelineCacheMetrics
-pub struct vyre_runtime::PipelineFingerprint(pub [u8; 32])
-pub struct vyre_runtime::RecordedSlot
-pub struct vyre_runtime::ReplayFailureEvidence
-pub struct vyre_runtime::ReplayRecord
-pub struct vyre_runtime::ResidentQueueCompletion
-pub struct vyre_runtime::ResidentQueueState
-pub struct vyre_runtime::RetainedArtifactSession
-pub struct vyre_runtime::RingLog
-pub struct vyre_runtime::TenantHandle
-pub struct vyre_runtime::TenantRegistry
 pub struct vyre_runtime::UringCompletionPump<'a>
 pub struct vyre_runtime::artifact_admission::AdmittedArtifact
 pub struct vyre_runtime::artifact_admission::ArtifactAdmissionError
@@ -1296,7 +1258,6 @@ pub struct vyre_runtime::uring::pump::UringResidentQueuePump<'a>
 pub struct vyre_runtime::uring::ring::IoUringState
 pub struct vyre_runtime::uring::stream::AsyncUringStream<'a>
 pub struct vyre_runtime::uring::stream::GpuMappedBuffer<'a>
-pub trait vyre_runtime::PipelineCacheStore: core::marker::Send + core::marker::Sync
 pub trait vyre_runtime::pipeline_cache::PipelineCacheStore: core::marker::Send + core::marker::Sync
 pub trait vyre_runtime::resident_work_queue::ResidentWorkspaceAdapter
 pub trait vyre_runtime::resident_work_queue::ring::RingConsumer
@@ -1319,25 +1280,6 @@ pub unsafe fn vyre_runtime::uring::stream::GpuMappedBuffer<'a>::duplicate(&self)
 pub unsafe fn vyre_runtime::uring::stream::GpuMappedBuffer<'a>::from_bar1_peer_with_owner<O: ?core::marker::Sized>(_owner: &'a mut O, peer_ptr: *mut u8, len: usize) -> Self
 pub unsafe fn vyre_runtime::uring::stream::GpuMappedBuffer<'a>::from_host_visible_owner<O: ?core::marker::Sized>(_owner: &'a mut O, ptr: *mut u8, len: usize) -> Self
 pub unsafe fn vyre_runtime::uring::stream::GpuMappedBuffer<'a>::from_host_visible_slice(slice: &'a mut [u8]) -> Self
-pub use vyre_runtime::RetryClass
-pub vyre_runtime::ArtifactSessionError::Admission(vyre_runtime::artifact_admission::ArtifactAdmissionError)
-pub vyre_runtime::ArtifactSessionError::Backend(vyre_driver::backend::error::BackendError)
-pub vyre_runtime::ArtifactSessionError::Compile(vyre_megakernel::CompileError)
-pub vyre_runtime::ArtifactSessionError::State(alloc::string::String)
-pub vyre_runtime::ArtifactSessionError::Target(vyre_megakernel::target::TargetCompileError)
-pub vyre_runtime::DiskCacheError::CacheDirUnknown
-pub vyre_runtime::DiskCacheError::Io(std::io::error::Error)
-pub vyre_runtime::PipelineCacheMetrics::cached_bytes: u64
-pub vyre_runtime::PipelineCacheMetrics::entries: u64
-pub vyre_runtime::PipelineCacheMetrics::evicted_bytes: u64
-pub vyre_runtime::PipelineCacheMetrics::evictions: u64
-pub vyre_runtime::PipelineCacheMetrics::flush_errors: u64
-pub vyre_runtime::PipelineCacheMetrics::flushes: u64
-pub vyre_runtime::PipelineCacheMetrics::hits: u64
-pub vyre_runtime::PipelineCacheMetrics::lookups: u64
-pub vyre_runtime::PipelineCacheMetrics::misses: u64
-pub vyre_runtime::PipelineCacheMetrics::puts: u64
-pub vyre_runtime::PipelineCacheMetrics::rejected_puts: u64
 pub vyre_runtime::PipelineError::Backend(alloc::string::String)
 pub vyre_runtime::PipelineError::DrainIncomplete
 pub vyre_runtime::PipelineError::DrainIncomplete::claimed: u32
@@ -1353,70 +1295,6 @@ pub vyre_runtime::PipelineError::NvmePassthroughDisabled
 pub vyre_runtime::PipelineError::QueueFull
 pub vyre_runtime::PipelineError::QueueFull::fix: &'static str
 pub vyre_runtime::PipelineError::QueueFull::queue: &'static str
-pub vyre_runtime::RecordedSlot::args: [u32; 4]
-pub vyre_runtime::RecordedSlot::epoch: u32
-pub vyre_runtime::RecordedSlot::opcode: u32
-pub vyre_runtime::RecordedSlot::slot_idx: u32
-pub vyre_runtime::RecordedSlot::tenant_id: u32
-pub vyre_runtime::RecordedSlot::timestamp_ns: u64
-pub vyre_runtime::ReplayFailureClass::DeviceLoss
-pub vyre_runtime::ReplayFailureClass::None
-pub vyre_runtime::ReplayFailureClass::ProgramBug
-pub vyre_runtime::ReplayFailureClass::TransientQueue
-pub vyre_runtime::ReplayFailureClass::Unclassified
-pub vyre_runtime::ReplayFailureEvidence::backend_error_code: u32
-pub vyre_runtime::ReplayFailureEvidence::failure_class: vyre_runtime::ReplayFailureClass
-pub vyre_runtime::ReplayFailureEvidence::output_digest: u64
-pub vyre_runtime::ReplayFailureEvidence::slot_status: u32
-pub vyre_runtime::ReplayLogError::CapacityOverflow
-pub vyre_runtime::ReplayLogError::CapacityOverflow::count: u64
-pub vyre_runtime::ReplayLogError::CapacityOverflow::max: u64
-pub vyre_runtime::ReplayLogError::HeaderMismatch
-pub vyre_runtime::ReplayLogError::HeaderMismatch::path: alloc::sync::Arc<str>
-pub vyre_runtime::ReplayLogError::Io
-pub vyre_runtime::ReplayLogError::Io::op: &'static str
-pub vyre_runtime::ReplayLogError::Io::path: alloc::sync::Arc<str>
-pub vyre_runtime::ReplayLogError::Io::source: std::io::error::Error
-pub vyre_runtime::ReplayLogError::ZeroCapacity
-pub vyre_runtime::ReplayRecord::failure: core::option::Option<vyre_runtime::ReplayFailureEvidence>
-pub vyre_runtime::ReplayRecord::slot: vyre_runtime::replay::RecordedSlot
-pub vyre_runtime::ResidentQueueCompletion::device_ns: core::option::Option<u64>
-pub vyre_runtime::ResidentQueueCompletion::state: vyre_runtime::persistent_executor::ResidentQueueState
-pub vyre_runtime::ResidentQueueState::control: alloc::vec::Vec<u8>
-pub vyre_runtime::ResidentQueueState::debug_log: alloc::vec::Vec<u8>
-pub vyre_runtime::ResidentQueueState::io_queue: alloc::vec::Vec<u8>
-pub vyre_runtime::ResidentQueueState::ring: alloc::vec::Vec<u8>
-pub vyre_runtime::TenantError::Backpressure
-pub vyre_runtime::TenantError::Backpressure::cap: u64
-pub vyre_runtime::TenantError::Backpressure::outstanding: u64
-pub vyre_runtime::TenantError::Backpressure::tenant_id: u32
-pub vyre_runtime::TenantError::OpcodeOutOfRange
-pub vyre_runtime::TenantError::OpcodeOutOfRange::cap: u32
-pub vyre_runtime::TenantError::OpcodeOutOfRange::local_opcode: u32
-pub vyre_runtime::TenantError::OpcodeOutOfRange::tenant_id: u32
-pub vyre_runtime::TenantError::Pipeline(vyre_runtime::PipelineError)
-pub vyre_runtime::TenantError::QuiesceTimeout
-pub vyre_runtime::TenantError::QuiesceTimeout::outstanding: u64
-pub vyre_runtime::TenantError::QuiesceTimeout::tenant_id: u32
-pub vyre_runtime::TenantError::RegistryFull
-pub vyre_runtime::TenantError::RegistryFull::issued: u32
-pub vyre_runtime::TenantError::ResidentHandleBackpressure
-pub vyre_runtime::TenantError::ResidentHandleBackpressure::cap: u64
-pub vyre_runtime::TenantError::ResidentHandleBackpressure::requested: u64
-pub vyre_runtime::TenantError::ResidentHandleBackpressure::tenant_id: u32
-pub vyre_runtime::TenantError::ResidentHandleBackpressure::used: u64
-pub vyre_runtime::TenantError::ResourceUnderflow
-pub vyre_runtime::TenantError::ResourceUnderflow::requested: u64
-pub vyre_runtime::TenantError::ResourceUnderflow::resource: &'static str
-pub vyre_runtime::TenantError::ResourceUnderflow::tenant_id: u32
-pub vyre_runtime::TenantError::ResourceUnderflow::used: u64
-pub vyre_runtime::TenantError::Revoked
-pub vyre_runtime::TenantError::Revoked::tenant_id: u32
-pub vyre_runtime::TenantError::StagingBackpressure
-pub vyre_runtime::TenantError::StagingBackpressure::cap: u64
-pub vyre_runtime::TenantError::StagingBackpressure::requested: u64
-pub vyre_runtime::TenantError::StagingBackpressure::tenant_id: u32
-pub vyre_runtime::TenantError::StagingBackpressure::used: u64
 pub vyre_runtime::UringPollState::Completed(u32)
 pub vyre_runtime::UringPollState::Detached
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Admission(vyre_runtime::artifact_admission::ArtifactAdmissionError)
@@ -1471,7 +1349,7 @@ pub vyre_runtime::replay::ReplayFailureClass::ProgramBug
 pub vyre_runtime::replay::ReplayFailureClass::TransientQueue
 pub vyre_runtime::replay::ReplayFailureClass::Unclassified
 pub vyre_runtime::replay::ReplayFailureEvidence::backend_error_code: u32
-pub vyre_runtime::replay::ReplayFailureEvidence::failure_class: vyre_runtime::ReplayFailureClass
+pub vyre_runtime::replay::ReplayFailureEvidence::failure_class: vyre_runtime::replay::ReplayFailureClass
 pub vyre_runtime::replay::ReplayFailureEvidence::output_digest: u64
 pub vyre_runtime::replay::ReplayFailureEvidence::slot_status: u32
 pub vyre_runtime::replay::ReplayLogError::CapacityOverflow
@@ -1484,7 +1362,7 @@ pub vyre_runtime::replay::ReplayLogError::Io::op: &'static str
 pub vyre_runtime::replay::ReplayLogError::Io::path: alloc::sync::Arc<str>
 pub vyre_runtime::replay::ReplayLogError::Io::source: std::io::error::Error
 pub vyre_runtime::replay::ReplayLogError::ZeroCapacity
-pub vyre_runtime::replay::ReplayRecord::failure: core::option::Option<vyre_runtime::ReplayFailureEvidence>
+pub vyre_runtime::replay::ReplayRecord::failure: core::option::Option<vyre_runtime::replay::ReplayFailureEvidence>
 pub vyre_runtime::replay::ReplayRecord::slot: vyre_runtime::replay::RecordedSlot
 pub vyre_runtime::resident_work_queue::AutomataStateIndex::byte_index: u32
 pub vyre_runtime::resident_work_queue::AutomataStateIndex::state_id: u32
