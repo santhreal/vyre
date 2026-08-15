@@ -7,7 +7,7 @@ use std::collections::BTreeSet;
 pub enum MemoryOwner {
     /// Caller owns the host-visible input/output allocation.
     HostCaller,
-    /// CUDA owns a resident device allocation.
+    /// The backend owns a resident device allocation.
     DeviceResident,
     /// Runtime owns pinned staging for transfers only.
     PinnedStaging,
@@ -90,7 +90,7 @@ impl std::fmt::Display for MemoryOwnershipError {
             ),
             Self::MissingDeviceResident => write!(
                 f,
-                "memory ownership contract has no device-resident resources. Fix: CUDA release paths must declare resident device ownership explicitly."
+                "memory ownership contract has no device-resident resources. Fix: release paths must declare resident device ownership explicitly."
             ),
             Self::MissingBorrowedOutputSlots => write!(
                 f,
@@ -162,30 +162,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn memory_ownership_accepts_cuda_release_boundaries() {
+    fn memory_ownership_accepts_release_boundaries() {
         let proof = validate_memory_ownership_contract(&[
             record("frontend-input", "vyrec", MemoryOwner::HostCaller, true),
             record(
                 "resident-csr",
-                "vyre-cuda",
+                "backend",
                 MemoryOwner::DeviceResident,
                 true,
             ),
             record(
                 "upload-stage",
-                "vyre-cuda",
+                "backend",
                 MemoryOwner::PinnedStaging,
                 true,
             ),
             record(
                 "analysis-output",
-                "vyre-cuda",
+                "backend",
                 MemoryOwner::BorrowedOutputSlot,
                 true,
             ),
             record(
                 "reference-oracle",
-                "vyre-cuda-tests",
+                "backend-parity-tests",
                 MemoryOwner::ParityOnly,
                 false,
             ),
@@ -203,17 +203,17 @@ mod tests {
             validate_memory_ownership_contract(&[
                 record(
                     "resident-csr",
-                    "vyre-cuda",
+                    "backend",
                     MemoryOwner::DeviceResident,
                     true
                 ),
                 record(
                     "analysis-output",
-                    "vyre-cuda",
+                    "backend",
                     MemoryOwner::BorrowedOutputSlot,
                     true,
                 ),
-                record("cpu-oracle", "vyre-cuda", MemoryOwner::ParityOnly, true),
+                record("cpu-oracle", "backend", MemoryOwner::ParityOnly, true),
             ])
             .expect_err("production parity-only memory should fail"),
             MemoryOwnershipError::ParityOnlyInProduction {
@@ -227,7 +227,7 @@ mod tests {
         assert_eq!(
             validate_memory_ownership_contract(&[record(
                 "analysis-output",
-                "vyre-cuda",
+                "backend",
                 MemoryOwner::BorrowedOutputSlot,
                 true,
             )])
@@ -237,7 +237,7 @@ mod tests {
         assert_eq!(
             validate_memory_ownership_contract(&[record(
                 "resident-csr",
-                "vyre-cuda",
+                "backend",
                 MemoryOwner::DeviceResident,
                 true,
             )])

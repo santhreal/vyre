@@ -65,7 +65,7 @@ impl std::fmt::Display for GpuProbeContractError {
             ),
             Self::MissingProbeFailureDetail { gate } => write!(
                 f,
-                "GPU gate `{gate}` failed discovery without adapter/device detail. Fix: report nvidia-smi, CUDA device count, or adapter enumeration output."
+                "GPU gate `{gate}` failed discovery without adapter/device detail. Fix: report the driver probe, device count, or adapter enumeration output."
             ),
         }
     }
@@ -117,10 +117,10 @@ pub fn validate_gpu_probe_contract(
 
 fn has_probe_detail(detail: &str) -> bool {
     let lower = detail.to_ascii_lowercase();
-    lower.contains("nvidia-smi")
-        || lower.contains("cuda")
-        || lower.contains("adapter")
+    lower.contains("adapter")
         || lower.contains("device")
+        || lower.contains("driver")
+        || lower.contains("backend")
 }
 
 #[cfg(test)]
@@ -130,9 +130,9 @@ mod tests {
     #[test]
     fn gpu_probe_contract_accepts_discovered_gpu_records() {
         let proof = validate_gpu_probe_contract(&[GpuProbeRecord {
-            gate: "cuda parity",
-            probe: "nvidia-smi",
-            detail: "NVIDIA GeForce RTX 5090 CUDA device 0",
+            gate: "backend parity",
+            probe: "driver probe",
+            detail: "backend adapter 0, device 0",
             gpu_discovered: true,
             skipped: false,
         }])
@@ -146,15 +146,15 @@ mod tests {
     fn gpu_probe_contract_rejects_skipped_gpu_tests() {
         assert_eq!(
             validate_gpu_probe_contract(&[GpuProbeRecord {
-                gate: "cuda parity",
-                probe: "nvidia-smi",
+                gate: "backend parity",
+                probe: "driver probe",
                 detail: "disabled: no GPU",
                 gpu_discovered: false,
                 skipped: true,
             }])
             .expect_err("skip-on-no-GPU must fail"),
             GpuProbeContractError::SkippedGpuGate {
-                gate: "cuda parity".to_owned(),
+                gate: "backend parity".to_owned(),
             }
         );
     }
@@ -163,15 +163,15 @@ mod tests {
     fn gpu_probe_contract_requires_failure_detail() {
         assert_eq!(
             validate_gpu_probe_contract(&[GpuProbeRecord {
-                gate: "cuda parity",
-                probe: "nvidia-smi",
+                gate: "backend parity",
+                probe: "driver probe",
                 detail: "not available",
                 gpu_discovered: false,
                 skipped: false,
             }])
             .expect_err("missing device detail should fail"),
             GpuProbeContractError::MissingProbeFailureDetail {
-                gate: "cuda parity".to_owned(),
+                gate: "backend parity".to_owned(),
             }
         );
     }

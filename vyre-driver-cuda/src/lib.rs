@@ -75,8 +75,6 @@ pub mod synthetic_device_caps;
 mod target_compiler;
 /// CUDA execution planning for unified token/fact graph frontier waves.
 pub mod token_fact_frontier_execution;
-/// Adapter from unified token/fact graph layouts to CUDA resident bytes.
-pub mod token_fact_graph_cuda_adapter;
 /// CUDA warp-word bit-parallel automata layout evidence.
 pub mod warp_word_automata;
 
@@ -169,10 +167,6 @@ pub use resident_graph_session::{
 pub use token_fact_frontier_execution::{
     plan_cuda_token_fact_frontier_execution, plan_cuda_token_fact_frontier_execution_with_scratch,
     CudaTokenFactFrontierExecutionError, CudaTokenFactFrontierExecutionPlan,
-};
-pub use token_fact_graph_cuda_adapter::{
-    adapt_token_fact_graph_to_cuda_layout, CudaTokenFactGraphLayout, CudaTokenFactGraphLayoutError,
-    CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS, CUDA_TOKEN_FACT_DEGREE_PROFILE_RANKS,
 };
 pub use warp_word_automata::{
     plan_cuda_warp_word_automata_layout, CudaWarpWordAutomataLayoutError,
