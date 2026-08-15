@@ -262,7 +262,7 @@ use super::barrier;
 use super::binding::{check_sibling_duplicate, Binding};
 use super::expr_rules;
 use super::shadowing;
-use super::typecheck::expr_type;
+use super::typecheck::{expr_type, ScopeTypes};
 use super::uniformity::is_uniform;
 // use super::report::warn;
 
@@ -680,7 +680,7 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         if !duplicate_sibling {
             shadowing::check_local(name, &self.scope, self.options, &mut self.errors);
         }
-        let ty_opt = expr_type(value, &self.buffers, &self.scope);
+        let ty_opt = expr_type(value, &mut ScopeTypes::new(&self.buffers, &self.scope));
         let ty = ty_opt.clone().unwrap_or(DataType::U32);
         let ty_known = ty_opt.is_some();
         let uniform = is_uniform(value, &self.scope);

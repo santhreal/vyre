@@ -1,3 +1,4 @@
+use super::duplication::may_duplicate;
 use crate::ir::{BinOp, Expr, UnOp};
 use crate::optimizer::passes::algebraic::const_fold::is_float_expr;
 
@@ -187,6 +188,10 @@ pub(super) fn shift_add_decompose(x: &Expr, constant: &Expr) -> Option<Expr> {
     if let Some(chain) = shift_add_chain(x, c) {
         return Some(chain);
     }
+    // Both fallback shapes below write `x` into two terms.
+    if !may_duplicate(x, 2) {
+        return None;
+    }
     for hi in (1u32..=16).rev() {
         let high = 1u32 << hi;
         if high > c {
@@ -232,7 +237,7 @@ pub(super) fn shift_add_decompose(x: &Expr, constant: &Expr) -> Option<Expr> {
 /// `21`, `27`, `31`) while the cost gate avoids replacing one multiply with a
 /// longer ALU chain.
 pub(super) fn shift_add_chain(x: &Expr, c: u32) -> Option<Expr> {
-    if c <= 1 || c.is_power_of_two() || operand_duplication_cost(x) > 1 {
+    if c <= 1 || c.is_power_of_two() {
         return None;
     }
 
@@ -242,6 +247,10 @@ pub(super) fn shift_add_chain(x: &Expr, c: u32) -> Option<Expr> {
     }
     let cost = shift_add_cost(&terms);
     if cost > MAX_SHIFT_ADD_CHAIN_COST {
+        return None;
+    }
+    // The chain writes `x` once per term.
+    if !may_duplicate(x, u32::try_from(terms.len()).unwrap_or(u32::MAX)) {
         return None;
     }
 
@@ -305,23 +314,6 @@ fn shifted_term(x: &Expr, shift: u32) -> Expr {
         x.clone()
     } else {
         Expr::shl(x.clone(), Expr::u32(shift))
-    }
-}
-
-fn operand_duplication_cost(expr: &Expr) -> u32 {
-    match expr {
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => 0,
-        Expr::Load { .. } | Expr::BufLen { .. } => 1,
-        _ => 2,
     }
 }
 
@@ -512,16 +504,34 @@ pub(super) fn compute_div_magic(d: u32) -> DivMagic {
     }
 }
 
+/// How many times the Granlund-Montgomery sequence for `/ d` writes its
+/// dividend. The fixup form reads `n` again to correct the truncated product.
+///
+/// A divisor outside the transform's domain reads it once, because the
+/// sequence is never built for one; `compute_div_magic` divides by `d` and
+/// must not be reached with a divisor it cannot factor.
+pub(super) fn div_operand_copies(d: u32) -> u32 {
+    if d <= 1 || d.is_power_of_two() {
+        return 1;
+    }
+    if compute_div_magic(d).needs_fixup {
+        2
+    } else {
+        1
+    }
+}
+
 /// Emit the Granlund-Montgomery sequence for `dividend / d`.
 ///
-/// Returns `None` if `d` is 0, 1, or a power of two (handled elsewhere).
+/// Returns `None` if `d` is 0, 1, or a power of two (handled elsewhere), or if
+/// the fixup form would have to evaluate `dividend` twice and that is not safe.
 ///
 /// For non-fixup: `mulhi(n, M) >> s`  -  2 instructions, ~5 GPU cycles.
 /// For fixup:     `t = mulhi(n, M); (t + ((n - t) >> 1)) >> (s - 1)`
 ///                 -  5 instructions, ~9 GPU cycles.
 /// Original `Div`: 1 instruction but ~50-100 GPU cycles (software).
 pub(super) fn granlund_montgomery_div(dividend: &Expr, d: u32) -> Option<Expr> {
-    if d <= 1 || d.is_power_of_two() {
+    if d <= 1 || d.is_power_of_two() || !may_duplicate(dividend, div_operand_copies(d)) {
         return None;
     }
 

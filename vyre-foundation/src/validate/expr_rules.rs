@@ -7,7 +7,7 @@ use crate::validate::call_rules::validate_call;
 use crate::validate::cast::{cast_is_narrowing, cast_is_valid, cast_target_set};
 use crate::validate::depth;
 use crate::validate::report::warn;
-use crate::validate::typecheck::{self, expr_type};
+use crate::validate::typecheck::{self, expr_type, ScopeTypes};
 use crate::validate::{err, Binding, ValidationError, ValidationOptions, ValidationReport};
 use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashMap;
@@ -115,7 +115,7 @@ pub(crate) fn validate_expr(
             // floats; integer operands silently become (a * b + c) via
             // u32 arithmetic today, which is NOT what the node promises.
             for (slot, operand) in [("a", a.as_ref()), ("b", b.as_ref()), ("c", c.as_ref())] {
-                if let Some(ty) = expr_type(operand, buffers, scope) {
+                if let Some(ty) = expr_type(operand, &mut ScopeTypes::new(buffers, scope)) {
                     if ty != DataType::F32 {
                         report.errors.push(err("V028", ValidationPhase::Type, ValidationLocation::Operand {
                                 node: 0,
@@ -144,8 +144,8 @@ pub(crate) fn validate_expr(
             // VAL-002: Select requires the two branches to agree on type.
             // Divergent branch types give the node an ambiguous static type
             // and break downstream lowering + reference evaluation.
-            let t_ty = expr_type(true_val, buffers, scope);
-            let f_ty = expr_type(false_val, buffers, scope);
+            let t_ty = expr_type(true_val, &mut ScopeTypes::new(buffers, scope));
+            let f_ty = expr_type(false_val, &mut ScopeTypes::new(buffers, scope));
             if let (Some(t), Some(f)) = (&t_ty, &f_ty) {
                 if t != f {
                     report.errors.push(err(
@@ -166,7 +166,7 @@ pub(crate) fn validate_expr(
                     options.backend_name()
                 ), format!("choose a target type this backend supports, or validate against a backend that advertises `{target}` cast support")));
             }
-            if let Some(src) = expr_type(value, buffers, scope) {
+            if let Some(src) = expr_type(value, &mut ScopeTypes::new(buffers, scope)) {
                 if target == &DataType::Bytes && src != DataType::Bytes {
                     report.errors.push(err(
                         "V023",
@@ -235,7 +235,8 @@ pub(crate) fn validate_expr(
             // failure is uniform across every backend instead of surfacing late
             // (and only on backends whose emit happens to catch it).
             if op.is_bitwise() {
-                if let Some(DataType::F32) = expr_type(value, buffers, scope) {
+                if let Some(DataType::F32) = expr_type(value, &mut ScopeTypes::new(buffers, scope))
+                {
                     report.errors.push(err("V047", ValidationPhase::Expression, ValidationLocation::Program, format!(
                         "subgroup `{op:?}` is a bitwise reduction and rejects f32 operands (its value has type `f32`)"
                     ), format!(
