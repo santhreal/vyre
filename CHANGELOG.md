@@ -1689,6 +1689,19 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `vyre-libs` composition domains behind driver cache invalidation, substrate
   telemetry, and the megakernel planner's program builders. Pre-1.0 rename with
   no alias.
+- Target-payload admission has one owner for the last five clusters the four
+  driver copies still shared. `MaterializerDevice::admit_modules` runs the
+  admit-size-decode loop and each backend supplies only its dialect decode;
+  `InstanceCore::submit_host_only` is the whole submission path for a backend
+  with no resident route, and it reads the refused backend off the recorded
+  device generation instead of a constant restated at the call site;
+  `InstanceCore::ordered_resident_resources` owns the resident handle lookup, so
+  the two backends with a resident path no longer each project buffer names onto
+  canonical values; `materialize::omitted_output` owns the omitted-output
+  rejection, whose sentence six copies had written out and one had already lost
+  the recompile instruction the other five give; and `executable_module!`
+  answers the two `ExecutableModule` methods every backend stored under the same
+  two field names.
 
 ### Removed
 
@@ -1696,6 +1709,15 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   C-frontend test files or parser release artifacts. Diagnostic and
   preprocessing conformance now belongs to the live frontend and conformance
   paths.
+- `RoutingDecision::CpuSimd` is gone from `vyre-runtime`. Vyre executes compute
+  on a device; the only host arithmetic in the workspace is `vyre-reference`,
+  which is a parity oracle and not a route. No executor arm ever served the
+  variant and the standard policy rewrote every suggestion to the persistent
+  megakernel regardless, so what the declaration bought was a caller that
+  believed a degradation path existed. The routing contract test asserted one
+  plan did not pick that route; it now asserts the router declares no host
+  route at all, reading the variant set and the module text from source so a
+  route added back under any spelling fails on arrival.
 - Neural operations and opaque-payload helpers now use their category-owned
   module paths. Flat compatibility re-exports and the `matching::ops` shim are
   gone; unclassified backend failures use `BackendError::Other`.

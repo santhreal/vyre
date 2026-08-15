@@ -19,9 +19,7 @@ mod native {
 
     /// Rejection for a dispatch that skipped a declared output slot.
     fn omitted_output(output_index: usize, name: &str) -> BackendError {
-        materialize::invalid_module(&format!(
-            "Metal target module omitted output {output_index} for Program buffer `{name}`"
-        ))
+        materialize::omitted_output("Metal target module", output_index, name)
     }
 
     pub(super) struct MetalMaterializer {
@@ -37,35 +35,37 @@ mod native {
             artifact: &Artifact,
             payload: &TargetPayload,
         ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
-            let admitted =
-                materialize::admit(artifact, payload, self.descriptor.target(METAL_BACKEND_ID))?;
-            let mut modules = Vec::with_capacity(admitted.len());
-            for admitted_module in admitted {
-                let target: vyre_emit_metal::MetalArtifact =
-                    serde_json::from_slice(&admitted_module.image.bytes).map_err(|error| {
-                        materialize::invalid_module(&format!(
-                            "Metal target artifact is malformed: {error}"
-                        ))
-                    })?;
-                if admitted_module.image.entry_point != target.entry_point {
-                    return Err(materialize::invalid_module(
-                        "module bundle and Metal artifact entry points disagree",
-                    ));
-                }
-                let program = admitted_module.program;
-                let config = admitted_module.config;
-                if target.workgroup_size != program.workgroup_size {
-                    return Err(materialize::invalid_module(
-                        "Metal artifact workgroup geometry disagrees with the selected Program",
-                    ));
-                }
-                let module = self.backend.materialize_target_module(target)?;
-                modules.push(MetalExecutableModule {
-                    program,
-                    module,
-                    config,
-                });
-            }
+            let modules = self.descriptor.admit_modules(
+                METAL_BACKEND_ID,
+                artifact,
+                payload,
+                |admitted_module| {
+                    let target: vyre_emit_metal::MetalArtifact =
+                        serde_json::from_slice(&admitted_module.image.bytes).map_err(|error| {
+                            materialize::invalid_module(&format!(
+                                "Metal target artifact is malformed: {error}"
+                            ))
+                        })?;
+                    if admitted_module.image.entry_point != target.entry_point {
+                        return Err(materialize::invalid_module(
+                            "module bundle and Metal artifact entry points disagree",
+                        ));
+                    }
+                    let program = admitted_module.program;
+                    let config = admitted_module.config;
+                    if target.workgroup_size != program.workgroup_size {
+                        return Err(materialize::invalid_module(
+                            "Metal artifact workgroup geometry disagrees with the selected Program",
+                        ));
+                    }
+                    let module = self.backend.materialize_target_module(target)?;
+                    Ok(MetalExecutableModule {
+                        program,
+                        module,
+                        config,
+                    })
+                },
+            )?;
             Ok(Box::new(MetalArtifactInstance {
                 core: self
                     .descriptor
@@ -89,27 +89,18 @@ mod native {
     }
 
     impl ExecutableModule for MetalExecutableModule {
-        fn program(&self) -> &Program {
-            &self.program
-        }
-
-        fn config(&self) -> &DispatchConfig {
-            &self.config
-        }
+        vyre_driver::executable_module!();
     }
 
     impl ArtifactInstance for MetalArtifactInstance {
         vyre_driver::artifact_instance_identity!();
 
         fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
-            self.core.accept(&bindings)?;
-            let invocation_grid = bindings.invocation_grid();
-            let state = materialize::host_only_bindings(
+            self.core.submit_host_only(
                 &bindings,
                 "Metal artifact resident binding",
-                METAL_BACKEND_ID,
-            )?;
-            Ok(self.core.ready(self.execute(state, invocation_grid)))
+                |state, invocation_grid| self.execute(state, invocation_grid),
+            )
         }
     }
 

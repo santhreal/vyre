@@ -34,20 +34,12 @@ const MESSAGES: InstanceMessages = InstanceMessages {
 
 /// Rejection for a host dispatch that skipped a declared output slot.
 fn omitted_output(output_index: usize, name: &str) -> BackendError {
-    BackendError::InvalidProgram {
-        fix: format!(
-            "Fix: CUDA target module omitted output {output_index} for Program buffer `{name}`."
-        ),
-    }
+    materialize::omitted_output("CUDA target module", output_index, name)
 }
 
 /// Rejection for a resident dispatch that skipped a declared output slot.
 fn omitted_resident_output(output_index: usize, name: &str) -> BackendError {
-    BackendError::InvalidProgram {
-        fix: format!(
-            "Fix: CUDA resident target module omitted output {output_index} for Program buffer `{name}`."
-        ),
-    }
+    materialize::omitted_output("CUDA resident target module", output_index, name)
 }
 
 pub(crate) struct CudaMaterializer {
@@ -64,38 +56,40 @@ impl ArtifactMaterializer for CudaMaterializer {
         artifact: &Artifact,
         payload: &TargetPayload,
     ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
-        let admitted =
-            materialize::admit(artifact, payload, self.descriptor.target(CUDA_BACKEND_ID))?;
-        let mut modules = Vec::with_capacity(admitted.len());
-        for module in admitted {
-            let ptx = std::str::from_utf8(&module.image.bytes).map_err(|error| {
-                materialize::invalid_module(&format!("PTX target module is not UTF-8: {error}"))
-            })?;
-            if !ptx.contains(".visible .entry main(") {
-                return Err(materialize::invalid_module(
-                    "PTX target module does not define `.visible .entry main`",
-                ));
-            }
-            let prepared = self
-                .backend
-                .prepare_static_dispatch(&module.program, &module.config)?;
-            let module_key = self.backend.module_cache_key_for_raw_ptx_artifact(ptx)?;
-            self.backend.module_for_ptx_with_key(ptx, module_key)?;
-            let ptx: Arc<str> = Arc::from(ptx);
-            let pipeline = Arc::new(CudaCompiledPipeline::new_from_target_payload(
-                self.backend.clone(),
-                Arc::clone(&module.program),
-                ptx,
-                module_key,
-                &module.config,
-                prepared,
-            )?);
-            modules.push(CudaExecutableModule {
-                program: module.program,
-                pipeline,
-                config: module.config,
-            });
-        }
+        let modules = self.descriptor.admit_modules(
+            CUDA_BACKEND_ID,
+            artifact,
+            payload,
+            |module| {
+                let ptx = std::str::from_utf8(&module.image.bytes).map_err(|error| {
+                    materialize::invalid_module(&format!("PTX target module is not UTF-8: {error}"))
+                })?;
+                if !ptx.contains(".visible .entry main(") {
+                    return Err(materialize::invalid_module(
+                        "PTX target module does not define `.visible .entry main`",
+                    ));
+                }
+                let prepared = self
+                    .backend
+                    .prepare_static_dispatch(&module.program, &module.config)?;
+                let module_key = self.backend.module_cache_key_for_raw_ptx_artifact(ptx)?;
+                self.backend.module_for_ptx_with_key(ptx, module_key)?;
+                let ptx: Arc<str> = Arc::from(ptx);
+                let pipeline = Arc::new(CudaCompiledPipeline::new_from_target_payload(
+                    self.backend.clone(),
+                    Arc::clone(&module.program),
+                    ptx,
+                    module_key,
+                    &module.config,
+                    prepared,
+                )?);
+                Ok(CudaExecutableModule {
+                    program: module.program,
+                    pipeline,
+                    config: module.config,
+                })
+            },
+        )?;
         Ok(Box::new(CudaArtifactInstance {
             core: self.descriptor.instance(artifact, payload, MESSAGES),
             modules,
@@ -115,13 +109,7 @@ struct CudaArtifactInstance {
 }
 
 impl ExecutableModule for CudaExecutableModule {
-    fn program(&self) -> &Program {
-        &self.program
-    }
-
-    fn config(&self) -> &DispatchConfig {
-        &self.config
-    }
+    vyre_driver::executable_module!();
 }
 
 impl ArtifactInstance for CudaArtifactInstance {
@@ -174,21 +162,17 @@ impl CudaArtifactInstance {
             "CUDA resident submission for multi-module artifacts",
         )?;
         let plan = BindingPlan::build(&module.program)?;
-        let mut ordered = Vec::with_capacity(plan.bindings.len());
-        for binding in resident_resource_bindings(&plan) {
-            let buffer = &module.program.buffers()[binding.buffer_index];
-            let value = self.core.value_for_buffer(buffer.name())?;
-            let resource = resources
-                .get(&value)
-                .ok_or_else(|| BackendError::InvalidProgram {
-                    fix: format!(
-                        "Fix: bind canonical artifact value {} for resident Program buffer `{}`.",
-                        value.0,
-                        buffer.name()
-                    ),
-                })?;
-            ordered.push(resource.clone());
-        }
+        let ordered = self.core.ordered_resident_resources(
+            resident_resource_bindings(&plan)
+                .map(|binding| module.program.buffers()[binding.buffer_index].name()),
+            resources,
+            |value, name| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: bind canonical artifact value {} for resident Program buffer `{name}`.",
+                    value.0
+                ),
+            },
+        )?;
         let dispatched = module
             .pipeline
             .dispatch_artifact_resident_timed(&ordered, invocation_grid)?;

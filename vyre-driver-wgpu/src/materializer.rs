@@ -23,16 +23,12 @@ use vyre_lower::TRAP_SIDECAR_NAME;
 
 /// Rejection for a host dispatch that skipped a declared output slot.
 fn omitted_output(output_index: usize, name: &str) -> BackendError {
-    materialize::invalid_module(&format!(
-        "WGSL target module omitted output {output_index} for Program buffer `{name}`"
-    ))
+    materialize::omitted_output("WGSL target module", output_index, name)
 }
 
 /// Rejection for a resident dispatch that skipped a declared output slot.
 fn omitted_resident_output(output_index: usize, name: &str) -> BackendError {
-    materialize::invalid_module(&format!(
-        "WGPU resident target module omitted output {output_index} for Program buffer `{name}`"
-    ))
+    materialize::omitted_output("WGPU resident target module", output_index, name)
 }
 
 /// Resident-path rejection text. This backend names an unproduced or
@@ -71,71 +67,72 @@ impl ArtifactMaterializer for WgpuMaterializer {
         if !self.descriptor.is_healthy() {
             return Err(device_lost_error(self.descriptor.identity()));
         }
-        let admitted =
-            materialize::admit(artifact, payload, self.descriptor.target(WGPU_BACKEND_ID))?;
-        let mut modules = Vec::with_capacity(admitted.len());
-        for module in admitted {
-            let target: WgpuTargetModule =
-                serde_json::from_slice(&module.image.bytes).map_err(|error| {
-                    materialize::invalid_module(&format!(
-                        "WGSL target module is malformed: {error}"
-                    ))
-                })?;
-            if target.schema_version != WGPU_TARGET_MODULE_SCHEMA_VERSION {
-                return Err(materialize::invalid_module(
-                    "WGSL target module schema is unsupported",
-                ));
-            }
-            if !target.wgsl.contains("@compute") || !target.wgsl.contains("fn main(") {
-                return Err(materialize::invalid_module(
-                    "WGSL target module does not define compute entry point `main`",
-                ));
-            }
-            let program = module.program;
-            let config = module.config;
-            let binding_plan = BindingPlan::build(&program)?;
-            let input_slots = module
-                .image
-                .descriptor
-                .bindings
-                .slots
-                .iter()
-                .filter(|slot| {
-                    descriptor_bind_group(slot.memory_class).is_some()
-                        && slot.name != TRAP_SIDECAR_NAME
-                })
-                .map(|slot| {
-                    let required = binding_plan
-                        .bindings
-                        .iter()
-                        .find(|binding| program.buffers()[binding.buffer_index].name() == slot.name)
-                        .is_none_or(|binding| binding.input_index.is_some());
-                    ArtifactInputSlot {
-                        name: slot.name.clone(),
-                        required,
+        let modules =
+            self.descriptor
+                .admit_modules(WGPU_BACKEND_ID, artifact, payload, |module| {
+                    let target: WgpuTargetModule = serde_json::from_slice(&module.image.bytes)
+                        .map_err(|error| {
+                            materialize::invalid_module(&format!(
+                                "WGSL target module is malformed: {error}"
+                            ))
+                        })?;
+                    if target.schema_version != WGPU_TARGET_MODULE_SCHEMA_VERSION {
+                        return Err(materialize::invalid_module(
+                            "WGSL target module schema is unsupported",
+                        ));
                     }
-                })
-                .collect();
-            let pipeline = self.backend.compile_pipeline(
-                &program,
-                &config,
-                Some(crate::pipeline::AuthenticatedTarget {
-                    wgsl: &target.wgsl,
-                    descriptor: &module.image.descriptor,
-                }),
-            )?;
-            let resident_slots = pipeline
-                .persistent_resource_names()
-                .map(str::to_owned)
-                .collect();
-            modules.push(WgpuExecutableModule {
-                program,
-                pipeline,
-                input_slots,
-                resident_slots,
-                config,
-            });
-        }
+                    if !target.wgsl.contains("@compute") || !target.wgsl.contains("fn main(") {
+                        return Err(materialize::invalid_module(
+                            "WGSL target module does not define compute entry point `main`",
+                        ));
+                    }
+                    let program = module.program;
+                    let config = module.config;
+                    let binding_plan = BindingPlan::build(&program)?;
+                    let input_slots = module
+                        .image
+                        .descriptor
+                        .bindings
+                        .slots
+                        .iter()
+                        .filter(|slot| {
+                            descriptor_bind_group(slot.memory_class).is_some()
+                                && slot.name != TRAP_SIDECAR_NAME
+                        })
+                        .map(|slot| {
+                            let required = binding_plan
+                                .bindings
+                                .iter()
+                                .find(|binding| {
+                                    program.buffers()[binding.buffer_index].name() == slot.name
+                                })
+                                .is_none_or(|binding| binding.input_index.is_some());
+                            ArtifactInputSlot {
+                                name: slot.name.clone(),
+                                required,
+                            }
+                        })
+                        .collect();
+                    let pipeline = self.backend.compile_pipeline(
+                        &program,
+                        &config,
+                        Some(crate::pipeline::AuthenticatedTarget {
+                            wgsl: &target.wgsl,
+                            descriptor: &module.image.descriptor,
+                        }),
+                    )?;
+                    let resident_slots = pipeline
+                        .persistent_resource_names()
+                        .map(str::to_owned)
+                        .collect();
+                    Ok(WgpuExecutableModule {
+                        program,
+                        pipeline,
+                        input_slots,
+                        resident_slots,
+                        config,
+                    })
+                })?;
         Ok(Box::new(WgpuArtifactInstance {
             core: self
                 .descriptor
@@ -166,13 +163,7 @@ struct WgpuArtifactInstance {
 }
 
 impl ExecutableModule for WgpuExecutableModule {
-    fn program(&self) -> &Program {
-        &self.program
-    }
-
-    fn config(&self) -> &DispatchConfig {
-        &self.config
-    }
+    vyre_driver::executable_module!();
 }
 
 impl ArtifactInstance for WgpuArtifactInstance {
@@ -254,17 +245,16 @@ impl WgpuArtifactInstance {
             &self.modules,
             "WGPU resident submission for multi-module artifacts",
         )?;
-        let mut ordered = Vec::with_capacity(module.resident_slots.len());
-        for name in &module.resident_slots {
-            let value = self.core.value_for_buffer(name)?;
-            let resource = resources.get(&value).ok_or_else(|| {
+        let ordered = self.core.ordered_resident_resources(
+            module.resident_slots.iter().map(String::as_str),
+            resources,
+            |value, name| {
                 materialize::invalid_module(&format!(
                     "canonical artifact value {} for resident target binding `{name}` is unbound",
                     value.0
                 ))
-            })?;
-            ordered.push(resource.clone());
-        }
+            },
+        )?;
         let mut config = module.config.clone();
         materialize::override_grid(&mut config, invocation_grid);
         let dispatched = module

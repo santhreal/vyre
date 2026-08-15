@@ -266,6 +266,35 @@ impl MaterializerDevice {
     ) -> InstanceCore {
         InstanceCore::new(artifact, payload, self.identity.clone(), messages)
     }
+
+    /// Admit a payload and decode each admitted module in this backend's dialect.
+    ///
+    /// Every backend wrote the same four steps around the one that is its own:
+    /// call [`admit`], size a vector to the admitted count, push one decoded
+    /// module per admitted module, and stop at the first rejection. Only
+    /// `decode` is target-specific, and it is the only thing a backend has to
+    /// supply. Restating the loop per backend is how one of them came to
+    /// allocate without the admitted capacity and another to keep going past a
+    /// module it had already rejected.
+    ///
+    /// # Errors
+    ///
+    /// Returns whatever [`admit`] rejects, and whatever `decode` rejects for
+    /// the first module it refuses.
+    pub fn admit_modules<M>(
+        &self,
+        backend_id: &str,
+        artifact: &Artifact,
+        payload: &TargetPayload,
+        mut decode: impl FnMut(AdmittedModule) -> Result<M, BackendError>,
+    ) -> Result<Vec<M>, BackendError> {
+        let admitted = admit(artifact, payload, self.target(backend_id))?;
+        let mut modules = Vec::with_capacity(admitted.len());
+        for module in admitted {
+            modules.push(decode(module)?);
+        }
+        Ok(modules)
+    }
 }
 
 impl Device for MaterializerDevice {
@@ -351,6 +380,20 @@ pub fn unbound_input(value: ArtifactValueId, name: &str) -> BackendError {
     }
 }
 
+/// Rejection for a declared output slot the target module never produced.
+///
+/// `module_label` names the dialect and path in the backend's own words, which
+/// is the only part the four backends disagreed on. The sentence around it was
+/// written six times, and one of the six had already lost the recompile
+/// instruction the other five give, so the same defect read as two different
+/// classes of failure depending on which backend hit it.
+#[must_use]
+pub fn omitted_output(module_label: &str, output_index: usize, name: &str) -> BackendError {
+    invalid_module(&format!(
+        "{module_label} omitted output {output_index} for Program buffer `{name}`"
+    ))
+}
+
 /// One executable module of a materialized instance, as the shared execution
 /// loop reads it.
 ///
@@ -364,6 +407,26 @@ pub trait ExecutableModule {
     fn program(&self) -> &Program;
     /// Dispatch configuration the payload entry declared.
     fn config(&self) -> &DispatchConfig;
+}
+
+/// Answer the two [`ExecutableModule`] methods from fields named `program` and
+/// `config`.
+///
+/// The trait's whole purpose is to let the shared execution loop read those two
+/// out of a record it does not otherwise know, and every backend stores them
+/// under those names, so every backend wrote the same eight lines. A backend
+/// that stores them elsewhere writes the impl by hand instead.
+#[macro_export]
+macro_rules! executable_module {
+    () => {
+        fn program(&self) -> &vyre_foundation::ir::Program {
+            &self.program
+        }
+
+        fn config(&self) -> &$crate::DispatchConfig {
+            &self.config
+        }
+    };
 }
 
 /// Identity and artifact ABI projection every materialized instance keeps.
@@ -586,6 +649,69 @@ impl InstanceCore {
             resident(&bound.resident, invocation_grid)
         };
         Ok(self.ready(result))
+    }
+
+    /// Route one submission on a backend that has no resident execution path.
+    ///
+    /// The refusal, the grid, and the host state come from the same three calls
+    /// wherever there is only one path to route to, so the backends that have
+    /// one wrote the same four lines. `feature` names the refused capability in
+    /// the backend's own words; the backend itself comes from the recorded
+    /// device generation rather than a constant restated at the call site, so a
+    /// materializer cannot report a resident refusal against a backend it did
+    /// not acquire.
+    ///
+    /// # Errors
+    ///
+    /// Returns the backend's `foreign_artifact` rejection when the bindings name
+    /// another artifact, and `BackendError::UnsupportedFeature` when any value
+    /// is bound to a device-resident resource. A failure inside `host` is
+    /// carried by the returned submission instead, because the execution it
+    /// describes did begin.
+    pub fn submit_host_only(
+        &self,
+        bindings: &BindingSet,
+        feature: &str,
+        host: impl FnOnce(
+            BTreeMap<ArtifactValueId, Vec<u8>>,
+            Option<[u32; 3]>,
+        ) -> Result<Completion, BackendError>,
+    ) -> Result<Box<dyn Submission>, BackendError> {
+        self.accept(bindings)?;
+        let invocation_grid = bindings.invocation_grid();
+        let state = host_only_bindings(bindings, feature, &self.device.backend)?;
+        Ok(self.ready(host(state, invocation_grid)))
+    }
+
+    /// Resolve resident handles into the order `names` declares.
+    ///
+    /// A resident launch takes an ordered handle list, and the order is the
+    /// backend's: one reads it off the binding plan's non-shared roles, another
+    /// off the persistent resource names its pipeline reports. What neither
+    /// owns is the lookup, which is the same three steps per name and was
+    /// written once per backend: project the buffer name onto its canonical
+    /// artifact value, find the resource bound to that value, and refuse when
+    /// nothing is.
+    ///
+    /// # Errors
+    ///
+    /// Returns `unmapped_buffer` for a name outside the artifact ABI, and
+    /// `unbound` for a declared resident name whose canonical value carries no
+    /// resource.
+    pub fn ordered_resident_resources<'names>(
+        &self,
+        names: impl IntoIterator<Item = &'names str>,
+        resources: &BTreeMap<ArtifactValueId, Resource>,
+        unbound: impl Fn(ArtifactValueId, &str) -> BackendError,
+    ) -> Result<Vec<Resource>, BackendError> {
+        let names = names.into_iter();
+        let mut ordered = Vec::with_capacity(names.size_hint().0);
+        for name in names {
+            let value = self.value_for_buffer(name)?;
+            let resource = resources.get(&value).ok_or_else(|| unbound(value, name))?;
+            ordered.push(resource.clone());
+        }
+        Ok(ordered)
     }
 
     /// Dispatch every module in order and complete the accumulated state.
