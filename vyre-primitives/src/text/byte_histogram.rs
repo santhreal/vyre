@@ -1,8 +1,8 @@
 //! Byte histogram primitive over source bytes.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for the 256-bin byte histogram primitive.
@@ -91,13 +91,13 @@ fn byte_histogram_256_child_with_source_type(
     histogram: &str,
     count: u32,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(BYTE_HISTOGRAM_256_OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        BYTE_HISTOGRAM_256_OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(byte_histogram_256_body(input, histogram, count)),
-    }
+        },
+        byte_histogram_256_body(input, histogram, count),
+    )
 }
 
 /// Standalone histogram program for primitive-level conformance.
@@ -140,11 +140,10 @@ fn byte_histogram_256_with_source_type(
                 .with_output_byte_range(0..256 * 4),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(BYTE_HISTOGRAM_256_OP_ID),
-            source_region: None,
-            body: Arc::new(byte_histogram_256_body(input, histogram, count)),
-        }],
+        vec![wrap_anonymous_region(
+            BYTE_HISTOGRAM_256_OP_ID,
+            byte_histogram_256_body(input, histogram, count),
+        )],
     )
 }
 

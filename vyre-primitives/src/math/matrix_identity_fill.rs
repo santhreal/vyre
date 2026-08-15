@@ -3,10 +3,13 @@
 //! Every rotation accumulator starts from the identity, so the seeding pass is
 //! its own operation rather than three lines repeated inside each solver.
 
-use std::sync::Arc;
-
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::algebra::composition::{
+    trap_program, wrap_anonymous_region, wrap_child_region,
+};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+
+use crate::math::square_matrix_cells;
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::math::matrix_identity_fill";
@@ -41,45 +44,32 @@ pub fn matrix_identity_fill_body(matrix: &str, n: u32) -> Vec<Node> {
 /// Emit [`matrix_identity_fill_body`] as a child region of `parent_op_id`.
 #[must_use]
 pub fn matrix_identity_fill_region(parent_op_id: &str, matrix: &str, n: u32) -> Node {
-    Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(matrix_identity_fill_body(matrix, n)),
-    }
+        },
+        matrix_identity_fill_body(matrix, n),
+    )
 }
 
 /// Build a standalone identity-fill Program over an `n x n` f32 matrix.
 #[must_use]
 pub fn matrix_identity_fill(matrix: &str, n: u32) -> Program {
-    if n == 0 {
-        return crate::invalid_output_program(
-            OP_ID,
-            matrix,
-            DataType::F32,
-            format!("Fix: matrix_identity_fill requires n > 0, got {n}."),
-        );
-    }
-    let Some(cells) = n.checked_mul(n) else {
-        return crate::invalid_output_program(
-            OP_ID,
-            matrix,
-            DataType::F32,
-            format!("Fix: matrix_identity_fill n*n overflows matrix cell count for n={n}."),
-        );
+    let cells = match square_matrix_cells(OP_ID, n) {
+        Ok(cells) => cells,
+        Err(message) => return trap_program(OP_ID, Some((matrix, DataType::F32)), message),
     };
     Program::wrapped(
         vec![BufferDecl::output(matrix, 0, DataType::F32).with_count(cells)],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
                 matrix_identity_fill_body(matrix, n),
-            )]),
-        }],
+            )],
+        )],
     )
 }
 

@@ -1,5 +1,6 @@
 //! Element-wise residual-stream addition.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Expr, Program};
 
 use super::unary::typed_binary_activation_program;
@@ -43,7 +44,7 @@ fn build_residual_add(
     dtype: DataType,
 ) -> Program {
     if n == 0 {
-        return crate::invalid_program(OP_ID, "Fix: residual_add requires n > 0");
+        return trap_program(OP_ID, None, "Fix: residual_add requires n > 0");
     }
     typed_binary_activation_program(OP_ID, residual, branch, output, n, dtype, Expr::add)
 }

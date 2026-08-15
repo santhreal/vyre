@@ -4,9 +4,8 @@
 //! Program. Consumed by a external analyzer's point-lookup predicates (e.g.
 //! `target ∈ frontier`).
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -50,14 +49,13 @@ pub fn bitset_contains(input: &str, index_buffer: &str, out: &str, words: u32) -
             BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
                 body,
-            )]),
-        }],
+            )],
+        )],
     )
 }
 

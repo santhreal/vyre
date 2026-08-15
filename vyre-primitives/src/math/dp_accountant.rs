@@ -29,9 +29,8 @@
 //! formula assumes that doubling pre-scales α to 2α  -  i.e. the caller
 //! provides `alpha[i]` already scaled, the divide is fixed-point.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -50,10 +49,9 @@ pub const OP_ID: &str = "vyre-primitives::math::gaussian_rdp_step";
 #[must_use]
 pub fn gaussian_rdp_step(alpha: &str, sigma_squared: &str, out: &str, count: u32) -> Program {
     if count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("Fix: gaussian_rdp_step requires count > 0, got {count}."),
         );
     }
@@ -93,11 +91,7 @@ pub fn gaussian_rdp_step(alpha: &str, sigma_squared: &str, out: &str, count: u32
             BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(count),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

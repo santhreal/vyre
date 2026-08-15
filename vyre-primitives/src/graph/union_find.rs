@@ -4,9 +4,8 @@
 //! text. Concrete drivers own target spelling; primitives own the backend-
 //! neutral algorithm.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical operation id for one union-find merge pass.
@@ -223,15 +222,11 @@ pub fn union_find_program(
                 .with_count(edge_count.max(1)),
         ],
         UNION_FIND_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new({
-                let mut entry = vec![Node::let_bind("uf_edge", lane)];
-                entry.extend(body);
-                entry
-            }),
-        }],
+        vec![wrap_anonymous_region(OP_ID, {
+            let mut entry = vec![Node::let_bind("uf_edge", lane)];
+            entry.extend(body);
+            entry
+        })],
     )
 }
 

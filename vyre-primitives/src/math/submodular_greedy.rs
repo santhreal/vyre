@@ -41,9 +41,8 @@
 //! Implementation: lane 0 walks all candidates so tie-breaking and
 //! exclusion-mask semantics remain deterministic across backends.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -64,10 +63,9 @@ pub fn argmax_of_marginals(
     n_candidates: u32,
 ) -> Program {
     if n_candidates == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            winner_idx,
-            DataType::U32,
+            Some((winner_idx, DataType::U32)),
             format!("Fix: argmax_of_marginals requires n_candidates > 0, got {n_candidates}."),
         );
     }
@@ -116,11 +114,7 @@ pub fn argmax_of_marginals(
                 .with_count(1),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

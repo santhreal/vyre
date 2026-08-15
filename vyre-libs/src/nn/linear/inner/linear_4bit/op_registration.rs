@@ -1,5 +1,6 @@
 //! Operation-catalog registrations for the INT4 linear builders.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::DataType;
 
 use super::affine_grouped::linear_4bit_affine_grouped;
@@ -10,10 +11,9 @@ inventory::submit! {
         "vyre-libs::nn::linear_4bit",
         || {
             linear_4bit("x", "w", "b", "out", 8, 4).unwrap_or_else(|error| {
-                crate::builder::invalid_builder_trap_program(
+                trap_program(
                     "vyre-libs::nn::linear_4bit",
-                    "out",
-                    DataType::F32,
+                    Some(("out", DataType::F32)),
                     error,
                 )
             })
@@ -42,10 +42,9 @@ inventory::submit! {
         || {
             linear_4bit_affine_grouped("x", "w", "scale", "zp", "b", "out", 8, 2, 4)
                 .unwrap_or_else(|error| {
-                    crate::builder::invalid_builder_trap_program(
+                    trap_program(
                         "vyre-libs::nn::linear_4bit_affine_grouped",
-                        "out",
-                        DataType::F32,
+                        Some(("out", DataType::F32)),
                         error,
                     )
                 })

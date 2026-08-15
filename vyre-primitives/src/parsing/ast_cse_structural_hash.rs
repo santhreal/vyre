@@ -1,8 +1,7 @@
 //! Structural-hash CSE probe/insert wave.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::hash::fnv1a::fnv1a32_mul_xor_word_expr;
@@ -284,11 +283,7 @@ pub fn ast_cse_structural_hash_program(num_nodes: u32, hash_set_capacity: u32) -
             .with_count(1),
         ],
         [num_nodes.max(hash_set_capacity).max(1), 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

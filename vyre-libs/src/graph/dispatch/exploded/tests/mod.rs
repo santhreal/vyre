@@ -8,7 +8,13 @@ use vyre_test_support::exploded_ifds_cases::{arm_coverage, declared_groups, Expl
 
 mod ifds_doubles;
 
-use ifds_doubles::{canonical_expected, MalformedIfdsDispatcher, RecordingIfdsOracle};
+use crate::test_support::StaticOutputs;
+use ifds_doubles::{canonical_expected, RecordingIfdsOracle};
+
+/// The readback shapes below are deliberately malformed, so the dispatcher
+/// asserts nothing about its inputs; what is under test is the decoder's
+/// validation. Production parity uses `CpuOracleDispatcher`.
+const MALFORMED_IFDS_CONTRACT: &str = "malformed exploded-IFDS readback";
 
 /// Every declared exploded-IFDS group has a substrate arm, and every case in it
 /// holds.
@@ -377,8 +383,9 @@ fn empty_via_path_does_not_materialize_program_or_dispatch() {
 
 #[test]
 fn via_rejects_extra_outputs() {
-    let dispatcher = MalformedIfdsDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        MALFORMED_IFDS_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0, 0]),
             u32_slice_to_le_bytes(&[0]),
             u32_slice_to_le_bytes(&[0]),
@@ -386,7 +393,7 @@ fn via_rejects_extra_outputs() {
             u32_slice_to_le_bytes(&[0]),
             u32_slice_to_le_bytes(&[0]),
         ],
-    };
+    );
     let err = build_ifds_csr_via(&dispatcher, 1, 1, 1, &[], &[], &[], &[])
         .expect_err("extra outputs must be rejected");
     assert!(
@@ -397,14 +404,15 @@ fn via_rejects_extra_outputs() {
 
 #[test]
 fn via_rejects_trailing_col_len_bytes() {
-    let dispatcher = MalformedIfdsDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        MALFORMED_IFDS_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0, 0]),
             u32_slice_to_le_bytes(&[0]),
             u32_slice_to_le_bytes(&[0]),
             vec![0, 0, 0, 0, 1],
         ],
-    };
+    );
     let err = build_ifds_csr_via(&dispatcher, 1, 1, 1, &[], &[], &[], &[])
         .expect_err("trailing col_len bytes must be rejected");
     assert!(
@@ -415,14 +423,15 @@ fn via_rejects_trailing_col_len_bytes() {
 
 #[test]
 fn via_rejects_inconsistent_row_ptr_readback() {
-    let dispatcher = MalformedIfdsDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        MALFORMED_IFDS_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[1, 1]),
             u32_slice_to_le_bytes(&[0]),
             u32_slice_to_le_bytes(&[0]),
             u32_slice_to_le_bytes(&[0]),
         ],
-    };
+    );
     let err = build_ifds_csr_via(&dispatcher, 1, 1, 1, &[], &[], &[], &[])
         .expect_err("row_ptr[0] drift must be rejected");
     assert!(

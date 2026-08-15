@@ -60,8 +60,7 @@ pub const fn fnv1a32_update_byte(hash: u32, byte: u8) -> u32 {
     (hash ^ byte as u32).wrapping_mul(FNV1A32_PRIME)
 }
 
-use std::sync::Arc;
-use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id  -  the Tier 3 wrapper registers under this id.
@@ -170,10 +169,9 @@ fn fnv1a32_program_bounded(
     static_count: Option<u32>,
     source_type: DataType,
 ) -> Program {
-    let body = vec![Node::Region {
-        generator: Ident::from(FNV1A32_OP_ID),
-        source_region: None,
-        body: Arc::new(vec![Node::if_then(
+    let body = vec![wrap_anonymous_region(
+        FNV1A32_OP_ID,
+        vec![Node::if_then(
             Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
             vec![
                 Node::let_bind("h", fnv1a32_initial_expr()),
@@ -188,8 +186,8 @@ fn fnv1a32_program_bounded(
                 ),
                 Node::store(out, Expr::u32(0), Expr::var("h")),
             ],
-        )]),
-    }];
+        )],
+    )];
 
     let input_buf = match static_count {
         Some(n) => BufferDecl::storage(input, 0, BufferAccess::ReadOnly, source_type).with_count(n),
@@ -287,10 +285,9 @@ fn fnv1a64_program_bounded(
     static_count: Option<u32>,
     source_type: DataType,
 ) -> Program {
-    let body = vec![Node::Region {
-        generator: Ident::from(FNV1A64_OP_ID),
-        source_region: None,
-        body: Arc::new(vec![Node::if_then(
+    let body = vec![wrap_anonymous_region(
+        FNV1A64_OP_ID,
+        vec![Node::if_then(
             Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
             vec![
                 Node::let_bind("h_lo", Expr::u32(FNV1A64_OFFSET_LO)),
@@ -368,8 +365,8 @@ fn fnv1a64_program_bounded(
                 Node::store(out, Expr::u32(0), Expr::var("h_lo")),
                 Node::store(out, Expr::u32(1), Expr::var("h_hi")),
             ],
-        )]),
-    }];
+        )],
+    )];
 
     let input_buf = match static_count {
         Some(n) => BufferDecl::storage(input, 0, BufferAccess::ReadOnly, source_type).with_count(n),

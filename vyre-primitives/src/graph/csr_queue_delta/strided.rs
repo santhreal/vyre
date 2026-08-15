@@ -1,5 +1,6 @@
 //! Row-strided queue-to-queue sparse CSR expansion.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use crate::graph::csr_frontier_step::{csr_queue_step_program, CsrQueueLanes};
@@ -75,12 +76,9 @@ pub fn csr_queue_delta_strided_enqueue_with(params: CsrQueueDeltaEnqueueParams<'
     let active_queue_capacity = params.active_queue_capacity;
     let next_queue_capacity = params.next_queue_capacity;
     if node_count == 0 || active_queue_capacity == 0 || next_queue_capacity == 0 {
-        return crate::invalid_output_program(CSR_QUEUE_DELTA_STRIDED_ENQUEUE_OP_ID,
-        params.next_len,
-        DataType::U32,
-        format!(
+        return trap_program(CSR_QUEUE_DELTA_STRIDED_ENQUEUE_OP_ID, Some((params.next_len, DataType::U32)), format!(
             "Fix: csr_queue_delta_strided_enqueue requires node_count > 0 and non-zero queue capacities, got node_count={node_count} active_queue_capacity={active_queue_capacity} next_queue_capacity={next_queue_capacity}."
-        ),);
+        ));
     }
     // A wave wider than one launch covers its tail with a grid-stride loop
     // instead of a worst-wave-sized grid.

@@ -14,8 +14,10 @@
 //! rather than element-wise, because near-degenerate eigenvalues admit different-but-valid
 //! eigenvector bases.
 
-use std::sync::Arc;
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::algebra::composition::{
+    trap_program, wrap_anonymous_region, wrap_child_region,
+};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::math::eigenvector_column_sign::eigenvector_column_sign_region;
@@ -160,13 +162,13 @@ pub fn jacobi_eigen_region(
     eigenvalues: &str,
     n: u32,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(jacobi_eigen_body(a, eigenvectors, eigenvalues, n)),
-    }
+        },
+        jacobi_eigen_body(a, eigenvectors, eigenvalues, n),
+    )
 }
 
 /// Build a standalone symmetric-eigendecomposition Program.
@@ -177,21 +179,9 @@ pub fn jacobi_eigen_region(
 /// - `eigenvalues`: `n` output; `eigenvalues[k] = A_rotated[k,k]`.
 #[must_use]
 pub fn symmetric_eigen_jacobi(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32) -> Program {
-    if n == 0 {
-        return crate::invalid_output_program(
-            OP_ID,
-            eigenvalues,
-            DataType::F32,
-            format!("Fix: symmetric_eigen_jacobi requires n > 0, got {n}."),
-        );
-    }
-    let Some(cells) = n.checked_mul(n) else {
-        return crate::invalid_output_program(
-            OP_ID,
-            eigenvalues,
-            DataType::F32,
-            format!("Fix: symmetric_eigen_jacobi n*n overflows matrix cell count for n={n}."),
-        );
+    let cells = match crate::math::square_matrix_cells(OP_ID, n) {
+        Ok(cells) => cells,
+        Err(message) => return trap_program(OP_ID, Some((eigenvalues, DataType::F32)), message),
     };
 
     let body = jacobi_eigen_body(a, eigenvectors, eigenvalues, n);
@@ -204,14 +194,13 @@ pub fn symmetric_eigen_jacobi(a: &str, eigenvectors: &str, eigenvalues: &str, n:
                 .with_count(n),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
                 body,
-            )]),
-        }],
+            )],
+        )],
     )
 }
 

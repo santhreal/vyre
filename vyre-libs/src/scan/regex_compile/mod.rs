@@ -154,7 +154,7 @@ pub enum RegexCompileError {
         /// One-line description of what isn't supported (e.g. "anchors").
         feature: &'static str,
     },
-    /// The compiled NFA exceeds `LANES * 32` states (the lane-major
+    /// The compiled NFA exceeds `LANES * 32` states (the state-major
     /// transition table addresses states with one bit per lane).
     /// Mitigation: split the pattern set across multiple pipelines.
     TooManyStates {

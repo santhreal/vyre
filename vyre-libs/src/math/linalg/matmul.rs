@@ -5,6 +5,7 @@
 //! so the optimizer treats it as opaque unless an inline pass
 //! explicitly unrolls.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::builder::{check_tensors, BuildOptions};
@@ -295,14 +296,7 @@ pub fn matmul(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32) -> Program {
         TensorRef::u32_2d(out, m, n),
     )
     .build()
-    .unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
-            OP_ID,
-            out,
-            DataType::U32,
-            format!("Fix: {err}"),
-        )
-    })
+    .unwrap_or_else(|err| trap_program(OP_ID, Some((out, DataType::U32)), format!("Fix: {err}")))
 }
 
 /// Build a Program that computes `out[i, j] = sum_k a[i, k] * b[k, j] + bias[j]`.
@@ -316,10 +310,9 @@ pub fn matmul_bias(a: &str, b: &str, bias: &str, out: &str, m: u32, k: u32, n: u
     )
     .build()
     .unwrap_or_else(|err| {
-        crate::builder::invalid_builder_trap_program(
+        trap_program(
             OP_ID_BIAS,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("Fix: {err}"),
         )
     })

@@ -21,9 +21,8 @@
 //! features, or graph-signature pipelines without changing the
 //! topology authority layer.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -51,10 +50,9 @@ pub fn vietoris_rips_edge_filter(
     n: u32,
 ) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            edge_mask,
-            DataType::U32,
+            Some((edge_mask, DataType::U32)),
             format!("Fix: vietoris_rips_edge_filter requires n > 0, got {n}."),
         );
     }
@@ -86,11 +84,7 @@ pub fn vietoris_rips_edge_filter(
                 .with_count(cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

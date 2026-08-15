@@ -1,6 +1,6 @@
 //! NFA → DFA subset construction.
 //!
-//! Lowers a lane-major NFA bit-table (the shape `compile_regex_set` /
+//! Lowers a state-major NFA bit-table (the shape `compile_regex_set` /
 //! `nfa_scan_with_plan` emit) into the dense `state * 256 + byte → next_state`
 //! [`CompiledDfa`] the [`crate::matching::dfa_compile`] family also produces.
 //!
@@ -11,7 +11,7 @@
 //! * `classic_ac_bounded_ranges_program` - consumes [`CompiledDfa`], does ONE
 //!   transition-table load per input byte (`transitions[state * 256 + byte]`).
 //!   O(1) per byte regardless of state count.
-//! * `nfa_scan_with_plan` - consumes the lane-major NFA bit-table, walks a
+//! * `nfa_scan_with_plan` - consumes the state-major NFA bit-table, walks a
 //!   bit-vector state with ~LANES² subgroup_shuffle steps per byte. Necessary
 //!   when an NFA cannot be subset-constructed under budget (state explosion),
 //!   but expensive per byte.
@@ -43,12 +43,12 @@ use crate::matching::dfa_compile::CompiledDfa;
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::matching::nfa_to_dfa";
 
-/// Lanes-per-subgroup the lane-major NFA tables are laid out for.
+/// Lanes-per-subgroup the state-major NFA tables are laid out for.
 ///
 /// Contractually equal to `vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP`
 /// (= 32). Hard-coded here so `matching::nfa_to_dfa` can compile without
 /// the `feature = "nfa"` gate - this primitive only consumes the
-/// lane-major bit-table layout, it doesn't invoke the NFA scan kernel.
+/// state-major bit-table layout, it doesn't invoke the NFA scan kernel.
 /// The `layout_matches_nfa_module` test asserts the equality so a future
 /// change in `subgroup_nfa::LANES_PER_SUBGROUP` produces a CI failure
 /// here, not a silent layout mismatch at runtime.

@@ -620,7 +620,7 @@ fn c11_build_expression_shape_nodes_impl(
                 Expr::lt(t.clone(), num_nodes),
                 vec![child_phase(
                     EXPR_SHAPE_OP_ID,
-                    "vyre-libs::parsing::c11_build_expression_shape_nodes::node_shape_pass",
+                    "anonymous::vast_expression_shape_pass",
                     loop_body,
                 )],
             )],

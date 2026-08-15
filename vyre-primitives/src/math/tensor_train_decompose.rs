@@ -6,9 +6,11 @@
 //!
 //! Algorithm: TT-SVD (Oseledets 2011).
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{
+    trap_program, wrap_anonymous_region, wrap_child_region,
+};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::math::dot_partial::{dot_partial, OP_ID as DOT_PARTIAL_OP_ID};
@@ -43,58 +45,51 @@ pub fn tensor_train_decompose_step(
     r_next: u32,
 ) -> Program {
     let Some(input_rows) = r_prev.checked_mul(nk) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            u_out,
-            DataType::F32,
+            Some((u_out, DataType::F32)),
             "Fix: tensor_train_decompose_step r_prev * nk must fit in u32.".to_owned(),
         );
     };
     let Some(input_count) = input_rows.checked_mul(rem) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            u_out,
-            DataType::F32,
+            Some((u_out, DataType::F32)),
             "Fix: tensor_train_decompose_step input count must fit in u32.".to_owned(),
         );
     };
     let Some(u_count) = input_rows.checked_mul(r_next) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            u_out,
-            DataType::F32,
+            Some((u_out, DataType::F32)),
             "Fix: tensor_train_decompose_step core count must fit in u32.".to_owned(),
         );
     };
     let Some(rem_count) = r_next.checked_mul(rem) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            u_out,
-            DataType::F32,
+            Some((u_out, DataType::F32)),
             "Fix: tensor_train_decompose_step remainder count must fit in u32.".to_owned(),
         );
     };
     let Some(gram_count) = rem.checked_mul(rem) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            u_out,
-            DataType::F32,
+            Some((u_out, DataType::F32)),
             "Fix: tensor_train_decompose_step Gram matrix count must fit in u32.".to_owned(),
         );
     };
     if r_prev == 0 || nk == 0 || rem == 0 || r_next == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            u_out,
-            DataType::F32,
+            Some((u_out, DataType::F32)),
             "Fix: tensor_train_decompose_step dimensions and ranks must be non-zero.".to_owned(),
         );
     }
     if r_next > rem {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            u_out,
-            DataType::F32,
+            Some((u_out, DataType::F32)),
             "Fix: tensor_train_decompose_step requires r_next <= rem for emitted rank columns."
                 .to_owned(),
         );
@@ -219,20 +214,20 @@ pub fn tensor_train_decompose_step(
                     // second hand-rolled accumulation loop: row `tt_ur` of the unfolding and
                     // row `tt_rank` of the remainder are both unit-stride runs of `n` f32,
                     // which is exactly that primitive's contract.
-                    Node::Region {
-                        generator: Ident::from(DOT_PARTIAL_OP_ID),
-                        source_region: Some(GeneratorRef {
+                    wrap_child_region(
+                        DOT_PARTIAL_OP_ID,
+                        GeneratorRef {
                             name: OP_ID.to_string(),
-                        }),
-                        body: Arc::new(vec![dot_partial(
+                        },
+                        vec![dot_partial(
                             input_matrix,
                             rem_out,
                             "tt_dot",
                             Expr::mul(Expr::var("tt_ur"), Expr::u32(n)),
                             Expr::mul(Expr::var("tt_rank"), Expr::u32(n)),
                             n,
-                        )]),
-                    },
+                        )],
+                    ),
                     Node::store(
                         u_out,
                         tt_idx(Expr::var("tt_ur"), r_next, Expr::var("tt_rank")),
@@ -278,14 +273,13 @@ pub fn tensor_train_decompose_step(
             BufferDecl::storage("tt_eval", 5, BufferAccess::ReadWrite, DataType::F32).with_count(n),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
                 body,
-            )]),
-        }],
+            )],
+        )],
     )
 }
 

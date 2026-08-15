@@ -9,8 +9,7 @@
 //! Every parser dialect that needs matched-brace detection reaches this one
 //! kernel: C, Rust, Go, and Python f-string interpolation.
 
-use std::sync::Arc;
-use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id for the Tier 2.5 primitive.
@@ -68,10 +67,9 @@ fn bracket_match_bounded_stack(
     n: u32,
     max_depth: u32,
 ) -> Program {
-    let body = vec![Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: None,
-        body: Arc::new(vec![Node::if_then(
+    let body = vec![wrap_anonymous_region(
+        OP_ID,
+        vec![Node::if_then(
             Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
             vec![
                 Node::let_bind("depth", Expr::u32(0)),
@@ -124,8 +122,8 @@ fn bracket_match_bounded_stack(
                     ],
                 ),
             ],
-        )]),
-    }];
+        )],
+    )];
 
     Program::wrapped(
         vec![
@@ -251,11 +249,10 @@ fn bracket_match_parallel(
             BufferDecl::output(match_pairs, 2, DataType::U32).with_count(n),
         ],
         BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(Expr::lt(lane, Expr::u32(n)), lane_body)]),
-        }],
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(Expr::lt(lane, Expr::u32(n)), lane_body)],
+        )],
     )
 }
 

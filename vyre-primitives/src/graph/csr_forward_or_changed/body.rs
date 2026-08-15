@@ -1,6 +1,6 @@
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_child_region;
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{Expr, Node};
 
 use super::layout::OP_ID;
@@ -92,17 +92,17 @@ pub fn csr_forward_or_changed_child_prefixed(
     edge_kind_mask: u32,
     local_prefix: &str,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(csr_forward_or_changed_body_prefixed(
+        },
+        csr_forward_or_changed_body_prefixed(
             shape,
             frontier_out,
             changed_var,
             edge_kind_mask,
             local_prefix,
-        )),
-    }
+        ),
+    )
 }

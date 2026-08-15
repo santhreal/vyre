@@ -386,11 +386,6 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
-feature = "bench"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-libs"
 feature = "c-parser"
 outcome = "compiles"
 

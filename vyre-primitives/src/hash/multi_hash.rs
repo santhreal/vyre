@@ -4,9 +4,8 @@
 //! the primitive authority for the fused checksum body; higher-tier crates may
 //! rename buffers or stamp parent op ids, but should not rebuild this loop.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::adler32::{
@@ -39,11 +38,10 @@ pub fn multi_hash_program(input: &str, out: &str, n: u32) -> Program {
             BufferDecl::output(out, 1, DataType::U32).with_count(3),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(MULTI_HASH_OP_ID),
-            source_region: None,
-            body: Arc::new(multi_hash_body(input, out, n)),
-        }],
+        vec![wrap_anonymous_region(
+            MULTI_HASH_OP_ID,
+            multi_hash_body(input, out, n),
+        )],
     )
 }
 

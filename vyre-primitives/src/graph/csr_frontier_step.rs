@@ -12,9 +12,8 @@
 //! direction is its argument because the row scan and the edge-kind filter are
 //! one walk, not two.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::graph::frontier_bits::{
@@ -283,11 +282,7 @@ pub(crate) fn csr_frontier_step_program(
     Program::wrapped(
         buffers,
         CSR_FRONTIER_STEP_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(op_id, body)],
     )
 }
 /// Build a forward CSR step that excludes active source nodes selected by
@@ -325,18 +320,17 @@ pub(crate) fn csr_forward_step_excluding_program(
     Program::wrapped(
         buffers,
         CSR_FRONTIER_STEP_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(forward_body(
+        vec![wrap_anonymous_region(
+            op_id,
+            forward_body(
                 shape.node_count,
                 frontier_in,
                 Some(excluded_sources),
                 frontier_out,
                 allow_mask,
                 t,
-            )),
-        }],
+            ),
+        )],
     )
 }
 
@@ -572,10 +566,9 @@ pub(crate) fn csr_queue_step_program(spec: &CsrQueueStepSpec<'_>) -> Program {
         match crate::graph::checked_csr_offset_count(spec.node_count, spec.builder_name) {
             Ok(edge_offset_count) => edge_offset_count,
             Err(error) => {
-                return crate::invalid_output_program(
+                return trap_program(
                     spec.op_id,
-                    spec.emit.failure_output(),
-                    DataType::U32,
+                    Some((spec.emit.failure_output(), DataType::U32)),
                     error,
                 );
             }
@@ -666,11 +659,7 @@ pub(crate) fn csr_queue_step_program(spec: &CsrQueueStepSpec<'_>) -> Program {
     Program::wrapped(
         buffers,
         spec.workgroup_size,
-        vec![Node::Region {
-            generator: Ident::from(spec.op_id),
-            source_region: None,
-            body: Arc::new(csr_queue_step_body(spec)),
-        }],
+        vec![wrap_anonymous_region(spec.op_id, csr_queue_step_body(spec))],
     )
 }
 

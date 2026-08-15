@@ -1,86 +1,10 @@
 use super::super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::test_support::NeverDispatches;
-use std::cell::RefCell;
-use vyre_foundation::ir::Program;
+use crate::test_support::{NeverDispatches, StaticOutputs};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::csr_closure_inputs::{graphs, CsrClosureInputs, CsrGraphView};
 
-struct PersistentBfsDispatcher {
-    outputs: Vec<Vec<u8>>,
-}
-
-impl ProgramDispatcher for PersistentBfsDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(grid_override, Some([1, 1, 1]));
-        if inputs.len() != 9 {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: persistent BFS test dispatcher expected 9 inputs, got {}.",
-                inputs.len()
-            )));
-        }
-        Ok(self.outputs.clone())
-    }
-}
-
-struct RecordingPersistentBfsDispatcher {
-    outputs: Vec<Vec<u8>>,
-    edge_targets: RefCell<Vec<Vec<u32>>>,
-}
-
-impl ProgramDispatcher for RecordingPersistentBfsDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(grid_override, Some([1, 1, 1]));
-        if inputs.len() != 9 {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: persistent BFS recording dispatcher expected 9 inputs, got {}.",
-                inputs.len()
-            )));
-        }
-        self.edge_targets
-            .borrow_mut()
-            .push(crate::dispatch_buffers::read_u32s(&inputs[2]));
-        Ok(self.outputs.clone())
-    }
-}
-
-struct LargeScratchPersistentBfsDispatcher {
-    outputs: Vec<Vec<u8>>,
-}
-
-impl ProgramDispatcher for LargeScratchPersistentBfsDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(grid_override, Some([3, 1, 1]));
-        if inputs.len() != 9 {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: large persistent BFS test dispatcher expected 9 inputs, got {}.",
-                inputs.len()
-            )));
-        }
-        if inputs[7].len() != 12 {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: large persistent BFS changed scratch must allocate 12 bytes, got {}.",
-                inputs[7].len()
-            )));
-        }
-        Ok(self.outputs.clone())
-    }
-}
+const BFS_CONTRACT: &str = "persistent BFS expand dispatch";
 
 /// Expands one persistent-BFS step over [`graphs::CHAIN_4`] with every edge kind allowed,
 /// returning the changed and converged flags. The contracts below vary the dispatcher, the seed
@@ -131,13 +55,16 @@ fn linear_expand(
 
 #[test]
 fn via_into_decodes_exact_outputs_into_reused_frontier() {
-    let dispatcher = PersistentBfsDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        BFS_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[1]),
             u32_slice_to_le_bytes(&[1]),
         ],
-    };
+    )
+    .expecting_grid([1, 1, 1])
+    .expecting_inputs(&[9]);
     let mut frontier = Vec::with_capacity(4);
     let ptr = frontier.as_ptr();
     let (changed, converged) = linear_expand_into(&dispatcher, &[0b0001], 4, &mut frontier)
@@ -150,13 +77,16 @@ fn via_into_decodes_exact_outputs_into_reused_frontier() {
 
 #[test]
 fn via_into_rejects_non_boolean_changed_flag_readback() {
-    let dispatcher = PersistentBfsDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        BFS_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[7]),
             u32_slice_to_le_bytes(&[1]),
         ],
-    };
+    )
+    .expecting_grid([1, 1, 1])
+    .expecting_inputs(&[9]);
     let mut frontier = vec![0xDEAD_BEEF];
     let capacity = frontier.capacity();
 
@@ -177,13 +107,16 @@ fn via_into_rejects_non_boolean_changed_flag_readback() {
 
 #[test]
 fn via_into_rejects_non_boolean_converged_flag_readback() {
-    let dispatcher = PersistentBfsDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        BFS_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[1]),
             u32_slice_to_le_bytes(&[7]),
         ],
-    };
+    )
+    .expecting_grid([1, 1, 1])
+    .expecting_inputs(&[9]);
     let mut frontier = Vec::new();
 
     let err = linear_expand_into(&dispatcher, &[0b0001], 4, &mut frontier).expect_err(
@@ -204,13 +137,17 @@ fn via_into_rejects_non_boolean_converged_flag_readback() {
 fn via_large_graph_allocates_changed_active_scratch_without_extra_outputs() {
     let node_count = 513u32;
     let words = ((node_count + 31) / 32) as usize;
-    let dispatcher = LargeScratchPersistentBfsDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        BFS_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&vec![0u32; words]),
             u32_slice_to_le_bytes(&[0, 0, 0]),
             u32_slice_to_le_bytes(&[1]),
         ],
-    };
+    )
+    .expecting_grid([3, 1, 1])
+    .expecting_inputs(&[9])
+    .expecting_input_bytes(7, 12);
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let frontier_in = vec![0u32; words];
     let mut frontier = Vec::new();
@@ -238,13 +175,16 @@ fn via_large_graph_allocates_changed_active_scratch_without_extra_outputs() {
 
 #[test]
 fn via_with_scratch_reuses_dispatch_storage() {
-    let dispatcher = PersistentBfsDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        BFS_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[1]),
             u32_slice_to_le_bytes(&[1]),
         ],
-    };
+    )
+    .expecting_grid([1, 1, 1])
+    .expecting_inputs(&[9]);
     let mut scratch = PersistentBfsGpuScratch::default();
     let mut frontier = Vec::with_capacity(1);
 
@@ -271,14 +211,17 @@ fn via_with_scratch_reuses_dispatch_storage() {
 
 #[test]
 fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
-    let dispatcher = RecordingPersistentBfsDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        BFS_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[1]),
             u32_slice_to_le_bytes(&[1]),
         ],
-        edge_targets: RefCell::new(Vec::new()),
-    };
+    )
+    .expecting_grid([1, 1, 1])
+    .expecting_inputs(&[9])
+    .recording_input(2);
     let edge_offsets = vec![0, 1, 2, 3, 3];
     let first_targets = vec![1, 2, 3];
     let second_targets = vec![2, 3, 0];
@@ -315,7 +258,7 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
     }
 
     assert_eq!(
-        dispatcher.edge_targets.borrow().as_slice(),
+        dispatcher.recorded().as_slice(),
         &[first_targets, second_targets]
     );
     let snapshot = scratch.plan_cache.snapshot();
@@ -351,14 +294,17 @@ fn via_zero_iters_validates_and_returns_seed_without_dispatch_or_cache() {
 
 #[test]
 fn via_rejects_extra_outputs() {
-    let dispatcher = PersistentBfsDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        BFS_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[1]),
             u32_slice_to_le_bytes(&[1]),
             u32_slice_to_le_bytes(&[99]),
         ],
-    };
+    )
+    .expecting_grid([1, 1, 1])
+    .expecting_inputs(&[9]);
     let err = linear_expand(&dispatcher, &[0b0001], 4).expect_err("extra outputs must be rejected");
     assert!(
         matches!(err, DispatchError::BackendError(_)),
@@ -368,13 +314,16 @@ fn via_rejects_extra_outputs() {
 
 #[test]
 fn via_rejects_trailing_changed_bytes() {
-    let dispatcher = PersistentBfsDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        BFS_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1111]),
             vec![1, 0, 0, 0, 2],
             u32_slice_to_le_bytes(&[0]),
         ],
-    };
+    )
+    .expecting_grid([1, 1, 1])
+    .expecting_inputs(&[9]);
     let err = linear_expand(&dispatcher, &[0b0001], 4)
         .expect_err("trailing changed bytes must be rejected");
     assert!(
@@ -385,12 +334,15 @@ fn via_rejects_trailing_changed_bytes() {
 
 #[test]
 fn via_rejects_mismatched_edge_arrays() {
-    let dispatcher = PersistentBfsDispatcher {
-        outputs: vec![
+    let dispatcher = StaticOutputs::new(
+        BFS_CONTRACT,
+        vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[1]),
         ],
-    };
+    )
+    .expecting_grid([1, 1, 1])
+    .expecting_inputs(&[9]);
     let err = bfs_expand_via(
         &dispatcher,
         CsrClosureInputs::allow_all(

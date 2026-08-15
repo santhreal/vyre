@@ -15,6 +15,7 @@
 //!   any_hit = bitset_any(hits)                (sink projection, optional)
 //! ```
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::execution_plan::fusion::fuse_programs;
 use vyre_foundation::ir::DataType;
 use vyre_foundation::ir::Program;
@@ -189,10 +190,9 @@ pub(crate) fn fuse_security_flow(op_id: &'static str, parts: &[Program], output:
     let fused = match fuse_programs(parts) {
         Ok(fused) => fused,
         Err(error) => {
-            return crate::builder::invalid_builder_trap_program(
+            return trap_program(
                 op_id,
-                output,
-                DataType::U32,
+                Some((output, DataType::U32)),
                 format!("Fix: security flow composition failed to fuse: {error}"),
             );
         }

@@ -6,6 +6,7 @@
 //! complex buffers `[re0, im0, re1, im1, ...]` with length `2 * n`.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_child_region;
 
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
@@ -73,13 +74,13 @@ pub fn fft_convolve_circular_complex(
         )),
     });
     entry.push(fft_region(product_freq, output, n)?);
-    entry.push(Node::Region {
-        generator: Ident::from(SCALE_OP_ID),
-        source_region: Some(GeneratorRef {
+    entry.push(wrap_child_region(
+        SCALE_OP_ID,
+        GeneratorRef {
             name: SCALE_OP_ID.to_string(),
-        }),
-        body: Arc::new(scale_conjugate_body(output, n)),
-    });
+        },
+        scale_conjugate_body(output, n),
+    ));
 
     Ok(Program::wrapped(
         vec![
@@ -115,13 +116,13 @@ fn validate_names(names: &[&str]) -> Result<(), String> {
 }
 
 fn fft_region(input: &str, output: &str, n: u32) -> Result<Node, String> {
-    Ok(Node::Region {
-        generator: Ident::from(FFT_OP_ID),
-        source_region: Some(GeneratorRef {
+    Ok(wrap_child_region(
+        FFT_OP_ID,
+        GeneratorRef {
             name: FFT_OP_ID.to_string(),
-        }),
-        body: Arc::new(fft_radix2_complex(input, output, n)?.into_entry_vec()),
-    })
+        },
+        fft_radix2_complex(input, output, n)?.into_entry_vec(),
+    ))
 }
 
 fn multiply_and_conjugate_body(

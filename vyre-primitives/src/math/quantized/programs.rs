@@ -1,6 +1,6 @@
 //! IR program builders for packed INT4 quantized primitives.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
 use super::program_helpers::{
     i4_dot_accumulation_body, i4_matvec_scaled_body, signed_i4_nibble_expr,
@@ -13,17 +13,14 @@ use super::{
     I4_LANES_PER_WORD, I4_MATVEC_F32_SCALED_OP_ID, UNPACK_I4_OP_ID,
 };
 
-use vyre_foundation::ir::model::expr::Ident;
-
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Build a Program that unpacks packed signed INT4 lanes into i32 lanes.
 pub fn unpack_i4x8(packed_words: &str, out_lanes: &str, lane_count: u32) -> Program {
     if lane_count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             UNPACK_I4_OP_ID,
-            out_lanes,
-            DataType::I32,
+            Some((out_lanes, DataType::I32)),
             "Fix: unpack_i4x8 requires lane_count > 0.".to_string(),
         );
     }
@@ -65,14 +62,10 @@ pub fn unpack_i4x8(packed_words: &str, out_lanes: &str, lane_count: u32) -> Prog
                 .with_count(lane_count),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(UNPACK_I4_OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
-                Expr::lt(t, Expr::u32(lane_count)),
-                body,
-            )]),
-        }],
+        vec![wrap_anonymous_region(
+            UNPACK_I4_OP_ID,
+            vec![Node::if_then(Expr::lt(t, Expr::u32(lane_count)), body)],
+        )],
     )
 }
 
@@ -85,10 +78,9 @@ pub fn unpack_i4x8(packed_words: &str, out_lanes: &str, lane_count: u32) -> Prog
 /// Build a Program that computes a packed signed INT4 dot product.
 pub fn i4x8_dot_i32(lhs_packed: &str, rhs_packed: &str, out: &str, lane_count: u32) -> Program {
     if lane_count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             I4_DOT_I32_OP_ID,
-            out,
-            DataType::I32,
+            Some((out, DataType::I32)),
             "Fix: i4x8_dot_i32 requires lane_count > 0.".to_string(),
         );
     }
@@ -112,11 +104,7 @@ pub fn i4x8_dot_i32(lhs_packed: &str, rhs_packed: &str, out: &str, lane_count: u
             BufferDecl::output(out, 2, DataType::I32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(I4_DOT_I32_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(I4_DOT_I32_OP_ID, body)],
     )
 }
 
@@ -135,10 +123,9 @@ pub fn i4x8_dot_f32_scaled(
     lane_count: u32,
 ) -> Program {
     if lane_count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             I4_DOT_F32_SCALED_OP_ID,
-            out,
-            DataType::F32,
+            Some((out, DataType::F32)),
             "Fix: i4x8_dot_f32_scaled requires lane_count > 0.".to_string(),
         );
     }
@@ -168,11 +155,7 @@ pub fn i4x8_dot_f32_scaled(
             BufferDecl::output(out, 4, DataType::F32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(I4_DOT_F32_SCALED_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(I4_DOT_F32_SCALED_OP_ID, body)],
     )
 }
 
@@ -192,10 +175,9 @@ pub fn i4x8_matvec_f32_scaled(
     cols: u32,
 ) -> Program {
     if rows == 0 || cols == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             I4_MATVEC_F32_SCALED_OP_ID,
-            out,
-            DataType::F32,
+            Some((out, DataType::F32)),
             "Fix: i4x8_matvec_f32_scaled requires rows > 0 and cols > 0.".to_string(),
         );
     }
@@ -224,11 +206,10 @@ pub fn i4x8_matvec_f32_scaled(
             BufferDecl::output(out, 3, DataType::F32).with_count(rows),
         ],
         [64, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(I4_MATVEC_F32_SCALED_OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(Expr::lt(row, Expr::u32(rows)), body)]),
-        }],
+        vec![wrap_anonymous_region(
+            I4_MATVEC_F32_SCALED_OP_ID,
+            vec![Node::if_then(Expr::lt(row, Expr::u32(rows)), body)],
+        )],
     )
 }
 
@@ -250,10 +231,9 @@ pub fn i4x8_batched_matvec_f32_scaled(
     cols: u32,
 ) -> Program {
     if batch == 0 || rows == 0 || cols == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             I4_BATCHED_MATVEC_F32_SCALED_OP_ID,
-            out,
-            DataType::F32,
+            Some((out, DataType::F32)),
             "Fix: i4x8_batched_matvec_f32_scaled requires batch > 0, rows > 0, and cols > 0."
                 .to_string(),
         );
@@ -288,14 +268,13 @@ pub fn i4x8_batched_matvec_f32_scaled(
             BufferDecl::output(out, 3, DataType::F32).with_count(total_outputs),
         ],
         [64, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(I4_BATCHED_MATVEC_F32_SCALED_OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            I4_BATCHED_MATVEC_F32_SCALED_OP_ID,
+            vec![Node::if_then(
                 Expr::lt(item, Expr::u32(total_outputs)),
                 body,
-            )]),
-        }],
+            )],
+        )],
     )
 }
 
@@ -317,10 +296,9 @@ pub fn i4x8_batched_matmul_f32_scaled(
     cols: u32,
 ) -> Program {
     if batch == 0 || rows == 0 || cols == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             I4_BATCHED_MATMUL_F32_SCALED_OP_ID,
-            out,
-            DataType::F32,
+            Some((out, DataType::F32)),
             "Fix: i4x8_batched_matmul_f32_scaled requires batch > 0, rows > 0, and cols > 0."
                 .to_string(),
         );
@@ -436,14 +414,13 @@ pub fn i4x8_batched_matmul_f32_scaled(
             BufferDecl::output(out, 4, DataType::F32).with_count(total_outputs),
         ],
         [64, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(I4_BATCHED_MATMUL_F32_SCALED_OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            I4_BATCHED_MATMUL_F32_SCALED_OP_ID,
+            vec![Node::if_then(
                 Expr::lt(item, Expr::u32(total_outputs)),
                 body,
-            )]),
-        }],
+            )],
+        )],
     )
 }
 
@@ -465,10 +442,9 @@ pub fn i4x8_batched_matmul_top1_f32_scaled(
     cols: u32,
 ) -> Program {
     if batch == 0 || rows == 0 || cols == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             I4_BATCHED_MATMUL_TOP1_F32_SCALED_OP_ID,
-            out,
-            DataType::F32,
+            Some((out, DataType::F32)),
             "Fix: i4x8_batched_matmul_top1_f32_scaled requires batch > 0, rows > 0, and cols > 0."
                 .to_string(),
         );
@@ -604,13 +580,9 @@ pub fn i4x8_batched_matmul_top1_f32_scaled(
             BufferDecl::output(out, 4, DataType::F32).with_count(batch * 2),
         ],
         [64, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(I4_BATCHED_MATMUL_TOP1_F32_SCALED_OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
-                Expr::lt(batch_index, Expr::u32(batch)),
-                body,
-            )]),
-        }],
+        vec![wrap_anonymous_region(
+            I4_BATCHED_MATMUL_TOP1_F32_SCALED_OP_ID,
+            vec![Node::if_then(Expr::lt(batch_index, Expr::u32(batch)), body)],
+        )],
     )
 }

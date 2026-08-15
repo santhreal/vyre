@@ -43,9 +43,8 @@
 //! The bitmask approach uses pure arithmetic  -  no branches, every lane
 //! does the same work, GPU throughput stays at peak.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -212,11 +211,7 @@ pub fn whitespace_classify_word(word_count: u32) -> Program {
         .with_count(word_count),
     ];
 
-    let entry = vec![Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: None,
-        body: Arc::new(body),
-    }];
+    let entry = vec![wrap_anonymous_region(OP_ID, body)];
     Program::wrapped(buffers, WHITESPACE_CLASSIFY_WORD_WORKGROUP_SIZE, entry)
 }
 

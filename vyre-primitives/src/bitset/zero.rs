@@ -3,9 +3,8 @@
 //! Resident graph pipelines use this to clear scratch/output bitsets on device
 //! instead of uploading zero-filled host buffers every iteration.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -21,14 +20,13 @@ pub fn bitset_zero(target: &str, words: u32) -> Program {
                 .with_count(words),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::lt(w.clone(), Expr::u32(words)),
                 vec![Node::store(target, w, Expr::u32(0))],
-            )]),
-        }],
+            )],
+        )],
     )
 }
 

@@ -37,9 +37,8 @@
 //!   = 8 to fit standard 4-byte alignment).
 //! - **Particle data: 4 u32 per particle** = `(x, y, charge, _pad)`.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// p2m op id.
@@ -92,18 +91,16 @@ pub fn p2m_step(
     n_cells: u32,
 ) -> Program {
     if n_particles == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             P2M_OP_ID,
-            multipoles,
-            DataType::U32,
+            Some((multipoles, DataType::U32)),
             "Fix: p2m_step requires n_particles > 0, got 0.".to_string(),
         );
     }
     if n_cells == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             P2M_OP_ID,
-            multipoles,
-            DataType::U32,
+            Some((multipoles, DataType::U32)),
             "Fix: p2m_step requires n_cells > 0, got 0.".to_string(),
         );
     }
@@ -163,11 +160,7 @@ pub fn p2m_step(
                 .with_count(n_cells * EXPANSION_WORDS),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(P2M_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(P2M_OP_ID, body)],
     )
 }
 
@@ -185,18 +178,16 @@ pub fn p2m_zeroth_f32_step(
     n_cells: u32,
 ) -> Program {
     if n_regions == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             P2M_ZEROTH_F32_OP_ID,
-            moments,
-            DataType::F32,
+            Some((moments, DataType::F32)),
             "Fix: p2m_zeroth_f32_step requires n_regions > 0, got 0.".to_string(),
         );
     }
     if n_cells == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             P2M_ZEROTH_F32_OP_ID,
-            moments,
-            DataType::F32,
+            Some((moments, DataType::F32)),
             "Fix: p2m_zeroth_f32_step requires n_cells > 0, got 0.".to_string(),
         );
     }
@@ -235,11 +226,7 @@ pub fn p2m_zeroth_f32_step(
                 .with_count(n_cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(P2M_ZEROTH_F32_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(P2M_ZEROTH_F32_OP_ID, body)],
     )
 }
 
@@ -255,20 +242,18 @@ pub fn m2l_zeroth_f32_step(
     n_cells: u32,
 ) -> Program {
     if n_cells == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             M2L_ZEROTH_F32_OP_ID,
-            cell_local,
-            DataType::F32,
+            Some((cell_local, DataType::F32)),
             "Fix: m2l_zeroth_f32_step requires n_cells > 0, got 0.".to_string(),
         );
     }
     let distance_count = match n_cells.checked_mul(n_cells) {
         Some(count) => count,
         None => {
-            return crate::invalid_output_program(
+            return trap_program(
                 M2L_ZEROTH_F32_OP_ID,
-                cell_local,
-                DataType::F32,
+                Some((cell_local, DataType::F32)),
                 format!(
                     "Fix: m2l_zeroth_f32_step n_cells*n_cells overflows u32 for n_cells={n_cells}."
                 ),
@@ -333,11 +318,7 @@ pub fn m2l_zeroth_f32_step(
                 .with_count(n_cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(M2L_ZEROTH_F32_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(M2L_ZEROTH_F32_OP_ID, body)],
     )
 }
 
@@ -351,18 +332,16 @@ pub fn l2p_zeroth_f32_step(
     n_cells: u32,
 ) -> Program {
     if n_regions == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             L2P_ZEROTH_F32_OP_ID,
-            region_out,
-            DataType::F32,
+            Some((region_out, DataType::F32)),
             "Fix: l2p_zeroth_f32_step requires n_regions > 0, got 0.".to_string(),
         );
     }
     if n_cells == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             L2P_ZEROTH_F32_OP_ID,
-            region_out,
-            DataType::F32,
+            Some((region_out, DataType::F32)),
             "Fix: l2p_zeroth_f32_step requires n_cells > 0, got 0.".to_string(),
         );
     }
@@ -393,11 +372,7 @@ pub fn l2p_zeroth_f32_step(
                 .with_count(n_regions),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(L2P_ZEROTH_F32_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(L2P_ZEROTH_F32_OP_ID, body)],
     )
 }
 

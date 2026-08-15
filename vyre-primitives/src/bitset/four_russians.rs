@@ -5,9 +5,9 @@
 //! boolean-matrix and reachability kernels can specialize the LUT once, then
 //! replace branchy byte logic with coalesced table loads.
 
-use std::sync::{Arc, LazyLock};
+use std::sync::LazyLock;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -234,14 +234,10 @@ pub fn four_russians_apply_byte_lut(
             BufferDecl::storage(out, 3, BufferAccess::ReadWrite, DataType::U32).with_count(words),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
-                Expr::lt(t.clone(), Expr::u32(words)),
-                body,
-            )]),
-        }],
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(Expr::lt(t.clone(), Expr::u32(words)), body)],
+        )],
     )
 }
 
@@ -330,14 +326,13 @@ pub fn four_russians_dense_matvec_byte_lut(
                 .with_count(dst_words),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(DENSE_MATVEC_OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            DENSE_MATVEC_OP_ID,
+            vec![Node::if_then(
                 Expr::lt(dst_word.clone(), Expr::u32(dst_words)),
                 body,
-            )]),
-        }],
+            )],
+        )],
     )
 }
 

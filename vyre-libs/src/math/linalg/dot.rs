@@ -3,6 +3,7 @@
 //! Category A composition: reads two equally-sized u32 buffers,
 //! multiplies element-wise, and reduces through workgroup scratch.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::{
@@ -221,7 +222,7 @@ fn dot_reference(lhs: &str, rhs: &str, out: &str, n: u32) -> Program {
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
-        || dot("lhs", "rhs", "out", 256).unwrap_or_else(|error| crate::invalid_program(OP_ID, format!("Fix: dot fixture must build: {error}"))),
+        || dot("lhs", "rhs", "out", 256).unwrap_or_else(|error| trap_program(OP_ID, None, format!("Fix: dot fixture must build: {error}"))),
         Some(|| vec![vec![
             vec![0u8; 256 * 4],
             vec![0u8; 256 * 4],

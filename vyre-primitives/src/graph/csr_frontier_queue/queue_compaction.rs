@@ -1,8 +1,7 @@
 //! Queue-length initialization and node-per-lane frontier compaction.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::MemoryOrdering;
 
@@ -27,11 +26,10 @@ pub fn frontier_queue_len_init(queue_len: &str) -> Program {
             BufferDecl::storage(queue_len, 0, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(FRONTIER_QUEUE_LEN_INIT_OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::store(queue_len, Expr::u32(0), Expr::u32(0))]),
-        }],
+        vec![wrap_anonymous_region(
+            FRONTIER_QUEUE_LEN_INIT_OP_ID,
+            vec![Node::store(queue_len, Expr::u32(0), Expr::u32(0))],
+        )],
     )
 }
 
@@ -75,12 +73,9 @@ pub fn frontier_to_queue(
     queue_capacity: u32,
 ) -> Program {
     if node_count == 0 || queue_capacity == 0 {
-        return crate::invalid_output_program(FRONTIER_TO_QUEUE_OP_ID,
-        queue_len,
-        DataType::U32,
-        format!(
+        return trap_program(FRONTIER_TO_QUEUE_OP_ID, Some((queue_len, DataType::U32)), format!(
             "Fix: frontier_to_queue requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
-        ),);
+        ));
     }
     let lane = Expr::InvocationId { axis: 0 };
     let words = bitset_words(node_count);
@@ -148,11 +143,7 @@ pub fn frontier_to_queue(
             BufferDecl::storage(queue_len, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [lanes, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(FRONTIER_TO_QUEUE_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(FRONTIER_TO_QUEUE_OP_ID, body)],
     )
 }
 
@@ -171,12 +162,9 @@ pub fn frontier_to_queue_parallel(
     queue_capacity: u32,
 ) -> Program {
     if node_count == 0 || queue_capacity == 0 {
-        return crate::invalid_output_program(FRONTIER_TO_QUEUE_PARALLEL_OP_ID,
-        queue_len,
-        DataType::U32,
-        format!(
+        return trap_program(FRONTIER_TO_QUEUE_PARALLEL_OP_ID, Some((queue_len, DataType::U32)), format!(
             "Fix: frontier_to_queue_parallel requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
-        ),);
+        ));
     }
     let lane = Expr::InvocationId { axis: 0 };
     let words = bitset_words(node_count);
@@ -217,10 +205,9 @@ pub fn frontier_to_queue_parallel(
             BufferDecl::storage(queue_len, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(FRONTIER_TO_QUEUE_PARALLEL_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(
+            FRONTIER_TO_QUEUE_PARALLEL_OP_ID,
+            body,
+        )],
     )
 }

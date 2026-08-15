@@ -42,9 +42,8 @@
 //! backends without native grid barriers can split the traversal into
 //! launch-separated depth waves.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, MemoryOrdering, Node, Program,
 };
@@ -173,11 +172,7 @@ pub fn level_wave_program_with_buffers(
     Program::wrapped(
         buffers,
         LEVEL_WAVE_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

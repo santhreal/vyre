@@ -5,9 +5,8 @@
 //! wrap the same bodies with `source_region` metadata instead of
 //! hiding multi-phase work in one monolithic op.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id for deterministic queue zero-fill.
@@ -50,11 +49,10 @@ pub fn quest_zero_fill(io_queue: &str, num_pages: u32) -> Program {
                 .with_count(num_pages),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(QUEST_ZERO_FILL_OP_ID),
-            source_region: None,
-            body: Arc::new(quest_zero_fill_body(io_queue, num_pages)),
-        }],
+        vec![wrap_anonymous_region(
+            QUEST_ZERO_FILL_OP_ID,
+            quest_zero_fill_body(io_queue, num_pages),
+        )],
     )
 }
 
@@ -150,17 +148,10 @@ pub fn quest_score_pages(
                 .with_count(num_pages),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(QUEST_SCORE_PAGES_OP_ID),
-            source_region: None,
-            body: Arc::new(quest_score_pages_body(
-                query,
-                page_metadata,
-                scores,
-                num_pages,
-                d_head,
-            )),
-        }],
+        vec![wrap_anonymous_region(
+            QUEST_SCORE_PAGES_OP_ID,
+            quest_score_pages_body(query, page_metadata, scores, num_pages, d_head),
+        )],
     )
 }
 
@@ -218,14 +209,13 @@ pub fn quest_select_top_k(
                 .with_count(num_pages),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(QUEST_SELECT_TOP_K_OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            QUEST_SELECT_TOP_K_OP_ID,
+            vec![Node::if_then(
                 Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
                 quest_select_top_k_body(scores, io_queue, num_pages, k, score_sentinel),
-            )]),
-        }],
+            )],
+        )],
     )
 }
 

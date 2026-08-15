@@ -2,6 +2,7 @@
 //! diagnostic emitted when a size cannot be represented.
 
 use std::fmt;
+use vyre_foundation::algebra::composition::trap_program;
 
 use vyre_foundation::ir::{DataType, Program};
 
@@ -63,7 +64,7 @@ pub(super) fn invalid_frontier_queue_sizing_program(
     output: &str,
     error: FrontierQueueSizingError,
 ) -> Program {
-    crate::invalid_output_program(op_id, output, DataType::U32, error.to_string())
+    trap_program(op_id, Some((output, DataType::U32)), error.to_string())
 }
 
 #[cfg(test)]

@@ -3,9 +3,8 @@
 //! This is parsing substrate, not a language-specific op: every parser with
 //! paired delimiters can reuse the same inclusive prefix-depth scan.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable Tier 2.5 op id.
@@ -60,14 +59,13 @@ pub fn core_delimiter_match(
                 .with_count(tok_count),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::lt(t, Expr::u32(tok_count)),
                 transform_logic,
-            )]),
-        }],
+            )],
+        )],
     )
     .with_entry_op_id(OP_ID)
     .with_non_composable_with_self(true)

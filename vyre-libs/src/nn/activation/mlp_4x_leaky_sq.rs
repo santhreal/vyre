@@ -2,6 +2,7 @@
 //!
 //! Category A composition. Fused linear + activation without scratch buffer.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::{wrap_anonymous, wrap_child};
@@ -229,7 +230,7 @@ inventory::submit! {
         OP_ID,
         || {
             mlp_4x_leaky_sq("x", "w1", "b1", "w2", "b2", "out", 2, 4)
-                .unwrap_or_else(|error| crate::invalid_program(OP_ID, format!("Fix: mlp_4x_leaky_sq fixture must build: {error}")))
+                .unwrap_or_else(|error| trap_program(OP_ID, None, format!("Fix: mlp_4x_leaky_sq fixture must build: {error}")))
         },
         Some(|| {
             let f = vyre_primitives::wire::pack_f32_slice;

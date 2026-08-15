@@ -12,8 +12,7 @@ use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
 use crate::graph::program_graph::{
     word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_TARGETS,
 };
-use std::sync::Arc;
-use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -145,7 +144,7 @@ pub fn tensor_flow_forward(
         allow_mask,
     ) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, tensor_out, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((tensor_out, DataType::U32)), error),
     }
 }
 
@@ -236,14 +235,13 @@ pub fn try_tensor_flow_forward(
     Ok(Program::wrapped(
         buffers,
         TENSOR_FLOW_FORWARD_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::lt(t.clone(), Expr::u32(shape.node_count)),
                 body,
-            )]),
-        }],
+            )],
+        )],
     ))
 }
 

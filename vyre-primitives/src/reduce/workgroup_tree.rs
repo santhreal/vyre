@@ -5,9 +5,9 @@
 //! child `Region`s so composition audits and traces show the shared reduction
 //! instead of treating every math/NN op as a hand-rolled loop.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::MemoryOrdering;
 
@@ -285,22 +285,18 @@ where
             BufferDecl::output(out, 1, dtype).with_count(1),
         ],
         [tile, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(op_id, body)],
     )
 }
 
 fn child_region(generator: &'static str, parent_op_id: &str, body: Vec<Node>) -> Node {
-    Node::Region {
-        generator: Ident::from(generator),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        generator,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(body),
-    }
+        },
+        body,
+    )
 }
 
 fn sum_body(tile: u32, scratch: &'static str, scope: WorkgroupReductionScope) -> Vec<Node> {

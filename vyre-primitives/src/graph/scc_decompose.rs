@@ -11,9 +11,8 @@
 //! id. The CPU reference below shows the composition; the Program
 //! ships one pass.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::bitset::bitset_words;
@@ -122,14 +121,13 @@ pub fn scc_decompose(
                 .with_count(node_count),
         ],
         SCC_DECOMPOSE_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::lt(t.clone(), Expr::u32(node_count)),
                 body,
-            )]),
-        }],
+            )],
+        )],
     )
 }
 

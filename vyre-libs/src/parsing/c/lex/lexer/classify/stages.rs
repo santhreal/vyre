@@ -776,7 +776,7 @@ impl SerialLexer<'_> {
                                     let mut body = vec![Node::let_bind("pos", Expr::var("cursor"))];
                                     body.push(child_phase(
                                         self.op_id,
-                                        &format!("{}::classify_at_pos", self.op_id),
+                                        "anonymous::c_lexer_classify_at_pos",
                                         classify_at_pos,
                                     ));
                                     body

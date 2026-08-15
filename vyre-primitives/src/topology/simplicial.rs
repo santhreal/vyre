@@ -19,9 +19,8 @@
 //! | `vyre-libs::sci::topology_features` consumers | topological-feature ML |
 //! | `vyre-foundation::transform` conflict analysis | 3-way Region conflicts in vyre's dispatch graph become 2-simplices; same primitive scores them |
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -48,26 +47,23 @@ pub fn simplicial_triangle_message(
     d: u32,
 ) -> Program {
     if n_edges == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            triangle_messages,
-            DataType::U32,
+            Some((triangle_messages, DataType::U32)),
             "Fix: simplicial_triangle_message requires n_edges > 0, got 0.".to_string(),
         );
     }
     if n_triangles == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            triangle_messages,
-            DataType::U32,
+            Some((triangle_messages, DataType::U32)),
             "Fix: simplicial_triangle_message requires n_triangles > 0, got 0.".to_string(),
         );
     }
     if d == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            triangle_messages,
-            DataType::U32,
+            Some((triangle_messages, DataType::U32)),
             "Fix: simplicial_triangle_message requires d > 0, got 0.".to_string(),
         );
     }
@@ -136,11 +132,7 @@ pub fn simplicial_triangle_message(
                 .with_count(cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

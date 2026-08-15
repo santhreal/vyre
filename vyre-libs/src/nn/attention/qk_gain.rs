@@ -4,6 +4,7 @@
 //!
 //! Category A  -  broadcast mul. Recipe uses gain_init=5.25.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
@@ -38,23 +39,17 @@ pub fn qk_gain(
     let per_head = match seq_len.checked_mul(head_dim) {
         Some(per_head) => per_head,
         None => {
-            return crate::builder::invalid_builder_trap_program(OP_ID,
-            q_out,
-            DataType::F32,
-            format!(
+            return trap_program(OP_ID, Some((q_out, DataType::F32)), format!(
                 "Fix: qk_gain per-head element count overflows u32 for seq_len={seq_len}, head_dim={head_dim}."
-            ),);
+            ));
         }
     };
     let total = match num_heads.checked_mul(per_head) {
         Some(total) => total,
         None => {
-            return crate::builder::invalid_builder_trap_program(OP_ID,
-            q_out,
-            DataType::F32,
-            format!(
+            return trap_program(OP_ID, Some((q_out, DataType::F32)), format!(
                 "Fix: qk_gain total element count overflows u32 for num_heads={num_heads}, seq_len={seq_len}, head_dim={head_dim}."
-            ),);
+            ));
         }
     };
 

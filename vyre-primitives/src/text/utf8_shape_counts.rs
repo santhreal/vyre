@@ -1,8 +1,8 @@
 //! UTF-8 shape counters over a precomputed byte histogram.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for UTF-8 histogram shape counting.
@@ -97,17 +97,13 @@ pub fn utf8_shape_counts_child(
     continuation_var: &str,
     expected_var: &str,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(UTF8_SHAPE_COUNTS_OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        UTF8_SHAPE_COUNTS_OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(utf8_shape_counts_body(
-            histogram,
-            continuation_var,
-            expected_var,
-        )),
-    }
+        },
+        utf8_shape_counts_body(histogram, continuation_var, expected_var),
+    )
 }
 
 /// Standalone UTF-8 shape counter program for primitive-level conformance.
@@ -133,11 +129,7 @@ pub fn utf8_shape_counts(histogram: &str, out: &str) -> Program {
                 .with_output_byte_range(0..8),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(UTF8_SHAPE_COUNTS_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(UTF8_SHAPE_COUNTS_OP_ID, body)],
     )
 }
 

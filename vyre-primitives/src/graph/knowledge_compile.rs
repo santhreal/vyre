@@ -14,9 +14,8 @@
 //! | `vyre-libs::ml::probabilistic_logic` | neuro-symbolic systems |
 //! | `vyre-libs::security::policy_engine` | rule-conflict resolution as probabilistic logic |
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// d-DNNF "literal kind" tag.
@@ -81,7 +80,7 @@ pub fn ddnnf_evaluate(
         n_vars,
     ) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, out, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((out, DataType::U32)), error),
     }
 }
 
@@ -244,11 +243,7 @@ pub fn try_ddnnf_evaluate(
             BufferDecl::storage(out, 6, BufferAccess::ReadWrite, DataType::U32).with_count(n_nodes),
         ],
         DDNNF_EVALUATE_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }
 

@@ -15,6 +15,7 @@
 //! | future `vyre-libs::sci::quantum_chem` | quantum chemistry contraction |
 //! | `vyre-driver` megakernel scheduling | each Region in vyre's IR is a tensor; wires are buffer dependencies; optimal fusion = optimal contraction order |
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use crate::fixed_u32_matmul::{try_fixed_u32_matmul, FixedMatmulContext};
@@ -39,7 +40,7 @@ const MATMUL_CONTEXT: FixedMatmulContext = FixedMatmulContext {
 pub fn tn_pair_contract(a: &str, b: &str, c: &str, m: u32, k: u32, n: u32) -> Program {
     match try_tn_pair_contract(a, b, c, m, k, n) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, c, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((c, DataType::U32)), error),
     }
 }
 
@@ -319,8 +320,9 @@ mod tests {
             .expect_err("checked tensor contraction builder must reject output overflow");
 
         assert!(
-            error.contains("overflows cell count"),
-            "error should describe the output tensor overflow: {error}"
+            error.contains("tn_pair_contract output shape")
+                && error.contains("overflows the u32 cell count"),
+            "error should name the operand and the shape that overflowed: {error}"
         );
     }
 }

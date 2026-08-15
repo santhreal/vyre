@@ -52,26 +52,6 @@
 // the architectural decision.
 #![allow(clippy::module_inception)]
 
-/// Build a trap-only program for registry fixtures or infallible composition wrappers.
-#[allow(dead_code)]
-pub(crate) fn invalid_program(
-    op_id: &'static str,
-    message: impl Into<String>,
-) -> vyre_foundation::ir::Program {
-    let message = message.into();
-    vyre_foundation::ir::Program::wrapped(
-        Vec::new(),
-        [1, 1, 1],
-        vec![region::wrap_anonymous(
-            op_id,
-            vec![vyre_foundation::ir::Node::trap(
-                vyre_foundation::ir::Expr::u32(0),
-                message,
-            )],
-        )],
-    )
-}
-
 /// Region builder  -  the shared helper every composition routes through.
 pub mod region;
 
@@ -318,7 +298,7 @@ pub mod prelude {
     pub use crate::math::broadcast::broadcast;
     #[cfg(feature = "math-linalg")]
     pub use crate::math::linalg::{
-        dot, matmul, matmul_tiled, Matmul, MatmulBiasTiled, MatmulTiled,
+        dot, matmul, matmul_bias_tiled, matmul_tiled, Matmul, MatmulBiasTiled, MatmulTiled,
     };
     #[cfg(feature = "math-scan")]
     pub use crate::math::scan::scan_prefix_sum;

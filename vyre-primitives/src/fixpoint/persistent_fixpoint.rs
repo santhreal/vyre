@@ -110,9 +110,8 @@
 //! Soundness: matches the host-driven loop exactly (proven by the
 //! convergence-equivalence test below).
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -782,11 +781,7 @@ fn build_fixpoint_program(
                 .with_count(changed_words),
         ],
         PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(entry),
-        }],
+        vec![wrap_anonymous_region(op_id, entry)],
     )
 }
 

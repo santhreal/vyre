@@ -4,6 +4,7 @@
 //! shape-broadcasting version (NumPy semantics) belongs in a future
 //! `broadcast_shaped` function that takes source + target shapes.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
@@ -13,10 +14,9 @@ use crate::region::wrap_anonymous;
 #[must_use]
 pub fn broadcast(src: &str, dst: &str, n: u32) -> Program {
     if n == 0 {
-        return crate::builder::invalid_builder_trap_program(
+        return trap_program(
             "vyre-libs::math::broadcast",
-            dst,
-            DataType::U32,
+            Some((dst, DataType::U32)),
             "Fix: broadcast requires n > 0.".to_string(),
         );
     }

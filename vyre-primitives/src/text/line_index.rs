@@ -16,10 +16,9 @@
 //! dialects that need column offsets derive them from their own
 //! line-start representation.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
 use crate::reduce::multi_block_prefix_scan::{multi_block_prefix_scan_sum_u32, BLOCK_LANES};
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id for the registered Tier 3 wrapper.
@@ -41,7 +40,7 @@ const FLAG_OP_ID: &str = "vyre-primitives::text::line_index::line_start_flags";
 pub fn line_index(source: &str, lines: &str, n: u32) -> Program {
     match try_line_index(source, lines, n) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, lines, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((lines, DataType::U32)), error),
     }
 }
 
@@ -53,7 +52,7 @@ pub fn line_index(source: &str, lines: &str, n: u32) -> Program {
 pub fn line_index_u8(source: &str, lines: &str, n: u32) -> Program {
     match try_line_index_u8(source, lines, n) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, lines, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((lines, DataType::U32)), error),
     }
 }
 
@@ -103,11 +102,7 @@ fn empty_line_index_program(source: &str, lines: &str, source_type: DataType) ->
                 .with_output_byte_range(0..0),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(Vec::new()),
-        }],
+        vec![wrap_anonymous_region(OP_ID, Vec::new())],
     )
 }
 
@@ -175,11 +170,10 @@ fn line_start_flags_program(
                 .with_output_byte_range(0..output_bytes),
         ],
         [BLOCK_LANES, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(FLAG_OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(Expr::lt(t, Expr::u32(n)), lane_body)]),
-        }],
+        vec![wrap_anonymous_region(
+            FLAG_OP_ID,
+            vec![Node::if_then(Expr::lt(t, Expr::u32(n)), lane_body)],
+        )],
     ))
 }
 

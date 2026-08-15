@@ -28,9 +28,8 @@
 //! | future `vyre-libs::sci::quantum_sim` | classical simulation of quantum circuits |
 //! | `vyre-foundation::transform` Wasserstein dispatch analysis | matrix-function evaluation (matrix log, exp) for transport-based fusion-cost analyses |
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -46,7 +45,7 @@ pub const OP_ID: &str = "vyre-primitives::math::qsvt_block_encode";
 pub fn qsvt_block_encode(a: &str, norm: &str, a_scaled: &str, n: u32) -> Program {
     match try_qsvt_block_encode(a, norm, a_scaled, n) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, a_scaled, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((a_scaled, DataType::U32)), error),
     }
 }
 
@@ -57,11 +56,7 @@ pub fn try_qsvt_block_encode(
     a_scaled: &str,
     n: u32,
 ) -> Result<Program, String> {
-    if n == 0 {
-        return Err(format!("Fix: qsvt_block_encode requires n > 0, got {n}."));
-    }
-
-    let cells = checked_qsvt_cells(n)?;
+    let cells = crate::math::square_matrix_cells(OP_ID, n)?;
     let t = Expr::InvocationId { axis: 0 };
     let n_v = Expr::load(norm, Expr::u32(0));
     let safe_norm = Expr::select(Expr::eq(n_v.clone(), Expr::u32(0)), Expr::u32(1), n_v);
@@ -83,20 +78,8 @@ pub fn try_qsvt_block_encode(
                 .with_count(cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
-}
-
-fn checked_qsvt_cells(n: u32) -> Result<u32, String> {
-    n.checked_mul(n).ok_or_else(|| {
-        format!(
-            "qsvt_block_encode n={n} overflows dense matrix cell count. Fix: shard the matrix before GPU dispatch."
-        )
-    })
 }
 
 /// CPU reference: scale `A` by `1 / ||A||_F`.
@@ -582,8 +565,9 @@ mod tests {
             .expect_err("checked QSVT builder must reject n*n overflow");
 
         assert!(
-            error.contains("overflows dense matrix cell count"),
-            "error should describe dense matrix overflow: {error}"
+            error.contains("qsvt_block_encode shape")
+                && error.contains("overflows the u32 cell count"),
+            "error should name the op and the shape that overflowed: {error}"
         );
     }
 }

@@ -33,6 +33,7 @@
 //! Self-consumer is weak; revisit when optimizer-aware dispatch
 //! scheduling appears.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 /// Op id.
@@ -57,7 +58,7 @@ pub fn natural_gradient_block_apply(
 ) -> Program {
     match try_natural_gradient_block_apply(m_inv_sqrt, grad, grad_nat, n) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, grad_nat, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((grad_nat, DataType::U32)), error),
     }
 }
 

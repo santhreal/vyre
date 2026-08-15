@@ -26,9 +26,8 @@
 //! | `vyre-libs::security::call_graph_sheaf` consumers | typed call-graph anomalies |
 //! | `vyre-foundation::transform` dispatch-sheaf analysis | vyre's dispatch graph is heterophilic; sheaf diffusion predicts where fusion fails |
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -76,7 +75,7 @@ pub fn sheaf_diffusion_step(
         d,
     ) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, stalks_next, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((stalks_next, DataType::U32)), error),
     }
 }
 
@@ -98,7 +97,7 @@ pub fn try_sheaf_diffusion_step(
         ));
     }
 
-    let cells = checked_stalk_cells(n_nodes, d)?;
+    let cells = crate::math::matrix_cells(OP_ID, n_nodes, d)?;
     let t = Expr::InvocationId { axis: 0 };
 
     // delta = damping · restriction_diag[t] · stalks[t]
@@ -126,20 +125,8 @@ pub fn try_sheaf_diffusion_step(
                 .with_count(cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
-}
-
-fn checked_stalk_cells(n_nodes: u32, d: u32) -> Result<u32, String> {
-    n_nodes.checked_mul(d).ok_or_else(|| {
-        format!(
-            "sheaf_diffusion_step n_nodes={n_nodes} d={d} overflows stalk tensor cell count. Fix: shard the sheaf domain before GPU dispatch."
-        )
-    })
 }
 
 /// CPU reference (f64).
@@ -367,8 +354,9 @@ mod tests {
             .expect_err("checked sheaf builder must reject stalk tensor overflow");
 
         assert!(
-            error.contains("overflows stalk tensor cell count"),
-            "error should describe the stalk tensor overflow: {error}"
+            error.contains("sheaf_diffusion_step shape")
+                && error.contains("overflows the u32 cell count"),
+            "error should name the op and the shape that overflowed: {error}"
         );
     }
 

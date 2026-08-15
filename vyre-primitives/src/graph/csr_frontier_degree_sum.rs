@@ -21,9 +21,8 @@
 //! bottom of this file documents the contract; the parity harness runs
 //! both implementations on the same input.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, Expr, Node, Program};
 
 use crate::graph::frontier_bits::active_source_lane;
@@ -95,11 +94,7 @@ pub fn csr_frontier_degree_sum(shape: ProgramGraphShape) -> Program {
         1,
     ));
 
-    let entry = vec![Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: None,
-        body: Arc::new(body),
-    }];
+    let entry = vec![wrap_anonymous_region(OP_ID, body)];
     Program::wrapped(buffers, CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE, entry)
 }
 

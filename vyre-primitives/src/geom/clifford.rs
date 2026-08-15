@@ -32,9 +32,8 @@
 //! sign rule) generalizes; this file's 4-component implementation is
 //! the simplest case that exercises every product structure.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -57,10 +56,9 @@ pub const MV_COMPONENTS: u32 = 4;
 #[must_use]
 pub fn clifford2_product(lhs: &str, rhs: &str, out: &str, n_pairs: u32) -> Program {
     if n_pairs == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("Fix: clifford2_product requires n_pairs > 0, got {n_pairs}."),
         );
     }
@@ -128,11 +126,7 @@ pub fn clifford2_product(lhs: &str, rhs: &str, out: &str, n_pairs: u32) -> Progr
                 .with_count(n_pairs * MV_COMPONENTS),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

@@ -6,6 +6,7 @@
 //!
 //! Category A composition.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use super::unary::typed_sigmoid_gate_program;
@@ -43,7 +44,7 @@ pub fn swiglu_typed(
 
 fn build_swiglu(gate: &str, up: &str, output: &str, n: u32, dtype: DataType) -> Program {
     if n == 0 {
-        return crate::invalid_program(OP_ID, "Fix: swiglu requires n > 0");
+        return trap_program(OP_ID, None, "Fix: swiglu requires n > 0");
     }
     typed_sigmoid_gate_program(OP_ID, gate, up, output, n, dtype, true)
 }

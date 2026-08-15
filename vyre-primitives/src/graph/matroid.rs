@@ -19,9 +19,8 @@
 //! | `vyre-libs::opt::bipartite` | bipartite matching |
 //! | `vyre-runtime/src/megakernel/planner.rs` (#22 self-consumer) | **vyre's megakernel scheduler**  -  fusion-grouping subject to memory + sync constraints IS a matroid intersection problem (graphic matroid × partition matroid) |
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -60,7 +59,7 @@ pub fn matroid_exchange_bfs_step(
         n,
     ) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, frontier_out, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((frontier_out, DataType::U32)), error),
     }
 }
 
@@ -74,12 +73,7 @@ pub fn try_matroid_exchange_bfs_step(
     any_change: &str,
     n: u32,
 ) -> Result<Program, String> {
-    if n == 0 {
-        return Err(format!(
-            "Fix: matroid_exchange_bfs_step requires n > 0, got {n}."
-        ));
-    }
-    let dense_cells = checked_dense_cells(n, OP_ID)?;
+    let dense_cells = crate::math::square_matrix_cells(OP_ID, n)?;
 
     let t = Expr::InvocationId { axis: 0 };
 
@@ -146,20 +140,8 @@ pub fn try_matroid_exchange_bfs_step(
                 .with_count(1),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
-}
-
-fn checked_dense_cells(n: u32, op_id: &'static str) -> Result<u32, String> {
-    n.checked_mul(n).ok_or_else(|| {
-        format!(
-            "{op_id} n={n} overflows dense exchange matrix size. Fix: shard the exchange graph before GPU dispatch."
-        )
-    })
 }
 
 /// CPU reference for one BFS layer.
@@ -385,8 +367,9 @@ mod tests {
             .expect_err("checked matroid exchange BFS builder must reject n*n overflow");
 
         assert!(
-            error.contains("overflows dense exchange matrix size"),
-            "error should describe the dense matrix overflow: {error}"
+            error.contains("matroid_exchange_bfs_step shape")
+                && error.contains("overflows the u32 cell count"),
+            "error should name the op and the shape that overflowed: {error}"
         );
     }
 

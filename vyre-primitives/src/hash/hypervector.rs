@@ -32,9 +32,8 @@
 //!   position, output bit = 1 iff > k/2 input bits are 1. Ties
 //!   (k even, exactly k/2) round to 0 (callers typically use odd k).
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for the binding primitive.
@@ -54,10 +53,9 @@ pub const STANDARD_DIM_WORDS: u32 = STANDARD_DIM_BITS / 32;
 #[must_use]
 pub fn hypervector_xor_bind(a: &str, b: &str, out: &str, dim_words: u32) -> Program {
     if dim_words == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             BIND_OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             "Fix: hypervector_xor_bind requires dim_words > 0, got 0.".to_string(),
         );
     }
@@ -80,11 +78,7 @@ pub fn hypervector_xor_bind(a: &str, b: &str, out: &str, dim_words: u32) -> Prog
                 .with_count(dim_words),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(BIND_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(BIND_OP_ID, body)],
     )
 }
 
@@ -97,28 +91,23 @@ pub fn hypervector_xor_bind(a: &str, b: &str, out: &str, dim_words: u32) -> Prog
 #[must_use]
 pub fn hypervector_majority_bundle(stacked: &str, out: &str, dim_words: u32, k: u32) -> Program {
     if dim_words == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             BUNDLE_OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             "Fix: hypervector_majority_bundle requires dim_words > 0, got 0.".to_string(),
         );
     }
     if k == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             BUNDLE_OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             "Fix: hypervector_majority_bundle requires k > 0, got 0.".to_string(),
         );
     }
     let Some(stacked_words) = k.checked_mul(dim_words) else {
-        return crate::invalid_output_program(BUNDLE_OP_ID,
-        out,
-        DataType::U32,
-        format!(
+        return trap_program(BUNDLE_OP_ID, Some((out, DataType::U32)), format!(
             "Fix: hypervector_majority_bundle k*dim_words overflows stacked input count for k={k}, dim_words={dim_words}; shard the bundle before GPU dispatch."
-        ),);
+        ));
     };
 
     let t = Expr::InvocationId { axis: 0 };
@@ -188,11 +177,7 @@ pub fn hypervector_majority_bundle(stacked: &str, out: &str, dim_words: u32, k: 
                 .with_count(dim_words),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(BUNDLE_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(BUNDLE_OP_ID, body)],
     )
 }
 

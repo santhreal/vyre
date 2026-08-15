@@ -15,6 +15,7 @@
 //!
 //! The queue length can exceed queue capacity to expose overflow pressure; the
 //! traversal consumes only the first `queue_capacity` entries.
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use crate::graph::csr_frontier_step::{
@@ -132,14 +133,9 @@ impl<'a> CsrQueueForwardTraverseParams<'a> {
         if node_count != 0 && queue_capacity != 0 {
             return None;
         }
-        Some(crate::invalid_output_program(
-            op_id,
-            self.frontier_out,
-            DataType::U32,
-            format!(
-                "Fix: {builder_name} requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
-            ),
-        ))
+        Some(trap_program(op_id, Some((self.frontier_out, DataType::U32)), format!(
+            "Fix: {builder_name} requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
+        )))
     }
 
     /// Point these inputs at the shared queue-step builder. The queued-row

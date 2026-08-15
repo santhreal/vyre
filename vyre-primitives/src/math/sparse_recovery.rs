@@ -26,6 +26,7 @@
 //! | future `vyre-libs::ml::dictionary` | dictionary learning |
 //! | `vyre-foundation::transform` sparse-buffer compaction | when a Region's output is mostly zero, IHT picks the threshold that keeps the top-k non-zeros. The same primitive ships to user signal-recovery dialects. |
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Expr, Program};
 
 /// Op id.
@@ -46,10 +47,9 @@ pub const OP_ID: &str = "vyre-primitives::math::iht_threshold";
 #[must_use]
 pub fn iht_threshold(z: &str, threshold: &str, out: &str, n: u32) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("Fix: iht_threshold requires n > 0, got {n}."),
         );
     }

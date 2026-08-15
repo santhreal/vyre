@@ -18,6 +18,7 @@
 //! fixed point on the GPU/IR path (`r`, `v`) and `f64` on the CPU reference path.
 
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -58,20 +59,14 @@ pub fn sheaf_laplacian_eigenvalue(
     // to it immediately), so it does not influence the emitted program.
     let _ = iterations;
     if n_nodes == 0 || d == 0 {
-        return crate::invalid_output_program(OP_ID,
-        lambda,
-        DataType::U32,
-        format!(
+        return trap_program(OP_ID, Some((lambda, DataType::U32)), format!(
             "Fix: sheaf_laplacian_eigenvalue requires n_nodes > 0 and d > 0, got n_nodes={n_nodes}, d={d}."
-        ),);
+        ));
     }
     let Some(cells) = n_nodes.checked_mul(d) else {
-        return crate::invalid_output_program(OP_ID,
-        lambda,
-        DataType::U32,
-        format!(
+        return trap_program(OP_ID, Some((lambda, DataType::U32)), format!(
             "Fix: sheaf_laplacian_eigenvalue n_nodes*d overflows vector cell count for n_nodes={n_nodes}, d={d}; shard the sheaf spectrum before GPU dispatch."
-        ),);
+        ));
     };
 
     // Closed-form dominant eigenpair of diag(r): serial single-lane scan for the max diagonal entry
@@ -140,10 +135,9 @@ pub fn sheaf_laplacian_eigenvalue(
                 .with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::Region {
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::Region {
                 generator: Ident::from(POWER_ITERATION_PHASE_OP_ID),
                 source_region: Some(GeneratorRef {
                     name: OP_ID.to_string(),
@@ -159,8 +153,8 @@ pub fn sheaf_laplacian_eigenvalue(
                     Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
                     nodes,
                 )]),
-            }]),
-        }],
+            }],
+        )],
     )
 }
 
@@ -294,15 +288,11 @@ inventory::submit! {
                     BufferDecl::output("out", 1, DataType::U32).with_count(1),
                 ],
                 [1, 1, 1],
-                vec![Node::Region {
-                    generator: Ident::from(POWER_ITERATION_PHASE_OP_ID),
-                    source_region: None,
-                    body: Arc::new(vec![Node::store(
+                vec![wrap_anonymous_region(POWER_ITERATION_PHASE_OP_ID, vec![Node::store(
                         "out",
                         Expr::u32(0),
                         Expr::load("input", Expr::u32(0)),
-                    )]),
-                }],
+                    )])],
             )
         },
         Some(|| {

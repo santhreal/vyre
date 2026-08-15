@@ -7,6 +7,7 @@ use super::topk_selection::{
     copy_top_k_indices, init_top_k_slots, insert_top_k_candidate, BEST_IDXS, BEST_VALS,
 };
 use crate::region::wrap_anonymous;
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Build a Program that finds the indices of the `k` largest elements in `input`.
@@ -17,10 +18,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 #[must_use]
 pub fn top_k(input: &str, output_indices: &str, n: u32, k: u32) -> Program {
     if k == 0 {
-        return crate::builder::invalid_builder_trap_program(
+        return trap_program(
             "vyre-libs::nn::top_k",
-            output_indices,
-            DataType::U32,
+            Some((output_indices, DataType::U32)),
             "Fix: top_k requires k > 0 so the selection scratch has at least one slot.".to_string(),
         );
     }

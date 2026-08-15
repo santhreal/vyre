@@ -5,9 +5,8 @@
 //! `payloads[i]` into `compacted[offsets[i]]`; `live_count[0]` receives
 //! the final survivor count.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -32,10 +31,7 @@ pub fn stream_compact(
     count: u32,
 ) -> Program {
     if count == 0 {
-        return crate::invalid_output_program(OP_ID,
-        compacted,
-        DataType::U32,
-        "Fix: stream_compact requires count > 0 so live_count can be derived from the final lane.".to_string(),);
+        return trap_program(OP_ID, Some((compacted, DataType::U32)), "Fix: stream_compact requires count > 0 so live_count can be derived from the final lane.".to_string());
     }
     let t = Expr::InvocationId { axis: 0 };
 
@@ -73,11 +69,10 @@ pub fn stream_compact(
                 .with_count(1),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(Expr::lt(t, Expr::u32(count)), body)]),
-        }],
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(Expr::lt(t, Expr::u32(count)), body)],
+        )],
     )
 }
 

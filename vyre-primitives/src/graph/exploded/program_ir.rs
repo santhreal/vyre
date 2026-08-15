@@ -1,7 +1,6 @@
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
 use super::abi::{IFDS_CSR_WORKGROUP_SIZE, OP_ID};
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Build a GPU Program that emits the exploded-supergraph CSR.
@@ -23,36 +22,28 @@ pub fn build_ifds_csr_program(
     max_col_count: u32,
 ) -> Program {
     if num_procs == 0 || blocks_per_proc == 0 || facts_per_proc == 0 {
-        return crate::invalid_output_program(OP_ID,
-        "row_ptr",
-        DataType::U32,
-        format!(
+        return trap_program(OP_ID, Some(("row_ptr", DataType::U32)), format!(
             "Fix: exploded IFDS dimensions must be nonzero, got procs={num_procs}, blocks={blocks_per_proc}, facts={facts_per_proc}."
-        ),);
+        ));
     }
     let Some(slots_per_proc) = blocks_per_proc.checked_mul(facts_per_proc) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            "row_ptr",
-            DataType::U32,
+            Some(("row_ptr", DataType::U32)),
             "Fix: exploded IFDS slots_per_proc overflowed u32.".to_string(),
         );
     };
     let Some(total_nodes) = num_procs.checked_mul(slots_per_proc) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            "row_ptr",
-            DataType::U32,
+            Some(("row_ptr", DataType::U32)),
             "Fix: exploded IFDS total node count overflowed u32.".to_string(),
         );
     };
     let Some(row_ptr_count) = total_nodes.checked_add(1) else {
-        return crate::invalid_output_program(OP_ID,
-        "row_ptr",
-        DataType::U32,
-        format!(
+        return trap_program(OP_ID, Some(("row_ptr", DataType::U32)), format!(
             "Fix: exploded IFDS total_nodes={total_nodes} overflows row_ptr count. Shard the IFDS graph before GPU dispatch."
-        ),);
+        ));
     };
 
     let idx_expr = |p: Expr, b: Expr, f: Expr| {
@@ -482,13 +473,9 @@ pub fn build_ifds_csr_program(
                 .with_count(1),
         ],
         IFDS_CSR_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
-                Expr::eq(Expr::gid_x(), Expr::u32(0)),
-                entry,
-            )]),
-        }],
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(Expr::eq(Expr::gid_x(), Expr::u32(0)), entry)],
+        )],
     )
 }

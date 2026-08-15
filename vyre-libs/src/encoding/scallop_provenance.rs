@@ -339,27 +339,7 @@ mod tests {
     #![allow(clippy::identity_op, clippy::erasing_op)]
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-
-    struct ProvenanceDispatcher {
-        outputs: Vec<Vec<u8>>,
-    }
-
-    impl ProgramDispatcher for ProvenanceDispatcher {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            if inputs.len() != 4 {
-                return Err(DispatchError::BadInputs(format!(
-                    "Fix: provenance test dispatcher expected 4 inputs, got {}.",
-                    inputs.len()
-                )));
-            }
-            Ok(self.outputs.clone())
-        }
-    }
+    use crate::test_support::StaticOutputs;
 
     #[test]
     fn build_program_declares_four_buffers() {
@@ -431,9 +411,11 @@ mod tests {
     #[test]
     fn via_decodes_exact_state_output_into_reused_buffer() {
         let expected = vec![1u32, 2, 3, 4];
-        let dispatcher = ProvenanceDispatcher {
-            outputs: vec![u32_slice_to_le_bytes(&expected)],
-        };
+        let dispatcher = StaticOutputs::new(
+            "provenance closure dispatch",
+            vec![u32_slice_to_le_bytes(&expected)],
+        )
+        .expecting_inputs(&[4]);
         let state = vec![0u32; 4];
         let join_rules = vec![0u32; 4];
         let mut closure = Vec::with_capacity(8);
@@ -447,9 +429,11 @@ mod tests {
     #[test]
     fn via_with_scratch_reuses_dispatch_and_output_storage() {
         let expected = vec![1u32, 2, 3, 4];
-        let dispatcher = ProvenanceDispatcher {
-            outputs: vec![u32_slice_to_le_bytes(&expected)],
-        };
+        let dispatcher = StaticOutputs::new(
+            "provenance closure dispatch",
+            vec![u32_slice_to_le_bytes(&expected)],
+        )
+        .expecting_inputs(&[4]);
 
         let state = vec![0u32; 4];
         let join_rules = vec![0u32; 4];
@@ -491,13 +475,15 @@ mod tests {
 
     #[test]
     fn via_accepts_primitive_scratch_output_buffers() {
-        let dispatcher = ProvenanceDispatcher {
-            outputs: vec![
+        let dispatcher = StaticOutputs::new(
+            "provenance closure dispatch",
+            vec![
                 u32_slice_to_le_bytes(&[1, 2, 3, 4]),
                 u32_slice_to_le_bytes(&[0, 0, 0, 0]),
                 u32_slice_to_le_bytes(&[0]),
             ],
-        };
+        )
+        .expecting_inputs(&[4]);
         let state = vec![0u32; 4];
         let join_rules = vec![0u32; 4];
         let closure = provenance_closure_via(&dispatcher, &state, &join_rules, 2, 16)
@@ -507,9 +493,9 @@ mod tests {
 
     #[test]
     fn via_rejects_trailing_state_bytes() {
-        let dispatcher = ProvenanceDispatcher {
-            outputs: vec![vec![1, 0, 0, 0, 2]],
-        };
+        let dispatcher =
+            StaticOutputs::new("provenance closure dispatch", vec![vec![1, 0, 0, 0, 2]])
+                .expecting_inputs(&[4]);
         let state = vec![0u32; 1];
         let join_rules = vec![0u32; 1];
         let err = provenance_closure_via(&dispatcher, &state, &join_rules, 1, 16)

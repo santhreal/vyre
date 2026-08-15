@@ -8,6 +8,7 @@ use super::topk_selection::{
     BEST_VALS,
 };
 use crate::region::wrap_anonymous;
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 /// Build a Program that computes softmax over `scores`, then returns the
@@ -30,10 +31,9 @@ pub fn softmax_top_k(
     k: u32,
 ) -> Program {
     if k == 0 {
-        return crate::builder::invalid_builder_trap_program(
+        return trap_program(
             "vyre-libs::nn::softmax_top_k",
-            out_indices,
-            DataType::U32,
+            Some((out_indices, DataType::U32)),
             "Fix: softmax_top_k requires k > 0 so the selection scratch has at least one slot."
                 .to_string(),
         );

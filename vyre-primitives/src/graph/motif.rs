@@ -4,10 +4,9 @@
 //! ProgramGraph CSR. If every requested motif edge exists, every
 //! endpoint participating in the motif is marked in the final witness.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
 use super::padded_u32_slice_fingerprint as motif_padded_slice_fingerprint;
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 
 use crate::graph::program_graph::{
@@ -315,10 +314,9 @@ pub fn plan_motif_dispatch(
 #[must_use]
 pub fn motif(shape: ProgramGraphShape, edges: &[MotifEdge], witness_out: &str) -> Program {
     let Ok(edge_count) = u32::try_from(edges.len()) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            witness_out,
-            DataType::U32,
+            Some((witness_out, DataType::U32)),
             "Fix: motif edges.len() exceeds u32::MAX; split the motif or redesign the caller."
                 .to_string(),
         );
@@ -347,38 +345,34 @@ pub fn motif(shape: ProgramGraphShape, edges: &[MotifEdge], witness_out: &str) -
     // buffers and prevents loop-carried scratch state from making a partial
     // motif look like a complete match.
     let Some(scan_capacity) = edges.len().checked_mul(5) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            witness_out,
-            DataType::U32,
+            Some((witness_out, DataType::U32)),
             "Fix: motif scan node count overflows usize; split the motif before lowering."
                 .to_string(),
         );
     };
     let Some(mark_capacity) = edges.len().checked_mul(2) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            witness_out,
-            DataType::U32,
+            Some((witness_out, DataType::U32)),
             "Fix: motif witness mark count overflows usize; split the motif before lowering."
                 .to_string(),
         );
     };
     let mut scan_edges: Vec<Node> = Vec::new();
     if let Err(error) = scan_edges.try_reserve(scan_capacity) {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            witness_out,
-            DataType::U32,
+            Some((witness_out, DataType::U32)),
             format!("Fix: motif lowering could not reserve {scan_capacity} scan nodes: {error}"),
         );
     }
     let mut mark_hits: Vec<Node> = Vec::new();
     if let Err(error) = mark_hits.try_reserve(mark_capacity) {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            witness_out,
-            DataType::U32,
+            Some((witness_out, DataType::U32)),
             format!("Fix: motif lowering could not reserve {mark_capacity} mark nodes: {error}"),
         );
     }
@@ -465,10 +459,9 @@ pub fn motif(shape: ProgramGraphShape, edges: &[MotifEdge], witness_out: &str) -
     Program::wrapped(
         buffers,
         MOTIF_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![
                 Node::loop_for(
                     "node",
                     Expr::u32(0),
@@ -481,8 +474,8 @@ pub fn motif(shape: ProgramGraphShape, edges: &[MotifEdge], witness_out: &str) -
                     Expr::eq(Expr::var("matched_edges"), Expr::u32(edge_count)),
                     publish_full_match,
                 ),
-            ]),
-        }],
+            ],
+        )],
     )
 }
 

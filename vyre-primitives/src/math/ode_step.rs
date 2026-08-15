@@ -26,9 +26,8 @@
 //! - Multi-shooting variants own independent segment dispatch plus a
 //!   final stitch step that reconciles boundary continuity.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -52,10 +51,9 @@ pub fn rk4_step(
     n: u32,
 ) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            y_next,
-            DataType::U32,
+            Some((y_next, DataType::U32)),
             format!("Fix: rk4_step requires n > 0, got {n}."),
         );
     }
@@ -91,11 +89,7 @@ pub fn rk4_step(
             BufferDecl::storage(y_next, 6, BufferAccess::ReadWrite, DataType::U32).with_count(n),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

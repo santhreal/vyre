@@ -1,5 +1,6 @@
 //! Element-wise sigmoid output gate.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 use super::unary::typed_sigmoid_gate_program;
@@ -43,7 +44,7 @@ fn build_sigmoid_gate(
     dtype: DataType,
 ) -> Program {
     if n == 0 {
-        return crate::invalid_program(OP_ID, "Fix: sigmoid_gate requires n > 0");
+        return trap_program(OP_ID, None, "Fix: sigmoid_gate requires n > 0");
     }
     typed_sigmoid_gate_program(OP_ID, gate_logits, branch, output, n, dtype, false)
 }

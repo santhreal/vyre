@@ -24,9 +24,8 @@
 //!   and taking the median of `sign * cell` reads.
 
 use std::fmt;
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id for the update primitive.
@@ -131,26 +130,23 @@ impl std::error::Error for CountSketchError {}
 #[must_use]
 pub fn count_sketch_update(table: &str, hashes: &str, signs: &str, d: u32, w: u32) -> Program {
     if d == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             UPDATE_OP_ID,
-            table,
-            DataType::U32,
+            Some((table, DataType::U32)),
             format!("Fix: count_sketch_update requires d > 0, got {d}."),
         );
     }
     if w == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             UPDATE_OP_ID,
-            table,
-            DataType::U32,
+            Some((table, DataType::U32)),
             format!("Fix: count_sketch_update requires w > 0, got {w}."),
         );
     }
     let Some(table_words) = d.checked_mul(w) else {
-        return crate::invalid_output_program(
+        return trap_program(
             UPDATE_OP_ID,
-            table,
-            DataType::U32,
+            Some((table, DataType::U32)),
             format!("Fix: count_sketch_update table size overflowed for d={d}, w={w}."),
         );
     };
@@ -191,11 +187,7 @@ pub fn count_sketch_update(table: &str, hashes: &str, signs: &str, d: u32, w: u3
             BufferDecl::storage(signs, 2, BufferAccess::ReadOnly, DataType::U32).with_count(d),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(UPDATE_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(UPDATE_OP_ID, body)],
     )
 }
 

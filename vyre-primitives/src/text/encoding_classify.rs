@@ -1,8 +1,8 @@
 //! Encoding classifier over a precomputed 256-bin byte histogram.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::reduce::range_counts::range_counts_u32_child;
@@ -99,13 +99,13 @@ pub fn encoding_classify_child(
     output: &str,
     count: u32,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(ENCODING_CLASSIFY_OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        ENCODING_CLASSIFY_OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(encoding_classify_body(histogram, output, count)),
-    }
+        },
+        encoding_classify_body(histogram, output, count),
+    )
 }
 
 /// Standalone classifier program for primitive-level conformance.
@@ -120,11 +120,10 @@ pub fn encoding_classify(histogram: &str, output: &str, count: u32) -> Program {
                 .with_output_byte_range(0..4),
         ],
         ENCODING_CLASSIFY_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(ENCODING_CLASSIFY_OP_ID),
-            source_region: None,
-            body: Arc::new(encoding_classify_body(histogram, output, count)),
-        }],
+        vec![wrap_anonymous_region(
+            ENCODING_CLASSIFY_OP_ID,
+            encoding_classify_body(histogram, output, count),
+        )],
     )
 }
 

@@ -29,9 +29,8 @@
 //! round. The public builder accepts any `N` in `1..=1024` and pads
 //! the workgroup to the next power of two internally.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
@@ -74,10 +73,9 @@ pub fn prefix_scan_with_op_id(
     op_id: &'static str,
 ) -> Program {
     if n == 0 || n > 1024 {
-        return crate::invalid_output_program(
+        return trap_program(
             op_id,
-            out_buf,
-            DataType::U32,
+            Some((out_buf, DataType::U32)),
             format!("Fix: prefix_scan requires n in 1..=1024, got {n}."),
         );
     }
@@ -142,11 +140,7 @@ pub fn prefix_scan_with_op_id(
     Program::wrapped(
         buffers,
         [lanes, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(op_id, body)],
     )
 }
 
@@ -187,22 +181,14 @@ fn empty_large_scan_program(in_buf: &str, out_buf: &str, op_id: &'static str) ->
     Program::wrapped(
         vec![input_decl, output_decl],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(Vec::new()),
-        }],
+        vec![wrap_anonymous_region(op_id, Vec::new())],
     )
 }
 
 fn wrap_large_scan_program(program: Program, op_id: &'static str) -> Program {
     // Only the entry changes, so rebuild only the entry. `Program::wrapped`
     // would deep-clone the buffer table and reset the metadata flags.
-    let tagged = vec![Node::Region {
-        generator: Ident::from(op_id),
-        source_region: None,
-        body: Arc::new(program.entry().to_vec()),
-    }];
+    let tagged = vec![wrap_anonymous_region(op_id, program.entry().to_vec())];
     program.with_rewritten_wrapped_entry(tagged)
 }
 

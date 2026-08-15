@@ -1,8 +1,7 @@
 //! SSA dominance-frontier lookahead scan.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::ast_ops::AST_ASSIGN;
@@ -155,11 +154,7 @@ pub fn ssa_dominance_scan_program(num_nodes: u32, phi_words: u32) -> Program {
                 .with_count(1),
         ],
         [num_nodes.max(1), 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

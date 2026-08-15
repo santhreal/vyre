@@ -21,9 +21,8 @@
 //! | future `vyre-libs::opt::polynomial` | polynomial optimization (POP) |
 //! | future `vyre-libs::security::buffer_safety` | SOS proofs of bounded-buffer-access |
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -53,27 +52,24 @@ pub fn sos_gram_construct(
     coeff_count: u32,
 ) -> Program {
     if m == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            gram,
-            DataType::U32,
+            Some((gram, DataType::U32)),
             format!("Fix: sos_gram_construct requires m > 0, got {m}."),
         );
     }
     if coeff_count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            gram,
-            DataType::U32,
+            Some((gram, DataType::U32)),
             "Fix: sos_gram_construct requires coeff_count > 0, got 0.".to_string(),
         );
     }
 
     let Some(cells) = m.checked_mul(m) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            gram,
-            DataType::U32,
+            Some((gram, DataType::U32)),
             format!("Fix: sos_gram_construct m*m overflows u32 for m={m}."),
         );
     };
@@ -110,11 +106,7 @@ pub fn sos_gram_construct(
             BufferDecl::storage(gram, 2, BufferAccess::ReadWrite, DataType::U32).with_count(cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

@@ -1,5 +1,5 @@
 //! Pattern-set compilation: parse each pattern, budget-check it, lower it, and
-//! emit the shared plan plus lane-major tables.
+//! emit the shared plan plus state-major tables.
 
 use crate::scan::nfa::NfaPlan;
 
@@ -184,7 +184,7 @@ pub(super) fn compile_regex_set_inner(
         accept_start_anchored,
         accept_end_anchored,
     };
-    let (transition_table, epsilon_table) = builder.emit_lane_major_tables()?;
+    let (transition_table, epsilon_table) = builder.emit_state_major_tables()?;
     Ok(CompiledRegexSet {
         plan,
         transition_table,

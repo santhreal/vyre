@@ -9,9 +9,8 @@
 //! an approximate root x of `f(x) ≡ 0 (mod p^k)` and the formal
 //! derivative `f'(x)`, return a refined root accurate `mod p^{2k}`.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -22,10 +21,9 @@ pub const OP_ID: &str = "vyre-primitives::math::hensel_lift_step";
 #[must_use]
 pub fn hensel_lift_step(x: &str, f_x: &str, inv_f_prime: &str, out: &str, n: u32) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             "Fix: hensel_lift_step requires n > 0, got 0.".to_string(),
         );
     }
@@ -53,11 +51,7 @@ pub fn hensel_lift_step(x: &str, f_x: &str, inv_f_prime: &str, out: &str, n: u32
             BufferDecl::storage(out, 3, BufferAccess::ReadWrite, DataType::U32).with_count(n),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

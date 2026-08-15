@@ -41,9 +41,8 @@
 //! single-dispatch version inlines the matvec body to keep launch
 //! overhead at one dispatch.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -83,7 +82,7 @@ pub fn chebyshev_filter(
 ) -> Program {
     match try_chebyshev_filter(laplacian, signal, coeffs, output, scratch, n, k_steps) {
         Ok(program) => program,
-        Err(error) => crate::invalid_output_program(OP_ID, output, DataType::U32, error),
+        Err(error) => trap_program(OP_ID, Some((output, DataType::U32)), error),
     }
 }
 
@@ -98,16 +97,13 @@ pub fn try_chebyshev_filter(
     n: u32,
     k_steps: u32,
 ) -> Result<Program, String> {
-    if n == 0 {
-        return Err(format!("Fix: chebyshev_filter requires n > 0, got {n}."));
-    }
+    let laplacian_cells = crate::math::square_matrix_cells(OP_ID, n)?;
     if k_steps > MAX_K {
         return Err(format!(
             "Fix: chebyshev_filter k_steps must be <= MAX_K={MAX_K}, got {k_steps}."
         ));
     }
-    let laplacian_cells = checked_square_cells(n)?;
-    let scratch_words = checked_double_words(n)?;
+    let scratch_words = crate::math::matrix_cells(OP_ID, n, 2)?;
 
     let t = Expr::InvocationId { axis: 0 };
 
@@ -264,28 +260,8 @@ pub fn try_chebyshev_filter(
                 .with_count(scratch_words),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body_with_bounds),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body_with_bounds)],
     ))
-}
-
-fn checked_square_cells(n: u32) -> Result<u32, String> {
-    n.checked_mul(n).ok_or_else(|| {
-        format!(
-            "chebyshev_filter n={n} overflows dense Laplacian cell count. Fix: shard or sparsify the graph before GPU dispatch."
-        )
-    })
-}
-
-fn checked_double_words(n: u32) -> Result<u32, String> {
-    n.checked_mul(2).ok_or_else(|| {
-        format!(
-            "chebyshev_filter n={n} overflows scratch word count. Fix: shard the graph before GPU dispatch."
-        )
-    })
 }
 
 /// CPU reference for [`chebyshev_filter`]. Operates on f32 internally
@@ -657,8 +633,9 @@ mod tests {
             .expect_err("checked Chebyshev builder must reject dense matrix overflow");
 
         assert!(
-            error.contains("overflows dense Laplacian cell count"),
-            "error should describe the dense Laplacian overflow: {error}"
+            error.contains("vyre-primitives::graph::chebyshev_filter shape")
+                && error.contains("overflows the u32 cell count"),
+            "error should name the op and the shape that overflowed: {error}"
         );
     }
 

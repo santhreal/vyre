@@ -9,6 +9,7 @@
 //! bitstream representations elementwise.
 
 use super::binary_word::{binary_word_program, BitwiseBinaryOp};
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
 /// Op id.
@@ -18,10 +19,9 @@ pub const OP_ID: &str = "vyre-primitives::bitset::stochastic_and_mul";
 #[must_use]
 pub fn stochastic_and_mul(a: &str, b: &str, out: &str, n_words: u32) -> Program {
     if n_words == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             "Fix: stochastic_and_mul requires n_words > 0, got 0.".to_string(),
         );
     }

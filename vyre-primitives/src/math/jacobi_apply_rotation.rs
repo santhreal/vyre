@@ -12,9 +12,11 @@
 //! loop-carried pivot variables while the standalone Program passes constants.
 //! The rotation is the operation; choosing the pivot is not part of it.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{
+    trap_program, wrap_anonymous_region, wrap_child_region,
+};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::math::givens_rotate_pair::givens_rotate_pair_region;
@@ -119,41 +121,26 @@ pub fn jacobi_apply_rotation_region(
     p: &Expr,
     q: &Expr,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(jacobi_apply_rotation_body(a, eigenvectors, n, p, q)),
-    }
+        },
+        jacobi_apply_rotation_body(a, eigenvectors, n, p, q),
+    )
 }
 
 /// Build a standalone Program applying one Jacobi rotation at a fixed pivot.
 #[must_use]
-pub fn jacobi_apply_rotation(
-    a: &str,
-    eigenvectors: &str,
-    n: u32,
-    p: u32,
-    q: u32,
-) -> Program {
+pub fn jacobi_apply_rotation(a: &str, eigenvectors: &str, n: u32, p: u32, q: u32) -> Program {
     if n == 0 || p >= n || q >= n || p == q {
-        return crate::invalid_output_program(
-            OP_ID,
-            a,
-            DataType::F32,
-            format!(
-                "Fix: jacobi_apply_rotation needs n > 0 and a distinct off-diagonal pivot below n, got n={n}, p={p}, q={q}."
-            ),
-        );
+        return trap_program(OP_ID, Some((a, DataType::F32)), format!(
+            "Fix: jacobi_apply_rotation needs n > 0 and a distinct off-diagonal pivot below n, got n={n}, p={p}, q={q}."
+        ));
     }
-    let Some(cells) = n.checked_mul(n) else {
-        return crate::invalid_output_program(
-            OP_ID,
-            a,
-            DataType::F32,
-            format!("Fix: jacobi_apply_rotation n*n overflows matrix cell count for n={n}."),
-        );
+    let cells = match crate::math::square_matrix_cells(OP_ID, n) {
+        Ok(cells) => cells,
+        Err(message) => return trap_program(OP_ID, Some((a, DataType::F32)), message),
     };
     Program::wrapped(
         vec![
@@ -162,20 +149,13 @@ pub fn jacobi_apply_rotation(
                 .with_count(cells),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-                jacobi_apply_rotation_body(
-                    a,
-                    eigenvectors,
-                    n,
-                    &Expr::u32(p),
-                    &Expr::u32(q),
-                ),
-            )]),
-        }],
+                jacobi_apply_rotation_body(a, eigenvectors, n, &Expr::u32(p), &Expr::u32(q)),
+            )],
+        )],
     )
 }
 
@@ -247,13 +227,7 @@ mod tests {
 
     #[test]
     fn the_three_rotations_are_one_owner() {
-        let body = jacobi_apply_rotation_body(
-            "a",
-            "evec",
-            4,
-            &Expr::u32(0),
-            &Expr::u32(1),
-        );
+        let body = jacobi_apply_rotation_body("a", "evec", 4, &Expr::u32(0), &Expr::u32(1));
         let regions = body
             .iter()
             .filter(|node| {

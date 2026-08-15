@@ -6,9 +6,8 @@
 //! Fulfils the "otherwise dense solve" primitive fallback for natural
 //! gradient optimization in `vyre-nn`.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -27,34 +26,30 @@ pub fn kfac_block_inverse(
     n: u32,
 ) -> Program {
     if num_blocks == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            blocks_out,
-            DataType::F32,
+            Some((blocks_out, DataType::F32)),
             "Fix: kfac_block_inverse requires num_blocks > 0, got 0.".to_string(),
         );
     }
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            blocks_out,
-            DataType::F32,
+            Some((blocks_out, DataType::F32)),
             "Fix: kfac_block_inverse requires n > 0, got 0.".to_string(),
         );
     }
     let Some(block_cells) = n.checked_mul(n) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            blocks_out,
-            DataType::F32,
+            Some((blocks_out, DataType::F32)),
             format!("Fix: kfac_block_inverse n*n overflows u32 for n={n}."),
         );
     };
     let Some(total_cells) = num_blocks.checked_mul(block_cells) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            blocks_out,
-            DataType::F32,
+            Some((blocks_out, DataType::F32)),
             format!("Fix: kfac_block_inverse num_blocks*n*n overflows u32: {num_blocks}*{n}*{n}."),
         );
     };
@@ -198,11 +193,7 @@ pub fn kfac_block_inverse(
                 .with_count(total_cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(entry),
-        }],
+        vec![wrap_anonymous_region(OP_ID, entry)],
     )
 }
 
@@ -366,6 +357,7 @@ mod tests {
 
         let expected_out = cpu_ref(&blocks_in, 1, 2);
 
+        use std::sync::Arc;
         use vyre_reference::reference_eval;
         use vyre_reference::value::Value;
 

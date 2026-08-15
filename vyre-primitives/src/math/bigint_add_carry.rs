@@ -40,9 +40,8 @@
 //! This module is the load-and-half-add primitive used by the parallel-prefix
 //! carry resolver.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for region-chain audits and bench attribution.
@@ -109,10 +108,9 @@ pub enum BigIntAddCarryError {
 #[must_use]
 pub fn bigint_add_carry(limb_count: u32) -> Program {
     if limb_count == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            "sum_partial",
-            DataType::U32,
+            Some(("sum_partial", DataType::U32)),
             "Fix: bigint_add_carry requires limb_count > 0, got 0.".to_string(),
         );
     }
@@ -163,11 +161,7 @@ pub fn bigint_add_carry(limb_count: u32) -> Program {
         .with_count(limb_count),
     ];
 
-    let entry = vec![Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: None,
-        body: Arc::new(body),
-    }];
+    let entry = vec![wrap_anonymous_region(OP_ID, body)];
     Program::wrapped(buffers, BIGINT_ADD_CARRY_WORKGROUP_SIZE, entry)
 }
 

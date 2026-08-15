@@ -4,6 +4,7 @@
 //! Composes `sinkhorn_scale` + `semiring_gemm` + a persistent fixpoint
 //! harness.
 
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
 #[cfg(test)]
@@ -130,26 +131,23 @@ pub fn sinkhorn_iterate(buffers: SinkhornBuffers<'_>, extents: SinkhornExtents) 
         max_iterations,
     } = extents;
     if m == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            buffers.u_curr,
-            DataType::U32,
+            Some((buffers.u_curr, DataType::U32)),
             "Fix: sinkhorn_iterate requires m > 0, got 0.".to_string(),
         );
     }
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            buffers.u_curr,
-            DataType::U32,
+            Some((buffers.u_curr, DataType::U32)),
             "Fix: sinkhorn_iterate requires n > 0, got 0.".to_string(),
         );
     }
     let Some(matrix_cells) = m.checked_mul(n) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            buffers.u_curr,
-            DataType::U32,
+            Some((buffers.u_curr, DataType::U32)),
             format!("Fix: sinkhorn_iterate m*n overflows u32: {m}*{n}."),
         );
     };

@@ -1,3 +1,4 @@
+use vyre_foundation::algebra::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[cfg(test)]
@@ -137,18 +138,16 @@ pub fn bellman_shortest_path(buffers: BellmanBuffers<'_>, extents: BellmanExtent
         max_iterations,
     } = extents;
     if n_nodes == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            dist,
-            DataType::U32,
+            Some((dist, DataType::U32)),
             format!("Fix: bellman_shortest_path requires n_nodes > 0, got {n_nodes}."),
         );
     }
     if max_iterations == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            dist,
-            DataType::U32,
+            Some((dist, DataType::U32)),
             format!(
                 "Fix: bellman_shortest_path requires max_iterations > 0, got {max_iterations}."
             ),

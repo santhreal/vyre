@@ -34,9 +34,8 @@
 //! selection; this module's contract is softmax plus differentiable
 //! argmax.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -62,10 +61,9 @@ pub const OP_ID: &str = "vyre-primitives::math::softmax_step";
 #[must_use]
 pub fn softmax_step(pre_exp: &str, out: &str, n: u32) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            out,
-            DataType::U32,
+            Some((out, DataType::U32)),
             format!("Fix: softmax_step requires n > 0, got {n}."),
         );
     }
@@ -118,11 +116,7 @@ pub fn softmax_step(pre_exp: &str, out: &str, n: u32) -> Program {
             BufferDecl::storage(out, 1, BufferAccess::ReadWrite, DataType::U32).with_count(n),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

@@ -11,6 +11,7 @@ fn program_builds_without_panic() {
 
 #[test]
 fn program_exposes_chk_phases_as_child_regions() {
+    use vyre_foundation::algebra::composition::is_anonymous_generator;
     use vyre_foundation::ir::Node;
 
     fn collect(nodes: &[Node], generators: &mut Vec<String>) {
@@ -43,16 +44,20 @@ fn program_exposes_chk_phases_as_child_regions() {
     let mut generators = Vec::new();
     collect(p.entry(), &mut generators);
 
-    assert!(
-        generators.iter().any(|g| g == "vyre-primitives::graph::dominator_tree::init_state")
-            && generators
-                .iter()
-                .any(|g| g == "vyre-primitives::graph::dominator_tree::recompute_depth")
-            && generators.iter().any(|g| {
-                g == "vyre-primitives::graph::dominator_tree::intersect_predecessors"
-            }),
-        "Fix: dominator_tree must expose CHK initialization, depth recompute, and predecessor intersection as child regions so LegoGate and print-composition can see real phase boundaries: {generators:?}"
-    );
+    for phase in [
+        "anonymous::dominator_tree_init_state",
+        "anonymous::dominator_tree_recompute_depth",
+        "anonymous::dominator_tree_intersect_predecessors",
+    ] {
+        assert!(
+            generators.iter().any(|g| g == phase),
+            "Fix: dominator_tree must expose CHK initialization, depth recompute, and predecessor intersection as child regions so composition printing can see real phase boundaries. Missing `{phase}` in {generators:?}"
+        );
+        assert!(
+            is_anonymous_generator(phase),
+            "Fix: a phase boundary is not an operation, so `{phase}` must carry an anonymous-generator prefix"
+        );
+    }
 }
 
 #[test]

@@ -47,9 +47,8 @@
 //! emit `Y_{k+1}`. The matrix product `Z_k Y_k` is the caller's job
 //! (one `semiring_gemm` dispatch per step).
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -79,10 +78,9 @@ pub const POLY5_F32_OP_ID: &str = "vyre-primitives::math::newton_schulz_poly5_f3
 #[must_use]
 pub fn newton_schulz_y_step(y_curr: &str, yzy: &str, y_next: &str, n: u32) -> Program {
     if n == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            y_next,
-            DataType::U32,
+            Some((y_next, DataType::U32)),
             format!("Fix: newton_schulz_y_step requires n > 0, got {n}."),
         );
     }
@@ -108,11 +106,7 @@ pub fn newton_schulz_y_step(y_curr: &str, yzy: &str, y_next: &str, n: u32) -> Pr
                 .with_count(cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -162,11 +156,7 @@ pub fn newton_schulz_poly5_f32(mat: &str, output: &str, rows: u32, cols: u32) ->
             BufferDecl::output(output, 1, DataType::F32).with_count(total),
         ],
         [64, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(POLY5_F32_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(POLY5_F32_OP_ID, body)],
     )
 }
 

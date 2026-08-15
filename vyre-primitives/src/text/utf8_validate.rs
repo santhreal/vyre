@@ -15,8 +15,7 @@
 //! [`UTF8_INVALID`] at the offending byte. Valid bytes retain the
 //! shape code parser dialects need for downstream tokenization.
 
-use std::sync::Arc;
-use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id for the registered Tier 3 wrapper.
@@ -75,10 +74,9 @@ fn utf8_validate_with_source_type(
     source_type: DataType,
 ) -> Program {
     let idx = Expr::InvocationId { axis: 0 };
-    let body = vec![Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: None,
-        body: Arc::new(vec![
+    let body = vec![wrap_anonymous_region(
+        OP_ID,
+        vec![
             Node::let_bind("idx", idx.clone()),
             Node::if_then(
                 Expr::lt(Expr::var("idx"), Expr::u32(n)),
@@ -108,8 +106,8 @@ fn utf8_validate_with_source_type(
                     Node::store(classes, Expr::var("idx"), Expr::var("class")),
                 ],
             ),
-        ]),
-    }];
+        ],
+    )];
 
     let source_decl = if n == 0 {
         BufferDecl::storage(source, 0, BufferAccess::ReadOnly, source_type)

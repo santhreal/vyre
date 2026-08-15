@@ -1,8 +1,8 @@
 //! DEFLATE stored-block inflate primitive body.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for stored-block inflate.
@@ -149,13 +149,13 @@ pub fn inflate_stored_child(
     output: &str,
     inflated_len_buffer: &str,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(INFLATE_STORED_OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        INFLATE_STORED_OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(inflate_stored_body(input, output, inflated_len_buffer)),
-    }
+        },
+        inflate_stored_body(input, output, inflated_len_buffer),
+    )
 }
 
 /// Standalone stored-block inflate program for primitive-level conformance.
@@ -174,11 +174,10 @@ pub fn inflate_stored(
             BufferDecl::read_write(inflated_len_buffer, 2, DataType::U32).with_count(1),
         ],
         INFLATE_STORED_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(INFLATE_STORED_OP_ID),
-            source_region: None,
-            body: Arc::new(inflate_stored_body(input, output, inflated_len_buffer)),
-        }],
+        vec![wrap_anonymous_region(
+            INFLATE_STORED_OP_ID,
+            inflate_stored_body(input, output, inflated_len_buffer),
+        )],
     )
 }
 

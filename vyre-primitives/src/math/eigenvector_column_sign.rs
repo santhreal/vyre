@@ -13,9 +13,11 @@
 //!
 //! [`EIGENVECTOR_SIGN_EPSILON`]: crate::math::eigenvector_column_sign::EIGENVECTOR_SIGN_EPSILON
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{
+    trap_program, wrap_anonymous_region, wrap_child_region,
+};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -27,9 +29,8 @@ pub const EIGENVECTOR_SIGN_EPSILON: f32 = 1.0e-6;
 /// Emit the pass that flips every column whose first significant component is negative.
 #[must_use]
 pub fn eigenvector_column_sign_body(eigenvectors: &str, n: u32) -> Vec<Node> {
-    let cell = |row: &str, col: &str| {
-        Expr::add(Expr::mul(Expr::var(row), Expr::u32(n)), Expr::var(col))
-    };
+    let cell =
+        |row: &str, col: &str| Expr::add(Expr::mul(Expr::var(row), Expr::u32(n)), Expr::var(col));
     vec![Node::loop_for(
         "ecs_col",
         Expr::u32(0),
@@ -70,11 +71,7 @@ pub fn eigenvector_column_sign_body(eigenvectors: &str, n: u32) -> Vec<Node> {
                     ),
                     Node::assign(
                         "ecs_found",
-                        Expr::select(
-                            Expr::var("ecs_first"),
-                            Expr::u32(1),
-                            Expr::var("ecs_found"),
-                        ),
+                        Expr::select(Expr::var("ecs_first"), Expr::u32(1), Expr::var("ecs_found")),
                     ),
                 ],
             ),
@@ -98,45 +95,34 @@ pub fn eigenvector_column_sign_body(eigenvectors: &str, n: u32) -> Vec<Node> {
 /// Emit [`eigenvector_column_sign_body`] as a child region of `parent_op_id`.
 #[must_use]
 pub fn eigenvector_column_sign_region(parent_op_id: &str, eigenvectors: &str, n: u32) -> Node {
-    Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(eigenvector_column_sign_body(eigenvectors, n)),
-    }
+        },
+        eigenvector_column_sign_body(eigenvectors, n),
+    )
 }
 
 /// Build a standalone column-sign canonicalization Program.
 #[must_use]
 pub fn eigenvector_column_sign(eigenvectors: &str, n: u32) -> Program {
-    if n == 0 {
-        return crate::invalid_output_program(
-            OP_ID,
-            eigenvectors,
-            DataType::F32,
-            format!("Fix: eigenvector_column_sign requires n > 0, got {n}."),
-        );
-    }
-    let Some(cells) = n.checked_mul(n) else {
-        return crate::invalid_output_program(
-            OP_ID,
-            eigenvectors,
-            DataType::F32,
-            format!("Fix: eigenvector_column_sign n*n overflows matrix cell count for n={n}."),
-        );
+    let cells = match crate::math::square_matrix_cells(OP_ID, n) {
+        Ok(cells) => cells,
+        Err(message) => {
+            return trap_program(OP_ID, Some((eigenvectors, DataType::F32)), message);
+        }
     };
     Program::wrapped(
         vec![BufferDecl::output(eigenvectors, 0, DataType::F32).with_count(cells)],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
                 eigenvector_column_sign_body(eigenvectors, n),
-            )]),
-        }],
+            )],
+        )],
     )
 }
 

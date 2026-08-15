@@ -5,9 +5,8 @@
 //! reachable bits through rows inside `group_mask` and writes the final
 //! bounded closure to `out_mask[0]`.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -88,11 +87,7 @@ pub fn tensor_scc_fixpoint(
             BufferDecl::storage(out_mask, 3, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

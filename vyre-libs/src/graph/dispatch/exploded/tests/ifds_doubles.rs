@@ -43,20 +43,3 @@ impl ProgramDispatcher for RecordingIfdsOracle {
         self.inner.dispatch(program, inputs, grid_override)
     }
 }
-
-/// Test-only dispatcher that returns malformed backend outputs for decode
-/// validation. Production parity uses [`CpuOracleDispatcher`].
-pub(super) struct MalformedIfdsDispatcher {
-    pub(super) outputs: Vec<Vec<u8>>,
-}
-
-impl ProgramDispatcher for MalformedIfdsDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        _inputs: &[Vec<u8>],
-        _grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        Ok(self.outputs.clone())
-    }
-}

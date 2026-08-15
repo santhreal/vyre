@@ -23,8 +23,7 @@
 //! host-side iterations. It chains the Sinkhorn update steps directly
 //! within the IR Program.
 
-use std::sync::Arc;
-use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::dispatch_buffers::{
@@ -347,11 +346,7 @@ pub fn sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32)
             BufferDecl::output("out_assignments", 6, DataType::U32).with_count(m),
         ],
         [workgroup_size, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -679,30 +674,12 @@ pub fn reference_sinkhorn_clustering(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::StaticOutputs;
 
-    struct SinkhornDispatcher {
-        outputs: Vec<Vec<u8>>,
-    }
-
-    impl ProgramDispatcher for SinkhornDispatcher {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            // Real-backend contract: 4 RO inputs + u/v plain-RW = 6 input-consuming buffers;
-            // out_assignments is a backend-allocated `BufferDecl::output`, not an input.
-            if inputs.len() != 6 {
-                return Err(DispatchError::BadInputs(format!(
-                    "Fix: sinkhorn test dispatcher expected 6 inputs, got {}.",
-                    inputs.len()
-                )));
-            }
-            Ok(self.outputs.clone())
-        }
-    }
+    /// Real-backend contract: 4 RO inputs + u/v plain-RW = 6 input-consuming
+    /// buffers; out_assignments is a backend-allocated `BufferDecl::output`,
+    /// not an input.
+    const SINKHORN_CONTRACT: &str = "sinkhorn clustering dispatch";
 
     #[test]
     fn clustering_identity_one_region_one_cluster() {
@@ -810,13 +787,16 @@ mod tests {
     #[test]
     fn via_decodes_exact_assignments_into_reused_buffer() {
         // Real-backend output shape: [u, v, out_assignments] (the decoder reads the THIRD buffer).
-        let dispatcher = SinkhornDispatcher {
-            outputs: vec![
+        let dispatcher = StaticOutputs::new(
+            SINKHORN_CONTRACT,
+            vec![
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 0]),
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 0]),
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 1]),
             ],
-        };
+        )
+        .expecting_grid([1, 1, 1])
+        .expecting_inputs(&[6]);
         let mut out = Vec::with_capacity(4);
         let ptr = out.as_ptr();
         sinkhorn_clustering_via_into(
@@ -840,13 +820,16 @@ mod tests {
     #[test]
     fn via_with_scratch_reuses_dispatch_and_assignment_storage() {
         // Real-backend output shape: [u, v, out_assignments] (the decoder reads the THIRD buffer).
-        let dispatcher = SinkhornDispatcher {
-            outputs: vec![
+        let dispatcher = StaticOutputs::new(
+            SINKHORN_CONTRACT,
+            vec![
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 0]),
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 0]),
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 1]),
             ],
-        };
+        )
+        .expecting_grid([1, 1, 1])
+        .expecting_inputs(&[6]);
         let mut scratch = SinkhornDispatchGpuScratch::default();
         let mut out = Vec::with_capacity(2);
 
@@ -896,14 +879,17 @@ mod tests {
     #[test]
     fn via_rejects_extra_outputs() {
         // A backend returning more than the 3 writable buffers (u, v, out_assignments) is malformed.
-        let dispatcher = SinkhornDispatcher {
-            outputs: vec![
+        let dispatcher = StaticOutputs::new(
+            SINKHORN_CONTRACT,
+            vec![
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[0]),
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[0]),
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[1]),
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[9]),
             ],
-        };
+        )
+        .expecting_grid([1, 1, 1])
+        .expecting_inputs(&[6]);
         let err =
             sinkhorn_clustering_via(&dispatcher, &[0.0], &[0.0], &[1.0], &[1.0], 1, 1, 1, 5, 1.0)
                 .expect_err("extra outputs must be rejected");
@@ -916,13 +902,16 @@ mod tests {
     #[test]
     fn via_rejects_trailing_assignment_bytes() {
         // Correct 3-output shape but the out_assignments buffer (index 2) has a trailing byte.
-        let dispatcher = SinkhornDispatcher {
-            outputs: vec![
+        let dispatcher = StaticOutputs::new(
+            SINKHORN_CONTRACT,
+            vec![
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[0]),
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[0]),
                 vec![0, 0, 0, 0, 1],
             ],
-        };
+        )
+        .expecting_grid([1, 1, 1])
+        .expecting_inputs(&[6]);
         let err =
             sinkhorn_clustering_via(&dispatcher, &[0.0], &[0.0], &[1.0], &[1.0], 1, 1, 1, 5, 1.0)
                 .expect_err("trailing bytes must be rejected");

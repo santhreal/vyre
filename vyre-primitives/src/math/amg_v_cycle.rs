@@ -16,6 +16,7 @@
 use crate::math::multigrid::jacobi_smooth_step_cpu_into;
 use crate::math::multigrid::jacobi_smooth_step_serial_body;
 use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -41,48 +42,38 @@ pub fn amg_v_cycle(
     n_coarse: u32,
 ) -> Program {
     if n_fine == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            x,
-            DataType::U32,
+            Some((x, DataType::U32)),
             "Fix: amg_v_cycle requires n_fine > 0, got 0.".to_string(),
         );
     }
     if n_coarse == 0 {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            x,
-            DataType::U32,
+            Some((x, DataType::U32)),
             "Fix: amg_v_cycle requires n_coarse > 0, got 0.".to_string(),
         );
     }
     if n_coarse >= n_fine {
-        return crate::invalid_output_program(OP_ID,
-        x,
-        DataType::U32,
-        format!("Fix: amg_v_cycle requires n_coarse < n_fine, got n_coarse={n_coarse}, n_fine={n_fine}."),);
+        return trap_program(OP_ID, Some((x, DataType::U32)), format!("Fix: amg_v_cycle requires n_coarse < n_fine, got n_coarse={n_coarse}, n_fine={n_fine}."));
     }
     let Some(fine_cells) = n_fine.checked_mul(n_fine) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            x,
-            DataType::U32,
+            Some((x, DataType::U32)),
             format!("Fix: amg_v_cycle fine matrix cells overflow u32: n_fine={n_fine}."),
         );
     };
     let Some(transfer_cells) = n_fine.checked_mul(n_coarse) else {
-        return crate::invalid_output_program(OP_ID,
-        x,
-        DataType::U32,
-        format!(
+        return trap_program(OP_ID, Some((x, DataType::U32)), format!(
             "Fix: amg_v_cycle transfer matrix cells overflow u32: n_fine={n_fine}, n_coarse={n_coarse}."
-        ),);
+        ));
     };
     let Some(coarse_cells) = n_coarse.checked_mul(n_coarse) else {
-        return crate::invalid_output_program(
+        return trap_program(
             OP_ID,
-            x,
-            DataType::U32,
+            Some((x, DataType::U32)),
             format!("Fix: amg_v_cycle coarse matrix cells overflow u32: n_coarse={n_coarse}."),
         );
     };
@@ -282,10 +273,9 @@ pub fn amg_v_cycle(
                 .with_count(n_coarse),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::Region {
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::Region {
                 generator: Ident::from(V_CYCLE_PHASE_OP_ID),
                 source_region: Some(GeneratorRef {
                     name: OP_ID.to_string(),
@@ -304,8 +294,8 @@ pub fn amg_v_cycle(
                     Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
                     nodes,
                 )]),
-            }]),
-        }],
+            }],
+        )],
     )
 }
 
@@ -573,15 +563,11 @@ inventory::submit! {
                     BufferDecl::output("out", 1, DataType::U32).with_count(1),
                 ],
                 [1, 1, 1],
-                vec![Node::Region {
-                    generator: Ident::from(V_CYCLE_PHASE_OP_ID),
-                    source_region: None,
-                    body: Arc::new(vec![Node::store(
+                vec![wrap_anonymous_region(V_CYCLE_PHASE_OP_ID, vec![Node::store(
                         "out",
                         Expr::u32(0),
                         Expr::load("input", Expr::u32(0)),
-                    )]),
-                }],
+                    )])],
             )
         },
         Some(|| {

@@ -8,9 +8,11 @@
 //! stride between successive elements of a line, so they are one builder with
 //! two address parameters rather than three copies of a five-node loop.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{
+    trap_program, wrap_anonymous_region, wrap_child_region,
+};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -18,10 +20,7 @@ pub const OP_ID: &str = "vyre-primitives::math::givens_rotate_pair";
 
 /// Address of element `step` of the line starting at `base`.
 fn line_element(base: &Expr, stride: u32, step: &str) -> Expr {
-    Expr::add(
-        base.clone(),
-        Expr::mul(Expr::var(step), Expr::u32(stride)),
-    )
+    Expr::add(base.clone(), Expr::mul(Expr::var(step), Expr::u32(stride)))
 }
 
 /// Emit the loop that rotates the element pair `(first_base, second_base)` of
@@ -91,12 +90,12 @@ pub fn givens_rotate_pair_region(
     c: &Expr,
     s: &Expr,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(vec![givens_rotate_pair(
+        },
+        vec![givens_rotate_pair(
             matrix,
             loop_var,
             count,
@@ -105,8 +104,8 @@ pub fn givens_rotate_pair_region(
             stride,
             c,
             s,
-        )]),
-    }
+        )],
+    )
 }
 
 /// Build a standalone Program that rotates columns `first_col` and `second_col`
@@ -124,22 +123,13 @@ pub fn givens_rotate_columns(
     second_col: u32,
 ) -> Program {
     if n == 0 || first_col >= n || second_col >= n {
-        return crate::invalid_output_program(
-            OP_ID,
-            matrix,
-            DataType::F32,
-            format!(
-                "Fix: givens_rotate_columns needs n > 0 and both columns below n, got n={n}, first_col={first_col}, second_col={second_col}."
-            ),
-        );
+        return trap_program(OP_ID, Some((matrix, DataType::F32)), format!(
+            "Fix: givens_rotate_columns needs n > 0 and both columns below n, got n={n}, first_col={first_col}, second_col={second_col}."
+        ));
     }
-    let Some(cells) = n.checked_mul(n) else {
-        return crate::invalid_output_program(
-            OP_ID,
-            matrix,
-            DataType::F32,
-            format!("Fix: givens_rotate_columns n*n overflows matrix cell count for n={n}."),
-        );
+    let cells = match crate::math::square_matrix_cells(OP_ID, n) {
+        Ok(cells) => cells,
+        Err(message) => return trap_program(OP_ID, Some((matrix, DataType::F32)), message),
     };
     Program::wrapped(
         vec![
@@ -149,10 +139,9 @@ pub fn givens_rotate_columns(
                 .with_count(2),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
                 vec![givens_rotate_pair(
                     matrix,
@@ -164,8 +153,8 @@ pub fn givens_rotate_columns(
                     &Expr::load(coefficients, Expr::u32(0)),
                     &Expr::load(coefficients, Expr::u32(1)),
                 )],
-            )]),
-        }],
+            )],
+        )],
     )
 }
 
@@ -253,11 +242,7 @@ mod tests {
         let program = Program::wrapped(
             vec![BufferDecl::storage("m", 0, BufferAccess::ReadWrite, DataType::F32).with_count(4)],
             [1, 1, 1],
-            vec![Node::Region {
-                generator: Ident::from(OP_ID),
-                source_region: None,
-                body: Arc::new(vec![first, second]),
-            }],
+            vec![wrap_anonymous_region(OP_ID, vec![first, second])],
         );
         let errors = vyre_foundation::validate::validate(&program);
         assert!(

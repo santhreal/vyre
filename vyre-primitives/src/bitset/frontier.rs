@@ -1,10 +1,9 @@
 //! Packed-frontier bitset utilities and fused frontier absorption.
 
 use core::fmt;
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
 use crate::bitset::bitset_words;
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 /// Canonical op id for fused frontier absorption.
@@ -167,11 +166,7 @@ pub fn frontier_absorb_new_bits_program(
                 .with_count(words),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(ABSORB_NEW_BITS_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(ABSORB_NEW_BITS_OP_ID, body)],
     )
 }
 
@@ -309,10 +304,9 @@ pub fn frontier_absorb_new_bits_no_counts_program(
                 .with_count(words),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(ABSORB_NEW_BITS_NO_COUNTS_OP_ID),
-            source_region: None,
-            body: Arc::new(frontier_absorb_new_bits_body_prefixed(
+        vec![wrap_anonymous_region(
+            ABSORB_NEW_BITS_NO_COUNTS_OP_ID,
+            frontier_absorb_new_bits_body_prefixed(
                 visited,
                 neighbors,
                 next_wave,
@@ -320,8 +314,8 @@ pub fn frontier_absorb_new_bits_no_counts_program(
                 words,
                 final_word_mask,
                 "frontier_absorb_no_counts",
-            )),
-        }],
+            ),
+        )],
     )
 }
 

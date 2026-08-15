@@ -1,5 +1,5 @@
 //! Thompson construction state: the builder, its byte-set alphabet, and the
-//! lane-major table emission the accelerator consumes.
+//! state-major table emission the accelerator consumes.
 
 use super::construct_budget::STATE_CAP;
 use super::{RegexCompileError, LANES};
@@ -117,9 +117,11 @@ impl NfaBuilder {
         self.epsilons.push((src, dst));
     }
 
-    /// Lane-major emission, matching the contract of
+    /// State-major emission, matching the contract of
     /// `nfa::build_transition_table` + `build_epsilon_table`.
-    pub(super) fn emit_lane_major_tables(&self) -> Result<(Vec<u32>, Vec<u32>), RegexCompileError> {
+    pub(super) fn emit_state_major_tables(
+        &self,
+    ) -> Result<(Vec<u32>, Vec<u32>), RegexCompileError> {
         let n = self.state_count();
         let mut transitions = zeroed_u32_table(
             table_word_count(n, 256, "transition")?,

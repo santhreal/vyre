@@ -75,44 +75,20 @@ pub mod wire;
 /// One classification of every Cargo feature this crate declares.
 ///
 /// A domain feature that is in neither list is how a third admission category
-/// returns, so `tests/feature_classification.rs` holds the lists to the
-/// manifest.
-pub mod organization;
-#[cfg(feature = "vyre-foundation")]
-use std::sync::Arc;
+/// returns, so the module's own tests hold the lists to the manifest. The lists
+/// are crate-private: they describe which compositions are still parked here,
+/// and nothing outside may depend on that.
+mod organization;
 
 pub use markers::{
     ArithAdd, ArithMul, BitwiseAnd, BitwiseOr, BitwiseXor, Clz, CombineOp, CompareEq, CompareLt,
     Gather, HashBlake3, HashFnv1a, PatternMatchDfa, PatternMatchLiteral, Popcount, Reduce,
     RegionId, Scan, Scatter, ShiftLeft, ShiftRight, Shuffle,
 };
+#[cfg(any(feature = "graph", feature = "math", feature = "geom", feature = "opt"))]
+use vyre_foundation::ir::Expr;
 #[cfg(feature = "vyre-foundation")]
-use vyre_foundation::ir::model::expr::Ident;
-#[cfg(feature = "vyre-foundation")]
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-
-/// Build a scalar trap program for invalid primitive builder inputs.
-///
-/// Primitive constructors are intentionally infallible for composition with
-/// registry fixtures and generated dialect code. Invalid user-controlled
-/// shapes must therefore become explicit IR traps, not host panics.
-#[cfg(feature = "vyre-foundation")]
-pub(crate) fn invalid_output_program(
-    op_id: &'static str,
-    output: &str,
-    data_type: DataType,
-    message: String,
-) -> Program {
-    Program::wrapped(
-        vec![BufferDecl::output(output, 0, data_type).with_count(1)],
-        [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(vec![Node::trap(Expr::u32(0), message)]),
-        }],
-    )
-}
+use vyre_foundation::ir::Program;
 
 #[cfg(feature = "vyre-foundation")]
 pub(crate) fn demote_intermediate_outputs(program: Program, final_output: &str) -> Program {

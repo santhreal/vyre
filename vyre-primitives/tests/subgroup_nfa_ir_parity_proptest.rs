@@ -44,14 +44,14 @@ fn empty_transition(num_states: usize) -> Vec<u32> {
     vec![0u32; num_states * 256 * LANES]
 }
 
-/// Set a transition edge `from -(byte)-> to` in the lane-major table:
+/// Set a transition edge `from -(byte)-> to` in the state-major table:
 /// destination state `to` contributes bit `to % 32` to output lane `to / 32`.
 fn add_transition(table: &mut [u32], from: usize, byte: u8, to: usize) {
     let idx = from * 256 * LANES + (byte as usize) * LANES + (to / 32);
     table[idx] |= 1u32 << (to % 32);
 }
 
-/// Set an epsilon edge `from -> to` in the lane-major epsilon table.
+/// Set an epsilon edge `from -> to` in the state-major epsilon table.
 fn add_epsilon(table: &mut [u32], from: usize, to: usize) {
     let idx = from * LANES + (to / 32);
     table[idx] |= 1u32 << (to % 32);

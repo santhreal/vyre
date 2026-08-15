@@ -25,21 +25,21 @@
 //!
 //! - `state_bits` (per-lane u32): active-state bitset. Bit `i` in
 //!   lane `k` means state `(k * 32 + i)` is active.
-//! - `transition_buf` (ReadOnly, u32): lane-major
+//! - `transition_buf` (ReadOnly, u32): state-major
 //!   `[num_states × 256 × LANES_PER_SUBGROUP]`. Entry
 //!   `transition[src_state * 256 * LANES + byte * LANES + lane]`
 //!   is a u32 holding the destination-state bits *this lane is
 //!   responsible for* that state `src_state` reaches on byte
-//!   `byte`.
-//! - `epsilon_buf` (ReadOnly, u32): lane-major
+//!   `byte`. The source state is the outermost index, so one
+//!   subgroup load fetches every lane's word for one `(src, byte)`.
+//! - `epsilon_buf` (ReadOnly, u32): state-major
 //!   `[num_states × LANES_PER_SUBGROUP]`.
 //!
 //! Compact and cache-friendly. Higher-level NFA compositions emit this
 //! canonical transition-table shape and handle tiling policy.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -88,10 +88,7 @@ pub fn nfa_step(
     num_states: u32,
 ) -> Program {
     if num_states as usize > MAX_STATES_PER_SUBGROUP {
-        return crate::invalid_output_program(OP_ID,
-        out_buf,
-        DataType::U32,
-        format!("Fix: num_states {num_states} exceeds MAX_STATES_PER_SUBGROUP={MAX_STATES_PER_SUBGROUP}; caller must tile at the composition layer."),);
+        return trap_program(OP_ID, Some((out_buf, DataType::U32)), format!("Fix: num_states {num_states} exceeds MAX_STATES_PER_SUBGROUP={MAX_STATES_PER_SUBGROUP}; caller must tile at the composition layer."));
     }
 
     let lane = Expr::InvocationId { axis: 0 };
@@ -236,14 +233,13 @@ pub fn nfa_step(
                 .with_count(LANES_PER_SUBGROUP as u32),
         ],
         [LANES_PER_SUBGROUP as u32, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::lt(lane_u32(), Expr::u32(LANES_PER_SUBGROUP as u32)),
                 body,
-            )]),
-        }],
+            )],
+        )],
     )
 }
 
@@ -253,8 +249,8 @@ pub fn nfa_step(
 ///
 /// `state`: active-state bitset of length `LANES_PER_SUBGROUP`.
 /// `byte`: input byte [0, 256).
-/// `transition`: lane-major `[num_states × 256 × LANES]`.
-/// `epsilon`: lane-major `[num_states × LANES]`.
+/// `transition`: state-major `[num_states × 256 × LANES]`.
+/// `epsilon`: state-major `[num_states × LANES]`.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_step(
