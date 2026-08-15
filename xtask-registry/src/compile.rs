@@ -22,10 +22,10 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
 use vyre_foundation::ir::{Program, ProgramGraph};
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 use vyre_megakernel::{
     Artifact, CompileRequest, Digest, ExternalFacts, SearchBudget, TargetPayload,
 };
+use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
 const MAX_XTASK_COMPILE_INPUT_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_XTASK_ARTIFACT_BYTES: u64 = 64 * 1024 * 1024;
@@ -76,7 +76,9 @@ impl Gate for Compile {
                     Ok(payload) => payload,
                     Err(error) => {
                         report.find(Finding::new(
-                            format!("`{id}` does not compile for registered target `{target}`: {error}"),
+                            format!(
+                                "`{id}` does not compile for registered target `{target}`: {error}"
+                            ),
                             "repair the target lowering, or stop naming that target",
                         ));
                         continue;
@@ -156,7 +158,6 @@ fn corpus(ctx: &GateCtx) -> Result<Vec<(String, Program)>, GateError> {
     }
     Ok(cases)
 }
-
 
 fn compile_neutral(program: Program) -> Result<Artifact, String> {
     let graph = ProgramGraph::from_program("xtask-compile", program)

@@ -7,9 +7,9 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use vyre::ir::{Node, Program};
-use xtask::gate::{Gate, GateCtx, GateError, Report};
 use vyre_foundation::algebra::algebraic_law_registry::AlgebraicLawRegistration;
 use vyre_foundation::operation::classify_operation_id as classify_op_id;
+use xtask::gate::{Gate, GateCtx, GateError, Report};
 
 use xtask::release::conformance_op_matrix::read_conformance_required_op_matrix;
 
@@ -224,7 +224,6 @@ impl Gate for OperationSchema {
         Ok(report)
     }
 }
-
 
 pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
     let root = workspace_root();

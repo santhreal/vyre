@@ -23,7 +23,6 @@
 //!
 //! Exit code 0 = all ops pass. Exit code 1 = ≥ 1 op fails (CI signal).
 
-
 use vyre::ir::{Node, Program};
 use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
@@ -109,7 +108,8 @@ impl Gate for Gate1 {
                 continue;
             }
             let fix = if verdict.inline_hot_spots.is_empty() {
-                "factor the inline work into a registered primitive call through region::wrap_child".to_string()
+                "factor the inline work into a registered primitive call through region::wrap_child"
+                    .to_string()
             } else {
                 format!(
                     "extract each inline hot spot into a vyre-primitives operation and call it through region::wrap_child: {}",
@@ -131,7 +131,6 @@ impl Gate for Gate1 {
         Ok(report)
     }
 }
-
 
 fn verdict_for(op_id: &'static str, program: &Program) -> Verdict {
     let mut state = WalkState::default();

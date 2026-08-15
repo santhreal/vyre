@@ -127,7 +127,6 @@ impl Gate for HeuristicAudit {
     }
 }
 
-
 fn scan_dir(
     dir: &Path,
     findings: &mut Vec<(PathBuf, usize, &'static str, &'static str)>,

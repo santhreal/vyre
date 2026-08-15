@@ -120,13 +120,9 @@ impl Gate for LegoAudit {
                 "--duplicate-report-json requires a path",
             )
             .map_err(|error| {
-                GateError::new(
-                    error,
-                    "pass a writable path after --duplicate-report-json",
-                )
+                GateError::new(error, "pass a writable path after --duplicate-report-json")
             })?;
-            let generator_command =
-                duplicate_report_generator_command("lego-audit", &path);
+            let generator_command = duplicate_report_generator_command("lego-audit", &path);
             let duplicates = lego_duplicate_report(&ops, &generator_command);
             write_duplicate_report_json(&path, &duplicates).map_err(|error| {
                 GateError::new(
@@ -137,7 +133,10 @@ impl Gate for LegoAudit {
                     "pass a writable path after --duplicate-report-json",
                 )
             })?;
-            report.note(format!("wrote the duplicate family report to {}", path.display()));
+            report.note(format!(
+                "wrote the duplicate family report to {}",
+                path.display()
+            ));
         }
 
         check_1_no_reinvention(&mut report, &ops);
@@ -198,7 +197,6 @@ fn violation(text: String) -> Finding {
         ),
     }
 }
-
 
 /// One registered op with everything the audit needs.
 pub(crate) struct OpInfo {
@@ -583,7 +581,9 @@ fn fingerprint_name(name: &str) -> [u8; 4] {
 /// Uses bigram-frequency cosine similarity  -  captures ordered
 /// structure, not just node-kind sets.
 fn check_1_no_reinvention(report: &mut Report, ops: &[OpInfo]) -> usize {
-    report.note(format!("[1/10] No-reinvention check (bigram cosine ≥ {FINGERPRINT_SIM_THRESHOLD:.2})"));
+    report.note(format!(
+        "[1/10] No-reinvention check (bigram cosine ≥ {FINGERPRINT_SIM_THRESHOLD:.2})"
+    ));
     let pairs = no_reinvention_pairs(ops);
     for (sim, a, b) in &pairs {
         report.find(violation(format!("  ✗ reinvention: `{}` and `{}` are {:.0}% structurally similar (cross-dialect) but neither composes the other. Extract the shared body into a Tier 2.5 primitive.",
@@ -743,7 +743,9 @@ fn check_2_depth_of_composition(report: &mut Report, ops: &[OpInfo]) -> usize {
         }
     }
     if flagged == 0 {
-        report.note(format!("  ✓ Tier 3 ops meet registered-child depth or declare reviewed pure-IR leaves"));
+        report.note(format!(
+            "  ✓ Tier 3 ops meet registered-child depth or declare reviewed pure-IR leaves"
+        ));
     }
     flagged
 }
@@ -797,7 +799,8 @@ fn load_primitive_admission_registry() -> Result<PrimitiveAdmissionRegistry, Str
     Ok(registry)
 }
 
-fn validate_primitive_admission(report: &mut Report, 
+fn validate_primitive_admission(
+    report: &mut Report,
     ops: &[OpInfo],
     caller_counts: &HashMap<String, usize>,
     registry: PrimitiveAdmissionRegistry,
@@ -819,7 +822,9 @@ fn validate_primitive_admission(report: &mut Report,
             .insert(exception.family.clone(), exception)
             .is_some()
         {
-            report.find(violation(format!("  ✗ duplicate primitive admission exception family")));
+            report.find(violation(format!(
+                "  ✗ duplicate primitive admission exception family"
+            )));
             flagged += 1;
         }
     }
@@ -874,7 +879,9 @@ fn check_3_primitive_coverage(report: &mut Report, ops: &[OpInfo]) -> usize {
     let registry = match load_primitive_admission_registry() {
         Ok(registry) => registry,
         Err(error) => {
-            report.find(violation(format!("  ✗ primitive admission registry is invalid: {error}")));
+            report.find(violation(format!(
+                "  ✗ primitive admission registry is invalid: {error}"
+            )));
             return flagged + 1;
         }
     };
@@ -920,7 +927,9 @@ fn check_6_composition_chain_coverage(report: &mut Report, ops: &[OpInfo]) -> us
         }
     }
     if flagged == 0 {
-        report.note(format!("  ✓ every non-leaf op names at least one child op in its Region chain"));
+        report.note(format!(
+            "  ✓ every non-leaf op names at least one child op in its Region chain"
+        ));
     }
     flagged
 }
@@ -945,7 +954,9 @@ fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
             .join("src"),
     );
     let Some(libs_root) = libs_root.filter(|p| p.is_dir()) else {
-        report.find(violation(format!("  ⚠ vyre-libs/src not reachable from xtask. Fix: invoke from the workspace root.")));
+        report.find(violation(format!(
+            "  ⚠ vyre-libs/src not reachable from xtask. Fix: invoke from the workspace root."
+        )));
         return 0;
     };
     let (dialects, list_errors) = list_dialect_dirs(&libs_root);
@@ -956,7 +967,9 @@ fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
         return list_errors.len();
     }
     if dialects.len() < 2 {
-        report.note(format!("  ✓ fewer than 2 dialects present; nothing to cross."));
+        report.note(format!(
+            "  ✓ fewer than 2 dialects present; nothing to cross."
+        ));
         return 0;
     }
     let mut flagged = 0usize;
@@ -1037,7 +1050,9 @@ fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
         }
     }
     if flagged == 0 {
-        report.note(format!("  ✓ no Tier-3 dialect imports another Tier-3 dialect privately"));
+        report.note(format!(
+            "  ✓ no Tier-3 dialect imports another Tier-3 dialect privately"
+        ));
     }
     flagged
 }
@@ -1142,7 +1157,9 @@ fn check_5_god_files(report: &mut Report) -> usize {
         }
     }
     if advisories == 0 {
-        report.note(format!("  ✓ no Rust source file is over the {LARGE_FILE_ADVISORY_LINES}-line review guideline"));
+        report.note(format!(
+            "  ✓ no Rust source file is over the {LARGE_FILE_ADVISORY_LINES}-line review guideline"
+        ));
     } else {
         report.note(format!("  • {advisories} file(s) over the {LARGE_FILE_ADVISORY_LINES}-line guideline flagged for review (non-blocking)"));
     }
@@ -1167,7 +1184,9 @@ fn check_7_trend(report: &mut Report, ops: &[OpInfo]) -> usize {
         return 1;
     };
     let Some(tag) = previous_tag(&root) else {
-        report.note(format!("  ✓ no previous git tag found; trend check has no baseline"));
+        report.note(format!(
+            "  ✓ no previous git tag found; trend check has no baseline"
+        ));
         return 0;
     };
     let (previous, baseline_name) = if let Some(previous) =
@@ -1196,7 +1215,9 @@ fn check_7_trend(report: &mut Report, ops: &[OpInfo]) -> usize {
         }
     }
     if flagged == 0 {
-        report.note(format!("  ✓ no composed_fraction regressions against `{baseline_name}`"));
+        report.note(format!(
+            "  ✓ no composed_fraction regressions against `{baseline_name}`"
+        ));
     }
     flagged
 }
@@ -1374,7 +1395,9 @@ fn is_known_stem_family(stem: &str) -> bool {
 }
 
 fn check_9_name_stem_collision(report: &mut Report, ops: &[OpInfo]) -> usize {
-    report.note(format!("[9/10] Name-stem collision (≥ {STEM_COLLISION_MIN} ops sharing a leaf-prefix stem)"));
+    report.note(format!(
+        "[9/10] Name-stem collision (≥ {STEM_COLLISION_MIN} ops sharing a leaf-prefix stem)"
+    ));
     let mut buckets: HashMap<String, Vec<String>> = HashMap::new();
     for op in ops {
         if is_internal_phase_op(&op.id) {
@@ -1416,7 +1439,9 @@ fn check_9_name_stem_collision(report: &mut Report, ops: &[OpInfo]) -> usize {
         flagged += 1;
     }
     if flagged == 0 {
-        report.note(format!("  ✓ no leaf-stem collisions ≥ {STEM_COLLISION_MIN}"));
+        report.note(format!(
+            "  ✓ no leaf-stem collisions ≥ {STEM_COLLISION_MIN}"
+        ));
     }
     flagged
 }
@@ -1695,7 +1720,13 @@ mod dedup_contract_tests {
             .exception
             .retain(|exception| exception.family == "unreviewed");
         assert_eq!(
-            validate_primitive_admission(&mut Report::clean(), &ops, &primitive_caller_counts(&ops), exceptions).0,
+            validate_primitive_admission(
+                &mut Report::clean(),
+                &ops,
+                &primitive_caller_counts(&ops),
+                exceptions
+            )
+            .0,
             1
         );
     }
@@ -1722,7 +1753,10 @@ mod dedup_contract_tests {
         );
         composed.own_nodes = 75;
         composed.composed_nodes = 25;
-        assert_eq!(check_2_depth_of_composition(&mut Report::clean(), &[composed]), 0);
+        assert_eq!(
+            check_2_depth_of_composition(&mut Report::clean(), &[composed]),
+            0
+        );
     }
 
     /// This negative twin prevents a nominal child edge from hiding an almost entirely inlined Tier-3 implementation.
@@ -1735,7 +1769,10 @@ mod dedup_contract_tests {
         );
         inlined.own_nodes = 76;
         inlined.composed_nodes = 24;
-        assert_eq!(check_2_depth_of_composition(&mut Report::clean(), &[inlined]), 1);
+        assert_eq!(
+            check_2_depth_of_composition(&mut Report::clean(), &[inlined]),
+            1
+        );
     }
 
     /// This discoverability test preserves explicit acknowledgement of intentional operation families.

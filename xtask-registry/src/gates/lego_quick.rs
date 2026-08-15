@@ -98,7 +98,6 @@ impl Gate for LegoQuick {
     }
 }
 
-
 #[derive(Debug)]
 struct Hit {
     file: String,

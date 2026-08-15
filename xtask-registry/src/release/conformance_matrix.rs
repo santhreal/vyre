@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 use vyre_driver::backend::backend_dispatches;
+use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 use xtask::release::conformance_op_matrix::{
     evaluate_op_matrix_coverage, read_conformance_required_op_matrix, OpMatrixReleaseBackendSpec,
 };
@@ -162,220 +162,222 @@ impl Gate for ConformanceMatrix {
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-    let operations = vyre_registry_link::operation::live_operation_registry()
-        .iter()
-        .collect::<Vec<_>>();
-    let mut entries = Vec::with_capacity(operations.len());
-    let mut ids = BTreeSet::new();
-    let mut duplicate_op_ids = BTreeSet::new();
-    for entry in operations {
-        if !ids.insert(entry.id) {
-            duplicate_op_ids.insert(entry.id.to_string());
+        let operations = vyre_registry_link::operation::live_operation_registry()
+            .iter()
+            .collect::<Vec<_>>();
+        let mut entries = Vec::with_capacity(operations.len());
+        let mut ids = BTreeSet::new();
+        let mut duplicate_op_ids = BTreeSet::new();
+        for entry in operations {
+            if !ids.insert(entry.id) {
+                duplicate_op_ids.insert(entry.id.to_string());
+            }
+            entries.push(ConformanceEntry {
+                id: entry.id.to_string(),
+                requires_fixture: entry.program().is_some(),
+                has_test_inputs: entry.test_inputs.is_some(),
+                has_expected_output: entry.expected_output.is_some(),
+                tolerance_ulp: entry.tolerance(),
+            });
         }
-        entries.push(ConformanceEntry {
-            id: entry.id.to_string(),
-            requires_fixture: entry.program().is_some(),
-            has_test_inputs: entry.test_inputs.is_some(),
-            has_expected_output: entry.expected_output.is_some(),
-            tolerance_ulp: entry.tolerance(),
-        });
-    }
-    entries.sort_by(|left, right| left.id.cmp(&right.id));
-    let registered_backends = vyre_registry_link::backend::live_backend_registry_by_precedence()
-        .unwrap_or_else(|error| panic!("backend registry startup failed: {error}"));
-    let mut dispatch_backends = Vec::new();
-    for backend in registered_backends {
-        if backend_dispatches(backend.id)
-            .unwrap_or_else(|error| panic!("backend registry startup failed: {error}"))
-        {
-            dispatch_backends.push(backend.id.to_string());
+        entries.sort_by(|left, right| left.id.cmp(&right.id));
+        let registered_backends =
+            vyre_registry_link::backend::live_backend_registry_by_precedence()
+                .unwrap_or_else(|error| panic!("backend registry startup failed: {error}"));
+        let mut dispatch_backends = Vec::new();
+        for backend in registered_backends {
+            if backend_dispatches(backend.id)
+                .unwrap_or_else(|error| panic!("backend registry startup failed: {error}"))
+            {
+                dispatch_backends.push(backend.id.to_string());
+            }
         }
-    }
-    let fixture_required_count = entries
-        .iter()
-        .filter(|entry| entry.requires_fixture)
-        .count();
-    let fixture_input_count = entries
-        .iter()
-        .filter(|entry| entry.requires_fixture && entry.has_test_inputs)
-        .count();
-    let expected_output_count = entries
-        .iter()
-        .filter(|entry| entry.requires_fixture && entry.has_expected_output)
-        .count();
-    let vyre_root = xtask::checkout::checkout_root();
-    let ci_gates = inspect_ci_conformance_gates(&vyre_root);
-    let (required_ci_statuses, mut ci_status_scan_errors) = parse_required_ci_statuses(&vyre_root);
-    let mut missing_required_ci_statuses = Vec::new();
-    for status in &required_ci_statuses {
-        if !ci_status_defined(&vyre_root, status, &mut ci_status_scan_errors) {
-            missing_required_ci_statuses.push(status.clone());
+        let fixture_required_count = entries
+            .iter()
+            .filter(|entry| entry.requires_fixture)
+            .count();
+        let fixture_input_count = entries
+            .iter()
+            .filter(|entry| entry.requires_fixture && entry.has_test_inputs)
+            .count();
+        let expected_output_count = entries
+            .iter()
+            .filter(|entry| entry.requires_fixture && entry.has_expected_output)
+            .count();
+        let vyre_root = xtask::checkout::checkout_root();
+        let ci_gates = inspect_ci_conformance_gates(&vyre_root);
+        let (required_ci_statuses, mut ci_status_scan_errors) =
+            parse_required_ci_statuses(&vyre_root);
+        let mut missing_required_ci_statuses = Vec::new();
+        for status in &required_ci_statuses {
+            if !ci_status_defined(&vyre_root, status, &mut ci_status_scan_errors) {
+                missing_required_ci_statuses.push(status.clone());
+            }
         }
-    }
-    let path_filtered_required_workflows = inspect_path_filtered_required_workflows(&vyre_root);
-    let missing_required_workflow_triggers = inspect_required_workflow_triggers(&vyre_root);
-    let missing_fail_closed_fanins = inspect_fail_closed_fanins(&vyre_root);
-    let mut blockers = Vec::new();
-    let catalog = read_conformance_required_op_matrix(&vyre_root);
-    let (scan_conformance_rows, scan_conformance_findings) =
-        read_scan_conformance_matrix(&vyre_root);
-    let entry_by_id = entries
-        .iter()
-        .map(|entry| (entry.id.as_str(), entry))
-        .collect::<BTreeMap<_, _>>();
-    let release_backend_case_rows =
-        release_backend_case_rows(&catalog.release_backend_specs, &entry_by_id);
-    for error in &catalog.errors {
-        blockers.push(error.clone());
-    }
-    for row in &release_backend_case_rows {
-        for blocker in &row.blockers {
-            blockers.push(blocker.clone());
+        let path_filtered_required_workflows = inspect_path_filtered_required_workflows(&vyre_root);
+        let missing_required_workflow_triggers = inspect_required_workflow_triggers(&vyre_root);
+        let missing_fail_closed_fanins = inspect_fail_closed_fanins(&vyre_root);
+        let mut blockers = Vec::new();
+        let catalog = read_conformance_required_op_matrix(&vyre_root);
+        let (scan_conformance_rows, scan_conformance_findings) =
+            read_scan_conformance_matrix(&vyre_root);
+        let entry_by_id = entries
+            .iter()
+            .map(|entry| (entry.id.as_str(), entry))
+            .collect::<BTreeMap<_, _>>();
+        let release_backend_case_rows =
+            release_backend_case_rows(&catalog.release_backend_specs, &entry_by_id);
+        for error in &catalog.errors {
+            blockers.push(error.clone());
         }
-    }
-    for finding in &scan_conformance_findings {
-        blockers.push(format!(
-            "scan conformance row `{}` engine {:?} is invalid: {}",
-            finding.semantics, finding.engine, finding.issue
-        ));
-    }
-    let mut catalog_blockers = Vec::new();
-    let coverage = evaluate_op_matrix_coverage(
-        &catalog,
-        |op| ids.contains(op),
-        |missing| {
-            format!("{missing} OP_MATRIX op id(s) are missing registered conformance entries")
-        },
-        &mut catalog_blockers,
-    );
-    let ci_blocking_gate_count = ci_gates
-        .iter()
-        .filter(|gate| gate.present && gate.command_present && gate.artifact_check_present)
-        .count();
-    if entries.is_empty() {
-        blockers.push("no registered conformance op entries found".to_string());
-    }
-    if entries.len() < MIN_RELEASE_OP_COUNT {
-        blockers.push(format!(
-            "registered conformance op count {} is below release floor {MIN_RELEASE_OP_COUNT}",
-            entries.len()
-        ));
-    }
-    if ids.len() < MIN_RELEASE_OP_COUNT {
-        blockers.push(format!(
+        for row in &release_backend_case_rows {
+            for blocker in &row.blockers {
+                blockers.push(blocker.clone());
+            }
+        }
+        for finding in &scan_conformance_findings {
+            blockers.push(format!(
+                "scan conformance row `{}` engine {:?} is invalid: {}",
+                finding.semantics, finding.engine, finding.issue
+            ));
+        }
+        let mut catalog_blockers = Vec::new();
+        let coverage = evaluate_op_matrix_coverage(
+            &catalog,
+            |op| ids.contains(op),
+            |missing| {
+                format!("{missing} OP_MATRIX op id(s) are missing registered conformance entries")
+            },
+            &mut catalog_blockers,
+        );
+        let ci_blocking_gate_count = ci_gates
+            .iter()
+            .filter(|gate| gate.present && gate.command_present && gate.artifact_check_present)
+            .count();
+        if entries.is_empty() {
+            blockers.push("no registered conformance op entries found".to_string());
+        }
+        if entries.len() < MIN_RELEASE_OP_COUNT {
+            blockers.push(format!(
+                "registered conformance op count {} is below release floor {MIN_RELEASE_OP_COUNT}",
+                entries.len()
+            ));
+        }
+        if ids.len() < MIN_RELEASE_OP_COUNT {
+            blockers.push(format!(
             "registered distinct conformance op count {} is below release floor {MIN_RELEASE_OP_COUNT}",
             ids.len()
         ));
-    }
-    if !duplicate_op_ids.is_empty() {
-        blockers.push(format!(
-            "registered conformance matrix contains {} duplicate op id(s)",
-            duplicate_op_ids.len()
-        ));
-    }
-    blockers.append(&mut catalog_blockers);
-    for required in ["cuda", "wgpu", "cpu-ref"] {
-        if !dispatch_backends.iter().any(|backend| backend == required) {
-            blockers.push(format!("required dispatch backend `{required}` is missing"));
         }
-    }
-    if fixture_input_count != fixture_required_count {
-        blockers.push(format!(
+        if !duplicate_op_ids.is_empty() {
+            blockers.push(format!(
+                "registered conformance matrix contains {} duplicate op id(s)",
+                duplicate_op_ids.len()
+            ));
+        }
+        blockers.append(&mut catalog_blockers);
+        for required in ["cuda", "wgpu", "cpu-ref"] {
+            if !dispatch_backends.iter().any(|backend| backend == required) {
+                blockers.push(format!("required dispatch backend `{required}` is missing"));
+            }
+        }
+        if fixture_input_count != fixture_required_count {
+            blockers.push(format!(
             "only {fixture_input_count}/{fixture_required_count} executable op entries have fixture inputs"
         ));
-    }
-    if expected_output_count != fixture_required_count {
-        blockers.push(format!(
+        }
+        if expected_output_count != fixture_required_count {
+            blockers.push(format!(
             "only {expected_output_count}/{fixture_required_count} executable op entries have expected outputs"
         ));
-    }
-    if ci_blocking_gate_count < 3 {
-        blockers.push(format!(
-            "only {ci_blocking_gate_count}/{} conformance CI gate(s) are fully wired",
-            ci_gates.len()
-        ));
-    }
-    for gate in &ci_gates {
-        if let Some(error) = &gate.read_error {
+        }
+        if ci_blocking_gate_count < 3 {
             blockers.push(format!(
-                "conformance CI gate `{}` in `{}` could not read workflow: {error}",
-                gate.gate, gate.workflow
+                "only {ci_blocking_gate_count}/{} conformance CI gate(s) are fully wired",
+                ci_gates.len()
             ));
-        } else if !gate.present || !gate.command_present || !gate.artifact_check_present {
-            blockers.push(format!(
+        }
+        for gate in &ci_gates {
+            if let Some(error) = &gate.read_error {
+                blockers.push(format!(
+                    "conformance CI gate `{}` in `{}` could not read workflow: {error}",
+                    gate.gate, gate.workflow
+                ));
+            } else if !gate.present || !gate.command_present || !gate.artifact_check_present {
+                blockers.push(format!(
                 "conformance CI gate `{}` in `{}` is incomplete: present={}, command_present={}, artifact_check_present={}",
                 gate.gate, gate.workflow, gate.present, gate.command_present, gate.artifact_check_present
             ));
+            }
         }
-    }
-    if !missing_required_ci_statuses.is_empty() {
-        blockers.push(format!(
-            "{} required branch-protection status context(s) are not defined by any workflow",
-            missing_required_ci_statuses.len()
-        ));
-    }
-    if !ci_status_scan_errors.is_empty() {
-        blockers.push(format!(
-            "{} CI status scan error(s) make branch-protection status evidence incomplete",
-            ci_status_scan_errors.len()
-        ));
-    }
-    if !path_filtered_required_workflows.is_empty() {
-        blockers.push(format!(
-            "{} required workflow(s) still use path filters",
-            path_filtered_required_workflows.len()
-        ));
-    }
-    if !missing_required_workflow_triggers.is_empty() {
-        blockers.push(format!(
-            "{} required workflow(s) are missing pull_request + push main trigger coverage",
-            missing_required_workflow_triggers.len()
-        ));
-    }
-    if !missing_fail_closed_fanins.is_empty() {
-        blockers.push(format!(
-            "{} required fan-in job(s) are missing fail-closed dependency checks",
-            missing_fail_closed_fanins.len()
-        ));
-    }
-    let matrix = ConformanceMatrix {
-        schema_version: 5,
-        op_count: entries.len(),
-        distinct_op_count: ids.len(),
-        catalog_required_op_count: coverage.catalog_required_op_count,
-        catalog_covered_op_count: coverage.catalog_covered_op_count,
-        missing_catalog_ops: coverage.missing_catalog_ops,
-        release_backend_row_count: coverage.release_backend_row_count,
-        supported_release_backend_row_count: coverage.supported_release_backend_row_count,
-        release_backend_rows: catalog.release_backend_rows,
-        case_class_blocker_count: release_backend_case_rows
-            .iter()
-            .map(|row| row.blockers.len())
-            .sum(),
-        release_backend_case_rows,
-        required_case_classes: REPORTED_CONFORMANCE_CASE_CLASSES.to_vec(),
-        missing_release_backend_rows: catalog.missing_release_backend_rows,
-        op_matrix_blocked_release_count: coverage.op_matrix_blocked_release_count,
-        op_matrix_blocked_release_rows: catalog.blocked_release_rows,
-        op_matrix_errors: catalog.errors,
-        duplicate_op_ids: duplicate_op_ids.into_iter().collect(),
-        fixture_required_count,
-        fixture_input_count,
-        expected_output_count,
-        dispatch_backends,
-        ci_blocking_gate_count,
-        ci_gates,
-        required_ci_statuses,
-        missing_required_ci_statuses,
-        ci_status_scan_errors,
-        path_filtered_required_workflows,
-        missing_required_workflow_triggers,
-        missing_fail_closed_fanins,
-        scan_conformance_rows,
-        scan_conformance_findings,
-        entries,
-        blockers,
-    };
+        if !missing_required_ci_statuses.is_empty() {
+            blockers.push(format!(
+                "{} required branch-protection status context(s) are not defined by any workflow",
+                missing_required_ci_statuses.len()
+            ));
+        }
+        if !ci_status_scan_errors.is_empty() {
+            blockers.push(format!(
+                "{} CI status scan error(s) make branch-protection status evidence incomplete",
+                ci_status_scan_errors.len()
+            ));
+        }
+        if !path_filtered_required_workflows.is_empty() {
+            blockers.push(format!(
+                "{} required workflow(s) still use path filters",
+                path_filtered_required_workflows.len()
+            ));
+        }
+        if !missing_required_workflow_triggers.is_empty() {
+            blockers.push(format!(
+                "{} required workflow(s) are missing pull_request + push main trigger coverage",
+                missing_required_workflow_triggers.len()
+            ));
+        }
+        if !missing_fail_closed_fanins.is_empty() {
+            blockers.push(format!(
+                "{} required fan-in job(s) are missing fail-closed dependency checks",
+                missing_fail_closed_fanins.len()
+            ));
+        }
+        let matrix = ConformanceMatrix {
+            schema_version: 5,
+            op_count: entries.len(),
+            distinct_op_count: ids.len(),
+            catalog_required_op_count: coverage.catalog_required_op_count,
+            catalog_covered_op_count: coverage.catalog_covered_op_count,
+            missing_catalog_ops: coverage.missing_catalog_ops,
+            release_backend_row_count: coverage.release_backend_row_count,
+            supported_release_backend_row_count: coverage.supported_release_backend_row_count,
+            release_backend_rows: catalog.release_backend_rows,
+            case_class_blocker_count: release_backend_case_rows
+                .iter()
+                .map(|row| row.blockers.len())
+                .sum(),
+            release_backend_case_rows,
+            required_case_classes: REPORTED_CONFORMANCE_CASE_CLASSES.to_vec(),
+            missing_release_backend_rows: catalog.missing_release_backend_rows,
+            op_matrix_blocked_release_count: coverage.op_matrix_blocked_release_count,
+            op_matrix_blocked_release_rows: catalog.blocked_release_rows,
+            op_matrix_errors: catalog.errors,
+            duplicate_op_ids: duplicate_op_ids.into_iter().collect(),
+            fixture_required_count,
+            fixture_input_count,
+            expected_output_count,
+            dispatch_backends,
+            ci_blocking_gate_count,
+            ci_gates,
+            required_ci_statuses,
+            missing_required_ci_statuses,
+            ci_status_scan_errors,
+            path_filtered_required_workflows,
+            missing_required_workflow_triggers,
+            missing_fail_closed_fanins,
+            scan_conformance_rows,
+            scan_conformance_findings,
+            entries,
+            blockers,
+        };
 
         let output = default_output();
         let relative = output
@@ -399,7 +401,6 @@ impl Gate for ConformanceMatrix {
         Ok(report)
     }
 }
-
 
 fn release_backend_case_rows(
     specs: &[OpMatrixReleaseBackendSpec],

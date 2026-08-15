@@ -1,6 +1,5 @@
 //! `cargo xtask list-ops` renders the canonical live operation schema as Markdown.
 
-
 use xtask::gate::{Gate, GateCtx, GateError, Report};
 
 use crate::docs::operation_schema::{self, OperationRecord};
@@ -45,7 +44,6 @@ impl Gate for ListOps {
 
 /// Repository-relative document this gate owns.
 const INVENTORY_PATH: &str = "docs/generated/op-inventory.toml";
-
 
 fn render(operations: &[OperationRecord]) -> String {
     let mut text = String::from(
@@ -104,4 +102,3 @@ fn array(values: &[String]) -> String {
     text.push(']');
     text
 }
-

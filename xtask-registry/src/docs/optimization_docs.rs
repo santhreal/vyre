@@ -46,7 +46,6 @@ impl Gate for OptimizationDocs {
 /// Repository-relative document this gate owns.
 const PASSES_PATH: &str = "docs/generated/optimizer-passes.toml";
 
-
 /// One TOML basic string.
 fn quote(value: &str) -> String {
     format!("\"{}\"", value.replace('\\', "\\\\").replace('"', "\\\""))
@@ -64,7 +63,6 @@ fn array(values: &[&str]) -> String {
     text.push(']');
     text
 }
-
 
 fn metadata_by_name() -> Result<BTreeMap<&'static str, PassMetadata>, String> {
     let registrations = registered_pass_registrations().map_err(|error| error.to_string())?;

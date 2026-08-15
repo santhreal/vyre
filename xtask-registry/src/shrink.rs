@@ -47,8 +47,9 @@ impl Gate for Shrink {
             return Err(GateError::new(
                 match selected {
                     Some(id) => format!("no release corpus case is named `{id}`"),
-                    None => "the release corpus generated no case, so nothing was reduced"
-                        .to_string(),
+                    None => {
+                        "the release corpus generated no case, so nothing was reduced".to_string()
+                    }
                 },
                 "run the gate without --program to reduce every generated case",
             ));
@@ -131,11 +132,7 @@ impl Oracle {
 }
 
 /// Writes one wire blob for the oracle to read.
-fn write_wire(
-    work_dir: &std::path::Path,
-    id: &str,
-    wire: &[u8],
-) -> Result<PathBuf, GateError> {
+fn write_wire(work_dir: &std::path::Path, id: &str, wire: &[u8]) -> Result<PathBuf, GateError> {
     fs::create_dir_all(work_dir).map_err(|error| {
         GateError::new(
             format!("failed to create {}: {error}", work_dir.display()),

@@ -89,7 +89,8 @@ impl Gate for TraceF32 {
 }
 
 fn render_run(run_idx: usize, outputs: &[Vec<u8>]) -> String {
-    let mut text = format!("\n    vec![                                           // run {run_idx}");
+    let mut text =
+        format!("\n    vec![                                           // run {run_idx}");
     for (buf_idx, bytes) in outputs.iter().enumerate() {
         text.push_str("\n        vec![");
         for (i, byte) in bytes.iter().enumerate() {

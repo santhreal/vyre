@@ -6,7 +6,6 @@ use xtask::gate::{Gate, GateCtx, GateError, Report};
 
 use crate::docs::operation_schema::{self, OperationRecord};
 
-
 /// Holds the per-subsystem operation catalog to the live inventory.
 pub struct Catalog;
 
@@ -28,7 +27,10 @@ impl Gate for Catalog {
         let mut inspection = xtask::artifact_gate::Inspection::new();
         inspection.generates_text(CATALOG_PATH, render(&catalog));
         let mut report = xtask::artifact_gate::settle_inspection(ctx, self.name(), inspection);
-        report.note(format!("{} subsystem(s) in the live inventory", catalog.len()));
+        report.note(format!(
+            "{} subsystem(s) in the live inventory",
+            catalog.len()
+        ));
         Ok(report)
     }
 }
@@ -59,9 +61,6 @@ fn render(catalog: &BTreeMap<String, Vec<OperationRecord>>) -> String {
 fn quote(value: &str) -> String {
     format!("\"{}\"", value.replace('\\', "\\\\").replace('"', "\\\""))
 }
-
-
-
 
 fn collect() -> Result<BTreeMap<String, Vec<OperationRecord>>, GateError> {
     let schema = operation_schema::build().map_err(schema_error)?;

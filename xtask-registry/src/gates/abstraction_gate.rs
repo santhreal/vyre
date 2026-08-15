@@ -85,7 +85,6 @@ fn violation(text: &str) -> Finding {
     }
 }
 
-
 struct OpInfo {
     id: String,
     program: Program,

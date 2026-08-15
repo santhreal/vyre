@@ -118,7 +118,6 @@ fn duplicate_finding(left: &str, right: &str, score: f64) -> Finding {
     )
 }
 
-
 fn run_target_query(
     report: &mut Report,
     ops: &[OpInfo],
@@ -188,28 +187,38 @@ fn run_target_query(
         return;
     }
 
-    report.note(format!("  Top {} matches by bigram-cosine structural similarity:",
-        scored.len()));
+    report.note(format!(
+        "  Top {} matches by bigram-cosine structural similarity:",
+        scored.len()
+    ));
     for (i, (score, same_contract, same_family, op)) in scored.iter().enumerate() {
         let verdict = pair_verdict(*score, *same_contract, *same_family);
-        report.note(format!("    {:>2}. {:>5.1}%  {}  ({})",
+        report.note(format!(
+            "    {:>2}. {:>5.1}%  {}  ({})",
             i + 1,
             score * 100.0,
             op.id,
-            verdict));
-        report.note(format!("         tier={} own={} composed={} children={}",
+            verdict
+        ));
+        report.note(format!(
+            "         tier={} own={} composed={} children={}",
             tier_label(op.tier),
             op.own_nodes,
             op.composed_nodes,
-            op.children.len()));
+            op.children.len()
+        ));
         if !same_contract {
-            report.note(format!("         contract=DIFFERENT target_buffers={} match_buffers={}",
+            report.note(format!(
+                "         contract=DIFFERENT target_buffers={} match_buffers={}",
                 target.buffer_signature.len(),
-                op.buffer_signature.len()));
+                op.buffer_signature.len()
+            ));
         }
         if *same_family {
-            report.note(format!("         implementation=CENTRALIZED family={}",
-                implementation_family(target).unwrap_or("unknown")));
+            report.note(format!(
+                "         implementation=CENTRALIZED family={}",
+                implementation_family(target).unwrap_or("unknown")
+            ));
         }
     }
     report.note(format!("  Bar: ≥ 0.95 = duplicate, ≥ 0.80 = very similar, ≥ 0.50 = same family, < 0.20 = unrelated."));
@@ -295,17 +304,26 @@ fn run_all_pairs_query(
             s if s >= 0.50 => "SIMILAR",
             _ => "RELATED",
         };
-        report.note(format!("  {:>2}. {:>5.1}%  {}", index + 1, score * 100.0, verdict));
-        report.note(format!("      A: {} tier={} own={} composed={}",
+        report.note(format!(
+            "  {:>2}. {:>5.1}%  {}",
+            index + 1,
+            score * 100.0,
+            verdict
+        ));
+        report.note(format!(
+            "      A: {} tier={} own={} composed={}",
             left.id,
             tier_label(left.tier),
             left.own_nodes,
-            left.composed_nodes));
-        report.note(format!("      B: {} tier={} own={} composed={}",
+            left.composed_nodes
+        ));
+        report.note(format!(
+            "      B: {} tier={} own={} composed={}",
             right.id,
             tier_label(right.tier),
             right.own_nodes,
-            right.composed_nodes));
+            right.composed_nodes
+        ));
     }
     Ok(())
 }
