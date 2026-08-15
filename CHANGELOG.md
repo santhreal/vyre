@@ -1931,6 +1931,30 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `ir-fixtures` means `vyre-foundation` plus `smallvec`. The IR fixture table
   builds its flat leaves from the same module, so the two tables cannot
   disagree about which element types exist.
+- Every registered xtask subcommand is now a gate answering one contract: it
+  returns findings and notes instead of printing, and the runner decides what
+  that means. The `Kind` enum is gone, so no check is exempt from the sweep by
+  category. The `check-cat-a` and `release-gate` composites are named subsets
+  of the registry, `xtask gates --subset cat-a` and `--subset prepublish`, and
+  the cargo invocations they drove are gates of their own: `workspace-check`,
+  `workspace-clippy`, `workspace-tests`, `workspace-docs` and `lockfile-clean`.
+  `scripts/check_op_names.sh` and `scripts/check_parity_testing_not_leaked.sh`
+  became the `op-names` and `parity-testing-isolated` gates.
+  `xtask/gate-baselines.toml` pins `findings` rather than output lines, one row
+  per registered gate, and the sweep enumerates the registry at run time so a
+  gate without a row and a row without a gate both fail. A gate that owns a
+  generated artifact checks it against the tree and rewrites it under
+  `--write`, so regeneration is never a subcommand of its own.
+- The seventeen registry-linked checks answer the gate contract. Each one
+  returns findings instead of an exit code, so the sweep counts what it found
+  and pins that count. catalog, list-ops and optimization-docs now own
+  docs/generated/catalog.toml, docs/generated/op-inventory.toml and
+  docs/generated/optimizer-passes.toml, compared on every run and regenerated
+  with --write. lego-audit runs its repo-context checks unconditionally and has
+  no report-only mode, lego-quick scans the whole tree unless --staged narrows
+  it, heuristic-audit has no advisory mode, compile and shrink run over the
+  generated release corpus, and verify-rewrite-proofs fails when no solver can
+  discharge an obligation.
 - Three optimizer hot paths stopped allocating per sample.
   `HotPathHints::record` allocated the key on every call including a repeat
   sample, and its LRU eviction cloned every key in the map to find the oldest;
@@ -3451,6 +3475,22 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   state in which a crate most needs to be checked. Both are findings now, and
   an extraction that exits nonzero prints what `cargo public-api` said rather
   than a bare sentence naming the crate.
+- The optimizer compiles for the adapter it was given. `Autotune` and
+  `DecodeScanFuse` both read device facts, and both hardcoded
+  `AdapterCaps::conservative()` in their `ProgramPass::transform`, so every
+  program that went through the standard pipeline was tuned for a device with
+  no optional features whatever the real adapter reported; the caps-aware
+  `transform_for_adapter` existed the whole time and only a caller who already
+  knew to ask could reach it. Nothing failed, which is why it lasted: the
+  pipeline produced a valid program and a slower one. `ProgramPass` now
+  declares `transform_for_adapter`, whose default discards the adapter because
+  an IR-only rewrite is the same program on every device, and
+  `#[vyre_pass(adapter_dependent = true)]` is how a pass says its output moves
+  with the device. `PassScheduler` carries the adapter it was built for,
+  `PassScheduler::for_adapter` and `optimize_for_adapter` are the entries a
+  backend uses once it has probed one, and a scheduler built without an adapter
+  states the conservative fallback at the place that chose it instead of
+  leaving it to whichever pass reached for a profile first.
 
 ## [0.7.1] - 2026-08-01
 
