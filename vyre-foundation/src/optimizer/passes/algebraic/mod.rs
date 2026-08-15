@@ -20,6 +20,8 @@ pub mod normalize_atomics;
 /// Mixed-precision + transcendental fast-path emit hints
 /// (ROADMAP G1 + G5 foundation half).
 pub mod precision_hint;
+/// Shift identities and chained-shift fusion shared by folding and reduction.
+pub(crate) mod shift_fusion;
 /// Algebraic rewrites derived from operation specifications.
 /// Multiplication strength reduction.
 pub mod strength_reduce;

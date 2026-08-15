@@ -5,8 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use vyre_foundation::operation::{
     classify_operation_id as classify_op_id, OperationTier as OpTier,
 };
-use xtask::artifact_gate::{self, Inspection};
-use xtask::gate::{Gate, GateCtx, GateError, Report};
+use xtask::artifact_gate::Inspection;
 
 /// The artifact this gate owns, relative to the workspace root.
 ///
@@ -123,33 +122,16 @@ struct OpRecord {
     bench_targets: Vec<String>,
 }
 
-/// Holds `docs/optimization/OP_MATRIX.toml` to the live operation registry.
-pub struct OpMatrixGate;
-
-impl Gate for OpMatrixGate {
-    fn name(&self) -> &'static str {
-        "op-matrix"
-    }
-
-    fn help(&self) -> &'static str {
-        "Render the canonical op matrix from the live operation registry and the manual scan \
-         construct rows, and report each line docs/optimization/OP_MATRIX.toml disagrees on. \
-         Proves every registered op id carries a canonical tier namespace, is registered by one \
-         semantic source, appears in one family, and that every family declares owners and \
-         tests. Proves nothing about whether the named owner and test paths exist."
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
-    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        Ok(artifact_gate::settle_inspection(
-            ctx,
-            self.name(),
-            inspect(),
-        ))
-    }
+xtask::artifact_gate! {
+    /// Holds `docs/optimization/OP_MATRIX.toml` to the live operation registry.
+    OpMatrixGate,
+    name: "op-matrix",
+    help: "Render the canonical op matrix from the live operation registry and the manual scan \
+       construct rows, and report each line docs/optimization/OP_MATRIX.toml disagrees on. \
+       Proves every registered op id carries a canonical tier namespace, is registered by one \
+       semantic source, appears in one family, and that every family declares owners and \
+       tests. Proves nothing about whether the named owner and test paths exist.",
+    inspect: |ctx| inspect(),
 }
 
 /// The matrix the registry generates, and every row problem found producing it.

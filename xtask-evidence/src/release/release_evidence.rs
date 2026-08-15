@@ -8,8 +8,7 @@
 use std::path::Path;
 
 use serde::Serialize;
-use xtask::artifact_gate::{self, Inspection};
-use xtask::gate::{Gate, GateCtx, GateError, Report};
+use xtask::artifact_gate::Inspection;
 
 mod artifact_status;
 mod evidence_index;
@@ -132,35 +131,18 @@ impl EvidenceCommand {
     }
 }
 
-/// Holds the release evidence set to the artifacts every generator owes it.
-pub struct ReleaseEvidenceGate;
-
-impl Gate for ReleaseEvidenceGate {
-    fn name(&self) -> &'static str {
-        "release-evidence"
-    }
-
-    fn help(&self) -> &'static str {
-        "Regenerate release/evidence/final/release-evidence-run.json and expected-artifacts.json \
-         and report each line the committed copies disagree on. Proves every required generator \
-         declares at least one expected artifact, and that every declared artifact exists, is \
-         non-empty, is readable and carries provenance. Proves nothing about whether those \
-         generators pass: it no longer runs them. Each one is a registered gate, so the sweep \
-         runs it and fails on it directly rather than through a spawn this gate reports \
-         second-hand."
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
-    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        Ok(artifact_gate::settle_inspection(
-            ctx,
-            self.name(),
-            inspect(&ctx.root),
-        ))
-    }
+xtask::artifact_gate! {
+    /// Holds the release evidence set to the artifacts every generator owes it.
+    ReleaseEvidenceGate,
+    name: "release-evidence",
+    help: "Regenerate release/evidence/final/release-evidence-run.json and expected-artifacts.json \
+       and report each line the committed copies disagree on. Proves every required generator \
+       declares at least one expected artifact, and that every declared artifact exists, is \
+       non-empty, is readable and carries provenance. Proves nothing about whether those \
+       generators pass: it no longer runs them. Each one is a registered gate, so the sweep \
+       runs it and fails on it directly rather than through a spawn this gate reports \
+       second-hand.",
+    inspect: |ctx| inspect(&ctx.root),
 }
 
 /// The state of the release evidence set, and the two artifacts recording it.

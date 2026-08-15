@@ -9,8 +9,7 @@ use serde::Serialize;
 use vyre_driver::backend::{
     acquire, acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
 };
-use xtask::artifact_gate::{self, Inspection};
-use xtask::gate::{Gate, GateCtx, GateError, Report};
+use xtask::artifact_gate::Inspection;
 
 const MAX_BACKEND_EVIDENCE_TEXT_BYTES: u64 = 4_194_304;
 
@@ -308,36 +307,19 @@ const BACKEND_PRODUCTION_SCAN_ROOTS: &[&str] = &[
     "vyre-runtime/src",
 ];
 
-/// Holds the backend release policy evidence to the tree and to the recorded probe.
-pub struct BackendMatrixGate;
-
-impl Gate for BackendMatrixGate {
-    fn name(&self) -> &'static str {
-        "backend-matrix"
-    }
-
-    fn help(&self) -> &'static str {
-        "Judge the CUDA-first, WGPU-fallback backend policy. Proves, on any host, that every \
-         backend implementation file the policy names exists and carries its implementation \
-         tokens with no unresolved marker left in it, and that no backend production source \
-         states a hidden fallback. Proves, from the recorded probe, that CUDA acquires first, \
-         that the WGPU fallback acquires, that the preferred dispatch backend is never the \
-         reference one, and that the host met the release GPU floor. The probe is only as \
-         current as the run that recorded it; --write re-probes this host and rewrites the \
-         artifact."
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
-    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        Ok(artifact_gate::settle_inspection(
-            ctx,
-            self.name(),
-            inspect(&ctx.root, ctx.write),
-        ))
-    }
+xtask::artifact_gate! {
+    /// Holds the backend release policy evidence to the tree and to the recorded probe.
+    BackendMatrixGate,
+    name: "backend-matrix",
+    help: "Judge the CUDA-first, WGPU-fallback backend policy. Proves, on any host, that every \
+       backend implementation file the policy names exists and carries its implementation \
+       tokens with no unresolved marker left in it, and that no backend production source \
+       states a hidden fallback. Proves, from the recorded probe, that CUDA acquires first, \
+       that the WGPU fallback acquires, that the preferred dispatch backend is never the \
+       reference one, and that the host met the release GPU floor. The probe is only as \
+       current as the run that recorded it; --write re-probes this host and rewrites the \
+       artifact.",
+    inspect: |ctx| inspect(&ctx.root, ctx.write),
 }
 
 /// The artifact this gate owns, relative to the workspace root.

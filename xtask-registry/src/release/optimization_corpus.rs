@@ -7,8 +7,7 @@ use vyre_foundation::optimizer::corpus::{
     generate_release_corpus, manifest_for, OptimizationCorpusCase, OptimizationCorpusManifest,
     RELEASE_OPTIMIZATION_FAMILIES,
 };
-use xtask::artifact_gate::{self, Inspection};
-use xtask::gate::{Gate, GateCtx, GateError, Report};
+use xtask::artifact_gate::Inspection;
 
 use crate::release::optimizer_pass_rows::{self, OptimizerPassRow};
 
@@ -80,35 +79,18 @@ struct OptimizerPassManifest {
     blockers: Vec<String>,
 }
 
-/// Holds the five optimizer corpus artifacts to the corpus the generator emits.
-pub struct OptimizationCorpusGate;
-
-impl Gate for OptimizationCorpusGate {
-    fn name(&self) -> &'static str {
-        "optimization-corpus"
-    }
-
-    fn help(&self) -> &'static str {
-        "Regenerate the five artifacts under release/evidence/optimization from the semantic \
-         Program optimizer corpus and report each line the committed copies disagree on. Proves \
-         the corpus reaches its case floor, that every case verifies after optimization, that at \
-         least one pass instance changed a program, that no case failed to converge, that every \
-         required family carries its minimum case count, that no case id repeats, and that no \
-         optimizer pass id repeats. Proves nothing about runtime performance: the corpus is \
-         optimized and re-verified in process, never executed on a device."
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
-    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        Ok(artifact_gate::settle_inspection(
-            ctx,
-            self.name(),
-            inspect(),
-        ))
-    }
+xtask::artifact_gate! {
+    /// Holds the five optimizer corpus artifacts to the corpus the generator emits.
+    OptimizationCorpusGate,
+    name: "optimization-corpus",
+    help: "Regenerate the five artifacts under release/evidence/optimization from the semantic \
+       Program optimizer corpus and report each line the committed copies disagree on. Proves \
+       the corpus reaches its case floor, that every case verifies after optimization, that at \
+       least one pass instance changed a program, that no case failed to converge, that every \
+       required family carries its minimum case count, that no case id repeats, and that no \
+       optimizer pass id repeats. Proves nothing about runtime performance: the corpus is \
+       optimized and re-verified in process, never executed on a device.",
+    inspect: |ctx| inspect(),
 }
 
 /// What the corpus generator produces, and the five artifacts recording it.
