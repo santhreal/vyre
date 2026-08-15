@@ -400,3 +400,47 @@ pub(crate) fn oracle_forward_step(
     }
     out
 }
+
+/// The masked forward closure: `oracle_forward_step` to fixpoint, bounded by
+/// `max_iters`, with the changed flag both persistent-BFS kernels also return.
+///
+/// Two crates carried this loop verbatim, which made the primitive arm and the
+/// substrate arm share one reference instead of checking each other.
+pub(crate) fn oracle_persistent_closure(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    frontier_in: &[u32],
+    allow_mask: u32,
+    max_iters: u32,
+) -> (Vec<u32>, u32) {
+    let words = node_count.div_ceil(32) as usize;
+    let mut out = frontier_in.to_vec();
+    out.resize(words, 0);
+    let mut changed = 0;
+    for _ in 0..max_iters {
+        let step = oracle_forward_step(
+            node_count,
+            edge_offsets,
+            edge_targets,
+            edge_kind_mask,
+            &out,
+            allow_mask,
+        );
+        let mut step_changed = false;
+        for word in 0..words {
+            let before = out[word];
+            out[word] |= step[word];
+            if out[word] != before {
+                step_changed = true;
+            }
+        }
+        if step_changed {
+            changed = 1;
+        } else {
+            break;
+        }
+    }
+    (out, changed)
+}
