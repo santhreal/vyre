@@ -22,7 +22,7 @@ use crate::reduce::multi_block_prefix_scan::{multi_block_prefix_scan_sum_u32, BL
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id for the registered Tier 3 wrapper.
-pub const OP_ID: &str = "vyre-primitives::text::line_index";
+pub const LINE_INDEX_OP_ID: &str = "vyre-primitives::text::line_index";
 const FLAG_OP_ID: &str = "vyre-primitives::text::line_index::line_start_flags";
 
 /// Build a Program that writes `lines[i] = line_number_of(source[i])`.
@@ -40,7 +40,7 @@ const FLAG_OP_ID: &str = "vyre-primitives::text::line_index::line_start_flags";
 pub fn line_index(source: &str, lines: &str, n: u32) -> Program {
     match try_line_index(source, lines, n) {
         Ok(program) => program,
-        Err(error) => trap_program(OP_ID, Some((lines, DataType::U32)), error),
+        Err(error) => trap_program(LINE_INDEX_OP_ID, Some((lines, DataType::U32)), error),
     }
 }
 
@@ -52,7 +52,7 @@ pub fn line_index(source: &str, lines: &str, n: u32) -> Program {
 pub fn line_index_u8(source: &str, lines: &str, n: u32) -> Program {
     match try_line_index_u8(source, lines, n) {
         Ok(program) => program,
-        Err(error) => trap_program(OP_ID, Some((lines, DataType::U32)), error),
+        Err(error) => trap_program(LINE_INDEX_OP_ID, Some((lines, DataType::U32)), error),
     }
 }
 
@@ -102,7 +102,7 @@ fn empty_line_index_program(source: &str, lines: &str, source_type: DataType) ->
                 .with_output_byte_range(0..0),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, Vec::new())],
+        vec![wrap_anonymous_region(LINE_INDEX_OP_ID, Vec::new())],
     )
 }
 
@@ -205,7 +205,7 @@ pub fn reference_line_index(source: &[u8]) -> Vec<u32> {
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
-        OP_ID,
+        LINE_INDEX_OP_ID,
         || line_index("source", "lines", 5),
         Some(|| {
             vec![vec![

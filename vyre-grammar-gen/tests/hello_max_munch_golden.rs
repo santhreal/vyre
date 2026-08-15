@@ -3,8 +3,8 @@
 //! Refresh: `cargo test -p vyre-grammar-gen --test gen_lex_hash -- --ignored --nocapture`
 
 use vyre_grammar_gen::host_preprocess::preprocess_c_host;
-use vyre_grammar_gen::kinds_blake3;
-use vyre_grammar_gen::lex_c11_max_munch_kinds;
+use vyre_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
+use vyre_grammar_gen::max_munch_cpu::kinds_blake3;
 
 #[test]
 fn hello_c_preproc_max_munch_kinds_hash() {

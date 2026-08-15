@@ -4,10 +4,8 @@
 mod flat_expr_eval;
 
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_reference::{
-    execution::expr as eval_expr, execution::expr::Buffer, reference_eval, value::Value,
-    workgroup::Memory,
-};
+use vyre_reference::expr::Buffer;
+use vyre_reference::{expr as eval_expr, reference_eval, value::Value, workgroup::Memory};
 
 use flat_expr_eval::{empty_program, eval_expr_value, float_bits, zero_invocation};
 

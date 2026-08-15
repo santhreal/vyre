@@ -1,6 +1,7 @@
 //! Adversarial contracts for corrupt generated grammar payloads.
 
-use vyre_grammar_gen::{decode_dfa_from_bytes, wire::WireError};
+use vyre_grammar_gen::wire::decode_dfa_from_bytes;
+use vyre_grammar_gen::wire::WireError;
 
 #[test]
 fn adversarial_contract_rejects_corrupt_generated_blob() {

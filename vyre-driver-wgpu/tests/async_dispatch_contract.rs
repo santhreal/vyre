@@ -318,7 +318,7 @@ fn dispatch_profile_gpu_timestamps_executes_with_live_timestamp_queries() {
 
 #[test]
 fn wgpu_dispatch_async_returns_handle_and_matches_borrowed_dispatch() {
-    let adapters = vyre_driver_wgpu::runtime::device::enumerate_adapters();
+    let adapters = vyre_driver_wgpu::runtime::enumerate_adapters();
     assert!(
         !adapters.is_empty(),
         "Fix: async dispatch contract requires the live RTX 5090 adapter."

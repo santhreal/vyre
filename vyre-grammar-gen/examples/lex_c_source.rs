@@ -13,7 +13,10 @@
 //! cargo run --example lex_c_source -p vyre-grammar-gen
 //! ```
 
-use vyre_grammar_gen::{kinds_blake3, lex_c11_max_munch_kinds, preprocess_c_host, C11_PATTERNS};
+use vyre_grammar_gen::c11_lexer::C11_PATTERNS;
+use vyre_grammar_gen::host_preprocess::preprocess_c_host;
+use vyre_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
+use vyre_grammar_gen::max_munch_cpu::kinds_blake3;
 
 const SOURCE: &str = r#"
 #define WIDTH 8

@@ -11,8 +11,8 @@
 //!  * **`bracket_pairs_via` double-bug.** `bracket_match` binds `kinds` ReadOnly(0), `stack` plain
 //!    ReadWrite(1, InputOutput), `match_pairs` `BufferDecl::output`(2, backend-allocated). So only
 //!    TWO buffers are input-consuming (kinds + stack), yet the consumer passed THREE inputs (feeding
-//!    a dead `MATCH_NONE` seed for the output-allocated `match_pairs`, whose entries the kernel
-//!    initializes itself at bracket_match.rs's `store(match_pairs, i, MATCH_NONE)`) → OVER-FEED, a
+//!    a dead `BRACKET_MATCH_NONE` seed for the output-allocated `match_pairs`, whose entries the kernel
+//!    initializes itself at bracket_match.rs's `store(match_pairs, i, BRACKET_MATCH_NONE)`) → OVER-FEED, a
 //!    hard "expected 2, received 3" on a real backend. AND the writable buffers returned in binding
 //!    order are `[stack, match_pairs]`, so `match_pairs` is `outputs[1]`: but the decode read
 //!    `outputs[0]` (= the `stack` scratch), i.e. the wrong buffer entirely.
@@ -29,10 +29,9 @@ use vyre_libs::encoding::matching_diagnostic_compaction::{
     bracket_pairs_via, dedup_region_survivor_flags_via, reference_dedup_regions,
     reference_sort_regions, sort_regions_via,
 };
-use vyre_primitives::matching::bracket_match::{
-    cpu_ref as bracket_cpu_ref, CLOSE_BRACE, OPEN_BRACE,
+use vyre_primitives::matching::{
+    bracket_match_cpu_ref as bracket_cpu_ref, RegionTriple, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN,
 };
-use vyre_primitives::matching::region::RegionTriple;
 
 use vyre_libs::test_support::ReferenceEvalDispatcher;
 
@@ -43,13 +42,13 @@ fn xorshift(state: &mut u32) -> u32 {
     *state
 }
 
-/// A random brace-token stream: `OPEN_BRACE` / `CLOSE_BRACE` / `OTHER(0)` in balanced-ish mix.
+/// A random brace-token stream: `BRACKET_KIND_OPEN` / `BRACKET_KIND_CLOSE` / `BRACKET_KIND_OTHER(0)` in balanced-ish mix.
 fn random_kinds(state: &mut u32, len: usize) -> Vec<u32> {
     (0..len)
         .map(|_| match xorshift(state) % 4 {
-            0 => OPEN_BRACE,
-            1 => CLOSE_BRACE,
-            _ => 0, // OTHER
+            0 => BRACKET_KIND_OPEN,
+            1 => BRACKET_KIND_CLOSE,
+            _ => 0, // BRACKET_KIND_OTHER
         })
         .collect()
 }
@@ -89,12 +88,12 @@ fn bracket_pairs_via_matches_known_nested_pairs() {
     let dispatcher = ReferenceEvalDispatcher;
     // "( ( ) ( ) )" → outer 0-5, inner 1-2, inner 3-4.
     let kinds = vec![
-        OPEN_BRACE,
-        OPEN_BRACE,
-        CLOSE_BRACE,
-        OPEN_BRACE,
-        CLOSE_BRACE,
-        CLOSE_BRACE,
+        BRACKET_KIND_OPEN,
+        BRACKET_KIND_OPEN,
+        BRACKET_KIND_CLOSE,
+        BRACKET_KIND_OPEN,
+        BRACKET_KIND_CLOSE,
+        BRACKET_KIND_CLOSE,
     ];
     let pairs = bracket_pairs_via(&dispatcher, &kinds, 8).unwrap();
     assert_eq!(pairs, vec![5, 2, 1, 4, 3, 0]);

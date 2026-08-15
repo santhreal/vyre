@@ -46,7 +46,7 @@ fn megakernel_shutdown_on_first_iteration_dispatches_cleanly() {
     // iteration thanks to the prearmed SHUTDOWN.
     let workgroup_size_x: u32 = 64;
     let slot_count: u32 = 64;
-    let program = resident_work_queue::builder::build_program_sharded(workgroup_size_x, &[]);
+    let program = resident_work_queue::build_program_sharded(workgroup_size_x, &[]);
 
     // Sanity check: the megakernel lowers to valid Naga IR and emits valid WGSL. This
     // is what Gate E cares about  -  both halves must succeed end to
@@ -135,7 +135,7 @@ fn megakernel_shutdown_on_first_iteration_dispatches_cleanly() {
 fn megakernel_wgsl_contains_compute_entry_and_atomic_cas() {
     use vyre_emit_naga::program::emit_module;
 
-    let program = resident_work_queue::builder::build_program_sharded(64, &[]);
+    let program = resident_work_queue::build_program_sharded(64, &[]);
     let module = emit_module(&program, [64, 1, 1]).expect("megakernel must emit Naga");
     let info = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),

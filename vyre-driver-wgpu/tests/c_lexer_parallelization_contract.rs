@@ -17,7 +17,7 @@ use c_frontend::rows::haystack_words;
 use c_token_support::run_c11_lexer;
 use common::words_from_bytes;
 
-use c_grammar_gen::lex_c11_max_munch_kinds;
+use c_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
 
 use vyre_emit_naga::program::emit_module;
 use vyre_libs::parsing::c::lex::keyword::{

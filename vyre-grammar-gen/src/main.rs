@@ -9,9 +9,10 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand, ValueEnum};
 use serde_json::json;
-use vyre_grammar_gen::{
-    c11_lexer::build_c11_lexer_dfa, dfa::DfaBuilder, DfaTable, LrTable, PackedBlob,
-};
+use vyre_grammar_gen::c11_lexer::build_c11_lexer_dfa;
+use vyre_grammar_gen::dfa::{DfaBuilder, DfaTable};
+use vyre_grammar_gen::lr::LrTable;
+use vyre_grammar_gen::wire::PackedBlob;
 
 /// Command-line interface.
 #[derive(Parser)]

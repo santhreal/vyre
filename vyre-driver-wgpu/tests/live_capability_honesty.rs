@@ -17,7 +17,7 @@ use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::BackendValidationCapabilities;
 
 fn selected_adapter(backend: &WgpuBackend) -> wgpu::Adapter {
-    vyre_driver_wgpu::runtime::device::adapter_for_info(backend.adapter_info()).expect(
+    vyre_driver_wgpu::runtime::adapter_for_info(backend.adapter_info()).expect(
         "Fix: selected wgpu backend adapter must still be enumerable for live capability probing",
     )
 }
@@ -303,7 +303,7 @@ fn acquisition_never_returns_cpu_adapter() {
 
 #[test]
 fn acquire_fails_when_only_cpu_adapters_are_available() {
-    let has_real_gpu = vyre_driver_wgpu::runtime::device::has_real_gpu_adapter();
+    let has_real_gpu = vyre_driver_wgpu::runtime::has_real_gpu_adapter();
 
     if !has_real_gpu {
         let result = WgpuBackend::acquire();
@@ -324,7 +324,7 @@ fn acquire_fails_when_only_cpu_adapters_are_available() {
 
 #[test]
 fn new_also_rejects_cpu_fallback() {
-    let has_real_gpu = vyre_driver_wgpu::runtime::device::has_real_gpu_adapter();
+    let has_real_gpu = vyre_driver_wgpu::runtime::has_real_gpu_adapter();
 
     if !has_real_gpu {
         let result = WgpuBackend::new();

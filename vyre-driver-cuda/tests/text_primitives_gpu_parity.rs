@@ -9,8 +9,8 @@ mod common;
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::{BufferAccess, DataType, Program};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::text::line_index::{line_index, line_index_u8, reference_line_index};
-use vyre_primitives::text::utf8_validate::{
+use vyre_primitives::text::{line_index, line_index_u8, reference_line_index};
+use vyre_primitives::text::{
     reference_utf8_validate, utf8_validate, utf8_validate_dispatch_grid, utf8_validate_u8,
     UTF8_CONT, UTF8_INVALID, UTF8_LEAD_3, UTF8_LEAD_4,
 };

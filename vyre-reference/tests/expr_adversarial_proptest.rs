@@ -10,9 +10,8 @@ mod flat_expr_eval;
 use proptest::prelude::*;
 use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_foundation::MemoryOrdering;
-use vyre_reference::{
-    execution::expr as eval_expr, execution::expr::Buffer, value::Value, workgroup::Memory,
-};
+use vyre_reference::expr::Buffer;
+use vyre_reference::{expr as eval_expr, value::Value, workgroup::Memory};
 
 use flat_expr_eval::{
     canonical_f32, empty_program, eval_binop_f32, eval_binop_i32, eval_binop_u32, eval_expr_value,

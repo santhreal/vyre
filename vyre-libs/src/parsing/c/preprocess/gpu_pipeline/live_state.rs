@@ -269,7 +269,10 @@ mod live_macro_tests {
 
     #[test]
     fn replace_live_macro_keeps_one_authoritative_definition() {
-        let mut macros = vec![object_macro(b"FEATURE", b"0"), object_macro(b"OTHER", b"1")];
+        let mut macros = vec![
+            object_macro(b"FEATURE", b"0"),
+            object_macro(b"BRACKET_KIND_OTHER", b"1"),
+        ];
         let mut index = macros
             .iter()
             .enumerate()

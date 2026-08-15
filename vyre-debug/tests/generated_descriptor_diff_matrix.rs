@@ -4,7 +4,7 @@
 //! test drives generated root-level descriptor mutations to pin the expected
 //! op-count delta and root-shape classification.
 
-use vyre_debug::descriptor_diff::{diff_descriptors, DescriptorDiff};
+use vyre_debug::{diff_descriptors, DescriptorDiff};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 fn seed_program(seed: u32) -> Program {

@@ -25,13 +25,14 @@ mod normalize;
 mod search;
 mod select;
 /// Target compiler facets over compiler-selected modules and canonical ABI.
-pub mod target;
+pub(crate) mod target;
 
 pub use envelope::{
     ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile,
     TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
     ARTIFACT_ENVELOPE_SCHEMA_VERSION, TARGET_PAYLOAD_SCHEMA_VERSION,
 };
+pub use target::SelectedModule;
 pub use target::{
     attach_target, compile_selected_modules, EmittedTargetModule, SelectedLowering,
     TargetCompileError, TargetCompiler, TargetModuleBundle, TargetModuleImage,

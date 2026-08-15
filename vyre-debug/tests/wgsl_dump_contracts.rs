@@ -1,5 +1,5 @@
 //! WGSL dumping: compute entry rendering, line prefixing, and naga validation failures.
-use vyre_debug::wgsl::{dump_wgsl, dump_wgsl_with_lines};
+use vyre_debug::{dump_wgsl, dump_wgsl_with_lines};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
 #[path = "support/mod.rs"]

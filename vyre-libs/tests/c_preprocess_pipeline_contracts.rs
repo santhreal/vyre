@@ -20,7 +20,7 @@ use c_frontend::reference_lexer::run_c11_lexer;
 use common::{decode_u32_words, u32_bytes};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
-use c_grammar_gen::lex_c11_max_munch_kinds;
+use c_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
 use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::lexer::c11_lexer_regular_sparse_packed_haystack_with_flags;
 use vyre_libs::parsing::c::lex::tokens::*;

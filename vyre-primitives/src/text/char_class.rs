@@ -217,19 +217,6 @@ pub fn reference_char_class(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
         .collect()
 }
 
-/// Pack a `[u32]` slice into the LE-byte layout the harness uses.
-#[must_use]
-pub fn pack_u32(words: &[u32]) -> Vec<u8> {
-    crate::wire::pack_u32_slice(words)
-}
-
-/// Pack a `[u8]` source slice into the per-element u32 layout the GPU
-/// kernel expects (each byte in the low 8 bits of a u32 lane).
-#[must_use]
-pub fn pack_bytes_as_u32(bytes: &[u8]) -> Vec<u8> {
-    crate::wire::pack_bytes_as_u32_slice(bytes)
-}
-
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
@@ -238,13 +225,13 @@ inventory::submit! {
         Some(|| {
             let table = build_char_class_table();
             vec![vec![
-                pack_bytes_as_u32(b"A1 "),
-                pack_u32(&table),
+                crate::wire::pack_bytes_as_u32_slice(b"A1 "),
+                crate::wire::pack_u32_slice(&table),
                 vec![0u8; 3 * 4],
             ]]
         }),
         Some(|| {
-            vec![vec![pack_u32(&[C_ALPHA, C_DIGIT, C_WS])]]
+            vec![vec![crate::wire::pack_u32_slice(&[C_ALPHA, C_DIGIT, C_WS])]]
         }),
     )
 }

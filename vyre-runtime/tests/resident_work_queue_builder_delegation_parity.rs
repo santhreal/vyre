@@ -20,12 +20,12 @@
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::transform::visit::child_bodies;
-use vyre_runtime::resident_work_queue::builder::{
+use vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspaceAdapter;
+use vyre_runtime::resident_work_queue::{
     build_program_jit, build_program_jit_slots, build_program_priority,
     build_program_priority_slots, build_program_sharded_no_io, build_program_sharded_once_slots,
     build_program_sharded_slots, build_program_sharded_with_workspace_adapter,
 };
-use vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspaceAdapter;
 
 /// Structural (Debug-form) equality: `Program` is `Debug` but not `PartialEq`; its Debug
 /// rendering prints buffer names/bindings/counts and the full node tree by value (Arc<str>

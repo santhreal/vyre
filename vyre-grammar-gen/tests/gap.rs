@@ -1,19 +1,18 @@
 //! Gap tests: documented current limitations and edge cases, pinned so a
 //! future change must be deliberate.
 
-use vyre_grammar_gen::{
-    c11_lexer::{
-        TOK_ALIGNAS, TOK_ALIGNOF, TOK_ATOMIC, TOK_BOOL, TOK_BUILTIN_CONSTANT_P, TOK_COMMENT,
-        TOK_COMPLEX, TOK_GENERIC, TOK_GNU_ASM, TOK_GNU_ATTRIBUTE, TOK_GNU_EXTENSION,
-        TOK_GNU_TYPEOF, TOK_HASH, TOK_IDENTIFIER, TOK_IMAGINARY, TOK_INC, TOK_INTEGER,
-        TOK_NORETURN, TOK_PLUS, TOK_PREPROC, TOK_STATIC_ASSERT, TOK_THREAD_LOCAL, TOK_WHITESPACE,
-    },
-    decode_dfa_from_bytes, decode_lr_from_bytes, lex_c11_max_munch_kinds,
-    lr::Action,
-    preprocess_c_host,
-    wire::{PackedBlob, WireError},
-    LrBuilder,
+use vyre_grammar_gen::c11_lexer::{
+    TOK_ALIGNAS, TOK_ALIGNOF, TOK_ATOMIC, TOK_BOOL, TOK_BUILTIN_CONSTANT_P, TOK_COMMENT,
+    TOK_COMPLEX, TOK_GENERIC, TOK_GNU_ASM, TOK_GNU_ATTRIBUTE, TOK_GNU_EXTENSION, TOK_GNU_TYPEOF,
+    TOK_HASH, TOK_IDENTIFIER, TOK_IMAGINARY, TOK_INC, TOK_INTEGER, TOK_NORETURN, TOK_PLUS,
+    TOK_PREPROC, TOK_STATIC_ASSERT, TOK_THREAD_LOCAL, TOK_WHITESPACE,
 };
+use vyre_grammar_gen::host_preprocess::preprocess_c_host;
+use vyre_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
+use vyre_grammar_gen::lr::Action;
+use vyre_grammar_gen::lr::LrBuilder;
+use vyre_grammar_gen::wire::{decode_dfa_from_bytes, decode_lr_from_bytes};
+use vyre_grammar_gen::wire::{PackedBlob, WireError};
 
 // ---------------------------------------------------------------------------
 // GAP: wire format only supports VERSION == 1; future versions are rejected.

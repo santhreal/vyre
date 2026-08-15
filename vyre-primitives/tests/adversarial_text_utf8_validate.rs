@@ -1,7 +1,7 @@
 //! Adversarial oracle tests for `text::utf8_validate` classification.
 
 use vyre_foundation::ir::{DataType, Program};
-use vyre_primitives::text::utf8_validate::{
+use vyre_primitives::text::{
     reference_utf8_validate, utf8_validate, utf8_validate_u8, UTF8_ASCII, UTF8_CONT, UTF8_INVALID,
     UTF8_LEAD_2, UTF8_LEAD_4,
 };

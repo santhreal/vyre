@@ -24,7 +24,7 @@
 #![deny(missing_docs)]
 
 /// Canonical lowering and emitter adapter.
-pub mod backend;
+pub(crate) mod backend;
 mod materializer;
 mod target_compiler;
 /// Vulkan compute dispatch implementation.

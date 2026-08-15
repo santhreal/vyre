@@ -12,7 +12,7 @@ use vyre_libs::operation_catalog::all_entries;
 fn backend() -> &'static WgpuBackend {
     static BACKEND: OnceLock<WgpuBackend> = OnceLock::new();
     BACKEND.get_or_init(|| {
-        let adapters = vyre_driver_wgpu::runtime::device::enumerate_adapters();
+        let adapters = vyre_driver_wgpu::runtime::enumerate_adapters();
         assert!(
             !adapters.is_empty(),
             "Fix: cat_a_conform requires a live GPU adapter; this host is expected to expose the RTX 5090."

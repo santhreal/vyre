@@ -5,7 +5,8 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::hardware::{pack_u32, packed_u32_input_with_output, MAP_WORKGROUP};
+use crate::hardware::{packed_u32_input_with_output, MAP_WORKGROUP};
+use crate::wire::pack_u32_slice as pack_u32;
 /// Canonical op id shared by semantics, fixtures, and driver registration.
 pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_ballot";
 

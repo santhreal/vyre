@@ -13,18 +13,18 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id for the Tier 2.5 primitive.
-pub const OP_ID: &str = "vyre-primitives::matching::bracket_match";
+pub const BRACKET_MATCH_OP_ID: &str = "vyre-primitives::matching::bracket_match";
 /// Workgroup size for the uncapped parallel parser-bracket path.
 pub const BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
 /// Token kind: not a brace.
-pub const OTHER: u32 = 0;
+pub const BRACKET_KIND_OTHER: u32 = 0;
 /// Token kind: `{`
-pub const OPEN_BRACE: u32 = 1;
+pub const BRACKET_KIND_OPEN: u32 = 1;
 /// Token kind: `}`
-pub const CLOSE_BRACE: u32 = 2;
+pub const BRACKET_KIND_CLOSE: u32 = 2;
 /// Unmatched sentinel written to `match_pairs`.
-pub const MATCH_NONE: u32 = u32::MAX;
+pub const BRACKET_MATCH_NONE: u32 = u32::MAX;
 
 /// Dispatch grid for [`bracket_match`].
 #[must_use]
@@ -42,9 +42,9 @@ pub const fn bracket_match_dispatch_grid(n: u32, max_depth: u32) -> [u32; 3] {
 
 /// Build a Program that matches brace tokens using a bounded stack.
 ///
-/// `kinds[i]` is `OTHER`, `OPEN_BRACE`, or `CLOSE_BRACE`.
+/// `kinds[i]` is `BRACKET_KIND_OTHER`, `BRACKET_KIND_OPEN`, or `BRACKET_KIND_CLOSE`.
 /// `stack` is scratch storage with `max_depth` entries.
-/// Initializes unmatched entries to [`MATCH_NONE`] and writes bidirectional
+/// Initializes unmatched entries to [`BRACKET_MATCH_NONE`] and writes bidirectional
 /// links for every matched brace pair.
 #[must_use]
 pub fn bracket_match(
@@ -68,7 +68,7 @@ fn bracket_match_bounded_stack(
     max_depth: u32,
 ) -> Program {
     let body = vec![wrap_anonymous_region(
-        OP_ID,
+        BRACKET_MATCH_OP_ID,
         vec![Node::if_then(
             Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
             vec![
@@ -79,9 +79,9 @@ fn bracket_match_bounded_stack(
                     Expr::u32(n),
                     vec![
                         Node::let_bind("k", Expr::load(kinds, Expr::var("i"))),
-                        Node::store(match_pairs, Expr::var("i"), Expr::u32(MATCH_NONE)),
+                        Node::store(match_pairs, Expr::var("i"), Expr::u32(BRACKET_MATCH_NONE)),
                         Node::if_then_else(
-                            Expr::eq(Expr::var("k"), Expr::u32(OPEN_BRACE)),
+                            Expr::eq(Expr::var("k"), Expr::u32(BRACKET_KIND_OPEN)),
                             vec![Node::if_then(
                                 Expr::lt(Expr::var("depth"), Expr::u32(max_depth)),
                                 vec![
@@ -93,7 +93,7 @@ fn bracket_match_bounded_stack(
                                 ],
                             )],
                             vec![Node::if_then(
-                                Expr::eq(Expr::var("k"), Expr::u32(CLOSE_BRACE)),
+                                Expr::eq(Expr::var("k"), Expr::u32(BRACKET_KIND_CLOSE)),
                                 vec![Node::if_then(
                                     Expr::lt(Expr::u32(0), Expr::var("depth")),
                                     vec![
@@ -145,10 +145,10 @@ fn bracket_match_parallel(
 ) -> Program {
     let lane = Expr::InvocationId { axis: 0 };
     let lane_body = vec![
-        Node::store(match_pairs, lane.clone(), Expr::u32(MATCH_NONE)),
+        Node::store(match_pairs, lane.clone(), Expr::u32(BRACKET_MATCH_NONE)),
         Node::let_bind("kind_self", Expr::load(kinds, lane.clone())),
         Node::if_then(
-            Expr::eq(Expr::var("kind_self"), Expr::u32(OPEN_BRACE)),
+            Expr::eq(Expr::var("kind_self"), Expr::u32(BRACKET_KIND_OPEN)),
             vec![
                 Node::let_bind("forward_depth", Expr::u32(1)),
                 Node::let_bind("forward_active", Expr::u32(1)),
@@ -161,14 +161,14 @@ fn bracket_match_parallel(
                         vec![
                             Node::let_bind("forward_kind", Expr::load(kinds, Expr::var("j"))),
                             Node::if_then(
-                                Expr::eq(Expr::var("forward_kind"), Expr::u32(OPEN_BRACE)),
+                                Expr::eq(Expr::var("forward_kind"), Expr::u32(BRACKET_KIND_OPEN)),
                                 vec![Node::assign(
                                     "forward_depth",
                                     Expr::add(Expr::var("forward_depth"), Expr::u32(1)),
                                 )],
                             ),
                             Node::if_then(
-                                Expr::eq(Expr::var("forward_kind"), Expr::u32(CLOSE_BRACE)),
+                                Expr::eq(Expr::var("forward_kind"), Expr::u32(BRACKET_KIND_CLOSE)),
                                 vec![
                                     Node::assign(
                                         "forward_depth",
@@ -189,7 +189,7 @@ fn bracket_match_parallel(
             ],
         ),
         Node::if_then(
-            Expr::eq(Expr::var("kind_self"), Expr::u32(CLOSE_BRACE)),
+            Expr::eq(Expr::var("kind_self"), Expr::u32(BRACKET_KIND_CLOSE)),
             vec![
                 Node::let_bind("backward_depth", Expr::u32(1)),
                 Node::let_bind("backward_active", Expr::u32(1)),
@@ -209,14 +209,14 @@ fn bracket_match_parallel(
                                 Expr::load(kinds, Expr::var("backward_j")),
                             ),
                             Node::if_then(
-                                Expr::eq(Expr::var("backward_kind"), Expr::u32(CLOSE_BRACE)),
+                                Expr::eq(Expr::var("backward_kind"), Expr::u32(BRACKET_KIND_CLOSE)),
                                 vec![Node::assign(
                                     "backward_depth",
                                     Expr::add(Expr::var("backward_depth"), Expr::u32(1)),
                                 )],
                             ),
                             Node::if_then(
-                                Expr::eq(Expr::var("backward_kind"), Expr::u32(OPEN_BRACE)),
+                                Expr::eq(Expr::var("backward_kind"), Expr::u32(BRACKET_KIND_OPEN)),
                                 vec![
                                     Node::assign(
                                         "backward_depth",
@@ -250,7 +250,7 @@ fn bracket_match_parallel(
         ],
         BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE,
         vec![wrap_anonymous_region(
-            OP_ID,
+            BRACKET_MATCH_OP_ID,
             vec![Node::if_then(Expr::lt(lane, Expr::u32(n)), lane_body)],
         )],
     )
@@ -259,10 +259,10 @@ fn bracket_match_parallel(
 /// CPU reference: bounded-stack pair-matching walk over `kinds`.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(kinds: &[u32], max_depth: u32) -> Vec<u32> {
+pub fn bracket_match_cpu_ref(kinds: &[u32], max_depth: u32) -> Vec<u32> {
     let mut match_pairs = Vec::new();
     let mut stack = Vec::new();
-    cpu_ref_into(kinds, max_depth, &mut match_pairs, &mut stack);
+    bracket_match_cpu_ref_into(kinds, max_depth, &mut match_pairs, &mut stack);
     match_pairs
 }
 
@@ -272,24 +272,24 @@ pub fn cpu_ref(kinds: &[u32], max_depth: u32) -> Vec<u32> {
 /// bracket matching across thousands of token shards. `match_pairs` is fully
 /// overwritten on every call and `stack` is cleared before use.
 #[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(
+pub fn bracket_match_cpu_ref_into(
     kinds: &[u32],
     max_depth: u32,
     match_pairs: &mut Vec<u32>,
     stack: &mut Vec<u32>,
 ) {
     match_pairs.clear();
-    match_pairs.resize(kinds.len(), MATCH_NONE);
+    match_pairs.resize(kinds.len(), BRACKET_MATCH_NONE);
     stack.clear();
     let max_depth = max_depth as usize;
     for (index, kind) in kinds.iter().copied().enumerate() {
-        if kind == OPEN_BRACE {
+        if kind == BRACKET_KIND_OPEN {
             if stack.len() < max_depth {
                 stack.push(index as u32);
             }
             continue;
         }
-        if kind == CLOSE_BRACE {
+        if kind == BRACKET_KIND_CLOSE {
             if let Some(open_idx) = stack.pop() {
                 match_pairs[open_idx as usize] = index as u32;
                 match_pairs[index] = open_idx;
@@ -298,25 +298,19 @@ pub fn cpu_ref_into(
     }
 }
 
-/// Pack `[u32]` into the LE-byte layout the harness uses.
-#[must_use]
-pub fn pack_u32(words: &[u32]) -> Vec<u8> {
-    crate::wire::pack_u32_slice(words)
-}
-
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(
-        OP_ID,
+        BRACKET_MATCH_OP_ID,
         || bracket_match("kinds", "stack", "match_pairs", 4, 4),
         Some(|| vec![vec![
-            pack_u32(&[OPEN_BRACE, OPEN_BRACE, CLOSE_BRACE, CLOSE_BRACE]),
-            pack_u32(&[0, 0, 0, 0]),
-            pack_u32(&[MATCH_NONE, MATCH_NONE, MATCH_NONE, MATCH_NONE]),
+            crate::wire::pack_u32_slice(&[BRACKET_KIND_OPEN, BRACKET_KIND_OPEN, BRACKET_KIND_CLOSE, BRACKET_KIND_CLOSE]),
+            crate::wire::pack_u32_slice(&[0, 0, 0, 0]),
+            crate::wire::pack_u32_slice(&[BRACKET_MATCH_NONE, BRACKET_MATCH_NONE, BRACKET_MATCH_NONE, BRACKET_MATCH_NONE]),
         ]]),
         Some(|| vec![vec![
-            pack_u32(&[0, 0, 0, 0]),
-            pack_u32(&[3, 2, 1, 0]),
+            crate::wire::pack_u32_slice(&[0, 0, 0, 0]),
+            crate::wire::pack_u32_slice(&[3, 2, 1, 0]),
         ]]),
     )
 }
@@ -328,15 +322,26 @@ mod tests {
     #[test]
     fn cpu_ref_balanced_single_pair() {
         assert_eq!(
-            cpu_ref(&[OPEN_BRACE, OTHER, CLOSE_BRACE], 3),
-            vec![2, MATCH_NONE, 0]
+            bracket_match_cpu_ref(
+                &[BRACKET_KIND_OPEN, BRACKET_KIND_OTHER, BRACKET_KIND_CLOSE],
+                3
+            ),
+            vec![2, BRACKET_MATCH_NONE, 0]
         );
     }
 
     #[test]
     fn cpu_ref_nested_pairs() {
         assert_eq!(
-            cpu_ref(&[OPEN_BRACE, OPEN_BRACE, CLOSE_BRACE, CLOSE_BRACE], 4),
+            bracket_match_cpu_ref(
+                &[
+                    BRACKET_KIND_OPEN,
+                    BRACKET_KIND_OPEN,
+                    BRACKET_KIND_CLOSE,
+                    BRACKET_KIND_CLOSE
+                ],
+                4
+            ),
             vec![3, 2, 1, 0]
         );
     }
@@ -344,34 +349,40 @@ mod tests {
     #[test]
     fn cpu_ref_unbalanced_extra_open() {
         assert_eq!(
-            cpu_ref(&[OPEN_BRACE, OPEN_BRACE, CLOSE_BRACE], 3),
-            vec![MATCH_NONE, 2, 1]
+            bracket_match_cpu_ref(
+                &[BRACKET_KIND_OPEN, BRACKET_KIND_OPEN, BRACKET_KIND_CLOSE],
+                3
+            ),
+            vec![BRACKET_MATCH_NONE, 2, 1]
         );
     }
 
     #[test]
     fn cpu_ref_unbalanced_extra_close() {
         assert_eq!(
-            cpu_ref(&[CLOSE_BRACE, OPEN_BRACE, CLOSE_BRACE], 3),
-            vec![MATCH_NONE, 2, 1]
+            bracket_match_cpu_ref(
+                &[BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN, BRACKET_KIND_CLOSE],
+                3
+            ),
+            vec![BRACKET_MATCH_NONE, 2, 1]
         );
     }
 
     #[test]
     fn cpu_ref_depth_cap_truncates_extra_opens() {
         assert_eq!(
-            cpu_ref(
+            bracket_match_cpu_ref(
                 &[
-                    OPEN_BRACE,
-                    OPEN_BRACE,
-                    OPEN_BRACE,
-                    CLOSE_BRACE,
-                    CLOSE_BRACE,
-                    CLOSE_BRACE
+                    BRACKET_KIND_OPEN,
+                    BRACKET_KIND_OPEN,
+                    BRACKET_KIND_OPEN,
+                    BRACKET_KIND_CLOSE,
+                    BRACKET_KIND_CLOSE,
+                    BRACKET_KIND_CLOSE
                 ],
                 2,
             ),
-            vec![4, 3, MATCH_NONE, 1, 0, MATCH_NONE]
+            vec![4, 3, BRACKET_MATCH_NONE, 1, 0, BRACKET_MATCH_NONE]
         );
     }
 
@@ -384,24 +395,29 @@ mod tests {
         let out_cap = out.capacity();
         let stack_cap = stack.capacity();
 
-        cpu_ref_into(
-            &[OPEN_BRACE, OTHER, CLOSE_BRACE, OPEN_BRACE],
+        bracket_match_cpu_ref_into(
+            &[
+                BRACKET_KIND_OPEN,
+                BRACKET_KIND_OTHER,
+                BRACKET_KIND_CLOSE,
+                BRACKET_KIND_OPEN,
+            ],
             4,
             &mut out,
             &mut stack,
         );
 
-        assert_eq!(out, vec![2, MATCH_NONE, 0, MATCH_NONE]);
+        assert_eq!(out, vec![2, BRACKET_MATCH_NONE, 0, BRACKET_MATCH_NONE]);
         assert_eq!(out.capacity(), out_cap);
         assert_eq!(stack.capacity(), stack_cap);
         assert_eq!(
             stack,
             vec![3],
-            "Fix: cpu_ref_into must clear stale stack entries before each run and leave only currently-unmatched opens."
+            "Fix: bracket_match_cpu_ref_into must clear stale stack entries before each run and leave only currently-unmatched opens."
         );
 
-        cpu_ref_into(&[OTHER], 4, &mut out, &mut stack);
-        assert_eq!(out, vec![MATCH_NONE]);
+        bracket_match_cpu_ref_into(&[BRACKET_KIND_OTHER], 4, &mut out, &mut stack);
+        assert_eq!(out, vec![BRACKET_MATCH_NONE]);
         assert!(stack.is_empty());
         assert_eq!(out.capacity(), out_cap);
         assert_eq!(stack.capacity(), stack_cap);
@@ -440,16 +456,16 @@ mod tests {
             for index in 0..len {
                 state = state.rotate_left(5) ^ (index as u32).wrapping_mul(0x9E37_79B9);
                 let kind = match state % 5 {
-                    0 => OPEN_BRACE,
-                    1 => CLOSE_BRACE,
-                    _ => OTHER,
+                    0 => BRACKET_KIND_OPEN,
+                    1 => BRACKET_KIND_CLOSE,
+                    _ => BRACKET_KIND_OTHER,
                 };
                 kinds.push(kind);
             }
 
-            let expected = cpu_ref(&kinds, kinds.len() as u32);
+            let expected = bracket_match_cpu_ref(&kinds, kinds.len() as u32);
             for (index, &pair) in expected.iter().enumerate() {
-                if pair == MATCH_NONE {
+                if pair == BRACKET_MATCH_NONE {
                     continue;
                 }
                 assert!(

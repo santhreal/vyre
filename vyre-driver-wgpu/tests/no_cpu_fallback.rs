@@ -29,7 +29,7 @@ fn default_acquisition_prefers_discrete_gpu_when_enumerable() {
         "WgpuBackend::acquire failed on a machine that must have a GPU. \
          Fix: inspect driver visibility and adapter probing; this must not silently skip.",
     );
-    let adapters = vyre_driver_wgpu::runtime::device::enumerate_adapters();
+    let adapters = vyre_driver_wgpu::runtime::enumerate_adapters();
     let has_discrete = adapters
         .iter()
         .any(|adapter| adapter.device_type == wgpu::DeviceType::DiscreteGpu);

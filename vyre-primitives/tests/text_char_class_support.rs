@@ -1,6 +1,6 @@
 //! Shared executable helpers for packed character-class integration tests.
 
-use vyre_primitives::text::char_class::char_class_u8;
+use vyre_primitives::text::char_class_u8;
 use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
 use vyre_reference::value::Value;
 

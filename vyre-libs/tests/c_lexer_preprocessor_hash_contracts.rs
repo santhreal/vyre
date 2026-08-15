@@ -2,7 +2,7 @@
 
 #![cfg(feature = "c-parser")]
 
-use c_grammar_gen::lex_c11_max_munch_kinds;
+use c_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
 use vyre_libs::parsing::c::lex::tokens::{TOK_HASH, TOK_IDENTIFIER, TOK_PREPROC, TOK_WHITESPACE};
 
 #[test]

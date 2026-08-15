@@ -11,21 +11,23 @@ use crate::dispatch_buffers::{
 };
 use crate::scratch::reserve_vec_capacity;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::matching::bracket_match::{
-    bracket_match, bracket_match_dispatch_grid, pack_u32, CLOSE_BRACE, OPEN_BRACE, OTHER,
+use vyre_primitives::matching::{
+    bracket_match, bracket_match_dispatch_grid, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN,
+    BRACKET_KIND_OTHER,
 };
-use vyre_primitives::matching::region::{
+use vyre_primitives::matching::{
     dedup_regions_flag_program, region_dedup_dispatch_grid, region_sort_program, RegionTriple,
 };
 use vyre_primitives::matching::{
     dfa_compile, dfa_compile_with_budget, dfa_fingerprint, dfa_wire_bytes, nfa_to_dfa, CompiledDfa,
     DfaCompileError, DfaDedupBatch, DfaDedupResult, DfaDedupTable, NfaTables, NfaToDfaError,
 };
+use vyre_primitives::wire::pack_u32_slice;
 
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_primitives::matching::{
-    bracket_match::cpu_ref as primitive_bracket_match,
-    region::{dedup_regions_cpu, dedup_regions_inplace, sort_regions_cpu},
+    bracket_match_cpu_ref as primitive_bracket_match, dedup_regions_cpu, dedup_regions_inplace,
+    sort_regions_cpu,
 };
 
 /// Caller-owned dispatch scratch for matching diagnostic compaction.
@@ -125,7 +127,7 @@ pub fn merge_diagnostic_dfa_tables(
 /// Return the little-endian u32 byte layout used for diagnostic fixture uploads.
 #[must_use]
 pub fn pack_diagnostic_u32(words: &[u32]) -> Vec<u8> {
-    pack_u32(words)
+    pack_u32_slice(words)
 }
 
 /// Match diagnostic brace tokens through the bracket-match primitive.
@@ -170,7 +172,7 @@ pub fn bracket_pairs_via_with_scratch_into(
     let program = bracket_match("kinds", "stack", "match_pairs", n, max_depth);
     // Input-consuming buffers ONLY: `kinds` ReadOnly(0) + `stack` plain-ReadWrite(1). `match_pairs`
     // is `BufferDecl::output`(2), backend-allocated, so it consumes NO dispatch input (the kernel
-    // initializes every entry to MATCH_NONE itself). Passing a seed slot for it would over-feed the
+    // initializes every entry to BRACKET_MATCH_NONE itself). Passing a seed slot for it would over-feed the
     // real backend's strict input count (`inputs.len() == input_indices.len()`).
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], kinds);
@@ -353,7 +355,13 @@ pub fn reference_bracket_pairs(kinds: &[u32], max_depth: u32) -> Vec<u32> {
 /// Build a compact fixture token stream for one nested diagnostic block.
 #[must_use]
 pub fn nested_diagnostic_brace_fixture() -> Vec<u32> {
-    vec![OPEN_BRACE, OTHER, OPEN_BRACE, CLOSE_BRACE, CLOSE_BRACE]
+    vec![
+        BRACKET_KIND_OPEN,
+        BRACKET_KIND_OTHER,
+        BRACKET_KIND_OPEN,
+        BRACKET_KIND_CLOSE,
+        BRACKET_KIND_CLOSE,
+    ]
 }
 
 #[cfg(test)]
@@ -490,7 +498,7 @@ mod tests {
                 })
                 .expect("Fix: matching primitive should expose a region generator");
             match op_id {
-                vyre_primitives::matching::bracket_match::OP_ID => {
+                vyre_primitives::matching::BRACKET_MATCH_OP_ID => {
                     // Two input-consuming buffers: kinds ReadOnly(0), stack plain-ReadWrite(1).
                     // `match_pairs` output(2) is backend-allocated (no input slot).
                     assert_eq!(
@@ -601,18 +609,18 @@ mod tests {
             reference_bracket_pairs(&fixture, 8)
         );
         assert_eq!(
-            pack_diagnostic_u32(&[OPEN_BRACE, CLOSE_BRACE]),
-            pack_u32(&[OPEN_BRACE, CLOSE_BRACE])
+            pack_diagnostic_u32(&[BRACKET_KIND_OPEN, BRACKET_KIND_CLOSE]),
+            pack_u32_slice(&[BRACKET_KIND_OPEN, BRACKET_KIND_CLOSE])
         );
     }
 
     #[test]
     fn bracket_pairs_uncapped_large_stream_dispatches_all_parallel_workgroups() {
-        let mut kinds = vec![OTHER; 513];
-        kinds[0] = OPEN_BRACE;
-        kinds[255] = OPEN_BRACE;
-        kinds[256] = CLOSE_BRACE;
-        kinds[512] = CLOSE_BRACE;
+        let mut kinds = vec![BRACKET_KIND_OTHER; 513];
+        kinds[0] = BRACKET_KIND_OPEN;
+        kinds[255] = BRACKET_KIND_OPEN;
+        kinds[256] = BRACKET_KIND_CLOSE;
+        kinds[512] = BRACKET_KIND_CLOSE;
 
         assert_eq!(
             bracket_pairs_via(&MatchingDispatcher, &kinds, kinds.len() as u32).unwrap(),
@@ -622,10 +630,10 @@ mod tests {
 
     #[test]
     fn bracket_pairs_depth_capped_stream_keeps_single_workgroup_fallback() {
-        let mut kinds = vec![OTHER; 513];
-        kinds[0] = OPEN_BRACE;
-        kinds[64] = OPEN_BRACE;
-        kinds[65] = CLOSE_BRACE;
+        let mut kinds = vec![BRACKET_KIND_OTHER; 513];
+        kinds[0] = BRACKET_KIND_OPEN;
+        kinds[64] = BRACKET_KIND_OPEN;
+        kinds[65] = BRACKET_KIND_CLOSE;
 
         assert_eq!(
             bracket_pairs_via(&MatchingDispatcher, &kinds, 64).unwrap(),
@@ -649,9 +657,9 @@ mod tests {
                 state ^= state >> 17;
                 state ^= state << 5;
                 let kind = match (state.wrapping_add(index as u32)) % 7 {
-                    0 | 1 => OPEN_BRACE,
-                    2 | 3 => CLOSE_BRACE,
-                    _ => OTHER,
+                    0 | 1 => BRACKET_KIND_OPEN,
+                    2 | 3 => BRACKET_KIND_CLOSE,
+                    _ => BRACKET_KIND_OTHER,
                 };
                 kinds.push(kind);
             }

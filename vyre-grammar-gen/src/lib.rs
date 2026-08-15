@@ -62,12 +62,3 @@ pub mod lex_c11_max_munch;
 pub mod lr;
 pub mod max_munch_cpu;
 pub mod wire;
-
-pub use c11_lexer::{build_c11_lexer_dfa, build_c11_lexer_dfa_for_host, C11_PATTERNS};
-pub use chunk_lexer_cpu::count_chunked_valid_tokens;
-pub use dfa::{DfaBuilder, DfaTable};
-pub use host_preprocess::preprocess_c_host;
-pub use lex_c11_max_munch::lex_c11_max_munch_kinds;
-pub use lr::{validate_lr_table, LrBuilder, LrTable};
-pub use max_munch_cpu::{kinds_blake3, LexCpuError};
-pub use wire::{decode_dfa_from_bytes, decode_lr_from_bytes, BlobKind, PackedBlob, WireError};

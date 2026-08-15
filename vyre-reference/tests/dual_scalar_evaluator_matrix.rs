@@ -288,7 +288,7 @@ fn every_reference_evaluator_is_swept_or_recorded_as_non_scalar() {
 /// snapshot refresh.
 fn evaluator_markers() -> BTreeSet<String> {
     const PREFIX: &str =
-        "impl vyre_reference::dual_impls::evaluator::ReferenceEvaluator for vyre_primitives::markers::";
+        "impl vyre_reference::dual_impls::ReferenceEvaluator for vyre_primitives::markers::";
     const PACKAGE: &str = "vyre-reference";
     let markers: BTreeSet<String> = vyre_test_support::public_api::snapshot_text(PACKAGE)
         .lines()

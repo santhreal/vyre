@@ -12,7 +12,8 @@
 //! cargo run --example pack_lexer_blob -p vyre-grammar-gen
 //! ```
 
-use vyre_grammar_gen::{build_c11_lexer_dfa, decode_dfa_from_bytes, BlobKind, PackedBlob};
+use vyre_grammar_gen::c11_lexer::build_c11_lexer_dfa;
+use vyre_grammar_gen::wire::{decode_dfa_from_bytes, BlobKind, PackedBlob};
 
 fn main() {
     let dfa = build_c11_lexer_dfa();

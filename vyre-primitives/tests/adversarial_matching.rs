@@ -4,18 +4,19 @@
 #![cfg(feature = "matching")]
 
 use vyre_primitives::matching::{
-    bracket_match::*, dfa_compile, dfa_compile_with_budget, DfaCompileError,
+    dfa_compile, dfa_compile_with_budget, DfaCompileError, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN,
+    BRACKET_KIND_OTHER, BRACKET_MATCH_NONE,
 };
 
 fn cpu_ref(kinds: &[u32], max_depth: u32) -> Vec<u32> {
-    let mut pairs = vec![MATCH_NONE; kinds.len()];
+    let mut pairs = vec![BRACKET_MATCH_NONE; kinds.len()];
     let mut stack = Vec::with_capacity(max_depth as usize);
     for (index, kind) in kinds.iter().copied().enumerate() {
-        if kind == OPEN_BRACE {
+        if kind == BRACKET_KIND_OPEN {
             if stack.len() < max_depth as usize {
                 stack.push(index as u32);
             }
-        } else if kind == CLOSE_BRACE {
+        } else if kind == BRACKET_KIND_CLOSE {
             if let Some(open) = stack.pop() {
                 pairs[open as usize] = index as u32;
                 pairs[index] = open;
@@ -40,22 +41,31 @@ fn bracket_match_cpu_ref_empty_inputs() {
 
 #[test]
 fn bracket_match_cpu_ref_depth_zero_rejects_all_opens() {
-    let kinds = vec![OPEN_BRACE, OPEN_BRACE, CLOSE_BRACE];
+    let kinds = vec![BRACKET_KIND_OPEN, BRACKET_KIND_OPEN, BRACKET_KIND_CLOSE];
     let got = cpu_ref(&kinds, 0);
-    assert_eq!(got, vec![MATCH_NONE, MATCH_NONE, MATCH_NONE]);
+    assert_eq!(
+        got,
+        vec![BRACKET_MATCH_NONE, BRACKET_MATCH_NONE, BRACKET_MATCH_NONE]
+    );
 }
 
 #[test]
 fn bracket_match_cpu_ref_all_closes_with_empty_stack() {
-    let got = cpu_ref(&[CLOSE_BRACE; 5], 10);
-    assert_eq!(got, vec![MATCH_NONE; 5]);
+    let got = cpu_ref(&[BRACKET_KIND_CLOSE; 5], 10);
+    assert_eq!(got, vec![BRACKET_MATCH_NONE; 5]);
 }
 
 #[test]
 fn bracket_match_cpu_ref_overflow_length() {
     let n = 10_000usize;
     let kinds: Vec<u32> = (0..n)
-        .map(|i| if i % 2 == 0 { OPEN_BRACE } else { CLOSE_BRACE })
+        .map(|i| {
+            if i % 2 == 0 {
+                BRACKET_KIND_OPEN
+            } else {
+                BRACKET_KIND_CLOSE
+            }
+        })
         .collect();
     let got = cpu_ref(&kinds, n as u32);
     assert_eq!(got.len(), n);
@@ -72,15 +82,18 @@ fn bracket_match_cpu_ref_overflow_length() {
 #[test]
 fn bracket_match_cpu_ref_unbalanced_mixed() {
     let kinds = vec![
-        OPEN_BRACE,
-        OTHER,
-        OPEN_BRACE,
-        CLOSE_BRACE,
-        CLOSE_BRACE,
-        OTHER,
+        BRACKET_KIND_OPEN,
+        BRACKET_KIND_OTHER,
+        BRACKET_KIND_OPEN,
+        BRACKET_KIND_CLOSE,
+        BRACKET_KIND_CLOSE,
+        BRACKET_KIND_OTHER,
     ];
     let got = cpu_ref(&kinds, 10);
-    assert_eq!(got, vec![4, MATCH_NONE, 3, 2, 0, MATCH_NONE]);
+    assert_eq!(
+        got,
+        vec![4, BRACKET_MATCH_NONE, 3, 2, 0, BRACKET_MATCH_NONE]
+    );
 }
 
 #[test]

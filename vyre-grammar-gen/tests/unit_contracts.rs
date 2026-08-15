@@ -1,6 +1,7 @@
 //! Unit contracts for generated C parser grammar tables.
 
-use vyre_grammar_gen::{build_c11_lexer_dfa, validate_lr_table, LrBuilder};
+use vyre_grammar_gen::c11_lexer::build_c11_lexer_dfa;
+use vyre_grammar_gen::lr::{validate_lr_table, LrBuilder};
 
 #[test]
 fn unit_contract_generates_c11_lexer_and_validates_lr_table() {

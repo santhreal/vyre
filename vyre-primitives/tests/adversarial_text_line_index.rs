@@ -1,7 +1,7 @@
 //! Adversarial oracle tests for `text::line_index`.
 
 use vyre_foundation::ir::{DataType, Program};
-use vyre_primitives::text::line_index::{line_index, line_index_u8, reference_line_index};
+use vyre_primitives::text::{line_index, line_index_u8, reference_line_index};
 use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_u32s;
 use vyre_reference::value::Value;
 

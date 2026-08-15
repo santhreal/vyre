@@ -517,11 +517,7 @@ fn descriptor_trap_sidecar_slot(desc: &KernelDescriptor) -> Result<Option<u32>, 
 }
 
 fn descriptor_trap_tag_codes(body: &KernelBody) -> FxHashMap<vyre_lower::Name, u32> {
-    fn walk(
-        body: &KernelBody,
-        tags: &mut FxHashMap<vyre_lower::Name, u32>,
-        next: &mut u32,
-    ) {
+    fn walk(body: &KernelBody, tags: &mut FxHashMap<vyre_lower::Name, u32>, next: &mut u32) {
         for op in &body.ops {
             if let KernelOpKind::Trap { tag } = &op.kind {
                 tags.entry(tag.clone()).or_insert_with(|| {

@@ -12,7 +12,7 @@ use c_ast_gpu_parity_support::{
     build_fixture, kind_at, lexeme_indices, row_indices, run_gpu_classifier,
     run_gpu_scoped_typedef_annotation, run_gpu_vast_builder_from_parts, Fixture, FixtureToken,
 };
-use c_grammar_gen::lex_c11_max_munch_kinds;
+use c_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,

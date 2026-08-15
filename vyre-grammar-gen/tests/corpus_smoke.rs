@@ -1,8 +1,8 @@
 //! Curated snippets: preprocess + fast stub lexer counts.
 
-use vyre_grammar_gen::count_chunked_valid_tokens;
+use vyre_grammar_gen::chunk_lexer_cpu::count_chunked_valid_tokens;
+use vyre_grammar_gen::dfa::DfaBuilder;
 use vyre_grammar_gen::host_preprocess::preprocess_c_host;
-use vyre_grammar_gen::DfaBuilder;
 
 const HELLO: &str = include_str!("../corpus/hello.c");
 const COMMENT: &str = include_str!("../corpus/comment_only.c");

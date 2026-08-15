@@ -569,6 +569,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   the mask count: a width added or a mask resized in one copy left the sink
   bound over a mask, which writes match triples into a read-only table and
   loses recall silently rather than failing.
+- The bracket matching kind constants published by vyre-primitives::matching
+  are BRACKET_KIND_OPEN, BRACKET_KIND_CLOSE, BRACKET_KIND_OTHER and
+  BRACKET_MATCH_NONE, and the CPU oracle is bracket_match_cpu_ref /
+  bracket_match_cpu_ref_into under its own name rather than an aliased cpu_ref.
 - Scan products now return the foundation-owned `ByteRange { tag, start, end
   }`. The deprecated `Match` and `LiteralMatch` surfaces and the duplicate
   primitive range type are gone.
@@ -1173,6 +1177,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   buffer-table and memory-region halves, which mirror each other and were the
   two largest blocks in either file. `Ident` moves out of the expression
   module. No signature changes and no re-exports removed.
+- vyre-grammar-gen publishes each generator through its own module (dfa, lr,
+  c11_lexer, wire, host_preprocess, lex_c11_max_munch, chunk_lexer_cpu,
+  max_munch_cpu) instead of a flat crate-root re-export, because two sibling
+  tables both define Action and a flat name cannot say which one it is.
 - The buffer layout every CSR graph primitive appends to the read-only
   ProgramGraph bundle has one owner. `graph::program_graph` gains
   `word_buffer`, `frontier_buffer`, and `push_frontier_changed_buffers`;
@@ -1558,6 +1566,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   without the `anonymous::` prefix the audit gates read, or a child region
   could be attached with no parent. The literals carry no information the two
   constructors do not, so they are gone.
+- vyre-aot, vyre-debug, vyre-driver-spirv, vyre-driver-wgpu, vyre-emit-naga,
+  vyre-grammar-gen, vyre-megakernel, vyre-reference and vyre-runtime publish
+  each item at one path; submodules that exist because a file was split are
+  private and their owning module re-exports what it holds.
 - Every `vyre-foundation` module has one public path. `algebra`, `analysis` and
   `dispatch` were grouping directories, each holding one or two unrelated
   modules, and each needed a crate-root re-export because callers named the
@@ -1931,6 +1943,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   grid or read back a different set of ranges than the sequence it belongs to,
   on the backends that do not fuse the sequence and therefore have no other
   check on it. Dispatch order, launch counts and readback ranges are unchanged.
+- The resident work queue program builders are reached as
+  vyre_runtime::resident_work_queue::build_program... instead of through a
+  builder submodule path.
 - `vyre-runtime` builds pipeline-cache test artifacts from one fixture module,
   `src/pipeline_cache/test_artifact_fixtures.rs`, which the fingerprint suites
   include by path. The two suites previously built the same artifact
@@ -2331,6 +2346,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   differently trimmed bytes for the same program depending on whether the
   caller supplied the output buffers. Emitted shader text, binding order, and
   readback ranges are unchanged.
+- The wgpu runtime cache publishes AccessTracker and the tiered cache types;
+  IntrusiveLru, AccessMeta and DEFAULT_INTRUSIVE_LRU_CAPACITY are
+  crate-internal because no consumer outside the crate could reach them.
 - The in-memory and on-disk pipeline caches ask the same question about a
   rule-graph change. `pipeline::cache_impact::RuleImpactQuery::impact_mask`
   owns the reachability walk and its error mapping; both invalidation paths

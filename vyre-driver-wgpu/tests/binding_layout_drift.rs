@@ -10,7 +10,7 @@ use naga::{ArraySize, ResourceBinding, TypeInner};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::DispatchConfig;
 use vyre_driver_wgpu::emit::{self, WgpuProgram};
-use vyre_driver_wgpu::runtime::device::EnabledFeatures;
+use vyre_driver_wgpu::runtime::EnabledFeatures;
 
 fn lower_wgsl(program: &Program) -> String {
     emit::lower(program).expect("Fix: test program must lower to WGSL")

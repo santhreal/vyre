@@ -86,10 +86,10 @@ pub use substring::{substring_search, SCAN_SUBSTRING_OP_ID};
 pub use vyre_foundation::execution_plan::fusion::{fuse_programs, fuse_programs_vec, FusionError};
 
 #[cfg(feature = "cpu-parity")]
-use vyre_primitives::matching::region::dedup_regions_cpu as primitive_dedup_regions_cpu;
+use vyre_primitives::matching::dedup_regions_cpu as primitive_dedup_regions_cpu;
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use vyre_primitives::matching::region::dedup_regions_inplace;
-pub use vyre_primitives::matching::region::{dedup_regions_flag_program, RegionTriple};
+pub use vyre_primitives::matching::dedup_regions_inplace;
+pub use vyre_primitives::matching::{dedup_regions_flag_program, RegionTriple};
 
 /// Reference region deduplication helper for parity tests.
 #[cfg(feature = "cpu-parity")]

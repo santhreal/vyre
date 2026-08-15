@@ -31,7 +31,7 @@ use c_token_support::{
 use common::{decode_u32_words, u32_bytes};
 use std::sync::OnceLock;
 
-use c_grammar_gen::lex_c11_max_munch_kinds;
+use c_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
 use vyre::ir::Expr;
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;

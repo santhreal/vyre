@@ -8,7 +8,7 @@
 use proptest::prelude::*;
 use vyre_foundation::ir::{Expr, UnOp};
 use vyre_reference::{
-    execution::expr as eval_expr,
+    expr as eval_expr,
     ieee754::{canonical_cos, canonical_exp, canonical_log, canonical_sin, canonical_sqrt},
     value::Value,
     workgroup::{Invocation, InvocationIds, Memory},

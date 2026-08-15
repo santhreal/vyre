@@ -6,7 +6,7 @@ use std::io::{ErrorKind, Write};
 use std::path::PathBuf;
 
 /// Compute shader compilation.
-pub mod compile_compute_pipeline;
+pub(crate) mod compile_compute_pipeline;
 
 /// Dump WGSL source when `VYRE_DUMP_WGSL` is set.
 ///

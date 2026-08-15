@@ -2,7 +2,7 @@
 
 use vyre_foundation::ir::{DataType, Expr, Program};
 use vyre_reference::{
-    execution::expr as eval_expr,
+    expr as eval_expr,
     value::Value,
     workgroup::{Invocation, InvocationIds, Memory},
 };

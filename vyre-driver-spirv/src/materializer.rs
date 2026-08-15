@@ -33,31 +33,34 @@ impl ArtifactMaterializer for SpirvMaterializer {
         artifact: &Artifact,
         payload: &TargetPayload,
     ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
-        let modules =
-            self.descriptor
-                .admit_modules(SPIRV_BACKEND_ID, artifact, payload, |admitted_module| {
-                    if admitted_module.image.bytes.len() % 4 != 0 {
-                        return Err(materialize::invalid_module(
-                            "SPIR-V module byte length must be divisible by four",
-                        ));
-                    }
-                    let words = admitted_module
-                        .image
-                        .bytes
-                        .chunks_exact(4)
-                        .map(|word| u32::from_le_bytes([word[0], word[1], word[2], word[3]]))
-                        .collect::<Vec<_>>();
-                    if words.first().copied() != Some(SPIRV_MAGIC) {
-                        return Err(materialize::invalid_module(
-                            "SPIR-V target module must begin with the SPIR-V magic word",
-                        ));
-                    }
-                    Ok(SpirvExecutableModule {
-                        program: admitted_module.program,
-                        words,
-                        config: admitted_module.config,
-                    })
-                })?;
+        let modules = self.descriptor.admit_modules(
+            SPIRV_BACKEND_ID,
+            artifact,
+            payload,
+            |admitted_module| {
+                if admitted_module.image.bytes.len() % 4 != 0 {
+                    return Err(materialize::invalid_module(
+                        "SPIR-V module byte length must be divisible by four",
+                    ));
+                }
+                let words = admitted_module
+                    .image
+                    .bytes
+                    .chunks_exact(4)
+                    .map(|word| u32::from_le_bytes([word[0], word[1], word[2], word[3]]))
+                    .collect::<Vec<_>>();
+                if words.first().copied() != Some(SPIRV_MAGIC) {
+                    return Err(materialize::invalid_module(
+                        "SPIR-V target module must begin with the SPIR-V magic word",
+                    ));
+                }
+                Ok(SpirvExecutableModule {
+                    program: admitted_module.program,
+                    words,
+                    config: admitted_module.config,
+                })
+            },
+        )?;
         Ok(Box::new(SpirvArtifactInstance {
             core: self
                 .descriptor

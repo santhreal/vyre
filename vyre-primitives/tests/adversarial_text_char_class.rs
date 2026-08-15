@@ -3,7 +3,7 @@ mod text_char_class_support;
 
 use text_char_class_support::run_packed_u8_program;
 use vyre_foundation::ir::DataType;
-use vyre_primitives::text::char_class::{char_class, char_class_u8, reference_char_class};
+use vyre_primitives::text::{char_class, char_class_u8, reference_char_class};
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack_u32s, pack_u32_slice as pack_u32s};
 use vyre_reference::value::Value;
 

@@ -78,7 +78,10 @@ pub(crate) fn elementwise_fma_program(count: u32) -> Program {
 
 /// Little-endian bytes for `values`.
 pub(crate) fn u32_values_to_bytes(values: &[u32]) -> Vec<u8> {
-    values.iter().flat_map(|value| value.to_le_bytes()).collect()
+    values
+        .iter()
+        .flat_map(|value| value.to_le_bytes())
+        .collect()
 }
 
 /// `bytes` decoded as little-endian u32 lanes. A trailing partial word is

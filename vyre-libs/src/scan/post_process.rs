@@ -6,7 +6,7 @@
 //! deterministic entropy and confidence signals.
 
 use vyre_foundation::match_result::ByteRange;
-use vyre_primitives::matching::region::{dedup_regions_inplace, RegionTriple};
+use vyre_primitives::matching::{dedup_regions_inplace, RegionTriple};
 
 /// Post-processing contract violation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -167,7 +167,7 @@ pub fn shannon_entropy_bits_per_byte(bytes: &[u8]) -> f32 {
     if bytes.is_empty() {
         return 0.0;
     }
-    let counts = vyre_primitives::text::byte_histogram::reference_byte_histogram(bytes);
+    let counts = vyre_primitives::text::reference_byte_histogram(bytes);
     let n = bytes.len() as f32;
     let mut h = 0.0_f32;
     for c in counts {

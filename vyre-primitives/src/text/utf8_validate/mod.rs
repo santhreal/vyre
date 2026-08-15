@@ -28,7 +28,7 @@ pub use program::{utf8_validate, utf8_validate_u8};
 pub use reference::reference_utf8_validate;
 
 /// Stable op id for the registered Tier 3 wrapper.
-pub const OP_ID: &str = "vyre-primitives::text::utf8_validate";
+pub(crate) const OP_ID: &str = "vyre-primitives::text::utf8_validate";
 /// Byte-lane workgroup used by the UTF-8 classifier.
 pub const UTF8_VALIDATE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// Dispatch grid for one UTF-8 validation pass over `n` bytes.

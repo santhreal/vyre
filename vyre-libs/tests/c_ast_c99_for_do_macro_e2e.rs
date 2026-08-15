@@ -7,7 +7,7 @@
 mod c_frontend;
 
 use c_frontend::expression_pipeline::run_reference_pg_lower;
-use c_grammar_gen::lex_c11_max_munch_kinds;
+use c_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
 use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
 use vyre_libs::parsing::c::lex::tokens::*;

@@ -19,8 +19,7 @@ fn test_cross_backend_elementwise() {
         .expect("valid backend registry")
         .iter()
         .filter(|registration| {
-            if !vyre_driver::backend_dispatches(registration.id)
-                .expect("valid backend registry")
+            if !vyre_driver::backend_dispatches(registration.id).expect("valid backend registry")
                 || registration.reference_oracle
                 || registration.target_compiler.is_none()
                 || registration.materializer.is_none()

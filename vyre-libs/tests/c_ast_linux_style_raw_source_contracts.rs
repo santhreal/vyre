@@ -24,7 +24,7 @@ use c_frontend::reference_lexer::classify_raw_source;
 use c_frontend::rows::{
     kind_at, node_count_from_vast, row_indices as indices_with_kind, word_at, VAST_STRIDE_U32,
 };
-use c_grammar_gen::lex_c11_max_munch_kinds;
+use c_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_ASM_CLOBBERS_LIST, C_AST_KIND_ASM_GOTO_LABELS, C_AST_KIND_ASM_INPUT_OPERAND,

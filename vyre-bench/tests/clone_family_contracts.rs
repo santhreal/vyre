@@ -153,7 +153,10 @@ fn case_surface(case: &'static dyn BenchCase) -> serde_json::Value {
 #[test]
 fn registry_publishes_exactly_the_pinned_case_enumeration() {
     let actual = registry_ids();
-    let pinned: Vec<String> = EXPECTED_CASE_IDS.iter().map(|id| (*id).to_string()).collect();
+    let pinned: Vec<String> = EXPECTED_CASE_IDS
+        .iter()
+        .map(|id| (*id).to_string())
+        .collect();
 
     let published: BTreeSet<&String> = actual.iter().collect();
     let recorded: BTreeSet<&String> = pinned.iter().collect();

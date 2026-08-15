@@ -20,7 +20,7 @@ use vyre_driver_wgpu::WgpuBackend;
 
 #[test]
 fn acquisition_fails_when_only_cpu_adapters_exist() {
-    let has_real_gpu = vyre_driver_wgpu::runtime::device::has_real_gpu_adapter();
+    let has_real_gpu = vyre_driver_wgpu::runtime::has_real_gpu_adapter();
 
     if !has_real_gpu {
         let result = WgpuBackend::acquire();

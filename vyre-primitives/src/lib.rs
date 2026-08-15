@@ -63,7 +63,7 @@
 //!
 //! The path is the interface. A domain `mod.rs` exposes its sub-modules rather
 //! than a flat namespace, so a call site reads
-//! `vyre_primitives::text::char_class::char_class(..)` and names the operation
+//! `vyre_primitives::text::char_class(..)` and names the operation
 //! it reached.
 
 mod dispatch_grid;

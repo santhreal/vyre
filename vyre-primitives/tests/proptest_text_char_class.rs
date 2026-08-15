@@ -1,4 +1,4 @@
-//! Property gates for `vyre_primitives::text::char_class::reference_char_class`.
+//! Property gates for `vyre_primitives::text::reference_char_class`.
 
 #![cfg(all(feature = "text", feature = "cpu-parity"))]
 mod text_char_class_support;
@@ -6,9 +6,7 @@ mod text_char_class_support;
 use proptest::prelude::*;
 use text_char_class_support::run_packed_u8_program;
 use vyre_foundation::ir::DataType;
-use vyre_primitives::text::char_class::{
-    build_char_class_table, char_class_u8, reference_char_class,
-};
+use vyre_primitives::text::{build_char_class_table, char_class_u8, reference_char_class};
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]

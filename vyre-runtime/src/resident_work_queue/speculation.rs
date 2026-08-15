@@ -7,12 +7,12 @@
 //! into the N2 adoption verdict.
 
 use vyre_driver::autotune_store::{AutotuneRecord, AutotuneStore};
+use vyre_driver::speculation_verdict::{
+    decide_speculation, SpeculationObservation, SpeculationVerdict,
+};
 use vyre_driver::{
     record_speculative_variant_race, SpeculativeVariantDecision, SpeculativeVariantKeys,
     SpeculativeVariantRace,
-};
-use vyre_driver::speculation_verdict::{
-    decide_speculation, SpeculationObservation, SpeculationVerdict,
 };
 
 /// One measured conservative/speculative dispatch pair.

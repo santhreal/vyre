@@ -1,12 +1,13 @@
 //! Adversarial tests: hostile, malformed, boundary, and empty/oversized inputs.
 
-use vyre_grammar_gen::{
-    decode_dfa_from_bytes, decode_lr_from_bytes, lex_c11_max_munch_kinds,
-    lr::Action,
-    preprocess_c_host, validate_lr_table,
-    wire::{PackedBlob, WireError, MAGIC},
-    DfaBuilder, LexCpuError, LrBuilder,
-};
+use vyre_grammar_gen::dfa::DfaBuilder;
+use vyre_grammar_gen::host_preprocess::preprocess_c_host;
+use vyre_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
+use vyre_grammar_gen::lr::Action;
+use vyre_grammar_gen::lr::{validate_lr_table, LrBuilder};
+use vyre_grammar_gen::max_munch_cpu::LexCpuError;
+use vyre_grammar_gen::wire::{decode_dfa_from_bytes, decode_lr_from_bytes};
+use vyre_grammar_gen::wire::{PackedBlob, WireError, MAGIC};
 
 // ---------------------------------------------------------------------------
 // decode_dfa_from_bytes: malformed inputs

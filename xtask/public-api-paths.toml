@@ -11,11 +11,11 @@ duplicate_paths = 0
 
 [[crate]]
 name = "vyre-aot"
-duplicate_paths = 48
+duplicate_paths = 0
 
 [[crate]]
 name = "vyre-debug"
-duplicate_paths = 68
+duplicate_paths = 0
 
 [[crate]]
 name = "vyre-driver"
@@ -35,11 +35,11 @@ duplicate_paths = 0
 
 [[crate]]
 name = "vyre-driver-spirv"
-duplicate_paths = 1
+duplicate_paths = 0
 
 [[crate]]
 name = "vyre-driver-wgpu"
-duplicate_paths = 38
+duplicate_paths = 10
 
 [[crate]]
 name = "vyre-emit-metal"
@@ -47,7 +47,7 @@ duplicate_paths = 0
 
 [[crate]]
 name = "vyre-emit-naga"
-duplicate_paths = 14
+duplicate_paths = 0
 
 [[crate]]
 name = "vyre-emit-ptx"
@@ -63,7 +63,7 @@ duplicate_paths = 81
 
 [[crate]]
 name = "vyre-grammar-gen"
-duplicate_paths = 50
+duplicate_paths = 0
 
 [[crate]]
 name = "vyre-libs"
@@ -83,7 +83,7 @@ duplicate_paths = 0
 
 [[crate]]
 name = "vyre-megakernel"
-duplicate_paths = 40
+duplicate_paths = 0
 
 [[crate]]
 name = "vyre-pass-engine"
@@ -95,7 +95,7 @@ duplicate_paths = 28
 
 [[crate]]
 name = "vyre-reference"
-duplicate_paths = 22
+duplicate_paths = 6
 
 [[crate]]
 name = "vyre-runtime"

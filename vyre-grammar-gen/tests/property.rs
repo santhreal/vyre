@@ -1,15 +1,13 @@
 //! Property-based tests: proptest invariants over the public API.
 
 use proptest::prelude::*;
-use vyre_grammar_gen::{
-    decode_dfa_from_bytes, decode_lr_from_bytes,
-    dfa::{Action as DfaAction, Transition},
-    kinds_blake3,
-    lr::Action,
-    validate_lr_table,
-    wire::{PackedBlob, WireError},
-    DfaBuilder, LrBuilder,
-};
+use vyre_grammar_gen::dfa::DfaBuilder;
+use vyre_grammar_gen::dfa::{Action as DfaAction, Transition};
+use vyre_grammar_gen::lr::Action;
+use vyre_grammar_gen::lr::{validate_lr_table, LrBuilder};
+use vyre_grammar_gen::max_munch_cpu::kinds_blake3;
+use vyre_grammar_gen::wire::{decode_dfa_from_bytes, decode_lr_from_bytes};
+use vyre_grammar_gen::wire::{PackedBlob, WireError};
 
 // ---------------------------------------------------------------------------
 // Transition pack/unpack is a bijection

@@ -12,7 +12,7 @@
 mod c_frontend;
 
 use c_frontend::reference_lexer::{c11_lexer_outputs, run_c11_lexer_promoted as run_gpu_lexer};
-use c_grammar_gen::lex_c11_max_munch_kinds;
+use c_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
 use vyre_libs::parsing::c::lex::diagnostics::{first_c11_lexer_diagnostic, C11LexerDiagnosticKind};
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::pipeline::stages::C11_AST_MAX_TOK_SCAN;

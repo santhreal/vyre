@@ -1,47 +1,27 @@
-impl core::default::Default for vyre_debug::descriptor_dump::DescriptorDumpOptions
-impl vyre_debug::artifact_report::ArtifactReport
-impl vyre_debug::naga_dump::NagaDump
+impl core::default::Default for vyre_debug::DescriptorDumpOptions
+impl vyre_debug::ArtifactReport
+impl vyre_debug::NagaDump
 pub enum vyre_debug::BindResultLogError
-pub enum vyre_debug::naga_trace::BindResultLogError
-pub fn vyre_debug::artifact_report::ArtifactReport::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::CompileError>
-pub fn vyre_debug::artifact_report::ArtifactReport::from_envelope(envelope: &vyre_megakernel::envelope::ArtifactEnvelope) -> Self
-pub fn vyre_debug::carrier_summary(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::carriers::CarrierSummary
-pub fn vyre_debug::carriers::carrier_summary(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::carriers::CarrierSummary
-pub fn vyre_debug::carriers::find_uncarriered_assigns(program: &vyre_foundation::ir_inner::model::program::definition::Program, desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::carriers::UncarrieredAssign>
-pub fn vyre_debug::dangling::find_dangling_refs(desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::dangling::DanglingRef>
-pub fn vyre_debug::descriptor_diff::diff_descriptors(before: &vyre_lower::descriptor::KernelDescriptor, after: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::descriptor_diff::DescriptorDiff
-pub fn vyre_debug::descriptor_dump::DescriptorDumpOptions::default() -> Self
-pub fn vyre_debug::descriptor_dump::dump_descriptor(desc: &vyre_lower::descriptor::KernelDescriptor, options: &vyre_debug::descriptor_dump::DescriptorDumpOptions) -> vyre_debug::descriptor_dump::DescriptorDump
-pub fn vyre_debug::diff_descriptors(before: &vyre_lower::descriptor::KernelDescriptor, after: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::descriptor_diff::DescriptorDiff
-pub fn vyre_debug::dump_descriptor(desc: &vyre_lower::descriptor::KernelDescriptor, options: &vyre_debug::descriptor_dump::DescriptorDumpOptions) -> vyre_debug::descriptor_dump::DescriptorDump
-pub fn vyre_debug::dump_naga_module(module: &naga::ir::Module) -> vyre_debug::naga_dump::NagaDump
-pub fn vyre_debug::dump_wgsl(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
-pub fn vyre_debug::dump_wgsl_with_lines(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
-pub fn vyre_debug::failure_trace(module: &naga::ir::Module, error: &naga::valid::ValidationError) -> vyre_debug::naga_trace::FailureTrace
-pub fn vyre_debug::failure_trace_wgsl(module: &naga::ir::Module, info: &naga::valid::ModuleInfo, err: &naga::back::wgsl::Error) -> vyre_debug::naga_trace::FailureTrace
-pub fn vyre_debug::find_dangling_refs(desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::dangling::DanglingRef>
-pub fn vyre_debug::find_uncarriered_assigns(program: &vyre_foundation::ir_inner::model::program::definition::Program, desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::carriers::UncarrieredAssign>
+pub fn vyre_debug::ArtifactReport::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::CompileError>
+pub fn vyre_debug::ArtifactReport::from_envelope(envelope: &vyre_megakernel::envelope::ArtifactEnvelope) -> Self
+pub fn vyre_debug::DescriptorDumpOptions::default() -> Self
+pub fn vyre_debug::NagaDump::find(&self, handle: u32) -> core::option::Option<&alloc::vec::Vec<alloc::string::String>>
+pub fn vyre_debug::carrier_summary(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::CarrierSummary
+pub fn vyre_debug::diff_descriptors(before: &vyre_lower::descriptor::KernelDescriptor, after: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::DescriptorDiff
+pub fn vyre_debug::dump_descriptor(desc: &vyre_lower::descriptor::KernelDescriptor, options: &vyre_debug::DescriptorDumpOptions) -> vyre_debug::DescriptorDump
+pub fn vyre_debug::dump_naga_module(module: &naga::ir::Module) -> vyre_debug::NagaDump
+pub fn vyre_debug::dump_wgsl(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_debug::WgslDump, alloc::string::String>
+pub fn vyre_debug::dump_wgsl_with_lines(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_debug::WgslDump, alloc::string::String>
+pub fn vyre_debug::failure_trace(module: &naga::ir::Module, error: &naga::valid::ValidationError) -> vyre_debug::FailureTrace
+pub fn vyre_debug::failure_trace_wgsl(module: &naga::ir::Module, info: &naga::valid::ModuleInfo, err: &naga::back::wgsl::Error) -> vyre_debug::FailureTrace
+pub fn vyre_debug::find_dangling_refs(desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::DanglingRef>
+pub fn vyre_debug::find_uncarriered_assigns(program: &vyre_foundation::ir_inner::model::program::definition::Program, desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::UncarrieredAssign>
 pub fn vyre_debug::fixtures::loop_carry_smoke() -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_debug::load_bind_result_log(path: &str) -> core::result::Result<alloc::vec::Vec<vyre_emit_naga::BindResultEntry>, vyre_debug::naga_trace::BindResultLogError>
-pub fn vyre_debug::naga_dump::NagaDump::find(&self, handle: u32) -> core::option::Option<&alloc::vec::Vec<alloc::string::String>>
-pub fn vyre_debug::naga_dump::dump_naga_module(module: &naga::ir::Module) -> vyre_debug::naga_dump::NagaDump
-pub fn vyre_debug::naga_trace::failure_trace(module: &naga::ir::Module, error: &naga::valid::ValidationError) -> vyre_debug::naga_trace::FailureTrace
-pub fn vyre_debug::naga_trace::failure_trace_wgsl(module: &naga::ir::Module, info: &naga::valid::ModuleInfo, err: &naga::back::wgsl::Error) -> vyre_debug::naga_trace::FailureTrace
-pub fn vyre_debug::naga_trace::load_bind_result_log(path: &str) -> core::result::Result<alloc::vec::Vec<vyre_emit_naga::BindResultEntry>, vyre_debug::naga_trace::BindResultLogError>
+pub fn vyre_debug::load_bind_result_log(path: &str) -> core::result::Result<alloc::vec::Vec<vyre_emit_naga::BindResultEntry>, vyre_debug::BindResultLogError>
 pub fn vyre_debug::source_assignments::walk_source_assigns<F>(program: &vyre_foundation::ir_inner::model::program::definition::Program, callback: F) where F: core::ops::function::FnMut(&str, alloc::vec::Vec<alloc::string::String>)
-pub fn vyre_debug::wgsl::dump_wgsl(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
-pub fn vyre_debug::wgsl::dump_wgsl_with_lines(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
 pub mod vyre_debug
-pub mod vyre_debug::artifact_report
-pub mod vyre_debug::carriers
-pub mod vyre_debug::dangling
-pub mod vyre_debug::descriptor_diff
-pub mod vyre_debug::descriptor_dump
 pub mod vyre_debug::fixtures
-pub mod vyre_debug::naga_dump
-pub mod vyre_debug::naga_trace
 pub mod vyre_debug::source_assignments
-pub mod vyre_debug::wgsl
 pub struct vyre_debug::ArtifactReport
 pub struct vyre_debug::CarrierSummary
 pub struct vyre_debug::DanglingRef
@@ -53,24 +33,13 @@ pub struct vyre_debug::NagaDump
 pub struct vyre_debug::TargetPayloadReport
 pub struct vyre_debug::UncarrieredAssign
 pub struct vyre_debug::WgslDump
-pub struct vyre_debug::artifact_report::ArtifactReport
-pub struct vyre_debug::artifact_report::TargetPayloadReport
-pub struct vyre_debug::carriers::CarrierSummary
-pub struct vyre_debug::carriers::UncarrieredAssign
-pub struct vyre_debug::dangling::DanglingRef
-pub struct vyre_debug::descriptor_diff::DescriptorDiff
-pub struct vyre_debug::descriptor_dump::DescriptorDump
-pub struct vyre_debug::descriptor_dump::DescriptorDumpOptions
-pub struct vyre_debug::naga_dump::NagaDump
-pub struct vyre_debug::naga_trace::FailureTrace
-pub struct vyre_debug::wgsl::WgslDump
 pub vyre_debug::ArtifactReport::abi: vyre_megakernel::ArtifactAbi
 pub vyre_debug::ArtifactReport::artifact: alloc::string::String
 pub vyre_debug::ArtifactReport::compiler_version: alloc::string::String
 pub vyre_debug::ArtifactReport::request: alloc::string::String
 pub vyre_debug::ArtifactReport::selected_plan: vyre_megakernel::SelectedPlan
 pub vyre_debug::ArtifactReport::source_graph: alloc::string::String
-pub vyre_debug::ArtifactReport::targets: alloc::vec::Vec<vyre_debug::artifact_report::TargetPayloadReport>
+pub vyre_debug::ArtifactReport::targets: alloc::vec::Vec<vyre_debug::TargetPayloadReport>
 pub vyre_debug::BindResultLogError::Open(std::io::error::Error)
 pub vyre_debug::BindResultLogError::Parse(usize, serde_json::error::Error)
 pub vyre_debug::BindResultLogError::Read(std::io::error::Error)
@@ -109,48 +78,3 @@ pub vyre_debug::UncarrieredAssign::loop_path: alloc::vec::Vec<alloc::string::Str
 pub vyre_debug::UncarrieredAssign::name: alloc::string::String
 pub vyre_debug::WgslDump::text: alloc::string::String
 pub vyre_debug::WgslDump::variable_lines: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>
-pub vyre_debug::artifact_report::ArtifactReport::abi: vyre_megakernel::ArtifactAbi
-pub vyre_debug::artifact_report::ArtifactReport::artifact: alloc::string::String
-pub vyre_debug::artifact_report::ArtifactReport::compiler_version: alloc::string::String
-pub vyre_debug::artifact_report::ArtifactReport::request: alloc::string::String
-pub vyre_debug::artifact_report::ArtifactReport::selected_plan: vyre_megakernel::SelectedPlan
-pub vyre_debug::artifact_report::ArtifactReport::source_graph: alloc::string::String
-pub vyre_debug::artifact_report::ArtifactReport::targets: alloc::vec::Vec<vyre_debug::artifact_report::TargetPayloadReport>
-pub vyre_debug::artifact_report::TargetPayloadReport::bytes: usize
-pub vyre_debug::artifact_report::TargetPayloadReport::digest: alloc::string::String
-pub vyre_debug::artifact_report::TargetPayloadReport::entries: usize
-pub vyre_debug::artifact_report::TargetPayloadReport::format: alloc::string::String
-pub vyre_debug::artifact_report::TargetPayloadReport::format_version: u16
-pub vyre_debug::carriers::CarrierSummary::carrier_finals: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>
-pub vyre_debug::carriers::CarrierSummary::carrier_reads: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>
-pub vyre_debug::carriers::CarrierSummary::carrier_writes: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>
-pub vyre_debug::carriers::CarrierSummary::function_locals: alloc::vec::Vec<alloc::string::String>
-pub vyre_debug::carriers::CarrierSummary::total_ops_observed: usize
-pub vyre_debug::carriers::UncarrieredAssign::has_carrier_op: bool
-pub vyre_debug::carriers::UncarrieredAssign::has_final_op: bool
-pub vyre_debug::carriers::UncarrieredAssign::loop_path: alloc::vec::Vec<alloc::string::String>
-pub vyre_debug::carriers::UncarrieredAssign::name: alloc::string::String
-pub vyre_debug::dangling::DanglingRef::operand_position: usize
-pub vyre_debug::dangling::DanglingRef::produced_in_body_path: alloc::vec::Vec<usize>
-pub vyre_debug::dangling::DanglingRef::producing_op_index: usize
-pub vyre_debug::dangling::DanglingRef::producing_op_kind: alloc::string::String
-pub vyre_debug::dangling::DanglingRef::ref_id: u32
-pub vyre_debug::dangling::DanglingRef::referenced_in_body_path: alloc::vec::Vec<usize>
-pub vyre_debug::dangling::DanglingRef::referencing_op_index: usize
-pub vyre_debug::dangling::DanglingRef::referencing_op_kind: alloc::string::String
-pub vyre_debug::descriptor_diff::DescriptorDiff::bindings_added: alloc::vec::Vec<u32>
-pub vyre_debug::descriptor_diff::DescriptorDiff::bindings_dropped: alloc::vec::Vec<u32>
-pub vyre_debug::descriptor_diff::DescriptorDiff::op_count_delta: alloc::collections::btree::map::BTreeMap<alloc::vec::Vec<usize>, i64>
-pub vyre_debug::descriptor_diff::DescriptorDiff::root_shape_changed: bool
-pub vyre_debug::descriptor_dump::DescriptorDump::op_counts_by_path: alloc::collections::btree::map::BTreeMap<alloc::vec::Vec<usize>, usize>
-pub vyre_debug::descriptor_dump::DescriptorDump::text: alloc::string::String
-pub vyre_debug::descriptor_dump::DescriptorDumpOptions::max_ops_per_body: usize
-pub vyre_debug::descriptor_dump::DescriptorDumpOptions::show_literals: bool
-pub vyre_debug::descriptor_dump::DescriptorDumpOptions::show_result_ids: bool
-pub vyre_debug::naga_dump::NagaDump::text: alloc::string::String
-pub vyre_debug::naga_trace::BindResultLogError::Open(std::io::error::Error)
-pub vyre_debug::naga_trace::BindResultLogError::Parse(usize, serde_json::error::Error)
-pub vyre_debug::naga_trace::BindResultLogError::Read(std::io::error::Error)
-pub vyre_debug::naga_trace::FailureTrace::text: alloc::string::String
-pub vyre_debug::wgsl::WgslDump::text: alloc::string::String
-pub vyre_debug::wgsl::WgslDump::variable_lines: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>

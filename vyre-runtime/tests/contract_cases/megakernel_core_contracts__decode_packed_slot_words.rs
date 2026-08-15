@@ -4,9 +4,6 @@
 mod megakernel_core_contracts_read_metrics_returns_nonzero_only;
 
 use vyre_foundation::ir::{Node, Program};
-use vyre_runtime::resident_work_queue::builder::{
-    build_program, build_program_jit, build_program_sharded, build_program_sharded_slots,
-};
 use vyre_runtime::resident_work_queue::handlers::OpcodeHandler;
 use vyre_runtime::resident_work_queue::protocol::{
     self, control, debug, opcode as opcodes, slot, DebugRecord, ARG0_WORD, ARGS_PER_SLOT,
@@ -14,6 +11,9 @@ use vyre_runtime::resident_work_queue::protocol::{
 };
 use vyre_runtime::resident_work_queue::scheduler;
 use vyre_runtime::resident_work_queue::ResidentWorkQueue;
+use vyre_runtime::resident_work_queue::{
+    build_program, build_program_jit, build_program_sharded, build_program_sharded_slots,
+};
 use vyre_runtime::PipelineError;
 
 #[cfg(test)]

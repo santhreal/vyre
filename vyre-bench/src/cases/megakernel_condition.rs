@@ -77,12 +77,11 @@ impl BenchCase for MegakernelCondition {
 
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
         let handler = condition_opcode_handler();
-        let program =
-            resident_work_queue::builder::build_program_sharded_once_slots_control_report_shared(
-                WORKGROUP_SIZE,
-                SLOT_COUNT,
-                &[handler],
-            );
+        let program = resident_work_queue::build_program_sharded_once_slots_control_report_shared(
+            WORKGROUP_SIZE,
+            SLOT_COUNT,
+            &[handler],
+        );
         let mut expected_fired = 0u32;
         let ring_bytes = condition_ring(SLOT_COUNT, &mut expected_fired)?;
         let queue = queue_buffers(

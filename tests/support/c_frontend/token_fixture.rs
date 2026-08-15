@@ -105,8 +105,8 @@ pub(crate) fn classify_without_annotation(fix: &Fixture) -> Vec<u8> {
 /// the fixture. Every fixture-driven parity test runs this first, so it lives
 /// with the fixture builder rather than in each test file.
 pub(crate) fn assert_lex_matches_non_ws(fix: &Fixture) {
-    let kinds =
-        c_grammar_gen::lex_c11_max_munch_kinds(fix.source.as_bytes()).expect("fixture must lex");
+    let kinds = c_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds(fix.source.as_bytes())
+        .expect("fixture must lex");
     let lexed_non_ws: Vec<u32> = kinds
         .into_iter()
         .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)

@@ -16,7 +16,7 @@
 #![allow(dead_code)]
 
 use vyre_foundation::ir::{BinOp, Expr, Program, UnOp};
-use vyre_reference::execution::expr as eval_expr;
+use vyre_reference::expr as eval_expr;
 use vyre_reference::value::Value;
 use vyre_reference::workgroup::{Invocation, InvocationIds, Memory};
 

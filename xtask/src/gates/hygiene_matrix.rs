@@ -233,7 +233,7 @@ const THRESHOLD_SUFFIXES: &[&str] = &[
 /// A source-inspecting test is a release blocker by default, because the usual
 /// reason a test reads source is that nobody worked out how to assert the
 /// behaviour. That default is wrong for a property no execution can observe:
-/// that no OTHER file calls a function, that a registration is visible from the
+/// that no other file calls a function, that a registration is visible from the
 /// crate root, that a table covers every variant. Rust offers no reflection, so
 /// the source is the only witness those have.
 ///

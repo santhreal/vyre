@@ -8,7 +8,7 @@
 )]
 #[path = "../../tests/support/c_frontend/fixtures/vast_builder_token_streams.rs"]
 mod vast_builder_token_streams;
-use c_grammar_gen::lex_c11_max_munch_kinds;
+use c_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
 use proptest::prelude::*;
 use std::sync::OnceLock;
 use vast_builder_token_streams::{

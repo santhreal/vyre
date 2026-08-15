@@ -1,4 +1,4 @@
-//! Doc.
+//! Per-subsystem cache unit tests: LRU tracking and tiered policy transitions.
 
-pub mod lru;
-pub mod tiered_cache;
+mod lru;
+mod tiered_cache;

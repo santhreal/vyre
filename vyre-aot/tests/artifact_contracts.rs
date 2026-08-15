@@ -52,7 +52,7 @@ fn envelope_selects_the_canonical_target_payload() {
 
     assert_eq!(payload.format().identity(), "fixture-target-format");
     assert_eq!(payload.format().version(), 1);
-    let modules = vyre_megakernel::target::TargetModuleBundle::from_bytes(payload.bytes())
+    let modules = vyre_megakernel::TargetModuleBundle::from_bytes(payload.bytes())
         .expect("target module bundle must decode");
     assert_eq!(modules.modules[0].bytes, b"target-payload-fixture");
     assert_eq!(payload.neutral_artifact(), envelope.neutral().digest());

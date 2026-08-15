@@ -4,8 +4,8 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::LazyLock;
 
-use vyre_driver::BackendRegistration;
 use vyre_driver::materialize::MaterializerDevice;
+use vyre_driver::BackendRegistration;
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, BoundResource, Completion,
     Device, DeviceIdentity, ResidentOwner, Resource, Submission, VyreBackend,

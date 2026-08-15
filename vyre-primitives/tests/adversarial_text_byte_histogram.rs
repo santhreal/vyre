@@ -5,7 +5,7 @@
 #![allow(clippy::needless_range_loop)]
 
 use vyre_foundation::ir::DataType;
-use vyre_primitives::text::byte_histogram::{byte_histogram_256_u8, reference_byte_histogram};
+use vyre_primitives::text::{byte_histogram_256_u8, reference_byte_histogram};
 
 #[test]
 fn reference_byte_histogram_empty() {

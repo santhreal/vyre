@@ -65,12 +65,11 @@ impl BenchCase for MegakernelTruth {
                 "megakernel truth work item count cannot fit u32: {source}"
             ))
         })?;
-        let program =
-            resident_work_queue::builder::build_program_sharded_once_slots_control_report_shared(
-                WORKER_COUNT,
-                slot_count,
-                &[],
-            );
+        let program = resident_work_queue::build_program_sharded_once_slots_control_report_shared(
+            WORKER_COUNT,
+            slot_count,
+            &[],
+        );
         let mut ring_words = Vec::new();
         vyre_runtime::resident_work_queue::ResidentWorkQueue::encode_work_items_ring_words_into(
             slot_count,

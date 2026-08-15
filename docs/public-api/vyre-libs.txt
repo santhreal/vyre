@@ -574,8 +574,6 @@ pub use vyre_libs::text::C_TILDE
 pub use vyre_libs::text::C_WS
 pub use vyre_libs::text::build_char_class_table
 pub use vyre_libs::text::char_class
-pub use vyre_libs::text::pack_bytes_as_u32
-pub use vyre_libs::text::pack_u32
 pub use vyre_libs::text::reference_char_class
 pub vyre_libs::BufferDescriptor::access: vyre_spec::buffer_access::BufferAccess
 pub vyre_libs::BufferDescriptor::count: u32

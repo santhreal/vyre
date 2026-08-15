@@ -20,8 +20,8 @@ use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::optimizer::corpus::generate_release_corpus;
-use vyre_reference::execution::{is_reference_input, is_reference_output};
 use vyre_reference::value::Value;
+use vyre_reference::{is_reference_input, is_reference_output};
 
 /// Deterministic corpus sample. The corpus cycles its eight families with
 /// period eight, and 37 is coprime with eight, so a stride of 37 reaches every

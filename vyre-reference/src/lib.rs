@@ -33,7 +33,7 @@ pub mod cpu_op;
 /// separate reference-owned facet.
 pub mod dialect_dispatch;
 /// Canonical reference execution tree.
-pub mod execution;
+pub(crate) mod execution;
 /// Flat byte adapter used by [`crate::cpu_op::CpuOp`].
 pub mod flat_cpu;
 /// IEEE 754 strict floating-point utilities.
@@ -55,6 +55,7 @@ pub use oob::OobReport;
 /// Count arithmetic IR ops the reference interpreter executes in a scope (roofline /
 /// complexity analysis) (a backend-agnostic dynamic operation count).
 pub use execution::op_count::count_ops;
+pub use execution::{expr, node, op_count, sequential};
 /// The interpreter's ABI: [`is_reference_input`] selects the buffers a caller must
 /// supply a `Value` for, [`is_reference_output`] selects the buffers `reference_eval`
 /// returns, and [`output_index`] locates a named output by that predicate, so test

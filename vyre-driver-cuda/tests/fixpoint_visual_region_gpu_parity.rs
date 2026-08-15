@@ -8,7 +8,7 @@ mod common;
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_primitives::fixpoint::bitset_fixpoint::bitset_fixpoint;
-use vyre_primitives::matching::region::{
+use vyre_primitives::matching::{
     dedup_regions_cluster_program, dedup_regions_flag_program, region_dedup_dispatch_grid,
 };
 use vyre_primitives::visual::packed_rgba_map::packed_rgba_map;

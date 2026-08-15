@@ -110,7 +110,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hardware::{lcg_u32, pack_u32, run_program};
+    use crate::hardware::{lcg_u32, run_program};
+    use crate::wire::pack_u32_slice as pack_u32;
 
     fn assert_case(values: &[u32]) {
         let n = values.len() as u32;

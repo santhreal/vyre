@@ -41,7 +41,7 @@ use crate::hash::fnv1a::{fnv1a64_initial_state, fnv1a64_update_byte};
 use crate::matching::dfa_compile::CompiledDfa;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::matching::nfa_to_dfa";
+pub(crate) const OP_ID: &str = "vyre-primitives::matching::nfa_to_dfa";
 
 /// Lanes-per-subgroup the state-major NFA tables are laid out for.
 ///

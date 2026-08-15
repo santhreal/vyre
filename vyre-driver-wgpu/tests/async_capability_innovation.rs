@@ -62,7 +62,7 @@ fn subgroup_capability_is_derived_from_adapter_features() {
     let backend = live_backend();
 
     let info = backend.adapter_info();
-    let adapter = vyre_driver_wgpu::runtime::device::adapter_for_info(info)
+    let adapter = vyre_driver_wgpu::runtime::adapter_for_info(info)
         .expect("Fix: selected wgpu backend adapter must remain enumerable for capability probing");
     let adapter_features = adapter.features();
     let limits = adapter.limits();

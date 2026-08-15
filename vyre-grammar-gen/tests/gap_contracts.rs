@@ -1,6 +1,6 @@
 //! Gap contracts for empty generated LR payload handling.
 
-use vyre_grammar_gen::{decode_lr_from_bytes, wire::WireError};
+use vyre_grammar_gen::wire::{decode_lr_from_bytes, WireError};
 
 #[test]
 fn gap_contract_rejects_empty_generated_lr_payload() {

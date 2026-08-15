@@ -6,9 +6,9 @@
 /// [`vyre_foundation::optimizer::AdapterCaps`] passes read to adapt.
 pub mod adapter_caps_probe;
 /// Tiered caching for device buffers and shader pipelines.
-pub mod cache;
+pub(crate) mod cache;
 /// GPU device abstraction and initialization.
-pub mod device;
+pub(crate) mod device;
 /// Indirect dispatch path (C-B4).
 ///
 /// Submits `ComputePass::dispatch_workgroups_indirect` on a
@@ -31,11 +31,17 @@ pub mod router;
 /// Runtime wire-format serialization for multi-part programs.
 pub mod serializer;
 /// Shader pipeline compilation and caching.
-pub mod shader;
+pub(crate) mod shader;
 /// LRU cache access tracker for buffer eviction policies.
-pub use cache::lru::AccessTracker;
+pub use cache::AccessTracker;
 /// Cache tier policies and access statistics.
 pub use cache::{AccessStats, CacheError, LruPolicy};
+pub use cache::{CacheEntry, CacheTier, TieredCache};
+pub use device::{
+    acquire_gpu, acquire_gpu_for_adapter, adapter_for_info, adapter_index_from_env,
+    adapter_probe_report, enumerate_adapters, has_real_gpu_adapter, init_device_for_adapter,
+    select_adapter, AdapterCriteria, AdapterProbeReport, EnabledFeatures,
+};
 /// Initialize a cached GPU device wrapper.
 pub use device::{cached_adapter_info, cached_device, init_device};
 /// Compile a compute pipeline from WGSL source.

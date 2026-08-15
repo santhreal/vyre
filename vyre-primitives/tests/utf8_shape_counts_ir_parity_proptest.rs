@@ -17,7 +17,7 @@
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 
-use vyre_primitives::text::utf8_shape_counts::utf8_shape_counts;
+use vyre_primitives::text::utf8_shape_counts;
 
 /// Independent reference: saturating range sums matching the kernel's lead-byte classes.
 fn reference(hist: &[u32; 256]) -> (u32, u32) {

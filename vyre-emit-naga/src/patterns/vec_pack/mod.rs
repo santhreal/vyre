@@ -26,8 +26,8 @@
 //! vyre-bank-conflict  -  all four analyses operate on KernelDescriptor
 //! and live one layer below the per-substrate emitters.
 
-pub mod analysis;
-pub mod plan;
+pub(crate) mod analysis;
+pub(crate) mod plan;
 
 pub use analysis::analyze;
 pub use plan::{PackGroup, PackKind, PackingPlan};

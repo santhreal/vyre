@@ -1,8 +1,8 @@
 //! Golden regression test for C11 max-munch lexing of `corpus/hello.c`.
 
 use vyre_grammar_gen::host_preprocess::preprocess_c_host;
-use vyre_grammar_gen::kinds_blake3;
-use vyre_grammar_gen::lex_c11_max_munch_kinds;
+use vyre_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
+use vyre_grammar_gen::max_munch_cpu::kinds_blake3;
 
 #[test]
 fn hello_max_munch_blake3() {

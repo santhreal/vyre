@@ -14,7 +14,7 @@ use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::BackendValidationCapabilities;
 
 fn selected_adapter(backend: &WgpuBackend) -> wgpu::Adapter {
-    vyre_driver_wgpu::runtime::device::adapter_for_info(backend.adapter_info()).expect(
+    vyre_driver_wgpu::runtime::adapter_for_info(backend.adapter_info()).expect(
         "Fix: selected wgpu backend adapter must remain enumerable for live capability probing",
     )
 }

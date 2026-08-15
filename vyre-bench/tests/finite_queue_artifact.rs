@@ -10,7 +10,7 @@ use vyre_foundation::ir::ProgramGraph;
 #[test]
 fn finite_queue_program_compiles_to_authenticated_cuda_payload() {
     let program =
-        vyre_runtime::resident_work_queue::builder::build_program_sharded_once_slots(256, 256, &[]);
+        vyre_runtime::resident_work_queue::build_program_sharded_once_slots(256, 256, &[]);
     let graph = ProgramGraph::from_program("finite_queue", program)
         .expect("finite queue program must form a valid canonical graph");
     let request = CompileRequest::new(
@@ -25,9 +25,8 @@ fn finite_queue_program_compiles_to_authenticated_cuda_payload() {
         compiler::compile(&request).expect("finite queue graph must compile to a neutral artifact");
     vyre_registry_link::backend::live_backend_registry()
         .expect("Fix: the backend registry must freeze cleanly");
-    let registration =
-        vyre_driver::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
-            .expect("CUDA target compiler registration must be linked");
+    let registration = vyre_driver::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
+        .expect("CUDA target compiler registration must be linked");
     let compiler = registration
         .target_compiler()
         .expect("CUDA registration must provide a target compiler");

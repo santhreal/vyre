@@ -6,14 +6,15 @@
 //! the authenticated [`ArtifactEnvelope`] with deployment metadata.
 #![deny(missing_docs)]
 
-pub mod artifact;
-pub mod bundle;
+pub(crate) mod artifact;
+pub(crate) mod bundle;
 /// Runtime-cache compatibility for AOT-emitted artifacts (audit P0 #26).
 pub mod cache;
-pub mod compile;
-pub mod launcher;
-pub mod manifest;
+pub(crate) mod compile;
+pub(crate) mod launcher;
+pub(crate) mod manifest;
 
+pub use artifact::registration;
 pub use artifact::TargetId;
 pub use bundle::{bundle, package_artifact, read_bundle_artifact, BundleError, DeploymentBundle};
 pub use compile::{compile, compile_with_resolver, CompileError};

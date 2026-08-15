@@ -4,7 +4,7 @@
 #![cfg(all(feature = "text", feature = "cpu-parity"))]
 #![allow(clippy::needless_range_loop)]
 
-use vyre_primitives::text::utf8_shape_counts::reference_utf8_shape_counts;
+use vyre_primitives::text::reference_utf8_shape_counts;
 
 #[test]
 fn reference_utf8_shape_counts_empty_histogram() {

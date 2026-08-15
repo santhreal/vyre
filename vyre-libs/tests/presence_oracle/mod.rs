@@ -17,7 +17,7 @@
 // subset of the helpers; silence the unused-in-this-binary warnings. `dead_code`
 // covers helpers a binary never calls; `unreachable_pub` covers the `pub` on a
 // shared helper that a given binary does not re-export (the `pub` exists so the
-// OTHER gate can import it).
+// BRACKET_KIND_OTHER gate can import it).
 #![allow(dead_code, unreachable_pub)]
 
 use vyre_libs::scan::classic_ac::{

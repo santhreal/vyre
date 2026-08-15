@@ -6,7 +6,7 @@ use vyre_aot::{
     TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 use vyre_foundation::ir::{BufferAccess, DataType, Program, ValueLifetime};
-use vyre_megakernel::target::{
+use vyre_megakernel::{
     compile_selected_modules, EmittedTargetModule, TargetModuleBundle, TargetModuleImage,
 };
 use vyre_megakernel::{TargetCompileError, TargetCompiler};

@@ -8,7 +8,7 @@ pub mod bitwise;
 /// docs
 pub mod compare;
 /// docs
-pub mod evaluator;
+pub(crate) mod evaluator;
 /// docs
 pub mod hash;
 mod indexed_reference_impls;

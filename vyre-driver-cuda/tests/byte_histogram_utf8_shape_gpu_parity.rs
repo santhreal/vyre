@@ -8,10 +8,8 @@ mod common;
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::{BufferAccess, DataType, Program};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::text::byte_histogram::{
-    byte_histogram_256, byte_histogram_256_u8, reference_byte_histogram,
-};
-use vyre_primitives::text::utf8_shape_counts::{reference_utf8_shape_counts, utf8_shape_counts};
+use vyre_primitives::text::{byte_histogram_256, byte_histogram_256_u8, reference_byte_histogram};
+use vyre_primitives::text::{reference_utf8_shape_counts, utf8_shape_counts};
 
 fn bytes_to_u32_per_lane(source: &[u8]) -> Vec<u32> {
     source.iter().map(|&b| b as u32).collect()

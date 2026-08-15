@@ -18,26 +18,26 @@
 )]
 //! Inspection and diagnostic helpers for Vyre IR and lowered kernel descriptors.
 /// Canonical compiler artifact and selected-plan diagnostics.
-pub mod artifact_report;
+pub(crate) mod artifact_report;
 pub(crate) mod body_path_map;
 /// Loop-carrier diagnostics.
-pub mod carriers;
+pub(crate) mod carriers;
 /// Dangling descriptor-reference diagnostics.
-pub mod dangling;
+pub(crate) mod dangling;
 /// Structural descriptor comparison and rewrite bisection.
-pub mod descriptor_diff;
+pub(crate) mod descriptor_diff;
 /// Human-readable descriptor rendering.
-pub mod descriptor_dump;
+pub(crate) mod descriptor_dump;
 /// Reusable diagnostic fixtures.
 pub mod fixtures;
 /// Human-readable Naga module rendering.
-pub mod naga_dump;
+pub(crate) mod naga_dump;
 /// Naga validation and binding failure traces.
-pub mod naga_trace;
+pub(crate) mod naga_trace;
 /// Source-level assignment traversal.
 pub mod source_assignments;
 /// WGSL emission and source-line mapping.
-pub mod wgsl;
+pub(crate) mod wgsl;
 
 pub use artifact_report::{ArtifactReport, TargetPayloadReport};
 pub use carriers::{carrier_summary, find_uncarriered_assigns, CarrierSummary, UncarrieredAssign};

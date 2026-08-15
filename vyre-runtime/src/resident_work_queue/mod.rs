@@ -11,7 +11,7 @@ pub mod atomic_relaxed;
 pub mod automata_worklist;
 #[cfg(test)]
 mod body_preorder;
-pub mod builder;
+pub(crate) mod builder;
 pub mod descriptor;
 pub mod handlers;
 pub mod io;
@@ -41,6 +41,16 @@ pub struct ResidentWorkQueue;
 /// Test-only builder variant, re-exported for the integration suites.
 #[cfg(test)]
 pub use builder::build_program_with_self_loading_miss_handler;
+pub use builder::{
+    build_program, build_program_jit, build_program_jit_slots, build_program_priority,
+    build_program_priority_slots, build_program_sharded, build_program_sharded_no_io,
+    build_program_sharded_once_slots, build_program_sharded_once_slots_control_report_shared,
+    build_program_sharded_once_slots_shared, build_program_sharded_slots,
+    build_program_sharded_slots_shared, build_program_sharded_with_io_polling,
+    build_program_sharded_with_workspace_adapter, persistent_body, persistent_body_jit,
+    persistent_body_priority, persistent_body_priority_slots,
+    try_build_program_with_self_loading_miss_handler, try_persistent_body,
+};
 /// Ring-slot state transition. `protocol_api` is private, so this is the one
 /// public path to it.
 pub use protocol_api::RingSlotTransition;

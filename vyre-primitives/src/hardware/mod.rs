@@ -45,7 +45,7 @@ macro_rules! define_unary_u32_hardware_intrinsic {
         fn cpu_ref(input: &[u32]) -> Vec<u8> {
             let map_lane = $cpu_map;
             let output: Vec<u32> = input.iter().copied().map(map_lane).collect();
-            crate::hardware::pack_u32(&output)
+            crate::wire::pack_u32_slice(&output)
         }
 
         fn fixture_input() -> Vec<u32> {
@@ -55,7 +55,7 @@ macro_rules! define_unary_u32_hardware_intrinsic {
         fn test_inputs() -> Vec<Vec<Vec<u8>>> {
             let input = fixture_input();
             let len = input.len() * 4;
-            vec![vec![crate::hardware::pack_u32(&input), vec![0u8; len]]]
+            vec![vec![crate::wire::pack_u32_slice(&input), vec![0u8; len]]]
         }
 
         fn expected_output() -> Vec<Vec<Vec<u8>>> {
@@ -93,7 +93,8 @@ macro_rules! define_unary_u32_hardware_intrinsic {
         #[cfg(test)]
         mod tests {
             use super::*;
-            use crate::hardware::{lcg_u32, pack_u32, run_program};
+            use crate::hardware::{lcg_u32, run_program};
+            use crate::wire::pack_u32_slice as pack_u32;
 
             fn assert_case(input: &[u32]) {
                 let n = input.len() as u32;
@@ -144,7 +145,7 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
         }
 
         fn cpu_ref(input: &[u32]) -> Vec<u8> {
-            crate::hardware::pack_u32(input)
+            crate::wire::pack_u32_slice(input)
         }
 
         fn fixture_input() -> Vec<u32> {
@@ -154,7 +155,7 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
         fn test_inputs() -> Vec<Vec<Vec<u8>>> {
             let input = fixture_input();
             let len = input.len() * 4;
-            vec![vec![crate::hardware::pack_u32(&input), vec![0u8; len]]]
+            vec![vec![crate::wire::pack_u32_slice(&input), vec![0u8; len]]]
         }
 
         fn expected_output() -> Vec<Vec<Vec<u8>>> {
@@ -192,7 +193,8 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
         #[cfg(test)]
         mod tests {
             use super::*;
-            use crate::hardware::{lcg_u32, pack_u32, run_program};
+            use crate::hardware::{lcg_u32, run_program};
+            use crate::wire::pack_u32_slice as pack_u32;
 
             fn assert_case(input: &[u32]) {
                 let n = input.len() as u32;
@@ -358,12 +360,11 @@ pub(crate) fn ternary_f32_program(
     )
 }
 
-pub(crate) fn pack_u32(words: &[u32]) -> Vec<u8> {
-    crate::wire::pack_u32_slice(words)
-}
-
 pub(crate) fn packed_u32_input_with_output(words: &[u32]) -> Vec<Vec<Vec<u8>>> {
-    vec![vec![pack_u32(words), vec![0u8; words.len() * 4]]]
+    vec![vec![
+        crate::wire::pack_u32_slice(words),
+        vec![0u8; words.len() * 4],
+    ]]
 }
 
 pub(crate) fn pack_f32(values: &[f32]) -> Vec<u8> {

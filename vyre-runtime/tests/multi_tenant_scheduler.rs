@@ -159,6 +159,6 @@ fn sharded_megakernel_scales_with_workgroup_size() {
     // Building a sharded program at wg_x=1024 must produce a program
     // whose workgroup_size matches. Community schedulers that
     // slice slots across workgroups pin against this.
-    let program = resident_work_queue::builder::build_program_sharded(1024, &[]);
+    let program = resident_work_queue::build_program_sharded(1024, &[]);
     assert_eq!(program.workgroup_size(), [1024, 1, 1]);
 }

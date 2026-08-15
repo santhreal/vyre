@@ -5,7 +5,7 @@
 
 use proptest::prelude::*;
 use vyre_foundation::ir::DataType;
-use vyre_primitives::text::byte_histogram::{byte_histogram_256_u8, reference_byte_histogram};
+use vyre_primitives::text::{byte_histogram_256_u8, reference_byte_histogram};
 use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_u32s;
 use vyre_reference::value::Value;
 

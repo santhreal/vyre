@@ -3,8 +3,8 @@
 #![cfg(all(feature = "text", feature = "cpu-parity"))]
 
 use proptest::prelude::*;
-use vyre_primitives::text::byte_histogram::reference_byte_histogram;
-use vyre_primitives::text::encoding_classify::{
+use vyre_primitives::text::reference_byte_histogram;
+use vyre_primitives::text::{
     classify_from_histogram, ENC_ASCII, ENC_ISO8859_1, ENC_UTF16LE, ENC_UTF8,
 };
 

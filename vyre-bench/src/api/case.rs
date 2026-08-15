@@ -525,9 +525,7 @@ pub fn dispatch_config_with_inferred_grid<'a>(
     }
 
     let mut inferred_config = config.clone();
-    inferred_config.grid_override = Some(vyre_driver::infer_dispatch_grid(
-        prog, inputs, config,
-    )?);
+    inferred_config.grid_override = Some(vyre_driver::infer_dispatch_grid(prog, inputs, config)?);
     Ok(Cow::Owned(inferred_config))
 }
 

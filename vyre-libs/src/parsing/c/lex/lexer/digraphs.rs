@@ -216,7 +216,7 @@ pub fn c11_lex_digraphs(
             "vyre-libs::parsing::c11_lex_digraphs",
             vec![child_phase(
                 "vyre-libs::parsing::c11_lex_digraphs",
-                vyre_primitives::text::utf8_validate::OP_ID,
+                vyre_primitives::text::LINE_INDEX_OP_ID,
                 vec![Node::if_then(
                     Expr::lt(t.clone(), logical_token_count.clone()),
                     transform_logic,

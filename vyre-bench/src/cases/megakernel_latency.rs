@@ -8,9 +8,9 @@ use crate::api::resident::{dispatch_artifact_timed, ResidentInputPool};
 use crate::cases::reference_sample::{reference_metrics, timed_reference};
 use crate::cases::resident_queue::{account, queue_buffers, resident_pool_sets_metric};
 use vyre_driver::autotune_store::{AutotuneRecord, AutotuneStore};
+use vyre_driver::speculation_verdict::SpeculationVerdict;
 use vyre_driver::SpecCacheKey;
 use vyre_driver::SpeculativeVariantKeys;
-use vyre_driver::speculation_verdict::SpeculationVerdict;
 use vyre_runtime::resident_work_queue::protocol::{control, slot, SLOT_WORDS, STATUS_WORD};
 use vyre_runtime::resident_work_queue::speculation::{
     PairedSpeculationSample, PairedSpeculationWindow,
@@ -64,11 +64,8 @@ impl BenchCase for MegakernelLatency {
     }
 
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let program = resident_work_queue::builder::build_program_sharded_once_slots(
-            WORKGROUP_SIZE,
-            SLOT_COUNT,
-            &[],
-        );
+        let program =
+            resident_work_queue::build_program_sharded_once_slots(WORKGROUP_SIZE, SLOT_COUNT, &[]);
         let ring_bytes = published_ring(SLOT_COUNT)?;
         let queue = queue_buffers(
             ctx,

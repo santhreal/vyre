@@ -135,20 +135,20 @@ pub fn execute_suite(
                     continue;
                 }
             };
-        let preferred_registration =
-            match vyre_driver::backend_registration(preferred_backend.id()) {
-                Ok(registration) => registration,
-                Err(error) => {
-                    failed += 1;
-                    cases_report.push(case_failure(
-                        case,
-                        None,
-                        format!("Backend registration error: {error}"),
-                        case.performance_contract(),
-                    ));
-                    continue;
-                }
-            };
+        let preferred_registration = match vyre_driver::backend_registration(preferred_backend.id())
+        {
+            Ok(registration) => registration,
+            Err(error) => {
+                failed += 1;
+                cases_report.push(case_failure(
+                    case,
+                    None,
+                    format!("Backend registration error: {error}"),
+                    case.performance_contract(),
+                ));
+                continue;
+            }
+        };
         let materializer = match preferred_registration.materializer() {
             Ok(materializer) => Arc::from(materializer),
             Err(error) => {
