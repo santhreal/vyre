@@ -1931,6 +1931,30 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `ir-fixtures` means `vyre-foundation` plus `smallvec`. The IR fixture table
   builds its flat leaves from the same module, so the two tables cannot
   disagree about which element types exist.
+- Every registered xtask subcommand is now a gate answering one contract: it
+  returns findings and notes instead of printing, and the runner decides what
+  that means. The `Kind` enum is gone, so no check is exempt from the sweep by
+  category. The `check-cat-a` and `release-gate` composites are named subsets
+  of the registry, `xtask gates --subset cat-a` and `--subset prepublish`, and
+  the cargo invocations they drove are gates of their own: `workspace-check`,
+  `workspace-clippy`, `workspace-tests`, `workspace-docs` and `lockfile-clean`.
+  `scripts/check_op_names.sh` and `scripts/check_parity_testing_not_leaked.sh`
+  became the `op-names` and `parity-testing-isolated` gates.
+  `xtask/gate-baselines.toml` pins `findings` rather than output lines, one row
+  per registered gate, and the sweep enumerates the registry at run time so a
+  gate without a row and a row without a gate both fail. A gate that owns a
+  generated artifact checks it against the tree and rewrites it under
+  `--write`, so regeneration is never a subcommand of its own.
+- The seventeen registry-linked checks answer the gate contract. Each one
+  returns findings instead of an exit code, so the sweep counts what it found
+  and pins that count. catalog, list-ops and optimization-docs now own
+  docs/generated/catalog.toml, docs/generated/op-inventory.toml and
+  docs/generated/optimizer-passes.toml, compared on every run and regenerated
+  with --write. lego-audit runs its repo-context checks unconditionally and has
+  no report-only mode, lego-quick scans the whole tree unless --staged narrows
+  it, heuristic-audit has no advisory mode, compile and shrink run over the
+  generated release corpus, and verify-rewrite-proofs fails when no solver can
+  discharge an obligation.
 - Three optimizer hot paths stopped allocating per sample.
   `HotPathHints::record` allocated the key on every call including a repeat
   sample, and its LRU eviction cloned every key in the map to find the oldest;
@@ -1957,10 +1981,6 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   buffer of count 1 is declared, and a trap program is IR composed out of IR,
   so neither crate is its home. The declared output is an `Option` argument
   because that is the whole difference between the two former copies.
-- `vyre-test-support` states the minimal one-output test program once, as
-  `ir_variants::single_u32_output_program`. Suites that needed a program with
-  somewhere to store a result each declared the same buffer and workgroup size
-  locally, so a change to the shape had to be found in every copy.
 - The workspace contract suite no longer compiles into `vyre-foundation`'s test
   target. `tests/contract/mod.rs` was included by
   `vyre-foundation/tests/contract_workspace.rs`, so a contract that judges the
@@ -2075,6 +2095,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   one shared fold. `is_adjoint_pair` is `adjoint_pair`, because it returns the
   pair and its witness rather than a bool, and `yoneda_natural_iso` is
   `natural_transformation_count`, because a count is what it returns.
+- `vyre-release-gate` judges prepublication evidence by default and takes
+  `--launch-complete` for the post-ship mode. The default was launch-complete,
+  which demands `public_launch_complete`, all three approval-gated external
+  actions complete and zero blockers, so the gate every sweep runs with no
+  arguments could not pass before the version it guards had shipped. The
+  removed `--prepublish` flag is rejected rather than ignored.
 
 ### Removed
 
@@ -2178,6 +2204,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   evaluator forwarded to that type's own method. Both had no callers, and the
   foundation owner's own tests already assert every boundary the copies
   asserted.
+- Three checks that could not fail are gone. Release hygiene named an xtask
+  command module `release_gate` that has no source file, beside the
+  `vyre_release_gate` that does. `scripts/architecture_docs.py` guarded a
+  superseded-RFC contract behind `if the file exists`, and the RFC is deleted,
+  so the whole block was unreachable; its fixture also wrote three pages the
+  checker never opens, and the test that proved the stale-version rule poisoned
+  one of them. `xtask/feature-isolation.toml` recorded five `vyre-primitives`
+  feature selections - cat, dnnf, effects, types, zx - that no manifest
+  declares since those domains moved to `vyre-libs`, and
+  `scripts/docs_manifest.py` claimed provenance for a `RELEASE_CHECKLIST.md` no
+  generator writes.
 
 ### Fixed
 
@@ -3442,6 +3479,39 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   neighbours to be other spiders of matching colour. `simplified_diagram` runs
   fusion and identity removal to a joint fixpoint, which terminates because
   every firing removes exactly one spider.
+- `docs/CLI.md`, `docs/CRATE_GRAPH.md`, `docs/OWNERSHIP.md` and the 35
+  per-crate testing guides are present again. The book deletion removed them
+  without retiring the generators that own them, so `crate_ownership.py`,
+  `testing_guides.py` and `cli_docs.py` each failed `--check` against a tree
+  their own `--write` reproduces, and `docs/DOCS.toml` listed two pages out of
+  forty. `docs/optimization/OWNERSHIP.toml` also assigned two scopes that match
+  nothing: a gitignored `BACKLOG.md`, which made the architecture-docs verdict
+  depend on an untracked file, and a deleted `docs/catalog/**`.
+- Four release surfaces named documents the book deletion removed, and each
+  failed open. `release_contract_path` pointed at `docs/RELEASE.md` and now
+  names `release-train.toml`, the surviving authority for versions, tags,
+  package membership and the approval-gated actions. `hygiene-matrix` listed
+  `docs/RELEASE.md` three times and skipped every entry that is not a file, so
+  it reported clean while scanning none of the documents it names; a listed
+  document that is absent is now a finding. The version matrix resolved release
+  notes to `docs/release/v<version>.md` and repeated one path twice, so its
+  tag-command scan spent its blockers on unreadable files and double-counted
+  the one file it could read. `scripts/final-launch.sh` passed that same
+  missing page to `gh release create --notes-file`, so the last outward step of
+  a release would have failed after the crates were published;
+  `scripts/release_docs.py` now generates
+  `release/evidence/docs/release-notes-body.md` from the fragments the
+  changelog is built from and `--check` holds the two together.
+- `release/changes/unreleased.toml` parses again. Two fragments had been
+  appended without their `[[fragments]]` header, so the second `id` key
+  overwrote the first and every release-docs command failed at the TOML parser
+  before it reached a verdict.
+- Strength reduction folds a chained shift whose counts reach the register
+  width to zero again. It had been changed to leave both shifts standing, on
+  the reasoning that a right shift on a signed operand replicates the sign bit,
+  but V094 rejects a shift whose operands are not `u32`, so that operand cannot
+  reach the pass. The fused shift is not an alternative: the target text masks
+  a shift count with `& 31`, so emitting `x << 32` would emit `x`.
 - The public-API snapshot gate reports a crate it could not read instead of
   skipping it. Two paths dropped a package out of the comparison without a
   word: a publishable package whose `src` directory was missing, and an
@@ -3451,6 +3521,39 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   state in which a crate most needs to be checked. Both are findings now, and
   an extraction that exits nonzero prints what `cargo public-api` said rather
   than a bare sentence naming the crate.
+- `vyre-release-gate` implements the `Gate` contract. The registry assigned it
+  to `xtask-evidence` and no implementation existed, so that crate's own table
+  check failed. Options now parse from the runner's argument offset instead of
+  argv position 2, the default manifest resolves under the context root instead
+  of through a second checkout probe, and the two exit paths become one
+  `Report` whose findings are the blockers and whose note carries the
+  requirement count and the scope. `--help` left the option parser because
+  `help()` answers it, and `GateOptions` derives `Debug`, without which the
+  crate's lib test did not compile.
+- The release gate no longer replays an aggregate's recorded freshness verdicts
+  as live findings. Thirty-seven of the thirty-eight blockers stored in
+  `cuda-release-suite.json`, `bench-release-axes.json` and
+  `cpu-only-100x-proof.json` embed a hash labelled "current workspace source"
+  that was current when the aggregate was written, so the gate printed a value
+  no reader can resolve and that disagrees with the one the same run computes.
+  Freshness is recomputed against the tree the gate is running on; every other
+  recorded verdict is replayed unchanged.
+- The optimizer compiles for the adapter it was given. `Autotune` and
+  `DecodeScanFuse` both read device facts, and both hardcoded
+  `AdapterCaps::conservative()` in their `ProgramPass::transform`, so every
+  program that went through the standard pipeline was tuned for a device with
+  no optional features whatever the real adapter reported; the caps-aware
+  `transform_for_adapter` existed the whole time and only a caller who already
+  knew to ask could reach it. Nothing failed, which is why it lasted: the
+  pipeline produced a valid program and a slower one. `ProgramPass` now
+  declares `transform_for_adapter`, whose default discards the adapter because
+  an IR-only rewrite is the same program on every device, and
+  `#[vyre_pass(adapter_dependent = true)]` is how a pass says its output moves
+  with the device. `PassScheduler` carries the adapter it was built for,
+  `PassScheduler::for_adapter` and `optimize_for_adapter` are the entries a
+  backend uses once it has probed one, and a scheduler built without an adapter
+  states the conservative fallback at the place that chose it instead of
+  leaving it to whichever pass reached for a profile first.
 
 ## [0.7.1] - 2026-08-01
 

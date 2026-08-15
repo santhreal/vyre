@@ -1,3 +1,11 @@
-# Release fragments are append-only; a textual three-way merge of two lanes
-# adding rows at the end drops the [[fragments]] header at the seam.
+# Changelog fragments are append-only, so take both sides of every merge.
+#
+# Five merges in one day produced the same corruption: two branches append a
+# fragment at the same offset, the `[[fragments]]` header line is identical
+# context on both sides, and the three-way merge keeps one header for two ids.
+# The second id then parses as a duplicate key inside the first fragment, the
+# file stops being valid TOML, and every release-docs verdict behind the parse
+# becomes unreachable until someone recognizes the failure. Union merge keeps
+# both sides' added lines, headers included, which is the correct resolution for
+# a file nobody edits in place.
 release/changes/unreleased.toml merge=union

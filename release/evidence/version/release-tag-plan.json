@@ -6,8 +6,8 @@
     "vyre-v0.7.2-rc.1",
     "vyre-v0.7.2"
   ],
-  "required_gate_before_rc_tag": "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
-  "required_gate_before_tag": "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
+  "required_gate_before_rc_tag": "cargo_full run --bin xtask -- version-matrix && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
+  "required_gate_before_tag": "cargo_full run --bin xtask -- version-matrix && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
   "version_matrix_blocker_count": 0,
   "blockers": []
 }

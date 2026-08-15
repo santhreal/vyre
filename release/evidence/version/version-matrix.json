@@ -153,13 +153,6 @@
       "publishable": true
     },
     {
-      "package": "vyre-frontend-rust",
-      "version": "0.7.2",
-      "manifest": "vyre-frontend-rust/Cargo.toml",
-      "release_group": "vyre",
-      "publishable": false
-    },
-    {
       "package": "vyre-grammar-gen",
       "version": "0.7.2",
       "manifest": "vyre-grammar-gen/Cargo.toml",
@@ -565,13 +558,6 @@
     {
       "lockfile": "Cargo.lock",
       "package": "vyre-foundation",
-      "version": "0.7.2",
-      "expected": "0.7.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "Cargo.lock",
-      "package": "vyre-frontend-rust",
       "version": "0.7.2",
       "expected": "0.7.2",
       "release_group": "vyre"

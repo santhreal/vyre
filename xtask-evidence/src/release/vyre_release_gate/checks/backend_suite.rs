@@ -9,6 +9,27 @@ use crate::bench::benchmark_evidence_semantics::{
     BackendSuiteArtifactStatusIssue, BackendSuiteBackendIssue, BackendSuiteParityIssue,
 };
 
+/// A recorded blocker that froze a freshness verdict is not replayed as a live
+/// finding.
+///
+/// Each aggregate under `release/evidence/benchmarks/` stores the blockers it
+/// computed when it was generated. Thirty-seven of the thirty-eight recorded
+/// across `cuda-release-suite.json`, `bench-release-axes.json` and
+/// `cpu-only-100x-proof.json` have one shape: a source artifact's
+/// `source_tree_fingerprint` against the workspace source as it stood at
+/// generation time. Replaying that text prints a hash labelled "current
+/// workspace source" that is not the current workspace source, so a reader who
+/// searches for it finds nothing, and it disagrees with the hash the same run
+/// prints from `check_source_fingerprint_freshness`, which recomputes the same
+/// verdict against the tree the gate is running on. The stale tree is still
+/// reported, once, with a hash that resolves.
+///
+/// Any other recorded blocker - a failed case, a wrong answer, a missing metric
+/// - is a verdict nothing here recomputes, and is replayed unchanged.
+fn is_frozen_freshness_verdict(blocker: &str) -> bool {
+    blocker.contains("does not match current workspace source")
+}
+
 pub(crate) fn check_backend_suite_report(
     requirement: &Requirement,
     base_dir: &Path,
@@ -58,10 +79,13 @@ pub(crate) fn check_backend_suite_report(
     match report.get("blockers").and_then(serde_json::Value::as_array) {
         Some(blockers) => {
             for blocker in blockers {
+                let text = blocker.as_str().unwrap_or("<non-string blocker>");
+                if is_frozen_freshness_verdict(text) {
+                    continue;
+                }
                 failures.push(format!(
-                    "requirement `{}` backend suite `{suffix}` reports blocker: {}",
-                    requirement.id,
-                    blocker.as_str().unwrap_or("<non-string blocker>")
+                    "requirement `{}` backend suite `{suffix}` reports blocker: {text}",
+                    requirement.id
                 ));
             }
         }
@@ -770,6 +794,65 @@ mod backend_suite_tests {
                 "requirement `cuda-first-path` backend suite `cuda-release-suite.json` is missing blockers array"
             )),
             "Fix: backend suite release gate must fail closed when generated suite evidence omits blockers; failures={failures:?}"
+        );
+    }
+
+    /// A frozen freshness verdict is dropped; every other recorded blocker is
+    /// replayed.
+    ///
+    /// Both halves matter and the filter is one `contains`, so a widening that
+    /// starts swallowing real recorded verdicts has to turn the second
+    /// assertion red rather than merely lowering the finding count.
+    #[test]
+    fn backend_suite_report_replays_recorded_blockers_except_frozen_freshness_verdicts() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for suite blocker replay test.");
+        let release_dir = dir.path().join("release");
+        let benchmark_dir = release_dir.join("evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create benchmark evidence directory for suite blocker replay test.");
+        std::fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "family_count": 0,
+                "artifacts": [],
+                "artifact_statuses": [],
+                "blockers": [
+                    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-01.json`: source_tree_fingerprint `source-tree-v1:old` does not match current workspace source `source-tree-v1:older`",
+                    "case `release.condition_eval.1m` failed: wrong answer"
+                ]
+            }))
+            .expect("Fix: serialize CUDA suite with mixed recorded blockers."),
+        )
+        .expect("Fix: write CUDA suite with mixed recorded blockers.");
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "CUDA first path".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
+        };
+        let mut failures = Vec::new();
+
+        check_backend_suite_report(
+            &requirement,
+            &release_dir,
+            "cuda-release-suite.json",
+            &mut failures,
+        );
+
+        assert!(
+            !failures
+                .iter()
+                .any(|failure| failure.contains("does not match current workspace source")),
+            "Fix: the gate must recompute freshness against the current tree instead of replaying a hash that was current when the aggregate was written; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "reports blocker: case `release.condition_eval.1m` failed: wrong answer"
+            )),
+            "Fix: a recorded verdict the gate does not recompute must still be replayed; failures={failures:?}"
         );
     }
 
