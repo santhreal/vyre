@@ -5,7 +5,6 @@
 //! first-workgroup consumer aligned if the IR representation changes.
 
 use std::fs;
-use std::path::{Path, PathBuf};
 
 use proc_macro2::LineColumn;
 use syn::spanned::Spanned;
@@ -109,36 +108,6 @@ fn raw_guard_locations(source: &str) -> Result<Vec<LineColumn>, syn::Error> {
     Ok(visitor.locations)
 }
 
-fn workspace_member_src_dirs(root: &Path) -> Vec<PathBuf> {
-    let manifest_path = root.join("Cargo.toml");
-    let manifest_text = fs::read_to_string(&manifest_path).unwrap_or_else(|error| {
-        panic!(
-            "Fix: canonical first-workgroup gate cannot read {}: {error}",
-            manifest_path.display()
-        )
-    });
-    let manifest: toml::Value = toml::from_str(&manifest_text).unwrap_or_else(|error| {
-        panic!(
-            "Fix: canonical first-workgroup gate cannot parse {}: {error}",
-            manifest_path.display()
-        )
-    });
-    manifest["workspace"]["members"]
-        .as_array()
-        .expect("Fix: workspace.members must remain an explicit array")
-        .iter()
-        .map(|member| {
-            root.join(
-                member
-                    .as_str()
-                    .expect("Fix: every workspace member must be a string"),
-            )
-            .join("src")
-        })
-        .filter(|path| path.is_dir())
-        .collect()
-}
-
 /// Every production source must use the canonical first-workgroup builder.
 ///
 /// This scans parsed Rust expressions rather than source substrings, so comments,
@@ -149,36 +118,29 @@ fn workspace_sources_reject_raw_first_workgroup_predicates() {
     let canonical_path = root.join(CANONICAL_BUILDER);
     let mut violations = Vec::new();
 
-    for src_dir in workspace_member_src_dirs(&root) {
-        for entry in walkdir::WalkDir::new(src_dir) {
-            let entry = entry.expect("Fix: every workspace source path must be readable");
-            let path = entry.path();
-            if !entry.file_type().is_file()
-                || path.extension().is_none_or(|extension| extension != "rs")
-                || path == canonical_path
-            {
-                continue;
-            }
-            let source = fs::read_to_string(path).unwrap_or_else(|error| {
-                panic!(
-                    "Fix: canonical first-workgroup gate cannot read {}: {error}",
-                    path.display()
-                )
-            });
-            let locations = raw_guard_locations(&source).unwrap_or_else(|error| {
-                panic!(
-                    "Fix: canonical first-workgroup gate cannot parse {}: {error}",
-                    path.display()
-                )
-            });
-            for location in locations {
-                violations.push(format!(
-                    "{}:{}:{}",
-                    path.strip_prefix(&root).unwrap_or(path).display(),
-                    location.line,
-                    location.column + 1
-                ));
-            }
+    for path in super::common::workspace_member_sources(&root) {
+        if path == canonical_path {
+            continue;
+        }
+        let source = fs::read_to_string(&path).unwrap_or_else(|error| {
+            panic!(
+                "Fix: canonical first-workgroup gate cannot read {}: {error}",
+                path.display()
+            )
+        });
+        let locations = raw_guard_locations(&source).unwrap_or_else(|error| {
+            panic!(
+                "Fix: canonical first-workgroup gate cannot parse {}: {error}",
+                path.display()
+            )
+        });
+        for location in locations {
+            violations.push(format!(
+                "{}:{}:{}",
+                path.strip_prefix(&root).unwrap_or(&path).display(),
+                location.line,
+                location.column + 1
+            ));
         }
     }
 

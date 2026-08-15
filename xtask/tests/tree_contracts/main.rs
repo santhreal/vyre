@@ -22,6 +22,7 @@ mod cli_docs;
 mod crate_ownership_registry;
 mod crate_readmes;
 mod feature_isolation;
+mod nested_byte_row_types;
 mod public_api_snapshot_inventory;
 mod relation_import_certificates;
 mod subcommand_dispatch;
