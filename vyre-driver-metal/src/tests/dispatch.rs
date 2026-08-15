@@ -3,20 +3,13 @@
 
 use crate::*;
 
+use super::fixtures::{one_word_output, stores_word};
+use vyre_driver::DispatchConfig;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
 #[test]
 fn apple_dispatches_store_literal_program() {
-    use vyre_driver::DispatchConfig;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-        ],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
-    );
+    let program = stores_word(42);
 
     let backend = acquire().expect(
         "Fix: Apple Metal builds must acquire the system default MTLDevice before dispatch.",
@@ -28,82 +21,7 @@ fn apple_dispatches_store_literal_program() {
 }
 
 #[test]
-fn apple_native_metal_matches_wgpu_on_same_program_bytes() {
-    use vyre_driver::{DispatchConfig, VyreBackend as _};
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-    let idx = Expr::var("idx");
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::U32).with_count(8),
-            BufferDecl::storage("b", 1, BufferAccess::ReadOnly, DataType::U32).with_count(8),
-            BufferDecl::storage("out", 2, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(8)
-                .with_output_byte_range(0..32),
-        ],
-        [8, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::lt(idx.clone(), Expr::u32(8)),
-                vec![Node::store(
-                    "out",
-                    idx.clone(),
-                    Expr::add(
-                        Expr::load("a", idx.clone()),
-                        Expr::mul(Expr::load("b", idx), Expr::u32(3)),
-                    ),
-                )],
-            ),
-        ],
-    );
-    let a = [1u32, 2, 3, 4, 5, 6, 7, 8]
-        .into_iter()
-        .flat_map(u32::to_le_bytes)
-        .collect::<Vec<_>>();
-    let b = [10u32, 11, 12, 13, 14, 15, 16, 17]
-        .into_iter()
-        .flat_map(u32::to_le_bytes)
-        .collect::<Vec<_>>();
-    let expected = [31u32, 35, 39, 43, 47, 51, 55, 59]
-        .into_iter()
-        .flat_map(u32::to_le_bytes)
-        .collect::<Vec<_>>();
-
-    let metal = acquire().expect(
-        "Fix: Apple Metal builds must acquire the system default MTLDevice before differential dispatch.",
-    );
-    let wgpu = vyre_driver_wgpu::WgpuBackend::acquire()
-        .expect("Fix: WGPU-on-Metal must acquire on the Apple GPU differential lane.");
-    let config = DispatchConfig::default();
-    let metal_outputs = metal
-        .dispatch(&program, &[a.clone(), b.clone()], &config)
-        .expect("Fix: native Metal must dispatch the differential Program.");
-    let wgpu_outputs = wgpu
-        .dispatch(&program, &[a, b], &config)
-        .expect("Fix: WGPU-on-Metal must dispatch the same differential Program.");
-
-    assert_eq!(
-        metal_outputs,
-        vec![expected.clone()],
-        "Fix: native Metal output must match the explicit byte oracle before comparing backends."
-    );
-    assert_eq!(
-        wgpu_outputs,
-        vec![expected],
-        "Fix: WGPU-on-Metal output must match the explicit byte oracle before comparing backends."
-    );
-    assert_eq!(
-        metal_outputs, wgpu_outputs,
-        "Fix: native Metal and WGPU-on-Metal must produce byte-identical outputs for the same Program."
-    );
-}
-
-#[test]
 fn apple_dispatch_handles_empty_and_unaligned_output_ranges() {
-    use vyre_driver::DispatchConfig;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
     let program = Program::wrapped(
         vec![
             BufferDecl::storage("empty", 0, BufferAccess::WriteOnly, DataType::U32)
@@ -132,18 +50,7 @@ fn apple_dispatch_handles_empty_and_unaligned_output_ranges() {
 
 #[test]
 fn apple_dispatch_config_errors_are_actionable() {
-    use vyre_driver::DispatchConfig;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-        ],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
-    );
+    let program = stores_word(42);
 
     let backend = acquire().expect(
         "Fix: Apple Metal builds must acquire the system default MTLDevice before negative dispatch tests.",
@@ -174,9 +81,6 @@ fn apple_dispatch_config_errors_are_actionable() {
 
 #[test]
 fn apple_dispatch_grid_uses_declared_output_count_not_trimmed_readback() {
-    use vyre_driver::DispatchConfig;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
     let local = Expr::var("local");
     let token = Expr::var("token");
     let program = Program::wrapped(
@@ -217,9 +121,6 @@ fn apple_dispatch_grid_uses_declared_output_count_not_trimmed_readback() {
 
 #[test]
 fn apple_dispatch_allocates_threadgroup_memory() {
-    use vyre_driver::DispatchConfig;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
     let local = Expr::var("local");
     let program = Program::wrapped(
         vec![
@@ -276,15 +177,7 @@ fn apple_dispatch_allocates_threadgroup_memory() {
 
 #[test]
 fn apple_dispatch_allocates_internal_trap_sidecar() {
-    use vyre_driver::DispatchConfig;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-        ],
+    let program = one_word_output(
         [1, 1, 1],
         vec![
             Node::store("out", Expr::u32(0), Expr::u32(42)),
@@ -303,15 +196,7 @@ fn apple_dispatch_allocates_internal_trap_sidecar() {
 
 #[test]
 fn apple_dispatches_subgroup_size_builtin() {
-    use vyre_driver::DispatchConfig;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-        ],
+    let program = one_word_output(
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::subgroup_size())],
     );
@@ -341,18 +226,7 @@ fn apple_dispatches_subgroup_size_builtin() {
 
 #[test]
 fn apple_borrowed_dispatch_into_reuses_caller_output_slots() {
-    use vyre_driver::DispatchConfig;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-        ],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(123))],
-    );
+    let program = stores_word(123);
 
     let backend = acquire().expect(
         "Fix: Apple Metal builds must acquire the system default MTLDevice before borrowed-into dispatch.",
@@ -379,18 +253,7 @@ fn apple_borrowed_dispatch_into_reuses_caller_output_slots() {
 
 #[test]
 fn apple_borrowed_timed_dispatch_reports_enqueue_and_wait() {
-    use vyre_driver::DispatchConfig;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-        ],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(77))],
-    );
+    let program = stores_word(77);
 
     let backend = acquire().expect(
         "Fix: Apple Metal builds must acquire the system default MTLDevice before timed dispatch.",

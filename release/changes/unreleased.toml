@@ -1638,3 +1638,23 @@ text = "The test guides for `vyre-driver` and `vyre-driver-wgpu` describe what t
 id = "wgpu-loop-carrier-token-ids-from-owner"
 category = "Fixed"
 text = "`vyre-driver-wgpu`'s loop-carrier scope-latch dispatch test reads `TOK_LBRACE` and `TOK_RBRACE` from `vyre_spec::c11_token` instead of declaring its own pair with the values 1 and 2. Those two declarations were the only `TOK_`-prefixed constants outside `vyre-spec` in the tree, so `vyre-spec`'s `no_file_outside_the_owner_declares_a_token_id` failed on this file. The test pins the shape the c-parser scope walker emits, and it now pins that shape against the real numbering the walker actually sees: the canonical ids are 12 and 13. Nothing observable moves, because the program compares `scope_kind` for equality against the same constants the fixture inputs are built from, and every assertion is on `scope_open` and `scope_depth`."
+
+[[fragments]]
+id = "metal-test-program-shape-one-owner"
+category = "Changed"
+text = "The programs the native Metal tests dispatch have one owner in `vyre-driver-metal/src/tests/fixtures.rs`. The single WriteOnly `u32` output word, declared with count 1 and an output byte range of 0..4, was restated at nine call sites across four modules, and the ReadOnly-input-plus-WriteOnly-output pair at four more, twice byte for byte inside one file. The declared element count and the output byte range together decide how many bytes the backend collects, so every test asserting a single little-endian word was asserting against a shape it also restated: one edited count would have retargeted the assertion at a different number of bytes in one place and left the others agreeing with each other. Each module now imports what it uses once at module scope instead of repeating the same two `use` lines inside every test function."
+
+[[fragments]]
+id = "metal-wgpu-differential-own-module"
+category = "Changed"
+text = "The native Metal against wgpu-on-Metal comparison lives in `vyre-driver-metal/src/tests/wgpu_differential.rs`. It was the second test in the one-shot dispatch module, whose subject is what Metal does with a program rather than whether two backends agree."
+
+[[fragments]]
+id = "metal-metric-counter-table"
+category = "Changed"
+text = "`vyre-driver-metal`'s `backend_metric_snapshot` builds its scalar counters from a name-and-accessor table rather than fourteen hand-written pushes. A counter added to `MetalMetrics` and forgotten in the snapshot was previously invisible, because the push list carried no relation to the struct. The resident-buffer branch moved to `push_resident_table_metrics` next to the lock helper it shares a failure mode with, and the comment explaining the poison sentinel states the reason instead of citing an internal rule number."
+
+[[fragments]]
+id = "metal-poison-sentinel-test-poisons"
+category = "Fixed"
+text = "`vyre-driver-metal`'s poisoned-resident-table test poisons the lock. It was named for the poison path and documented the sentinel, then contained a comment-only block whose note explained that `MetalBackend` does not expose `resident_buffers`, and asserted only that a healthy snapshot carries both resident keys with a count of zero. It could not fail on the bug it existed for. It now allocates a resident buffer, poisons the table from a thread that panics while holding the lock, and asserts the count and byte total are both `u64::MAX`, that `metal_resident_buffer_error` is 1, and that the unrelated counters survive. The healthy test asserts the error key is absent, so the pair separates poison from emptiness instead of proving one state twice. `resident_buffers` is `pub(crate)` because poisoning the lock is the only way to observe the contract."

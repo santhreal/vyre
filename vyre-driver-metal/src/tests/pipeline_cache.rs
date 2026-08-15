@@ -3,20 +3,12 @@
 
 use crate::*;
 
+use super::fixtures::stores_word;
+use vyre_driver::DispatchConfig;
+
 #[test]
 fn apple_dispatch_reuses_pipeline_cache_for_identical_program_and_policy() {
-    use vyre_driver::DispatchConfig;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-        ],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(99))],
-    );
+    let program = stores_word(99);
 
     let backend = acquire().expect(
         "Fix: Apple Metal builds must acquire the system default MTLDevice before cache testing.",
@@ -61,18 +53,7 @@ fn apple_dispatch_reuses_pipeline_cache_for_identical_program_and_policy() {
 
 #[test]
 fn apple_pipeline_cache_partitions_workgroup_policy_changes() {
-    use vyre_driver::DispatchConfig;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-        ],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(88))],
-    );
+    let program = stores_word(88);
 
     let backend = acquire().expect(
         "Fix: Apple Metal builds must acquire the system default MTLDevice before cache policy testing.",
@@ -132,18 +113,7 @@ fn apple_pipeline_cache_partitions_workgroup_policy_changes() {
 
 #[test]
 fn apple_shutdown_invalidates_pipeline_cache_entries() {
-    use vyre_driver::DispatchConfig;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-        ],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(144))],
-    );
+    let program = stores_word(144);
 
     let backend = acquire().expect(
         "Fix: Apple Metal builds must acquire the system default MTLDevice before lifecycle cache testing.",
