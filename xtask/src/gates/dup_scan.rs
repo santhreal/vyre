@@ -315,24 +315,182 @@ fn hash(window: &[String]) -> u64 {
     u64::from_le_bytes(bytes.as_bytes()[..8].try_into().unwrap_or([0; 8]))
 }
 
-fn render(counts: &BTreeMap<String, CrateCount>) -> String {
-    let mut text = String::from(
-        "# Duplicated source lines per crate, written by `xtask dup-scan --write-baseline`.\n\
-         #\n\
-         # A line counts as duplicated when an 8-line normalized shingle covering it\n\
-         # also appears in another file. More than the pin fails; less is reported so\n\
-         # the owning dedup PR can lower it here as part of its own diff.\n",
+/// Rewrite one crate's pin in place, leaving every other byte of the file alone.
+///
+/// Editing the text rather than serializing the parsed rows is the whole point:
+/// the file's leading comment block records which pins are deliberately tight
+/// and why neither side of a cross-crate pair can own the shape yet, and a
+/// serializer has no field to put that in. A writer that reproduced the rows
+/// and dropped the block destroyed the only record of the reasoning, which made
+/// the one job this file has, recording progress, corrupt the record instead.
+///
+/// `None` when the file pins no such crate.
+fn rewrite_pin(text: &str, name: &str, count: &CrateCount) -> Option<String> {
+    let mut out = Vec::new();
+    let mut in_block = false;
+    let mut found = false;
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed == "[[crate]]" {
+            in_block = false;
+        } else if let Some(value) = trimmed.strip_prefix("name = ") {
+            in_block = value.trim_matches('"') == name;
+            found |= in_block;
+        }
+        if in_block && trimmed.starts_with("duplicate_lines = ") {
+            out.push(format!("duplicate_lines = {}", count.duplicate_lines));
+            continue;
+        }
+        if in_block && trimmed.starts_with("total_lines = ") {
+            out.push(format!("total_lines = {}", count.total_lines));
+            continue;
+        }
+        out.push(line.to_string());
+    }
+    if !found {
+        return None;
+    }
+    let mut text = out.join("\n");
+    text.push('\n');
+    Some(text)
+}
+
+/// Insert a pin for a crate the file does not measure yet, in name order.
+///
+/// Rows are sorted by name so a new crate lands where a reader looks for it
+/// instead of at the end, and the file stays a diffable record.
+fn insert_pin(text: &str, name: &str, count: &CrateCount) -> String {
+    let row = format!(
+        "[[crate]]\nname = \"{name}\"\nduplicate_lines = {}\ntotal_lines = {}\n",
+        count.duplicate_lines, count.total_lines
     );
+    let lines: Vec<&str> = text.lines().collect();
+    for (index, line) in lines.iter().enumerate() {
+        if line.trim() != "[[crate]]" {
+            continue;
+        }
+        let existing = lines
+            .get(index + 1)
+            .and_then(|next| next.trim().strip_prefix("name = "))
+            .map(|value| value.trim_matches('"'))
+            .unwrap_or("");
+        if existing > name {
+            let mut out = lines[..index].join("\n");
+            out.push('\n');
+            out.push_str(&row);
+            out.push('\n');
+            out.push_str(&lines[index..].join("\n"));
+            out.push('\n');
+            return out;
+        }
+    }
+    let mut out = text.to_string();
+    if !out.ends_with('\n') {
+        out.push('\n');
+    }
+    out.push('\n');
+    out.push_str(&row);
+    out
+}
+
+/// Read the pinned baseline, or exit naming the file that could not be read.
+fn read_baseline(path: &Path) -> (String, BaselineFile) {
+    let text = fs::read_to_string(path).unwrap_or_else(|error| {
+        eprintln!("Fix: cannot read {}: {error}", path.display());
+        process::exit(1);
+    });
+    let baseline: BaselineFile = toml::from_str(&text).unwrap_or_else(|error| {
+        eprintln!("Fix: cannot parse {}: {error}", path.display());
+        process::exit(1);
+    });
+    (text, baseline)
+}
+
+/// Record every crate the baseline does not pin yet, and nothing else.
+///
+/// No bulk operation lowers a pin. A pin below its measurement is closing work
+/// some other checkout owns, and rewriting all 34 rows from one tree erased the
+/// intentional-red state those pins exist to hold. Lowering is `--lower-pin`,
+/// one crate at a time, in the diff that removed the duplication.
+fn write_baseline(root: &Path, counts: &BTreeMap<String, CrateCount>) {
+    let path = baseline_path(root);
+    let (mut text, baseline) = read_baseline(&path);
+    let mut added = Vec::new();
+    let mut lowerable = Vec::new();
     for (name, count) in counts {
         if count.duplicate_lines == 0 {
             continue;
         }
-        text.push_str("\n[[crate]]\n");
-        text.push_str(&format!("name = \"{name}\"\n"));
-        text.push_str(&format!("duplicate_lines = {}\n", count.duplicate_lines));
-        text.push_str(&format!("total_lines = {}\n", count.total_lines));
+        match baseline.crates.iter().find(|pin| &pin.name == name) {
+            None => {
+                text = insert_pin(&text, name, count);
+                added.push(name.clone());
+            }
+            Some(pin) if count.duplicate_lines < pin.duplicate_lines => {
+                lowerable.push(format!(
+                    "{name}: {} measured against a pinned {}",
+                    count.duplicate_lines, pin.duplicate_lines
+                ));
+            }
+            Some(_) => {}
+        }
     }
-    text
+    fs::write(&path, &text).unwrap_or_else(|error| {
+        eprintln!("Fix: cannot write {}: {error}", path.display());
+        process::exit(1);
+    });
+    if added.is_empty() {
+        println!("dup-scan: every measured crate is already pinned");
+    } else {
+        println!("dup-scan: pinned {} new crate(s):", added.len());
+        for name in &added {
+            println!("  - {name}");
+        }
+    }
+    for entry in &lowerable {
+        println!("  {entry}; record it with `dup-scan --lower-pin <crate>`");
+    }
+}
+
+/// Lower one crate's pin to what this tree measures.
+///
+/// Refuses to raise: a measurement above the pin is a regression to collapse,
+/// and the one thing this file must never do is move a pin up to make a
+/// regression pass.
+fn lower_pin(root: &Path, name: &str, counts: &BTreeMap<String, CrateCount>) {
+    let path = baseline_path(root);
+    let (text, baseline) = read_baseline(&path);
+    let Some(pin) = baseline.crates.iter().find(|pin| pin.name == name) else {
+        eprintln!("Fix: {} pins no crate named `{name}`", path.display());
+        process::exit(1);
+    };
+    let Some(count) = counts.get(name) else {
+        eprintln!("Fix: `{name}` is not a measured directory in this workspace");
+        process::exit(1);
+    };
+    if count.duplicate_lines > pin.duplicate_lines {
+        eprintln!(
+            "Fix: `{name}` measures {} duplicated lines against a pinned {}. A pin never moves up; collapse the new copy.",
+            count.duplicate_lines, pin.duplicate_lines
+        );
+        process::exit(1);
+    }
+    if count.duplicate_lines == pin.duplicate_lines {
+        println!("dup-scan: `{name}` is already pinned at {}", pin.duplicate_lines);
+        return;
+    }
+    let Some(updated) = rewrite_pin(&text, name, count) else {
+        eprintln!("Fix: {} has no editable row for `{name}`", path.display());
+        process::exit(1);
+    };
+    fs::write(&path, updated).unwrap_or_else(|error| {
+        eprintln!("Fix: cannot write {}: {error}", path.display());
+        process::exit(1);
+    });
+    println!(
+        "dup-scan: lowered `{name}` from {} to {}",
+        pin.duplicate_lines, count.duplicate_lines
+    );
 }
 
 /// Run the duplicate scan.
@@ -365,32 +523,25 @@ pub(crate) fn run(args: &[String]) {
 
     let counts = measure(&root);
 
-    if args.iter().any(|argument| argument == "--write-baseline") {
-        let path = baseline_path(&root);
-        fs::write(&path, render(&counts)).unwrap_or_else(|error| {
-            eprintln!("Fix: cannot write {}: {error}", path.display());
+    if let Some(position) = args.iter().position(|argument| argument == "--lower-pin") {
+        let Some(name) = args
+            .get(position + 1)
+            .filter(|value| !value.starts_with("--"))
+        else {
+            eprintln!("Fix: `--lower-pin` needs the crate whose row it lowers");
             process::exit(1);
-        });
-        let total: usize = counts.values().map(|count| count.duplicate_lines).sum();
-        println!(
-            "dup-scan: wrote {} ({total} duplicated lines)",
-            path.display()
-        );
+        };
+        lower_pin(&root, name, &counts);
+        return;
+    }
+
+    if args.iter().any(|argument| argument == "--write-baseline") {
+        write_baseline(&root, &counts);
         return;
     }
 
     let path = baseline_path(&root);
-    let text = fs::read_to_string(&path).unwrap_or_else(|error| {
-        eprintln!(
-            "Fix: cannot read {}: {error}. Regenerate it with `xtask dup-scan --write-baseline`.",
-            path.display()
-        );
-        process::exit(1);
-    });
-    let baseline: BaselineFile = toml::from_str(&text).unwrap_or_else(|error| {
-        eprintln!("Fix: cannot parse {}: {error}", path.display());
-        process::exit(1);
-    });
+    let (_, baseline) = read_baseline(&path);
 
     let mut failures = Vec::new();
     for pin in &baseline.crates {
@@ -408,15 +559,15 @@ pub(crate) fn run(args: &[String]) {
             ));
         } else if count.duplicate_lines < pin.duplicate_lines {
             println!(
-                "{}: {} duplicated lines, improved from {}; lower the pin",
-                pin.name, count.duplicate_lines, pin.duplicate_lines
+                "{}: {} duplicated lines, improved from {}; record it with `dup-scan --lower-pin {}`",
+                pin.name, count.duplicate_lines, pin.duplicate_lines, pin.name
             );
         }
     }
     for (name, count) in &counts {
         if count.duplicate_lines > 0 && !baseline.crates.iter().any(|pin| &pin.name == name) {
             failures.push(format!(
-                "`{name}` has {} duplicated lines and no pin; add one to xtask/dup-baseline.toml",
+                "`{name}` has {} duplicated lines and no pin; run `dup-scan --write-baseline` to record it",
                 count.duplicate_lines
             ));
         }
@@ -599,5 +750,108 @@ mod tests {
             "a crate whose only source is ignored is not measured at all"
         );
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// The baseline file as it is actually shaped: a justifying comment block
+    /// over name-ordered rows. Built here rather than read from disk so the
+    /// contract holds for the file's shape and not for today's contents.
+    fn baseline_fixture() -> String {
+        "# Duplicated source lines per crate.\n\
+         #\n\
+         # vyre-libs sits at its measured value but not at a floor.\n\
+         \n\
+         [[crate]]\n\
+         name = \"alpha\"\n\
+         duplicate_lines = 100\n\
+         total_lines = 1000\n\
+         \n\
+         [[crate]]\n\
+         name = \"gamma\"\n\
+         duplicate_lines = 50\n\
+         total_lines = 500\n"
+            .to_string()
+    }
+
+    fn count(duplicate_lines: usize, total_lines: usize) -> CrateCount {
+        CrateCount {
+            duplicate_lines,
+            total_lines,
+        }
+    }
+
+    /// WHY: the header is the only record of which pins are deliberately tight
+    /// and why neither side of a cross-crate pair can own the shape yet. The
+    /// serializing writer dropped it, so the one job this file has, recording
+    /// progress, corrupted the record. This is the regression that closes.
+    #[test]
+    fn lowering_a_pin_preserves_the_justifying_header() {
+        let updated = rewrite_pin(&baseline_fixture(), "alpha", &count(90, 990))
+            .expect("the fixture pins alpha");
+        assert!(
+            updated.contains("# vyre-libs sits at its measured value but not at a floor."),
+            "the comment block survives a pin edit: {updated}"
+        );
+        assert!(updated.contains("duplicate_lines = 90"));
+        assert!(updated.contains("total_lines = 990"));
+    }
+
+    /// WHY: a bulk rewrite from one checkout is how the intentional-red state of
+    /// another worktree's pins was erased. Editing one row must leave every
+    /// other row byte-identical, not re-derive it.
+    #[test]
+    fn lowering_one_pin_leaves_every_other_row_untouched() {
+        let updated = rewrite_pin(&baseline_fixture(), "alpha", &count(90, 990))
+            .expect("the fixture pins alpha");
+        assert!(
+            updated.contains("name = \"gamma\"\nduplicate_lines = 50\ntotal_lines = 500"),
+            "an unnamed crate's row is not rewritten: {updated}"
+        );
+    }
+
+    /// WHY: a name that is a prefix or suffix of another crate's name must not
+    /// match it. `vyre-libs` and `vyre-libs-extra` would both be edited by a
+    /// substring test, and the wrong row is worse than no edit.
+    #[test]
+    fn a_crate_the_file_does_not_pin_is_reported_rather_than_guessed() {
+        assert!(
+            rewrite_pin(&baseline_fixture(), "alph", &count(1, 2)).is_none(),
+            "a prefix of a pinned name is not that name"
+        );
+        assert!(
+            rewrite_pin(&baseline_fixture(), "beta", &count(1, 2)).is_none(),
+            "an absent crate has no row to rewrite"
+        );
+    }
+
+    /// WHY: a new crate must arrive measured, and it must land where a reader
+    /// looks for it. Appending at the end makes the file stop being ordered,
+    /// which is what makes its diffs readable.
+    #[test]
+    fn a_new_crate_is_inserted_in_name_order_under_the_header() {
+        let updated = insert_pin(&baseline_fixture(), "beta", &count(7, 70));
+        let alpha = updated.find("name = \"alpha\"").expect("alpha row");
+        let beta = updated.find("name = \"beta\"").expect("beta row");
+        let gamma = updated.find("name = \"gamma\"").expect("gamma row");
+        assert!(alpha < beta && beta < gamma, "rows stay name-ordered: {updated}");
+        assert!(updated.starts_with("# Duplicated source lines per crate."));
+        let parsed: BaselineFile =
+            toml::from_str(&updated).expect("the written file must still parse");
+        assert_eq!(
+            parsed.crates.len(),
+            3,
+            "insertion adds exactly one row"
+        );
+    }
+
+    /// WHY: a crate sorting after every pinned name has no row to insert before,
+    /// and the tail case is where a hand-written splice loses the last row.
+    #[test]
+    fn a_crate_sorting_last_is_appended_and_still_parses() {
+        let updated = insert_pin(&baseline_fixture(), "zeta", &count(3, 30));
+        let parsed: BaselineFile =
+            toml::from_str(&updated).expect("the written file must still parse");
+        let names: Vec<&str> = parsed.crates.iter().map(|pin| pin.name.as_str()).collect();
+        assert_eq!(names, vec!["alpha", "gamma", "zeta"]);
+        assert_eq!(parsed.crates[2].duplicate_lines, 3);
     }
 }

@@ -4,10 +4,12 @@
 # also appears in another file. More than the pin fails; less is reported so
 # the owning dedup PR can lower it here as part of its own diff.
 #
-# A pin is never raised. `--write-baseline` rewrites every row from the current
-# tree and drops this block, so it must not be used to record one crate's
-# progress; edit that crate's row by hand. A crate with duplication and no row
-# fails, so a new crate cannot arrive unmeasured.
+# A pin is never raised. `--write-baseline` adds a row for a crate that has none
+# and touches nothing else, so it cannot erase the intentional-red state of a
+# pin whose closing work another checkout owns. Lowering is
+# `--lower-pin CRATE`, one row, in the diff that removed the duplication; it
+# refuses to move a pin up. A crate with duplication and no row fails, so a new
+# crate cannot arrive unmeasured.
 #
 # vyre-primitives and vyre-libs sit at their measured values but not at a floor:
 # the iterative-solver builders in vyre-primitives duplicate against their
