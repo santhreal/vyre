@@ -12,7 +12,7 @@ use vyre_primitives::math::{
     },
     preconditioner::{newton_schulz_poly5_f32, newton_schulz_y_step},
     randomized_svd::randomized_projection_step,
-    sinkhorn_iterate::{sinkhorn_iterate, SinkhornBuffers, SinkhornExtents},
+    sinkhorn_iterate::{SinkhornBuffers, SinkhornExtents},
 };
 
 #[cfg(any(test, feature = "cpu-parity"))]
@@ -26,10 +26,6 @@ use vyre_primitives::math::{
     randomized_svd::{
         modified_gram_schmidt_cpu, modified_gram_schmidt_cpu_into, randomized_projection_step_cpu,
         randomized_projection_step_cpu_into,
-    },
-    sinkhorn_iterate::{
-        cpu_ref as sinkhorn_cpu_ref, cpu_ref_into as sinkhorn_cpu_ref_into, sinkhorn_col_residual,
-        sinkhorn_iterate_f64, sinkhorn_iterate_f64_into, sinkhorn_row_residual,
     },
 };
 
@@ -60,16 +56,11 @@ pub fn dispatch_newton_schulz_poly5_f32(mat: &str, output: &str, rows: u32, cols
 
 /// Build a quantized Sinkhorn fixed-point dispatch.
 ///
-/// A dispatch facade adds nothing to the primitive here: it forwards the same
-/// binding record and the same extents, so it takes them rather than restating
-/// the ten names and three dimensions as its own parameter list.
-#[must_use]
-pub fn dispatch_sinkhorn_iterate(
-    buffers: SinkhornBuffers<'_>,
-    extents: SinkhornExtents,
-) -> Program {
-    sinkhorn_iterate(buffers, extents)
-}
+/// A re-export rather than a facade: a facade would forward the same binding
+/// record and the same extents and add nothing, and the only thing it could add
+/// is a restatement of the primitive's parameter list that is free to drift from
+/// it. The composition names the primitive; it does not repeat it.
+pub use vyre_primitives::math::sinkhorn_iterate::sinkhorn_iterate as dispatch_sinkhorn_iterate;
 
 /// Build a Gaussian RDP per-step dispatch.
 #[must_use]
@@ -206,98 +197,32 @@ pub fn reference_newton_schulz_inverse_sqrt_into(
 }
 
 /// CPU quantized Sinkhorn reference.
-#[must_use]
+///
+/// Re-exported for the same reason as [`dispatch_sinkhorn_iterate`]: the
+/// wrapper's whole body was its nine-parameter positional list, which is where a
+/// transposed `k`/`k_t` or `m`/`n` hides, unprovable from either side.
 #[cfg(any(test, feature = "cpu-parity"))]
-#[allow(clippy::too_many_arguments)]
-pub fn reference_sinkhorn_quantized(
-    k: &[u32],
-    k_t: &[u32],
-    a: &[u32],
-    b: &[u32],
-    u_curr: &[u32],
-    v: &[u32],
-    m: u32,
-    n: u32,
-    max_iterations: u32,
-) -> (Vec<u32>, Vec<u32>, u32) {
-    sinkhorn_cpu_ref(k, k_t, a, b, u_curr, v, m, n, max_iterations)
-}
+pub use vyre_primitives::math::sinkhorn_iterate::cpu_ref as reference_sinkhorn_quantized;
 
 /// CPU quantized Sinkhorn reference into caller storage.
 #[cfg(any(test, feature = "cpu-parity"))]
-#[allow(clippy::too_many_arguments)]
-pub fn reference_sinkhorn_quantized_into(
-    k: &[u32],
-    k_t: &[u32],
-    a: &[u32],
-    b: &[u32],
-    u_curr: &[u32],
-    v: &[u32],
-    m: u32,
-    n: u32,
-    max_iterations: u32,
-    u_out: &mut Vec<u32>,
-    v_out: &mut Vec<u32>,
-    u_old: &mut Vec<u32>,
-) -> u32 {
-    sinkhorn_cpu_ref_into(
-        k,
-        k_t,
-        a,
-        b,
-        u_curr,
-        v,
-        m,
-        n,
-        max_iterations,
-        u_out,
-        v_out,
-        u_old,
-    )
-}
+pub use vyre_primitives::math::sinkhorn_iterate::cpu_ref_into as reference_sinkhorn_quantized_into;
 
 /// CPU f64 Sinkhorn-Knopp reference.
-#[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_sinkhorn_f64(
-    k: &[f64],
-    a: &[f64],
-    b: &[f64],
-    tolerance: f64,
-    max_iterations: u32,
-) -> (Vec<f64>, Vec<f64>, u32) {
-    sinkhorn_iterate_f64(k, a, b, tolerance, max_iterations)
-}
+pub use vyre_primitives::math::sinkhorn_iterate::sinkhorn_iterate_f64 as reference_sinkhorn_f64;
 
 /// CPU f64 Sinkhorn-Knopp reference into caller storage.
 #[cfg(any(test, feature = "cpu-parity"))]
-#[allow(clippy::too_many_arguments)]
-pub fn reference_sinkhorn_f64_into(
-    k: &[f64],
-    a: &[f64],
-    b: &[f64],
-    tolerance: f64,
-    max_iterations: u32,
-    u: &mut Vec<f64>,
-    v: &mut Vec<f64>,
-    u_old: &mut Vec<f64>,
-) -> u32 {
-    sinkhorn_iterate_f64_into(k, a, b, tolerance, max_iterations, u, v, u_old)
-}
+pub use vyre_primitives::math::sinkhorn_iterate::sinkhorn_iterate_f64_into as reference_sinkhorn_f64_into;
 
 /// CPU Sinkhorn row residual.
-#[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_sinkhorn_row_residual(k: &[f64], u: &[f64], v: &[f64], a: &[f64]) -> f64 {
-    sinkhorn_row_residual(k, u, v, a)
-}
+pub use vyre_primitives::math::sinkhorn_iterate::sinkhorn_row_residual as reference_sinkhorn_row_residual;
 
 /// CPU Sinkhorn column residual.
-#[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_sinkhorn_col_residual(k: &[f64], u: &[f64], v: &[f64], b: &[f64]) -> f64 {
-    sinkhorn_col_residual(k, u, v, b)
-}
+pub use vyre_primitives::math::sinkhorn_iterate::sinkhorn_col_residual as reference_sinkhorn_col_residual;
 
 /// CPU Gaussian RDP reference.
 #[must_use]
@@ -324,29 +249,6 @@ mod tests {
 
     /// The binding names the Sinkhorn dispatch tests build against.
     const SINKHORN_FIXTURE: SinkhornBuffers<'static> = SinkhornBuffers::CANONICAL;
-
-    /// The dispatch facade must emit exactly the primitive's program.
-    ///
-    /// It forwards the record and the extents and adds nothing, so the two
-    /// emissions must be byte-identical on the wire. Compared on the wire
-    /// encoding rather than a debug string, which would compare formatting.
-    #[test]
-    fn sinkhorn_dispatch_emits_the_primitive_program_unchanged() {
-        let extents = SinkhornExtents {
-            m: 17,
-            n: 17,
-            max_iterations: 4,
-        };
-        let encode = |program: &vyre_foundation::ir::Program| {
-            vyre_foundation::serial::wire::encode::to_wire(program)
-                .expect("Fix: a sinkhorn program must encode to the wire form.")
-        };
-        assert_eq!(
-            encode(&dispatch_sinkhorn_iterate(SINKHORN_FIXTURE, extents)),
-            encode(&sinkhorn_iterate(SINKHORN_FIXTURE, extents)),
-            "Fix: dispatch_sinkhorn_iterate must forward to the primitive, not restate its program."
-        );
-    }
 
     #[test]
     fn program_builders_emit_expected_numerical_primitives() {

@@ -17,7 +17,7 @@
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
 
 use proptest::prelude::*;
-use vyre_primitives::graph::motif::{cpu_ref, motif, MotifEdge};
+use vyre_primitives::graph::motif::{cpu_ref, motif, MotifEdge, TWO_EDGE_PATH_MOTIF};
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
 use vyre_reference::value::Value;
@@ -147,18 +147,7 @@ fn ir_matches_cpu_ref_on_present_and_partial_motifs() {
     let kind_mask = vec![1u32, 1];
 
     // Present 2-edge path motif {0->1, 1->2}: all present -> witness {0,1,2}.
-    let present = vec![
-        MotifEdge {
-            from: 0,
-            kind_mask: 1,
-            to: 1,
-        },
-        MotifEdge {
-            from: 1,
-            kind_mask: 1,
-            to: 2,
-        },
-    ];
+    let present = TWO_EDGE_PATH_MOTIF.to_vec();
     let expected = cpu_ref(node_count, &offsets, &targets, &kind_mask, &present);
     assert_eq!(
         expected,
@@ -173,23 +162,12 @@ fn ir_matches_cpu_ref_on_present_and_partial_motifs() {
 
     // Partial: {0->1, 1->2, 2->0}; the 2->0 edge does NOT exist -> matched_edges
     // (2) != edge_count (3) -> witness must stay ALL ZERO.
-    let partial = vec![
-        MotifEdge {
-            from: 0,
-            kind_mask: 1,
-            to: 1,
-        },
-        MotifEdge {
-            from: 1,
-            kind_mask: 1,
-            to: 2,
-        },
-        MotifEdge {
-            from: 2,
-            kind_mask: 1,
-            to: 0,
-        },
-    ];
+    let mut partial = TWO_EDGE_PATH_MOTIF.to_vec();
+    partial.push(MotifEdge {
+        from: 2,
+        kind_mask: 1,
+        to: 0,
+    });
     let empty = cpu_ref(node_count, &offsets, &targets, &kind_mask, &partial);
     assert_eq!(
         empty,

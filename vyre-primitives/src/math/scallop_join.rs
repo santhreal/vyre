@@ -86,9 +86,7 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
-use crate::math::scallop_persistent::{
-    ceil_div_u32, single_word_lineage_body, single_word_lineage_grid_sync_body,
-};
+use crate::math::scallop_persistent::{single_word_lineage_body, single_word_lineage_grid_sync_body};
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::math::semiring_gemm::{semiring_gemm_cpu_into, Semiring};
 
@@ -98,11 +96,12 @@ pub const OP_ID: &str = "vyre-primitives::math::scallop_join";
 pub const SCALLOP_JOIN_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
 /// Dispatch grid for the Scallop kernel.
+///
+/// One lane per relation cell, over the [`crate::graph::lane_grid`] owner, so
+/// the zero-relation case still yields a launchable grid.
 #[must_use]
 pub const fn scallop_join_dispatch_grid(_n: u32) -> [u32; 3] {
-    let cells = _n.saturating_mul(_n);
-    let blocks = ceil_div_u32(cells, SCALLOP_JOIN_WORKGROUP_SIZE[0]);
-    [if blocks == 0 { 1 } else { blocks }, 1, 1]
+    crate::graph::lane_grid(_n.saturating_mul(_n), SCALLOP_JOIN_WORKGROUP_SIZE[0])
 }
 
 /// Documentation hook for the recursion-thesis self-consumer wired in

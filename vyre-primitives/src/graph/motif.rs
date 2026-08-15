@@ -52,6 +52,27 @@ pub struct MotifEdge {
     pub to: u32,
 }
 
+/// The two-edge directed path `0 -> 1 -> 2`, both edges on kind mask 1.
+///
+/// The smallest motif that is not a single edge, so it is the pattern every
+/// parity suite reaches for: it distinguishes a matcher that walks the whole
+/// pattern from one that stops after the first edge. Four crates had each
+/// written the two `MotifEdge` literals out by hand, and a change to what
+/// `kind_mask` means, or to the node numbering a witness is indexed by, would
+/// have had to be applied to every copy separately.
+pub const TWO_EDGE_PATH_MOTIF: [MotifEdge; 2] = [
+    MotifEdge {
+        from: 0,
+        kind_mask: 1,
+        to: 1,
+    },
+    MotifEdge {
+        from: 1,
+        kind_mask: 1,
+        to: 2,
+    },
+];
+
 /// Primitive-owned cache identity for motif Programs.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MotifProgramCacheKey {
@@ -1018,18 +1039,7 @@ mod tests {
         endpoints.extend_from_slice(&[99, 98, 97]);
         let mut scratch = MotifCpuScratch { endpoints };
         let capacity = scratch.endpoints.capacity();
-        let motif = [
-            MotifEdge {
-                from: 0,
-                kind_mask: 1,
-                to: 1,
-            },
-            MotifEdge {
-                from: 1,
-                kind_mask: 1,
-                to: 2,
-            },
-        ];
+        let motif = TWO_EDGE_PATH_MOTIF;
 
         let count = try_cpu_ref_participation_count_with_scratch(
             3,
@@ -1137,18 +1147,7 @@ mod tests {
             &[0, 1, 2, 2],
             &[1, 2],
             &[1, 1],
-            &[
-                MotifEdge {
-                    from: 0,
-                    kind_mask: 1,
-                    to: 1,
-                },
-                MotifEdge {
-                    from: 1,
-                    kind_mask: 1,
-                    to: 2,
-                },
-            ],
+            &TWO_EDGE_PATH_MOTIF,
         );
         assert_eq!(witness, vec![1, 1, 1]);
     }
@@ -1160,18 +1159,7 @@ mod tests {
             &[0, 1, 1, 1],
             &[1],
             &[1],
-            &[
-                MotifEdge {
-                    from: 0,
-                    kind_mask: 1,
-                    to: 1,
-                },
-                MotifEdge {
-                    from: 1,
-                    kind_mask: 1,
-                    to: 2,
-                },
-            ],
+            &TWO_EDGE_PATH_MOTIF,
         );
         assert_eq!(witness, vec![0, 0, 0]);
     }
@@ -1184,18 +1172,7 @@ mod tests {
             &[0, 1, 2, 2],
             &[1, 2],
             &[1, 1],
-            &[
-                MotifEdge {
-                    from: 0,
-                    kind_mask: 1,
-                    to: 1,
-                },
-                MotifEdge {
-                    from: 1,
-                    kind_mask: 1,
-                    to: 2,
-                },
-            ],
+            &TWO_EDGE_PATH_MOTIF,
             &mut witness,
         );
         let capacity = witness.capacity();
@@ -1298,18 +1275,7 @@ mod tests {
 
     #[test]
     fn allocation_free_predicates_match_witness_contract() {
-        let motif = [
-            MotifEdge {
-                from: 0,
-                kind_mask: 1,
-                to: 1,
-            },
-            MotifEdge {
-                from: 1,
-                kind_mask: 1,
-                to: 2,
-            },
-        ];
+        let motif = TWO_EDGE_PATH_MOTIF;
         assert!(cpu_ref_matches(&[0, 1, 2, 2], &[1, 2], &[1, 1], &motif));
         assert_eq!(
             cpu_ref_participation_count(3, &[0, 1, 2, 2], &[1, 2], &[1, 1], &motif),

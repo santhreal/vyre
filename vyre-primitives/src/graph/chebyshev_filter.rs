@@ -376,75 +376,28 @@ pub fn try_chebyshev_filter_cpu_into(
             "chebyshev_filter_cpu n={n} overflows dense Laplacian indexing. Fix: shard or sparsify the graph before CPU parity evaluation."
         )
     })?;
-    let c0 = coeffs.first().copied().unwrap_or(0.0);
-    // Output starts as c_0 · signal
-    if n > out.capacity() {
-        crate::graph::scratch::reserve_graph_items(
-            out,
-            n - out.len(),
-            "Chebyshev graph-filter CPU oracle",
-            "chebyshev_filter_cpu output",
-        )?;
+    let degree = k_steps as usize;
+    resize_chebyshev_cpu_vec(out, n, "chebyshev_filter_cpu output")?;
+    if degree >= 1 {
+        resize_chebyshev_cpu_vec(t_prev, n, "chebyshev_filter_cpu T0")?;
+        resize_chebyshev_cpu_vec(t_curr, n, "chebyshev_filter_cpu T1")?;
     }
-    out.clear();
-    out.extend((0..n).map(|idx| c0 * signal.get(idx).copied().unwrap_or(0.0)));
-    if k_steps == 0 {
-        return Ok(());
+    if degree >= 2 {
+        resize_chebyshev_cpu_vec(t_next, n, "chebyshev_filter_cpu T_next")?;
     }
-
-    // T_0 = signal, T_1 = L̂ · signal
-    if n > t_prev.capacity() {
-        crate::graph::scratch::reserve_graph_items(
-            t_prev,
-            n - t_prev.len(),
-            "Chebyshev graph-filter CPU oracle",
-            "chebyshev_filter_cpu T0",
-        )?;
-    }
-    t_prev.clear();
-    t_prev.extend((0..n).map(|idx| signal.get(idx).copied().unwrap_or(0.0)));
-    t_curr.clear();
-    resize_chebyshev_cpu_vec(t_curr, n, 0.0, "chebyshev_filter_cpu T1")?;
-    for i in 0..n {
-        for j in 0..n {
-            t_curr[i] += laplacian.get(i * n + j).copied().unwrap_or(0.0) * t_prev[j];
-        }
-    }
-    let c1 = coeffs.get(1).copied().unwrap_or(0.0);
-    for i in 0..n {
-        out[i] += c1 * t_curr[i];
-    }
-
-    // Recurrence
-    for &c_k in coeffs.iter().take(k_steps as usize + 1).skip(2) {
-        t_next.clear();
-        resize_chebyshev_cpu_vec(t_next, n, 0.0, "chebyshev_filter_cpu T_next")?;
-        // lap_curr = L̂ · t_curr
-        for i in 0..n {
-            for j in 0..n {
-                t_next[i] += laplacian.get(i * n + j).copied().unwrap_or(0.0) * t_curr[j];
-            }
-        }
-        // t_next = 2 lap_curr - t_prev
-        for i in 0..n {
-            t_next[i] = 2.0 * t_next[i] - t_prev[i];
-        }
-        for i in 0..n {
-            out[i] += c_k * t_next[i];
-        }
-        std::mem::swap(t_prev, t_curr);
-        std::mem::swap(t_curr, t_next);
-    }
+    crate::chebyshev_recurrence::chebyshev_expansion_into(
+        laplacian, signal, coeffs, n, degree, out, t_prev, t_curr, t_next,
+    );
     Ok(())
 }
 
+/// Clear `out` and give it exactly `len` zeroed lanes, reserving first.
+///
+/// The reservation is checked against the length the caller arrived with, not
+/// against zero, so a buffer already wide enough is reused in place and a
+/// parity harness that hands the same scratch back every call never allocates.
 #[cfg(any(test, feature = "cpu-parity"))]
-fn resize_chebyshev_cpu_vec<T: Clone>(
-    out: &mut Vec<T>,
-    len: usize,
-    value: T,
-    context: &str,
-) -> Result<(), String> {
+fn resize_chebyshev_cpu_vec(out: &mut Vec<f32>, len: usize, context: &str) -> Result<(), String> {
     if len > out.capacity() {
         crate::graph::scratch::reserve_graph_items(
             out,
@@ -453,7 +406,8 @@ fn resize_chebyshev_cpu_vec<T: Clone>(
             context,
         )?;
     }
-    out.resize(len, value);
+    out.clear();
+    out.resize(len, 0.0);
     Ok(())
 }
 
