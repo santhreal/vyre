@@ -308,9 +308,6 @@ write = [
   "scripts/**",
   "release/evidence/**",
 ]
-avoid = [
-  "BACKLOG.md",
-]
 required_commands = [
   "cargo_full test -p vyre-foundation wire",
   "cargo_full test -p vyre-driver -p vyre-runtime",
@@ -464,7 +461,6 @@ parent_axis = "coordination"
 support_reason = "Op/backend coverage files support coordination evidence and are not a separate implementation axis."
 write = [
   "docs/optimization/OP_MATRIX.toml",
-  "docs/catalog/**",
   "docs/generated/**",
 ]
 required_commands = [
