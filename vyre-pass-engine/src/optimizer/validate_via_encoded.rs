@@ -285,7 +285,7 @@ pub fn build_validate_limits_program(expr_count: u32) -> Program {
             )],
         ),
         Node::Barrier {
-            ordering: vyre_foundation::MemoryOrdering::SeqCst,
+            ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
         },
         // CAS loop: each thread tries to bump violations[0] up to
         // local_max if its local_max is greater. Bounded by a small
@@ -305,14 +305,14 @@ pub fn build_validate_limits_program(expr_count: u32) -> Program {
                             Expr::u32(0),
                             Expr::var("cur"),
                             Expr::var("local_max"),
-                            vyre_foundation::MemoryOrdering::SeqCst,
+                            vyre_foundation::ir::MemoryOrdering::SeqCst,
                         ),
                     )],
                 ),
             ],
         ),
         Node::Barrier {
-            ordering: vyre_foundation::MemoryOrdering::SeqCst,
+            ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
         },
         // Thread 0 reads the final max + the limits and writes the
         // violations bitmap. We deliberately overwrite violations[0]

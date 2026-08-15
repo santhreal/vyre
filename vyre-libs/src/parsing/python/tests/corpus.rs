@@ -63,7 +63,7 @@ fn python_programs_validate() {
             64,
         ),
     ] {
-        let errors = vyre_foundation::ir::validate(&program);
+        let errors = vyre_foundation::validate::validate(&program);
         assert!(
             errors.is_empty(),
             "python parser program must validate: {errors:?}"

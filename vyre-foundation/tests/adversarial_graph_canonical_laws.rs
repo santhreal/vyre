@@ -15,7 +15,7 @@ use vyre_foundation::graph_view::{
 };
 use vyre_foundation::ir::{BinOp, Expr, Node, Program};
 use vyre_foundation::optimizer::passes::algebraic::canonicalize_engine as canonicalize;
-use vyre_foundation::transform::visit::for_each_node;
+use vyre_foundation::visit::for_each_node;
 
 #[path = "contract_cases/optimizer_program_corpus.rs"]
 mod corpus;
@@ -170,7 +170,7 @@ fn phi_chain_is_dropped_on_lowering() {
     );
 }
 
-/// Node descent comes from `transform::visit::for_each_node`, so a statement
+/// Node descent comes from `visit::for_each_node`, so a statement
 /// that survives lowering inside a nesting variant this file does not
 /// enumerate is still counted.
 fn count_stores(nodes: &[Node]) -> usize {

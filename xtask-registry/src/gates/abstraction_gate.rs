@@ -9,7 +9,7 @@ use std::collections::BTreeSet;
 
 use vyre::ir::{Node, Program};
 use vyre_foundation::composition::is_anonymous_generator;
-use vyre_foundation::transform::visit::child_bodies;
+use vyre_foundation::visit::child_bodies;
 use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
 const LOOP_BUDGET: usize = 4;
@@ -320,7 +320,7 @@ mod tests {
     /// arm that doubled as "this variant is a leaf". A `Node` variant that
     /// gained a body would have stopped being descended and the gate would
     /// have reported nothing about it while still exiting green. Children now
-    /// come from `transform::visit::child_bodies`, so a new nesting variant
+    /// come from `visit::child_bodies`, so a new nesting variant
     /// fails to compile there instead. This holds the observable half: a
     /// finding buried under each nesting variant still surfaces.
     #[test]

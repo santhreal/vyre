@@ -12,8 +12,8 @@ use rustc_hash::FxHashMap;
 use crate::ir::{
     node_variant_name, BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program,
 };
-use crate::transform::visit::{for_each_node, node_scalars, try_for_each_expr, NameBinding};
 use crate::validate::typecheck::{expr_type, TypeEnv};
+use crate::visit::{for_each_node, node_scalars, try_for_each_expr, NameBinding};
 
 use super::error::AutodiffError;
 mod expr;
@@ -367,7 +367,7 @@ impl AdjointEnv {
     /// walk this replaces produced, which matters because a later `Let`'s type
     /// is inferred from the types recorded by the earlier ones. Which name a
     /// statement binds, and what it does to it, comes from
-    /// [`node_scalars`](crate::transform::visit::node_scalars), so a `Node`
+    /// [`node_scalars`](crate::visit::node_scalars), so a `Node`
     /// variant that gains a binding position cannot leave a forward local
     /// untyped here and silently lose its adjoint.
     fn record_forward_types(&mut self, nodes: &[Node]) {
@@ -416,7 +416,7 @@ impl TypeEnv for AdjointEnv {
 ///
 /// Descent is [`for_each_node`], the one exhaustive owner of which variants
 /// nest, and the per-node answer is
-/// [`node_scalars`](crate::transform::visit::node_scalars), the one exhaustive
+/// [`node_scalars`](crate::visit::node_scalars), the one exhaustive
 /// owner of the scalar namespace. Only the declaring and rebinding forms need
 /// an accumulator; [`NameBinding::Induction`] names a loop counter the backward
 /// loop re-binds itself. A variant that later gains a binding position fails to

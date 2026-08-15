@@ -35,7 +35,7 @@
 use crate::ir::{Node, Program};
 use crate::memory_model::MemoryOrdering;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::transform::visit::any_body;
+use crate::visit::any_body;
 
 /// Coalesce consecutive `Node::Barrier` siblings into the join of their orderings.
 #[derive(Debug, Default)]
@@ -210,7 +210,7 @@ mod tests {
     /// The ordering of the first `Node::Barrier` at any depth, in source order.
     fn first_barrier_ordering(node: &Node) -> Option<MemoryOrdering> {
         let mut first = None;
-        crate::transform::visit::for_each_node(std::slice::from_ref(node), |candidate| {
+        crate::visit::for_each_node(std::slice::from_ref(node), |candidate| {
             if let Node::Barrier { ordering } = candidate {
                 first = first.or(Some(*ordering));
             }

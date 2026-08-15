@@ -21,14 +21,14 @@
 //! Three owners, one per Rust reference mode, and nothing else may enumerate
 //! the shape:
 //!
-//! - `transform::visit::child_bodies` for a shared read,
-//! - `transform::visit::child_bodies_mut` for a move or an in-place mutation,
+//! - `visit::child_bodies` for a shared read,
+//! - `visit::child_bodies_mut` for a move or an in-place mutation,
 //! - `transform::rewrite_walk::rewrite_node` for a borrow-preserving rebuild.
 //!
 //! Each is an independent exhaustive match, so this suite holds them to each
 //! other on arity, source order, and contents; a position added to one and
 //! forgotten in another is visible here and nowhere else. The scalar namespace
-//! has one owner, `transform::visit::node_scalars`, held to `node_shape` and to
+//! has one owner, `visit::node_scalars`, held to `node_shape` and to
 //! the rewriting walk the same way. The consumers that used to carry their own
 //! list (`map_body`, `walk_nodes_mut`, and the cost fold behind
 //! `CostCertificate::for_program`) are each required to reach a marker planted
@@ -62,17 +62,17 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{
     BinOp, BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program, NODE_VARIANT_NAMES,
 };
 use vyre_foundation::optimizer::cost::CostCertificate;
 use vyre_foundation::optimizer::{registered_pass_registrations, ProgramPass};
 use vyre_foundation::transform::rewrite_walk::{self, NodeRewrite};
-use vyre_foundation::transform::visit::{
+use vyre_foundation::visit::node_map::map_body;
+use vyre_foundation::visit::{
     child_bodies, child_bodies_mut, for_each_expr, node_scalars, node_shape, walk_nodes_mut,
 };
-use vyre_foundation::visit::node_map::map_body;
-use vyre_foundation::MemoryOrdering;
 use vyre_test_support::ir_variants::{
     assert_covers_every_node_variant, assert_samples_match_declared_shape, node_body_slot_samples,
     node_operand_samples, node_variant_samples, NodeSample,
@@ -470,7 +470,7 @@ fn fixture_buffers() -> Vec<BufferDecl> {
 /// the new variant simply never reaches whatever the visitor was counting.
 ///
 /// A scan that wants one or two variants and descent for the rest wants
-/// `transform::visit::try_for_each_node`, which takes a closure and gets its
+/// `visit::try_for_each_node`, which takes a closure and gets its
 /// descent from `child_bodies`. Adding an implementation without adding it here
 /// is the failure this list exists to force.
 const RECORDED_NODE_VISITORS: &[(&str, &str)] = &[
@@ -547,10 +547,10 @@ fn hook_for_variant(variant: &str) -> String {
 
 /// The hook names the trait declares, read from its declaration.
 fn declared_visitor_hooks() -> BTreeSet<String> {
-    let source = read_workspace_file("vyre-foundation/src/visit/traits.rs");
+    let source = read_workspace_file("vyre-foundation/src/visit/node_visitor.rs");
     let body = vyre_test_support::braced_body(&source, "pub trait NodeVisitor {").expect(
-        "Fix: no `pub trait NodeVisitor` in vyre-foundation/src/visit/traits.rs; this scan is \
-         reading the wrong file",
+        "Fix: no `pub trait NodeVisitor` in vyre-foundation/src/visit/node_visitor.rs; this scan \
+         is reading the wrong file",
     );
     body.match_indices("fn visit")
         .map(|(offset, _)| {
@@ -737,7 +737,7 @@ fn every_node_visitor_implementation_in_the_workspace_is_recorded() {
          RECORDED_NODE_VISITORS: {unrecorded:?}. Each one restates the whole Node enum by hand, \
          and Node is #[non_exhaustive] outside vyre-foundation, so the copy goes stale in \
          silence. A scan that wants a variant or two and descent for the rest wants \
-         transform::visit::try_for_each_node instead; if the per-variant dispatch really is the \
+         visit::try_for_each_node instead; if the per-variant dispatch really is the \
          work, record it with that reason."
     );
 
@@ -768,14 +768,14 @@ fn scan_node_visitor_implementations(hooks: &BTreeSet<String>) -> BTreeMap<Strin
             continue;
         };
         for (name, body) in impl_blocks_for_trait(&source, "NodeVisitor") {
-            // `transform::visit::NodeVisitor` shares the name and declares one
-            // hook. Only the abstract-by-default trait forces the enum out by
-            // hand, and only its implementors define the per-variant hooks.
+            // Every hook is abstract, so an implementor states the whole enum.
+            // A block that defines none of them is a trait of the same name in
+            // another crate, not this one.
             let per_variant = hooks
                 .iter()
                 .filter(|hook| body.contains(&format!("fn {hook}(")))
                 .count();
-            if per_variant >= 3 {
+            if per_variant > 0 {
                 found.insert(
                     name,
                     path.strip_prefix(&root).unwrap_or(&path).to_path_buf(),

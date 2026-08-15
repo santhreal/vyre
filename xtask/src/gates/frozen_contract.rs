@@ -8,7 +8,7 @@
 
 use std::collections::BTreeSet;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
@@ -416,7 +416,7 @@ impl Gate for FrozenContracts {
             ),
             (
                 "ExprVisitor",
-                "vyre-foundation/src/visit/expr/mod.rs",
+                "vyre-foundation/src/visit/expr_visitor/mod.rs",
                 "pub trait ExprVisitor",
             ),
             (
@@ -504,18 +504,74 @@ impl Gate for FrozenContracts {
                 ));
             }
         }
+        for orphan in orphan_snapshots(&tree.absolute(SNAPSHOTS), SNAPSHOTS, CONTRACTS)? {
+            report.find(Finding::in_file(
+                orphan.clone(),
+                format!("`{orphan}` snapshots a declaration this gate does not freeze"),
+                "add the declaration to the frozen set, or delete the snapshot, because a \
+                 snapshot nothing compares against freezes nothing",
+            ));
+        }
         Ok(report)
     }
 }
 
-/// The declaration block that starts at the keyword, indentation stripped.
+/// Snapshot files under `directory` that no frozen contract claims.
 ///
-/// The block ends where its braces balance, so a trait with a default body is
-/// captured whole and the next declaration is not.
+/// A snapshot is the only durable record of a frozen declaration, so one left
+/// behind by a deleted row reads as coverage that no longer exists.
+fn orphan_snapshots(
+    directory_path: &Path,
+    directory: &str,
+    contracts: &[(&str, &str, &str)],
+) -> Result<Vec<String>, GateError> {
+    let claimed: BTreeSet<String> = contracts
+        .iter()
+        .map(|(name, _, _)| format!("{directory}/{name}.txt"))
+        .collect();
+    let mut orphans = Vec::new();
+    let entries = fs::read_dir(directory_path).map_err(|error| {
+        GateError::new(
+            format!("cannot list `{directory}`: {error}"),
+            "restore the snapshot directory, because the frozen set is stored there",
+        )
+    })?;
+    for entry in entries {
+        let entry = entry.map_err(|error| {
+            GateError::new(
+                format!("cannot read an entry of `{directory}`: {error}"),
+                "check the checkout is readable",
+            )
+        })?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if !name.ends_with(".txt") {
+            continue;
+        }
+        let path = format!("{directory}/{name}");
+        if !claimed.contains(&path) {
+            orphans.push(path);
+        }
+    }
+    orphans.sort();
+    Ok(orphans)
+}
+
+/// The declaration of `keyword`: the item line, its signatures, and its closer.
+///
+/// The block ends where its braces balance. Three things are left out, because
+/// none of them is the frozen thing and each one moves on ordinary work: a
+/// default method body, a doc or code comment, and blank space. A snapshot that
+/// moved when a default body was refactored or a doc link was repointed would
+/// report a version event on every such edit, and a reader who has refreshed it
+/// twice for nothing stops reading it at all.
+///
+/// Braces are counted on the code alone. A comment is prose and a string is
+/// data, so neither nests the declaration.
 fn extract_declaration(text: &str, keyword: &str) -> Option<String> {
     let mut collected = String::new();
     let mut depth = 0_i32;
     let mut inside = false;
+    let mut open = false;
     for line in text.lines() {
         if !inside {
             if !line.contains(keyword) {
@@ -524,27 +580,44 @@ fn extract_declaration(text: &str, keyword: &str) -> Option<String> {
             inside = true;
         }
         let trimmed = line.trim_start();
-        if !trimmed.is_empty() {
-            collected.push_str(trimmed);
+        let prose = trimmed.is_empty() || scan::is_comment(trimmed);
+        let code = if prose {
+            String::new()
+        } else {
+            scan::mask_literals(trimmed)
+        };
+        let opened = i32::try_from(code.matches('{').count()).unwrap_or(i32::MAX);
+        let closed = i32::try_from(code.matches('}').count()).unwrap_or(i32::MAX);
+        if !prose && depth <= 1 {
+            if depth == 1 && opened > closed {
+                collected.push_str(&signature_of(trimmed));
+            } else {
+                collected.push_str(trimmed);
+            }
             collected.push('\n');
         }
-        for character in line.chars() {
-            match character {
-                '{' => depth += 1,
-                '}' => {
-                    depth -= 1;
-                    if depth == 0 {
-                        return Some(collected);
-                    }
-                }
-                _ => {}
-            }
+        depth += opened - closed;
+        if depth > 0 {
+            open = true;
+        } else if open {
+            return Some(collected);
         }
     }
     if inside && !collected.is_empty() {
         Some(collected)
     } else {
         None
+    }
+}
+
+/// A signature line with its body opener replaced by a terminator.
+///
+/// `fn probe(&self) -> bool {` reads as `fn probe(&self) -> bool;`, which is the
+/// part of it that callers depend on.
+fn signature_of(line: &str) -> String {
+    match line.rfind('{') {
+        Some(at) => format!("{};", line[..at].trim_end()),
+        None => line.to_string(),
     }
 }
 
@@ -571,10 +644,88 @@ pub trait Other {}
 ";
         let block = extract_declaration(text, "pub trait Example")
             .expect("the declaration is found");
-        assert!(block.starts_with("pub trait Example {\n"));
-        assert!(block.contains("fn two(&self) {\n"));
-        assert!(block.ends_with("}\n"));
-        assert!(!block.contains("Other"));
+        assert_eq!(
+            block,
+            "pub trait Example {\nfn one(&self);\nfn two(&self);\n}\n"
+        );
+    }
+
+    /// WHY: a default body and a doc comment both move on ordinary work. If
+    /// either were part of the snapshot, refactoring a default body or
+    /// repointing a doc link would report a major version event, and a reader
+    /// who has refreshed the snapshot twice for nothing stops reading it. Only
+    /// the signatures may move the bytes.
+    #[test]
+    fn neither_a_default_body_nor_a_comment_is_part_of_the_contract() {
+        let before = "\
+pub trait Example {
+    /// Probe the device.
+    ///
+    /// ```no_run
+    /// use vyre_foundation::Program;
+    /// # fn example(program: &Program) -> bool {
+    /// true
+    /// # }
+    /// ```
+    fn probe(&self) -> bool {
+        let mut count = 0;
+        for _ in 0..2 {
+            count += 1;
+        }
+        count > 0
+    }
+}
+";
+        let after = "\
+pub trait Example {
+    /// Probe the device, which is what the caller waits on.
+    ///
+    /// ```no_run
+    /// use vyre_foundation::ir::Program;
+    /// # fn example(program: &Program) -> bool {
+    /// true
+    /// # }
+    /// ```
+    fn probe(&self) -> bool {
+        helper(self)
+    }
+}
+";
+        let renamed = "\
+pub trait Example {
+    fn probe(&self, timeout: u64) -> bool {
+        helper(self)
+    }
+}
+";
+        let extract = |text| extract_declaration(text, "pub trait Example");
+        assert_eq!(
+            extract(before),
+            Some("pub trait Example {\nfn probe(&self) -> bool;\n}\n".to_string())
+        );
+        assert_eq!(extract(before), extract(after));
+        assert_ne!(extract(before), extract(renamed));
+    }
+
+    /// WHY: a brace inside a string literal is data, not nesting. Counting one
+    /// would end the declaration early and freeze half of it.
+    #[test]
+    fn a_brace_in_a_string_literal_does_not_close_the_declaration() {
+        let text = "\
+pub enum E {
+    A,
+}
+";
+        let braced = "\
+pub enum E {
+    A,
+}
+const FORMAT: &str = \"}\";
+";
+        assert_eq!(
+            extract_declaration(braced, "pub enum E"),
+            extract_declaration(text, "pub enum E")
+        );
     }
 
     /// WHY: indentation is stripped so a rustfmt width change does not read as a
@@ -621,5 +772,28 @@ pub struct Other {
             '{'
         ));
         assert!(!followed_by("// supported_ops is advertised", "supported_ops", ':'));
+    }
+
+    /// WHY: the frozen set is a table in this file and the snapshots are files on
+    /// disk. Deleting a row leaves its snapshot behind, where it reads as a
+    /// frozen declaration nothing compares against. The gate has to name it.
+    #[test]
+    fn a_snapshot_no_contract_claims_is_reported() {
+        let root = std::env::temp_dir().join(format!("vyre-frozen-orphan-{}", std::process::id()));
+        let snapshots = root.join("docs/frozen-traits");
+        fs::create_dir_all(&snapshots).expect("the fixture directory is created");
+        fs::write(snapshots.join("Claimed.txt"), "pub trait Claimed {}\n")
+            .expect("the claimed snapshot is written");
+        fs::write(snapshots.join("Retired.txt"), "pub trait Retired {}\n")
+            .expect("the retired snapshot is written");
+        fs::write(snapshots.join("notes.md"), "prose\n").expect("the note is written");
+
+        let contracts: &[(&str, &str, &str)] =
+            &[("Claimed", "src/claimed.rs", "pub trait Claimed")];
+        let orphans = orphan_snapshots(&snapshots, "docs/frozen-traits", contracts)
+            .expect("the snapshot directory is listed");
+
+        fs::remove_dir_all(&root).expect("the fixture is removed");
+        assert_eq!(orphans, vec!["docs/frozen-traits/Retired.txt".to_string()]);
     }
 }

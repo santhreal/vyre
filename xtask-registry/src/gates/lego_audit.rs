@@ -409,7 +409,7 @@ fn fingerprint_node(node: &Node, out: &mut Vec<u8>) {
             out.push(0xFF);
         }
         Node::Barrier {
-            ordering: vyre_foundation::MemoryOrdering::SeqCst,
+            ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
         } => out.push(0x08),
         Node::Region {
             source_region,

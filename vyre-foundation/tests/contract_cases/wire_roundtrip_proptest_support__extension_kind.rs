@@ -10,8 +10,8 @@ use ir_arbitrary::*;
 use proptest::prelude::*;
 use smallvec::smallvec;
 use std::sync::Arc;
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_foundation::MemoryOrdering;
 use vyre_spec::extension::ExtensionDataTypeId;
 use vyre_spec::TypeId;
 

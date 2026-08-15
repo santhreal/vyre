@@ -15,7 +15,7 @@
 //! driver wants. It cannot MOVE a body out, so a transform that consumes its
 //! input body (filtering a statement list, or recursing into each child by
 //! value) would have to clone every body at every level to use it. This map
-//! takes the slots through `transform::visit::child_bodies_mut` instead, so a
+//! takes the slots through `visit::child_bodies_mut` instead, so a
 //! body is moved, not copied.
 //!
 //! ## Recursion contract
@@ -27,7 +27,7 @@
 //! called.
 
 use crate::ir::Node;
-use crate::transform::visit::child_bodies_mut;
+use crate::visit::child_bodies_mut;
 
 /// Recurse one level into `node`'s child sequences and apply `f` to each
 /// immediate child node. Returns the rebuilt node.

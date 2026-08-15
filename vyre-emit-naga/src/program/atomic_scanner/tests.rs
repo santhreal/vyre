@@ -22,7 +22,7 @@
 
 use super::*;
 use vyre_foundation::ir::{Expr, Ident, Node};
-use vyre_foundation::transform::visit::node_buffer_refs;
+use vyre_foundation::visit::node_buffer_refs;
 use vyre_test_support::ir_variants::{
     assert_covers_every_node_variant, assert_samples_match_declared_shape, node_body_slot_samples,
     node_variant_samples,
@@ -53,7 +53,7 @@ fn a_nested_atomic_is_found_through_every_body_bearing_variant() {
                 .atomic
                 .contains(&Ident::from("nested_atomic_target")),
             "{} hides a nested atomic from the scan, so its element type will not wrap in \
-             atomic<...>. Fix: descend through vyre_foundation::transform::visit::child_bodies \
+             atomic<...>. Fix: descend through vyre_foundation::visit::child_bodies \
              instead of a per-variant match.",
             sample.label()
         );
@@ -111,7 +111,7 @@ fn every_variant_that_names_a_write_reports_it_as_a_write_target() {
                 targets.writes.contains(&name),
                 "{} writes `{name}` at the declaration site but the scan does not report it. \
                  Fix: take the write set from \
-                 vyre_foundation::transform::visit::node_buffer_refs, the exhaustive owner.",
+                 vyre_foundation::visit::node_buffer_refs, the exhaustive owner.",
                 sample.label()
             );
         }

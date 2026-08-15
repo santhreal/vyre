@@ -4,7 +4,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::ir::{CommGroup, Expr, Node, Program};
-use crate::transform::visit::child_bodies;
+use crate::visit::child_bodies;
 
 /// Error returned when a collective cannot be lowered without real transport.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -18,12 +18,6 @@ pub mod compiler;
 /// Shared-nothing parallel dispatch analysis.
 pub mod parallelism;
 
-/// IR visitor utilities.
-///
-/// Provides iterative traversal functions that walk nodes and expressions
-/// without recursion, preventing stack overflow on deeply nested programs.
-pub mod visit;
-
 /// The one structural `Node` rewrite.
 ///
 /// Substitution, fusion alpha-renaming, cache-key canonicalization, and the

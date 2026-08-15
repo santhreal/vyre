@@ -49,7 +49,7 @@
 use super::substitution::body_writes_loop_var;
 use crate::ir::{BinOp, Expr, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::transform::visit;
+use crate::visit;
 
 /// Drop redundant `if loop_var < to { ... }` guards inside loops with
 /// matching literal upper bounds.

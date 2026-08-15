@@ -12,9 +12,6 @@
 /// known type.
 pub(crate) mod expr;
 
-/// Opt-in bump arena for high-volume expression builders.
-pub(crate) mod arena;
-
 pub(crate) mod generated;
 /// Statement nodes that execute effects.
 ///

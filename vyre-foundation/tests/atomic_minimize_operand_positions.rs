@@ -10,16 +10,16 @@
 //! worth pinning rather than noticing later.
 //!
 //! Both the analysis and the rewrite now enumerate node operands through
-//! `transform::visit::node_operands`, so a `Node` variant that gains an
+//! `visit::node_operands`, so a `Node` variant that gains an
 //! expression position fails to compile there instead of being skipped here.
 
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{
     AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program,
 };
 use vyre_foundation::optimizer::passes::algebraic::atomic_minimize::AtomicMinimizePass;
 use vyre_foundation::optimizer::{PassAnalysis, ProgramPass};
-use vyre_foundation::transform::visit::walk_exprs;
-use vyre_foundation::MemoryOrdering;
+use vyre_foundation::visit::walk_exprs;
 
 fn program(entry: Vec<Node>) -> Program {
     Program::wrapped(

@@ -186,12 +186,12 @@ fn literal_u32(expr: &Expr) -> Option<u32> {
 
 /// True when any statement under `nodes` assigns to a binding. Child
 /// enumeration comes from
-/// [`child_bodies`](crate::transform::visit::child_bodies) so a future nesting
+/// [`child_bodies`](crate::visit::child_bodies) so a future nesting
 /// variant cannot hide an assignment from the unroll safety check.
 fn body_contains_assign(nodes: &[Node]) -> bool {
     nodes.iter().any(|node| {
         matches!(node, Node::Assign { .. })
-            || crate::transform::visit::child_bodies(node)
+            || crate::visit::child_bodies(node)
                 .into_iter()
                 .any(body_contains_assign)
     })

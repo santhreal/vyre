@@ -50,7 +50,6 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `canonical_determinism` | `vyre-foundation/tests/canonical_determinism.rs` | None | `./cargo_full test -p vyre-foundation --test canonical_determinism` |
 | `test` | `canonicalization_corpus_contracts` | `vyre-foundation/tests/canonicalization_corpus_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test canonicalization_corpus_contracts` |
 | `test` | `capability_contracts` | `vyre-foundation/tests/capability_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test capability_contracts` |
-| `test` | `ci_script_frozen_contract_coupling` | `vyre-foundation/tests/ci_script_frozen_contract_coupling.rs` | None | `./cargo_full test -p vyre-foundation --test ci_script_frozen_contract_coupling` |
 | `test` | `collective_ir_contracts` | `vyre-foundation/tests/collective_ir_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test collective_ir_contracts` |
 | `test` | `composition_tagging_contracts` | `vyre-foundation/tests/composition_tagging_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test composition_tagging_contracts` |
 | `test` | `const_fold_shift_fusion_amount_overflow` | `vyre-foundation/tests/const_fold_shift_fusion_amount_overflow.rs` | None | `./cargo_full test -p vyre-foundation --test const_fold_shift_fusion_amount_overflow` |

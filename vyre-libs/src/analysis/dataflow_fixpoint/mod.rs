@@ -24,7 +24,7 @@
 //! `reference_gemm` adds the call counter and nothing else. The public types
 //! stay declared here so their rendered documentation paths do not move.
 
-pub use vyre_foundation::pass_substrate::dataflow_fixpoint::Semiring;
+pub use vyre_foundation::pass_substrate::semiring_closure::Semiring;
 
 mod delta_maintenance;
 mod dense_matrix;

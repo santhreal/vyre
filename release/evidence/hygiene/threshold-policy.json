@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:01bb4fcce8e0172b2b99cd2b0430d7c75da4f8b6:dirty=true:worktree=a6e2e434bb772dd5cbe5aa04c4e2e6bf6e0a264fbc46399973375e0c4cab138b",
+  "source_fingerprint": "git:fbee0b6e6c17a364b42cffab381f36c93d6c0339:dirty=true:worktree=c768c66d122670599138b5a439342ae2e1a855268eb9effcf3fcb5edbd1407a8",
   "schema_version": 1,
   "source_manifest": "docs/optimization/THRESHOLD_POLICY.toml",
   "evidence_artifact": "release/evidence/hygiene/threshold-policy.json",
@@ -8,22 +8,9 @@
   "registered_policy_count": 14,
   "rows": [
     {
-      "id": "VX475-STAGING_BUFFER_POOL_CLASS_CAP",
-      "path": "vyre-driver-wgpu/src/buffer/handle.rs",
-      "line": 19,
-      "name": "STAGING_BUFFER_POOL_CLASS_CAP",
-      "observed_value": "16",
-      "unit": "pool classes",
-      "provenance": "Existing WGPU staging buffer pool class bound; prevents unbounded class fanout in descriptor allocation.",
-      "config_tier": "structural",
-      "override_path": "not operator configurable; changing this requires buffer-pool ABI review",
-      "evidence_link": "release/evidence/hygiene/threshold-policy.json",
-      "release_rule": "VX-475"
-    },
-    {
       "id": "VX475-BIND_GROUP_CACHE_CAP",
-      "path": "vyre-driver-wgpu/src/buffer/handle.rs",
-      "line": 779,
+      "path": "vyre-driver-wgpu/src/buffer/bind_group_cache/mod.rs",
+      "line": 14,
       "name": "BIND_GROUP_CACHE_CAP",
       "observed_value": "256",
       "unit": "bind group entries",
@@ -56,6 +43,19 @@
       "provenance": "Existing maximum event-log capacity for WGPU buffer pool tiering telemetry.",
       "config_tier": "tier_a",
       "override_path": "compiled default -> tool.toml -> CLI override for telemetry-capacity tuning",
+      "evidence_link": "release/evidence/hygiene/threshold-policy.json",
+      "release_rule": "VX-475"
+    },
+    {
+      "id": "VX475-STAGING_BUFFER_POOL_CLASS_CAP",
+      "path": "vyre-driver-wgpu/src/buffer/staging/mod.rs",
+      "line": 9,
+      "name": "STAGING_BUFFER_POOL_CLASS_CAP",
+      "observed_value": "16",
+      "unit": "pool classes",
+      "provenance": "Existing WGPU staging buffer pool class bound; prevents unbounded class fanout in descriptor allocation.",
+      "config_tier": "structural",
+      "override_path": "not operator configurable; changing this requires buffer-pool ABI review",
       "evidence_link": "release/evidence/hygiene/threshold-policy.json",
       "release_rule": "VX-475"
     },
@@ -113,7 +113,7 @@
     },
     {
       "id": "VX475-EMPTY_TEMPLATE_CACHE_CAP",
-      "path": "vyre-runtime/src/megakernel/builder/cache.rs",
+      "path": "vyre-runtime/src/resident_work_queue/builder/cache.rs",
       "line": 10,
       "name": "EMPTY_TEMPLATE_CACHE_CAP",
       "observed_value": "64",
@@ -126,7 +126,7 @@
     },
     {
       "id": "VX475-GRID_PLAN_CACHE_CAP",
-      "path": "vyre-runtime/src/megakernel/planner/grid.rs",
+      "path": "vyre-runtime/src/resident_work_queue/planner/grid.rs",
       "line": 22,
       "name": "GRID_PLAN_CACHE_CAP",
       "observed_value": "128",
@@ -139,7 +139,7 @@
     },
     {
       "id": "VX475-LAUNCH_RECOMMENDATION_CACHE_CAP",
-      "path": "vyre-runtime/src/megakernel/policy/cache.rs",
+      "path": "vyre-runtime/src/resident_work_queue/policy/cache.rs",
       "line": 8,
       "name": "LAUNCH_RECOMMENDATION_CACHE_CAP",
       "observed_value": "128",
@@ -152,7 +152,7 @@
     },
     {
       "id": "VX475-RESERVED_MAX_RANGE_MIN",
-      "path": "vyre-runtime/src/megakernel/protocol/opcode.rs",
+      "path": "vyre-runtime/src/resident_work_queue/protocol/opcode.rs",
       "line": 32,
       "name": "RESERVED_MAX_RANGE_MIN",
       "observed_value": "0x0000_FFF0",
@@ -165,7 +165,7 @@
     },
     {
       "id": "VX475-STARVATION_THRESHOLD",
-      "path": "vyre-runtime/src/megakernel/scheduler.rs",
+      "path": "vyre-runtime/src/resident_work_queue/scheduler/mod.rs",
       "line": 48,
       "name": "STARVATION_THRESHOLD",
       "observed_value": "16",
@@ -178,7 +178,7 @@
     },
     {
       "id": "VX475-TENANT_FAIRNESS_THRESHOLD",
-      "path": "vyre-runtime/src/megakernel/scheduler.rs",
+      "path": "vyre-runtime/src/resident_work_queue/scheduler/mod.rs",
       "line": 52,
       "name": "TENANT_FAIRNESS_THRESHOLD",
       "observed_value": "64",

@@ -5,7 +5,7 @@
 mod common;
 
 use common::with_cuda_optimizer_dispatcher;
-use vyre_foundation::pass_substrate::dataflow_fixpoint::{
+use vyre_foundation::pass_substrate::semiring_closure::{
     lineage_closure, reachability_closure, shortest_path_closure,
 };
 use vyre_libs::analysis::dataflow_fixpoint::{

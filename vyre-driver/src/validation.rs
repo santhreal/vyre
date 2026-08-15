@@ -260,7 +260,7 @@ fn validate_supported_ops(
     program: &Program,
     backend_id: &'static str,
     supported_ops: &HashSet<OpId>,
-) -> Result<(), vyre_foundation::ir::ValidationError> {
+) -> Result<(), vyre_foundation::validate::ValidationError> {
     struct SupportedOpsBackend<'a> {
         id: &'static str,
         ops: &'a HashSet<OpId>,

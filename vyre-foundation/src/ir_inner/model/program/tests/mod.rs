@@ -17,7 +17,7 @@ use crate::error::IrError;
 use crate::ir::{Expr, Ident, Node};
 use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::spec_types::DataType;
-use crate::transform::visit::collect_call_op_ids;
+use crate::visit::collect_call_op_ids;
 
 fn sample_body() -> Vec<Node> {
     vec![

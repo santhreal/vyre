@@ -20,7 +20,7 @@ use std::ops::ControlFlow;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::transform::inline::inline_calls_with_resolver;
-use vyre_foundation::transform::visit::try_for_each_expr;
+use vyre_foundation::visit::try_for_each_expr;
 use vyre_test_support::ir_variants::node_operand_samples;
 
 /// `leaf_op(src) = src[0]`, the smallest inlinable composition.

@@ -109,7 +109,7 @@ pub fn prefix_scan_with_op_id(
         )),
     }
     body.push(Node::Barrier {
-        ordering: vyre_foundation::MemoryOrdering::SeqCst,
+        ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
     });
 
     body.extend(

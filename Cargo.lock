@@ -3685,7 +3685,6 @@ version = "0.7.2"
 dependencies = [
  "arrayvec",
  "blake3",
- "bumpalo",
  "criterion",
  "dashmap",
  "hashbrown 0.17.1",

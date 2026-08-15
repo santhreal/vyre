@@ -4,7 +4,7 @@
 //! but it cannot see hazards introduced when independently valid nodes are
 //! fused into the same kernel. This pass walks node sequences and rejects
 //! mixed atomic / non-atomic access to the same buffer unless an explicit
-//! `Node::Barrier { ordering: vyre_foundation::MemoryOrdering::SeqCst }` separates them.
+//! `Node::Barrier { ordering: vyre_foundation::ir::MemoryOrdering::SeqCst }` separates them.
 //!
 //! # Sole owner of `V116`
 //!
@@ -20,9 +20,9 @@
 use crate::ir::Expr;
 use crate::ir::Ident;
 use crate::ir::Node;
-use crate::transform::visit;
 use crate::validate::{err, ValidationError};
 use crate::validate::{ValidationLocation, ValidationPhase};
+use crate::visit;
 use rustc_hash::FxHashSet;
 
 #[derive(Debug, Default)]

@@ -4,8 +4,8 @@
 //! Program construction and harness registration belong to higher-level
 //! composition crates that choose table shape and dispatch policy.
 
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{Expr, Node};
-use vyre_foundation::MemoryOrdering;
 
 use super::fnv1a::{fnv1a32_initial_expr, fnv1a32_update_byte_expr};
 

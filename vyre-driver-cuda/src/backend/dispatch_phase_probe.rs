@@ -325,7 +325,7 @@ pub(crate) fn record_counts(
         return;
     }
     let mut nodes = 0u64;
-    vyre_foundation::transform::visit::walk_nodes(program, |_| {
+    vyre_foundation::visit::walk_nodes(program, |_| {
         nodes = nodes.saturating_add(1);
     });
     let blocks = u64::from(grid[0])

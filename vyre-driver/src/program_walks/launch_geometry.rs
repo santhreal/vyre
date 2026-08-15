@@ -1,7 +1,7 @@
 //! Launch-geometry dependency walks.
 
 use vyre_foundation::ir::{Expr, Program};
-use vyre_foundation::transform::visit::any_expr_in;
+use vyre_foundation::visit::any_expr_in;
 
 /// True when the program reads launch geometry that makes workgroup shape
 /// semantically visible to the kernel body.

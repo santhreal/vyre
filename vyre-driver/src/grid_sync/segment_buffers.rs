@@ -4,7 +4,7 @@
 use std::collections::{HashMap, HashSet};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, Expr, Ident, MemoryKind, Node, Program};
-use vyre_foundation::transform::visit::{for_each_node, node_operands};
+use vyre_foundation::visit::{for_each_node, node_operands};
 
 use super::barrier_split::{entry_sequence, try_split_on_grid_sync};
 use super::{reserve_grid_sync_hash_map, reserve_grid_sync_hash_set, reserve_grid_sync_vec};
@@ -263,7 +263,7 @@ pub(super) fn segment_buffer_produces_output(buffer: &BufferDecl) -> bool {
 
 /// The buffers `nodes` reads and writes, at any nesting depth.
 ///
-/// Descent and operand positions come from `transform::visit::for_each_node`
+/// Descent and operand positions come from `visit::for_each_node`
 /// and `node_operands`, the owners of which variants nest and which carry an
 /// expression. The match below asks only what a statement does to a buffer BY
 /// NAME, which is a per-variant question with no body-bearing arm left in it:
@@ -315,7 +315,7 @@ mod tests {
     use super::*;
     use crate::grid_sync::test_programs::{cross_segment_store_program, region};
     use vyre_foundation::ir::DataType;
-    use vyre_foundation::MemoryOrdering;
+    use vyre_foundation::ir::MemoryOrdering;
 
     #[test]
     fn split_keeps_multi_segment_output_as_readwrite_accumulator() {

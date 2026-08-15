@@ -3,7 +3,9 @@
 use std::collections::BTreeMap;
 
 use thiserror::Error;
-use vyre_foundation::ir::{inline_calls_with_resolver, OpResolver, Program, ProgramGraph};
+use vyre_foundation::ir::{Program, ProgramGraph};
+use vyre_foundation::transform::inline::inline_calls_with_resolver;
+use vyre_foundation::transform::inline::OpResolver;
 use vyre_megakernel::{
     Artifact, ArtifactEnvelope, CompileRequest, Digest, ExternalFacts, SearchBudget, TargetCompiler,
 };

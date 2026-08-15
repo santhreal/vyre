@@ -7,7 +7,7 @@
 use std::hash::{Hash, Hasher as _};
 
 use crate::ir::{Expr, Node};
-use crate::transform::visit::{ExprVisitor, NodeVisitor};
+use crate::visit::{ExprSink, NodeSink};
 use rustc_hash::FxHasher;
 
 fn mix_wire_fallback_hashable<T: Hash>(hasher: &mut blake3::Hasher, value: &T) {
@@ -19,8 +19,8 @@ fn mix_wire_fallback_hashable<T: Hash>(hasher: &mut blake3::Hasher, value: &T) {
 /// Bounded IR structure digest for wire-hash fallback (never formats full IR via `Debug`).
 pub(super) struct FallbackWireHasher<'a>(pub(super) &'a mut blake3::Hasher);
 
-impl NodeVisitor for FallbackWireHasher<'_> {
-    fn visit_node(&mut self, node: &Node) {
+impl NodeSink for FallbackWireHasher<'_> {
+    fn accept_node(&mut self, node: &Node) {
         let h = &mut *self.0;
         match node {
             Node::Let { name, .. } => {
@@ -151,8 +151,8 @@ impl NodeVisitor for FallbackWireHasher<'_> {
     }
 }
 
-impl ExprVisitor for FallbackWireHasher<'_> {
-    fn visit_expr(&mut self, expr: &Expr) {
+impl ExprSink for FallbackWireHasher<'_> {
+    fn accept_expr(&mut self, expr: &Expr) {
         let h = &mut *self.0;
         match expr {
             Expr::LitU32(v) => {

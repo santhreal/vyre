@@ -39,7 +39,8 @@
 //! specializes at 0 or 1 can be legal at one budget and not another.
 #![forbid(unsafe_code)]
 
-use vyre_foundation::ir::{validate, Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_foundation::validate::validate;
 use vyre_primitives::fixpoint::persistent_fixpoint::{
     persistent_fixpoint, persistent_fixpoint_grid,
 };

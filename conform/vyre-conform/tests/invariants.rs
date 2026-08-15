@@ -104,7 +104,7 @@ fn reference_backend_certifies_clean() {
     // Foundation contract: a well-formed program validates without error.
     let program = minimal_program();
     assert!(
-        vyre::ir::validate(&program).is_empty(),
+        vyre::validate(&program).is_empty(),
         "Fix: a minimal program must pass validation."
     );
 }
@@ -120,7 +120,7 @@ fn broken_cpu_fn_produces_actionable_violation() {
             Node::Return,
         ],
     );
-    let errors = vyre::ir::validate(&program);
+    let errors = vyre::validate(&program);
     assert!(
         !errors.is_empty(),
         "Fix: store to undeclared buffer must fail validation."
@@ -163,7 +163,7 @@ fn reference_round2_1_validation_gate_rejects_invalid_programs() {
         [0, 1, 1], // zero workgroup x is invalid
         vec![Node::Return],
     );
-    let errors = vyre::ir::validate(&program);
+    let errors = vyre::validate(&program);
     assert!(
         !errors.is_empty(),
         "Fix: workgroup_size component of 0 must be rejected by validation."
@@ -188,7 +188,7 @@ fn reference_round2_7_huge_workgroup_allocation_is_rejected() {
 fn validation_generation_emits_accept_and_reject_cases() {
     // Contract: validate accepts the canonical program and rejects the broken one.
     let good = minimal_program();
-    assert!(vyre::ir::validate(&good).is_empty(), "accept");
+    assert!(vyre::validate(&good).is_empty(), "accept");
     let bad = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
@@ -197,7 +197,7 @@ fn validation_generation_emits_accept_and_reject_cases() {
             Node::Return,
         ],
     );
-    assert!(!vyre::ir::validate(&bad).is_empty());
+    assert!(!vyre::validate(&bad).is_empty());
 }
 
 #[test]
@@ -377,7 +377,7 @@ fn enforces_oob_load_store_and_atomic_contract() {
         vec![Node::store("out", Expr::u32(0), Expr::u32(7)), Node::Return],
     );
     assert!(
-        vyre::ir::validate(&program).is_empty(),
+        vyre::validate(&program).is_empty(),
         "Fix: canonical store program must validate."
     );
 }
@@ -393,7 +393,7 @@ fn bad_atomic_backend_fails_with_actionable_message() {
             Node::Return,
         ],
     );
-    let err = &vyre::ir::validate(&program)[0];
+    let err = &vyre::validate(&program)[0];
     let _ = format!("{err}");
 }
 

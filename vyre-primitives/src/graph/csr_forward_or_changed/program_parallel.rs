@@ -1,8 +1,8 @@
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
 use vyre_foundation::ir::GeneratorRef;
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
 
 use super::layout::{CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE, OP_ID};
 use crate::graph::edge_scan::csr_edge_expand_nodes;

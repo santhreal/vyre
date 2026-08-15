@@ -17,7 +17,7 @@
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::rewrite::expr_contains_atomic;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::transform::visit::any_descendant;
+use crate::visit::any_descendant;
 use smallvec::SmallVec;
 
 #[vyre_pass(
@@ -233,7 +233,7 @@ mod tests {
                     index: Box::new(Expr::u32(0)),
                     expected: None,
                     value: Box::new(Expr::u32(1)),
-                    ordering: crate::MemoryOrdering::SeqCst,
+                    ordering: crate::memory_model::MemoryOrdering::SeqCst,
                 },
                 then: vec![Node::store("state", Expr::u32(0), Expr::u32(2))],
                 otherwise: Vec::new(),

@@ -24,7 +24,9 @@ so the wrapper never affects execution.
 Skeleton:
 
 ```rust
-use vyre_libs::prelude::*;
+use vyre_foundation::ir::{DataType, Program};
+use vyre_libs::region::wrap;
+use vyre_libs::{check_tensors, TensorRef, TensorRefError};
 
 fn my_op(input: TensorRef, output: TensorRef) -> Result<Program, TensorRefError> {
     check_tensors(
@@ -197,8 +199,8 @@ round-trip, optimization, conformance, and generated catalog checks.
 | BLAKE3 compression | `src/hash/blake3_compress.rs` | `crypto-blake3` |
 
 Add a new dialect by creating `src/<dialect>/mod.rs` + registering a
-feature flag in `Cargo.toml`. Re-export the op from `src/lib.rs`'s
-`prelude` module so `use vyre_libs::prelude::*;` still works.
+feature flag in `Cargo.toml`. The op is published at one path: the
+module that builds it. Callers name that module.
 
 ## What gets checked before merge
 

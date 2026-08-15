@@ -19,8 +19,8 @@ use common::{bytes_u32, u32_bytes};
 use vyre_driver::{grid_sync, BackendError, DispatchConfig};
 use vyre_driver_cuda::occupancy::cooperative_thread_residency_block_limit;
 use vyre_driver_cuda::{cuda_factory, CudaBackend};
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
 
 fn add_one_program() -> Program {
     Program::wrapped(

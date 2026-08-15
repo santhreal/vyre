@@ -629,22 +629,6 @@ impl Gate for DupScan {
 mod tests {
     use super::*;
 
-    /// Initialize the temporary tree as a git checkout, because the scan
-    /// measures what the repository will carry rather than what the working
-    /// directory happens to hold.
-    fn init_repository(dir: &Path) {
-        let status = std::process::Command::new("git")
-            .args(["init", "--quiet"])
-            .arg(dir)
-            .status()
-            .expect("git must be available to measure a repository");
-        assert!(
-            status.success(),
-            "git init must succeed in {}",
-            dir.display()
-        );
-    }
-
     /// WHY: comments and indentation are exactly what a copy-paste edits first,
     /// so normalization must see through both or the scan misses real clones.
     #[test]
@@ -659,7 +643,7 @@ mod tests {
     fn a_block_repeated_inside_one_file_is_not_cross_file_duplication() {
         let dir = std::env::temp_dir().join(format!("vyre-dup-scan-single-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        init_repository(&dir);
+        crate::fixture_checkout::empty(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         let block: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
         fs::write(dir.join("crate-a/src/lib.rs"), format!("{block}{block}")).expect("write");
@@ -678,7 +662,7 @@ mod tests {
     fn the_same_block_in_two_crates_is_counted_in_both() {
         let dir = std::env::temp_dir().join(format!("vyre-dup-scan-pair-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        init_repository(&dir);
+        crate::fixture_checkout::empty(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let block: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
@@ -697,7 +681,7 @@ mod tests {
     fn a_shared_run_shorter_than_the_shingle_is_not_duplication() {
         let dir = std::env::temp_dir().join(format!("vyre-dup-scan-short-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        init_repository(&dir);
+        crate::fixture_checkout::empty(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let block: String = (0..SHINGLE - 1)
@@ -717,7 +701,7 @@ mod tests {
     fn the_report_names_the_file_a_copy_was_made_from() {
         let dir = std::env::temp_dir().join(format!("vyre-dup-scan-report-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        init_repository(&dir);
+        crate::fixture_checkout::empty(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let block: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
@@ -743,7 +727,7 @@ mod tests {
     fn per_file_duplication_sums_to_the_crate_measure() {
         let dir = std::env::temp_dir().join(format!("vyre-dup-scan-agree-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        init_repository(&dir);
+        crate::fixture_checkout::empty(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let shared: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
@@ -774,7 +758,7 @@ mod tests {
     fn a_file_the_repository_ignores_is_not_measured() {
         let dir = std::env::temp_dir().join(format!("vyre-dup-scan-ignored-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        init_repository(&dir);
+        crate::fixture_checkout::empty(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/tests")).expect("temp dir");
         fs::write(dir.join(".gitignore"), "**/tests/scratch.rs\n").expect("write");

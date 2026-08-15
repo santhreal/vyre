@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:01bb4fcce8e0172b2b99cd2b0430d7c75da4f8b6:dirty=true:worktree=a6e2e434bb772dd5cbe5aa04c4e2e6bf6e0a264fbc46399973375e0c4cab138b",
+  "source_fingerprint": "git:fbee0b6e6c17a364b42cffab381f36c93d6c0339:dirty=true:worktree=a2d59957250120e8b125917fa2f7264118ee04803608feef620168c1d17d13c7",
   "schema_version": 5,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4381,
+  "scanned_files": 4400,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -76,10 +76,6 @@
       "count": 22
     },
     {
-      "pattern": "unbounded_read",
-      "count": 1
-    },
-    {
       "pattern": "unwrap_call",
       "count": 4
     }
@@ -108,14 +104,6 @@
       "hot_path": false,
       "release_blocker": false,
       "count": 28
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true,
-      "count": 1
     },
     {
       "owner_lane": "coordination",
@@ -230,7 +218,7 @@
       "count": 4
     },
     {
-      "owner_lane": "runtime_megakernel",
+      "owner_lane": "runtime_resident_work_queue",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -291,15 +279,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 4
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true,
-      "count": 1
+      "count": 5
     }
   ],
   "intake_summary": [
@@ -374,15 +354,6 @@
       "pattern": "raw_workspace_cargo",
       "release_blocker": false,
       "count": 3
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "unbounded_read",
-      "release_blocker": true,
-      "count": 1
     },
     {
       "owner_lane": "coordination",
@@ -547,7 +518,7 @@
       "count": 4
     },
     {
-      "owner_lane": "runtime_megakernel",
+      "owner_lane": "runtime_resident_work_queue",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -556,7 +527,7 @@
       "count": 11
     },
     {
-      "owner_lane": "runtime_megakernel",
+      "owner_lane": "runtime_resident_work_queue",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -652,16 +623,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 4
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 1
+      "count": 5
     }
   ],
   "threshold_policy": {
@@ -673,22 +635,9 @@
     "registered_policy_count": 14,
     "rows": [
       {
-        "id": "VX475-STAGING_BUFFER_POOL_CLASS_CAP",
-        "path": "vyre-driver-wgpu/src/buffer/handle.rs",
-        "line": 19,
-        "name": "STAGING_BUFFER_POOL_CLASS_CAP",
-        "observed_value": "16",
-        "unit": "pool classes",
-        "provenance": "Existing WGPU staging buffer pool class bound; prevents unbounded class fanout in descriptor allocation.",
-        "config_tier": "structural",
-        "override_path": "not operator configurable; changing this requires buffer-pool ABI review",
-        "evidence_link": "release/evidence/hygiene/threshold-policy.json",
-        "release_rule": "VX-475"
-      },
-      {
         "id": "VX475-BIND_GROUP_CACHE_CAP",
-        "path": "vyre-driver-wgpu/src/buffer/handle.rs",
-        "line": 779,
+        "path": "vyre-driver-wgpu/src/buffer/bind_group_cache/mod.rs",
+        "line": 14,
         "name": "BIND_GROUP_CACHE_CAP",
         "observed_value": "256",
         "unit": "bind group entries",
@@ -721,6 +670,19 @@
         "provenance": "Existing maximum event-log capacity for WGPU buffer pool tiering telemetry.",
         "config_tier": "tier_a",
         "override_path": "compiled default -> tool.toml -> CLI override for telemetry-capacity tuning",
+        "evidence_link": "release/evidence/hygiene/threshold-policy.json",
+        "release_rule": "VX-475"
+      },
+      {
+        "id": "VX475-STAGING_BUFFER_POOL_CLASS_CAP",
+        "path": "vyre-driver-wgpu/src/buffer/staging/mod.rs",
+        "line": 9,
+        "name": "STAGING_BUFFER_POOL_CLASS_CAP",
+        "observed_value": "16",
+        "unit": "pool classes",
+        "provenance": "Existing WGPU staging buffer pool class bound; prevents unbounded class fanout in descriptor allocation.",
+        "config_tier": "structural",
+        "override_path": "not operator configurable; changing this requires buffer-pool ABI review",
         "evidence_link": "release/evidence/hygiene/threshold-policy.json",
         "release_rule": "VX-475"
       },
@@ -778,7 +740,7 @@
       },
       {
         "id": "VX475-EMPTY_TEMPLATE_CACHE_CAP",
-        "path": "vyre-runtime/src/megakernel/builder/cache.rs",
+        "path": "vyre-runtime/src/resident_work_queue/builder/cache.rs",
         "line": 10,
         "name": "EMPTY_TEMPLATE_CACHE_CAP",
         "observed_value": "64",
@@ -791,7 +753,7 @@
       },
       {
         "id": "VX475-GRID_PLAN_CACHE_CAP",
-        "path": "vyre-runtime/src/megakernel/planner/grid.rs",
+        "path": "vyre-runtime/src/resident_work_queue/planner/grid.rs",
         "line": 22,
         "name": "GRID_PLAN_CACHE_CAP",
         "observed_value": "128",
@@ -804,7 +766,7 @@
       },
       {
         "id": "VX475-LAUNCH_RECOMMENDATION_CACHE_CAP",
-        "path": "vyre-runtime/src/megakernel/policy/cache.rs",
+        "path": "vyre-runtime/src/resident_work_queue/policy/cache.rs",
         "line": 8,
         "name": "LAUNCH_RECOMMENDATION_CACHE_CAP",
         "observed_value": "128",
@@ -817,7 +779,7 @@
       },
       {
         "id": "VX475-RESERVED_MAX_RANGE_MIN",
-        "path": "vyre-runtime/src/megakernel/protocol/opcode.rs",
+        "path": "vyre-runtime/src/resident_work_queue/protocol/opcode.rs",
         "line": 32,
         "name": "RESERVED_MAX_RANGE_MIN",
         "observed_value": "0x0000_FFF0",
@@ -830,7 +792,7 @@
       },
       {
         "id": "VX475-STARVATION_THRESHOLD",
-        "path": "vyre-runtime/src/megakernel/scheduler.rs",
+        "path": "vyre-runtime/src/resident_work_queue/scheduler/mod.rs",
         "line": 48,
         "name": "STARVATION_THRESHOLD",
         "observed_value": "16",
@@ -843,7 +805,7 @@
       },
       {
         "id": "VX475-TENANT_FAIRNESS_THRESHOLD",
-        "path": "vyre-runtime/src/megakernel/scheduler.rs",
+        "path": "vyre-runtime/src/resident_work_queue/scheduler/mod.rs",
         "line": 52,
         "name": "TENANT_FAIRNESS_THRESHOLD",
         "observed_value": "64",
@@ -966,6 +928,11 @@
         "file": "vyre-foundation/tests/expr_type_single_owner.rs",
         "test": "owner_answers_every_expr_variant",
         "reason": "Requires a recorded type answer for every declared `Expr` variant, with the\nvariant roster read from the source of the enum. Rust has no reflection, so a\nvariant added without an answer cannot be observed at run time: the typecheck\nwalk simply returns nothing for it, which is also what a legitimately untyped\nexpression returns."
+      },
+      {
+        "file": "xtask/tests/tree_contracts/subcommand_dispatch.rs",
+        "test": "no_other_build_task_source_resolves_its_own_binary",
+        "reason": "Asserts that no build-task source except the dispatcher resolves the running\nbinary for itself. The wrong answer is only wrong in a binary that is not the\ndispatcher, where the subcommand it would run does not exist, so a passing run\nof the dispatcher witnesses nothing. The subject is a call another crate did not\nmake, which no execution observes."
       }
     ],
     "blockers": []
@@ -1003,17 +970,7 @@
     },
     {
       "path": "structure-gate/src/source_scan.rs",
-      "line": 30,
-      "pattern": "unbounded_read",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "structure-gate/src/source_scan.rs",
-      "line": 129,
+      "line": 164,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1043,7 +1000,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 227,
+      "line": 230,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1053,7 +1010,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 229,
+      "line": 232,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1063,7 +1020,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 562,
+      "line": 581,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1073,7 +1030,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 582,
+      "line": 601,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1083,7 +1040,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 584,
+      "line": 603,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1245,7 +1202,7 @@
       "path": "vyre-libs/src/scheduling/megakernel_schedule.rs",
       "line": 167,
       "pattern": "documented_panic_contract",
-      "owner_lane": "runtime_megakernel",
+      "owner_lane": "runtime_resident_work_queue",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -1283,7 +1240,7 @@
     },
     {
       "path": "vyre-libs/src/scan/classic_ac/bounded_ranges/mod.rs",
-      "line": 312,
+      "line": 304,
       "pattern": "panic_macro",
       "owner_lane": "scan_static",
       "surface": "production",
@@ -1603,7 +1560,7 @@
     },
     {
       "path": "vyre-foundation/src/validate/binding.rs",
-      "line": 43,
+      "line": 42,
       "pattern": "placeholder_text",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1613,7 +1570,7 @@
     },
     {
       "path": "vyre-foundation/src/validate/binding.rs",
-      "line": 49,
+      "line": 48,
       "pattern": "placeholder_text",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1713,7 +1670,7 @@
     },
     {
       "path": "vyre-test-support/src/data_type_variants.rs",
-      "line": 53,
+      "line": 54,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -1843,7 +1800,7 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 283,
+      "line": 282,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -1853,7 +1810,7 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 302,
+      "line": 325,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -1863,7 +1820,7 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 386,
+      "line": 419,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -1903,7 +1860,7 @@
     },
     {
       "path": "vyre-megakernel/src/lib.rs",
-      "line": 763,
+      "line": 764,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1913,7 +1870,7 @@
     },
     {
       "path": "vyre-megakernel/src/lib.rs",
-      "line": 790,
+      "line": 791,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1923,7 +1880,7 @@
     },
     {
       "path": "vyre-megakernel/src/lib.rs",
-      "line": 921,
+      "line": 922,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "production",
@@ -2172,38 +2129,38 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-primitives/src/matching/dfa_compile.rs",
-      "line": 370,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "scan_static",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-primitives/src/matching/dfa_compile.rs",
-      "line": 415,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "scan_static",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-primitives/src/matching/dfa_compile.rs",
-      "line": 532,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "scan_static",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "vyre-primitives/src/matching/nfa_to_dfa.rs",
       "line": 326,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "scan_static",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-primitives/src/matching/dfa_compile/compile.rs",
+      "line": 29,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "scan_static",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-primitives/src/matching/dfa_compile/compile.rs",
+      "line": 74,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "scan_static",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-primitives/src/matching/dfa_compile/compile.rs",
+      "line": 191,
       "pattern": "documented_panic_contract",
       "owner_lane": "scan_static",
       "surface": "production",
@@ -2372,80 +2329,10 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-runtime/src/megakernel/protocol/codec/debug_log.rs",
-      "line": 16,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "runtime_megakernel",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/protocol/codec/debug_log.rs",
-      "line": 32,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "runtime_megakernel",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/io/queue.rs",
-      "line": 182,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "runtime_megakernel",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/io/queue.rs",
-      "line": 190,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "runtime_megakernel",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/io/queue.rs",
-      "line": 193,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "runtime_megakernel",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/io/queue.rs",
-      "line": 196,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "runtime_megakernel",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/io/queue.rs",
-      "line": 214,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "runtime_megakernel",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/descriptor.rs",
-      "line": 287,
-      "pattern": "documented_panic_contract",
-      "owner_lane": "runtime_megakernel",
+      "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
+      "line": 46,
+      "pattern": "unwrap_call",
+      "owner_lane": "runtime_resident_work_queue",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -2453,9 +2340,9 @@
     },
     {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 47,
+      "line": 50,
       "pattern": "unwrap_call",
-      "owner_lane": "runtime_megakernel",
+      "owner_lane": "runtime_resident_work_queue",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -2463,9 +2350,9 @@
     },
     {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 51,
+      "line": 58,
       "pattern": "unwrap_call",
-      "owner_lane": "runtime_megakernel",
+      "owner_lane": "runtime_resident_work_queue",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -2475,17 +2362,7 @@
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
       "line": 59,
       "pattern": "unwrap_call",
-      "owner_lane": "runtime_megakernel",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 60,
-      "pattern": "unwrap_call",
-      "owner_lane": "runtime_megakernel",
+      "owner_lane": "runtime_resident_work_queue",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -2495,7 +2372,87 @@
       "path": "vyre-runtime/src/pipeline_cache/in_memory.rs",
       "line": 47,
       "pattern": "documented_panic_contract",
-      "owner_lane": "runtime_megakernel",
+      "owner_lane": "runtime_resident_work_queue",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/protocol/codec/debug_log.rs",
+      "line": 16,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "runtime_resident_work_queue",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/protocol/codec/debug_log.rs",
+      "line": 32,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "runtime_resident_work_queue",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/io/queue.rs",
+      "line": 182,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "runtime_resident_work_queue",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/io/queue.rs",
+      "line": 190,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "runtime_resident_work_queue",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/io/queue.rs",
+      "line": 193,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "runtime_resident_work_queue",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/io/queue.rs",
+      "line": 196,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "runtime_resident_work_queue",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/io/queue.rs",
+      "line": 214,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "runtime_resident_work_queue",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/descriptor/mod.rs",
+      "line": 287,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "runtime_resident_work_queue",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -2505,7 +2462,7 @@
       "path": "vyre-runtime/src/scheduler.rs",
       "line": 93,
       "pattern": "documented_panic_contract",
-      "owner_lane": "runtime_megakernel",
+      "owner_lane": "runtime_resident_work_queue",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -2677,9 +2634,9 @@
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
-      "risk": "release_blocker",
+      "risk": "informational",
       "hot_path": false,
-      "release_blocker": true
+      "release_blocker": false
     },
     {
       "path": "xtask/tests/tree_contracts/cargo_invocation_resolution.rs",
@@ -2793,7 +2750,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 330,
+      "line": 351,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2803,7 +2760,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 334,
+      "line": 355,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2813,7 +2770,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 386,
+      "line": 407,
       "pattern": "heredoc",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2823,7 +2780,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2305,
+      "line": 2521,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2833,7 +2790,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2434,
+      "line": 2716,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2843,7 +2800,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2435,
+      "line": 2717,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2853,7 +2810,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2608,
+      "line": 2890,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2863,7 +2820,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2770,
+      "line": 3058,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2873,7 +2830,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2786,
+      "line": 3074,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2883,7 +2840,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2920,
+      "line": 3216,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2893,7 +2850,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3072,
+      "line": 3377,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2903,7 +2860,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3104,
+      "line": 3409,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2913,7 +2870,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3325,
+      "line": 3628,
       "pattern": "heredoc",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2923,7 +2880,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3401,
+      "line": 3711,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2933,7 +2890,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3649,
+      "line": 3973,
       "pattern": "heredoc",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2943,7 +2900,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3827,
+      "line": 4181,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2953,7 +2910,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3982,
+      "line": 4336,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2963,7 +2920,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 4281,
+      "line": 4635,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2973,7 +2930,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 5268,
+      "line": 5622,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -2983,7 +2940,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 5308,
+      "line": 5662,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "coordination",
       "surface": "docs",
@@ -3032,7 +2989,7 @@
       "release_blocker": false
     }
   ],
-  "release_blocker_count": 2,
+  "release_blocker_count": 0,
   "findings": [
     {
       "path": "vyre-grammar-gen/src/lex_c11_max_munch.rs",
@@ -3054,13 +3011,7 @@
     },
     {
       "path": "structure-gate/src/source_scan.rs",
-      "line": 30,
-      "pattern": "unbounded_read",
-      "text": "let text = fs::read_to_string(&file).ok()?;"
-    },
-    {
-      "path": "structure-gate/src/source_scan.rs",
-      "line": 129,
+      "line": 164,
       "pattern": "expect_call",
       "text": ".expect(\"masking replaces whole opaque spans with ASCII, so the rest stays valid UTF-8\")"
     },
@@ -3078,31 +3029,31 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 227,
+      "line": 230,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 229,
+      "line": 232,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 562,
+      "line": 581,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 582,
+      "line": 601,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 584,
+      "line": 603,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
     },
@@ -3222,7 +3173,7 @@
     },
     {
       "path": "vyre-libs/src/scan/classic_ac/bounded_ranges/mod.rs",
-      "line": 312,
+      "line": 304,
       "pattern": "panic_macro",
       "text": "Err(error) => panic!("
     },
@@ -3414,13 +3365,13 @@
     },
     {
       "path": "vyre-foundation/src/validate/binding.rs",
-      "line": 43,
+      "line": 42,
       "pattern": "placeholder_text",
       "text": "/// `false` this field is `DataType::U32` as a placeholder; callers"
     },
     {
       "path": "vyre-foundation/src/validate/binding.rs",
-      "line": 49,
+      "line": 48,
       "pattern": "placeholder_text",
       "text": "/// placeholder; V045 assignment-type checking must be skipped."
     },
@@ -3476,11 +3427,11 @@
       "path": "vyre-test-support/src/data_type_variants.rs",
       "line": 51,
       "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|err| panic!(\"Fix: cannot read the DataType declaration at {path:?}: {err}\"));"
+      "text": "panic!(\"Fix: cannot read the DataType declaration at {path:?}: {err}\")"
     },
     {
       "path": "vyre-test-support/src/data_type_variants.rs",
-      "line": 53,
+      "line": 54,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"Fix: no `pub enum DataType` declaration in {path:?}; update this enumeration\")"
     },
@@ -3558,19 +3509,19 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 283,
+      "line": 282,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 302,
+      "line": 325,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 386,
+      "line": 419,
       "pattern": "documented_panic_contract",
       "text": "let path = entry.expect(\"source entry must be readable\").path();"
     },
@@ -3594,19 +3545,19 @@
     },
     {
       "path": "vyre-megakernel/src/lib.rs",
-      "line": 763,
+      "line": 764,
       "pattern": "expect_call",
       "text": "let body_len = u32::from_le_bytes(bytes[6..10].try_into().expect(\"fixed slice\")) as usize;"
     },
     {
       "path": "vyre-megakernel/src/lib.rs",
-      "line": 790,
+      "line": 791,
       "pattern": "expect_call",
       "text": ".expect(\"validated digest length\");"
     },
     {
       "path": "vyre-megakernel/src/lib.rs",
-      "line": 921,
+      "line": 922,
       "pattern": "expect_call",
       "text": ".expect(\"encoded digest length\");"
     },
@@ -3755,28 +3706,28 @@
       "text": "panic!(\"Fix: the program must declare a buffer named `{buffer}`.\");"
     },
     {
-      "path": "vyre-primitives/src/matching/dfa_compile.rs",
-      "line": 370,
-      "pattern": "documented_panic_contract",
-      "text": "Err(error) => panic!("
-    },
-    {
-      "path": "vyre-primitives/src/matching/dfa_compile.rs",
-      "line": 415,
-      "pattern": "documented_panic_contract",
-      "text": "Err(error) => panic!("
-    },
-    {
-      "path": "vyre-primitives/src/matching/dfa_compile.rs",
-      "line": 532,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"pattern_idx must be <= u32::MAX - 1 to fit the pid+1 encoding\");"
-    },
-    {
       "path": "vyre-primitives/src/matching/nfa_to_dfa.rs",
       "line": 326,
       "pattern": "documented_panic_contract",
       "text": "panic!("
+    },
+    {
+      "path": "vyre-primitives/src/matching/dfa_compile/compile.rs",
+      "line": 29,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!("
+    },
+    {
+      "path": "vyre-primitives/src/matching/dfa_compile/compile.rs",
+      "line": 74,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!("
+    },
+    {
+      "path": "vyre-primitives/src/matching/dfa_compile/compile.rs",
+      "line": 191,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"pattern_idx must be <= u32::MAX - 1 to fit the pid+1 encoding\");"
     },
     {
       "path": "vyre-primitives/src/math/fractional.rs",
@@ -3875,74 +3826,26 @@
       "text": "panic!(\"Fix: cannot write {}: {error}\", path.display());"
     },
     {
-      "path": "vyre-runtime/src/megakernel/protocol/codec/debug_log.rs",
-      "line": 16,
-      "pattern": "documented_panic_contract",
-      "text": "Err(error) => panic!(\"vyre-runtime debug-log decode failed: {error}\"),"
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/protocol/codec/debug_log.rs",
-      "line": 32,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"vyre-runtime debug-log decode failed: {error}\");"
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/io/queue.rs",
-      "line": 182,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\");"
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/io/queue.rs",
-      "line": 190,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\"),"
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/io/queue.rs",
-      "line": 193,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\"),"
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/io/queue.rs",
-      "line": 196,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\"),"
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/io/queue.rs",
-      "line": 214,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling is_recycled\");"
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/descriptor.rs",
-      "line": 287,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 47,
+      "line": 46,
       "pattern": "unwrap_call",
       "text": ".unwrap();"
     },
     {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 51,
+      "line": 50,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
+      "line": 58,
       "pattern": "unwrap_call",
       "text": ".unwrap();"
     },
     {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
       "line": 59,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 60,
       "pattern": "unwrap_call",
       "text": "compile(&request).unwrap()"
     },
@@ -3951,6 +3854,54 @@
       "line": 47,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"pipeline cache shard lock was poisoned\"))"
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/protocol/codec/debug_log.rs",
+      "line": 16,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!(\"vyre-runtime debug-log decode failed: {error}\"),"
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/protocol/codec/debug_log.rs",
+      "line": 32,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-runtime debug-log decode failed: {error}\");"
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/io/queue.rs",
+      "line": 182,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\");"
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/io/queue.rs",
+      "line": 190,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\"),"
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/io/queue.rs",
+      "line": 193,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\"),"
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/io/queue.rs",
+      "line": 196,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\"),"
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/io/queue.rs",
+      "line": 214,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling is_recycled\");"
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/descriptor/mod.rs",
+      "line": 287,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
     },
     {
       "path": "vyre-runtime/src/scheduler.rs",
@@ -4150,121 +4101,121 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 330,
+      "line": 351,
       "pattern": "raw_workspace_cargo",
       "text": "- `xtask` declares `default-run`, and a tree contract derives every `cargo run`"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 334,
+      "line": 355,
       "pattern": "raw_workspace_cargo",
       "text": "and declares no default makes a bare `cargo run -p <package>` exit 101 before"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 386,
+      "line": 407,
       "pattern": "heredoc",
       "text": "`presence[rs_base + (pattern_id >> 5)] |= 1 << (pattern_id & 31)`, spelled"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2305,
+      "line": 2521,
       "pattern": "raw_workspace_cargo",
       "text": "sixteen crates. `cargo deny`'s sibling gate, `cargo machete`, had never run"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2434,
+      "line": 2716,
       "pattern": "raw_workspace_cargo",
       "text": "`benches/RESULTS.md` now carries the criterion medians of `cargo bench -p"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2435,
+      "line": 2717,
       "pattern": "raw_workspace_cargo",
       "text": "vyre-primitives --bench wire_throughput` and `cargo bench -p vyre-bench"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2608,
+      "line": 2890,
       "pattern": "raw_workspace_cargo",
       "text": "- Two CI jobs named cargo test targets that do not exist and would have failed"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2770,
+      "line": 3058,
       "pattern": "raw_workspace_cargo",
       "text": "and gave `cargo test --test` invocations for target names (`adversarial`,"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2786,
+      "line": 3074,
       "pattern": "raw_workspace_cargo",
       "text": "- Every intra-doc link in the workspace resolves, so `cargo doc` builds with"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2920,
+      "line": 3216,
       "pattern": "raw_workspace_cargo",
       "text": "The plain default build of each member, which is what `cargo check -p"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3072,
+      "line": 3377,
       "pattern": "raw_workspace_cargo",
       "text": "- `cargo xtask check-tier-deps` judges every production dependency in the"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3104,
+      "line": 3409,
       "pattern": "raw_workspace_cargo",
       "text": "feature, and it had no manifest entry, so `cargo test -p vyre-libs` built it"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3325,
+      "line": 3628,
       "pattern": "heredoc",
       "text": "a shift count with `& 31`, so emitting `x << 32` would emit `x`."
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3401,
+      "line": 3711,
       "pattern": "raw_workspace_cargo",
       "text": "an extraction that exits nonzero prints what `cargo public-api` said rather"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3649,
+      "line": 3973,
       "pattern": "heredoc",
       "text": "count above 31, which the target text masks with `& 31`, so `(x << 40) << 1`"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3827,
+      "line": 4181,
       "pattern": "raw_workspace_cargo",
       "text": "run. The corpus directory was covered by the `cargo fuzz init` default ignore"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3982,
+      "line": 4336,
       "pattern": "raw_workspace_cargo",
       "text": "into one FMA, that made `cargo test --workspace --all-features` unable to pass:"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 4281,
+      "line": 4635,
       "pattern": "raw_workspace_cargo",
       "text": "from the public repository, so `cargo test` failed to compile on every fresh clone"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 5268,
+      "line": 5622,
       "pattern": "raw_workspace_cargo",
       "text": "- **Workspace docs pristine.** `cargo doc --workspace --all-features"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 5308,
+      "line": 5662,
       "pattern": "raw_workspace_cargo",
       "text": "`vyre` lib target in `cargo doc`."
     },
@@ -4293,7 +4244,5 @@
       "text": "./cargo_full xtask lego-audit"
     }
   ],
-  "blockers": [
-    "2 release-blocking source hygiene finding(s) remain; 206 total finding(s) preserved in classification output"
-  ]
+  "blockers": []
 }

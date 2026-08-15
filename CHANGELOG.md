@@ -9,6 +9,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 
 ### Added
 
+- The `frozen-contracts` gate reads the snapshot directory and reports a
+  snapshot no frozen contract claims. The frozen set is a table in the gate and
+  the snapshots are files on disk, so deleting a row left its snapshot behind,
+  where it read as a frozen declaration that nothing compares against. The gate
+  sweep reports a workflow step that names a script the checkout does not
+  carry, which is what every script this campaign deletes leaves behind: a step
+  that fails at run time under a name that still reads as coverage.
 - The reference and SPIR-V backends carry a tracked hostile-input closure
   target, `vyre-driver-reference/tests/hostile_input_closure_contract.rs` and
   `vyre-driver-spirv/tests/hostile_input_closure_contract.rs`. Both backends
@@ -353,15 +360,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   this is the other direction. An invocation form the scan cannot attribute is
   an error rather than a skip, because a form nobody checked is how this
   reached CI.
-- `vyre_foundation::transform::visit::try_for_each_node` walks every node in a
-  body and every nested body, stopping at the first `Break`, and
-  `for_each_node` now delegates to it. A short-circuiting scan outside the
-  crate previously had to implement the abstract-by-default `NodeVisitor` and
-  write a no-op body for every variant it did not care about, which is the cost
-  that made one scan hand-roll its own descent with a catch-all arm instead.
-  `node_buffer_refs`, `expr_buffer_ref` and their result types are public for
-  the same reason: a lowering crate answering "what does this statement do to a
-  buffer" now reads the exhaustive owner rather than restating it.
+- `vyre_foundation::visit::try_for_each_node` walks every node in a body and
+  every nested body, stopping at the first `Break`, and `for_each_node` now
+  delegates to it. A short-circuiting scan outside the crate previously had to
+  implement the abstract-by-default `NodeVisitor` and write a no-op body for
+  every variant it did not care about, which is the cost that made one scan
+  hand-roll its own descent with a catch-all arm instead. `node_buffer_refs`,
+  `expr_buffer_ref` and their result types are public for the same reason: a
+  lowering crate answering "what does this statement do to a buffer" now reads
+  the exhaustive owner rather than restating it.
 - ProgramGraph now composes reusable Programs through canonical typed value
   identities, explicit consumer and output ports, symbolic or concrete shapes,
   access and lifetime contracts, and validated state transitions. Its bounded
@@ -418,10 +425,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   skipped was written out variant by variant, so a new statement-carrying
   variant would have misaligned an arena verdict against the node it was
   computed for without any error. `ArenaCursor` takes its nesting from
-  `transform::visit::child_bodies` and stays in the pass engine, because the
-  numbering is the encoder's and not the IR's. The hoisting decision and the
-  same-scope let-dedupe decision stay separate: they are different decisions
-  over the same walk.
+  `visit::child_bodies` and stays in the pass engine, because the numbering is
+  the encoder's and not the IR's. The hoisting decision and the same-scope
+  let-dedupe decision stay separate: they are different decisions over the same
+  walk.
 - The four `*_via_encoded` passes prove their decode against one test
   dispatcher, `optimizer::arena_kernel::FixedOutputDispatcher`, which takes the
   pass name, the input count it must be bound with, and the grid it must be
@@ -877,12 +884,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   declaration at run time.
 - The host dataflow closures are read from their owner. `vyre-libs` carried a
   module whose six public functions each did nothing but call the identically
-  named function in `vyre_foundation::pass_substrate::dataflow_fixpoint`, and
-  it had grown a copy of the owner's whole test module: five assertions
-  verbatim, plus two that could not fail because they compared the forwarder
-  against the function it forwards to. The forwarders are gone and the module
-  re-exports the owner, so the documented paths still resolve. What remains is
-  the one thing this crate adds, the call counter, in a file named for it.
+  named function in `vyre_foundation::pass_substrate::semiring_closure`, and it
+  had grown a copy of the owner's whole test module: five assertions verbatim,
+  plus two that could not fail because they compared the forwarder against the
+  function it forwards to. The forwarders are gone and every caller names the
+  owner. What remains is the one thing this crate adds, the call counter, in a
+  file named for it.
 - The decode-scan fusion pass takes its workgroup promotion budget from the
   caller's capability record instead of a fixed constant. `run`,
   `count_opportunities` and `candidate_handoffs` take an `AdapterCaps`, and
@@ -978,8 +985,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   ended in a catch-all arm and `Node` is `#[non_exhaustive]`: an unsupported
   operation nested inside an unrecognised variant validated clean, and a kernel
   that read launch geometry inside one read as not reading it.
-  `transform::visit::any_expr_in` is public, as the composition of the node,
-  operand, and expression owners that a scan over both namespaces needs.
+  `visit::any_expr_in` is public, as the composition of the node, operand, and
+  expression owners that a scan over both namespaces needs.
 - Twelve duplication pins now sit at what the merged tree measures rather than
   at what each lane measured in isolation: vyre 40 to 22, vyre-aot 54 to 31,
   vyre-debug 71 to 54, vyre-driver-cuda 3252 to 3238, vyre-driver-wgpu 4229 to
@@ -1579,11 +1586,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   are gone and the five modules sit at the crate root, which is the path 200
   files already used. The crate-root item re-exports of `from_graph`,
   `to_graph`, the graph types, and the operation signature types are gone with
-  them; two callers now name `dialect_lookup` directly. `transform::visit`
-  split into `node`, `expr` and `walk` while publishing all three, so every
-  traversal answered to two paths; the submodules are private and the re-export
-  at `transform::visit` is the one path, which is what its own module
-  documentation already claimed.
+  them; two callers now name `dialect_lookup` directly. `visit` split into
+  `node`, `expr` and `walk` while publishing all three, so every traversal
+  answered to two paths; the submodules are private and the re-export at
+  `visit` is the one path, which is what its own module documentation already
+  claimed.
 - Every item a vyre crate publishes is reachable at one public path. A
   submodule that exists because a file was split is now private to its crate
   and the owning module re-exports what it holds, so vyre-foundation,
@@ -1602,6 +1609,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   tell which path was canonical. The root re-exports are gone, every caller in
   the tree names the owning module, and the `vyre` facade re-exports from those
   module paths rather than from a second index.
+- IR traversal has one module. vyre-foundation published two modules named
+  visit, each with its own ExprVisitor and NodeVisitor trait: one the
+  exhaustive per-variant contract, one a pair of one-method callbacks a walk
+  pushes into. A crate cannot say which ExprVisitor a reader means, and the
+  exhaustive contract already imported child_bodies from the other. The
+  traversals, the per-variant decisions they are written against (node_parts,
+  expr_parts) and the visitor contracts now live under vyre_foundation::visit,
+  and the walk callbacks are named for what they are: NodeSink::accept_node and
+  ExprSink::accept_expr. Lowerable and Evaluatable moved into files named for
+  the contract each holds instead of a module named traits.
 - `vyre_lower::op_facts` was both a module and a function inside it, so a doc
   link to either was ambiguous and `crate::op_facts` resolved to whichever
   rustdoc preferred. The function is `facts_for`, reached as
@@ -2126,10 +2143,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   was a compile error at sixty-six call sites or a silent divergence. What
   survives is the module's test, which pins the primitive contracts the graph
   dispatch layer relies on. Two ceilings on the Newton-Schulz IR shape now come
-  from `vyre_foundation::transform::visit::walk_exprs` instead of a hand-rolled
-  counter over `#[non_exhaustive]` enums whose catch-all arm read an unlisted
-  variant as a leaf, so a tree that grew through a new variant counted as
-  small.
+  from `vyre_foundation::visit::walk_exprs` instead of a hand-rolled counter
+  over `#[non_exhaustive]` enums whose catch-all arm read an unlisted variant
+  as a leaf, so a tree that grew through a new variant counted as small.
 - A test-only IR extension payload is declared through
   `vyre_test_support::test_expr_extension!` or `test_node_extension!` instead
   of six hand-written trait methods. Five of the six are the same in every test
@@ -2163,11 +2179,26 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   whose generator was retired is stale by construction, and the README sections
   plus `--help` are the live surface. `scripts/cli_docs.py` and
   `scripts/lib/cargo_runner.py` are gone.
+- A frozen-contract snapshot records the declaration and nothing else: the item
+  line, its signatures and its closer. Default method bodies, doc comments and
+  blank lines are left out. Before, a refactor inside a default body or a
+  repointed doc link reported a semver-major contract change, and the fix text
+  told the reader to bump the major version for it, so the seven snapshots had
+  drifted on work that changed no contract. Braces are counted on code alone,
+  because a brace in a comment or a string literal nests nothing. `VyreBackend`
+  reads as 182 lines of signatures where it was 940 lines of bodies.
 - vyre_foundation::ir publishes each IR type once. The facade previously
   re-exported the whole private model tree, so every expression, node, and
   program type answered to both ir::Name and ir::model::<submodule>::Name.
   Callers use the flat ir:: path; GeneratorRef, node_op_id, Scope and the
   program-graph identity types joined it.
+- The vyre_foundation::ir facade no longer re-exports items another module
+  owns. Validation is reached at validate::{validate, ValidationError,
+  LimitState, DEFAULT_MAX_CALL_DEPTH, DEFAULT_MAX_NESTING_DEPTH,
+  DEFAULT_MAX_NODE_COUNT}, call inlining at transform::inline, the text wire
+  format at serial::text, and the CSE and DCE pass internals at
+  optimizer::passes::fusion_cse. MemoryOrdering is published once, at
+  vyre_foundation::ir::MemoryOrdering, beside the node variants that carry it.
 - The runtime module that owns persistent slot residency is
   `vyre-runtime/src/resident_work_queue/`, and its lane, its test files, and
   its architecture page carry the same name. The directory was `megakernel/`, a
@@ -2185,6 +2216,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   in a module named sealed rather than private, and vyre-driver publishes it at
   vyre_driver::sealed. A module name states what a module contains, not who may
   reach it.
+- `vyre_foundation::pass_substrate::dataflow_fixpoint` is now
+  `pass_substrate::semiring_closure`. Two modules in one crate carried the name
+  `dataflow_fixpoint`: this substrate, which closes a semiring matrix product
+  to a fixpoint, and `transform::compiler::dataflow_fixpoint`, the live
+  compiler primitive. A reader who found one had no way to know which one, and
+  a caller who imported the wrong one got a type error rather than a name
+  error. The substrate is named for what it computes, its twelve callers name
+  it, and `pass_substrate/mod.rs` carries a header and one documented line per
+  module instead of an allow for missing documentation.
 - `recurrent_gated_delta` and `chunked_gated_delta` take `&GatedDeltaSpec`,
   which is now public, and the chunked schedule is exported from the module
   that builds it. Each entry point had restated the same sixteen positional
@@ -2262,18 +2302,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   four codes carried the placeholder text `Program validation error 0NN` with
   the corrective action `See diagnostic output`, which the catalog replaces
   with the invariant each emission site actually checks.
-- `transform::visit` is split by what is being visited. `node` owns the
-  per-variant `Node` decisions a traversal cannot re-derive safely - which
-  bodies a variant nests, which scalar name it binds and what it does to that
-  name, which operands it evaluates, which buffers it names and in which
-  direction - `expr` owns the same for the value namespace, and `walk` owns the
-  traversals, which are written entirely against those two and restate neither.
-  Every item is re-exported from `transform::visit`, so no caller changes. The
-  file was 1789 lines against an 829-line cap, and every match in it is
-  exhaustive with no catch-all arm on purpose, which is the mechanism that
-  makes a new IR variant a compile error rather than a silent leaf
-  classification; one file that size hides which of those decisions a reader is
-  looking at.
+- `visit` is split by what is being visited. `node` owns the per-variant `Node`
+  decisions a traversal cannot re-derive safely - which bodies a variant nests,
+  which scalar name it binds and what it does to that name, which operands it
+  evaluates, which buffers it names and in which direction - `expr` owns the
+  same for the value namespace, and `walk` owns the traversals, which are
+  written entirely against those two and restate neither. Every item is
+  re-exported from `visit`, so no caller changes. The file was 1789 lines
+  against an 829-line cap, and every match in it is exhaustive with no
+  catch-all arm on purpose, which is the mechanism that makes a new IR variant
+  a compile error rather than a silent leaf classification; one file that size
+  hides which of those decisions a reader is looking at.
 - `vyre-driver/tests/async_dispatch_contract.rs` is the sole owner of what the
   default async dispatch adapter guarantees: error propagation before any
   await, a ready handle that never blocks, independent handles per dispatch,
@@ -2311,13 +2350,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   counters instrument every dialect and belong to none; `scratch` and
   `dispatch_program_cache` sit at the crate root beside `dispatch_buffers`,
   because host dispatch plumbing is not a dialect either. The
-  `analysis::dataflow_fixpoint` re-export of
-  `vyre_foundation::pass_substrate::dataflow_fixpoint` is deleted, so the
-  closure family has one path instead of two, and every caller names the owner.
-  Composition that genuinely crosses dialects goes through `prelude`, which is
-  the one declared seam: `nn::linear` reaches `MatmulBiasTiled` and `reasoning`
-  reaches `reachability_closure_via_into` through it, and the prelude names
-  both.
+  `analysis::dataflow_fixpoint` re-export of the foundation substrate is
+  deleted, so the closure family has one path instead of two, and every caller
+  names the owner. Composition that crosses dialects names the module that owns
+  what it composes: `nn::linear` names `math::linalg` for `MatmulBiasTiled`,
+  and `reasoning` names `analysis::dataflow_fixpoint` for
+  `reachability_closure_via_into`.
 - The `vyre-libs` duplication pin records what the tree measures after the
   width table lands: 10649 to 10598 duplicated lines, with `total_lines`
   measured. What remains between the three match-emitting entry points is their
@@ -2545,6 +2583,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   workflow and no gate, so the two owners of one rule could disagree without
   anything noticing. The `file-size` gate is the only owner; the script's
   section left `xtask/script-assertion-ledger.md` by deletion.
+- `scripts/check_trait_freeze.sh` is gone. It was a second implementation of
+  the frozen-declaration check with its own table of seven contracts, their
+  source files and their keywords, invoked by no workflow, so the two owners of
+  one rule could disagree without anything noticing. The `frozen-contracts`
+  gate is the only owner.
+  `vyre-foundation/tests/ci_script_frozen_contract_coupling.rs` held a third
+  copy of the same table and is gone with it; the workflow-reference rule it
+  also carried now lives in the gate sweep, where the registry, the baseline,
+  the subsets and the workflows already have to agree. The script's section
+  left `xtask/script-assertion-ledger.md` by deletion.
 - The buffer-name form of each classic Aho-Corasick program left the published
   surface of vyre-libs. The `build_*`/`try_build_*` entry that binds the pinned
   ABI names is the one published path per program. The legacy buffered
@@ -2567,6 +2615,21 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   C-frontend test files or parser release artifacts. Diagnostic and
   preprocessing conformance now belongs to the live frontend and conformance
   paths.
+- `vyre_libs::prelude` is gone. It re-exported forty items that each already
+  had a path, so `TensorRef`, `BuildOptions` and every built-in builder were
+  reachable at two paths and some at three. It was declared as the one seam a
+  dialect crosses through, but one module in the crate reached through it and
+  one template outside the crate glob-imported it, so the seam described a
+  discipline no code followed. Callers name the module that owns the item:
+  `reasoning::do_calculus_change_impact` names `analysis::dataflow_fixpoint`,
+  and the dialect template names `vyre_foundation::ir`, `vyre_libs::region` and
+  the crate root.
+- vyre_foundation::ir::ExprArena, ExprRef, ArenaProgram and Program::with_arena
+  are gone. Nothing in the workspace ever constructed one: it was a second
+  expression arena beside the live flat arena in optimizer::expr_arena,
+  published under a colliding name, and it carried the only unsafe code in
+  vyre-foundation. The crate no longer allows unsafe outside one test that
+  frees leaked static keys, and no longer depends on bumpalo.
 - The WGPU host-ingress and raw persistent-kernel compiler routes are gone.
   Persistent product execution uses authenticated artifact sessions; concrete
   pipeline compilation remains available only as a hidden oracle helper for
@@ -2616,8 +2679,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   registered. `vyre-foundation/src/algebra/composition.rs` owns the answer as
   `ANONYMOUS_GENERATOR_PREFIXES` and `is_anonymous_generator`, and the gate's
   fix text now names the rename. The gate also descends through
-  `vyre_foundation::transform::visit::child_bodies` rather than its own list of
-  node arms, so a new nesting variant cannot hide a region from it.
+  `vyre_foundation::visit::child_bodies` rather than its own list of node arms,
+  so a new nesting variant cannot hide a region from it.
 - Architecture guides now use the generated 36-crate dependency graph, joined
   operation registries, CUDA-first backend evidence, typed cross-program
   composition, and explicit runtime/compiler/driver megakernel boundaries. The
@@ -2859,7 +2922,7 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   all-reduce, all-gather, reduce-scatter or broadcast was reported as touching
   nothing; an atomic read-modify-write was reported as a pure read. The
   positions are now owned exhaustively in
-  `vyre-foundation/src/transform/visit.rs`, where adding a variant fails to
+  `vyre-foundation/src/visit/node_parts.rs`, where adding a variant fails to
   compile, one walk collects both directions, and a node carrying an opaque
   payload reports the sets as a lower bound rather than as empty, which
   declines the fusion instead of guessing at it. The test that should have
@@ -3257,12 +3320,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   oracle looks, because an oracle compares evaluated output and never sees the
   grid or the allocation size.
 - The grid-sync split fixtures read a segment body through
-  `transform::visit::child_bodies` instead of a hand-written match with a
-  catch-all arm. The walk applies each literal store a test backend stands in
-  for, so a nesting form it does not descend into makes a store invisible and a
-  split that dropped a write looks correct. The catch-all meant a statement
-  variant that gains a body would have been skipped silently; the nesting is
-  now stated once, in the crate that owns the IR.
+  `visit::child_bodies` instead of a hand-written match with a catch-all arm.
+  The walk applies each literal store a test backend stands in for, so a
+  nesting form it does not descend into makes a store invisible and a split
+  that dropped a write looks correct. The catch-all meant a statement variant
+  that gains a body would have been skipped silently; the nesting is now stated
+  once, in the crate that owns the IR.
 - Grid-fence counting for wave-structure assertions descends through the
   workspace's single exhaustive owner of node nesting. Seven copies each
   re-derived the walk with a trailing catch-all arm, which classifies an
@@ -3391,16 +3454,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - The loop restructuring passes ask three questions before they reorder
   statements, and each now has one owner.
   `vyre_foundation::optimizer::passes::loops::var_reads`, `touched_buffers` and
-  `bound_names` are public, and
-  `vyre_foundation::transform::visit::node_bound_name` answers which statement
-  binds a name with no catch-all arm. The walks they replace named their own
-  variants and ended in `_ => {}`, so a `Var` read in `Node::Trap.address` or
-  in an async copy's `offset` reported ABSENT: `loop_fusion` fused two loops
-  across a scalar one of them assigns, which silently changes the values the
-  program computes, and `legality::bindings_flow_across` weakened the capture
-  guard for both fusion and fission. The rematerialization pass asked the same
-  question through a `_ => false` arm and could inline a stale definition
-  across a rebinding.
+  `bound_names` are public, and `vyre_foundation::visit::node_bound_name`
+  answers which statement binds a name with no catch-all arm. The walks they
+  replace named their own variants and ended in `_ => {}`, so a `Var` read in
+  `Node::Trap.address` or in an async copy's `offset` reported ABSENT:
+  `loop_fusion` fused two loops across a scalar one of them assigns, which
+  silently changes the values the program computes, and
+  `legality::bindings_flow_across` weakened the capture guard for both fusion
+  and fission. The rematerialization pass asked the same question through a `_
+  => false` arm and could inline a stale definition across a rebinding.
 - The six byte counts that decide a megakernel wave's device-memory plan travel
   as one value, `vyre_driver::megakernel_execution::MegakernelByteLayout`,
   instead of a positional list of six `u64` arguments restated at every hop
@@ -3444,17 +3506,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - The pre-emission scan that decides which buffers Naga emits as `atomic<...>`
   and which keep `BufferAccess::ReadWrite` takes descent, operand positions and
   per-node buffer direction from the exhaustive owners in
-  `vyre_foundation::transform::visit`, and returns both sets together. The
-  write half was a hand-rolled recursive descent ending in `_ => {}`, so the
-  four collective variants were reported as writing nothing: a buffer written
-  only by an `AllReduce`, `AllGather`, `ReduceScatter` or `Broadcast` was
-  auto-downgraded to `ReadOnly` and emitted as `var<storage, read>`. The atomic
-  half restated `node_operands` as fifteen `NodeVisitor` method bodies.
-  `node_buffer_refs` disagreed with the old scan about
-  `Node::IndirectDispatch`, which names its count buffer as a read because the
-  host writes it and the shader only reads it; the scan now agrees, and no
-  emitted shader changes because the Naga emitter rejects `IndirectDispatch`
-  before producing WGSL.
+  `vyre_foundation::visit`, and returns both sets together. The write half was
+  a hand-rolled recursive descent ending in `_ => {}`, so the four collective
+  variants were reported as writing nothing: a buffer written only by an
+  `AllReduce`, `AllGather`, `ReduceScatter` or `Broadcast` was auto-downgraded
+  to `ReadOnly` and emitted as `var<storage, read>`. The atomic half restated
+  `node_operands` as fifteen `NodeVisitor` method bodies. `node_buffer_refs`
+  disagreed with the old scan about `Node::IndirectDispatch`, which names its
+  count buffer as a read because the host writes it and the shader only reads
+  it; the scan now agrees, and no emitted shader changes because the Naga
+  emitter rejects `IndirectDispatch` before producing WGSL.
 - The substrate-neutrality rule can see the dependency form this tree uses.
   `scripts/check_architectural_invariants.sh` matched `^name =` against
   manifest text, so a dependency written `name.workspace = true` never matched,
@@ -3470,15 +3531,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - Adding an IR `Node` variant can no longer be handled by a catch-all arm
   nobody chose. The AST registry macro emits `NODE_VARIANT_NAMES` and
   `node_variant_name` from the declaration site,
-  `vyre_foundation::transform::visit::node_shape` records for every variant
-  whether it nests statements, carries operand expressions, or holds an opaque
-  payload, and `child_bodies` is the one exhaustive owner of child enumeration.
-  Two traversals that re-derived that list were wrong: the reference
-  interpreter's barrier scan claimed an exhaustive match but let `Node::Region`
-  fall into its default, so a barrier inside a region body read as absent; and
-  `walk_exprs` skipped the `offset` and `size` operands of asynchronous copies
-  and the `address` operand of a trap, hiding those buffer references from
-  every analysis built on it. Loop unrolling's local-declaration check now also
+  `vyre_foundation::visit::node_shape` records for every variant whether it
+  nests statements, carries operand expressions, or holds an opaque payload,
+  and `child_bodies` is the one exhaustive owner of child enumeration. Two
+  traversals that re-derived that list were wrong: the reference interpreter's
+  barrier scan claimed an exhaustive match but let `Node::Region` fall into its
+  default, so a barrier inside a region body read as absent; and `walk_exprs`
+  skipped the `offset` and `size` operands of asynchronous copies and the
+  `address` operand of a trap, hiding those buffer references from every
+  analysis built on it. Loop unrolling's local-declaration check now also
   treats a region body as scope-transparent. Tail duplication's read check now
   answers yes for a statement form it does not recognise instead of no, so an
   unfamiliar tail costs a missed duplication rather than code sunk past a live
@@ -3542,8 +3603,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   least a fence. The owner answers all of that once, and what stays per-pass is
   the one bit that genuinely differs: whether a write to the buffer interferes
   or only a read. Node descent and buffer naming come from
-  `vyre_foundation::transform::visit`, so a new IR variant fails to compile
-  here rather than defaulting to harmless.
+  `vyre_foundation::visit`, so a new IR variant fails to compile here rather
+  than defaulting to harmless.
 - `vyre_foundation::transform::rewrite_walk::rewrite_node` is the only
   rewriting enumeration of `Node`, which it already claimed to be.
   `vyre_foundation::optimizer::rewrite` carried a second exhaustive match over
@@ -3663,8 +3724,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   the driver publishes `ErrorCode::summary`, `ErrorCode::ALL`, the
   `error_catalog` module and `migration::DEPRECATED_OP_CODE`, the SPIR-V
   registration no longer answers seven capability questions one method at a
-  time, and the tiled matmul builders are reachable through the composition
-  prelude. A stale snapshot fails the drift check for every crate at once,
+  time, and the tiled matmul builders are published by `math::linalg`, which
+  owns them. A stale snapshot fails the drift check for every crate at once,
   which hides the next real change behind noise.
 - The release publish order is derived from the manifests instead of listed in
   source. It was a hardcoded table of twenty-six steps, and moving library code
@@ -3901,11 +3962,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   was accepted as flat. Facts are now derived once per program, keyed on the
   program fingerprint, and reused across every gate and every fixpoint
   iteration, which also removes one deep clone of the program per running pass.
-- The self-exclusive region scan descends through
-  `transform::visit::child_bodies` instead of its own exhaustive `match node`.
-  A node variant that carries a body would have had to be added to both lists,
-  and the scan's copy is the one a reader would not think to check when adding
-  one.
+- The self-exclusive region scan descends through `visit::child_bodies` instead
+  of its own exhaustive `match node`. A node variant that carries a body would
+  have had to be added to both lists, and the scan's copy is the one a reader
+  would not think to check when adding one.
 - Chained shift fusion has one owner and one answer. Constant folding and
   strength reduction each carried the rule, and they disagreed: folding
   declined a pair whose counts reach the word width and left the double shift
@@ -3946,9 +4006,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   six files split in this change are replaced by rows measuring their largest
   children, so each one is now held to a tighter number than the file it came
   from.
-- vyre_libs::prelude exported the decode::inflate module where it meant the two
-  inflate builders. It now re-exports inflate_stored_block and
-  inflate_stored_block_then_aho_corasick.
+- The file-size gate test that claims the core ratchet beats the audit ceiling
+  now proves it. It named a path only the core table listed, so it asserted a
+  core cap and never exercised the precedence; cap_from takes both tables, and
+  the test injects one path into both and asserts the tighter number wins.
 - The crate ownership registry records the feature selection each dependency
   edge is built with. The `xtask-registry` to `vyre-libs` row named no features
   while the edge enables `full` and `matching-regex`, so the derived crate
@@ -4021,17 +4082,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   property is for; mutating the production walk to skip the last statement of a
   body turns it red.
 - IR variant descent has one owner per reference mode.
-  `vyre_foundation::transform::visit::child_bodies_mut` is new and owns the
-  body slots of a node held by unique reference, alongside `child_bodies` for a
-  shared read and `vyre_foundation::transform::rewrite_walk::rewrite_node` for
-  a borrow-preserving rebuild. `vyre_foundation::visit::node_map::map_body`
-  took its slot list from a hand-written match ending in a catch-all that
-  returned the node unchanged, so a body-bearing variant the list had not been
-  told about made every pass composed on it a silent no-op inside that variant,
+  `vyre_foundation::visit::child_bodies_mut` is new and owns the body slots of
+  a node held by unique reference, alongside `child_bodies` for a shared read
+  and `vyre_foundation::transform::rewrite_walk::rewrite_node` for a
+  borrow-preserving rebuild. `vyre_foundation::visit::node_map::map_body` took
+  its slot list from a hand-written match ending in a catch-all that returned
+  the node unchanged, so a body-bearing variant the list had not been told
+  about made every pass composed on it a silent no-op inside that variant,
   including `rematerialize_cheap_let` and the pass engine's constant
   propagation. The scalar namespace also has one owner,
-  `vyre_foundation::transform::visit::node_scalars`, reporting the bound name,
-  what the statement does to it, and the operand expressions in one record;
+  `vyre_foundation::visit::node_scalars`, reporting the bound name, what the
+  statement does to it, and the operand expressions in one record;
   `node_operands` and `node_bound_name` are derived from it, and
   `vyre_foundation::visit::bound_names` no longer classifies an unrecognised
   variant as binding nothing. `vyre_foundation::optimizer::cost` folds the

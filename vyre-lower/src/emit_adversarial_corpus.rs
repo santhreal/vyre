@@ -7,8 +7,8 @@
 
 use std::sync::Arc;
 
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BinOp, DataType, UnOp};
-use vyre_foundation::MemoryOrdering;
 
 use crate::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,

@@ -1,7 +1,7 @@
 //! Shared recursive inspection helpers for statement IR nodes.
 
 use vyre_foundation::ir::Node;
-use vyre_foundation::transform::visit::any_descendant;
+use vyre_foundation::visit::any_descendant;
 
 /// Whether any statement in `nodes` may reach a `Barrier`, at any depth.
 pub(crate) fn contains_barrier(nodes: &[Node]) -> bool {
@@ -11,7 +11,7 @@ pub(crate) fn contains_barrier(nodes: &[Node]) -> bool {
 /// True when `node` or anything under it is a barrier.
 ///
 /// Child enumeration comes from
-/// `vyre_foundation::transform::visit::child_bodies`, the one exhaustive owner
+/// `vyre_foundation::visit::child_bodies`, the one exhaustive owner
 /// of which `Node` variants contain other nodes. This function used to name the
 /// nesting variants itself, its doc comment claimed the match was exhaustive,
 /// and it was not: `Node::Region` fell through to `_ => false`. Since

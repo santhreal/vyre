@@ -136,7 +136,7 @@ pub(super) fn sinkhorn_transfer_body(
         body
     };
     let seq_cst = || Node::Barrier {
-        ordering: vyre_foundation::MemoryOrdering::SeqCst,
+        ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
     };
 
     let mut transfer_body = Vec::new();

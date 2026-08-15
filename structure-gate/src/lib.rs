@@ -1483,7 +1483,7 @@ mod tests {
         // (`vyre-libs/src/substrate_catalog.rs`, `vyre-driver/src/speculation_substrate.rs`)
         // have been renamed, so the fixture keeps the shape rather than a path.
         let failures = substrate_home_failures(&[
-            "vyre-foundation/src/pass_substrate/dataflow_fixpoint.rs".to_string(),
+            "vyre-foundation/src/pass_substrate/semiring_closure.rs".to_string(),
             "vyre-driver/src/speculation_substrate.rs".to_string(),
             "vyre-libs/src/matmul_substrate.rs".to_string(),
         ]);
@@ -1499,7 +1499,7 @@ mod tests {
         // imports it, so this is the one home the name has. Every other home
         // stays a failure.
         let failures = substrate_home_failures(&[
-            "vyre-foundation/src/pass_substrate/dataflow_fixpoint.rs".to_string(),
+            "vyre-foundation/src/pass_substrate/semiring_closure.rs".to_string(),
             "vyre-foundation/src/pass_substrate/mod.rs".to_string(),
         ]);
 

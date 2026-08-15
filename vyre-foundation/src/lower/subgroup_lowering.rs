@@ -399,7 +399,7 @@ fn two_level_subgroup_reduce_body(
 mod tests {
     use super::*;
     use crate::ir::{BufferDecl, DataType, Expr, Node, Program};
-    use crate::transform::visit::try_for_each_expr;
+    use crate::visit::try_for_each_expr;
     use core::ops::ControlFlow;
 
     fn caps_with_subgroup(size: u32) -> AdapterCaps {

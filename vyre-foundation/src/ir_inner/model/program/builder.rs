@@ -2,7 +2,6 @@ use std::sync::{Arc, OnceLock};
 
 use rustc_hash::FxHashMap;
 
-use crate::ir_inner::model::arena::{ArenaProgram, ExprArena};
 use crate::ir_inner::model::node::Node;
 
 use super::{BufferDecl, Program};
@@ -236,21 +235,6 @@ impl Program {
     #[inline]
     pub fn into_entry_vec(self) -> Vec<Node> {
         Arc::try_unwrap(self.entry).unwrap_or_else(|entry| entry.as_ref().clone())
-    }
-
-    /// Create an arena-backed program scaffold.
-    ///
-    /// This constructor is the opt-in path for builders that want
-    /// [`ExprRef`](crate::ir_inner::model::arena::ExprRef) handles instead of boxed
-    /// expression trees. [`Program::wrapped`] remains the boxed-tree constructor.
-    #[must_use]
-    #[inline]
-    pub fn with_arena(
-        arena: &ExprArena,
-        buffers: Vec<BufferDecl>,
-        workgroup_size: [u32; 3],
-    ) -> ArenaProgram<'_> {
-        ArenaProgram::new(arena, buffers, workgroup_size)
     }
 
     /// Create a minimal program with no buffers and an empty body.

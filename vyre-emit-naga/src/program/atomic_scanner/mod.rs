@@ -9,7 +9,7 @@ use std::ops::ControlFlow::{self, Break, Continue};
 use rustc_hash::FxHashSet;
 
 use vyre_foundation::ir::{Expr, Ident, Node};
-use vyre_foundation::transform::visit::{node_buffer_refs, node_operands, try_for_each_node};
+use vyre_foundation::visit::{node_buffer_refs, node_operands, try_for_each_node};
 use vyre_foundation::visit::{visit_preorder, ExprVisitor};
 
 use super::extension_ops::{scan_registered_atomic_expr, scan_registered_atomic_node};
@@ -36,7 +36,7 @@ pub(super) struct BufferTargets {
 /// Collect both buffer sets from `nodes` and every nested body.
 ///
 /// Descent, operand positions and per-node buffer direction all come from the
-/// exhaustive owners in `vyre_foundation::transform::visit`
+/// exhaustive owners in `vyre_foundation::visit`
 /// ([`try_for_each_node`] over `child_bodies`, [`node_operands`],
 /// [`node_buffer_refs`]), so a new `Node` variant is a compile error there
 /// rather than a buffer this scan quietly reports as untouched. The hand-rolled

@@ -133,7 +133,7 @@ mod tests {
     /// Regions whose whole body is one `Block`, counted at any nesting depth.
     ///
     /// Descent comes from `test_ir_inspect::count_nodes` over
-    /// `transform::visit::for_each_node`. The hand-written pair of matches this
+    /// `visit::for_each_node`. The hand-written pair of matches this
     /// replaces ended in `_ => {}`, so a promotable region inside a fifth
     /// body-bearing variant read as absent and the assertion would have passed
     /// on a program the pass had not finished promoting.

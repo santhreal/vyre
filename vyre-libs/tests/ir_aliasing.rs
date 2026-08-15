@@ -3,7 +3,7 @@
 #![cfg(feature = "c-parser")]
 use std::collections::HashSet;
 
-use vyre::ir::{validate, BufferAccess, Program};
+use vyre::ir::{BufferAccess, Program};
 use vyre_foundation::composition::tag_program;
 use vyre_libs::decode::{base64_decode, hex_decode, inflate_stored_block};
 use vyre_primitives::parsing::core_delimiter_match::core_delimiter_match;
@@ -58,7 +58,7 @@ fn fused_decode_programs_keep_generic_buffers_disjoint() {
     ]);
 
     assert_unique_buffer_names(&combined);
-    let errors = validate(&combined);
+    let errors = vyre::validate(&combined);
     assert!(errors.is_empty(), "{errors:#?}");
 }
 
@@ -78,7 +78,7 @@ fn duplicate_self_exclusive_parser_regions_fail_validation() {
         tag_program(op_id, scanner),
     ]);
 
-    let errors = validate(&combined);
+    let errors = vyre::validate(&combined);
     assert!(
         errors.iter().any(|error| error
             .message()

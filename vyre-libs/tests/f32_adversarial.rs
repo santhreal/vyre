@@ -35,7 +35,7 @@ fn harness_path_outputs(entry: &SemanticOperation, inputs: &[Vec<u8>]) -> Vec<Ve
     let program = entry
         .program()
         .expect("Fix: registered library operation must provide a neutral builder");
-    let errors = vyre::ir::validate(&program);
+    let errors = vyre::validate(&program);
     assert!(
         errors.is_empty(),
         "Fix: {} failed validation on adversarial f32 input: {:?}",

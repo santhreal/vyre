@@ -191,8 +191,8 @@ pub(crate) fn grid_sync_barrier_count(program: &vyre_foundation::ir::Program) ->
 }
 
 fn node_grid_sync_barrier_count(node: &vyre_foundation::ir::Node) -> usize {
+    use vyre_foundation::ir::MemoryOrdering;
     use vyre_foundation::ir::Node;
-    use vyre_foundation::MemoryOrdering;
     match node {
         Node::Barrier {
             ordering: MemoryOrdering::GridSync,

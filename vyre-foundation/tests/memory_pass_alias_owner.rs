@@ -27,7 +27,7 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::optimizer::{registered_pass_registrations, PassPhase, ProgramPass};
-use vyre_foundation::transform::visit::{for_each_expr, for_each_node};
+use vyre_foundation::visit::{for_each_expr, for_each_node};
 
 /// A rewrite the memory passes perform, and the same rewrite with one
 /// interfering node dropped into the gap.

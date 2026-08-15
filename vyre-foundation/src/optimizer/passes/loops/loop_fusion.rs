@@ -57,7 +57,7 @@ use super::{collect_touched_buffers, collect_var_reads, legality};
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::transform::visit::for_each_node;
+use crate::visit::for_each_node;
 use rustc_hash::FxHashSet;
 
 /// Fuse adjacent `Node::Loop` siblings under the buffer-disjoint

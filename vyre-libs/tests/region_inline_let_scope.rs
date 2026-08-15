@@ -31,7 +31,7 @@ fn fft_convolve_optimizes_without_duplicate_sibling_let() {
     // u_re_s1_b0_k0` into duplicate siblings.
     let optimized = optimize(program).expect("registered optimizer must converge");
 
-    let errors = vyre::ir::validate(&optimized);
+    let errors = vyre::validate(&optimized);
     let messages: Vec<String> = errors.iter().map(|e| e.message().to_string()).collect();
 
     assert!(

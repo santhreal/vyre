@@ -97,6 +97,18 @@ generator = "../scripts/crate_ownership.py"
 nav = true
 
 [[page]]
+path = "lego-block-rule.md"
+title = "LEGO-block rule"
+status = "current"
+audience = "extension"
+owner = "architecture"
+kind = "ownership"
+section = "Architecture and ownership"
+authority = "self"
+generation = "manual"
+nav = true
+
+[[page]]
 path = "testing/structure-gate.md"
 title = "Testing `structure-gate`"
 status = "generated"

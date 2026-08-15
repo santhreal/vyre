@@ -3,7 +3,7 @@
 
 use super::dense_matrix::{checked_dense_cells, checked_dense_node_count, normalize_bool_matrix};
 use super::{DeltaDataflowEvidence, DeltaDataflowReport, DeltaRelationBatch, DeltaRelationChange};
-use vyre_foundation::pass_substrate::dataflow_fixpoint::reachability_closure_into;
+use vyre_foundation::pass_substrate::semiring_closure::reachability_closure_into;
 
 impl DeltaRelationBatch {
     /// Number of inserted tuples.

@@ -5,9 +5,7 @@
 //! without missing nested bodies.
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::transform::visit::{
-    collect_call_op_ids, referenced_buffers, walk_exprs, walk_nodes,
-};
+use vyre_foundation::visit::{collect_call_op_ids, referenced_buffers, walk_exprs, walk_nodes};
 use vyre_foundation::visit::{visit_expr_buffer_accesses, ExprBufferAccess};
 
 fn sample_program() -> Program {

@@ -53,6 +53,7 @@ fn scheduler_lookup_tables_use_static_str_keys() {
     }
 
     // Free the leaked boxed strings to prevent sanitizer alarms.
+    #[allow(unsafe_code)]
     for name in names {
         unsafe {
             let _ = Box::from_raw(name as *const str as *mut str);

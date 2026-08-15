@@ -46,7 +46,7 @@ ROWS=(
     # exactly 4 of those blocks carried a catch-all `_ =>` arm, and 22 - 4 = 18.
     #
     # Child enumeration now has one public owner,
-    # vyre-foundation::transform::visit::child_bodies, with no catch-all, so
+    # vyre-foundation::visit::child_bodies, with no catch-all, so
     # adding a Node variant fails to compile there. This row asserts that
     # nothing re-implements it: a second exhaustive child match is a duplicate.
     # The other half of the property is a test, not a count, because `Node` is

@@ -1,6 +1,6 @@
 //! Support passes for the scheduler tests.
 //!
-//! Every walk here goes through `transform::visit`: the read-only scans through
+//! Every walk here goes through `visit`: the read-only scans through
 //! [`for_each_node`] and the in-place rewrites through [`walk_nodes_mut`], both
 //! of which take their nesting from `child_bodies`. Each of the six helpers used
 //! to carry its own `match node` naming `If`, `Loop`, `Block` and `Region` and
@@ -14,7 +14,7 @@
 //! invalidates the cached stats the passes downstream read.
 
 use super::*;
-use crate::transform::visit::{for_each_node, walk_nodes_mut};
+use crate::visit::{for_each_node, walk_nodes_mut};
 
 pub(super) fn rewrite_first_store_value(program: &mut Program) -> bool {
     let mut done = false;
@@ -108,7 +108,7 @@ pub(super) fn rewrite_all_matching_stores(program: &mut Program) -> bool {
 ///
 /// The ordinal advances on every `Store`, matched or not, which is the same
 /// numbering [`collect_store_candidates`] hands the batch planner. Both walks
-/// now read their order from `transform::visit`, so the two cannot disagree
+/// now read their order from `visit`, so the two cannot disagree
 /// about which store a column refers to.
 pub(super) fn rewrite_selected_store_ordinals(program: &mut Program, selected: &[usize]) -> bool {
     let mut changed = false;

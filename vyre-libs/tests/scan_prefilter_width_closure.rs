@@ -33,7 +33,7 @@ use std::collections::BTreeSet;
 use std::fs;
 
 use vyre_foundation::ir::{BufferAccess, Node, Program};
-use vyre_foundation::transform::visit::referenced_buffers;
+use vyre_foundation::visit::referenced_buffers;
 use vyre_libs::scan::classic_ac::{
     build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
     build_ac_bounded_ranges_program_with_subgroup_coalesce,

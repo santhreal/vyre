@@ -6,7 +6,7 @@ use super::dense_matrix::{
     checked_dense_cells, checked_dense_node_count, dense_bool_to_csr, normalize_bool_matrix,
 };
 use super::{FixpointEngineReport, FixpointEngineTelemetry, StaticAnalysisFixpointComparison};
-use vyre_foundation::pass_substrate::dataflow_fixpoint::reachability_closure_into;
+use vyre_foundation::pass_substrate::semiring_closure::reachability_closure_into;
 
 /// Compare Vyre semiring, external-style frontier, and GraphBLAS-style sparse
 /// reachability closures on one static-analysis adjacency matrix.

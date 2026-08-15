@@ -171,7 +171,7 @@ mod tests {
 
     fn count_stores(nodes: &[Node]) -> usize {
         let mut count = 0;
-        vyre_foundation::transform::visit::for_each_node(nodes, |node| {
+        vyre_foundation::visit::for_each_node(nodes, |node| {
             if matches!(node, Node::Store { .. }) {
                 count += 1;
             }
@@ -196,13 +196,13 @@ mod tests {
     /// True when any expression anywhere in `nodes` reads the subgroup lane id.
     ///
     /// Node descent, operand positions and sub-expression structure all come
-    /// from `vyre_foundation::transform::visit`, the single owner of each. The
+    /// from `vyre_foundation::visit`, the single owner of each. The
     /// hand-written pair this replaces restated all three and ended each match
     /// in a wildcard, so an operand position or expression kind added later
     /// would have read as "no lane id" instead of failing to compile.
     fn contains_subgroup_local_id(nodes: &[Node]) -> bool {
         let mut found = false;
-        vyre_foundation::transform::visit::for_each_expr(nodes, |expr| {
+        vyre_foundation::visit::for_each_expr(nodes, |expr| {
             found = found || matches!(expr, Expr::SubgroupLocalId);
         });
         found

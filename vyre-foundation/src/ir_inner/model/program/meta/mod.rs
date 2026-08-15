@@ -6,7 +6,7 @@ use vyre_spec::OpIntensity;
 use crate::ir::Node;
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::spec_types::BufferAccess;
-use crate::transform::visit::walk_nodes_and_exprs;
+use crate::visit::walk_nodes_and_exprs;
 
 use super::Program;
 
@@ -514,7 +514,7 @@ impl Program {
     /// had not been told about.
     ///
     /// Descent belongs to
-    /// [`for_each_expr`](crate::transform::visit::for_each_expr), the one walk
+    /// [`for_each_expr`](crate::visit::for_each_expr), the one walk
     /// that reaches every operand of every node and every sub-expression of
     /// every operand. What is left here is the scoring rule, which is per
     /// expression and does not need to see its children: the walk offers the
@@ -523,7 +523,7 @@ impl Program {
     #[must_use]
     pub fn peak_intensity(&self) -> OpIntensity {
         let mut peak = OpIntensity::Free;
-        crate::transform::visit::for_each_expr(self.entry(), |expr| {
+        crate::visit::for_each_expr(self.entry(), |expr| {
             peak = peak.max(Self::expr_intensity(expr));
         });
         peak

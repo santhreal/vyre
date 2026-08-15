@@ -8,7 +8,7 @@ use common::{f32_bytes, f32_words as decode_f32};
 use std::collections::HashMap;
 
 use vyre::ir::Node;
-use vyre_foundation::transform::visit::walk_nodes;
+use vyre_foundation::visit::walk_nodes;
 use vyre_libs::nn::attention::gqa_attention;
 use vyre_primitives::math::dot_partial::OP_ID as DOT_PARTIAL_OP_ID;
 use vyre_primitives::nn::attention_passes::{

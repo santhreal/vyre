@@ -11,8 +11,8 @@ mod spec_variant_tables;
 
 use smallvec::smallvec;
 use spec_variant_tables::{builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_foundation::MemoryOrdering;
 use vyre_spec::extension::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionUnOpId,
 };

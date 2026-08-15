@@ -128,7 +128,7 @@ pub fn default_resolver(op_id: &str) -> Option<Program> {
 #[inline]
 fn contains_call(program: &Program) -> bool {
     let mut found = false;
-    crate::transform::visit::walk_exprs(program, |expr| {
+    crate::visit::walk_exprs(program, |expr| {
         found |= matches!(expr, Expr::Call { .. });
     });
     found

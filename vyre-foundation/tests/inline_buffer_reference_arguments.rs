@@ -18,10 +18,9 @@
 //! buffer name lowers to a binding the caller never declared, and the kernel
 //! reads whatever slot that binding happens to land on.
 
-use vyre_foundation::ir::{
-    inline_calls_with_resolver, AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program,
-};
-use vyre_foundation::MemoryOrdering;
+use vyre_foundation::ir::MemoryOrdering;
+use vyre_foundation::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::transform::inline::inline_calls_with_resolver;
 
 /// Callee reading `table[i]` where `table` is its input buffer and `i` its
 /// index parameter. `i` is a second read-only buffer so both binding kinds

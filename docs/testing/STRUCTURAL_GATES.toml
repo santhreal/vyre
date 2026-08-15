@@ -225,3 +225,14 @@ variant added without an answer cannot be observed at run time: the typecheck
 walk simply returns nothing for it, which is also what a legitimately untyped
 expression returns.
 """
+
+[[gate]]
+file = "xtask/tests/tree_contracts/subcommand_dispatch.rs"
+test = "no_other_build_task_source_resolves_its_own_binary"
+reason = """
+Asserts that no build-task source except the dispatcher resolves the running
+binary for itself. The wrong answer is only wrong in a binary that is not the
+dispatcher, where the subcommand it would run does not exist, so a passing run
+of the dispatcher witnesses nothing. The subject is a call another crate did not
+make, which no execution observes.
+"""

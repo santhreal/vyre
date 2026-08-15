@@ -28,7 +28,7 @@ use crate::error::{IrError as Error, IrResult as Result};
 use crate::ir::{Expr, Ident, Node};
 use crate::optimizer::rewrite::rewrite_node_slices;
 use crate::transform::rewrite_walk::{self, NodeRewrite};
-use crate::transform::visit::{node_scalars, NameBinding};
+use crate::visit::{node_scalars, NameBinding};
 
 /// What an inlining walk does at the positions a statement owns.
 ///

@@ -8,7 +8,6 @@
 ///
 /// These constants bound the size and depth of programs that the
 /// validator will accept.
-pub use super::depth::{DEFAULT_MAX_CALL_DEPTH, DEFAULT_MAX_NESTING_DEPTH, DEFAULT_MAX_NODE_COUNT};
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::spec_types::DataType;
 use crate::validate::{err, ValidationError};
@@ -22,7 +21,7 @@ use rustc_hash::FxHashSet;
 /// declared as mutable (for assignment validation), and whether
 /// it holds a value that is *uniform* across every invocation in
 /// the same workgroup. The uniformity bit feeds the relaxed
-/// barrier-placement rule: a `Node::Barrier { ordering: vyre_foundation::MemoryOrdering::SeqCst }` inside a `Node::Loop`
+/// barrier-placement rule: a `Node::Barrier { ordering: vyre_foundation::ir::MemoryOrdering::SeqCst }` inside a `Node::Loop`
 /// or `Node::If` is legal when the loop bounds (or `If` condition)
 /// are uniform, because every invocation reaches the barrier
 /// through the same iteration count and branch.

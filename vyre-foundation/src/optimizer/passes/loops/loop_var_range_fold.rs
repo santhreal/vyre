@@ -58,7 +58,7 @@ use crate::ir::{BinOp, Expr, Ident, Node, Program};
 use crate::optimizer::passes::driver;
 use crate::optimizer::program_shape_facts::ProgramShapeFacts;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::transform::visit::any_descendant;
+use crate::visit::any_descendant;
 
 /// Fold loop-induction-range-determined `If` conditions.
 #[derive(Debug, Default)]

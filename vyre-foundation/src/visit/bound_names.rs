@@ -17,7 +17,7 @@
 //! and are intentionally skipped.
 
 use crate::ir::{Ident, Node};
-use crate::transform::visit::{child_bodies, node_scalars, NameBinding};
+use crate::visit::{child_bodies, node_scalars, NameBinding};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Invoke `visit` once for every binding name introduced by `nodes`

@@ -9,7 +9,7 @@
 //! only what it varies.
 
 use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use crate::transform::visit::child_bodies;
+use crate::visit::child_bodies;
 
 /// A read-write `u32` storage buffer with eight elements.
 pub(super) fn buf(name: &str) -> BufferDecl {

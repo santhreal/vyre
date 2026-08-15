@@ -22,11 +22,11 @@ pub(crate) fn region_body(program: &Program) -> &[Node] {
 /// (`count_loops`, `count_ifs`, `count_stores`, `count_barriers`, …), every one
 /// restating which node variants nest. A counter that misses a nesting variant
 /// under-reports, which makes the assertion it feeds pass on a program the pass
-/// mishandled. Descent comes from `transform::visit::for_each_node`, so there is
+/// mishandled. Descent comes from `visit::for_each_node`, so there is
 /// one answer to "which variants nest" for tests and production alike.
 pub(crate) fn count_nodes(nodes: &[Node], mut pred: impl FnMut(&Node) -> bool) -> usize {
     let mut count = 0;
-    crate::transform::visit::for_each_node(nodes, |node| {
+    crate::visit::for_each_node(nodes, |node| {
         if pred(node) {
             count += 1;
         }

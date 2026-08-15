@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:01bb4fcce8e0172b2b99cd2b0430d7c75da4f8b6:dirty=true:worktree=a6e2e434bb772dd5cbe5aa04c4e2e6bf6e0a264fbc46399973375e0c4cab138b",
+  "source_fingerprint": "git:fbee0b6e6c17a364b42cffab381f36c93d6c0339:dirty=true:worktree=c768c66d122670599138b5a439342ae2e1a855268eb9effcf3fcb5edbd1407a8",
   "schema_version": 1,
   "scan": "cargo-wrapper",
   "findings": [
@@ -47,121 +47,121 @@
     },
     {
       "path": "CHANGELOG.md",
-      "line": 330,
+      "line": 351,
       "pattern": "raw_workspace_cargo",
       "text": "- `xtask` declares `default-run`, and a tree contract derives every `cargo run`"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 334,
+      "line": 355,
       "pattern": "raw_workspace_cargo",
       "text": "and declares no default makes a bare `cargo run -p <package>` exit 101 before"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 386,
+      "line": 407,
       "pattern": "heredoc",
       "text": "`presence[rs_base + (pattern_id >> 5)] |= 1 << (pattern_id & 31)`, spelled"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2305,
+      "line": 2521,
       "pattern": "raw_workspace_cargo",
       "text": "sixteen crates. `cargo deny`'s sibling gate, `cargo machete`, had never run"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2434,
+      "line": 2716,
       "pattern": "raw_workspace_cargo",
       "text": "`benches/RESULTS.md` now carries the criterion medians of `cargo bench -p"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2435,
+      "line": 2717,
       "pattern": "raw_workspace_cargo",
       "text": "vyre-primitives --bench wire_throughput` and `cargo bench -p vyre-bench"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2608,
+      "line": 2890,
       "pattern": "raw_workspace_cargo",
       "text": "- Two CI jobs named cargo test targets that do not exist and would have failed"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2770,
+      "line": 3058,
       "pattern": "raw_workspace_cargo",
       "text": "and gave `cargo test --test` invocations for target names (`adversarial`,"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2786,
+      "line": 3074,
       "pattern": "raw_workspace_cargo",
       "text": "- Every intra-doc link in the workspace resolves, so `cargo doc` builds with"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 2920,
+      "line": 3216,
       "pattern": "raw_workspace_cargo",
       "text": "The plain default build of each member, which is what `cargo check -p"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3072,
+      "line": 3377,
       "pattern": "raw_workspace_cargo",
       "text": "- `cargo xtask check-tier-deps` judges every production dependency in the"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3104,
+      "line": 3409,
       "pattern": "raw_workspace_cargo",
       "text": "feature, and it had no manifest entry, so `cargo test -p vyre-libs` built it"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3325,
+      "line": 3628,
       "pattern": "heredoc",
       "text": "a shift count with `& 31`, so emitting `x << 32` would emit `x`."
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3401,
+      "line": 3711,
       "pattern": "raw_workspace_cargo",
       "text": "an extraction that exits nonzero prints what `cargo public-api` said rather"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3649,
+      "line": 3973,
       "pattern": "heredoc",
       "text": "count above 31, which the target text masks with `& 31`, so `(x << 40) << 1`"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3827,
+      "line": 4181,
       "pattern": "raw_workspace_cargo",
       "text": "run. The corpus directory was covered by the `cargo fuzz init` default ignore"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 3982,
+      "line": 4336,
       "pattern": "raw_workspace_cargo",
       "text": "into one FMA, that made `cargo test --workspace --all-features` unable to pass:"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 4281,
+      "line": 4635,
       "pattern": "raw_workspace_cargo",
       "text": "from the public repository, so `cargo test` failed to compile on every fresh clone"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 5268,
+      "line": 5622,
       "pattern": "raw_workspace_cargo",
       "text": "- **Workspace docs pristine.** `cargo doc --workspace --all-features"
     },
     {
       "path": "CHANGELOG.md",
-      "line": 5308,
+      "line": 5662,
       "pattern": "raw_workspace_cargo",
       "text": "`vyre` lib target in `cargo doc`."
     },

@@ -11,7 +11,7 @@
 //! which arena slot the walk is standing on.
 
 use vyre_foundation::ir::Node;
-use vyre_foundation::transform::visit::child_bodies;
+use vyre_foundation::visit::child_bodies;
 
 /// A cursor over `ExprArenaEncoding::node_top_level_exprs`.
 pub(super) struct ArenaCursor<'a> {

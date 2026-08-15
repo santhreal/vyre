@@ -65,7 +65,7 @@ pub fn ifds_program_cache_key_from_program(
 
 #[cfg(any(test, feature = "cpu-parity"))]
 fn loop_upper_bound(program: &Program, var: &str) -> Option<u32> {
-    use vyre_foundation::transform::visit::walk_nodes;
+    use vyre_foundation::visit::walk_nodes;
 
     let mut found: Option<u32> = None;
     walk_nodes(program, |node| {
@@ -86,7 +86,7 @@ fn loop_upper_bound(program: &Program, var: &str) -> Option<u32> {
 #[cfg(any(test, feature = "cpu-parity"))]
 fn upper_limit_for_var(program: &Program, var: &str) -> Option<u32> {
     use vyre_foundation::ir::BinOp;
-    use vyre_foundation::transform::visit::walk_exprs;
+    use vyre_foundation::visit::walk_exprs;
 
     let mut found: Option<u32> = None;
     walk_exprs(program, |expr| {

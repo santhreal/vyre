@@ -18,7 +18,7 @@
 //! cannot pass once a variant is added without a decision recorded for it. Two
 //! halves, because one alone is not enough:
 //!
-//! - COMPILE TIME. `vyre_foundation::transform::visit::node_shape` matches every
+//! - COMPILE TIME. `vyre_foundation::visit::node_shape` matches every
 //!   variant with no catch-all arm. Adding a variant fails to compile there,
 //!   which forces the author to say whether it nests bodies, owns operands, or
 //!   is opaque. `child_bodies` is exhaustive for the same reason.
@@ -36,11 +36,9 @@
 //! those are satisfied `node_variant_samples_cover_every_declared_variant`
 //! fails naming `["Speculate"]`.
 
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{Expr, Node, NODE_VARIANT_NAMES};
-use vyre_foundation::transform::visit::{
-    any_descendant, child_bodies, node_shape, walk_exprs, NodeShape,
-};
-use vyre_foundation::MemoryOrdering;
+use vyre_foundation::visit::{any_descendant, child_bodies, node_shape, walk_exprs, NodeShape};
 use vyre_test_support::ir_variants::{
     assert_covers_every_node_variant, assert_samples_match_declared_shape, node_body_slot_samples,
     node_operand_samples, node_variant_samples,

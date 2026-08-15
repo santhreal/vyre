@@ -63,7 +63,7 @@ mod tests {
     use super::*;
     use crate::fixture_bytes::{bytes_to_u32 as decode_u32_words, u32_bytes};
     use vyre_foundation::ir::{BufferAccess, Expr, Node};
-    use vyre_foundation::transform::visit::any_descendant;
+    use vyre_foundation::visit::any_descendant;
     use vyre_reference::value::Value;
 
     /// Run `scan_prefix_sum` through the reference interpreter and return the
@@ -261,7 +261,7 @@ mod tests {
 
     /// True when any `If` anywhere in `program` is gated on invocation zero.
     ///
-    /// Descent comes from `transform::visit::any_descendant`, the one owner of
+    /// Descent comes from `visit::any_descendant`, the one owner of
     /// which node variants nest. The two hand-written matches this replaces both
     /// ended in `_ => false`, so a fifth body-bearing variant would have hidden
     /// the gate and the assertion would have reported the wrong shape.

@@ -1,11 +1,8 @@
 #[non_exhaustive] pub enum vyre_libs::TensorRefError
-#[non_exhaustive] pub enum vyre_libs::prelude::TensorRefError
 #[non_exhaustive] pub struct vyre_libs::BufferDescriptor
 #[non_exhaustive] pub struct vyre_libs::BuildOptions
 #[non_exhaustive] pub struct vyre_libs::ProgramDescriptor
 #[non_exhaustive] pub struct vyre_libs::TensorRef
-#[non_exhaustive] pub struct vyre_libs::prelude::BuildOptions
-#[non_exhaustive] pub struct vyre_libs::prelude::TensorRef
 impl core::error::Error for vyre_libs::parsing::lr_tables::ParseError
 impl core::error::Error for vyre_libs::scan::PostProcessError
 impl core::fmt::Display for vyre_libs::parsing::lr_tables::ParseError
@@ -16,15 +13,15 @@ impl vyre_libs::BuildOptions
 impl vyre_libs::ProgramDescriptor
 impl vyre_libs::TensorRef
 impl vyre_libs::math::linalg::Dot
+impl vyre_libs::math::linalg::Matmul
 impl vyre_libs::math::linalg::MatmulBias
+impl vyre_libs::math::linalg::MatmulBiasTiled
+impl vyre_libs::math::linalg::MatmulTiled
 impl vyre_libs::nn::linear::Linear
+impl vyre_libs::nn::norm::LayerNorm
 impl vyre_libs::parsing::lr_tables::Action
 impl vyre_libs::parsing::lr_tables::LrTables
 impl vyre_libs::parsing::source_cache::SourceHash
-impl vyre_libs::prelude::LayerNorm
-impl vyre_libs::prelude::Matmul
-impl vyre_libs::prelude::MatmulBiasTiled
-impl vyre_libs::prelude::MatmulTiled
 impl<T> vyre_libs::parsing::source_cache::ParsedSourceLru<T>
 pub const fn vyre_libs::parsing::lr_tables::Action::pack(self) -> u32
 pub const fn vyre_libs::parsing::lr_tables::Action::unpack(word: u32) -> Self
@@ -181,11 +178,28 @@ pub fn vyre_libs::math::linalg::Dot::new(lhs: vyre_libs::TensorRef, rhs: vyre_li
 pub fn vyre_libs::math::linalg::Dot::with_region_generator(self, name: &'static str) -> Self
 pub fn vyre_libs::math::linalg::Dot::with_tenant_id(self, tenant_id: u32) -> Self
 pub fn vyre_libs::math::linalg::Dot::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs::math::linalg::Matmul::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
+pub fn vyre_libs::math::linalg::Matmul::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
+pub fn vyre_libs::math::linalg::Matmul::with_region_generator(self, name: &'static str) -> Self
+pub fn vyre_libs::math::linalg::Matmul::with_tenant_id(self, tenant_id: u32) -> Self
+pub fn vyre_libs::math::linalg::Matmul::with_workgroup_size(self, size: [u32; 3]) -> Self
 pub fn vyre_libs::math::linalg::MatmulBias::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
 pub fn vyre_libs::math::linalg::MatmulBias::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
 pub fn vyre_libs::math::linalg::MatmulBias::with_region_generator(self, name: &'static str) -> Self
 pub fn vyre_libs::math::linalg::MatmulBias::with_tenant_id(self, tenant_id: u32) -> Self
 pub fn vyre_libs::math::linalg::MatmulBias::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs::math::linalg::MatmulBiasTiled::auto(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
+pub fn vyre_libs::math::linalg::MatmulBiasTiled::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
+pub fn vyre_libs::math::linalg::MatmulBiasTiled::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef, tile: u32) -> Self
+pub fn vyre_libs::math::linalg::MatmulBiasTiled::with_region_generator(self, name: &'static str) -> Self
+pub fn vyre_libs::math::linalg::MatmulBiasTiled::with_tenant_id(self, tenant_id: u32) -> Self
+pub fn vyre_libs::math::linalg::MatmulBiasTiled::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs::math::linalg::MatmulTiled::auto(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
+pub fn vyre_libs::math::linalg::MatmulTiled::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
+pub fn vyre_libs::math::linalg::MatmulTiled::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, out: vyre_libs::TensorRef, tile: u32) -> Self
+pub fn vyre_libs::math::linalg::MatmulTiled::with_region_generator(self, name: &'static str) -> Self
+pub fn vyre_libs::math::linalg::MatmulTiled::with_tenant_id(self, tenant_id: u32) -> Self
+pub fn vyre_libs::math::linalg::MatmulTiled::with_workgroup_size(self, size: [u32; 3]) -> Self
 pub fn vyre_libs::math::linalg::dot(lhs: &str, rhs: &str, out: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::math::linalg::matmul(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::linalg::matmul_bias(a: &str, b: &str, bias: &str, out: &str, m: u32, k: u32, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -249,6 +263,11 @@ pub fn vyre_libs::nn::linear::linear_tiled(x: &str, w: &str, b: &str, out: &str,
 pub fn vyre_libs::nn::linear::linear_tiled_reference(x: &str, w: &str, b: &str, out: &str, in_dim: u32, out_dim: u32, tile: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::nn::linear::rms_norm_linear(input: &str, w: &str, b: &str, out: &str, n: u32, in_dim: u32, out_dim: u32, eps: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::linear::try_rms_norm_linear(input: &str, w: &str, b: &str, out: &str, n: u32, in_dim: u32, out_dim: u32, eps: f32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
+pub fn vyre_libs::nn::norm::LayerNorm::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
+pub fn vyre_libs::nn::norm::LayerNorm::new(input: vyre_libs::TensorRef, output: vyre_libs::TensorRef, eps: f32) -> Self
+pub fn vyre_libs::nn::norm::LayerNorm::with_region_generator(self, name: &'static str) -> Self
+pub fn vyre_libs::nn::norm::LayerNorm::with_tenant_id(self, tenant_id: u32) -> Self
+pub fn vyre_libs::nn::norm::LayerNorm::with_workgroup_size(self, size: [u32; 3]) -> Self
 pub fn vyre_libs::nn::norm::gated_rms_norm(input: &str, weight: &str, gate: &str, output: &str, rows: u32, hidden: u32, eps: f32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::norm::GatedRmsNormError>
 pub fn vyre_libs::nn::norm::gated_rms_norm_with_weight_dtype(input: &str, weight: &str, gate: &str, output: &str, rows: u32, hidden: u32, eps: f32, dtype: vyre_spec::data_type::DataType, weight_dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::norm::GatedRmsNormError>
 pub fn vyre_libs::nn::norm::last_dim_l2_norm(input: &str, output: &str, rows: u32, width: u32, eps: f32, dtype: vyre_spec::data_type::DataType) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::norm::LastDimL2NormError>
@@ -301,51 +320,6 @@ pub fn vyre_libs::parsing::source_cache::ParsedSourceLru<T>::len(&self) -> usize
 pub fn vyre_libs::parsing::source_cache::ParsedSourceLru<T>::with_capacity(capacity: usize) -> Self
 pub fn vyre_libs::parsing::source_cache::SourceHash::of(source: &[u8], extra: &[u8]) -> Self
 pub fn vyre_libs::parsing::source_cache::source_len_u32_nonzero(source: &[u8]) -> u32
-pub fn vyre_libs::prelude::LayerNorm::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
-pub fn vyre_libs::prelude::LayerNorm::new(input: vyre_libs::TensorRef, output: vyre_libs::TensorRef, eps: f32) -> Self
-pub fn vyre_libs::prelude::LayerNorm::with_region_generator(self, name: &'static str) -> Self
-pub fn vyre_libs::prelude::LayerNorm::with_tenant_id(self, tenant_id: u32) -> Self
-pub fn vyre_libs::prelude::LayerNorm::with_workgroup_size(self, size: [u32; 3]) -> Self
-pub fn vyre_libs::prelude::Matmul::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
-pub fn vyre_libs::prelude::Matmul::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
-pub fn vyre_libs::prelude::Matmul::with_region_generator(self, name: &'static str) -> Self
-pub fn vyre_libs::prelude::Matmul::with_tenant_id(self, tenant_id: u32) -> Self
-pub fn vyre_libs::prelude::Matmul::with_workgroup_size(self, size: [u32; 3]) -> Self
-pub fn vyre_libs::prelude::MatmulBiasTiled::auto(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
-pub fn vyre_libs::prelude::MatmulBiasTiled::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
-pub fn vyre_libs::prelude::MatmulBiasTiled::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, bias: vyre_libs::TensorRef, out: vyre_libs::TensorRef, tile: u32) -> Self
-pub fn vyre_libs::prelude::MatmulBiasTiled::with_region_generator(self, name: &'static str) -> Self
-pub fn vyre_libs::prelude::MatmulBiasTiled::with_tenant_id(self, tenant_id: u32) -> Self
-pub fn vyre_libs::prelude::MatmulBiasTiled::with_workgroup_size(self, size: [u32; 3]) -> Self
-pub fn vyre_libs::prelude::MatmulTiled::auto(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, out: vyre_libs::TensorRef) -> Self
-pub fn vyre_libs::prelude::MatmulTiled::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
-pub fn vyre_libs::prelude::MatmulTiled::new(a: vyre_libs::TensorRef, b: vyre_libs::TensorRef, out: vyre_libs::TensorRef, tile: u32) -> Self
-pub fn vyre_libs::prelude::MatmulTiled::with_region_generator(self, name: &'static str) -> Self
-pub fn vyre_libs::prelude::MatmulTiled::with_tenant_id(self, tenant_id: u32) -> Self
-pub fn vyre_libs::prelude::MatmulTiled::with_workgroup_size(self, size: [u32; 3]) -> Self
-pub fn vyre_libs::prelude::aho_corasick(haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::base64_decode(input: &str, output: &str, input_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::broadcast(src: &str, dst: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::check_dtype(r: &vyre_libs::TensorRef, expected: vyre_spec::data_type::DataType, op: &'static str) -> core::result::Result<(), vyre_libs::TensorRefError>
-pub fn vyre_libs::prelude::check_shape(r: &vyre_libs::TensorRef, expected: &[u32], op: &'static str) -> core::result::Result<(), vyre_libs::TensorRefError>
-pub fn vyre_libs::prelude::check_tensors(op: &'static str, tensors: &[(&vyre_libs::TensorRef, vyre_spec::data_type::DataType)]) -> core::result::Result<(), vyre_libs::TensorRefError>
-pub fn vyre_libs::prelude::check_unique_names(refs: &[&vyre_libs::TensorRef], op: &'static str) -> core::result::Result<(), vyre_libs::TensorRefError>
-pub fn vyre_libs::prelude::dot(lhs: &str, rhs: &str, out: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
-pub fn vyre_libs::prelude::hex_decode(input: &str, output: &str, input_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::inflate_stored_block(input: &str, output: &str, input_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::inflate_stored_block_then_aho_corasick(input: &str, decoded: &str, transitions: &str, accept: &str, matches: &str, input_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::layer_norm(input: &str, output: &str, n: u32, eps: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::linear(x: &str, w: &str, b: &str, out: &str, in_dim: u32, out_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
-pub fn vyre_libs::prelude::matmul(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::matmul_bias_tiled(a: &str, b: &str, bias: &str, out: &str, m: u32, k: u32, n: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::matmul_tiled(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::matmul_tiled::matmul_bias_tiled(a: &str, b: &str, bias: &str, out: &str, m: u32, k: u32, n: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::matmul_tiled::matmul_tiled(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::relu(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::relu::relu(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::scan_prefix_sum(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::substring_search(haystack: &str, needle: &str, matches: &str, haystack_len: u32, needle_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::ziftsieve_gpu(buffers: vyre_primitives::decode::ziftsieve::ZiftsieveBuffers<'_>, extents: vyre_primitives::decode::ziftsieve::ZiftsieveExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::range_ordering::match_order(left_id: vyre_foundation::ir_inner::model::generated::Expr, right_id: vyre_foundation::ir_inner::model::generated::Expr, res_name: &str) -> (alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, vyre_foundation::ir_inner::model::generated::Expr)
 pub fn vyre_libs::representation::unpack_4bit_f32(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::scan::PostProcessError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -445,9 +419,6 @@ pub mod vyre_libs::parsing::lr_tables
 pub mod vyre_libs::parsing::parallel_parse
 pub mod vyre_libs::parsing::source_cache
 pub mod vyre_libs::parsing::vast
-pub mod vyre_libs::prelude
-pub mod vyre_libs::prelude::matmul_tiled
-pub mod vyre_libs::prelude::relu
 pub mod vyre_libs::range_ordering
 pub mod vyre_libs::region
 pub mod vyre_libs::representation
@@ -471,12 +442,6 @@ pub struct vyre_libs::parsing::lr_tables::LrTables
 pub struct vyre_libs::parsing::lr_tables::Production
 pub struct vyre_libs::parsing::source_cache::ParsedSourceLru<T>
 pub struct vyre_libs::parsing::source_cache::SourceHash(pub [u8; 32])
-pub struct vyre_libs::prelude::LayerNorm
-pub struct vyre_libs::prelude::Matmul
-pub struct vyre_libs::prelude::MatmulBiasTiled
-pub struct vyre_libs::prelude::MatmulTiled
-pub struct vyre_libs::prelude::matmul_tiled::MatmulBiasTiled
-pub struct vyre_libs::prelude::matmul_tiled::MatmulTiled
 pub struct vyre_libs::scan::PostProcessedMatch
 pub struct vyre_libs::scan::classic_ac::ClassicAcAutomaton
 pub use vyre_libs::decode::ENC_ASCII
@@ -519,16 +484,6 @@ pub use vyre_libs::parsing::vast::pack_spine_vast
 pub use vyre_libs::parsing::vast::validate_vast
 pub use vyre_libs::parsing::vast::walk_postorder_indices
 pub use vyre_libs::parsing::vast::walk_preorder_indices
-pub use vyre_libs::prelude::BufferAccess
-pub use vyre_libs::prelude::BufferDecl
-pub use vyre_libs::prelude::DataType
-pub use vyre_libs::prelude::Expr
-pub use vyre_libs::prelude::GeneratorRef
-pub use vyre_libs::prelude::Node
-pub use vyre_libs::prelude::Program
-pub use vyre_libs::prelude::wrap
-pub use vyre_libs::prelude::wrap_anonymous
-pub use vyre_libs::prelude::wrap_child
 pub use vyre_libs::region::reparent_program_children
 pub use vyre_libs::region::tag_program
 pub use vyre_libs::region::wrap
@@ -647,28 +602,6 @@ pub vyre_libs::parsing::lr_tables::ParseError::UnexpectedToken::state: u32
 pub vyre_libs::parsing::lr_tables::ParseError::UnexpectedToken::token: u32
 pub vyre_libs::parsing::lr_tables::Production::lhs: u32
 pub vyre_libs::parsing::lr_tables::Production::rhs_len: u32
-pub vyre_libs::prelude::BuildOptions::region_generator: core::option::Option<&'static str>
-pub vyre_libs::prelude::BuildOptions::tenant_id: core::option::Option<u32>
-pub vyre_libs::prelude::BuildOptions::workgroup_size: core::option::Option<[u32; 3]>
-pub vyre_libs::prelude::TensorRef::dtype: vyre_spec::data_type::DataType
-pub vyre_libs::prelude::TensorRef::name: vyre_foundation::ir_inner::model::expr::ident::Ident
-pub vyre_libs::prelude::TensorRef::shape: alloc::sync::Arc<[u32]>
-pub vyre_libs::prelude::TensorRefError::DtypeMismatch
-pub vyre_libs::prelude::TensorRefError::DtypeMismatch::expected: vyre_spec::data_type::DataType
-pub vyre_libs::prelude::TensorRefError::DtypeMismatch::found: vyre_spec::data_type::DataType
-pub vyre_libs::prelude::TensorRefError::DtypeMismatch::name: alloc::string::String
-pub vyre_libs::prelude::TensorRefError::DtypeMismatch::op: &'static str
-pub vyre_libs::prelude::TensorRefError::ElementCountOverflow
-pub vyre_libs::prelude::TensorRefError::ElementCountOverflow::name: alloc::string::String
-pub vyre_libs::prelude::TensorRefError::ElementCountOverflow::shape: alloc::vec::Vec<u32>
-pub vyre_libs::prelude::TensorRefError::NameCollision
-pub vyre_libs::prelude::TensorRefError::NameCollision::name: alloc::string::String
-pub vyre_libs::prelude::TensorRefError::NameCollision::op: &'static str
-pub vyre_libs::prelude::TensorRefError::ShapeMismatch
-pub vyre_libs::prelude::TensorRefError::ShapeMismatch::expected: alloc::vec::Vec<u32>
-pub vyre_libs::prelude::TensorRefError::ShapeMismatch::found: alloc::vec::Vec<u32>
-pub vyre_libs::prelude::TensorRefError::ShapeMismatch::name: alloc::string::String
-pub vyre_libs::prelude::TensorRefError::ShapeMismatch::op: &'static str
 pub vyre_libs::scan::PostProcessError::InvalidRange
 pub vyre_libs::scan::PostProcessError::InvalidRange::end: u32
 pub vyre_libs::scan::PostProcessError::InvalidRange::haystack_len: usize

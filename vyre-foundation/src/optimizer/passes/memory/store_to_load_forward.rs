@@ -53,7 +53,7 @@ use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::passes::driver;
 use crate::optimizer::passes::expr_is_observably_free_for_reexecution;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::transform::visit::{any_descendant, for_each_subexpr};
+use crate::visit::{any_descendant, for_each_subexpr};
 use rustc_hash::FxHashSet;
 
 /// `ProgramPass` registration for the store-to-load forwarding rewrite

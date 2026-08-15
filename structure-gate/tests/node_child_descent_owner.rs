@@ -35,8 +35,8 @@
 //! Three owners, one per Rust reference mode, each an exhaustive match with no
 //! catch-all so a new variant fails to COMPILE there:
 //!
-//! - `transform::visit::child_bodies` for a shared read,
-//! - `transform::visit::child_bodies_mut` for a move or an in-place mutation,
+//! - `visit::child_bodies` for a shared read,
+//! - `visit::child_bodies_mut` for a move or an in-place mutation,
 //! - `transform::rewrite_walk::rewrite_node` for a borrow-preserving rebuild.
 //!
 //! A block that takes its children from one of those is not reported, however
@@ -380,7 +380,7 @@ fn no_unrecorded_walk_derives_node_children_itself() {
         "{} walk(s) derive `Node` child structure themselves and end in a catch-all arm, so a \
          nesting variant added to `Node` would be skipped there in silence:\n{}\n\n\
          Fix: take the children from one owner instead. \
-         `vyre_foundation::transform::visit::child_bodies` for a shared read, \
+         `vyre_foundation::visit::child_bodies` for a shared read, \
          `child_bodies_mut` for a move or in-place mutation, \
          `vyre_foundation::transform::rewrite_walk::rewrite_node` for a borrow-preserving \
          rebuild. A predicate becomes \
@@ -420,7 +420,10 @@ fn every_waiver_still_describes_a_real_walk() {
         stale.len(),
         stale
             .iter()
-            .map(|waiver| format!("  {} (owner {}): {}", waiver.path, waiver.owner, waiver.reason))
+            .map(|waiver| format!(
+                "  {} (owner {}): {}",
+                waiver.path, waiver.owner, waiver.reason
+            ))
             .collect::<Vec<_>>()
             .join("\n"),
     );
@@ -431,7 +434,10 @@ fn every_waiver_still_describes_a_real_walk() {
 fn every_waiver_names_an_owner_and_a_reason() {
     for waiver in WAIVERS {
         assert!(
-            matches!(waiver.owner, "CompilerCore" | "Backends" | "ToolingFrontend"),
+            matches!(
+                waiver.owner,
+                "CompilerCore" | "Backends" | "ToolingFrontend"
+            ),
             "Fix: waiver for {} names owner `{}`, which is not a subsystem. Only the subsystem \
              that owns the file may convert it, so the row has to say which one.",
             waiver.path,
@@ -584,7 +590,6 @@ fn scrutinee_is_a_node(rest: &str) -> Option<usize> {
     }
     Some(consumed + (tail.len() - head.len()))
 }
-
 
 /// True when `body` has a `_ =>` arm at arm depth, not inside a nested pattern.
 fn has_top_level_wildcard_arm(body: &str) -> bool {

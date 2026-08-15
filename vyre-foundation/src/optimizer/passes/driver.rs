@@ -23,7 +23,7 @@ use std::borrow::Cow;
 
 use crate::ir::{Node, Program};
 use crate::optimizer::{PassAnalysis, PassResult};
-use crate::transform::visit::{any_body, any_descendant, map_bodies_cow};
+use crate::visit::{any_body, any_descendant, map_bodies_cow};
 
 /// `RUN` when `program` carries every node kind in `required` and some node
 /// under the entry satisfies `candidate`.

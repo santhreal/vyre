@@ -10,7 +10,7 @@
 //! that one of them assigns, which silently changes the values the program
 //! computes.
 //!
-//! Routing both onto the exhaustive owners in `transform::visit` closes that for
+//! Routing both onto the exhaustive owners in `visit` closes that for
 //! the variants that exist. It does not close it for the next one, because a
 //! fixture list written today would not exercise a variant added tomorrow. So
 //! the fixtures here come from `vyre_test_support::ir_variants`, which checks
@@ -25,7 +25,7 @@
 
 use vyre_foundation::ir::{Expr, Ident, Node};
 use vyre_foundation::optimizer::passes::loops::{bound_names, touched_buffers, var_reads};
-use vyre_foundation::transform::visit::node_bound_name;
+use vyre_foundation::visit::node_bound_name;
 use vyre_test_support::ir_variants::{
     assert_covers_every_node_variant, assert_samples_match_declared_shape, node_body_slot_samples,
     node_operand_samples, node_variant_samples, NodeSample,

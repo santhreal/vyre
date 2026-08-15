@@ -8,7 +8,7 @@ use crate::ir::{AtomicOp, Expr, Program};
 use crate::memory_model::MemoryOrdering;
 use crate::optimizer::rewrite::rewrite_program;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::transform::visit::any_expr_in;
+use crate::visit::any_expr_in;
 
 /// Replace identity-op Relaxed atomics with plain loads.
 #[derive(Debug, Default)]
@@ -30,7 +30,7 @@ impl AtomicMinimizePass {
             return PassAnalysis::SKIP;
         }
         // The scan enumerates node nesting, node operands, and expression
-        // operands through the three owners in `transform::visit`. The
+        // operands through the three owners in `visit`. The
         // hand-written scan this replaces ended in a catch-all node arm, so an
         // identity atomic reachable only through `Trap::address` or an async
         // copy offset made this report SKIP and the pass never ran.
@@ -97,7 +97,7 @@ fn is_identity_atomic(op: AtomicOp, value: &Expr) -> bool {
 mod tests {
     use super::*;
     use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node};
-    use crate::transform::visit::for_each_node;
+    use crate::visit::for_each_node;
 
     fn buf() -> BufferDecl {
         BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)
@@ -122,7 +122,7 @@ mod tests {
     /// so a `Let` in a body shape this helper never named is still found.
     fn extract_let_value(p: &Program, name: &str) -> Expr {
         let mut found = None;
-        crate::transform::visit::walk_nodes(p, |node| {
+        crate::visit::walk_nodes(p, |node| {
             if let Node::Let { name: bound, value } = node {
                 if bound.as_str() == name {
                     found = Some(value.clone());
@@ -323,7 +323,7 @@ mod tests {
     /// The value bound to `target` by the first matching `Let`, at any nesting
     /// depth.
     ///
-    /// Descent comes from `transform::visit::for_each_node`, the one owner of
+    /// Descent comes from `visit::for_each_node`, the one owner of
     /// which node variants nest. The hand-written worklist this replaces ended
     /// in `_ => {}`, so a binding inside a fifth body-bearing variant read as
     /// absent and the assertion below would have failed for the wrong reason.
@@ -383,6 +383,6 @@ mod tests {
     }
 
     fn expr_contains(expr: &Expr, mut predicate: impl FnMut(&Expr) -> bool) -> bool {
-        crate::transform::visit::any_subexpr(expr, &mut predicate)
+        crate::visit::any_subexpr(expr, &mut predicate)
     }
 }

@@ -11,7 +11,7 @@
 //!
 //! # Why it counts with the foundation walker
 //!
-//! The count comes from `vyre_foundation::transform::visit::walk_exprs`. A
+//! The count comes from `vyre_foundation::visit::walk_exprs`. A
 //! hand-rolled counter here would be a second traversal of a `#[non_exhaustive]`
 //! enum written outside the crate that declares it: its catch-all arm makes a
 //! variant added tomorrow read as a leaf, so a tree that grew through the new
@@ -21,7 +21,7 @@
 
 mod common;
 
-use vyre_foundation::transform::visit::walk_exprs;
+use vyre_foundation::visit::walk_exprs;
 
 /// Expression-node ceiling for the five-iteration composition.
 ///

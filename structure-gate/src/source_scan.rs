@@ -8,6 +8,7 @@
 //! workspace contains.
 
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use walkdir::{DirEntry, WalkDir};
@@ -27,7 +28,7 @@ use crate::opaque_span;
 /// whole tree in memory to answer a question about one file.
 pub fn rust_sources_with_text(root: &Path) -> impl Iterator<Item = (String, String)> + '_ {
     rust_sources(root).into_iter().filter_map(move |file| {
-        let text = fs::read_to_string(&file).ok()?;
+        let text = read_source(&file)?;
         let relative = file
             .strip_prefix(root)
             .unwrap_or(&file)
@@ -35,6 +36,40 @@ pub fn rust_sources_with_text(root: &Path) -> impl Iterator<Item = (String, Stri
             .replace('\\', "/");
         Some((relative, text))
     })
+}
+
+/// The most bytes one source may hold before a scanner refuses to judge it.
+///
+/// The per-file line cap holds every tracked source far below this, so a file
+/// over the bound is not a large source: it is generated output or a binary
+/// that reached the walk. Reading it in full would let one file decide how much
+/// memory a tree scan takes.
+const MAX_SOURCE_BYTES: u64 = 4 * 1024 * 1024;
+
+/// The text of one source, read under [`MAX_SOURCE_BYTES`].
+///
+/// A file that cannot be opened or is not UTF-8 yields nothing, because a
+/// scanner reports what the tree says and an unreadable file says nothing.
+///
+/// # Panics
+///
+/// When the file holds more than [`MAX_SOURCE_BYTES`]. Truncating it would let
+/// a scanner judge a source it read only part of and report the tree as clean
+/// past the cut, which is the one answer worse than refusing.
+fn read_source(path: &Path) -> Option<String> {
+    let mut text = String::new();
+    fs::File::open(path)
+        .ok()?
+        .take(MAX_SOURCE_BYTES + 1)
+        .read_to_string(&mut text)
+        .ok()?;
+    assert!(
+        text.len() as u64 <= MAX_SOURCE_BYTES,
+        "Fix: {} holds more than {MAX_SOURCE_BYTES} bytes, so a tree scan cannot read it whole; \
+         split the file or keep generated output out of the source tree",
+        path.display()
+    );
+    Some(text)
 }
 
 /// Every `.rs` file under `root`, sorted.

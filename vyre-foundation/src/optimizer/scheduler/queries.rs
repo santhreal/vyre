@@ -198,7 +198,7 @@ impl PassScheduler {
 
     /// Reachability check: returns true if pass `from` can transitively
     /// invalidate any capability `to` requires. Computed via the
-    /// substrate `dataflow_fixpoint::reachability_closure` with the
+    /// substrate `semiring_closure::reachability_closure` with the
     /// `BoolOr` semiring over the same invalidation adjacency built by
     /// [`Self::transitive_dependents`].
     ///

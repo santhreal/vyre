@@ -16,7 +16,7 @@
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::optimizer::passes::loops::loop_fusion::LoopFusion;
-use vyre_foundation::transform::visit::child_bodies;
+use vyre_foundation::visit::child_bodies;
 
 /// A loop over `0..4` writing `value` into `buffer`.
 ///

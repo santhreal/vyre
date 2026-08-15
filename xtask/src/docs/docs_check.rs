@@ -198,7 +198,7 @@ impl Gate for DocsCheck {
         ];
         if ctx.write {
             for (path, content) in &rendered {
-                write_file(&ctx.root.join(path), content)?;
+                crate::generated_document::write(&ctx.root.join(path), content)?;
             }
             report.note("wrote the summary and the authority index".to_string());
         } else {
@@ -995,23 +995,6 @@ fn read_text(root: &Path, relative: &str) -> Result<String, GateError> {
     })
 }
 
-/// Write one generated document, creating the directory it lives in.
-fn write_file(path: &Path, content: &str) -> Result<(), GateError> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|error| {
-            GateError::new(
-                format!("could not create `{}`: {error}", parent.display()),
-                "check the checkout is writable",
-            )
-        })?;
-    }
-    fs::write(path, content).map_err(|error| {
-        GateError::new(
-            format!("could not write `{}`: {error}", path.display()),
-            "check the checkout is writable",
-        )
-    })
-}
 
 #[cfg(test)]
 mod tests {

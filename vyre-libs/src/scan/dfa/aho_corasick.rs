@@ -149,7 +149,7 @@ mod tests {
     use super::*;
     use std::ops::ControlFlow;
     use vyre_foundation::ir::Node;
-    use vyre_foundation::transform::visit::try_for_each_node;
+    use vyre_foundation::visit::try_for_each_node;
 
     /// Bounds of the first `Loop` in emission order.
     ///

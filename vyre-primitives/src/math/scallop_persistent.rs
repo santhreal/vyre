@@ -1,8 +1,8 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 
 use crate::fixpoint::persistent_fixpoint::grid_sync_barrier;
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
 
 fn workgroup_lineage_loop(
     iteration_var: &'static str,

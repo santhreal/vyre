@@ -17,7 +17,7 @@
 //!   ordering before invoking this primitive).
 //! - `Node::Loop` (vyre-foundation IR primitive)  -  outer per-depth
 //!   loop.
-//! - `Node::Barrier { ordering: vyre_foundation::MemoryOrdering::SeqCst }`  -  synchronisation between depth waves.
+//! - `Node::Barrier { ordering: vyre_foundation::ir::MemoryOrdering::SeqCst }`  -  synchronisation between depth waves.
 //! - `Expr::eq` + `Node::if_then`  -  depth predicate per lane.
 //!
 //! No new sub-op invented. The caller composes its own per-lane work
@@ -197,7 +197,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::transform::visit::any_descendant;
+    use vyre_foundation::visit::any_descendant;
 
     fn entry_region_body(program: &Program) -> &[Node] {
         match &program.entry()[0] {
@@ -208,7 +208,7 @@ mod tests {
 
     /// True when a grid-wide fence appears anywhere under `nodes`.
     ///
-    /// Descent comes from `transform::visit::any_descendant`, the one owner of
+    /// Descent comes from `visit::any_descendant`, the one owner of
     /// which node variants nest. The hand-written match this replaces ended in
     /// `_ => false`, so a fifth body-bearing variant would have made a program
     /// with no reachable fence look correctly synchronized.

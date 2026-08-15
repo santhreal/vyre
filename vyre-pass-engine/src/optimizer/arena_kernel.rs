@@ -115,7 +115,7 @@ pub(super) fn build_fused_level_wave_program(
                 vec![chunk_loop],
             ),
             Node::Barrier {
-                ordering: vyre_foundation::MemoryOrdering::SeqCst,
+                ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
             },
         ],
     );

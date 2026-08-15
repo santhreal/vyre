@@ -10,7 +10,7 @@ pub mod toposort;
 /// GPU-resident depth-wave dispatcher for bottom-up callee-before-
 /// caller computations (e.g. downstream_dataflow::summary's per-procedure summary
 /// fixpoint with topological ordering). Composes Node::Loop +
-/// Node::Barrier { ordering: vyre_foundation::MemoryOrdering::SeqCst } + a per-lane depth predicate; no new sub-op.
+/// Node::Barrier { ordering: vyre_foundation::ir::MemoryOrdering::SeqCst } + a per-lane depth predicate; no new sub-op.
 pub mod level_wave;
 
 /// Reachability scan  -  given a source set + edge list, which nodes

@@ -3,8 +3,8 @@
 //! Category-B composition over `AtomicOp::Max`.
 
 use crate::region::wrap_anonymous;
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
 
 /// Build a Program that atomically updates an LRU slot.
 #[must_use]

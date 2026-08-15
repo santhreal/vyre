@@ -1,7 +1,7 @@
 use super::super::*;
 use crate::bitset::bitset_words;
 use crate::graph::program_graph::ProgramGraphShape;
-use vyre_foundation::{ir::Node, MemoryOrdering};
+use vyre_foundation::ir::{MemoryOrdering, Node};
 
 mod cpu_reference_contracts;
 mod device_parity;

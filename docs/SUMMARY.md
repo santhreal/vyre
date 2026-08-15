@@ -5,6 +5,7 @@
 
 # Architecture and ownership
 
+- [LEGO-block rule](lego-block-rule.md)
 - [Vyre Crate Graph](CRATE_GRAPH.md)
 - [Vyre Crate Ownership](OWNERSHIP.md)
 - [Vyre architecture](ARCHITECTURE.md)

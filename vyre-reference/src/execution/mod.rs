@@ -61,8 +61,9 @@ pub(crate) fn program_for_interpreter(
     // Skipping this made every composite call fall through to the empty
     // lowering table's placeholder, which cleared the output buffer instead
     // of computing anything.
-    let inlined = vyre_foundation::ir::inline_composite_calls(collectives_lowered.as_ref())
-        .map_err(|error| crate::ReferenceError::new(error.to_string()))?;
+    let inlined =
+        vyre_foundation::transform::inline::inline_composite_calls(collectives_lowered.as_ref())
+            .map_err(|error| crate::ReferenceError::new(error.to_string()))?;
     Ok(Cow::Owned(inlined))
 }
 

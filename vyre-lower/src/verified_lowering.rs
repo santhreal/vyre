@@ -49,7 +49,7 @@ impl fmt::Display for LowerVerifiedError {
 impl std::error::Error for LowerVerifiedError {}
 
 fn prepare_verified_program(program: &Program) -> Result<Program, LowerVerifiedError> {
-    let expanded = vyre_foundation::ir::inline_composite_calls(program).map_err(|error| {
+    let expanded = vyre_foundation::transform::inline::inline_composite_calls(program).map_err(|error| {
         LowerVerifiedError::new(format!(
             "composition expansion failed before semantic optimization: {error}. Fix: repair the registered composition body or its call graph."
         ))
@@ -60,7 +60,7 @@ fn prepare_verified_program(program: &Program) -> Result<Program, LowerVerifiedE
             "registered semantic optimization failed before descriptor lowering: {error}. Fix: repair pass registration, legality, or convergence instead of emitting unoptimized IR."
         ))
     })?;
-    vyre_foundation::ir::inline_calls(&optimized).map_err(|error| {
+    vyre_foundation::transform::inline::inline_calls(&optimized).map_err(|error| {
         LowerVerifiedError::new(format!(
             "unresolved call remained after semantic optimization: {error}. Fix: register its composition body or eliminate the dead call before backend emission."
         ))

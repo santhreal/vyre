@@ -10,7 +10,7 @@
 
 use vyre_emit_ptx::PtxEmitOptions;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
+use vyre_foundation::ir::MemoryOrdering;
 
 #[path = "emit_probe/probe.rs"]
 mod emit_probe;

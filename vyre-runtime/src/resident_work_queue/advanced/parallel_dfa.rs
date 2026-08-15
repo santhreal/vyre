@@ -214,7 +214,7 @@ fn table_index(lane_var: &str, state_count_var: &str, state: Expr) -> Expr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::MemoryOrdering;
+    use vyre_foundation::ir::MemoryOrdering;
 
     #[test]
     fn parallel_dfa_fragment_has_prefix_barriers_and_output() {
@@ -240,7 +240,7 @@ mod tests {
 
     fn stores_buffer(nodes: &[Node], name: &str) -> bool {
         let mut found = false;
-        vyre_foundation::transform::visit::for_each_node(nodes, |node| {
+        vyre_foundation::visit::for_each_node(nodes, |node| {
             if let Node::Store { buffer, .. } = node {
                 found = found || buffer.as_str() == name;
             }

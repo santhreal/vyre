@@ -9,12 +9,11 @@
 //! is one.
 
 use std::path::Path;
-use std::process::Command;
 
 #[test]
 fn both_producers_fingerprint_a_clean_checkout_identically() {
     let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
-    init_repository(dir.path());
+    xtask::fixture_checkout::seeded(dir.path());
 
     assert_eq!(
         probe_fingerprint(dir.path()),
@@ -27,7 +26,7 @@ fn both_producers_fingerprint_a_clean_checkout_identically() {
 #[test]
 fn both_producers_fingerprint_a_dirty_checkout_identically() {
     let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
-    init_repository(dir.path());
+    xtask::fixture_checkout::seeded(dir.path());
     std::fs::write(dir.path().join("tracked.txt"), "changed\n")
         .expect("Fix: dirty the tracked file.");
     std::fs::write(dir.path().join("untracked.txt"), "new\n")
@@ -50,7 +49,7 @@ fn both_producers_fingerprint_a_dirty_checkout_identically() {
 #[test]
 fn both_producers_ignore_the_evidence_the_run_is_writing() {
     let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
-    init_repository(dir.path());
+    xtask::fixture_checkout::seeded(dir.path());
     std::fs::create_dir_all(dir.path().join("release/evidence/metadata"))
         .expect("Fix: create the evidence directory.");
     std::fs::write(
@@ -71,20 +70,3 @@ fn probe_fingerprint(root: &Path) -> String {
     vyre_bench::probes::source_fingerprint(&vyre_bench::probes::capture_git_info_at(root))
 }
 
-fn init_repository(dir: &Path) {
-    std::fs::write(dir.join("tracked.txt"), "original\n").expect("Fix: write the tracked file.");
-    for args in [
-        vec!["init", "--quiet"],
-        vec!["config", "user.email", "gate@example.invalid"],
-        vec!["config", "user.name", "gate"],
-        vec!["add", "tracked.txt"],
-        vec!["commit", "--quiet", "-m", "seed"],
-    ] {
-        let status = Command::new("git")
-            .args(&args)
-            .current_dir(dir)
-            .status()
-            .expect("Fix: run git to build the fixture checkout.");
-        assert!(status.success(), "Fix: git {args:?} failed in the fixture.");
-    }
-}

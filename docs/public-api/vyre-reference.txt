@@ -12,8 +12,8 @@ impl core::fmt::Display for vyre_reference::ReferenceError
 impl core::fmt::Display for vyre_reference::dual_impls::EvalError
 impl inventory::Collect for vyre_reference::DualReferenceFacet
 impl inventory::Collect for vyre_reference::ReferenceFacet
-impl vyre_foundation::visit::expr::ExprVisitor for vyre_reference::workgroup::LocalSlots
-impl vyre_foundation::visit::traits::NodeVisitor for vyre_reference::workgroup::LocalSlots
+impl vyre_foundation::visit::expr_visitor::ExprVisitor for vyre_reference::workgroup::LocalSlots
+impl vyre_foundation::visit::node_visitor::NodeVisitor for vyre_reference::workgroup::LocalSlots
 impl vyre_reference::DualReferenceFacet
 impl vyre_reference::OobReport
 impl vyre_reference::ReferenceError

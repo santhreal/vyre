@@ -361,7 +361,7 @@ fn join_arms<'a>(nodes: impl IntoIterator<Item = &'a Node>) -> EffectLevel {
 }
 
 fn expr_effect_level(expr: &Expr) -> EffectLevel {
-    use crate::visit::expr::{visit_preorder, ExprVisitor};
+    use crate::visit::expr_visitor::{visit_preorder, ExprVisitor};
     use std::ops::ControlFlow;
 
     // A shallow top-level match summarises an effectful VALUE expression as

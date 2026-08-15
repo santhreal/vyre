@@ -3,7 +3,7 @@
 use std::ops::ControlFlow;
 
 use vyre_foundation::ir::{Ident, Node, Program};
-use vyre_foundation::transform::visit::try_for_each_node;
+use vyre_foundation::visit::try_for_each_node;
 
 use crate::backend::BackendError;
 

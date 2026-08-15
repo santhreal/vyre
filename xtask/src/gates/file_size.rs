@@ -43,7 +43,8 @@ const CORE_MEASURED: &[(&str, usize)] = &[
     ("vyre-foundation/src/optimizer/fact_cache/mod.rs", 570),
     ("vyre-runtime/src/tenant/handle.rs", 443),
     ("vyre-runtime/src/tenant/registry.rs", 302),
-    ("vyre-foundation/src/transform/visit/mod.rs", 789),
+    ("vyre-foundation/src/visit/walk.rs", 529),
+    ("vyre-foundation/src/visit/node_parts.rs", 473),
     ("vyre-foundation/src/optimizer/rewrite.rs", 754),
     ("vyre-driver-wgpu/src/buffer/pool.rs", 910),
     ("vyre-runtime/src/uring/stream.rs", 830),
@@ -156,16 +157,24 @@ impl Gate for FileSize {
 
 /// The cap a path is held to.
 fn cap_for(path: &str) -> usize {
+    cap_from(path, CORE_MEASURED, AUDIT_CEILINGS)
+}
+
+/// The cap `path` takes from a given pair of tables.
+///
+/// A core path never consults the audit table: the core ratchet is the tighter
+/// number, and a file listed in both would otherwise gain hundreds of lines.
+fn cap_from(path: &str, core: &[(&str, usize)], audit: &[(&str, usize)]) -> usize {
     if is_outside_production(path) {
         return TEST_MAX_LINES;
     }
     if is_core(path) {
-        return match measured(CORE_MEASURED, path) {
+        return match measured(core, path) {
             Some(base) => base + base.div_ceil(20),
             None => CORE_MAX_LINES,
         };
     }
-    match measured(AUDIT_CEILINGS, path) {
+    match measured(audit, path) {
         Some(base) => base + base.div_ceil(20),
         None => MAX_LINES,
     }
@@ -208,12 +217,15 @@ mod tests {
 
     /// WHY: the core ratchet has to win over the audit ceiling, because it is the
     /// tighter number. A file in both tables that took the audit ceiling would
-    /// silently gain hundreds of lines of room.
+    /// silently gain hundreds of lines of room. No committed row is in both
+    /// tables today, so the precedence is proved against injected tables rather
+    /// than asserted about a path that only one table names.
     #[test]
     fn the_core_ratchet_wins_over_the_audit_ceiling() {
-        let path = "vyre-foundation/src/transform/visit/mod.rs";
+        let path = "vyre-foundation/src/visit/walk.rs";
         assert!(is_core(path));
-        assert_eq!(cap_for(path), 789 + 40);
+        assert_eq!(cap_from(path, &[(path, 400)], &[(path, 2000)]), 400 + 20);
+        assert_eq!(cap_for(path), 529 + 27);
     }
 
     /// WHY: the resident work queue left the exclusion when the runtime

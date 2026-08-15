@@ -34,7 +34,7 @@
 //! the emitter should substitute.
 
 use crate::ir::{Expr, Program, UnOp};
-use crate::transform::visit::for_each_expr;
+use crate::visit::for_each_expr;
 use dashmap::DashMap;
 
 /// Per-site precision-hint entry. Recorded by the analysis and

@@ -106,8 +106,8 @@ pub(crate) fn kernel_op_kind_is_dce_pure(kind: &KernelOpKind) -> bool {
 mod tests {
     use super::*;
     use crate::OpaqueNodeData;
+    use vyre_foundation::ir::MemoryOrdering;
     use vyre_foundation::ir::{AtomicOp, BinOp};
-    use vyre_foundation::MemoryOrdering;
 
     #[test]
     fn arithmetic_and_literals_are_dead_eliminable_when_unused() {

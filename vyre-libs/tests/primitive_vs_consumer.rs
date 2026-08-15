@@ -6,7 +6,7 @@
 //! wrapper, not a divergent rewrite).
 #![allow(missing_docs)]
 
-use vyre_foundation::pass_substrate::dataflow_fixpoint;
+use vyre_foundation::pass_substrate::semiring_closure;
 use vyre_libs::encoding::{scallop_provenance, scallop_provenance_wide};
 
 #[test]
@@ -34,9 +34,9 @@ fn consumers_are_thicker_wrappers_not_rewrites() {
         "scallop_provenance_wide must preserve the wide primitive's four-buffer contract"
     );
 
-    let closure = dataflow_fixpoint::reachability_closure(&[0, 1, 0, 0], 2, 8);
+    let closure = semiring_closure::reachability_closure(&[0, 1, 0, 0], 2, 8);
     assert_eq!(
         closure[1], 1,
-        "dataflow_fixpoint must expose the primitive closure semantics to self-substrate callers"
+        "semiring_closure must expose the primitive closure semantics to self-substrate callers"
     );
 }

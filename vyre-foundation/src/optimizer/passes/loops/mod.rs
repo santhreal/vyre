@@ -96,7 +96,7 @@ fn sorted_names(set: rustc_hash::FxHashSet<crate::ir::Ident>) -> Vec<crate::ir::
 /// Every name read by an expression anywhere in `nodes`, nested scopes included.
 ///
 /// Node nesting, operand positions, and sub-expressions all come from
-/// [`for_each_expr`](crate::transform::visit::for_each_expr), whose three
+/// [`for_each_expr`](crate::visit::for_each_expr), whose three
 /// enumerations are this crate's exhaustive owners.
 ///
 /// The hand-written descent this replaces ended in `_ => {}`, so a `Var` read
@@ -107,7 +107,7 @@ fn sorted_names(set: rustc_hash::FxHashSet<crate::ir::Ident>) -> Vec<crate::ir::
 /// invisible to `legality::bindings_flow_across`, weakening the capture guard
 /// for both fusion and fission.
 fn collect_var_reads(nodes: &[crate::ir::Node], out: &mut rustc_hash::FxHashSet<crate::ir::Ident>) {
-    crate::transform::visit::for_each_expr(nodes, |expr| {
+    crate::visit::for_each_expr(nodes, |expr| {
         if let crate::ir::Expr::Var(name) = expr {
             out.insert(name.clone());
         }
@@ -117,8 +117,8 @@ fn collect_var_reads(nodes: &[crate::ir::Node], out: &mut rustc_hash::FxHashSet<
 /// Every buffer named by `expr` or any sub-expression.
 ///
 /// The per-variant decision is
-/// [`expr_buffer_ref`](crate::transform::visit::expr_buffer_ref) and the descent
-/// is [`for_each_subexpr`](crate::transform::visit::for_each_subexpr), both
+/// [`expr_buffer_ref`](crate::visit::expr_buffer_ref) and the descent
+/// is [`for_each_subexpr`](crate::visit::for_each_subexpr), both
 /// exhaustive. The match this replaces ended in `_ => {}` over `Expr`, so an
 /// expression variant that gains a buffer position would report the two loop
 /// bodies as touching disjoint memory and let fusion or fission reorder a real
@@ -131,22 +131,21 @@ fn collect_buffers_in_expr(
     expr: &crate::ir::Expr,
     out: &mut rustc_hash::FxHashSet<crate::ir::Ident>,
 ) {
-    crate::transform::visit::for_each_subexpr(expr, &mut |candidate| {
-        match crate::transform::visit::expr_buffer_ref(candidate) {
-            crate::transform::visit::ExprBufferRef::Read(buffer)
-            | crate::transform::visit::ExprBufferRef::ReadWrite(buffer) => {
-                out.insert(buffer.clone());
-            }
-            crate::transform::visit::ExprBufferRef::None
-            | crate::transform::visit::ExprBufferRef::Unknown => {}
+    crate::visit::for_each_subexpr(expr, &mut |candidate| match crate::visit::expr_buffer_ref(
+        candidate,
+    ) {
+        crate::visit::ExprBufferRef::Read(buffer)
+        | crate::visit::ExprBufferRef::ReadWrite(buffer) => {
+            out.insert(buffer.clone());
         }
+        crate::visit::ExprBufferRef::None | crate::visit::ExprBufferRef::Unknown => {}
     });
 }
 
 /// Every buffer any statement in `nodes` touches, by name or through an operand.
 ///
 /// The two halves of the answer come from their owners:
-/// [`node_buffer_refs`](crate::transform::visit::node_buffer_refs) for the
+/// [`node_buffer_refs`](crate::visit::node_buffer_refs) for the
 /// buffers a statement names directly and [`collect_buffers_in_expr`] for the
 /// ones an operand expression reaches. Direction is collapsed because the
 /// disjointness test the loop passes run cares only about overlap.
@@ -154,15 +153,12 @@ fn collect_touched_buffers(
     nodes: &[crate::ir::Node],
     out: &mut rustc_hash::FxHashSet<crate::ir::Ident>,
 ) {
-    crate::transform::visit::for_each_node(nodes, |node| {
-        let refs = crate::transform::visit::node_buffer_refs(node);
+    crate::visit::for_each_node(nodes, |node| {
+        let refs = crate::visit::node_buffer_refs(node);
         for buffer in refs.reads.into_iter().chain(refs.writes).flatten() {
             out.insert(buffer.clone());
         }
-        for operand in crate::transform::visit::node_operands(node)
-            .into_iter()
-            .flatten()
-        {
+        for operand in crate::visit::node_operands(node).into_iter().flatten() {
             collect_buffers_in_expr(operand, out);
         }
     });

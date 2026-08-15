@@ -81,18 +81,41 @@ fn load_baselines(root: &Path) -> Vec<Baseline> {
     parsed.gate
 }
 
+/// A glob a workflow may name, because a glob names a set rather than a file.
+const SCRIPT_GLOBS: &[&str] = &["check_*.sh"];
+
+/// What the in-repo workflows name: xtask subcommands, subsets, and scripts.
+struct WorkflowNames {
+    /// Every `xtask <name>` subcommand a workflow invokes.
+    invoked: Vec<String>,
+    /// Every `xtask gates --subset <name>` a workflow runs.
+    subsets: Vec<String>,
+    /// Every `scripts/<path>` a workflow command names, with where it said so.
+    scripts: Vec<(String, usize, String)>,
+}
+
 /// Every `-- <name>` invocation appearing in an in-repo workflow.
 ///
-/// Only lines that mention `xtask` are read, and a token beginning with `-` is
-/// not a subcommand, so `cargo test -- --nocapture` is not mistaken for one.
-/// The old scan kept only names beginning with `vyre`, which made the check
-/// near-vacuous: a workflow could invoke any misspelled gate and pass.
-fn workflow_invocations(root: &Path) -> (Vec<String>, Vec<String>) {
-    let dir = root.join(".github/workflows");
+/// Only lines that mention `xtask` are read for subcommands, and a token
+/// beginning with `-` is not a subcommand, so `cargo test -- --nocapture` is not
+/// mistaken for one. The old scan kept only names beginning with `vyre`, which
+/// made the check near-vacuous: a workflow could invoke any misspelled gate and
+/// pass.
+///
+/// Script references are read from every line, because a workflow that invokes a
+/// script the checkout no longer carries fails at run time under a step name
+/// that still reads as coverage.
+fn workflow_names(root: &Path) -> WorkflowNames {
     let mut invoked = Vec::new();
     let mut subsets = Vec::new();
+    let mut scripts = Vec::new();
+    let dir = root.join(".github/workflows");
     let Ok(entries) = fs::read_dir(&dir) else {
-        return (invoked, subsets);
+        return WorkflowNames {
+            invoked,
+            subsets,
+            scripts,
+        };
     };
     for entry in entries.flatten() {
         let path = entry.path();
@@ -105,7 +128,14 @@ fn workflow_invocations(root: &Path) -> (Vec<String>, Vec<String>) {
         let Ok(text) = fs::read_to_string(&path) else {
             continue;
         };
-        for line in text.lines() {
+        let file = path
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        for (index, line) in text.lines().enumerate() {
+            if let Some(script) = referenced_script(line) {
+                scripts.push((file.clone(), index + 1, script.to_string()));
+            }
             if !line.contains("xtask") {
                 continue;
             }
@@ -131,7 +161,11 @@ fn workflow_invocations(root: &Path) -> (Vec<String>, Vec<String>) {
         list.sort();
         list.dedup();
     }
-    (invoked, subsets)
+    WorkflowNames {
+        invoked,
+        subsets,
+        scripts,
+    }
 }
 
 /// The leading subcommand-shaped token of `text`.
@@ -139,6 +173,58 @@ fn token(text: &str) -> String {
     text.chars()
         .take_while(|character| character.is_ascii_alphanumeric() || *character == '-')
         .collect()
+}
+
+/// The script a workflow line invokes, relative to `scripts/`, or `None` when
+/// the line invokes nothing.
+///
+/// A YAML comment is documentation, not a reference: prose that ends a sentence
+/// with `source_scan.sh.` names no file, and reporting it as a missing script
+/// makes the check fail on its own explanatory text.
+fn referenced_script(line: &str) -> Option<&str> {
+    let command = strip_yaml_comment(line.trim());
+    let index = command.find("scripts/")?;
+    let rest = &command[index + "scripts/".len()..];
+    let name = rest.split_whitespace().next().unwrap_or(rest);
+    let name = name.trim_end_matches(['"', '\'', ';', ')']);
+    (!name.is_empty()).then_some(name)
+}
+
+/// Everything before a trailing YAML comment. `#` opens one at the start of a
+/// line or after whitespace.
+fn strip_yaml_comment(line: &str) -> &str {
+    if line.starts_with('#') {
+        return "";
+    }
+    match line.find(" #") {
+        Some(index) => &line[..index],
+        None => line,
+    }
+}
+
+/// Every workflow reference to a script the checkout does not carry.
+///
+/// A glob is a set, so it is checked against the accepted globs rather than
+/// against the filesystem.
+fn script_failures(root: &Path, scripts: &[(String, usize, String)]) -> Vec<String> {
+    let directory = root.join("scripts");
+    let mut failures = Vec::new();
+    for (file, line, name) in scripts {
+        if name.contains('*') {
+            if !SCRIPT_GLOBS.contains(&name.as_str()) {
+                failures.push(format!(
+                    "{file}:{line} names `scripts/{name}`, which is not an accepted glob; name the script, or add the glob"
+                ));
+            }
+            continue;
+        }
+        if !directory.join(name).exists() {
+            failures.push(format!(
+                "{file}:{line} invokes `scripts/{name}`, which the checkout does not carry; point the step at what owns the rule now, or delete the step"
+            ));
+        }
+    }
+    failures
 }
 
 /// Every disagreement between the registry and the baseline file.
@@ -222,11 +308,17 @@ fn workflow_failures(gate_names: &[&str], invoked: &[String], subsets: &[String]
 /// Reject a registry, baseline and workflow set that do not agree.
 ///
 /// This is the meta-check. It is what makes an unwired gate impossible rather
-/// than merely discouraged.
+/// than merely discouraged, and what makes a workflow step invoking a deleted
+/// script impossible to leave behind.
 fn wiring_failures(root: &Path, gate_names: &[&str], baselines: &[Baseline]) -> Vec<String> {
-    let (invoked, subsets) = workflow_invocations(root);
+    let names = workflow_names(root);
     let mut failures = baseline_failures(gate_names, baselines);
-    failures.extend(workflow_failures(gate_names, &invoked, &subsets));
+    failures.extend(workflow_failures(
+        gate_names,
+        &names.invoked,
+        &names.subsets,
+    ));
+    failures.extend(script_failures(root, &names.scripts));
     failures
 }
 
@@ -560,5 +652,68 @@ mod tests {
         assert!(selected.len() < subcommands::registry().len());
         assert!(selection(&["--subset".to_string()]).is_err());
         assert!(selection(&["--subset".to_string(), "nope".to_string()]).is_err());
+    }
+
+    /// WHY: a workflow reference is read out of a shell command, and the same
+    /// file explains itself in YAML comments. Prose that ends a sentence with a
+    /// script name invokes nothing, so reading it as a reference would make the
+    /// check fail on documentation.
+    #[test]
+    fn a_script_reference_comes_from_a_command_not_from_prose() {
+        assert_eq!(
+            referenced_script("        run: bash scripts/check_unsafe_budget.sh"),
+            Some("check_unsafe_budget.sh")
+        );
+        assert_eq!(
+            referenced_script("        run: bash scripts/lib/source_scan.sh --strict"),
+            Some("lib/source_scan.sh")
+        );
+        assert_eq!(
+            referenced_script("        run: bash \"scripts/check_public_api.sh\";"),
+            Some("check_public_api.sh")
+        );
+        assert_eq!(referenced_script("      # all on scripts/source_scan.sh."), None);
+        assert_eq!(
+            referenced_script("        run: bash scripts/gate.sh # see scripts/other.sh."),
+            Some("gate.sh")
+        );
+        assert_eq!(referenced_script("        run: cargo test"), None);
+        assert_eq!(
+            referenced_script("        run: bash scripts/check_*.sh"),
+            Some("check_*.sh")
+        );
+    }
+
+    /// WHY: every script this campaign deletes is named by the workflow that
+    /// used to run it. A step pointing at a script the checkout no longer
+    /// carries fails at run time under a step name that still reads as
+    /// coverage, so the wiring check has to name it before CI does.
+    #[test]
+    fn a_workflow_naming_a_script_the_tree_lacks_fails() {
+        let root = std::env::temp_dir().join(format!("vyre-sweep-scripts-{}", std::process::id()));
+        fs::create_dir_all(root.join("scripts")).expect("the fixture tree is created");
+        fs::write(root.join("scripts/present.sh"), "#!/bin/sh\n").expect("the script is written");
+
+        let present = vec![("gates.yml".to_string(), 7, "present.sh".to_string())];
+        let absent = vec![("gates.yml".to_string(), 9, "retired.sh".to_string())];
+        let glob = vec![("gates.yml".to_string(), 11, "check_*.sh".to_string())];
+        let unknown_glob = vec![("gates.yml".to_string(), 13, "run_*.sh".to_string())];
+
+        let clean = script_failures(&root, &present);
+        let missing = script_failures(&root, &absent);
+        let accepted = script_failures(&root, &glob);
+        let rejected = script_failures(&root, &unknown_glob);
+
+        fs::remove_dir_all(&root).expect("the fixture is removed");
+        assert_eq!(clean, Vec::<String>::new());
+        assert_eq!(accepted, Vec::<String>::new());
+        assert_eq!(missing.len(), 1, "got {missing:?}");
+        assert!(missing[0].contains("gates.yml:9"), "got {missing:?}");
+        assert!(
+            missing[0].contains("scripts/retired.sh"),
+            "got {missing:?}"
+        );
+        assert_eq!(rejected.len(), 1, "got {rejected:?}");
+        assert!(rejected[0].contains("run_*.sh"), "got {rejected:?}");
     }
 }

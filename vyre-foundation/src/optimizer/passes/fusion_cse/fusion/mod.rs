@@ -1,7 +1,7 @@
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::rewrite::push_expr_children;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::transform::visit::{
+use crate::visit::{
     expr_buffer_ref, for_each_descendant, for_each_node, node_buffer_refs, node_operands,
     ExprBufferRef,
 };
@@ -684,8 +684,8 @@ pub(super) struct BufferSets {
 /// per-variant list of buffer positions and ended it in `_ => {}`. Both
 /// therefore reported that the four collective variants touch nothing and that
 /// an atomic only reads. The positions are now
-/// [`node_buffer_refs`](crate::transform::visit::node_buffer_refs) and
-/// [`expr_buffer_ref`](crate::transform::visit::expr_buffer_ref)'s decision, so
+/// [`node_buffer_refs`](crate::visit::node_buffer_refs) and
+/// [`expr_buffer_ref`](crate::visit::expr_buffer_ref)'s decision, so
 /// a new variant is a compile error in one place rather than a silently empty
 /// dependency set.
 pub(super) fn buffer_sets(nodes: &[Node]) -> BufferSets {

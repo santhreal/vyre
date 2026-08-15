@@ -5,7 +5,7 @@
 //! coverage or moves an atomic into a per-bit loop fails here.
 
 use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_foundation::transform::visit::{walk_exprs, walk_nodes};
+use vyre_foundation::visit::{walk_exprs, walk_nodes};
 
 use super::{
     csr_queue_forward_traverse, frontier_queue_len_init, frontier_to_queue,

@@ -37,7 +37,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::ir::{BufferAccess, BufferDecl, DataType, Ident, Node, Program};
 use crate::optimizer::{fingerprint_program, vyre_pass, AdapterCaps, PassAnalysis, PassResult};
-use crate::transform::visit::for_each_node;
+use crate::visit::for_each_node;
 
 /// Bytes-per-element for the destination workgroup buffer. Delegates
 /// to the canonical [`DataType::size_bytes`] table so every variant

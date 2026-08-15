@@ -47,7 +47,7 @@
 use super::is_invocation_id_eq_constant;
 use crate::ir::{Expr, Node, Program};
 use crate::optimizer::AdapterCaps;
-use crate::transform::visit::{expr_children, for_each_descendant};
+use crate::visit::{expr_children, for_each_descendant};
 
 /// A frozen snapshot of the cost dimensions tracked by the optimizer's
 /// monotone-down post-condition gate.

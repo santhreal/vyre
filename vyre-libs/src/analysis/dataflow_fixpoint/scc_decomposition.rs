@@ -6,7 +6,7 @@ use super::DataflowFixpointScratch;
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::scratch::reserve_vec_capacity_or_panic;
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_foundation::pass_substrate::dataflow_fixpoint::reachability_closure_into;
+use vyre_foundation::pass_substrate::semiring_closure::reachability_closure_into;
 
 #[cfg(any(test, feature = "cpu-parity"))]
 impl DataflowFixpointScratch {

@@ -266,7 +266,7 @@ pub fn persistent_fixpoint(
         )],
     ));
     iter_body.push(Node::Barrier {
-        ordering: vyre_foundation::MemoryOrdering::SeqCst,
+        ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
     });
     iter_body.extend(transfer_body);
     iter_body.push(compare_and_copy_node(
@@ -279,7 +279,7 @@ pub fn persistent_fixpoint(
         words,
     ));
     iter_body.push(Node::Barrier {
-        ordering: vyre_foundation::MemoryOrdering::SeqCst,
+        ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
     });
     // Termination reads `changed[0]` after the barrier above, so this
     // iteration's sets are visible to every invocation.
@@ -328,7 +328,7 @@ pub fn persistent_fixpoint(
             // barrier is what discharges that requirement here; the
             // grid form has no clear at all and so needs nothing.
             body.push(Node::Barrier {
-                ordering: vyre_foundation::MemoryOrdering::SeqCst,
+                ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
             });
             body
         },
@@ -655,13 +655,13 @@ pub fn routed_persistent_fixpoint(
 /// ordering are the same drift in two places.
 #[must_use]
 pub fn grid_sync_barrier() -> Node {
-    Node::barrier_with_ordering(vyre_foundation::MemoryOrdering::GridSync)
+    Node::barrier_with_ordering(vyre_foundation::ir::MemoryOrdering::GridSync)
 }
 
 /// Grid-wide fences in `nodes`, counted through every nesting construct.
 ///
 /// This is the ONE reader of [`grid_sync_barrier`]. Nesting comes from
-/// `vyre_foundation::transform::visit::child_bodies`, the workspace's single
+/// `vyre_foundation::visit::child_bodies`, the workspace's single
 /// exhaustive owner of "which node variants contain other nodes", so a new
 /// nesting variant fails to compile there rather than being counted as a leaf
 /// here.
@@ -678,12 +678,12 @@ pub fn count_grid_sync(nodes: &[Node]) -> usize {
         if matches!(
             node,
             Node::Barrier {
-                ordering: vyre_foundation::MemoryOrdering::GridSync
+                ordering: vyre_foundation::ir::MemoryOrdering::GridSync
             }
         ) {
             total += 1;
         }
-        for body in vyre_foundation::transform::visit::child_bodies(node) {
+        for body in vyre_foundation::visit::child_bodies(node) {
             stack.extend(body);
         }
     }

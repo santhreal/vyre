@@ -1,6 +1,6 @@
 use super::*;
 use crate::ir::BinOp;
-use crate::transform::visit::{any_subexpr, for_each_node};
+use crate::visit::{any_subexpr, for_each_node};
 
 /// Test: d(x*x)/dx = 2*x for a simple square program.
 #[test]
@@ -183,7 +183,7 @@ fn generated_backward_program_zeroes_gradient_buffers_before_accumulation() {
 
 /// Every node in `nodes` and in every nested body, flattened.
 ///
-/// Descent comes from `transform::visit::for_each_node`, the one owner of which
+/// Descent comes from `visit::for_each_node`, the one owner of which
 /// node variants nest. The hand-written match this replaces ended in `_ => {}`,
 /// so a node inside a fifth body-bearing variant never reached the list and
 /// every assertion driven off it read a shorter program than the one produced.
@@ -261,7 +261,7 @@ fn backward_loop_body_uses_reversed_index_not_forward_var() {
     // if the raw var appears as a top-level Store index the substitution was
     // not applied and the backward pass would write in forward order.
     fn contains_bare_loop_var(expr: &Expr, var_name: &str) -> bool {
-        // Children come from `transform::visit::any_subexpr`, the owner of which
+        // Children come from `visit::any_subexpr`, the owner of which
         // expression variants carry operands. The hand-written match this
         // replaces listed three and ended in `_ => false`, so a reversal
         // expression built with `Select`, `Fma` or a cast read as containing no
@@ -274,7 +274,7 @@ fn backward_loop_body_uses_reversed_index_not_forward_var() {
 
     /// The index of every `Store` in `nodes`, at any nesting depth.
     ///
-    /// Descent comes from `transform::visit::for_each_node`, the one owner of
+    /// Descent comes from `visit::for_each_node`, the one owner of
     /// which node variants nest. The hand-written match this replaces ended in
     /// `_ => {}` and had no `Region` arm at all, so a store inside a region was
     /// already invisible and the assertion below passed on a backward body it

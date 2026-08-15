@@ -6,10 +6,6 @@
 //! `vyre-spec`, `vyre-macros`, and lightweight third-party data crates.
 //! It never knows about concrete driver APIs, a dialect, or a backend.
 
-// Foundation owns the IR arena (`ir_inner::model::arena`), which uses two
-// `unsafe` blocks to extend bumpalo lifetimes inside a single arena owner.
-// Every other unsafe usage is forbidden by `check_lib_rs_headers.sh`.
-#![allow(unsafe_code)]
 #![allow(
     clippy::duplicate_mod,
     clippy::too_many_arguments,
@@ -40,7 +36,6 @@ pub mod ir {
             fold_unary_literal,
         };
     }
-    pub use crate::ir_inner::model::arena::{ArenaProgram, ExprArena, ExprRef};
     pub use crate::ir_inner::model::expr::{Expr, ExprNode, GeneratorRef, Ident};
     pub use crate::ir_inner::model::generated::{
         expr_variant_name, node_variant_name, EXPR_VARIANT_NAMES, NODE_VARIANT_NAMES,
@@ -79,17 +74,6 @@ pub mod ir {
         SubgroupReduceOp, UnOp,
     };
     pub use crate::memory_model::MemoryOrdering;
-    pub use crate::optimizer::passes::fusion_cse::{cse, dce};
-    pub use crate::serial::text;
-    pub use crate::transform::inline::{
-        inline_calls, inline_calls_with_mode, inline_calls_with_resolver, inline_composite_calls,
-        OpResolver, UnresolvedCalls,
-    };
-    pub use crate::validate::depth::{
-        LimitState, DEFAULT_MAX_CALL_DEPTH, DEFAULT_MAX_NESTING_DEPTH, DEFAULT_MAX_NODE_COUNT,
-    };
-    pub use crate::validate::rule_pipeline::validate;
-    pub use crate::validate::validation_error::ValidationError;
 }
 
 /// CPU reference registration contract.
@@ -107,9 +91,6 @@ pub mod program_caps;
 /// Single owner of scalar operator semantics, shared by the literal folder
 /// and the reference interpreter.
 pub(crate) mod scalar_ops;
-
-/// Endian-agnostic memory ordering shared by atomics and fences.
-pub use memory_model::MemoryOrdering;
 
 /// Inventory-registered algebraic-law registry (`algebraic_law_registry::laws_for_op`).
 pub mod algebraic_law_registry;

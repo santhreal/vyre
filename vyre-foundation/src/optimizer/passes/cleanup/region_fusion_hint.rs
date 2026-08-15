@@ -279,7 +279,7 @@ fn has_candidate_pair(node: &Node) -> bool {
 mod tests {
     use super::*;
     use crate::ir::{BufferAccess, BufferDecl, DataType, Ident, Node};
-    use crate::transform::visit::for_each_node;
+    use crate::visit::for_each_node;
 
     fn buf() -> BufferDecl {
         BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)
@@ -299,7 +299,7 @@ mod tests {
 
     /// Every region generator name under `nodes`, in source order.
     ///
-    /// Descent comes from `transform::visit::for_each_node`, the one owner of
+    /// Descent comes from `visit::for_each_node`, the one owner of
     /// which node variants nest. The hand-written match this replaces ended in
     /// `_ => {}`, so a region inside a fifth body-bearing variant read as absent
     /// and the fusion-hint assertions would have passed on a program whose

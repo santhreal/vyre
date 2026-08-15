@@ -61,8 +61,7 @@ pub use region::{
 };
 pub use region::{
     compact_first_per_region_pattern_flag_program, region_sort_program,
-    COMPACT_FIRST_PER_REGION_PATTERN_OP_ID, DEDUP_REGIONS_CLUSTER_OP_ID,
-    DEDUP_REGIONS_FLAG_OP_ID,
+    COMPACT_FIRST_PER_REGION_PATTERN_OP_ID, DEDUP_REGIONS_CLUSTER_OP_ID, DEDUP_REGIONS_FLAG_OP_ID,
 };
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use region::{compact_first_per_region_pattern_survivors_cpu, sort_regions_cpu};

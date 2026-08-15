@@ -18,7 +18,7 @@ use crate::ir_inner::model::expr::{Expr, Ident};
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::Program;
 use crate::ir_inner::model::spec_types::{BufferAccess, DataType};
-use crate::visit::traits::{dispatch_node, NodeVisitor};
+use crate::visit::node_visitor::{dispatch_node, NodeVisitor};
 use hashbrown::hash_map::RawEntryMut;
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
@@ -37,7 +37,8 @@ use std::ops::ControlFlow;
 /// # Examples
 ///
 /// ```
-/// use vyre::ir::{Program, validate};
+/// use vyre::ir::Program;
+/// use vyre::validate;
 ///
 /// let program = Program::wrapped(Vec::new(), [1, 1, 1], Vec::new());
 /// let errors = validate(&program);

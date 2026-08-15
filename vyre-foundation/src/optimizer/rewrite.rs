@@ -1,7 +1,7 @@
 #![allow(clippy::expect_used)]
 use crate::ir::{BinOp, Expr, Node, Program};
 use crate::transform::rewrite_walk::{self, NodeRewrite};
-use crate::transform::visit::{any_subexpr, expr_children};
+use crate::visit::{any_subexpr, expr_children};
 use smallvec::SmallVec;
 use std::borrow::Cow;
 

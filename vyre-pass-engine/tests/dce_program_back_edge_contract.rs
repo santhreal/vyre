@@ -15,7 +15,8 @@
 
 use std::sync::Arc;
 
-use vyre_foundation::ir::{validate, Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_foundation::validate::validate;
 use vyre_pass_engine::optimizer::dce_program::{
     build_dce_bfs_program, build_persistent_bfs_program,
 };

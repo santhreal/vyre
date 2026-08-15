@@ -15,7 +15,7 @@
 //! escapes, and it escapes into the failure mode above rather than into a
 //! compile error. `Node` is `#[non_exhaustive]`, so this crate cannot be made to
 //! fail at compile time; the detection now delegates to
-//! `vyre_foundation::transform::visit::any_descendant`, whose child enumeration
+//! `vyre_foundation::visit::any_descendant`, whose child enumeration
 //! IS exhaustive in the crate that owns the enum.
 //!
 //! # Which variants previously escaped
@@ -36,9 +36,9 @@
 //! claim is narrower and load-bearing: the fence is never reported as absent.
 
 use vyre_driver::grid_sync::{contains_grid_sync, split_on_grid_sync};
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
-use vyre_foundation::transform::visit::child_bodies;
-use vyre_foundation::MemoryOrdering;
+use vyre_foundation::visit::child_bodies;
 use vyre_test_support::ir_variants::{
     assert_covers_every_node_variant, node_body_slot_samples, node_variant_samples,
 };

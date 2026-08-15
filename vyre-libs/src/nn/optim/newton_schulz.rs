@@ -41,7 +41,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::transform::visit::walk_exprs;
+    use vyre_foundation::visit::walk_exprs;
 
     /// Expression-node ceiling for the five-iteration composition.
     ///

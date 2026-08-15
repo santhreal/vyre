@@ -7,7 +7,7 @@
 //! no answer.
 
 use crate::ir::{Expr, Ident, Node};
-use crate::transform::visit::{any_subexpr, child_bodies};
+use crate::visit::{any_subexpr, child_bodies};
 
 /// True iff `expr` contains an `Expr::Opaque` anywhere in its tree.
 ///
@@ -21,7 +21,7 @@ use crate::transform::visit::{any_subexpr, child_bodies};
 /// touched set and the disjointness proof would be unsound. Both passes call
 /// this to fail closed: any opaque expression in the body keeps it whole.
 ///
-/// Operand positions come from `transform::visit::expr_children`, so every
+/// Operand positions come from `visit::expr_children`, so every
 /// position is covered, including `SubgroupShuffle`'s `lane`, which the buffer
 /// collectors elide: an opaque payload can never be reordered past a dependent
 /// access it cannot see.
@@ -32,7 +32,7 @@ pub(super) fn expr_contains_opaque(expr: &Expr) -> bool {
 /// True iff `nodes` rebinds `var`, with `nested_same_name_rebinds` deciding
 /// what a nested `Loop` that reuses the name counts as.
 ///
-/// Child bodies come from `transform::visit::child_bodies`, the one exhaustive
+/// Child bodies come from `visit::child_bodies`, the one exhaustive
 /// owner. The copy this replaces ended in `_ => false`, so a `Node` variant
 /// that gained a body would have read as rebinding nothing and every loop pass
 /// guarded by this would have applied an induction-range fact through a scope

@@ -1,7 +1,7 @@
 //! Composition contracts for standalone decode programs built from Tier-2.5 primitives.
 
 use vyre::ir::{Node, Program};
-use vyre_foundation::transform::visit::walk_nodes;
+use vyre_foundation::visit::walk_nodes;
 use vyre_libs::decode::{base64_decode, inflate_stored_block};
 use vyre_primitives::decode::base64::BASE64_DECODE_OP_ID;
 use vyre_primitives::decode::inflate::INFLATE_STORED_OP_ID;

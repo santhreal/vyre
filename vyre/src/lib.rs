@@ -105,10 +105,10 @@ pub use vyre_megakernel::{
     TargetPayloadFormat, TargetProfile, ValidatedCompileRequest,
 };
 
-/// Domain-neutral tagged byte-range contract.
-pub use vyre_foundation::match_result;
 /// Retry classification shared by every diagnostic that can be retried.
 pub use vyre_foundation::diagnostics::RetryClass;
+/// Domain-neutral tagged byte-range contract.
+pub use vyre_foundation::match_result;
 /// Authenticated artifact admission, materialization, and recovery.
 pub use vyre_runtime::artifact_admission::{
     admit_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession, ArtifactSessionError,
@@ -120,7 +120,8 @@ pub use vyre_runtime::persistent_executor::PersistentExecutor;
 pub use vyre_driver::{ArtifactInstance, BindingSet, Completion, DeviceIdentity, Submission};
 
 /// Canonical frontend IR program and validation entry point.
-pub use ir::{validate, Program};
+pub use ir::Program;
+pub use vyre_foundation::validate::validate;
 
 /// Domain-neutral tagged byte range shared by source-processing products.
 pub use vyre_foundation::match_result::ByteRange;

@@ -3,7 +3,7 @@
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_foundation::MemoryOrdering;
+use vyre_foundation::ir::MemoryOrdering;
 
 fn ordered_grid_sync_program() -> Program {
     Program::wrapped(

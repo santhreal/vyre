@@ -4,8 +4,9 @@ use super::capability::Backend;
 use std::sync::{Arc, LazyLock};
 pub use vyre_foundation::ir::node_op_id;
 use vyre_foundation::ir::Node;
-use vyre_foundation::ir::{OpId, Program, ValidationError};
-use vyre_foundation::transform::visit::child_bodies;
+use vyre_foundation::ir::{OpId, Program};
+use vyre_foundation::validate::ValidationError;
+use vyre_foundation::visit::child_bodies;
 
 const CORE_SUPPORTED_OP_IDS: &[&str] = &[
     "vyre.node.let",

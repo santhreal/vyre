@@ -14,8 +14,8 @@
 use std::collections::HashSet;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
 
 use crate::bitset::bitset_words;
 use crate::bitset::frontier::{

@@ -1,11 +1,11 @@
 //! Effect classification for common-subexpression elimination.
 
 use crate::ir::Expr;
-use crate::transform::visit::any_subexpr;
+use crate::visit::any_subexpr;
 
 /// Return true when evaluating `expr` can read or mutate external state.
 ///
-/// Operand positions come from `transform::visit::expr_children`, so only the
+/// Operand positions come from `visit::expr_children`, so only the
 /// per-variant classification lives here. That matters most for the subgroup
 /// ops: a subgroup op's EFFECT is its operand's effect, because `CseCtx::expr`
 /// does not descend into a subgroup operand (the op interns to a unique key and

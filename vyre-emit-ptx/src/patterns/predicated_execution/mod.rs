@@ -266,7 +266,7 @@ mod tests {
                     .children([body().ops([op(
                         KernelOpKind::Atomic {
                             op: vyre_foundation::ir::AtomicOp::Add,
-                            ordering: vyre_foundation::MemoryOrdering::SeqCst,
+                            ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
                         },
                         [0, 0, 1],
                         2,
@@ -361,7 +361,7 @@ mod tests {
             (KernelOpKind::StoreShared, false),
             (
                 KernelOpKind::Barrier {
-                    ordering: vyre_foundation::MemoryOrdering::SeqCst,
+                    ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
                 },
                 true,
             ),

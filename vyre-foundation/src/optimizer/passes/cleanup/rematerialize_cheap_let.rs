@@ -58,7 +58,7 @@ use crate::ir::{Expr, Node, Program};
 use crate::optimizer::cost::is_rematerializable_leaf;
 use crate::optimizer::rewrite::rewrite_nodes_cow;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::transform::visit::any_descendant;
+use crate::visit::any_descendant;
 
 /// Drop `Let` bindings whose value is a trivially cheap leaf and whose
 /// name is never reassigned, inlining the value at every use site.
@@ -189,15 +189,14 @@ fn can_rematerialize_let(name: &str, value: &Expr, tail: &[Node]) -> bool {
 /// True iff `node` (or any descendant) rebinds `name`.
 ///
 /// Descent comes from [`any_descendant`] and the per-node answer from
-/// [`node_bound_name`](crate::transform::visit::node_bound_name), the two owners
+/// [`node_bound_name`](crate::visit::node_bound_name), the two owners
 /// of "which variants nest" and "which variants bind". The match this replaces
 /// restated both lists and ended in `_ => false`, so a rebinding it did not name
 /// read as never rebound and the pass inlined a stale first definition across the
 /// rebinding.
 fn node_reassigns(node: &Node, name: &str) -> bool {
     any_descendant(node, &mut |candidate| {
-        crate::transform::visit::node_bound_name(candidate)
-            .is_some_and(|bound| bound.as_str() == name)
+        crate::visit::node_bound_name(candidate).is_some_and(|bound| bound.as_str() == name)
     })
 }
 
@@ -221,7 +220,7 @@ fn scan_for_candidate(nodes: &[Node]) -> bool {
 mod tests {
     use super::*;
     use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
-    use crate::transform::visit::{child_bodies, node_shape};
+    use crate::visit::{child_bodies, node_shape};
 
     fn buf() -> BufferDecl {
         BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)

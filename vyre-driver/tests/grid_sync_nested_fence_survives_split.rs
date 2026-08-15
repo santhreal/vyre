@@ -16,9 +16,9 @@
 use std::sync::Arc;
 
 use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::transform::visit;
-use vyre_foundation::MemoryOrdering;
+use vyre_foundation::visit;
 
 fn nested_fence_program() -> Program {
     Program::wrapped(

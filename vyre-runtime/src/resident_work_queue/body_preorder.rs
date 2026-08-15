@@ -5,7 +5,7 @@ use vyre_foundation::ir::Node;
 
 /// Visit `nodes` and every nested body in source preorder.
 ///
-/// Child bodies come from [`vyre_foundation::transform::visit::child_bodies`],
+/// Child bodies come from [`vyre_foundation::visit::child_bodies`],
 /// the single owner of which node variants nest, so a walk built on this cannot
 /// classify a new nesting variant as a leaf. The worklist is explicit so an
 /// adversarially deep body cannot overflow the native stack.
@@ -13,7 +13,7 @@ pub(super) fn walk_body_preorder<'a>(nodes: &'a [Node], visit: &mut impl FnMut(&
     let mut stack: Vec<&'a Node> = nodes.iter().rev().collect();
     while let Some(node) = stack.pop() {
         visit(node);
-        for body in vyre_foundation::transform::visit::child_bodies(node)
+        for body in vyre_foundation::visit::child_bodies(node)
             .into_iter()
             .rev()
         {

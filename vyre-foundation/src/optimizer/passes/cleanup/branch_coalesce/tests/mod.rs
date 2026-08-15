@@ -1,7 +1,7 @@
 use super::*;
 use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node};
 use crate::test_ir_inspect::count_nodes;
-use crate::transform::visit::for_each_node;
+use crate::visit::for_each_node;
 
 fn buf() -> BufferDecl {
     BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)
@@ -14,7 +14,7 @@ fn program_with_entry(entry: Vec<Node>) -> Program {
 /// Every `If` in `nodes`, at any nesting depth.
 ///
 /// Counting comes from `test_ir_inspect::count_nodes`, which descends through
-/// `transform::visit::for_each_node`, the one owner of which node variants
+/// `visit::for_each_node`, the one owner of which node variants
 /// nest. The hand-written match this replaces re-listed the four body-bearing
 /// variants and ended in `_ => 0`, so an `If` inside a fifth nesting variant
 /// went uncounted and the collapse assertions below read a smaller program than
@@ -25,7 +25,7 @@ fn count_ifs(nodes: &[Node]) -> usize {
 
 /// The condition of the first `If` in document order, at any nesting depth.
 ///
-/// Descent comes from `transform::visit::for_each_node`, the same owner
+/// Descent comes from `visit::for_each_node`, the same owner
 /// `count_ifs` uses, so the node this returns is always one of the nodes that
 /// function counted. The hand-written match this replaces ended in `_ => {}`.
 fn first_if_cond(entry: &[Node]) -> Option<&Expr> {

@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use smallvec::SmallVec;
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
-use vyre_foundation::transform::visit::any_descendant;
+use vyre_foundation::visit::any_descendant;
 
 /// Report returned by [`elide_value_flow_barriers`].
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -54,7 +54,7 @@ fn nodes_have_barrier(nodes: &[Node]) -> bool {
 /// True when `node` or anything under it is a barrier.
 ///
 /// Delegates to [`any_descendant`], which enumerates children through
-/// `vyre_foundation::transform::visit::child_bodies`, the one exhaustive owner
+/// `vyre_foundation::visit::child_bodies`, the one exhaustive owner
 /// of "which `Node` variants contain other nodes". This function used to run its
 /// own `match node` over `If`, `Loop`, `Block`, and `Region` ending in
 /// `_ => false`. That listed every nesting variant that exists today and would
@@ -368,12 +368,12 @@ mod tests {
 
     /// Nodes anywhere in `nodes` and its nested bodies that satisfy `pred`.
     ///
-    /// Descent comes from `vyre_foundation::transform::visit::for_each_node`,
+    /// Descent comes from `vyre_foundation::visit::for_each_node`,
     /// the single owner of which node variants nest, rather than from a match
     /// here that would silently treat a new nesting variant as a leaf.
     fn count_matching(nodes: &[Node], mut pred: impl FnMut(&Node) -> bool) -> usize {
         let mut count = 0;
-        vyre_foundation::transform::visit::for_each_node(nodes, |node| {
+        vyre_foundation::visit::for_each_node(nodes, |node| {
             if pred(node) {
                 count += 1;
             }

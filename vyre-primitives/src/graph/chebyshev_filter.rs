@@ -231,7 +231,7 @@ pub fn try_chebyshev_filter(
                 // write t_prev_at <- temp. This is per-lane; correctness
                 // requires barriers between iterations across lanes  -  the
                 // workgroup_size below pins all lanes to one workgroup so
-                // a Node::Barrier { ordering: vyre_foundation::MemoryOrdering::SeqCst } between iterations would close the gap.
+                // a Node::Barrier { ordering: vyre_foundation::ir::MemoryOrdering::SeqCst } between iterations would close the gap.
                 // For dense small n (the spectral_schedule self-consumer
                 // case), n ≤ workgroup_size = 256 and a barrier suffices.
                 Node::let_bind("old_curr", t_curr_at(t.clone())),

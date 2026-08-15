@@ -1,7 +1,7 @@
 use super::*;
 use naga::{Binding, BuiltIn, Statement, TypeInner};
 use vyre_foundation::ir::{BinOp, DataType, UnOp};
-use vyre_foundation::MemoryOrdering;
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, SlotCount};
 use vyre_lower::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelDescriptor, KernelOpKind,

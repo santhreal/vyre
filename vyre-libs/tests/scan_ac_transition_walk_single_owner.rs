@@ -26,7 +26,7 @@
 use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{BinOp, Expr, Node, Program};
-use vyre_foundation::transform::visit::for_each_node;
+use vyre_foundation::visit::for_each_node;
 use vyre_libs::scan::classic_ac::{
     build_ac_bounded_count_prefilter_program, build_ac_bounded_count_program,
     build_ac_bounded_count_suffix2_prefilter_program,

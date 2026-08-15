@@ -15,7 +15,7 @@
 use std::sync::Arc;
 
 use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_foundation::transform::visit::child_bodies;
+use vyre_foundation::visit::child_bodies;
 use vyre_pass_engine::optimizer::const_prop::apply_const_prop;
 
 /// One way of nesting a body inside a node, named for the failure message.

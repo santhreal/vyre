@@ -59,7 +59,7 @@ use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::program_soa::ProgramFacts;
 use crate::optimizer::rewrite::rewrite_program;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::transform::visit::for_each_node;
+use crate::visit::for_each_node;
 use rustc_hash::FxHashMap;
 
 /// Cross-control-flow literal Let propagation.

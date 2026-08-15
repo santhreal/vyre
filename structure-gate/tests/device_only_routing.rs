@@ -57,7 +57,14 @@ const DEVICE_ROUTE_MARKERS: [&str; 2] = ["PersistentMegakernel", "GpuPipeline"];
 
 /// Fragments that name host execution in a variant.
 const HOST_EXECUTION_MARKERS: [&str; 8] = [
-    "Cpu", "Host", "Simd", "Scalar", "Native", "Software", "Interpret", "Emulate",
+    "Cpu",
+    "Host",
+    "Simd",
+    "Scalar",
+    "Native",
+    "Software",
+    "Interpret",
+    "Emulate",
 ];
 
 /// Crates whose enums are exempt, with the reason.
@@ -341,4 +348,3 @@ fn variants_in(body: &str) -> Vec<String> {
     }
     variants
 }
-

@@ -14,7 +14,7 @@
 use crate::ir::Ident;
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::Program;
-use crate::transform::visit::any_descendant;
+use crate::visit::any_descendant;
 use crate::visit::bound_names::count_bound_names;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;

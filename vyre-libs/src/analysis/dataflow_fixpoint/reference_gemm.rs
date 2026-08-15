@@ -1,7 +1,7 @@
 //! Telemetered host entry point for the semiring matrix product.
 //!
 //! The product itself, and every fixpoint closure built on it, is owned by
-//! `vyre_foundation::pass_substrate::dataflow_fixpoint`. What this crate adds is
+//! `vyre_foundation::pass_substrate::semiring_closure`. What this crate adds is
 //! the call counter, so a parity run can report how many host products it asked
 //! for. The closures are re-exported from the owner directly rather than
 //! wrapped: a wrapper that only forwards is a second place for the contract to
@@ -10,7 +10,7 @@
 
 use super::Semiring;
 use crate::telemetry::{bump, dataflow_fixpoint_calls};
-use vyre_foundation::pass_substrate::dataflow_fixpoint as foundation_dataflow;
+use vyre_foundation::pass_substrate::semiring_closure as foundation_dataflow;
 
 /// Multiply matrices over the selected semiring through the reference oracle.
 #[must_use]
@@ -44,7 +44,7 @@ pub fn reference_semiring_gemm_into(
 #[cfg(test)]
 mod tests {
     use super::{reference_semiring_gemm_into, Semiring};
-    use vyre_foundation::pass_substrate::dataflow_fixpoint as foundation_dataflow;
+    use vyre_foundation::pass_substrate::semiring_closure as foundation_dataflow;
 
     /// The counter is the only thing this crate adds, so the product must be
     /// the owner's byte for byte, and the caller's allocation must survive the

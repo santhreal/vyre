@@ -21,7 +21,7 @@ use vyre_libs::nn::{activation::relu, linear::linear};
 use vyre_libs::scan::substring_search;
 
 fn assert_valid(p: &Program) {
-    let errors = vyre::ir::validate(p);
+    let errors = vyre::validate(p);
     assert!(
         errors.is_empty(),
         "Program failed validation: {:?}",

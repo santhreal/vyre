@@ -4,9 +4,9 @@
 //! validator emits exactly the expected contract-error message. No silent
 //! fake paths are allowed.
 
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_foundation::validate::validate;
-use vyre_foundation::MemoryOrdering;
 
 fn output_program(nodes: Vec<Node>) -> Program {
     Program::wrapped(

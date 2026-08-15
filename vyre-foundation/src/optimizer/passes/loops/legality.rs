@@ -49,15 +49,15 @@ use rustc_hash::FxHashSet;
 /// Every name `nodes` binds, nested scopes included.
 ///
 /// The per-variant answer is
-/// [`node_bound_name`](crate::transform::visit::node_bound_name) and the descent
-/// is [`for_each_node`](crate::transform::visit::for_each_node), both exhaustive.
+/// [`node_bound_name`](crate::visit::node_bound_name) and the descent
+/// is [`for_each_node`](crate::visit::for_each_node), both exhaustive.
 /// The walk this replaces named its own variants and ended in `_ => {}`, so a
 /// binding form it did not list read as binding nothing and
 /// [`bindings_flow_across`] then let fusion or fission reorder statements across
 /// a live binding.
 pub(super) fn collect_bound_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
-    crate::transform::visit::for_each_node(nodes, |node| {
-        if let Some(name) = crate::transform::visit::node_bound_name(node) {
+    crate::visit::for_each_node(nodes, |node| {
+        if let Some(name) = crate::visit::node_bound_name(node) {
             out.insert(name.clone());
         }
     });

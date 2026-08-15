@@ -56,8 +56,8 @@ use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::passes::expr_is_observably_free_for_reexecution;
 use crate::optimizer::rewrite::push_expr_children;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::transform::visit::{any_descendant, for_each_node};
 use crate::visit::bound_names::count_bound_names;
+use crate::visit::{any_descendant, for_each_node};
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
 

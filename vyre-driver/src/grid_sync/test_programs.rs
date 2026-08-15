@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
-use vyre_foundation::transform::visit::child_bodies;
-use vyre_foundation::MemoryOrdering;
+use vyre_foundation::visit::child_bodies;
 
 pub(super) fn buffer() -> BufferDecl {
     BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)
@@ -69,7 +69,7 @@ pub(super) fn cross_segment_store_program() -> Program {
 /// The test backends that stand in for a device all need the same reading of a
 /// segment body, and a nesting form this walk forgets makes a store invisible
 /// and the split look correct when it dropped a write. The nesting comes from
-/// `transform::visit::child_bodies`, so a statement variant that gains a body
+/// `visit::child_bodies`, so a statement variant that gains a body
 /// is descended into here without this file being edited.
 pub(super) fn apply_out_stores(nodes: &[Node], state: &mut [u8]) {
     for node in nodes {

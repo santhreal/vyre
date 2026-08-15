@@ -268,8 +268,8 @@ mod tests {
     };
     use smallvec::SmallVec;
     use std::sync::{Arc, Mutex};
+    use vyre_foundation::ir::MemoryOrdering;
     use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
-    use vyre_foundation::MemoryOrdering;
 
     /// The owned-dispatch stub every borrowed-path probe below needs.
     ///

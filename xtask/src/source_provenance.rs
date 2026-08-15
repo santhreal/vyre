@@ -281,7 +281,7 @@ mod tests {
     #[test]
     fn capture_marks_a_dirty_tree_dirty_with_a_worktree_digest() {
         let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
-        init_repository(dir.path());
+        crate::fixture_checkout::seeded(dir.path());
         std::fs::write(dir.path().join("tracked.txt"), "changed\n")
             .expect("Fix: dirty the tracked file.");
 
@@ -301,7 +301,7 @@ mod tests {
     #[test]
     fn capture_records_a_clean_tree_clean() {
         let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
-        init_repository(dir.path());
+        crate::fixture_checkout::seeded(dir.path());
 
         let fingerprint = capture(dir.path()).expect("Fix: a clean checkout names its commit.");
 
@@ -314,7 +314,7 @@ mod tests {
     #[test]
     fn a_committed_evidence_artifact_does_not_dirty_the_tree_it_describes() {
         let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
-        init_repository(dir.path());
+        crate::fixture_checkout::seeded(dir.path());
         std::fs::create_dir_all(dir.path().join("release/evidence/metadata"))
             .expect("Fix: create the evidence directory.");
         std::fs::write(
@@ -335,8 +335,8 @@ mod tests {
     fn two_different_dirty_trees_get_two_different_digests() {
         let first = tempfile::tempdir().expect("Fix: create a temporary directory.");
         let second = tempfile::tempdir().expect("Fix: create a temporary directory.");
-        init_repository(first.path());
-        init_repository(second.path());
+        crate::fixture_checkout::seeded(first.path());
+        crate::fixture_checkout::seeded(second.path());
         std::fs::write(first.path().join("tracked.txt"), "one\n")
             .expect("Fix: dirty the first tree.");
         std::fs::write(second.path().join("tracked.txt"), "two\n")
@@ -383,23 +383,4 @@ mod tests {
         assert!(issues(&format!("git:abc:dirty=true:worktree={}", "a".repeat(64))).is_empty());
     }
 
-    /// A checkout with one commit and one tracked file, and nothing else.
-    fn init_repository(dir: &Path) {
-        std::fs::write(dir.join("tracked.txt"), "original\n")
-            .expect("Fix: write the tracked file.");
-        for args in [
-            vec!["init", "--quiet"],
-            vec!["config", "user.email", "gate@example.invalid"],
-            vec!["config", "user.name", "gate"],
-            vec!["add", "tracked.txt"],
-            vec!["commit", "--quiet", "-m", "seed"],
-        ] {
-            let status = Command::new("git")
-                .args(&args)
-                .current_dir(dir)
-                .status()
-                .expect("Fix: run git to build the fixture checkout.");
-            assert!(status.success(), "Fix: git {args:?} failed in the fixture.");
-        }
-    }
 }

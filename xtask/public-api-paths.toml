@@ -59,7 +59,7 @@ duplicate_paths = 0
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_paths = 81
+duplicate_paths = 6
 
 [[crate]]
 name = "vyre-grammar-gen"
@@ -67,7 +67,7 @@ duplicate_paths = 0
 
 [[crate]]
 name = "vyre-libs"
-duplicate_paths = 64
+duplicate_paths = 15
 
 [[crate]]
 name = "vyre-lints"

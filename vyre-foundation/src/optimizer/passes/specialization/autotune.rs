@@ -4,7 +4,7 @@ use crate::optimizer::program_shape_facts::ProgramShapeFacts;
 use crate::optimizer::program_soa::ProgramFacts;
 use crate::optimizer::AdapterCaps;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::transform::visit::any_descendant;
+use crate::visit::any_descendant;
 use rustc_hash::FxHashSet;
 
 /// Dynamically adjust dispatch dimensions and workgroup bounds.
@@ -109,7 +109,7 @@ fn tuned_workgroup_size_for(
 
 /// Whether any `If` in the program guards on `invocation_id.x` against a bound.
 ///
-/// Descent comes from `transform::visit::any_descendant`, the one owner of which
+/// Descent comes from `visit::any_descendant`, the one owner of which
 /// node variants nest. The hand-written match this replaces re-listed all four
 /// body-bearing variants and every leaf, so a fifth nesting variant had to be
 /// added here as well or a guard inside it read as absent and autotune would

@@ -20,10 +20,9 @@
 
 use std::ops::ControlFlow;
 
-use vyre_foundation::ir::{
-    inline_calls_with_resolver, BufferAccess, BufferDecl, DataType, Expr, Node, Program,
-};
-use vyre_foundation::transform::visit::{expr_buffer_ref, try_for_each_expr, ExprBufferRef};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::transform::inline::inline_calls_with_resolver;
+use vyre_foundation::visit::{expr_buffer_ref, try_for_each_expr, ExprBufferRef};
 
 /// `inner(v) = v * 2`, taking its argument through a read-only parameter.
 fn inner_callee() -> Program {

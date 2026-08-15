@@ -32,8 +32,8 @@
 
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BinOp, DataType, SubgroupReduceOp, UnOp};
-use vyre_foundation::MemoryOrdering;
 
 mod binding_layout;
 mod intent;

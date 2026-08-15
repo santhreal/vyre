@@ -1,7 +1,7 @@
 use super::*;
 use crate::reg::{PtxType, Reg};
 use vyre_foundation::ir::{AtomicOp, BinOp, DataType, UnOp};
-use vyre_foundation::MemoryOrdering;
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_lower::descriptor_builder::{
     body, descriptor, effect, global_ro, global_wo, lit, op, SlotCount,
 };

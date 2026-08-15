@@ -103,8 +103,8 @@ impl Gate for ReleaseDocs {
         let notes = notes_body(&train, &section)?;
 
         if ctx.write {
-            write_file(&ctx.root.join(CHANGELOG), &rendered)?;
-            write_file(&ctx.root.join(NOTES), &notes)?;
+            crate::generated_document::write(&ctx.root.join(CHANGELOG), &rendered)?;
+            crate::generated_document::write(&ctx.root.join(NOTES), &notes)?;
             report.note("wrote the changelog and the release notes body".to_string());
             return Ok(report);
         }
@@ -565,23 +565,6 @@ fn read_toml(root: &Path, relative: &str) -> Result<toml::Table, GateError> {
     })
 }
 
-/// Write one generated document, creating the directory it lives in.
-fn write_file(path: &Path, content: &str) -> Result<(), GateError> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|error| {
-            GateError::new(
-                format!("could not create `{}`: {error}", parent.display()),
-                "check the checkout is writable",
-            )
-        })?;
-    }
-    fs::write(path, content).map_err(|error| {
-        GateError::new(
-            format!("could not write `{}`: {error}", path.display()),
-            "check the checkout is writable",
-        )
-    })
-}
 
 #[cfg(test)]
 mod tests {

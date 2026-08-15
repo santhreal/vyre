@@ -404,7 +404,7 @@ mod tests {
     /// Both scratch clears must retain canonical primitive provenance after fusion.
     #[test]
     fn fused_program_uses_two_canonical_bitset_zero_regions() {
-        use vyre_foundation::transform::visit::walk_nodes;
+        use vyre_foundation::visit::walk_nodes;
         use vyre_primitives::bitset::zero::OP_ID as BITSET_ZERO_OP_ID;
 
         let program = witness_program();

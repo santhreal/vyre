@@ -15,9 +15,9 @@ use self::exit_uniformity::exits_after_last_barrier_are_uniform;
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::node::Node;
 use crate::memory_model::MemoryOrdering;
-use crate::transform::visit::any_descendant;
 use crate::validate::binding::Binding;
 use crate::validate::{err, ValidationError};
+use crate::visit::any_descendant;
 
 /// Ensure a barrier is not placed inside divergent control flow.
 ///
@@ -29,7 +29,7 @@ use crate::validate::{err, ValidationError};
 ///
 /// `check_barrier` is `pub(crate)`; it's exercised indirectly through
 /// [`crate::validate::rule_pipeline::validate`] when a program contains a
-/// `Node::Barrier { ordering: vyre_foundation::MemoryOrdering::SeqCst }` inside a divergent `Node::If`. See the unit tests on
+/// `Node::Barrier { ordering: vyre_foundation::ir::MemoryOrdering::SeqCst }` inside a divergent `Node::If`. See the unit tests on
 /// [`crate::validate::rule_pipeline::validate`] for a runnable example.
 ///
 /// # Errors

@@ -35,8 +35,8 @@ use std::sync::Arc;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
 
 /// Canonical op id for inclusive sum-scan over arbitrary `n`.
 pub const OP_ID_INCLUSIVE_SUM: &str =
@@ -651,7 +651,7 @@ pub fn try_cpu_ref_exclusive_into(input: &[u32], out: &mut Vec<u32>) -> Result<(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::transform::visit::any_descendant;
+    use vyre_foundation::visit::any_descendant;
 
     #[test]
     fn cpu_ref_matches_simple_inclusive_sum() {
@@ -891,7 +891,7 @@ mod tests {
 
     /// True when `program` encodes an executable trap anywhere.
     ///
-    /// Descent comes from `transform::visit::any_descendant`, the one owner of
+    /// Descent comes from `visit::any_descendant`, the one owner of
     /// which node variants nest. The hand-written match this replaces ended in
     /// `_ => false`, so a fifth body-bearing variant would have reported no trap
     /// in a program whose only trap is nested inside it.

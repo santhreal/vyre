@@ -31,7 +31,7 @@ pub fn byte_histogram_256_body(input: &str, histogram: &str, count: u32) -> Vec<
             vec![Node::store(histogram, Expr::var("lane"), Expr::u32(0))],
         ),
         Node::Barrier {
-            ordering: vyre_foundation::MemoryOrdering::SeqCst,
+            ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
         },
         Node::loop_for(
             "round",
@@ -58,7 +58,7 @@ pub fn byte_histogram_256_body(input: &str, histogram: &str, count: u32) -> Vec<
             ],
         ),
         Node::Barrier {
-            ordering: vyre_foundation::MemoryOrdering::SeqCst,
+            ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
         },
     ]
 }

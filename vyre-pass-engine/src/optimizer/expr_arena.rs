@@ -23,7 +23,7 @@
 
 use vyre_foundation::ir::{BinOp, UnOp};
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
-use vyre_foundation::transform::visit::{child_bodies, node_operands};
+use vyre_foundation::visit::{child_bodies, node_operands};
 
 use super::encode::EncodeError;
 
@@ -212,7 +212,7 @@ impl ArenaCtx {
         self.node_top_level_exprs.push(Vec::new());
 
         // Every operand this Node carries, in source order, from
-        // `transform::visit::node_operands`: the owner of which variants carry
+        // `visit::node_operands`: the owner of which variants carry
         // an expression and in which order. The hand-written match this
         // replaces reproduced that order by hand and ended in
         // `EncodeError::Unsupported`, so a variant gaining an operand position
@@ -224,7 +224,7 @@ impl ArenaCtx {
 
         // Recurse into nested scope bodies. Each pushes its own
         // node_top_level_exprs entries. The slots come from
-        // `transform::visit::child_bodies`, so a fifth body-bearing variant is
+        // `visit::child_bodies`, so a fifth body-bearing variant is
         // descended into rather than encoded as a leaf.
         for body in child_bodies(node) {
             self.encode_scope(body)?;

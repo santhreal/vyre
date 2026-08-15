@@ -2,11 +2,11 @@
 //! so every segment is a self-contained program.
 
 use vyre_foundation::ir::{Expr, Node};
-use vyre_foundation::transform::visit::{for_each_expr, for_each_node};
+use vyre_foundation::visit::{for_each_expr, for_each_node};
 
 /// Every `Let` in `nodes` and in every nested body, keyed by bound name.
 ///
-/// Descent comes from `transform::visit::for_each_node`, the one owner of which
+/// Descent comes from `visit::for_each_node`, the one owner of which
 /// node variants nest. The hand-written match this replaces ended in `_ => {}`,
 /// so a binding inside a fifth body-bearing variant would not have been
 /// available to hoist and the segment that reads it would not have been
@@ -35,7 +35,7 @@ fn collect_locally_defined_vars(nodes: &[Node], vars: &mut std::collections::Has
 /// position.
 ///
 /// Node descent, operand positions and expression children all come from
-/// `transform::visit::for_each_expr`. This replaces three hand-written matches,
+/// `visit::for_each_expr`. This replaces three hand-written matches,
 /// each ending in a wildcard: one over node bodies, one over the operand
 /// positions of a statement, and one over the operands of an expression. A free
 /// variable missed by any of the three is a segment emitted without the binding

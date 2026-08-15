@@ -332,7 +332,7 @@ where
             vec![Node::store(out, Expr::u32(0), Expr::u32(identity))],
         ),
         Node::Barrier {
-            ordering: vyre_foundation::MemoryOrdering::SeqCst,
+            ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
         },
         // Gate the ENTIRE grid-stride loop on `WorkgroupId == 0`, the canonical "first workgroup"
         // predicate this codebase already uses for single-workgroup reductions (see

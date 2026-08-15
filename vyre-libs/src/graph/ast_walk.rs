@@ -296,7 +296,8 @@ mod tests {
             "spine preorder must be identity [0, 1, 2]"
         );
         assert!(
-            vyre_foundation::ir::validate(&ast_walk_preorder("nodes", "out", 4, 8)).is_empty(),
+            vyre_foundation::validate::validate(&ast_walk_preorder("nodes", "out", 4, 8))
+                .is_empty(),
             "ast_walk_preorder IR must pass the validator"
         );
     }
@@ -308,7 +309,7 @@ mod tests {
         let post = vyre_foundation::vast::walk_postorder_indices(&region, 4, 128).unwrap();
         assert_eq!(post, pre.iter().rev().copied().collect::<Vec<_>>());
         assert!(
-            vyre_foundation::ir::validate(&ast_walk_postorder("out", 4)).is_empty(),
+            vyre_foundation::validate::validate(&ast_walk_postorder("out", 4)).is_empty(),
             "postorder spine program must validate"
         );
     }
@@ -324,9 +325,12 @@ mod tests {
             vyre_foundation::vast::walk_postorder_indices(&node_region, 6, 128).unwrap(),
             vec![4, 1, 2, 5, 3, 0]
         );
-        assert!(vyre_foundation::ir::validate(&ast_walk_preorder("nodes", "out", 6, 8)).is_empty());
         assert!(
-            vyre_foundation::ir::validate(&ast_walk_postorder_nodes("nodes", "out", 6, 8))
+            vyre_foundation::validate::validate(&ast_walk_preorder("nodes", "out", 6, 8))
+                .is_empty()
+        );
+        assert!(
+            vyre_foundation::validate::validate(&ast_walk_postorder_nodes("nodes", "out", 6, 8))
                 .is_empty()
         );
     }

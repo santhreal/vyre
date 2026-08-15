@@ -374,7 +374,7 @@ mod tests {
         let h = analyze(&build(
             vec![effect(
                 KernelOpKind::Barrier {
-                    ordering: vyre_foundation::MemoryOrdering::SeqCst,
+                    ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
                 },
                 [],
             )],

@@ -6,7 +6,9 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-use vyre_libs::prelude::*;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_libs::region::wrap;
+use vyre_libs::{check_tensors, BuildOptions, TensorRef, TensorRefError};
 
 const OP_ID: &str = "{{crate_name}}::example_op";
 

@@ -1,7 +1,7 @@
 //! Dispatcher-backed wrappers: each closure step and SCC pivot query is routed
 //! through vyre dispatch while the host owns the fixed-point loop.
 
-use vyre_foundation::pass_substrate::dataflow_fixpoint as foundation_dataflow;
+use vyre_foundation::pass_substrate::semiring_closure as foundation_dataflow;
 
 use super::scc_decomposition::write_pivot_bitsets;
 use super::{SccComponentsGpuScratch, Semiring, SemiringGemmGpuScratch};

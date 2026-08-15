@@ -155,7 +155,7 @@ fn barrier_count(nodes: &[Node]) -> usize {
         .iter()
         .map(|node| {
             usize::from(matches!(node, Node::Barrier { .. }))
-                + vyre_foundation::transform::visit::child_bodies(node)
+                + vyre_foundation::visit::child_bodies(node)
                     .into_iter()
                     .map(barrier_count)
                     .sum::<usize>()

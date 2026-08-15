@@ -151,7 +151,7 @@ fn collect_node_access(root: &Node, access: &mut AccessSet) {
 
 /// Record every buffer `expr` reads, plus the read-modify-write of an atomic.
 ///
-/// Operand positions come from [`crate::transform::visit::expr_children`], the
+/// Operand positions come from [`crate::visit::expr_children`], the
 /// one exhaustive owner. The copy this replaces classified
 /// `Expr::SubgroupBallot`, `Expr::SubgroupShuffle`, and `Expr::SubgroupReduce`
 /// as leaves, so a buffer read inside a subgroup operand never entered the read
@@ -159,7 +159,7 @@ fn collect_node_access(root: &Node, access: &mut AccessSet) {
 /// so a sibling statement writing `acc` looked non-conflicting and both landed
 /// in one parallel dispatch group, reordering that read across the write.
 fn collect_expr_reads(expr: &Expr, access: &mut AccessSet) {
-    crate::transform::visit::for_each_subexpr(expr, &mut |expr| match expr {
+    crate::visit::for_each_subexpr(expr, &mut |expr| match expr {
         // A buffer argument binds a callee parameter, and a callee parameter is
         // a read-only or uniform buffer by declaration, so the callee can only
         // read through it.

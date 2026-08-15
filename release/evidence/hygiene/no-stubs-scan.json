@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:01bb4fcce8e0172b2b99cd2b0430d7c75da4f8b6:dirty=true:worktree=a6e2e434bb772dd5cbe5aa04c4e2e6bf6e0a264fbc46399973375e0c4cab138b",
+  "source_fingerprint": "git:fbee0b6e6c17a364b42cffab381f36c93d6c0339:dirty=true:worktree=c768c66d122670599138b5a439342ae2e1a855268eb9effcf3fcb5edbd1407a8",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -29,13 +29,13 @@
     },
     {
       "path": "vyre-foundation/src/validate/binding.rs",
-      "line": 43,
+      "line": 42,
       "pattern": "placeholder_text",
       "text": "/// `false` this field is `DataType::U32` as a placeholder; callers"
     },
     {
       "path": "vyre-foundation/src/validate/binding.rs",
-      "line": 49,
+      "line": 48,
       "pattern": "placeholder_text",
       "text": "/// placeholder; V045 assignment-type checking must be skipped."
     },

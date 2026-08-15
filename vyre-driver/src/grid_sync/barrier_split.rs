@@ -3,9 +3,9 @@
 
 use std::sync::Arc;
 
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{Ident, Node, Program};
-use vyre_foundation::transform::visit::any_descendant;
-use vyre_foundation::MemoryOrdering;
+use vyre_foundation::visit::any_descendant;
 
 use super::let_propagation::propagate_let_bindings;
 use super::reserve_grid_sync_vec;
@@ -94,7 +94,7 @@ fn node_slice_contains_grid_sync(nodes: &[Node]) -> bool {
 /// True when `node` or anything under it is a grid-sync fence.
 ///
 /// Delegates to [`any_descendant`], which enumerates children through
-/// `vyre_foundation::transform::visit::child_bodies`, the one exhaustive owner
+/// `vyre_foundation::visit::child_bodies`, the one exhaustive owner
 /// of "which `Node` variants contain other nodes". This function used to run its
 /// own `match node` over `If`, `Loop`, `Block`, and `Region` ending in
 /// `_ => false`.

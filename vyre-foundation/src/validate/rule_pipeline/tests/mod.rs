@@ -41,12 +41,10 @@ fn validate_with_options_legacy(
 }
 
 // ------------------------------------------------------------------
-// IR-shape corpus. One owner: `transform::visit::fixtures`, the module
+// IR-shape corpus. One owner: `visit::fixtures`, the module
 // that owns the public visitor these programs are walked with.
 // ------------------------------------------------------------------
-use crate::transform::visit::{
-    fixtures::arb_program, walk_nodes_and_exprs, ExprVisitor, NodeVisitor,
-};
+use crate::visit::{fixtures::arb_program, walk_nodes_and_exprs, ExprSink, NodeSink};
 
 /// Every buffer name the PUBLIC visitor reaches, driving
 /// [`walk_nodes_and_exprs`] directly. `referenced_buffers` is deliberately
@@ -56,8 +54,8 @@ use crate::transform::visit::{
 #[derive(Default)]
 struct BufferNamesReached(BTreeSet<String>);
 
-impl NodeVisitor for BufferNamesReached {
-    fn visit_node(&mut self, node: &Node) {
+impl NodeSink for BufferNamesReached {
+    fn accept_node(&mut self, node: &Node) {
         let mut record = |name: &crate::ir::Ident| {
             self.0.insert(name.as_str().to_string());
         };
@@ -91,8 +89,8 @@ impl NodeVisitor for BufferNamesReached {
     }
 }
 
-impl ExprVisitor for BufferNamesReached {
-    fn visit_expr(&mut self, expr: &Expr) {
+impl ExprSink for BufferNamesReached {
+    fn accept_expr(&mut self, expr: &Expr) {
         match expr {
             Expr::Load { buffer, .. }
             | Expr::BufLen { buffer }
@@ -599,7 +597,7 @@ fn atomic_add(buffer: &str) -> Expr {
         index: Box::new(Expr::u32(0)),
         expected: None,
         value: Box::new(Expr::u32(1)),
-        ordering: crate::MemoryOrdering::SeqCst,
+        ordering: crate::memory_model::MemoryOrdering::SeqCst,
     }
 }
 

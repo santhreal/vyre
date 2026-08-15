@@ -33,7 +33,7 @@ use rustc_hash::FxHashMap;
 use std::sync::Arc;
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
-use vyre_foundation::transform::visit::{child_bodies, for_each_subexpr, node_operands};
+use vyre_foundation::visit::{child_bodies, for_each_subexpr, node_operands};
 
 /// Canonical edge-kind bits used by the encoder.
 pub mod edge_kind {
@@ -310,7 +310,7 @@ impl EncoderCtx {
         // block / region body gets its own scope frame so a Let inside
         // does not leak out.
         //
-        // The slots come from `transform::visit::child_bodies`, the owner of
+        // The slots come from `visit::child_bodies`, the owner of
         // which variants nest. The hand-written match this replaces ended in
         // `EncodeError::Unsupported`, so a fifth body-bearing variant turned
         // gpu_dce off for the whole program rather than descending into it.
@@ -465,7 +465,7 @@ fn node_definition_name(node: &Node) -> Option<&Ident> {
 /// expressions, NOT recursing into nested Node bodies (those are
 /// walked by the encoder separately, with their own scope frames).
 ///
-/// Operand positions come from `transform::visit::node_operands`, the owner of
+/// Operand positions come from `visit::node_operands`, the owner of
 /// which variants carry an expression, so a variant that gains an operand
 /// position contributes its USE_DEF edges without an edit here.
 fn collect_node_own_var_refs(node: &Node, out: &mut Vec<Ident>) {
@@ -477,7 +477,7 @@ fn collect_node_own_var_refs(node: &Node, out: &mut Vec<Ident>) {
 /// Walk every sub-expression and push every `Expr::Var(name)` ident
 /// into `out`.
 ///
-/// Children come from `transform::visit::for_each_subexpr`, the owner of which
+/// Children come from `visit::for_each_subexpr`, the owner of which
 /// expression variants carry operands. The hand-written match this replaces
 /// ended in `_ => {}` and had already lost `Expr::BufferRef`; an unresolved
 /// name costs a USE_DEF edge, and a missing USE_DEF edge is a binding DCE is

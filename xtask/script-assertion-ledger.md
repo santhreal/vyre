@@ -1,10 +1,10 @@
 # Script assertion ledger
 
-`scripts/` holds 58 tracked files: 47 shell scripts and 11 Python scripts.
+`scripts/` holds 56 tracked files: 45 shell scripts and 11 Python scripts.
 Each one is recorded below with its assertions, what makes it exit nonzero, every
 caller found in the tree, whether the files it reads still exist, and the gate
-that owns its assertions after the port. The rows carry 219 assertions and
-78 findings.
+that owns its assertions after the port. The rows carry 214 assertions and
+73 findings.
 
 A script leaves this document by being deleted: its rule belongs to a registered
 gate, so the row is a record of a port that is finished, not of a file that still
@@ -12,9 +12,9 @@ runs. The ledger is empty when the registry owns every rule.
 
 ## Totals
 
-- Files: 58. Assertions: 219. Findings: 78.
+- Files: 56. Assertions: 214. Findings: 73.
 - Files whose subject is partly or wholly gone: 7.
-- Files nothing invokes: 24.
+- Files nothing invokes: 22.
 - Files that assert nothing: 1.
 
 ### Subject gone
@@ -44,7 +44,6 @@ runs. The ledger is empty when the registry owns every rule.
 - `scripts/check_platform_consumer_docs.sh`
 - `scripts/check_primitive_contract.sh`
 - `scripts/check_signed_conformance_certificate.sh`
-- `scripts/check_trait_freeze.sh`
 - `scripts/check_unsafe_justifications.sh`
 - `scripts/crate_ownership.py`
 - `scripts/crate_readmes.py`
@@ -761,33 +760,6 @@ Exits nonzero on:
 - spirv-val missing
 - test failure
 
-### `scripts/check_trait_freeze.sh`
-
-Subject: present (docs/frozen-traits/*.txt survive; they are .txt).
-
-Invoked by: nothing; named in vyre-foundation/tests/ci_script_frozen_contract_coupling.rs.
-
-Gate: xtask/src/gates/frozen_contract.rs, with --refresh-snapshots becoming ctx.write.
-
-Assertions:
-
-- Each of seven frozen contracts has its declaring source file on disk.
-- Each contract's declaration block is found in that file by keyword.
-- Each has a docs/frozen-traits/<name>.txt snapshot.
-- Each extracted block is byte-identical to its snapshot.
-
-Exits nonzero on:
-
-- missing source file
-- keyword not found
-- missing snapshot
-- block drift
-
-Findings:
-
-- Nothing invokes it, so seven declared semver-major contracts have no drift enforcement in CI.
-- The block is extracted with an awk brace counter that counts braces inside string literals and comments, so a contract body containing a brace in a doc comment shifts the snapshot. The Rust gate uses syn, which xtask already depends on.
-
 ### `scripts/check_unification_baselines.sh`
 
 Subject: present (docs/MIGRATION.md, cited as the target list, is gone).
@@ -1168,7 +1140,7 @@ Exits nonzero on:
 
 Subject: present.
 
-Invoked by: 10 shell gates plus vyre-foundation/tests/ci_script_frozen_contract_coupling.rs.
+Invoked by: 10 shell gates.
 
 Gate: replaced by the Rust scanner in xtask/src/gates/scan.rs, which is fallible by type rather than by exit status.
 

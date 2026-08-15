@@ -108,7 +108,7 @@ pub(super) fn collect_carrier_names(
                 // one contributes its carriers instead of being skipped.
                 // Each gets a fresh let frame: an unnamed body is a scope.
                 _ => {
-                    for inner in vyre_foundation::transform::visit::child_bodies(node) {
+                    for inner in vyre_foundation::visit::child_bodies(node) {
                         local_lets.push(FxHashSet::default());
                         walk(inner, incoming_scope, loop_var, seen, order, local_lets);
                         local_lets.pop();

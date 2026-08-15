@@ -214,11 +214,11 @@ fn collect_names(nodes: &[Node], out: &mut Vec<Ident>) {
 
 /// Push every variable `expr` reads, in source order.
 ///
-/// Operand positions come from `transform::visit::expr_children`, so a new
+/// Operand positions come from `visit::expr_children`, so a new
 /// operand-carrying `Expr` variant cannot hide a name from the fresh-name
 /// collision check that strip-mining depends on.
 fn collect_names_in_expr(expr: &Expr, out: &mut Vec<Ident>) {
-    crate::transform::visit::for_each_subexpr(expr, &mut |candidate| {
+    crate::visit::for_each_subexpr(expr, &mut |candidate| {
         if let Expr::Var(name) = candidate {
             out.push(name.clone());
         }

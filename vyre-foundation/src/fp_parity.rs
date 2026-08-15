@@ -8,7 +8,7 @@ use core::ops::ControlFlow;
 
 use crate::ir::{DataType, Expr, Program, UnOp};
 use crate::operation::OperationRegistry;
-use crate::transform::visit::try_for_each_expr;
+use crate::visit::try_for_each_expr;
 
 /// Maximum accepted reference-oracle error against correctly-rounded f32
 /// transcendentals.

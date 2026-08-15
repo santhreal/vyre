@@ -9,8 +9,8 @@
 use vyre_foundation::execution_plan::fusion::{
     fuse_programs, FusionError, FusionSelfAliasingError,
 };
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
 
 fn entry_body(program: &Program) -> &[Node] {
     match program.entry() {

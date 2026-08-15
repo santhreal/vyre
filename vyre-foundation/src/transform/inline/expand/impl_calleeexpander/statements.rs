@@ -2,7 +2,7 @@ use super::super::CalleeExpander;
 use crate::error::IrResult as Result;
 use crate::ir::{Expr, Ident, Node};
 use crate::transform::inline::expand_walk::{expand_body, ExpandPolicy};
-use crate::transform::visit::NameBinding;
+use crate::visit::NameBinding;
 
 impl CalleeExpander<'_> {
     /// The callee's statements rewritten into the caller's namespace.

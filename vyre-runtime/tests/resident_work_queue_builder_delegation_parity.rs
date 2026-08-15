@@ -19,7 +19,7 @@
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::transform::visit::child_bodies;
+use vyre_foundation::visit::child_bodies;
 use vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspaceAdapter;
 use vyre_runtime::resident_work_queue::{
     build_program_jit, build_program_jit_slots, build_program_priority,

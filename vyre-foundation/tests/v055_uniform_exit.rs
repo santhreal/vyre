@@ -8,8 +8,9 @@
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::{
-    validate, BufferAccess, BufferDecl, DataType, Expr, MemoryOrdering, Node, Program,
+    BufferAccess, BufferDecl, DataType, Expr, MemoryOrdering, Node, Program,
 };
+use vyre_foundation::validate::validate;
 
 fn program(body: Vec<Node>) -> Program {
     Program::wrapped(

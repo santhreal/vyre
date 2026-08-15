@@ -4,7 +4,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::execution_plan::SchedulingPolicy;
 use crate::ir::{BufferAccess, BufferDecl, Ident, Node, Program};
-use crate::transform::visit::any_descendant;
+use crate::visit::any_descendant;
 
 use super::alpha_rename::{multiply_declared_names, push_alpha_renamed_arm_entry_node, ArmRenamer};
 use super::collectors::collect_buffer_targets;

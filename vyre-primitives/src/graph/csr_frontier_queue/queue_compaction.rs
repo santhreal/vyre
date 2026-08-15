@@ -2,8 +2,8 @@
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
 
 use super::{
     FRONTIER_QUEUE_LEN_INIT_OP_ID, FRONTIER_TO_QUEUE_OP_ID, FRONTIER_TO_QUEUE_PARALLEL_OP_ID,

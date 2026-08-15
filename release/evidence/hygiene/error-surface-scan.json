@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:01bb4fcce8e0172b2b99cd2b0430d7c75da4f8b6:dirty=true:worktree=a6e2e434bb772dd5cbe5aa04c4e2e6bf6e0a264fbc46399973375e0c4cab138b",
+  "source_fingerprint": "git:fbee0b6e6c17a364b42cffab381f36c93d6c0339:dirty=true:worktree=a2d59957250120e8b125917fa2f7264118ee04803608feef620168c1d17d13c7",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -23,37 +23,37 @@
     },
     {
       "path": "structure-gate/src/source_scan.rs",
-      "line": 129,
+      "line": 164,
       "pattern": "expect_call",
       "text": ".expect(\"masking replaces whole opaque spans with ASCII, so the rest stays valid UTF-8\")"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 227,
+      "line": 230,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 229,
+      "line": 232,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 562,
+      "line": 581,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 582,
+      "line": 601,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 584,
+      "line": 603,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
     },
@@ -161,7 +161,7 @@
     },
     {
       "path": "vyre-libs/src/scan/classic_ac/bounded_ranges/mod.rs",
-      "line": 312,
+      "line": 304,
       "pattern": "panic_macro",
       "text": "Err(error) => panic!("
     },
@@ -367,11 +367,11 @@
       "path": "vyre-test-support/src/data_type_variants.rs",
       "line": 51,
       "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|err| panic!(\"Fix: cannot read the DataType declaration at {path:?}: {err}\"));"
+      "text": "panic!(\"Fix: cannot read the DataType declaration at {path:?}: {err}\")"
     },
     {
       "path": "vyre-test-support/src/data_type_variants.rs",
-      "line": 53,
+      "line": 54,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"Fix: no `pub enum DataType` declaration in {path:?}; update this enumeration\")"
     },
@@ -443,19 +443,19 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 283,
+      "line": 282,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 302,
+      "line": 325,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 386,
+      "line": 419,
       "pattern": "documented_panic_contract",
       "text": "let path = entry.expect(\"source entry must be readable\").path();"
     },
@@ -479,19 +479,19 @@
     },
     {
       "path": "vyre-megakernel/src/lib.rs",
-      "line": 763,
+      "line": 764,
       "pattern": "expect_call",
       "text": "let body_len = u32::from_le_bytes(bytes[6..10].try_into().expect(\"fixed slice\")) as usize;"
     },
     {
       "path": "vyre-megakernel/src/lib.rs",
-      "line": 790,
+      "line": 791,
       "pattern": "expect_call",
       "text": ".expect(\"validated digest length\");"
     },
     {
       "path": "vyre-megakernel/src/lib.rs",
-      "line": 921,
+      "line": 922,
       "pattern": "expect_call",
       "text": ".expect(\"encoded digest length\");"
     },
@@ -616,28 +616,28 @@
       "text": "panic!(\"Fix: the program must declare a buffer named `{buffer}`.\");"
     },
     {
-      "path": "vyre-primitives/src/matching/dfa_compile.rs",
-      "line": 370,
-      "pattern": "documented_panic_contract",
-      "text": "Err(error) => panic!("
-    },
-    {
-      "path": "vyre-primitives/src/matching/dfa_compile.rs",
-      "line": 415,
-      "pattern": "documented_panic_contract",
-      "text": "Err(error) => panic!("
-    },
-    {
-      "path": "vyre-primitives/src/matching/dfa_compile.rs",
-      "line": 532,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"pattern_idx must be <= u32::MAX - 1 to fit the pid+1 encoding\");"
-    },
-    {
       "path": "vyre-primitives/src/matching/nfa_to_dfa.rs",
       "line": 326,
       "pattern": "documented_panic_contract",
       "text": "panic!("
+    },
+    {
+      "path": "vyre-primitives/src/matching/dfa_compile/compile.rs",
+      "line": 29,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!("
+    },
+    {
+      "path": "vyre-primitives/src/matching/dfa_compile/compile.rs",
+      "line": 74,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!("
+    },
+    {
+      "path": "vyre-primitives/src/matching/dfa_compile/compile.rs",
+      "line": 191,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"pattern_idx must be <= u32::MAX - 1 to fit the pid+1 encoding\");"
     },
     {
       "path": "vyre-primitives/src/math/fractional.rs",
@@ -736,74 +736,26 @@
       "text": "panic!(\"Fix: cannot write {}: {error}\", path.display());"
     },
     {
-      "path": "vyre-runtime/src/megakernel/protocol/codec/debug_log.rs",
-      "line": 16,
-      "pattern": "documented_panic_contract",
-      "text": "Err(error) => panic!(\"vyre-runtime debug-log decode failed: {error}\"),"
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/protocol/codec/debug_log.rs",
-      "line": 32,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"vyre-runtime debug-log decode failed: {error}\");"
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/io/queue.rs",
-      "line": 182,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\");"
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/io/queue.rs",
-      "line": 190,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\"),"
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/io/queue.rs",
-      "line": 193,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\"),"
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/io/queue.rs",
-      "line": 196,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\"),"
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/io/queue.rs",
-      "line": 214,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling is_recycled\");"
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/descriptor.rs",
-      "line": 287,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 47,
+      "line": 46,
       "pattern": "unwrap_call",
       "text": ".unwrap();"
     },
     {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 51,
+      "line": 50,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
+      "line": 58,
       "pattern": "unwrap_call",
       "text": ".unwrap();"
     },
     {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
       "line": 59,
-      "pattern": "unwrap_call",
-      "text": ".unwrap();"
-    },
-    {
-      "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 60,
       "pattern": "unwrap_call",
       "text": "compile(&request).unwrap()"
     },
@@ -812,6 +764,54 @@
       "line": 47,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"pipeline cache shard lock was poisoned\"))"
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/protocol/codec/debug_log.rs",
+      "line": 16,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!(\"vyre-runtime debug-log decode failed: {error}\"),"
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/protocol/codec/debug_log.rs",
+      "line": 32,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-runtime debug-log decode failed: {error}\");"
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/io/queue.rs",
+      "line": 182,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\");"
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/io/queue.rs",
+      "line": 190,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\"),"
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/io/queue.rs",
+      "line": 193,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\"),"
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/io/queue.rs",
+      "line": 196,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\"),"
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/io/queue.rs",
+      "line": 214,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling is_recycled\");"
+    },
+    {
+      "path": "vyre-runtime/src/resident_work_queue/descriptor/mod.rs",
+      "line": 287,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
     },
     {
       "path": "vyre-runtime/src/scheduler.rs",

@@ -20,7 +20,7 @@
 //! to the buffer interferes, or only a read.
 
 use crate::ir::{Expr, Ident, Node};
-use crate::transform::visit::{any_descendant, node_buffer_refs, node_operands};
+use crate::visit::{any_descendant, node_buffer_refs, node_operands};
 
 /// Which accesses to a buffer a memory pass cannot look past.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,7 +52,7 @@ pub(super) fn any_node_interferes(nodes: &[Node], buffer: &Ident, question: Inte
 
 /// True when `expr` reads, writes, or measures `buffer`, at any depth.
 ///
-/// Operand positions come from `transform::visit::expr_children`, so a new
+/// Operand positions come from `visit::expr_children`, so a new
 /// operand-carrying `Expr` variant cannot hide an access from the proofs that
 /// call this. `Expr::Opaque` answers `true` because its buffer effect is
 /// unnameable. A compare-exchange against ANY buffer answers `true` because it
@@ -60,7 +60,7 @@ pub(super) fn any_node_interferes(nodes: &[Node], buffer: &Ident, question: Inte
 /// to `buffer` are visible even though the atomic never names it.
 pub(super) fn expr_touches_buffer(expr: &Expr, buffer: &Ident) -> bool {
     use crate::ir::AtomicOp;
-    crate::transform::visit::any_subexpr(expr, &mut |candidate| match candidate {
+    crate::visit::any_subexpr(expr, &mut |candidate| match candidate {
         Expr::Load { buffer: other, .. }
         | Expr::BufLen { buffer: other }
         | Expr::BufferRef { buffer: other } => other == buffer,

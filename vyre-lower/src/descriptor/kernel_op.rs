@@ -123,8 +123,8 @@ impl std::hash::Hash for KernelOpKind {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_foundation::ir::MemoryOrdering;
     use vyre_foundation::ir::{AtomicOp, BinOp, DataType, UnOp};
-    use vyre_foundation::MemoryOrdering;
 
     #[test]
     fn binop_kind_carries_full_vyre_spec_op() {

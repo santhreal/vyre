@@ -205,7 +205,7 @@ fn collect_self_exclusive_regions<'a>(nodes: &'a [Node], counts: &mut FxHashMap<
                 *counts.entry(base).or_insert(0) += 1;
             }
         }
-        for body in crate::transform::visit::child_bodies(node) {
+        for body in crate::visit::child_bodies(node) {
             collect_self_exclusive_regions(body, counts);
         }
     }

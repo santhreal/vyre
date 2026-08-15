@@ -1,10 +1,9 @@
 //! `cargo xtask gate1`  -  Gate 1 complexity-budget enforcement.
 //!
-//! The rule this enforces, stated here because it has no other written owner:
-//! an op is either small enough to read whole, or mostly made of other
-//! registered ops. Nothing in between. Reuse count is not part of it; the
-//! two-caller promotion rule the deleted composition-policy document carried
-//! is void.
+//! The composition policy states the rule; this gate enforces the half of it
+//! that is countable. An op is either small enough to read whole, or mostly
+//! made of other registered ops. Nothing in between. Reuse count is policy the
+//! author applies, not a number this gate can read off a program.
 //!
 //! For every registered op (vyre-libs + vyre-primitives inventories):
 //!

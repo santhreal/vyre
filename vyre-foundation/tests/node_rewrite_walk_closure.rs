@@ -14,7 +14,7 @@
 //! # The property that replaced it
 //!
 //! `transform::rewrite_walk::rewrite_node` is the only rewriting enumeration of
-//! `Node`, and it is held to the read-only enumeration in `transform::visit`:
+//! `Node`, and it is held to the read-only enumeration in `visit`:
 //!
 //! - COVERAGE. Every expression `walk_exprs` reaches for a node is offered to
 //!   the rewrite's `operand` hook, and every body `child_bodies` enumerates is
@@ -39,10 +39,10 @@
 
 use std::sync::Arc;
 
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
 use vyre_foundation::transform::rewrite_walk::{self, NodeRewrite};
-use vyre_foundation::transform::visit::{child_bodies, node_shape, walk_exprs};
-use vyre_foundation::MemoryOrdering;
+use vyre_foundation::visit::{child_bodies, node_shape, walk_exprs};
 use vyre_test_support::ir_variants::{
     node_body_slot_samples, node_operand_samples, node_variant_samples, NodeSample,
 };

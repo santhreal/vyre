@@ -297,7 +297,7 @@ fn repeated_transfer_body_with_top_level_bindings_stays_valid_ir() {
         ),
     ];
     let program = persistent_fixpoint_grid(body, "current", "next", "changed", 4, 4);
-    let errors = vyre_foundation::ir::validate(&program);
+    let errors = vyre_foundation::validate::validate(&program);
     assert!(
         errors.is_empty(),
         "grid wave form must be valid IR, got: {errors:?}"

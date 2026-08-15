@@ -12,8 +12,8 @@
 //! that matches `wrapping_{add,and,or,xor}`, `min`, `max`, `exchange`,
 //! or `compare_exchange` semantics under single-lane contention.
 
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
 
 // --- Macros must be defined before `pub mod` declarations so child modules
 // can name them. `macro_rules!` is textual and scoped to what appears
