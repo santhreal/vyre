@@ -64,9 +64,12 @@ crate::artifact_gate! {
     help: "Regenerate release/evidence/final/public-launch-state.json from the launch completion \
        marker and the four prepublish gate artifacts, and report each line the committed \
        artifact disagrees on. Proves the recorded launch state matches the marker on disk, and \
-       that each prepublish gate left an artifact carrying no blockers. Proves nothing about \
-       whether the external actions were really performed: the marker is written by the launch \
-       script and this gate reads it, it does not contact crates.io or the git remote.",
+       that each prepublish gate left an artifact carrying no blockers. A launch whose external \
+       actions are still pending is recorded and noted, not reported: this gate runs on every \
+       tree, and the gate that requires a closed launch is `vyre-release-gate --launch-complete`, \
+       which reads this artifact in launch-complete mode. Proves nothing about whether the \
+       external actions were really performed: the marker is written by the launch script and \
+       this gate reads it, it does not contact crates.io or the git remote.",
     inspect: |ctx| inspect(&ctx.root),
 }
 
@@ -121,16 +124,14 @@ fn inspect(root: &Path) -> Inspection {
             "not_complete_until_external_actions_are_approved_and_done"
         },
     };
-    for blocker in &state.blockers {
-        inspection.blocked(
-            ARTIFACT,
-            (*blocker).to_string(),
-            format!(
-                "Perform the external action, then run `scripts/final-launch.sh` so it records \
-                 `{COMPLETION_MARKER}`. Until that marker names this release train with every \
-                 required action complete, the launch is not closed."
-            ),
-        );
+    if state.blockers.is_empty() {
+        inspection.notes.push("the launch completion marker names this release train with every external action complete".to_string());
+    } else {
+        inspection.notes.push(format!(
+            "{} external action(s) pending: {}",
+            state.blockers.len(),
+            state.blockers.join("; ")
+        ));
     }
     inspection.generates(ARTIFACT, &state);
     inspection
@@ -381,6 +382,59 @@ mod tests {
         assert!(
             !completion_marker_complete(&marker),
             "Fix: launch-state must reject legacy repositories_public evidence and require singular public_repository."
+        );
+    }
+
+    /// WHY: the three external actions are pending on every tree until the day a
+    /// release is published, and reporting them as findings made a swept gate
+    /// permanently red, with a pinned count of zero that only a faked marker
+    /// could ever meet. `vyre-release-gate --launch-complete` is the gate that
+    /// requires a closed launch, and it reads this artifact, so recording the
+    /// pending actions is what this gate owes. What it must still report is a
+    /// prepublish gate that left no artifact.
+    #[test]
+    fn a_pending_launch_is_noted_and_a_missing_prepublish_artifact_is_reported() {
+        let dir = tempfile::tempdir().expect("Fix: create launch-state test directory.");
+        let root = dir.path();
+        for (_, artifact) in super::PREPUBLISH_GATES {
+            let path = root.join(artifact);
+            std::fs::create_dir_all(path.parent().expect("Fix: artifact paths carry a directory."))
+                .expect("Fix: create prepublish artifact directory fixture.");
+            std::fs::write(&path, "{\"blockers\": []}\n")
+                .expect("Fix: write prepublish artifact fixture.");
+        }
+
+        let inspection = super::inspect(root);
+        assert!(
+            inspection.findings.is_empty(),
+            "a launch pending its external actions is not a defect of the tree: {:?}",
+            inspection
+                .findings
+                .iter()
+                .map(|finding| finding.message.clone())
+                .collect::<Vec<_>>()
+        );
+        assert!(
+            inspection
+                .notes
+                .iter()
+                .any(|note| note.contains("3 external action(s) pending")),
+            "the pending actions are recorded for a reader: {:?}",
+            inspection.notes
+        );
+
+        std::fs::remove_file(root.join(super::PREPUBLISH_GATES[0].1))
+            .expect("Fix: remove one prepublish artifact fixture.");
+        let inspection = super::inspect(root);
+        assert_eq!(
+            inspection.findings.len(),
+            1,
+            "a prepublish gate that wrote no artifact is still reported: {:?}",
+            inspection
+                .findings
+                .iter()
+                .map(|finding| finding.message.clone())
+                .collect::<Vec<_>>()
         );
     }
 }

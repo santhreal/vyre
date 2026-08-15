@@ -71,10 +71,14 @@ impl Gate for GpuLoudness {
 ///
 /// Two inputs, because the discriminator sits in a different place per shape. A
 /// guard is code, and a detector that builds the same guard out of string pieces
-/// must not read as one, so those shapes are judged on the masked line. An
-/// attribute carries its feature name inside a literal, which masking blanks, so
-/// those shapes are judged on the raw line and anchored on the attribute opener:
-/// a pattern table row does not begin with `#[`.
+/// must not read as one, so those shapes are judged on the masked line. So is a
+/// skip that explains itself in a trailing comment: masking blanks a quoted
+/// example of the shape and leaves a real comment untouched. An attribute
+/// carries its feature name inside a literal, which masking blanks, so those
+/// shapes are judged on the raw line and anchored on the attribute opener: a
+/// pattern table row does not begin with `#[`. A printed excuse is a literal
+/// too, and a table row spelling one escapes its own quotes, so the raw line
+/// tells the two apart.
 fn silent_skips(raw: &str, masked: &str) -> Vec<&'static str> {
     let mut found = Vec::new();
     if masked.contains("if ") && masked.contains("is_err()") && masked.contains('{') {
@@ -110,7 +114,7 @@ fn silent_skips(raw: &str, masked: &str) -> Vec<&'static str> {
             found.push("a cfg_attr that ignores the test without any gpu feature");
         }
     }
-    if let Some((code, comment)) = raw.split_once("//") {
+    if let Some((code, comment)) = masked.split_once("//") {
         if comment.contains("no GPU") {
             if code.contains("return Ok(());") {
                 found.push("a device-conditional early Ok");
@@ -209,8 +213,10 @@ mod tests {
     /// WHY: a detector's own pattern table is source that contains every shape it
     /// looks for. A guard written as code that builds a pattern must not read as
     /// a guard, which is what the mask buys, and an attribute row in a table does
-    /// not start with the attribute opener, which is what the anchor buys. The
-    /// mask must keep comments, because two of the shapes live in a comment.
+    /// not start with the attribute opener, which is what the anchor buys. A
+    /// quoted example of a commented skip is a row too: the mask blanks the
+    /// comment inside the literal and leaves a real trailing comment standing,
+    /// which is how the two are told apart.
     #[test]
     fn a_pattern_table_is_not_a_skip_site() {
         assert!(
@@ -218,6 +224,10 @@ mod tests {
                 .is_empty()
         );
         assert!(skips("if line.contains(\"#[cfg(not(\") && line.contains(\"gpu\") {").is_empty());
+        assert!(
+            skips("            \"        return; // no GPU here\",").is_empty(),
+            "a quoted example of the commented shape is a table row, not a skip site"
+        );
         let source = "let x = 1; // no GPU here\n";
         let masked = scan::mask_literals(source);
         assert_eq!(masked.trim_end(), "let x = 1; // no GPU here");

@@ -139,7 +139,15 @@ impl Gate for UnsafeBudget {
             .collect();
         let mut actual: BTreeSet<String> = BTreeSet::new();
         for file in tree.all_rust() {
-            if tree.read(&file)?.contains("allow(unsafe_code)") {
+            // The override is an attribute, so the scan reads code: literals are
+            // masked and comment lines are skipped. This gate spells
+            // allow(unsafe_code) in both places to look for it, and a rule that
+            // counts its own source has one exception it can never lose.
+            let text = scan::mask_literals(&tree.read(&file)?);
+            let carries = text
+                .lines()
+                .any(|line| !scan::is_comment(line) && line.contains("allow(unsafe_code)"));
+            if carries {
                 actual.insert(file.to_string_lossy().into_owned());
             }
         }
@@ -199,7 +207,9 @@ impl Gate for UnsafeJustification {
             .collect();
         report.note(format!("scanned {} production source file(s)", files.len()));
         for file in &files {
-            let text = tree.read(file)?;
+            // A quoted block is fixture text, including this gate's own examples,
+            // so the scan reads code with literals masked.
+            let text = scan::mask_literals(&tree.read(file)?);
             let lines: Vec<&str> = text.lines().collect();
             for (index, line) in lines.iter().enumerate() {
                 if !opens_unsafe_block(line) {
@@ -261,43 +271,73 @@ fn opens_unsafe_block(line: &str) -> bool {
     rest.starts_with('{')
 }
 
-/// The contiguous comment block immediately above a line, bounded to eight lines.
+/// The comment lines directly above a line, up to the first line that is not one.
+///
+/// A blank line ends the block: a justification belongs against the block it
+/// justifies, and walking past a gap would let a doc comment several lines up
+/// answer for an unsafe block it never mentions. The block has no line bound,
+/// because a marker followed by a long list of invariants is the shape the rule
+/// is asking for and a bound would drop the marker out of the window.
 fn preceding_comment_block(lines: &[&str], index: usize) -> String {
     let mut collected: Vec<&str> = Vec::new();
     let mut cursor = index;
     while cursor > 0 {
         cursor -= 1;
         let line = lines[cursor];
-        let trimmed = line.trim();
-        if !(trimmed.is_empty() || trimmed.starts_with("//")) {
+        if !line.trim_start().starts_with("//") {
             break;
         }
         collected.push(line);
-        if index - cursor >= 8 {
-            break;
-        }
     }
     collected.reverse();
     collected.join("\n")
 }
 
 /// The text after a `// SAFETY:` marker, when the block carries one.
+///
+/// The marker line is often bare, with the invariants listed as bullets on the
+/// comment lines under it. Those lines are the justification, so they are joined
+/// into it: a reader checking the block reads the whole list, and a placeholder
+/// hiding one line below the marker is still caught.
 fn safety_justification(comment: &str) -> Option<String> {
-    for line in comment.lines() {
-        let trimmed = line.trim_start();
-        let Some(rest) = trimmed.strip_prefix("//") else {
+    let mut lines = comment.lines();
+    while let Some(line) = lines.next() {
+        let Some(rest) = comment_body(line) else {
             continue;
         };
-        let rest = rest.trim_start_matches('/').trim_start_matches('!').trim_start();
         let Some(text) = rest.strip_prefix("SAFETY:") else {
             continue;
         };
-        let text = text.trim();
-        if !text.is_empty() {
-            return Some(text.to_string());
+        let mut justification = text.trim().to_string();
+        for line in lines.by_ref() {
+            let Some(rest) = comment_body(line) else {
+                break;
+            };
+            let rest = rest.trim().trim_start_matches('*').trim();
+            if rest.is_empty() {
+                continue;
+            }
+            if !justification.is_empty() {
+                justification.push(' ');
+            }
+            justification.push_str(rest);
+        }
+        if !justification.is_empty() {
+            return Some(justification);
         }
     }
     None
+}
+
+/// The text of a line comment, when the line is one.
+fn comment_body(line: &str) -> Option<&str> {
+    let trimmed = line.trim_start();
+    let rest = trimmed.strip_prefix("//")?;
+    Some(
+        rest.trim_start_matches('/')
+            .trim_start_matches('!')
+            .trim_start(),
+    )
 }
 
 /// Whether a line is a crate-root `#![allow(...)]` naming a lint.
@@ -312,6 +352,11 @@ fn is_inner_allow_of(line: &str, lint: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use std::process::Command;
+
+    use tempfile::TempDir;
+
     use super::*;
 
     /// WHY: the floor is crate-wide, and the narrow module-scoped form on a
@@ -375,5 +420,132 @@ mod tests {
         let block = preceding_comment_block(&lines, 4);
         assert!(block.contains("a plain note"));
         assert!(!block.contains("belongs to the function above"));
+    }
+
+    /// WHY: the marker line is usually bare, with the invariants listed under
+    /// it, and the previous reader looked only at the marker line and at eight
+    /// lines of block. A long justification lost its own marker out of that
+    /// window, so the soundest block in the workspace read as unjustified while
+    /// a one-line "SAFETY: TODO" one line lower read as fine.
+    #[test]
+    fn a_justification_under_the_marker_is_read_and_a_placeholder_there_is_caught() {
+        let wrapped = "// SAFETY:\n// * the pointer is valid for len bytes\n// * no other reference aliases it";
+        assert_eq!(
+            safety_justification(wrapped),
+            Some("the pointer is valid for len bytes no other reference aliases it".to_string())
+        );
+        assert_eq!(
+            safety_justification("// SAFETY:\n// TODO work out the aliasing"),
+            Some("TODO work out the aliasing".to_string())
+        );
+    }
+
+    /// WHY: both rules read every Rust file in the tree, so their own text is in
+    /// scope: this gate spells `unsafe {` in the fixtures above and spells the
+    /// override in the scan that looks for it. A rule that reports itself spends
+    /// a pin on the size of its own test module. Masked literals and skipped
+    /// comment lines keep the examples readable, and this proves both directions.
+    #[test]
+    fn a_quoted_unsafe_block_is_data_and_a_real_one_still_needs_its_justification() {
+        let (_directory, root) = fixture_tree(&[
+            (
+                "quoted.rs",
+                "fn fixture() {\n    let needles = [\"unsafe {\", \"allow(unsafe_code)\"];\n}\n",
+            ),
+            (
+                "justified.rs",
+                "fn read(ptr: *const u8, len: usize) {\n    // SAFETY:\n    // * the caller owns len readable bytes at ptr\n    // * nothing else writes them while this borrow lives\n    unsafe {\n        let _ = core::slice::from_raw_parts(ptr, len);\n    }\n}\n",
+            ),
+            (
+                "bare.rs",
+                "fn read(ptr: *const u8, len: usize) {\n    unsafe {\n        let _ = core::slice::from_raw_parts(ptr, len);\n    }\n}\n",
+            ),
+        ]);
+
+        let report = UnsafeJustification
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate reads the fixture tree");
+        assert_eq!(
+            reported_files(&report),
+            ["bare.rs"],
+            "a quoted block is data, a wrapped justification is a justification: {:?}",
+            reported_files(&report)
+        );
+    }
+
+    /// WHY: the override is an attribute. The scan spelled it in a literal and in
+    /// the comment beside that literal, so its own source counted as an unsafe
+    /// surface and the pin could only be met by deleting the explanation.
+    #[test]
+    fn only_a_real_override_counts_against_the_budget() {
+        let (_directory, root) = fixture_tree(&[
+            (
+                "xtask/unsafe-budget.txt",
+                "# reviewed surfaces\nreal.rs\n",
+            ),
+            (
+                "quoted.rs",
+                "// allow(unsafe_code) in a comment is prose\nfn fixture() {\n    let needle = \"allow(unsafe_code)\";\n}\n",
+            ),
+            (
+                "real.rs",
+                "#[allow(unsafe_code)]\nfn wrapper() {}\n",
+            ),
+        ]);
+
+        let report = UnsafeBudget
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate reads the fixture tree");
+        assert!(
+            report.findings.is_empty(),
+            "the reviewed file carries the override and no other file does: {:?}",
+            reported_files(&report)
+        );
+        assert!(
+            report
+                .notes
+                .iter()
+                .any(|note| note.contains("1 file(s) reviewed, 1 file(s) carrying the override")),
+            "the note counts the surface: {:?}",
+            report.notes
+        );
+    }
+
+    /// A git checkout holding the given files, which is what `Tree::open` needs.
+    ///
+    /// The directory is returned with it: dropping it deletes the tree, so the
+    /// caller holds it for as long as the gate reads it.
+    fn fixture_tree(files: &[(&str, &str)]) -> (TempDir, PathBuf) {
+        let temporary = TempDir::new().expect("a temporary directory");
+        let root = temporary.path().to_path_buf();
+        for (path, text) in files {
+            let target = root.join(path);
+            if let Some(parent) = target.parent() {
+                fs::create_dir_all(parent).expect("a fixture directory");
+            }
+            fs::write(target, text).expect("a fixture file");
+        }
+        let status = Command::new("git")
+            .args(["init", "-q", "."])
+            .current_dir(&root)
+            .status()
+            .expect("git is available");
+        assert!(status.success(), "the fixture git step failed");
+        (temporary, root)
+    }
+
+    /// The files a report names, in the order it named them.
+    fn reported_files(report: &Report) -> Vec<String> {
+        report
+            .findings
+            .iter()
+            .map(|finding| {
+                finding
+                    .file
+                    .as_ref()
+                    .map(|path| path.display().to_string())
+                    .unwrap_or_default()
+            })
+            .collect()
     }
 }

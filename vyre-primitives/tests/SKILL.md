@@ -7,13 +7,14 @@ for every package.
 
 ## Purpose
 
-`vyre-primitives` owns the reusable Tier 2.5 program builders shared by the
-higher-level libraries and the runtime. Three kinds of primitive live here.
-Marker types are always on and carry no dependencies. Category C hardware
-intrinsics sit behind the `hardware` feature and are the ops that need a
-dedicated backend emitter arm and a dedicated reference arm. The Tier 2.5
-substrate is one directory and one feature flag per domain, each exporting
-`fn(..) -> Program` builders reused by more than one Tier 3 dialect.
+`vyre-primitives` owns operations that cannot be composed. Marker types are
+always on and carry no dependencies. Category C hardware intrinsics sit behind
+the `hardware` feature and are the ops that need a dedicated backend emitter
+arm and a dedicated reference arm. The remaining domain directories, one Cargo
+feature each, export `fn(..) -> Program` builders that are compositions: they
+belong in `vyre-libs` and the crate README records them as a live defect. Reuse
+count is not an admission criterion, so a test written here pins a builder that
+is on its way out, not a placement decision.
 
 The path is the interface. A caller writes
 `vyre_primitives::text::char_class::char_class(..)`, so the composition chain

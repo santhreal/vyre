@@ -9,8 +9,9 @@
 # naming the invariant its caller relies on. Removing unsafe from a file
 # means deleting its line here in the same change.
 #
-# Generated from the tree, then reviewed. Regenerate with:
-#   git ls-files '*.rs' | xargs grep -ln 'allow(unsafe_code)' | sort
+# Reviewed against the tree by the lint-unsafe-budget gate, which reads the
+# attribute out of code: a mention in a comment or a string is not a surface.
+#   ./cargo_full run -q -p xtask --bin xtask -- lint-unsafe-budget
 
 vyre-bench/src/lib.rs
 vyre-bench/src/probes/allocations.rs
@@ -26,7 +27,6 @@ vyre-driver-wgpu/src/runtime/shader/compile_compute_pipeline.rs
 vyre-driver-wgpu/tests/nvme_gpu_ingest_e2e.rs
 vyre-emit-ptx/tests/nvrtc_compile_gate/cuda.rs
 vyre-foundation/src/optimizer/scheduler/tests/lookup_identity.rs
-vyre-primitives/src/lib.rs
 vyre-primitives/src/wire.rs
 vyre-runtime/src/lib.rs
 vyre-runtime/src/uring/ring.rs

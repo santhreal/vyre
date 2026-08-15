@@ -26,19 +26,27 @@ use crate::gates::scan::Tree;
 /// makes.
 const PRODUCTION_TABLES: &[&str] = &["dependencies", "build-dependencies"];
 
-/// Crates that must name no concrete backend, driver product or runtime in a
-/// production dependency table.
+/// Crates that must name no concrete backend or driver product in a production
+/// dependency table.
 ///
 /// This is the direct-edge half of the layering contract, kept beside the
 /// transitive half. The two answer different questions: the closure rule asks
 /// whether an edge is declared, this one asks whether a named crate has an edge
 /// at all, and a crate can satisfy the first while carrying the second.
+///
+/// `vyre-runtime` is here rather than in [`FORBIDDEN_DEPENDENCIES`], where it
+/// stated a boundary the architecture does not have: its own manifest names no
+/// backend, so the facade depending on it drags in no substrate, and admitting an
+/// artifact and submitting resident work is the product path a consumer reaches
+/// through the facade. What is worth holding is that the runtime stays neutral,
+/// which is the rule it is now under.
 const NEUTRAL_CRATES: &[&str] = &[
     "vyre",
     "vyre-driver",
     "vyre-foundation",
     "vyre-primitives",
     "vyre-reference",
+    "vyre-runtime",
     "vyre-spec",
 ];
 
@@ -49,7 +57,6 @@ const FORBIDDEN_DEPENDENCIES: &[&str] = &[
     "vyre-driver-cuda",
     "vyre-driver-spirv",
     "vyre-driver-wgpu",
-    "vyre-runtime",
     "wgpu",
 ];
 

@@ -163,6 +163,12 @@ impl Gate for InvariantPaths {
 }
 
 /// Conformance test paths cited in the text, with the line each sits on.
+///
+/// A match counts only where the path begins. `conform/` also occurs inside
+/// `conform/vyre-conform/tests/...`, and reading from there invented the
+/// citation `conform/tests/invariants.rs`, which no tree has ever held: the
+/// gate then reported a broken pointer for every descriptor that spelled its
+/// path correctly.
 fn cited_conform_paths(text: &str) -> Vec<(String, u32)> {
     let mut found = Vec::new();
     for (number, line) in crate::gates::scan::numbered(text) {
@@ -172,14 +178,26 @@ fn cited_conform_paths(text: &str) -> Vec<(String, u32)> {
             let end = line[start..]
                 .find(|character| character == ':' || character == '"')
                 .map_or(line.len(), |offset| start + offset);
-            let candidate = &line[start..end];
-            if let Some(cut) = candidate.find(".rs") {
-                found.push((candidate[..cut + 3].to_string(), number));
+            if begins_a_path(line, start) {
+                let candidate = &line[start..end];
+                if let Some(cut) = candidate.find(".rs") {
+                    found.push((candidate[..cut + 3].to_string(), number));
+                }
             }
-            from = start + "conform/".len();
+            from = end.max(start + 1);
         }
     }
     found
+}
+
+/// Whether the offset starts a path rather than sitting inside a longer one.
+fn begins_a_path(line: &str, start: usize) -> bool {
+    match line[..start].chars().next_back() {
+        None => true,
+        Some(character) => {
+            !(character.is_ascii_alphanumeric() || matches!(character, '_' | '-' | '/' | '.'))
+        }
+    }
 }
 
 /// Extensions that occur among the tree's own files, lowercased.
@@ -411,6 +429,37 @@ mod tests {
             "schema",
             &extensions
         ));
+    }
+
+    /// WHY: the conformance crate lives at `conform/vyre-conform`, so every
+    /// correct citation contains `conform/` twice. Reading from the second
+    /// occurrence invented `conform/tests/invariants.rs`, a path no tree has
+    /// held, and the gate reported a broken pointer for a descriptor that was
+    /// right. One citation per cited path, from where the path starts.
+    #[test]
+    fn a_nested_crate_path_is_read_once_from_its_start() {
+        let text = "        \"conform/vyre-conform/tests/invariants.rs::deterministic\",\n";
+        assert_eq!(
+            cited_conform_paths(text),
+            vec![("conform/vyre-conform/tests/invariants.rs".to_string(), 1)]
+        );
+    }
+
+    /// WHY: two descriptors on one line, and the second must still be read.
+    #[test]
+    fn every_citation_on_a_line_is_read() {
+        let text = "a \"conform/vyre-conform/tests/one.rs::x\" b \"conform/vyre-conform/tests/two.rs::y\"\n";
+        let cited: Vec<String> = cited_conform_paths(text)
+            .into_iter()
+            .map(|(path, _)| path)
+            .collect();
+        assert_eq!(
+            cited,
+            [
+                "conform/vyre-conform/tests/one.rs".to_string(),
+                "conform/vyre-conform/tests/two.rs".to_string()
+            ]
+        );
     }
 
     /// WHY: the two citation forms are a path with a slash and a bare filename

@@ -292,7 +292,12 @@ impl Gate for ReserveArgument {
         report.note(format!("scanned {} Rust source file(s)", files.len()));
         for file in &files {
             let text = tree.read(file)?;
-            let lines: Vec<&str> = text.lines().collect();
+            // A quoted call is a fixture or an example, not a reserve this rule
+            // can be wrong about, so the scan reads code with literals masked and
+            // quotes the original line back when it reports.
+            let masked = scan::mask_literals(&text);
+            let lines: Vec<&str> = masked.lines().collect();
+            let quoted: Vec<&str> = text.lines().collect();
             let mut index = 0;
             while index < lines.len() {
                 let line = lines[index];
@@ -309,7 +314,7 @@ impl Gate for ReserveArgument {
                         u32::try_from(index + 1).unwrap_or(u32::MAX),
                         format!(
                             "reserve derives additional capacity from capacity(): {}",
-                            line.trim()
+                            quoted.get(index).unwrap_or(&line).trim()
                         ),
                         "pass target_capacity - collection.len() after a capacity guard",
                     ));
@@ -361,7 +366,13 @@ fn is_test_path(path: &Path) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use std::process::Command;
+
+    use tempfile::TempDir;
+
     use super::*;
+    use crate::gate::GateCtx;
 
     /// WHY: the shell rule was `^[[:space:]]*[^/]*inventory::iter::<`, and the
     /// only reason it worked was that a comment introduces a `/` before the
@@ -407,5 +418,53 @@ mod tests {
         let (uses, end) = block_uses_capacity(&lines, 0);
         assert!(!uses);
         assert_eq!(end, 9);
+    }
+
+    /// WHY: the rule reads every Rust file in the tree, so the fixtures above are
+    /// themselves inside its scope, and the gate reported its own test data. A
+    /// rule that reports the text of its own examples spends a pin on the size of
+    /// its test module, and the only way to lower that pin is to stop writing
+    /// examples. Masking literals keeps the example readable and the rule honest,
+    /// and this proves both directions on one tree.
+    #[test]
+    fn a_quoted_reserve_is_not_a_call_and_a_real_one_still_is() {
+        let temporary = TempDir::new().expect("a temporary directory");
+        let root = temporary.path().to_path_buf();
+        fs::write(
+            root.join("quoted.rs"),
+            "fn fixture() {\n    let lines = vec![\"buffer.try_reserve(\", \"    x.capacity(),\", \")?;\"];\n}\n",
+        )
+        .expect("a quoted fixture");
+        fs::write(
+            root.join("real.rs"),
+            "fn stage(buffer: &mut Vec<u8>, target: usize) {\n    buffer.try_reserve(\n        target.saturating_sub(buffer.capacity()),\n    ).expect(\"Fix: reserve the staging buffer.\");\n}\n",
+        )
+        .expect("a real reserve");
+        let status = Command::new("git")
+            .args(["init", "-q", "."])
+            .current_dir(&root)
+            .status()
+            .expect("git is available");
+        assert!(status.success(), "the fixture git step failed");
+
+        let report = ReserveArgument
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate reads the fixture tree");
+        let named: Vec<String> = report
+            .findings
+            .iter()
+            .map(|finding| {
+                finding
+                    .file
+                    .as_ref()
+                    .map(|path| path.display().to_string())
+                    .unwrap_or_default()
+            })
+            .collect();
+        assert_eq!(
+            named,
+            ["real.rs"],
+            "a quoted call is data and a real one is a defect: {named:?}"
+        );
     }
 }

@@ -34,15 +34,20 @@ phrase = "pipeline-cache entry budget"
 test = "vyre-driver-wgpu/tests/pipeline_cache_contract.rs"
 description = "In-memory pipeline-cache entry-count enforcement (audit item #18)."
 
+# primitives_lego_substrate removed. It required vyre-primitives/README.md to
+# contain "reusable Tier 2.5 program builders", a phrase that README does not
+# carry and whose vocabulary the crate retired: the composition folders the
+# phrase described are a live defect that moves to vyre-libs, not the crate's
+# purpose. Its proving test, tests/region_adversarial.rs, pins the span-dedup
+# primitive and could never fail on the substrate claim. The claim below is the
+# one this README states and a test enforces.
+
 [[claim]]
-id = "primitives_lego_substrate"
+id = "primitives_feature_classification"
 doc = "vyre-primitives/README.md"
-# Was "Tier-2.5 LEGO substrate", a phrase the README stopped using. The claim
-# itself is unchanged and still stated, so the phrase is repointed at the
-# sentence that carries it rather than the claim being dropped.
-phrase = "reusable Tier 2.5 program builders"
-test = "vyre-primitives/tests/region_adversarial.rs"
-description = "Tier-2.5 compositional substrate contract claim."
+phrase = "every_cargo_feature_is_classified_exactly_once"
+test = "vyre-primitives/src/organization.rs"
+description = "Every Cargo feature is classified exactly once by the crate's own feature table."
 
 # aot_no_runtime_dependency removed. It required vyre-aot/README.md to contain
 # "removes the entire vyre runtime from the deployed image", and that README makes
