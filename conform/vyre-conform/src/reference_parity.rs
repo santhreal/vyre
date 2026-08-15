@@ -4,10 +4,23 @@
 use crate::operation_selection::PreparedEntry;
 use crate::proof_scheduler::panic_message;
 use crate::replay_capsule::build_replay_capsule;
-use vyre_foundation::fp_parity::{compare_output_buffers, BufferParity};
 use vyre_conform::witness_plan::plan_witness_inputs_into;
 use vyre_conform::{convergence_lens, ExecutionRoute};
 use vyre_conform_spec::ConformanceResult;
+use vyre_foundation::fp_parity::{compare_output_buffers, BufferParity};
+
+/// How one prepared entry reaches the backend.
+///
+/// A fixpoint entry has no route of its own: `convergence_lens` opens one per
+/// iteration. A direct entry holds one route open across every case. Holding the
+/// route inside the variant that has one is what makes the pairing of a route
+/// with an iteration bound unrepresentable, so no case body has to assert it.
+enum Execution {
+    /// Fixpoint entry, converged by `convergence_lens` under this bound.
+    Fixpoint { max_iterations: u32 },
+    /// Direct entry, submitted once per case on this route.
+    Direct(ExecutionRoute),
+}
 
 pub(crate) fn compare_backend_against_reference(
     backend: &'static vyre_driver::BackendRegistration,
@@ -24,9 +37,11 @@ pub(crate) fn compare_backend_against_reference(
         };
     }
     let mut checked_cases = 0usize;
-    let route = if prepared.convergence_max_iterations.is_none() {
+    let execution = if let Some(max_iterations) = prepared.convergence_max_iterations {
+        Execution::Fixpoint { max_iterations }
+    } else {
         match ExecutionRoute::open(&prepared.program, backend) {
-            Ok(route) => Some(route),
+            Ok(route) => Execution::Direct(route),
             Err(error) => {
                 return ConformanceResult {
                     op_id: prepared.id.into(),
@@ -39,23 +54,22 @@ pub(crate) fn compare_backend_against_reference(
                 };
             }
         }
-    } else {
-        None
     };
     let mut backend_inputs: Vec<&[u8]> = Vec::with_capacity(prepared.input_plan.source_count());
 
     for (case_index, inputs) in prepared.cases.iter().enumerate() {
         let reference = &prepared.reference_cases[case_index];
-        if let Some(max_iterations) = prepared.convergence_max_iterations {
-            let outputs = match convergence_lens::run_fixpoint_to_convergence(
-                backend,
-                &prepared.program,
-                inputs,
-                max_iterations,
-            ) {
-                Ok(outputs) => outputs,
-                Err(error) => {
-                    return ConformanceResult {
+        match &execution {
+            Execution::Fixpoint { max_iterations } => {
+                let outputs = match convergence_lens::run_fixpoint_to_convergence(
+                    backend,
+                    &prepared.program,
+                    inputs,
+                    *max_iterations,
+                ) {
+                    Ok(outputs) => outputs,
+                    Err(error) => {
+                        return ConformanceResult {
                         op_id: prepared.id.into(),
                         backend_id: backend_id.clone(),
                         passed: false,
@@ -64,13 +78,13 @@ pub(crate) fn compare_backend_against_reference(
                         ),
                         replay_capsule: None,
                     };
-                }
-            };
+                    }
+                };
 
-            if let BufferParity::Mismatch(detail) =
-                compare_output_buffers(&prepared.program, &outputs, reference)
-            {
-                return ConformanceResult {
+                if let BufferParity::Mismatch(detail) =
+                    compare_output_buffers(&prepared.program, &outputs, reference)
+                {
+                    return ConformanceResult {
                     op_id: prepared.id.into(),
                     backend_id: backend_id.clone(),
                     passed: false,
@@ -86,31 +100,30 @@ pub(crate) fn compare_backend_against_reference(
                         reference,
                     )),
                 };
+                }
             }
-        } else {
-            if let Err(error) =
-                plan_witness_inputs_into(inputs, &prepared.input_plan, &mut backend_inputs)
-            {
-                return ConformanceResult {
-                    op_id: prepared.id.into(),
-                    backend_id: backend_id.clone(),
-                    passed: false,
-                    message: error,
-                    replay_capsule: None,
-                };
-            }
-            let dispatch_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                route
-                    .as_ref()
-                    .expect("execution route opened")
-                    .submit(&backend_inputs, &prepared.dispatch_config)
-            }));
-            match dispatch_result {
-                Ok(Ok(outputs)) => {
-                    if let BufferParity::Mismatch(detail) =
-                        compare_output_buffers(&prepared.program, &outputs, reference)
-                    {
-                        return ConformanceResult {
+            Execution::Direct(route) => {
+                if let Err(error) =
+                    plan_witness_inputs_into(inputs, &prepared.input_plan, &mut backend_inputs)
+                {
+                    return ConformanceResult {
+                        op_id: prepared.id.into(),
+                        backend_id: backend_id.clone(),
+                        passed: false,
+                        message: error,
+                        replay_capsule: None,
+                    };
+                }
+                let dispatch_result =
+                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        route.submit(&backend_inputs, &prepared.dispatch_config)
+                    }));
+                match dispatch_result {
+                    Ok(Ok(outputs)) => {
+                        if let BufferParity::Mismatch(detail) =
+                            compare_output_buffers(&prepared.program, &outputs, reference)
+                        {
+                            return ConformanceResult {
                             op_id: prepared.id.into(),
                             backend_id: backend_id.clone(),
                             passed: false,
@@ -126,10 +139,10 @@ pub(crate) fn compare_backend_against_reference(
                                 reference,
                             )),
                         };
+                        }
                     }
-                }
-                Ok(Err(error)) => {
-                    return ConformanceResult {
+                    Ok(Err(error)) => {
+                        return ConformanceResult {
                         op_id: prepared.id.into(),
                         backend_id: backend_id.clone(),
                         passed: false,
@@ -138,9 +151,9 @@ pub(crate) fn compare_backend_against_reference(
                         ),
                         replay_capsule: None,
                     };
-                }
-                Err(payload) => {
-                    return ConformanceResult {
+                    }
+                    Err(payload) => {
+                        return ConformanceResult {
                         op_id: prepared.id.into(),
                         backend_id: backend_id.clone(),
                         passed: false,
@@ -150,16 +163,17 @@ pub(crate) fn compare_backend_against_reference(
                         ),
                         replay_capsule: None,
                     };
+                    }
                 }
             }
         }
         checked_cases += 1;
     }
 
-    let proof = route.as_ref().map_or(
-        "through the production fixpoint artifact route",
-        ExecutionRoute::proof,
-    );
+    let proof = match &execution {
+        Execution::Fixpoint { .. } => "through the production fixpoint artifact route",
+        Execution::Direct(route) => route.proof(),
+    };
     ConformanceResult {
         op_id: prepared.id.into(),
         backend_id,
