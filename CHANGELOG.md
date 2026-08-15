@@ -1595,43 +1595,6 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   and the substrate arm passes
   `vyre_libs::encoding::bitset_transform_pipeline::four_russians_dense_matvec_program`,
   and the failure message names which arm failed.
-- Seven release gate scripts run `scripts/lib/<name>.py` instead of piping a
-  Python program into an interpreter through a heredoc. A heredoc hides a whole
-  second language from review, lint, and syntax checking, and these were the
-  last seven. `scripts/cli_docs.py` invokes the workspace wrapper through
-  `scripts/lib/cargo_runner.py`, the Python twin of the shell runner that
-  already owned that decision.
-- Benchmark case declarations have one owner, `vyre_bench::cases::harness`.
-  Each of the eight honest cases open-coded the same ten-method `BenchCase`
-  block, and the copies had drifted: `search.binary.u32.1m` omitted the smoke
-  suite from its private list and so ran in no smoke suite, and
-  `regex.backtracking.adversarial` inherited a byte-accounting default that
-  reported reading and writing nothing because its prepared payload was not a
-  bare program. A case is now a static `WorkloadDescription` plus a `CaseOps`
-  record of the operations a description cannot carry, and it reports which
-  owner built it through `BenchCase::declaration_owner`.
-  `vyre_bench::cases::harness::HONEST_SUITES` is the single honest suite list,
-  replacing two verbatim copies and one per-case spelling. The two YARA-like
-  condition workloads likewise share one owner each for the nine per-rule
-  parameters, for the five-condition conjunction their device programs are
-  scored against, and for the four IR predicate blocks, in
-  `vyre_bench::cases::conditional`; both previously held a private copy of all
-  three, so a predicate dropped from one copy of the host oracle would have
-  read as a device correctness violation rather than a host bug. Callers still
-  concatenate the IR blocks in their own order, so both programs keep their
-  recorded fingerprints. A new gate walks the inventory registry at run time
-  and fails when an honest case reports no declaration owner or an owner
-  serving only itself.
-- Two coverage gates that derive their member set from source are declared in
-  `docs/testing/STRUCTURAL_GATES.toml`: the resident queue materializer variant
-  scan and the published quantized entry-point scan. Each asserts the absence
-  of a case or a row, which no execution of the covered code can witness.
-- The generated crate README contracts invoke the workspace wrapper directly
-  instead of prefixing `CARGO_BUILD_JOBS=1`. Build configuration is declared
-  once, in the cargo config and the root profiles, where it is reviewable and
-  applies to every build equally; a per-invocation override makes each reader's
-  build a different build, and thirty-six generated documents were teaching
-  exactly that.
 - `vyre_foundation::optimizer::passes::algebraic::strength_reduce` recognizes
   four constant-divisor shapes before it lowers them. A divisibility test `x %
   d == 0` becomes Lemire's `rotate_right(x * inverse(odd(d)),
@@ -2762,27 +2725,6 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `Shl`/`Shr` are now total, matching IEEE-754 division and the
   shift-count-modulo-width rule the backends lower to, instead of bailing on
   NaN, zero or a negative count.
-- Every evidence subcommand prints its blockers to stderr before exiting 1,
-  through the one owner of that epilogue,
-  `xtask::output_arg::report_evidence_artifact`. It wrote the artifact and
-  exited on a non-empty blocker list without naming a single entry, so nine
-  gates reported a bare exit code and the cause was readable only by opening
-  the JSON. `xtask::release::release_conformance` returned a count of failing
-  backends instead of the failures; it now returns each one prefixed by its
-  backend id. `xtask_registry::release::conformance_matrix` kept a private
-  write-then-exit epilogue beside the owner and is routed through it.
-- The unbounded-read rule in `xtask::gates::hygiene_matrix` matches a call to
-  `fs::read` rather than the text `fs::read(`, which also matched
-  `BufferRefs::read(count_buffer)` and reported a graph accessor as an
-  unbounded filesystem read. The release-tooling scan reads `.py` alongside
-  `.sh` and `.yml`, so a rule that a shell script cannot evade cannot be evaded
-  by moving the body into a Python file beside it.
-- `docs-check` and `feature-matrix` pass. The generated testing guide for
-  `vyre-registry-link` had no row in the documentation manifest, and
-  `vyre-test-support` declared features with no explicit default policy. A tree
-  contract now derives the workspace member list at run time and fails when a
-  member has no classified testing guide row, or when a row names a crate the
-  workspace no longer has.
 - Expression type inference has one owner,
   `vyre_foundation::validate::typecheck::expr_type`, and the environment its
   consumers supplied differently is the
@@ -2848,34 +2790,6 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `typeof` and the GNU specifiers. A new matrix reads the token vocabulary out
   of `vyre-spec` at test time and fails when any kind is classified differently
   by the two paths.
-- Expression type inference has one owner,
-  `vyre_foundation::validate::typecheck::expr_type`, and the environment its
-  consumers supplied differently is the
-  `vyre_foundation::validate::typecheck::TypeEnv` trait: a scalar lookup, a
-  buffer element lookup, and a hook that observes the type of every
-  subexpression a walk resolves.
-  `vyre_foundation::optimizer::fact_cache::type_facts` and the reverse-mode
-  forward pass in `vyre_foundation::transform::autodiff::grad` each carried a
-  second `Expr` walker, and the three answers had drifted. `Expr::BufferRef`
-  was a word in both copies where validation reports nothing on purpose, so a
-  buffer name could pass an operand typecheck it must never pass; the
-  validator's answer wins. Arithmetic in the fact cache was the left operand's
-  type falling back to the right, so a mixed-width expression took the left
-  operand's width; it now unifies, and an unknown or mismatched pair answers
-  `u32`, which is what validation already assumes of the same expression, so an
-  optimizer fact cannot contradict a validation decision. `BitAnd`, `BitOr`,
-  `BitXor`, `AbsDiff`, `WrappingAdd`, `WrappingSub`, `MulHigh` and `Shuffle`
-  were typed from their operands in the fact cache and are integer-typed by the
-  owner; logical `And` and `Or` and the comparisons stay `bool`, as all three
-  copies already had them. Autodiff typed `Expr::SubgroupShuffle` and
-  `Expr::SubgroupReduce` as words, so the adjoint of an f32 moved between lanes
-  was refused as a non-differentiable cast; both now report their value
-  operand's type. Autodiff also inherits the iterative walk, so a deep forward
-  expression can no longer overflow the stack while its locals are typed. The
-  deliberate i32 `AbsDiff` rejection and the unknown result type of
-  `Expr::Call` are unchanged. A contract reads the `Expr` enum's own source at
-  run time and fails when a variant has no recorded answer, or when a second
-  file in the crate defines an `expr_type` walker.
 
 ## [0.7.1] - 2026-08-01
 
