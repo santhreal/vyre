@@ -7,16 +7,13 @@
 //! CPU baseline: OpenSSL EVP AES-128-CTR, which routes through AES-NI on
 //! x86_64 hosts with AES acceleration.
 
-use crate::api::case::{
-    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, PerformanceContract, PreparedCase,
+use crate::api::case::{BenchCase, BenchContext, BenchError};
+use crate::cases::harness::{
+    verify_exact, CaseOps, ContractDescription, HarnessCase, WorkloadDescription,
 };
-use crate::api::resident::{
-    dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
+use crate::cases::reference_sample::{
+    measure_against_reference, referenced_program, HostReferencePayload, HostReferenced,
 };
-use crate::api::suite::SuiteKind;
-use crate::cases::honest_case::{honest_gpu_requirements, honest_metadata, HONEST_SUITES};
-use crate::cases::reference_sample::{run_against_reference, timed_reference, ReferenceSample};
 use openssl::symm::{Cipher, Crypter, Mode};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::wire::pack_u32_iter;
@@ -60,136 +57,94 @@ const AES_SBOX: [u8; 256] = [
 
 const AES_RCON: [u8; 10] = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36];
 
-pub struct AesCtrEncrypt;
-
 struct AesCtrPrepared {
-    program: Program,
+    dispatch: HostReferencePayload,
     plaintext_bytes: Vec<u8>,
     key_bytes: [u8; AES_BLOCK_BYTES],
-    inputs: Vec<Vec<u8>>,
-    input_bytes_total: u64,
-    resident: Option<ResidentInputSet>,
 }
 
-impl BenchCase for AesCtrEncrypt {
-    fn id(&self) -> BenchId {
-        BenchId("crypto.aes_ctr.encrypt.10mb".to_string())
+impl HostReferenced for AesCtrPrepared {
+    fn dispatch(&self) -> &HostReferencePayload {
+        &self.dispatch
     }
 
-    fn metadata(&self) -> BenchMetadata {
-        honest_metadata(
-            self.id(),
-            "AES-CTR Encrypt 10MB",
-            "AES-128 counter-mode encryption, 10MB stream, per-block parallel",
-            &["honest", "crypto", "compute-bound"],
-        )
+    fn reference(&self) -> Result<Vec<u8>, BenchError> {
+        cpu_openssl_aes_ctr(&self.plaintext_bytes, &self.key_bytes)
     }
 
-    fn suites(&self) -> &'static [SuiteKind] {
-        HONEST_SUITES
+    /// The cipher reads the plaintext stream. The AES round-key and T-table
+    /// buffer is an artifact of expressing the round function as IR, and OpenSSL
+    /// never reads it, so counting it against the host sample would understate
+    /// the baseline's bandwidth.
+    fn reference_input_bytes(&self) -> u64 {
+        self.plaintext_bytes.len() as u64
     }
+}
 
-    fn requirements(&self) -> BenchRequirements {
-        // input + output
-        honest_gpu_requirements((TOTAL_WORDS as u64) * 4 * 2)
-    }
+static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
+    "crypto.aes_ctr.encrypt.10mb",
+    "AES-CTR Encrypt 10MB",
+    "AES-128 counter-mode encryption, 10MB stream, per-block parallel",
+    &["honest", "crypto", "compute-bound"],
+    // Plaintext in, ciphertext out.
+    TOTAL_WORDS as u64 * 4 * 2,
+    Some(ContractDescription {
+        primitive: "AES-CTR encryption",
+        baseline_crate: "OpenSSL EVP AES-128-CTR",
+        baseline_name: "OpenSSL 0.10.78 EVP path with hardware AES acceleration",
+        min_speedup_x: 3.0,
+    }),
+);
 
-    fn performance_contract(&self) -> Option<PerformanceContract> {
-        Some(PerformanceContract::cpu_sota_3x(
-            "AES-CTR encryption",
-            "OpenSSL EVP AES-128-CTR",
-            "OpenSSL 0.10.78 EVP path with hardware AES acceleration",
-        ))
-    }
+static OPS: CaseOps<AesCtrPrepared> = CaseOps {
+    build: prepare_aes_ctr,
+    measure: measure_against_reference::<AesCtrPrepared>,
+    verify: verify_exact,
+    program: referenced_program::<AesCtrPrepared>,
+    fingerprint: None,
+    bytes_touched: bytes_touched,
+};
 
-    fn bytes_touched(&self, prepared: &PreparedCase) -> (u64, u64) {
-        let bytes = prepared
-            .downcast_ref::<AesCtrPrepared>()
-            .map(|prepared| prepared.plaintext_bytes.len() as u64)
-            .unwrap_or_else(|| TOTAL_WORDS as u64 * 4);
-        (bytes, bytes) // read plaintext, write ciphertext
-    }
+static CASE: HarnessCase<AesCtrPrepared> = HarnessCase {
+    workload: &WORKLOAD,
+    ops: &OPS,
+};
 
-    fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let body = aes_ctr_kernel_body();
-        let prog = Program::wrapped(
-            vec![
-                BufferDecl::storage("plaintext", 0, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(TOTAL_WORDS),
-                BufferDecl::output("ciphertext", 1, DataType::U32).with_count(TOTAL_WORDS),
-                BufferDecl::storage("aes_tables", 2, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(AES_TABLE_WORDS as u32),
-            ],
-            [256, 1, 1],
-            body,
-        );
-        let plaintext_bytes = pack_u32_iter(0..TOTAL_WORDS);
-        let key_bytes = [
-            0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB,
-            0xCD, 0xEF,
-        ];
-        let inputs = vec![plaintext_bytes.clone(), aes_table_bytes(key_bytes)];
-        let input_bytes_total = input_bytes_total(&inputs);
-        let resident = ResidentInputSet::upload_program_ordered_with_zeroed_outputs_optional(
+/// One plaintext stream read, one ciphertext stream written.
+fn bytes_touched(prepared: &AesCtrPrepared) -> (u64, u64) {
+    let bytes = prepared.plaintext_bytes.len() as u64;
+    (bytes, bytes)
+}
+
+fn prepare_aes_ctr(ctx: &mut BenchContext) -> Result<AesCtrPrepared, BenchError> {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::storage("plaintext", 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(TOTAL_WORDS),
+            BufferDecl::output("ciphertext", 1, DataType::U32).with_count(TOTAL_WORDS),
+            BufferDecl::storage("aes_tables", 2, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(AES_TABLE_WORDS as u32),
+        ],
+        [256, 1, 1],
+        aes_ctr_kernel_body(),
+    );
+    let plaintext_bytes = pack_u32_iter(0..TOTAL_WORDS);
+    let key_bytes = [
+        0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD,
+        0xEF,
+    ];
+    let inputs = vec![plaintext_bytes.clone(), aes_table_bytes(key_bytes)];
+
+    Ok(AesCtrPrepared {
+        dispatch: HostReferencePayload::program_ordered_resident(
             ctx,
-            &prog,
-            &inputs,
-            "aes-ctr bench",
-        )?;
-        Ok(Box::new(AesCtrPrepared {
-            program: prog,
-            plaintext_bytes,
-            key_bytes,
+            program,
             inputs,
-            input_bytes_total,
-            resident,
-        }))
-    }
-
-    fn program<'a>(&self, prepared: &'a PreparedCase) -> Option<&'a Program> {
-        prepared
-            .downcast_ref::<AesCtrPrepared>()
-            .map(|prepared| &prepared.program)
-    }
-
-    fn run(
-        &self,
-        ctx: &mut BenchContext,
-        prepared: &mut PreparedCase,
-    ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared_as::<AesCtrPrepared>(prepared, "aes-ctr")?;
-
-        let dispatch = dispatch_program_timed(
-            ctx,
-            &prepared.program,
-            prepared.resident.as_ref(),
-            &prepared.inputs,
-            &ctx.dispatch_config,
-        )?;
-        let resident_used = dispatch.resident_used;
-        let timed = dispatch.timed;
-
-        let (cpu_result, elapsed_ref) =
-            timed_reference(|| cpu_openssl_aes_ctr(&prepared.plaintext_bytes, &prepared.key_bytes));
-        let cpu_result = cpu_result?;
-        let input_bytes = prepared.input_bytes_total;
-        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
-
-        Ok(run_against_reference(
-            timed,
-            input_bytes,
-            transfer_accounting(input_bytes, output_bytes, resident_used),
-            ReferenceSample {
-                outputs: vec![cpu_result],
-                wall_ns: elapsed_ref,
-                input_bytes: prepared.plaintext_bytes.len() as u64,
-            },
-        ))
-    }
-
-    fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
-        run.verify_exact_outputs()
-    }
+            "aes-ctr bench",
+        )?,
+        plaintext_bytes,
+        key_bytes,
+    })
 }
 
 fn aes_ctr_kernel_body() -> Vec<Node> {
@@ -455,5 +410,5 @@ fn cpu_openssl_aes_ctr(
 }
 
 inventory::submit! {
-    &AesCtrEncrypt as &'static dyn BenchCase
+    &CASE as &'static dyn BenchCase
 }

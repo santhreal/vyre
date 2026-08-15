@@ -742,19 +742,6 @@ impl<'a> ProgramDispatcher for CudaProgramDispatcher<'a> {
         })
     }
 
-    fn release_resident_static_uploads(
-        &self,
-        set: ResidentStaticBufferSet,
-    ) -> Result<(), DispatchError> {
-        if set.retained_by_dispatcher {
-            return Ok(());
-        }
-        for handle in set.handles {
-            self.free_resident(handle)?;
-        }
-        Ok(())
-    }
-
     fn read_resident(&self, id: u64) -> Result<Vec<u8>, DispatchError> {
         let handle = self.resolve(id)?;
         self.backend

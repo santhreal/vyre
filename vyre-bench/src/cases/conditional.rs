@@ -3,24 +3,24 @@
 //! `conditions.yara_like.eval.1m` and `conditions.yara_like.batch.16x64k` both
 //! evaluate a branchy rule-condition graph on GPU, append fired identifiers to
 //! a device-resident sparse output through one atomic counter, and compare that
-//! set against a Rayon CPU oracle. Everything except the condition graph, the
-//! record layout and the CPU oracle is the same workload and lives here.
+//! set against a Rayon CPU oracle. The two are not two rows of one table: the
+//! 1M case keeps its rule parameters in twelve per-rule buffers and bakes one
+//! file's size and entropy into the graph as constants, while the batched case
+//! packs nine words per rule into one descriptor buffer and reads size and
+//! entropy from per-file buffers indexed by lane. The layouts, the binding
+//! counts and the appended identity all differ, and only the 1M case carries the
+//! release speedup claim.
+//!
+//! What the two share is here: the rule parameters derived from a rule index,
+//! the boolean predicate those parameters feed, the IR nodes that predicate
+//! lowers to, the measured loop, the sample assembly and the sparse verifier.
 
 use super::mix32;
 use crate::api::case::{BenchContext, BenchError, BenchRun, Correctness};
 use crate::api::metric::BenchMetrics;
 use crate::api::resident::{dispatch_program_timed, transfer_accounting, ResidentInputSet};
-use crate::api::suite::SuiteKind;
 use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
-use vyre_foundation::ir::Program;
-
-/// The suites both conditional cases run in.
-pub(crate) const HONEST_SUITES: &[SuiteKind] = &[
-    SuiteKind::Honest,
-    SuiteKind::Deep,
-    SuiteKind::Release,
-    SuiteKind::Smoke,
-];
+use vyre_foundation::ir::{Expr, Node, Program};
 
 /// Output slot of the atomic fired counter.
 const FIRED_COUNT_OUTPUT: usize = 0;
@@ -320,6 +320,189 @@ pub(crate) fn pattern_streams(
     })
 }
 
+/// One rule's nine condition parameters.
+///
+/// Both cases derive these from the rule index with the same mixer and the same
+/// nine expressions; they differ only in where the words are stored. Two copies
+/// of the derivation is two chances for one workload's rules to stop matching the
+/// other's while both still look like the same benchmark.
+pub(crate) struct RuleConditions {
+    /// Pattern whose match flag must be set.
+    pub(crate) pattern_a: u32,
+    /// Second pattern whose match flag must be set.
+    pub(crate) pattern_b: u32,
+    /// Pattern whose match count is compared against `min_count`.
+    pub(crate) pattern_c: u32,
+    /// Pattern whose first offset is compared against `max_offset`.
+    pub(crate) pattern_d: u32,
+    pub(crate) min_count: u32,
+    pub(crate) max_offset: u32,
+    pub(crate) min_size: u32,
+    pub(crate) max_size: u32,
+    pub(crate) entropy_limit: u32,
+}
+
+impl RuleConditions {
+    /// The parameters in the packed order the batched descriptor stores them.
+    pub(crate) fn descriptor_words(&self) -> [u32; 9] {
+        [
+            self.pattern_a,
+            self.pattern_b,
+            self.pattern_c,
+            self.pattern_d,
+            self.min_count,
+            self.max_offset,
+            self.min_size,
+            self.max_size,
+            self.entropy_limit,
+        ]
+    }
+}
+
+/// Derive one rule's condition parameters from its index.
+///
+/// `pattern_count` must be a power of two: the pattern indices are masked, not
+/// reduced, so a non-power-of-two count would skew the selection rather than
+/// wrap it.
+pub(crate) fn rule_conditions(
+    rule: u32,
+    pattern_count: u32,
+    filesize_bytes: u32,
+) -> RuleConditions {
+    let seed = mix32(rule);
+    RuleConditions {
+        pattern_a: seed & (pattern_count - 1),
+        pattern_b: mix32(seed ^ 0x9E37_79B9) & (pattern_count - 1),
+        pattern_c: mix32(seed ^ 0x85EB_CA6B) & (pattern_count - 1),
+        pattern_d: mix32(seed ^ 0xC2B2_AE35) & (pattern_count - 1),
+        min_count: (seed >> 5) % 7 + 1,
+        max_offset: filesize_bytes - ((seed >> 11) % (filesize_bytes / 2)),
+        min_size: filesize_bytes - ((seed >> 17) & 4095),
+        max_size: filesize_bytes + ((seed >> 3) & 8191),
+        entropy_limit: 600 + ((seed >> 9) % 320),
+    }
+}
+
+/// The pattern-metadata streams one rule is scored against.
+pub(crate) struct PatternStreams<'a> {
+    pub(crate) matched: &'a [u32],
+    pub(crate) counts: &'a [u32],
+    pub(crate) offsets: &'a [u32],
+}
+
+/// Whether one rule fires: both literals matched, enough matches of the third
+/// pattern, the fourth pattern early enough, the file within the size window, and
+/// its entropy at or below the limit.
+///
+/// This is the host oracle both cases are scored against, so a divergence between
+/// two copies of it would read as a device correctness violation in whichever
+/// case held the stale copy.
+pub(crate) fn rule_fires(
+    streams: &PatternStreams<'_>,
+    rule: &RuleConditions,
+    filesize_bytes: u32,
+    entropy_millibits: u32,
+) -> bool {
+    streams.matched[rule.pattern_a as usize] != 0
+        && streams.matched[rule.pattern_b as usize] != 0
+        && streams.counts[rule.pattern_c as usize] >= rule.min_count
+        && streams.offsets[rule.pattern_d as usize] <= rule.max_offset
+        && filesize_bytes >= rule.min_size
+        && filesize_bytes <= rule.max_size
+        && entropy_millibits <= rule.entropy_limit
+}
+
+/// Bind the four pattern indices this lane's rule selects.
+///
+/// The initializers are the caller's: one case loads them from four per-rule
+/// buffers, the other from four words of one packed descriptor. The bound names
+/// are what the predicates below read.
+pub(crate) fn pattern_index_binds(
+    pattern_a: Expr,
+    pattern_b: Expr,
+    pattern_c: Expr,
+    pattern_d: Expr,
+) -> Vec<Node> {
+    vec![
+        Node::let_bind("pa", pattern_a),
+        Node::let_bind("pb", pattern_b),
+        Node::let_bind("pc", pattern_c),
+        Node::let_bind("pd", pattern_d),
+    ]
+}
+
+/// The three predicates read from the pattern-metadata streams.
+pub(crate) fn stream_predicates(min_count: Expr, max_offset: Expr) -> Vec<Node> {
+    vec![
+        Node::let_bind(
+            "both_literals",
+            Expr::and(
+                Expr::ne(Expr::load("matched", Expr::var("pa")), Expr::u32(0)),
+                Expr::ne(Expr::load("matched", Expr::var("pb")), Expr::u32(0)),
+            ),
+        ),
+        Node::let_bind(
+            "count_ok",
+            Expr::ge(Expr::load("counts", Expr::var("pc")), min_count),
+        ),
+        Node::let_bind(
+            "offset_ok",
+            Expr::le(Expr::load("offsets", Expr::var("pd")), max_offset),
+        ),
+    ]
+}
+
+/// The two predicates read from the file's own metadata.
+///
+/// `filesize` and `entropy` are expressions rather than values because one case
+/// evaluates a single file whose size and entropy are graph constants, and the
+/// other reads them per lane from per-file buffers.
+pub(crate) fn file_metadata_predicates(
+    filesize: Expr,
+    min_size: Expr,
+    max_size: Expr,
+    entropy: Expr,
+    entropy_limit: Expr,
+) -> Vec<Node> {
+    vec![
+        Node::let_bind(
+            "size_ok",
+            Expr::and(
+                Expr::ge(filesize.clone(), min_size),
+                Expr::le(filesize, max_size),
+            ),
+        ),
+        Node::let_bind("entropy_ok", Expr::le(entropy, entropy_limit)),
+    ]
+}
+
+/// Conjoin the five predicates and append this lane's identifier to the sparse
+/// output through the atomic counter.
+pub(crate) fn fired_append(fired_buffer: &str) -> Vec<Node> {
+    vec![
+        Node::let_bind(
+            "fired",
+            Expr::and(
+                Expr::and(Expr::var("both_literals"), Expr::var("count_ok")),
+                Expr::and(
+                    Expr::var("offset_ok"),
+                    Expr::and(Expr::var("size_ok"), Expr::var("entropy_ok")),
+                ),
+            ),
+        ),
+        Node::if_then(
+            Expr::var("fired"),
+            vec![
+                Node::let_bind(
+                    "slot",
+                    Expr::atomic_add("fired_count", Expr::u32(0), Expr::u32(1)),
+                ),
+                Node::store(fired_buffer, Expr::var("slot"), Expr::var("tid")),
+            ],
+        ),
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -466,5 +649,96 @@ mod tests {
         assert!(matched.iter().all(|value| *value <= 1));
         assert!(counts.iter().all(|value| (1..=8).contains(value)));
         assert!(offsets.iter().all(|value| *value < 4_096));
+    }
+
+    /// Golden pin on the rule derivation both cases now share.
+    ///
+    /// These are the values the two open-coded copies produced. A change to the
+    /// mixer, the mask, or any of the nine expressions moves the recorded
+    /// workload identity of both release cases, so it has to be a deliberate
+    /// edit to this table rather than a side effect of touching one case.
+    #[test]
+    fn rule_parameters_are_pinned_to_the_recorded_workload() {
+        let rule = rule_conditions(0, 1 << 14, 10 * 1024 * 1024);
+        assert_eq!(
+            rule.descriptor_words(),
+            [0, 9_554, 10_354, 15_586, 1, 10_485_760, 10_485_760, 10_485_760, 600]
+        );
+
+        let rule = rule_conditions(7, 1 << 14, 10 * 1024 * 1024);
+        assert_eq!(
+            rule.descriptor_words(),
+            [8_678, 1_983, 10_037, 3_661, 6, 9_268_876, 10_483_131, 10_490_940, 616]
+        );
+    }
+
+    /// Every parameter has to be able to veto the rule on its own.
+    ///
+    /// A predicate dropped from the shared conjunction would still pass a test
+    /// that only checks a firing rule, and would then disagree with the device
+    /// program in exactly one direction: extra pairs reported as fired.
+    #[test]
+    fn each_condition_can_veto_the_rule_on_its_own() {
+        let matched = [1_u32; 4];
+        let counts = [8_u32; 4];
+        let offsets = [16_u32; 4];
+        let streams = PatternStreams {
+            matched: &matched,
+            counts: &counts,
+            offsets: &offsets,
+        };
+        let firing = RuleConditions {
+            pattern_a: 0,
+            pattern_b: 1,
+            pattern_c: 2,
+            pattern_d: 3,
+            min_count: 8,
+            max_offset: 16,
+            min_size: 1_000,
+            max_size: 2_000,
+            entropy_limit: 640,
+        };
+        assert!(rule_fires(&streams, &firing, 1_000, 640));
+        assert!(rule_fires(&streams, &firing, 2_000, 0));
+
+        let unmatched = [0_u32, 1, 1, 1];
+        assert!(!rule_fires(
+            &PatternStreams {
+                matched: &unmatched,
+                counts: &counts,
+                offsets: &offsets,
+            },
+            &firing,
+            1_000,
+            640
+        ));
+        let second_unmatched = [1_u32, 0, 1, 1];
+        assert!(!rule_fires(
+            &PatternStreams {
+                matched: &second_unmatched,
+                counts: &counts,
+                offsets: &offsets,
+            },
+            &firing,
+            1_000,
+            640
+        ));
+
+        for veto in [
+            RuleConditions {
+                min_count: 9,
+                ..firing
+            },
+            RuleConditions {
+                max_offset: 15,
+                ..firing
+            },
+        ] {
+            assert!(!rule_fires(&streams, &veto, 1_000, 640));
+        }
+
+        assert!(!rule_fires(&streams, &firing, 999, 640));
+        assert!(!rule_fires(&streams, &firing, 2_001, 640));
+        assert!(!rule_fires(&streams, &firing, 1_000, 641));
     }
 }

@@ -236,7 +236,7 @@ pub fn workspace_root_from(start: &Path) -> Option<PathBuf> {
     start
         .ancestors()
         .find(|directory| {
-            std::fs::read_to_string(directory.join("Cargo.toml")).is_ok_and(|text| {
+            read_source_bounded(&directory.join("Cargo.toml")).is_ok_and(|text| {
                 text.lines()
                     .any(|line| line.trim_start().starts_with("[workspace]"))
             })

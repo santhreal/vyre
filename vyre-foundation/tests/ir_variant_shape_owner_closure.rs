@@ -274,7 +274,8 @@ fn walk_nodes_mut_reaches_every_body_slot() {
             }
         });
         assert_eq!(
-            seen, 1,
+            seen,
+            1,
             "Fix: walk_nodes_mut never reached the node planted in {}",
             sample.label()
         );
@@ -316,7 +317,8 @@ fn the_cost_fold_scores_nothing_for_a_non_divergent_branch() {
     for sample in node_body_slot_samples(&benign) {
         let certificate = CostCertificate::for_program(&program_of(vec![sample.node.clone()]));
         assert_eq!(
-            certificate.divergence_score, 0,
+            certificate.divergence_score,
+            0,
             "Fix: the divergence fold counted a comparison that is not \
              invocation-id divergence in {}",
             sample.label()
@@ -390,8 +392,13 @@ fn the_reported_binding_is_the_ident_the_rewriting_walk_renames() {
             from: name.clone(),
             to: renamed.clone(),
         };
-        let rewritten = rewrite_walk::rewrite_node(&sample.node, &mut rename)
-            .unwrap_or_else(|| panic!("Fix: renaming the binding of {} changed nothing", sample.label()));
+        let rewritten =
+            rewrite_walk::rewrite_node(&sample.node, &mut rename).unwrap_or_else(|| {
+                panic!(
+                    "Fix: renaming the binding of {} changed nothing",
+                    sample.label()
+                )
+            });
 
         assert_eq!(
             node_scalars(&rewritten).binding.map(|(_, name)| name),

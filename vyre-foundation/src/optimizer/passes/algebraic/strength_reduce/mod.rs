@@ -3,11 +3,18 @@ use crate::optimizer::rewrite::rewrite_program;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 
 mod arithmetic;
+mod bounds;
+mod divisibility;
+mod duplication;
+mod exact_div;
 
 use arithmetic::{
-    granlund_montgomery_div, horner_polynomial_int, power_of_two_shift, reciprocal_constant_fold,
-    shift_add_decompose, synthesize_fma_add, synthesize_fma_sub,
+    div_operand_copies, granlund_montgomery_div, horner_polynomial_int, power_of_two_shift,
+    reciprocal_constant_fold, shift_add_decompose, synthesize_fma_add, synthesize_fma_sub,
 };
+use divisibility::rewrite_divisibility_test;
+use duplication::may_duplicate;
+use exact_div::{cancel_constant_factor, fuse_constant_divisors, narrow_nested_modulus};
 
 /// Replace multiplication by powers of two with shifts.
 #[derive(Debug, Default)]
@@ -40,8 +47,39 @@ impl StrengthReduce {
     /// (see builder.rs line ~134). No explicit call needed here.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let (program, changed) = rewrite_program(program, reduce_expr);
-        PassResult { program, changed }
+        // Recognition runs first and on its own sweep. The expression
+        // rewriter assembles children before their parent, so by the time
+        // `reduce_expr` reaches `x % d == 0` or `(x * c) / d`, the inner
+        // remainder or product has already been lowered and the cheaper
+        // shape is unreachable.
+        let (program, recognized) = rewrite_program(program, recognize_source_shape);
+        let (program, reduced) = rewrite_program(program, reduce_expr);
+        PassResult {
+            program,
+            changed: recognized || reduced,
+        }
+    }
+}
+
+/// Rewrites that must see the operands as written.
+///
+/// Each one keys on a constant that the lowering table consumes: the
+/// remainder in a divisibility test, the multiplier inside a dividend, the
+/// inner divisor of a division chain. Lowering a child destroys that
+/// constant, and a bottom-up rewriter lowers children first, so these have to
+/// run as a separate earlier sweep rather than as entries in the table.
+fn recognize_source_shape(expr: &Expr) -> Option<Expr> {
+    if let Some(test) = rewrite_divisibility_test(expr) {
+        return Some(test);
+    }
+    let Expr::BinOp { op, left, right } = expr else {
+        return None;
+    };
+    match (op, right.as_ref()) {
+        (BinOp::Div, Expr::LitU32(divisor)) => cancel_constant_factor(left, *divisor)
+            .or_else(|| fuse_constant_divisors(left, *divisor)),
+        (BinOp::Mod, Expr::LitU32(modulus)) => narrow_nested_modulus(left, *modulus),
+        _ => None,
     }
 }
 
@@ -189,6 +227,13 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
             // ~40-90 cycle integer umod becomes mulhi + shift + mul + sub.
             // d == 0 falls through here (granlund_montgomery_div guards d <= 1),
             // leaving modulo-by-zero intact for the backend to trap.
+            //
+            // The subtraction reads `x` on top of every read the quotient
+            // makes, so the whole shape has to clear the duplication budget
+            // before the quotient is built.
+            if !may_duplicate(left, 1 + div_operand_copies(*value)) {
+                return None;
+            }
             granlund_montgomery_div(left.as_ref(), *value).map(|quotient| {
                 Expr::sub(
                     left.as_ref().clone(),
@@ -279,11 +324,17 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
                         (inner_shift.as_ref(), right.as_ref())
                     {
                         let total = a.saturating_add(*b);
-                        // A u32 shift by >= 32 bits produces 0 for every
-                        // non-zero value of x; clamping to 31 would produce
-                        // x << 31 instead of 0 (a miscompile).
+                        // Fusing past the width is only sound for a shift
+                        // that discards every bit. `Shl` does, and so does
+                        // `Shr` on an unsigned operand, but `Shr` on a signed
+                        // one replicates the sign bit, so `(x >> 20) >> 20`
+                        // is -1 for every negative x, not 0. The operand type
+                        // is not knowable here (a `Var` carries none), and
+                        // folding to a `u32` literal would also retype a
+                        // signed expression, so an over-width total declines
+                        // the fusion and leaves the two shifts standing.
                         if total > 31 {
-                            return Some(Expr::u32(0));
+                            return None;
                         }
                         return Some(Expr::BinOp {
                             op: *op,

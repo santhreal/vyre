@@ -735,6 +735,18 @@ pub enum BenchError {
 pub trait BenchCase: Send + Sync {
     fn id(&self) -> BenchId;
     fn metadata(&self) -> BenchMetadata;
+    /// The declaration owner this case was built by.
+    ///
+    /// A benchmark case is workload data plus the few operations data cannot
+    /// carry. The trait itself is implemented by the handful of declaration
+    /// owners in `cases`, each serving several cases, never once per case: the
+    /// per-case copies of the suite list, the metadata record and the measured
+    /// loop had already drifted apart by the time they were collapsed. The
+    /// default is empty, so a case that open-codes the trait declares no owner
+    /// and the declaration gate names it.
+    fn declaration_owner(&self) -> &'static str {
+        ""
+    }
     fn suites(&self) -> &'static [SuiteKind] {
         &[]
     }

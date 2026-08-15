@@ -49,7 +49,7 @@ Any other normal or build dependency requires an ownership-registry change.
 Run the checked-in behavior from `vyre-driver-spirv/examples/vulkan_probe.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-driver-spirv --example vulkan_probe
+./cargo_full run -p vyre-driver-spirv --example vulkan_probe
 ```
 
 ### Features

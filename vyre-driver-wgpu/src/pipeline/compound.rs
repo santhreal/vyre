@@ -7,7 +7,8 @@ use crate::numeric::WGPU_NUMERIC;
 use crate::pipeline::{DispatchItem, OutputLayout, WgpuPipeline};
 use smallvec::SmallVec;
 use std::sync::mpsc::Receiver;
-use vyre_driver::{BackendError, DispatchConfig, ResidentHandle, Resource};
+use vyre_driver::program_walks::enforce_output_budget;
+use vyre_driver::{BackendError, BatchOutputs, DispatchConfig, ResidentHandle, Resource};
 
 /// Per-dispatch view of one bound resource.
 ///
@@ -36,7 +37,7 @@ impl WgpuPipeline {
         &self,
         inputs: &[Vec<u8>],
         config: &DispatchConfig,
-    ) -> Result<Vec<Vec<Vec<u8>>>, BackendError> {
+    ) -> Result<BatchOutputs, BackendError> {
         let mut borrowed = SmallVec::<[&[u8]; 8]>::new();
         reserve_smallvec_to_capacity(
             &mut borrowed,
@@ -49,21 +50,11 @@ impl WgpuPipeline {
         self.dispatch_coalesced_borrowed(&borrowed, config)
     }
 
-    /// Batch several borrowed inputs for this same compiled program into one
-    /// GPU submission.
-    pub fn dispatch_coalesced_borrowed(
-        &self,
-        inputs: &[&[u8]],
-        config: &DispatchConfig,
-    ) -> Result<Vec<Vec<Vec<u8>>>, BackendError> {
-        self.dispatch_same_pipeline_borrowed(inputs, config)
-    }
-
     /// Optimized substrate-neutral compound dispatch (V7-PERF-021).
     pub fn dispatch_compound_v2(
         requests: &[(&WgpuPipeline, Resource)],
         config: &DispatchConfig,
-    ) -> Result<Vec<Vec<Vec<u8>>>, BackendError> {
+    ) -> Result<BatchOutputs, BackendError> {
         let mut borrowed_requests = SmallVec::<[(&WgpuPipeline, CompoundResource<'_>); 8]>::new();
         reserve_smallvec_to_capacity(
             &mut borrowed_requests,
@@ -83,9 +74,9 @@ impl WgpuPipeline {
     pub(crate) fn dispatch_compound_borrowed(
         requests: &[(&WgpuPipeline, CompoundResource<'_>)],
         config: &DispatchConfig,
-    ) -> Result<Vec<Vec<Vec<u8>>>, BackendError> {
+    ) -> Result<BatchOutputs, BackendError> {
         if requests.is_empty() {
-            return Ok(Vec::new());
+            return Ok(BatchOutputs::default());
         }
         let (device, queue) = &*requests[0].0.device_queue;
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -115,13 +106,15 @@ impl WgpuPipeline {
         submit_and_collect_compound_readbacks(device, queue, encoder, live, config)
     }
 
-    fn dispatch_same_pipeline_borrowed(
+    /// Batch several borrowed inputs for this same compiled program into one
+    /// GPU submission.
+    pub fn dispatch_coalesced_borrowed(
         &self,
         inputs: &[&[u8]],
         config: &DispatchConfig,
-    ) -> Result<Vec<Vec<Vec<u8>>>, BackendError> {
+    ) -> Result<BatchOutputs, BackendError> {
         if inputs.is_empty() {
-            return Ok(Vec::new());
+            return Ok(BatchOutputs::default());
         }
         let (device, queue) = &*self.device_queue;
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -259,7 +252,7 @@ fn submit_and_collect_compound_readbacks(
     encoder: wgpu::CommandEncoder,
     live: SmallVec<[PipelineDispatchReadback; 8]>,
     config: &DispatchConfig,
-) -> Result<Vec<Vec<Vec<u8>>>, BackendError> {
+) -> Result<BatchOutputs, BackendError> {
     let submission = queue.submit(std::iter::once(encoder.finish()));
     let mut pending_maps = SmallVec::<[CompoundPendingMap; 8]>::new();
     reserve_smallvec_to_capacity(
@@ -269,47 +262,30 @@ fn submit_and_collect_compound_readbacks(
         "pending readback map",
         "split the compound dispatch batch before submission",
     )?;
+    let mut row_bytes = 0usize;
     for readback in live {
-        pending_maps.push(readback.request_map());
-    }
-    crate::runtime::device::poll_device_wait_for(device, submission)?;
-    let mut outputs = Vec::new();
-    reserve_vec_to_capacity(
-        &mut outputs,
-        pending_maps.len(),
-        "compound dispatch",
-        "output set",
-        "split the compound dispatch batch before readback collection",
-    )?;
-    for (resources, receiver) in pending_maps {
-        outputs.push(resources.read_mapped(receiver)?);
-    }
-    enforce_compound_output_budget(config, &outputs)?;
-    Ok(outputs)
-}
-
-fn enforce_compound_output_budget(
-    config: &DispatchConfig,
-    outputs: &[Vec<Vec<u8>>],
-) -> Result<(), BackendError> {
-    let Some(limit) = config.max_output_bytes else {
-        return Ok(());
-    };
-    let actual = outputs.iter().try_fold(0usize, |sum, dispatch_outputs| {
-        dispatch_outputs.iter().try_fold(sum, |inner_sum, output| {
-            inner_sum.checked_add(output.len()).ok_or_else(|| {
+        row_bytes = row_bytes
+            .checked_add(readback.output.read_size)
+            .ok_or_else(|| {
                 BackendError::new(
                     "compound readback size overflows usize. Fix: split the Program output before dispatch.",
                 )
-            })
-        })
-    })?;
-    if actual > limit {
-        return Err(BackendError::new(format!(
-            "compound readback size {actual} exceeds DispatchConfig.max_output_bytes {limit}. Fix: narrow BufferDecl::output_byte_range or raise max_output_bytes."
-        )));
+            })?;
+        pending_maps.push(readback.request_map());
     }
-    Ok(())
+    crate::runtime::device::poll_device_wait_for(device, submission)?;
+    let mut outputs = BatchOutputs::default();
+    let row_count = pending_maps.len();
+    outputs.try_reserve(row_count, row_bytes).map_err(|error| {
+        BackendError::new(format!(
+            "compound dispatch could not reserve {row_count} output row(s) holding {row_bytes} byte(s): {error}. Fix: split the compound dispatch batch before readback collection."
+        ))
+    })?;
+    for (resources, receiver) in pending_maps {
+        resources.read_mapped_into(receiver, &mut outputs)?;
+    }
+    enforce_output_budget(config, outputs.total_bytes())?;
+    Ok(outputs)
 }
 
 struct PipelineDispatchReadback {
@@ -339,10 +315,11 @@ impl PipelineDispatchReadback {
         (self, receiver)
     }
 
-    fn read_mapped(
+    fn read_mapped_into(
         self,
         receiver: Receiver<Result<(), wgpu::BufferAsyncError>>,
-    ) -> Result<Vec<Vec<u8>>, BackendError> {
+        outputs: &mut BatchOutputs,
+    ) -> Result<(), BackendError> {
         let map_result = match receiver.recv() {
             Ok(result) => result,
             Err(_) => {
@@ -374,12 +351,12 @@ impl PipelineDispatchReadback {
                     trim_start, read_size, mapped_len
                 )))
             } else {
-                Ok(mapped[trim_start..end].to_vec())
+                outputs.push_row(&mapped[trim_start..end]);
+                Ok(())
             }
         };
         self.release_readback_buffer();
-        let res = read_result?;
-        Ok(vec![res])
+        read_result
     }
 
     fn release_readback_buffer(self) {
@@ -389,65 +366,5 @@ impl PipelineDispatchReadback {
             self.readback_size,
             self.readback_usage,
         );
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::enforce_compound_output_budget;
-    use vyre_driver::DispatchConfig;
-
-    fn generated_compound_outputs(case: usize) -> Vec<Vec<Vec<u8>>> {
-        let dispatch_count = (case % 7) + 1;
-        let mut outputs = Vec::new();
-        outputs
-            .try_reserve(dispatch_count)
-            .expect("Fix: generated compound budget test must reserve dispatch outputs");
-        for dispatch_idx in 0..dispatch_count {
-            let output_count = ((case / (dispatch_idx + 1)) % 5) + 1;
-            let mut dispatch_outputs = Vec::new();
-            dispatch_outputs
-                .try_reserve(output_count)
-                .expect("Fix: generated compound budget test must reserve per-dispatch outputs");
-            for output_idx in 0..output_count {
-                let len = ((case * 31 + dispatch_idx * 17 + output_idx * 13) % 257) + 1;
-                dispatch_outputs.push(vec![0u8; len]);
-            }
-            outputs.push(dispatch_outputs);
-        }
-        outputs
-    }
-
-    fn compound_output_bytes(outputs: &[Vec<Vec<u8>>]) -> usize {
-        outputs
-            .iter()
-            .flat_map(|dispatch_outputs| dispatch_outputs.iter())
-            .map(Vec::len)
-            .sum()
-    }
-
-    #[test]
-    fn generated_compound_output_budget_accepts_exact_total_and_rejects_one_byte_less() {
-        for case in 0..4096 {
-            let outputs = generated_compound_outputs(case);
-            let exact_total = compound_output_bytes(&outputs);
-
-            let mut exact_config = DispatchConfig::default();
-            exact_config.max_output_bytes = Some(exact_total);
-            enforce_compound_output_budget(&exact_config, &outputs)
-                .expect("Fix: exact compound readback budget must be accepted");
-
-            if exact_total == 0 {
-                continue;
-            }
-            let mut too_small_config = DispatchConfig::default();
-            too_small_config.max_output_bytes = Some(exact_total - 1);
-            let error = enforce_compound_output_budget(&too_small_config, &outputs)
-                .expect_err("Fix: compound readback budget one byte below total must reject");
-            assert!(
-                error.to_string().contains("compound readback size"),
-                "compound budget rejection must identify readback size, got {error}"
-            );
-        }
     }
 }

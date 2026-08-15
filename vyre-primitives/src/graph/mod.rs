@@ -59,12 +59,12 @@ pub(crate) fn padded_u32_slice_fingerprint(values: &[u32], padded_words: usize) 
     hash
 }
 
-/// The ONE named-field input bundle every CSR closure entry point takes, so a
-/// run of same-typed CSR slices cannot transpose silently at a call site.
-pub mod csr_closure_inputs;
 /// The published call shapes of a CSR closure, stated once for every op that
 /// iterates a one-step traversal to a fixpoint.
 pub(crate) mod csr_closure_entry_points;
+/// The ONE named-field input bundle every CSR closure entry point takes, so a
+/// run of same-typed CSR slices cannot transpose silently at a call site.
+pub mod csr_closure_inputs;
 /// One BFS step that accumulates into frontier_out and reports changes.
 pub mod csr_forward_or_changed;
 /// One BFS frontier step over ProgramGraph CSR.

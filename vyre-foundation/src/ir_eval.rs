@@ -1,13 +1,19 @@
 //! Backend-neutral literal evaluation for the vyre IR.
 //!
-//! This module owns scalar constant evaluation semantics that must match across
-//! optimizer passes and concrete lowerings. Backends may use the recursive
-//! folder before emission to avoid target-language constant-evaluation traps,
-//! but the rules themselves stay in foundation.
+//! This module recognizes that an expression tree is literal-only and hands
+//! each operator to [`crate::scalar_ops`], the one owner of scalar operator
+//! semantics. It carries no arithmetic of its own: a rule written here rather
+//! than there is a rule the reference interpreter does not know about, which
+//! is how the folder and the interpreter came to disagree per width.
+//!
+//! Backends may use the recursive folder before emission to avoid
+//! target-language constant-evaluation traps.
 
 use std::borrow::Cow;
 
 use crate::ir::{BinOp, DataType, Expr, UnOp};
+use crate::ir_inner::model::node_kind::Value;
+use crate::scalar_ops::{apply_binary, apply_unary, canonical_f32};
 
 /// Recursively fold a literal-only expression tree.
 #[must_use]
@@ -44,27 +50,25 @@ pub fn fold_literal_tree(expr: &Expr) -> Option<Cow<'_, Expr>> {
 }
 
 /// Fold one binary operator applied to literal operands.
+///
+/// `None` means "do not rewrite": either an operand is not a literal, or
+/// [`crate::scalar_ops`] has no defined answer at that width, in which case
+/// the expression must survive to validation rather than acquire a value the
+/// unoptimized program never produces.
 #[must_use]
 pub fn fold_binary_literal(op: &BinOp, left: &Expr, right: &Expr) -> Option<Expr> {
-    match (left, right) {
-        (Expr::LitU32(a), Expr::LitU32(b)) => fold_u32_binary(*op, *a, *b),
-        (Expr::LitI32(a), Expr::LitI32(b)) => fold_i32_binary(*op, *a, *b),
-        (Expr::LitBool(a), Expr::LitBool(b)) => fold_bool_binary(*op, *a, *b),
-        (Expr::LitF32(a), Expr::LitF32(b)) => fold_f32_binary(*op, *a, *b),
-        _ => None,
-    }
+    let left = literal_scalar(left)?;
+    let right = literal_scalar(right)?;
+    scalar_literal(apply_binary(*op, left, right).ok()?)
 }
 
 /// Fold one unary operator applied to a literal operand.
+///
+/// `None` carries the same meaning as in [`fold_binary_literal`].
 #[must_use]
 pub fn fold_unary_literal(op: &UnOp, operand: &Expr) -> Option<Expr> {
-    match operand {
-        Expr::LitU32(value) => fold_u32_unary(op, *value),
-        Expr::LitI32(value) => fold_i32_unary(op, *value),
-        Expr::LitBool(value) => fold_bool_unary(op, *value),
-        Expr::LitF32(value) => fold_f32_unary(op, *value),
-        _ => None,
-    }
+    let operand = literal_scalar(operand)?;
+    scalar_literal(apply_unary(op, operand).ok()?)
 }
 
 /// Fold a cast applied to a literal operand.
@@ -104,275 +108,27 @@ pub fn fold_fma_literal(a: &Expr, b: &Expr, c: &Expr) -> Option<Expr> {
     }
 }
 
-#[must_use]
-pub(crate) fn canonical_f32(value: f32) -> f32 {
-    if value.is_nan() {
-        f32::from_bits(0x7FC0_0000)
-    } else if value.is_subnormal() {
-        f32::from_bits(value.to_bits() & 0x8000_0000)
-    } else {
-        value
+/// Read a literal expression as a scalar; `None` for every other expression.
+fn literal_scalar(expr: &Expr) -> Option<Value> {
+    match expr {
+        Expr::LitU32(value) => Some(Value::U32(*value)),
+        Expr::LitI32(value) => Some(Value::I32(*value)),
+        Expr::LitF32(value) => Some(Value::F32(*value)),
+        Expr::LitBool(value) => Some(Value::Bool(*value)),
+        _ => None,
     }
 }
 
-fn fold_u32_binary(op: BinOp, a: u32, b: u32) -> Option<Expr> {
-    Some(match op {
-        BinOp::Add | BinOp::WrappingAdd => Expr::LitU32(a.wrapping_add(b)),
-        BinOp::Sub | BinOp::WrappingSub => Expr::LitU32(a.wrapping_sub(b)),
-        BinOp::Mul => Expr::LitU32(a.wrapping_mul(b)),
-        BinOp::Div => Expr::LitU32(if b == 0 { u32::MAX } else { a / b }),
-        BinOp::Mod => Expr::LitU32(if b == 0 { 0 } else { a % b }),
-        BinOp::BitAnd => Expr::LitU32(a & b),
-        BinOp::BitOr => Expr::LitU32(a | b),
-        BinOp::BitXor => Expr::LitU32(a ^ b),
-        BinOp::Shl => Expr::LitU32(a.wrapping_shl(b % 32)),
-        BinOp::Shr => Expr::LitU32(a.wrapping_shr(b % 32)),
-        BinOp::Eq => Expr::LitBool(a == b),
-        BinOp::Ne => Expr::LitBool(a != b),
-        BinOp::Lt => Expr::LitBool(a < b),
-        BinOp::Gt => Expr::LitBool(a > b),
-        BinOp::Le => Expr::LitBool(a <= b),
-        BinOp::Ge => Expr::LitBool(a >= b),
-        BinOp::And => Expr::LitBool(a != 0 && b != 0),
-        BinOp::Or => Expr::LitBool(a != 0 || b != 0),
-        BinOp::Min => Expr::LitU32(a.min(b)),
-        BinOp::Max => Expr::LitU32(a.max(b)),
-        BinOp::AbsDiff => Expr::LitU32(a.abs_diff(b)),
-        BinOp::SaturatingAdd => Expr::LitU32(a.saturating_add(b)),
-        BinOp::SaturatingSub => Expr::LitU32(a.saturating_sub(b)),
-        BinOp::SaturatingMul => Expr::LitU32(a.saturating_mul(b)),
-        BinOp::RotateLeft => Expr::LitU32(a.rotate_left(b % 32)),
-        BinOp::RotateRight => Expr::LitU32(a.rotate_right(b % 32)),
-        BinOp::MulHigh => Expr::LitU32(((a as u64).wrapping_mul(b as u64) >> 32) as u32),
-        _ => return None,
-    })
-}
-
-fn fold_i32_binary(op: BinOp, a: i32, b: i32) -> Option<Expr> {
-    Some(match op {
-        BinOp::Add | BinOp::WrappingAdd => Expr::LitI32(a.wrapping_add(b)),
-        BinOp::Sub | BinOp::WrappingSub => Expr::LitI32(a.wrapping_sub(b)),
-        BinOp::Mul => Expr::LitI32(a.wrapping_mul(b)),
-        // I32 Div / Mod: signed division by zero and the i32::MIN / -1 overflow
-        // are UNDEFINED on the target backends, so the folder must NOT fabricate
-        // a value for them. The reference oracle errors on both (see
-        // vyre-reference div_i32 / rem_i32: "undefined backend semantics"), and
-        // the Naga emitter lowers signed division to a raw SDiv with no
-        // divisor-zero guard (the Select(divisor==0 ? max : x/y) guard is
-        // emitted only for UNSIGNED operands, unsigned div-by-zero is the one
-        // defined case, u32::MAX, handled in fold_u32_binary). Folding `x / 0`
-        // to 0 would make the optimized program produce a value the unoptimized
-        // program never produces. Decline instead, mirroring the f32 div-by-zero
-        // path below; a correct program guards the signed divisor before
-        // lowering. Defined signed cases fold via wrapping_div / wrapping_rem.
-        BinOp::Div => {
-            if b == 0 || (a == i32::MIN && b == -1) {
-                return None;
-            }
-            Expr::LitI32(a.wrapping_div(b))
-        }
-        BinOp::Mod => {
-            if b == 0 || (a == i32::MIN && b == -1) {
-                return None;
-            }
-            Expr::LitI32(a.wrapping_rem(b))
-        }
-        BinOp::BitAnd => Expr::LitI32(a & b),
-        BinOp::BitOr => Expr::LitI32(a | b),
-        BinOp::BitXor => Expr::LitI32(a ^ b),
-        BinOp::Shl => {
-            if b < 0 {
-                return None;
-            }
-            Expr::LitI32(a.wrapping_shl((b as u32) % 32))
-        }
-        BinOp::Shr => {
-            if b < 0 {
-                return None;
-            }
-            Expr::LitI32(a.wrapping_shr((b as u32) % 32))
-        }
-        BinOp::Eq => Expr::LitBool(a == b),
-        BinOp::Ne => Expr::LitBool(a != b),
-        BinOp::Lt => Expr::LitBool(a < b),
-        BinOp::Gt => Expr::LitBool(a > b),
-        BinOp::Le => Expr::LitBool(a <= b),
-        BinOp::Ge => Expr::LitBool(a >= b),
-        BinOp::And => Expr::LitBool(a != 0 && b != 0),
-        BinOp::Or => Expr::LitBool(a != 0 || b != 0),
-        BinOp::Min => Expr::LitI32(a.min(b)),
-        BinOp::Max => Expr::LitI32(a.max(b)),
-        BinOp::AbsDiff => Expr::LitU32(a.abs_diff(b)),
-        BinOp::SaturatingAdd => Expr::LitI32(a.saturating_add(b)),
-        BinOp::SaturatingSub => Expr::LitI32(a.saturating_sub(b)),
-        BinOp::SaturatingMul => Expr::LitI32(a.saturating_mul(b)),
-        BinOp::RotateLeft => Expr::LitI32(a.rotate_left((b as u32) % 32)),
-        BinOp::RotateRight => Expr::LitI32(a.rotate_right((b as u32) % 32)),
-        _ => return None,
-    })
-}
-
-fn fold_bool_binary(op: BinOp, a: bool, b: bool) -> Option<Expr> {
-    Some(match op {
-        BinOp::And => Expr::LitBool(a && b),
-        BinOp::Or => Expr::LitBool(a || b),
-        BinOp::BitXor => Expr::LitBool(a ^ b),
-        BinOp::Eq => Expr::LitBool(a == b),
-        BinOp::Ne => Expr::LitBool(a != b),
-        _ => return None,
-    })
-}
-
-fn fold_f32_binary(op: BinOp, a: f32, b: f32) -> Option<Expr> {
-    let a = canonical_f32(a);
-    let b = canonical_f32(b);
-    if a.is_nan() || b.is_nan() {
-        return None;
+/// Write a scalar back as a literal expression.
+///
+/// `Value::U64` has no `Expr` literal, so a 64-bit result cannot be folded
+/// into the expression IR and the expression is left alone.
+fn scalar_literal(value: Value) -> Option<Expr> {
+    match value {
+        Value::U32(value) => Some(Expr::LitU32(value)),
+        Value::I32(value) => Some(Expr::LitI32(value)),
+        Value::F32(value) => Some(Expr::LitF32(value)),
+        Value::Bool(value) => Some(Expr::LitBool(value)),
+        Value::U64(_) => None,
     }
-    Some(match op {
-        BinOp::Add => Expr::LitF32(canonical_f32(a + b)),
-        BinOp::Sub => Expr::LitF32(canonical_f32(a - b)),
-        BinOp::Mul => Expr::LitF32(canonical_f32(a * b)),
-        BinOp::Div => {
-            if b == 0.0 {
-                return None;
-            }
-            Expr::LitF32(canonical_f32(a / b))
-        }
-        BinOp::Mod => {
-            if b == 0.0 {
-                return None;
-            }
-            Expr::LitF32(canonical_f32(a % b))
-        }
-        BinOp::Eq => Expr::LitBool(a == b),
-        BinOp::Ne => Expr::LitBool(a != b),
-        BinOp::Lt => Expr::LitBool(a < b),
-        BinOp::Gt => Expr::LitBool(a > b),
-        BinOp::Le => Expr::LitBool(a <= b),
-        BinOp::Ge => Expr::LitBool(a >= b),
-        BinOp::Min => Expr::LitF32(canonical_f32(a.min(b))),
-        BinOp::Max => Expr::LitF32(canonical_f32(a.max(b))),
-        _ => return None,
-    })
-}
-
-fn fold_u32_unary(op: &UnOp, v: u32) -> Option<Expr> {
-    Some(match op {
-        UnOp::Negate => Expr::LitU32(v.wrapping_neg()),
-        UnOp::BitNot => Expr::LitU32(!v),
-        UnOp::LogicalNot => Expr::LitBool(v == 0),
-        UnOp::Popcount => Expr::LitU32(v.count_ones()),
-        UnOp::Clz => Expr::LitU32(v.leading_zeros()),
-        UnOp::Ctz => Expr::LitU32(v.trailing_zeros()),
-        UnOp::ReverseBits => Expr::LitU32(v.reverse_bits()),
-        UnOp::Abs => Expr::LitU32(v),
-        UnOp::Sign => Expr::LitF32(if v == 0 { 0.0 } else { 1.0 }),
-        UnOp::Sqrt => Expr::LitF32(libm::sqrtf(v as f32)),
-        UnOp::InverseSqrt => Expr::LitF32(1.0 / libm::sqrtf(v as f32)),
-        UnOp::Reciprocal => Expr::LitF32(1.0 / v as f32),
-        UnOp::Exp => Expr::LitF32(libm::expf(v as f32)),
-        UnOp::Exp2 => Expr::LitF32(libm::exp2f(v as f32)),
-        UnOp::Log => Expr::LitF32(libm::logf(v as f32)),
-        UnOp::Log2 => Expr::LitF32(libm::log2f(v as f32)),
-        UnOp::Sin => Expr::LitF32(libm::sinf(v as f32)),
-        UnOp::Cos => Expr::LitF32(libm::cosf(v as f32)),
-        UnOp::Tan => Expr::LitF32(libm::tanf(v as f32)),
-        UnOp::Asin => Expr::LitF32(libm::asinf(v as f32)),
-        UnOp::Acos => Expr::LitF32(libm::acosf(v as f32)),
-        UnOp::Atan => Expr::LitF32(libm::atanf(v as f32)),
-        UnOp::Sinh => Expr::LitF32(libm::sinhf(v as f32)),
-        UnOp::Cosh => Expr::LitF32(libm::coshf(v as f32)),
-        UnOp::Tanh => Expr::LitF32(libm::tanhf(v as f32)),
-        UnOp::Floor | UnOp::Ceil | UnOp::Round | UnOp::Trunc => Expr::LitF32(v as f32),
-        UnOp::IsNan => Expr::LitBool(false),
-        UnOp::IsInf => Expr::LitBool(false),
-        UnOp::IsFinite => Expr::LitBool(true),
-        UnOp::Unpack4Low => Expr::LitU32(v & 0x0F),
-        UnOp::Unpack4High => Expr::LitU32((v >> 4) & 0x0F),
-        UnOp::Unpack8Low => Expr::LitU32(v & 0xFF),
-        UnOp::Unpack8High => Expr::LitU32((v >> 24) & 0xFF),
-        _ => return None,
-    })
-}
-
-fn fold_i32_unary(op: &UnOp, v: i32) -> Option<Expr> {
-    Some(match op {
-        UnOp::Negate => Expr::LitI32(v.wrapping_neg()),
-        UnOp::BitNot => Expr::LitI32(!v),
-        UnOp::LogicalNot => Expr::LitBool(v == 0),
-        UnOp::Popcount => Expr::LitI32(v.count_ones() as i32),
-        UnOp::Clz => Expr::LitI32(v.leading_zeros() as i32),
-        UnOp::Ctz => Expr::LitI32(v.trailing_zeros() as i32),
-        UnOp::ReverseBits => Expr::LitI32(v.reverse_bits()),
-        UnOp::Abs => Expr::LitI32(v.wrapping_abs()),
-        UnOp::Sign => Expr::LitF32(if v == 0 { 0.0 } else { v.signum() as f32 }),
-        UnOp::Sqrt => Expr::LitF32(libm::sqrtf(v as f32)),
-        UnOp::InverseSqrt => Expr::LitF32(1.0 / libm::sqrtf(v as f32)),
-        UnOp::Reciprocal => Expr::LitF32(1.0 / v as f32),
-        UnOp::Exp => Expr::LitF32(libm::expf(v as f32)),
-        UnOp::Exp2 => Expr::LitF32(libm::exp2f(v as f32)),
-        UnOp::Log => Expr::LitF32(libm::logf(v as f32)),
-        UnOp::Log2 => Expr::LitF32(libm::log2f(v as f32)),
-        UnOp::Sin => Expr::LitF32(libm::sinf(v as f32)),
-        UnOp::Cos => Expr::LitF32(libm::cosf(v as f32)),
-        UnOp::Tan => Expr::LitF32(libm::tanf(v as f32)),
-        UnOp::Asin => Expr::LitF32(libm::asinf(v as f32)),
-        UnOp::Acos => Expr::LitF32(libm::acosf(v as f32)),
-        UnOp::Atan => Expr::LitF32(libm::atanf(v as f32)),
-        UnOp::Sinh => Expr::LitF32(libm::sinhf(v as f32)),
-        UnOp::Cosh => Expr::LitF32(libm::coshf(v as f32)),
-        UnOp::Tanh => Expr::LitF32(libm::tanhf(v as f32)),
-        UnOp::Floor | UnOp::Ceil | UnOp::Round | UnOp::Trunc => Expr::LitF32(v as f32),
-        UnOp::IsNan => Expr::LitBool(false),
-        UnOp::IsInf => Expr::LitBool(false),
-        UnOp::IsFinite => Expr::LitBool(true),
-        _ => return None,
-    })
-}
-
-fn fold_bool_unary(op: &UnOp, v: bool) -> Option<Expr> {
-    Some(match op {
-        UnOp::LogicalNot | UnOp::BitNot => Expr::LitBool(!v),
-        UnOp::IsNan | UnOp::IsInf => Expr::LitBool(false),
-        UnOp::IsFinite => Expr::LitBool(true),
-        _ => return None,
-    })
-}
-
-fn fold_f32_unary(op: &UnOp, v: f32) -> Option<Expr> {
-    let v = canonical_f32(v);
-    if v.is_nan() && !matches!(op, UnOp::IsNan | UnOp::IsInf | UnOp::IsFinite) {
-        return None;
-    }
-    Some(match op {
-        UnOp::Negate => Expr::LitF32(canonical_f32(-v)),
-        UnOp::Sqrt => Expr::LitF32(canonical_f32(libm::sqrtf(v))),
-        UnOp::InverseSqrt => Expr::LitF32(canonical_f32(1.0 / libm::sqrtf(v))),
-        UnOp::Reciprocal => Expr::LitF32(canonical_f32(1.0 / v)),
-        UnOp::Exp => Expr::LitF32(canonical_f32(libm::expf(v))),
-        UnOp::Exp2 => Expr::LitF32(canonical_f32(libm::exp2f(v))),
-        UnOp::Log => Expr::LitF32(canonical_f32(libm::logf(v))),
-        UnOp::Log2 => Expr::LitF32(canonical_f32(libm::log2f(v))),
-        UnOp::Sin => Expr::LitF32(canonical_f32(libm::sinf(v))),
-        UnOp::Cos => Expr::LitF32(canonical_f32(libm::cosf(v))),
-        UnOp::Tan => Expr::LitF32(canonical_f32(libm::tanf(v))),
-        UnOp::Asin => Expr::LitF32(canonical_f32(libm::asinf(v))),
-        UnOp::Acos => Expr::LitF32(canonical_f32(libm::acosf(v))),
-        UnOp::Atan => Expr::LitF32(canonical_f32(libm::atanf(v))),
-        UnOp::Sinh => Expr::LitF32(canonical_f32(libm::sinhf(v))),
-        UnOp::Cosh => Expr::LitF32(canonical_f32(libm::coshf(v))),
-        UnOp::Tanh => Expr::LitF32(canonical_f32(libm::tanhf(v))),
-        UnOp::Ceil => Expr::LitF32(canonical_f32(v.ceil())),
-        UnOp::Floor => Expr::LitF32(canonical_f32(v.floor())),
-        UnOp::Round => Expr::LitF32(canonical_f32(v.round())),
-        UnOp::Trunc => Expr::LitF32(canonical_f32(v.trunc())),
-        UnOp::Abs => Expr::LitF32(canonical_f32(v.abs())),
-        UnOp::Sign => Expr::LitF32(canonical_f32(if v == 0.0 { 0.0 } else { v.signum() })),
-        UnOp::IsNan => Expr::LitBool(v.is_nan()),
-        UnOp::IsInf => Expr::LitBool(v.is_infinite()),
-        UnOp::IsFinite => Expr::LitBool(v.is_finite()),
-        UnOp::LogicalNot => Expr::LitBool(v == 0.0),
-        _ => return None,
-    })
 }

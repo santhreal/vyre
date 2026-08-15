@@ -33,7 +33,7 @@ fn materialized_output_cache_prebuilt_entries_match_direct_remember_for_1024_cas
         prebuilt
             .remember_entry(entry)
             .expect("Fix: prebuilt materialized cache entry insertion must fit");
-        let input_key = materialized_input_key(&[input.as_slice()])
+        let input_key = exact_input_key(&[input.as_slice()])
             .expect("Fix: generated materialized input key must fit");
         let mut keyed = MaterializedPipelineOutputCache::default();
         let keyed_entry = MaterializedPipelineOutputCacheEntry::new_with_key(

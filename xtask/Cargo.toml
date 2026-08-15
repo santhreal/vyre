@@ -11,6 +11,11 @@ description = "Build task runner for the vyre workspace."
 # Internal build-task runner, not a published crate. `cargo publish` on the
 # workspace must skip it.
 publish = false
+# `src/bin/` holds two maintainer tools beside the runner, which makes
+# `cargo run -p xtask` ambiguous. Every workflow step, script and doc invokes
+# the runner, so name it here once instead of spelling `--bin xtask` at each
+# call site.
+default-run = "xtask"
 
 [lints]
 workspace = true

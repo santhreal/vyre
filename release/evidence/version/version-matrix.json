@@ -223,6 +223,13 @@
       "publishable": true
     },
     {
+      "package": "vyre-registry-link",
+      "version": "0.7.2",
+      "manifest": "vyre-registry-link/Cargo.toml",
+      "release_group": "vyre",
+      "publishable": false
+    },
+    {
       "package": "vyre-runtime",
       "version": "0.7.2",
       "manifest": "vyre-runtime/Cargo.toml",
@@ -447,6 +454,13 @@
       "version": "0.7.2",
       "expected": "0.7.2",
       "release_group": "vyre"
+    },
+    {
+      "manifest": "vyre-pass-engine/Cargo.toml",
+      "dependency": "vyre-libs",
+      "version": "0.7.2",
+      "expected": "0.7.2",
+      "release_group": "vyre"
     }
   ],
   "lockfile_packages": [
@@ -621,6 +635,13 @@
     {
       "lockfile": "Cargo.lock",
       "package": "vyre-reference",
+      "version": "0.7.2",
+      "expected": "0.7.2",
+      "release_group": "vyre"
+    },
+    {
+      "lockfile": "Cargo.lock",
+      "package": "vyre-registry-link",
       "version": "0.7.2",
       "expected": "0.7.2",
       "release_group": "vyre"

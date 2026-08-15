@@ -71,7 +71,7 @@ mod shadowing;
 /// `BufferDecl::shape_predicate()` against the static `count` and
 /// reports a `ValidationError` for every contradiction.
 pub mod shape_predicate;
-mod typecheck;
+pub(crate) mod typecheck;
 mod uniformity;
 
 pub(crate) use binding::Binding;

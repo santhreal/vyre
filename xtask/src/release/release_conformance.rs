@@ -96,8 +96,8 @@ pub(crate) fn run(args: &[String]) {
                 continue;
             }
         };
-        if let Err(error) = run_backend_conformance(&workspace_root, backend, artifact) {
-            failures.push(error);
+        if let Err(errors) = run_backend_conformance(&workspace_root, backend, artifact) {
+            failures.extend(errors);
         }
     }
     write_release_log(&workspace_root, &config.backends, &failures);
@@ -111,11 +111,15 @@ pub(crate) fn run(args: &[String]) {
     println!("release-conformance: wrote backend conformance artifacts");
 }
 
+/// Run one backend's conformance sweep, returning every blocker it recorded.
+///
+/// The blockers are returned individually rather than as a count, because the
+/// artifact they were also written to is not what a caller reads at the terminal.
 fn run_backend_conformance(
     workspace_root: &Path,
     backend: &str,
     artifact: &str,
-) -> Result<(), String> {
+) -> Result<(), Vec<String>> {
     let backend_id = if backend == "reference" {
         "cpu-ref"
     } else {
@@ -147,11 +151,11 @@ fn run_backend_conformance(
         .current_dir(workspace_root)
         .output()
         .map_err(|error| {
-            format!(
+            vec![format!(
                 "failed to run `{} {}`: {error}. Set VYRE_CARGO_RUNNER to the bounded workspace cargo wrapper if it is not named `cargo_full`.",
                 runner.display(),
                 args.join(" ")
-            )
+            )]
         })?;
     let command = format!("{} {}", runner.display(), args.join(" "));
     let (pairs, stdout_diagnostics, mut blockers) = match parse_pairs(&output.stdout) {
@@ -261,15 +265,16 @@ fn run_backend_conformance(
         pairs,
         blockers,
     };
-    crate::json_output::write_pretty_json(&workspace_root.join(artifact), &artifact_body)?;
+    crate::json_output::write_pretty_json(&workspace_root.join(artifact), &artifact_body)
+        .map_err(|error| vec![error])?;
     if artifact_body.blockers.is_empty() {
         Ok(())
     } else {
-        Err(format!(
-            "{} conformance artifact reports {} blocker(s)",
-            artifact_body.backend_id,
-            artifact_body.blockers.len()
-        ))
+        Err(artifact_body
+            .blockers
+            .iter()
+            .map(|blocker| format!("{}: {blocker}", artifact_body.backend_id))
+            .collect())
     }
 }
 

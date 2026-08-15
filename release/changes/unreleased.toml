@@ -4,6 +4,7 @@ schema_version = 1
 id = "conformance-owner-consolidation"
 category = "Changed"
 text = "The standalone `vyre-harness` package is gone. Semantic operation identity, tier classification, and registration now live in `vyre-foundation`; library fixture views live in `vyre-libs`; conformance execution and parity policy live in `vyre-conform`; self-substrate behavior tests live with their owner."
+
 [[fragments]]
 id = "self-substrate-policy-shadow-removal"
 category = "Removed"
@@ -63,7 +64,6 @@ text = "Resident throughput batches preserve complete device-timestamp totals an
 id = "wgpu-artifact-route-cutover"
 category = "Removed"
 text = "The WGPU host-ingress and raw persistent-kernel compiler routes are gone. Persistent product execution uses authenticated artifact sessions; concrete pipeline compilation remains available only as a hidden oracle helper for driver cache tests."
-
 
 [[fragments]]
 id = "heuristic-audit-root-resolution"
@@ -249,6 +249,7 @@ text = "The neural library now executes a reusable dense gated-MLP ProgramGraph 
 id = "chunked-gated-delta"
 category = "Added"
 text = "The neural library now executes chunk-size-64 gated delta prefill with F32 cumulative log-decay, a strict lower-triangular solve, initial-state correction, chunk output reconstruction, and explicit final matrix state. F16, BF16, and F32 inputs retain F32 internal math. Guarded rows in the final structural tile cannot read padding, change state, or appear in truncated output."
+
 [[fragments]]
 id = "canonical-procedural-macro-surface"
 category = "Removed"
@@ -263,7 +264,6 @@ text = "Foundation now exposes IR-specific `IrError` and `IrResult` contracts in
 id = "documentation-and-dependency-authority"
 category = "Changed"
 text = "Documentation pages now declare audience, owner, authority, kind, and generated/manual ownership. Crate dependency records declare purpose, features, target conditions, visibility, and destination seam, and optimizer pass reference pages are generated from the live pass registry."
-
 
 [[fragments]]
 id = "semantic-parity-fixture-projection"
@@ -1324,3 +1324,173 @@ text = "`c_frontend::parity_matrix::assert_case_table_covers_fixture_file` reads
 id = "visit-owner-ir-variant-descent"
 category = "Fixed"
 text = "IR variant descent has one owner per reference mode. `vyre_foundation::transform::visit::child_bodies_mut` is new and owns the body slots of a node held by unique reference, alongside `child_bodies` for a shared read and `vyre_foundation::transform::rewrite_walk::rewrite_node` for a borrow-preserving rebuild. `vyre_foundation::visit::node_map::map_body` took its slot list from a hand-written match ending in a catch-all that returned the node unchanged, so a body-bearing variant the list had not been told about made every pass composed on it a silent no-op inside that variant, including `rematerialize_cheap_let` and the pass engine's constant propagation. The scalar namespace also has one owner, `vyre_foundation::transform::visit::node_scalars`, reporting the bound name, what the statement does to it, and the operand expressions in one record; `node_operands` and `node_bound_name` are derived from it, and `vyre_foundation::visit::bound_names` no longer classifies an unrecognised variant as binding nothing. `vyre_foundation::optimizer::cost` folds the divergence dimension over the owning descent instead of a search that stops at the first match, and `vyre_foundation::transform::autodiff::grad` reads its forward types and adjoint targets from the owner and reports an unsupported node by its registry variant name rather than by a `Debug` rendering truncated at sixty characters."
+
+[[fragments]]
+id = "evidence-blockers-named-not-implied"
+category = "Fixed"
+text = "Every evidence subcommand prints its blockers to stderr before exiting 1, through the one owner of that epilogue, `xtask::output_arg::report_evidence_artifact`. It wrote the artifact and exited on a non-empty blocker list without naming a single entry, so nine gates reported a bare exit code and the cause was readable only by opening the JSON. `xtask::release::release_conformance` returned a count of failing backends instead of the failures; it now returns each one prefixed by its backend id. `xtask_registry::release::conformance_matrix` kept a private write-then-exit epilogue beside the owner and is routed through it."
+
+[[fragments]]
+id = "evidence-blockers-hygiene-rule-reads-calls"
+category = "Fixed"
+text = "The unbounded-read rule in `xtask::gates::hygiene_matrix` matches a call to `fs::read` rather than the text `fs::read(`, which also matched `BufferRefs::read(count_buffer)` and reported a graph accessor as an unbounded filesystem read. The release-tooling scan reads `.py` alongside `.sh` and `.yml`, so a rule that a shell script cannot evade cannot be evaded by moving the body into a Python file beside it."
+
+[[fragments]]
+id = "evidence-blockers-structural-gate-registry"
+category = "Added"
+text = "A source-inspecting test is informational only when `docs/testing/STRUCTURAL_GATES.toml` declares it by file and test name with a reason, and a row the tree no longer backs is itself a release blocker. Twelve gates assert a property with no run-time witness, such as which crate owns a symbol or that no second file spells a constant; they cannot be rewritten as behaviour tests, and blocking on them permanently would have been answered by deleting them. Keying on the pair means a reviewed declaration exempts the gate it names and not the next one added to the same file."
+
+[[fragments]]
+id = "evidence-blockers-tooling-out-of-heredocs"
+category = "Changed"
+text = "Seven release gate scripts run `scripts/lib/<name>.py` instead of piping a Python program into an interpreter through a heredoc. A heredoc hides a whole second language from review, lint, and syntax checking, and these were the last seven. `scripts/cli_docs.py` invokes the workspace wrapper through `scripts/lib/cargo_runner.py`, the Python twin of the shell runner that already owned that decision."
+
+[[fragments]]
+id = "evidence-blockers-docs-and-features-complete"
+category = "Fixed"
+text = "`docs-check` and `feature-matrix` pass. The generated testing guide for `vyre-registry-link` had no row in the documentation manifest, and `vyre-test-support` declared features with no explicit default policy. A tree contract now derives the workspace member list at run time and fails when a member has no classified testing guide row, or when a row names a crate the workspace no longer has."
+
+[[fragments]]
+id = "benchscaffold-one-owner-per-bench-case-declaration"
+category = "Changed"
+text = "Benchmark case declarations have one owner, `vyre_bench::cases::harness`. Each of the eight honest cases open-coded the same ten-method `BenchCase` block, and the copies had drifted: `search.binary.u32.1m` omitted the smoke suite from its private list and so ran in no smoke suite, and `regex.backtracking.adversarial` inherited a byte-accounting default that reported reading and writing nothing because its prepared payload was not a bare program. A case is now a static `WorkloadDescription` plus a `CaseOps` record of the operations a description cannot carry, and it reports which owner built it through `BenchCase::declaration_owner`. `vyre_bench::cases::harness::HONEST_SUITES` is the single honest suite list, replacing two verbatim copies and one per-case spelling. The two YARA-like condition workloads likewise share one owner each for the nine per-rule parameters, for the five-condition conjunction their device programs are scored against, and for the four IR predicate blocks, in `vyre_bench::cases::conditional`; both previously held a private copy of all three, so a predicate dropped from one copy of the host oracle would have read as a device correctness violation rather than a host bug. Callers still concatenate the IR blocks in their own order, so both programs keep their recorded fingerprints. A new gate walks the inventory registry at run time and fails when an honest case reports no declaration owner or an owner serving only itself."
+
+[[fragments]]
+id = "tooling-frontend-branch-accounting-gate"
+category = "Added"
+text = "`scripts/check_branch_accounting.py` derives the campaign's own branch and worktree state from git at run time and fails when it is inconsistent: a branch no owner branch holds and no worktree carries is work nobody is doing and nobody is merging, and a branch an owner already holds while a worktree keeps it alive is a source tree every scan walks for nothing. Owners are the integration branch and the subsystem tier, and a branch never accounts for itself. The derivation refuses to run against a repository with fewer than two local branches or no integration branch, because a check that silently derives nothing is the same defect as no check."
+
+[[fragments]]
+id = "tooling-frontend-two-more-structural-gates-declared"
+category = "Changed"
+text = "Two coverage gates that derive their member set from source are declared in `docs/testing/STRUCTURAL_GATES.toml`: the resident queue materializer variant scan and the published quantized entry-point scan. Each asserts the absence of a case or a row, which no execution of the covered code can witness."
+
+[[fragments]]
+id = "optpasses-memory-alias-one-owner"
+category = "Fixed"
+text = "The buffer-interference proof the memory passes need before they may rewrite across a gap has one owner, `vyre_foundation::optimizer::passes::memory::alias`. `dead_store_elim` and `store_to_load_forward` each carried a full node-by-node copy of it, both exhaustive and both tested, and they disagreed: a compare-exchange against another buffer, which is how a lock is taken, blocked the dead-store proof and did not block the forwarding proof, so a load across a lock acquire was replaced with the value stored before it. Both copies also inspected only the one buffer `Node::Trap` and `Node::IndirectDispatch` name, while both pass module docs promised the node blocks outright; a host effect handler and a launched grid may touch any buffer, and a grid-synchronizing collective is at least a fence. The owner answers all of that once, and what stays per-pass is the one bit that genuinely differs: whether a write to the buffer interferes or only a read. Node descent and buffer naming come from `vyre_foundation::transform::visit`, so a new IR variant fails to compile here rather than defaulting to harmless."
+
+[[fragments]]
+id = "optpasses-memory-alias-gate"
+category = "Added"
+text = "`memory_pass_alias_owner` reads the pass set from the inventory registry at run time, keeps every pass in the memory phase, and asserts none of them changes how many times a program reaches a buffer across a gap node the alias owner reports as interfering. Each probe carries a control with a harmless gap that at least one pass must rewrite, so a pass that simply had nothing to do cannot pass for one that consulted the owner. Registering a third memory pass with its own copy of the analysis turns the suite red on the day it is registered rather than on the day someone diffs two files."
+
+[[fragments]]
+id = "optpasses-idempotence-covers-the-registry"
+category = "Changed"
+text = "`vyre_foundation::optimizer`'s per-pass fixed-point contract is measured against every registered pass, discovered through `vyre_foundation::optimizer::registered_pass_registrations` and scheduled with the passes it declares a requirement on. The seven pass names it hardcoded were a fifth of the registry and could not go stale loudly: a pass registered afterwards was never held to the contract and nothing said so. The entry-point half is now a declared table, so `canonicalize_engine::run` and `optimize` are each held to the union of what the two suites separately asserted, three runs compared structurally and on the wire with reference-interpreter parity checked on every run."
+
+[[fragments]]
+id = "optpasses-optimizer-program-corpus"
+category = "Changed"
+text = "The generated-program corpus and the run-then-compare scaffold the optimizer contract suites draw from have one owner, `contract_cases::optimizer_program_corpus`. Two suites carried a copy each, down to identical recursion depth and branch weights, with two names for the same single-store program builder. Two copies of a generator is not a duplicated helper: the property a suite proves is only as wide as the programs it draws, so a generator that drifts in one file narrows one suite's claim while both stay green."
+
+[[fragments]]
+id = "cuda-input-identity-one-spelling"
+category = "Changed"
+text = "The CUDA backend names `vyre_driver::input_identity::exact_input_key` and `ExactInputKey` directly. `vyre_driver_cuda::input_identity` was a module whose entire body was a re-export of those two items, and `vyre_driver_cuda::pipeline::materialized_cache` re-exported them again under second names, `materialized_input_key` and `MaterializedInputKey`, so one hash envelope and one key type were reachable under four spellings and the materialized cache read as if it owned a key format of its own. Both re-export layers are deleted and every use site names the owner. `vyre_driver_cuda::pipeline::tests::input_key_owner_contracts` replaces a test file that restated the envelope's own tuple-boundary and single-byte-sensitivity properties over 8192 generated cases under the alias name, proving nothing about CUDA while the question that mattered went unasked: it now asserts that a stored entry's key equals the shared envelope's answer for the same inputs, and that a resident-cache domain-separated key cannot reach materialized replay outputs for inputs that still hit under the plain envelope."
+
+[[fragments]]
+id = "csr-closure-fixtures-named-once"
+category = "Changed"
+text = "`vyre_primitives::graph::csr_closure_inputs` owns two things the CSR closure tests restated at every case: `CsrClosureInputs::allow_all` names the all-ones edge filter a case picks when the filter is not what it is testing, and `graphs::CHAIN_4` and `graphs::DIAMOND_4` name the two small graphs whose closure is known by inspection. Fifty-six call sites across `vyre-primitives`, `vyre-libs` and `vyre-driver-cuda` restated the filter as a bare `0xFFFF_FFFF` beside a four-field graph literal, and seventeen more restated one of those two graphs inline, so two cases could not be told apart by their graph and rustfmt put every field on its own row. The redundant `name: name` half of eighty-four fields the positional-to-named rewrite left behind is gone as well."
+
+[[fragments]]
+id = "scalar-ops-one-owner-for-scalar-operator-semantics"
+category = "Fixed"
+text = "`vyre_foundation::scalar_ops` is the single owner of scalar operator semantics. The literal folder in `vyre_foundation::ir_eval` and the storage-graph interpreter in `vyre_foundation::ir_inner::model::node_kind` each carried a full per-width operator table, and the two tables disagreed on more than thirty (operator, width) pairs: the folder retyped integer transcendental, rounding, classification, `Abs` and `Sign` expressions to f32, folded i32 `AbsDiff`, `And`, `Or`, `RotateLeft` and `RotateRight`, f32 `Mod`, and bool `BitXor`, all of which `vyre_foundation::validate` rejects, while the interpreter had no answer for u32 `Negate`, the unpack operators, i32 `BitNot`, `Popcount`, `Clz`, `Ctz` and `ReverseBits`, the f32 unary math set, or f32 comparisons. The validator decides every row. f32 `Div` and i32 `Shl`/`Shr` are now total, matching IEEE-754 division and the shift-count-modulo-width rule the backends lower to, instead of bailing on NaN, zero or a negative count."
+
+[[fragments]]
+id = "compilercore-cross-crate-fixtures-and-ir-slicing-named-once"
+category = "Changed"
+text = "Two concepts that a consumer crate had re-derived now have one owner. `vyre_test_support::ir_regions` owns the three helpers that slice a stretch of generated IR out of a program and compare it against a sibling, which `vyre_primitives` and `vyre_libs` each wrote out; a comparison helper decides what its test can see, so a widened slice in one copy weakened an assertion in a crate whose author never read the change. `vyre_libs::solvers::bellman_tn_order` no longer re-proves the shortest-path relaxation of `vyre_primitives::math::bellman_shortest_path`: what it owes is the routing assertion it already carries, that its composition emits the primitive program unchanged."
+
+[[fragments]]
+id = "imbl-replaces-unmaintained-im"
+category = "Changed"
+text = "The persistent collections come from `imbl` 7.0.1 instead of `im` 15.1.0. `im` carries RUSTSEC-2026-0248 as unmaintained, pulls `bitmaps` 2.1.0 which carries RUSTSEC-2026-0247, and its `OrdSet` insertion has an aliasing violation, RUSTSEC-2023-0126; `cargo deny check advisories` failed on all three. `imbl` is the maintained fork with the same API. The structural sharing is why a std map is not the answer: the DCE live set is cloned at every branch arm and every loop body, and the lowering variable scope snapshots its binding map per scope, so a std map would deep-copy every identifier where the persistent map shares its structure. `vyre_foundation::optimizer::passes::fusion_cse::dce::LiveSet` is new and is the one place the live-set type is named, replacing the concrete set spelled in four files."
+
+[[fragments]]
+id = "dead-dependencies-removed"
+category = "Removed"
+text = "Forty declared dependencies that no source file references are gone, across sixteen crates. `cargo deny`'s sibling gate, `cargo machete`, had never run to completion in CI because it could not install under the workspace toolchain pin, so the declarations accumulated unchallenged: `vyre-driver-wgpu` alone declared ten it never used, including `tokio` twice, `tree-sitter`, `tree-sitter-go`, `crc32fast`, `libm`, and dev-dependencies on `vyre-emit-metal` and `vyre-emit-spirv`. The `self-substrate-adapters` feature in `vyre-driver` and `vyre-runtime` pulled `dep:vyre-pass-engine` without either crate naming it. Four flagged entries were kept because they are used through workspace-root shared test files included by path, which a crate-scoped search cannot see."
+
+[[fragments]]
+id = "genmatvec-dense-byte-tile-corpus-has-one-owner"
+category = "Changed"
+text = "The dense byte-tile Four-Russians matvec corpus has one owner, `tests/support/dense_matvec_cases.rs`, with one arm per crate: `vyre_primitives::bitset::four_russians` pins its byte-LUT builder, word-count helper, CPU reference and dispatch Program, and `vyre_libs::encoding::bitset_transform_pipeline` pins its own sizing, LUT builder, parity oracle and composed Program. The corpus generator, the frontier masking and the naive boolean-semiring oracle were written twice, and the two copies swept different bounds: 0..=18 byte tiles by 1..=5 destination words on the primitive side, 0..=24 by 1..=4 on the substrate side, so 384 cases in the union were exercised by neither. Both arms now run the union, plus a saturated-frontier group neither had, which is the only way the all-ones LUT row of every tile is reached at once."
+
+[[fragments]]
+id = "genmatvec-exploded-ifds-cases-have-one-owner"
+category = "Changed"
+text = "The exploded-supergraph (IFDS) CPU-reference corpus has one owner, `vyre_test_support::exploded_ifds_cases`, which declares the cases and owns what a correct CSR for them is. `vyre_primitives::graph::exploded` pins its allocating, fallible and workspace-reusing builders against it, and `vyre_libs::graph::dispatch::exploded` pins its host reference, its node-count helper and its dispatched path. The mixed intra/inter/GEN/KILL case stream was written twice and the copies ran different counts, 1024 against 512, so the dispatched path was never asked about the upper half of a corpus its own file defined. The rule semantics that were hand-checked per suite, KILL suppression, GEN injection and inter-edge fact propagation, are now declared as dense edge expectations both arms are held to."
+
+[[fragments]]
+id = "genmatvec-declared-case-with-no-arm-is-a-failure"
+category = "Added"
+text = "`vyre_test_support::case_table::ArmCoverage` reads a shared case table's declared group names at run time, records which groups a crate's arm actually asserted, and fails naming every declared group that crate has no branch for. A corpus shared through an include has a hole a per-crate copy also had: the table declares a group, one crate grows an arm, the other does not, and the crate without the arm still passes because nothing in it mentions the group. Group-count and case-count floors make a collapsed table fail rather than report a clean sweep of an empty set. Both the dense-matvec and exploded-IFDS tables are enrolled, in four arms across two crates."
+
+[[fragments]]
+id = "genmatvec-csr-closure-graph-shapes-have-one-owner"
+category = "Changed"
+text = "The fixed CSR graphs the closure contracts are written against have one owner, `vyre_primitives::graph::csr_closure_inputs::graphs`, and an unrestricted edge filter has one spelling, `vyre_primitives::graph::csr_closure_inputs::CsrClosureInputs::allow_all`. The four-node chain and the four-node diamond were rebuilt from three array literals at each call site, four crate-local `linear_graph` helpers returned the chain as an owned triple so a caller had to keep `off`, `tgt` and `msk` alive to borrow a view from them, and more than thirty call sites restated the whole seven-field closure group only to set the allow mask to every kind. `CsrGraphShape` owns the arrays with `'static` lifetime and borrows itself as the view, so a contract now names the shape it means instead of agreeing with its siblings by coincidence."
+
+[[fragments]]
+id = "genmatvec-dense-matvec-dirty-output-driver-has-one-owner"
+category = "Changed"
+text = "The dirty-output contract for a dense byte-tile matvec Program is asserted once, by `tests/support/dense_matvec_cases.rs`, which drives the reference interpreter with the all-ones output buffer and takes the LUT builder and Program builder as arguments. The two arms ran byte-identical interpreter setups and differed only in which builders they named, which is why they were the largest cross-crate duplicate pair in the repository. The primitive arm passes `vyre_primitives::bitset::four_russians::four_russians_dense_matvec_byte_lut` and the substrate arm passes `vyre_libs::encoding::bitset_transform_pipeline::four_russians_dense_matvec_program`, and the failure message names which arm failed."
+
+[[fragments]]
+id = "exprtype-one-owner-for-expression-type-inference"
+category = "Fixed"
+text = "Expression type inference has one owner, `vyre_foundation::validate::typecheck::expr_type`, and the environment its consumers supplied differently is the `vyre_foundation::validate::typecheck::TypeEnv` trait: a scalar lookup, a buffer element lookup, and a hook that observes the type of every subexpression a walk resolves. `vyre_foundation::optimizer::fact_cache::type_facts` and the reverse-mode forward pass in `vyre_foundation::transform::autodiff::grad` each carried a second `Expr` walker, and the three answers had drifted. `Expr::BufferRef` was a word in both copies where validation reports nothing on purpose, so a buffer name could pass an operand typecheck it must never pass; the validator's answer wins. Arithmetic in the fact cache was the left operand's type falling back to the right, so a mixed-width expression took the left operand's width; it now unifies, and an unknown or mismatched pair answers `u32`, which is what validation already assumes of the same expression, so an optimizer fact cannot contradict a validation decision. `BitAnd`, `BitOr`, `BitXor`, `AbsDiff`, `WrappingAdd`, `WrappingSub`, `MulHigh` and `Shuffle` were typed from their operands in the fact cache and are integer-typed by the owner; logical `And` and `Or` and the comparisons stay `bool`, as all three copies already had them. Autodiff typed `Expr::SubgroupShuffle` and `Expr::SubgroupReduce` as words, so the adjoint of an f32 moved between lanes was refused as a non-differentiable cast; both now report their value operand's type. Autodiff also inherits the iterative walk, so a deep forward expression can no longer overflow the stack while its locals are typed. The deliberate i32 `AbsDiff` rejection and the unknown result type of `Expr::Call` are unchanged. A contract reads the `Expr` enum's own source at run time and fails when a variant has no recorded answer, or when a second file in the crate defines an `expr_type` walker."
+
+[[fragments]]
+id = "exprtype-constant-division-recognition"
+category = "Changed"
+text = """
+`vyre_foundation::optimizer::passes::algebraic::strength_reduce` recognizes four
+constant-divisor shapes before it lowers them. A divisibility test `x % d == 0`
+becomes Lemire's `rotate_right(x * inverse(odd(d)), trailing_zeros(d)) <= limit`,
+which reads the operand once and emits two operations where lowering the
+remainder emitted five. A common factor between a dividend's multiplier and the
+divisor cancels, a constant division chain fuses into one division, and a nested
+modulus narrows, each guarded by a range proof from a new provable-upper-bound
+analysis so a rewrite that would only hold without 32-bit wrapping is declined.
+Chained shift fusion no longer folds an over-width total to zero, which was a
+miscompile for a signed right shift, where the sign bit replicates instead.
+Rewrites that re-evaluate their operand now clear one duplication budget owned
+by `strength_reduce`, so a remainder of a buffer load no longer emits three
+loads of the same address.
+"""
+
+[[fragments]]
+id = "tooling-frontend-checkout-root-stays-runtime"
+category = "Fixed"
+text = "The gate crates resolve the checkout they report on from the working directory at run time, through `structure_gate::workspace_root`, and no checkout-identifying variable is declared in the cargo config. A `VYRE_CHECKOUT_ROOT` with `relative = true`, read with `env!` so its value entered each crate's dep-info, was tried as the way to stop one checkout being handed a binary another compiled; cargo does not export such a variable to the process it runs, so every gate fell through to its compiled-in value and the shared binary reported a worktree's numbers as this tree's. The declaration is rejected rather than absent, and the comment saying so is the only thing that stops it coming back. `structure-gate/tests/checkout_provenance.rs` rejects both spellings, assembling each from parts at run time so the gate does not report itself and needs no exemption."
+
+[[fragments]]
+id = "c-integer-literal-grammar-one-owner"
+category = "Fixed"
+text = "The radix prefix table, digit-value decode, type-suffix set and digit accumulator of a C integer literal are owned by `parsing::c::preprocess::c_int_literal_grammar`. The standalone scanner and the inline scan in the `#if` evaluator each carried a copy and the copies had drifted: the evaluator accumulated with wrapping `u32` arithmetic, so a literal above `u32::MAX` could carry to zero and flip a conditional, and it consumed a type suffix after a radix prefix with no digits after it. The scanner and the CPU `consume_integer` saturate and reject, and that is now the only spelling."
+
+[[fragments]]
+id = "declaration-prefix-walk-one-owner"
+category = "Fixed"
+text = "The declaration-prefix walk in front of a VAST row is owned by `parsing::c::parse::vast::declaration_prefix_scan`. The precomputed-context declaration classifier walked the prefix forwards with no delimiter depth, so the `int` inside a cast reached the identifier after it and `(int) a;` classified `a` as an ordinary declarator; the self-contained classifier skipped balanced paren and brace groups. Both call the same walk."
+
+[[fragments]]
+id = "declaration-token-tables-one-owner"
+category = "Fixed"
+text = "Four token tables that decide whether an identifier is a declarator name are single-owner in `parsing::c::parse::vast::token_grammar::declarations`. The declarator-follower set no longer admits `]`, which had made the bound in `int a[N];` a declarator on the precomputed path only. The declaration-prefix set gained `auto` and `register`, and the precomputed path now reads it instead of a 23-entry copy that omitted every C23 scalar type, `_Alignas`, `typeof` and the GNU specifiers. A new matrix reads the token vocabulary out of `vyre-spec` at test time and fails when any kind is classified differently by the two paths."
+
+[[fragments]]
+id = "tooling-frontend-invocation-resolves-gate"
+category = "Added"
+text = "`xtask` declares `default-run`, and a tree contract derives every `cargo run` in the workflows and scripts at run time, derives the binary targets from every member's manifest and source layout, and fails when an invocation does not resolve to exactly one target. A package that ships more than one binary and declares no default makes a bare `cargo run -p <package>` exit 101 before running anything, which is a property of the manifest rather than of any line of code: adding a second file under `xtask/src/bin` failed nineteen hosted jobs at their first step and nothing in the workspace could see it. The sweep already asserted that every registered subcommand is named by a workflow; this is the other direction. An invocation form the scan cannot attribute is an error rather than a skip, because a form nobody checked is how this reached CI."
+
+[[fragments]]
+id = "tooling-frontend-readme-commands-set-no-build-variable"
+category = "Changed"
+text = "The generated crate README contracts invoke the workspace wrapper directly instead of prefixing `CARGO_BUILD_JOBS=1`. Build configuration is declared once, in the cargo config and the root profiles, where it is reviewable and applies to every build equally; a per-invocation override makes each reader's build a different build, and thirty-six generated documents were teaching exactly that."
+

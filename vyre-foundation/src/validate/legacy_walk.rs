@@ -18,7 +18,7 @@ use super::binding::check_sibling_duplicate;
 use super::depth::{self, LimitState};
 use super::expr_rules::validate_expr;
 use super::node_rules::{self, insert_binding, restore_scope, BufferTable, Scope, ScopeLog};
-use super::typecheck::expr_type;
+use super::typecheck::{expr_type, ScopeTypes};
 use super::uniformity::is_uniform;
 use super::{barrier, shadowing, Binding, ValidationOptions, ValidationReport};
 use crate::ir_inner::model::expr::Ident;
@@ -109,7 +109,7 @@ fn validate_node_inner(
             if !duplicate_sibling {
                 shadowing::check_local(name, scope, options, &mut report.errors);
             }
-            let ty_opt = expr_type(value, buffers, scope);
+            let ty_opt = expr_type(value, &mut ScopeTypes::new(buffers, scope));
             let ty = ty_opt.clone().unwrap_or(DataType::U32);
             let ty_known = ty_opt.is_some();
             let uniform = is_uniform(value, scope);

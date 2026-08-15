@@ -22,8 +22,9 @@ PATTERN='Vec<Vec<u8>>'
 
 # Measured on the tree that introduced this owner. A ceiling far above the real
 # count permits a silent regression up to the slack, which is how the previous
-# value of 35 sat above an actual 24.
-CEILING=24
+# value of 35 sat above an actual 24. The compound dispatch path then moved its
+# per-dispatch readback rows into one contiguous buffer, taking 24 to 14.
+CEILING=14
 
 hits="$(vyre_scan_tracked "$PATTERN" "$EXCLUDE" "${SCAN_PATHS[@]}")"
 count="$(vyre_scan_count "$hits")"
