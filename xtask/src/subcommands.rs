@@ -67,6 +67,44 @@ pub static SUBSETS: &[Subset] = &[
             "lockfile-clean",
         ],
     },
+    Subset {
+        name: "composition",
+        help: "Whether the registered building blocks still compose the way the rules say",
+        gates: &[
+            "lego-audit",
+            "lego-quick",
+            "primitive-admission-gate",
+            "whats-similar",
+        ],
+    },
+    Subset {
+        name: "structure",
+        help: "Whether the tree still has the shape the layering and hygiene rules require",
+        gates: &[
+            "check-tier-deps",
+            "dup-scan",
+            "hot-path-scan",
+            "hygiene-matrix",
+            "heuristic-audit",
+        ],
+    },
+    Subset {
+        name: "docs",
+        help: "Whether the generated documentation artifacts still match the tree",
+        gates: &["docs-check", "optimization-docs"],
+    },
+    Subset {
+        name: "ir",
+        help: "Whether the IR still compiles, reduces, traces and proves what it claims",
+        gates: &[
+            "compile",
+            "shrink",
+            "print-composition",
+            "trace-f32",
+            "verify-rewrite-proofs",
+            "bench-crossback",
+        ],
+    },
 ];
 
 /// Every gate implemented in a crate that links vyre.
@@ -307,10 +345,7 @@ pub fn help_text() -> String {
     text.push_str(&format!("  {:width$}  Print this message\n", "--help"));
     text.push_str("\nSUBSETS:\n");
     for subset in SUBSETS {
-        text.push_str(&format!(
-            "  {:width$}  {}\n",
-            subset.name, subset.help
-        ));
+        text.push_str(&format!("  {:width$}  {}\n", subset.name, subset.help));
     }
     text.push_str("\nEvery subcommand is a gate. A gate that owns a generated artifact\n");
     text.push_str("checks it against the tree and rewrites it when passed --write.\n");
@@ -425,7 +460,10 @@ mod tests {
             "a gate that exists only under test"
         }
 
-        fn run(&self, _ctx: &crate::gate::GateCtx) -> Result<crate::gate::Report, crate::gate::GateError> {
+        fn run(
+            &self,
+            _ctx: &crate::gate::GateCtx,
+        ) -> Result<crate::gate::Report, crate::gate::GateError> {
             panic!("a gate under table test must never run")
         }
     }

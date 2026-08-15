@@ -1854,3 +1854,23 @@ text = "The gate sweep's wiring check now runs from gate to workflow as well as 
 id = "public-api-gate-no-silent-skip"
 category = "Fixed"
 text = "The public-API snapshot gate reports a crate it could not read instead of skipping it. Two paths dropped a package out of the comparison without a word: a publishable package whose `src` directory was missing, and an extraction that succeeded but returned nothing. No committed snapshot is empty, so an empty surface is a truncated rustdoc or a zero-byte `.rmeta` from a parallel build sharing one target directory, which is exactly the state in which a crate most needs to be checked. Both are findings now, and an extraction that exits nonzero prints what `cargo public-api` said rather than a bare sentence naming the crate."
+
+[[fragments]]
+id = "domain-subsets-name-every-gate"
+category = "Added"
+text = "Four subsets group the gates no workflow named: `composition`, `structure`, `docs` and `ir`. The gates workflow runs each as its own step, so a red gate is addressed to the owner of that domain instead of arriving inside one whole-registry log. The whole-registry sweep stays as the backstop for a gate that belongs to no subset."
+
+[[fragments]]
+id = "clippy-gate-can-run"
+category = "Fixed"
+text = "`workspace-clippy` passed `--message-format=json` after the `--` that hands the rest of the line to the lint driver, so clippy-driver answered `Unrecognized option: 'message-format'` for every crate and the only gate that judges lints could not run. The flag now sits on cargo's side of the separator."
+
+[[fragments]]
+id = "gate-child-runs-the-build-it-made"
+category = "Fixed"
+text = "A delegated gate ran the binary at the shared `target/debug/<package>` path, which every checkout building this workspace overwrites, so a sweep that took minutes could execute another checkout's gate code against this tree. The child now runs from a copy made when the build finished."
+
+[[fragments]]
+id = "release-hygiene-reads-a-module-that-exists"
+category = "Fixed"
+text = "The release hygiene scan named `release_gate`, a module deleted when the composite became the `prepublish` subset, so one entry in its list scanned nothing while reading as coverage. It reads `lockfile`, the gate that inherited the lockfile step."

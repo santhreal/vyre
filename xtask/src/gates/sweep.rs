@@ -446,7 +446,16 @@ mod tests {
     /// decoration until someone wires it.
     #[test]
     fn workflow_and_registry_disagreement_fails_in_both_directions() {
-        let names = ["dep-drift", "op-names", "platform-boundary"];
+        // The registry under test must hold every subset member, because a
+        // subset naming a gate nobody registered is itself a failure and would
+        // otherwise drown the direction this test exercises.
+        let mut names: Vec<&str> = SUBSETS
+            .iter()
+            .flat_map(|subset| subset.gates.iter().copied())
+            .collect();
+        names.push("dep-drift");
+        names.sort_unstable();
+        names.dedup();
         let every_subset: Vec<String> = SUBSETS
             .iter()
             .map(|subset| subset.name.to_string())
@@ -482,8 +491,9 @@ mod tests {
             "a subset nobody runs leaves every gate it holds named by nobody: {unrun_subset:?}"
         );
 
+        let with_unnamed: Vec<&str> = [names.clone(), vec!["file-size"]].concat();
         let unnamed = workflow_failures(
-            &["dep-drift", "op-names", "platform-boundary", "file-size"],
+            &with_unnamed,
             &["gates".to_string(), "dep-drift".to_string()],
             &every_subset,
         );
@@ -494,7 +504,7 @@ mod tests {
         );
 
         let named_directly = workflow_failures(
-            &["dep-drift", "op-names", "platform-boundary", "file-size"],
+            &with_unnamed,
             &[
                 "gates".to_string(),
                 "dep-drift".to_string(),
