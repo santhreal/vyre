@@ -1364,3 +1364,18 @@ text = "Two coverage gates that derive their member set from source are declared
 id = "tooling-frontend-checkout-root-stays-runtime"
 category = "Fixed"
 text = "The gate crates resolve the checkout they report on from the working directory at run time, through `structure_gate::workspace_root`, and no checkout-identifying variable is declared in the cargo config. A `VYRE_CHECKOUT_ROOT` with `relative = true`, read with `env!` so its value entered each crate's dep-info, was tried as the way to stop one checkout being handed a binary another compiled; cargo does not export such a variable to the process it runs, so every gate fell through to its compiled-in value and the shared binary reported a worktree's numbers as this tree's. The declaration is rejected rather than absent, and the comment saying so is the only thing that stops it coming back. `structure-gate/tests/checkout_provenance.rs` rejects both spellings, assembling each from parts at run time so the gate does not report itself and needs no exemption."
+
+[[fragments]]
+id = "c-integer-literal-grammar-one-owner"
+category = "Fixed"
+text = "The radix prefix table, digit-value decode, type-suffix set and digit accumulator of a C integer literal are owned by `parsing::c::preprocess::c_int_literal_grammar`. The standalone scanner and the inline scan in the `#if` evaluator each carried a copy and the copies had drifted: the evaluator accumulated with wrapping `u32` arithmetic, so a literal above `u32::MAX` could carry to zero and flip a conditional, and it consumed a type suffix after a radix prefix with no digits after it. The scanner and the CPU `consume_integer` saturate and reject, and that is now the only spelling."
+
+[[fragments]]
+id = "declaration-prefix-walk-one-owner"
+category = "Fixed"
+text = "The declaration-prefix walk in front of a VAST row is owned by `parsing::c::parse::vast::declaration_prefix_scan`. The precomputed-context declaration classifier walked the prefix forwards with no delimiter depth, so the `int` inside a cast reached the identifier after it and `(int) a;` classified `a` as an ordinary declarator; the self-contained classifier skipped balanced paren and brace groups. Both call the same walk."
+
+[[fragments]]
+id = "declaration-token-tables-one-owner"
+category = "Fixed"
+text = "Four token tables that decide whether an identifier is a declarator name are single-owner in `parsing::c::parse::vast::token_grammar::declarations`. The declarator-follower set no longer admits `]`, which had made the bound in `int a[N];` a declarator on the precomputed path only. The declaration-prefix set gained `auto` and `register`, and the precomputed path now reads it instead of a 23-entry copy that omitted every C23 scalar type, `_Alignas`, `typeof` and the GNU specifiers. A new matrix reads the token vocabulary out of `vyre-spec` at test time and fails when any kind is classified differently by the two paths."

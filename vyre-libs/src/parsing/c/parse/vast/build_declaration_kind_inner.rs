@@ -26,6 +26,7 @@ use super::build::{
     vast_row_base_expr, vast_row_field_expr, vast_row_kind_from_base_expr,
     vast_row_parent_from_base_expr,
 };
+use super::declaration_prefix_scan::{emit_declaration_prefix_back_scan, DeclarationPrefixScan};
 use super::token_grammar::*;
 use super::*;
 
@@ -60,15 +61,9 @@ pub(super) fn emit_declaration_kind_for_index_inner(
     let prefix_has_type = format!("{prefix}_has_type");
     let prefix_done = format!("{prefix}_prefix_done");
     let prefix_start = format!("{prefix}_prefix_start");
-    let prefix_skipped_paren_depth = format!("{prefix}_prefix_skipped_paren_depth");
-    let prefix_skipped_brace_depth = format!("{prefix}_prefix_skipped_brace_depth");
-    let prefix_scan = format!("{prefix}_prefix_scan");
     let prefix_idx = format!("{prefix}_prefix_idx");
-    let prefix_base = format!("{prefix}_prefix_base");
     let prefix_kind = format!("{prefix}_prefix_kind");
     let prefix_symbol_hash = format!("{prefix}_prefix_symbol_hash");
-    let prefix_in_skipped_paren = format!("{prefix}_prefix_in_skipped_paren");
-    let prefix_in_skipped_brace = format!("{prefix}_prefix_in_skipped_brace");
     let prefix_visible_typedef = format!("{prefix}_prefix_visible_typedef");
     let is_identifier = format!("{prefix}_is_identifier");
     let declarator_follower = format!("{prefix}_declarator_follower");
@@ -113,7 +108,7 @@ pub(super) fn emit_declaration_kind_for_index_inner(
             Node::if_then(Expr::u32(0), Vec::new())
         };
 
-    vec![
+    let mut nodes = vec![
         Node::let_bind(out_name, Expr::u32(0)),
         Node::let_bind(&base, vast_row_base_expr(idx.clone())),
         Node::let_bind(
@@ -255,7 +250,6 @@ pub(super) fn emit_declaration_kind_for_index_inner(
         ),
         Node::let_bind(&prefix_has_typedef, Expr::u32(0)),
         Node::let_bind(&prefix_has_type, Expr::u32(0)),
-        Node::let_bind(&prefix_done, Expr::u32(0)),
         Node::let_bind(
             &prefix_start,
             if let Some(decl_contexts) = decl_contexts {
@@ -270,99 +264,32 @@ pub(super) fn emit_declaration_kind_for_index_inner(
                 Expr::u32(0)
             },
         ),
-        Node::let_bind(&prefix_skipped_paren_depth, Expr::u32(0)),
-        Node::let_bind(&prefix_skipped_brace_depth, Expr::u32(0)),
-        Node::loop_for(
-            &prefix_scan,
-            Expr::var(&prefix_start),
-            idx.clone(),
-            vec![Node::if_then(
-                Expr::eq(Expr::var(&prefix_done), Expr::u32(0)),
-                vec![
-                    Node::let_bind(
-                        &prefix_idx,
-                        Expr::sub(
-                            Expr::sub(idx.clone(), Expr::u32(1)),
-                            Expr::sub(Expr::var(&prefix_scan), Expr::var(&prefix_start)),
-                        ),
-                    ),
-                    Node::let_bind(&prefix_base, vast_row_base_expr(Expr::var(&prefix_idx))),
-                    Node::let_bind(
-                        &prefix_kind,
-                        vast_row_kind_from_base_expr(vast_nodes, Expr::var(&prefix_base)),
-                    ),
-                    Node::let_bind(
-                        &prefix_in_skipped_paren,
-                        Expr::or(
-                            Expr::gt(Expr::var(&prefix_skipped_paren_depth), Expr::u32(0)),
-                            Expr::eq(Expr::var(&prefix_kind), Expr::u32(TOK_RPAREN)),
-                        ),
-                    ),
-                    Node::let_bind(
-                        &prefix_in_skipped_brace,
-                        Expr::or(
-                            Expr::gt(Expr::var(&prefix_skipped_brace_depth), Expr::u32(0)),
-                            Expr::eq(Expr::var(&prefix_kind), Expr::u32(TOK_RBRACE)),
-                        ),
-                    ),
-                    Node::if_then(
-                        Expr::eq(Expr::var(&prefix_kind), Expr::u32(TOK_RBRACE)),
-                        vec![Node::assign(
-                            &prefix_skipped_brace_depth,
-                            Expr::add(Expr::var(&prefix_skipped_brace_depth), Expr::u32(1)),
-                        )],
-                    ),
-                    Node::if_then(
-                        Expr::and(
-                            Expr::gt(Expr::var(&prefix_skipped_brace_depth), Expr::u32(0)),
-                            Expr::eq(Expr::var(&prefix_kind), Expr::u32(TOK_LBRACE)),
-                        ),
-                        vec![Node::assign(
-                            &prefix_skipped_brace_depth,
-                            Expr::sub(Expr::var(&prefix_skipped_brace_depth), Expr::u32(1)),
-                        )],
-                    ),
-                    Node::if_then(
-                        Expr::eq(Expr::var(&prefix_kind), Expr::u32(TOK_RPAREN)),
-                        vec![Node::assign(
-                            &prefix_skipped_paren_depth,
-                            Expr::add(Expr::var(&prefix_skipped_paren_depth), Expr::u32(1)),
-                        )],
-                    ),
-                    Node::if_then(
-                        Expr::and(
-                            Expr::gt(Expr::var(&prefix_skipped_paren_depth), Expr::u32(0)),
-                            Expr::eq(Expr::var(&prefix_kind), Expr::u32(TOK_LPAREN)),
-                        ),
-                        vec![Node::assign(
-                            &prefix_skipped_paren_depth,
-                            Expr::sub(Expr::var(&prefix_skipped_paren_depth), Expr::u32(1)),
-                        )],
-                    ),
-                    Node::if_then(
-                        Expr::not(Expr::or(
-                            Expr::var(&prefix_in_skipped_brace),
-                            Expr::var(&prefix_in_skipped_paren),
-                        )),
-                        vec![
-                            Node::if_then(
-                                is_decl_prefix_reset_token(Expr::var(&prefix_kind)),
-                                vec![Node::assign(&prefix_done, Expr::u32(1))],
-                            ),
-                            Node::if_then(
-                                Expr::eq(Expr::var(&prefix_kind), Expr::u32(TOK_TYPEDEF)),
-                                vec![Node::assign(&prefix_has_typedef, Expr::u32(1))],
-                            ),
-                            Node::if_then(
-                                is_decl_prefix_token(Expr::var(&prefix_kind)),
-                                vec![Node::assign(&prefix_has_type, Expr::u32(1))],
-                            ),
-                            prefix_typedef_lookup_node,
-                        ],
-                    ),
-                ],
-            )],
-        ),
+    ];
+    let prefix_walk = DeclarationPrefixScan {
+        vast_nodes,
+        idx: idx.clone(),
+        prefix_start: Expr::var(&prefix_start),
+        prefix,
+    };
+    nodes.extend(emit_declaration_prefix_back_scan(
+        &prefix_walk,
+        vec![
+            Node::if_then(
+                is_decl_prefix_reset_token(Expr::var(&prefix_kind)),
+                vec![Node::assign(&prefix_done, Expr::u32(1))],
+            ),
+            Node::if_then(
+                Expr::eq(Expr::var(&prefix_kind), Expr::u32(TOK_TYPEDEF)),
+                vec![Node::assign(&prefix_has_typedef, Expr::u32(1))],
+            ),
+            Node::if_then(
+                is_decl_prefix_token(Expr::var(&prefix_kind)),
+                vec![Node::assign(&prefix_has_type, Expr::u32(1))],
+            ),
+            prefix_typedef_lookup_node,
+        ],
+    ));
+    nodes.extend([
         Node::let_bind(
             &is_identifier,
             Expr::eq(Expr::var(&kind), Expr::u32(TOK_IDENTIFIER)),
@@ -406,5 +333,6 @@ pub(super) fn emit_declaration_kind_for_index_inner(
             Expr::eq(Expr::var(&prefix_has_typedef), Expr::u32(1)),
             Expr::eq(Expr::var(&prefix_has_type), Expr::u32(1)),
         ),
-    ]
+    ]);
+    nodes
 }
