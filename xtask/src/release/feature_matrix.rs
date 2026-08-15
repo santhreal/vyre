@@ -116,7 +116,7 @@ pub(crate) fn run(args: &[String]) {
     };
 
     crate::output_arg::write_json(&output, &matrix);
-    crate::output_arg::report_evidence_artifact("feature-matrix", &output, matrix.blockers.len());
+    crate::output_arg::report_evidence_artifact("feature-matrix", &output, &matrix.blockers);
 }
 
 fn collect_features(root: &Path, packages: &mut Vec<PackageFeatures>, blockers: &mut Vec<String>) {

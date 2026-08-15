@@ -13,8 +13,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Sync",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -22,7 +20,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.sync"
+      "benchmark": "foundation.optimizer.sync",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "autotune",
@@ -30,8 +30,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Unclassified",
       "boundary": "Unknown",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -39,7 +37,9 @@
       "invariant": "must not enter release/profile pipelines until classified",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
+      "benchmark": "foundation.optimizer.classification-gap",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "barrier_coalesce",
@@ -47,8 +47,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Unclassified",
       "boundary": "Unknown",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -56,7 +54,9 @@
       "invariant": "must not enter release/profile pipelines until classified",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
+      "benchmark": "foundation.optimizer.classification-gap",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "branch_coalesce",
@@ -64,8 +64,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Cleanup",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -73,7 +71,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.fusion"
+      "benchmark": "foundation.optimizer.fusion",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "branch_value_hoist",
@@ -81,8 +81,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Cleanup",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -90,7 +88,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.fusion"
+      "benchmark": "foundation.optimizer.fusion",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "buffer_decl_sort",
@@ -98,8 +98,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Unclassified",
       "boundary": "Unknown",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -107,7 +105,9 @@
       "invariant": "must not enter release/profile pipelines until classified",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
+      "benchmark": "foundation.optimizer.classification-gap",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "canonicalize",
@@ -115,8 +115,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Canonicalization",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [
         "fusion"
@@ -126,7 +124,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.scalar"
+      "benchmark": "foundation.optimizer.scalar",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold",
@@ -134,8 +134,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [
         "value_numbering"
@@ -145,7 +143,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.scalar"
+      "benchmark": "foundation.optimizer.scalar",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "cse",
@@ -153,8 +153,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "FusionCse",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [
         "canonicalize"
       ],
@@ -166,7 +164,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.fusion"
+      "benchmark": "foundation.optimizer.fusion",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "dce",
@@ -174,8 +174,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "FusionCse",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [
         "region_inline"
@@ -185,7 +183,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.fusion"
+      "benchmark": "foundation.optimizer.fusion",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "dead_store_elim",
@@ -193,8 +193,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Memory",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -202,7 +200,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.memory"
+      "benchmark": "foundation.optimizer.memory",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "decode_scan_fuse",
@@ -210,8 +210,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Unclassified",
       "boundary": "Unknown",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [
         "buffer_layout",
@@ -222,7 +220,9 @@
       "invariant": "must not enter release/profile pipelines until classified",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
+      "benchmark": "foundation.optimizer.classification-gap",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "empty_block_collapse",
@@ -230,8 +230,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Unclassified",
       "boundary": "Unknown",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -239,7 +237,9 @@
       "invariant": "must not enter release/profile pipelines until classified",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
+      "benchmark": "foundation.optimizer.classification-gap",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "fusion",
@@ -247,8 +247,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "FusionCse",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [
         "region_inline",
@@ -262,7 +260,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.fusion"
+      "benchmark": "foundation.optimizer.fusion",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "dead_buffer_elim",
@@ -270,8 +270,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Memory",
       "boundary": "AbiChanging",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [
         "fusion"
       ],
@@ -283,7 +281,9 @@
       "invariant": "requires explicit caller opt-in before changing public buffer ABI",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.memory"
+      "benchmark": "foundation.optimizer.memory",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "if_constant_branch_eliminate",
@@ -291,8 +291,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Cleanup",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [
         "const_fold"
       ],
@@ -302,7 +300,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.scalar"
+      "benchmark": "foundation.optimizer.scalar",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop_bound_tighten",
@@ -310,8 +310,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -319,7 +317,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.loop"
+      "benchmark": "foundation.optimizer.loop",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop_fission",
@@ -327,8 +327,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Unclassified",
       "boundary": "Unknown",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -336,7 +334,9 @@
       "invariant": "must not enter release/profile pipelines until classified",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
+      "benchmark": "foundation.optimizer.classification-gap",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop_fusion",
@@ -344,8 +344,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -353,7 +351,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.loop"
+      "benchmark": "foundation.optimizer.loop",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop_licm",
@@ -361,8 +361,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -370,7 +368,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.loop"
+      "benchmark": "foundation.optimizer.loop",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop_lower_bound_normalize",
@@ -378,8 +378,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Unclassified",
       "boundary": "Unknown",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [
         "const_fold"
       ],
@@ -392,7 +390,9 @@
       "invariant": "must not enter release/profile pipelines until classified",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
+      "benchmark": "foundation.optimizer.classification-gap",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop_peel",
@@ -400,8 +400,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Unclassified",
       "boundary": "Unknown",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [
         "const_fold"
       ],
@@ -411,7 +409,9 @@
       "invariant": "must not enter release/profile pipelines until classified",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
+      "benchmark": "foundation.optimizer.classification-gap",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop_redundant_bound_check_elide",
@@ -419,8 +419,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Unclassified",
       "boundary": "Unknown",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -428,7 +426,9 @@
       "invariant": "must not enter release/profile pipelines until classified",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
+      "benchmark": "foundation.optimizer.classification-gap",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop_software_pipeline",
@@ -436,8 +436,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [
         "const_fold"
       ],
@@ -450,7 +448,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.loop"
+      "benchmark": "foundation.optimizer.loop",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop_strip_mine",
@@ -458,8 +458,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [
         "const_fold"
       ],
@@ -472,7 +470,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.loop"
+      "benchmark": "foundation.optimizer.loop",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop_trip_zero_eliminate",
@@ -480,8 +480,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Unclassified",
       "boundary": "Unknown",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [
         "const_fold"
       ],
@@ -491,7 +489,9 @@
       "invariant": "must not enter release/profile pipelines until classified",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
+      "benchmark": "foundation.optimizer.classification-gap",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop_unroll",
@@ -499,8 +499,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [
         "const_fold"
       ],
@@ -514,7 +512,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.loop"
+      "benchmark": "foundation.optimizer.loop",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop_var_range_fold",
@@ -522,8 +522,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Unclassified",
       "boundary": "Unknown",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [
         "const_fold"
       ],
@@ -533,7 +531,9 @@
       "invariant": "must not enter release/profile pipelines until classified",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
+      "benchmark": "foundation.optimizer.classification-gap",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "noop_assign_eliminate",
@@ -541,8 +541,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Unclassified",
       "boundary": "Unknown",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -550,7 +548,9 @@
       "invariant": "must not enter release/profile pipelines until classified",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
+      "benchmark": "foundation.optimizer.classification-gap",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "normalize_atomics",
@@ -558,8 +558,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Sync",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [
         "fusion"
@@ -569,7 +567,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.sync"
+      "benchmark": "foundation.optimizer.sync",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "reaching_def_propagate",
@@ -577,8 +577,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [
         "const_fold"
       ],
@@ -592,7 +590,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.scalar"
+      "benchmark": "foundation.optimizer.scalar",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "read_only_load_hoist",
@@ -600,8 +600,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Memory",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -609,7 +607,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.memory"
+      "benchmark": "foundation.optimizer.memory",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "region_fusion_hint",
@@ -617,8 +617,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Cleanup",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -626,7 +624,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.fusion"
+      "benchmark": "foundation.optimizer.fusion",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "region_inline",
@@ -634,8 +634,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Cleanup",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [
         "cse",
@@ -646,7 +644,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.scalar"
+      "benchmark": "foundation.optimizer.scalar",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "region_promote_singleton_block",
@@ -654,8 +654,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Unclassified",
       "boundary": "Unknown",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -663,7 +661,9 @@
       "invariant": "must not enter release/profile pipelines until classified",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.classification-gap"
+      "benchmark": "foundation.optimizer.classification-gap",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "rematerialize_cheap_let",
@@ -671,8 +671,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Cleanup",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [
         "region_inline",
@@ -686,7 +684,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.scalar"
+      "benchmark": "foundation.optimizer.scalar",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "store_to_load_forward",
@@ -694,8 +694,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Memory",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -703,7 +701,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.memory"
+      "benchmark": "foundation.optimizer.memory",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "strength_reduce",
@@ -711,8 +711,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [
         "const_fold"
       ],
@@ -726,7 +724,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.scalar"
+      "benchmark": "foundation.optimizer.scalar",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "tail_duplication",
@@ -734,8 +734,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Cleanup",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -743,7 +741,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.fusion"
+      "benchmark": "foundation.optimizer.fusion",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "vectorization",
@@ -751,8 +751,6 @@
       "owner": "vyre-foundation-optimizer",
       "phase": "Memory",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [
         "buffer_layout"
@@ -762,7 +760,9 @@
       "invariant": "preserves public buffer ABI and externally visible program semantics",
       "termination": "bounded by the registered scheduler restart and iteration budgets",
       "proof": "optimizer::pass_invariants::audit_registered_passes plus semantic differential fixtures",
-      "benchmark": "foundation.optimizer.memory"
+      "benchmark": "foundation.optimizer.memory",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.logical_not_involution",
@@ -770,8 +770,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -779,7 +777,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.negate_involution",
@@ -787,8 +787,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -796,7 +794,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.reverse_bits_involution",
@@ -804,8 +804,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -813,7 +811,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.bitnot_involution",
@@ -821,8 +821,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -830,7 +828,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.negate_sub_flip",
@@ -838,8 +838,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -847,7 +845,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.abs_neg",
@@ -855,8 +855,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -864,7 +862,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.abs_idempotent",
@@ -872,8 +872,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -881,7 +879,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.floor_idempotent",
@@ -889,8 +889,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -898,7 +896,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.ceil_idempotent",
@@ -906,8 +906,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -915,7 +913,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.round_idempotent",
@@ -923,8 +923,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -932,7 +930,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.trunc_idempotent",
@@ -940,8 +940,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -949,7 +947,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.sign_idempotent",
@@ -957,8 +957,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -966,7 +964,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.floor_trunc_subsumption",
@@ -974,8 +974,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -983,7 +981,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.ceil_trunc_subsumption",
@@ -991,8 +991,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1000,7 +998,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.round_trunc_subsumption",
@@ -1008,8 +1008,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1017,7 +1015,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.inverse_sqrt_one",
@@ -1025,8 +1025,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1034,7 +1032,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.reciprocal_one",
@@ -1042,8 +1042,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1051,7 +1049,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.sqrt_one",
@@ -1059,8 +1059,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1068,7 +1066,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.sqrt_zero",
@@ -1076,8 +1076,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1085,7 +1083,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.sin_zero",
@@ -1093,8 +1093,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1102,7 +1100,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.cos_zero",
@@ -1110,8 +1110,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1119,7 +1117,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.tan_zero",
@@ -1127,8 +1127,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1136,7 +1134,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.exp_zero",
@@ -1144,8 +1144,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1153,7 +1151,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.exp2_zero",
@@ -1161,8 +1161,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1170,7 +1168,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.log_one",
@@ -1178,8 +1178,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1187,7 +1185,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.log2_one",
@@ -1195,8 +1195,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1204,7 +1202,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.asin_zero",
@@ -1212,8 +1212,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1221,7 +1219,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.acos_one",
@@ -1229,8 +1229,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1238,7 +1236,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.atan_zero",
@@ -1246,8 +1246,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1255,7 +1253,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.tanh_zero",
@@ -1263,8 +1263,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1272,7 +1270,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.sinh_zero",
@@ -1280,8 +1280,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1289,7 +1287,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.cosh_zero",
@@ -1297,8 +1297,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1306,7 +1304,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.popcount_zero",
@@ -1314,8 +1314,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1323,7 +1321,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.clz_zero",
@@ -1331,8 +1331,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1340,7 +1338,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.ctz_zero",
@@ -1348,8 +1348,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1357,7 +1355,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.reverse_bits_zero",
@@ -1365,8 +1365,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1374,7 +1372,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.popcount_literal",
@@ -1382,8 +1382,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1391,7 +1389,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.clz_literal",
@@ -1399,8 +1399,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1408,7 +1406,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.ctz_literal",
@@ -1416,8 +1416,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1425,7 +1423,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.reverse_bits_literal",
@@ -1433,8 +1433,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1442,7 +1440,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.bitnot_literal",
@@ -1450,8 +1450,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1459,7 +1457,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.negate_i32_literal",
@@ -1467,8 +1467,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1476,7 +1474,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.abs_u32_literal",
@@ -1484,8 +1484,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1493,7 +1491,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.unary.abs_i32_literal",
@@ -1501,8 +1501,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1510,7 +1508,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.select.bool_true",
@@ -1518,8 +1518,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1527,7 +1525,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.select.bool_false",
@@ -1535,8 +1535,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1544,7 +1542,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.select.u32_zero_false",
@@ -1552,8 +1552,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1561,7 +1559,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.select.u32_nonzero_true",
@@ -1569,8 +1569,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1578,7 +1576,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.select.identical_branches",
@@ -1586,8 +1586,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1595,7 +1593,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.select.logical_not_swap",
@@ -1603,8 +1603,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1612,7 +1610,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.select.bool_to_u32_cast",
@@ -1620,8 +1620,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1629,7 +1627,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.select.inverted_bool_to_u32_cast",
@@ -1637,8 +1637,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1646,7 +1644,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.select.true_branch_select_fusion",
@@ -1654,8 +1654,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1663,7 +1661,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.select.false_branch_select_fusion",
@@ -1671,8 +1671,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1680,7 +1678,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.fma.literal",
@@ -1688,8 +1688,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1697,7 +1695,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.fma.left_identity_multiplier",
@@ -1705,8 +1705,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1714,7 +1712,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.fma.right_identity_multiplier",
@@ -1722,8 +1722,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1731,7 +1729,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.fma.left_zero_multiplier",
@@ -1739,8 +1739,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1748,7 +1746,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.fma.right_zero_multiplier",
@@ -1756,8 +1756,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1765,7 +1763,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.binop.add_fma_left",
@@ -1773,8 +1773,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1782,7 +1780,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.binop.add_fma_right",
@@ -1790,8 +1790,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1799,7 +1797,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.binop.sub_fma_left",
@@ -1807,8 +1807,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1816,7 +1814,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.binop.sub_fma_right",
@@ -1824,8 +1824,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1833,7 +1831,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.binop.add_zero_left",
@@ -1841,8 +1841,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1850,7 +1848,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.binop.add_zero_right",
@@ -1858,8 +1858,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1867,7 +1865,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.binop.sub_self",
@@ -1875,8 +1875,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1884,7 +1882,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.binop.sub_zero_right",
@@ -1892,8 +1892,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1901,7 +1899,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.binop.add_reassociate_right_literal",
@@ -1909,8 +1909,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1918,7 +1916,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.binop.add_reassociate_left_literal",
@@ -1926,8 +1926,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1935,7 +1933,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.binop.distribute_add_u32",
@@ -1943,8 +1943,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1952,7 +1950,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.binop.distribute_add_i32",
@@ -1960,8 +1960,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1969,7 +1967,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.binop.distribute_sub_u32",
@@ -1977,8 +1977,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -1986,7 +1984,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "const_fold.binop.distribute_sub_i32",
@@ -1994,8 +1994,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2003,7 +2001,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "strength_reduce.horner_polynomial_int",
@@ -2011,8 +2011,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2020,7 +2018,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "strength_reduce.shift_add_decompose_plus",
@@ -2028,8 +2028,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2037,7 +2035,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "strength_reduce.shift_add_decompose_minus",
@@ -2045,8 +2045,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2054,7 +2052,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "strength_reduce.naf_shift_add_chain",
@@ -2062,8 +2062,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2071,7 +2069,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "strength_reduce.mul_power_of_two_shift",
@@ -2079,8 +2079,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2088,7 +2086,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "strength_reduce.mul_negative_const_negate",
@@ -2096,8 +2096,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2105,7 +2103,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "strength_reduce.div_power_of_two_shift",
@@ -2113,8 +2113,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2122,7 +2120,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "strength_reduce.float_div_reciprocal",
@@ -2130,8 +2130,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2139,7 +2137,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "strength_reduce.self_inverse_select",
@@ -2147,8 +2147,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2156,7 +2154,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "strength_reduce.shift_negation_fma",
@@ -2164,8 +2164,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2173,7 +2171,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "strength_reduce.complement_bounds",
@@ -2181,8 +2181,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "ScalarAlgebra",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2190,7 +2188,9 @@
       "invariant": "preserves scalar expression value while reducing redundant GPU work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.scalar.rules"
+      "benchmark": "foundation.optimizer.scalar.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop.trip_zero_eliminate",
@@ -2198,8 +2198,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2207,7 +2205,9 @@
       "invariant": "preserves loop iteration semantics while reducing loop or index overhead",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.loop.rules"
+      "benchmark": "foundation.optimizer.loop.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop.lower_bound_normalize",
@@ -2215,8 +2215,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2224,7 +2222,9 @@
       "invariant": "preserves loop iteration semantics while reducing loop or index overhead",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.loop.rules"
+      "benchmark": "foundation.optimizer.loop.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop.bound_tighten",
@@ -2232,8 +2232,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2241,7 +2239,9 @@
       "invariant": "preserves loop iteration semantics while reducing loop or index overhead",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.loop.rules"
+      "benchmark": "foundation.optimizer.loop.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop.var_range_fold",
@@ -2249,8 +2249,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2258,7 +2256,9 @@
       "invariant": "preserves loop iteration semantics while reducing loop or index overhead",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.loop.rules"
+      "benchmark": "foundation.optimizer.loop.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop.peel",
@@ -2266,8 +2266,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2275,7 +2273,9 @@
       "invariant": "preserves loop iteration semantics while reducing loop or index overhead",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.loop.rules"
+      "benchmark": "foundation.optimizer.loop.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop.unroll",
@@ -2283,8 +2283,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2292,7 +2290,9 @@
       "invariant": "preserves loop iteration semantics while reducing loop or index overhead",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.loop.rules"
+      "benchmark": "foundation.optimizer.loop.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop.strip_mine",
@@ -2300,8 +2300,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2309,7 +2307,9 @@
       "invariant": "preserves loop iteration semantics while reducing loop or index overhead",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.loop.rules"
+      "benchmark": "foundation.optimizer.loop.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop.fission",
@@ -2317,8 +2317,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2326,7 +2324,9 @@
       "invariant": "preserves loop iteration semantics while reducing loop or index overhead",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.loop.rules"
+      "benchmark": "foundation.optimizer.loop.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop.fusion",
@@ -2334,8 +2334,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2343,7 +2341,9 @@
       "invariant": "preserves loop iteration semantics while reducing loop or index overhead",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.loop.rules"
+      "benchmark": "foundation.optimizer.loop.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop.licm",
@@ -2351,8 +2351,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2360,7 +2358,9 @@
       "invariant": "preserves loop iteration semantics while reducing loop or index overhead",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.loop.rules"
+      "benchmark": "foundation.optimizer.loop.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop.software_pipeline",
@@ -2368,8 +2368,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2377,7 +2375,9 @@
       "invariant": "preserves loop iteration semantics while reducing loop or index overhead",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.loop.rules"
+      "benchmark": "foundation.optimizer.loop.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "loop.redundant_bound_check_elide",
@@ -2385,8 +2385,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Loop",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2394,7 +2392,9 @@
       "invariant": "preserves loop iteration semantics while reducing loop or index overhead",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.loop.rules"
+      "benchmark": "foundation.optimizer.loop.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "memory.const_buffer_fold",
@@ -2402,8 +2402,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Memory",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2411,7 +2409,9 @@
       "invariant": "preserves memory-visible behavior while reducing traffic or redundant storage",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.memory.rules"
+      "benchmark": "foundation.optimizer.memory.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "memory.dead_buffer_elim",
@@ -2419,8 +2419,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Memory",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2428,7 +2426,9 @@
       "invariant": "preserves memory-visible behavior while reducing traffic or redundant storage",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.memory.rules"
+      "benchmark": "foundation.optimizer.memory.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "memory.dead_store_elim",
@@ -2436,8 +2436,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Memory",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2445,7 +2443,9 @@
       "invariant": "preserves memory-visible behavior while reducing traffic or redundant storage",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.memory.rules"
+      "benchmark": "foundation.optimizer.memory.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "memory.decode_scan_fuse",
@@ -2453,8 +2453,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Memory",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2462,7 +2460,9 @@
       "invariant": "preserves memory-visible behavior while reducing traffic or redundant storage",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.memory.rules"
+      "benchmark": "foundation.optimizer.memory.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "memory.read_only_load_hoist",
@@ -2470,8 +2470,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Memory",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2479,7 +2477,9 @@
       "invariant": "preserves memory-visible behavior while reducing traffic or redundant storage",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.memory.rules"
+      "benchmark": "foundation.optimizer.memory.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "memory.store_to_load_forward",
@@ -2487,8 +2487,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Memory",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2496,7 +2494,9 @@
       "invariant": "preserves memory-visible behavior while reducing traffic or redundant storage",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.memory.rules"
+      "benchmark": "foundation.optimizer.memory.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "memory.vectorization",
@@ -2504,8 +2504,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "Memory",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2513,7 +2511,9 @@
       "invariant": "preserves memory-visible behavior while reducing traffic or redundant storage",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.memory.rules"
+      "benchmark": "foundation.optimizer.memory.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "fusion.cse.structural_expr_dedup",
@@ -2521,8 +2521,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "FusionCse",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2530,7 +2528,9 @@
       "invariant": "preserves visible effects while eliminating duplicate computation or launches",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.fusion.rules"
+      "benchmark": "foundation.optimizer.fusion.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "fusion.dce.dead_let_eliminate",
@@ -2538,8 +2538,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "FusionCse",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2547,7 +2545,9 @@
       "invariant": "preserves visible effects while eliminating duplicate computation or launches",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.fusion.rules"
+      "benchmark": "foundation.optimizer.fusion.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "fusion.dce.unreachable_eliminate",
@@ -2555,8 +2555,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "FusionCse",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2564,7 +2562,9 @@
       "invariant": "preserves visible effects while eliminating duplicate computation or launches",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.fusion.rules"
+      "benchmark": "foundation.optimizer.fusion.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "fusion.dce.const_loop_empty",
@@ -2572,8 +2572,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "FusionCse",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2581,7 +2579,9 @@
       "invariant": "preserves visible effects while eliminating duplicate computation or launches",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.fusion.rules"
+      "benchmark": "foundation.optimizer.fusion.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "fusion.dce.const_truth",
@@ -2589,8 +2589,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "FusionCse",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2598,7 +2596,9 @@
       "invariant": "preserves visible effects while eliminating duplicate computation or launches",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.fusion.rules"
+      "benchmark": "foundation.optimizer.fusion.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "fusion.region_fusion_hint",
@@ -2606,8 +2606,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "FusionCse",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2615,7 +2613,9 @@
       "invariant": "preserves visible effects while eliminating duplicate computation or launches",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.fusion.rules"
+      "benchmark": "foundation.optimizer.fusion.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "fusion.cross_rule_cse",
@@ -2623,8 +2623,6 @@
       "owner": "vyre-foundation-rules",
       "phase": "FusionCse",
       "boundary": "AbiPreserving",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2632,7 +2630,9 @@
       "invariant": "preserves visible effects while eliminating duplicate computation or launches",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "foundation.optimizer.fusion.rules"
+      "benchmark": "foundation.optimizer.fusion.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "dataflow.layout_normalization",
@@ -2640,8 +2640,6 @@
       "owner": "dataflow-rules",
       "phase": "Dataflow",
       "boundary": "DomainSpecific",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2649,7 +2647,9 @@
       "invariant": "preserves dataflow fixed-point semantics while reducing frontier or lattice work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "dataflow.optimizer.rules"
+      "benchmark": "dataflow.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "dataflow.frontier_density_switch",
@@ -2657,8 +2657,6 @@
       "owner": "dataflow-rules",
       "phase": "Dataflow",
       "boundary": "DomainSpecific",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2666,7 +2664,9 @@
       "invariant": "preserves dataflow fixed-point semantics while reducing frontier or lattice work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "dataflow.optimizer.rules"
+      "benchmark": "dataflow.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "dataflow.sparse_frontier_expand",
@@ -2674,8 +2674,6 @@
       "owner": "dataflow-rules",
       "phase": "Dataflow",
       "boundary": "DomainSpecific",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2683,7 +2681,9 @@
       "invariant": "preserves dataflow fixed-point semantics while reducing frontier or lattice work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "dataflow.optimizer.rules"
+      "benchmark": "dataflow.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "dataflow.dense_bitset_propagate",
@@ -2691,8 +2691,6 @@
       "owner": "dataflow-rules",
       "phase": "Dataflow",
       "boundary": "DomainSpecific",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2700,7 +2698,9 @@
       "invariant": "preserves dataflow fixed-point semantics while reducing frontier or lattice work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "dataflow.optimizer.rules"
+      "benchmark": "dataflow.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "dataflow.bitset_compression",
@@ -2708,8 +2708,6 @@
       "owner": "dataflow-rules",
       "phase": "Dataflow",
       "boundary": "DomainSpecific",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2717,7 +2715,9 @@
       "invariant": "preserves dataflow fixed-point semantics while reducing frontier or lattice work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "dataflow.optimizer.rules"
+      "benchmark": "dataflow.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "dataflow.fixed_point_buffer_reuse",
@@ -2725,8 +2725,6 @@
       "owner": "dataflow-rules",
       "phase": "Dataflow",
       "boundary": "DomainSpecific",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2734,7 +2732,9 @@
       "invariant": "preserves dataflow fixed-point semantics while reducing frontier or lattice work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "dataflow.optimizer.rules"
+      "benchmark": "dataflow.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "dataflow.resident_csr_reuse",
@@ -2742,8 +2742,6 @@
       "owner": "dataflow-rules",
       "phase": "Dataflow",
       "boundary": "DomainSpecific",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2751,7 +2749,9 @@
       "invariant": "preserves dataflow fixed-point semantics while reducing frontier or lattice work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "dataflow.optimizer.rules"
+      "benchmark": "dataflow.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "dataflow.multi_query_batch",
@@ -2759,8 +2759,6 @@
       "owner": "dataflow-rules",
       "phase": "Dataflow",
       "boundary": "DomainSpecific",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2768,7 +2766,9 @@
       "invariant": "preserves dataflow fixed-point semantics while reducing frontier or lattice work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "dataflow.optimizer.rules"
+      "benchmark": "dataflow.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "dataflow.lattice_join_idempotence_skip",
@@ -2776,8 +2776,6 @@
       "owner": "dataflow-rules",
       "phase": "Dataflow",
       "boundary": "DomainSpecific",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2785,7 +2783,9 @@
       "invariant": "preserves dataflow fixed-point semantics while reducing frontier or lattice work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "dataflow.optimizer.rules"
+      "benchmark": "dataflow.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "dataflow.delta_frontier_prune",
@@ -2793,8 +2793,6 @@
       "owner": "dataflow-rules",
       "phase": "Dataflow",
       "boundary": "DomainSpecific",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2802,7 +2800,9 @@
       "invariant": "preserves dataflow fixed-point semantics while reducing frontier or lattice work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "dataflow.optimizer.rules"
+      "benchmark": "dataflow.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "megakernel.allocation_reuse",
@@ -2810,8 +2810,6 @@
       "owner": "vyre-runtime-rules",
       "phase": "Megakernel",
       "boundary": "RuntimeAware",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2819,7 +2817,9 @@
       "invariant": "preserves resident megakernel execution semantics while reducing launches, readback, or queue work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "vyre.megakernel.optimizer.rules"
+      "benchmark": "vyre.megakernel.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "megakernel.launch_fusion",
@@ -2827,8 +2827,6 @@
       "owner": "vyre-runtime-rules",
       "phase": "Megakernel",
       "boundary": "RuntimeAware",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2836,7 +2834,9 @@
       "invariant": "preserves resident megakernel execution semantics while reducing launches, readback, or queue work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "vyre.megakernel.optimizer.rules"
+      "benchmark": "vyre.megakernel.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "megakernel.readback_minimization",
@@ -2844,8 +2844,6 @@
       "owner": "vyre-runtime-rules",
       "phase": "Megakernel",
       "boundary": "RuntimeAware",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2853,7 +2851,9 @@
       "invariant": "preserves resident megakernel execution semantics while reducing launches, readback, or queue work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "vyre.megakernel.optimizer.rules"
+      "benchmark": "vyre.megakernel.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "megakernel.queue_no_conflict_fast_path",
@@ -2861,8 +2861,6 @@
       "owner": "vyre-runtime-rules",
       "phase": "Megakernel",
       "boundary": "RuntimeAware",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2870,7 +2868,9 @@
       "invariant": "preserves resident megakernel execution semantics while reducing launches, readback, or queue work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "vyre.megakernel.optimizer.rules"
+      "benchmark": "vyre.megakernel.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "megakernel.frontier_density_worker_shed",
@@ -2878,8 +2878,6 @@
       "owner": "vyre-runtime-rules",
       "phase": "Megakernel",
       "boundary": "RuntimeAware",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2887,7 +2885,9 @@
       "invariant": "preserves resident megakernel execution semantics while reducing launches, readback, or queue work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "vyre.megakernel.optimizer.rules"
+      "benchmark": "vyre.megakernel.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "megakernel.device_side_convergence",
@@ -2895,8 +2895,6 @@
       "owner": "vyre-runtime-rules",
       "phase": "Megakernel",
       "boundary": "RuntimeAware",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2904,7 +2902,9 @@
       "invariant": "preserves resident megakernel execution semantics while reducing launches, readback, or queue work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "vyre.megakernel.optimizer.rules"
+      "benchmark": "vyre.megakernel.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "megakernel.plan_cache_reuse",
@@ -2912,8 +2912,6 @@
       "owner": "vyre-runtime-rules",
       "phase": "Megakernel",
       "boundary": "RuntimeAware",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2921,7 +2919,9 @@
       "invariant": "preserves resident megakernel execution semantics while reducing launches, readback, or queue work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "vyre.megakernel.optimizer.rules"
+      "benchmark": "vyre.megakernel.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "megakernel.barrier_wave_grouping",
@@ -2929,8 +2929,6 @@
       "owner": "vyre-runtime-rules",
       "phase": "Megakernel",
       "boundary": "RuntimeAware",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2938,7 +2936,9 @@
       "invariant": "preserves resident megakernel execution semantics while reducing launches, readback, or queue work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "vyre.megakernel.optimizer.rules"
+      "benchmark": "vyre.megakernel.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "megakernel.zero_copy_result_compaction",
@@ -2946,8 +2946,6 @@
       "owner": "vyre-runtime-rules",
       "phase": "Megakernel",
       "boundary": "RuntimeAware",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2955,7 +2953,9 @@
       "invariant": "preserves resident megakernel execution semantics while reducing launches, readback, or queue work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "vyre.megakernel.optimizer.rules"
+      "benchmark": "vyre.megakernel.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     },
     {
       "id": "megakernel.resident_graph_reuse",
@@ -2963,8 +2963,6 @@
       "owner": "vyre-runtime-rules",
       "phase": "Megakernel",
       "boundary": "RuntimeAware",
-      "input": "vyre-foundation Program",
-      "output": "semantically equivalent vyre-foundation Program",
       "requires": [],
       "invalidates": [],
       "capabilities": [],
@@ -2972,7 +2970,9 @@
       "invariant": "preserves resident megakernel execution semantics while reducing launches, readback, or queue work",
       "termination": "bounded by its owning registered executable pass",
       "proof": "owning pass differential and invariant fixtures",
-      "benchmark": "vyre.megakernel.optimizer.rules"
+      "benchmark": "vyre.megakernel.optimizer.rules",
+      "input": "vyre-foundation Program",
+      "output": "semantically equivalent vyre-foundation Program"
     }
   ],
   "blockers": []

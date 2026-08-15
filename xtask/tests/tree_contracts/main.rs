@@ -21,6 +21,8 @@ mod ci_workflow_references;
 mod cli_docs;
 mod crate_ownership_registry;
 mod crate_readmes;
+mod docs_manifest_completeness;
+mod evidence_blocker_reporting;
 mod feature_isolation;
 mod nested_byte_row_types;
 mod public_api_snapshot_inventory;

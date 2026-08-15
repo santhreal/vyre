@@ -901,76 +901,79 @@ fn csr_bidir_u32_to_usize(value: u32, label: &'static str) -> Result<usize, Stri
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::csr_closure_inputs::CsrGraphView;
-
-    fn linear_graph() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-        // 0 -> 1 -> 2 -> 3
-        (vec![0, 1, 2, 3, 3], vec![1, 2, 3], vec![1, 1, 1])
-    }
+    use crate::graph::csr_closure_inputs::graphs;
 
     #[test]
     fn forward_step_propagates() {
-        let (off, tgt, msk) = linear_graph();
-        let out = cpu_ref(4, &off, &tgt, &msk, &[0b0001], 0xFFFF_FFFF);
+        let g = graphs::CHAIN_4;
+        let out = cpu_ref(
+            g.node_count,
+            g.edge_offsets,
+            g.edge_targets,
+            g.edge_kind_mask,
+            &[0b0001],
+            u32::MAX,
+        );
         // 0's forward neighbor = 1 → bit 1 set.
         assert!(out[0] & 0b0010 != 0);
     }
 
     #[test]
     fn empty_seed_yields_empty_step() {
-        let (off, tgt, msk) = linear_graph();
-        let out = cpu_ref(4, &off, &tgt, &msk, &[0], 0xFFFF_FFFF);
+        let g = graphs::CHAIN_4;
+        let out = cpu_ref(
+            g.node_count,
+            g.edge_offsets,
+            g.edge_targets,
+            g.edge_kind_mask,
+            &[0],
+            u32::MAX,
+        );
         assert_eq!(out, vec![0]);
     }
 
     #[test]
     fn allow_mask_zero_blocks_all() {
-        let (off, tgt, msk) = linear_graph();
-        let out = cpu_ref(4, &off, &tgt, &msk, &[0b0001], 0);
+        let g = graphs::CHAIN_4;
+        let out = cpu_ref(
+            g.node_count,
+            g.edge_offsets,
+            g.edge_targets,
+            g.edge_kind_mask,
+            &[0b0001],
+            0,
+        );
         assert_eq!(out, vec![0]);
     }
 
     #[test]
     fn bidirectional_includes_both_directions() {
-        let (off, tgt, msk) = linear_graph();
+        let g = graphs::CHAIN_4;
         // From {1}, forward reaches {2}; backward reaches {0}.
-        let out = cpu_ref(4, &off, &tgt, &msk, &[0b0010], 0xFFFF_FFFF);
+        let out = cpu_ref(
+            g.node_count,
+            g.edge_offsets,
+            g.edge_targets,
+            g.edge_kind_mask,
+            &[0b0010],
+            u32::MAX,
+        );
         assert!(out[0] & 0b0001 != 0, "bwd should reach node 0");
         assert!(out[0] & 0b0100 != 0, "fwd should reach node 2");
     }
 
-    /// The linear-graph closure inputs, named so no pair of CSR slices can
-    /// transpose across the closure tests below.
-    fn linear_closure(
-        graph: &(Vec<u32>, Vec<u32>, Vec<u32>),
-        max_iters: u32,
-    ) -> CsrClosureInputs<'_> {
-        CsrClosureInputs {
-            graph: CsrGraphView {
-                node_count: 4,
-                edge_offsets: &graph.0,
-                edge_targets: &graph.1,
-                edge_kind_mask: &graph.2,
-            },
-            allow_mask: 0xFFFF_FFFF,
-            max_iters,
-        }
-    }
-
     #[test]
     fn closure_reaches_full_linear_component() {
-        let graph = linear_graph();
-        let out = cpu_ref_closure(linear_closure(&graph, 5), &[0b0001]);
+        let out = cpu_ref_closure(CsrClosureInputs::allow_all(graphs::CHAIN_4, 5), &[0b0001]);
         assert_eq!(out, vec![0b1111]);
     }
 
     #[test]
     fn closure_into_reuses_caller_buffers() {
-        let graph = linear_graph();
         let mut current = Vec::with_capacity(8);
         let mut next = Vec::with_capacity(8);
         cpu_ref_closure_into(
-            linear_closure(&graph, 5),
+            CsrClosureInputs::allow_all(graphs::CHAIN_4, 5),
             &[0b0001],
             &mut current,
             &mut next,
@@ -1022,9 +1025,16 @@ mod tests {
             }
         );
 
-        let (off, tgt, msk) = linear_graph();
+        let g = graphs::CHAIN_4;
         assert_eq!(
-            validate_csr_inputs(4, &off, &tgt, &msk, &[0]).unwrap(),
+            validate_csr_inputs(
+                g.node_count,
+                g.edge_offsets,
+                g.edge_targets,
+                g.edge_kind_mask,
+                &[0]
+            )
+            .unwrap(),
             CsrBidirectionalLayout {
                 node_count: 4,
                 words: 1,
@@ -1063,16 +1073,12 @@ mod tests {
 
     #[test]
     fn try_cpu_ref_closure_rejects_bad_seed_without_clobbering_buffers() {
-        let graph = linear_graph();
         let mut current = vec![0xCAFE_BABEu32];
         let mut next = vec![0xDEAD_BEEFu32];
         let current_capacity = current.capacity();
         let next_capacity = next.capacity();
         let err = try_cpu_ref_closure_into(
-            CsrClosureInputs {
-                allow_mask: u32::MAX,
-                ..linear_closure(&graph, 4)
-            },
+            CsrClosureInputs::allow_all(graphs::CHAIN_4, 4),
             &[],
             &mut current,
             &mut next,
@@ -1087,16 +1093,29 @@ mod tests {
 
     #[test]
     fn fallible_cpu_reference_matches_compatibility_wrappers() {
-        let (off, tgt, msk) = linear_graph();
-        let step = try_cpu_ref(4, &off, &tgt, &msk, &[0b0010], u32::MAX)
-            .expect("Fix: operation must return Err on failure; tests may use expect only with Fix: recovery text - valid step should succeed");
-        assert_eq!(step, cpu_ref(4, &off, &tgt, &msk, &[0b0010], u32::MAX));
+        let g = graphs::CHAIN_4;
+        let step = try_cpu_ref(
+            g.node_count,
+            g.edge_offsets,
+            g.edge_targets,
+            g.edge_kind_mask,
+            &[0b0010],
+            u32::MAX,
+        )
+        .expect("Fix: operation must return Err on failure; tests may use expect only with Fix: recovery text - valid step should succeed");
+        assert_eq!(
+            step,
+            cpu_ref(
+                g.node_count,
+                g.edge_offsets,
+                g.edge_targets,
+                g.edge_kind_mask,
+                &[0b0010],
+                u32::MAX
+            )
+        );
 
-        let graph = linear_graph();
-        let inputs = CsrClosureInputs {
-            allow_mask: u32::MAX,
-            ..linear_closure(&graph, 5)
-        };
+        let inputs = CsrClosureInputs::allow_all(graphs::CHAIN_4, 5);
         let closure = try_cpu_ref_closure(inputs, &[0b0001])
             .expect("Fix: operation must return Err on failure; tests may use expect only with Fix: recovery text - valid closure should succeed");
         assert_eq!(closure, cpu_ref_closure(inputs, &[0b0001]));

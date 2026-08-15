@@ -1,6 +1,6 @@
-use crate::ir::{Expr, Ident};
+use super::LiveSet;
+use crate::ir::Expr;
 use crate::transform::visit::for_each_subexpr;
-use im::HashSet;
 
 /// Record every variable `expr` reads, including inside every operand of every
 /// nested expression.
@@ -14,7 +14,7 @@ use im::HashSet;
 /// The walk visits every sub-expression rather than stopping at the first
 /// match, because every name has to be recorded, not just the first one.
 #[inline]
-pub(crate) fn collect_expr_refs(expr: &Expr, refs: &mut HashSet<Ident>) {
+pub(crate) fn collect_expr_refs(expr: &Expr, refs: &mut LiveSet) {
     for_each_subexpr(expr, &mut |candidate| {
         if let Expr::Var(name) = candidate {
             refs.insert(name.clone());
