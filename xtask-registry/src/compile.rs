@@ -20,116 +20,143 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
-use std::process;
 
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_megakernel::{
     Artifact, CompileRequest, Digest, ExternalFacts, SearchBudget, TargetPayload,
 };
+use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
 const MAX_XTASK_COMPILE_INPUT_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_XTASK_ARTIFACT_BYTES: u64 = 64 * 1024 * 1024;
 const XTASK_SEARCH_BUDGET: SearchBudget = SearchBudget::new(256, 100_000, 1, 0, 1_000_000_000);
 
-pub(crate) fn run(args: &[String]) {
-    let (input_path, targets, output_dir) = parse_args(args).unwrap_or_else(|error| {
-        eprintln!("{error}");
-        process::exit(2);
-    });
-    let wire = read_bytes_bounded(&input_path).unwrap_or_else(|error| {
-        eprintln!("Fix: cannot read {}: {error}", input_path.display());
-        process::exit(1);
-    });
-    let program = Program::from_wire(&wire).unwrap_or_else(|error| {
-        eprintln!("Fix: wire decode failed: {error}");
-        process::exit(1);
-    });
-    let artifact = compile_neutral(program).unwrap_or_else(|error| {
-        eprintln!("{error}");
-        process::exit(1);
-    });
-    fs::create_dir_all(&output_dir).unwrap_or_else(|error| {
-        eprintln!(
-            "Fix: cannot create output directory {}: {error}",
-            output_dir.display()
-        );
-        process::exit(1);
-    });
+/// Compiles the registered release corpus, and any caller-named wire file.
+pub struct Compile;
 
-    let digest = digest_hex(artifact.digest());
-    let prefix = &digest[..16];
-    for (index, target) in targets.iter().enumerate() {
-        let payload = compile_registered_target(&artifact, target).unwrap_or_else(|error| {
-            eprintln!("{error}");
-            process::exit(1);
-        });
-        let bytes = payload.to_bytes().unwrap_or_else(|error| {
-            eprintln!(
-                "Fix: authenticated payload for registered target `{target}` could not encode: {error}"
-            );
-            process::exit(1);
-        });
-        let path = output_dir.join(format!("{prefix}.{index}.vtp"));
-        fs::write(&path, bytes).unwrap_or_else(|error| {
-            eprintln!("Fix: cannot write {}: {error}", path.display());
-            process::exit(1);
-        });
-        println!("emitted: {}", path.display());
+impl Gate for Compile {
+    fn name(&self) -> &'static str {
+        "compile"
     }
 
-    let manifest_path = output_dir.join(format!("{prefix}.manifest.json"));
-    let manifest = serde_json::to_string_pretty(&serde_json::json!({
-        "artifact": digest,
-        "targets": targets,
-    }))
-    .expect("target manifest contains only strings")
-        + "\n";
-    fs::write(&manifest_path, manifest).unwrap_or_else(|error| {
-        eprintln!("Fix: cannot write {}: {error}", manifest_path.display());
-        process::exit(1);
-    });
-    println!("manifest: {}", manifest_path.display());
+    fn help(&self) -> &'static str {
+        "Compile the registered release corpus; --program ID narrows to one case, --input PATH compiles one wire file, --to ID also compiles that registered target, --out DIR writes the payloads"
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let cases = corpus(ctx)?;
+        let targets: Vec<&str> = ctx
+            .args
+            .iter()
+            .zip(ctx.args.iter().skip(1))
+            .filter(|(flag, _)| flag.as_str() == "--to")
+            .map(|(_, target)| target.as_str())
+            .collect();
+        let out_dir = ctx.flag("--out").map(PathBuf::from);
+        let mut report = Report::clean();
+        report.note(format!(
+            "{} program(s) compiled, {} registered target(s) requested",
+            cases.len(),
+            targets.len()
+        ));
+        for (id, program) in cases {
+            let artifact = match compile_neutral(program) {
+                Ok(artifact) => artifact,
+                Err(error) => {
+                    report.find(Finding::new(
+                        format!("`{id}` does not compile to a neutral artifact: {error}"),
+                        "repair the program or the neutral compiler path it exercises",
+                    ));
+                    continue;
+                }
+            };
+            let digest = digest_hex(artifact.digest());
+            for (index, target) in targets.iter().enumerate() {
+                let payload = match compile_registered_target(&artifact, target) {
+                    Ok(payload) => payload,
+                    Err(error) => {
+                        report.find(Finding::new(
+                            format!(
+                                "`{id}` does not compile for registered target `{target}`: {error}"
+                            ),
+                            "repair the target lowering, or stop naming that target",
+                        ));
+                        continue;
+                    }
+                };
+                let bytes = match payload.to_bytes() {
+                    Ok(bytes) => bytes,
+                    Err(error) => {
+                        report.find(Finding::new(
+                            format!(
+                                "the authenticated payload of `{id}` for `{target}` does not encode: {error}"
+                            ),
+                            "repair the payload encoder for that target",
+                        ));
+                        continue;
+                    }
+                };
+                if let Some(dir) = out_dir.as_ref() {
+                    fs::create_dir_all(dir).map_err(|error| {
+                        GateError::new(
+                            format!("cannot create {}: {error}", dir.display()),
+                            "pass a writable path after --out",
+                        )
+                    })?;
+                    let path = dir.join(format!("{}.{index}.vtp", &digest[..16]));
+                    fs::write(&path, bytes).map_err(|error| {
+                        GateError::new(
+                            format!("cannot write {}: {error}", path.display()),
+                            "pass a writable path after --out",
+                        )
+                    })?;
+                    report.note(format!("emitted {}", path.display()));
+                }
+            }
+        }
+        Ok(report)
+    }
 }
 
-fn parse_args(args: &[String]) -> Result<(PathBuf, Vec<String>, PathBuf), String> {
-    let input = args.get(2).ok_or_else(|| {
-        "Fix: missing input wire file. Usage: cargo_full run --bin xtask -- compile <program.vir> --to <registered-target-id>".to_string()
-    })?;
-    let mut targets = Vec::new();
-    let mut output_dir = PathBuf::from("target/vyre-compile");
-    let mut index = 3;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--to" => {
-                index += 1;
-                let target = args
-                    .get(index)
-                    .filter(|target| !target.trim().is_empty())
-                    .ok_or_else(|| {
-                        "Fix: --to requires a non-empty registered target id".to_string()
-                    })?;
-                targets.push(target.clone());
-                index += 1;
-            }
-            "--output-dir" => {
-                index += 1;
-                let path = args
-                    .get(index)
-                    .filter(|path| !path.trim().is_empty())
-                    .ok_or_else(|| "Fix: --output-dir requires a path".to_string())?;
-                output_dir = PathBuf::from(path);
-                index += 1;
-            }
-            other => return Err(format!("Fix: unknown compile argument `{other}`")),
-        }
+/// The programs this run compiles: one caller-named wire file, one narrowed
+/// corpus case, or the whole registered release corpus.
+fn corpus(ctx: &GateCtx) -> Result<Vec<(String, Program)>, GateError> {
+    if let Some(input) = ctx.flag("--input") {
+        let path = PathBuf::from(input);
+        let wire = read_bytes_bounded(&path).map_err(|error| {
+            GateError::new(
+                format!("cannot read {}: {error}", path.display()),
+                "pass a readable wire file after --input",
+            )
+        })?;
+        let program = Program::from_wire(&wire).map_err(|error| {
+            GateError::new(
+                format!("wire decode of {} failed: {error}", path.display()),
+                "pass a file this compiler version encoded",
+            )
+        })?;
+        return Ok(vec![(path.display().to_string(), program)]);
     }
-    if targets.is_empty() {
-        return Err(
-            "Fix: no --to target specified. Pass one target id from the linked target registry."
-                .to_string(),
-        );
+    let selected = ctx.flag("--program");
+    let cases: Vec<(String, Program)> =
+        vyre_foundation::optimizer::corpus::generate_release_corpus()
+            .into_iter()
+            .filter(|case| match selected {
+                Some(id) => case.id == id,
+                None => true,
+            })
+            .map(|case| (case.id, case.program))
+            .collect();
+    if cases.is_empty() {
+        return Err(GateError::new(
+            match selected {
+                Some(id) => format!("no release corpus case is named `{id}`"),
+                None => "the release corpus generated no case, so nothing was compiled".to_string(),
+            },
+            "run the gate without --program to compile every generated case",
+        ));
     }
-    Ok((PathBuf::from(input), targets, output_dir))
+    Ok(cases)
 }
 
 fn compile_neutral(program: Program) -> Result<Artifact, String> {

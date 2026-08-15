@@ -24,7 +24,7 @@ pub fn byte_histogram_256_body(input: &str, histogram: &str, count: u32) -> Vec<
         // Gate the per-lane zero-fill against the bin count. The intended dispatch is
         // one 256-lane workgroup (lane 0..255 = the 256 bins), but whole-workgroup GPU
         // dispatch rounds up, so a >256-lane dispatch would otherwise OOB-write the
-        // histogram (memory corruption on CUDA). Transparent for the intended dispatch;
+        // histogram (memory corruption on a real GPU). Transparent for the intended dispatch;
         // caught by the grid-overfire registry gate.
         Node::if_then(
             Expr::lt(Expr::var("lane"), Expr::buf_len(histogram)),
@@ -222,7 +222,7 @@ mod tests {
         // `& 0xFF` bin mask, never atomic-add past the last bin. Assert ZERO
         // interpreter OOB accesses (the mask keeps the atomic in bounds, not the
         // interpreter's silent drop) and that the low byte's bin is incremented.
-        // Removing the mask would OOB the atomic scatter (memory corruption on CUDA)
+        // Removing the mask would OOB the atomic scatter (memory corruption on a real GPU)
         // and this test would see report.total() > 0.
         let program = byte_histogram_256("bytes", "histogram", 1);
         let (outputs, report) = vyre_reference::reference_eval_oob_report(

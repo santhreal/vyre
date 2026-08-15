@@ -3,8 +3,8 @@
 //! LZ4-style formats have serial sequence discovery but parallel literal
 //! copying once an index exists. This primitive is the reusable second stage:
 //! one lane per sequence copies `[literal_start, literal_start + literal_len)`
-//! into the prefix-summed output offset. Producers may be CPU, CUDA, WGPU, or
-//! a future persistent decode megakernel as long as they satisfy the same
+//! into the prefix-summed output offset. Producers may be a host oracle, any
+//! accelerator backend, or a future persistent decode megakernel as long as they satisfy the same
 //! sequence-index contract.
 
 use std::sync::Arc;
@@ -255,8 +255,8 @@ pub fn ziftsieve_literal_copy_body(buffers: ZiftsieveBuffers<'_>, seq_count: u32
                     // (an `if_then`, NOT `Expr::select`: select still evaluates the OOB
                     // load on a real GPU). The seq_* indices are unvalidated producer
                     // input, so an out-of-contract `literal_start`/`literal_offset` would
-                    // otherwise be a raw OOB read (UB on CUDA) and OOB write (memory
-                    // corruption on CUDA). This puts the documented "drops stores whose
+                    // otherwise be a raw OOB read and OOB write, which is undefined
+                    // behaviour on a real GPU. This puts the documented "drops stores whose
                     // `literal_offset + i >= max_output`" cap INTO the IR instead of
                     // relying on unreliable driver OOB behavior (see vyre-reference
                     // oob.rs: "some clamp, some return zero, some crash"). Transparent to
@@ -565,8 +565,8 @@ mod tests {
     #[test]
     fn out_of_contract_literal_start_gates_oob_source_reads() {
         // A `literal_start`/`literal_len` that runs past the input buffer must have
-        // its out-of-range SOURCE READS gated away entirely (no OOB load. UB on
-        // CUDA), leaving the corresponding output slots untouched. This distinguishes
+        // its out-of-range SOURCE READS gated away entirely (no OOB load, which is
+        // undefined behaviour on a real GPU), leaving the corresponding output slots untouched. This distinguishes
         // the control-flow gate from the OLD ungated IR: the old code zero-fill-loaded
         // the OOB source and stored 0 (→ [B, 0, 0, SENTINEL]); the gate skips the whole
         // iteration (→ [B, SENTINEL, SENTINEL, SENTINEL]).

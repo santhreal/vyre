@@ -189,11 +189,6 @@ const WAIVERS: &[Waiver] = &[
         reason: "tooling walk over IR for documentation generation",
     },
     Waiver {
-        path: "xtask-registry/src/gates/abstraction_gate.rs",
-        owner: "ToolingFrontend",
-        reason: "tooling walk over IR for a gate",
-    },
-    Waiver {
         path: "xtask-registry/src/gates/gate1.rs",
         owner: "ToolingFrontend",
         reason: "tooling walk over IR for a gate",

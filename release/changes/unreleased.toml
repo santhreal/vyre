@@ -1622,10 +1622,40 @@ text = "The tooling and workspace-contract source walks have one owner each. `te
 id = "cargo-full-build-parallelism"
 category = "Fixed"
 text = "The `cargo_full` wrapper no longer exports `CARGO_BUILD_JOBS`. An environment variable overrides `.cargo/config.toml`, so the wrapper's default of `1` silently replaced the declared `[build] jobs = 16` on every invocation, and every build, test run, and gate in this workspace ran one codegen job at a time regardless of how many cores the host had. Parallelism is declared once, in the config file, where it is reviewable and applies to every build equally."
+
+[[fragments]]
+id = "platform-crates-backend-neutral-prose"
+category = "Changed"
+text = "Comments and doc comments in `vyre-foundation`, `vyre-primitives`, `vyre-runtime` and `vyre-pass-engine` state the hardware fact instead of naming a backend product. A load past a buffer end is undefined behaviour on a real GPU whichever driver reached it, a nested `Return` lowers to an exit branch in every machine-code emitter, and a launcher refuses a zero grid extent everywhere. The old wording pinned a general rule to one vendor, so a reader on another backend had to guess whether the rule applied to them. Backend-specific text now lives only in the crate that owns that backend."
 [[fragments]]
 id = "vyre-libs-dialect-seams"
 category = "Changed"
 text = "`vyre-libs` no longer reaches across dialect boundaries in private code. `telemetry` is a crate-root module rather than a one-file directory, because counters instrument every dialect and belong to none; `scratch` and `dispatch_program_cache` sit at the crate root beside `dispatch_buffers`, because host dispatch plumbing is not a dialect either. The `analysis::dataflow_fixpoint` re-export of `vyre_foundation::pass_substrate::dataflow_fixpoint` is deleted, so the closure family has one path instead of two, and every caller names the owner. Composition that genuinely crosses dialects goes through `prelude`, which is the one declared seam: `nn::linear` reaches `MatmulBiasTiled` and `reasoning` reaches `reachability_closure_via_into` through it, and the prelude names both."
+
+[[fragments]]
+id = "scallop-lineage-fixpoint-one-owner"
+category = "Changed"
+text = "`vyre_primitives::math::scallop_persistent` owns `lineage_fixpoint_program` and `accumulate_lineage_words`. `scallop_join` and `scallop_join_wide` each carried their own copy of the persistent program envelope and the lineage word join, so a change to the convergence protocol had to be made twice and the two spellings had already drifted in how they reported change. Both now call the owner."
+
+[[fragments]]
+id = "runtime-artifact-fixture-one-owner"
+category = "Changed"
+text = "`vyre-runtime` builds pipeline-cache test artifacts from one fixture module, `src/pipeline_cache/test_artifact_fixtures.rs`, which the fingerprint suites include by path. The two suites previously built the same artifact independently and `artifact_for_program` looked only at the first buffer, so a program whose second buffer had a different access produced a fingerprint the fixture could not distinguish. It now walks every buffer with that buffer's own access."
+
+[[fragments]]
+id = "jacobi-rotation-primitives"
+category = "Added"
+text = "Five operations now own the pieces the Jacobi eigensolver used to spell inline: `givens_rotate_pair` rotates one strided element pair, `jacobi_apply_rotation` applies one rotation at a pivot to a matrix and its accumulator, `matrix_identity_fill` seeds a rotation accumulator, `matrix_diagonal_extract` reads a diagonal out, and `eigenvector_column_sign` fixes the sign of every eigenvector column. `symmetric_eigen_jacobi` composes them and emits identical numerics; the three column, row and accumulator rotations inside one Jacobi step were byte-identical five-node loops differing only in base offset and stride, and are now one builder with two address parameters."
+
+[[fragments]]
+id = "test-skill-contracts-true-to-source"
+category = "Changed"
+text = "The `tests/SKILL.md` contracts for `vyre-spec`, `vyre-foundation`, `vyre-macros`, `vyre-reference` and `vyre-primitives` now state the category contract where it is read instead of pointing at a file the tree does not contain, and every claim in them is checked against source. They previously routed op semantics to `vyre-ops`, which is not a package here; listed bench and fuzz targets for directories four of the five crates do not have; named `--test adversarial`, `--test property`, `--test gap` and `--test integration` where only two of those targets are declared anywhere; and described `vyre-primitives` as marker types with no runtime behavior and no bench, while it owns the Tier 2.5 substrate and declares the `wire_throughput` bench."
+
+[[fragments]]
+id = "validation-rule-catalog-generated"
+category = "Changed"
+text = "The validation rule registry is one table in `vyre-foundation/src/validate/catalog.rs`, carrying each code's phase, invariant and corrective action. `docs/generated/error-codes.toml` is rendered from it and `vyre-foundation/tests/validator_error_docs.rs` fails on divergence, reporting one finding per divergent code. `ValidationCode` gained `phase`, `invariant` and `corrective_action` accessors. The hand-maintained table in `docs/error-codes.md` was a second copy that had already drifted: four codes carried the placeholder text `Program validation error 0NN` with the corrective action `See diagnostic output`, which the catalog replaces with the invariant each emission site actually checks."
 [[fragments]]
 id = "gate-sweep-no-legal-failure"
 category = "Changed"
@@ -1650,9 +1680,59 @@ category = "Changed"
 text = "`vyre-test-support` states which flat `DataType` forms exist in one ungated module, `data_type_elements`. The list sat inside `data_type_variants`, which is gated behind `ir-fixtures`, so a suite that wanted the flat element list had to enable a feature that pulls `vyre-foundation` into its dev graph; for `vyre-spec`, a leaf crate that declares `DataType` in the first place, that meant building the whole compiler to read a list of discriminants. `vyre-spec` is now a plain dependency of `vyre-test-support` and `ir-fixtures` means `vyre-foundation` plus `smallvec`. The IR fixture table builds its flat leaves from the same module, so the two tables cannot disagree about which element types exist."
 
 [[fragments]]
+id = "one-gate-registry"
+category = "Changed"
+text = "Every registered xtask subcommand is now a gate answering one contract: it returns findings and notes instead of printing, and the runner decides what that means. The `Kind` enum is gone, so no check is exempt from the sweep by category. The `check-cat-a` and `release-gate` composites are named subsets of the registry, `xtask gates --subset cat-a` and `--subset prepublish`, and the cargo invocations they drove are gates of their own: `workspace-check`, `workspace-clippy`, `workspace-tests`, `workspace-docs` and `lockfile-clean`. `scripts/check_op_names.sh` and `scripts/check_parity_testing_not_leaked.sh` became the `op-names` and `parity-testing-isolated` gates. `xtask/gate-baselines.toml` pins `findings` rather than output lines, one row per registered gate, and the sweep enumerates the registry at run time so a gate without a row and a row without a gate both fail. A gate that owns a generated artifact checks it against the tree and rewrites it under `--write`, so regeneration is never a subcommand of its own."
+
+[[fragments]]
+id = "registry-gates-one-contract"
+category = "Changed"
+text = "The seventeen registry-linked checks answer the gate contract. Each one returns findings instead of an exit code, so the sweep counts what it found and pins that count. catalog, list-ops and optimization-docs now own docs/generated/catalog.toml, docs/generated/op-inventory.toml and docs/generated/optimizer-passes.toml, compared on every run and regenerated with --write. lego-audit runs its repo-context checks unconditionally and has no report-only mode, lego-quick scans the whole tree unless --staged narrows it, heuristic-audit has no advisory mode, compile and shrink run over the generated release corpus, and verify-rewrite-proofs fails when no solver can discharge an obligation."
 id = "driver-error-catalog-generated"
 category = "Fixed"
 text = "The backend error-code catalog is generated from the enum that emits it. `ErrorCode` owns `ALL` and `summary`, and a const assertion makes a variant missing from the catalog a compile error. The previous markdown table, and the seven-variant list that checked it against a nine-variant enum, are gone."
+
+[[fragments]]
+id = "loop-fusion-pair-after-refusal"
+category = "Fixed"
+text = "Loop fusion no longer skips a fusable pair after a refusal. When two adjacent loops could not be fused, the walk advanced its cursor by two instead of one, so the pair formed by the second loop and its successor was never considered; a comment claimed the scheduler retried the skipped pair, and nothing did. The pass now bails before cloning a body that holds no fusable pair at all, rather than deep-cloning the whole body and discarding it."
+
+[[fragments]]
+id = "optimizer-hot-path-allocations"
+category = "Changed"
+text = "Three optimizer hot paths stopped allocating per sample. `HotPathHints::record` allocated the key on every call including a repeat sample, and its LRU eviction cloned every key in the map to find the oldest; it now takes a `get_mut` fast path and clones the one key it evicts. `reaching_def_propagate` keyed its propagatable-let map and its shadowed-binding set by `String`, so every binding heap-allocated and memcpy'd its name twice per scope walk; both are keyed by `Ident`, which is an `Arc<str>` refcount bump and hashes through the same `str`, so `&str` lookups are unchanged. `loop_fission` walked its body building a new `Vec` node by node whether or not a fissionable loop existed; it locates the loop first and copies the prefix in one `extend_from_slice`."
+
+[[fragments]]
+id = "anonymous-generator-owner"
+category = "Fixed"
+text = "`abstraction-gate` no longer demands an operation registration for a region that names no operation. Two prefixes mean the same thing: `inline::`, minted by `reparent_entry_node` for a body the composer reparented onto its caller, and `anonymous::`, written by a builder that needs a named phase boundary inside one operation. The gate knew only the first, and fell back to `source_region.is_some()` for the second, which proves nothing because composition stamps `source_region` onto every entry region it reparents. Seven regions were reported as unregistered building blocks that must not be registered. `vyre-foundation/src/algebra/composition.rs` owns the answer as `ANONYMOUS_GENERATOR_PREFIXES` and `is_anonymous_generator`, and the gate's fix text now names the rename. The gate also descends through `vyre_foundation::transform::visit::child_bodies` rather than its own list of node arms, so a new nesting variant cannot hide a region from it."
+
+[[fragments]]
+id = "hot-path-scan-excludes-test-bodies"
+category = "Fixed"
+text = "`hot-path-scan` counts runtime code only. It claimed to skip `#[cfg(test)]`, calling those \"intentional dev-only lines, not runtime cost\", but an attribute annotates the item that follows it and the scan skipped the attribute line alone. Every `panic!`, `format!` and `.to_string()` inside a `mod tests` body was reported as hot-path cost and weighted per kLOC, and the same bodies inflated the `count_code_lines` denominator, so a file's real density read lower than it is. Seventeen of 125 findings were test code, one `mod tests` spanning 575 lines of a backend dispatch file. The scan now tracks the item a `#[cfg(test)]` annotates to its closing brace, or to its semicolon when it has no body, with a brace counter that ignores braces inside string and character literals and a `'` that opens a lifetime rather than a literal. The `hot-path-scan` pin falls from 170 to 154 and `abstraction-gate` from 32 to 23."
+
+[[fragments]]
+id = "pass-engine-scope-walk-one-owner"
+category = "Changed"
+text = "The pass engine has one scope walk. `optimizer::rewrite_walk` owns the encoder's reachable-prefix truncation and the borrow-preserving rebuild, and const propagation, cross-scope CSE, encoded CSE and the encoded-order rewrite call it. Four copies of the same loop stood beside each other and three of them discarded the walk's unchanged answer, so a pass that propagated nothing still deep-copied every nested body it visited. Constant propagation also stopped enumerating `Node` itself: it is a policy over the one structural node rewrite, so a body-bearing variant added to the IR is descended into instead of switching propagation off for everything inside it."
+
+[[fragments]]
+id = "trap-program-one-owner"
+category = "Changed"
+text = "`vyre_foundation::algebra::composition::trap_program` builds the program a builder returns when its inputs cannot produce a valid one. `vyre-primitives` and `vyre-libs` each had their own copy, differing only in whether one output buffer of count 1 is declared, and a trap program is IR composed out of IR, so neither crate is its home. The declared output is an `Option` argument because that is the whole difference between the two former copies."
+
+[[fragments]]
+id = "single-output-program-fixture-owner"
+category = "Changed"
+text = "`vyre-test-support` states the minimal one-output test program once, as `ir_variants::single_u32_output_program`. Suites that needed a program with somewhere to store a result each declared the same buffer and workgroup size locally, so a change to the shape had to be found in every copy."
+
+[[fragments]]
+id = "inline-expansion-one-walk"
+category = "Fixed"
+text = "Call inlining expands a call in every operand position. The caller side and the callee side each enumerated `Node` themselves and had diverged: the caller copied the `AsyncLoad` and `AsyncStore` offset and size and the `Trap` address verbatim, so a call written there survived a pass whose contract is that no call reaches a backend. Both sides are now policies over one expansion walk, `transform::inline::expand_walk`, which descends through the structural node rewrite. A call inside a callee body was also expanded under the caller's substitution, which renames locals but does not bind callee parameters or retarget buffer-reference arguments, so `call outer(BufferRef(data))` with a nested call in `outer` produced a program reading a buffer only the callee declares. Nested-call arguments are expanded under the callee's policy."
+
+[[fragments]]
 id = "workspace-contract-target-owners"
 category = "Changed"
 text = "The workspace contract suite no longer compiles into `vyre-foundation`'s test target. `tests/contract/mod.rs` was included by `vyre-foundation/tests/contract_workspace.rs`, so a contract that judges the whole workspace could not run until the compiler built, and a crate that has nothing to do with the routing rule decided whether the rule ran at all. Each contract now sits with its subject: the device-only routing rule and the node child descent rule are `structure-gate` tests, which is the crate that reads source text and depends on no vyre crate; the validator rejection contract is a `vyre-foundation` test target; the public-API snapshot check joins the other snapshot contracts in `xtask`. `structure_gate::source_scan` owns the workspace source walk, the brace matcher and the comment and literal masker, and the masker is built on the same `opaque_span` the registration parser uses, so a masker and a parser can no longer disagree about whether a raw string or a nested block comment holds code."
@@ -1681,6 +1761,8 @@ text = "The command-line contract no longer renders a book page. `scripts/cli_do
 id = "workflow-subcommand-resolution"
 category = "Added"
 text = "A CI step that passes a subcommand to `xtask`, `xtask-registry` or `xtask-evidence` is resolved against the registered subcommand table. A renamed or deleted row left the step naming a command that no longer exists, and nothing local went red: the package existed, the binary existed, and the name was one shell token in a `run:` line. `xtask gates` judges the other direction, that a registered row is wired into CI, so the pair is now closed. Names are extracted per step, including every command in a joined `run:` block, and resolved when the test runs rather than listed in it."
+
+[[fragments]]
 id = "vyre-driver-backend-contract-one-owner"
 category = "Changed"
 text = "The `VyreBackend` trait contract has two owners in `vyre-driver`'s test surface instead of three overlapping files. `tests/backend_trait_contract.rs` owns the minimal and fully overriding backend fixtures and asserts that every capability default is conservative, that every override is observably different from its default, that lifecycle hooks succeed by default and receive every call once overridden, that the blanket `Backend` impl exposes the driver identity, and that the trait surface stays object safe and `Send + Sync`. `tests/backend_registry.rs` owns what the registry reports when nothing is registered, including that preferred-dispatch acquisition fails closed and never advertises a host fallback. The previous `backend_contract.rs`, `backend_capability_negotiation.rs`, and `backend_trait_compatibility.rs` each declared their own copy of the same fixtures and asserted overlapping subsets of the same contract, so an override that silently returned its default value was invisible in all three. That case is now a single invariant rather than two mirrored capability lists."
@@ -1764,3 +1846,8 @@ text = "ZX identity removal no longer splices out a phase-zero spider whose two 
 id = "kan-extension-one-owner"
 category = "Changed"
 text = "`reasoning::finite_category` states each construction once. Left and right Kan extension were four functions differing in whether the fold summed or multiplied and whether it ran per object or over a table; they are now `kan_extension_at` and `kan_extension_table` taking a `KanDirection`, over one shared fold. `is_adjoint_pair` is `adjoint_pair`, because it returns the pair and its witness rather than a bool, and `yoneda_natural_iso` is `natural_transformation_count`, because a count is what it returns."
+
+[[fragments]]
+id = "public-api-gate-no-silent-skip"
+category = "Fixed"
+text = "The public-API snapshot gate reports a crate it could not read instead of skipping it. Two paths dropped a package out of the comparison without a word: a publishable package whose `src` directory was missing, and an extraction that succeeded but returned nothing. No committed snapshot is empty, so an empty surface is a truncated rustdoc or a zero-byte `.rmeta` from a parallel build sharing one target directory, which is exactly the state in which a crate most needs to be checked. Both are findings now, and an extraction that exits nonzero prints what `cargo public-api` said rather than a bare sentence naming the crate."

@@ -301,9 +301,9 @@ fn build_persistent_bfs_program_internal(
         // redundant with the `Node::Return` below.
         //
         // Read this before changing either one. `Return` nested inside a
-        // `Node::Loop` USED to be emitted as nothing by vyre-emit-ptx, and an
-        // earlier version of this comment said so. That is no longer true: the
-        // emitter now lowers a nested `Return` to a real `bra $L_exit`, so the exit
+        // `Node::Loop` USED to be emitted as nothing by a machine-code emitter, and
+        // an earlier version of this comment said so. That is no longer true: the
+        // emitter now lowers a nested `Return` to a real exit branch, so the exit
         // is live on device and not only in the reference interpreter. Two
         // consequences, and both matter here.
         //

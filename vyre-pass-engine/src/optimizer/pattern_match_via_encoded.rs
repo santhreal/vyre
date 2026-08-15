@@ -21,7 +21,7 @@
 //! kernel.
 //!
 //! No host-reference escape in production. `ProgramDispatcher` injects the
-//! backend; the same kernel runs unchanged on wgpu + CUDA.
+//! backend; the same kernel runs unchanged on every backend.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

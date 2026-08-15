@@ -1,98 +1,264 @@
-//! The registered subcommand table.
+//! The gate registry.
 //!
-//! Dispatch, help text and CI wiring all read this one table. They used to be
-//! three hand-maintained lists, and they had stopped agreeing: 41 subcommands
-//! were registered and 9 were ever invoked, so 32 gates existed, compiled, and
-//! judged nothing. A gate nobody runs is worse than no gate, because it reads
-//! as coverage.
+//! Dispatch, help text and the sweep all read this one registry. They used to
+//! read a table whose rows carried a `Kind`, and the kind decided whether a
+//! check could fail a build, whether it had a baseline, whether the sweep saw
+//! it, and whether anyone ran it at all: 41 subcommands were registered and 9
+//! were ever invoked, so 32 checks existed, compiled, and judged nothing.
 //!
-//! Adding a subcommand means adding a row here. `Kind` decides what CI owes it,
-//! and `xtask gates` fails when that obligation is unmet, so a new row cannot
-//! be quietly left unwired.
+//! There is no kind now. Every entry is a gate, every gate has a baseline row,
+//! and the sweep runs all of them. A generated artifact is not a category, it is
+//! a gate that checks the artifact against the tree and rewrites it under
+//! `--write`. A check that needs caller input is not a category, it is a gate
+//! that runs over a registered corpus and takes the caller's input as a flag.
+//! Delegation to a crate that links vyre is a property of one gate, carried by
+//! `Delegated`, not a class of its own.
+//!
+//! Adding a gate means adding it to the slice its area owns. The registry is
+//! assembled from those slices at run time, so no list here is maintained by
+//! hand.
 
-use crate::docs::docs_check;
-use crate::gates::{
-    check_cat_a, check_tier_deps, dep_drift, dup_scan, feature_isolation, hot_path_scan,
-    hygiene_matrix, platform_boundary, sweep,
-};
-use crate::release::{
-    feature_matrix, launch_state, metadata_matrix, package_readiness, release_conformance,
-    release_gate, release_workload_matrix, version_matrix,
-};
-use crate::shrink;
+use crate::gate::{Delegated, Gate};
 
-/// Which crate implements a subcommand, and therefore what running it costs.
+/// A named set of gates, so a caller can ask for part of the registry without
+/// any gate being exempt from the whole of it.
 ///
-/// A `Local` subcommand reads source text, manifests, workflows or evidence
-/// files, so it runs in this process against no vyre crate. The other two are
-/// implemented in a crate that links vyre because it has to observe the live
-/// operation registry or a measured benchmark probe; `xtask` builds and runs
-/// that crate on demand instead of linking it.
-#[derive(Clone, Copy)]
-pub enum Home {
-    /// Implemented here. The function is the entry point.
-    Local(fn(&[String])),
-    /// Implemented in `xtask-registry`, which links the operation registry.
-    Registry,
-    /// Implemented in `xtask-evidence`, which links the benchmark harness.
-    Evidence,
+/// This is what the two composites became. `check-cat-a` and `release-gate`
+/// were registered subcommands that ran other subcommands, which gave them
+/// their own control flow, their own pass summary, no baseline and no place in
+/// the sweep. A subset names gates and nothing else, so the runner holds every
+/// member to the same contract however it was selected.
+pub struct Subset {
+    /// Name passed to `xtask gates --subset`.
+    pub name: &'static str,
+    /// What the set is for, shown in help.
+    pub help: &'static str,
+    /// Gates in the set, by registered name.
+    pub gates: &'static [&'static str],
 }
 
-impl Home {
-    /// Package that implements the subcommand, or `None` when `xtask` does.
-    #[must_use]
-    pub fn package(self) -> Option<&'static str> {
-        match self {
-            Self::Local(_) => None,
-            Self::Registry => Some("xtask-registry"),
-            Self::Evidence => Some("xtask-evidence"),
-        }
-    }
+/// Every named subset.
+pub static SUBSETS: &[Subset] = &[
+    Subset {
+        name: "cat-a",
+        help: "What a Cat-A author runs before opening a pull request",
+        gates: &[
+            "workspace-check",
+            "workspace-clippy",
+            "workspace-tests",
+            "workspace-docs",
+            "op-names",
+            "parity-testing-isolated",
+            "platform-boundary",
+        ],
+    },
+    Subset {
+        name: "prepublish",
+        help: "What must hold before publishing, beyond what a dry run catches",
+        gates: &[
+            "operation-schema",
+            "list-ops",
+            "catalog",
+            "gate1",
+            "abstraction-gate",
+            "dep-drift",
+            "platform-boundary",
+            "vyre-release-gate",
+            "lockfile-clean",
+        ],
+    },
+];
+
+/// Every gate implemented in a crate that links vyre.
+///
+/// These read the live operation registry, a linked backend driver or a
+/// measured benchmark probe, none of which exist in source text. `xtask` links
+/// no vyre crate, so it builds the owning package on demand and reads back the
+/// report the child serialises.
+static DELEGATED: &[Delegated] = &[
+    Delegated {
+        name: "abstraction-gate",
+        help: "Enforce registered building-block boundaries",
+        package: "xtask-registry",
+        generates: false,
+    },
+    Delegated {
+        name: "bench-crossback",
+        help: "Measure the registered cross-backend workloads and hold the recorded table to them; --write records it, --program NAME narrows to one workload",
+        package: "xtask-evidence",
+        generates: true,
+    },
+    Delegated {
+        name: "catalog",
+        help: "Hold docs/generated/catalog.toml to the live operation inventory; --write regenerates it",
+        package: "xtask-registry",
+        generates: true,
+    },
+    Delegated {
+        name: "compile",
+        help: "Compile the registered release corpus; --program ID narrows to one case, --input PATH compiles one wire file, --to ID also compiles that registered target, --out DIR writes the payloads",
+        package: "xtask-registry",
+        generates: false,
+    },
+    Delegated {
+        name: "conformance-matrix",
+        help: "Hold release op and backend conformance coverage to the recorded matrix; --write regenerates it",
+        package: "xtask-registry",
+        generates: true,
+    },
+    Delegated {
+        name: "gate1",
+        help: "Enforce the Gate 1 complexity budget",
+        package: "xtask-registry",
+        generates: false,
+    },
+    Delegated {
+        name: "heuristic-audit",
+        help: "Report hand-rolled heuristics that should be self-consumer calls",
+        package: "xtask-registry",
+        generates: false,
+    },
+    Delegated {
+        name: "lego-audit",
+        help: "Hold registered composition to the ten composition laws; --write records the composition baseline",
+        package: "xtask-registry",
+        generates: true,
+    },
+    Delegated {
+        name: "lego-quick",
+        help: "Composition boundary checks over every Rust source in the tree; --staged narrows to the staged set",
+        package: "xtask-registry",
+        generates: false,
+    },
+    Delegated {
+        name: "list-ops",
+        help: "Hold docs/generated/op-inventory.toml to the live operation registry; --write regenerates it",
+        package: "xtask-registry",
+        generates: true,
+    },
+    Delegated {
+        name: "operation-schema",
+        help: "Hold the canonical live operation contract schema to the registry; --write regenerates it, --validate PATH judges one document",
+        package: "xtask-registry",
+        generates: true,
+    },
+    Delegated {
+        name: "optimization-docs",
+        help: "Hold docs/generated/optimizer-passes.toml to the passes the source declares; --write regenerates it",
+        package: "xtask-registry",
+        generates: true,
+    },
+    Delegated {
+        name: "primitive-admission-gate",
+        help: "Enforce canonical primitive adoption and its recorded exceptions",
+        package: "xtask-registry",
+        generates: false,
+    },
+    Delegated {
+        name: "print-composition",
+        help: "Walk the decomposition chain of every registered operation; --op-id ID narrows to one",
+        package: "xtask-registry",
+        generates: false,
+    },
+    Delegated {
+        name: "release-benchmarks",
+        help: "Measure the release benchmark surface; --write records the evidence",
+        package: "xtask-evidence",
+        generates: true,
+    },
+    Delegated {
+        name: "release-evidence",
+        help: "Hold the cheap structural release evidence to the tree; --write regenerates it",
+        package: "xtask-evidence",
+        generates: true,
+    },
+    Delegated {
+        name: "shrink",
+        help: "Delta-debug every registered corpus case that fails its oracle down to a minimal reproducer; --program ID narrows to one, --oracle PATH replaces the oracle",
+        package: "xtask-registry",
+        generates: false,
+    },
+    Delegated {
+        name: "trace-f32",
+        help: "Run the recorded test inputs of every registered operation through the reference; --op-id ID narrows to one",
+        package: "xtask-registry",
+        generates: false,
+    },
+    Delegated {
+        name: "verify-rewrite-proofs",
+        help: "Verify every optimizer rewrite proof fixture",
+        package: "xtask-registry",
+        generates: false,
+    },
+    Delegated {
+        name: "vyre-release-gate",
+        help: "Enforce release evidence closure; --prepublish judges the prepublication set, --manifest PATH names another manifest",
+        package: "xtask-evidence",
+        generates: false,
+    },
+    Delegated {
+        name: "whats-similar",
+        help: "Report duplicate operations by IR shape across the whole registry; --op-id ID narrows to one",
+        package: "xtask-registry",
+        generates: false,
+    },
+];
+
+/// Every registered gate, in name order.
+///
+/// Assembled from one slice per area at run time. The sweep enumerates this, so
+/// registering a gate is what wires it: there is no second list to update and
+/// no way to register a gate the sweep does not run.
+#[must_use]
+pub fn registry() -> Vec<&'static dyn Gate> {
+    let mut gates: Vec<&'static dyn Gate> = crate::gates::GATES
+        .iter()
+        .copied()
+        .chain(crate::docs::GATES.iter().copied())
+        .chain(crate::release::GATES.iter().copied())
+        .chain(DELEGATED.iter().map(|gate| gate as &'static dyn Gate))
+        .collect();
+    gates.sort_unstable_by_key(|gate| gate.name());
+    gates
 }
 
-/// Every subcommand `package` is responsible for, in table order.
+/// Look one gate up by name.
+#[must_use]
+pub fn find(name: &str) -> Option<&'static dyn Gate> {
+    registry().into_iter().find(|gate| gate.name() == name)
+}
+
+/// Look one subset up by name.
+#[must_use]
+pub fn subset(name: &str) -> Option<&'static Subset> {
+    SUBSETS.iter().find(|subset| subset.name == name)
+}
+
+/// Every gate `package` is responsible for, in registry order.
 #[must_use]
 pub fn owned_by(package: &str) -> Vec<&'static str> {
-    SUBCOMMANDS
-        .iter()
-        .filter(|entry| entry.home.package() == Some(package))
-        .map(|entry| entry.name)
+    registry()
+        .into_iter()
+        .filter(|gate| gate.package() == Some(package))
+        .map(Gate::name)
         .collect()
 }
 
-/// One row of a delegate crate's table: the name typed on the command line,
-/// paired with the function that runs it.
-pub type Implemented<'a> = &'a [(&'a str, fn(&[String]))];
-
-/// Run `name` out of a delegate crate's table, reporting whether that table owns
-/// it. A name it does not own runs nothing, so `xtask` stays the only place an
-/// unknown subcommand is reported.
-#[must_use]
-pub fn dispatch(implemented: Implemented<'_>, name: &str, args: &[String]) -> bool {
-    match implemented.iter().find(|(row, _)| *row == name) {
-        Some((_, run)) => {
-            run(args);
-            true
-        }
-        None => false,
-    }
-}
-
-/// Every disagreement between the subcommands this table assigns to `package`
-/// and the table `package` actually implements.
+/// Every disagreement between the gates this registry assigns to `package` and
+/// the gates `package` actually implements.
 ///
-/// The two are separate declarations that have to agree. A row assigned here
-/// with no entry in the delegate table fails as an unknown subcommand after the
-/// build has already been paid for, and an entry in the delegate table that this
-/// table assigns elsewhere is unreachable. Dispatch resolves by linear search,
-/// so a repeated name would shadow its second entry while both lists still
-/// compared equal. Both sides are derived at call time, so a subcommand added
-/// to one and not the other is reported here.
+/// The two are separate declarations that have to agree. A gate assigned here
+/// with no entry in the delegate table fails as an unknown name after the build
+/// has already been paid for, and an entry in the delegate table that this
+/// registry assigns elsewhere is unreachable. The child resolves by linear
+/// search, so a repeated name would shadow its second entry while both lists
+/// still compared equal. Both sides are derived at call time, so a gate added to
+/// one and not the other is reported here.
 #[must_use]
-pub fn delegate_table_problems(package: &str, implemented: Implemented<'_>) -> Vec<String> {
+pub fn delegate_table_problems(package: &str, implemented: &[&dyn Gate]) -> Vec<String> {
     let mut problems = Vec::new();
     let assigned = owned_by(package);
-    let mut names: Vec<&str> = implemented.iter().map(|(name, _)| *name).collect();
+    let mut names: Vec<&str> = implemented.iter().map(|gate| gate.name()).collect();
     for name in &assigned {
         if !names.contains(name) {
             problems.push(format!(
@@ -111,443 +277,43 @@ pub fn delegate_table_problems(package: &str, implemented: Implemented<'_>) -> V
     let before = names.len();
     names.dedup();
     if before != names.len() {
-        problems.push(format!("`{package}` lists a subcommand more than once"));
+        problems.push(format!("`{package}` lists a gate more than once"));
     }
     problems.sort_unstable();
     problems
 }
 
-/// What a subcommand is for, and therefore what CI owes it.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Kind {
-    /// Judges the tree and must run on every change. `xtask gates` executes it
-    /// and holds it to its pinned baseline.
-    Gate,
-    /// Writes release evidence artifacts. The release pipeline owns it, so it
-    /// must be named by a workflow but is not run by the sweep.
-    Evidence,
-    /// Re-runs other registered gates or drives full cargo builds. Wiring it
-    /// into the sweep would rebuild the workspace inside a gate, so it must be
-    /// named by a workflow instead and is not swept.
-    Composite,
-    /// Needs inputs only a caller can supply, so CI cannot run it. The string
-    /// is the reason, and it is required: an empty one is a violation.
-    Tool(&'static str),
-    /// The sweep itself. Excluded from the gate list so it cannot recurse.
-    Runner,
-}
-
-/// One registered subcommand.
-pub struct Subcommand {
-    /// Name as typed on the command line.
-    pub name: &'static str,
-    /// Argument spec shown in help.
-    pub usage: &'static str,
-    /// One-line description shown in help.
-    pub help: &'static str,
-    /// What CI owes this subcommand.
-    pub kind: Kind,
-    /// Arguments the sweep runs a `Gate` with. Empty means run it bare.
-    pub ci_args: &'static [&'static str],
-    /// Which crate implements it, and the entry point when that is this one.
-    pub home: Home,
-}
-
-/// Every registered subcommand.
-pub const SUBCOMMANDS: &[Subcommand] = &[
-    Subcommand {
-        name: "abstraction-gate",
-        usage: "",
-        help: "Enforce registered building-block boundaries",
-        kind: Kind::Gate,
-        ci_args: &[],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "backend-matrix",
-        usage: "[--output PATH]",
-        help: "Probe linked backend release policy",
-        kind: Kind::Evidence,
-        ci_args: &[],
-        home: Home::Evidence,
-    },
-    Subcommand {
-        name: "bench-crossback",
-        usage: "[program]",
-        help: "Cross-backend perf table",
-        kind: Kind::Tool(
-            "prints a cross-backend performance table for a human; measured release evidence is owned by release-benchmarks",
-        ),
-        ci_args: &[],
-        home: Home::Evidence,
-    },
-    Subcommand {
-        name: "bench-release",
-        usage: "[--backend all]",
-        help: "Run the cross-backend release benchmark coordinator",
-        kind: Kind::Evidence,
-        ci_args: &[],
-        home: Home::Evidence,
-    },
-    Subcommand {
-        name: "catalog",
-        usage: "[--out DIR] [--check]",
-        help: "Emit one markdown table per subsystem under docs/catalog; --check gates drift",
-        kind: Kind::Gate,
-        ci_args: &["--check"],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "check-cat-a",
-        usage: "",
-        help: "Run every Cat-A pre-merge gate",
-        kind: Kind::Composite,
-        ci_args: &[],
-        home: Home::Local(check_cat_a::run),
-    },
-    Subcommand {
-        name: "check-tier-deps",
-        usage: "",
-        help: "Reject upward tier path dependencies",
-        kind: Kind::Gate,
-        ci_args: &[],
-        home: Home::Local(check_tier_deps::run),
-    },
-    Subcommand {
-        name: "compile",
-        usage: "<program.vir> --to TARGET",
-        help: "Emit authenticated payloads through linked target compiler facets",
-        kind: Kind::Tool("compiles a caller-supplied wire program to a caller-chosen target"),
-        ci_args: &[],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "conformance-matrix",
-        usage: "[--check] [--output PATH]",
-        help: "Enumerate or check release op/backend conformance coverage",
-        kind: Kind::Gate,
-        ci_args: &["--check"],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "dep-drift",
-        usage: "",
-        help: "Fail if a manifest pins a workspace-managed dependency to a different version",
-        kind: Kind::Gate,
-        ci_args: &[],
-        home: Home::Local(dep_drift::run),
-    },
-    Subcommand {
-        name: "docs-check",
-        usage: "",
-        help: "Validate manifest-backed documentation lifecycle and generated navigation",
-        kind: Kind::Gate,
-        ci_args: &[],
-        home: Home::Local(docs_check::run),
-    },
-    Subcommand {
-        name: "dup-scan",
-        usage: "[--write-baseline] [--lower-pin CRATE] [--report [CRATE]]",
-        help: "Measure cross-file duplicate source blocks against the pinned per-crate baseline",
-        kind: Kind::Gate,
-        ci_args: &[],
-        home: Home::Local(dup_scan::run),
-    },
-    Subcommand {
-        name: "feature-isolation",
-        usage: "[--list] [--sweep [--write] [--only-unrecorded]] [--member NAME]",
-        help: "Hold every feature selection the manifests declare to its recorded compile outcome",
-        kind: Kind::Gate,
-        ci_args: &[],
-        home: Home::Local(feature_isolation::run),
-    },
-    Subcommand {
-        name: "feature-matrix",
-        usage: "[--output PATH]",
-        help: "Generate crate feature evidence matrix",
-        kind: Kind::Evidence,
-        ci_args: &[],
-        home: Home::Local(feature_matrix::run),
-    },
-    Subcommand {
-        name: "gate1",
-        usage: "",
-        help: "Enforce Gate 1 complexity budget",
-        kind: Kind::Gate,
-        ci_args: &[],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "gates",
-        usage: "[--list]",
-        help: "Run every registered gate and hold it to the pinned baseline",
-        kind: Kind::Runner,
-        ci_args: &[],
-        home: Home::Local(sweep::run),
-    },
-    Subcommand {
-        name: "heuristic-audit",
-        usage: "[--strict]",
-        help: "Surface hand-rolled heuristics that should be self-consumer calls",
-        kind: Kind::Gate,
-        ci_args: &[],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "hot-path-scan",
-        usage: "[--strict]",
-        help: "Scan files in HOT_PATHS.toml for clone/alloc/lock patterns",
-        kind: Kind::Gate,
-        ci_args: &[],
-        home: Home::Local(hot_path_scan::run),
-    },
-    Subcommand {
-        name: "hygiene-matrix",
-        usage: "[--output PATH]",
-        help: "Scan source hygiene release blockers",
-        kind: Kind::Gate,
-        ci_args: &[],
-        home: Home::Local(hygiene_matrix::run),
-    },
-    Subcommand {
-        name: "launch-state",
-        usage: "[--output PATH]",
-        help: "Generate public launch completion state evidence",
-        kind: Kind::Evidence,
-        ci_args: &[],
-        home: Home::Local(launch_state::run),
-    },
-    Subcommand {
-        name: "lego-audit",
-        usage: "[--report-only|--with-repo|--write-baseline] [--duplicate-report-json PATH]",
-        help: "Deeper LEGO-block enforcement and composition baseline management",
-        kind: Kind::Gate,
-        ci_args: &[],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "lego-quick",
-        usage: "[--all]",
-        help: "Fast pre-commit boundary checks",
-        kind: Kind::Gate,
-        ci_args: &["--all"],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "list-ops",
-        usage: "[--write PATH|--check]",
-        help: "Render or check the schema-derived operation inventory",
-        kind: Kind::Gate,
-        ci_args: &["--check"],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "metadata-matrix",
-        usage: "[--output PATH]",
-        help: "Generate crate metadata evidence",
-        kind: Kind::Evidence,
-        ci_args: &[],
-        home: Home::Local(metadata_matrix::run),
-    },
-    Subcommand {
-        name: "op-matrix",
-        usage: "[--output PATH]",
-        help: "Generate operation/backend coverage evidence",
-        kind: Kind::Evidence,
-        ci_args: &[],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "operation-schema",
-        usage: "[--output PATH] [--check] [--validate PATH]",
-        help: "Generate or verify the canonical live operation contract schema",
-        kind: Kind::Gate,
-        ci_args: &["--check"],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "optimization-corpus",
-        usage: "[--output PATH]",
-        help: "Generate release optimization corpus manifest",
-        kind: Kind::Evidence,
-        ci_args: &[],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "optimization-docs",
-        usage: "[--output PATH] [--check]",
-        help: "Generate or check the source-owned optimizer pass reference",
-        kind: Kind::Gate,
-        ci_args: &["--check"],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "optimization-matrix",
-        usage: "[--output PATH]",
-        help: "Generate release optimization integration evidence",
-        kind: Kind::Evidence,
-        ci_args: &[],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "package-readiness",
-        usage: "[--output PATH]",
-        help: "Generate pre-publish package order evidence",
-        kind: Kind::Evidence,
-        ci_args: &[],
-        home: Home::Local(package_readiness::run),
-    },
-    Subcommand {
-        name: "platform-boundary",
-        usage: "",
-        help: "Fail on consumer names in platform crate docs and comments",
-        kind: Kind::Gate,
-        ci_args: &[],
-        home: Home::Local(platform_boundary::run),
-    },
-    Subcommand {
-        name: "primitive-admission-gate",
-        usage: "",
-        help: "Enforce canonical LEGO primitive adoption and exceptions",
-        kind: Kind::Gate,
-        ci_args: &[],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "print-composition",
-        usage: "<op_id>",
-        help: "Walk an op's Region tree and print its decomposition chain",
-        kind: Kind::Tool("walks one operation id supplied by the caller"),
-        ci_args: &[],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "release-benchmarks",
-        usage: "[--backend cuda]",
-        help: "Generate long-running release benchmark artifacts",
-        kind: Kind::Evidence,
-        ci_args: &[],
-        home: Home::Evidence,
-    },
-    Subcommand {
-        name: "release-conformance",
-        usage: "[--backend all]",
-        help: "Generate real backend conformance artifacts",
-        kind: Kind::Evidence,
-        ci_args: &[],
-        home: Home::Local(release_conformance::run),
-    },
-    Subcommand {
-        name: "release-evidence",
-        usage: "",
-        help: "Generate cheap structural release evidence artifacts",
-        kind: Kind::Evidence,
-        ci_args: &[],
-        home: Home::Evidence,
-    },
-    Subcommand {
-        name: "release-gate",
-        usage: "",
-        help: "Pre-publish sanity checks",
-        kind: Kind::Composite,
-        ci_args: &[],
-        home: Home::Local(release_gate::run),
-    },
-    Subcommand {
-        name: "release-workload-matrix",
-        usage: "[--output PATH]",
-        help: "Generate cheap release workload family evidence",
-        kind: Kind::Evidence,
-        ci_args: &[],
-        home: Home::Local(release_workload_matrix::run),
-    },
-    Subcommand {
-        name: "shrink",
-        usage: "<file.vir> <oracle.sh>",
-        help: "Delta-debug a crashing wire formulation down to a minimal reproducer",
-        kind: Kind::Tool(
-            "delta-debugs a caller-supplied crashing wire file against a caller-supplied oracle",
-        ),
-        ci_args: &[],
-        home: Home::Local(shrink::run),
-    },
-    Subcommand {
-        name: "trace-f32",
-        usage: "<op_id>",
-        help: "Run an op's test inputs through the reference and dump the expected output",
-        kind: Kind::Tool("dumps reference output for one operation id supplied by the caller"),
-        ci_args: &[],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "verify-rewrite-proofs",
-        usage: "",
-        help: "Verify optimizer rewrite proof fixtures",
-        kind: Kind::Gate,
-        ci_args: &[],
-        home: Home::Registry,
-    },
-    Subcommand {
-        name: "version-matrix",
-        usage: "[--output PATH]",
-        help: "Generate manifest version matrix",
-        kind: Kind::Evidence,
-        ci_args: &[],
-        home: Home::Local(version_matrix::run),
-    },
-    Subcommand {
-        name: "vyre-release-gate",
-        usage: "[--prepublish] [--manifest PATH]",
-        help: "Enforce final or prepublication evidence closure",
-        kind: Kind::Gate,
-        ci_args: &[],
-        home: Home::Evidence,
-    },
-    Subcommand {
-        name: "whats-similar",
-        usage: "(--op-id <id>|--all) [--duplicate-report-json PATH]",
-        help: "Duplicate query by IR shape",
-        kind: Kind::Gate,
-        ci_args: &["--all"],
-        home: Home::Registry,
-    },
-];
-
-/// Look one subcommand up by name.
-#[must_use]
-pub fn find(name: &str) -> Option<&'static Subcommand> {
-    SUBCOMMANDS.iter().find(|entry| entry.name == name)
-}
-
-/// Every subcommand the sweep must execute.
-#[must_use]
-pub fn gates() -> Vec<&'static Subcommand> {
-    SUBCOMMANDS
-        .iter()
-        .filter(|entry| entry.kind == Kind::Gate)
-        .collect()
-}
-
-/// Render the help text from the table.
+/// Render the help text from the registry.
 #[must_use]
 pub fn help_text() -> String {
-    let width = SUBCOMMANDS
+    let gates = registry();
+    let width = gates
         .iter()
-        .map(|entry| entry.name.len() + entry.usage.len() + 1)
+        .map(|gate| gate.name().len())
+        .chain(SUBSETS.iter().map(|subset| subset.name.len()))
         .max()
         .unwrap_or(0);
     let mut text = String::from(
         "vyre xtask runner\n\nUSAGE:\n  cargo run --bin xtask -- <subcommand> [options]\n\nSUBCOMMANDS:\n",
     );
-    for entry in SUBCOMMANDS {
-        let invocation = if entry.usage.is_empty() {
-            entry.name.to_string()
-        } else {
-            format!("{} {}", entry.name, entry.usage)
-        };
-        text.push_str(&format!("  {invocation:width$}  {}\n", entry.help));
+    for gate in &gates {
+        let name = gate.name();
+        text.push_str(&format!("  {name:width$}  {}\n", gate.help()));
     }
+    text.push_str(&format!(
+        "  {:width$}  Run every registered gate and hold each to its pinned finding count\n",
+        "gates"
+    ));
     text.push_str(&format!("  {:width$}  Print this message\n", "--help"));
+    text.push_str("\nSUBSETS:\n");
+    for subset in SUBSETS {
+        text.push_str(&format!(
+            "  {:width$}  {}\n",
+            subset.name, subset.help
+        ));
+    }
+    text.push_str("\nEvery subcommand is a gate. A gate that owns a generated artifact\n");
+    text.push_str("checks it against the tree and rewrites it when passed --write.\n");
     text
 }
 
@@ -555,149 +321,127 @@ pub fn help_text() -> String {
 mod tests {
     use super::*;
 
-    /// WHY: dispatch resolves by name, so a duplicate row makes the second one
-    /// unreachable and its gate silently stops running.
+    /// WHY: dispatch resolves by name, so a duplicate registration makes the
+    /// second one unreachable and its gate silently stops running.
     #[test]
-    fn every_subcommand_name_is_unique() {
-        let mut names: Vec<&str> = SUBCOMMANDS.iter().map(|entry| entry.name).collect();
+    fn every_gate_name_is_unique() {
+        let mut names: Vec<&str> = registry().iter().map(|gate| gate.name()).collect();
         let before = names.len();
         names.sort_unstable();
         names.dedup();
-        assert_eq!(
-            before,
-            names.len(),
-            "duplicate subcommand name in the table"
-        );
+        assert_eq!(before, names.len(), "duplicate gate name in the registry");
     }
 
-    /// WHY: the exemption is the whole escape hatch. An empty reason turns it
-    /// into an unexplained hole, which is how the 32 unwired gates happened.
+    /// WHY: a subset that names an unregistered gate silently runs fewer gates
+    /// than its name promises, which is the exemption this whole registry
+    /// exists to remove.
     #[test]
-    fn every_exempt_tool_states_why_ci_cannot_run_it() {
-        for entry in SUBCOMMANDS {
-            if let Kind::Tool(reason) = entry.kind {
+    fn every_subset_names_registered_gates() {
+        for subset in SUBSETS {
+            assert!(!subset.gates.is_empty(), "`{}` is empty", subset.name);
+            for name in subset.gates {
                 assert!(
-                    reason.len() > 20,
-                    "`{}` is exempt from CI without a real reason",
-                    entry.name
+                    find(name).is_some(),
+                    "subset `{}` names `{name}`, which is not registered",
+                    subset.name
                 );
             }
         }
     }
 
-    /// WHY: a gate whose CI arguments do not actually judge anything passes
-    /// vacuously. These four only report when asked to check.
+    /// WHY: `gates` is the runner, not a gate. Registering it would let the
+    /// sweep recurse into itself, and a subset named `gates` would do the same.
     #[test]
-    fn check_only_gates_are_run_with_check() {
-        for name in [
-            "catalog",
-            "conformance-matrix",
-            "list-ops",
-            "operation-schema",
-        ] {
-            let entry = find(name).expect("registered");
-            assert!(
-                entry.ci_args.contains(&"--check"),
-                "`{name}` must run with --check or it only regenerates output"
-            );
-        }
+    fn the_runner_is_not_a_gate() {
+        assert!(find("gates").is_none());
+        assert!(subset("gates").is_none());
     }
 
-    /// WHY: exactly one runner may exist, or the sweep could recurse into a
-    /// second copy of itself.
+    /// WHY: help is generated from the registry, so it cannot drift from
+    /// dispatch again.
     #[test]
-    fn there_is_exactly_one_runner() {
-        let runners = SUBCOMMANDS
-            .iter()
-            .filter(|entry| entry.kind == Kind::Runner)
-            .count();
-        assert_eq!(runners, 1);
-    }
-
-    /// WHY: help is generated now, so it cannot drift from dispatch again.
-    #[test]
-    fn help_lists_every_registered_subcommand() {
+    fn help_lists_every_registered_gate_and_subset() {
         let text = help_text();
-        for entry in SUBCOMMANDS {
+        for gate in registry() {
             assert!(
-                text.contains(entry.name),
+                text.contains(gate.name()),
                 "`{}` is registered but absent from help",
-                entry.name
+                gate.name()
+            );
+        }
+        for subset in SUBSETS {
+            assert!(
+                text.contains(subset.name),
+                "subset `{}` is absent from help",
+                subset.name
             );
         }
     }
 
-    /// WHY: a delegated row names the crate that has to be built to run it. A
+    /// WHY: a delegated gate names the crate that has to be built to run it. A
     /// name that is not a workspace member would only fail at the moment an
     /// operator invoked the gate, which is the worst place to learn it.
     #[test]
-    fn every_delegated_subcommand_names_a_workspace_member() {
+    fn every_delegated_gate_names_a_workspace_member() {
         let members = std::fs::read_to_string(crate::checkout::checkout_root().join("Cargo.toml"))
             .expect("Fix: the workspace manifest must be readable from xtask");
-        for entry in SUBCOMMANDS {
-            let Some(package) = entry.home.package() else {
+        for gate in registry() {
+            let Some(package) = gate.package() else {
                 continue;
             };
             assert!(
                 members.contains(&format!("\"{package}\"")),
                 "`{}` delegates to `{package}`, which is not a workspace member",
-                entry.name
+                gate.name()
             );
         }
     }
 
-    /// WHY: `owned_by` is what each delegated crate checks its own dispatch
-    /// against, so the partition has to be total. A row that belongs to no
+    /// WHY: `owned_by` is what each delegated crate checks its own table
+    /// against, so the partition has to be total. A gate that belongs to no
     /// package and is not local would be dispatched by nobody.
     #[test]
-    fn every_subcommand_belongs_to_exactly_one_home() {
+    fn every_gate_belongs_to_exactly_one_home() {
         let delegated: usize = ["xtask-registry", "xtask-evidence"]
             .iter()
             .map(|package| owned_by(package).len())
             .sum();
-        let local = SUBCOMMANDS
+        let local = registry()
             .iter()
-            .filter(|entry| entry.home.package().is_none())
+            .filter(|gate| gate.package().is_none())
             .count();
-        assert_eq!(local + delegated, SUBCOMMANDS.len());
+        assert_eq!(local + delegated, registry().len());
     }
 
-    fn unreachable_run(_args: &[String]) {
-        panic!("a subcommand outside the table must never run");
-    }
+    /// A gate that exists only to be named in a table under test.
+    struct Named(&'static str);
 
-    fn noop(_args: &[String]) {}
-
-    /// WHY: a delegate crate is built only because `xtask` decided a subcommand
-    /// belongs to it, so answering to a name it was not given would run the
-    /// wrong gate under the right name. Dispatch must refuse every registered
-    /// name outside the table, and the panic proves it refuses without running
-    /// anything.
-    #[test]
-    fn dispatch_refuses_every_name_outside_the_table() {
-        let table: [(&str, fn(&[String])); 1] = [("owned", unreachable_run)];
-        for entry in SUBCOMMANDS {
-            assert!(
-                !dispatch(&table, entry.name, &["xtask".to_string()]),
-                "`{}` is not in the table and must not dispatch",
-                entry.name
-            );
+    impl Gate for Named {
+        fn name(&self) -> &'static str {
+            self.0
         }
-        assert!(!dispatch(&table, "", &["xtask".to_string()]));
+
+        fn help(&self) -> &'static str {
+            "a gate that exists only under test"
+        }
+
+        fn run(&self, _ctx: &crate::gate::GateCtx) -> Result<crate::gate::Report, crate::gate::GateError> {
+            panic!("a gate under table test must never run")
+        }
     }
 
-    /// WHY: the delegate crates check their own tables against this one through
-    /// `delegate_table_problems`, so a checker that reported nothing would let
-    /// every kind of drift through while reading as coverage. Each way the two
-    /// declarations can disagree must be named, and the live assignment is read
-    /// at run time so a new delegated subcommand cannot escape the check.
+    /// WHY: the delegate crates check their own tables against this registry
+    /// through `delegate_table_problems`, so a checker that reported nothing
+    /// would let every kind of drift through while reading as coverage. Each way
+    /// the two declarations can disagree must be named, and the live assignment
+    /// is read at run time so a new delegated gate cannot escape the check.
     #[test]
     fn the_delegate_checker_names_every_kind_of_drift() {
         let package = "xtask-registry";
         let assigned = owned_by(package);
-        let first = *assigned.first().expect("the registry owns subcommands");
+        let first = *assigned.first().expect("the registry owns gates");
 
-        let unassigned: [(&str, fn(&[String])); 1] = [("dep-drift", noop)];
+        let unassigned = Named("dep-drift");
         let mut expected = assigned
             .iter()
             .map(|name| format!("`{package}` is assigned `{name}` but does not implement it"))
@@ -706,25 +450,23 @@ mod tests {
             "`{package}` implements `dep-drift` but is not assigned it"
         ));
         expected.sort_unstable();
-        assert_eq!(delegate_table_problems(package, &unassigned), expected);
-
-        let mut duplicated = assigned
-            .iter()
-            .map(|name| (*name, noop as fn(&[String])))
-            .collect::<Vec<_>>();
-        duplicated.push((first, noop));
         assert_eq!(
-            delegate_table_problems(package, &duplicated),
-            vec![format!("`{package}` lists a subcommand more than once")]
+            delegate_table_problems(package, &[&unassigned as &dyn Gate]),
+            expected
         );
 
-        let complete = assigned
-            .iter()
-            .map(|name| (*name, noop as fn(&[String])))
-            .collect::<Vec<_>>();
+        let owned: Vec<Named> = assigned.iter().map(|name| Named(*name)).collect();
+        let repeated = Named(first);
+        let mut complete: Vec<&dyn Gate> = owned.iter().map(|gate| gate as &dyn Gate).collect();
         assert_eq!(
             delegate_table_problems(package, &complete),
             Vec::<String>::new()
+        );
+
+        complete.push(&repeated);
+        assert_eq!(
+            delegate_table_problems(package, &complete),
+            vec![format!("`{package}` lists a gate more than once")]
         );
     }
 }

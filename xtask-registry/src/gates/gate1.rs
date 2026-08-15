@@ -23,9 +23,8 @@
 //!
 //! Exit code 0 = all ops pass. Exit code 1 = ≥ 1 op fails (CI signal).
 
-use std::process;
-
 use vyre::ir::{Node, Program};
+use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
 const LOOP_BUDGET: usize = 4;
 const NODE_BUDGET: usize = 200;
@@ -62,76 +61,75 @@ impl Verdict {
 }
 
 /// Entry point for the `gate1` subcommand.
-pub(crate) fn run(_args: &[String]) {
-    let mut verdicts: Vec<Verdict> = Vec::new();
-    for entry in vyre_registry_link::operation::live_operation_registry().iter() {
-        let program = entry.program().unwrap_or_else(|| {
-            panic!(
-                "Fix: canonical operation `{}` provides no neutral builder; register one or remove the registration",
-                entry.id
-            )
-        });
-        verdicts.push(verdict_for(entry.id, &program));
+/// Enforces the Gate 1 complexity budget over every registered operation.
+pub struct Gate1;
+
+impl Gate for Gate1 {
+    fn name(&self) -> &'static str {
+        "gate1"
     }
 
-    verdicts.sort_by(|a, b| a.op_id.cmp(&b.op_id));
-
-    let total = verdicts.len();
-    let failures: Vec<&Verdict> = verdicts.iter().filter(|v| !v.passes()).collect();
-
-    println!("=== Gate 1  -  complexity budget ===");
-    println!(
-        "Budget: loops <= {LOOP_BUDGET}  AND  nodes <= {NODE_BUDGET}, \
-         OR composed_fraction >= {:.0}%",
-        COMPOSED_FRACTION_THRESHOLD * 100.0
-    );
-    println!("Ops audited: {total}");
-    println!("Failures:    {}", failures.len());
-    println!();
-
-    for v in &verdicts {
-        let mark = if v.passes() { "✓" } else { "✗" };
-        println!(
-            "{mark}  {:<60}  loops={:<3} nodes={:<5} composed={:>5.1}%",
-            v.op_id,
-            v.loops,
-            v.total_nodes,
-            v.composed_fraction_pct()
-        );
+    fn help(&self) -> &'static str {
+        "Enforce the Gate 1 complexity budget"
     }
 
-    if !failures.is_empty() {
-        println!();
-        println!("=== Failure detail ===");
-        for v in &failures {
-            println!();
-            println!("✗ {}", v.op_id);
-            println!(
-                "  loops={} (budget {LOOP_BUDGET}), nodes={} (budget {NODE_BUDGET}), composed={:.1}% (need {:.0}%)",
-                v.loops,
-                v.total_nodes,
-                v.composed_fraction_pct(),
-                COMPOSED_FRACTION_THRESHOLD * 100.0
-            );
-            if v.inline_hot_spots.is_empty() {
-                println!("  Fix: factor inline work into a Tier 2.5 primitive call (region::wrap_child).");
-            } else {
-                println!("  Inline hot spots that should be Tier 2.5 primitive calls:");
-                for spot in &v.inline_hot_spots {
-                    println!("    - {spot}");
-                }
-                println!(
-                    "  Fix: extract each hot spot into a `vyre-primitives::{{math,nn,hash,matching,parsing,text,graph}}::<op>` primitive (one crate, feature-gated per domain), \
-                     then call it from this op via `region::wrap_child(<primitive_op_id>, ...)`. \
-                     See docs/lego-block-rule.md."
-                );
-            }
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        let mut verdicts: Vec<Verdict> = Vec::new();
+        for entry in vyre_registry_link::operation::live_operation_registry().iter() {
+            let Some(program) = entry.program() else {
+                report.find(Finding::new(
+                    format!(
+                        "registered operation `{}` provides no neutral builder, so its complexity cannot be judged",
+                        entry.id
+                    ),
+                    "register a neutral builder for it, or withdraw the registration",
+                ));
+                continue;
+            };
+            verdicts.push(verdict_for(entry.id, &program));
         }
-        process::exit(1);
-    }
+        verdicts.sort_by(|left, right| left.op_id.cmp(&right.op_id));
 
-    println!();
-    println!("All {total} ops within budget. Gate 1 ✓");
+        report.note(format!(
+            "budget: loops <= {LOOP_BUDGET} and nodes <= {NODE_BUDGET}, or composed_fraction >= {:.0}%",
+            COMPOSED_FRACTION_THRESHOLD * 100.0
+        ));
+        report.note(format!("{} operation(s) audited", verdicts.len()));
+        for verdict in &verdicts {
+            report.note(format!(
+                "{:<60}  loops={:<3} nodes={:<5} composed={:>5.1}%",
+                verdict.op_id,
+                verdict.loops,
+                verdict.total_nodes,
+                verdict.composed_fraction_pct()
+            ));
+            if verdict.passes() {
+                continue;
+            }
+            let fix = if verdict.inline_hot_spots.is_empty() {
+                "factor the inline work into a registered primitive call through region::wrap_child"
+                    .to_string()
+            } else {
+                format!(
+                    "extract each inline hot spot into a vyre-primitives operation and call it through region::wrap_child: {}",
+                    verdict.inline_hot_spots.join(", ")
+                )
+            };
+            report.find(Finding::new(
+                format!(
+                    "operation `{}` is over the Gate 1 budget: loops={} (budget {LOOP_BUDGET}), nodes={} (budget {NODE_BUDGET}), composed={:.1}% (need {:.0}%)",
+                    verdict.op_id,
+                    verdict.loops,
+                    verdict.total_nodes,
+                    verdict.composed_fraction_pct(),
+                    COMPOSED_FRACTION_THRESHOLD * 100.0
+                ),
+                fix,
+            ));
+        }
+        Ok(report)
+    }
 }
 
 fn verdict_for(op_id: &'static str, program: &Program) -> Verdict {

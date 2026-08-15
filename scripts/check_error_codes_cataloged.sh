@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
-# Every stable error code emitted by vyre source must appear in
-# docs/error-codes.md. Prose drifts; codes don't. Catching a code that's
-# been added to source without a doc entry lets tooling keep up.
+# Every stable V### validation code emitted by vyre source must appear in
+# docs/generated/error-codes.toml, which is rendered from the rule table in
+# vyre-foundation/src/validate/catalog.rs. Prose drifts; codes don't. Catching
+# a code that's been added to source without a registry entry lets tooling keep
+# up.
 #
-# Scans for V### (3-digit), E-*, W-*, B-*, C-* tokens inside Rust string
-# literals and verifies each appears in the doc.
+# Scans for V### (3-digit) tokens inside Rust string literals. Codes in the
+# E-*, W-*, B-* and C-* families are owned by the crate that emits them and are
+# checked by that crate's own catalog test, not here.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-DOC="docs/error-codes.md"
-if [[ ! -f "$DOC" ]]; then
-    echo "Missing catalog: $DOC. Fix: create the registry before adding new codes." >&2
+CATALOG="docs/generated/error-codes.toml"
+if [[ ! -f "$CATALOG" ]]; then
+    echo "Missing catalog: $CATALOG. Fix: run VYRE_WRITE_ERROR_CATALOG=1 ./cargo_full test -p vyre-foundation --test validator_error_docs." >&2
     exit 1
 fi
 
@@ -29,23 +32,23 @@ SEARCH_DIRS=(
 )
 
 codes_in_source="$(
-    grep -rEho '"(V[0-9]{3}|[E|W|B|C]-[A-Z\-]+)[^"]*' \
+    grep -rEho '"V[0-9]{3}' \
         --include='*.rs' \
         "${SEARCH_DIRS[@]}" \
         2>/dev/null \
-    | grep -oE '(V[0-9]{3}|[E|W|B|C]-[A-Z\-]+)' \
+    | grep -oE 'V[0-9]{3}' \
     | sort -u
 )"
 
 missing=0
 while IFS= read -r code; do
     if [[ -z "$code" ]]; then continue; fi
-    if ! grep -Fq "\`${code}\`" "$DOC"; then
-        echo "Uncataloged error code: ${code}. Fix: add a row to ${DOC}." >&2
+    if ! grep -Fq "code = \"${code}\"" "$CATALOG"; then
+        echo "Uncataloged validation code: ${code}. Fix: add a ValidationRule to vyre-foundation/src/validate/catalog.rs and regenerate ${CATALOG}." >&2
         missing=1
     fi
 done <<< "$codes_in_source"
 
 if [[ "$missing" -ne 0 ]]; then exit 1; fi
 count="$(echo "$codes_in_source" | grep -c . || true)"
-echo "Error codes cataloged: ${count} codes verified against ${DOC}."
+echo "Error codes cataloged: ${count} validation codes verified against ${CATALOG}."

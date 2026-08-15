@@ -166,7 +166,7 @@ pub fn count_sketch_update(table: &str, hashes: &str, signs: &str, d: u32, w: u3
             // unvalidated producer input; without this gate the GPU writes to
             // `addr = t*w + col`, which for `col >= w` corrupts a DIFFERENT row's
             // cell (a silent parity divergence, the CPU skips) or, past the last
-            // row, OOB-writes beyond the d*w table (memory corruption on CUDA).
+            // row, OOB-writes beyond the d*w table (memory corruption on a real GPU).
             // Transparent to valid columns (`col < w`).
             Node::if_then(
                 Expr::lt(Expr::var("col"), Expr::u32(w)),
@@ -506,7 +506,7 @@ mod tests {
         // A col far past `w` makes addr = t*w + col overshoot the d*w table. The
         // col<w gate must skip the read-modify-write with control flow, so
         // reference_eval reports ZERO OOB accesses. The pre-fix ungated scatter to
-        // addr would OOB read+write past the table (memory corruption on CUDA) →
+        // addr would OOB read+write past the table (memory corruption on a real GPU) →
         // nonzero. This proves the gate never leans on the interpreter's masking.
         let d = 3u32;
         let w = 4u32;

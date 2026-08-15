@@ -1,9 +1,15 @@
-//! Crate feature release evidence for Vyre.
+//! Hold the crate feature evidence to the feature tables the manifests declare.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde::Serialize;
 
+use crate::artifact_gate::{self, Inspection};
+use crate::gate::{Gate, GateCtx, GateError, Report};
+use crate::manifest_walk::{self, PackageManifest};
+
+/// The artifact this gate owns, relative to the workspace root.
+const ARTIFACT: &str = "release/evidence/metadata/feature-matrix.json";
 #[derive(Debug, Serialize)]
 struct FeatureMatrix {
     schema_version: u32,
@@ -28,14 +34,56 @@ struct PackageFeatures {
 
 const REQUIRED_RELEASE_PACKAGES: &[&str] = &["vyre", "vyre-driver-cuda", "vyre-driver-wgpu"];
 
-pub(crate) fn run(args: &[String]) {
-    let output = crate::output_arg::parsed_or_exit(parse_output(args));
-    let vyre_root = crate::checkout::checkout_root();
-    let roots = [vyre_root];
+/// Holds the feature matrix to the feature tables in the manifests.
+pub struct FeatureMatrixGate;
+
+impl Gate for FeatureMatrixGate {
+    fn name(&self) -> &'static str {
+        "feature-matrix"
+    }
+
+    fn help(&self) -> &'static str {
+        "Regenerate release/evidence/metadata/feature-matrix.json from every workspace manifest \
+         and report each line the committed artifact disagrees on. Proves every feature table \
+         parses, every feature member resolves to a local feature, an optional dependency or a \
+         dependency feature, every package that declares features declares a default policy, the \
+         three release packages exist with empty defaults, and that vyre, vyre-driver-cuda and \
+         vyre-driver-wgpu declare their release features. Proves nothing about whether any \
+         feature selection compiles: that is feature-isolation."
+    }
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        Ok(artifact_gate::settle_inspection(
+            ctx,
+            self.name(),
+            inspect(&ctx.root),
+        ))
+    }
+}
+
+/// What the manifests declare about features, and the artifact recording it.
+fn inspect(root: &Path) -> Inspection {
+    let mut inspection = Inspection::new();
     let mut packages = Vec::new();
     let mut blockers = Vec::new();
-    for root in &roots {
-        collect_features(root, &mut packages, &mut blockers);
+    manifest_walk::collect_manifests(
+        root,
+        "feature matrix",
+        &mut packages,
+        &mut blockers,
+        parse_features,
+    );
+    for blocker in &blockers {
+        inspection.blocked(
+            ARTIFACT,
+            blocker.clone(),
+            "Repair the manifest the sentence names. A feature matrix built from a tree it could \
+             not finish reading describes a smaller workspace than the one that ships.",
+        );
     }
     packages.sort_by(|left, right| left.name.cmp(&right.name));
     let missing_required_release_packages = REQUIRED_RELEASE_PACKAGES
@@ -44,66 +92,26 @@ pub(crate) fn run(args: &[String]) {
         .filter(|required| !packages.iter().any(|package| package.name == *required))
         .collect::<Vec<_>>();
     if packages.is_empty() {
-        blockers.push("feature matrix found zero packages".to_string());
+        let blocker = "feature matrix found zero packages".to_string();
+        inspection.blocked(
+            ARTIFACT,
+            blocker.clone(),
+            "The walk reached no manifest at all, so every assertion below is vacuous. Check that \
+             the gate is running against the checkout root.",
+        );
+        blockers.push(blocker);
     }
-    blockers.extend(
-        missing_required_release_packages.iter().map(|package| {
-            format!("feature matrix is missing required release package `{package}`")
-        }),
-    );
+    for package in &missing_required_release_packages {
+        let blocker = format!("feature matrix is missing required release package `{package}`");
+        inspection.blocked(
+            ARTIFACT,
+            blocker.clone(),
+            format!("Add `{package}` to the workspace, or drop it from the required release set."),
+        );
+        blockers.push(blocker);
+    }
     for package in &packages {
-        if !package.malformed_features.is_empty() {
-            blockers.push(format!(
-                "{} has malformed feature definitions: {}",
-                package.name,
-                package.malformed_features.join(", ")
-            ));
-        }
-        if package.feature_count > 0 && !package.has_default_feature {
-            blockers.push(format!(
-                "{} defines {} feature(s) but no explicit default feature policy",
-                package.name, package.feature_count
-            ));
-        }
-        if !package.unresolved_feature_members.is_empty() {
-            blockers.push(format!(
-                "{} has feature members that do not resolve to local features, optional dependencies, or dependency features: {}",
-                package.name,
-                package.unresolved_feature_members.join(", ")
-            ));
-        }
-        if matches!(
-            package.name.as_str(),
-            "vyre" | "vyre-driver-cuda" | "vyre-driver-wgpu"
-        ) && !package.default_feature_members.is_empty()
-        {
-            blockers.push(format!(
-                "{} default feature set must stay empty; GPU release paths are explicit feature choices",
-                package.name
-            ));
-        }
-        if package.name == "vyre" {
-            for required in ["cuda", "wgpu"] {
-                if !package.features.iter().any(|feature| feature == required) {
-                    blockers.push(format!(
-                        "vyre top-level crate is missing release feature `{required}`"
-                    ));
-                }
-            }
-        }
-        if package.name == "vyre-driver-cuda"
-            && !package.features.iter().any(|feature| feature == "cuda")
-        {
-            blockers
-                .push("vyre-driver-cuda is missing explicit `cuda` release feature".to_string());
-        }
-        if package.name == "vyre-driver-wgpu"
-            && !package.features.iter().any(|feature| feature == "wgpu")
-        {
-            blockers.push(
-                "vyre-driver-wgpu is missing explicit `wgpu` fallback release feature".to_string(),
-            );
-        }
+        collect_package_blockers(package, &mut inspection, &mut blockers);
     }
     let matrix = FeatureMatrix {
         schema_version: 1,
@@ -112,45 +120,116 @@ pub(crate) fn run(args: &[String]) {
         packages,
         blockers,
     };
-
-    crate::output_arg::write_json(&output, &matrix);
-    crate::output_arg::report_evidence_artifact("feature-matrix", &output, &matrix.blockers);
+    inspection.generates(ARTIFACT, &matrix);
+    inspection
 }
 
-fn collect_features(root: &Path, packages: &mut Vec<PackageFeatures>, blockers: &mut Vec<String>) {
-    crate::manifest_walk::collect_manifests(
-        root,
-        "feature matrix",
-        packages,
-        blockers,
-        parse_features,
-    );
+/// Every release feature rule one package breaks.
+fn collect_package_blockers(
+    package: &PackageFeatures,
+    inspection: &mut Inspection,
+    blockers: &mut Vec<String>,
+) {
+    let mut record = |message: String, fix: String| {
+        inspection.blocked(ARTIFACT, message.clone(), fix);
+        blockers.push(message);
+    };
+    if !package.malformed_features.is_empty() {
+        record(
+            format!(
+                "{} has malformed feature definitions: {}",
+                package.name,
+                package.malformed_features.join(", ")
+            ),
+            format!(
+                "Every entry under [features] in {} must be an array of strings.",
+                package.manifest
+            ),
+        );
+    }
+    if package.feature_count > 0 && !package.has_default_feature {
+        record(
+            format!(
+                "{} defines {} feature(s) but no explicit default feature policy",
+                package.name, package.feature_count
+            ),
+            format!(
+                "Add a `default = [...]` entry to [features] in {}. An absent default is a \
+                 decision nobody wrote down.",
+                package.manifest
+            ),
+        );
+    }
+    if !package.unresolved_feature_members.is_empty() {
+        record(
+            format!(
+                "{} has feature members that do not resolve to local features, optional dependencies, or dependency features: {}",
+                package.name,
+                package.unresolved_feature_members.join(", ")
+            ),
+            format!(
+                "Each `feature:member` pair names a member cargo cannot resolve. Correct the name \
+                 in {}, or declare the dependency it refers to.",
+                package.manifest
+            ),
+        );
+    }
+    if matches!(
+        package.name.as_str(),
+        "vyre" | "vyre-driver-cuda" | "vyre-driver-wgpu"
+    ) && !package.default_feature_members.is_empty()
+    {
+        record(
+            format!(
+                "{} default feature set must stay empty; GPU release paths are explicit feature choices",
+                package.name
+            ),
+            format!(
+                "Empty the `default` feature in {}. A GPU backend selected by a default is one \
+                 nobody chose.",
+                package.manifest
+            ),
+        );
+    }
+    if package.name == "vyre" {
+        for required in ["cuda", "wgpu"] {
+            if !package.features.iter().any(|feature| feature == required) {
+                record(
+                    format!("vyre top-level crate is missing release feature `{required}`"),
+                    format!("Declare a `{required}` feature in {}.", package.manifest),
+                );
+            }
+        }
+    }
+    if package.name == "vyre-driver-cuda" && !package.features.iter().any(|feature| feature == "cuda")
+    {
+        record(
+            "vyre-driver-cuda is missing explicit `cuda` release feature".to_string(),
+            format!("Declare a `cuda` feature in {}.", package.manifest),
+        );
+    }
+    if package.name == "vyre-driver-wgpu" && !package.features.iter().any(|feature| feature == "wgpu")
+    {
+        record(
+            "vyre-driver-wgpu is missing explicit `wgpu` fallback release feature".to_string(),
+            format!("Declare a `wgpu` feature in {}.", package.manifest),
+        );
+    }
 }
 
 fn parse_features(path: &Path) -> Result<Option<PackageFeatures>, String> {
-    crate::manifest_walk::parse_package_manifest(
-        path,
-        "release feature",
-        "feature manifest",
-        |name, value, _package| build_features(path, name, value),
-    )
-}
-
-fn build_features(
-    path: &Path,
-    name: &str,
-    value: &toml::Value,
-) -> Result<Option<PackageFeatures>, String> {
-    let mut features: Vec<String> = value
-        .get("features")
-        .and_then(toml::Value::as_table)
+    let Some(PackageManifest { document, name }) =
+        manifest_walk::parse_package_manifest(path, "release feature")?
+    else {
+        return Ok(None);
+    };
+    let features_table = document.get("features").and_then(toml::Value::as_table);
+    let mut features: Vec<String> = features_table
         .map(|table| table.keys().cloned().collect())
         .unwrap_or_default();
     features.sort();
     let has_default_feature = features.iter().any(|feature| feature == "default");
-    let default_feature_members = value
-        .get("features")
-        .and_then(toml::Value::as_table)
+    let default_feature_members = features_table
         .and_then(|table| table.get("default"))
         .and_then(toml::Value::as_array)
         .map(|members| {
@@ -161,9 +240,7 @@ fn build_features(
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
-    let malformed_features = value
-        .get("features")
-        .and_then(toml::Value::as_table)
+    let malformed_features = features_table
         .map(|table| {
             table
                 .iter()
@@ -177,15 +254,15 @@ fn build_features(
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
-    let dependency_names = dependency_names(value);
-    let optional_dependency_names = optional_dependency_names(value);
+    let dependency_names = dependency_names(&document);
+    let optional_dependency_names = optional_dependency_names(&document);
     let unresolved_feature_members = unresolved_feature_members(
-        value.get("features").and_then(toml::Value::as_table),
+        features_table,
         &features,
         &dependency_names,
         &optional_dependency_names,
     );
-    let release_policy = release_policy(name);
+    let release_policy = release_policy(&name);
     Ok(Some(PackageFeatures {
         name: name.to_string(),
         manifest: path.display().to_string(),
@@ -199,30 +276,27 @@ fn build_features(
     }))
 }
 
-fn dependency_names(value: &toml::Value) -> Vec<String> {
+fn dependency_names(document: &toml::Table) -> Vec<String> {
     let mut names = Vec::new();
-    collect_dependency_names_recursive(value, false, &mut names);
+    collect_dependency_names_recursive(document, false, &mut names);
     names.sort();
     names.dedup();
     names
 }
 
-fn optional_dependency_names(value: &toml::Value) -> Vec<String> {
+fn optional_dependency_names(document: &toml::Table) -> Vec<String> {
     let mut names = Vec::new();
-    collect_dependency_names_recursive(value, true, &mut names);
+    collect_dependency_names_recursive(document, true, &mut names);
     names.sort();
     names.dedup();
     names
 }
 
 fn collect_dependency_names_recursive(
-    value: &toml::Value,
+    table: &toml::Table,
     optional_only: bool,
     out: &mut Vec<String>,
 ) {
-    let Some(table) = value.as_table() else {
-        return;
-    };
     for (key, child) in table {
         if matches!(
             key.as_str(),
@@ -237,14 +311,18 @@ fn collect_dependency_names_recursive(
                     }
                 }
             }
-        } else {
+        } else if let Some(child) = child.as_table() {
             collect_dependency_names_recursive(child, optional_only, out);
         }
     }
 }
 
-fn unresolved_feature_members(
-    features_table: Option<&toml::value::Table>,
+/// Every `feature:member` pair naming a member cargo cannot resolve.
+///
+/// `pub(crate)` because the contract test drives it directly: the resolution
+/// rules are the part of this gate a fixture can prove without a workspace.
+pub(crate) fn unresolved_feature_members(
+    features_table: Option<&toml::Table>,
     features: &[String],
     dependencies: &[String],
     optional_dependencies: &[String],
@@ -299,17 +377,4 @@ fn release_policy(name: &str) -> &'static str {
         "vyre-driver-wgpu" => "WGPU backend crate keeps default empty as fallback path",
         _ => "feature definitions are syntactically valid and have an explicit default policy",
     }
-}
-
-fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    crate::output_arg::parse_output_arg(
-        args,
-        "feature-matrix",
-        "Writes Vyre crate feature evidence.",
-        default_output,
-    )
-}
-
-fn default_output() -> PathBuf {
-    crate::checkout::checkout_root().join("release/evidence/metadata/feature-matrix.json")
 }

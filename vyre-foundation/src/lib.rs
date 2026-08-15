@@ -130,7 +130,7 @@ pub use memory_model::MemoryOrdering;
 /// Endian-fixed encode/decode helpers for `Expr::Opaque` / `Node::Opaque` payloads.
 pub mod opaque_payload;
 
-/// Packed AST (VAST) wire layout + host-side tree walks (`docs/ARCHITECTURE.md`).
+/// Packed AST (VAST) wire layout plus host-side tree walks.
 pub mod vast;
 
 pub use analysis::graph_view::{
