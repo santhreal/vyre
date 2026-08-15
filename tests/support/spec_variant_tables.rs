@@ -28,7 +28,7 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
-use vyre_spec::{AtomicOp, BinOp, TernaryOp, UnOp};
+use vyre_spec::{AtomicOp, BinOp, DataType, TernaryOp, UnOp};
 
 /// Every builtin `BinOp`, in wire-tag order.
 pub(crate) fn builtin_bin_ops() -> Vec<BinOp> {
