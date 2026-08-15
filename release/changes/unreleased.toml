@@ -1324,3 +1324,28 @@ text = "`c_frontend::parity_matrix::assert_case_table_covers_fixture_file` reads
 id = "visit-owner-ir-variant-descent"
 category = "Fixed"
 text = "IR variant descent has one owner per reference mode. `vyre_foundation::transform::visit::child_bodies_mut` is new and owns the body slots of a node held by unique reference, alongside `child_bodies` for a shared read and `vyre_foundation::transform::rewrite_walk::rewrite_node` for a borrow-preserving rebuild. `vyre_foundation::visit::node_map::map_body` took its slot list from a hand-written match ending in a catch-all that returned the node unchanged, so a body-bearing variant the list had not been told about made every pass composed on it a silent no-op inside that variant, including `rematerialize_cheap_let` and the pass engine's constant propagation. The scalar namespace also has one owner, `vyre_foundation::transform::visit::node_scalars`, reporting the bound name, what the statement does to it, and the operand expressions in one record; `node_operands` and `node_bound_name` are derived from it, and `vyre_foundation::visit::bound_names` no longer classifies an unrecognised variant as binding nothing. `vyre_foundation::optimizer::cost` folds the divergence dimension over the owning descent instead of a search that stops at the first match, and `vyre_foundation::transform::autodiff::grad` reads its forward types and adjoint targets from the owner and reports an unsupported node by its registry variant name rather than by a `Debug` rendering truncated at sixty characters."
+
+[[fragments]]
+id = "evidence-blockers-named-not-implied"
+category = "Fixed"
+text = "Every evidence subcommand prints its blockers to stderr before exiting 1, through the one owner of that epilogue, `xtask::output_arg::report_evidence_artifact`. It wrote the artifact and exited on a non-empty blocker list without naming a single entry, so nine gates reported a bare exit code and the cause was readable only by opening the JSON. `xtask::release::release_conformance` returned a count of failing backends instead of the failures; it now returns each one prefixed by its backend id. `xtask_registry::release::conformance_matrix` kept a private write-then-exit epilogue beside the owner and is routed through it."
+
+[[fragments]]
+id = "evidence-blockers-hygiene-rule-reads-calls"
+category = "Fixed"
+text = "The unbounded-read rule in `xtask::gates::hygiene_matrix` matches a call to `fs::read` rather than the text `fs::read(`, which also matched `BufferRefs::read(count_buffer)` and reported a graph accessor as an unbounded filesystem read. The release-tooling scan reads `.py` alongside `.sh` and `.yml`, so a rule that a shell script cannot evade cannot be evaded by moving the body into a Python file beside it."
+
+[[fragments]]
+id = "evidence-blockers-structural-gate-registry"
+category = "Added"
+text = "A source-inspecting test is informational only when `docs/testing/STRUCTURAL_GATES.toml` declares it by file and test name with a reason, and a row the tree no longer backs is itself a release blocker. Twelve gates assert a property with no run-time witness, such as which crate owns a symbol or that no second file spells a constant; they cannot be rewritten as behaviour tests, and blocking on them permanently would have been answered by deleting them. Keying on the pair means a reviewed declaration exempts the gate it names and not the next one added to the same file."
+
+[[fragments]]
+id = "evidence-blockers-tooling-out-of-heredocs"
+category = "Changed"
+text = "Seven release gate scripts run `scripts/lib/<name>.py` instead of piping a Python program into an interpreter through a heredoc. A heredoc hides a whole second language from review, lint, and syntax checking, and these were the last seven. `scripts/cli_docs.py` invokes the workspace wrapper through `scripts/lib/cargo_runner.py`, the Python twin of the shell runner that already owned that decision."
+
+[[fragments]]
+id = "evidence-blockers-docs-and-features-complete"
+category = "Fixed"
+text = "`docs-check` and `feature-matrix` pass. The generated testing guide for `vyre-registry-link` had no row in the documentation manifest, and `vyre-test-support` declared features with no explicit default policy. A tree contract now derives the workspace member list at run time and fails when a member has no classified testing guide row, or when a row names a crate the workspace no longer has."

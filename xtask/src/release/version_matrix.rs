@@ -188,7 +188,7 @@ pub(crate) fn run(args: &[String]) {
 
     crate::output_arg::write_json(&output, &matrix);
     write_release_tag_plan(&output, &matrix);
-    crate::output_arg::report_evidence_artifact("version-matrix", &output, matrix.blockers.len());
+    crate::output_arg::report_evidence_artifact("version-matrix", &output, &matrix.blockers);
 }
 
 fn missing_required_release_packages(crates: &[CrateVersion]) -> Vec<String> {

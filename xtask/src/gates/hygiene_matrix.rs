@@ -20,6 +20,7 @@ struct HygieneMatrix {
     classification_summary: Vec<HygieneClassificationSummary>,
     intake_summary: Vec<HygieneIntakeSummary>,
     threshold_policy: ThresholdPolicyArtifact,
+    structural_gates: StructuralGateArtifact,
     finding_classes: Vec<HygieneFindingClass>,
     release_blocker_count: usize,
     findings: Vec<HygieneFinding>,
@@ -45,6 +46,12 @@ struct HygieneFinding {
     line: usize,
     pattern: &'static str,
     text: String,
+    /// The test this finding belongs to, for the patterns that judge a test
+    /// rather than a line. The structural-gate registry is keyed on it, so the
+    /// name has to reach classification rather than being formatted into
+    /// `text` and parsed back out.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    test: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -201,6 +208,8 @@ const THRESHOLD_POLICY_SCHEMA_VERSION: u32 = 1;
 const THRESHOLD_POLICY_SOURCE: &str = "docs/optimization/THRESHOLD_POLICY.toml";
 const THRESHOLD_POLICY_ARTIFACT: &str = "release/evidence/hygiene/threshold-policy.json";
 const THRESHOLD_POLICY_OWNER_LANE: &str = "testing_evidence";
+const STRUCTURAL_GATE_SCHEMA_VERSION: u32 = 1;
+const STRUCTURAL_GATE_SOURCE: &str = "docs/testing/STRUCTURAL_GATES.toml";
 const THRESHOLD_SUFFIXES: &[&str] = &[
     "_THRESHOLD",
     "_LIMIT",
@@ -215,6 +224,170 @@ const THRESHOLD_SUFFIXES: &[&str] = &[
     "_RETRY",
     "_BACKOFF",
 ];
+
+/// Structural gates whose property has no run-time witness, and their status.
+///
+/// A source-inspecting test is a release blocker by default, because the usual
+/// reason a test reads source is that nobody worked out how to assert the
+/// behaviour. That default is wrong for a property no execution can observe:
+/// that no OTHER file calls a function, that a registration is visible from the
+/// crate root, that a table covers every variant. Rust offers no reflection, so
+/// the source is the only witness those have.
+///
+/// The declaration is what makes the exemption reviewable. Both halves are
+/// derived from the tree, so a row naming a test that no longer exists is a
+/// blocker of its own: a stale registry is worth what no registry is worth.
+#[derive(Debug, Clone, Serialize)]
+struct StructuralGateArtifact {
+    schema_version: u32,
+    source: &'static str,
+    declarations: Vec<StructuralGateDeclaration>,
+    blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct StructuralGateDeclaration {
+    file: String,
+    test: String,
+    reason: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct StructuralGateDocument {
+    schema: u32,
+    #[serde(default)]
+    gate: Vec<StructuralGateTomlRow>,
+}
+
+#[derive(Debug, Deserialize)]
+struct StructuralGateTomlRow {
+    file: String,
+    test: String,
+    reason: String,
+}
+
+/// Read the structural-gate registry, or report why it could not be trusted.
+///
+/// Every failure path returns an empty declaration set plus a blocker, so an
+/// unreadable or malformed registry exempts nothing rather than everything.
+fn load_structural_gates(vyre_root: &Path) -> StructuralGateArtifact {
+    let mut artifact = StructuralGateArtifact {
+        schema_version: STRUCTURAL_GATE_SCHEMA_VERSION,
+        source: STRUCTURAL_GATE_SOURCE,
+        declarations: Vec::new(),
+        blockers: Vec::new(),
+    };
+    let path = vyre_root.join(STRUCTURAL_GATE_SOURCE);
+    let text = match read_text_bounded(&path) {
+        Ok(text) => text,
+        Err(error) => {
+            artifact.blockers.push(format!(
+                "{STRUCTURAL_GATE_SOURCE} is unreadable: {error}. Fix: restore the structural-gate registry; without it every source-inspecting gate is a release blocker."
+            ));
+            return artifact;
+        }
+    };
+    let document = match toml::from_str::<StructuralGateDocument>(&text) {
+        Ok(document) => document,
+        Err(error) => {
+            artifact.blockers.push(format!(
+                "{STRUCTURAL_GATE_SOURCE} is not valid structural-gate TOML: {error}. Fix: repair the schema before release."
+            ));
+            return artifact;
+        }
+    };
+    if document.schema != STRUCTURAL_GATE_SCHEMA_VERSION {
+        artifact.blockers.push(format!(
+            "{STRUCTURAL_GATE_SOURCE} declares schema {} but this gate reads schema {STRUCTURAL_GATE_SCHEMA_VERSION}. Fix: migrate the registry before release.",
+            document.schema
+        ));
+        return artifact;
+    }
+    let mut seen = BTreeSet::new();
+    for row in document.gate {
+        if row.file.trim().is_empty() || row.test.trim().is_empty() {
+            artifact.blockers.push(format!(
+                "{STRUCTURAL_GATE_SOURCE} has a row with an empty file or test name. Fix: name both."
+            ));
+            continue;
+        }
+        if row.reason.trim().is_empty() {
+            artifact.blockers.push(format!(
+                "{STRUCTURAL_GATE_SOURCE}: `{}` in `{}` declares no reason. Fix: state why the property has no run-time witness.",
+                row.test, row.file
+            ));
+            continue;
+        }
+        if !seen.insert((row.file.clone(), row.test.clone())) {
+            artifact.blockers.push(format!(
+                "{STRUCTURAL_GATE_SOURCE}: `{}` in `{}` is declared twice. Fix: keep one row.",
+                row.test, row.file
+            ));
+            continue;
+        }
+        artifact.declarations.push(StructuralGateDeclaration {
+            file: row.file,
+            test: row.test,
+            reason: row.reason.trim().to_string(),
+        });
+    }
+    artifact
+}
+
+/// Blockers for registry rows the tree no longer backs.
+///
+/// Derived from the same scan that produced the findings, so the registry
+/// cannot outlive the gates it exempts.
+fn stale_declaration_blockers(
+    vyre_root: &Path,
+    declarations: &[StructuralGateDeclaration],
+    findings: &[HygieneFinding],
+) -> Vec<String> {
+    let mut inspecting = BTreeMap::<String, BTreeSet<&str>>::new();
+    for finding in findings {
+        if finding.pattern != "source_inspection_test" {
+            continue;
+        }
+        let Some(test) = finding.test.as_deref() else {
+            continue;
+        };
+        inspecting
+            .entry(relative_to_vyre(vyre_root, Path::new(&finding.path)))
+            .or_default()
+            .insert(test);
+    }
+    let mut blockers = Vec::new();
+    for declaration in declarations {
+        match inspecting.get(&declaration.file) {
+            None => blockers.push(format!(
+                "{STRUCTURAL_GATE_SOURCE}: `{}` names `{}`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
+                declaration.test, declaration.file
+            )),
+            Some(tests) if !tests.contains(declaration.test.as_str()) => blockers.push(format!(
+                "{STRUCTURAL_GATE_SOURCE}: `{}` is declared for `{}`, which no longer has a test by that name that inspects source. Fix: delete the row or correct the name.",
+                declaration.test, declaration.file
+            )),
+            Some(_) => {}
+        }
+    }
+    blockers
+}
+
+/// Whether a source-inspecting `finding` is covered by a reviewed declaration.
+fn is_declared_structural_gate(
+    vyre_root: &Path,
+    finding: &HygieneFinding,
+    structural_gates: &StructuralGateArtifact,
+) -> bool {
+    let Some(test) = finding.test.as_deref() else {
+        return false;
+    };
+    let file = relative_to_vyre(vyre_root, Path::new(&finding.path));
+    structural_gates
+        .declarations
+        .iter()
+        .any(|declaration| declaration.file == file && declaration.test == test)
+}
 
 /// The vyre workspace root this build was compiled against.
 pub(crate) fn run(args: &[String]) {
@@ -239,7 +412,13 @@ pub(crate) fn run(args: &[String]) {
     let threshold_policy = collect_threshold_policy(&roots[0]);
     let release_surface_coverage = release_surface_coverage(&roots[0]);
     let hot_paths = load_hot_path_files(&roots[0]);
-    let finding_classes = classify_findings(&roots[0], &findings, &hot_paths);
+    let mut structural_gates = load_structural_gates(&roots[0]);
+    let finding_classes = classify_findings(&roots[0], &findings, &hot_paths, &structural_gates);
+    structural_gates.blockers.extend(stale_declaration_blockers(
+        &roots[0],
+        &structural_gates.declarations,
+        &findings,
+    ));
     let release_blocker_count = finding_classes
         .iter()
         .filter(|finding| finding.release_blocker)
@@ -253,11 +432,12 @@ pub(crate) fn run(args: &[String]) {
         )]
     };
     blockers.extend(threshold_policy.blockers.iter().cloned());
+    blockers.extend(structural_gates.blockers.iter().cloned());
     let finding_summary = finding_summary(&findings);
     let classification_summary = classification_summary(&finding_classes);
     let intake_summary = hygiene_intake_summary(&finding_classes);
     let matrix = HygieneMatrix {
-        schema_version: 4,
+        schema_version: 5,
         scanned_roots,
         scanned_files,
         release_surface_coverage,
@@ -265,6 +445,7 @@ pub(crate) fn run(args: &[String]) {
         classification_summary,
         intake_summary,
         threshold_policy,
+        structural_gates,
         finding_classes,
         release_blocker_count,
         findings,
@@ -273,7 +454,7 @@ pub(crate) fn run(args: &[String]) {
 
     crate::output_arg::write_json(&output, &matrix);
     write_sibling_artifacts(&output, &matrix);
-    crate::output_arg::report_evidence_artifact("hygiene-matrix", &output, matrix.blockers.len());
+    crate::output_arg::report_evidence_artifact("hygiene-matrix", &output, &matrix.blockers);
 }
 
 fn finding_summary(findings: &[HygieneFinding]) -> Vec<HygieneFindingSummary> {
@@ -291,6 +472,7 @@ fn classify_findings(
     vyre_root: &Path,
     findings: &[HygieneFinding],
     hot_paths: &std::collections::BTreeSet<String>,
+    structural_gates: &StructuralGateArtifact,
 ) -> Vec<HygieneFindingClass> {
     findings
         .iter()
@@ -298,7 +480,8 @@ fn classify_findings(
             let owner_lane = hygiene_owner_lane_for_path(&finding.path);
             let surface = hygiene_surface_for_path(&finding.path);
             let hot_path = hygiene_finding_is_hot_path(vyre_root, &finding.path, hot_paths);
-            let risk = hygiene_risk(finding.pattern, surface, hot_path);
+            let declared = is_declared_structural_gate(vyre_root, finding, structural_gates);
+            let risk = hygiene_risk(finding.pattern, surface, hot_path, declared);
             HygieneFindingClass {
                 path: finding.path.clone(),
                 line: finding.line,
@@ -563,12 +746,23 @@ fn is_cpu_parity_oracle_source(normalized_path: &str) -> bool {
         || normalized_path.ends_with("/reaching/oracle.rs")
 }
 
-fn hygiene_risk(pattern: &str, surface: &str, hot_path: bool) -> &'static str {
+/// The release risk of one finding.
+///
+/// `declared` is true only for a source-inspecting test that
+/// `docs/testing/STRUCTURAL_GATES.toml` records as asserting a property with no
+/// run-time witness. Everything else about a source-inspecting test is
+/// unchanged: it is a release blocker, because a test that reads source when it
+/// could have run the code is a test that proves nothing about behaviour.
+fn hygiene_risk(pattern: &str, surface: &str, hot_path: bool, declared: bool) -> &'static str {
     if surface == "generated" || surface == "example" {
         return "informational";
     }
     if pattern == "source_inspection_test" {
-        return "release_blocker";
+        return if declared {
+            "informational"
+        } else {
+            "release_blocker"
+        };
     }
     if surface == "test" || pattern.starts_with("test_") {
         return "test_hygiene";
@@ -1254,6 +1448,7 @@ fn scan_release_xtask(root: &Path, scanned_files: &mut usize, findings: &mut Vec
                 line: 1,
                 pattern: "unreadable_source_file",
                 text: error,
+                test: None,
             }),
         }
     }
@@ -1324,7 +1519,11 @@ fn scan_release_tooling(
             let Some(extension) = path.extension().and_then(|ext| ext.to_str()) else {
                 continue;
             };
-            if matches!(extension, "sh" | "yml" | "yaml") {
+            // Python belongs here as much as shell does. A gate written as a
+            // `.py` under `scripts/` is release tooling that runs in CI, and
+            // leaving the extension out meant a rule could be evaded by moving
+            // the body from a shell heredoc into a file beside it.
+            if matches!(extension, "sh" | "yml" | "yaml" | "py") {
                 scan_tooling_file(path, scanned_files, findings);
             }
         }
@@ -1390,6 +1589,7 @@ fn check_required_cargo_wrappers(vyre_root: &Path, findings: &mut Vec<HygieneFin
                 line: 1,
                 pattern: "missing_cargo_wrapper",
                 text: "required bounded cargo_full wrapper is missing".to_string(),
+                test: None,
             });
         }
     }
@@ -1490,6 +1690,7 @@ fn scan_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
                 line: line_index + 1,
                 pattern: "raw_workspace_cargo",
                 text: line.trim().to_string(),
+                test: None,
             });
         }
         if line_contains_invalid_cargo_full_xtask(line) {
@@ -1498,6 +1699,7 @@ fn scan_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
                 line: line_index + 1,
                 pattern: "invalid_cargo_full_xtask",
                 text: line.trim().to_string(),
+                test: None,
             });
         }
         for &(name, pattern) in BLOCKED_PATTERNS {
@@ -1514,6 +1716,7 @@ fn scan_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
                     line: line_index + 1,
                     pattern: name,
                     text: line.trim().to_string(),
+                    test: None,
                 });
             }
         }
@@ -1523,6 +1726,7 @@ fn scan_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
                 line: line_index + 1,
                 pattern: "unbounded_read",
                 text: line.trim().to_string(),
+                test: None,
             });
         }
         if bounded_read_chain && line_contains_read_call(line) {
@@ -1542,6 +1746,7 @@ fn scan_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
                 line: line_index + 1,
                 pattern: "gpu_unavailable_skip",
                 text: line.trim().to_string(),
+                test: None,
             });
         }
     }
@@ -1848,8 +2053,9 @@ fn scan_source_inspection_tests(path: &Path, text: &str, findings: &mut Vec<Hygi
             line,
             pattern: "source_inspection_test",
             text: format!(
-                "test `{test}` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead."
+                "test `{test}` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in {STRUCTURAL_GATE_SOURCE}."
             ),
+            test: Some(test),
         });
     }
 }
@@ -1875,13 +2081,26 @@ fn is_non_release_cfg_attr(trimmed: &str) -> bool {
         .any(|token| token == "test")
 }
 
+/// True when `line` calls a filesystem read or reads a stream to the end.
+///
+/// The `fs::` forms are matched as a path segment, not as a substring. A plain
+/// `line.contains("fs::read(")` also matched `BufferRefs::read(count_buffer)`,
+/// whose type name happens to end in `fs`; that call reads a GPU buffer
+/// reference and has no file, no length, and nothing to bound. A false positive
+/// here is not harmless: it is a permanent release blocker on correct code, and
+/// the only way to clear it would have been to rename the type.
 fn line_contains_read_call(line: &str) -> bool {
-    line.contains("fs::read_to_string(")
-        || line.contains("std::fs::read_to_string(")
-        || line.contains("fs::read(")
-        || line.contains("std::fs::read(")
+    calls_path_function(line, "fs::read_to_string")
+        || calls_path_function(line, "fs::read")
         || line.contains(".read_to_end(")
         || line.contains(".read_to_string(")
+}
+
+/// True when `line` calls `name` as a whole path segment rather than as a suffix.
+fn calls_path_function(line: &str, name: &str) -> bool {
+    line.match_indices(name).any(|(index, _)| {
+        is_word_start(line, index) && line[index + name.len()..].starts_with('(')
+    })
 }
 
 fn line_contains_unbounded_read(path: &Path, line: &str) -> bool {
@@ -2011,6 +2230,7 @@ fn scan_command_file(
                     line: line_index + 1,
                     pattern,
                     text: line.trim().to_string(),
+                    test: None,
                 });
             }
         }
@@ -2026,6 +2246,7 @@ fn push_walk_error(root: &Path, error: &walkdir::Error, findings: &mut Vec<Hygie
         line: 1,
         pattern: "unreadable_scan_entry",
         text: format!("failed to walk release hygiene root: {error}"),
+        test: None,
     });
 }
 
@@ -2040,6 +2261,7 @@ fn push_read_error(
         line: 1,
         pattern,
         text: format!("failed to read release hygiene input: {error}"),
+        test: None,
     });
 }
 
@@ -2384,6 +2606,72 @@ fn default_output() -> PathBuf {
 mod tests {
     use super::*;
 
+    /// WHY: `unbounded_read` matched `fs::read(` as a bare substring, so any
+    /// type whose name ends in `fs` produced a permanent release blocker on
+    /// correct code. `BufferRefs::read(count_buffer)` reads a GPU buffer
+    /// reference: there is no file, no length, and nothing to bound, and the
+    /// only way to clear the finding would have been to rename the type.
+    #[test]
+    fn a_method_on_a_type_ending_in_fs_is_not_a_filesystem_read() {
+        assert!(!line_contains_read_call(
+            "Node::IndirectDispatch { count_buffer, .. } => BufferRefs::read(count_buffer),"
+        ));
+        assert!(!line_contains_read_call("let refs = Refs::read(buffer);"));
+    }
+
+    /// The narrowing above must not stop the rule catching a real read.
+    #[test]
+    fn every_filesystem_read_spelling_is_still_a_read_call() {
+        for line in [
+            "let text = fs::read_to_string(path)?;",
+            "let text = std::fs::read_to_string(path)?;",
+            "let bytes = fs::read(path)?;",
+            "let bytes = std::fs::read(path)?;",
+            "file.read_to_end(&mut bytes)?;",
+            "handle.read_to_string(&mut text)?;",
+        ] {
+            assert!(line_contains_read_call(line), "missed `{line}`");
+        }
+    }
+
+    /// WHY: the release-tooling scan read `.sh`, `.yml` and `.yaml` only, so a
+    /// rule that blocks a shell heredoc could be satisfied by moving the body
+    /// into a `.py` beside it, where nothing looked. Seven gate scripts were
+    /// rewritten that way, which would have moved 1100 lines of release tooling
+    /// out of scan range in the same change that cleared the findings.
+    #[test]
+    fn python_release_tooling_is_scanned_like_shell_release_tooling() {
+        let tree = tempfile::TempDir::new().expect("Fix: create a fixture tree.");
+        let scripts = tree.path().join("scripts/lib");
+        fs::create_dir_all(&scripts).expect("Fix: create the fixture scripts directory.");
+        for (name, body) in [
+            ("gate.sh", "#!/usr/bin/env bash\ncargo build --workspace\n"),
+            ("gate.py", "import sys\nrun([\"x\"])  # cargo build --workspace\n"),
+        ] {
+            fs::write(scripts.join(name), body).expect("Fix: write the fixture script.");
+        }
+
+        let mut scanned = 0usize;
+        let mut findings = Vec::new();
+        scan_release_tooling(tree.path(), &mut scanned, &mut findings);
+
+        let scanned_extensions = findings
+            .iter()
+            .filter(|finding| finding.pattern == "raw_workspace_cargo")
+            .filter_map(|finding| {
+                Path::new(&finding.path)
+                    .extension()
+                    .and_then(|extension| extension.to_str())
+                    .map(ToString::to_string)
+            })
+            .collect::<BTreeSet<_>>();
+        assert_eq!(
+            scanned_extensions,
+            BTreeSet::from(["py".to_string(), "sh".to_string()]),
+            "Fix: release tooling written in Python must be scanned like release tooling written in shell; findings={findings:?}"
+        );
+    }
+
     /// WHY: surface classification matched `/docs/` anywhere in the path, so an
     /// xtask module grouped under `xtask/src/docs/` was filed as documentation
     /// and lost its release-tooling thresholds. What decides the surface is
@@ -2725,6 +3013,23 @@ mod tests {
         );
     }
 
+    /// A registry with the given `(file, test)` rows, each with a stated reason.
+    fn structural_gates(rows: &[(&str, &str)]) -> StructuralGateArtifact {
+        StructuralGateArtifact {
+            schema_version: STRUCTURAL_GATE_SCHEMA_VERSION,
+            source: STRUCTURAL_GATE_SOURCE,
+            declarations: rows
+                .iter()
+                .map(|(file, test)| StructuralGateDeclaration {
+                    file: (*file).to_string(),
+                    test: (*test).to_string(),
+                    reason: "no run-time witness".to_string(),
+                })
+                .collect(),
+            blockers: Vec::new(),
+        }
+    }
+
     #[test]
     fn hygiene_classifier_separates_test_from_release_blocker() {
         let hot_paths = std::collections::BTreeSet::new();
@@ -2734,16 +3039,19 @@ mod tests {
                 line: 10,
                 pattern: "unbounded_read",
                 text: "std::fs::read(path)?".to_string(),
+                test: None,
             },
             HygieneFinding {
                 path: "vyre-driver/tests/pipeline_contracts.rs".to_string(),
                 line: 20,
                 pattern: "test_ignored",
                 text: "#[ignore]".to_string(),
+                test: None,
             },
         ];
 
-        let classes = classify_findings(Path::new("."), &findings, &hot_paths);
+        let classes =
+            classify_findings(Path::new("."), &findings, &hot_paths, &structural_gates(&[]));
 
         assert_eq!(classes[0].surface, "production");
         assert_eq!(classes[0].risk, "release_blocker");
@@ -2754,23 +3062,107 @@ mod tests {
     }
 
     #[test]
-    fn source_inspection_tests_are_release_blockers() {
+    fn undeclared_source_inspection_tests_are_release_blockers() {
         let findings = vec![HygieneFinding {
             path: "driver/tests/source_contracts.rs".to_string(),
             line: 7,
             pattern: "source_inspection_test",
             text: "test inspects Rust source text".to_string(),
+            test: Some("every_module_is_reachable".to_string()),
         }];
 
         let classes = classify_findings(
             Path::new("."),
             &findings,
             &std::collections::BTreeSet::new(),
+            &structural_gates(&[]),
         );
 
         assert_eq!(classes[0].surface, "test");
         assert_eq!(classes[0].risk, "release_blocker");
         assert!(classes[0].release_blocker);
+    }
+
+    /// A declared gate is informational; its neighbour in the same file is not.
+    ///
+    /// Keying on the file alone would let one reviewed declaration exempt every
+    /// later source-inspecting test added beside it, which is the cost the
+    /// declaration exists to charge.
+    #[test]
+    fn only_the_declared_source_inspection_test_is_informational() {
+        let findings = vec![
+            HygieneFinding {
+                path: "/repo/driver/tests/source_contracts.rs".to_string(),
+                line: 7,
+                pattern: "source_inspection_test",
+                text: "declared".to_string(),
+                test: Some("no_other_file_calls_the_owner".to_string()),
+            },
+            HygieneFinding {
+                path: "/repo/driver/tests/source_contracts.rs".to_string(),
+                line: 40,
+                pattern: "source_inspection_test",
+                text: "undeclared".to_string(),
+                test: Some("added_later_without_a_row".to_string()),
+            },
+        ];
+
+        let classes = classify_findings(
+            Path::new("/repo"),
+            &findings,
+            &std::collections::BTreeSet::new(),
+            &structural_gates(&[(
+                "driver/tests/source_contracts.rs",
+                "no_other_file_calls_the_owner",
+            )]),
+        );
+
+        assert_eq!(
+            classes[0].risk, "informational",
+            "Fix: a reviewed row in {STRUCTURAL_GATE_SOURCE} must exempt the test it names"
+        );
+        assert!(!classes[0].release_blocker);
+        assert_eq!(
+            classes[1].risk, "release_blocker",
+            "Fix: a source-inspecting test with no reviewed row must block the release"
+        );
+        assert!(classes[1].release_blocker);
+    }
+
+    /// A row the tree no longer backs is a blocker, not a silent no-op.
+    #[test]
+    fn stale_structural_gate_rows_block_the_release() {
+        let findings = vec![HygieneFinding {
+            path: "/repo/driver/tests/source_contracts.rs".to_string(),
+            line: 7,
+            pattern: "source_inspection_test",
+            text: "declared".to_string(),
+            test: Some("still_here".to_string()),
+        }];
+        let declarations = structural_gates(&[
+            ("driver/tests/source_contracts.rs", "still_here"),
+            ("driver/tests/source_contracts.rs", "renamed_away"),
+            ("driver/tests/deleted_contracts.rs", "gone_with_the_file"),
+        ])
+        .declarations;
+
+        let blockers = stale_declaration_blockers(Path::new("/repo"), &declarations, &findings);
+
+        assert_eq!(
+            blockers.len(),
+            2,
+            "Fix: a row whose test or file the tree no longer has must block the release; blockers={blockers:?}"
+        );
+        assert!(
+            blockers[0].contains("renamed_away")
+                && blockers[0].contains("no longer has a test by that name"),
+            "{blockers:?}"
+        );
+        assert!(
+            blockers[1].contains("deleted_contracts.rs")
+                && blockers[1].contains("contains no source-inspecting test"),
+            "{blockers:?}"
+        );
     }
 
     #[test]
@@ -2781,9 +3173,11 @@ mod tests {
             line: 37,
             pattern: "panic_macro",
             text: "panic!(\"IFDS CPU oracle\")".to_string(),
+            test: None,
         }];
 
-        let classes = classify_findings(Path::new("."), &findings, &hot_paths);
+        let classes =
+            classify_findings(Path::new("."), &findings, &hot_paths, &structural_gates(&[]));
 
         assert_eq!(classes[0].surface, "test");
         assert_eq!(classes[0].risk, "test_hygiene");
@@ -2800,16 +3194,23 @@ mod tests {
                 line: 161,
                 pattern: "panic_macro",
                 text: "panic!(\"fixture contract failed\")".to_string(),
+                test: None,
             },
             HygieneFinding {
                 path: "/repo/vyre-test-support/src/monorepo.rs".to_string(),
                 line: 66,
                 pattern: "expect_call",
                 text: ".expect(\"workspace root\")".to_string(),
+                test: None,
             },
         ];
 
-        let classes = classify_findings(Path::new("/repo"), &findings, &hot_paths);
+        let classes = classify_findings(
+            Path::new("/repo"),
+            &findings,
+            &hot_paths,
+            &structural_gates(&[]),
+        );
 
         assert!(classes.iter().all(|class| class.surface == "test"));
         assert!(classes.iter().all(|class| class.risk == "test_hygiene"));
@@ -2887,9 +3288,11 @@ mod tests {
             line: 12,
             pattern: "TODO",
             text: "// TODO: remove allocation".to_string(),
+            test: None,
         }];
 
-        let classes = classify_findings(Path::new("."), &findings, &hot_paths);
+        let classes =
+            classify_findings(Path::new("."), &findings, &hot_paths, &structural_gates(&[]));
 
         assert!(classes[0].hot_path);
         assert_eq!(classes[0].risk, "release_blocker");

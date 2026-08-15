@@ -4,13 +4,13 @@
   "findings": [
     {
       "path": "vyre-driver/src/grid_sync/resident_dispatch.rs",
-      "line": 217,
+      "line": 204,
       "pattern": "placeholder_text",
       "text": "// unused buffer, so the placeholder is bound but inert (proven equal to"
     },
     {
       "path": "vyre-bench/src/cases/scan_ac_irregular/mod.rs",
-      "line": 84,
+      "line": 51,
       "pattern": "TODO",
       "text": "b\"TODO:\","
     },
@@ -39,32 +39,32 @@
       "text": "/// placeholder; V045 assignment-type checking must be skipped."
     },
     {
-      "path": "vyre-test-support/src/lib.rs",
-      "line": 9,
-      "pattern": "stub_text",
-      "text": "//! own ~230-line copy of the enumerator (and 22 crates shipped a *tautology stub* whose doc"
+      "path": "vyre-test-support/src/ir_variants.rs",
+      "line": 109,
+      "pattern": "placeholder_text",
+      "text": "/// variants with placeholder operands, so this set is the one to use when the"
     },
     {
       "path": "vyre-reference/src/execution/mod.rs",
-      "line": 61,
+      "line": 62,
       "pattern": "placeholder_text",
       "text": "// lowering table's placeholder, which cleared the output buffer instead"
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 257,
+      "line": 284,
       "pattern": "placeholder_text",
       "text": "// the placeholder to the range it will actually read back."
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 412,
+      "line": 435,
       "pattern": "placeholder_text",
       "text": "/// what a caller-supplied placeholder has to cover."
     },
     {
       "path": "vyre-primitives/src/graph/program_graph.rs",
-      "line": 269,
+      "line": 327,
       "pattern": "placeholder_text",
       "text": "// `max(edge_count, 1)`. A zero-edge graph still carries a single placeholder"
     },

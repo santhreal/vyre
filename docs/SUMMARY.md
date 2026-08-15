@@ -120,6 +120,7 @@
 - [Testing `vyre-pass-engine`](testing/vyre-pass-engine.md)
 - [Testing `vyre-primitives`](testing/vyre-primitives.md)
 - [Testing `vyre-reference`](testing/vyre-reference.md)
+- [Testing `vyre-registry-link`](testing/vyre-registry-link.md)
 - [Testing `vyre-runtime`](testing/vyre-runtime.md)
 - [Testing `vyre-safetensors`](testing/vyre-safetensors.md)
 - [Testing `vyre-spec`](testing/vyre-spec.md)

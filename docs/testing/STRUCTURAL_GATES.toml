@@ -1,0 +1,137 @@
+# Structural gates that read source text, and why each property they assert
+# cannot be observed from a running program.
+#
+# `cargo xtask hygiene-matrix` reports every test that reads Rust source and
+# then inspects the text. The default classification for one of those is a
+# release blocker, because the usual reason a test reads source is that nobody
+# worked out how to assert the behaviour. That rule is right for a test that
+# COULD run the code, and wrong for a property that has no run-time witness at
+# all: nothing a running program observes can tell you that some other file
+# failed to make a call, that a registration is visible from the crate root, or
+# that a table covers every variant of an enum. Rust has no reflection, so the
+# only witness for those is the source.
+#
+# A row here reclassifies one gate from `release_blocker` to `informational`.
+# It is not a suppression list: adding a gate still costs a reviewed line
+# naming the file, the test, and the property, and both halves are checked
+# against the tree at run time. A row whose test no longer exists, or whose
+# file no longer contains a source-inspecting test, fails the same gate, since
+# a stale registry is worth exactly as much as no registry.
+#
+# Before adding a row, answer this: could the test call the code and assert
+# what it does? If yes, write that test instead. The rows below are the cases
+# where the answer is no.
+
+schema = 1
+
+[[gate]]
+file = "vyre-spec/tests/token_ids_have_one_owner.rs"
+test = "no_file_outside_the_owner_declares_a_token_id"
+reason = """
+Asserts that no file outside vyre-spec declares a `TOK_`-prefixed constant. A
+second numbering table in a crate vyre-spec does not depend on is not linked
+into any program this test could run, so no execution can witness it; the
+duplicate only shows up as a wrong parse on the GPU much later.
+"""
+
+[[gate]]
+file = "vyre-spec/tests/token_ids_have_one_owner.rs"
+test = "the_walk_actually_reaches_the_owner"
+reason = """
+Floor check for the walk the gate above depends on. Its subject is the file set
+that walk produced, which exists only inside the source scan.
+"""
+
+[[gate]]
+file = "xtask/tests/tree_contracts/ci_workflow_references.rs"
+test = "every_target_a_workflow_names_exists_in_the_package_it_addresses"
+reason = """
+Resolves every `--test`/`--bin` name a CI workflow step passes against the
+cargo targets that package declares or auto-discovers. A workflow step is text
+until CI runs it, and a target named by a step is not reachable from any
+process running locally.
+"""
+
+[[gate]]
+file = "vyre-primitives/tests/shared_owner_closure.rs"
+test = "no_dispatch_grid_function_hand_rolls_the_ceiling_division"
+reason = """
+Asserts that exactly one implementation of the ceiling division exists. A
+behavioural parity sweep catches a copy that rounds differently and passes a
+copy that agrees today, and a second implementation that agrees today is the
+defect this closes: the copies it replaced agreed until the zero case.
+"""
+
+[[gate]]
+file = "vyre-primitives/tests/shared_owner_closure.rs"
+test = "every_domain_with_a_dispatch_grid_can_reach_the_owner"
+reason = """
+Asserts that the owner module is not gated behind a Cargo feature some domain
+does not enable. Feature reachability is decided at compile time, so a build
+where the owner is unreachable is a build in which this test does not run.
+"""
+
+[[gate]]
+file = "vyre-primitives/tests/shared_owner_closure.rs"
+test = "no_binding_record_spells_its_full_name_set_twice"
+reason = """
+Asserts that no file in the workspace respells a binding record's full name set
+instead of naming the record's canonical constant. Two spellings that agree
+produce identical behaviour, which is why the drift it exists for went
+unnoticed; only the source distinguishes them.
+"""
+
+[[gate]]
+file = "vyre-primitives/tests/shared_owner_closure.rs"
+test = "every_buffer_binding_record_publishes_canonical_names"
+reason = """
+Asserts that every declared `*Buffers` record publishes canonical names. The
+subject is the set of declared types, which a running program cannot enumerate
+without reflection.
+"""
+
+[[gate]]
+file = "vyre-primitives/tests/shared_owner_closure.rs"
+test = "every_routed_convergence_op_registers_with_the_routing_contract"
+reason = """
+Asserts that every op calling `routed_persistent_fixpoint` also registers with
+the shared routing contract. An op that never registers runs correctly on the
+inputs it does have, so the omission has no run-time symptom until a dispatch
+spans more than one workgroup in production.
+"""
+
+[[gate]]
+file = "vyre-primitives/tests/shared_owner_closure.rs"
+test = "no_op_re_asserts_the_routing_obligations_privately"
+reason = """
+Asserts that no file outside the routing owner observes both halves of the
+routing obligation itself. A private copy of an assertion passes, which is the
+whole reason a copy survives; only the source shows there are two.
+"""
+
+[[gate]]
+file = "vyre-primitives/tests/shared_owner_closure.rs"
+test = "the_source_walk_reaches_the_modules_every_gate_above_depends_on"
+reason = """
+Floor check for the walk every gate in the file depends on. Its subject is the
+file set that walk produced.
+"""
+
+[[gate]]
+file = "xtask-registry/tests/registry_contracts/registration_visibility.rs"
+test = "every_submitted_registration_is_reachable_from_this_walker"
+reason = """
+Asserts that no operation registration is gated behind a Cargo feature this
+crate's dependency edge leaves off. An invisible registration is
+indistinguishable from an absent one at run time: the walker reports a smaller
+registry and every document generated from it agrees.
+"""
+
+[[gate]]
+file = "xtask-registry/tests/registry_contracts/registration_visibility.rs"
+test = "each_source_aggregate_covers_every_feature_that_gates_a_registration"
+reason = """
+Asserts that each source crate's widest aggregate feature turns on every
+feature that gates a registration. The subject is that crate's feature table,
+which is consumed by cargo before any code runs.
+"""
