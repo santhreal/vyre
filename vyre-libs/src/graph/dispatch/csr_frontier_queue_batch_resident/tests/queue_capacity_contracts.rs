@@ -77,7 +77,7 @@ fn batch_queries_reuse_larger_queue_scratch_for_smaller_effective_capacity() {
     .expect("Fix: first resident CSR queue batch dispatch should allocate the larger bucket");
 
     let retained_queue_handles: Vec<u64> = scratch
-        .handles
+        .slots
         .iter()
         .map(|handles| handles.active_queue)
         .collect();
@@ -99,7 +99,7 @@ fn batch_queries_reuse_larger_queue_scratch_for_smaller_effective_capacity() {
 
     assert_eq!(
         scratch
-            .handles
+            .slots
             .iter()
             .map(|handles| handles.active_queue)
             .collect::<Vec<_>>(),

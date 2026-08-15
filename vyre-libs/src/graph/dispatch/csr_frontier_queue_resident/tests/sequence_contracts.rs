@@ -29,7 +29,7 @@ fn resident_query_initializes_queue_len_on_device() {
     .expect("Fix: recording dispatcher should complete resident CSR queue query");
 
     let handles = scratch
-        .handles
+        .slots
         .expect("Fix: resident CSR queue query should allocate scratch handles");
     assert_eq!(
         dispatcher

@@ -1,6 +1,6 @@
 use super::super::*;
 use super::recording_dispatcher::RecordingResidentDispatcher;
-use crate::graph::dispatch::csr_frontier_queue_scratch::ResidentCsrQueueMaterializer;
+use crate::graph::dispatch::csr_frontier_queue_scratch::ResidentCsrQueueSlots;
 
 #[test]
 fn generated_resident_csr_queue_free_releases_each_handle_once_in_first_seen_order() {
@@ -22,7 +22,7 @@ fn generated_resident_csr_queue_free_releases_each_handle_once_in_first_seen_ord
 
         dispatcher.freed.borrow_mut().clear();
         let mut scratch = ResidentCsrQueueScratch::default();
-        scratch.handles = Some(ResidentCsrQueueScratchHandles {
+        scratch.slots = Some(ResidentCsrQueueSlots {
             frontier: base + 2,
             active_queue: base + 2,
             queue_len: base + 3,
@@ -31,10 +31,6 @@ fn generated_resident_csr_queue_free_releases_each_handle_once_in_first_seen_ord
             block_totals: None,
             high_queue: None,
             high_len: None,
-            queue_capacity: 4,
-            high_queue_capacity: 0,
-            frontier_bytes: 4,
-            materializer: ResidentCsrQueueMaterializer::AtomicWordScan,
         });
         scratch.free(&dispatcher).expect("Fix: scratch free dedup");
         assert_eq!(
@@ -43,7 +39,7 @@ fn generated_resident_csr_queue_free_releases_each_handle_once_in_first_seen_ord
         );
 
         dispatcher.freed.borrow_mut().clear();
-        scratch.handles = Some(ResidentCsrQueueScratchHandles {
+        scratch.slots = Some(ResidentCsrQueueSlots {
             frontier: base + 5,
             active_queue: base + 6,
             queue_len: base + 6,
@@ -52,10 +48,6 @@ fn generated_resident_csr_queue_free_releases_each_handle_once_in_first_seen_ord
             block_totals: Some(base + 8),
             high_queue: Some(base + 9),
             high_len: Some(base + 9),
-            queue_capacity: 4,
-            high_queue_capacity: 1,
-            frontier_bytes: 4,
-            materializer: ResidentCsrQueueMaterializer::DeterministicWordPrefix,
         });
         scratch
             .free(&dispatcher)

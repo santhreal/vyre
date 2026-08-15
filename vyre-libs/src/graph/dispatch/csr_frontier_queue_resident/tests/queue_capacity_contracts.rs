@@ -34,11 +34,12 @@ fn resident_query_buckets_graph_sized_capacity_from_frontier_popcount() {
     )
     .expect("Fix: recording dispatcher should complete bucketed resident CSR queue query");
 
-    let handles = scratch
-        .handles
-        .expect("Fix: resident CSR queue query should allocate scratch handles");
     assert_eq!(
-        handles.queue_capacity, 512,
+        scratch
+            .shape
+            .expect("Fix: resident CSR queue query should retain scratch shape")
+            .queue_capacity,
+        512,
         "257 active sources should use the 512-slot bucket, not graph-sized scratch"
     );
     assert_eq!(
@@ -93,7 +94,7 @@ fn resident_query_reuses_larger_queue_scratch_for_smaller_effective_capacity() {
     .expect("Fix: first resident CSR queue query should allocate the larger bucket");
 
     let handles = scratch
-        .handles
+        .slots
         .expect("Fix: resident CSR queue query should retain handles");
     let retained_queue_handle = handles.active_queue;
     let alloc_count = dispatcher.allocs.borrow().len();
@@ -112,10 +113,16 @@ fn resident_query_reuses_larger_queue_scratch_for_smaller_effective_capacity() {
     .expect("Fix: second resident CSR queue query should reuse the larger bucket");
 
     let handles = scratch
-        .handles
+        .slots
         .expect("Fix: resident CSR queue query should retain handles");
     assert_eq!(handles.active_queue, retained_queue_handle);
-    assert_eq!(handles.queue_capacity, 512);
+    assert_eq!(
+        scratch
+            .shape
+            .expect("Fix: resident CSR queue query should retain scratch shape")
+            .queue_capacity,
+        512
+    );
     assert_eq!(
         dispatcher.allocs.borrow().len(),
         alloc_count,

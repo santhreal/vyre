@@ -50,16 +50,16 @@ fn skewed_high_degree_batch_queries_use_bounded_split_queue() {
             .high_queue_capacity,
         1
     );
-    let first_high_queue = scratch.handles[0]
+    let first_high_queue = scratch.slots[0]
         .high_queue
         .expect("Fix: first mixed-split batch query should allocate high_queue");
-    let first_high_len = scratch.handles[0]
+    let first_high_len = scratch.slots[0]
         .high_len
         .expect("Fix: first mixed-split batch query should allocate high_len");
-    let second_high_queue = scratch.handles[1]
+    let second_high_queue = scratch.slots[1]
         .high_queue
         .expect("Fix: second mixed-split batch query should allocate high_queue");
-    let second_high_len = scratch.handles[1]
+    let second_high_len = scratch.slots[1]
         .high_len
         .expect("Fix: second mixed-split batch query should allocate high_len");
     assert_eq!(scratch.high_len_handle_sets.len(), 2);
@@ -69,12 +69,12 @@ fn skewed_high_degree_batch_queries_use_bounded_split_queue() {
     assert_eq!(
         scratch.split_low_handle_sets[0],
         [
-            scratch.handles[0].active_queue,
-            scratch.handles[0].queue_len,
+            scratch.slots[0].active_queue,
+            scratch.slots[0].queue_len,
             graph.edge_offsets_handle(),
             graph.edge_targets_handle(),
             graph.edge_kind_mask_handle(),
-            scratch.handles[0].frontier_out,
+            scratch.slots[0].frontier_out,
             first_high_queue,
             first_high_len,
         ]
@@ -87,7 +87,7 @@ fn skewed_high_degree_batch_queries_use_bounded_split_queue() {
             graph.edge_offsets_handle(),
             graph.edge_targets_handle(),
             graph.edge_kind_mask_handle(),
-            scratch.handles[1].frontier_out,
+            scratch.slots[1].frontier_out,
         ]
     );
     let steps = dispatcher
@@ -180,11 +180,11 @@ fn uniformly_high_degree_batch_queries_use_row_strided_traverse_grid() {
         0
     );
     assert!(scratch
-        .handles
+        .slots
         .iter()
         .all(|handles| handles.high_queue.is_none()));
     assert!(scratch
-        .handles
+        .slots
         .iter()
         .all(|handles| handles.high_len.is_none()));
     assert!(scratch.high_len_handle_sets.is_empty());

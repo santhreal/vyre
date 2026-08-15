@@ -103,7 +103,7 @@ fn generated_batch_scratch_free_releases_each_handle_once_in_first_seen_order() 
         let dispatcher = RecordingBatchDispatcher::default();
         let base = 40_000 + seed * 16;
         let mut scratch = ResidentCsrQueueBatchScratch::default();
-        scratch.handles.push(ResidentCsrQueueBatchQueryHandles {
+        scratch.slots.push(ResidentCsrQueueSlots {
             frontier: base,
             active_queue: base + 1,
             queue_len: base,
@@ -113,7 +113,7 @@ fn generated_batch_scratch_free_releases_each_handle_once_in_first_seen_order() 
             high_queue: None,
             high_len: None,
         });
-        scratch.handles.push(ResidentCsrQueueBatchQueryHandles {
+        scratch.slots.push(ResidentCsrQueueSlots {
             frontier: base + 2,
             active_queue: base + 3,
             queue_len: base + 3,

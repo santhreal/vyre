@@ -13,6 +13,7 @@
 //! check, the CSR row lookup, the edge walk, or the edge guard.
 
 use vyre_foundation::ir::Program;
+use vyre_foundation::program_dispatch::DispatchError;
 use vyre_primitives::bitset::zero::bitset_zero;
 use vyre_primitives::graph::csr_frontier_queue::{
     csr_queue_forward_traverse, frontier_queue_len_init, frontier_word_block_offsets_in_place,
@@ -251,4 +252,136 @@ pub(crate) fn resident_csr_queue_materializer_programs(
             }
         }
     }
+}
+
+/// The shape that selects every Program one resident CSR queue step launches.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct ResidentCsrQueueProgramShape {
+    pub(crate) node_count: u32,
+    pub(crate) edge_count: u32,
+    pub(crate) words: usize,
+    pub(crate) queue_capacity: u32,
+    pub(crate) allow_mask: u32,
+    pub(crate) materializer: ResidentCsrQueueMaterializer,
+    pub(crate) traverse_kind: ResidentCsrQueueTraverseKind,
+}
+
+/// Every Program a resident CSR queue step can launch, cached as one set.
+///
+/// The single-query and batched resident sites each used to hold eight
+/// `Option<Program>` fields, refill all eight from one materializer build, and
+/// unwrap each one with its own diagnostic. The set is built and read here so
+/// that a half-refilled cache is unrepresentable: `ensure` either replaces the
+/// whole set or leaves the previous shape in place.
+#[derive(Debug, Default)]
+pub(crate) struct ResidentCsrQueuePrograms {
+    clear_frontier_out: Option<Program>,
+    queue_len_init: Option<Program>,
+    word_counts: Option<Program>,
+    word_block_offsets: Option<Program>,
+    queue: Option<Program>,
+    high_len_init: Option<Program>,
+    split_low: Option<Program>,
+    traverse: Option<Program>,
+    shape: Option<ResidentCsrQueueProgramShape>,
+}
+
+impl ResidentCsrQueuePrograms {
+    /// Build the whole set for `shape` unless it is already cached.
+    ///
+    /// `frontier_in` names the resident buffer the materializer reads, which
+    /// is the one thing the three resident protocols do not agree on.
+    pub(crate) fn ensure(
+        &mut self,
+        frontier_in: &str,
+        shape: ResidentCsrQueueProgramShape,
+        precomputed_block_offsets: bool,
+    ) {
+        if self.shape == Some(shape) {
+            return;
+        }
+        self.shape = None;
+        let materializer = resident_csr_queue_materializer_programs(
+            frontier_in,
+            shape.node_count,
+            shape.words as u32,
+            shape.queue_capacity,
+            shape.materializer,
+            precomputed_block_offsets,
+        );
+        self.clear_frontier_out = materializer.clear_frontier_out;
+        self.queue_len_init = materializer.queue_len_init;
+        self.word_counts = materializer.word_counts;
+        self.word_block_offsets = materializer.word_block_offsets;
+        self.queue = Some(materializer.queue);
+        self.traverse = Some(resident_csr_queue_traverse_program(
+            shape.node_count,
+            shape.edge_count,
+            shape.queue_capacity,
+            shape.allow_mask,
+            shape.traverse_kind,
+        ));
+        self.high_len_init = None;
+        self.split_low = None;
+        if let ResidentCsrQueueTraverseKind::MixedSplit {
+            high_queue_capacity,
+        } = shape.traverse_kind
+        {
+            self.high_len_init = Some(resident_csr_queue_len_init_program(HIGH_LEN));
+            self.split_low = Some(resident_csr_queue_split_low_program(
+                shape.node_count,
+                shape.edge_count,
+                shape.queue_capacity,
+                high_queue_capacity,
+                shape.allow_mask,
+            ));
+        }
+        self.shape = Some(shape);
+    }
+
+    /// Drop every cached Program and the shape that selected them.
+    pub(crate) fn clear(&mut self) {
+        *self = Self::default();
+    }
+
+    pub(crate) fn clear_frontier_out(&self) -> Result<&Program, DispatchError> {
+        require(self.clear_frontier_out.as_ref(), "output clear")
+    }
+
+    pub(crate) fn queue_len_init(&self) -> Result<&Program, DispatchError> {
+        require(self.queue_len_init.as_ref(), "queue length init")
+    }
+
+    pub(crate) fn word_counts(&self) -> Result<&Program, DispatchError> {
+        require(self.word_counts.as_ref(), "word-count scan")
+    }
+
+    pub(crate) fn word_block_offsets(&self) -> Result<&Program, DispatchError> {
+        require(self.word_block_offsets.as_ref(), "block-offset scan")
+    }
+
+    pub(crate) fn queue(&self) -> Result<&Program, DispatchError> {
+        require(self.queue.as_ref(), "queue materialization")
+    }
+
+    pub(crate) fn high_len_init(&self) -> Result<&Program, DispatchError> {
+        require(self.high_len_init.as_ref(), "high_len init")
+    }
+
+    pub(crate) fn split_low(&self) -> Result<&Program, DispatchError> {
+        require(self.split_low.as_ref(), "split-low traverse")
+    }
+
+    pub(crate) fn traverse(&self) -> Result<&Program, DispatchError> {
+        require(self.traverse.as_ref(), "traverse")
+    }
+}
+
+fn require<'a>(program: Option<&'a Program>, role: &str) -> Result<&'a Program, DispatchError> {
+    program.ok_or_else(|| {
+        DispatchError::BackendError(format!(
+            "resident CSR queue {role} program is missing for the cached shape. \
+             Fix: rebuild the resident CSR queue program set before dispatch."
+        ))
+    })
 }
