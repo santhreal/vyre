@@ -18,14 +18,12 @@ use vyre_libs::parsing::c::lex::tokens::{
     TOK_RBRACE, TOK_RBRACKET, TOK_RPAREN, TOK_SEMICOLON, TOK_TYPEDEF, TOK_VOID,
 };
 use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_semantic_graph, reference_ast_to_pg_nodes};
-use vyre_libs::parsing::c::parse::vast::{
-    c11_annotate_global_typedef_names_fast, c11_build_expression_shape_nodes,
-};
+use vyre_libs::parsing::c::parse::vast::c11_annotate_global_typedef_names_fast;
 use vyre_libs::parsing::c::sema::c_sema_scope;
 
 pub(crate) use crate::c_frontend::parity_matrix::{
     arm_annotated_vast, arm_pg_nodes, arm_raw_vast, arm_typed_vast, primary_output, program,
-    ParityArm,
+    ExpressionCase, ParityArm,
 };
 // Only the three C-AST family roots that iterate a `CASES` table call this.
 #[allow(unused_imports)]

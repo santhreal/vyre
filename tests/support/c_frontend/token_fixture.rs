@@ -98,6 +98,25 @@ pub(crate) fn classify_without_annotation(fix: &Fixture) -> Vec<u8> {
     reference_c11_classify_vast_node_kinds(&raw)
 }
 
+/// Assert the fixture's own source re-lexes to the raw kinds it declares.
+///
+/// A hand-built stream can otherwise assert a tokenization the lexer does not
+/// produce, which turns every parser contract above it into a contract about
+/// the fixture. Every fixture-driven parity test runs this first, so it lives
+/// with the fixture builder rather than in each test file.
+pub(crate) fn assert_lex_matches_non_ws(fix: &Fixture) {
+    let kinds =
+        c_grammar_gen::lex_c11_max_munch_kinds(fix.source.as_bytes()).expect("fixture must lex");
+    let lexed_non_ws: Vec<u32> = kinds
+        .into_iter()
+        .filter(|k| *k != TOK_WHITESPACE && *k != TOK_COMMENT)
+        .collect();
+    assert_eq!(
+        lexed_non_ws, fix.raw_kinds,
+        "hand-built fixture must match max-munch lexer (no fake tokenization)"
+    );
+}
+
 /// `c_fixture![("int", TOK_IDENTIFIER), ("x", TOK_IDENTIFIER)]`.
 ///
 /// The expansion is rooted at `$crate::c_frontend`, the name every consumer

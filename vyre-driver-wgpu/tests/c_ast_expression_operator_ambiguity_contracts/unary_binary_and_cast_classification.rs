@@ -1,18 +1,13 @@
 use super::expression_ambiguity::*;
-use crate::c_ast_gpu_parity_support::{
-    run_gpu_expr_shape, run_gpu_pg_lower, starts_for_lens, word_at, VAST_STRIDE_U32,
-};
+use crate::c_ast_gpu_parity_support::{assert_expression_shape_parity, word_at, VAST_STRIDE_U32};
 use crate::c_frontend::expression_pipeline::{
     assert_pg_links_match_vast, assert_pg_preserves_row, assert_shape_row, run_pipeline,
-    run_reference_pg_lower,
 };
-use crate::c_frontend::rows::{bytes, row_indices_by_stride as row_indices, SENTINEL};
+use crate::c_frontend::rows::{row_indices_by_stride as row_indices, SENTINEL};
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_build_expression_shape_nodes, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_CAST_EXPR, C_AST_KIND_SIZEOF_EXPR,
-    C_AST_KIND_UNARY_EXPR, C_EXPR_ASSOC_LEFT, C_EXPR_ASSOC_NONE, C_EXPR_SHAPE_BINARY,
-    C_EXPR_SHAPE_NONE,
+    C_AST_KIND_CAST_EXPR, C_AST_KIND_SIZEOF_EXPR, C_AST_KIND_UNARY_EXPR, C_EXPR_ASSOC_LEFT,
+    C_EXPR_ASSOC_NONE, C_EXPR_SHAPE_BINARY, C_EXPR_SHAPE_NONE,
 };
 use vyre_primitives::predicate::node_kind;
 
@@ -255,7 +250,7 @@ fn sizeof_and_typeof_do_not_classify_inner_lparen_as_cast() {
 
 #[test]
 fn gpu_matches_cpu_for_ambiguity_fixtures() {
-    let fixtures: Vec<(Vec<u32>, Vec<u32>)> = vec![
+    assert_expression_shape_parity(&[
         star_binary_fixture(),
         star_unary_fixture(),
         amp_binary_fixture(),
@@ -272,35 +267,5 @@ fn gpu_matches_cpu_for_ambiguity_fixtures() {
         sizeof_expr_fixture(),
         typeof_typename_fixture(),
         typeof_expr_fixture(),
-    ];
-
-    for (fixture_idx, (tok_types, tok_lens)) in fixtures.iter().enumerate() {
-        let tok_starts = starts_for_lens(tok_lens);
-        let raw_vast = reference_c11_build_vast_nodes(tok_types, &tok_starts, tok_lens);
-        let typed_vast = reference_c11_classify_vast_node_kinds(&raw_vast);
-        let expected_shape = reference_c11_build_expression_shape_nodes(&raw_vast, &typed_vast);
-        let expected_pg = run_reference_pg_lower(&typed_vast);
-
-        assert_eq!(
-            run_gpu_expr_shape(&raw_vast, &typed_vast),
-            expected_shape,
-            "GPU expression-shape rows must match CPU for fixture {fixture_idx}"
-        );
-        assert_eq!(
-            run_gpu_pg_lower(&typed_vast),
-            expected_pg,
-            "GPU PG lowering must match CPU for fixture {fixture_idx}"
-        );
-
-        let typed_bytes = bytes(
-            &typed_vast
-                .chunks_exact(4)
-                .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap()))
-                .collect::<Vec<_>>(),
-        );
-        assert_eq!(
-            typed_bytes, typed_vast,
-            "typed VAST fixture {fixture_idx} must stay word-aligned for GPU dispatch"
-        );
-    }
+    ]);
 }
