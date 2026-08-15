@@ -3,6 +3,10 @@
 
 use crate::*;
 
+use super::fixtures::word_to_word;
+use vyre_driver::{DispatchConfig, ResidentDispatchStep, ResidentReadRange};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
 #[test]
 fn apple_resident_transfers_cover_full_range_batch_and_stale_handles() {
     let backend = acquire().expect(
@@ -208,23 +212,7 @@ fn apple_resident_ranged_batch_download_fuses_views_and_preflights_outputs() {
 
 #[test]
 fn apple_resident_dispatch_uses_binding_order_handles_and_persists_output() {
-    use vyre_driver::DispatchConfig;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage("out", 1, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::add(Expr::load("input", Expr::u32(0)), Expr::u32(1)),
-        )],
-    );
+    let program = word_to_word("input", "out", |input| Expr::add(input, Expr::u32(1)));
 
     let backend = acquire().expect(
         "Fix: Apple Metal builds must acquire the system default MTLDevice before resident dispatch.",
@@ -270,23 +258,7 @@ fn apple_resident_dispatch_uses_binding_order_handles_and_persists_output() {
 
 #[test]
 fn apple_resident_dispatch_resource_errors_are_actionable() {
-    use vyre_driver::DispatchConfig;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage("out", 1, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::add(Expr::load("input", Expr::u32(0)), Expr::u32(1)),
-        )],
-    );
+    let program = word_to_word("input", "out", |input| Expr::add(input, Expr::u32(1)));
 
     let backend = acquire().expect(
         "Fix: Apple Metal builds must acquire the system default MTLDevice before resident dispatch negative tests.",
@@ -352,37 +324,8 @@ fn apple_resident_dispatch_resource_errors_are_actionable() {
 
 #[test]
 fn apple_resident_sequence_dispatches_ordered_steps_and_reads_ranges() {
-    use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-    let double_program = Program::wrapped(
-        vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage("mid", 1, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "mid",
-            Expr::u32(0),
-            Expr::mul(Expr::load("input", Expr::u32(0)), Expr::u32(2)),
-        )],
-    );
-    let add_program = Program::wrapped(
-        vec![
-            BufferDecl::storage("mid", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage("out", 1, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::add(Expr::load("mid", Expr::u32(0)), Expr::u32(7)),
-        )],
-    );
+    let double_program = word_to_word("input", "mid", |input| Expr::mul(input, Expr::u32(2)));
+    let add_program = word_to_word("mid", "out", |mid| Expr::add(mid, Expr::u32(7)));
 
     let backend = acquire().expect(
         "Fix: Apple Metal builds must acquire the system default MTLDevice before resident sequence dispatch.",
@@ -465,9 +408,6 @@ fn apple_resident_sequence_dispatches_ordered_steps_and_reads_ranges() {
 
 #[test]
 fn apple_repeated_resident_sequence_updates_read_write_handle() {
-    use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
     let increment_program = Program::wrapped(
         vec![
             BufferDecl::storage("state", 0, BufferAccess::ReadWrite, DataType::U32)

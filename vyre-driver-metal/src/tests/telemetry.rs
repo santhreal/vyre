@@ -2,22 +2,15 @@
 
 use crate::*;
 
+use std::collections::BTreeMap;
+use std::sync::Arc;
+
+use super::fixtures::stores_word;
+use vyre_driver::DispatchConfig;
+
 #[test]
 fn apple_backend_metric_snapshot_exposes_cache_and_resident_counters() {
-    use std::collections::BTreeMap;
-
-    use vyre_driver::DispatchConfig;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-        ],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(233))],
-    );
+    let program = stores_word(233);
 
     let backend = acquire().expect(
         "Fix: Apple Metal builds must acquire the system default MTLDevice before backend metric testing.",
@@ -44,15 +37,7 @@ fn apple_backend_metric_snapshot_exposes_cache_and_resident_counters() {
     backend
         .dispatch(&program, &[], &changed_policy)
         .expect("Fix: Metal metric-snapshot policy probe must compile a distinct policy key.");
-    let changed_program = Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-        ],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(234))],
-    );
+    let changed_program = stores_word(234);
     backend
         .dispatch(&changed_program, &[], &DispatchConfig::default())
         .expect("Fix: Metal metric-snapshot program probe must compile a distinct Program key.");
@@ -173,6 +158,10 @@ fn apple_backend_metric_snapshot_exposes_cache_and_resident_counters() {
         Some(16),
         "Fix: Metal backend metric snapshot must expose logical resident bytes."
     );
+    assert!(
+        !metrics.contains_key("metal_resident_buffer_error"),
+        "Fix: a healthy backend must not report the resident-table poison sentinel."
+    );
 
     backend
         .free_resident(resident)
@@ -185,7 +174,7 @@ fn apple_backend_metric_snapshot_exposes_cache_and_resident_counters() {
 /// two fewer entries in the snapshot and making "zero resident buffers"
 /// indistinguishable from "poisoned backend".
 ///
-/// This exercises `push_resident_buffer_metrics` directly against a genuinely
+/// This exercises `push_resident_table_metrics` directly against a genuinely
 /// poisoned table. `MetalBackend::backend_metric_snapshot` needs a live
 /// `MTLDevice` and offers no way to poison the lock it owns, so a test written
 /// against the backend can only ever observe the healthy arm, which is what the
@@ -197,7 +186,7 @@ fn metric_snapshot_poisoned_mutex_is_loud() {
     use std::collections::HashMap;
     use std::sync::{Arc, Mutex};
 
-    use crate::runtime::{push_resident_buffer_metrics, MetalResidentBufferTable};
+    use crate::runtime::{push_resident_table_metrics, MetalResidentBufferTable};
 
     let table: MetalResidentBufferTable = Arc::new(Mutex::new(HashMap::new()));
 
@@ -205,7 +194,7 @@ fn metric_snapshot_poisoned_mutex_is_loud() {
     // error row. This is the value the poisoned arm must be distinguishable
     // from, so it is asserted here rather than assumed.
     let mut healthy = Vec::new();
-    push_resident_buffer_metrics(&table, &mut healthy);
+    push_resident_table_metrics(&table, &mut healthy);
     assert_eq!(
         healthy,
         vec![
@@ -229,7 +218,7 @@ fn metric_snapshot_poisoned_mutex_is_loud() {
     );
 
     let mut poisoned = Vec::new();
-    push_resident_buffer_metrics(&table, &mut poisoned);
+    push_resident_table_metrics(&table, &mut poisoned);
     assert_eq!(
         poisoned,
         vec![

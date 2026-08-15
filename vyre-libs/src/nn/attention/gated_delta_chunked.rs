@@ -139,9 +139,7 @@ fn pair_dot_nodes(
 /// lower-triangular tile. Its final tile is padded structurally and guarded,
 /// so padding cannot read inputs, modify state, or appear in the output. It
 /// builds the authoritative cumulative-decay triangular schedule.
-pub fn chunked_gated_delta(
-    spec: &GatedDeltaSpec<'_>,
-) -> Result<Program, RecurrentGatedDeltaError> {
+pub fn chunked_gated_delta(spec: &GatedDeltaSpec<'_>) -> Result<Program, RecurrentGatedDeltaError> {
     let counts = spec.counts()?;
     let GatedDeltaSpec {
         query,

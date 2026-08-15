@@ -31,7 +31,9 @@ use crate::METAL_BACKEND_ID;
 pub struct MetalBackend {
     device: Device,
     queue: metal::CommandQueue,
-    resident_buffers: MetalResidentBufferTable,
+    /// Crate-visible because the only way to observe the poison contract in
+    /// `backend_metric_snapshot` is to poison this lock.
+    pub(crate) resident_buffers: MetalResidentBufferTable,
     /// Identity of this instance's resident-buffer namespace.
     ///
     /// `next_resident` restarts at 1 in every fresh backend, so a bare id is
@@ -1297,78 +1299,11 @@ impl VyreBackend for MetalBackend {
     }
 
     fn backend_metric_snapshot(&self) -> Vec<(&'static str, u64)> {
-        let mut metrics = Vec::with_capacity(16);
-        metrics.push((
-            "metal_pipeline_cache_hits",
-            self.metrics.pipeline_cache_hits.load(Ordering::Relaxed),
-        ));
-        metrics.push((
-            "metal_pipeline_cache_misses",
-            self.metrics.pipeline_cache_misses.load(Ordering::Relaxed),
-        ));
-        metrics.push((
-            "metal_pipeline_cache_miss_empty_cache",
-            self.metrics
-                .pipeline_cache_miss_empty_cache
-                .load(Ordering::Relaxed),
-        ));
-        metrics.push((
-            "metal_pipeline_cache_miss_program_changed",
-            self.metrics
-                .pipeline_cache_miss_program_changed
-                .load(Ordering::Relaxed),
-        ));
-        metrics.push((
-            "metal_pipeline_cache_miss_dispatch_policy_changed",
-            self.metrics
-                .pipeline_cache_miss_dispatch_policy_changed
-                .load(Ordering::Relaxed),
-        ));
-        metrics.push((
-            "metal_pipeline_cache_miss_device_or_runtime_changed",
-            self.metrics
-                .pipeline_cache_miss_device_or_runtime_changed
-                .load(Ordering::Relaxed),
-        ));
-        metrics.push((
-            "metal_pipeline_cache_miss_key_absent",
-            self.metrics
-                .pipeline_cache_miss_key_absent
-                .load(Ordering::Relaxed),
-        ));
-        metrics.push((
-            "metal_buffer_allocation_count",
-            self.metrics.buffer_allocation_count.load(Ordering::Relaxed),
-        ));
-        metrics.push((
-            "metal_buffer_allocation_bytes",
-            self.metrics.buffer_allocation_bytes.load(Ordering::Relaxed),
-        ));
-        metrics.push((
-            "metal_host_to_device_copy_count",
-            self.metrics
-                .host_to_device_copy_count
-                .load(Ordering::Relaxed),
-        ));
-        metrics.push((
-            "metal_host_to_device_bytes",
-            self.metrics.host_to_device_bytes.load(Ordering::Relaxed),
-        ));
-        metrics.push((
-            "metal_device_to_host_copy_count",
-            self.metrics
-                .device_to_host_copy_count
-                .load(Ordering::Relaxed),
-        ));
-        metrics.push((
-            "metal_device_to_host_bytes",
-            self.metrics.device_to_host_bytes.load(Ordering::Relaxed),
-        ));
-        metrics.push((
-            "metal_output_readback_bytes",
-            self.metrics.output_readback_bytes.load(Ordering::Relaxed),
-        ));
-        push_resident_buffer_metrics(&self.resident_buffers, &mut metrics);
+        let mut metrics = Vec::with_capacity(METAL_COUNTERS.len() + 3);
+        for (name, counter) in METAL_COUNTERS {
+            metrics.push((name, counter(&self.metrics).load(Ordering::Relaxed)));
+        }
+        push_resident_table_metrics(&self.resident_buffers, &mut metrics);
         metrics
     }
 
@@ -1431,48 +1366,7 @@ impl VyreBackend for MetalBackend {
     }
 }
 
-pub(crate) type MetalResidentBufferTable =
-    Arc<Mutex<HashMap<ResidentHandle, MetalResidentBuffer>>>;
-
-/// Append the resident-buffer metric rows for `resident_buffers`.
-///
-/// Law 10: do NOT silently discard Mutex-poisoned state. If a background thread
-/// panicked while holding `resident_buffers`, callers cannot distinguish "zero
-/// resident buffers" from "poisoned backend". The poisoned arm pushes
-/// `u64::MAX` for both counters plus a `metal_resident_buffer_error` row, so a
-/// downstream metric gate or benchmark comparison fires immediately rather than
-/// observing a silent gap.
-pub(crate) fn push_resident_buffer_metrics(
-    resident_buffers: &MetalResidentBufferTable,
-    metrics: &mut Vec<(&'static str, u64)>,
-) {
-    match resident_buffers.lock() {
-        Ok(table) => {
-            metrics.push(("metal_resident_buffer_count", table.len() as u64));
-            let resident_bytes = table
-                .values()
-                .try_fold(0_u64, |total, resident| {
-                    u64::try_from(resident.byte_len)
-                        .ok()
-                        .and_then(|byte_len| total.checked_add(byte_len))
-                })
-                .unwrap_or(u64::MAX);
-            metrics.push(("metal_resident_bytes", resident_bytes));
-        }
-        Err(_poison) => {
-            metrics.push(("metal_resident_buffer_count", u64::MAX));
-            metrics.push(("metal_resident_bytes", u64::MAX));
-            metrics.push(("metal_resident_buffer_error", 1_u64));
-            tracing::error!(
-                "metal resident_buffers Mutex is poisoned; \
-                 resident buffer metrics are sentinel values (u64::MAX). \
-                 Fix: a background dispatch thread panicked while holding \
-                 the resident buffer table lock."
-            );
-        }
-    }
-}
-
+pub(crate) type MetalResidentBufferTable = Arc<Mutex<HashMap<ResidentHandle, MetalResidentBuffer>>>;
 type MetalMetricCounters = Arc<MetalMetrics>;
 
 #[derive(Default)]
@@ -1492,6 +1386,47 @@ struct MetalMetrics {
     device_to_host_bytes: AtomicU64,
     output_readback_bytes: AtomicU64,
 }
+
+/// Every scalar counter `backend_metric_snapshot` reports, paired with the
+/// atomic that holds it.
+///
+/// A counter is one row here rather than a six-line push, so a new counter
+/// cannot be added to [`MetalMetrics`] and then forgotten in the snapshot for
+/// want of noticing the push list.
+const METAL_COUNTERS: [(&str, fn(&MetalMetrics) -> &AtomicU64); 14] = [
+    ("metal_pipeline_cache_hits", |m| &m.pipeline_cache_hits),
+    ("metal_pipeline_cache_misses", |m| &m.pipeline_cache_misses),
+    ("metal_pipeline_cache_miss_empty_cache", |m| {
+        &m.pipeline_cache_miss_empty_cache
+    }),
+    ("metal_pipeline_cache_miss_program_changed", |m| {
+        &m.pipeline_cache_miss_program_changed
+    }),
+    ("metal_pipeline_cache_miss_dispatch_policy_changed", |m| {
+        &m.pipeline_cache_miss_dispatch_policy_changed
+    }),
+    ("metal_pipeline_cache_miss_device_or_runtime_changed", |m| {
+        &m.pipeline_cache_miss_device_or_runtime_changed
+    }),
+    ("metal_pipeline_cache_miss_key_absent", |m| {
+        &m.pipeline_cache_miss_key_absent
+    }),
+    ("metal_buffer_allocation_count", |m| {
+        &m.buffer_allocation_count
+    }),
+    ("metal_buffer_allocation_bytes", |m| {
+        &m.buffer_allocation_bytes
+    }),
+    ("metal_host_to_device_copy_count", |m| {
+        &m.host_to_device_copy_count
+    }),
+    ("metal_host_to_device_bytes", |m| &m.host_to_device_bytes),
+    ("metal_device_to_host_copy_count", |m| {
+        &m.device_to_host_copy_count
+    }),
+    ("metal_device_to_host_bytes", |m| &m.device_to_host_bytes),
+    ("metal_output_readback_bytes", |m| &m.output_readback_bytes),
+];
 
 struct MetalDispatchResult {
     outputs: Vec<Vec<u8>>,
@@ -1647,6 +1582,45 @@ fn lock_resident_buffer_table<'a>(
                 "Fix: Metal resident buffer table was poisoned during {operation}: {error}. Drop and reacquire the Metal backend before reusing resident resources."
             ),
         })
+}
+
+/// Append the resident-buffer count and byte total, or the poison sentinel.
+///
+/// A poisoned table means a thread panicked while holding it. Reporting zero
+/// buffers there would be indistinguishable from a backend that genuinely holds
+/// none, so the count and the byte total both become `u64::MAX` and a
+/// `metal_resident_buffer_error` key appears. Every downstream metric gate
+/// compares against real buffer counts, so the sentinel fires immediately
+/// instead of reading as a quiet gap in the snapshot.
+pub(crate) fn push_resident_table_metrics(
+    resident_buffers: &MetalResidentBufferTable,
+    metrics: &mut Vec<(&'static str, u64)>,
+) {
+    match resident_buffers.lock() {
+        Ok(table) => {
+            metrics.push(("metal_resident_buffer_count", table.len() as u64));
+            let resident_bytes = table
+                .values()
+                .try_fold(0_u64, |total, resident| {
+                    u64::try_from(resident.byte_len)
+                        .ok()
+                        .and_then(|byte_len| total.checked_add(byte_len))
+                })
+                .unwrap_or(u64::MAX);
+            metrics.push(("metal_resident_bytes", resident_bytes));
+        }
+        Err(_poison) => {
+            metrics.push(("metal_resident_buffer_count", u64::MAX));
+            metrics.push(("metal_resident_bytes", u64::MAX));
+            metrics.push(("metal_resident_buffer_error", 1_u64));
+            tracing::error!(
+                "metal resident_buffers Mutex is poisoned; \
+                 resident buffer metrics are sentinel values (u64::MAX). \
+                 Fix: a background dispatch thread panicked while holding \
+                 the resident buffer table lock."
+            );
+        }
+    }
 }
 
 fn resolve_resident_resources_from_table<'a>(

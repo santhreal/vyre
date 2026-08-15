@@ -392,7 +392,8 @@ pub fn plan_device_resident_token_fact_graph_with_scratch(
     row_offsets.push(0);
     let mut edge_index = 0_usize;
     for row in 0..node_count {
-        let row = u32::try_from(row).map_err(|_| DeviceResidentTokenFactGraphError::CsrIndexOverflow)?;
+        let row =
+            u32::try_from(row).map_err(|_| DeviceResidentTokenFactGraphError::CsrIndexOverflow)?;
         let mut last_edge = None;
         while let Some(&staged) = scratch.staged_edges.get(edge_index) {
             if staged.from != row {
@@ -431,10 +432,7 @@ pub fn plan_device_resident_token_fact_graph_with_scratch(
 /// over one contiguous `u32` run. That beats a hash index here: the index would
 /// have to be built for every node before the first edge is resolved, and the
 /// search array is already needed as the packed output column.
-fn resident_index(
-    node_ids: &[u32],
-    id: u32,
-) -> Result<u32, DeviceResidentTokenFactGraphError> {
+fn resident_index(node_ids: &[u32], id: u32) -> Result<u32, DeviceResidentTokenFactGraphError> {
     let index = node_ids
         .binary_search(&id)
         .map_err(|_| DeviceResidentTokenFactGraphError::UnknownEdgeNode { id })?;
@@ -729,7 +727,12 @@ mod tests {
         let mut nodes = Vec::new();
         let mut edges = Vec::new();
         for id in (0..1024_u32).rev() {
-            nodes.push(TokenFactNode::new(id, TokenFactNodeKind::Token, u64::from(id), 1));
+            nodes.push(TokenFactNode::new(
+                id,
+                TokenFactNodeKind::Token,
+                u64::from(id),
+                1,
+            ));
             if id > 0 {
                 edges.push(TokenFactEdge::new(id - 1, id, TokenFactEdgeKind::TokenFlow));
             }
@@ -869,7 +872,9 @@ mod tests {
         for case_index in 0..4096_u64 {
             let node_count = 1 + (next_u64(&mut state) % 64) as u32;
             let nodes = (0..node_count)
-                .map(|index| TokenFactNode::new(index + 1, TokenFactNodeKind::Fact, u64::from(index) * 4, 4))
+                .map(|index| {
+                    TokenFactNode::new(index + 1, TokenFactNodeKind::Fact, u64::from(index) * 4, 4)
+                })
                 .collect::<Vec<_>>();
             let mut edges = Vec::new();
             if case_index % 4 == 0 {
@@ -928,7 +933,9 @@ mod tests {
     fn layout_profiles_large_graph_with_bounded_top_rank_storage() {
         let node_count = 32_770_u32;
         let nodes = (0..node_count)
-            .map(|index| TokenFactNode::new(index + 1, TokenFactNodeKind::Fact, u64::from(index) * 4, 4))
+            .map(|index| {
+                TokenFactNode::new(index + 1, TokenFactNodeKind::Fact, u64::from(index) * 4, 4)
+            })
             .collect::<Vec<_>>();
         let mut edges = Vec::with_capacity(32_858);
         for to in 2..=51 {
@@ -938,7 +945,11 @@ mod tests {
             edges.push(TokenFactEdge::new(2, to, TokenFactEdgeKind::FactDependency));
         }
         for from in 3..=node_count {
-            edges.push(TokenFactEdge::new(from, 1, TokenFactEdgeKind::FactDependency));
+            edges.push(TokenFactEdge::new(
+                from,
+                1,
+                TokenFactEdgeKind::FactDependency,
+            ));
         }
         let graph =
             plan_device_resident_token_fact_graph(&nodes, &edges, u64::from(node_count) * 4)
@@ -1009,7 +1020,6 @@ mod tests {
             }
         );
     }
-
 
     fn next_u64(state: &mut u64) -> u64 {
         *state = state

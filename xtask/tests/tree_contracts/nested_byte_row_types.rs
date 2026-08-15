@@ -185,14 +185,11 @@ fn backend_sources_reject_triple_nested_byte_row_types() {
     for src_dir in backend_crate_src_dirs(&root) {
         for path in super::common::rust_sources_under(&src_dir) {
             let locations = parse_or_panic(&path, nested_byte_row_locations(&read_source(&path)));
-            for location in locations {
-                violations.push(format!(
-                    "{}:{}:{}",
-                    path.strip_prefix(&root).unwrap_or(&path).display(),
-                    location.line,
-                    location.column + 1
-                ));
-            }
+            violations.extend(
+                locations
+                    .into_iter()
+                    .map(|location| super::common::violation_location(&root, &path, location)),
+            );
         }
     }
 

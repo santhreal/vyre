@@ -1,13 +1,21 @@
-//! Integration tests for SPIR-V backend runtime dispatch.
+//! Runtime dispatch through the Vulkan-backed SPIR-V backend, against the CPU
+//! reference.
 //!
-//! Tests build simple programs, dispatch them through the Vulkan-backed
-//! SPIR-V backend, and compare results against the CPU reference.
-//! When Vulkan probing fails, tests fail with an actionable configuration error.
+//! Every case dispatches a program on a live Vulkan compute device and compares
+//! every output lane to `vyre-reference`. A missing Vulkan device is a probe or
+//! driver configuration failure, so these tests fail rather than skip.
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_spirv::SpirvBackendRegistration;
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
+
+#[path = "support/elementwise.rs"]
+mod elementwise;
+use elementwise::{
+    bytes_to_u32_values, elementwise_add_program, elementwise_fma_program,
+    output_first_elementwise_add_program, u32_values_to_bytes,
+};
 
 fn require_vulkan_backend() -> SpirvBackendRegistration {
     SpirvBackendRegistration::acquire().unwrap_or_else(|error| {
@@ -19,115 +27,64 @@ fn require_vulkan_backend() -> SpirvBackendRegistration {
     })
 }
 
-/// Build an element-wise add program: out[i] = a[i] + b[i].
-fn elementwise_add_program(count: u32) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::read("a", 0, DataType::U32).with_count(count),
-            BufferDecl::read("b", 1, DataType::U32).with_count(count),
-            BufferDecl::output("out", 2, DataType::U32).with_count(count),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::gid_x(),
-            Expr::add(
-                Expr::load("a", Expr::gid_x()),
-                Expr::load("b", Expr::gid_x()),
-            ),
-        )],
-    )
-}
-
-/// Same computation with output at binding 0 to exercise BindingPlan input/output ordering.
-fn output_first_elementwise_add_program(count: u32) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::output("out", 0, DataType::U32).with_count(count),
-            BufferDecl::read("a", 1, DataType::U32).with_count(count),
-            BufferDecl::read("b", 2, DataType::U32).with_count(count),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::gid_x(),
-            Expr::add(
-                Expr::load("a", Expr::gid_x()),
-                Expr::load("b", Expr::gid_x()),
-            ),
-        )],
-    )
-}
-
-/// Build a program that computes out[i] = a[i] * 2 + 1.
-fn elementwise_fma_program(count: u32) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::read("a", 0, DataType::U32).with_count(count),
-            BufferDecl::output("out", 1, DataType::U32).with_count(count),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::gid_x(),
-            Expr::add(
-                Expr::mul(Expr::load("a", Expr::gid_x()), Expr::u32(2)),
-                Expr::u32(1),
-            ),
-        )],
-    )
-}
-
-fn u32_values_to_bytes(values: &[u32]) -> Vec<u8> {
-    values.iter().flat_map(|v| v.to_le_bytes()).collect()
-}
-
-fn bytes_to_u32_values(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect()
-}
-
-/// Run the CPU reference interpreter and return output bytes.
-fn reference_outputs(program: &Program, inputs: &[Value]) -> Vec<Vec<u8>> {
-    vyre_reference::reference_eval(program, inputs)
-        .expect("Fix: reference evaluation must succeed for valid test programs")
+/// Run the CPU reference interpreter over `lanes` and return its output bytes.
+fn reference_outputs(program: &Program, lanes: &[&[u32]]) -> Vec<Vec<u8>> {
+    let inputs = lanes
         .iter()
-        .map(|v| v.to_bytes())
+        .map(|lane| Value::Bytes(u32_values_to_bytes(lane).into()))
+        .collect::<Vec<_>>();
+    vyre_reference::reference_eval(program, &inputs)
+        .expect("Fix: reference evaluation must succeed for valid test programs.")
+        .iter()
+        .map(|value| value.to_bytes())
         .collect()
 }
 
+/// Compare every output buffer lane for lane.
+///
+/// Buffer count is asserted first: a backend that returns one buffer where the
+/// reference returns two otherwise passes a per-buffer zip silently.
+fn assert_lanes_match_reference(context: &str, device: &[Vec<u8>], reference: &[Vec<u8>]) {
+    assert_eq!(
+        device.len(),
+        reference.len(),
+        "Fix: SPIR-V {context} must produce the same number of output buffers as the reference."
+    );
+    for (index, (device_bytes, reference_bytes)) in device.iter().zip(reference).enumerate() {
+        assert_eq!(
+            bytes_to_u32_values(device_bytes),
+            bytes_to_u32_values(reference_bytes),
+            "Fix: SPIR-V {context} output buffer {index} does not match the reference."
+        );
+    }
+}
+
+/// An output at binding 0 must not be fed a host input buffer.
+///
+/// Host inputs are bound through the binding plan, not by raw binding order. A
+/// backend that walks bindings in order consumes the first input into the output
+/// slot here, which is the only program shape where that bug is visible.
 #[test]
 fn spirv_output_first_binding_matches_reference() {
     let backend = require_vulkan_backend();
 
     let count = 128u32;
     let program = output_first_elementwise_add_program(count);
+    let a = (0..count).map(|i| i.wrapping_mul(5)).collect::<Vec<u32>>();
+    let b = (0..count).map(|i| i.wrapping_mul(7)).collect::<Vec<u32>>();
 
-    let a: Vec<u32> = (0..count).map(|i| i.wrapping_mul(5)).collect();
-    let b: Vec<u32> = (0..count).map(|i| i.wrapping_mul(7)).collect();
+    let outputs = backend
+        .dispatch(
+            &program,
+            &[u32_values_to_bytes(&a), u32_values_to_bytes(&b)],
+            &DispatchConfig::default(),
+        )
+        .expect("Fix: SPIR-V dispatch must bind output-first programs through the binding plan.");
 
-    let inputs_bytes = vec![u32_values_to_bytes(&a), u32_values_to_bytes(&b)];
-    let spirv_outputs = backend
-        .dispatch(&program, &inputs_bytes, &DispatchConfig::default())
-        .expect("Fix: SPIR-V dispatch must bind output-first programs through BindingPlan.");
-
-    let ref_inputs = vec![
-        Value::Bytes(u32_values_to_bytes(&a).into()),
-        Value::Bytes(u32_values_to_bytes(&b).into()),
-    ];
-    let ref_outputs = reference_outputs(&program, &ref_inputs);
-
-    assert_eq!(
-        spirv_outputs.len(),
-        ref_outputs.len(),
-        "Fix: SPIR-V output-first binding must produce the same output count as reference."
-    );
-    assert_eq!(
-        bytes_to_u32_values(&spirv_outputs[0]),
-        bytes_to_u32_values(&ref_outputs[0]),
-        "Fix: SPIR-V must not consume input buffers by raw binding order when an output has binding 0."
+    assert_lanes_match_reference(
+        "output-first binding",
+        &outputs,
+        &reference_outputs(&program, &[&a, &b]),
     );
 }
 
@@ -137,45 +94,22 @@ fn spirv_elementwise_add_matches_reference() {
 
     let count = 256u32;
     let program = elementwise_add_program(count);
+    let a = (0..count).collect::<Vec<u32>>();
+    let b = (0..count).map(|i| i.wrapping_mul(3)).collect::<Vec<u32>>();
 
-    let a: Vec<u32> = (0..count).collect();
-    let b: Vec<u32> = (0..count).map(|i| i.wrapping_mul(3)).collect();
+    let outputs = backend
+        .dispatch(
+            &program,
+            &[u32_values_to_bytes(&a), u32_values_to_bytes(&b)],
+            &DispatchConfig::default(),
+        )
+        .expect("Fix: SPIR-V dispatch of an element-wise add must succeed.");
 
-    let inputs_bytes = vec![u32_values_to_bytes(&a), u32_values_to_bytes(&b)];
-
-    let spirv_outputs = backend
-        .dispatch(&program, &inputs_bytes, &DispatchConfig::default())
-        .expect("Fix: SPIR-V dispatch must succeed");
-
-    let ref_inputs = vec![
-        Value::Bytes(
-            a.iter()
-                .flat_map(|v| v.to_le_bytes())
-                .collect::<Vec<u8>>()
-                .into(),
-        ),
-        Value::Bytes(
-            b.iter()
-                .flat_map(|v| v.to_le_bytes())
-                .collect::<Vec<u8>>()
-                .into(),
-        ),
-    ];
-    let ref_outputs = reference_outputs(&program, &ref_inputs);
-
-    assert_eq!(
-        spirv_outputs.len(),
-        ref_outputs.len(),
-        "Fix: SPIR-V and reference must produce the same number of output buffers"
+    assert_lanes_match_reference(
+        "element-wise add",
+        &outputs,
+        &reference_outputs(&program, &[&a, &b]),
     );
-    for (idx, (spirv, reference)) in spirv_outputs.iter().zip(ref_outputs.iter()).enumerate() {
-        let spirv_u32 = bytes_to_u32_values(spirv);
-        let ref_u32 = bytes_to_u32_values(reference);
-        assert_eq!(
-            spirv_u32, ref_u32,
-            "Fix: SPIR-V output buffer {idx} does not match reference"
-        );
-    }
 }
 
 #[test]
@@ -184,35 +118,21 @@ fn spirv_elementwise_fma_matches_reference() {
 
     let count = 128u32;
     let program = elementwise_fma_program(count);
+    let a = (1..=count).collect::<Vec<u32>>();
 
-    let a: Vec<u32> = (1..=count).collect();
-    let inputs_bytes = vec![u32_values_to_bytes(&a)];
+    let outputs = backend
+        .dispatch(
+            &program,
+            &[u32_values_to_bytes(&a)],
+            &DispatchConfig::default(),
+        )
+        .expect("Fix: SPIR-V dispatch of a multiply-add must succeed.");
 
-    let spirv_outputs = backend
-        .dispatch(&program, &inputs_bytes, &DispatchConfig::default())
-        .expect("Fix: SPIR-V dispatch must succeed");
-
-    let ref_inputs = vec![Value::Bytes(
-        a.iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect::<Vec<u8>>()
-            .into(),
-    )];
-    let ref_outputs = reference_outputs(&program, &ref_inputs);
-
-    assert_eq!(
-        spirv_outputs.len(),
-        ref_outputs.len(),
-        "Fix: SPIR-V and reference must produce the same number of output buffers"
+    assert_lanes_match_reference(
+        "element-wise multiply-add",
+        &outputs,
+        &reference_outputs(&program, &[&a]),
     );
-    for (idx, (spirv, reference)) in spirv_outputs.iter().zip(ref_outputs.iter()).enumerate() {
-        let spirv_u32 = bytes_to_u32_values(spirv);
-        let ref_u32 = bytes_to_u32_values(reference);
-        assert_eq!(
-            spirv_u32, ref_u32,
-            "Fix: SPIR-V output buffer {idx} does not match reference"
-        );
-    }
 }
 
 #[test]
