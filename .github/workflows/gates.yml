@@ -9,16 +9,18 @@ jobs:
   registered-gates:
     name: Every registered gate
     runs-on: ubuntu-latest
-    env:
-      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
-      # Runs every subcommand registered as a gate and holds each to the
-      # result pinned in xtask/gate-baselines.toml. 41 subcommands were
-      # registered here and 9 were ever invoked; this step is what makes the
-      # other 32 count for anything.
+      # Runs every registered gate and holds each to the number pinned in
+      # xtask/gate-baselines.toml. Registering a gate without a pin fails, and a
+      # pin naming no gate fails, so neither list is maintained by hand and no
+      # rule can be registered and left unrun. The source-scanning rules, the
+      # frozen contracts, the size ratchet, the unification rows, the release
+      # evidence path oracle and the doc claim manifest are all in here; they
+      # used to be twenty separate steps below, each able to go red without
+      # anyone noticing which.
       - name: Run the registered gate sweep
         run: ./cargo_full run -p xtask -- gates
 
@@ -53,7 +55,7 @@ jobs:
         run: bash scripts/check_deep_bench_coverage.sh
 
   tree-rules:
-    name: Rules that need no build
+    name: Rules the sweep does not own yet
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -77,12 +79,6 @@ jobs:
       - name: Internal dependency versions match publishability
         run: bash scripts/check_internal_deps_have_versions.sh
 
-      # `missing_docs = "deny"` in [workspace.lints.rust] is the floor every
-      # member inherits. A crate-root #![allow(missing_docs)] silently removes
-      # it for that whole crate; a module-scoped allow stays permitted.
-      - name: No crate-root missing_docs override
-        run: bash scripts/check_no_missing_docs_override.sh
-
       # ci.yml must keep the three-OS by two-toolchain matrix, must not carry a
       # no-GPU escape hatch, and gpu-parity.yml must still exist to own the
       # parity lane.
@@ -96,74 +92,6 @@ jobs:
       # __pycache__ for scripts/check_repo_hygiene.sh to report.
       - name: Documentation manifest validator contracts
         run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_docs_manifest.py
-
-      # A lower bound, not an equality. The earlier version of this script
-      # failed when coverage GREW, demanding a manual floor bump, which is why
-      # it sat unwired: it punished the improvement it exists to encourage.
-      - name: Property-test coverage does not shrink
-        run: bash scripts/check_proptest_coverage.sh
-
-      # The execution queue is a gitignored local file, so its absence is not a
-      # violation and this gate measures tracked files only. The earlier version
-      # asserted the file exists, which no clean checkout can satisfy.
-      - name: One execution queue, no committed parallel plans
-        run: bash scripts/check_single_backlog.sh
-
-      # Each row pins a cross-crate unification that has already landed. A
-      # declared search path that no longer exists fails as UNMEASURABLE rather
-      # than scoring 0 and passing, which is how three of these rows spent
-      # months reporting success while scanning deleted trees.
-      - name: Unification baselines hold
-        run: bash scripts/check_unification_baselines.sh
-
-      # unsafe_code = "deny" is inherited workspace-wide, so the set of files
-      # carrying an allow(unsafe_code) override IS the complete unsafe surface,
-      # enforced by rustc rather than approximated by grep. This pins that set.
-      - name: Unsafe surface matches the reviewed budget
-        run: bash scripts/check_unsafe_budget.sh
-
-      # Source-scanning rules, all on scripts/lib/source_scan.sh. They were
-      # written against ripgrep with `2>/dev/null || true`, which reports a clean
-      # tree whenever ripgrep is missing or lacks a feature, so none of them could
-      # be trusted until they stopped depending on an optional binary.
-      - name: No registry walk on the dispatch hot path
-        run: bash scripts/check_no_hot_path_inventory.sh
-      - name: Nested byte rows held at their ceiling
-        run: bash scripts/check_no_hot_path_vec_vec.sh
-      - name: Unbounded container construction held at its ceiling
-        run: bash scripts/check_no_unbounded_cache.sh
-      - name: Read-all confined to reviewed cache modules
-        run: bash scripts/check_no_unbounded_external_read.sh
-      - name: Production dispatch stays borrowed
-        run: bash scripts/check_no_owned_dispatch_hot_paths.sh
-      - name: Blocking waits held at their ceiling
-        run: bash scripts/check_no_hot_path_blocking_wait.sh
-      - name: Ordinary outputs stage through readback rings
-        run: bash scripts/check_direct_readback_ring_default.sh
-      - name: Adding a backend stays one crate plus inventory
-        run: bash scripts/check_backend_extension_contract.sh
-      - name: Status-managed audits tag every finding
-        run: bash scripts/check_audit_status_tags.sh
-
-      # Program's fields are extracted from source and each must be classified as
-      # serialized or explicitly transient, so a new field turns this red until
-      # someone decides whether it belongs on the wire.
-      - name: Every Program field is serialized or declared transient
-        run: bash scripts/check_ir_wire_field_sync.sh
-
-      # Every load-bearing claim in a doc names the test that proves it. A claim
-      # whose phrase left the doc, or whose test file is gone, fails here.
-      - name: Every doc claim has a proving test
-        run: bash scripts/check_doc_claim_to_test.sh
-
-      # `try_reserve(additional)` guarantees `len() + additional`, so deriving
-      # `additional` from `capacity()` under-reserves any warm buffer whose
-      # capacity sits between `target / 2` and `target`: the call succeeds, the
-      # capacity stays short, and the following fill reallocates. It compiles,
-      # it returns Ok, and every result is correct, so no build, test, clippy,
-      # or unsafe-budget gate can see it. Only a source scan can.
-      - name: Reserve calls size from len, not capacity
-        run: bash scripts/check_no_under_reserve.sh
 
       # A manifest naming a member that does not exist makes every cargo command
       # fail from a clean checkout, which is why this gate runs no cargo at all:
@@ -195,8 +123,6 @@ jobs:
   feature-msrv:
     name: Every feature compiles alone on the MSRV
     runs-on: ubuntu-latest
-    env:
-      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -244,8 +170,6 @@ jobs:
   feature-gated-sweeps:
     name: Oracle-matrix sweeps ci.yml cannot reach
     runs-on: ubuntu-latest
-    env:
-      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -272,8 +196,6 @@ jobs:
   spirv-validation:
     name: Emitted SPIR-V is validated, not just shaped
     runs-on: ubuntu-latest
-    env:
-      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
