@@ -118,7 +118,7 @@ fn every_xtask_binary_help_route_exits_zero() {
     }
 }
 
-/// `xtask --help` lists every registered subcommand.
+/// `xtask --help` lists every registered gate.
 ///
 /// WHY: a reader reaches a subcommand through help. A help route that prints a
 /// header and a truncated table, or that stops at the first row whose usage
@@ -126,17 +126,17 @@ fn every_xtask_binary_help_route_exits_zero() {
 /// route check above passes while the commands are unreachable. The expected
 /// set is the table itself, so a subcommand added tomorrow is judged tomorrow.
 #[test]
-fn xtask_help_lists_every_registered_subcommand() {
+fn xtask_help_lists_every_registered_gate() {
     let output = run(env!("CARGO_BIN_EXE_xtask"), &["--help"]);
     let help = String::from_utf8_lossy(&output.stdout);
-    let missing: Vec<&str> = xtask::subcommands::SUBCOMMANDS
+    let missing: Vec<&str> = xtask::subcommands::registry()
         .iter()
-        .map(|entry| entry.name)
+        .map(|gate| gate.name())
         .filter(|name| !help.contains(name))
         .collect();
     assert!(
         missing.is_empty(),
-        "Fix: `xtask --help` omits {} registered subcommand(s): {}",
+        "Fix: `xtask --help` omits {} registered gate(s): {}",
         missing.len(),
         missing.join(", ")
     );
