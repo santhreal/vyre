@@ -3545,6 +3545,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   interpreter. The leaf table is checked against the operation ids declared
   under `vyre-libs/src/rule` on each run, so a twelfth predicate turns the
   suite red until it is pinned.
+- The scalar storage-graph matrix declares every operation the scalar oracle
+  defines. It declared 40 and the oracle defines 76: the four bit-unpack ops at
+  both 32-bit integer widths, the whole bitwise set at `i32`, and the
+  transcendental, rounding and classification set at `f32` were all undeclared,
+  so the matrix asserted that the oracle refuses operations it evaluates. The
+  row that reports an undeclared operation now reports every one of them in a
+  single run instead of the first, which is what turned a 36-item finding into
+  one measurement rather than 36 rebuilds.
 - `vyre_foundation::scalar_ops` is the single owner of scalar operator
   semantics. The literal folder in `vyre_foundation::ir_eval` and the
   storage-graph interpreter in `vyre_foundation::ir_inner::model::node_kind`

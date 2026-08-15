@@ -19,16 +19,19 @@
 //! declaration is proven in both directions: a declared operation must evaluate
 //! to the declared value, and an undeclared one must be refused by name. That
 //! second half is what pins the oracle's real capability surface, which is not
-//! uniform across widths: `i32` defines one unary operation where `u64` defines
-//! seven, `f32` has no remainder, and `u32` has no negation. Widening any of
-//! those turns this suite red until the row records the decision.
+//! uniform across widths: `f32` carries the transcendental, rounding and
+//! classification set and no remainder, the integer widths carry the bitwise
+//! set, `i32` refuses `LogicalNot` where `u32` defines it, the bit-unpack ops
+//! answer in `u32` for a 32-bit integer operand and refuse at every other
+//! width, and `bool` defines `LogicalNot` alone. Widening any of those turns
+//! this suite red until the row records the decision.
 
 #![forbid(unsafe_code)]
 
 use std::collections::BTreeSet;
-use std::path::{Path, PathBuf};
 
 use vyre_foundation::ir::{BinOp, NodeId, NodeStorage, UnOp, Value as IrValue};
+use vyre_reference::ieee754;
 use vyre_reference::ieee754::canonical_f32;
 use vyre_reference::{run_storage_graph, ReferenceError};
 
@@ -185,7 +188,7 @@ fn widths() -> Vec<Width> {
                 addend: 3,
             },
             binary_ops_floor: 29,
-            unary_ops_floor: 6,
+            unary_ops_floor: 11,
             exception: "",
             corpus: || u32_corpus().into_iter().map(NodeStorage::LitU32).collect(),
             binary: u32_binary,
@@ -242,7 +245,7 @@ fn widths() -> Vec<Width> {
                 addend: 13,
             },
             binary_ops_floor: 23,
-            unary_ops_floor: 1,
+            unary_ops_floor: 10,
             exception: "",
             corpus: || i32_corpus().into_iter().map(NodeStorage::LitI32).collect(),
             binary: i32_binary,
@@ -263,7 +266,7 @@ fn widths() -> Vec<Width> {
                 addend: 7,
             },
             binary_ops_floor: 12,
-            unary_ops_floor: 3,
+            unary_ops_floor: 26,
             exception: "",
             corpus: || f32_corpus().into_iter().map(NodeStorage::LitF32).collect(),
             binary: f32_binary,
@@ -377,12 +380,31 @@ fn u32_binary(op: BinOp, left: &NodeStorage, right: &NodeStorage) -> Option<Expe
     Some(Expected::Value(value))
 }
 
+/// `(shift, mask)` for the bit-unpack unary ops.
+///
+/// The oracle answers these before per-type dispatch, for a `u32` or `i32`
+/// operand alike, and always in `u32`: the trailing mask makes the shift's
+/// signedness irrelevant, so both widths extract identical bits.
+fn unpack_shift_mask(op: &UnOp) -> Option<(u32, u32)> {
+    match op {
+        UnOp::Unpack4Low => Some((0, 0x0F)),
+        UnOp::Unpack4High => Some((4, 0x0F)),
+        UnOp::Unpack8Low => Some((0, 0xFF)),
+        UnOp::Unpack8High => Some((24, 0xFF)),
+        _ => None,
+    }
+}
+
 fn u32_unary(op: &UnOp, operand: &NodeStorage) -> Option<Expected> {
     let NodeStorage::LitU32(value) = operand else {
         return None;
     };
     let value = *value;
+    if let Some((shift, mask)) = unpack_shift_mask(op) {
+        return Some(Expected::Value(IrValue::U32((value >> shift) & mask)));
+    }
     let result = match op {
+        UnOp::Negate => IrValue::U32(0u32.wrapping_sub(value)),
         UnOp::BitNot => IrValue::U32(!value),
         UnOp::LogicalNot => IrValue::Bool(value == 0),
         UnOp::Popcount => IrValue::U32(value.count_ones()),
@@ -489,10 +511,23 @@ fn i32_unary(op: &UnOp, operand: &NodeStorage) -> Option<Expected> {
     let NodeStorage::LitI32(value) = operand else {
         return None;
     };
-    match op {
-        UnOp::Negate => Some(Expected::Value(IrValue::I32(value.wrapping_neg()))),
-        _ => None,
+    let value = *value;
+    if let Some((shift, mask)) = unpack_shift_mask(op) {
+        return Some(Expected::Value(IrValue::U32(
+            (u32::from_ne_bytes(value.to_ne_bytes()) >> shift) & mask,
+        )));
     }
+    let result = match op {
+        UnOp::Negate => IrValue::I32(value.wrapping_neg()),
+        UnOp::BitNot => IrValue::I32(!value),
+        // LogicalNot is u32/bool only, per typecheck V100, so i32 refuses it.
+        UnOp::Popcount => IrValue::I32(value.count_ones() as i32),
+        UnOp::Clz => IrValue::I32(value.leading_zeros() as i32),
+        UnOp::Ctz => IrValue::I32(value.trailing_zeros() as i32),
+        UnOp::ReverseBits => IrValue::I32(value.reverse_bits()),
+        _ => return None,
+    };
+    Some(Expected::Value(result))
 }
 
 fn f32_binary(op: BinOp, left: &NodeStorage, right: &NodeStorage) -> Option<Expected> {
@@ -529,13 +564,49 @@ fn f32_unary(op: &UnOp, operand: &NodeStorage) -> Option<Expected> {
         return None;
     };
     let value = canonical_f32(*value);
+    // The transcendental arms name the same canonicalizer the oracle calls
+    // rather than a second `libm` call: what this row pins is which operations
+    // f32 defines and that each answer comes back canonicalized, not a private
+    // reimplementation of `sinf` that would agree with the oracle by luck.
     let result = match op {
         UnOp::Negate => IrValue::F32(canonical_f32(-value)),
-        UnOp::InverseSqrt => IrValue::F32(canonical_f32(1.0 / value.sqrt())),
-        UnOp::Reciprocal => IrValue::F32(canonical_f32(1.0 / value)),
+        UnOp::Abs => IrValue::F32(canonical_f32(value.abs())),
+        UnOp::Sqrt => IrValue::F32(canonical_f32(ieee754::canonical_sqrt(value))),
+        UnOp::InverseSqrt => IrValue::F32(canonical_f32(ieee754::canonical_inverse_sqrt(value))),
+        UnOp::Reciprocal => IrValue::F32(canonical_f32(ieee754::canonical_reciprocal(value))),
+        UnOp::Sin => IrValue::F32(canonical_f32(ieee754::canonical_sin(value))),
+        UnOp::Cos => IrValue::F32(canonical_f32(ieee754::canonical_cos(value))),
+        UnOp::Tan => IrValue::F32(canonical_f32(ieee754::canonical_tan(value))),
+        UnOp::Asin => IrValue::F32(canonical_f32(ieee754::canonical_asin(value))),
+        UnOp::Acos => IrValue::F32(canonical_f32(ieee754::canonical_acos(value))),
+        UnOp::Atan => IrValue::F32(canonical_f32(ieee754::canonical_atan(value))),
+        UnOp::Sinh => IrValue::F32(canonical_f32(ieee754::canonical_sinh(value))),
+        UnOp::Cosh => IrValue::F32(canonical_f32(ieee754::canonical_cosh(value))),
+        UnOp::Tanh => IrValue::F32(canonical_f32(ieee754::canonical_tanh(value))),
+        UnOp::Exp => IrValue::F32(canonical_f32(ieee754::canonical_exp(value))),
+        UnOp::Exp2 => IrValue::F32(canonical_f32(ieee754::canonical_exp2(value))),
+        UnOp::Log => IrValue::F32(canonical_f32(ieee754::canonical_log(value))),
+        UnOp::Log2 => IrValue::F32(canonical_f32(ieee754::canonical_log2(value))),
+        UnOp::Floor => IrValue::F32(canonical_f32(value.floor())),
+        UnOp::Ceil => IrValue::F32(canonical_f32(value.ceil())),
+        UnOp::Round => IrValue::F32(canonical_f32(value.round())),
+        UnOp::Trunc => IrValue::F32(canonical_f32(value.trunc())),
+        UnOp::Sign => IrValue::F32(canonical_f32(float_sign(value))),
+        UnOp::IsNan => IrValue::Bool(value.is_nan()),
+        UnOp::IsInf => IrValue::Bool(value.is_infinite()),
+        UnOp::IsFinite => IrValue::Bool(value.is_finite()),
         _ => return None,
     };
     Some(Expected::Value(result))
+}
+
+/// The oracle's `Sign`: zero of either sign answers `+0.0`, NaN stays NaN.
+fn float_sign(value: f32) -> f32 {
+    if value == 0.0 {
+        0.0
+    } else {
+        value.signum()
+    }
 }
 
 fn bool_binary(op: BinOp, left: &NodeStorage, right: &NodeStorage) -> Option<Expected> {
@@ -843,8 +914,15 @@ fn declared_edge_cases_match_the_storage_graph_oracle() {
     }
 }
 
+/// Every operation outside a width's declared surface, in one report.
+///
+/// Findings accumulate instead of panicking on the first: the oracle's real
+/// capability surface is not uniform across widths, so one missing declaration
+/// usually stands in front of several more, and a gate that names only the first
+/// costs a full rebuild per offender to enumerate what it already knows.
 #[test]
 fn operations_a_width_does_not_declare_are_refused_by_name() {
+    let mut findings = Vec::new();
     for row in widths() {
         let corpus = (row.corpus)();
         let (left, right) = row.probe(&corpus);
@@ -853,12 +931,14 @@ fn operations_a_width_does_not_declare_are_refused_by_name() {
             if declared.contains(&op) {
                 continue;
             }
-            assert_refused(
+            if let Some(finding) = refusal_finding(
                 binary_result(op, left, right),
                 row.diagnostic,
                 "binary",
-                || format!("{} {op:?}", row.literal),
-            );
+                &format!("{} {op:?}", row.literal),
+            ) {
+                findings.push(finding);
+            }
         }
 
         let declared = row.unary_ops(&corpus);
@@ -866,35 +946,46 @@ fn operations_a_width_does_not_declare_are_refused_by_name() {
             if declared.contains(&op) {
                 continue;
             }
-            assert_refused(unary_result(&op, left), row.diagnostic, "unary", || {
-                format!("{} {op:?}", row.literal)
-            });
+            if let Some(finding) = refusal_finding(
+                unary_result(&op, left),
+                row.diagnostic,
+                "unary",
+                &format!("{} {op:?}", row.literal),
+            ) {
+                findings.push(finding);
+            }
         }
     }
+
+    assert!(
+        findings.is_empty(),
+        "Fix: {} undeclared operation(s) do not refuse as this matrix states:\n{}",
+        findings.len(),
+        findings.join("\n")
+    );
 }
 
-/// An operation outside a width's declared surface must fail, and the failure
-/// must name the width and the arity so the reader knows which row to widen.
-fn assert_refused(
+/// How an operation outside a width's declared surface failed to refuse, if it did.
+///
+/// A refusal must name the width and the arity so the reader knows which row to
+/// widen, and an operation the oracle evaluates is not a refusal at all: it is a
+/// capability the matrix has stopped describing.
+fn refusal_finding(
     actual: ReferenceResult,
     diagnostic: &str,
     arity: &str,
-    context: impl Fn() -> String,
-) {
+    context: &str,
+) -> Option<String> {
     match actual {
-        Ok(value) => panic!(
-            "Fix: {} now evaluates to {value:?}. The oracle gained semantics this matrix \
-             does not declare: add the expectation to that width's row.",
-            context()
-        ),
+        Ok(value) => Some(format!(
+            "{context} evaluates to {value:?}; the oracle gained semantics this matrix does not \
+             declare, so add the expectation to that width's row"
+        )),
         Err(error) => {
             let message = error.to_string();
             let expected = format!("{UNSUPPORTED} {diagnostic} {arity} operation");
-            assert!(
-                message.contains(&expected),
-                "Fix: {} must be refused with `{expected}`: {message}",
-                context()
-            );
+            (!message.contains(&expected))
+                .then(|| format!("{context} must be refused with `{expected}`, said: {message}"))
         }
     }
 }
@@ -938,14 +1029,8 @@ fn operands_of_different_widths_are_refused_as_a_type_mismatch() {
 /// scalar literal reaches this matrix through the gate that already forces a
 /// snapshot refresh.
 fn frozen_literal_variants() -> BTreeSet<String> {
-    let path = foundation_api_snapshot();
-    let snapshot = std::fs::read_to_string(&path).unwrap_or_else(|error| {
-        panic!(
-            "Fix: the public-API snapshot at {} must be readable to enumerate the scalar literals: {error}",
-            path.display()
-        )
-    });
-    let names: BTreeSet<String> = snapshot
+    const PACKAGE: &str = "vyre-foundation";
+    let names: BTreeSet<String> = vyre_test_support::public_api::snapshot_text(PACKAGE)
         .lines()
         .filter_map(|line| line.strip_prefix("pub vyre_foundation::ir::NodeStorage::Lit"))
         .filter_map(|rest| rest.split('(').next())
@@ -955,23 +1040,8 @@ fn frozen_literal_variants() -> BTreeSet<String> {
     assert!(
         !names.is_empty(),
         "Fix: the public-API snapshot at {} lists no NodeStorage literal variants. Refresh it \
-         with scripts/check_public_api_snapshot.sh --refresh vyre-foundation.",
-        path.display()
+         with scripts/check_public_api_snapshot.sh --refresh {PACKAGE}.",
+        vyre_test_support::public_api::snapshot_path(PACKAGE).display()
     );
     names
-}
-
-fn foundation_api_snapshot() -> PathBuf {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    manifest
-        .ancestors()
-        .map(|directory| directory.join("docs/public-api/vyre-foundation.txt"))
-        .find(|candidate| candidate.is_file())
-        .unwrap_or_else(|| {
-            panic!(
-                "Fix: no docs/public-api/vyre-foundation.txt above {}. The scalar matrix enumerates \
-                 the frozen literal surface from that snapshot.",
-                manifest.display()
-            )
-        })
 }
