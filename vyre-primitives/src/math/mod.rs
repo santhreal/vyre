@@ -137,6 +137,24 @@ pub mod amg_v_cycle;
 /// dispatch-graph sheaf Laplacian.
 pub mod sheaf_laplacian_eigenvalue;
 
+/// Canonical sign for every column of an eigenvector matrix, so an eigenbasis
+/// that is only defined up to sign can be pinned by an exact fixture.
+pub mod eigenvector_column_sign;
+
+/// Givens rotation of one strided element pair, the shared arithmetic behind
+/// every column, row and accumulator rotation.
+pub mod givens_rotate_pair;
+
+/// One Jacobi rotation at a given pivot, applied to a symmetric matrix and
+/// accumulated into its rotation matrix.
+pub mod jacobi_apply_rotation;
+
+/// Diagonal read-out of a square row-major matrix.
+pub mod matrix_diagonal_extract;
+
+/// Identity seeding of a square row-major matrix.
+pub mod matrix_identity_fill;
+
 /// Symmetric eigendecomposition via cyclic (max-pivot) Jacobi rotations (f32, serial single-lane).
 /// The numerical core of the tensor-train SVD; reusable for any dense symmetric eigenproblem.
 pub mod symmetric_eigen_jacobi;
