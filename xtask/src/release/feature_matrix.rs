@@ -4,8 +4,6 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use crate::manifest_walk::MAX_MANIFEST_BYTES;
-
 #[derive(Debug, Serialize)]
 struct FeatureMatrix {
     schema_version: u32,
@@ -130,32 +128,19 @@ fn collect_features(root: &Path, packages: &mut Vec<PackageFeatures>, blockers: 
 }
 
 fn parse_features(path: &Path) -> Result<Option<PackageFeatures>, String> {
-    let text = crate::output_arg::read_text_bounded(path, MAX_MANIFEST_BYTES, "release feature")
-        .map_err(|error| {
-            format!(
-                "failed to read feature manifest `{}`: {error}",
-                path.display()
-            )
-        })?;
-    let value = toml::from_str::<toml::Value>(&text).map_err(|error| {
-        format!(
-            "failed to parse feature manifest `{}`: {error}",
-            path.display()
-        )
-    })?;
-    let Some(package) = value.get("package") else {
-        return Ok(None);
-    };
-    let Some(name) = package
-        .get("name")
-        .and_then(toml::Value::as_str)
-        .map(str::to_string)
-    else {
-        return Err(format!(
-            "package manifest `{}` is missing package.name",
-            path.display()
-        ));
-    };
+    crate::manifest_walk::parse_package_manifest(
+        path,
+        "release feature",
+        "feature manifest",
+        |name, value, _package| build_features(path, name, value),
+    )
+}
+
+fn build_features(
+    path: &Path,
+    name: &str,
+    value: &toml::Value,
+) -> Result<Option<PackageFeatures>, String> {
     let mut features: Vec<String> = value
         .get("features")
         .and_then(toml::Value::as_table)
@@ -192,17 +177,17 @@ fn parse_features(path: &Path) -> Result<Option<PackageFeatures>, String> {
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
-    let dependency_names = dependency_names(&value);
-    let optional_dependency_names = optional_dependency_names(&value);
+    let dependency_names = dependency_names(value);
+    let optional_dependency_names = optional_dependency_names(value);
     let unresolved_feature_members = unresolved_feature_members(
         value.get("features").and_then(toml::Value::as_table),
         &features,
         &dependency_names,
         &optional_dependency_names,
     );
-    let release_policy = release_policy(&name);
+    let release_policy = release_policy(name);
     Ok(Some(PackageFeatures {
-        name,
+        name: name.to_string(),
         manifest: path.display().to_string(),
         feature_count: features.len(),
         has_default_feature,

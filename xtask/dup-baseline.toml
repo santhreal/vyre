@@ -53,8 +53,8 @@ total_lines = 1955
 
 [[crate]]
 name = "tests"
-duplicate_lines = 8
-total_lines = 3185
+duplicate_lines = 0
+total_lines = 5031
 
 [[crate]]
 name = "vyre"
@@ -193,8 +193,8 @@ total_lines = 9706
 
 [[crate]]
 name = "xtask"
-duplicate_lines = 102
-total_lines = 17349
+duplicate_lines = 50
+total_lines = 18731
 
 [[crate]]
 name = "xtask-evidence"

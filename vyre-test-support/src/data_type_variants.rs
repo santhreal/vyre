@@ -55,8 +55,7 @@ pub fn declared_data_type_variants() -> BTreeSet<String> {
     top_level_variant_names(body)
 }
 
-/// One fixture per declared `DataType` variant, in declaration order of this
-/// list rather than of the enum.
+/// The flat `DataType` forms a buffer declaration can carry as its element.
 ///
 /// The flat leaves come from [`crate::data_type_elements`], so the two tables
 /// cannot disagree about which flat forms exist. Parameterised variants get the

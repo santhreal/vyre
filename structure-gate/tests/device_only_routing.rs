@@ -43,10 +43,10 @@
 //! name list would miss.
 
 use std::collections::BTreeSet;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use super::workspace_root;
+use structure_gate::source_scan::{is_word_byte, matching_brace, rust_sources_with_text};
+use structure_gate::workspace_root;
 
 /// Variant names that mark an enum as a routing enum.
 ///
@@ -253,15 +253,7 @@ pub enum PolicyRoute {
 /// Every routing enum in the workspace, recognised by its own variants.
 fn routing_enums(root: &Path) -> Vec<RoutingEnum> {
     let mut found = Vec::new();
-    for file in rust_sources(root) {
-        let Ok(text) = fs::read_to_string(&file) else {
-            continue;
-        };
-        let relative = file
-            .strip_prefix(root)
-            .unwrap_or(&file)
-            .to_string_lossy()
-            .replace('\\', "/");
+    for (relative, text) in rust_sources_with_text(root) {
         for (_, name, variants) in enums_in(&text) {
             let declared: BTreeSet<&str> = variants.iter().map(String::as_str).collect();
             if DEVICE_ROUTE_MARKERS
@@ -350,49 +342,3 @@ fn variants_in(body: &str) -> Vec<String> {
     variants
 }
 
-fn matching_brace(bytes: &[u8], open: usize) -> Option<usize> {
-    let mut depth = 0usize;
-    for (index, byte) in bytes.iter().enumerate().skip(open) {
-        match byte {
-            b'{' => depth += 1,
-            b'}' => {
-                depth -= 1;
-                if depth == 0 {
-                    return Some(index);
-                }
-            }
-            _ => {}
-        }
-    }
-    None
-}
-
-const fn is_word_byte(byte: u8) -> bool {
-    byte.is_ascii_alphanumeric() || byte == b'_'
-}
-
-fn rust_sources(root: &Path) -> Vec<PathBuf> {
-    let mut found = Vec::new();
-    collect(root, &mut found);
-    found.sort();
-    found
-}
-
-fn collect(directory: &Path, found: &mut Vec<PathBuf>) {
-    let Ok(entries) = fs::read_dir(directory) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        let name = entry.file_name();
-        let name = name.to_string_lossy();
-        if path.is_dir() {
-            if name == "target" || name.starts_with('.') {
-                continue;
-            }
-            collect(&path, found);
-        } else if path.extension().is_some_and(|extension| extension == "rs") {
-            found.push(path);
-        }
-    }
-}

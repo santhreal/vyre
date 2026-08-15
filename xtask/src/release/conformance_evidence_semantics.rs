@@ -1,10 +1,26 @@
-//! What a recorded conformance matrix artifact has to say to count.
+//! What a recorded conformance matrix artifact has to say to count, and how the
+//! conformance surface reads text off disk.
 //!
 //! The artifact is read back as JSON and checked against the backends, gates and
 //! workflows a release requires, without consulting the registry that produced
 //! it.
 
+use std::io;
+use std::path::Path;
+
 use serde_json::Value;
+
+/// Largest conformance evidence or workflow file this surface will read.
+const MAX_TEXT_BYTES: u64 = 8_388_608;
+
+/// Read a file on the conformance surface, bounded.
+///
+/// The bound and the error context are one decision about one surface. Three
+/// modules carried their own copy of both, so a change to either had to be made
+/// in three files and agreed by eye.
+pub fn read_conformance_text(path: &Path) -> io::Result<String> {
+    crate::output_arg::read_text_bounded(path, MAX_TEXT_BYTES, "conformance evidence")
+}
 
 const REQUIRED_BACKENDS: &[&str] = &["cuda", "wgpu", "cpu-ref"];
 const REQUIRED_WORKFLOWS: &[&str] = &[

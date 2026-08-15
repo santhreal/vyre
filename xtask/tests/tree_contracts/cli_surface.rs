@@ -1,5 +1,6 @@
-//! Executable command-line documentation contract tests.
+//! Contracts over the command-line surface every Cargo binary presents.
 
+use std::collections::BTreeSet;
 use std::fs;
 use std::process::{Command, Output};
 
@@ -12,11 +13,13 @@ fn run(executable: &str, args: &[&str]) -> Output {
         .expect("Fix: documented CLI executable must launch")
 }
 
-/// Locks every Cargo binary, discovered subcommand, README block, and help transcript to one executable contract.
+/// Locks every Cargo binary, discovered subcommand, README block, and help
+/// transcript to one executable contract.
 #[test]
 fn workspace_cli_documentation_is_current() {
+    let root = workspace_root();
     let output = Command::new("python3")
-        .arg(workspace_root().join("scripts/cli_docs.py"))
+        .arg(root.join("scripts/cli_docs.py"))
         .arg("--check")
         .output()
         .expect("Fix: CLI documentation generator must launch with python3");
@@ -25,39 +28,69 @@ fn workspace_cli_documentation_is_current() {
         "Fix: regenerate or repair CLI contracts: {}",
         String::from_utf8_lossy(&output.stderr)
     );
+
     let summary = String::from_utf8(output.stdout).expect("Fix: generator output must be UTF-8");
-    let root = workspace_root();
-    let manifest = fs::read_to_string(root.join("docs/CLI.toml"))
-        .expect("Fix: docs/CLI.toml must be readable");
-    let declared = manifest
-        .lines()
-        .filter(|line| line.trim() == "[[binary]]")
-        .count();
-    let documented =
-        fs::read_to_string(root.join("docs/CLI.md")).expect("Fix: docs/CLI.md must be readable");
+    let manifest: toml::Value = toml::from_str(
+        &fs::read_to_string(root.join("docs/CLI.toml")).expect("Fix: docs/CLI.toml must be readable"),
+    )
+    .expect("Fix: docs/CLI.toml must be valid TOML");
+    let binaries = manifest["binary"]
+        .as_array()
+        .expect("Fix: docs/CLI.toml must declare [[binary]] entries");
+    let mut readmes: BTreeSet<&str> = BTreeSet::new();
+    for entry in binaries {
+        readmes.insert(
+            entry["readme"]
+                .as_str()
+                .expect("Fix: every [[binary]] must name its README"),
+        );
+    }
+    let documented: usize = readmes
+        .iter()
+        .map(|readme| {
+            let text = fs::read_to_string(root.join(readme))
+                .unwrap_or_else(|error| panic!("Fix: {readme} must be readable: {error}"));
+            documented_subcommand_count(&text)
+        })
+        .sum();
+
     let expected = format!(
-        "cli-docs: verified {declared} binaries and {} subcommands\n",
-        documented_subcommand_count(&documented)
+        "cli-docs: verified {} binaries and {documented} subcommands\n",
+        binaries.len()
     );
     assert_eq!(
         summary, expected,
         "Fix: the generator must verify every binary declared in docs/CLI.toml and every \
-         subcommand it wrote into docs/CLI.md"
+         subcommand it wrote into the generated README blocks"
     );
 }
 
-/// Total subcommands the generated summary table attributes to the binaries.
+/// Subcommands the generated README blocks attribute to the binaries.
 ///
 /// The count is read back out of the artifact rather than written here, so
 /// registering a binary or adding a subcommand does not need this test edited,
-/// and a generator that stopped verifying one of them cannot stay green.
-fn documented_subcommand_count(doc: &str) -> usize {
-    doc.lines()
-        .filter(|line| line.starts_with("| `"))
-        .filter_map(|line| line.split('|').nth(4))
-        .map(str::trim)
-        .filter(|cell| !cell.is_empty() && *cell != "none")
-        .map(|cell| cell.split(',').count())
+/// and a generator that stopped verifying one of them cannot stay green. The
+/// artifact is the generated block in each crate README; the summary table this
+/// used to count lived in `docs/CLI.md`, which no longer exists.
+fn documented_subcommand_count(readme: &str) -> usize {
+    let Some((_, after)) = readme.split_once("<!-- BEGIN GENERATED CLI CONTRACT -->") else {
+        return 0;
+    };
+    let block = after
+        .split("<!-- END GENERATED CLI CONTRACT -->")
+        .next()
+        .unwrap_or_default();
+    block
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix("Commands: "))
+        .map(|listed| {
+            let listed = listed.trim_end_matches('.');
+            if listed == "none" {
+                0
+            } else {
+                listed.split(',').count()
+            }
+        })
         .sum()
 }
 
@@ -83,6 +116,30 @@ fn every_xtask_binary_help_route_exits_zero() {
         );
         assert!(String::from_utf8_lossy(&output.stdout).contains(expected));
     }
+}
+
+/// `xtask --help` lists every registered subcommand.
+///
+/// WHY: a reader reaches a subcommand through help. A help route that prints a
+/// header and a truncated table, or that stops at the first row whose usage
+/// string is empty, still exits 0 and still contains `SUBCOMMANDS:`, so the
+/// route check above passes while the commands are unreachable. The expected
+/// set is the table itself, so a subcommand added tomorrow is judged tomorrow.
+#[test]
+fn xtask_help_lists_every_registered_subcommand() {
+    let output = run(env!("CARGO_BIN_EXE_xtask"), &["--help"]);
+    let help = String::from_utf8_lossy(&output.stdout);
+    let missing: Vec<&str> = xtask::subcommands::SUBCOMMANDS
+        .iter()
+        .map(|entry| entry.name)
+        .filter(|name| !help.contains(name))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "Fix: `xtask --help` omits {} registered subcommand(s): {}",
+        missing.len(),
+        missing.join(", ")
+    );
 }
 
 /// Prevents the historical `scaffold_rule --help` bug from creating a rule

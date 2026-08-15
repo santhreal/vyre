@@ -1613,6 +1613,11 @@ text = "The C11 hostile-parser fixtures are spelled through `c_frontend::spellin
 id = "vyre-lints-workspace-root-discovery"
 category = "Fixed"
 text = "`vyre-lints` resolves the workspace root by walking ancestors for a manifest that declares `[workspace]`, and `--print-default-roots` prints those roots relative to it. A run from inside a member directory previously enumerated no members at all, because the default root is the current directory and a member manifest declares no `workspace.members`. Manifest reading also goes through `toml::from_str::<toml::Table>` rather than parsing a whole document into `toml::Value`, which the pinned toml release rejects at run time with `unexpected content, expected nothing`, and source reading goes through the one bounded reader `vyre_lints::read_source_bounded` so a single cap covers every file the lint walks."
+
+[[fragments]]
+id = "tooling-source-walk-owners"
+category = "Changed"
+text = "The tooling and workspace-contract source walks have one owner each. `tests/support/source_scan.rs` owns the workspace Rust walk, the brace matcher and the comment/string masker the two workspace contract scanners each carried; `xtask/src/tree_walk.rs` owns the prune rule that seven xtask WalkDir walks each spelled differently, so a build directory added to one is now skipped by all of them; `xtask/src/manifest_walk.rs` owns the read-parse-name sequence for a package manifest that the feature and metadata generators each repeated; `xtask::release::conformance_evidence_semantics` owns the conformance read bound and its error context, previously copied per module; `xtask/tests/common` owns the `path:line:column` violation format. `vyre_test_support::ir_variants::single_u32_output_program` owns the validator program fixture that three validation suites each built by hand."
 [[fragments]]
 id = "cargo-full-build-parallelism"
 category = "Fixed"
@@ -1648,3 +1653,31 @@ text = "`vyre-test-support` states which flat `DataType` forms exist in one unga
 id = "driver-error-catalog-generated"
 category = "Fixed"
 text = "The backend error-code catalog is generated from the enum that emits it. `ErrorCode` owns `ALL` and `summary`, and a const assertion makes a variant missing from the catalog a compile error. The previous markdown table, and the seven-variant list that checked it against a nine-variant enum, are gone."
+id = "workspace-contract-target-owners"
+category = "Changed"
+text = "The workspace contract suite no longer compiles into `vyre-foundation`'s test target. `tests/contract/mod.rs` was included by `vyre-foundation/tests/contract_workspace.rs`, so a contract that judges the whole workspace could not run until the compiler built, and a crate that has nothing to do with the routing rule decided whether the rule ran at all. Each contract now sits with its subject: the device-only routing rule and the node child descent rule are `structure-gate` tests, which is the crate that reads source text and depends on no vyre crate; the validator rejection contract is a `vyre-foundation` test target; the public-API snapshot check joins the other snapshot contracts in `xtask`. `structure_gate::source_scan` owns the workspace source walk, the brace matcher and the comment and literal masker, and the masker is built on the same `opaque_span` the registration parser uses, so a masker and a parser can no longer disagree about whether a raw string or a nested block comment holds code."
+
+[[fragments]]
+id = "registry-link-coverage-contract"
+category = "Added"
+text = "`xtask-registry` asserts that every crate submitting an operation registration in source contributes at least one operation to the live registry. Dropping one of those links left the registry answering with hundreds of ids from the crate that was still linked, every count agreeing with itself, and a whole tier missing from the catalog. The expected set is read from the sources when the test runs, so a third registering crate is covered the day it registers. This replaces a smoke test that grepped `list-ops` output for one crate's prefix from another crate's test target."
+
+[[fragments]]
+id = "xtask-help-lists-every-subcommand"
+category = "Added"
+text = "`xtask --help` is checked against the registered subcommand table rather than against four names written into a test. A help route that prints the header and a truncated table still exits zero and still contains `SUBCOMMANDS:`, so the previous route check passed while commands were unreachable."
+
+[[fragments]]
+id = "public-api-refresh-build-jobs"
+category = "Fixed"
+text = "The public-API snapshot fixture no longer forces `CARGO_BUILD_JOBS=1` on the refresh it runs. Parallelism is declared in `.cargo/config.toml`, and an environment variable overrides it, so the fixture rebuilt one codegen job at a time regardless of the host."
+
+[[fragments]]
+id = "cli-contract-without-the-book"
+category = "Changed"
+text = "The command-line contract no longer renders a book page. `scripts/cli_docs.py` kept generating `docs/CLI.md`, which is deleted, so the gate compared a generated document against a file that is not there while its real verdicts went unread: the manifest schema, the README each binary names, the declared binary set against cargo metadata, every help route exiting zero with bounded non-empty output, and the xtask help table against the registered subcommands. Those verdicts stay and the CLI section of each crate README is still generated. The contract test reads the subcommand count back out of the generated README blocks instead of out of the deleted page, and the build it runs no longer forces one codegen job."
+
+[[fragments]]
+id = "workflow-subcommand-resolution"
+category = "Added"
+text = "A CI step that passes a subcommand to `xtask`, `xtask-registry` or `xtask-evidence` is resolved against the registered subcommand table. A renamed or deleted row left the step naming a command that no longer exists, and nothing local went red: the package existed, the binary existed, and the name was one shell token in a `run:` line. `xtask gates` judges the other direction, that a registered row is wired into CI, so the pair is now closed. Names are extracted per step, including every command in a joined `run:` block, and resolved when the test runs rather than listed in it."
