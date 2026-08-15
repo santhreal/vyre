@@ -9,6 +9,8 @@ use std::collections::BTreeSet;
 use std::process;
 
 use vyre::ir::{Node, Program};
+use vyre_foundation::algebra::composition::is_anonymous_generator;
+use vyre_foundation::transform::visit::child_bodies;
 
 const LOOP_BUDGET: usize = 4;
 const NODE_BUDGET: usize = 200;
@@ -127,26 +129,28 @@ fn walk(
         state.registered_composed_nodes += 1;
     }
 
+    let mut child_is_registered = false;
     match node {
         Node::Region {
             generator,
             source_region,
-            body,
+            ..
         } => {
             let generator_name = generator.as_str();
-            let is_registered_child = source_region.is_some() && ids.contains(generator_name);
-            // `inline::<parent>` is what vyre-foundation names an anonymous body
-            // it reparented onto its caller (algebra::composition), so the
-            // prefix already states there is no operation behind it. Demanding
-            // a registration for one asks for an op that must not exist.
-            let is_anonymous_inline = generator_name.starts_with("inline::");
+            child_is_registered = source_region.is_some() && ids.contains(generator_name);
+            // Composition stamps `source_region` onto every entry region it
+            // reparents, so a source_region by itself does not mean the author
+            // declared an edge to a building block. An anonymous generator says
+            // outright that no operation is behind it, and demanding a
+            // registration for one asks for an op that must not exist.
+            // `algebra::composition` owns which prefixes mean that.
             if source_region.is_some()
                 && generator_name.contains("::")
-                && !is_registered_child
-                && !is_anonymous_inline
+                && !child_is_registered
+                && !is_anonymous_generator(generator_name)
             {
                 failures.insert(format!(
-                    "UNREGISTERED-CHILD: `{owner_id}` wraps `{generator_name}` as a child region, but no canonical SemanticOperation exists for that building block. Fix: submit it from the owning Tier 2.5/Tier 3 crate or stop marking it as a registered child."
+                    "UNREGISTERED-CHILD: `{owner_id}` wraps `{generator_name}` as a child region, but no canonical SemanticOperation exists for that building block. Fix: submit it from the owning Tier 2.5/Tier 3 crate, or rename it `anonymous::{generator_name}` when it is a phase boundary inside one operation rather than a building block."
                 ));
             }
             if let Some(parent) = source_region {
@@ -157,67 +161,26 @@ fn walk(
                     ));
                 }
             }
-            for child in body.iter() {
-                walk(
-                    child,
-                    inside_registered_child || is_registered_child,
-                    ids,
-                    state,
-                    failures,
-                    owner_id,
-                );
-            }
         }
-        Node::Loop { body, .. } => {
-            state.loops += 1;
-            for child in body {
-                walk(
-                    child,
-                    inside_registered_child,
-                    ids,
-                    state,
-                    failures,
-                    owner_id,
-                );
-            }
-        }
-        Node::Block(children) => {
-            for child in children {
-                walk(
-                    child,
-                    inside_registered_child,
-                    ids,
-                    state,
-                    failures,
-                    owner_id,
-                );
-            }
-        }
-        Node::If {
-            then, otherwise, ..
-        } => {
-            for child in then {
-                walk(
-                    child,
-                    inside_registered_child,
-                    ids,
-                    state,
-                    failures,
-                    owner_id,
-                );
-            }
-            for child in otherwise {
-                walk(
-                    child,
-                    inside_registered_child,
-                    ids,
-                    state,
-                    failures,
-                    owner_id,
-                );
-            }
-        }
+        Node::Loop { .. } => state.loops += 1,
         _ => {}
+    }
+
+    // Which variants carry children is `child_bodies`' decision. A hand-written
+    // arm list here would declare every variant it was not told about a leaf,
+    // so the gate would silently stop descending into a new nesting variant
+    // instead of failing.
+    for body in child_bodies(node) {
+        for child in body {
+            walk(
+                child,
+                inside_registered_child || child_is_registered,
+                ids,
+                state,
+                failures,
+                owner_id,
+            );
+        }
     }
 }
 
@@ -226,7 +189,7 @@ mod tests {
     use std::sync::Arc;
 
     use vyre::ir::model::expr::GeneratorRef;
-    use vyre::ir::Ident;
+    use vyre::ir::{Expr, Ident};
 
     use super::*;
 
@@ -248,27 +211,32 @@ mod tests {
         failures
     }
 
-    /// WHY: `inline::<parent>` is the name vyre-foundation gives an anonymous
-    /// body it reparented onto its caller, so no SemanticOperation can ever
-    /// exist for one. Reporting it told every caller to register an op that
-    /// must not exist, and the only way to clear the finding was to stop
-    /// composing. The parent it cites still has to be a real registered op.
+    /// WHY: two prefixes say "no operation is behind this region".
+    /// `inline::<parent>` is what vyre-foundation names a body it reparented
+    /// onto its caller; `anonymous::<label>` is what a builder names a phase
+    /// boundary inside one operation. Reporting either told the caller to
+    /// register an op that must not exist, and the only way to clear the
+    /// finding was to stop composing. The gate knew only `inline::`, so seven
+    /// `anonymous::` regions in vyre-libs and vyre-primitives were reported
+    /// for a registration nobody could ever submit. Driven off
+    /// `ANONYMOUS_GENERATOR_PREFIXES` so a third prefix cannot be minted
+    /// without arriving here.
     #[test]
-    fn an_anonymous_inline_child_is_not_an_unregistered_child() {
-        let node = child(
-            "inline::vyre-libs::security::flows_to",
-            "vyre-libs::security::flows_to",
-        );
-        let failures = findings(&node, &["vyre-libs::security::flows_to"]);
-        assert!(
-            failures.is_empty(),
-            "an inline:: child must not be reported, got {failures:?}"
-        );
+    fn an_anonymous_child_is_not_an_unregistered_child() {
+        for prefix in vyre_foundation::algebra::composition::ANONYMOUS_GENERATOR_PREFIXES {
+            let generator = format!("{prefix}vyre-libs::security::flows_to");
+            let node = child(&generator, "vyre-libs::security::flows_to");
+            let failures = findings(&node, &["vyre-libs::security::flows_to"]);
+            assert!(
+                failures.is_empty(),
+                "a `{prefix}` child must not be reported, got {failures:?}"
+            );
+        }
     }
 
     /// WHY: the check still has to bite. A child that names a real-looking
     /// operation nobody registered is the case the gate exists for, and the
-    /// inline:: exemption must not widen to cover it.
+    /// anonymity exemption must not widen to cover it.
     #[test]
     fn a_child_naming_an_unregistered_operation_is_still_reported() {
         let node = child(
@@ -284,39 +252,90 @@ mod tests {
         );
     }
 
-    /// WHY: the exemption is the `inline::` prefix, not the substring. A
-    /// generator that merely contains it elsewhere is an ordinary child.
+    /// WHY: the exemption is a prefix, not a substring. A generator that
+    /// merely carries one of the words further along is an ordinary child.
     #[test]
-    fn a_generator_merely_containing_inline_is_still_reported() {
-        let node = child(
-            "vyre-libs::security::not_inline::thing",
-            "vyre-libs::security::flows_to",
-        );
-        let failures = findings(&node, &["vyre-libs::security::flows_to"]);
-        assert!(
-            failures
-                .iter()
-                .any(|failure| failure.starts_with("UNREGISTERED-CHILD")),
-            "got {failures:?}"
-        );
+    fn a_generator_merely_containing_an_anonymity_word_is_still_reported() {
+        for word in ["not_inline", "not_anonymous"] {
+            let generator = format!("vyre-libs::security::{word}::thing");
+            let node = child(&generator, "vyre-libs::security::flows_to");
+            let failures = findings(&node, &["vyre-libs::security::flows_to"]);
+            assert!(
+                failures
+                    .iter()
+                    .any(|failure| failure.starts_with("UNREGISTERED-CHILD")),
+                "`{generator}` must still be reported, got {failures:?}"
+            );
+        }
     }
 
-    /// WHY: an inline child is anonymous, not composed. Counting it as
+    /// WHY: an anonymous child is anonymous, not composed. Counting it as
     /// registered composition would let a wrapper buy budget headroom by
     /// wrapping its own body.
     #[test]
-    fn an_anonymous_inline_child_does_not_count_as_registered_composition() {
-        let node = child(
-            "inline::vyre-libs::security::flows_to",
-            "vyre-libs::security::flows_to",
-        );
-        let ids: BTreeSet<String> = ["vyre-libs::security::flows_to".to_string()].into();
-        let mut state = WalkState::default();
-        let mut failures = BTreeSet::new();
-        walk(&node, false, &ids, &mut state, &mut failures, "owner::op");
-        assert_eq!(
-            state.registered_composed_nodes, 0,
-            "an inline child must not be counted as registered composition"
-        );
+    fn an_anonymous_child_does_not_count_as_registered_composition() {
+        for prefix in vyre_foundation::algebra::composition::ANONYMOUS_GENERATOR_PREFIXES {
+            let generator = format!("{prefix}vyre-libs::security::flows_to");
+            let node = child(&generator, "vyre-libs::security::flows_to");
+            let ids: BTreeSet<String> = ["vyre-libs::security::flows_to".to_string()].into();
+            let mut state = WalkState::default();
+            let mut failures = BTreeSet::new();
+            walk(&node, false, &ids, &mut state, &mut failures, "owner::op");
+            assert_eq!(
+                state.registered_composed_nodes, 0,
+                "a `{prefix}` child must not be counted as registered composition"
+            );
+        }
+    }
+
+    /// WHY: the walk used to derive child structure itself, with a `_ => {}`
+    /// arm that doubled as "this variant is a leaf". A `Node` variant that
+    /// gained a body would have stopped being descended and the gate would
+    /// have reported nothing about it while still exiting green. Children now
+    /// come from `transform::visit::child_bodies`, so a new nesting variant
+    /// fails to compile there instead. This holds the observable half: a
+    /// finding buried under each nesting variant still surfaces.
+    #[test]
+    fn a_finding_under_every_nesting_variant_is_reported() {
+        let buried = || {
+            child(
+                "vyre-libs::security::ghost",
+                "vyre-libs::security::flows_to",
+            )
+        };
+        let wrappers: [(&str, Node); 4] = [
+            (
+                "Block",
+                Node::Block(vec![buried()]),
+            ),
+            (
+                "Loop",
+                Node::loop_for("i", Expr::u32(0), Expr::u32(1), vec![buried()]),
+            ),
+            (
+                "If/then",
+                Node::if_then(Expr::bool(true), vec![buried()]),
+            ),
+            (
+                "If/otherwise",
+                Node::if_then_else(Expr::bool(true), Vec::new(), vec![buried()]),
+            ),
+        ];
+        for (name, wrapper) in wrappers {
+            let outer = Node::Region {
+                generator: Ident::from("vyre-libs::security::flows_to"),
+                source_region: Some(GeneratorRef {
+                    name: "vyre-libs::security::flows_to".to_string(),
+                }),
+                body: Arc::new(vec![wrapper]),
+            };
+            let failures = findings(&outer, &["vyre-libs::security::flows_to"]);
+            assert!(
+                failures
+                    .iter()
+                    .any(|failure| failure.starts_with("UNREGISTERED-CHILD")),
+                "a child buried under {name} must still be reported, got {failures:?}"
+            );
+        }
     }
 }

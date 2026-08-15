@@ -3168,6 +3168,19 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   a comment claimed the scheduler retried the skipped pair, and nothing did.
   The pass now bails before cloning a body that holds no fusable pair at all,
   rather than deep-cloning the whole body and discarding it.
+- `abstraction-gate` no longer demands an operation registration for a region
+  that names no operation. Two prefixes mean the same thing: `inline::`, minted
+  by `reparent_entry_node` for a body the composer reparented onto its caller,
+  and `anonymous::`, written by a builder that needs a named phase boundary
+  inside one operation. The gate knew only the first, and fell back to
+  `source_region.is_some()` for the second, which proves nothing because
+  composition stamps `source_region` onto every entry region it reparents.
+  Seven regions were reported as unregistered building blocks that must not be
+  registered. `vyre-foundation/src/algebra/composition.rs` owns the answer as
+  `ANONYMOUS_GENERATOR_PREFIXES` and `is_anonymous_generator`, and the gate's
+  fix text now names the rename. The gate also descends through
+  `vyre_foundation::transform::visit::child_bodies` rather than its own list of
+  node arms, so a new nesting variant cannot hide a region from it.
 
 ## [0.7.1] - 2026-08-01
 
