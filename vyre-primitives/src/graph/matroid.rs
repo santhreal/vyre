@@ -73,7 +73,7 @@ pub fn try_matroid_exchange_bfs_step(
     any_change: &str,
     n: u32,
 ) -> Result<Program, String> {
-    let dense_cells = crate::math::square_matrix_cells(OP_ID, n)?;
+    let dense_cells = crate::operand_shape::square_matrix_cells(OP_ID, n)?;
 
     let t = Expr::InvocationId { axis: 0 };
 

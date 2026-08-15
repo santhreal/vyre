@@ -2812,6 +2812,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   resolves its links in the scope of the parent that declares the module, so
   the telemetry and security family-mask headers name their items by full path
   instead of by bare name.
+- Every `vyre-primitives` feature compiles alone. The operand-shape guards
+  `matrix_cells` and `square_matrix_cells` lived behind the `math` feature
+  while `graph` used them, and `math` already enables `graph`, so the missing
+  edge could not be added without a feature cycle: `--features graph`, `math`,
+  `nn`, `geom`, `opt`, `topology` and `all-lego` all failed to build. The
+  guards now live in `vyre_primitives::operand_shape`, compiled unconditionally
+  because a shape check is not a domain, and all twenty-four features build in
+  isolation.
 - An artifact under `release/evidence` is written only when the tree it records
   can be identified. The recorder captures one `git:<commit>:dirty=false` or
   `git:<commit>:dirty=true:worktree=<digest>` fingerprint per run, stamps it at

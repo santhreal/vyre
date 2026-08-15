@@ -97,7 +97,7 @@ pub fn try_sheaf_diffusion_step(
         ));
     }
 
-    let cells = crate::math::matrix_cells(OP_ID, n_nodes, d)?;
+    let cells = crate::operand_shape::matrix_cells(OP_ID, n_nodes, d)?;
     let t = Expr::InvocationId { axis: 0 };
 
     // delta = damping · restriction_diag[t] · stalks[t]

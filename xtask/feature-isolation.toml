@@ -371,6 +371,11 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-libs"
+feature = "(default),full,matching-regex"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-libs"
 feature = "(default),reasoning"
 outcome = "compiles"
 
@@ -716,6 +721,11 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
+feature = "(default),math"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-primitives"
 feature = "(none)"
 outcome = "compiles"
 
@@ -936,17 +946,17 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-runtime"
+feature = "libs-compositions"
+outcome = "compiles"
+
+[[pair]]
+member = "vyre-runtime"
 feature = "megakernel-batch"
 outcome = "compiles"
 
 [[pair]]
 member = "vyre-runtime"
 feature = "remote-cache"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-runtime"
-feature = "libs-compositions"
 outcome = "compiles"
 
 [[pair]]

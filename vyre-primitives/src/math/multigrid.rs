@@ -75,7 +75,7 @@ pub fn try_jacobi_smooth_step(
     x_out: &str,
     n: u32,
 ) -> Result<Program, String> {
-    let matrix_cells = crate::math::square_matrix_cells(OP_ID, n)?;
+    let matrix_cells = crate::operand_shape::square_matrix_cells(OP_ID, n)?;
 
     let t = Expr::InvocationId { axis: 0 };
 

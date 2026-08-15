@@ -70,6 +70,7 @@ mod dispatch_grid;
 #[cfg(feature = "vyre-foundation")]
 pub mod ir_safe;
 mod markers;
+mod operand_shape;
 pub mod wire;
 
 /// One classification of every Cargo feature this crate declares.

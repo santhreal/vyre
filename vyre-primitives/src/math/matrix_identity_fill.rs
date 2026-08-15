@@ -9,7 +9,7 @@ use vyre_foundation::composition::{
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
-use crate::math::square_matrix_cells;
+use crate::operand_shape::square_matrix_cells;
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::math::matrix_identity_fill";

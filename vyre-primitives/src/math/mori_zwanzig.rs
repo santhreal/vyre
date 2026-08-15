@@ -70,7 +70,7 @@ pub fn try_mz_project_step(
     out: &str,
     n: u32,
 ) -> Result<Program, String> {
-    let matrix_cells = crate::math::square_matrix_cells(OP_ID, n)?;
+    let matrix_cells = crate::operand_shape::square_matrix_cells(OP_ID, n)?;
 
     Ok(crate::fixed_u32_matmul::fixed_u32_matvec_program(
         OP_ID,

@@ -72,7 +72,7 @@ pub fn try_do_intervention_delete_incoming(
     out_adjacency: &str,
     n: u32,
 ) -> Result<Program, String> {
-    let cells = crate::math::square_matrix_cells(OP_ID, n)?;
+    let cells = crate::operand_shape::square_matrix_cells(OP_ID, n)?;
     let t = Expr::InvocationId { axis: 0 };
 
     // Decode (i, j) from flat invocation t = i*n + j; only j matters.
@@ -345,7 +345,7 @@ pub fn try_do_rule2_reverse_incoming(
     out_adjacency: &str,
     n: u32,
 ) -> Result<Program, String> {
-    let cells = crate::math::square_matrix_cells(RULE2_OP_ID, n)?;
+    let cells = crate::operand_shape::square_matrix_cells(RULE2_OP_ID, n)?;
     let t = Expr::InvocationId { axis: 0 };
     let row = Expr::div(t.clone(), Expr::u32(n));
     let col = Expr::rem(t.clone(), Expr::u32(n));
@@ -433,7 +433,7 @@ pub fn try_do_rule3_subgraph(
     kept_len: &str,
     n: u32,
 ) -> Result<Program, String> {
-    let cells = crate::math::square_matrix_cells(RULE3_OP_ID, n)?;
+    let cells = crate::operand_shape::square_matrix_cells(RULE3_OP_ID, n)?;
 
     let lane0 = Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0));
 
