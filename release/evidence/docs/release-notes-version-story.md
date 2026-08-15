@@ -20,8 +20,10 @@ Required product-scoped tags:
 - Vyre tag: `vyre-v0.7.2`
 
 Before requesting approval for publication or pushes, run
-`cargo_full run --bin xtask -- vyre-release-gate --prepublish`. This mode
-accepts only the three explicitly approval-gated outward actions as pending.
+`cargo_full run --bin xtask -- vyre-release-gate`. The default prepublication
+mode accepts only the three explicitly approval-gated outward actions as
+pending. `--launch-complete` requires those actions to be done and is only
+meaningful after the release has shipped.
 
 Required pre-tag gates:
 

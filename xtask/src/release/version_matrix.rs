@@ -319,12 +319,16 @@ fn is_bare_release_tag_command(line: &str, bare_tag: &str, bare_rc_tag: &str) ->
     tag.is_some_and(|tag| tag == bare_tag || tag == bare_rc_tag)
 }
 
-/// Release notes for the version currently declared in the release train.
+/// The release prose a reader is sent to for this version.
+///
+/// This resolved `docs/release/v<version>.md`, a per-version notes page the
+/// mdbook carried. The book is gone and nothing regenerates that page, so every
+/// run opened with an unreadable-document finding and the token scan judged a
+/// file that does not exist. The changelog is the surviving release-notes
+/// surface and `scripts/release_docs.py` writes its identity preamble from the
+/// same release train these tokens come from.
 fn current_release_notes_path(vyre_root: &Path) -> PathBuf {
-    vyre_root.join(format!(
-        "docs/release/v{}.md",
-        release_train::vyre_version()
-    ))
+    vyre_root.join("CHANGELOG.md")
 }
 
 fn scan_release_note_tokens(vyre_root: &Path) -> Vec<ReleaseNoteTokenFinding> {
@@ -418,13 +422,18 @@ fn release_note_version_issues(line: &str, vyre_version: &str) -> Vec<String> {
     issues
 }
 
+/// Documents scanned for a bare, ambiguous release tag command.
+///
+/// Three of the five entries here were `docs/RELEASE.md` twice and
+/// `docs/RELEASE_CHECKLIST.md` once, all deleted with the mdbook, so the scan
+/// spent its blockers reporting that it could not read them and never reached a
+/// document that could carry a bad tag command. The duplicate also double-counted
+/// every finding in that one file.
 fn release_doc_paths(vyre_root: &Path) -> Vec<PathBuf> {
     vec![
-        vyre_root.join("docs/RELEASE.md"),
-        vyre_root.join("docs/RELEASE.md"),
-        vyre_root.join("docs/RELEASE_CHECKLIST.md"),
-        current_release_notes_path(vyre_root),
         vyre_root.join("README.md"),
+        vyre_root.join("CONTRIBUTING.md"),
+        current_release_notes_path(vyre_root),
         vyre_root.join("release/evidence/docs/release-notes.md"),
         vyre_root.join("release/evidence/docs/release-notes-version-story.md"),
     ]

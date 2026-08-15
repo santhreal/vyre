@@ -3,15 +3,16 @@ use std::path::{Path, PathBuf};
 
 use super::gate_inputs::{GateMode, MAX_RELEASE_GATE_TEXT_BYTES};
 
+#[derive(Debug)]
 pub(super) struct GateOptions {
     pub(super) manifest_path: PathBuf,
     pub(super) mode: GateMode,
 }
 
-pub(super) fn options_from_args(args: &[String]) -> Result<GateOptions, String> {
+pub(super) fn options_from_args(root: &Path, args: &[String]) -> Result<GateOptions, String> {
     let mut manifest_path = None;
-    let mut mode = GateMode::Final;
-    let mut index = 2;
+    let mut mode = GateMode::default();
+    let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
             "--manifest" => {
@@ -21,19 +22,9 @@ pub(super) fn options_from_args(args: &[String]) -> Result<GateOptions, String> 
                 manifest_path = Some(PathBuf::from(path));
                 index += 2;
             }
-            "--prepublish" => {
-                mode = GateMode::Prepublish;
+            "--launch-complete" => {
+                mode = GateMode::LaunchComplete;
                 index += 1;
-            }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo xtask vyre-release-gate [--prepublish] [--manifest PATH]\n\n\
-                     Checks the Vyre release evidence manifest. Final mode requires \
-                     completed publication, repository verification, and pushes. \
-                     --prepublish accepts only those explicit approval-gated actions \
-                     as pending and rejects every internal blocker."
-                );
-                std::process::exit(0);
             }
             other => {
                 return Err(format!("Fix: unknown vyre-release-gate option `{other}`."));
@@ -42,12 +33,14 @@ pub(super) fn options_from_args(args: &[String]) -> Result<GateOptions, String> 
     }
 
     Ok(GateOptions {
-        manifest_path: manifest_path.unwrap_or_else(default_manifest_path),
+        manifest_path: manifest_path.unwrap_or_else(|| default_manifest_path(root)),
         mode,
     })
 }
-pub(super) fn default_manifest_path() -> PathBuf {
-    xtask::checkout::checkout_root().join("release/vyre-release-evidence.toml")
+
+/// The manifest the gate judges when the caller names none.
+pub(super) fn default_manifest_path(root: &Path) -> PathBuf {
+    root.join("release/vyre-release-evidence.toml")
 }
 pub(super) fn resolve_manifest_path(base_dir: &Path, path: &str) -> PathBuf {
     xtask::output_arg::resolve_path(base_dir, path)
@@ -73,34 +66,48 @@ pub(super) fn escapes_repository(evidence: &str) -> bool {
 mod tests {
     use super::*;
 
-    /// Prepublication mode must remain an explicit opt-in while preserving a
-    /// caller-supplied evidence manifest.
+    /// The launch-complete judgement must remain an explicit opt-in while
+    /// preserving a caller-supplied evidence manifest.
     #[test]
-    fn parses_prepublish_mode_with_manifest() {
+    fn parses_launch_complete_mode_with_manifest() {
+        let root = Path::new("/w");
         let args = vec![
-            "xtask".to_string(),
-            "vyre-release-gate".to_string(),
-            "--prepublish".to_string(),
+            "--launch-complete".to_string(),
             "--manifest".to_string(),
             "release/custom.toml".to_string(),
         ];
 
-        let options = options_from_args(&args).expect("valid prepublish arguments");
+        let options = options_from_args(root, &args).expect("valid launch-complete arguments");
 
-        assert_eq!(options.mode, GateMode::Prepublish);
+        assert_eq!(options.mode, GateMode::LaunchComplete);
         assert_eq!(options.manifest_path, PathBuf::from("release/custom.toml"));
     }
 
-    /// Omitting the prepublication flag must retain the final-launch gate so
-    /// an ordinary invocation cannot silently weaken release closure.
+    /// A bare invocation must judge prepublication readiness. The gate used to
+    /// default to the launch-complete judgement, which demands a publication
+    /// that has not happened, so every sweep of a pre-release tree failed on
+    /// six findings no source change could clear.
     #[test]
-    fn defaults_to_final_launch_mode() {
-        let args = vec!["xtask".to_string(), "vyre-release-gate".to_string()];
+    fn defaults_to_prepublication_mode() {
+        let root = Path::new("/w");
 
-        let options = options_from_args(&args).expect("valid final-gate arguments");
+        let options = options_from_args(root, &[]).expect("valid default arguments");
 
-        assert_eq!(options.mode, GateMode::Final);
-        assert_eq!(options.manifest_path, default_manifest_path());
+        assert_eq!(options.mode, GateMode::Prepublish);
+        assert_eq!(options.manifest_path, default_manifest_path(root));
+    }
+
+    /// The removed spelling must be rejected rather than silently ignored: a
+    /// caller still passing it would otherwise get the mode it asked for by
+    /// accident today and a different one the day the default moves.
+    #[test]
+    fn rejects_the_removed_prepublish_flag() {
+        let args = vec!["--prepublish".to_string()];
+
+        let error = options_from_args(Path::new("/w"), &args)
+            .expect_err("removed flag must not parse");
+
+        assert!(error.contains("--prepublish"), "{error}");
     }
 
     /// Evidence must name a file the repository actually carries. Entries that
@@ -130,7 +137,7 @@ mod tests {
     /// directly rather than trusting that a future edit stays inside the tree.
     #[test]
     fn the_shipped_manifest_cites_only_repository_paths() {
-        let manifest = default_manifest_path();
+        let manifest = default_manifest_path(&xtask::checkout::checkout_root());
         let text = read_text_bounded(&manifest).expect("release evidence manifest is readable");
         let manifest: super::super::gate_inputs::EvidenceManifest =
             toml::from_str(&text).expect("release evidence manifest is valid TOML");

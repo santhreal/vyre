@@ -1442,7 +1442,6 @@ const RELEASE_XTASK_COMMAND_MODULES: &[&str] = &[
     "release_benchmarks",
     "release_conformance",
     "release_evidence",
-    "release_gate",
     "version_matrix",
     "vyre_release_gate",
 ];
@@ -1562,23 +1561,41 @@ fn scan_release_tooling(
     }
 }
 
+/// Hold the release-facing documents to the same command hygiene as the scripts.
+///
+/// This list named `docs/RELEASE.md` three times and `docs/RELEASE_CHECKLIST.md`
+/// once, all deleted with the mdbook, and skipped each one because it is not a
+/// file. The gate therefore reported clean while scanning none of the documents
+/// its name claims. A listed document that is absent is now a finding: the list
+/// is the contract, so a deletion has to be answered here rather than absorbed.
 fn scan_release_docs(
     vyre_root: &Path,
     scanned_files: &mut usize,
     findings: &mut Vec<HygieneFinding>,
 ) {
     for doc in [
-        vyre_root.join("README.md"),
-        vyre_root.join("docs/RELEASE.md"),
-        vyre_root.join("docs/RELEASE.md"),
-        vyre_root.join("docs/RELEASE_CHECKLIST.md"),
-        vyre_root.join("docs/RELEASE.md"),
-        vyre_root.join("docs/testing/TESTING.toml"),
-        vyre_root.join("conform/README.md"),
-        vyre_root.join("vyre-bench/README.md"),
+        "README.md",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "docs/testing/TESTING.toml",
+        "conform/README.md",
+        "vyre-bench/README.md",
+        "release/evidence/docs/release-notes.md",
+        "release/evidence/docs/release-notes-version-story.md",
     ] {
-        if doc.is_file() {
-            scan_doc_file(&doc, scanned_files, findings);
+        let path = vyre_root.join(doc);
+        if path.is_file() {
+            scan_doc_file(&path, scanned_files, findings);
+        } else {
+            findings.push(HygieneFinding {
+                path: doc.to_string(),
+                line: 0,
+                pattern: "missing_release_doc",
+                text: format!(
+                    "release document `{doc}` is listed for hygiene scanning and does not exist"
+                ),
+                test: None,
+            });
         }
     }
 }

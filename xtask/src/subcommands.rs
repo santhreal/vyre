@@ -256,7 +256,7 @@ static DELEGATED: &[Delegated] = &[
     },
     Delegated {
         name: "vyre-release-gate",
-        help: "Enforce release evidence closure; --prepublish judges the prepublication set, --manifest PATH names another manifest",
+        help: "Enforce release evidence closure; the default judges the prepublication set, --launch-complete judges the post-ship set, --manifest PATH names another manifest",
         package: "xtask-evidence",
         generates: false,
     },

@@ -52,7 +52,7 @@ fn check_launch_state(state: &serde_json::Value, mode: GateMode, failures: &mut 
 
     let (expected_state, expected_completion, expected_action_status, expected_blockers) =
         match mode {
-            GateMode::Final => ("public_launch_complete", "complete", "complete", 0),
+            GateMode::LaunchComplete => ("public_launch_complete", "complete", "complete", 0),
             GateMode::Prepublish => (
                 "prepublish_release_ready",
                 "not_complete_until_external_actions_are_approved_and_done",
@@ -162,16 +162,16 @@ mod tests {
     use super::*;
 
     fn launch_state(mode: GateMode) -> serde_json::Value {
-        let final_launch = matches!(mode, GateMode::Final);
-        let action_status = if final_launch {
+        let launch_complete = matches!(mode, GateMode::LaunchComplete);
+        let action_status = if launch_complete {
             "complete"
         } else {
             "blocked_pending_user_approval"
         };
         serde_json::json!({
             "schema_version": 2,
-            "current_state": if final_launch { "public_launch_complete" } else { "prepublish_release_ready" },
-            "completion_status": if final_launch { "complete" } else { "not_complete_until_external_actions_are_approved_and_done" },
+            "current_state": if launch_complete { "public_launch_complete" } else { "prepublish_release_ready" },
+            "completion_status": if launch_complete { "complete" } else { "not_complete_until_external_actions_are_approved_and_done" },
             "public_repository": xtask::release::repo_boundary::vyre_public_repository(),
             "prepublish_gates": {
                 "version_matrix": "pass",
@@ -188,7 +188,7 @@ mod tests {
                     "evidence": "verified release action"
                 }))
                 .collect::<Vec<_>>(),
-            "blockers": if final_launch {
+            "blockers": if launch_complete {
                 Vec::<String>::new()
             } else {
                 xtask::release::launch_contract::required_external_actions()
@@ -200,8 +200,8 @@ mod tests {
     }
 
     #[test]
-    fn accepts_prepublish_and_final_launch_states() {
-        for mode in [GateMode::Prepublish, GateMode::Final] {
+    fn accepts_prepublish_and_launch_complete_states() {
+        for mode in [GateMode::Prepublish, GateMode::LaunchComplete] {
             let mut failures = Vec::new();
             check_launch_state(&launch_state(mode), mode, &mut failures);
             assert!(failures.is_empty(), "{failures:#?}");
@@ -209,11 +209,11 @@ mod tests {
     }
 
     #[test]
-    fn final_launch_rejects_pending_external_actions() {
+    fn launch_complete_rejects_pending_external_actions() {
         let mut failures = Vec::new();
         check_launch_state(
             &launch_state(GateMode::Prepublish),
-            GateMode::Final,
+            GateMode::LaunchComplete,
             &mut failures,
         );
         assert!(failures
