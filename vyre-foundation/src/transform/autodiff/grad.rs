@@ -10,9 +10,10 @@ use std::ops::ControlFlow;
 use rustc_hash::FxHashMap;
 
 use crate::ir::{
-    node_variant_name, BinOp, BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program, UnOp,
+    node_variant_name, BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program,
 };
 use crate::transform::visit::{for_each_node, node_scalars, try_for_each_expr, NameBinding};
+use crate::validate::typecheck::{expr_type, TypeEnv};
 
 use super::error::AutodiffError;
 mod expr;
@@ -377,7 +378,7 @@ impl AdjointEnv {
             };
             match binding {
                 NameBinding::Declare | NameBinding::Reassign => {
-                    match scalars.operands[0].and_then(|value| self.expr_type(value)) {
+                    match scalars.operands[0].and_then(|value| expr_type(value, self)) {
                         Some(ty) => {
                             self.var_types.insert(name.as_str().to_string(), ty);
                         }
@@ -393,127 +394,20 @@ impl AdjointEnv {
             }
         });
     }
+}
 
-    fn expr_type(&self, expr: &Expr) -> Option<DataType> {
-        match expr {
-            Expr::LitU32(_)
-            | Expr::BufferRef { .. }
-            | Expr::BufLen { .. }
-            | Expr::InvocationId { .. }
-            | Expr::WorkgroupId { .. }
-            | Expr::LocalId { .. }
-            | Expr::SubgroupLocalId
-            | Expr::SubgroupSize
-            | Expr::Atomic { .. }
-            | Expr::SubgroupBallot { .. }
-            | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupReduce { .. } => Some(DataType::U32),
-            Expr::LitI32(_) => Some(DataType::I32),
-            Expr::LitF32(_) => Some(DataType::F32),
-            Expr::LitBool(_) => Some(DataType::Bool),
-            Expr::Var(name) => self.var_types.get(name.as_str()).cloned(),
-            Expr::Load { buffer, .. } => self.buffer_types.get(buffer.as_str()).cloned(),
-            Expr::Cast { target, .. } => Some(target.clone()),
-            Expr::BinOp { op, left, right } => self.binop_type(*op, left, right),
-            Expr::UnOp { op, operand } => self.unop_type(op.clone(), operand),
-            Expr::Select {
-                true_val,
-                false_val,
-                ..
-            } => {
-                let true_ty = self.expr_type(true_val)?;
-                let false_ty = self.expr_type(false_val)?;
-                (true_ty == false_ty).then_some(true_ty)
-            }
-            Expr::Fma { a, b, c } => {
-                let all_f32 = self.expr_type(a) == Some(DataType::F32)
-                    && self.expr_type(b) == Some(DataType::F32)
-                    && self.expr_type(c) == Some(DataType::F32);
-                all_f32.then_some(DataType::F32)
-            }
-            Expr::Call { .. } => None,
-            Expr::Opaque(extension) => extension.result_type(),
-        }
+/// Autodiff reads the same answer validation does.
+///
+/// Type inference itself is [`expr_type`]; only the two free-name lookups are
+/// local to the forward pass. Subexpression types are not recorded, so the
+/// default [`TypeEnv::on_typed`] applies.
+impl TypeEnv for AdjointEnv {
+    fn var_type(&self, name: &str) -> Option<DataType> {
+        self.var_types.get(name).cloned()
     }
 
-    fn binop_type(&self, op: BinOp, left: &Expr, right: &Expr) -> Option<DataType> {
-        match op {
-            BinOp::Add
-            | BinOp::Sub
-            | BinOp::Mul
-            | BinOp::Div
-            | BinOp::SaturatingAdd
-            | BinOp::SaturatingSub
-            | BinOp::SaturatingMul
-            | BinOp::Min
-            | BinOp::Max => {
-                let left_ty = self.expr_type(left)?;
-                let right_ty = self.expr_type(right)?;
-                (left_ty == right_ty).then_some(left_ty)
-            }
-            BinOp::And
-            | BinOp::Or
-            | BinOp::Eq
-            | BinOp::Ne
-            | BinOp::Lt
-            | BinOp::Gt
-            | BinOp::Le
-            | BinOp::Ge => Some(DataType::Bool),
-            BinOp::Mod
-            | BinOp::WrappingAdd
-            | BinOp::WrappingSub
-            | BinOp::BitAnd
-            | BinOp::BitOr
-            | BinOp::BitXor
-            | BinOp::Shl
-            | BinOp::Shr
-            | BinOp::AbsDiff
-            | BinOp::Shuffle
-            | BinOp::Ballot
-            | BinOp::WaveReduce
-            | BinOp::WaveBroadcast
-            | BinOp::RotateLeft
-            | BinOp::RotateRight
-            | BinOp::MulHigh => Some(DataType::U32),
-            BinOp::Opaque(_) => None,
-            _ => None,
-        }
-    }
-
-    fn unop_type(&self, op: UnOp, operand: &Expr) -> Option<DataType> {
-        match op {
-            UnOp::Negate
-            | UnOp::BitNot
-            | UnOp::Popcount
-            | UnOp::Clz
-            | UnOp::Ctz
-            | UnOp::ReverseBits => self.expr_type(operand),
-            UnOp::LogicalNot | UnOp::IsNan | UnOp::IsInf | UnOp::IsFinite => Some(DataType::Bool),
-            UnOp::Cos
-            | UnOp::Sin
-            | UnOp::Abs
-            | UnOp::Sqrt
-            | UnOp::Floor
-            | UnOp::Ceil
-            | UnOp::Round
-            | UnOp::Trunc
-            | UnOp::Sign
-            | UnOp::Exp
-            | UnOp::Log
-            | UnOp::Log2
-            | UnOp::Exp2
-            | UnOp::Tan
-            | UnOp::Acos
-            | UnOp::Asin
-            | UnOp::Atan
-            | UnOp::Tanh
-            | UnOp::Sinh
-            | UnOp::Cosh
-            | UnOp::InverseSqrt
-            | UnOp::Reciprocal => Some(DataType::F32),
-            UnOp::Unpack4Low | UnOp::Unpack4High | UnOp::Unpack8Low | UnOp::Unpack8High => None,
-            _ => None,
-        }
+    fn buffer_element(&self, name: &str) -> Option<DataType> {
+        self.buffer_types.get(name).cloned()
     }
 }
 
@@ -529,13 +423,11 @@ impl AdjointEnv {
 /// compile in `node_scalars` rather than dropping a forward local whose adjoint
 /// then reads as zero.
 fn collect_adjoint_targets(nodes: &[Node], out: &mut Vec<Ident>) {
-    for_each_node(nodes, |node| {
-        match node_scalars(node).binding {
-            Some((NameBinding::Declare | NameBinding::Reassign, name)) => {
-                push_unique_ident(out, name);
-            }
-            Some((NameBinding::Induction, _)) | None => {}
+    for_each_node(nodes, |node| match node_scalars(node).binding {
+        Some((NameBinding::Declare | NameBinding::Reassign, name)) => {
+            push_unique_ident(out, name);
         }
+        Some((NameBinding::Induction, _)) | None => {}
     });
 }
 

@@ -1,4 +1,10 @@
 //! Adversarial invariants for graph_view, canonicalize, and algebraic_law_registry.
+//!
+//! The programs come from `contract_cases::optimizer_program_corpus`, which
+//! also owns the fixed-point-and-semantics scaffold. What canonicalize owes as
+//! an optimizer entry point is asserted once, in the entry-point table in
+//! `optimizer_idempotence_proptest`; what is left here is the part that is
+//! about graph_view and the law registry rather than about canonicalize.
 
 use proptest::prelude::*;
 use vyre_foundation::algebraic_law_registry::{
@@ -7,9 +13,14 @@ use vyre_foundation::algebraic_law_registry::{
 use vyre_foundation::graph_view::{
     from_graph, to_graph, DataflowKind, GraphValidateError, NodeGraph,
 };
-use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BinOp, Expr, Node, Program};
 use vyre_foundation::optimizer::passes::algebraic::canonicalize_engine as canonicalize;
-use vyre_reference::value::Value;
+use vyre_foundation::transform::visit::for_each_node;
+
+#[path = "contract_cases/optimizer_program_corpus.rs"]
+mod corpus;
+
+use corpus::{output_only_store, program_strategy, program_with_body, test_output_buffer};
 
 inventory::submit! {
     AlgebraicLawRegistration::new("test::binop::add", AlgebraicLaw::Commutative)
@@ -21,24 +32,12 @@ inventory::submit! {
     AlgebraicLawRegistration::new("test::duplicate::commutative", AlgebraicLaw::Commutative)
 }
 
-fn test_output_buffer() -> BufferDecl {
-    BufferDecl::read_write("out", 0, DataType::U32).with_count(1)
-}
-
-fn program_with_body(body: Vec<Node>) -> Program {
-    Program::wrapped(vec![test_output_buffer()], [1, 1, 1], body)
-}
-
 fn raw_program_with_body(body: Vec<Node>) -> Program {
     Program::from_raw_parts(vec![test_output_buffer()], [1, 1, 1], body)
 }
 
-fn store_program(expr: Expr) -> Program {
-    program_with_body(vec![Node::store("out", Expr::u32(0), expr)])
-}
-
 fn canonicalized_store_value(expr: Expr) -> Expr {
-    let canonical = canonicalize::run(store_program(expr));
+    let canonical = canonicalize::run(output_only_store(expr));
     let first = canonical
         .entry()
         .first()
@@ -53,56 +52,6 @@ fn canonicalized_store_value(expr: Expr) -> Expr {
         Node::Store { value, .. } => value.clone(),
         other => panic!("Fix: expected canonicalized store node, got {other:?}"),
     }
-}
-
-fn run_reference(program: &Program) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
-    vyre_reference::reference_eval(program, &[Value::U32(0)])
-}
-
-fn leaf_expr() -> impl Strategy<Value = Expr> {
-    prop_oneof![
-        (0_u16..=1024).prop_map(|value| Expr::u32(u32::from(value))),
-        Just(Expr::gid_x()),
-    ]
-}
-
-fn non_zero_literal() -> impl Strategy<Value = Expr> {
-    (1_u16..=1024).prop_map(|value| Expr::u32(u32::from(value)))
-}
-
-fn shift_amount() -> impl Strategy<Value = Expr> {
-    (0_u8..=31).prop_map(|value| Expr::u32(u32::from(value)))
-}
-
-fn u32_expr() -> impl Strategy<Value = Expr> {
-    leaf_expr().prop_recursive(5, 64, 4, |inner| {
-        prop_oneof![
-            (inner.clone(), inner.clone()).prop_map(|(left, right)| Expr::add(left, right)),
-            (inner.clone(), inner.clone()).prop_map(|(left, right)| Expr::mul(left, right)),
-            (inner.clone(), inner.clone()).prop_map(|(left, right)| Expr::bitand(left, right)),
-            (inner.clone(), inner.clone()).prop_map(|(left, right)| Expr::bitor(left, right)),
-            (inner.clone(), inner.clone()).prop_map(|(left, right)| Expr::bitxor(left, right)),
-            (inner.clone(), inner.clone()).prop_map(|(left, right)| Expr::sub(left, right)),
-            (inner.clone(), non_zero_literal()).prop_map(|(left, right)| Expr::div(left, right)),
-            (inner.clone(), shift_amount()).prop_map(|(left, right)| Expr::shl(left, right)),
-            (inner.clone(), shift_amount()).prop_map(|(left, right)| Expr::shr(left, right)),
-        ]
-    })
-}
-
-fn program_strategy() -> impl Strategy<Value = Program> {
-    prop::collection::vec(u32_expr(), 1..16).prop_map(|exprs| {
-        let mut body = Vec::with_capacity(exprs.len() + 1);
-        for (index, expr) in exprs.into_iter().enumerate() {
-            body.push(Node::let_bind(format!("v{index}"), expr));
-        }
-        body.push(Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::var(format!("v{}", body.len().saturating_sub(1))),
-        ));
-        program_with_body(body)
-    })
 }
 
 /// BinOps where canonicalize may sort non-literal operands without
@@ -172,23 +121,6 @@ proptest! {
             lowered.to_wire().expect("Fix: graph round-trip Program must serialize"),
         );
     }
-
-    #[test]
-    fn canonicalize_is_idempotent(program in program_strategy()) {
-        let once = canonicalize::run(program);
-        let twice = canonicalize::run(once.clone());
-        prop_assert_eq!(once, twice);
-    }
-
-    #[test]
-    fn canonicalize_preserves_reference_semantics(program in program_strategy()) {
-        let canonical = canonicalize::run(program.clone());
-        let original = run_reference(&program)
-            .expect("Fix: generated Program must execute in the reference interpreter");
-        let canonicalized = run_reference(&canonical)
-            .expect("Fix: canonicalized Program must execute in the reference interpreter");
-        prop_assert_eq!(original, canonicalized);
-    }
 }
 
 #[test]
@@ -238,19 +170,15 @@ fn phi_chain_is_dropped_on_lowering() {
     );
 }
 
+/// Node descent comes from `transform::visit::for_each_node`, so a statement
+/// that survives lowering inside a nesting variant this file does not
+/// enumerate is still counted.
 fn count_stores(nodes: &[Node]) -> usize {
-    nodes
-        .iter()
-        .map(|node| match node {
-            Node::Store { .. } => 1,
-            Node::If {
-                then, otherwise, ..
-            } => count_stores(then) + count_stores(otherwise),
-            Node::Loop { body, .. } | Node::Block(body) => count_stores(body),
-            Node::Region { body, .. } => count_stores(body),
-            _ => 0,
-        })
-        .sum()
+    let mut stores = 0;
+    for_each_node(nodes, |node| {
+        stores += usize::from(matches!(node, Node::Store { .. }));
+    });
+    stores
 }
 
 /// A deep linear graph (one ordering edge per node) must lower without a

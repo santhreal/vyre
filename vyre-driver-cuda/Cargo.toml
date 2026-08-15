@@ -25,10 +25,10 @@ default = []
 cuda = []
 
 [dependencies]
+vyre-spec = { workspace = true }
 vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
-vyre-spec = { workspace = true }
 vyre-lower.workspace = true
 vyre-emit-ptx.workspace = true
 # `optimizer` module dispatches the self-hosted optimizer passes
@@ -65,8 +65,6 @@ vyre-driver = { workspace = true, features = ["test-fixtures"] }
 vyre-libs = { path = "../vyre-libs", features = ["full", "c-parser", "analysis", "cpu-parity"] }
 vyre-frontend-rust = { path = "../vyre-frontend-rust" }
 tempfile.workspace = true
-serde_json.workspace = true
-pollster.workspace = true
 # Required by tests/common/mod.rs (`vyre::ir`, `vyre_driver::DispatchConfig`) and by
 # many live CUDA integration tests. `vyre` optionally depends on
 # vyre-driver-cuda behind `features = ["cuda"]`; adding it here as a dev-dep

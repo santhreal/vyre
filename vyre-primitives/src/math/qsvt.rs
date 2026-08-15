@@ -292,7 +292,6 @@ fn reserve_qsvt_cpu_vec<T>(out: &mut Vec<T>, len: usize, context: &str) -> Resul
     Ok(())
 }
 
-
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::primitive(

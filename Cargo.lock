@@ -128,6 +128,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "archery"
+version = "1.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33ca55ee147b1926dbea904f50fe4902494e97bc742205abbbf10c709e43815f"
+
+[[package]]
 name = "arrayref"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -243,12 +249,9 @@ dependencies = [
 
 [[package]]
 name = "bitmaps"
-version = "2.1.0"
+version = "3.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "031043d04099746d8db04daf1fa424b2bc8bd69d92b25962dcde24da39ab64a2"
-dependencies = [
- "typenum",
-]
+checksum = "a1d084b0137aaa901caf9f1e8b21daa6aa24d41cd806e111335541eff9683bd6"
 
 [[package]]
 name = "blake3"
@@ -1523,17 +1526,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d3067d79b975e8844ca9eb072e16b31c3c1c36928edf9c6789548c524d0d954"
 
 [[package]]
-name = "im"
-version = "15.1.0"
+name = "imbl"
+version = "7.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0acd33ff0285af998aaf9b57342af478078f53492322fafc47450e09397e0e9"
+checksum = "43ea8d4c37ee560727e824d62804183624d371e632019b0e9e3532bce64a33e5"
+dependencies = [
+ "archery",
+ "bitmaps",
+ "equivalent",
+ "imbl-sized-chunks",
+ "rand_core 0.9.5",
+ "rand_xoshiro",
+ "version_check",
+ "wide",
+]
+
+[[package]]
+name = "imbl-sized-chunks"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f4241005618a62f8d57b2febd02510fb96e0137304728543dfc5fd6f052c22d"
 dependencies = [
  "bitmaps",
- "rand_core 0.6.4",
- "rand_xoshiro",
- "sized-chunks",
- "typenum",
- "version_check",
 ]
 
 [[package]]
@@ -2417,11 +2431,11 @@ dependencies = [
 
 [[package]]
 name = "rand_xoshiro"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f97cdb2a36ed4183de61b2f824cc45c9f1037f28afe0a322e9fff4c108b5aaa"
+checksum = "f703f4665700daf5512dcca5f43afa6af89f09db47fb56be587f80636bda2d41"
 dependencies = [
- "rand_core 0.6.4",
+ "rand_core 0.9.5",
 ]
 
 [[package]]
@@ -2651,12 +2665,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ryu"
-version = "1.0.23"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
-
-[[package]]
 name = "safe_arch"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2802,16 +2810,6 @@ name = "simd-adler32"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "703d5c7ef118737c72f1af64ad2f6f8c5e1921f818cdcb97b8fe6fc69bf66214"
-
-[[package]]
-name = "sized-chunks"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16d69225bde7a69b235da73377861095455d298f2b970996eec25ddbb42b3d1e"
-dependencies = [
- "bitmaps",
- "typenum",
-]
 
 [[package]]
 name = "slab"
@@ -3082,15 +3080,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tokio"
-version = "1.53.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "202caea871b69668250d242070849eb495be178ed697a3e98aebce5bc81a0bed"
-dependencies = [
- "pin-project-lite",
-]
-
-[[package]]
 name = "toml"
 version = "1.1.3+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3201,16 +3190,6 @@ dependencies = [
  "regex-syntax",
  "serde_json",
  "streaming-iterator",
- "tree-sitter-language",
-]
-
-[[package]]
-name = "tree-sitter-c"
-version = "0.24.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9b2eb57a55fed6b00812912e730b7a275cf4fe98bfd6a5d76263d4438371728"
-dependencies = [
- "cc",
  "tree-sitter-language",
 ]
 
@@ -3384,9 +3363,6 @@ dependencies = [
  "vyre-foundation",
  "vyre-lower",
  "vyre-megakernel",
- "vyre-primitives",
- "vyre-spec",
- "vyre-test-support",
 ]
 
 [[package]]
@@ -3409,7 +3385,6 @@ dependencies = [
  "proptest",
  "rand 0.10.2",
  "rayon",
- "regex",
  "rusqlite",
  "serde",
  "serde_json",
@@ -3417,9 +3392,6 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.19",
  "toml",
- "tracing",
- "tree-sitter",
- "tree-sitter-c",
  "vyre",
  "vyre-driver",
  "vyre-driver-cuda",
@@ -3469,7 +3441,6 @@ dependencies = [
  "vyre-registry-link",
  "vyre-runtime",
  "vyre-spec",
- "vyre-test-support",
 ]
 
 [[package]]
@@ -3500,7 +3471,6 @@ dependencies = [
  "vyre-foundation",
  "vyre-libs",
  "vyre-lower",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-test-support",
 ]
@@ -3526,9 +3496,7 @@ dependencies = [
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs",
- "vyre-macros",
  "vyre-megakernel",
- "vyre-pass-engine",
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
@@ -3546,9 +3514,7 @@ dependencies = [
  "dashmap",
  "inventory",
  "libc",
- "pollster",
  "rustc-hash 2.1.3",
- "serde_json",
  "smallvec",
  "tempfile",
  "tracing",
@@ -3599,7 +3565,6 @@ version = "0.7.2"
 dependencies = [
  "ash",
  "inventory",
- "smallvec",
  "tempfile",
  "vyre-driver",
  "vyre-emit-spirv",
@@ -3618,15 +3583,12 @@ dependencies = [
  "bincode",
  "blake3",
  "bytemuck",
- "crc32fast",
- "criterion",
  "crossbeam-channel",
  "crossbeam-queue",
  "dashmap",
  "fs2",
  "inventory",
  "libc",
- "libm",
  "naga",
  "pollster",
  "proptest",
@@ -3637,18 +3599,13 @@ dependencies = [
  "stats_alloc",
  "tempfile",
  "thiserror 2.0.19",
- "tokio",
  "toml",
  "tracing",
  "tracing-subscriber",
- "tree-sitter",
- "tree-sitter-go",
  "vyre",
  "vyre-conform",
  "vyre-driver",
- "vyre-emit-metal",
  "vyre-emit-naga",
- "vyre-emit-spirv",
  "vyre-foundation",
  "vyre-grammar-gen",
  "vyre-libs",
@@ -3670,7 +3627,6 @@ dependencies = [
  "bincode",
  "blake3",
  "naga",
- "proptest",
  "serde",
  "serde_json",
  "thiserror 2.0.19",
@@ -3683,7 +3639,6 @@ dependencies = [
 name = "vyre-emit-naga"
 version = "0.7.2"
 dependencies = [
- "blake3",
  "inventory",
  "naga",
  "proptest",
@@ -3736,17 +3691,15 @@ dependencies = [
  "arrayvec",
  "blake3",
  "bumpalo",
- "bytemuck",
  "criterion",
  "dashmap",
  "hashbrown 0.17.1",
- "im",
+ "imbl",
  "inventory",
  "itoa",
  "libm",
  "proptest",
  "rustc-hash 2.1.3",
- "ryu",
  "serde",
  "serde_json",
  "smallvec",
@@ -3793,7 +3746,6 @@ version = "0.7.2"
 dependencies = [
  "blake3",
  "bytemuck",
- "criterion",
  "inventory",
  "libm",
  "naga",
@@ -3804,9 +3756,7 @@ dependencies = [
  "rustc-hash 2.1.3",
  "serde",
  "serde_json",
- "sha2 0.11.0",
  "smallvec",
- "tempfile",
  "thiserror 2.0.19",
  "tracing",
  "tree-sitter",
@@ -3847,7 +3797,7 @@ dependencies = [
 name = "vyre-lower"
 version = "0.7.2"
 dependencies = [
- "im",
+ "imbl",
  "rustc-hash 2.1.3",
  "serde",
  "serde_json",
@@ -3918,11 +3868,9 @@ name = "vyre-reference"
 version = "0.7.2"
 dependencies = [
  "blake3",
- "bytemuck",
- "criterion",
  "fnv",
  "hex",
- "im",
+ "imbl",
  "inventory",
  "libm",
  "proptest",
@@ -3958,10 +3906,8 @@ dependencies = [
 name = "vyre-runtime"
 version = "0.7.2"
 dependencies = [
- "arc-swap",
  "blake3",
  "bytemuck",
- "criterion",
  "dashmap",
  "libc",
  "proptest",
@@ -3973,11 +3919,9 @@ dependencies = [
  "tracing",
  "ureq",
  "vyre-driver",
- "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs",
  "vyre-megakernel",
- "vyre-pass-engine",
  "vyre-test-support",
 ]
 
@@ -4706,7 +4650,6 @@ dependencies = [
  "vyre-driver",
  "vyre-foundation",
  "vyre-registry-link",
- "walkdir",
  "xtask",
 ]
 

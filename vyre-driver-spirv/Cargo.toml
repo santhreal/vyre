@@ -33,15 +33,14 @@ default = []
 spirv-val = []
 
 [dependencies]
+vyre-spec = { workspace = true }
 vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
-vyre-spec = { workspace = true }
 vyre-lower = { workspace = true }
 vyre-emit-spirv = { workspace = true }
 inventory.workspace = true
 ash.workspace = true
-smallvec = { workspace = true }
 
 [dev-dependencies]
 vyre-driver = { workspace = true, features = ["test-fixtures"] }

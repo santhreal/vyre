@@ -88,7 +88,19 @@ fn cpu_ref_single(
     allow_mask: u32,
     max_iters: u32,
 ) -> (Vec<u32>, u32, u32) {
-    let (frontier, outcome) = try_cpu_ref_converged(CsrClosureInputs { graph: CsrGraphView { node_count: node_count, edge_offsets: edge_offsets, edge_targets: edge_targets, edge_kind_mask: edge_kind_mask }, allow_mask: allow_mask, max_iters: max_iters }, frontier_in)
+    let (frontier, outcome) = try_cpu_ref_converged(
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count,
+                edge_offsets,
+                edge_targets,
+                edge_kind_mask,
+            },
+            allow_mask,
+            max_iters,
+        },
+        frontier_in,
+    )
     .expect("Fix: CPU persistent BFS oracle must accept the single-query shape");
     (frontier, outcome.changed, u32::from(outcome.converged))
 }
@@ -164,7 +176,19 @@ fn cpu_ref_batch(
     for query in 0..query_count as usize {
         let start = query * words;
         let end = start + words;
-        let (frontier, outcome) = try_cpu_ref_converged(CsrClosureInputs { graph: CsrGraphView { node_count: node_count, edge_offsets: edge_offsets, edge_targets: edge_targets, edge_kind_mask: edge_kind_mask }, allow_mask: allow_mask, max_iters: max_iters }, &frontiers[start..end])
+        let (frontier, outcome) = try_cpu_ref_converged(
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count,
+                    edge_offsets,
+                    edge_targets,
+                    edge_kind_mask,
+                },
+                allow_mask,
+                max_iters,
+            },
+            &frontiers[start..end],
+        )
         .expect("Fix: CPU persistent BFS batch oracle must accept the query shape");
         frontier_out.extend_from_slice(&frontier);
         changed_out.push(outcome.changed);

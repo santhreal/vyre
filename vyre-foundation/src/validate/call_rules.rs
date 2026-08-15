@@ -11,7 +11,7 @@ use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::spec_types::DataType;
 use crate::operation::OperationRegistry;
-use crate::validate::typecheck::expr_type;
+use crate::validate::typecheck::{expr_type, ScopeTypes};
 use crate::validate::{err, Binding, ValidationError};
 use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashMap;
@@ -92,7 +92,7 @@ fn validate_call_signature(
 ));
             continue;
         };
-        let Some(actual_ty) = expr_type(arg, buffers, scope) else {
+        let Some(actual_ty) = expr_type(arg, &mut ScopeTypes::new(buffers, scope)) else {
             continue;
         };
         if actual_ty != expected_ty {

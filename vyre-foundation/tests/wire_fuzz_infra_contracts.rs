@@ -45,7 +45,8 @@ fn corpus_entries(directory: &Path) -> Vec<(String, Vec<u8>)> {
             )
         })
         .map(|entry| {
-            entry.unwrap_or_else(|error| panic!("Fix: fuzz corpus entry must be readable: {error}"))
+            entry
+                .unwrap_or_else(|error| panic!("Fix: fuzz corpus entry must be readable: {error}"))
                 .path()
         })
         .filter(|path| path.is_file())
@@ -53,7 +54,9 @@ fn corpus_entries(directory: &Path) -> Vec<(String, Vec<u8>)> {
             let name = path
                 .file_name()
                 .and_then(|name| name.to_str())
-                .unwrap_or_else(|| panic!("Fix: corpus entry {} needs a UTF-8 name", path.display()))
+                .unwrap_or_else(|| {
+                    panic!("Fix: corpus entry {} needs a UTF-8 name", path.display())
+                })
                 .to_string();
             let bytes = fs::read(&path)
                 .unwrap_or_else(|error| panic!("Fix: read {}: {error}", path.display()));

@@ -1,10 +1,10 @@
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::test_support::NeverDispatches;
 use std::sync::Mutex;
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 
 mod reference_contracts;
 
@@ -82,7 +82,20 @@ fn linear_closure(
     max_iters: u32,
 ) -> Result<Vec<u32>, DispatchError> {
     let (off, tgt, msk) = linear_graph();
-    forward_closure_via_change_flag_gpu(dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: max_iters }, &[0b0001])
+    forward_closure_via_change_flag_gpu(
+        dispatcher,
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: 4,
+                edge_offsets: &off,
+                edge_targets: &tgt,
+                edge_kind_mask: &msk,
+            },
+            allow_mask: 0xFFFF_FFFF,
+            max_iters,
+        },
+        &[0b0001],
+    )
 }
 
 /// [`linear_closure`] decoding into caller-owned frontier storage.
@@ -92,7 +105,21 @@ fn linear_closure_into(
     frontier: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
     let (off, tgt, msk) = linear_graph();
-    forward_closure_via_change_flag_gpu_into(dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: max_iters }, &[0b0001], frontier)
+    forward_closure_via_change_flag_gpu_into(
+        dispatcher,
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: 4,
+                edge_offsets: &off,
+                edge_targets: &tgt,
+                edge_kind_mask: &msk,
+            },
+            allow_mask: 0xFFFF_FFFF,
+            max_iters,
+        },
+        &[0b0001],
+        frontier,
+    )
 }
 
 /// [`linear_closure`] through caller-owned scratch, with the seed and allow mask exposed because
@@ -106,7 +133,22 @@ fn linear_closure_with_scratch(
     frontier: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
     let (off, tgt, msk) = linear_graph();
-    forward_closure_via_change_flag_gpu_with_scratch_into(dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: allow_mask, max_iters: max_iters }, seed, scratch, frontier)
+    forward_closure_via_change_flag_gpu_with_scratch_into(
+        dispatcher,
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: 4,
+                edge_offsets: &off,
+                edge_targets: &tgt,
+                edge_kind_mask: &msk,
+            },
+            allow_mask,
+            max_iters,
+        },
+        seed,
+        scratch,
+        frontier,
+    )
 }
 
 #[test]
@@ -247,7 +289,21 @@ fn gpu_refreshes_static_inputs_when_same_shape_graph_content_changes() {
             "Fix: second same-shape dispatch should refresh static CSR inputs",
         ),
     ] {
-        forward_closure_via_change_flag_gpu_with_scratch_into(&dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &edge_offsets, edge_targets: edge_targets, edge_kind_mask: &edge_kind_mask }, allow_mask: 0xFFFF_FFFF, max_iters: 1 }, &[0b0001], &mut scratch, &mut frontier)
+        forward_closure_via_change_flag_gpu_with_scratch_into(
+            &dispatcher,
+            CsrClosureInputs::allow_all(
+                CsrGraphView {
+                    node_count: 4,
+                    edge_offsets: &edge_offsets,
+                    edge_targets,
+                    edge_kind_mask: &edge_kind_mask,
+                },
+                1,
+            ),
+            &[0b0001],
+            &mut scratch,
+            &mut frontier,
+        )
         .expect(why);
     }
 
@@ -343,7 +399,19 @@ fn gpu_rejects_mismatched_edge_arrays() {
             u32_slice_to_le_bytes(&[0, 0, 0, 0]),
         ],
     };
-    let err = forward_closure_via_change_flag_gpu(&dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: 2, edge_offsets: &[0, 1, 1], edge_targets: &[1], edge_kind_mask: &[] }, allow_mask: 0xFFFF_FFFF, max_iters: 1 }, &[0b01])
+    let err = forward_closure_via_change_flag_gpu(
+        &dispatcher,
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
+                node_count: 2,
+                edge_offsets: &[0, 1, 1],
+                edge_targets: &[1],
+                edge_kind_mask: &[],
+            },
+            1,
+        ),
+        &[0b01],
+    )
     .expect_err("mismatched edge arrays must be rejected");
     assert!(matches!(err, DispatchError::BadInputs(_)));
 }
@@ -367,7 +435,20 @@ fn generated_gpu_seed_copy_bounds_to_primitive_frontier_words() {
             };
             let mut frontier = Vec::new();
 
-            let result = forward_closure_via_change_flag_gpu_into(&dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: node_count, edge_offsets: &edge_offsets, edge_targets: &[], edge_kind_mask: &[] }, allow_mask: 0xFFFF_FFFF, max_iters: 1 }, &seed, &mut frontier);
+            let result = forward_closure_via_change_flag_gpu_into(
+                &dispatcher,
+                CsrClosureInputs::allow_all(
+                    CsrGraphView {
+                        node_count,
+                        edge_offsets: &edge_offsets,
+                        edge_targets: &[],
+                        edge_kind_mask: &[],
+                    },
+                    1,
+                ),
+                &seed,
+                &mut frontier,
+            );
 
             if extra_words == 0 {
                 result.expect("Fix: exact-width empty-edge generated CSR closure should dispatch");

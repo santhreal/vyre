@@ -44,11 +44,35 @@ fn assert_bidirectional_closure_matches_reference(
     allow_mask: u32,
     max_iters: u32,
 ) {
-    let reference = reference_bidirectional_closure(CsrClosureInputs { graph: CsrGraphView { node_count: n, edge_offsets: off, edge_targets: tgt, edge_kind_mask: msk }, allow_mask: allow_mask, max_iters: max_iters }, seed);
+    let reference = reference_bidirectional_closure(
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: n,
+                edge_offsets: off,
+                edge_targets: tgt,
+                edge_kind_mask: msk,
+            },
+            allow_mask,
+            max_iters,
+        },
+        seed,
+    );
     with_cuda_optimizer_dispatcher(label, |dispatcher| {
-        let gpu =
-            bidirectional_closure_via(dispatcher, CsrClosureInputs { graph: CsrGraphView { node_count: n, edge_offsets: off, edge_targets: tgt, edge_kind_mask: msk }, allow_mask: allow_mask, max_iters: max_iters }, seed)
-                .expect("dispatch");
+        let gpu = bidirectional_closure_via(
+            dispatcher,
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: n,
+                    edge_offsets: off,
+                    edge_targets: tgt,
+                    edge_kind_mask: msk,
+                },
+                allow_mask,
+                max_iters,
+            },
+            seed,
+        )
+        .expect("dispatch");
         assert_eq!(gpu, reference, "{label}: bidirectional closure divergence");
     });
 }

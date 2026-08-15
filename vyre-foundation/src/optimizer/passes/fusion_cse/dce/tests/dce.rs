@@ -1,6 +1,7 @@
 //! Integration test crate for the containing Vyre package.
 
 use crate::ir::{Expr, Node};
+use crate::optimizer::passes::fusion_cse::dce::LiveSet;
 use crate::optimizer::passes::fusion_cse::dce::const_loop_empty;
 use crate::optimizer::passes::fusion_cse::dce::const_truth;
 use crate::optimizer::passes::fusion_cse::dce::eliminate_unreachable;
@@ -145,7 +146,7 @@ fn test_eliminate_dead_lets_removes_dead_let() {
     let result =
         crate::optimizer::passes::fusion_cse::dce::eliminate_dead_lets::eliminate_dead_lets(
             nodes,
-            im::HashSet::new(),
+            LiveSet::new(),
         );
     assert_eq!(result.nodes.len(), 2);
     assert!(matches!(&result.nodes[0], Node::Let { name, .. } if name == "alive"));
@@ -167,7 +168,7 @@ fn test_eliminate_dead_lets_preserves_effectful_let() {
     let result =
         crate::optimizer::passes::fusion_cse::dce::eliminate_dead_lets::eliminate_dead_lets(
             nodes,
-            im::HashSet::new(),
+            LiveSet::new(),
         );
     assert_eq!(result.nodes.len(), 1);
     assert!(matches!(&result.nodes[0], Node::Let { name, .. } if name == "effectful"));
@@ -179,7 +180,7 @@ fn test_eliminate_dead_lets_computes_live_in() {
     let result =
         crate::optimizer::passes::fusion_cse::dce::eliminate_dead_lets::eliminate_dead_lets(
             nodes,
-            im::HashSet::new(),
+            LiveSet::new(),
         );
     assert!(result.live_in.contains("idx"));
     assert!(result.live_in.contains("val"));
@@ -200,7 +201,7 @@ fn loop_shadowing_preserves_live_outer_binding() {
     let result =
         crate::optimizer::passes::fusion_cse::dce::eliminate_dead_lets::eliminate_dead_lets(
             nodes,
-            im::HashSet::new(),
+            LiveSet::new(),
         );
 
     assert!(
@@ -229,7 +230,7 @@ fn test_async_load_offset_keeps_let_alive() {
     let result =
         crate::optimizer::passes::fusion_cse::dce::eliminate_dead_lets::eliminate_dead_lets(
             nodes,
-            im::HashSet::new(),
+            LiveSet::new(),
         );
     assert_eq!(
         result.nodes.len(),
@@ -259,7 +260,7 @@ fn test_async_load_size_keeps_let_alive() {
     let result =
         crate::optimizer::passes::fusion_cse::dce::eliminate_dead_lets::eliminate_dead_lets(
             nodes,
-            im::HashSet::new(),
+            LiveSet::new(),
         );
     assert_eq!(result.nodes.len(), 2);
     assert!(matches!(&result.nodes[0], Node::Let { name, .. } if name == "nbytes"));
@@ -281,7 +282,7 @@ fn test_async_store_offset_and_size_keep_lets_alive() {
     let result =
         crate::optimizer::passes::fusion_cse::dce::eliminate_dead_lets::eliminate_dead_lets(
             nodes,
-            im::HashSet::new(),
+            LiveSet::new(),
         );
     assert_eq!(result.nodes.len(), 3);
     assert!(matches!(&result.nodes[0], Node::Let { name, .. } if name == "dst_off"));
@@ -303,7 +304,7 @@ fn test_trap_address_keeps_let_alive() {
     let result =
         crate::optimizer::passes::fusion_cse::dce::eliminate_dead_lets::eliminate_dead_lets(
             nodes,
-            im::HashSet::new(),
+            LiveSet::new(),
         );
     assert_eq!(result.nodes.len(), 2);
     assert!(matches!(&result.nodes[0], Node::Let { name, .. } if name == "trap_addr"));
@@ -328,7 +329,7 @@ fn dead_let_bound_to_load_is_eliminated() {
     let result =
         crate::optimizer::passes::fusion_cse::dce::eliminate_dead_lets::eliminate_dead_lets(
             nodes,
-            im::HashSet::new(),
+            LiveSet::new(),
         );
     assert_eq!(
         result.nodes.len(),
@@ -355,7 +356,7 @@ fn dead_let_bound_to_load_with_load_index_is_eliminated() {
     let result =
         crate::optimizer::passes::fusion_cse::dce::eliminate_dead_lets::eliminate_dead_lets(
             nodes,
-            im::HashSet::new(),
+            LiveSet::new(),
         );
     assert_eq!(
         result.nodes.len(),
@@ -375,7 +376,7 @@ fn live_let_bound_to_load_is_kept() {
     let result =
         crate::optimizer::passes::fusion_cse::dce::eliminate_dead_lets::eliminate_dead_lets(
             nodes,
-            im::HashSet::new(),
+            LiveSet::new(),
         );
     assert_eq!(result.nodes.len(), 2);
     assert!(matches!(&result.nodes[0], Node::Let { name, .. } if name == "live_load"));

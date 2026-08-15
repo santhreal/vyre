@@ -186,14 +186,19 @@ fn const_fold_uses_shared_literal_eval_for_nested_trees() {
     assert_eq!(fold_expr(&expr), Some(shared));
 }
 
+/// Bitwise XOR over two bool literals is NOT a fold. Typecheck V091/V092
+/// restrict bitwise operands to `u32` and `i32`, and the CPU oracle rejects
+/// bool XOR, so folding it would hand the optimized program a value no other
+/// layer produces. The folder used to answer it while the reference
+/// interpreter rejected it.
 #[test]
-fn const_fold_bool_xor_uses_shared_literal_eval() {
+fn const_fold_declines_bitwise_xor_on_bool_literals() {
     let expr = Expr::BinOp {
         op: BinOp::BitXor,
         left: Box::new(Expr::bool(true)),
         right: Box::new(Expr::bool(false)),
     };
-    assert_eq!(fold_expr(&expr), Some(Expr::bool(true)));
+    assert_eq!(fold_expr(&expr), None);
 }
 
 #[test]

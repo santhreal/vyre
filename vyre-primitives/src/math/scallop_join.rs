@@ -86,7 +86,9 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
-use crate::math::scallop_persistent::{single_word_lineage_body, single_word_lineage_grid_sync_body};
+use crate::math::scallop_persistent::{
+    single_word_lineage_body, single_word_lineage_grid_sync_body,
+};
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::math::semiring_gemm::{semiring_gemm_cpu_into, Semiring};
 

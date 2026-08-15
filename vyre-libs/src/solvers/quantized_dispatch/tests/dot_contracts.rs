@@ -53,7 +53,9 @@ fn i4x8_dot_f32_scaled_via_reuses_cached_program_for_same_lane_shape() {
                 scratch,
                 &mut out,
             )
-            .expect("Fix: fake dot dispatcher must complete every lane shape this cache test drives");
+            .expect(
+                "Fix: fake dot dispatcher must complete every lane shape this cache test drives",
+            );
         },
     );
 }
@@ -110,4 +112,3 @@ fn i4x8_dot_f32_scaled_via_rejects_bad_shape_before_dispatch() {
         .expect_err("missing lhs packed word must fail");
     assert!(err.to_string().contains("packed lengths"));
 }
-
