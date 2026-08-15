@@ -224,8 +224,8 @@ fn clamp_lookup(name: &str, table: &str) -> Vec<Node> {
     vec![
         // Masked 256-table lookup via the canonical ONE-PLACE helper: a >255 input
         // element (the input buffer is U32 and unvalidated) folds to `c & 0xFF`
-        // instead of reading past the 256-entry decode table (a raw OOB read is UB
-        // on CUDA). Transparent for valid bytes; an out-of-range value lands on a
+        // instead of reading past the 256-entry decode table (a raw OOB read is
+        // undefined behaviour on a real GPU). Transparent for valid bytes; an out-of-range value lands on a
         // non-base64 slot (INVALID → clamped to 0 below). Using the shared helper
         // is what keeps this mask from being forgotten again.
         Node::let_bind(
@@ -610,7 +610,7 @@ mod tests {
         // (it is unvalidated); here the first char is `0x100 | 'T'`. The `& 0xFF`
         // index mask must fold it back to 'T' so the decode is IDENTICAL to the
         // clean input, and must never read past the 256-entry decode table (a raw
-        // OOB read is UB on CUDA). This is a regression LOCK: the OLD unmasked
+        // OOB read is undefined behaviour on a real GPU). This is a regression LOCK: the OLD unmasked
         // `load(table, c)` OOB-indexes the table (zero-filled to 0 by the reference
         // interpreter), decoding a wrong first byte instead of 'M'.
         let input_len = 4u32;

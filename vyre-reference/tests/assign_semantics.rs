@@ -1,5 +1,6 @@
-//! Enforces the `docs/ir-semantics.md` statement-IR contract for
-//! `Node::Let` + `Node::Assign`. Every rule in the doc has a test.
+//! Enforces the statement-IR contract for `Node::Let` and `Node::Assign`:
+//! a `Let` binds a name once in a scope, an `Assign` writes an already-bound
+//! name, and shadowing a visible binding is rejected as V008.
 //!
 //! These tests are the load-bearing source of truth  -  a refactor
 //! that violates the contract fails here, not silently in a Cat-A
@@ -83,7 +84,7 @@ fn assign_from_inside_region_mutates_outer_let() {
 
 #[test]
 fn shadowing_is_rejected_by_validator_v008() {
-    // Per docs/ir-semantics.md: shadowing a prior Let anywhere in the
+    // Shadowing a prior Let anywhere in the
     // visible scope chain is V008. The validator enforces this so
     // SSA-conversion + autodiff + canonical-form passes can assume
     // every Var(name) resolves to one Let(name, …) site.

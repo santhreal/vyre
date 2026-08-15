@@ -51,7 +51,7 @@ pub enum Crc32MapReduceStepKind {
     PairReduce,
 }
 
-/// One executable CUDA/WGPU dispatch shape in a CRC-32 map-reduce plan.
+/// One executable dispatch shape in a CRC-32 map-reduce plan.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Crc32MapReduceStep {
     /// Step kind.
@@ -875,7 +875,7 @@ mod tests {
 
     #[test]
     fn crc32_combine_matches_direct_crc_for_every_split() {
-        let bytes = b"vyre resident cuda crc block scan reduction";
+        let bytes = b"vyre resident crc block scan reduction";
         for split in 0..=bytes.len() {
             let left = crc32(&bytes[..split]);
             let right = crc32(&bytes[split..]);

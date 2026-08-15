@@ -19,7 +19,7 @@ pub fn bitset_test_bit(buf: &str, bit_idx: u32, out_scalar: &str, words: u32) ->
     // AUDIT_2026-07-10: gate the `buf[bit_idx/32]` load on an in-bounds check,
     // mirroring the sibling `bitset_contains` fix (F-BSC-01). The load used to be
     // unconditional, so an out-of-range `bit_idx` (word >= words) was an OOB GPU
-    // read (UB / page fault on CUDA) while `cpu_ref` safely returned 0, a CPU/GPU
+    // read (undefined behaviour or a page fault on a real GPU) while `cpu_ref` safely returned 0, a CPU/GPU
     // parity divergence and a GPU safety hole. Out-of-range now stores 0.
     let word = bit_idx / 32;
     let bit = bit_idx % 32;

@@ -12,6 +12,12 @@
 /// and workgroup buffers have positive element counts.
 pub mod binding;
 
+/// The validation-rule catalog and its generated-document renderer.
+///
+/// One owner for every stable `V###` rule: its phase, the invariant it
+/// enforces, and the correction it offers.
+pub mod catalog;
+
 /// Default depth limits and limit tracking for recursive validation.
 ///
 /// Defines the maximum call depth, nesting depth, and node count that
@@ -75,6 +81,8 @@ pub(crate) mod typecheck;
 mod uniformity;
 
 pub(crate) use binding::Binding;
+/// Re-export of the validation-rule catalog.
+pub use catalog::{render_catalog_toml, rules, ValidationRule};
 /// Re-export of default depth limits and limit tracking.
 ///
 /// These constants and types are used by the validator and by tests

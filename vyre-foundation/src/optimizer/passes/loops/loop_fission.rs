@@ -82,48 +82,67 @@ impl LoopFission {
 /// one node as siblings, and a `Block` around them would be new IR that no
 /// later pass removes.
 fn fission_in_body(body: &[Node]) -> Option<Vec<Node>> {
-    let mut out: Vec<Node> = Vec::with_capacity(body.len());
-    let mut split_any = false;
-    for node in body {
-        let Node::Loop {
-            var,
-            from,
-            to,
-            body: loop_body,
-        } = node
-        else {
-            out.push(node.clone());
-            continue;
-        };
-        let bounds_ok = matches!(from, Expr::LitU32(_)) && matches!(to, Expr::LitU32(_));
-        if !bounds_ok {
-            out.push(node.clone());
-            continue;
+    // Locating the first split before allocating is what keeps the common case
+    // free. This used to deep-clone every node into `out` and then discard the
+    // whole vector on the `None` return, once per body per scheduler
+    // iteration, for the overwhelming majority of bodies that split nothing.
+    let first = body.iter().position(|node| is_fissionable_loop(node))?;
+    let mut out: Vec<Node> = Vec::with_capacity(body.len() + 1);
+    out.extend_from_slice(&body[..first]);
+    for node in &body[first..] {
+        match split_loop(node) {
+            Some((prefix_loop, suffix_loop)) => {
+                out.push(prefix_loop);
+                out.push(suffix_loop);
+            }
+            None => out.push(node.clone()),
         }
-        let Some((prefix, suffix)) = try_partition(loop_body, var) else {
-            out.push(node.clone());
-            continue;
-        };
-        split_any = true;
-        let fresh_var = freshen(var, loop_body);
-        let renamed_suffix: Vec<Node> = suffix
-            .into_iter()
-            .map(|n| legality::rename_var_in_node(n, var, &fresh_var))
-            .collect();
-        out.push(Node::Loop {
+    }
+    Some(out)
+}
+
+/// The prefix and suffix loops that replace `node`, when it is fissionable.
+///
+/// [`is_fissionable_loop`] answers the same question without building either
+/// loop, and the two must agree: a `position` that finds a node this declines
+/// would return an unchanged body as a change.
+fn split_loop(node: &Node) -> Option<(Node, Node)> {
+    let Node::Loop {
+        var,
+        from,
+        to,
+        body: loop_body,
+    } = node
+    else {
+        return None;
+    };
+    if !matches!(from, Expr::LitU32(_)) || !matches!(to, Expr::LitU32(_)) {
+        return None;
+    }
+    let (prefix, suffix) = try_partition(loop_body, var)?;
+    let fresh_var = freshen(var, loop_body);
+    let renamed_suffix: Vec<Node> = suffix
+        .into_iter()
+        .map(|n| legality::rename_var_in_node(n, var, &fresh_var))
+        .collect();
+    // Both halves keep the original bounds, so the pair costs one clone of
+    // each rather than two.
+    let from = from.clone();
+    let to = to.clone();
+    Some((
+        Node::Loop {
             var: var.clone(),
             from: from.clone(),
             to: to.clone(),
             body: prefix,
-        });
-        out.push(Node::Loop {
+        },
+        Node::Loop {
             var: fresh_var,
-            from: from.clone(),
-            to: to.clone(),
+            from,
+            to,
             body: renamed_suffix,
-        });
-    }
-    split_any.then_some(out)
+        },
+    ))
 }
 
 /// True iff `nodes` contains an op whose ordering or cross-thread

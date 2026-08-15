@@ -465,12 +465,14 @@ fn write_budget_vx_candidates(path: &Path, candidates: &[BudgetVxCandidate]) -> 
 }
 
 fn collect_findings(file: &str, text: &str, out: &mut Vec<Hit>) {
-    for (line_no, line) in text.lines().enumerate() {
-        let scan_line = runtime_code_segment(line);
-        let trimmed = scan_line.trim_start();
-        // Skip comments and cfg(test) attributes  -  those are intentional
-        // dev-only or annotation lines, not runtime cost.
-        if trimmed.is_empty() || trimmed.starts_with("#[cfg(test)]") {
+    let lines: Vec<&str> = text.lines().collect();
+    let test_only = cfg_test_lines(&lines);
+    for (line_no, line) in lines.iter().enumerate() {
+        if test_only[line_no] {
+            continue;
+        }
+        let scan_line = scan_code(line).segment;
+        if scan_line.trim_start().is_empty() {
             continue;
         }
         for spec in PATTERNS {
@@ -480,7 +482,7 @@ fn collect_findings(file: &str, text: &str, out: &mut Vec<Hit>) {
                     line: (line_no + 1) as u32,
                     pattern: spec.name,
                     kind: spec.kind,
-                    content: line.to_string(),
+                    content: (*line).to_string(),
                 });
             }
         }
@@ -488,16 +490,79 @@ fn collect_findings(file: &str, text: &str, out: &mut Vec<Hit>) {
 }
 
 fn count_code_lines(text: &str) -> usize {
-    text.lines()
-        .filter(|line| {
-            let code = runtime_code_segment(line).trim_start();
-            !code.is_empty() && !code.starts_with("#[cfg(test)]")
+    let lines: Vec<&str> = text.lines().collect();
+    let test_only = cfg_test_lines(&lines);
+    lines
+        .iter()
+        .enumerate()
+        .filter(|(line_no, line)| {
+            !test_only[*line_no] && !scan_code(line).segment.trim_start().is_empty()
         })
         .count()
 }
 
-fn runtime_code_segment(line: &str) -> &str {
+/// Which lines belong to a `#[cfg(test)]` item, by 0-based index.
+///
+/// The scan always meant to exclude test code: it skipped a line that WAS the
+/// `#[cfg(test)]` attribute, and called that "intentional dev-only lines, not
+/// runtime cost". An attribute annotates the item that follows it, so skipping
+/// the attribute line excluded one line and nothing else. Every `panic!`,
+/// `format!` and `.to_string()` inside a `mod tests` body was reported as
+/// runtime hot-path cost, including panics that exist only to destructure a
+/// fixture and which the heatmap then weighted twelve times per kLOC. The same
+/// bodies inflated `count_code_lines`, so the per-kLOC denominator was wrong in
+/// the opposite direction and a file's real density read lower than it is.
+///
+/// An item with a body runs to the line that closes it. An item without one
+/// (`#[cfg(test)] use super::*;`) runs to its terminating semicolon.
+fn cfg_test_lines(lines: &[&str]) -> Vec<bool> {
+    let mut test_only = vec![false; lines.len()];
+    let mut depth = 0i32;
+    let mut index = 0usize;
+    while index < lines.len() {
+        let scan = scan_code(lines[index]);
+        if scan.segment.trim() != "#[cfg(test)]" {
+            depth += scan.brace_delta;
+            index += 1;
+            continue;
+        }
+        let outer_depth = depth;
+        let mut opened = false;
+        while index < lines.len() {
+            let line = scan_code(lines[index]);
+            depth += line.brace_delta;
+            opened |= line.brace_delta > 0;
+            test_only[index] = true;
+            index += 1;
+            if opened && depth <= outer_depth {
+                break;
+            }
+            if !opened && line.segment.trim_end().ends_with(';') {
+                break;
+            }
+        }
+    }
+    test_only
+}
+
+/// One line's runtime code and the block nesting it contributes.
+struct CodeScan<'a> {
+    /// Everything before a line comment.
+    segment: &'a str,
+    /// `{` minus `}`, counting only braces that sit in code.
+    brace_delta: i32,
+}
+
+/// Split `line` into runtime code and comment, and count its braces.
+///
+/// Braces inside a string or character literal do not open or close a block,
+/// and `//` inside one does not start a comment. A `'` that opens a lifetime
+/// rather than a character literal is left alone: taking `&'a str` for the
+/// start of a literal used to swallow the rest of the line, so a `//` after a
+/// lifetime read as code and a `{` after one moved the block depth.
+fn scan_code(line: &str) -> CodeScan<'_> {
     let bytes = line.as_bytes();
+    let mut brace_delta = 0i32;
     let mut in_string = false;
     let mut in_char = false;
     let mut escaped = false;
@@ -528,16 +593,33 @@ fn runtime_code_segment(line: &str) -> &str {
             index += 1;
             continue;
         }
-        if byte == b'"' {
-            in_string = true;
-        } else if byte == b'\'' {
-            in_char = true;
-        } else if byte == b'/' && bytes.get(index + 1) == Some(&b'/') {
-            return &line[..index];
+        match byte {
+            b'"' => in_string = true,
+            b'\'' if opens_char_literal(bytes, index) => in_char = true,
+            b'/' if bytes.get(index + 1) == Some(&b'/') => {
+                return CodeScan {
+                    segment: &line[..index],
+                    brace_delta,
+                };
+            }
+            b'{' => brace_delta += 1,
+            b'}' => brace_delta -= 1,
+            _ => {}
         }
         index += 1;
     }
-    line
+    CodeScan {
+        segment: line,
+        brace_delta,
+    }
+}
+
+/// True when the `'` at `index` opens a character literal rather than a
+/// lifetime, judged by whether a closing `'` follows within one escape
+/// sequence.
+fn opens_char_literal(bytes: &[u8], index: usize) -> bool {
+    let limit = (index + 5).min(bytes.len());
+    bytes[index + 1..limit].contains(&b'\'')
 }
 
 fn collect_budget_deltas(
@@ -999,6 +1081,111 @@ write = ["vyre-runtime/src/megakernel/**"]
         assert_eq!(count_code_lines(text), 2);
         assert_eq!(out.len(), 1);
         assert_eq!(out[0].pattern, "format!");
+    }
+
+    /// WHY: an attribute annotates the item after it. Skipping the line the
+    /// attribute sits on excluded one line and left the whole `mod tests` body
+    /// counted as runtime cost, so a fixture's `panic!` was reported as a
+    /// hot-path panic and weighted twelve times per kLOC. The body must be
+    /// excluded from BOTH the findings and the per-kLOC denominator.
+    #[test]
+    fn a_cfg_test_module_body_is_not_runtime_cost() {
+        let text = concat!(
+            "pub fn run() {\n",
+            "    let s = format!(\"{}\", 1);\n",
+            "}\n",
+            "\n",
+            "#[cfg(test)]\n",
+            "mod tests {\n",
+            "    #[test]\n",
+            "    fn t() {\n",
+            "        panic!(\"fixture\");\n",
+            "        let x = String::new();\n",
+            "    }\n",
+            "}\n",
+        );
+        let mut out = Vec::new();
+        collect_findings("x.rs", text, &mut out);
+
+        assert_eq!(
+            out.iter().map(|f| f.pattern).collect::<Vec<_>>(),
+            vec!["format!"],
+            "only the runtime format! may be reported"
+        );
+        assert_eq!(
+            count_code_lines(text),
+            3,
+            "the three runtime lines, not the eight test lines"
+        );
+    }
+
+    /// WHY: the exclusion must end where the item does. A test module that
+    /// swallowed the rest of the file would silence every later runtime
+    /// finding, which is the same defect with the sign flipped.
+    #[test]
+    fn runtime_code_after_a_cfg_test_module_is_still_scanned() {
+        let text = concat!(
+            "#[cfg(test)]\n",
+            "mod tests {\n",
+            "    fn t() {\n",
+            "        panic!(\"fixture\");\n",
+            "    }\n",
+            "}\n",
+            "pub fn later() {\n",
+            "    let s = String::new();\n",
+            "}\n",
+        );
+        let mut out = Vec::new();
+        collect_findings("x.rs", text, &mut out);
+
+        assert_eq!(
+            out.iter().map(|f| f.pattern).collect::<Vec<_>>(),
+            vec!["String::new"],
+            "the runtime allocation after the module must still be reported"
+        );
+        assert_eq!(out[0].line, 8);
+    }
+
+    /// WHY: a `#[cfg(test)]` item with no body ends at its semicolon. Treating
+    /// it as an unterminated block would mask every line after it.
+    #[test]
+    fn a_cfg_test_item_without_a_body_ends_at_its_semicolon() {
+        let text = concat!(
+            "#[cfg(test)]\n",
+            "use std::string::String;\n",
+            "pub fn later() {\n",
+            "    let s = String::new();\n",
+            "}\n",
+        );
+        let mut out = Vec::new();
+        collect_findings("x.rs", text, &mut out);
+
+        assert_eq!(out.len(), 1, "got {out:?}");
+        assert_eq!(out[0].line, 4);
+    }
+
+    /// WHY: a brace inside a string literal is not a block. `panic!("{")` in a
+    /// test body used to close the module early, and every later runtime line
+    /// then read as test-only or the reverse depending on parity.
+    #[test]
+    fn a_brace_in_a_string_literal_does_not_move_block_depth() {
+        assert_eq!(scan_code("    panic!(\"{\");").brace_delta, 0);
+        assert_eq!(scan_code("    let x = '}';").brace_delta, 0);
+        assert_eq!(scan_code("fn f() {").brace_delta, 1);
+    }
+
+    /// WHY: `'` opens a lifetime as often as a character literal. Reading
+    /// `&'a str` as the start of a literal swallowed the rest of the line, so a
+    /// trailing `//` comment read as code and a following `{` never counted.
+    #[test]
+    fn a_lifetime_is_not_a_character_literal() {
+        let scan = scan_code("fn f<'a>(x: &'a str) { // format!(\"{}\", x)");
+        assert_eq!(scan.brace_delta, 1);
+        assert!(
+            !scan.segment.contains("format!"),
+            "the trailing comment must still be stripped, got {:?}",
+            scan.segment
+        );
     }
 
     #[test]

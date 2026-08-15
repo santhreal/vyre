@@ -25,6 +25,7 @@ pub static GATES: &[&dyn Gate] = &[
     &compile::Compile,
     &docs::catalog::Catalog,
     &docs::list_ops::ListOps,
+    &docs::op_matrix::OpMatrixGate,
     &docs::operation_schema::OperationSchemaGate,
     &docs::optimization_docs::OptimizationDocs,
     &gates::abstraction_gate::AbstractionGate,
@@ -37,6 +38,8 @@ pub static GATES: &[&dyn Gate] = &[
     &gates::whats_similar::WhatsSimilar,
     &print_composition::PrintComposition,
     &release::conformance_matrix::ConformanceMatrixGate,
+    &release::optimization_corpus::OptimizationCorpusGate,
+    &release::optimization_matrix::OptimizationMatrixGate,
     &shrink::Shrink,
     &trace_f32::TraceF32,
 ];

@@ -184,7 +184,7 @@ fn run_target_query(
     if scored.is_empty() {
         report.note(format!("  ✓ no neighbors at score ≥ {:.2}. The op shape is novel (or your fingerprint is too short).",
             min_score));
-        return;
+        return Ok(());
     }
 
     report.note(format!(

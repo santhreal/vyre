@@ -70,7 +70,7 @@ pub fn find_root_body(
                     // it in the SAME if_then so the binding scope covers
                     // the use. Splitting them into two sibling if_then
                     // blocks ends uf_grandparent's binding lifetime
-                    // before atomic_min needs it (CUDA backend reports
+                    // before atomic_min needs it (a backend reports
                     // "uf_grandparent referenced before binding").
                     Node::if_then(
                         Expr::lt(Expr::var(scratch_parent_var), Expr::u32(node_count)),

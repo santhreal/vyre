@@ -1,5 +1,8 @@
+use std::sync::Arc;
+
 use crate::fixpoint::persistent_fixpoint::grid_sync_barrier;
-use vyre_foundation::ir::{Expr, Node};
+use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::MemoryOrdering;
 
 fn workgroup_lineage_loop(
@@ -457,4 +460,52 @@ fn workgroup_barrier() -> Node {
     Node::Barrier {
         ordering: MemoryOrdering::SeqCst,
     }
+}
+
+/// The Program envelope every lineage fixpoint op dispatches through.
+///
+/// Slot order is the wiring contract: the ping-pong state pair, the convergence
+/// flag, then the static join-rule matrix. `words` is the element count of a
+/// relation matrix, so a single-word op passes `n * n` and a wide op passes
+/// `n * n * w`.
+pub(crate) fn lineage_fixpoint_program(
+    op_id: &str,
+    state: &str,
+    next: &str,
+    join_rules: &str,
+    changed: &str,
+    words: u32,
+    workgroup_size: [u32; 3],
+    body: Vec<Node>,
+) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(state, 0, BufferAccess::ReadWrite, DataType::U32).with_count(words),
+            BufferDecl::storage(next, 1, BufferAccess::ReadWrite, DataType::U32).with_count(words),
+            BufferDecl::storage(changed, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+            BufferDecl::storage(join_rules, 3, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(words),
+        ],
+        workgroup_size,
+        vec![Node::Region {
+            generator: Ident::from(op_id),
+            source_region: None,
+            body: Arc::new(body),
+        }],
+    )
+}
+
+/// Accumulate `next` into `current` word by word, reporting whether a bit flipped.
+///
+/// Lineage accumulation is monotone bitwise OR, so the host oracles reach the
+/// fixpoint exactly when no word changes.
+#[cfg(any(test, feature = "cpu-parity"))]
+pub(crate) fn accumulate_lineage_words(current: &mut [u32], next: &[u32]) -> bool {
+    let mut changed = false;
+    for (cell, derived) in current.iter_mut().zip(next.iter()) {
+        let merged = *cell | *derived;
+        changed |= merged != *cell;
+        *cell = merged;
+    }
+    changed
 }

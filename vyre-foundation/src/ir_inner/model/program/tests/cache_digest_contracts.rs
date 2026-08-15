@@ -298,9 +298,9 @@ fn distinct_programs_get_distinct_normalized_cache_digests() {
 /// The two programs here are identical except that the two buffers swap binding
 /// slots. Descriptor lowering reads `binding` into the descriptor and the
 /// generated bind-group layout, so the emitted artifacts genuinely differ.
-/// Before v3 the digest omitted `binding` entirely, so the wgpu disk cache
-/// would serve the shader compiled for the other layout: writes land in the
-/// wrong buffer, with no error.
+/// Before v3 the digest omitted `binding` entirely, so a compiled-pipeline
+/// cache would serve the shader compiled for the other layout: writes land in
+/// the wrong buffer, with no error.
 #[test]
 fn normalized_cache_digest_separates_buffer_binding_layouts() {
     let body = vec![
@@ -334,11 +334,12 @@ fn normalized_cache_digest_separates_buffer_binding_layouts() {
 
 /// A static workgroup array length must be keyed.
 ///
-/// `MemoryKind::Shared` is the one class whose `element_count` the WGSL emitter
-/// bakes into shader text, as `var<workgroup> x: array<u32, N>`. Two programs
+/// `MemoryKind::Shared` is the one class whose `element_count` an emitter bakes
+/// into the shader text, as a fixed-length workgroup array. Two programs
 /// differing only in N compile to different shaders. Before v3 the digest
-/// omitted `count` for every class, so the wgpu disk cache returned the shader
-/// built for the other N: the kernel then indexes past its workgroup array.
+/// omitted `count` for every class, so a compiled-pipeline cache returned the
+/// shader built for the other N: the kernel then indexes past its workgroup
+/// array.
 #[test]
 fn normalized_cache_digest_separates_workgroup_static_array_lengths() {
     let build = |shared_len: u32| {
@@ -427,12 +428,12 @@ fn normalized_cache_digest_resists_delimiter_injection_in_entry_op_id() {
 
 /// A runtime storage buffer's `element_count` must NOT be keyed.
 ///
-/// Storage and uniform buffer lengths are erased in WGSL (`ArraySize::Dynamic`),
-/// so resizing an input must reuse the compiled shader. If this regresses, the
-/// wgpu disk cache misses on every new input size and each miss is a full naga
-/// compile, which is orders of magnitude more expensive than the dispatch it
-/// precedes. This is the invariant that makes the count field conditional
-/// rather than unconditional.
+/// Storage and uniform buffer lengths are erased in the shader, so resizing an
+/// input must reuse the compiled shader. If this regresses, a compiled-pipeline
+/// cache misses on every new input size and each miss is a full shader compile,
+/// which is orders of magnitude more expensive than the dispatch it precedes.
+/// This is the invariant that makes the count field conditional rather than
+/// unconditional.
 #[test]
 fn normalized_cache_digest_erases_runtime_storage_lengths() {
     let build = |count: u32| {
@@ -794,8 +795,8 @@ fn memo_warmth(program: &Program) -> Vec<(&'static str, bool)> {
 /// enough and warmth has to be observed directly.
 ///
 /// If this regresses, every clone of a Program re-hashes the whole node list on
-/// its next cache lookup. `Program::clone` is on the CUDA dispatch path
-/// (capabilities.rs lowers `program.clone()` per dispatch), so the cost returns
+/// its next cache lookup. `Program::clone` is on the dispatch path (a driver's
+/// capability lowering clones the program per dispatch), so the cost returns
 /// per dispatch with all gates green.
 #[test]
 fn clone_carries_every_warm_memo() {

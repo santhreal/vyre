@@ -17,6 +17,7 @@
 //! crates use them: the crate boundary is no longer the tool boundary.
 
 pub mod artifact_paths;
+pub mod artifact_gate;
 pub mod binary;
 pub mod checkout;
 pub mod delegate;

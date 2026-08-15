@@ -1,8 +1,8 @@
-// The validator must stay rejection-complete.
-//
-// These tests encode non-negotiable validation contracts. If the validator
-// becomes permissive and starts accepting the malformed programs below, this
-// suite fails loudly.
+//! The validator must stay rejection-complete.
+//!
+//! These tests encode non-negotiable validation contracts. If the validator
+//! becomes permissive and starts accepting the malformed programs below, this
+//! suite fails loudly.
 
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::validate::validate;

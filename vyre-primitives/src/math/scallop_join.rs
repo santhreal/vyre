@@ -3,7 +3,7 @@
 //! Compiles a Datalog fixpoint into GPU-resident dispatch phases by
 //! emitting a Lineage-semiring relational join. Small matrices use a
 //! block-local convergence loop; large matrices expose split-visible
-//! GridSync phases for multi-block CUDA dispatch. The output cell
+//! GridSync phases for multi-block dispatch. The output cell
 //! `C[i,j]` is the bitset union of clauses
 //! participating in any `i ⇝ j` derivation through one join step.
 //!
@@ -81,13 +81,12 @@
 //! `cpu_ref` (requires the `cpu-parity` feature) performs the same fixpoint iteration on host arrays and
 //! is the parity oracle for every GPU dispatch.
 
-use std::sync::Arc;
+use vyre_foundation::ir::{DataType, Program};
 
-use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
-
+#[cfg(any(test, feature = "cpu-parity"))]
+use crate::math::scallop_persistent::accumulate_lineage_words;
 use crate::math::scallop_persistent::{
-    single_word_lineage_body, single_word_lineage_grid_sync_body,
+    lineage_fixpoint_program, single_word_lineage_body, single_word_lineage_grid_sync_body,
 };
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::math::semiring_gemm::{semiring_gemm_cpu_into, Semiring};
@@ -176,24 +175,15 @@ pub fn scallop_join(
         )
     };
 
-    // Rebuild the Program with both the fixpoint trio and the
-    // additional join_rules ReadOnly buffer surfaced.
-    let entry: Vec<Node> = vec![Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: None,
-        body: Arc::new(body),
-    }];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(state, 0, BufferAccess::ReadWrite, DataType::U32).with_count(words),
-            BufferDecl::storage(next, 1, BufferAccess::ReadWrite, DataType::U32).with_count(words),
-            BufferDecl::storage(changed, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-            BufferDecl::storage(join_rules, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(words),
-        ],
+    lineage_fixpoint_program(
+        OP_ID,
+        state,
+        next,
+        join_rules,
+        changed,
+        words,
         SCALLOP_JOIN_WORKGROUP_SIZE,
-        entry,
+        body,
     )
 }
 
@@ -269,17 +259,10 @@ pub fn cpu_ref_into(
     for iter in 0..max_iterations {
         semiring_gemm_cpu_into(current, join_rules, n, n, n, Semiring::Lineage, next);
         // Datalog monotonicity: each iteration's output is a
-        // bitwise-OR-superset of the input on every cell. Convergence
-        // = no bit changed. Take the OR of current and next so the
-        // initial seed facts persist across iterations (semiring_gemm
-        // by itself replaces, not accumulates).
-        let mut changed = false;
-        for (cell, derived) in current.iter_mut().zip(next.iter()) {
-            let merged = *cell | *derived;
-            changed |= merged != *cell;
-            *cell = merged;
-        }
-        if !changed {
+        // bitwise-OR-superset of the input on every cell. Take the OR of
+        // current and next so the initial seed facts persist across
+        // iterations (semiring_gemm by itself replaces, not accumulates).
+        if !accumulate_lineage_words(current, next) {
             return iter;
         }
     }

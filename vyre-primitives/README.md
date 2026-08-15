@@ -98,7 +98,7 @@ Run the checked-in behavior from `vyre-primitives/examples/dominator_tree_e2e.rs
 
 ### Features
 
-- Manifest features: `all-lego`, `bitset`, `cat`, `cpu-parity`, `decode`, `default`, `dnnf`, `effects`, `fixpoint`, `geom`, `gpu`, `graph`, `hardware`, `hash`, `inventory-registry`, `label`, `matching`, `math`, `nfa`, `nn`, `opt`, `parsing`, `predicate`, `reduce`, `text`, `topology`, `types`, `visual`, `vyre-foundation`, `zx`
+- Manifest features: `all-lego`, `bitset`, `cpu-parity`, `decode`, `default`, `fixpoint`, `geom`, `gpu`, `graph`, `hardware`, `hash`, `inventory-registry`, `label`, `matching`, `math`, `nfa`, `nn`, `opt`, `parsing`, `predicate`, `reduce`, `text`, `topology`, `visual`, `vyre-foundation`
 - Default feature members: None
 
 ### Errors and unsupported behavior

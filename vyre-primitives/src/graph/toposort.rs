@@ -223,7 +223,7 @@ pub fn toposort_csr(
 
 /// Caller-owned workspace for repeated CSR topological-sort CPU oracle runs.
 ///
-/// The CPU oracle is used heavily by conformance and CUDA parity paths. Keeping
+/// The CPU oracle is used heavily by conformance and backend parity paths. Keeping
 /// indegree and queue storage outside the call lets proof runners amortize heap
 /// growth across thousands of generated graphs without changing the public
 /// allocating convenience API.

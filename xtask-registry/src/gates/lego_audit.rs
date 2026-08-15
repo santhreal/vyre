@@ -1811,16 +1811,27 @@ mod dedup_contract_tests {
         assert!(composition_regressed(0.913043478261, 0.90));
     }
 
-    /// This parser test preserves the explicit duplicate-report output path contract.
+    /// WHY: this preserves the explicit duplicate-report output path contract.
+    /// The gate reads the flag off `GateCtx` and resolves it through the shared
+    /// helper, so the test exercises both halves rather than a parser that no
+    /// longer exists.
     #[test]
     fn duplicate_report_json_arg_accepts_path() {
-        let args = vec![
-            "--with-repo".to_string(),
-            "--duplicate-report-json".to_string(),
-            "release/evidence/dedup/lego-duplicates.json".to_string(),
-        ];
+        let ctx = xtask::gate::GateCtx::new(
+            PathBuf::from("."),
+            vec![
+                "--with-repo".to_string(),
+                "--duplicate-report-json".to_string(),
+                "release/evidence/dedup/lego-duplicates.json".to_string(),
+            ],
+        );
+        let resolved = duplicate_report_json_path(
+            "--duplicate-report-json",
+            ctx.flag("--duplicate-report-json"),
+            "--duplicate-report-json requires a path",
+        );
         assert_eq!(
-            duplicate_report_json_arg(&args),
+            resolved.ok(),
             Some(PathBuf::from("release/evidence/dedup/lego-duplicates.json"))
         );
     }

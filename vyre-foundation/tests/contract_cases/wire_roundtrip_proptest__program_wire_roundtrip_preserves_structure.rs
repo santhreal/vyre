@@ -299,7 +299,7 @@ fn datatype_strategy_enumerates_every_wire_supported_terminal_variant() {
     // buffer element set: a cast target may also be a `Handle`, a nested `Vec`
     // or `TensorShaped`, or an `Opaque` extension type, and those four are the
     // reason this list exists at all.
-    let mut sample = buffer_data_types(8);
+    let mut sample = flat_buffer_element_types(8);
     sample.extend([
         DataType::Handle(TypeId(7)),
         DataType::Vec {

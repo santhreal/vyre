@@ -340,7 +340,6 @@ write = [
   "vyre-libs/tests/*gemm*",
   "vyre-libs/tests/*attention*",
   "vyre-bench/src/**",
-  "docs/OWNERSHIP.md",
 ]
 avoid = [
   "vyre-libs/src/security/**",
@@ -461,7 +460,6 @@ parent_axis = "coordination"
 support_reason = "Op/backend coverage files support coordination evidence and are not a separate implementation axis."
 write = [
   "docs/optimization/OP_MATRIX.toml",
-  "docs/catalog/**",
   "docs/generated/**",
 ]
 required_commands = [

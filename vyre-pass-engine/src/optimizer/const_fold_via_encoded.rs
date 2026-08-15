@@ -15,8 +15,8 @@
 //!
 //! No host-reference escape in production. Tests parity vs the existing
 //! `vyre-foundation` const-fold pass via `CpuOracleDispatcher`-style
-//! tests (extension follow-up  -  for V1 we run through the real
-//! `WgpuBackend` in the driver-wgpu integration test crate).
+//! tests (extension follow-up  -  for V1 we run through a real
+//! backend in the driver integration test crates).
 
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -346,7 +346,7 @@ fn bin_op_body() -> Vec<Node> {
                 ),
                 // Shl (tag 0x09). u32 shift; rv must be in 0..32 to
                 // be well-defined. We fold for any rv since the
-                // wrapping behaviour matches WGSL/PTX semantics.
+                // wrapping behaviour matches target shift semantics.
                 Node::if_then(
                     Expr::eq(Expr::var("op"), Expr::u32(0x09)),
                     vec![

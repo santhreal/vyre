@@ -41,7 +41,7 @@ pub const DOMINATOR_FRONTIER_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// A zero-node query used to return a grid of ZERO groups here while every
 /// sibling graph primitive returned one. `node_count == 0` is accepted by
 /// `validate_dominator_frontier_inputs` (an empty seed is exactly zero words), so
-/// that grid reached the launcher, and the CUDA launcher refuses `grid[axis] == 0`
+/// that grid reached the launcher, and the launcher refuses `grid[axis] == 0`
 /// outright. The candidate lanes are already guarded against `node_count`, so one
 /// group of guarded lanes is the no-op the zero-node case wants.
 #[must_use]
@@ -1057,7 +1057,7 @@ mod tests {
 
     #[test]
     fn launch_plan_packs_candidate_lanes_into_blocks() {
-        // A zero-node query launches ONE guarded group, not zero groups: the CUDA
+        // A zero-node query launches ONE guarded group, not zero groups: the
         // launcher refuses `grid[axis] == 0`, and this used to be the only graph
         // grid builder that produced it.
         assert_eq!(dominator_frontier_dispatch_grid(0), [1, 1, 1]);

@@ -1,4 +1,4 @@
-//! Anchor-DFA plan for software, SPIR-V, and accelerator experiments.
+//! Anchor-DFA plan for software and accelerator experiments.
 //!
 //! This module owns the shared scan-side representation: extracted anchor
 //! literals, the DFA state budget, verifier binding, and fallback diagnostic.

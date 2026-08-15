@@ -7,7 +7,7 @@
 fn main() {
     xtask::delegate::run_delegated_main(
         "xtask-evidence",
-        "`xtask` assigns these subcommands here because each one reads recorded benchmark or release evidence.",
-        xtask_evidence::IMPLEMENTED,
+        "`xtask` assigns these gates here because each one reads recorded benchmark or release evidence.",
+        xtask_evidence::GATES,
     );
 }
