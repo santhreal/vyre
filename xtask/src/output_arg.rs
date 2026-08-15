@@ -288,7 +288,11 @@ fn replace_serialized_root(
         .replace(fragment, exact_replacement)
 }
 
-pub(crate) fn cargo_runner(workspace_root: &Path) -> PathBuf {
+/// The bounded workspace cargo wrapper this tooling spawns.
+///
+/// `VYRE_CARGO_RUNNER` wins, then a `cargo_full` beside the workspace root,
+/// then the name alone for a wrapper on `PATH`.
+pub fn cargo_runner(workspace_root: &Path) -> PathBuf {
     if let Some(runner) = std::env::var_os("VYRE_CARGO_RUNNER") {
         return PathBuf::from(runner);
     }

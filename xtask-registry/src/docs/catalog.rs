@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 
 use xtask::gate::{Gate, GateCtx, GateError, Report};
+use xtask::toml_text::quote;
 
 use crate::docs::operation_schema::{self, OperationRecord};
 
@@ -55,11 +56,6 @@ fn render(catalog: &BTreeMap<String, Vec<OperationRecord>>) -> String {
         text.push_str("]\n");
     }
     text
-}
-
-/// One TOML basic string.
-fn quote(value: &str) -> String {
-    format!("\"{}\"", value.replace('\\', "\\\\").replace('"', "\\\""))
 }
 
 fn collect() -> Result<BTreeMap<String, Vec<OperationRecord>>, GateError> {

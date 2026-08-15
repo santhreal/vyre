@@ -29,31 +29,11 @@ impl Gate for Shrink {
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        let selected = ctx.flag("--program");
         let oracle = match ctx.flag("--oracle") {
             Some(path) => Oracle::Command(PathBuf::from(path)),
             None => Oracle::WireRoundTrip,
         };
-        let cases: Vec<(String, Program)> =
-            vyre_foundation::optimizer::corpus::generate_release_corpus()
-                .into_iter()
-                .filter(|case| match selected {
-                    Some(id) => case.id == id,
-                    None => true,
-                })
-                .map(|case| (case.id, case.program))
-                .collect();
-        if cases.is_empty() {
-            return Err(GateError::new(
-                match selected {
-                    Some(id) => format!("no release corpus case is named `{id}`"),
-                    None => {
-                        "the release corpus generated no case, so nothing was reduced".to_string()
-                    }
-                },
-                "run the gate without --program to reduce every generated case",
-            ));
-        }
+        let cases = crate::corpus::selected_cases(ctx.flag("--program"), "reduce")?;
 
         let work_dir = ctx.root.join("target").join("shrink");
         let mut report = Report::clean();

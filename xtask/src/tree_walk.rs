@@ -15,7 +15,7 @@ use std::path::Path;
 use walkdir::{DirEntry, WalkDir};
 
 /// Build outputs and version control. No gate reads these.
-pub(crate) const BUILD_OUTPUT_AND_VCS: &[&str] = &[
+pub const BUILD_OUTPUT_AND_VCS: &[&str] = &[
     "target",
     "target-codex",
     "target_tests",
@@ -27,7 +27,7 @@ pub(crate) const BUILD_OUTPUT_AND_VCS: &[&str] = &[
 ///
 /// The name test applies to files as well as directories, which is what the
 /// walks this replaced did: a file named `target` is generated too.
-pub(crate) fn pruned<'a>(
+pub fn pruned<'a>(
     root: &Path,
     skip: &'a [&'a str],
 ) -> impl Iterator<Item = walkdir::Result<DirEntry>> + 'a {
@@ -38,7 +38,7 @@ pub(crate) fn pruned<'a>(
 ///
 /// For a prune rule that is more than a name list. Rejecting a directory prunes
 /// everything under it.
-pub(crate) fn pruned_by(
+pub fn pruned_by(
     root: &Path,
     mut keep: impl FnMut(&str) -> bool,
 ) -> impl Iterator<Item = walkdir::Result<DirEntry>> {

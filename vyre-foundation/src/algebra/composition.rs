@@ -200,40 +200,13 @@ pub fn duplicate_self_exclusive_regions(nodes: &[Node]) -> Vec<String> {
 
 fn collect_self_exclusive_regions<'a>(nodes: &'a [Node], counts: &mut FxHashMap<&'a str, usize>) {
     for node in nodes {
-        match node {
-            Node::If {
-                then, otherwise, ..
-            } => {
-                collect_self_exclusive_regions(then, counts);
-                collect_self_exclusive_regions(otherwise, counts);
+        if let Node::Region { generator, .. } = node {
+            if let Some(base) = self_exclusive_region_key(generator.as_str()) {
+                *counts.entry(base).or_insert(0) += 1;
             }
-            Node::Loop { body, .. } | Node::Block(body) => {
-                collect_self_exclusive_regions(body, counts);
-            }
-            Node::Region {
-                generator, body, ..
-            } => {
-                if let Some(base) = self_exclusive_region_key(generator.as_str()) {
-                    *counts.entry(base).or_insert(0) += 1;
-                }
-                collect_self_exclusive_regions(body, counts);
-            }
-            Node::Let { .. }
-            | Node::Assign { .. }
-            | Node::Store { .. }
-            | Node::AllReduce { .. }
-            | Node::AllGather { .. }
-            | Node::ReduceScatter { .. }
-            | Node::Broadcast { .. }
-            | Node::Return
-            | Node::Barrier { .. }
-            | Node::IndirectDispatch { .. }
-            | Node::AsyncLoad { .. }
-            | Node::AsyncStore { .. }
-            | Node::AsyncWait { .. }
-            | Node::Trap { .. }
-            | Node::Resume { .. }
-            | Node::Opaque(_) => {}
+        }
+        for body in crate::transform::visit::child_bodies(node) {
+            collect_self_exclusive_regions(body, counts);
         }
     }
 }

@@ -32,4 +32,5 @@ pub mod release;
 pub mod subcommands;
 pub mod text_markers;
 pub mod toml_config;
+pub mod toml_text;
 pub mod tree_walk;

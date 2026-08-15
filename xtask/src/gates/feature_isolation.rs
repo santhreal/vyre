@@ -50,6 +50,7 @@ use std::process::Command;
 use serde::Deserialize;
 
 use crate::gate::{Gate, GateCtx, GateError, Report};
+use crate::toml_text::quote;
 
 /// Stand-in feature name for the per-member `--no-default-features` probe.
 ///
@@ -657,14 +658,14 @@ pub fn render(axis: &[Pair], observed: &[(Pair, Observation)], previous: &[Row])
                 Some(row) => {
                     text.push_str(&format!("outcome = \"{}\"\n", row.outcome));
                     if let Some(reason) = row.reason.as_deref() {
-                        text.push_str(&format!("reason = {}\n", toml_string(reason)));
+                        text.push_str(&format!("reason = {}\n", quote(reason)));
                     }
                 }
                 None => {
                     text.push_str(&format!("outcome = \"{BLOCKED}\"\n"));
                     text.push_str(&format!(
                         "reason = {}\n",
-                        toml_string(&format!("{UNREVIEWED}: never observed"))
+                        quote(&format!("{UNREVIEWED}: never observed"))
                     ));
                 }
             }
@@ -687,24 +688,9 @@ pub fn render(axis: &[Pair], observed: &[(Pair, Observation)], previous: &[Row])
                     .unwrap_or("cargo check failed")
             )
         });
-        text.push_str(&format!("reason = {}\n", toml_string(&reason)));
+        text.push_str(&format!("reason = {}\n", quote(&reason)));
     }
     text
-}
-
-/// A TOML basic string, so a reason containing a quote or a backslash round-trips.
-fn toml_string(value: &str) -> String {
-    let mut quoted = String::with_capacity(value.len() + 2);
-    quoted.push('"');
-    for character in value.chars() {
-        match character {
-            '"' => quoted.push_str("\\\""),
-            '\\' => quoted.push_str("\\\\"),
-            other => quoted.push(other),
-        }
-    }
-    quoted.push('"');
-    quoted
 }
 
 fn cargo_binary() -> String {

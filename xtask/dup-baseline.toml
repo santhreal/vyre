@@ -126,8 +126,8 @@ total_lines = 1139
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 2729
-total_lines = 95675
+duplicate_lines = 2707
+total_lines = 96013
 
 [[crate]]
 name = "vyre-grammar-gen"
@@ -191,15 +191,15 @@ total_lines = 9706
 
 [[crate]]
 name = "xtask"
-duplicate_lines = 42
-total_lines = 18761
+duplicate_lines = 8
+total_lines = 20015
 
 [[crate]]
 name = "xtask-evidence"
-duplicate_lines = 75
-total_lines = 25578
+duplicate_lines = 58
+total_lines = 26123
 
 [[crate]]
 name = "xtask-registry"
-duplicate_lines = 49
-total_lines = 8070
+duplicate_lines = 16
+total_lines = 8018

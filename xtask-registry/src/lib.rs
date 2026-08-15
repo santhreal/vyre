@@ -9,6 +9,7 @@
 //! anchors and the floor per source.
 
 pub mod compile;
+pub mod corpus;
 pub mod docs;
 pub mod gates;
 pub mod print_composition;

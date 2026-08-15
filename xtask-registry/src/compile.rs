@@ -137,26 +137,7 @@ fn corpus(ctx: &GateCtx) -> Result<Vec<(String, Program)>, GateError> {
         })?;
         return Ok(vec![(path.display().to_string(), program)]);
     }
-    let selected = ctx.flag("--program");
-    let cases: Vec<(String, Program)> =
-        vyre_foundation::optimizer::corpus::generate_release_corpus()
-            .into_iter()
-            .filter(|case| match selected {
-                Some(id) => case.id == id,
-                None => true,
-            })
-            .map(|case| (case.id, case.program))
-            .collect();
-    if cases.is_empty() {
-        return Err(GateError::new(
-            match selected {
-                Some(id) => format!("no release corpus case is named `{id}`"),
-                None => "the release corpus generated no case, so nothing was compiled".to_string(),
-            },
-            "run the gate without --program to compile every generated case",
-        ));
-    }
-    Ok(cases)
+    crate::corpus::selected_cases(ctx.flag("--program"), "compile")
 }
 
 fn compile_neutral(program: Program) -> Result<Artifact, String> {
