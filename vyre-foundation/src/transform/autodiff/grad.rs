@@ -5,10 +5,12 @@
 //! `Program` whose stores write the gradients of the outputs w.r.t. the
 //! inputs into `grad_<input>` buffers.
 
+use std::ops::ControlFlow;
+
 use rustc_hash::FxHashMap;
 
 use crate::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program, UnOp};
-use crate::transform::visit::child_bodies;
+use crate::transform::visit::{for_each_node, try_for_each_expr};
 
 use super::error::AutodiffError;
 mod expr;
@@ -177,90 +179,34 @@ pub fn grad_with_pullback(
 /// accumulator bindings are named `_adj_*` and forward loop variables are bound
 /// by the backward loop, so neither is in `local_targets`; only genuine
 /// forward-local value references match.
+///
+/// The walk is [`try_for_each_expr`], which takes node nesting, operand
+/// positions, and sub-expressions from their exhaustive owners. The hand-written
+/// descent this replaces recorded `Node::Trap`, `Node::AsyncLoad`, and
+/// `Node::AsyncStore` as carrying no operand at all, contradicting
+/// `node_operands`, which reports `Trap.address` and both async copies'
+/// `offset` / `size`. A dangling reference in one of those positions read as
+/// clean, so this fail-closed guard failed OPEN and `grad` returned a backward
+/// Program naming an undeclared local instead of an `AutodiffError`. No adjoint
+/// rule emits those three nodes today (`emit_adjoint_node` refuses them in the
+/// forward direction), so the hole was latent rather than live.
 fn first_dangling_forward_local(body: &[Node], local_targets: &[Ident]) -> Option<String> {
-    fn expr_ref<'a>(expr: &Expr, locals: &'a [Ident]) -> Option<&'a Ident> {
-        match expr {
-            Expr::Var(name) => locals.iter().find(|local| local.as_str() == name.as_str()),
-            Expr::Load { index, .. } => expr_ref(index, locals),
-            Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
-                expr_ref(operand, locals)
-            }
-            Expr::BinOp { left, right, .. } => {
-                expr_ref(left, locals).or_else(|| expr_ref(right, locals))
-            }
-            Expr::Fma { a, b, c } => expr_ref(a, locals)
-                .or_else(|| expr_ref(b, locals))
-                .or_else(|| expr_ref(c, locals)),
-            Expr::Select {
-                cond,
-                true_val,
-                false_val,
-            } => expr_ref(cond, locals)
-                .or_else(|| expr_ref(true_val, locals))
-                .or_else(|| expr_ref(false_val, locals)),
-            Expr::Call { args, .. } => args.iter().find_map(|arg| expr_ref(arg, locals)),
-            Expr::Atomic {
-                index,
-                expected,
-                value,
-                ..
-            } => expr_ref(index, locals)
-                .or_else(|| expected.as_deref().and_then(|e| expr_ref(e, locals)))
-                .or_else(|| expr_ref(value, locals)),
-            Expr::SubgroupBallot { cond } => expr_ref(cond, locals),
-            Expr::SubgroupShuffle { value, lane } => {
-                expr_ref(value, locals).or_else(|| expr_ref(lane, locals))
-            }
-            Expr::SubgroupReduce { value, .. } => expr_ref(value, locals),
-            Expr::LitU32(_)
-            | Expr::LitI32(_)
-            | Expr::LitF32(_)
-            | Expr::LitBool(_)
-            | Expr::BufferRef { .. }
-            | Expr::BufLen { .. }
-            | Expr::InvocationId { .. }
-            | Expr::WorkgroupId { .. }
-            | Expr::LocalId { .. }
-            | Expr::SubgroupLocalId
-            | Expr::SubgroupSize
-            | Expr::Opaque(_) => None,
-        }
-    }
-    fn node_ref<'a>(node: &Node, locals: &'a [Ident]) -> Option<&'a Ident> {
-        let own = match node {
-            Node::Let { value, .. } | Node::Assign { value, .. } => expr_ref(value, locals),
-            Node::Store { index, value, .. } => {
-                expr_ref(index, locals).or_else(|| expr_ref(value, locals))
-            }
-            Node::If { cond, .. } => expr_ref(cond, locals),
-            Node::Loop { from, to, .. } => expr_ref(from, locals).or_else(|| expr_ref(to, locals)),
-            Node::Block(_)
-            | Node::Region { .. }
-            | Node::Return
-            | Node::Barrier { .. }
-            | Node::IndirectDispatch { .. }
-            | Node::AllReduce { .. }
-            | Node::AllGather { .. }
-            | Node::ReduceScatter { .. }
-            | Node::Broadcast { .. }
-            | Node::AsyncLoad { .. }
-            | Node::AsyncStore { .. }
-            | Node::AsyncWait { .. }
-            | Node::Trap { .. }
-            | Node::Resume { .. }
-            | Node::Opaque(_) => None,
+    let flow = try_for_each_expr(body, |expr| {
+        let Expr::Var(name) = expr else {
+            return ControlFlow::Continue(());
         };
-        // Children come from the single exhaustive owner, in source order.
-        own.or_else(|| {
-            child_bodies(node)
-                .into_iter()
-                .flatten()
-                .find_map(|n| node_ref(n, locals))
-        })
+        match local_targets
+            .iter()
+            .find(|local| local.as_str() == name.as_str())
+        {
+            Some(local) => ControlFlow::Break(local.as_str().to_string()),
+            None => ControlFlow::Continue(()),
+        }
+    });
+    match flow {
+        ControlFlow::Break(local) => Some(local),
+        ControlFlow::Continue(()) => None,
     }
-    body.iter()
-        .find_map(|node| node_ref(node, local_targets))
-        .map(|ident| ident.as_str().to_string())
 }
 
 fn validate_buffer_names(
@@ -411,49 +357,27 @@ impl AdjointEnv {
         self.buffer_types.get(buf_name).cloned()
     }
 
+    /// Record the static type of every forward local, in forward source order.
+    ///
+    /// Descent is [`for_each_node`], the one exhaustive owner of which variants
+    /// nest, and its order is the same depth-first source order the recursive
+    /// walk this replaces produced, which matters because a later `Let`'s type
+    /// is inferred from the types recorded by the earlier ones. Only the two
+    /// name-binding shapes are named here: `Let` / `Assign` bind the value's
+    /// type and `Loop` binds its induction variable as `U32`.
     fn record_forward_types(&mut self, nodes: &[Node]) {
-        for node in nodes {
-            match node {
-                Node::Let { name, value } | Node::Assign { name, value } => {
-                    if let Some(ty) = self.expr_type(value) {
-                        self.var_types.insert(name.as_str().to_string(), ty);
-                    } else {
-                        self.var_types.remove(name.as_str());
-                    }
+        for_each_node(nodes, |node| {
+            if let Node::Let { name, value } | Node::Assign { name, value } = node {
+                if let Some(ty) = self.expr_type(value) {
+                    self.var_types.insert(name.as_str().to_string(), ty);
+                } else {
+                    self.var_types.remove(name.as_str());
                 }
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    self.record_forward_types(then);
-                    self.record_forward_types(otherwise);
-                }
-                Node::Loop {
-                    var,
-                    body: loop_body,
-                    ..
-                } => {
-                    self.var_types
-                        .insert(var.as_str().to_string(), DataType::U32);
-                    self.record_forward_types(loop_body);
-                }
-                Node::Block(body) => self.record_forward_types(body),
-                Node::Region { body, .. } => self.record_forward_types(body),
-                Node::Store { .. }
-                | Node::IndirectDispatch { .. }
-                | Node::AllReduce { .. }
-                | Node::AllGather { .. }
-                | Node::ReduceScatter { .. }
-                | Node::Broadcast { .. }
-                | Node::AsyncLoad { .. }
-                | Node::AsyncStore { .. }
-                | Node::AsyncWait { .. }
-                | Node::Trap { .. }
-                | Node::Resume { .. }
-                | Node::Return
-                | Node::Barrier { .. }
-                | Node::Opaque(_) => {}
+            } else if let Node::Loop { var, .. } = node {
+                self.var_types
+                    .insert(var.as_str().to_string(), DataType::U32);
             }
-        }
+        });
     }
 
     fn expr_type(&self, expr: &Expr) -> Option<DataType> {
@@ -579,34 +503,19 @@ impl AdjointEnv {
     }
 }
 
+/// Every forward local the backward pass needs an adjoint accumulator for, in
+/// first-appearance order.
+///
+/// Descent is [`for_each_node`], the one exhaustive owner of which variants
+/// nest. Only `Let` and `Assign` bind a forward local; every other variant
+/// either binds nothing or binds a loop induction variable, which the backward
+/// loop re-binds itself and therefore needs no accumulator.
 fn collect_adjoint_targets(nodes: &[Node], out: &mut Vec<Ident>) {
-    for node in nodes {
-        match node {
-            Node::Let { name, .. } | Node::Assign { name, .. } => push_unique_ident(out, name),
-            Node::If {
-                then, otherwise, ..
-            } => {
-                collect_adjoint_targets(then, out);
-                collect_adjoint_targets(otherwise, out);
-            }
-            Node::Loop { body, .. } | Node::Block(body) => collect_adjoint_targets(body, out),
-            Node::Region { body, .. } => collect_adjoint_targets(body, out),
-            Node::Store { .. }
-            | Node::IndirectDispatch { .. }
-            | Node::AllReduce { .. }
-            | Node::AllGather { .. }
-            | Node::ReduceScatter { .. }
-            | Node::Broadcast { .. }
-            | Node::AsyncLoad { .. }
-            | Node::AsyncStore { .. }
-            | Node::AsyncWait { .. }
-            | Node::Trap { .. }
-            | Node::Resume { .. }
-            | Node::Return
-            | Node::Barrier { .. }
-            | Node::Opaque(_) => {}
+    for_each_node(nodes, |node| {
+        if let Node::Let { name, .. } | Node::Assign { name, .. } = node {
+            push_unique_ident(out, name);
         }
-    }
+    });
 }
 
 fn push_unique_ident(out: &mut Vec<Ident>, name: &Ident) {

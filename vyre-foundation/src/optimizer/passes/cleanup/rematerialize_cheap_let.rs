@@ -52,7 +52,11 @@
 //! rewrite-side companion that drops the easiest contributors to that
 //! estimate without needing a downstream live-range substrate.
 
+use std::borrow::Cow;
+
 use crate::ir::{Expr, Node, Program};
+use crate::optimizer::cost::is_rematerializable_leaf;
+use crate::optimizer::rewrite::rewrite_nodes_cow;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::transform::visit::any_descendant;
 
@@ -106,7 +110,7 @@ fn rewrite_sequence(nodes: Vec<Node>, changed: &mut bool) -> Vec<Node> {
     let mut i = 0;
     while i < nodes.len() {
         let take_value = match &nodes[i] {
-            Node::Let { name, value } if is_cheap_leaf(value) => {
+            Node::Let { name, value } if is_rematerializable_leaf(value) => {
                 let name = name.clone();
                 let tail = &nodes[i + 1..];
                 if can_rematerialize_let(&name, value, tail) {
@@ -120,8 +124,13 @@ fn rewrite_sequence(nodes: Vec<Node>, changed: &mut bool) -> Vec<Node> {
 
         if let Some((name, value)) = take_value {
             nodes.remove(i);
-            for node in &mut nodes[i..] {
-                substitute_var_in_node(node, &name, &value);
+            let substituted = match substitute_var(&nodes[i..], name.as_str(), &value) {
+                Cow::Borrowed(_) => None,
+                Cow::Owned(tail) => Some(tail),
+            };
+            if let Some(tail) = substituted {
+                nodes.truncate(i);
+                nodes.extend(tail);
             }
             *changed = true;
             // Do not advance  -  the next index is the node previously at
@@ -137,203 +146,30 @@ fn rewrite_sequence(nodes: Vec<Node>, changed: &mut bool) -> Vec<Node> {
 /// Recurse into `node`'s child sequences so deep rewrites land before
 /// their parent gets considered. The top-level sequence rewrite is
 /// performed by the caller in `rewrite_sequence`.
+///
+/// Which variants have a body slot is
+/// [`map_body`](crate::visit::node_map::map_body)'s decision. The match this
+/// replaces ended in `other => other`, so a body-bearing variant it did not name
+/// was never descended into while `scan_for_candidate`, which uses the exhaustive
+/// owner, still reported a candidate inside it: the pass announced RUN and then
+/// rewrote nothing.
 fn recurse_into_children(node: Node, changed: &mut bool) -> Node {
-    match node {
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => Node::If {
-            cond,
-            then: rewrite_sequence(then, changed),
-            otherwise: rewrite_sequence(otherwise, changed),
-        },
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => Node::Loop {
-            var,
-            from,
-            to,
-            body: rewrite_sequence(body, changed),
-        },
-        Node::Block(body) => Node::Block(rewrite_sequence(body, changed)),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let body_vec: Vec<Node> = match std::sync::Arc::try_unwrap(body) {
-                Ok(v) => v,
-                Err(arc) => (*arc).clone(),
-            };
-            Node::Region {
-                generator,
-                source_region,
-                body: std::sync::Arc::new(rewrite_sequence(body_vec, changed)),
-            }
-        }
-        other => other,
-    }
+    crate::visit::node_map::map_body(node, &mut |body| rewrite_sequence(body, changed))
 }
 
-/// Replace every `Expr::Var(name)` in `node` with `value.clone()`.
-fn substitute_var_in_node(node: &mut Node, name: &str, value: &Expr) {
-    match node {
-        Node::Let { value: v, .. } | Node::Assign { value: v, .. } => {
-            substitute_var_in_expr(v, name, value);
-        }
-        Node::Store {
-            index, value: v, ..
-        } => {
-            substitute_var_in_expr(index, name, value);
-            substitute_var_in_expr(v, name, value);
-        }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            substitute_var_in_expr(cond, name, value);
-            for n in then {
-                substitute_var_in_node(n, name, value);
-            }
-            for n in otherwise {
-                substitute_var_in_node(n, name, value);
-            }
-        }
-        Node::Loop { from, to, body, .. } => {
-            substitute_var_in_expr(from, name, value);
-            substitute_var_in_expr(to, name, value);
-            for n in body {
-                substitute_var_in_node(n, name, value);
-            }
-        }
-        Node::Block(body) => {
-            for n in body {
-                substitute_var_in_node(n, name, value);
-            }
-        }
-        Node::Region { body, .. } => {
-            let body_vec: Vec<Node> = match std::sync::Arc::try_unwrap(std::mem::take(body)) {
-                Ok(v) => v,
-                Err(arc) => (*arc).clone(),
-            };
-            let mut owned = body_vec;
-            for n in &mut owned {
-                substitute_var_in_node(n, name, value);
-            }
-            *body = std::sync::Arc::new(owned);
-        }
-        Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
-            substitute_var_in_expr(offset, name, value);
-            substitute_var_in_expr(size, name, value);
-        }
-        Node::Trap { address, .. } => {
-            substitute_var_in_expr(address, name, value);
-        }
-        Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AllReduce { .. }
-        | Node::AllGather { .. }
-        | Node::ReduceScatter { .. }
-        | Node::Broadcast { .. }
-        | Node::AsyncWait { .. }
-        | Node::Resume { .. }
-        | Node::Opaque(_) => {}
-    }
-}
-
-/// Replace every `Expr::Var(name)` inside `expr` (recursively) with
-/// `value.clone()`. Cheap-leaf values do not embed `Var`s themselves
-/// (a `Var` value's substitution chains, but the original `Let` was
-/// already cheap, so the chain terminates at a leaf).
-fn substitute_var_in_expr(expr: &mut Expr, name: &str, value: &Expr) {
-    match expr {
-        Expr::Var(ident) if ident.as_str() == name => {
-            *expr = value.clone();
-        }
-        Expr::Var(_)
-        | Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => {}
-        Expr::Load { index, .. } => substitute_var_in_expr(index, name, value),
-        Expr::BinOp { left, right, .. } => {
-            substitute_var_in_expr(left, name, value);
-            substitute_var_in_expr(right, name, value);
-        }
-        Expr::UnOp { operand, .. } => substitute_var_in_expr(operand, name, value),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            substitute_var_in_expr(cond, name, value);
-            substitute_var_in_expr(true_val, name, value);
-            substitute_var_in_expr(false_val, name, value);
-        }
-        Expr::Cast { value: v, .. } | Expr::SubgroupReduce { value: v, .. } => {
-            substitute_var_in_expr(v, name, value);
-        }
-        Expr::Fma { a, b, c } => {
-            substitute_var_in_expr(a, name, value);
-            substitute_var_in_expr(b, name, value);
-            substitute_var_in_expr(c, name, value);
-        }
-        Expr::Call { args, .. } => {
-            for arg in args {
-                substitute_var_in_expr(arg, name, value);
-            }
-        }
-        Expr::Atomic {
-            index,
-            expected,
-            value: v,
-            ..
-        } => {
-            substitute_var_in_expr(index, name, value);
-            if let Some(e) = expected.as_deref_mut() {
-                substitute_var_in_expr(e, name, value);
-            }
-            substitute_var_in_expr(v, name, value);
-        }
-        Expr::SubgroupBallot { cond } => substitute_var_in_expr(cond, name, value),
-        Expr::SubgroupShuffle { value: v, lane } => {
-            substitute_var_in_expr(v, name, value);
-            substitute_var_in_expr(lane, name, value);
-        }
-    }
-}
-
-/// True iff `expr` is a leaf-cheap expression safe to rematerialize.
-fn is_cheap_leaf(expr: &Expr) -> bool {
-    matches!(
-        expr,
-        Expr::LitU32(_)
-            | Expr::LitI32(_)
-            | Expr::LitF32(_)
-            | Expr::LitBool(_)
-            | Expr::Var(_)
-            | Expr::BufferRef { .. }
-            | Expr::BufLen { .. }
-            | Expr::InvocationId { .. }
-            | Expr::WorkgroupId { .. }
-            | Expr::LocalId { .. }
-            | Expr::SubgroupLocalId
-            | Expr::SubgroupSize
-    )
+/// Every `Expr::Var(name)` in `nodes` replaced by `value`, at any nesting depth.
+///
+/// The rewrite is [`rewrite_nodes_cow`], the one owner of "run an expression
+/// rewrite over a node tree": it enumerates every operand position of every node
+/// variant and every sub-expression position of every expression, and it reports
+/// `Cow::Borrowed` when nothing matched, so a substitution with no use site
+/// clones nothing. The two hand-written mutators this replaces restated both
+/// enumerations.
+fn substitute_var<'a>(nodes: &'a [Node], name: &str, value: &Expr) -> Cow<'a, [Node]> {
+    rewrite_nodes_cow(nodes, &mut |expr| match expr {
+        Expr::Var(ident) if ident.as_str() == name => Some(value.clone()),
+        _ => None,
+    })
 }
 
 /// True iff a cheap `Let` can be replaced by its value in the remaining
@@ -350,42 +186,19 @@ fn can_rematerialize_let(name: &str, value: &Expr, tail: &[Node]) -> bool {
     true
 }
 
-/// True iff `node` (or any descendant) reassigns `name`.
+/// True iff `node` (or any descendant) rebinds `name`.
+///
+/// Descent comes from [`any_descendant`] and the per-node answer from
+/// [`node_bound_name`](crate::transform::visit::node_bound_name), the two owners
+/// of "which variants nest" and "which variants bind". The match this replaces
+/// restated both lists and ended in `_ => false`, so a rebinding it did not name
+/// read as never rebound and the pass inlined a stale first definition across the
+/// rebinding.
 fn node_reassigns(node: &Node, name: &str) -> bool {
-    match node {
-        Node::Assign { name: n, .. } if n.as_str() == name => true,
-        Node::Let { name: n, .. } if n.as_str() == name => true,
-        Node::Assign { .. }
-        | Node::Let { .. }
-        | Node::Store { .. }
-        | Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncLoad { .. }
-        | Node::AsyncStore { .. }
-        | Node::AllReduce { .. }
-        | Node::AllGather { .. }
-        | Node::ReduceScatter { .. }
-        | Node::Broadcast { .. }
-        | Node::AsyncWait { .. }
-        | Node::Trap { .. }
-        | Node::Resume { .. }
-        | Node::Opaque(_) => false,
-        Node::If {
-            then, otherwise, ..
-        } => {
-            then.iter().any(|n| node_reassigns(n, name))
-                || otherwise.iter().any(|n| node_reassigns(n, name))
-        }
-        Node::Loop { var, body, .. } => {
-            if var.as_str() == name {
-                return true;
-            }
-            body.iter().any(|n| node_reassigns(n, name))
-        }
-        Node::Block(body) => body.iter().any(|n| node_reassigns(n, name)),
-        Node::Region { body, .. } => body.iter().any(|n| node_reassigns(n, name)),
-    }
+    any_descendant(node, &mut |candidate| {
+        crate::transform::visit::node_bound_name(candidate)
+            .is_some_and(|bound| bound.as_str() == name)
+    })
 }
 
 /// True when any `Let` anywhere under `nodes` has a cheap-leaf value.
@@ -399,7 +212,7 @@ fn scan_for_candidate(nodes: &[Node]) -> bool {
     nodes.iter().any(|node| {
         any_descendant(
             node,
-            &mut |n| matches!(n, Node::Let { value, .. } if is_cheap_leaf(value)),
+            &mut |n| matches!(n, Node::Let { value, .. } if is_rematerializable_leaf(value)),
         )
     })
 }

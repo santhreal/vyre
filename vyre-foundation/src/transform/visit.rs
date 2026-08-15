@@ -289,6 +289,44 @@ pub fn node_operands(node: &Node) -> [Option<&Expr>; 2] {
     }
 }
 
+/// The scalar name a statement binds, or `None` when it binds nothing.
+///
+/// `Node::Let` and `Node::Assign` bind their target and `Node::Loop` binds its
+/// induction variable; every other variant binds no scalar. `Node::AsyncLoad`
+/// and the collectives name buffers, which is a different question answered by
+/// [`node_buffer_refs`].
+///
+/// This is the ONE owner of the question, and the match has no catch-all arm.
+/// The hand-written versions this replaces each ended in a `_` arm reporting
+/// "binds nothing", so a variant that gains a binding position would let a pass
+/// hoist, fuse, or inline across a live rebinding while every existing test
+/// still passed.
+#[inline]
+#[must_use]
+pub fn node_bound_name(node: &Node) -> Option<&Ident> {
+    match node {
+        Node::Let { name, .. } | Node::Assign { name, .. } => Some(name),
+        Node::Loop { var, .. } => Some(var),
+        Node::Store { .. }
+        | Node::If { .. }
+        | Node::Block(_)
+        | Node::Region { .. }
+        | Node::Return
+        | Node::Barrier { .. }
+        | Node::IndirectDispatch { .. }
+        | Node::AllReduce { .. }
+        | Node::AllGather { .. }
+        | Node::ReduceScatter { .. }
+        | Node::Broadcast { .. }
+        | Node::AsyncLoad { .. }
+        | Node::AsyncStore { .. }
+        | Node::AsyncWait { .. }
+        | Node::Trap { .. }
+        | Node::Resume { .. }
+        | Node::Opaque(_) => None,
+    }
+}
+
 /// Every sub-expression of every node in `nodes` and in every nested body.
 ///
 /// The slice-taking companion of [`for_each_node`], for an analysis outside this
@@ -303,6 +341,42 @@ pub fn for_each_expr<'a>(nodes: &'a [Node], mut f: impl FnMut(&'a Expr)) {
             for_each_subexpr(operand, &mut f);
         }
     });
+}
+
+/// Every sub-expression of every node in `nodes`, in source pre-order,
+/// stopping at the first `Break`.
+///
+/// The short-circuiting form of [`for_each_expr`], for a guard that reports the
+/// FIRST expression matching a predicate instead of every one. Node descent is
+/// [`try_for_each_node`], operand positions are [`node_operands`], and
+/// sub-expressions are [`expr_children`], so a guard cannot answer "no such
+/// expression anywhere" for a position it never named. A guard that hand-rolls
+/// the three enumerations instead reports "clean" for the positions it forgot,
+/// which is the failure mode of a fail-closed check: it fails open.
+///
+/// Both walks are explicit worklists, so an adversarially deep program costs
+/// heap rather than native stack.
+pub fn try_for_each_expr<B>(
+    nodes: &[Node],
+    mut f: impl FnMut(&Expr) -> ControlFlow<B>,
+) -> ControlFlow<B> {
+    let mut stopped: Option<B> = None;
+    try_for_each_node(nodes, |node| {
+        for operand in node_operands(node).into_iter().flatten() {
+            let hit = any_subexpr(operand, &mut |expr| match f(expr) {
+                ControlFlow::Continue(()) => false,
+                ControlFlow::Break(value) => {
+                    stopped = Some(value);
+                    true
+                }
+            });
+            if hit {
+                return ControlFlow::Break(());
+            }
+        }
+        ControlFlow::Continue(())
+    });
+    stopped.map_or(ControlFlow::Continue(()), ControlFlow::Break)
 }
 
 /// The buffers a node names directly, split by direction.

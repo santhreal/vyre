@@ -46,29 +46,21 @@ use super::{collect_var_reads, rename_var_in_expr};
 use crate::ir::{Ident, Node};
 use rustc_hash::FxHashSet;
 
-/// Collect every name `nodes` binds: `Let` and `Assign` targets plus nested
-/// `Loop` induction variables, recursing through every nested scope.
+/// Every name `nodes` binds, nested scopes included.
+///
+/// The per-variant answer is
+/// [`node_bound_name`](crate::transform::visit::node_bound_name) and the descent
+/// is [`for_each_node`](crate::transform::visit::for_each_node), both exhaustive.
+/// The walk this replaces named its own variants and ended in `_ => {}`, so a
+/// binding form it did not list read as binding nothing and
+/// [`bindings_flow_across`] then let fusion or fission reorder statements across
+/// a live binding.
 pub(super) fn collect_bound_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
-    for node in nodes {
-        match node {
-            Node::Let { name, .. } | Node::Assign { name, .. } => {
-                out.insert(name.clone());
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                collect_bound_names(then, out);
-                collect_bound_names(otherwise, out);
-            }
-            Node::Loop { var, body, .. } => {
-                out.insert(var.clone());
-                collect_bound_names(body, out);
-            }
-            Node::Block(body) => collect_bound_names(body, out),
-            Node::Region { body, .. } => collect_bound_names(body, out),
-            _ => {}
+    crate::transform::visit::for_each_node(nodes, |node| {
+        if let Some(name) = crate::transform::visit::node_bound_name(node) {
+            out.insert(name.clone());
         }
-    }
+    });
 }
 
 /// True iff a name bound by `binder` is read by `reader`, which makes moving
@@ -220,10 +212,9 @@ fn rename_var_in_body(body: Vec<Node>, from: &Ident, to: &Ident) -> Vec<Node> {
 
 #[cfg(test)]
 mod tests {
+    use super::super::test_fixtures::{loops_of, program};
     use super::*;
-    use crate::ir::{
-        BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node, NodeExtension, Program,
-    };
+    use crate::ir::{DataType, Expr, ExprNode, Node, NodeExtension};
     use crate::optimizer::passes::loops::{loop_fission::LoopFission, loop_fusion::LoopFusion};
 
     fn sorted(nodes: &[Node]) -> Vec<String> {
@@ -364,28 +355,6 @@ mod tests {
     // these red. They pin the transformed IR, not just the `changed` flag,
     // so a rename defect is caught as well as a legality defect.
     // ----------------------------------------------------------------
-
-    fn buf(name: &str) -> BufferDecl {
-        BufferDecl::storage(name, 0, BufferAccess::ReadWrite, DataType::U32).with_count(8)
-    }
-
-    fn program(entry: Vec<Node>) -> Program {
-        Program::wrapped(vec![buf("a"), buf("b"), buf("c")], [1, 1, 1], entry)
-    }
-
-    /// Flatten Region/Block wrappers so a test can index the real statements.
-    fn loops_of(nodes: &[Node]) -> Vec<&Node> {
-        let mut out = Vec::new();
-        for node in nodes {
-            match node {
-                Node::Loop { .. } => out.push(node),
-                Node::Region { body, .. } => out.extend(loops_of(body)),
-                Node::Block(body) => out.extend(loops_of(body)),
-                _ => {}
-            }
-        }
-        out
-    }
 
     /// `body_a` / `body_b` halves both passes must judge the same way: fission
     /// sees them concatenated inside one loop, fusion sees them as two sibling

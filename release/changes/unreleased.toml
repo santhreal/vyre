@@ -1124,3 +1124,18 @@ text = "The six byte counts that decide a megakernel wave's device-memory plan t
 id = "workspace-member-roster-has-one-owner"
 category = "Fixed"
 text = "The workspace member roster has one reader, `structure_gate::workspace_members`. It was parsed out of the root manifest three times, once inside `structure-gate` and once in each of two gates, and every copy carried its own filter over the member list, so a member added under a path one copy accepted and another skipped would be gated by one and invisible to the other. The CI reference gate resolves a package's directory through `structure_gate::member_directory` for the same reason instead of walking the roster itself."
+
+[[fragments]]
+id = "loop-legality-read-sets-have-one-owner"
+category = "Fixed"
+text = "The loop restructuring passes ask three questions before they reorder statements, and each now has one owner. `vyre_foundation::optimizer::passes::loops::var_reads`, `touched_buffers` and `bound_names` are public, and `vyre_foundation::transform::visit::node_bound_name` answers which statement binds a name with no catch-all arm. The walks they replace named their own variants and ended in `_ => {}`, so a `Var` read in `Node::Trap.address` or in an async copy's `offset` reported ABSENT: `loop_fusion` fused two loops across a scalar one of them assigns, which silently changes the values the program computes, and `legality::bindings_flow_across` weakened the capture guard for both fusion and fission. The rematerialization pass asked the same question through a `_ => false` arm and could inline a stale definition across a rebinding."
+
+[[fragments]]
+id = "loop-legality-collector-closure-gate"
+category = "Added"
+text = "`loop_legality_collector_closure` plants a scalar read, a buffer load, a store and a binding in every operand and body slot of every declared `Node` variant and asserts each read set reports it. The variant set comes from `NODE_VARIANT_NAMES` through the shared IR fixtures, so a new variant is red before any of the three questions is asked."
+
+[[fragments]]
+id = "foundation-duplication-pin-lowered-to-measured"
+category = "Changed"
+text = "The `vyre-foundation` duplication pin records what the tree measures after the owners above: 4028 to 3718 duplicated lines, with `total_lines` measured. A pin with room under it hides the next copy."
