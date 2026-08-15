@@ -155,3 +155,43 @@ Derives the published quantized dispatch entry points from the `pub use
 readback contract row is red on its first run. The subject is the public
 export list, which no run of the covered entry points can report on.
 """
+
+[[gate]]
+file = "xtask/tests/tree_contracts/cargo_invocation_resolution.rs"
+test = "every_cargo_run_in_a_workflow_or_script_resolves_to_one_binary"
+reason = """
+Reads every workflow and script for `cargo run` and every manifest for the
+binaries a package ships, then asserts each invocation resolves to exactly one
+target. Whether an invocation resolves is decided by cargo before any code in
+this workspace runs, so no execution can witness it. Running the invocations
+instead would mean building and running every gate to check that the gates can
+be run.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/c_declaration_follower_token_matrix_guard.rs"
+test = "every_token_kind_agrees_in_the_declarator_follower_position"
+reason = """
+Derives the C token vocabulary from the source that declares it and compares
+the two declaration annotators across every kind. The member set is the token
+enum itself, which no parse of any input can enumerate: a kind no fixture uses
+is exactly the kind the two annotators are free to disagree about.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/c_declaration_follower_token_matrix_guard.rs"
+test = "every_token_kind_agrees_in_the_declarator_previous_position"
+reason = """
+The same derived vocabulary in the preceding-token position. Declared
+separately from the follower position because one reviewed row must not exempt
+a gate added later to the same file.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/c_declaration_follower_token_matrix_guard.rs"
+test = "every_token_kind_agrees_in_the_declaration_prefix_position"
+reason = """
+The same derived vocabulary in the declaration-prefix position, where the two
+annotators disagreed on TOK_RBRACKET and TOK_RPAREN before the prefix walk was
+given one owner.
+"""

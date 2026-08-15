@@ -87,6 +87,7 @@ impl inventory::Collect for vyre_driver::registry::migration::Deprecation
 impl inventory::Collect for vyre_driver::registry::migration::Migration
 impl vyre_driver::BackendError
 impl vyre_driver::BackendRegistration
+impl vyre_driver::BatchOutputs
 impl vyre_driver::BindingSet
 impl vyre_driver::Device for vyre_driver::materialize::MaterializerDevice
 impl vyre_driver::DeviceBuffer for vyre_driver::HostShimBuffer
@@ -388,6 +389,13 @@ pub fn vyre_driver::BackendError::unsupported_extension(backend: impl core::conv
 pub fn vyre_driver::BackendRegistration::acquire(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError>
 pub fn vyre_driver::BackendRegistration::materializer(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::ArtifactMaterializer>, vyre_driver::BackendError>
 pub fn vyre_driver::BackendRegistration::target_compiler(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_megakernel::target::TargetCompiler>, vyre_driver::BackendError>
+pub fn vyre_driver::BatchOutputs::is_empty(&self) -> bool
+pub fn vyre_driver::BatchOutputs::len(&self) -> usize
+pub fn vyre_driver::BatchOutputs::push_row(&mut self, row: &[u8])
+pub fn vyre_driver::BatchOutputs::row(&self, index: usize) -> core::option::Option<&[u8]>
+pub fn vyre_driver::BatchOutputs::rows(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &[u8]> + '_
+pub fn vyre_driver::BatchOutputs::total_bytes(&self) -> usize
+pub fn vyre_driver::BatchOutputs::try_reserve(&mut self, rows: usize, bytes: usize) -> core::result::Result<(), alloc::collections::TryReserveError>
 pub fn vyre_driver::BindingSet::insert(&mut self, value: vyre_megakernel::ArtifactValueId, resource: vyre_driver::BoundResource)
 pub fn vyre_driver::BindingSet::set_invocation_grid(&mut self, grid: [u32; 3]) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::CompiledPipeline::dispatch(&self, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
@@ -1048,6 +1056,7 @@ pub fn vyre_driver::program_walks::dispatch_element_count_for_program(program: &
 pub fn vyre_driver::program_walks::dispatch_param_words_into(bindings: &[vyre_driver::binding::Binding], element_count: u32, words: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::program_walks::element_size_bytes(data_type: &vyre_spec::data_type::DataType) -> core::result::Result<usize, vyre_driver::BackendError>
 pub fn vyre_driver::program_walks::enforce_actual_output_budget(config: &vyre_driver::DispatchConfig, outputs: &[alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::BackendError>
+pub fn vyre_driver::program_walks::enforce_output_budget(config: &vyre_driver::DispatchConfig, actual: usize) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::program_walks::find_indirect_dispatch(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<core::option::Option<vyre_driver::IndirectDispatch>, vyre_driver::BackendError>
 pub fn vyre_driver::program_walks::infer_dispatch_grid(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::DispatchConfig) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
 pub fn vyre_driver::program_walks::infer_dispatch_grid_for_count(element_count: u32, workgroup: [u32; 3]) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
@@ -1357,6 +1366,7 @@ pub mod vyre_driver::validation
 pub struct vyre_driver::BackendLayoutFingerprint
 pub struct vyre_driver::BackendLayoutSlot
 pub struct vyre_driver::BackendRegistration
+pub struct vyre_driver::BatchOutputs
 pub struct vyre_driver::Binding
 pub struct vyre_driver::BindingPlan
 pub struct vyre_driver::BindingSet
@@ -1409,6 +1419,7 @@ pub struct vyre_driver::autotune_store::AutotuneStore
 pub struct vyre_driver::backend::BackendCapability
 pub struct vyre_driver::backend::BackendPrecedence
 pub struct vyre_driver::backend::BackendRegistration
+pub struct vyre_driver::backend::BatchOutputs
 pub struct vyre_driver::backend::BindingSet
 pub struct vyre_driver::backend::Completion
 pub struct vyre_driver::backend::DeviceIdentity

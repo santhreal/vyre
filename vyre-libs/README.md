@@ -110,7 +110,7 @@ Any other normal or build dependency requires an ownership-registry change.
 Run the checked-in behavior from `vyre-libs/examples/check_select1.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-libs --example check_select1
+./cargo_full run -p vyre-libs --example check_select1
 ```
 
 ### Features

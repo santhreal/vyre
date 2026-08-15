@@ -117,7 +117,7 @@ Any other normal or build dependency requires an ownership-registry change.
 Run the checked-in behavior from `conform/vyre-conform-spec/tests/schema_contract.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-conform-spec --test schema_contract
+./cargo_full test -p vyre-conform-spec --test schema_contract
 ```
 
 ### Features

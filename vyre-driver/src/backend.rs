@@ -54,8 +54,8 @@ pub use dispatch_config::DispatchConfig;
 pub use dispatch_result::{
     replace_output_buffers_preserving_slots,
     replace_output_buffers_preserving_slots_with_memory_stats,
-    replace_output_buffers_preserving_slots_with_stats, OutputBuffers, OutputReplacementStats,
-    OutputSlotByteStats, OutputSlotStats, TimedDispatchResult,
+    replace_output_buffers_preserving_slots_with_stats, BatchOutputs, OutputBuffers,
+    OutputReplacementStats, OutputSlotByteStats, OutputSlotStats, TimedDispatchResult,
 };
 pub use error::{BackendError, ErrorCode};
 pub use pending_dispatch::PendingDispatch;

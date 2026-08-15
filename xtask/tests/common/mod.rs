@@ -19,6 +19,43 @@ pub(crate) fn workspace_root() -> PathBuf {
     structure_gate::workspace_root()
 }
 
+/// Every workspace member's `src` directory, read from the root manifest at run
+/// time.
+///
+/// A gate that judges production sources across the workspace has to know which
+/// directories those are, and a hardcoded list goes stale the day a crate is
+/// added, which is the same failure as having no gate. Members that ship no
+/// `src` directory are skipped rather than reported: a conform harness or
+/// fixture crate is not production source.
+pub(crate) fn workspace_member_src_dirs(root: &Path) -> Vec<PathBuf> {
+    structure_gate::workspace_members(root)
+        .into_iter()
+        .map(|member| root.join(member).join("src"))
+        .filter(|path| path.is_dir())
+        .collect()
+}
+
+/// Every Rust source file under `dir`, at any depth.
+pub(crate) fn rust_sources_under(dir: &Path) -> Vec<PathBuf> {
+    let mut sources = Vec::new();
+    for entry in walkdir::WalkDir::new(dir) {
+        let entry = entry.expect("Fix: every workspace source path must be readable");
+        let path = entry.path();
+        if entry.file_type().is_file() && path.extension().is_some_and(|ext| ext == "rs") {
+            sources.push(path.to_path_buf());
+        }
+    }
+    sources
+}
+
+/// Every Rust source file under every workspace member's `src` directory.
+pub(crate) fn workspace_member_sources(root: &Path) -> Vec<PathBuf> {
+    workspace_member_src_dirs(root)
+        .iter()
+        .flat_map(|dir| rust_sources_under(dir))
+        .collect()
+}
+
 /// Run a repository script under `python3` and capture its output.
 pub(crate) fn run_python(script: &str, args: &[&OsStr]) -> Output {
     Command::new("python3")
