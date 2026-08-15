@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use vyre::ir::{Node, Program};
 use vyre_foundation::algebra::algebraic_law_registry::AlgebraicLawRegistration;
 use vyre_foundation::operation::classify_operation_id as classify_op_id;
+use xtask::gate::{Gate, GateCtx, GateError, Report};
 
 use xtask::release::conformance_op_matrix::read_conformance_required_op_matrix;
 
@@ -170,83 +171,58 @@ fn signature_from_declaration(
     }
 }
 
-pub(crate) fn run(args: &[String]) {
-    let (output, check, validate) = match parse_args(args) {
-        Ok(value) => value,
-        Err(error) => {
-            eprintln!("{error}");
-            std::process::exit(2);
-        }
-    };
+/// Holds the canonical live operation contract schema to the registry.
+pub struct OperationSchemaGate;
 
-    let schema = match build() {
-        Ok(value) => value,
-        Err(errors) => {
-            for error in errors {
-                eprintln!("Fix: {error}");
-            }
-            std::process::exit(1);
-        }
-    };
-
-    if let Some(path) = validate {
-        let candidate = match read_schema(&path) {
-            Ok(value) => value,
-            Err(error) => {
-                eprintln!("Fix: {error}");
-                std::process::exit(1);
-            }
-        };
-        if let Err(errors) = validate_schema(&candidate, Some(&schema)) {
-            for error in errors {
-                eprintln!("Fix: {error}");
-            }
-            std::process::exit(1);
-        }
-        println!(
-            "operation-schema: {} live operation contracts agree",
-            candidate.operation_count
-        );
-        return;
+impl Gate for OperationSchemaGate {
+    fn name(&self) -> &'static str {
+        "operation-schema"
     }
 
-    let rendered = serde_json::to_string_pretty(&schema)
-        .expect("operation schema contains only serializable records")
-        + "\n";
-    if check {
-        let current = match read_text_bounded(&output) {
-            Ok(value) => value,
-            Err(error) => {
-                eprintln!(
-                    "Fix: read {} before operation-schema check: {error}",
-                    output.display()
-                );
-                std::process::exit(1);
+    fn help(&self) -> &'static str {
+        "Hold the canonical live operation contract schema to the registry; --write regenerates it, --validate PATH judges one document"
+    }
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let schema = match build() {
+            Ok(schema) => schema,
+            Err(errors) => {
+                return Ok(Report::from_messages(
+                    errors,
+                    "repair the registration the schema rejects, then run the gate again",
+                ));
             }
         };
-        if current != rendered {
-            eprintln!(
-                "Fix: {} is stale. Run `cargo_full run --bin xtask -- operation-schema`.",
-                output.display()
-            );
-            std::process::exit(1);
+        if let Some(path) = ctx.flag("--validate") {
+            let candidate = read_schema(Path::new(path)).map_err(|error| {
+                GateError::new(error, "pass a readable schema document after --validate")
+            })?;
+            let mut report = match validate_schema(&candidate, Some(&schema)) {
+                Ok(()) => Report::clean(),
+                Err(errors) => Report::from_messages(
+                    errors,
+                    "repair the document, or regenerate it from the registry with --write",
+                ),
+            };
+            report.note(format!(
+                "{} live operation contract(s) in the validated document",
+                candidate.operation_count
+            ));
+            return Ok(report);
         }
-    } else {
-        if let Some(parent) = output.parent() {
-            fs::create_dir_all(parent).unwrap_or_else(|error| {
-                eprintln!("Fix: create {}: {error}", parent.display());
-                std::process::exit(1);
-            });
-        }
-        fs::write(&output, rendered).unwrap_or_else(|error| {
-            eprintln!("Fix: write {}: {error}", output.display());
-            std::process::exit(1);
-        });
+        let mut inspection = xtask::artifact_gate::Inspection::new();
+        inspection.generates(DEFAULT_OUTPUT, &schema);
+        let mut report = xtask::artifact_gate::settle_inspection(ctx, self.name(), inspection);
+        report.note(format!(
+            "{} live operation contract(s)",
+            schema.operation_count
+        ));
+        Ok(report)
     }
-    println!(
-        "operation-schema: {} live operation contracts agree",
-        schema.operation_count
-    );
 }
 
 pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
