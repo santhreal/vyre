@@ -18,7 +18,6 @@ mod spec_variant_tables;
 
 use proptest::collection::vec as prop_vec;
 use proptest::prelude::*;
-pub(crate) use spec_variant_tables::buffer_data_types;
 use spec_variant_tables::{builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
 use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_foundation::MemoryOrdering;
@@ -26,6 +25,7 @@ use vyre_spec::data_type::TypeId;
 use vyre_spec::extension::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionUnOpId,
 };
+pub(crate) use vyre_test_support::data_type_elements::flat_buffer_element_types;
 
 pub(crate) const VAR_NAMES: &[&str] = &["", "x", "alpha", "snow_雪", "nul\0name"];
 pub(crate) const CALL_IDS: &[&str] = &[
@@ -119,7 +119,7 @@ pub(crate) fn arb_datatype() -> BoxedStrategy<DataType> {
 /// drawn rather than fixed; the rest of the set comes from the shared table.
 pub(crate) fn arb_buffer_datatype() -> BoxedStrategy<DataType> {
     (0usize..=64usize)
-        .prop_flat_map(|element_size| prop::sample::select(buffer_data_types(element_size)))
+        .prop_flat_map(|element_size| prop::sample::select(flat_buffer_element_types(element_size)))
         .boxed()
 }
 
