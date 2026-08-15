@@ -1899,6 +1899,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `ir-fixtures` means `vyre-foundation` plus `smallvec`. The IR fixture table
   builds its flat leaves from the same module, so the two tables cannot
   disagree about which element types exist.
+- Three optimizer hot paths stopped allocating per sample.
+  `HotPathHints::record` allocated the key on every call including a repeat
+  sample, and its LRU eviction cloned every key in the map to find the oldest;
+  it now takes a `get_mut` fast path and clones the one key it evicts.
+  `reaching_def_propagate` keyed its propagatable-let map and its
+  shadowed-binding set by `String`, so every binding heap-allocated and
+  memcpy'd its name twice per scope walk; both are keyed by `Ident`, which is
+  an `Arc<str>` refcount bump and hashes through the same `str`, so `&str`
+  lookups are unchanged. `loop_fission` walked its body building a new `Vec`
+  node by node whether or not a fissionable loop existed; it locates the loop
+  first and copies the prefix in one `extend_from_slice`.
 
 ### Removed
 

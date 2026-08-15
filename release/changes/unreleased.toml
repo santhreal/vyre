@@ -1683,3 +1683,8 @@ text = "The backend error-code catalog is generated from the enum that emits it.
 id = "loop-fusion-pair-after-refusal"
 category = "Fixed"
 text = "Loop fusion no longer skips a fusable pair after a refusal. When two adjacent loops could not be fused, the walk advanced its cursor by two instead of one, so the pair formed by the second loop and its successor was never considered; a comment claimed the scheduler retried the skipped pair, and nothing did. The pass now bails before cloning a body that holds no fusable pair at all, rather than deep-cloning the whole body and discarding it."
+
+[[fragments]]
+id = "optimizer-hot-path-allocations"
+category = "Changed"
+text = "Three optimizer hot paths stopped allocating per sample. `HotPathHints::record` allocated the key on every call including a repeat sample, and its LRU eviction cloned every key in the map to find the oldest; it now takes a `get_mut` fast path and clones the one key it evicts. `reaching_def_propagate` keyed its propagatable-let map and its shadowed-binding set by `String`, so every binding heap-allocated and memcpy'd its name twice per scope walk; both are keyed by `Ident`, which is an `Arc<str>` refcount bump and hashes through the same `str`, so `&str` lookups are unchanged. `loop_fission` walked its body building a new `Vec` node by node whether or not a fissionable loop existed; it locates the loop first and copies the prefix in one `extend_from_slice`."
