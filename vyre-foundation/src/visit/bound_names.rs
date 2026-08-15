@@ -9,23 +9,29 @@
 //! validator rejects (V008 / V032).
 //!
 //! Traversal descends through `child_bodies`, the exhaustive owner of which
-//! variants nest statements, so a new nesting variant cannot hide a binding.
+//! variants nest statements, and the per-node answer comes from `node_scalars`,
+//! the exhaustive owner of the scalar namespace, so a new nesting variant
+//! cannot hide a binding and a new binding form cannot be classified as "binds
+//! nothing" by a catch-all arm.
 //! Names that appear only inside expressions (e.g. `Expr::Var`) are *uses*, not bindings,
 //! and are intentionally skipped.
 
 use crate::ir::{Ident, Node};
-use crate::transform::visit::child_bodies;
+use crate::transform::visit::{child_bodies, node_scalars, NameBinding};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Invoke `visit` once for every binding name introduced by `nodes`
 /// (recursively): each `Let` name and each `Loop` variable.
+///
+/// A `Node::Assign` writes a name the enclosing scope already declares, so it
+/// reports [`NameBinding::Reassign`] and is not a binding here. Counting it as
+/// one would show a scope-extension pass a duplicate declaration and make it
+/// refuse a legal rewrite.
 pub(crate) fn for_each_bound_name(nodes: &[Node], visit: &mut impl FnMut(&Ident)) {
     for node in nodes {
-        match node {
-            Node::Let { name, .. } => visit(name),
-            Node::Loop { var, .. } => visit(var),
-            // Only `Let` and `Loop` introduce a name; descent into every nesting variant happens below through `child_bodies`.
-            _ => {}
+        match node_scalars(node).binding {
+            Some((NameBinding::Declare | NameBinding::Induction, name)) => visit(name),
+            Some((NameBinding::Reassign, _)) | None => {}
         }
         for body in child_bodies(node) {
             for_each_bound_name(body, visit);

@@ -9,8 +9,10 @@ use std::ops::ControlFlow;
 
 use rustc_hash::FxHashMap;
 
-use crate::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program, UnOp};
-use crate::transform::visit::{for_each_node, try_for_each_expr};
+use crate::ir::{
+    node_variant_name, BinOp, BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program, UnOp,
+};
+use crate::transform::visit::{for_each_node, node_scalars, try_for_each_expr, NameBinding};
 
 use super::error::AutodiffError;
 mod expr;
@@ -362,20 +364,32 @@ impl AdjointEnv {
     /// Descent is [`for_each_node`], the one exhaustive owner of which variants
     /// nest, and its order is the same depth-first source order the recursive
     /// walk this replaces produced, which matters because a later `Let`'s type
-    /// is inferred from the types recorded by the earlier ones. Only the two
-    /// name-binding shapes are named here: `Let` / `Assign` bind the value's
-    /// type and `Loop` binds its induction variable as `U32`.
+    /// is inferred from the types recorded by the earlier ones. Which name a
+    /// statement binds, and what it does to it, comes from
+    /// [`node_scalars`](crate::transform::visit::node_scalars), so a `Node`
+    /// variant that gains a binding position cannot leave a forward local
+    /// untyped here and silently lose its adjoint.
     fn record_forward_types(&mut self, nodes: &[Node]) {
         for_each_node(nodes, |node| {
-            if let Node::Let { name, value } | Node::Assign { name, value } = node {
-                if let Some(ty) = self.expr_type(value) {
-                    self.var_types.insert(name.as_str().to_string(), ty);
-                } else {
-                    self.var_types.remove(name.as_str());
+            let scalars = node_scalars(node);
+            let Some((binding, name)) = scalars.binding else {
+                return;
+            };
+            match binding {
+                NameBinding::Declare | NameBinding::Reassign => {
+                    match scalars.operands[0].and_then(|value| self.expr_type(value)) {
+                        Some(ty) => {
+                            self.var_types.insert(name.as_str().to_string(), ty);
+                        }
+                        None => {
+                            self.var_types.remove(name.as_str());
+                        }
+                    }
                 }
-            } else if let Node::Loop { var, .. } = node {
-                self.var_types
-                    .insert(var.as_str().to_string(), DataType::U32);
+                NameBinding::Induction => {
+                    self.var_types
+                        .insert(name.as_str().to_string(), DataType::U32);
+                }
             }
         });
     }
@@ -507,13 +521,20 @@ impl AdjointEnv {
 /// first-appearance order.
 ///
 /// Descent is [`for_each_node`], the one exhaustive owner of which variants
-/// nest. Only `Let` and `Assign` bind a forward local; every other variant
-/// either binds nothing or binds a loop induction variable, which the backward
-/// loop re-binds itself and therefore needs no accumulator.
+/// nest, and the per-node answer is
+/// [`node_scalars`](crate::transform::visit::node_scalars), the one exhaustive
+/// owner of the scalar namespace. Only the declaring and rebinding forms need
+/// an accumulator; [`NameBinding::Induction`] names a loop counter the backward
+/// loop re-binds itself. A variant that later gains a binding position fails to
+/// compile in `node_scalars` rather than dropping a forward local whose adjoint
+/// then reads as zero.
 fn collect_adjoint_targets(nodes: &[Node], out: &mut Vec<Ident>) {
     for_each_node(nodes, |node| {
-        if let Node::Let { name, .. } | Node::Assign { name, .. } = node {
-            push_unique_ident(out, name);
+        match node_scalars(node).binding {
+            Some((NameBinding::Declare | NameBinding::Reassign, name)) => {
+                push_unique_ident(out, name);
+            }
+            Some((NameBinding::Induction, _)) | None => {}
         }
     });
 }
@@ -696,7 +717,15 @@ fn emit_adjoint_node(
                 body: std::sync::Arc::new(adj_region_body),
             });
         }
-        // Return, IndirectDispatch, Async*, Trap, Resume  -  not differentiable control flow.
+        // Not differentiable: control flow with no adjoint, buffer-level
+        // collectives and async copies, the trap/resume pair, and the opaque
+        // extension node whose semantics this crate does not know.
+        //
+        // One arm, and the kind string is `node_variant_name`, the registry's
+        // own name for the variant. The `Debug` rendering this replaces was
+        // truncated at 60 characters, so two rejected nodes of the same variant
+        // produced two different error strings and one long variant produced a
+        // string with no variant name left in it at all.
         Node::Return
         | Node::IndirectDispatch { .. }
         | Node::AllReduce { .. }
@@ -707,15 +736,10 @@ fn emit_adjoint_node(
         | Node::AsyncStore { .. }
         | Node::AsyncWait { .. }
         | Node::Trap { .. }
-        | Node::Resume { .. } => {
+        | Node::Resume { .. }
+        | Node::Opaque(_) => {
             return Err(AutodiffError::UnsupportedNode {
-                kind: format!("{node:?}").chars().take(60).collect(),
-            });
-        }
-        // Opaque  -  cannot differentiate unknown ops.
-        Node::Opaque(_) => {
-            return Err(AutodiffError::UnsupportedNode {
-                kind: "Node::Opaque".to_string(),
+                kind: node_variant_name(node).to_string(),
             });
         }
     }
