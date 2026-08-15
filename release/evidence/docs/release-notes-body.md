@@ -1546,6 +1546,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   traversal answered to two paths; the submodules are private and the re-export
   at `transform::visit` is the one path, which is what its own module
   documentation already claimed.
+- Every resident work queue item is published at one path. The parent module
+  blanket re-export of 174 names from its public submodules is gone, so a
+  caller names the submodule that owns the item, and the crate duplicate-path
+  count drops from 735 to 119.
 - Every runtime type, function and constant has one public path: the module
   that owns it. The crate root re-exported about thirty items that were already
   public at `vyre_runtime::replay`, `::tenant`, `::pipeline_cache`,

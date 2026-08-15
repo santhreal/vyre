@@ -3,7 +3,8 @@
 
 use vyre_runtime::resident_work_queue::{
     protocol::{self, debug, slot, ARGS_PER_SLOT, SLOT_WORDS},
-    ResidentWorkQueue, RingTelemetry,
+    telemetry::RingTelemetry,
+    ResidentWorkQueue,
 };
 use vyre_runtime::PipelineError;
 

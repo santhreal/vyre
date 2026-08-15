@@ -1,9 +1,8 @@
 //! Adversarial metrics-decode sanity: hostile control buffers, truncation
 //! boundaries, misalignment, and region-non-alias contracts.
 
-use vyre_runtime::resident_work_queue::{
-    protocol::control, ControlSnapshot, ResidentWorkQueue, RingTelemetry,
-};
+use vyre_runtime::resident_work_queue::telemetry::{ControlSnapshot, RingTelemetry};
+use vyre_runtime::resident_work_queue::{protocol::control, ResidentWorkQueue};
 use vyre_runtime::PipelineError;
 
 fn write_word(bytes: &mut [u8], word_idx: usize, value: u32) {

@@ -11,10 +11,12 @@ use crate::cases::resident_queue::{account, queue_buffers, resident_pool_sets_me
 use rayon::prelude::*;
 use std::sync::Arc;
 use vyre_foundation::ir::{Expr, Node};
+use vyre_runtime::resident_work_queue::handlers::OpcodeHandler;
+use vyre_runtime::resident_work_queue::protocol::{control, slot, SLOT_WORDS};
 use vyre_runtime::resident_work_queue::protocol::{
     ARG0_WORD, OPCODE_WORD, PRIORITY_WORD, STATUS_WORD, TENANT_WORD,
 };
-use vyre_runtime::resident_work_queue::{self, control, slot, OpcodeHandler, SLOT_WORDS};
+use vyre_runtime::resident_work_queue::{self};
 
 /// Names this case's buffers in word codec errors.
 const WORD_CONTEXT: &str = "megakernel condition output";
@@ -75,11 +77,12 @@ impl BenchCase for MegakernelCondition {
 
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
         let handler = condition_opcode_handler();
-        let program = resident_work_queue::build_program_sharded_once_slots_control_report_shared(
-            WORKGROUP_SIZE,
-            SLOT_COUNT,
-            &[handler],
-        );
+        let program =
+            resident_work_queue::builder::build_program_sharded_once_slots_control_report_shared(
+                WORKGROUP_SIZE,
+                SLOT_COUNT,
+                &[handler],
+            );
         let mut expected_fired = 0u32;
         let ring_bytes = condition_ring(SLOT_COUNT, &mut expected_fired)?;
         let queue = queue_buffers(
@@ -235,7 +238,7 @@ fn condition_opcode_handler() -> OpcodeHandler {
 }
 
 fn condition_ring(slot_count: u32, expected_fired: &mut u32) -> Result<Vec<u8>, BenchError> {
-    let mut ring = resident_work_queue::encode_empty_ring(slot_count)
+    let mut ring = resident_work_queue::protocol::encode_empty_ring(slot_count)
         .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
     for slot_index in 0..slot_count {
         let flags = condition_flags(slot_index);

@@ -5,8 +5,9 @@
 //! host-side Vec<u8> buffers.
 
 use vyre_runtime::resident_work_queue::{
-    protocol::{self, control, debug},
-    ResidentIoQueue, ResidentWorkQueue, SLOT_WORDS,
+    io::ResidentIoQueue,
+    protocol::{self, control, debug, SLOT_WORDS},
+    ResidentWorkQueue,
 };
 use vyre_runtime::PipelineError;
 

@@ -6,7 +6,8 @@
 use vyre_runtime::resident_work_queue::{
     descriptor::{BatchDescriptor, SlotDescriptor, SlotOpcode, WindowDescriptor},
     protocol::{self, slot},
-    ResidentWorkQueue, RingTelemetry,
+    telemetry::RingTelemetry,
+    ResidentWorkQueue,
 };
 use vyre_runtime::PipelineError;
 

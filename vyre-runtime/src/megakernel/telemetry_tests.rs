@@ -3,11 +3,11 @@
 
 use super::*;
 use crate::resident_work_queue::descriptor::WindowClass;
-use crate::resident_work_queue::protocol::{opcode, SLOT_WORDS};
-use crate::resident_work_queue::ResidentWorkQueue;
-use crate::resident_work_queue::{
+use crate::resident_work_queue::policy::{
     ResidentExecutionMode, ResidentLaunchRequest, ResidentQueueTopology,
 };
+use crate::resident_work_queue::protocol::{opcode, SLOT_WORDS};
+use crate::resident_work_queue::ResidentWorkQueue;
 
 #[path = "telemetry_tests/decode_contracts.rs"]
 mod decode_contracts;

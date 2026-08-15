@@ -7,7 +7,8 @@ use crate::api::resident::{dispatch_artifact_timed, ResidentInputPool};
 use crate::cases::reference_sample::timed_reference;
 use crate::cases::resident_queue::{account, queue_buffers, resident_pool_sets_metric};
 use std::sync::Arc;
-use vyre_runtime::resident_work_queue::{self, protocol, ResidentWorkItem};
+use vyre_runtime::resident_work_queue::planner::ResidentWorkItem;
+use vyre_runtime::resident_work_queue::{self, protocol};
 
 pub struct MegakernelTruth;
 
@@ -64,11 +65,12 @@ impl BenchCase for MegakernelTruth {
                 "megakernel truth work item count cannot fit u32: {source}"
             ))
         })?;
-        let program = resident_work_queue::build_program_sharded_once_slots_control_report_shared(
-            WORKER_COUNT,
-            slot_count,
-            &[],
-        );
+        let program =
+            resident_work_queue::builder::build_program_sharded_once_slots_control_report_shared(
+                WORKER_COUNT,
+                slot_count,
+                &[],
+            );
         let mut ring_words = Vec::new();
         vyre_runtime::resident_work_queue::ResidentWorkQueue::encode_work_items_ring_words_into(
             slot_count,
@@ -197,7 +199,7 @@ fn read_done_count(outputs: &[Vec<u8>]) -> Result<u64, BenchError> {
             "megakernel truth dispatch produced no control output".to_string(),
         )
     })?;
-    let done = vyre_runtime::resident_work_queue::try_read_done_count(control)
+    let done = vyre_runtime::resident_work_queue::protocol::try_read_done_count(control)
         .map_err(|error| BenchError::CorrectnessViolation(error.to_string()))?;
     Ok(u64::from(done))
 }

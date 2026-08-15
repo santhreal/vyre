@@ -1,9 +1,8 @@
 //! Contract tests for compact megakernel sketch telemetry.
 
-use vyre_runtime::resident_work_queue::{
-    control, opcode, slot, CountMinSketch, ResidentWorkQueue, RingTelemetry, SLOT_WORDS,
-    STATUS_WORD,
-};
+use vyre_runtime::resident_work_queue::protocol::{control, opcode, slot, SLOT_WORDS, STATUS_WORD};
+use vyre_runtime::resident_work_queue::telemetry::{CountMinSketch, RingTelemetry};
+use vyre_runtime::resident_work_queue::ResidentWorkQueue;
 
 fn write_slot_status(ring: &mut [u8], slot_idx: usize, status: u32) {
     let off = slot_idx * (SLOT_WORDS as usize) * 4 + (STATUS_WORD as usize) * 4;

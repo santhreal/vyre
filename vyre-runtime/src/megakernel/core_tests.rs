@@ -2,7 +2,7 @@
 // parent file focused on production code.
 
 use super::*;
-use crate::resident_work_queue::{diffuse_priority_across_siblings, ResidentLaunchPolicy};
+use crate::resident_work_queue::policy::{diffuse_priority_across_siblings, ResidentLaunchPolicy};
 use vyre_foundation::execution_plan::SchedulingPolicy;
 
 #[test]

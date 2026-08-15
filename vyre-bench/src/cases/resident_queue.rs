@@ -38,11 +38,12 @@ pub(crate) fn queue_buffers(
     resident_sample_sets: usize,
     cleanup_label: &'static str,
 ) -> Result<QueueBuffers, BenchError> {
-    let control_bytes = resident_work_queue::encode_control(false, 1, 0)
+    let control_bytes = resident_work_queue::protocol::encode_control(false, 1, 0)
         .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
-    let debug_bytes =
-        resident_work_queue::encode_empty_debug_log(resident_work_queue::debug::RECORD_CAPACITY)
-            .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
+    let debug_bytes = resident_work_queue::protocol::encode_empty_debug_log(
+        resident_work_queue::protocol::debug::RECORD_CAPACITY,
+    )
+    .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
     let io_bytes =
         resident_work_queue::io::try_encode_empty_io_queue(resident_work_queue::io::IO_SLOT_COUNT)
             .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;

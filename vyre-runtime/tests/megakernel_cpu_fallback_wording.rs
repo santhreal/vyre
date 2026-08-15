@@ -5,7 +5,8 @@
 
 use vyre_runtime::resident_work_queue::{
     descriptor::{BatchDescriptor, BuiltinOpcode, SlotDescriptor, SlotOpcode},
-    protocol, ResidentIoQueue, ResidentWorkQueue, IO_SLOT_COUNT,
+    io::{ResidentIoQueue, IO_SLOT_COUNT},
+    protocol, ResidentWorkQueue,
 };
 use vyre_runtime::PipelineError;
 

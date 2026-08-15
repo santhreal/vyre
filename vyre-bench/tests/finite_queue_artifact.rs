@@ -10,7 +10,7 @@ use vyre_foundation::ir::ProgramGraph;
 #[test]
 fn finite_queue_program_compiles_to_authenticated_cuda_payload() {
     let program =
-        vyre_runtime::resident_work_queue::build_program_sharded_once_slots(256, 256, &[]);
+        vyre_runtime::resident_work_queue::builder::build_program_sharded_once_slots(256, 256, &[]);
     let graph = ProgramGraph::from_program("finite_queue", program)
         .expect("finite queue program must form a valid canonical graph");
     let request = CompileRequest::new(

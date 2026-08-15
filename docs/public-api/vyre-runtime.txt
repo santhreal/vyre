@@ -1,14 +1,10 @@
 #[non_exhaustive] pub enum vyre_runtime::PipelineError
 #[non_exhaustive] pub enum vyre_runtime::pipeline_cache::DiskCacheError
 #[non_exhaustive] pub enum vyre_runtime::replay::ReplayLogError
-#[non_exhaustive] pub enum vyre_runtime::resident_work_queue::MixedWorkProtocolError
-#[non_exhaustive] pub enum vyre_runtime::resident_work_queue::ProtocolError
 #[non_exhaustive] pub enum vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolError
 #[non_exhaustive] pub enum vyre_runtime::resident_work_queue::protocol::ProtocolError
 #[non_exhaustive] pub enum vyre_runtime::routing::RoutingDecision
 #[non_exhaustive] pub enum vyre_runtime::tenant::TenantError
-#[repr(C)] pub struct vyre_runtime::resident_work_queue::ResidentWorkItem
-#[repr(C)] pub struct vyre_runtime::resident_work_queue::TaskWorkItem
 #[repr(C)] pub struct vyre_runtime::resident_work_queue::planner::ResidentWorkItem
 #[repr(C)] pub struct vyre_runtime::resident_work_queue::task::TaskWorkItem
 #[repr(C)] pub struct vyre_runtime::uring::Iovec
@@ -18,13 +14,11 @@
 #[repr(C)] pub struct vyre_runtime::uring::ring::io_uring_params
 #[repr(C)] pub struct vyre_runtime::uring::ring::io_uring_sqe
 #[repr(C)] pub struct vyre_runtime::uring::stream::Iovec
-#[repr(u32)] pub enum vyre_runtime::resident_work_queue::TaskPriority
-#[repr(u32)] pub enum vyre_runtime::resident_work_queue::TaskState
 #[repr(u32)] pub enum vyre_runtime::resident_work_queue::task::TaskPriority
 #[repr(u32)] pub enum vyre_runtime::resident_work_queue::task::TaskState
-impl bytemuck::pod::Pod for vyre_runtime::resident_work_queue::ResidentWorkItem
+impl bytemuck::pod::Pod for vyre_runtime::resident_work_queue::planner::ResidentWorkItem
 impl bytemuck::pod::Pod for vyre_runtime::resident_work_queue::task::TaskWorkItem
-impl bytemuck::zeroable::Zeroable for vyre_runtime::resident_work_queue::ResidentWorkItem
+impl bytemuck::zeroable::Zeroable for vyre_runtime::resident_work_queue::planner::ResidentWorkItem
 impl bytemuck::zeroable::Zeroable for vyre_runtime::resident_work_queue::task::TaskWorkItem
 impl core::clone::Clone for vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers
 impl core::cmp::Eq for vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers
@@ -34,10 +28,10 @@ impl core::convert::From<vyre_megakernel::CompileError> for vyre_runtime::artifa
 impl core::convert::From<vyre_runtime::replay::ReplayLogError> for vyre_runtime::PipelineError
 impl core::default::Default for vyre_runtime::UringCompletionPump<'_>
 impl core::default::Default for vyre_runtime::pipeline_cache::InMemoryPipelineCache
-impl core::default::Default for vyre_runtime::resident_work_queue::ResidentQueueConfig
-impl core::default::Default for vyre_runtime::resident_work_queue::ResidentQueueTelemetry
-impl core::default::Default for vyre_runtime::resident_work_queue::ResidentSizingPolicy
 impl core::default::Default for vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistPolicy
+impl core::default::Default for vyre_runtime::resident_work_queue::planner::ResidentQueueConfig
+impl core::default::Default for vyre_runtime::resident_work_queue::planner::ResidentQueueTelemetry
+impl core::default::Default for vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy
 impl core::default::Default for vyre_runtime::resident_work_queue::policy::ResidentLaunchPolicy
 impl core::default::Default for vyre_runtime::tenant::TenantRegistry
 impl core::error::Error for vyre_runtime::pipeline_cache::PipelineCacheMetricError
@@ -70,26 +64,7 @@ impl vyre_runtime::pipeline_cache::PipelineCacheStore for vyre_runtime::pipeline
 impl vyre_runtime::pipeline_cache::PipelineFingerprint
 impl vyre_runtime::replay::ReplayFailureEvidence
 impl vyre_runtime::replay::RingLog
-impl vyre_runtime::resident_work_queue::ControlSnapshot
-impl vyre_runtime::resident_work_queue::CountMinSketch
-impl vyre_runtime::resident_work_queue::ResidentGridLimits
-impl vyre_runtime::resident_work_queue::ResidentGridPlan
-impl vyre_runtime::resident_work_queue::ResidentGridRequest
-impl vyre_runtime::resident_work_queue::ResidentIoQueue
-impl vyre_runtime::resident_work_queue::ResidentLaunchGeometry
-impl vyre_runtime::resident_work_queue::ResidentQueueCapabilities
-impl vyre_runtime::resident_work_queue::ResidentQueueConfig
-impl vyre_runtime::resident_work_queue::ResidentRuntimeEvidence
-impl vyre_runtime::resident_work_queue::ResidentSizingPolicy
 impl vyre_runtime::resident_work_queue::ResidentWorkQueue
-impl vyre_runtime::resident_work_queue::RingOccupancy
-impl vyre_runtime::resident_work_queue::RingStatus
-impl vyre_runtime::resident_work_queue::RingTelemetry
-impl vyre_runtime::resident_work_queue::RuntimeEvidenceMetricCoverage
-impl vyre_runtime::resident_work_queue::RuntimeEvidenceMetricFamily
-impl vyre_runtime::resident_work_queue::TelemetryDecodeCapacityEvidence
-impl vyre_runtime::resident_work_queue::TelemetryDecodeScratch
-impl vyre_runtime::resident_work_queue::WindowTelemetry
 impl vyre_runtime::resident_work_queue::automata_worklist::AutomataStateIndex
 impl vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistEvidence
 impl vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistMode
@@ -102,12 +77,20 @@ impl vyre_runtime::resident_work_queue::descriptor::SlotDescriptor
 impl vyre_runtime::resident_work_queue::descriptor::SlotOpcode
 impl vyre_runtime::resident_work_queue::descriptor::WindowClass
 impl vyre_runtime::resident_work_queue::descriptor::WindowDescriptor
+impl vyre_runtime::resident_work_queue::io::ResidentIoQueue
 impl vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolEvidence
 impl vyre_runtime::resident_work_queue::mixed_work::MixedWorkQueueClass
 impl vyre_runtime::resident_work_queue::mixed_work::MixedWorkUnit
 impl vyre_runtime::resident_work_queue::mixed_work::MixedWorkUnitType
 impl vyre_runtime::resident_work_queue::mixed_work::OutputSlabId
 impl vyre_runtime::resident_work_queue::mixed_work::ResidentArtifactId
+impl vyre_runtime::resident_work_queue::planner::ResidentGridLimits
+impl vyre_runtime::resident_work_queue::planner::ResidentGridPlan
+impl vyre_runtime::resident_work_queue::planner::ResidentGridRequest
+impl vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry
+impl vyre_runtime::resident_work_queue::planner::ResidentQueueCapabilities
+impl vyre_runtime::resident_work_queue::planner::ResidentQueueConfig
+impl vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy
 impl vyre_runtime::resident_work_queue::policy::PriorityDrainReason
 impl vyre_runtime::resident_work_queue::policy::PriorityRequeueAccounting
 impl vyre_runtime::resident_work_queue::policy::ResidentGraphBlasSwitchClass
@@ -126,7 +109,18 @@ impl vyre_runtime::resident_work_queue::task::TaskPriority
 impl vyre_runtime::resident_work_queue::task::TaskQueueSnapshot
 impl vyre_runtime::resident_work_queue::task::TaskState
 impl vyre_runtime::resident_work_queue::task::TaskWorkItem
+impl vyre_runtime::resident_work_queue::telemetry::ControlSnapshot
+impl vyre_runtime::resident_work_queue::telemetry::CountMinSketch
+impl vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence
+impl vyre_runtime::resident_work_queue::telemetry::RingOccupancy
+impl vyre_runtime::resident_work_queue::telemetry::RingStatus
+impl vyre_runtime::resident_work_queue::telemetry::RingTelemetry
+impl vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricCoverage
+impl vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricFamily
 impl vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch
+impl vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeCapacityEvidence
+impl vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeScratch
+impl vyre_runtime::resident_work_queue::telemetry::WindowTelemetry
 impl vyre_runtime::resource_residency::ArtifactInstanceBinding
 impl vyre_runtime::resource_residency::MaterializerResourceDevice
 impl vyre_runtime::resource_residency::ResidentResourceDevice for vyre_runtime::resource_residency::MaterializerResourceDevice
@@ -154,27 +148,6 @@ pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::envelope(&self)
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::neutral(&self) -> &vyre_megakernel::Artifact
 pub const fn vyre_runtime::artifact_admission::ArtifactAdmissionError::diagnostic(&self) -> &vyre_foundation::diagnostics::Diagnostic
 pub const fn vyre_runtime::pipeline_cache::PipelineCacheMetricError::field(&self) -> &'static str
-pub const fn vyre_runtime::resident_work_queue::CountMinSketch::depth(&self) -> usize
-pub const fn vyre_runtime::resident_work_queue::CountMinSketch::width(&self) -> usize
-pub const fn vyre_runtime::resident_work_queue::ResidentGridLimits::new(max_workgroup_size_x: u32, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> Self
-pub const fn vyre_runtime::resident_work_queue::ResidentGridRequest::new(queue_len: u32, requested_worker_groups: u32) -> Self
-pub const fn vyre_runtime::resident_work_queue::ResidentLaunchGeometry::covering_worker_groups(&self) -> u32
-pub const fn vyre_runtime::resident_work_queue::ResidentQueueCapabilities::supported(max_worker_count: u32) -> Self
-pub const fn vyre_runtime::resident_work_queue::ResidentQueueCapabilities::unsupported() -> Self
-pub const fn vyre_runtime::resident_work_queue::ResidentQueueConfig::launch_request(&self, queue_len: u32, max_workgroup_size_x: u32, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> vyre_runtime::resident_work_queue::policy::ResidentLaunchRequest
-pub const fn vyre_runtime::resident_work_queue::ResidentRuntimeEvidence::complete(resident_device_bytes: u64, host_copy_bytes: u64, host_copy_avoided_bytes: u64, ring_occupancy: vyre_runtime::resident_work_queue::RingOccupancy, control_decode_ns: u64, ring_decode_ns: u64) -> Self
-pub const fn vyre_runtime::resident_work_queue::ResidentSizingPolicy::default_worker_count(&self) -> u32
-pub const fn vyre_runtime::resident_work_queue::ResidentSizingPolicy::default_worker_groups_from_limits(&self, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> u32
-pub const fn vyre_runtime::resident_work_queue::ResidentSizingPolicy::dispatch_grid_for(&self, worker_count: u32, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3]
-pub const fn vyre_runtime::resident_work_queue::ResidentSizingPolicy::from_scheduling(scheduling: vyre_foundation::execution_plan::policy::SchedulingPolicy) -> Self
-pub const fn vyre_runtime::resident_work_queue::ResidentSizingPolicy::padded_slot_count(&self, slot_count: u32, workgroup_size_x: u32) -> u32
-pub const fn vyre_runtime::resident_work_queue::ResidentSizingPolicy::standard() -> Self
-pub const fn vyre_runtime::resident_work_queue::ResidentSizingPolicy::worker_workgroup_size(&self, worker_count: u32, max_workgroup_size_x: u32) -> u32
-pub const fn vyre_runtime::resident_work_queue::RingStatus::is_active(self) -> bool
-pub const fn vyre_runtime::resident_work_queue::RingStatus::raw(self) -> u32
-pub const fn vyre_runtime::resident_work_queue::RuntimeEvidenceMetricCoverage::complete() -> Self
-pub const fn vyre_runtime::resident_work_queue::RuntimeEvidenceMetricFamily::as_str(self) -> &'static str
-pub const fn vyre_runtime::resident_work_queue::WindowTelemetry::is_active(&self) -> bool
 pub const fn vyre_runtime::resident_work_queue::automata_worklist::AutomataStateIndex::new(state_id: u32, byte_index: u32) -> Self
 pub const fn vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistMode::as_str(self) -> &'static str
 pub const fn vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistPolicy::standard() -> Self
@@ -182,7 +155,6 @@ pub const fn vyre_runtime::resident_work_queue::automata_worklist::AutomataWorkl
 pub const fn vyre_runtime::resident_work_queue::descriptor::BuiltinOpcode::into_wire(self) -> u32
 pub const fn vyre_runtime::resident_work_queue::descriptor::SlotOpcode::into_wire(self) -> u32
 pub const fn vyre_runtime::resident_work_queue::descriptor::WindowClass::into_wire(self) -> u32
-pub const fn vyre_runtime::resident_work_queue::first_workspace_region<R>(id: R, words: u32, record_words: u32, capacity_records: u32) -> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>
 pub const fn vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolEvidence::covers_scan_graph_parser_flow(self) -> bool
 pub const fn vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolEvidence::is_complete(self) -> bool
 pub const fn vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolPlan<'a>::new(units: &'a [vyre_runtime::resident_work_queue::mixed_work::MixedWorkUnit], drain_watchdog_budget_ticks: u64) -> Self
@@ -191,10 +163,19 @@ pub const fn vyre_runtime::resident_work_queue::mixed_work::MixedWorkUnit::new(s
 pub const fn vyre_runtime::resident_work_queue::mixed_work::MixedWorkUnitType::as_str(self) -> &'static str
 pub const fn vyre_runtime::resident_work_queue::mixed_work::OutputSlabId::is_valid(self) -> bool
 pub const fn vyre_runtime::resident_work_queue::mixed_work::ResidentArtifactId::is_valid(self) -> bool
-pub const fn vyre_runtime::resident_work_queue::opcode::is_builtin(op: u32) -> bool
-pub const fn vyre_runtime::resident_work_queue::opcode::is_system(op: u32) -> bool
-pub const fn vyre_runtime::resident_work_queue::opcode::validate_publish_opcode(op: u32) -> core::result::Result<(), &'static str>
-pub const fn vyre_runtime::resident_work_queue::opcode::validate_user_opcode(op: u32) -> core::result::Result<(), &'static str>
+pub const fn vyre_runtime::resident_work_queue::planner::ResidentGridLimits::new(max_workgroup_size_x: u32, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> Self
+pub const fn vyre_runtime::resident_work_queue::planner::ResidentGridRequest::new(queue_len: u32, requested_worker_groups: u32) -> Self
+pub const fn vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry::covering_worker_groups(&self) -> u32
+pub const fn vyre_runtime::resident_work_queue::planner::ResidentQueueCapabilities::supported(max_worker_count: u32) -> Self
+pub const fn vyre_runtime::resident_work_queue::planner::ResidentQueueCapabilities::unsupported() -> Self
+pub const fn vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::launch_request(&self, queue_len: u32, max_workgroup_size_x: u32, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> vyre_runtime::resident_work_queue::policy::ResidentLaunchRequest
+pub const fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::default_worker_count(&self) -> u32
+pub const fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::default_worker_groups_from_limits(&self, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> u32
+pub const fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::dispatch_grid_for(&self, worker_count: u32, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3]
+pub const fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::from_scheduling(scheduling: vyre_foundation::execution_plan::policy::SchedulingPolicy) -> Self
+pub const fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::padded_slot_count(&self, slot_count: u32, workgroup_size_x: u32) -> u32
+pub const fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::standard() -> Self
+pub const fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::worker_workgroup_size(&self, worker_count: u32, max_workgroup_size_x: u32) -> u32
 pub const fn vyre_runtime::resident_work_queue::policy::PriorityDrainReason::as_str(self) -> &'static str
 pub const fn vyre_runtime::resident_work_queue::policy::ResidentGraphBlasSwitchClass::as_str(self) -> &'static str
 pub const fn vyre_runtime::resident_work_queue::policy::ResidentLaunchPolicy::standard() -> Self
@@ -211,17 +192,24 @@ pub const fn vyre_runtime::resident_work_queue::task::TaskPriority::word(self) -
 pub const fn vyre_runtime::resident_work_queue::task::TaskState::from_word(word: u32) -> core::option::Option<Self>
 pub const fn vyre_runtime::resident_work_queue::task::TaskState::is_schedulable(self) -> bool
 pub const fn vyre_runtime::resident_work_queue::task::TaskState::word(self) -> u32
-pub const fn vyre_runtime::resident_work_queue::task::TaskWorkItem::from_work_item(task_id: u32, tenant_id: u32, priority: vyre_runtime::resident_work_queue::task::TaskPriority, item: vyre_runtime::resident_work_queue::ResidentWorkItem) -> Self
+pub const fn vyre_runtime::resident_work_queue::task::TaskWorkItem::from_work_item(task_id: u32, tenant_id: u32, priority: vyre_runtime::resident_work_queue::task::TaskPriority, item: vyre_runtime::resident_work_queue::planner::ResidentWorkItem) -> Self
 pub const fn vyre_runtime::resident_work_queue::task::TaskWorkItem::is_schedulable(&self) -> bool
 pub const fn vyre_runtime::resident_work_queue::task::TaskWorkItem::task_priority(&self) -> core::option::Option<vyre_runtime::resident_work_queue::task::TaskPriority>
 pub const fn vyre_runtime::resident_work_queue::task::TaskWorkItem::task_state(&self) -> core::option::Option<vyre_runtime::resident_work_queue::task::TaskState>
-pub const fn vyre_runtime::resident_work_queue::task::TaskWorkItem::work_item(&self) -> vyre_runtime::resident_work_queue::ResidentWorkItem
+pub const fn vyre_runtime::resident_work_queue::task::TaskWorkItem::work_item(&self) -> vyre_runtime::resident_work_queue::planner::ResidentWorkItem
+pub const fn vyre_runtime::resident_work_queue::telemetry::CountMinSketch::depth(&self) -> usize
+pub const fn vyre_runtime::resident_work_queue::telemetry::CountMinSketch::width(&self) -> usize
+pub const fn vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::complete(resident_device_bytes: u64, host_copy_bytes: u64, host_copy_avoided_bytes: u64, ring_occupancy: vyre_runtime::resident_work_queue::telemetry::RingOccupancy, control_decode_ns: u64, ring_decode_ns: u64) -> Self
+pub const fn vyre_runtime::resident_work_queue::telemetry::RingStatus::is_active(self) -> bool
+pub const fn vyre_runtime::resident_work_queue::telemetry::RingStatus::raw(self) -> u32
+pub const fn vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricCoverage::complete() -> Self
+pub const fn vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricFamily::as_str(self) -> &'static str
+pub const fn vyre_runtime::resident_work_queue::telemetry::WindowTelemetry::is_active(&self) -> bool
 pub const fn vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>::end_words(self) -> core::option::Option<u32>
 pub const fn vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec<R>::fixed(id: R, words: u32, record_words: u32, capacity_records: u32) -> Self
 pub const fn vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec<R>::record(id: R, record_words: u32, capacity_records: u32) -> Self
 pub const fn vyre_runtime::resident_work_queue::workspace_layout::first_workspace_region<R>(id: R, words: u32, record_words: u32, capacity_records: u32) -> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>
 pub const fn vyre_runtime::resident_work_queue::workspace_layout::workspace_record_words(record_words: u32, capacity_records: u32) -> core::option::Option<u32>
-pub const fn vyre_runtime::resident_work_queue::workspace_record_words(record_words: u32, capacity_records: u32) -> core::option::Option<u32>
 pub const fn vyre_runtime::resource_residency::ArtifactInstanceBinding::byte_len(&self) -> u64
 pub const fn vyre_runtime::tenant::TenantQuota::bounded(max_outstanding_slots: u64, max_staging_bytes: u64, max_resident_handles: u64) -> Self
 pub const fn vyre_runtime::tenant::TenantQuota::unbounded() -> Self
@@ -231,45 +219,7 @@ pub const vyre_runtime::replay::LOG_MAGIC: &[u8; 8]
 pub const vyre_runtime::replay::LOG_VERSION: u32
 pub const vyre_runtime::replay::MAX_REPLAY_RECORDS: u64
 pub const vyre_runtime::replay::RECORD_BYTES: u64
-pub const vyre_runtime::resident_work_queue::ARG0_WORD: u32
-pub const vyre_runtime::resident_work_queue::ARGS_PER_SLOT: u32
-pub const vyre_runtime::resident_work_queue::AUTOMATA_WORKLIST_EVIDENCE_SCHEMA_VERSION: u32
-pub const vyre_runtime::resident_work_queue::CONTROL_MIN_WORDS: u32
-pub const vyre_runtime::resident_work_queue::HOT_WINDOW_PROMOTION_EVIDENCE_SCHEMA_VERSION: u32
-pub const vyre_runtime::resident_work_queue::IO_SLOT_COUNT: u32
-pub const vyre_runtime::resident_work_queue::IO_SLOT_WORDS: u32
-pub const vyre_runtime::resident_work_queue::MIXED_WORK_PROTOCOL_SCHEMA_VERSION: u32
-pub const vyre_runtime::resident_work_queue::OPCODE_WORD: u32
-pub const vyre_runtime::resident_work_queue::PRIORITY_COUNTER_DRAIN_FIX: &str
-pub const vyre_runtime::resident_work_queue::PRIORITY_COUNTER_DRAIN_HEADROOM: u64
-pub const vyre_runtime::resident_work_queue::PRIORITY_WORD: u32
-pub const vyre_runtime::resident_work_queue::RUNTIME_IO_EVIDENCE_SCHEMA_VERSION: u32
-pub const vyre_runtime::resident_work_queue::SLOT_WORDS: u32
-pub const vyre_runtime::resident_work_queue::STATUS_WORD: u32
-pub const vyre_runtime::resident_work_queue::TELEMETRY_DECODE_CAPACITY_SCHEMA_VERSION: u32
-pub const vyre_runtime::resident_work_queue::TENANT_WORD: u32
-pub const vyre_runtime::resident_work_queue::TOPOLOGY_EVIDENCE_SCHEMA_VERSION: u32
 pub const vyre_runtime::resident_work_queue::automata_worklist::AUTOMATA_WORKLIST_EVIDENCE_SCHEMA_VERSION: u32
-pub const vyre_runtime::resident_work_queue::control::DONE_COUNT: u32
-pub const vyre_runtime::resident_work_queue::control::EPOCH: u32
-pub const vyre_runtime::resident_work_queue::control::METRICS_BASE: u32
-pub const vyre_runtime::resident_work_queue::control::METRICS_SLOTS: u32
-pub const vyre_runtime::resident_work_queue::control::OBSERVABLE_BASE: u32
-pub const vyre_runtime::resident_work_queue::control::PRIORITY_FAIRNESS_BASE: u32
-pub const vyre_runtime::resident_work_queue::control::PRIORITY_FAIRNESS_SLOTS: u32
-pub const vyre_runtime::resident_work_queue::control::PRIORITY_OFFSETS_BASE: u32
-pub const vyre_runtime::resident_work_queue::control::PRIORITY_OFFSETS_SLOTS: u32
-pub const vyre_runtime::resident_work_queue::control::PRIORITY_STARVATION_COUNTER: u32
-pub const vyre_runtime::resident_work_queue::control::SHUTDOWN: u32
-pub const vyre_runtime::resident_work_queue::control::TENANT_BASE: u32
-pub const vyre_runtime::resident_work_queue::control::TENANT_FAIRNESS_BASE: u32
-pub const vyre_runtime::resident_work_queue::control::TENANT_FAIRNESS_SLOTS: u32
-pub const vyre_runtime::resident_work_queue::control::TENANT_QUOTA_BASE: u32
-pub const vyre_runtime::resident_work_queue::debug::BUFFER_WORDS: u32
-pub const vyre_runtime::resident_work_queue::debug::CURSOR_WORD: u32
-pub const vyre_runtime::resident_work_queue::debug::RECORDS_BASE: u32
-pub const vyre_runtime::resident_work_queue::debug::RECORD_CAPACITY: u32
-pub const vyre_runtime::resident_work_queue::debug::RECORD_WORDS: u32
 pub const vyre_runtime::resident_work_queue::io::IO_DESTINATION_CAPABILITY_TABLE: &str
 pub const vyre_runtime::resident_work_queue::io::IO_QUEUE_DMA_TAG: &str
 pub const vyre_runtime::resident_work_queue::io::IO_SLOT_COUNT: u32
@@ -289,20 +239,6 @@ pub const vyre_runtime::resident_work_queue::io::io_word::SRC_HANDLE: u32
 pub const vyre_runtime::resident_work_queue::io::io_word::STATUS: u32
 pub const vyre_runtime::resident_work_queue::io::io_word::TAG: u32
 pub const vyre_runtime::resident_work_queue::mixed_work::MIXED_WORK_PROTOCOL_SCHEMA_VERSION: u32
-pub const vyre_runtime::resident_work_queue::opcode::ATOMIC_ADD: u32
-pub const vyre_runtime::resident_work_queue::opcode::BATCH_FENCE: u32
-pub const vyre_runtime::resident_work_queue::opcode::COMPARE_SWAP: u32
-pub const vyre_runtime::resident_work_queue::opcode::DFA_STEP: u32
-pub const vyre_runtime::resident_work_queue::opcode::LOAD_MISS: u32
-pub const vyre_runtime::resident_work_queue::opcode::LOAD_U32: u32
-pub const vyre_runtime::resident_work_queue::opcode::MEMCPY: u32
-pub const vyre_runtime::resident_work_queue::opcode::NOP: u32
-pub const vyre_runtime::resident_work_queue::opcode::PACKED_SLOT: u32
-pub const vyre_runtime::resident_work_queue::opcode::PRINTF: u32
-pub const vyre_runtime::resident_work_queue::opcode::RESERVED_MAX_RANGE_MIN: u32
-pub const vyre_runtime::resident_work_queue::opcode::SHUTDOWN: u32
-pub const vyre_runtime::resident_work_queue::opcode::STORE_U32: u32
-pub const vyre_runtime::resident_work_queue::opcode::SYSTEM_MASK: u32
 pub const vyre_runtime::resident_work_queue::policy::HOT_WINDOW_PROMOTION_EVIDENCE_SCHEMA_VERSION: u32
 pub const vyre_runtime::resident_work_queue::policy::PRIORITY_COUNTER_DRAIN_FIX: &str
 pub const vyre_runtime::resident_work_queue::policy::PRIORITY_COUNTER_DRAIN_HEADROOM: u64
@@ -379,19 +315,6 @@ pub const vyre_runtime::resident_work_queue::scheduler::priority::HIGH: u32
 pub const vyre_runtime::resident_work_queue::scheduler::priority::IDLE: u32
 pub const vyre_runtime::resident_work_queue::scheduler::priority::LOW: u32
 pub const vyre_runtime::resident_work_queue::scheduler::priority::NORMAL: u32
-pub const vyre_runtime::resident_work_queue::slot::CLAIMED: u32
-pub const vyre_runtime::resident_work_queue::slot::DONE: u32
-pub const vyre_runtime::resident_work_queue::slot::EMPTY: u32
-pub const vyre_runtime::resident_work_queue::slot::FAULT: u32
-pub const vyre_runtime::resident_work_queue::slot::PRIORITY_CRITICAL: u32
-pub const vyre_runtime::resident_work_queue::slot::PRIORITY_HIGH: u32
-pub const vyre_runtime::resident_work_queue::slot::PRIORITY_IDLE: u32
-pub const vyre_runtime::resident_work_queue::slot::PRIORITY_LOW: u32
-pub const vyre_runtime::resident_work_queue::slot::PRIORITY_NORMAL: u32
-pub const vyre_runtime::resident_work_queue::slot::PUBLISHED: u32
-pub const vyre_runtime::resident_work_queue::slot::REQUEUE: u32
-pub const vyre_runtime::resident_work_queue::slot::WAIT_IO: u32
-pub const vyre_runtime::resident_work_queue::slot::YIELD: u32
 pub const vyre_runtime::resident_work_queue::task::TASK_FLAG_PAUSED: u32
 pub const vyre_runtime::resident_work_queue::task::TASK_FLAG_REQUEUE_REQUESTED: u32
 pub const vyre_runtime::resident_work_queue::task::TASK_FLAG_RESUME_READY: u32
@@ -413,24 +336,7 @@ pub enum vyre_runtime::UringPollState
 pub enum vyre_runtime::artifact_admission::ArtifactSessionError
 pub enum vyre_runtime::pipeline_cache::InMemoryEvictionReason
 pub enum vyre_runtime::replay::ReplayFailureClass
-pub enum vyre_runtime::resident_work_queue::AutomataWorklistMode
-pub enum vyre_runtime::resident_work_queue::BuiltinOpcode
-pub enum vyre_runtime::resident_work_queue::MixedWorkQueueClass
-pub enum vyre_runtime::resident_work_queue::MixedWorkUnitType
-pub enum vyre_runtime::resident_work_queue::PriorityDrainReason
-pub enum vyre_runtime::resident_work_queue::ResidentExecutionMode
-pub enum vyre_runtime::resident_work_queue::ResidentGraphBlasSwitchClass
-pub enum vyre_runtime::resident_work_queue::ResidentPromotionRoute
-pub enum vyre_runtime::resident_work_queue::ResidentQueuePressure
-pub enum vyre_runtime::resident_work_queue::ResidentQueueTopology
-pub enum vyre_runtime::resident_work_queue::ResidentWorkspaceLayoutError<R>
-pub enum vyre_runtime::resident_work_queue::ResidentWorkspaceRegionSpec<R>
 pub enum vyre_runtime::resident_work_queue::RingSlotTransition
-pub enum vyre_runtime::resident_work_queue::RingStatus
-pub enum vyre_runtime::resident_work_queue::RuntimeEvidenceMetricFamily
-pub enum vyre_runtime::resident_work_queue::SlotDescriptor
-pub enum vyre_runtime::resident_work_queue::SlotOpcode
-pub enum vyre_runtime::resident_work_queue::WindowClass
 pub enum vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistMode
 pub enum vyre_runtime::resident_work_queue::descriptor::BuiltinOpcode
 pub enum vyre_runtime::resident_work_queue::descriptor::SlotDescriptor
@@ -556,41 +462,6 @@ pub fn vyre_runtime::replay::RingLog::path(&self) -> &str
 pub fn vyre_runtime::replay::RingLog::replay_all(&mut self) -> core::result::Result<alloc::vec::Vec<vyre_runtime::replay::RecordedSlot>, vyre_runtime::replay::ReplayLogError>
 pub fn vyre_runtime::replay::RingLog::replay_records(&mut self) -> core::result::Result<alloc::vec::Vec<vyre_runtime::replay::ReplayRecord>, vyre_runtime::replay::ReplayLogError>
 pub fn vyre_runtime::replay::RingLog::sync(&mut self) -> core::result::Result<(), vyre_runtime::replay::ReplayLogError>
-pub fn vyre_runtime::resident_work_queue::ControlSnapshot::try_decode(control_bytes: &[u8]) -> core::result::Result<Self, vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::ControlSnapshot::try_decode_into(control_bytes: &[u8], out: &mut Self) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::CountMinSketch::add(&mut self, key: u32, amount: u64)
-pub fn vyre_runtime::resident_work_queue::CountMinSketch::clear(&mut self)
-pub fn vyre_runtime::resident_work_queue::CountMinSketch::counters(&self) -> &[u64]
-pub fn vyre_runtime::resident_work_queue::CountMinSketch::estimate(&self, key: u32) -> u64
-pub fn vyre_runtime::resident_work_queue::CountMinSketch::merge(&mut self, other: &Self) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::CountMinSketch::new(depth: usize, width: usize) -> core::result::Result<Self, vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::CountMinSketch::reset_shape(&mut self, depth: usize, width: usize) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::CountMinSketch::try_add(&mut self, key: u32, amount: u64) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::ResidentGridPlan::recommend(request: vyre_runtime::resident_work_queue::ResidentGridRequest, limits: vyre_runtime::resident_work_queue::ResidentGridLimits) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::resident_work_queue::ResidentIoQueue::as_bytes(&self) -> &[u8]
-pub fn vyre_runtime::resident_work_queue::ResidentIoQueue::as_mut_bytes(&mut self) -> &mut [u8]
-pub fn vyre_runtime::resident_work_queue::ResidentIoQueue::completion(&self, queue_slot: u32) -> core::option::Option<vyre_runtime::resident_work_queue::io::IoCompletion>
-pub fn vyre_runtime::resident_work_queue::ResidentIoQueue::is_recycled(&self, queue_slot: u32) -> bool
-pub fn vyre_runtime::resident_work_queue::ResidentIoQueue::new(slot_count: u32) -> core::result::Result<Self, vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::ResidentIoQueue::publish_slot(&mut self, queue_slot: u32, mapped_slot: u32, byte_count: u32, tag: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::ResidentIoQueue::slot_count(&self) -> u32
-pub fn vyre_runtime::resident_work_queue::ResidentIoQueue::submit_dma_read(&mut self, queue_slot: u32, src_handle: u32, dst_handle: u32, byte_count: u32, tag: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::ResidentLaunchGeometry::dispatch_config(&self, timeout: core::option::Option<core::time::Duration>) -> vyre_driver::backend::dispatch_config::DispatchConfig
-pub fn vyre_runtime::resident_work_queue::ResidentLaunchGeometry::from_item_count(item_count: usize, worker_count: u32, max_workgroup_size_x: u32) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::resident_work_queue::ResidentLaunchGeometry::from_slots(slot_count: u32, worker_count: u32, max_workgroup_size_x: u32) -> Self
-pub fn vyre_runtime::resident_work_queue::ResidentQueueConfig::default() -> Self
-pub fn vyre_runtime::resident_work_queue::ResidentQueueConfig::dispatch_grid(&self, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3]
-pub fn vyre_runtime::resident_work_queue::ResidentQueueConfig::launch_recommendation(&self, queue_len: u32, max_workgroup_size_x: u32, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> core::result::Result<vyre_runtime::resident_work_queue::policy::ResidentLaunchRecommendation, vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::resident_work_queue::ResidentQueueConfig::launch_recommendation_for_tasks(&self, tasks: &[vyre_runtime::resident_work_queue::task::TaskWorkItem], max_workgroup_size_x: u32, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> core::result::Result<vyre_runtime::resident_work_queue::policy::ResidentLaunchRecommendation, vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::resident_work_queue::ResidentQueueConfig::launch_request_for_tasks(&self, tasks: &[vyre_runtime::resident_work_queue::task::TaskWorkItem], max_workgroup_size_x: u32, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> core::result::Result<vyre_runtime::resident_work_queue::policy::ResidentLaunchRequest, vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::resident_work_queue::ResidentQueueConfig::validate(&self) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::resident_work_queue::ResidentQueueTelemetry::default() -> Self
-pub fn vyre_runtime::resident_work_queue::ResidentRuntimeEvidence::host_copy_avoidance_bps(&self) -> u16
-pub fn vyre_runtime::resident_work_queue::ResidentRuntimeEvidence::is_complete(&self) -> bool
-pub fn vyre_runtime::resident_work_queue::ResidentRuntimeEvidence::missing_metric_families(&self) -> alloc::vec::Vec<vyre_runtime::resident_work_queue::RuntimeEvidenceMetricFamily>
-pub fn vyre_runtime::resident_work_queue::ResidentSizingPolicy::calculate_optimal_grid(&self, request: vyre_runtime::resident_work_queue::ResidentGridRequest, limits: vyre_runtime::resident_work_queue::ResidentGridLimits) -> core::result::Result<vyre_runtime::resident_work_queue::ResidentGridPlan, vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::resident_work_queue::ResidentSizingPolicy::default() -> Self
-pub fn vyre_runtime::resident_work_queue::ResidentSizingPolicy::geometry_from_slots(&self, slot_count: u32, worker_count: u32, max_workgroup_size_x: u32) -> vyre_runtime::resident_work_queue::ResidentLaunchGeometry
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::batch_publish<A>(ring_bytes: &mut [u8], start_slot: u32, tenant_id: u32, items: &[(u32, A)], batch_tag: u32) -> core::result::Result<u32, vyre_runtime::PipelineError> where A: core::convert::AsRef<[u32]>
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::control_byte_len(observable_slots: u32) -> core::option::Option<usize>
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::debug_log_byte_len(record_capacity: u32) -> core::option::Option<usize>
@@ -598,11 +469,11 @@ pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::debug_record_capaci
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::encode_control(shutdown: bool, tenant_count: u32, observable_slots: u32) -> core::result::Result<alloc::vec::Vec<u8>, vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::encode_empty_debug_log(record_capacity: u32) -> core::result::Result<alloc::vec::Vec<u8>, vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::encode_empty_ring(slot_count: u32) -> core::result::Result<alloc::vec::Vec<u8>, vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::encode_work_items_ring_into(slot_count: u32, tenant_id: u32, items: &[vyre_runtime::resident_work_queue::ResidentWorkItem], ring_bytes: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::encode_work_items_ring_words_into(slot_count: u32, tenant_id: u32, items: &[vyre_runtime::resident_work_queue::ResidentWorkItem], ring_words: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::encode_work_items_ring_into(slot_count: u32, tenant_id: u32, items: &[vyre_runtime::resident_work_queue::planner::ResidentWorkItem], ring_bytes: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::encode_work_items_ring_words_into(slot_count: u32, tenant_id: u32, items: &[vyre_runtime::resident_work_queue::planner::ResidentWorkItem], ring_words: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::publish_packed_slot<A>(ring_bytes: &mut [u8], slot_idx: u32, tenant_id: u32, ops: &[(u8, A)]) -> core::result::Result<(), vyre_runtime::PipelineError> where A: core::convert::AsRef<[u32]>
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::publish_slot(ring_bytes: &mut [u8], slot_idx: u32, tenant_id: u32, opcode: u32, args: &[u32]) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::publish_work_items(ring_bytes: &mut [u8], start_slot: u32, tenant_id: u32, items: &[vyre_runtime::resident_work_queue::ResidentWorkItem]) -> core::result::Result<u32, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::publish_work_items(ring_bytes: &mut [u8], start_slot: u32, tenant_id: u32, items: &[vyre_runtime::resident_work_queue::planner::ResidentWorkItem]) -> core::result::Result<u32, vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::read_debug_log(debug_bytes: &[u8]) -> alloc::vec::Vec<vyre_runtime::resident_work_queue::protocol::DebugRecord>
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::read_debug_log_into(debug_bytes: &[u8], out: &mut alloc::vec::Vec<vyre_runtime::resident_work_queue::protocol::DebugRecord>)
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::read_done_count(control_bytes: &[u8]) -> u32
@@ -626,31 +497,6 @@ pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::try_read_epoch(cont
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::try_read_metrics(control_bytes: &[u8]) -> core::result::Result<alloc::vec::Vec<(u32, u32)>, vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::try_read_metrics_into(control_bytes: &[u8], out: &mut alloc::vec::Vec<(u32, u32)>) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::ResidentWorkQueue::try_read_observable(control_bytes: &[u8], index: u32) -> core::result::Result<u32, vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::ResidentWorkspaceAdapter::bootstrap_nodes(&self) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_runtime::resident_work_queue::ResidentWorkspaceAdapter::buffer_decl(&self) -> vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl
-pub fn vyre_runtime::resident_work_queue::ResidentWorkspaceAdapter::dispatch_nodes(&self) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_runtime::resident_work_queue::ResidentWorkspaceAdapter::guard_nodes(&self) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_runtime::resident_work_queue::RingOccupancy::queue_depth(&self) -> u32
-pub fn vyre_runtime::resident_work_queue::RingOccupancy::total_slots(&self) -> u32
-pub fn vyre_runtime::resident_work_queue::RingTelemetry::active_slots_for_opcode_iter(&self, opcode: u32) -> impl core::iter::traits::iterator::Iterator<Item = &vyre_runtime::resident_work_queue::RingSlotSnapshot>
-pub fn vyre_runtime::resident_work_queue::RingTelemetry::decode_capacity_evidence(&self, scratch: &vyre_runtime::resident_work_queue::TelemetryDecodeScratch) -> vyre_runtime::resident_work_queue::TelemetryDecodeCapacityEvidence
-pub fn vyre_runtime::resident_work_queue::RingTelemetry::priority_accounting(&self) -> vyre_runtime::resident_work_queue::policy::PriorityRequeueAccounting
-pub fn vyre_runtime::resident_work_queue::RingTelemetry::recommend_launch(&self, request: vyre_runtime::resident_work_queue::policy::ResidentLaunchRequest) -> core::result::Result<vyre_runtime::resident_work_queue::policy::ResidentLaunchRecommendation, vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::resident_work_queue::RingTelemetry::sketch(&self, depth: usize, width: usize) -> core::result::Result<vyre_runtime::resident_work_queue::SketchTelemetry, vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::RingTelemetry::sketch_into(&self, depth: usize, width: usize, scratch: &mut vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::RingTelemetry::try_active_slots_for_opcode(&self, opcode: u32) -> core::result::Result<alloc::vec::Vec<&vyre_runtime::resident_work_queue::RingSlotSnapshot>, vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::RingTelemetry::try_active_slots_for_opcode_into<'a>(&'a self, opcode: u32, out: &mut alloc::vec::Vec<&'a vyre_runtime::resident_work_queue::RingSlotSnapshot>) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::RingTelemetry::try_active_windows(&self) -> core::result::Result<alloc::vec::Vec<&vyre_runtime::resident_work_queue::WindowTelemetry>, vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::RingTelemetry::try_active_windows_into<'a>(&'a self, out: &mut alloc::vec::Vec<&'a vyre_runtime::resident_work_queue::WindowTelemetry>) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::RingTelemetry::try_decode(control_bytes: &[u8], ring_bytes: &[u8]) -> core::result::Result<Self, vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::RingTelemetry::try_decode_with_window_opcodes(control_bytes: &[u8], ring_bytes: &[u8], window_opcodes: &[u32]) -> core::result::Result<Self, vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::RingTelemetry::try_decode_with_window_opcodes_into(control_bytes: &[u8], ring_bytes: &[u8], window_opcodes: &[u32], out: &mut Self, scratch: &mut vyre_runtime::resident_work_queue::TelemetryDecodeScratch) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::RingTelemetry::try_health_since(&self, previous: &vyre_runtime::resident_work_queue::RingTelemetry) -> core::result::Result<vyre_runtime::resident_work_queue::telemetry::ResidentWatchdogSnapshot, vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::RingTelemetry::try_runtime_counters(&self) -> core::result::Result<vyre_runtime::resident_work_queue::ResidentRuntimeCounters, vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::RuntimeEvidenceMetricCoverage::missing_families(self) -> alloc::vec::Vec<vyre_runtime::resident_work_queue::RuntimeEvidenceMetricFamily>
-pub fn vyre_runtime::resident_work_queue::TelemetryDecodeCapacityEvidence::is_complete(self) -> bool
-pub fn vyre_runtime::resident_work_queue::TelemetryDecodeScratch::clear(&mut self)
-pub fn vyre_runtime::resident_work_queue::TelemetryDecodeScratch::new() -> Self
 pub fn vyre_runtime::resident_work_queue::atomic_relaxed::atomic_load_relaxed(buffer: &str, index: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_runtime::resident_work_queue::atomic_relaxed::atomic_store_relaxed(name: &str, buffer: &str, index: vyre_foundation::ir_inner::model::generated::Expr, value: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Node
 pub fn vyre_runtime::resident_work_queue::automata_worklist::AutomataStateIndex::to_task_work_item(self, task_id: u32, tenant_id: u32, priority: vyre_runtime::resident_work_queue::task::TaskPriority, op_handle: u32, input_handle: u32, output_handle: u32) -> vyre_runtime::resident_work_queue::task::TaskWorkItem
@@ -658,21 +504,6 @@ pub fn vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistEvi
 pub fn vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistPolicy::default() -> Self
 pub fn vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistPolicy::recommend(self, request: vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistRequest) -> core::result::Result<vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistRecommendation, vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistPolicy::recommend_with_evidence(self, request: vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistRequest) -> core::result::Result<(vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistRecommendation, vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistEvidence), vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::resident_work_queue::build_program() -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_runtime::resident_work_queue::build_program_jit(workgroup_size_x: u32, payload_processor: &[vyre_foundation::ir_inner::model::generated::Node]) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_runtime::resident_work_queue::build_program_jit_slots(workgroup_size_x: u32, slot_count: u32, payload_processor: &[vyre_foundation::ir_inner::model::generated::Node]) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_runtime::resident_work_queue::build_program_priority(workgroup_size_x: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_runtime::resident_work_queue::build_program_priority_slots(workgroup_size_x: u32, slot_count: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_runtime::resident_work_queue::build_program_sharded(workgroup_size_x: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_runtime::resident_work_queue::build_program_sharded_no_io(workgroup_size_x: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_runtime::resident_work_queue::build_program_sharded_once_slots(workgroup_size_x: u32, slot_count: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_runtime::resident_work_queue::build_program_sharded_once_slots_control_report_shared(workgroup_size_x: u32, slot_count: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> alloc::sync::Arc<vyre_foundation::ir_inner::model::program::definition::Program>
-pub fn vyre_runtime::resident_work_queue::build_program_sharded_once_slots_shared(workgroup_size_x: u32, slot_count: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> alloc::sync::Arc<vyre_foundation::ir_inner::model::program::definition::Program>
-pub fn vyre_runtime::resident_work_queue::build_program_sharded_slots(workgroup_size_x: u32, slot_count: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_runtime::resident_work_queue::build_program_sharded_slots_shared(workgroup_size_x: u32, slot_count: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> alloc::sync::Arc<vyre_foundation::ir_inner::model::program::definition::Program>
-pub fn vyre_runtime::resident_work_queue::build_program_sharded_with_io_polling(workgroup_size_x: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_runtime::resident_work_queue::build_program_sharded_with_workspace_adapter(workgroup_size_x: u32, slot_count: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler], adapter: &impl vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspaceAdapter) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_runtime::resident_work_queue::build_workspace_regions<R: core::marker::Copy>(specs: &[vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec<R>]) -> core::result::Result<alloc::vec::Vec<vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>>, vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceLayoutError<R>>
 pub fn vyre_runtime::resident_work_queue::builder::build_program() -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::builder::build_program_jit(workgroup_size_x: u32, payload_processor: &[vyre_foundation::ir_inner::model::generated::Node]) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::builder::build_program_jit_slots(workgroup_size_x: u32, slot_count: u32, payload_processor: &[vyre_foundation::ir_inner::model::generated::Node]) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -693,10 +524,6 @@ pub fn vyre_runtime::resident_work_queue::builder::persistent_body_priority(work
 pub fn vyre_runtime::resident_work_queue::builder::persistent_body_priority_slots(workgroup_size_x: u32, slot_count: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_runtime::resident_work_queue::builder::try_build_program_with_self_loading_miss_handler(workgroup_size_x: u32, slot_count: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_runtime::resident_work_queue::builder::try_persistent_body(workgroup_size_x: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, alloc::string::String>
-pub fn vyre_runtime::resident_work_queue::control_byte_len(observable_slots: u32) -> core::option::Option<usize>
-pub fn vyre_runtime::resident_work_queue::count_done_ring_slots(ring_bytes: &[u8], item_count: usize) -> core::option::Option<u64>
-pub fn vyre_runtime::resident_work_queue::debug_log_byte_len(record_capacity: u32) -> core::option::Option<usize>
-pub fn vyre_runtime::resident_work_queue::default_priority_offsets_array(total_slots: u32) -> [u32; 6]
 pub fn vyre_runtime::resident_work_queue::descriptor::BatchDescriptor::new(start_slot: u32, items: alloc::vec::Vec<vyre_runtime::resident_work_queue::descriptor::SlotDescriptor>) -> Self
 pub fn vyre_runtime::resident_work_queue::descriptor::BatchDescriptor::publish_into(&self, ring_bytes: &mut [u8]) -> core::result::Result<u32, vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::descriptor::PackedOpDescriptor::new(opcode: u8, args: alloc::vec::Vec<u32>) -> Self
@@ -707,10 +534,14 @@ pub fn vyre_runtime::resident_work_queue::descriptor::WindowDescriptor::into_bat
 pub fn vyre_runtime::resident_work_queue::descriptor::WindowDescriptor::new(start_slot: u32, tenant_id: u32, opcode: vyre_runtime::resident_work_queue::descriptor::SlotOpcode, ticket: u32, required: alloc::vec::Vec<alloc::vec::Vec<u32>>, lookahead: alloc::vec::Vec<alloc::vec::Vec<u32>>) -> Self
 pub fn vyre_runtime::resident_work_queue::descriptor::WindowDescriptor::publish_into(&self, ring_bytes: &mut [u8]) -> core::result::Result<u32, vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::descriptor::WindowDescriptor::try_into_batch(&self) -> core::result::Result<vyre_runtime::resident_work_queue::descriptor::BatchDescriptor, vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::dispatch_grid_for(worker_count: u32, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3]
-pub fn vyre_runtime::resident_work_queue::encode_control(shutdown: bool, tenant_count: u32, observable_slots: u32) -> core::result::Result<alloc::vec::Vec<u8>, vyre_runtime::resident_work_queue::protocol::ProtocolError>
-pub fn vyre_runtime::resident_work_queue::encode_empty_debug_log(record_capacity: u32) -> core::result::Result<alloc::vec::Vec<u8>, vyre_runtime::resident_work_queue::protocol::ProtocolError>
-pub fn vyre_runtime::resident_work_queue::encode_empty_ring(slot_count: u32) -> core::result::Result<alloc::vec::Vec<u8>, vyre_runtime::resident_work_queue::protocol::ProtocolError>
+pub fn vyre_runtime::resident_work_queue::io::ResidentIoQueue::as_bytes(&self) -> &[u8]
+pub fn vyre_runtime::resident_work_queue::io::ResidentIoQueue::as_mut_bytes(&mut self) -> &mut [u8]
+pub fn vyre_runtime::resident_work_queue::io::ResidentIoQueue::completion(&self, queue_slot: u32) -> core::option::Option<vyre_runtime::resident_work_queue::io::IoCompletion>
+pub fn vyre_runtime::resident_work_queue::io::ResidentIoQueue::is_recycled(&self, queue_slot: u32) -> bool
+pub fn vyre_runtime::resident_work_queue::io::ResidentIoQueue::new(slot_count: u32) -> core::result::Result<Self, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::io::ResidentIoQueue::publish_slot(&mut self, queue_slot: u32, mapped_slot: u32, byte_count: u32, tag: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::io::ResidentIoQueue::slot_count(&self) -> u32
+pub fn vyre_runtime::resident_work_queue::io::ResidentIoQueue::submit_dma_read(&mut self, queue_slot: u32, src_handle: u32, dst_handle: u32, byte_count: u32, tag: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::io::claim_io_requests_into(io_queue_bytes: &mut [u8], requests: &mut alloc::vec::Vec<vyre_runtime::resident_work_queue::io::IoRequest>) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::io::complete_io_request(io_queue_bytes: &mut [u8], slot_idx: u32, success: bool) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::io::complete_io_requests_batch(io_queue_bytes: &mut [u8], completions: &[(u32, bool)]) -> core::result::Result<(), vyre_runtime::PipelineError>
@@ -726,14 +557,20 @@ pub fn vyre_runtime::resident_work_queue::io::try_poll_io_requests_into(io_queue
 pub fn vyre_runtime::resident_work_queue::io::validate_io_queue_bytes(io_queue_bytes: &[u8]) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::mixed_work::mixed_work_protocol_evidence(plan: &vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolPlan<'_>) -> core::result::Result<vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolEvidence, vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolError>
 pub fn vyre_runtime::resident_work_queue::mixed_work::validate_mixed_work_protocol(plan: &vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolPlan<'_>) -> core::result::Result<vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolEvidence, vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolError>
-pub fn vyre_runtime::resident_work_queue::mixed_work_protocol_evidence(plan: &vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolPlan<'_>) -> core::result::Result<vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolEvidence, vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolError>
-pub fn vyre_runtime::resident_work_queue::next_record_workspace_region<R: core::marker::Copy>(previous: vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>, id: R, record_words: u32, capacity_records: u32) -> core::option::Option<vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>>
-pub fn vyre_runtime::resident_work_queue::next_workspace_region<R: core::marker::Copy>(previous: vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>, id: R, words: u32, record_words: u32, capacity_records: u32) -> core::option::Option<vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>>
-pub fn vyre_runtime::resident_work_queue::padded_slot_count(slot_count: u32, workgroup_size_x: u32) -> u32
-pub fn vyre_runtime::resident_work_queue::persistent_body(workgroup_size_x: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_runtime::resident_work_queue::persistent_body_jit(workgroup_size_x: u32, payload_processor: &[vyre_foundation::ir_inner::model::generated::Node]) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_runtime::resident_work_queue::persistent_body_priority(workgroup_size_x: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_runtime::resident_work_queue::persistent_body_priority_slots(workgroup_size_x: u32, slot_count: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_runtime::resident_work_queue::planner::ResidentGridPlan::recommend(request: vyre_runtime::resident_work_queue::planner::ResidentGridRequest, limits: vyre_runtime::resident_work_queue::planner::ResidentGridLimits) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry::dispatch_config(&self, timeout: core::option::Option<core::time::Duration>) -> vyre_driver::backend::dispatch_config::DispatchConfig
+pub fn vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry::from_item_count(item_count: usize, worker_count: u32, max_workgroup_size_x: u32) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry::from_slots(slot_count: u32, worker_count: u32, max_workgroup_size_x: u32) -> Self
+pub fn vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::default() -> Self
+pub fn vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::dispatch_grid(&self, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3]
+pub fn vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::launch_recommendation(&self, queue_len: u32, max_workgroup_size_x: u32, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> core::result::Result<vyre_runtime::resident_work_queue::policy::ResidentLaunchRecommendation, vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::launch_recommendation_for_tasks(&self, tasks: &[vyre_runtime::resident_work_queue::task::TaskWorkItem], max_workgroup_size_x: u32, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> core::result::Result<vyre_runtime::resident_work_queue::policy::ResidentLaunchRecommendation, vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::launch_request_for_tasks(&self, tasks: &[vyre_runtime::resident_work_queue::task::TaskWorkItem], max_workgroup_size_x: u32, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> core::result::Result<vyre_runtime::resident_work_queue::policy::ResidentLaunchRequest, vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::validate(&self) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::resident_work_queue::planner::ResidentQueueTelemetry::default() -> Self
+pub fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::calculate_optimal_grid(&self, request: vyre_runtime::resident_work_queue::planner::ResidentGridRequest, limits: vyre_runtime::resident_work_queue::planner::ResidentGridLimits) -> core::result::Result<vyre_runtime::resident_work_queue::planner::ResidentGridPlan, vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::default() -> Self
+pub fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::geometry_from_slots(&self, slot_count: u32, worker_count: u32, max_workgroup_size_x: u32) -> vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry
 pub fn vyre_runtime::resident_work_queue::planner::default_worker_groups_from_limits(max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> u32
 pub fn vyre_runtime::resident_work_queue::planner::dispatch_grid_for(worker_count: u32, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3]
 pub fn vyre_runtime::resident_work_queue::planner::elide_value_flow_barriers(program: vyre_foundation::ir_inner::model::program::definition::Program) -> (vyre_foundation::ir_inner::model::program::definition::Program, vyre_runtime::resident_work_queue::planner::BarrierElisionReport)
@@ -759,11 +596,6 @@ pub fn vyre_runtime::resident_work_queue::policy::ResidentPromotionEvidence::is_
 pub fn vyre_runtime::resident_work_queue::policy::ResidentTopologyEvidence::is_complete(self) -> bool
 pub fn vyre_runtime::resident_work_queue::policy::try_diffuse_priority_across_siblings(priority_stalks: &[f64], restriction_diag: &[f64], damping: f64, iterations: u32) -> core::result::Result<alloc::vec::Vec<f64>, vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::resident_work_queue::policy::try_diffuse_priority_across_siblings_into(priority_stalks: &[f64], restriction_diag: &[f64], damping: f64, iterations: u32, out: &mut alloc::vec::Vec<f64>, scratch: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::resident_work_queue::priority_partition_active_lane_count(partition_slots: u32, worker_width: u32) -> u32
-pub fn vyre_runtime::resident_work_queue::priority_partition_probe_budget(partition_slots: u32, worker_width: u32) -> u32
-pub fn vyre_runtime::resident_work_queue::priority_partition_probe_count(partition_slots: u32, worker_width: u32) -> u32
-pub fn vyre_runtime::resident_work_queue::priority_scan_body(total_slots: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_runtime::resident_work_queue::priority_scan_body_with_stride(total_slots: u32, worker_stride: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_runtime::resident_work_queue::protocol::control_byte_len(observable_slots: u32) -> core::option::Option<usize>
 pub fn vyre_runtime::resident_work_queue::protocol::count_done_ring_slots(ring_bytes: &[u8], item_count: usize) -> core::option::Option<u64>
 pub fn vyre_runtime::resident_work_queue::protocol::debug_log_byte_len(record_capacity: u32) -> core::option::Option<usize>
@@ -800,11 +632,6 @@ pub fn vyre_runtime::resident_work_queue::protocol::try_slot_byte_len() -> core:
 pub fn vyre_runtime::resident_work_queue::protocol::try_slot_word_base(slot: u32) -> core::result::Result<usize, vyre_runtime::resident_work_queue::protocol::ProtocolError>
 pub fn vyre_runtime::resident_work_queue::protocol::try_slot_word_index(slot: u32, word: u32) -> core::result::Result<usize, vyre_runtime::resident_work_queue::protocol::ProtocolError>
 pub fn vyre_runtime::resident_work_queue::protocol::try_word_index(word: u32) -> core::result::Result<usize, vyre_runtime::resident_work_queue::protocol::ProtocolError>
-pub fn vyre_runtime::resident_work_queue::read_debug_log(debug_bytes: &[u8]) -> alloc::vec::Vec<vyre_runtime::resident_work_queue::protocol::DebugRecord>
-pub fn vyre_runtime::resident_work_queue::read_done_count(control_bytes: &[u8]) -> u32
-pub fn vyre_runtime::resident_work_queue::read_epoch(control_bytes: &[u8]) -> u32
-pub fn vyre_runtime::resident_work_queue::read_metrics(control_bytes: &[u8]) -> alloc::vec::Vec<(u32, u32)>
-pub fn vyre_runtime::resident_work_queue::read_observable(control_bytes: &[u8], index: u32) -> u32
 pub fn vyre_runtime::resident_work_queue::readback::ResidentQueueReadback::counters(&self) -> core::result::Result<vyre_runtime::resident_work_queue::readback::ResidentReadbackCounters, vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::readback::ResidentQueueReadback::drain_outputs_into(outputs: &mut [alloc::vec::Vec<u8>], slot_count: u32, out: &mut Self) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::readback::ResidentQueueReadback::from_outputs(outputs: alloc::vec::Vec<alloc::vec::Vec<u8>>, slot_count: u32) -> core::result::Result<Self, vyre_runtime::PipelineError>
@@ -819,7 +646,7 @@ pub fn vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers::from_p
 pub fn vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers::io_queue_bytes(&self) -> &[u8]
 pub fn vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers::new(slot_count: u32, tenant_count: u32, observable_slots: u32) -> core::result::Result<Self, vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers::publish_slot(&mut self, slot_idx: u32, tenant_id: u32, opcode: u32, args: &[u32]) -> core::result::Result<(), vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers::publish_work_items(&mut self, start_slot: u32, tenant_id: u32, items: &[vyre_runtime::resident_work_queue::ResidentWorkItem]) -> core::result::Result<u32, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers::publish_work_items(&mut self, start_slot: u32, tenant_id: u32, items: &[vyre_runtime::resident_work_queue::planner::ResidentWorkItem]) -> core::result::Result<u32, vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers::reset(&mut self, tenant_count: u32, observable_slots: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers::ring_bytes(&self) -> &[u8]
 pub fn vyre_runtime::resident_work_queue::resident::ResidentQueueBuffers::ring_bytes_mut(&mut self) -> &mut [u8]
@@ -839,7 +666,6 @@ pub fn vyre_runtime::resident_work_queue::ring::RingConsumer::try_done_count(&se
 pub fn vyre_runtime::resident_work_queue::ring::RingProducer::name(&self) -> &'static str
 pub fn vyre_runtime::resident_work_queue::ring::RingProducer::publish(&mut self, slot_idx: u32, encoded: &[u8]) -> core::result::Result<(), vyre_runtime::resident_work_queue::protocol::ProtocolError>
 pub fn vyre_runtime::resident_work_queue::ring::RingProducer::slot_count(&self) -> u32
-pub fn vyre_runtime::resident_work_queue::ring_byte_len(slot_count: u32) -> core::option::Option<usize>
 pub fn vyre_runtime::resident_work_queue::scaling::default_worker_groups_from_limits(max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> u32
 pub fn vyre_runtime::resident_work_queue::scaling::dispatch_grid_for(worker_count: u32, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3]
 pub fn vyre_runtime::resident_work_queue::scaling::padded_slot_count(slot_count: u32, workgroup_size_x: u32) -> u32
@@ -870,26 +696,43 @@ pub fn vyre_runtime::resident_work_queue::task::TaskWorkItem::try_paused(self, c
 pub fn vyre_runtime::resident_work_queue::task::TaskWorkItem::try_requeued(self, continuation_pc: u32, continuation_data: u32, priority: vyre_runtime::resident_work_queue::task::TaskPriority) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::resident_work_queue::task::TaskWorkItem::try_resumed(self) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::resident_work_queue::task::TaskWorkItem::try_yielded(self, continuation_pc: u32, continuation_data: u32) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch::into_snapshot(self) -> vyre_runtime::resident_work_queue::SketchTelemetry
+pub fn vyre_runtime::resident_work_queue::telemetry::ControlSnapshot::try_decode(control_bytes: &[u8]) -> core::result::Result<Self, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::ControlSnapshot::try_decode_into(control_bytes: &[u8], out: &mut Self) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::CountMinSketch::add(&mut self, key: u32, amount: u64)
+pub fn vyre_runtime::resident_work_queue::telemetry::CountMinSketch::clear(&mut self)
+pub fn vyre_runtime::resident_work_queue::telemetry::CountMinSketch::counters(&self) -> &[u64]
+pub fn vyre_runtime::resident_work_queue::telemetry::CountMinSketch::estimate(&self, key: u32) -> u64
+pub fn vyre_runtime::resident_work_queue::telemetry::CountMinSketch::merge(&mut self, other: &Self) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::CountMinSketch::new(depth: usize, width: usize) -> core::result::Result<Self, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::CountMinSketch::reset_shape(&mut self, depth: usize, width: usize) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::CountMinSketch::try_add(&mut self, key: u32, amount: u64) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::host_copy_avoidance_bps(&self) -> u16
+pub fn vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::is_complete(&self) -> bool
+pub fn vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::missing_metric_families(&self) -> alloc::vec::Vec<vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricFamily>
+pub fn vyre_runtime::resident_work_queue::telemetry::RingOccupancy::queue_depth(&self) -> u32
+pub fn vyre_runtime::resident_work_queue::telemetry::RingOccupancy::total_slots(&self) -> u32
+pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::active_slots_for_opcode_iter(&self, opcode: u32) -> impl core::iter::traits::iterator::Iterator<Item = &vyre_runtime::resident_work_queue::telemetry::RingSlotSnapshot>
+pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::decode_capacity_evidence(&self, scratch: &vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeScratch) -> vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeCapacityEvidence
+pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::priority_accounting(&self) -> vyre_runtime::resident_work_queue::policy::PriorityRequeueAccounting
+pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::recommend_launch(&self, request: vyre_runtime::resident_work_queue::policy::ResidentLaunchRequest) -> core::result::Result<vyre_runtime::resident_work_queue::policy::ResidentLaunchRecommendation, vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::sketch(&self, depth: usize, width: usize) -> core::result::Result<vyre_runtime::resident_work_queue::telemetry::SketchTelemetry, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::sketch_into(&self, depth: usize, width: usize, scratch: &mut vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::try_active_slots_for_opcode(&self, opcode: u32) -> core::result::Result<alloc::vec::Vec<&vyre_runtime::resident_work_queue::telemetry::RingSlotSnapshot>, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::try_active_slots_for_opcode_into<'a>(&'a self, opcode: u32, out: &mut alloc::vec::Vec<&'a vyre_runtime::resident_work_queue::telemetry::RingSlotSnapshot>) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::try_active_windows(&self) -> core::result::Result<alloc::vec::Vec<&vyre_runtime::resident_work_queue::telemetry::WindowTelemetry>, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::try_active_windows_into<'a>(&'a self, out: &mut alloc::vec::Vec<&'a vyre_runtime::resident_work_queue::telemetry::WindowTelemetry>) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::try_decode(control_bytes: &[u8], ring_bytes: &[u8]) -> core::result::Result<Self, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::try_decode_with_window_opcodes(control_bytes: &[u8], ring_bytes: &[u8], window_opcodes: &[u32]) -> core::result::Result<Self, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::try_decode_with_window_opcodes_into(control_bytes: &[u8], ring_bytes: &[u8], window_opcodes: &[u32], out: &mut Self, scratch: &mut vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeScratch) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::try_health_since(&self, previous: &vyre_runtime::resident_work_queue::telemetry::RingTelemetry) -> core::result::Result<vyre_runtime::resident_work_queue::telemetry::ResidentWatchdogSnapshot, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::RingTelemetry::try_runtime_counters(&self) -> core::result::Result<vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeCounters, vyre_runtime::PipelineError>
+pub fn vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricCoverage::missing_families(self) -> alloc::vec::Vec<vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricFamily>
+pub fn vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch::into_snapshot(self) -> vyre_runtime::resident_work_queue::telemetry::SketchTelemetry
 pub fn vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch::new(depth: usize, width: usize) -> core::result::Result<Self, vyre_runtime::PipelineError>
-pub fn vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch::to_snapshot(&self) -> vyre_runtime::resident_work_queue::SketchTelemetry
-pub fn vyre_runtime::resident_work_queue::try_build_program_with_self_loading_miss_handler(workgroup_size_x: u32, slot_count: u32, opcodes: &[vyre_runtime::resident_work_queue::handlers::OpcodeHandler]) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
-pub fn vyre_runtime::resident_work_queue::try_count_done_ring_slots(ring_bytes: &[u8], item_count: usize) -> core::result::Result<u64, vyre_runtime::resident_work_queue::protocol::ProtocolError>
-pub fn vyre_runtime::resident_work_queue::try_diffuse_priority_across_siblings(priority_stalks: &[f64], restriction_diag: &[f64], damping: f64, iterations: u32) -> core::result::Result<alloc::vec::Vec<f64>, vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::resident_work_queue::try_diffuse_priority_across_siblings_into(priority_stalks: &[f64], restriction_diag: &[f64], damping: f64, iterations: u32, out: &mut alloc::vec::Vec<f64>, scratch: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::resident_work_queue::try_encode_control(shutdown: bool, tenant_count: u32, observable_slots: u32) -> core::result::Result<alloc::vec::Vec<u8>, vyre_runtime::resident_work_queue::protocol::ProtocolError>
-pub fn vyre_runtime::resident_work_queue::try_encode_control_into(shutdown: bool, tenant_count: u32, observable_slots: u32, dst: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_runtime::resident_work_queue::protocol::ProtocolError>
-pub fn vyre_runtime::resident_work_queue::try_encode_empty_debug_log(record_capacity: u32) -> core::result::Result<alloc::vec::Vec<u8>, vyre_runtime::resident_work_queue::protocol::ProtocolError>
-pub fn vyre_runtime::resident_work_queue::try_encode_empty_debug_log_into(record_capacity: u32, dst: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_runtime::resident_work_queue::protocol::ProtocolError>
-pub fn vyre_runtime::resident_work_queue::try_encode_empty_ring(slot_count: u32) -> core::result::Result<alloc::vec::Vec<u8>, vyre_runtime::resident_work_queue::protocol::ProtocolError>
-pub fn vyre_runtime::resident_work_queue::try_encode_empty_ring_into(slot_count: u32, dst: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_runtime::resident_work_queue::protocol::ProtocolError>
-pub fn vyre_runtime::resident_work_queue::try_read_debug_log(debug_bytes: &[u8]) -> core::result::Result<alloc::vec::Vec<vyre_runtime::resident_work_queue::protocol::DebugRecord>, vyre_runtime::resident_work_queue::protocol::ProtocolError>
-pub fn vyre_runtime::resident_work_queue::try_read_done_count(control_bytes: &[u8]) -> core::result::Result<u32, vyre_runtime::resident_work_queue::protocol::ProtocolError>
-pub fn vyre_runtime::resident_work_queue::try_read_epoch(control_bytes: &[u8]) -> core::result::Result<u32, vyre_runtime::resident_work_queue::protocol::ProtocolError>
-pub fn vyre_runtime::resident_work_queue::try_read_metrics(control_bytes: &[u8]) -> core::result::Result<alloc::vec::Vec<(u32, u32)>, vyre_runtime::resident_work_queue::protocol::ProtocolError>
-pub fn vyre_runtime::resident_work_queue::try_read_observable(control_bytes: &[u8], index: u32) -> core::result::Result<u32, vyre_runtime::resident_work_queue::protocol::ProtocolError>
-pub fn vyre_runtime::resident_work_queue::validate_mixed_work_protocol(plan: &vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolPlan<'_>) -> core::result::Result<vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolEvidence, vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolError>
-pub fn vyre_runtime::resident_work_queue::worker_workgroup_size(worker_count: u32, max_workgroup_size_x: u32) -> u32
+pub fn vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch::to_snapshot(&self) -> vyre_runtime::resident_work_queue::telemetry::SketchTelemetry
+pub fn vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeCapacityEvidence::is_complete(self) -> bool
+pub fn vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeScratch::clear(&mut self)
+pub fn vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeScratch::new() -> Self
 pub fn vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspaceAdapter::bootstrap_nodes(&self) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspaceAdapter::buffer_decl(&self) -> vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl
 pub fn vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspaceAdapter::dispatch_nodes(&self) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
@@ -897,7 +740,6 @@ pub fn vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspaceAd
 pub fn vyre_runtime::resident_work_queue::workspace_layout::build_workspace_regions<R: core::marker::Copy>(specs: &[vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec<R>]) -> core::result::Result<alloc::vec::Vec<vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>>, vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceLayoutError<R>>
 pub fn vyre_runtime::resident_work_queue::workspace_layout::next_record_workspace_region<R: core::marker::Copy>(previous: vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>, id: R, record_words: u32, capacity_records: u32) -> core::option::Option<vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>>
 pub fn vyre_runtime::resident_work_queue::workspace_layout::next_workspace_region<R: core::marker::Copy>(previous: vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>, id: R, words: u32, record_words: u32, capacity_records: u32) -> core::option::Option<vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>>
-pub fn vyre_runtime::resident_work_queue::write_default_priority_offsets(control_bytes: &mut [u8], total_slots: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::resource_residency::ArtifactInstanceBinding::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_runtime::resource_residency::ArtifactInstanceBinding::instance(&self) -> &alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactInstance>
 pub fn vyre_runtime::resource_residency::ArtifactInstanceBinding::name(&self) -> &str
@@ -973,10 +815,10 @@ pub fn vyre_runtime::tenant::TenantRegistry::runtime_counters_into(&self, out: &
 pub fn vyre_runtime::tenant::TenantRegistry::select_concurrent_tenants(&self, conflict_adj: &[u32]) -> alloc::vec::Vec<u32>
 pub fn vyre_runtime::tenant::TenantRegistry::select_concurrent_tenants_into(&self, conflict_adj: &[u32], out: &mut alloc::vec::Vec<u32>, scratch: &mut vyre_runtime::tenant::TenantSelectionScratch)
 pub fn vyre_runtime::tenant::TenantRegistry::unregister(&self, tenant_id: u32) -> core::option::Option<vyre_runtime::tenant::TenantHandle>
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::megakernel_io_queue(&self) -> &vyre_runtime::resident_work_queue::ResidentIoQueue
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::megakernel_io_queue_mut(&mut self) -> &mut vyre_runtime::resident_work_queue::ResidentIoQueue
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::new(stream: vyre_runtime::uring::stream::AsyncUringStream<'a>, slot_count: u32, megakernel_io_queue: vyre_runtime::resident_work_queue::ResidentIoQueue) -> core::result::Result<Self, vyre_runtime::PipelineError>
-pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::new_gpudirect(stream: vyre_runtime::uring::stream::AsyncUringStream<'a>, slot_count: u32, megakernel_io_queue: vyre_runtime::resident_work_queue::ResidentIoQueue) -> core::result::Result<Self, vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::megakernel_io_queue(&self) -> &vyre_runtime::resident_work_queue::io::ResidentIoQueue
+pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::megakernel_io_queue_mut(&mut self) -> &mut vyre_runtime::resident_work_queue::io::ResidentIoQueue
+pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::new(stream: vyre_runtime::uring::stream::AsyncUringStream<'a>, slot_count: u32, megakernel_io_queue: vyre_runtime::resident_work_queue::io::ResidentIoQueue) -> core::result::Result<Self, vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::new_gpudirect(stream: vyre_runtime::uring::stream::AsyncUringStream<'a>, slot_count: u32, megakernel_io_queue: vyre_runtime::resident_work_queue::io::ResidentIoQueue) -> core::result::Result<Self, vyre_runtime::PipelineError>
 pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::poll_completions(&mut self) -> core::result::Result<alloc::vec::Vec<vyre_runtime::uring::driver::CompletedIngest>, vyre_runtime::PipelineError>
 pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::poll_completions_into(&mut self, completed: &mut alloc::vec::Vec<vyre_runtime::uring::driver::CompletedIngest>) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::read_path(&self) -> vyre_runtime::uring::driver::NativeReadPath
@@ -1031,8 +873,6 @@ pub mod vyre_runtime::resident_work_queue
 pub mod vyre_runtime::resident_work_queue::atomic_relaxed
 pub mod vyre_runtime::resident_work_queue::automata_worklist
 pub mod vyre_runtime::resident_work_queue::builder
-pub mod vyre_runtime::resident_work_queue::control
-pub mod vyre_runtime::resident_work_queue::debug
 pub mod vyre_runtime::resident_work_queue::descriptor
 pub mod vyre_runtime::resident_work_queue::handlers
 pub mod vyre_runtime::resident_work_queue::io
@@ -1040,7 +880,6 @@ pub mod vyre_runtime::resident_work_queue::io::io_op
 pub mod vyre_runtime::resident_work_queue::io::io_status
 pub mod vyre_runtime::resident_work_queue::io::io_word
 pub mod vyre_runtime::resident_work_queue::mixed_work
-pub mod vyre_runtime::resident_work_queue::opcode
 pub mod vyre_runtime::resident_work_queue::planner
 pub mod vyre_runtime::resident_work_queue::policy
 pub mod vyre_runtime::resident_work_queue::protocol
@@ -1054,7 +893,6 @@ pub mod vyre_runtime::resident_work_queue::ring
 pub mod vyre_runtime::resident_work_queue::scaling
 pub mod vyre_runtime::resident_work_queue::scheduler
 pub mod vyre_runtime::resident_work_queue::scheduler::priority
-pub mod vyre_runtime::resident_work_queue::slot
 pub mod vyre_runtime::resident_work_queue::speculation
 pub mod vyre_runtime::resident_work_queue::task
 pub mod vyre_runtime::resident_work_queue::telemetry
@@ -1093,63 +931,7 @@ pub struct vyre_runtime::replay::RecordedSlot
 pub struct vyre_runtime::replay::ReplayFailureEvidence
 pub struct vyre_runtime::replay::ReplayRecord
 pub struct vyre_runtime::replay::RingLog
-pub struct vyre_runtime::resident_work_queue::AutomataStateIndex
-pub struct vyre_runtime::resident_work_queue::AutomataWorklistEvidence
-pub struct vyre_runtime::resident_work_queue::AutomataWorklistPolicy
-pub struct vyre_runtime::resident_work_queue::AutomataWorklistRecommendation
-pub struct vyre_runtime::resident_work_queue::AutomataWorklistRequest
-pub struct vyre_runtime::resident_work_queue::BatchDescriptor
-pub struct vyre_runtime::resident_work_queue::ControlSnapshot
-pub struct vyre_runtime::resident_work_queue::CountMinSketch
-pub struct vyre_runtime::resident_work_queue::DebugRecord
-pub struct vyre_runtime::resident_work_queue::IoCompletion
-pub struct vyre_runtime::resident_work_queue::IoRequest
-pub struct vyre_runtime::resident_work_queue::MixedWorkProtocolEvidence
-pub struct vyre_runtime::resident_work_queue::MixedWorkProtocolPlan<'a>
-pub struct vyre_runtime::resident_work_queue::MixedWorkUnit
-pub struct vyre_runtime::resident_work_queue::OpcodeHandler
-pub struct vyre_runtime::resident_work_queue::OutputSlabId(pub u32)
-pub struct vyre_runtime::resident_work_queue::PackedOpDescriptor
-pub struct vyre_runtime::resident_work_queue::PairedSpeculationSample
-pub struct vyre_runtime::resident_work_queue::PairedSpeculationUpdate
-pub struct vyre_runtime::resident_work_queue::PairedSpeculationWindow
-pub struct vyre_runtime::resident_work_queue::PriorityDrainRecommendation
-pub struct vyre_runtime::resident_work_queue::PriorityRequeueAccounting
-pub struct vyre_runtime::resident_work_queue::ResidentArtifactId(pub u32)
-pub struct vyre_runtime::resident_work_queue::ResidentGridLimits
-pub struct vyre_runtime::resident_work_queue::ResidentGridPlan
-pub struct vyre_runtime::resident_work_queue::ResidentGridRequest
-pub struct vyre_runtime::resident_work_queue::ResidentIoQueue
-pub struct vyre_runtime::resident_work_queue::ResidentLaunchCacheStats
-pub struct vyre_runtime::resident_work_queue::ResidentLaunchGeometry
-pub struct vyre_runtime::resident_work_queue::ResidentLaunchPolicy
-pub struct vyre_runtime::resident_work_queue::ResidentLaunchRecommendation
-pub struct vyre_runtime::resident_work_queue::ResidentLaunchRequest
-pub struct vyre_runtime::resident_work_queue::ResidentPromotionEvidence
-pub struct vyre_runtime::resident_work_queue::ResidentQueueBuffers
-pub struct vyre_runtime::resident_work_queue::ResidentQueueCapabilities
-pub struct vyre_runtime::resident_work_queue::ResidentQueueConfig
-pub struct vyre_runtime::resident_work_queue::ResidentQueueReadback
-pub struct vyre_runtime::resident_work_queue::ResidentQueueReport
-pub struct vyre_runtime::resident_work_queue::ResidentQueueTelemetry
-pub struct vyre_runtime::resident_work_queue::ResidentReadbackCounters
-pub struct vyre_runtime::resident_work_queue::ResidentRuntimeCounters
-pub struct vyre_runtime::resident_work_queue::ResidentRuntimeEvidence
-pub struct vyre_runtime::resident_work_queue::ResidentSizingPolicy
-pub struct vyre_runtime::resident_work_queue::ResidentTopologyEvidence
 pub struct vyre_runtime::resident_work_queue::ResidentWorkQueue
-pub struct vyre_runtime::resident_work_queue::ResidentWorkloadHints
-pub struct vyre_runtime::resident_work_queue::ResidentWorkspaceRegion<R>
-pub struct vyre_runtime::resident_work_queue::RingOccupancy
-pub struct vyre_runtime::resident_work_queue::RingSlotSnapshot
-pub struct vyre_runtime::resident_work_queue::RingTelemetry
-pub struct vyre_runtime::resident_work_queue::RuntimeEvidenceMetricCoverage
-pub struct vyre_runtime::resident_work_queue::SketchTelemetry
-pub struct vyre_runtime::resident_work_queue::TaskQueueSnapshot
-pub struct vyre_runtime::resident_work_queue::TelemetryDecodeCapacityEvidence
-pub struct vyre_runtime::resident_work_queue::TelemetryDecodeScratch
-pub struct vyre_runtime::resident_work_queue::WindowDescriptor
-pub struct vyre_runtime::resident_work_queue::WindowTelemetry
 pub struct vyre_runtime::resident_work_queue::automata_worklist::AutomataStateIndex
 pub struct vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistEvidence
 pub struct vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistPolicy
@@ -1259,7 +1041,6 @@ pub struct vyre_runtime::uring::ring::IoUringState
 pub struct vyre_runtime::uring::stream::AsyncUringStream<'a>
 pub struct vyre_runtime::uring::stream::GpuMappedBuffer<'a>
 pub trait vyre_runtime::pipeline_cache::PipelineCacheStore: core::marker::Send + core::marker::Sync
-pub trait vyre_runtime::resident_work_queue::ResidentWorkspaceAdapter
 pub trait vyre_runtime::resident_work_queue::ring::RingConsumer
 pub trait vyre_runtime::resident_work_queue::ring::RingProducer
 pub trait vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspaceAdapter
@@ -1364,480 +1145,11 @@ pub vyre_runtime::replay::ReplayLogError::Io::source: std::io::error::Error
 pub vyre_runtime::replay::ReplayLogError::ZeroCapacity
 pub vyre_runtime::replay::ReplayRecord::failure: core::option::Option<vyre_runtime::replay::ReplayFailureEvidence>
 pub vyre_runtime::replay::ReplayRecord::slot: vyre_runtime::replay::RecordedSlot
-pub vyre_runtime::resident_work_queue::AutomataStateIndex::byte_index: u32
-pub vyre_runtime::resident_work_queue::AutomataStateIndex::state_id: u32
-pub vyre_runtime::resident_work_queue::AutomataWorklistEvidence::blocking_active_time_ns: u64
-pub vyre_runtime::resident_work_queue::AutomataWorklistEvidence::match_parity_required: bool
-pub vyre_runtime::resident_work_queue::AutomataWorklistEvidence::nonblocking_active_time_ns: u64
-pub vyre_runtime::resident_work_queue::AutomataWorklistEvidence::occupancy_proxy_bps: u16
-pub vyre_runtime::resident_work_queue::AutomataWorklistEvidence::reports_state_index_pairs: bool
-pub vyre_runtime::resident_work_queue::AutomataWorklistEvidence::schema_version: u32
-pub vyre_runtime::resident_work_queue::AutomataWorklistEvidence::selected_mode: vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistMode
-pub vyre_runtime::resident_work_queue::AutomataWorklistEvidence::state_visit_count: u64
-pub vyre_runtime::resident_work_queue::AutomataWorklistEvidence::worklist_depth: u32
-pub vyre_runtime::resident_work_queue::AutomataWorklistMode::Blocking
-pub vyre_runtime::resident_work_queue::AutomataWorklistMode::Empty
-pub vyre_runtime::resident_work_queue::AutomataWorklistMode::NonBlocking
-pub vyre_runtime::resident_work_queue::AutomataWorklistMode::SpillRequired
-pub vyre_runtime::resident_work_queue::AutomataWorklistPolicy::low_occupancy_threshold_bps: u16
-pub vyre_runtime::resident_work_queue::AutomataWorklistPolicy::nonblocking_depth_threshold: u32
-pub vyre_runtime::resident_work_queue::AutomataWorklistPolicy::spill_depth_threshold: u32
-pub vyre_runtime::resident_work_queue::AutomataWorklistPolicy::state_visit_budget_multiplier: u32
-pub vyre_runtime::resident_work_queue::AutomataWorklistRecommendation::match_parity_required: bool
-pub vyre_runtime::resident_work_queue::AutomataWorklistRecommendation::mode: vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistMode
-pub vyre_runtime::resident_work_queue::AutomataWorklistRecommendation::occupancy_proxy_bps: u16
-pub vyre_runtime::resident_work_queue::AutomataWorklistRecommendation::reports_state_index_pairs: bool
-pub vyre_runtime::resident_work_queue::AutomataWorklistRecommendation::state_visit_budget: u64
-pub vyre_runtime::resident_work_queue::AutomataWorklistRecommendation::state_visit_count: u64
-pub vyre_runtime::resident_work_queue::AutomataWorklistRecommendation::worklist_depth: u32
-pub vyre_runtime::resident_work_queue::AutomataWorklistRequest::blocking_active_time_ns: u64
-pub vyre_runtime::resident_work_queue::AutomataWorklistRequest::nonblocking_active_time_ns: u64
-pub vyre_runtime::resident_work_queue::AutomataWorklistRequest::occupancy_proxy_bps: u16
-pub vyre_runtime::resident_work_queue::AutomataWorklistRequest::state_visit_count: u64
-pub vyre_runtime::resident_work_queue::AutomataWorklistRequest::worklist_depth: u32
-pub vyre_runtime::resident_work_queue::BatchDescriptor::items: alloc::vec::Vec<vyre_runtime::resident_work_queue::descriptor::SlotDescriptor>
-pub vyre_runtime::resident_work_queue::BatchDescriptor::start_slot: u32
-pub vyre_runtime::resident_work_queue::BuiltinOpcode::AtomicAdd
-pub vyre_runtime::resident_work_queue::BuiltinOpcode::BatchFence
-pub vyre_runtime::resident_work_queue::BuiltinOpcode::CompareSwap
-pub vyre_runtime::resident_work_queue::BuiltinOpcode::DfaStep
-pub vyre_runtime::resident_work_queue::BuiltinOpcode::LoadU32
-pub vyre_runtime::resident_work_queue::BuiltinOpcode::Memcpy
-pub vyre_runtime::resident_work_queue::BuiltinOpcode::Nop
-pub vyre_runtime::resident_work_queue::BuiltinOpcode::Printf
-pub vyre_runtime::resident_work_queue::BuiltinOpcode::Shutdown
-pub vyre_runtime::resident_work_queue::BuiltinOpcode::StoreU32
-pub vyre_runtime::resident_work_queue::ControlSnapshot::done_count: u32
-pub vyre_runtime::resident_work_queue::ControlSnapshot::epoch: u32
-pub vyre_runtime::resident_work_queue::ControlSnapshot::metrics: alloc::vec::Vec<(u32, u32)>
-pub vyre_runtime::resident_work_queue::ControlSnapshot::priority_fairness: alloc::vec::Vec<u32>
-pub vyre_runtime::resident_work_queue::ControlSnapshot::shutdown: bool
-pub vyre_runtime::resident_work_queue::ControlSnapshot::tenant_fairness: alloc::vec::Vec<u32>
-pub vyre_runtime::resident_work_queue::DebugRecord::args: [u32; 3]
-pub vyre_runtime::resident_work_queue::DebugRecord::fmt_id: u32
-pub vyre_runtime::resident_work_queue::IoCompletion::byte_count: u32
-pub vyre_runtime::resident_work_queue::IoCompletion::mapped_slot: u32
-pub vyre_runtime::resident_work_queue::IoCompletion::slot_idx: u32
-pub vyre_runtime::resident_work_queue::IoCompletion::tag: u32
-pub vyre_runtime::resident_work_queue::IoRequest::byte_count: u32
-pub vyre_runtime::resident_work_queue::IoRequest::dst_handle: u32
-pub vyre_runtime::resident_work_queue::IoRequest::offset: u64
-pub vyre_runtime::resident_work_queue::IoRequest::op_type: u32
-pub vyre_runtime::resident_work_queue::IoRequest::slot_idx: u32
-pub vyre_runtime::resident_work_queue::IoRequest::src_handle: u32
-pub vyre_runtime::resident_work_queue::IoRequest::tag: u32
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::ClassCountOverflow
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::ClassCountOverflow::queue_class: &'static str
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::EmptyPlan
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::QueueClassMismatch
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::QueueClassMismatch::queue_class: &'static str
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::QueueClassMismatch::sequence: u64
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::QueueClassMismatch::unit_type: &'static str
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::UnitCountOverflow
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::UnitCountOverflow::unit_count: usize
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::WatchdogBudgetExceeded
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::WatchdogBudgetExceeded::drain_watchdog_budget_ticks: u64
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::WatchdogBudgetExceeded::total_watchdog_budget_ticks: u64
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::WatchdogBudgetOverflow
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::ZeroDrainWatchdogBudget
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::ZeroOutputSlabId
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::ZeroOutputSlabId::sequence: u64
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::ZeroResidentArtifactId
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::ZeroResidentArtifactId::sequence: u64
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::ZeroUnitWatchdogBudget
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolError::ZeroUnitWatchdogBudget::sequence: u64
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolEvidence::bounded_drain: bool
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolEvidence::control_units: u32
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolEvidence::deterministic_output_digest: u64
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolEvidence::drain_watchdog_budget_ticks: u64
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolEvidence::flow_units: u32
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolEvidence::graph_units: u32
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolEvidence::hidden_host_loop_count: u32
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolEvidence::max_watchdog_budget_ticks: u32
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolEvidence::parser_units: u32
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolEvidence::scan_units: u32
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolEvidence::schema_version: u32
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolEvidence::total_watchdog_budget_ticks: u64
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolEvidence::unit_count: u32
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolPlan::drain_watchdog_budget_ticks: u64
-pub vyre_runtime::resident_work_queue::MixedWorkProtocolPlan::units: &'a [vyre_runtime::resident_work_queue::mixed_work::MixedWorkUnit]
-pub vyre_runtime::resident_work_queue::MixedWorkQueueClass::Control
-pub vyre_runtime::resident_work_queue::MixedWorkQueueClass::Flow
-pub vyre_runtime::resident_work_queue::MixedWorkQueueClass::Graph
-pub vyre_runtime::resident_work_queue::MixedWorkQueueClass::Parser
-pub vyre_runtime::resident_work_queue::MixedWorkQueueClass::Scan
-pub vyre_runtime::resident_work_queue::MixedWorkUnit::output_slab_id: vyre_runtime::resident_work_queue::mixed_work::OutputSlabId
-pub vyre_runtime::resident_work_queue::MixedWorkUnit::payload_digest: u64
-pub vyre_runtime::resident_work_queue::MixedWorkUnit::queue_class: vyre_runtime::resident_work_queue::mixed_work::MixedWorkQueueClass
-pub vyre_runtime::resident_work_queue::MixedWorkUnit::resident_artifact_id: vyre_runtime::resident_work_queue::mixed_work::ResidentArtifactId
-pub vyre_runtime::resident_work_queue::MixedWorkUnit::sequence: u64
-pub vyre_runtime::resident_work_queue::MixedWorkUnit::unit_type: vyre_runtime::resident_work_queue::mixed_work::MixedWorkUnitType
-pub vyre_runtime::resident_work_queue::MixedWorkUnit::watchdog_budget_ticks: u32
-pub vyre_runtime::resident_work_queue::MixedWorkUnitType::DrainSentinel
-pub vyre_runtime::resident_work_queue::MixedWorkUnitType::FlowFixpointStep
-pub vyre_runtime::resident_work_queue::MixedWorkUnitType::FlowRelationDelta
-pub vyre_runtime::resident_work_queue::MixedWorkUnitType::GraphCompaction
-pub vyre_runtime::resident_work_queue::MixedWorkUnitType::GraphFrontier
-pub vyre_runtime::resident_work_queue::MixedWorkUnitType::ParserChangedRange
-pub vyre_runtime::resident_work_queue::MixedWorkUnitType::ParserShard
-pub vyre_runtime::resident_work_queue::MixedWorkUnitType::ScanChunk
-pub vyre_runtime::resident_work_queue::MixedWorkUnitType::ScanVerifier
-pub vyre_runtime::resident_work_queue::OpcodeHandler::body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub vyre_runtime::resident_work_queue::OpcodeHandler::opcode: u32
-pub vyre_runtime::resident_work_queue::PackedOpDescriptor::args: alloc::vec::Vec<u32>
-pub vyre_runtime::resident_work_queue::PackedOpDescriptor::opcode: u8
-pub vyre_runtime::resident_work_queue::PairedSpeculationSample::conservative_compile_ns: u64
-pub vyre_runtime::resident_work_queue::PairedSpeculationSample::conservative_dispatch_ns: u64
-pub vyre_runtime::resident_work_queue::PairedSpeculationSample::conservative_record: vyre_driver::autotune_store::AutotuneRecord
-pub vyre_runtime::resident_work_queue::PairedSpeculationSample::speculative_compile_ns: u64
-pub vyre_runtime::resident_work_queue::PairedSpeculationSample::speculative_dispatch_ns: u64
-pub vyre_runtime::resident_work_queue::PairedSpeculationSample::speculative_record: vyre_driver::autotune_store::AutotuneRecord
-pub vyre_runtime::resident_work_queue::PairedSpeculationUpdate::observation: vyre_driver::speculation_verdict::SpeculationObservation
-pub vyre_runtime::resident_work_queue::PairedSpeculationUpdate::race_decision: vyre_driver::speculate::SpeculativeVariantDecision
-pub vyre_runtime::resident_work_queue::PairedSpeculationUpdate::verdict: vyre_driver::speculation_verdict::SpeculationVerdict
-pub vyre_runtime::resident_work_queue::PriorityDrainReason::AgedPromotionCounterExhausted
-pub vyre_runtime::resident_work_queue::PriorityDrainReason::AgedPromotionCounterNearLimit
-pub vyre_runtime::resident_work_queue::PriorityDrainReason::None
-pub vyre_runtime::resident_work_queue::PriorityDrainReason::PendingTelemetry
-pub vyre_runtime::resident_work_queue::PriorityDrainReason::RequeueCounterExhausted
-pub vyre_runtime::resident_work_queue::PriorityDrainReason::RequeueCounterNearLimit
-pub vyre_runtime::resident_work_queue::PriorityDrainRecommendation::aged_promotion_counter_headroom: u64
-pub vyre_runtime::resident_work_queue::PriorityDrainRecommendation::aged_promotions: u64
-pub vyre_runtime::resident_work_queue::PriorityDrainRecommendation::fix: &'static str
-pub vyre_runtime::resident_work_queue::PriorityDrainRecommendation::max_priority_age: u32
-pub vyre_runtime::resident_work_queue::PriorityDrainRecommendation::reason: vyre_runtime::resident_work_queue::policy::PriorityDrainReason
-pub vyre_runtime::resident_work_queue::PriorityDrainRecommendation::requeue_count: u64
-pub vyre_runtime::resident_work_queue::PriorityDrainRecommendation::requeue_counter_headroom: u64
-pub vyre_runtime::resident_work_queue::PriorityDrainRecommendation::should_drain: bool
-pub vyre_runtime::resident_work_queue::PriorityRequeueAccounting::aged_promotions: u64
-pub vyre_runtime::resident_work_queue::PriorityRequeueAccounting::max_priority_age: u32
-pub vyre_runtime::resident_work_queue::PriorityRequeueAccounting::requeue_count: u64
-pub vyre_runtime::resident_work_queue::ProtocolError::ByteLengthOverflow
-pub vyre_runtime::resident_work_queue::ProtocolError::ByteLengthOverflow::buffer: &'static str
-pub vyre_runtime::resident_work_queue::ProtocolError::ByteLengthOverflow::fix: &'static str
-pub vyre_runtime::resident_work_queue::ProtocolError::MisalignedByteLength
-pub vyre_runtime::resident_work_queue::ProtocolError::MisalignedByteLength::buffer: &'static str
-pub vyre_runtime::resident_work_queue::ProtocolError::MisalignedByteLength::byte_len: usize
-pub vyre_runtime::resident_work_queue::ProtocolError::MisalignedByteLength::fix: &'static str
-pub vyre_runtime::resident_work_queue::ProtocolError::MissingWord
-pub vyre_runtime::resident_work_queue::ProtocolError::MissingWord::buffer: &'static str
-pub vyre_runtime::resident_work_queue::ProtocolError::MissingWord::byte_len: usize
-pub vyre_runtime::resident_work_queue::ProtocolError::MissingWord::fix: &'static str
-pub vyre_runtime::resident_work_queue::ProtocolError::MissingWord::word_idx: usize
-pub vyre_runtime::resident_work_queue::ResidentExecutionMode::Interpreter
-pub vyre_runtime::resident_work_queue::ResidentExecutionMode::Jit
-pub vyre_runtime::resident_work_queue::ResidentGraphBlasSwitchClass::Dense
-pub vyre_runtime::resident_work_queue::ResidentGraphBlasSwitchClass::Empty
-pub vyre_runtime::resident_work_queue::ResidentGraphBlasSwitchClass::Hybrid
-pub vyre_runtime::resident_work_queue::ResidentGraphBlasSwitchClass::MemoryConstrained
-pub vyre_runtime::resident_work_queue::ResidentGraphBlasSwitchClass::Sparse
-pub vyre_runtime::resident_work_queue::ResidentGridLimits::max_compute_invocations_per_workgroup: u32
-pub vyre_runtime::resident_work_queue::ResidentGridLimits::max_compute_workgroups_per_dimension: u32
-pub vyre_runtime::resident_work_queue::ResidentGridLimits::max_workgroup_size_x: u32
-pub vyre_runtime::resident_work_queue::ResidentGridPlan::geometry: vyre_runtime::resident_work_queue::ResidentLaunchGeometry
-pub vyre_runtime::resident_work_queue::ResidentGridPlan::worker_groups: u32
-pub vyre_runtime::resident_work_queue::ResidentGridRequest::queue_len: u32
-pub vyre_runtime::resident_work_queue::ResidentGridRequest::requested_worker_groups: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchCacheStats::entries: usize
-pub vyre_runtime::resident_work_queue::ResidentLaunchCacheStats::hits: u64
-pub vyre_runtime::resident_work_queue::ResidentLaunchCacheStats::misses: u64
-pub vyre_runtime::resident_work_queue::ResidentLaunchGeometry::dispatch_grid: [u32; 3]
-pub vyre_runtime::resident_work_queue::ResidentLaunchGeometry::slot_count: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchGeometry::workgroup_size_x: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchPolicy::dense_frontier_threshold_bps: u16
-pub vyre_runtime::resident_work_queue::ResidentLaunchPolicy::fusion_edge_threshold: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchPolicy::hit_capacity_multiplier: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchPolicy::hot_opcode_threshold: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchPolicy::hot_window_threshold: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchPolicy::jit_queue_len_threshold: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchPolicy::memory_pressure_threshold_bps: u16
-pub vyre_runtime::resident_work_queue::ResidentLaunchPolicy::min_hit_capacity: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchPolicy::priority_age_threshold: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchPolicy::saturated_waves: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchPolicy::scratch_bytes_per_hit: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchPolicy::sizing: vyre_runtime::resident_work_queue::ResidentSizingPolicy
-pub vyre_runtime::resident_work_queue::ResidentLaunchPolicy::sparse_frontier_threshold_bps: u16
-pub vyre_runtime::resident_work_queue::ResidentLaunchRecommendation::age_priority_work: bool
-pub vyre_runtime::resident_work_queue::ResidentLaunchRecommendation::device_memory_budget_bytes: u64
-pub vyre_runtime::resident_work_queue::ResidentLaunchRecommendation::estimated_peak_device_bytes: u64
-pub vyre_runtime::resident_work_queue::ResidentLaunchRecommendation::execution_mode: vyre_runtime::resident_work_queue::policy::ResidentExecutionMode
-pub vyre_runtime::resident_work_queue::ResidentLaunchRecommendation::geometry: vyre_runtime::resident_work_queue::ResidentLaunchGeometry
-pub vyre_runtime::resident_work_queue::ResidentLaunchRecommendation::hit_capacity: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchRecommendation::pressure: vyre_runtime::resident_work_queue::policy::ResidentQueuePressure
-pub vyre_runtime::resident_work_queue::ResidentLaunchRecommendation::promote_hot_opcodes: bool
-pub vyre_runtime::resident_work_queue::ResidentLaunchRecommendation::promote_hot_windows: bool
-pub vyre_runtime::resident_work_queue::ResidentLaunchRecommendation::topology: vyre_runtime::resident_work_queue::policy::ResidentQueueTopology
-pub vyre_runtime::resident_work_queue::ResidentLaunchRecommendation::worker_groups: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::device_memory_budget_bytes: u64
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::expected_hits_per_item: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::frontier_density_bps: u16
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::graph_edge_count: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::graph_node_count: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::hot_opcode_count: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::hot_window_count: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::max_compute_invocations_per_workgroup: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::max_compute_workgroups_per_dimension: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::max_priority_age: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::max_workgroup_size_x: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::memory_pressure_bps: u16
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::queue_len: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::requested_hit_capacity: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::requested_worker_groups: u32
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::requeue_count: u64
-pub vyre_runtime::resident_work_queue::ResidentLaunchRequest::resident_device_bytes: u64
-pub vyre_runtime::resident_work_queue::ResidentPromotionEvidence::execution_mode: vyre_runtime::resident_work_queue::policy::ResidentExecutionMode
-pub vyre_runtime::resident_work_queue::ResidentPromotionEvidence::fused_descriptor_window_required: bool
-pub vyre_runtime::resident_work_queue::ResidentPromotionEvidence::hot_opcode_count: u32
-pub vyre_runtime::resident_work_queue::ResidentPromotionEvidence::hot_opcode_threshold: u32
-pub vyre_runtime::resident_work_queue::ResidentPromotionEvidence::hot_window_count: u32
-pub vyre_runtime::resident_work_queue::ResidentPromotionEvidence::hot_window_threshold: u32
-pub vyre_runtime::resident_work_queue::ResidentPromotionEvidence::jit_queue_len_threshold: u32
-pub vyre_runtime::resident_work_queue::ResidentPromotionEvidence::output_parity_required: bool
-pub vyre_runtime::resident_work_queue::ResidentPromotionEvidence::promote_hot_opcodes: bool
-pub vyre_runtime::resident_work_queue::ResidentPromotionEvidence::promote_hot_windows: bool
-pub vyre_runtime::resident_work_queue::ResidentPromotionEvidence::promotion_route: vyre_runtime::resident_work_queue::policy::ResidentPromotionRoute
-pub vyre_runtime::resident_work_queue::ResidentPromotionEvidence::queue_len: u32
-pub vyre_runtime::resident_work_queue::ResidentPromotionEvidence::schema_version: u32
-pub vyre_runtime::resident_work_queue::ResidentPromotionRoute::Interpreter
-pub vyre_runtime::resident_work_queue::ResidentPromotionRoute::OpcodeAndWindowJit
-pub vyre_runtime::resident_work_queue::ResidentPromotionRoute::OpcodeJit
-pub vyre_runtime::resident_work_queue::ResidentPromotionRoute::QueueJit
-pub vyre_runtime::resident_work_queue::ResidentPromotionRoute::WindowJit
-pub vyre_runtime::resident_work_queue::ResidentQueueCapabilities::max_worker_count: u32
-pub vyre_runtime::resident_work_queue::ResidentQueueCapabilities::supported: bool
-pub vyre_runtime::resident_work_queue::ResidentQueueConfig::expected_items_per_worker: u32
-pub vyre_runtime::resident_work_queue::ResidentQueueConfig::max_wall_time: core::time::Duration
-pub vyre_runtime::resident_work_queue::ResidentQueueConfig::worker_count: u32
-pub vyre_runtime::resident_work_queue::ResidentQueueConfig::workload: vyre_runtime::resident_work_queue::ResidentWorkloadHints
-pub vyre_runtime::resident_work_queue::ResidentQueuePressure::Balanced
-pub vyre_runtime::resident_work_queue::ResidentQueuePressure::Empty
-pub vyre_runtime::resident_work_queue::ResidentQueuePressure::Light
-pub vyre_runtime::resident_work_queue::ResidentQueuePressure::Saturated
-pub vyre_runtime::resident_work_queue::ResidentQueueReadback::control_bytes: alloc::vec::Vec<u8>
-pub vyre_runtime::resident_work_queue::ResidentQueueReadback::debug_log_bytes: alloc::vec::Vec<u8>
-pub vyre_runtime::resident_work_queue::ResidentQueueReadback::io_queue_bytes: alloc::vec::Vec<u8>
-pub vyre_runtime::resident_work_queue::ResidentQueueReadback::ring_bytes: alloc::vec::Vec<u8>
-pub vyre_runtime::resident_work_queue::ResidentQueueReport::backend_dispatch_ns: u64
-pub vyre_runtime::resident_work_queue::ResidentQueueReport::deduped_items: u64
-pub vyre_runtime::resident_work_queue::ResidentQueueReport::items_processed: u64
-pub vyre_runtime::resident_work_queue::ResidentQueueReport::items_remaining: u64
-pub vyre_runtime::resident_work_queue::ResidentQueueReport::lineage_items: u64
-pub vyre_runtime::resident_work_queue::ResidentQueueReport::lineage_ns: u64
-pub vyre_runtime::resident_work_queue::ResidentQueueReport::published_items: u64
-pub vyre_runtime::resident_work_queue::ResidentQueueReport::queue_plan_ns: u64
-pub vyre_runtime::resident_work_queue::ResidentQueueReport::queue_publish_ns: u64
-pub vyre_runtime::resident_work_queue::ResidentQueueReport::region_lineage: alloc::vec::Vec<u32>
-pub vyre_runtime::resident_work_queue::ResidentQueueReport::telemetry: vyre_runtime::resident_work_queue::ResidentQueueTelemetry
-pub vyre_runtime::resident_work_queue::ResidentQueueReport::wall_time: core::time::Duration
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::bytes_moved: u64
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::bytes_read_back: u64
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::bytes_uploaded: u64
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::compiled_pipeline_cache_hit: bool
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::device_memory_budget_bytes: u64
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::estimated_peak_device_bytes: u64
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::execution_mode: vyre_runtime::resident_work_queue::policy::ResidentExecutionMode
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::frontier_density_bps: u16
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::hit_capacity: u32
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::kernel_launches: u32
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::occupancy_proxy_bps: u16
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::pressure: vyre_runtime::resident_work_queue::policy::ResidentQueuePressure
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::readback_buffers: u32
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::resident_allocations: u32
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::resident_input_cache_hit: bool
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::sync_points: u32
-pub vyre_runtime::resident_work_queue::ResidentQueueTelemetry::topology: vyre_runtime::resident_work_queue::policy::ResidentQueueTopology
-pub vyre_runtime::resident_work_queue::ResidentQueueTopology::DenseFrontier
-pub vyre_runtime::resident_work_queue::ResidentQueueTopology::Empty
-pub vyre_runtime::resident_work_queue::ResidentQueueTopology::FusedDense
-pub vyre_runtime::resident_work_queue::ResidentQueueTopology::HybridFrontier
-pub vyre_runtime::resident_work_queue::ResidentQueueTopology::MemoryConstrained
-pub vyre_runtime::resident_work_queue::ResidentQueueTopology::SparseFrontier
-pub vyre_runtime::resident_work_queue::ResidentReadbackCounters::control_bytes: usize
-pub vyre_runtime::resident_work_queue::ResidentReadbackCounters::debug_log_bytes: usize
-pub vyre_runtime::resident_work_queue::ResidentReadbackCounters::io_queue_bytes: usize
-pub vyre_runtime::resident_work_queue::ResidentReadbackCounters::ring_bytes: usize
-pub vyre_runtime::resident_work_queue::ResidentReadbackCounters::total_bytes: usize
-pub vyre_runtime::resident_work_queue::ResidentRuntimeCounters::drained_slots: u32
-pub vyre_runtime::resident_work_queue::ResidentRuntimeCounters::fault_slots: u32
-pub vyre_runtime::resident_work_queue::ResidentRuntimeCounters::frontier_density_bps: u16
-pub vyre_runtime::resident_work_queue::ResidentRuntimeCounters::gpu_idle_ppm: u32
-pub vyre_runtime::resident_work_queue::ResidentRuntimeCounters::gpu_idle_slots: u32
-pub vyre_runtime::resident_work_queue::ResidentRuntimeCounters::occupancy_proxy_bps: u16
-pub vyre_runtime::resident_work_queue::ResidentRuntimeCounters::priority_fairness_total: u64
-pub vyre_runtime::resident_work_queue::ResidentRuntimeCounters::queue_depth: u32
-pub vyre_runtime::resident_work_queue::ResidentRuntimeCounters::requeue_slots: u32
-pub vyre_runtime::resident_work_queue::ResidentRuntimeCounters::tenant_fairness_skew: u32
-pub vyre_runtime::resident_work_queue::ResidentRuntimeCounters::tenant_fairness_total: u64
-pub vyre_runtime::resident_work_queue::ResidentRuntimeCounters::total_slots: u32
-pub vyre_runtime::resident_work_queue::ResidentRuntimeCounters::unreclaimed_done_slots: u32
-pub vyre_runtime::resident_work_queue::ResidentRuntimeEvidence::control_decode_ns: u64
-pub vyre_runtime::resident_work_queue::ResidentRuntimeEvidence::coverage: vyre_runtime::resident_work_queue::RuntimeEvidenceMetricCoverage
-pub vyre_runtime::resident_work_queue::ResidentRuntimeEvidence::host_copy_avoided_bytes: u64
-pub vyre_runtime::resident_work_queue::ResidentRuntimeEvidence::host_copy_bytes: u64
-pub vyre_runtime::resident_work_queue::ResidentRuntimeEvidence::resident_device_bytes: u64
-pub vyre_runtime::resident_work_queue::ResidentRuntimeEvidence::ring_decode_ns: u64
-pub vyre_runtime::resident_work_queue::ResidentRuntimeEvidence::ring_occupancy: vyre_runtime::resident_work_queue::RingOccupancy
-pub vyre_runtime::resident_work_queue::ResidentRuntimeEvidence::schema_version: u32
-pub vyre_runtime::resident_work_queue::ResidentTopologyEvidence::estimated_peak_device_bytes: u64
-pub vyre_runtime::resident_work_queue::ResidentTopologyEvidence::frontier_density_bps: u16
-pub vyre_runtime::resident_work_queue::ResidentTopologyEvidence::graphblas_switch_class: vyre_runtime::resident_work_queue::policy::ResidentGraphBlasSwitchClass
-pub vyre_runtime::resident_work_queue::ResidentTopologyEvidence::output_parity_required: bool
-pub vyre_runtime::resident_work_queue::ResidentTopologyEvidence::queue_pressure: vyre_runtime::resident_work_queue::policy::ResidentQueuePressure
-pub vyre_runtime::resident_work_queue::ResidentTopologyEvidence::resident_device_bytes: u64
-pub vyre_runtime::resident_work_queue::ResidentTopologyEvidence::schema_version: u32
-pub vyre_runtime::resident_work_queue::ResidentTopologyEvidence::selected_topology: vyre_runtime::resident_work_queue::policy::ResidentQueueTopology
-pub vyre_runtime::resident_work_queue::ResidentTopologyEvidence::semiring_frontier_density_bps: u16
-pub vyre_runtime::resident_work_queue::ResidentWorkItem::input_handle: u32
-pub vyre_runtime::resident_work_queue::ResidentWorkItem::op_handle: u32
-pub vyre_runtime::resident_work_queue::ResidentWorkItem::output_handle: u32
-pub vyre_runtime::resident_work_queue::ResidentWorkItem::param: u32
-pub vyre_runtime::resident_work_queue::ResidentWorkloadHints::device_memory_budget_bytes: u64
-pub vyre_runtime::resident_work_queue::ResidentWorkloadHints::frontier_density_bps: u16
-pub vyre_runtime::resident_work_queue::ResidentWorkloadHints::graph_edge_count: u32
-pub vyre_runtime::resident_work_queue::ResidentWorkloadHints::graph_node_count: u32
-pub vyre_runtime::resident_work_queue::ResidentWorkloadHints::hot_opcode_count: u32
-pub vyre_runtime::resident_work_queue::ResidentWorkloadHints::hot_window_count: u32
-pub vyre_runtime::resident_work_queue::ResidentWorkloadHints::memory_pressure_bps: u16
-pub vyre_runtime::resident_work_queue::ResidentWorkloadHints::resident_device_bytes: u64
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceLayoutError::OffsetOverflow
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceLayoutError::OffsetOverflow::region: R
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceLayoutError::RecordWordsOverflow
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceLayoutError::RecordWordsOverflow::region: R
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceRegion::capacity_records: u32
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceRegion::id: R
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceRegion::offset_words: u32
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceRegion::record_words: u32
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceRegion::words: u32
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceRegionSpec::Fixed
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceRegionSpec::Fixed::capacity_records: u32
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceRegionSpec::Fixed::id: R
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceRegionSpec::Fixed::record_words: u32
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceRegionSpec::Fixed::words: u32
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceRegionSpec::Record
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceRegionSpec::Record::capacity_records: u32
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceRegionSpec::Record::id: R
-pub vyre_runtime::resident_work_queue::ResidentWorkspaceRegionSpec::Record::record_words: u32
-pub vyre_runtime::resident_work_queue::RingOccupancy::claimed: u32
-pub vyre_runtime::resident_work_queue::RingOccupancy::done: u32
-pub vyre_runtime::resident_work_queue::RingOccupancy::empty: u32
-pub vyre_runtime::resident_work_queue::RingOccupancy::fault: u32
-pub vyre_runtime::resident_work_queue::RingOccupancy::published: u32
-pub vyre_runtime::resident_work_queue::RingOccupancy::requeue: u32
-pub vyre_runtime::resident_work_queue::RingOccupancy::unknown: u32
-pub vyre_runtime::resident_work_queue::RingOccupancy::wait_io: u32
-pub vyre_runtime::resident_work_queue::RingOccupancy::yield_count: u32
-pub vyre_runtime::resident_work_queue::RingSlotSnapshot::args_prefix: [u32; 3]
-pub vyre_runtime::resident_work_queue::RingSlotSnapshot::opcode: u32
-pub vyre_runtime::resident_work_queue::RingSlotSnapshot::slot_idx: u32
-pub vyre_runtime::resident_work_queue::RingSlotSnapshot::status: vyre_runtime::resident_work_queue::RingStatus
-pub vyre_runtime::resident_work_queue::RingSlotSnapshot::tenant_id: u32
 pub vyre_runtime::resident_work_queue::RingSlotTransition::Cancel
 pub vyre_runtime::resident_work_queue::RingSlotTransition::Claim
 pub vyre_runtime::resident_work_queue::RingSlotTransition::Done
 pub vyre_runtime::resident_work_queue::RingSlotTransition::Fault
 pub vyre_runtime::resident_work_queue::RingSlotTransition::Publish
-pub vyre_runtime::resident_work_queue::RingStatus::Claimed
-pub vyre_runtime::resident_work_queue::RingStatus::Done
-pub vyre_runtime::resident_work_queue::RingStatus::Empty
-pub vyre_runtime::resident_work_queue::RingStatus::Fault
-pub vyre_runtime::resident_work_queue::RingStatus::Published
-pub vyre_runtime::resident_work_queue::RingStatus::Requeue
-pub vyre_runtime::resident_work_queue::RingStatus::Unknown(u32)
-pub vyre_runtime::resident_work_queue::RingStatus::WaitIo
-pub vyre_runtime::resident_work_queue::RingStatus::Yield
-pub vyre_runtime::resident_work_queue::RingTelemetry::control: vyre_runtime::resident_work_queue::ControlSnapshot
-pub vyre_runtime::resident_work_queue::RingTelemetry::occupancy: vyre_runtime::resident_work_queue::RingOccupancy
-pub vyre_runtime::resident_work_queue::RingTelemetry::slots: alloc::vec::Vec<vyre_runtime::resident_work_queue::RingSlotSnapshot>
-pub vyre_runtime::resident_work_queue::RingTelemetry::windows: alloc::vec::Vec<vyre_runtime::resident_work_queue::WindowTelemetry>
-pub vyre_runtime::resident_work_queue::RuntimeEvidenceMetricCoverage::control: bool
-pub vyre_runtime::resident_work_queue::RuntimeEvidenceMetricCoverage::copy: bool
-pub vyre_runtime::resident_work_queue::RuntimeEvidenceMetricCoverage::residency: bool
-pub vyre_runtime::resident_work_queue::RuntimeEvidenceMetricCoverage::ring: bool
-pub vyre_runtime::resident_work_queue::RuntimeEvidenceMetricFamily::Control
-pub vyre_runtime::resident_work_queue::RuntimeEvidenceMetricFamily::Copy
-pub vyre_runtime::resident_work_queue::RuntimeEvidenceMetricFamily::Residency
-pub vyre_runtime::resident_work_queue::RuntimeEvidenceMetricFamily::Ring
-pub vyre_runtime::resident_work_queue::SketchTelemetry::active_opcode: vyre_runtime::resident_work_queue::CountMinSketch
-pub vyre_runtime::resident_work_queue::SketchTelemetry::active_slots: u64
-pub vyre_runtime::resident_work_queue::SketchTelemetry::dispatch_metrics: vyre_runtime::resident_work_queue::CountMinSketch
-pub vyre_runtime::resident_work_queue::SketchTelemetry::ring_opcode: vyre_runtime::resident_work_queue::CountMinSketch
-pub vyre_runtime::resident_work_queue::SketchTelemetry::status: vyre_runtime::resident_work_queue::CountMinSketch
-pub vyre_runtime::resident_work_queue::SketchTelemetry::tenant: vyre_runtime::resident_work_queue::CountMinSketch
-pub vyre_runtime::resident_work_queue::SketchTelemetry::total_slots: u64
-pub vyre_runtime::resident_work_queue::SlotDescriptor::Packed
-pub vyre_runtime::resident_work_queue::SlotDescriptor::Packed::ops: alloc::vec::Vec<vyre_runtime::resident_work_queue::descriptor::PackedOpDescriptor>
-pub vyre_runtime::resident_work_queue::SlotDescriptor::Packed::tenant_id: u32
-pub vyre_runtime::resident_work_queue::SlotDescriptor::Single
-pub vyre_runtime::resident_work_queue::SlotDescriptor::Single::args: alloc::vec::Vec<u32>
-pub vyre_runtime::resident_work_queue::SlotDescriptor::Single::opcode: vyre_runtime::resident_work_queue::descriptor::SlotOpcode
-pub vyre_runtime::resident_work_queue::SlotDescriptor::Single::tenant_id: u32
-pub vyre_runtime::resident_work_queue::SlotOpcode::Builtin(vyre_runtime::resident_work_queue::descriptor::BuiltinOpcode)
-pub vyre_runtime::resident_work_queue::SlotOpcode::Custom(u32)
-pub vyre_runtime::resident_work_queue::TaskPriority::Critical = 0
-pub vyre_runtime::resident_work_queue::TaskPriority::High = 1
-pub vyre_runtime::resident_work_queue::TaskPriority::Idle = 4
-pub vyre_runtime::resident_work_queue::TaskPriority::Low = 3
-pub vyre_runtime::resident_work_queue::TaskPriority::Normal = 2
-pub vyre_runtime::resident_work_queue::TaskQueueSnapshot::faulted_count: u32
-pub vyre_runtime::resident_work_queue::TaskQueueSnapshot::max_priority_age: u32
-pub vyre_runtime::resident_work_queue::TaskQueueSnapshot::paused_count: u32
-pub vyre_runtime::resident_work_queue::TaskQueueSnapshot::ready_count: u32
-pub vyre_runtime::resident_work_queue::TaskQueueSnapshot::requeued_count: u32
-pub vyre_runtime::resident_work_queue::TaskQueueSnapshot::running_count: u32
-pub vyre_runtime::resident_work_queue::TaskQueueSnapshot::total_requeues: u64
-pub vyre_runtime::resident_work_queue::TaskQueueSnapshot::yielded_count: u32
-pub vyre_runtime::resident_work_queue::TaskState::Done = 3
-pub vyre_runtime::resident_work_queue::TaskState::Empty = 0
-pub vyre_runtime::resident_work_queue::TaskState::Faulted = 7
-pub vyre_runtime::resident_work_queue::TaskState::Paused = 4
-pub vyre_runtime::resident_work_queue::TaskState::Ready = 1
-pub vyre_runtime::resident_work_queue::TaskState::Requeued = 6
-pub vyre_runtime::resident_work_queue::TaskState::Running = 2
-pub vyre_runtime::resident_work_queue::TaskState::Yielded = 5
-pub vyre_runtime::resident_work_queue::TaskWorkItem::age_ticks: u32
-pub vyre_runtime::resident_work_queue::TaskWorkItem::continuation_data: u32
-pub vyre_runtime::resident_work_queue::TaskWorkItem::continuation_pc: u32
-pub vyre_runtime::resident_work_queue::TaskWorkItem::flags: u32
-pub vyre_runtime::resident_work_queue::TaskWorkItem::input_handle: u32
-pub vyre_runtime::resident_work_queue::TaskWorkItem::op_handle: u32
-pub vyre_runtime::resident_work_queue::TaskWorkItem::output_handle: u32
-pub vyre_runtime::resident_work_queue::TaskWorkItem::param: u32
-pub vyre_runtime::resident_work_queue::TaskWorkItem::parent_task_id: u32
-pub vyre_runtime::resident_work_queue::TaskWorkItem::priority: u32
-pub vyre_runtime::resident_work_queue::TaskWorkItem::requeue_count: u32
-pub vyre_runtime::resident_work_queue::TaskWorkItem::resume_epoch: u32
-pub vyre_runtime::resident_work_queue::TaskWorkItem::state: u32
-pub vyre_runtime::resident_work_queue::TaskWorkItem::task_id: u32
-pub vyre_runtime::resident_work_queue::TaskWorkItem::tenant_id: u32
-pub vyre_runtime::resident_work_queue::TaskWorkItem::yield_count: u32
-pub vyre_runtime::resident_work_queue::TelemetryDecodeCapacityEvidence::decoded_slot_count: usize
-pub vyre_runtime::resident_work_queue::TelemetryDecodeCapacityEvidence::decoded_window_count: usize
-pub vyre_runtime::resident_work_queue::TelemetryDecodeCapacityEvidence::schema_version: u32
-pub vyre_runtime::resident_work_queue::TelemetryDecodeCapacityEvidence::slot_output_capacity: usize
-pub vyre_runtime::resident_work_queue::TelemetryDecodeCapacityEvidence::uses_caller_owned_scratch: bool
-pub vyre_runtime::resident_work_queue::TelemetryDecodeCapacityEvidence::window_accumulator_scratch_capacity: usize
-pub vyre_runtime::resident_work_queue::TelemetryDecodeCapacityEvidence::window_opcode_scratch_capacity: usize
-pub vyre_runtime::resident_work_queue::TelemetryDecodeCapacityEvidence::window_output_capacity: usize
-pub vyre_runtime::resident_work_queue::WindowClass::Lookahead
-pub vyre_runtime::resident_work_queue::WindowClass::Required
-pub vyre_runtime::resident_work_queue::WindowDescriptor::lookahead: alloc::vec::Vec<alloc::vec::Vec<u32>>
-pub vyre_runtime::resident_work_queue::WindowDescriptor::opcode: vyre_runtime::resident_work_queue::descriptor::SlotOpcode
-pub vyre_runtime::resident_work_queue::WindowDescriptor::required: alloc::vec::Vec<alloc::vec::Vec<u32>>
-pub vyre_runtime::resident_work_queue::WindowDescriptor::start_slot: u32
-pub vyre_runtime::resident_work_queue::WindowDescriptor::tenant_id: u32
-pub vyre_runtime::resident_work_queue::WindowDescriptor::ticket: u32
-pub vyre_runtime::resident_work_queue::WindowTelemetry::claimed: u32
-pub vyre_runtime::resident_work_queue::WindowTelemetry::done: u32
-pub vyre_runtime::resident_work_queue::WindowTelemetry::fault: u32
-pub vyre_runtime::resident_work_queue::WindowTelemetry::lookahead_slots: u32
-pub vyre_runtime::resident_work_queue::WindowTelemetry::opcode: u32
-pub vyre_runtime::resident_work_queue::WindowTelemetry::published: u32
-pub vyre_runtime::resident_work_queue::WindowTelemetry::requeue: u32
-pub vyre_runtime::resident_work_queue::WindowTelemetry::required_slots: u32
-pub vyre_runtime::resident_work_queue::WindowTelemetry::tenant_id: u32
-pub vyre_runtime::resident_work_queue::WindowTelemetry::ticket: u32
-pub vyre_runtime::resident_work_queue::WindowTelemetry::wait_io: u32
-pub vyre_runtime::resident_work_queue::WindowTelemetry::yield_count: u32
 pub vyre_runtime::resident_work_queue::automata_worklist::AutomataStateIndex::byte_index: u32
 pub vyre_runtime::resident_work_queue::automata_worklist::AutomataStateIndex::state_id: u32
 pub vyre_runtime::resident_work_queue::automata_worklist::AutomataWorklistEvidence::blocking_active_time_ns: u64
@@ -1973,7 +1285,7 @@ pub vyre_runtime::resident_work_queue::planner::BarrierElisionReport::removed: u
 pub vyre_runtime::resident_work_queue::planner::ResidentGridLimits::max_compute_invocations_per_workgroup: u32
 pub vyre_runtime::resident_work_queue::planner::ResidentGridLimits::max_compute_workgroups_per_dimension: u32
 pub vyre_runtime::resident_work_queue::planner::ResidentGridLimits::max_workgroup_size_x: u32
-pub vyre_runtime::resident_work_queue::planner::ResidentGridPlan::geometry: vyre_runtime::resident_work_queue::ResidentLaunchGeometry
+pub vyre_runtime::resident_work_queue::planner::ResidentGridPlan::geometry: vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry
 pub vyre_runtime::resident_work_queue::planner::ResidentGridPlan::worker_groups: u32
 pub vyre_runtime::resident_work_queue::planner::ResidentGridRequest::queue_len: u32
 pub vyre_runtime::resident_work_queue::planner::ResidentGridRequest::requested_worker_groups: u32
@@ -1985,7 +1297,7 @@ pub vyre_runtime::resident_work_queue::planner::ResidentQueueCapabilities::suppo
 pub vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::expected_items_per_worker: u32
 pub vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::max_wall_time: core::time::Duration
 pub vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::worker_count: u32
-pub vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::workload: vyre_runtime::resident_work_queue::ResidentWorkloadHints
+pub vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::workload: vyre_runtime::resident_work_queue::planner::ResidentWorkloadHints
 pub vyre_runtime::resident_work_queue::planner::ResidentQueueReport::backend_dispatch_ns: u64
 pub vyre_runtime::resident_work_queue::planner::ResidentQueueReport::deduped_items: u64
 pub vyre_runtime::resident_work_queue::planner::ResidentQueueReport::items_processed: u64
@@ -1996,7 +1308,7 @@ pub vyre_runtime::resident_work_queue::planner::ResidentQueueReport::published_i
 pub vyre_runtime::resident_work_queue::planner::ResidentQueueReport::queue_plan_ns: u64
 pub vyre_runtime::resident_work_queue::planner::ResidentQueueReport::queue_publish_ns: u64
 pub vyre_runtime::resident_work_queue::planner::ResidentQueueReport::region_lineage: alloc::vec::Vec<u32>
-pub vyre_runtime::resident_work_queue::planner::ResidentQueueReport::telemetry: vyre_runtime::resident_work_queue::ResidentQueueTelemetry
+pub vyre_runtime::resident_work_queue::planner::ResidentQueueReport::telemetry: vyre_runtime::resident_work_queue::planner::ResidentQueueTelemetry
 pub vyre_runtime::resident_work_queue::planner::ResidentQueueReport::wall_time: core::time::Duration
 pub vyre_runtime::resident_work_queue::planner::ResidentQueueTelemetry::bytes_moved: u64
 pub vyre_runtime::resident_work_queue::planner::ResidentQueueTelemetry::bytes_read_back: u64
@@ -2065,13 +1377,13 @@ pub vyre_runtime::resident_work_queue::policy::ResidentLaunchPolicy::min_hit_cap
 pub vyre_runtime::resident_work_queue::policy::ResidentLaunchPolicy::priority_age_threshold: u32
 pub vyre_runtime::resident_work_queue::policy::ResidentLaunchPolicy::saturated_waves: u32
 pub vyre_runtime::resident_work_queue::policy::ResidentLaunchPolicy::scratch_bytes_per_hit: u32
-pub vyre_runtime::resident_work_queue::policy::ResidentLaunchPolicy::sizing: vyre_runtime::resident_work_queue::ResidentSizingPolicy
+pub vyre_runtime::resident_work_queue::policy::ResidentLaunchPolicy::sizing: vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy
 pub vyre_runtime::resident_work_queue::policy::ResidentLaunchPolicy::sparse_frontier_threshold_bps: u16
 pub vyre_runtime::resident_work_queue::policy::ResidentLaunchRecommendation::age_priority_work: bool
 pub vyre_runtime::resident_work_queue::policy::ResidentLaunchRecommendation::device_memory_budget_bytes: u64
 pub vyre_runtime::resident_work_queue::policy::ResidentLaunchRecommendation::estimated_peak_device_bytes: u64
 pub vyre_runtime::resident_work_queue::policy::ResidentLaunchRecommendation::execution_mode: vyre_runtime::resident_work_queue::policy::ResidentExecutionMode
-pub vyre_runtime::resident_work_queue::policy::ResidentLaunchRecommendation::geometry: vyre_runtime::resident_work_queue::ResidentLaunchGeometry
+pub vyre_runtime::resident_work_queue::policy::ResidentLaunchRecommendation::geometry: vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry
 pub vyre_runtime::resident_work_queue::policy::ResidentLaunchRecommendation::hit_capacity: u32
 pub vyre_runtime::resident_work_queue::policy::ResidentLaunchRecommendation::pressure: vyre_runtime::resident_work_queue::policy::ResidentQueuePressure
 pub vyre_runtime::resident_work_queue::policy::ResidentLaunchRecommendation::promote_hot_opcodes: bool
@@ -2163,7 +1475,7 @@ pub vyre_runtime::resident_work_queue::scaling::ResidentExecutionMode::Jit
 pub vyre_runtime::resident_work_queue::scaling::ResidentGridLimits::max_compute_invocations_per_workgroup: u32
 pub vyre_runtime::resident_work_queue::scaling::ResidentGridLimits::max_compute_workgroups_per_dimension: u32
 pub vyre_runtime::resident_work_queue::scaling::ResidentGridLimits::max_workgroup_size_x: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentGridPlan::geometry: vyre_runtime::resident_work_queue::ResidentLaunchGeometry
+pub vyre_runtime::resident_work_queue::scaling::ResidentGridPlan::geometry: vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry
 pub vyre_runtime::resident_work_queue::scaling::ResidentGridPlan::worker_groups: u32
 pub vyre_runtime::resident_work_queue::scaling::ResidentGridRequest::queue_len: u32
 pub vyre_runtime::resident_work_queue::scaling::ResidentGridRequest::requested_worker_groups: u32
@@ -2181,13 +1493,13 @@ pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::min_hit_ca
 pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::priority_age_threshold: u32
 pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::saturated_waves: u32
 pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::scratch_bytes_per_hit: u32
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::sizing: vyre_runtime::resident_work_queue::ResidentSizingPolicy
+pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::sizing: vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy
 pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchPolicy::sparse_frontier_threshold_bps: u16
 pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::age_priority_work: bool
 pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::device_memory_budget_bytes: u64
 pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::estimated_peak_device_bytes: u64
 pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::execution_mode: vyre_runtime::resident_work_queue::policy::ResidentExecutionMode
-pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::geometry: vyre_runtime::resident_work_queue::ResidentLaunchGeometry
+pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::geometry: vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry
 pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::hit_capacity: u32
 pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::pressure: vyre_runtime::resident_work_queue::policy::ResidentQueuePressure
 pub vyre_runtime::resident_work_queue::scaling::ResidentLaunchRecommendation::promote_hot_opcodes: bool
@@ -2281,12 +1593,12 @@ pub vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeCounters::tenan
 pub vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeCounters::total_slots: u32
 pub vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeCounters::unreclaimed_done_slots: u32
 pub vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::control_decode_ns: u64
-pub vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::coverage: vyre_runtime::resident_work_queue::RuntimeEvidenceMetricCoverage
+pub vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::coverage: vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricCoverage
 pub vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::host_copy_avoided_bytes: u64
 pub vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::host_copy_bytes: u64
 pub vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::resident_device_bytes: u64
 pub vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::ring_decode_ns: u64
-pub vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::ring_occupancy: vyre_runtime::resident_work_queue::RingOccupancy
+pub vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::ring_occupancy: vyre_runtime::resident_work_queue::telemetry::RingOccupancy
 pub vyre_runtime::resident_work_queue::telemetry::ResidentRuntimeEvidence::schema_version: u32
 pub vyre_runtime::resident_work_queue::telemetry::ResidentWatchdogSnapshot::done_delta: u32
 pub vyre_runtime::resident_work_queue::telemetry::ResidentWatchdogSnapshot::fault_slots: u32
@@ -2306,7 +1618,7 @@ pub vyre_runtime::resident_work_queue::telemetry::RingOccupancy::yield_count: u3
 pub vyre_runtime::resident_work_queue::telemetry::RingSlotSnapshot::args_prefix: [u32; 3]
 pub vyre_runtime::resident_work_queue::telemetry::RingSlotSnapshot::opcode: u32
 pub vyre_runtime::resident_work_queue::telemetry::RingSlotSnapshot::slot_idx: u32
-pub vyre_runtime::resident_work_queue::telemetry::RingSlotSnapshot::status: vyre_runtime::resident_work_queue::RingStatus
+pub vyre_runtime::resident_work_queue::telemetry::RingSlotSnapshot::status: vyre_runtime::resident_work_queue::telemetry::RingStatus
 pub vyre_runtime::resident_work_queue::telemetry::RingSlotSnapshot::tenant_id: u32
 pub vyre_runtime::resident_work_queue::telemetry::RingStatus::Claimed
 pub vyre_runtime::resident_work_queue::telemetry::RingStatus::Done
@@ -2317,10 +1629,10 @@ pub vyre_runtime::resident_work_queue::telemetry::RingStatus::Requeue
 pub vyre_runtime::resident_work_queue::telemetry::RingStatus::Unknown(u32)
 pub vyre_runtime::resident_work_queue::telemetry::RingStatus::WaitIo
 pub vyre_runtime::resident_work_queue::telemetry::RingStatus::Yield
-pub vyre_runtime::resident_work_queue::telemetry::RingTelemetry::control: vyre_runtime::resident_work_queue::ControlSnapshot
-pub vyre_runtime::resident_work_queue::telemetry::RingTelemetry::occupancy: vyre_runtime::resident_work_queue::RingOccupancy
-pub vyre_runtime::resident_work_queue::telemetry::RingTelemetry::slots: alloc::vec::Vec<vyre_runtime::resident_work_queue::RingSlotSnapshot>
-pub vyre_runtime::resident_work_queue::telemetry::RingTelemetry::windows: alloc::vec::Vec<vyre_runtime::resident_work_queue::WindowTelemetry>
+pub vyre_runtime::resident_work_queue::telemetry::RingTelemetry::control: vyre_runtime::resident_work_queue::telemetry::ControlSnapshot
+pub vyre_runtime::resident_work_queue::telemetry::RingTelemetry::occupancy: vyre_runtime::resident_work_queue::telemetry::RingOccupancy
+pub vyre_runtime::resident_work_queue::telemetry::RingTelemetry::slots: alloc::vec::Vec<vyre_runtime::resident_work_queue::telemetry::RingSlotSnapshot>
+pub vyre_runtime::resident_work_queue::telemetry::RingTelemetry::windows: alloc::vec::Vec<vyre_runtime::resident_work_queue::telemetry::WindowTelemetry>
 pub vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricCoverage::control: bool
 pub vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricCoverage::copy: bool
 pub vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricCoverage::residency: bool
@@ -2329,18 +1641,18 @@ pub vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricFamily::C
 pub vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricFamily::Copy
 pub vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricFamily::Residency
 pub vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricFamily::Ring
-pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetry::active_opcode: vyre_runtime::resident_work_queue::CountMinSketch
+pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetry::active_opcode: vyre_runtime::resident_work_queue::telemetry::CountMinSketch
 pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetry::active_slots: u64
-pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetry::dispatch_metrics: vyre_runtime::resident_work_queue::CountMinSketch
-pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetry::ring_opcode: vyre_runtime::resident_work_queue::CountMinSketch
-pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetry::status: vyre_runtime::resident_work_queue::CountMinSketch
-pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetry::tenant: vyre_runtime::resident_work_queue::CountMinSketch
+pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetry::dispatch_metrics: vyre_runtime::resident_work_queue::telemetry::CountMinSketch
+pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetry::ring_opcode: vyre_runtime::resident_work_queue::telemetry::CountMinSketch
+pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetry::status: vyre_runtime::resident_work_queue::telemetry::CountMinSketch
+pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetry::tenant: vyre_runtime::resident_work_queue::telemetry::CountMinSketch
 pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetry::total_slots: u64
-pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch::active_opcode: vyre_runtime::resident_work_queue::CountMinSketch
-pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch::dispatch_metrics: vyre_runtime::resident_work_queue::CountMinSketch
-pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch::ring_opcode: vyre_runtime::resident_work_queue::CountMinSketch
-pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch::status: vyre_runtime::resident_work_queue::CountMinSketch
-pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch::tenant: vyre_runtime::resident_work_queue::CountMinSketch
+pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch::active_opcode: vyre_runtime::resident_work_queue::telemetry::CountMinSketch
+pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch::dispatch_metrics: vyre_runtime::resident_work_queue::telemetry::CountMinSketch
+pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch::ring_opcode: vyre_runtime::resident_work_queue::telemetry::CountMinSketch
+pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch::status: vyre_runtime::resident_work_queue::telemetry::CountMinSketch
+pub vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch::tenant: vyre_runtime::resident_work_queue::telemetry::CountMinSketch
 pub vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeCapacityEvidence::decoded_slot_count: usize
 pub vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeCapacityEvidence::decoded_window_count: usize
 pub vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeCapacityEvidence::schema_version: u32

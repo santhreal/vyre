@@ -7,8 +7,10 @@
 
 use vyre_runtime::resident_work_queue::{
     descriptor::{SlotOpcode, WindowDescriptor},
+    policy::{ResidentExecutionMode, ResidentLaunchRequest},
     protocol::{self, control, slot},
-    ResidentExecutionMode, ResidentLaunchRequest, ResidentWorkQueue, RingTelemetry,
+    telemetry::RingTelemetry,
+    ResidentWorkQueue,
 };
 
 fn write_slot_status(ring: &mut [u8], slot_idx: u32, status: u32) {

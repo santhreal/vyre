@@ -1,10 +1,10 @@
 use super::*;
+use crate::resident_work_queue::planner::ResidentWorkItem;
 use crate::resident_work_queue::protocol::{
     slot, ARG0_WORD, ARGS_PER_SLOT, OPCODE_WORD, PRIORITY_WORD, SLOT_WORDS, STATUS_WORD,
     TENANT_WORD,
 };
 use crate::resident_work_queue::scheduler;
-use crate::resident_work_queue::ResidentWorkItem;
 
 mod publish_contracts;
 

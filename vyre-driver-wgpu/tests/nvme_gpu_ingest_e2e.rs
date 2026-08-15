@@ -12,7 +12,7 @@ use tempfile::tempdir;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_runtime::resident_work_queue::ResidentIoQueue;
+use vyre_runtime::resident_work_queue::io::ResidentIoQueue;
 use vyre_runtime::uring::{
     AsyncUringStream, GpuMappedBuffer, IoUringState, NativeReadPath, NvmeGpuIngestDriver,
 };

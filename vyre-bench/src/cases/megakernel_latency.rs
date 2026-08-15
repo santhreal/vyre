@@ -11,9 +11,11 @@ use vyre_driver::autotune_store::{AutotuneRecord, AutotuneStore};
 use vyre_driver::specialization::SpecCacheKey;
 use vyre_driver::speculate::SpeculativeVariantKeys;
 use vyre_driver::speculation_verdict::SpeculationVerdict;
-use vyre_runtime::resident_work_queue::{
-    self, control, slot, PairedSpeculationSample, PairedSpeculationWindow, SLOT_WORDS, STATUS_WORD,
+use vyre_runtime::resident_work_queue::protocol::{control, slot, SLOT_WORDS, STATUS_WORD};
+use vyre_runtime::resident_work_queue::speculation::{
+    PairedSpeculationSample, PairedSpeculationWindow,
 };
+use vyre_runtime::resident_work_queue::{self};
 
 /// Names this case's buffers in word codec errors.
 const WORD_CONTEXT: &str = "megakernel latency output";
@@ -62,8 +64,11 @@ impl BenchCase for MegakernelLatency {
     }
 
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let program =
-            resident_work_queue::build_program_sharded_once_slots(WORKGROUP_SIZE, SLOT_COUNT, &[]);
+        let program = resident_work_queue::builder::build_program_sharded_once_slots(
+            WORKGROUP_SIZE,
+            SLOT_COUNT,
+            &[],
+        );
         let ring_bytes = published_ring(SLOT_COUNT)?;
         let queue = queue_buffers(
             ctx,
@@ -276,7 +281,7 @@ fn spec_key(id: u64) -> SpecCacheKey {
 }
 
 fn published_ring(slot_count: u32) -> Result<Vec<u8>, BenchError> {
-    let mut ring = resident_work_queue::encode_empty_ring(slot_count)
+    let mut ring = resident_work_queue::protocol::encode_empty_ring(slot_count)
         .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
     let slot_bytes = (SLOT_WORDS as usize).checked_mul(4).ok_or_else(|| {
         BenchError::ExecutionFailed("megakernel slot byte width overflowed usize".to_string())

@@ -102,9 +102,15 @@ pub fn load_rows(root: &Path) -> Result<Vec<Row>, String> {
 /// Split one snapshot line into the item it declares and the module path it is
 /// reachable through.
 ///
+/// `modules` is every module path the same snapshot declares, which is what
+/// tells a module segment from an item segment. Case cannot: an `io_uring` FFI
+/// struct is `io_sqring_offsets`, so reading a snake_case segment as a module
+/// merged its fields with the identically named fields of `io_cqring_offsets`
+/// and reported six items nobody could delete.
+///
 /// Returns `None` for a line that declares nothing crate-rooted, which is how a
 /// blank line and a `pub use` of a foreign crate's item leave the axis.
-fn split_line(line: &str) -> Option<(Item, String)> {
+fn split_line(line: &str, modules: &BTreeSet<String>) -> Option<(Item, String)> {
     let trimmed = line.trim();
     if trimmed.is_empty() {
         return None;
@@ -117,10 +123,11 @@ fn split_line(line: &str) -> Option<(Item, String)> {
     if segments.is_empty() {
         return None;
     }
-    let first_item = segments
-        .iter()
-        .position(|segment| segment.starts_with(|ch: char| ch.is_ascii_uppercase()))
-        .unwrap_or(segments.len() - 1);
+    let first_item = (0..segments.len())
+        .rev()
+        .map(|at| (at, segments[..at].join("::")))
+        .find(|(_, prefix)| prefix.is_empty() || modules.contains(prefix))
+        .map_or(segments.len() - 1, |(at, _)| at);
     let tail = segments[first_item..].join("::");
     let module = segments[..first_item].join("::");
     let mut signature = String::with_capacity(trimmed.len());
@@ -128,6 +135,18 @@ fn split_line(line: &str) -> Option<(Item, String)> {
     signature.push('|');
     signature.push_str(&trimmed[end..]);
     Some((Item { tail, signature }, module))
+}
+
+/// Every module path one snapshot declares, relative to the crate root.
+fn declared_modules(snapshot: &str) -> BTreeSet<String> {
+    snapshot
+        .lines()
+        .filter_map(|line| {
+            let path = line.trim().strip_prefix("pub mod ")?;
+            let (_, rest) = path.split_once("::")?;
+            Some(rest.trim().to_string())
+        })
+        .collect()
 }
 
 /// The first crate-rooted path in one snapshot line, with its byte offset.
@@ -161,9 +180,10 @@ fn crate_rooted_path(line: &str) -> Option<(usize, &str)> {
 /// Every item one snapshot publishes at more than one path, with those paths.
 #[must_use]
 pub fn duplicates(snapshot: &str) -> BTreeMap<String, BTreeSet<String>> {
+    let modules = declared_modules(snapshot);
     let mut paths: BTreeMap<Item, BTreeSet<String>> = BTreeMap::new();
     for line in snapshot.lines() {
-        if let Some((item, module)) = split_line(line) {
+        if let Some((item, module)) = split_line(line, &modules) {
             paths.entry(item).or_default().insert(module);
         }
     }
@@ -264,10 +284,9 @@ impl Gate for PublicApiPaths {
         let mut measured = BTreeMap::new();
         let mut examples = BTreeMap::new();
         for (name, path) in &files {
-            let text = read_text_bounded(path, MAX_SNAPSHOT_BYTES, "public-api snapshot")
-                .map_err(|error| {
-                    GateError::new(format!("{}: {error}", path.display()), SNAPSHOT_FIX)
-                })?;
+            let text = read_text_bounded(path, MAX_SNAPSHOT_BYTES, "public-api snapshot").map_err(
+                |error| GateError::new(format!("{}: {error}", path.display()), SNAPSHOT_FIX),
+            )?;
             let found = duplicates(&text);
             measured.insert(name.clone(), found.len());
             examples.insert(name.clone(), found);
@@ -290,7 +309,10 @@ impl Gate for PublicApiPaths {
 
         let mut seen: BTreeMap<&str, usize> = BTreeMap::new();
         for row in &rows {
-            if seen.insert(row.name.as_str(), row.duplicate_paths).is_some() {
+            if seen
+                .insert(row.name.as_str(), row.duplicate_paths)
+                .is_some()
+            {
                 report.find(Finding::in_file(
                     "xtask/public-api-paths.toml",
                     format!("{} has more than one row", row.name),
@@ -383,7 +405,7 @@ mod tests {
     #[test]
     fn a_type_reachable_through_two_modules_is_one_duplicate() {
         let found = duplicates(
-            "pub struct vyre_x::inner::Thing\npub struct vyre_x::Thing\npub struct vyre_x::inner::Other\n",
+            "pub mod vyre_x::inner\npub struct vyre_x::inner::Thing\npub struct vyre_x::Thing\npub struct vyre_x::inner::Other\n",
         );
         assert_eq!(found.len(), 1, "one item is published twice: {found:?}");
         let modules = &found["Thing"];
@@ -421,7 +443,7 @@ mod tests {
     #[test]
     fn a_foreign_trait_is_not_the_subject_of_the_line() {
         let found = duplicates(
-            "impl core::fmt::Debug for vyre_x::inner::Thing\nimpl core::fmt::Debug for vyre_x::Thing\n",
+            "pub mod vyre_x::inner\nimpl core::fmt::Debug for vyre_x::inner::Thing\nimpl core::fmt::Debug for vyre_x::Thing\n",
         );
         assert_eq!(
             found.keys().collect::<Vec<_>>(),
@@ -460,17 +482,34 @@ mod tests {
         );
     }
 
-    /// WHY: a module path and an item path are told apart by case alone here, so
-    /// a free function or constant has to keep its own last segment as the item.
+    /// WHY: a module segment is known only from a `pub mod` line, so a free
+    /// function or constant published under one keeps its own last segment as
+    /// the item and the module prefix as the path.
     #[test]
     fn a_free_function_is_identified_by_its_own_name() {
         let found = duplicates(
-            "pub fn vyre_x::inner::helper() -> u32\npub fn vyre_x::helper() -> u32\n",
+            "pub mod vyre_x::inner\npub fn vyre_x::inner::helper() -> u32\npub fn vyre_x::helper() -> u32\n",
         );
         assert_eq!(
             found.keys().collect::<Vec<_>>(),
             vec!["helper"],
             "a free function published twice: {found:?}"
+        );
+    }
+
+    /// WHY: the module set comes from the snapshot's own `pub mod` lines, so a
+    /// segment no snapshot declares as a module is part of the item. Reading a
+    /// snake_case segment as a module merged the fields of `io_sqring_offsets`
+    /// with the identically named fields of `io_cqring_offsets` and reported six
+    /// duplicates nobody could delete.
+    #[test]
+    fn an_undeclared_segment_is_part_of_the_item_not_a_module() {
+        let found = duplicates(
+            "pub struct field vyre_x::io_sqring_offsets::head: u32\npub struct field vyre_x::io_cqring_offsets::head: u32\n",
+        );
+        assert!(
+            found.is_empty(),
+            "two structs, two fields of the same name: {found:?}"
         );
     }
 }

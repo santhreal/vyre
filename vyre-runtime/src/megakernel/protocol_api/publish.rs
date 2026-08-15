@@ -1,6 +1,7 @@
+use crate::resident_work_queue::descriptor::PackedOpDescriptor;
 use crate::resident_work_queue::planner::ResidentWorkItem;
 use crate::resident_work_queue::protocol::{self, slot, SLOT_WORDS};
-use crate::resident_work_queue::{scheduler, PackedOpDescriptor, ResidentWorkQueue};
+use crate::resident_work_queue::{scheduler, ResidentWorkQueue};
 use crate::PipelineError;
 
 const SLOT_WORDS_USIZE: usize = 16;

@@ -99,7 +99,7 @@ duplicate_paths = 22
 
 [[crate]]
 name = "vyre-runtime"
-duplicate_paths = 735
+duplicate_paths = 119
 
 [[crate]]
 name = "vyre-safetensors"

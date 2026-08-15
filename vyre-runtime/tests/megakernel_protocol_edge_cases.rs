@@ -9,8 +9,9 @@
 
 use vyre_runtime::resident_work_queue::{
     descriptor::{BatchDescriptor, BuiltinOpcode, SlotDescriptor, SlotOpcode, WindowDescriptor},
+    policy::ResidentExecutionMode,
     protocol::{self, control, slot, ARGS_PER_SLOT, STATUS_WORD},
-    ResidentExecutionMode, ResidentWorkQueue,
+    ResidentWorkQueue,
 };
 use vyre_runtime::PipelineError;
 
