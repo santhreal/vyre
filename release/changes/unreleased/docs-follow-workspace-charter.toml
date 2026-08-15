@@ -1,0 +1,2 @@
+category = "Changed"
+text = "User-facing crate READMEs, `docs/ARCHITECTURE.md`, `GOAL.md`, `THESIS.md`, `CONTRIBUTING.md`, and the ownership/guide registries follow the workspace `README.md` charter. `vyre-libs` owns every composition, including compiler-internal domains. `vyre-primitives` owns only uncomposable intrinsics. Persistence is selected at compile time. Unmeasured selections are never called autoroute. The deleted `docs/lego-block-rule.md` two-caller promotion rule is void."

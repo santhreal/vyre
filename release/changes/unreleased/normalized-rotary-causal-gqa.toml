@@ -1,0 +1,2 @@
+category = "Added"
+text = "The neural library now composes F32 query and key normalization, cache-position partial rotary embedding, explicit query-to-KV head grouping, and dynamically bounded causal attention in one typed ProgramGraph. Prompt and cached-decode routes exclude future cache rows and support configurable head ratios, head widths, and rotary dimensions."

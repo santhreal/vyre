@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-driver`'s dispatch policy bundle is covered by a test that calls each policy directly and compares the verdicts to the bundle's, so the bundle cannot drift from the policies it composes. A test drives every policy at the extremes of its integer domain and asserts the resulting verdict, replacing a case that bound the results to `_` and only proved absence of a panic. The module and field documentation names the concern each policy decides instead of an internal plan label."

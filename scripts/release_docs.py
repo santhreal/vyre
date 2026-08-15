@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TRAIN_PATH = ROOT / "release/release-train.toml"
-FRAGMENTS_PATH = ROOT / "release/changes/unreleased.toml"
+FRAGMENTS_DIR = ROOT / "release/changes/unreleased"
 CHANGELOG_PATH = ROOT / "CHANGELOG.md"
 NOTES_PATH = ROOT / "release/evidence/docs/release-notes-body.md"
 LAUNCH_PATH = ROOT / "scripts/final-launch.sh"
@@ -23,32 +23,7 @@ def load_toml(path: Path) -> dict:
         with path.open("rb") as handle:
             return tomllib.load(handle)
     except (OSError, tomllib.TOMLDecodeError) as error:
-        raise ValueError(f"{path.relative_to(ROOT)}: {error}{fused_fragment_hint(path)}") from error
-
-
-def fused_fragment_hint(path: Path) -> str:
-    """Name the fragment whose `[[fragments]]` header is missing, if that is why.
-
-    An `id` key appended without its table header parses as a second `id` in the
-    preceding fragment, and tomllib reports only "cannot overwrite a value" with a
-    line and column. That reads as a corrupt file rather than as one absent line,
-    and every verdict behind the parse is unreachable until someone recognizes it.
-    Four merges in one day produced this, so the parser's position is not enough.
-    """
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return ""
-    fused: list[str] = []
-    previous = ""
-    for number, line in enumerate(lines, start=1):
-        if line.startswith("id = ") and previous != "[[fragments]]":
-            fused.append(f"line {number}: {line.strip()} has no `[[fragments]]` header")
-        if line.strip():
-            previous = line.strip()
-    if not fused:
-        return ""
-    return "\n  " + "\n  ".join(fused)
+        raise ValueError(f"{path.relative_to(ROOT)}: {error}") from error
 
 
 def normalize(text: str) -> str:
@@ -93,31 +68,54 @@ def validate_train(train: dict) -> list[str]:
 
 
 def load_fragments() -> tuple[dict[str, list[str]], list[str]]:
-    data = load_toml(FRAGMENTS_PATH)
+    """Read every fragment in `release/changes/unreleased/`, one per file.
+
+    A fragment used to be a `[[fragments]]` table in one shared file, and ten
+    times over one week a merge ate a header: every fragment opens with the same
+    `[[fragments]]` line, so diff3 aligns it as common context between the two
+    appended blocks, only the differing lines reach the merge driver, and the
+    second block keeps `id`, `category` and `text` while losing the header that
+    separates it. Its keys then parse as a second `id` in the fragment above,
+    tomllib reports a position rather than a cause, and every release document
+    stops regenerating until someone recognizes the shape. A `merge=union`
+    attribute cannot fix it, because there is no conflict to resolve.
+
+    The file name is the id. Two fragments cannot share a line, a header, or an
+    identity, and a merge that keeps both files keeps both fragments.
+    """
     errors: list[str] = []
-    if data.get("schema_version") != 1:
-        errors.append("release/changes/unreleased.toml: schema_version must be 1")
     grouped = {category: [] for category in CATEGORIES}
-    ids: set[str] = set()
-    texts: set[str] = set()
-    for index, fragment in enumerate(data.get("fragments", []), start=1):
-        fragment_id = fragment.get("id")
+    if not FRAGMENTS_DIR.is_dir():
+        return grouped, [f"{FRAGMENTS_DIR.relative_to(ROOT)}: fragment directory is missing"]
+    texts: dict[str, str] = {}
+    for path in sorted(FRAGMENTS_DIR.glob("*.toml")):
+        fragment_id = path.stem
+        where = f"{path.relative_to(ROOT)}"
+        fragment = load_toml(path)
+        unknown = sorted(set(fragment) - {"category", "text"})
+        if unknown:
+            errors.append(
+                f"{where}: unexpected key(s) {', '.join(unknown)}; a fragment file carries"
+                " category and text, and its id is the file name"
+            )
+            continue
         category = fragment.get("category")
         text = normalize(fragment.get("text", ""))
-        if not fragment_id or fragment_id in ids:
-            errors.append(f"fragment {index}: id must be non-empty and unique")
-        else:
-            ids.add(fragment_id)
         if category not in grouped:
-            errors.append(f"fragment `{fragment_id}`: category `{category}` is not supported")
+            errors.append(f"{where}: category `{category}` is not supported")
             continue
-        if not text or text in texts:
-            errors.append(f"fragment `{fragment_id}`: text must be non-empty and unique")
+        if not text:
+            errors.append(f"{where}: text must be non-empty")
             continue
-        texts.add(text)
+        if text in texts:
+            errors.append(f"{where}: text repeats the one in {texts[text]}")
+            continue
+        texts[text] = fragment_id
         grouped[category].append(text)
-    if not texts:
-        errors.append("release/changes/unreleased.toml: at least one fragment is required")
+    if not texts and not errors:
+        errors.append(
+            f"{FRAGMENTS_DIR.relative_to(ROOT)}: at least one fragment is required"
+        )
     return grouped, errors
 
 

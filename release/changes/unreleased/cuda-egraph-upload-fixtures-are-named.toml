@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The CUDA e-graph device-image upload contracts build their snapshots from named fixtures, and `assert_span_matches_foundation` has one definition. `upload_layout_contracts.rs` redefined that helper identically to the parent's, so the parent's copy was shadowed and a correction to it would have silently missed one file. Seven inline snapshot literals across four files were three distinct shapes, now `shared_eclass_add_snapshot`, `duplicate_add_snapshot` and `distinct_add_snapshot`, each documented with the property it exists to exercise."

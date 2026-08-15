@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Command-line documentation now inventories and executes all 12 workspace binaries and 84 subcommands, publishes exact help, exit-code, environment, configuration, hardware, and failure contracts in crate READMEs, and gates drift in documentation CI. The vyre-wgpu demo is documented and exercised on the real GPU lane, while helper --help routes are side-effect free."

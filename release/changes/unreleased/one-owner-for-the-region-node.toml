@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every `Node::Region` in `vyre-primitives` and `vyre-libs` is now built by `vyre_foundation::algebra::composition::wrap_anonymous_region` or `wrap_child_region`. 188 hand-written struct literals restated the same three fields, and each one was a place where a generator name could be spelled without the `anonymous::` prefix the audit gates read, or a child region could be attached with no parent. The literals carry no information the two constructors do not, so they are gone."

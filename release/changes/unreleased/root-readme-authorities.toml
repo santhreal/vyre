@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The root README now derives every workspace crate's publication and support status from manifests and maintained metadata. Operation tier counts come from the canonical operation schema, backend claims come from executable backend evidence, and the architecture identifies Metal as Apple-active instead of planned."

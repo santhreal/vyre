@@ -1,0 +1,2 @@
+category = "Added"
+text = "The neural library now executes a reusable dense gated-MLP ProgramGraph with learned RMSNorm, checkpoint-native output-major gate and up projections, F32 SwiGLU math, output-major down projection, and residual addition. F16, BF16, and F32 storage use F32 normalization, projection accumulation, activation, and residual arithmetic with source-dtype boundaries."

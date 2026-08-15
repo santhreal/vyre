@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`bellman_shortest_path` and `sinkhorn_iterate` take a named binding record plus an extents record instead of nine and thirteen positional arguments. The IR-parity test for Sinkhorn had been passing its ten same-typed buffer names in binding order rather than parameter order, so it emitted a program that named its kernel matrix `u_curr` and its convergence flag `kv`; a record forces each name to be spelled at the call. `bellman_tn_order_program` and `sinkhorn_full_clustering_program` forward the same records."

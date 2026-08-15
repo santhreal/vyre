@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`vyre_primitives::graph::csr_backward_or_changed` named the per-edge kind array `masks` and the scalar edge-kind filter `edge_kind_mask`, inverting the roles every sibling CSR module gives those two names. A call repointed from a sibling module fed the scalar where the per-edge array belonged. Both parameters now carry the tree-wide role names."

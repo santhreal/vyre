@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The duplication baseline pin for vyre-lower records the measured tree: 279 to 205 duplicated lines, with `total_lines` measured at 13187. The header block listing rows pinned below their measurement is gone with its only entry."

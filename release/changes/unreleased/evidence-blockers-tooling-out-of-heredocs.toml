@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Seven release gate scripts run `scripts/lib/<name>.py` instead of piping a Python program into an interpreter through a heredoc. A heredoc hides a whole second language from review, lint, and syntax checking, and these were the last seven. `scripts/cli_docs.py` invokes the workspace wrapper through `scripts/lib/cargo_runner.py`, the Python twin of the shell runner that already owned that decision."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`release/changes/unreleased.toml` parses again. Two fragments had been appended without their `[[fragments]]` header, so the second `id` key overwrote the first and every release-docs command failed at the TOML parser before it reached a verdict."

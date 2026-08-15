@@ -301,7 +301,7 @@ Findings:
 
 Subject: present.
 
-Invoked by: nothing; named in CHANGELOG.md and release/changes/unreleased.toml only.
+Invoked by: nothing; named in CHANGELOG.md and the changelog fragments only.
 
 Gate: xtask/src/gates/bench_contract.rs.
 
@@ -583,7 +583,7 @@ Exits nonzero on:
 
 Subject: present.
 
-Invoked by: nothing; named in CHANGELOG.md, release/changes/unreleased.toml and vyre-pass-engine/tests/release_evidence_path_contract.rs.
+Invoked by: nothing; named in CHANGELOG.md, the changelog fragments and vyre-pass-engine/tests/release_evidence_path_contract.rs.
 
 Gate: xtask/src/gates/evidence_paths.rs.
 
@@ -1461,7 +1461,7 @@ Findings:
 
 Subject: partly gone: docs/CLI.toml, the crate READMEs and xtask/src/subcommands.rs survive; docs/CLI.md was deleted at b1ed746d1c.
 
-Invoked by: docs-ci.yml, xtask/tests/tree_contracts/cli_docs.rs; named in docs/DOCS.toml, CHANGELOG.md, unreleased.toml and docs_manifest.py.
+Invoked by: docs-ci.yml, xtask/tests/tree_contracts/cli_docs.rs; named in docs/DOCS.toml, CHANGELOG.md, the changelog fragments and docs_manifest.py.
 
 Gate: xtask/src/gates/doc_contract.rs owns the manifest assertions, the binary inventory, the help routes, the subcommand-registry equality and the generated README blocks, and honours ctx.write; the missing docs/CLI.md is one finding.
 
@@ -2118,7 +2118,7 @@ Findings:
 
 Subject: present.
 
-Invoked by: nothing directly; named in CHANGELOG.md, docs/DOCS.toml, unreleased.toml, docs_manifest.py and xtask/tests/release_docs.rs.
+Invoked by: nothing directly; named in CHANGELOG.md, docs/DOCS.toml, the changelog fragments, docs_manifest.py and xtask/tests/release_docs.rs.
 
 Gate: kept as the one script exception. xtask/src/gates/changelog.rs runs `python3 scripts/release_docs.py --check` and honours ctx.write by running --write.
 
@@ -2128,7 +2128,7 @@ Assertions:
 - Every release group declares an owner/repository, a known version key and at least one package.
 - No package belongs to two release groups.
 - The train declares exactly three approval-gated external actions with non-empty unique ids.
-- release/changes/unreleased.toml declares schema_version 1, at least one fragment, unique non-empty ids, supported categories, and unique non-empty text.
+- release/changes/unreleased/ holds at least one fragment file, each named for its id, carrying only a supported category and non-empty text no other fragment repeats.
 - CHANGELOG.md contains every required_release_note_token from the train.
 - scripts/final-launch.sh contains ten guarded launch steps, in order.
 - CHANGELOG.md matches the content generated from the train and the fragments.

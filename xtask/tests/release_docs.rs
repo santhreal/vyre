@@ -20,7 +20,7 @@ fn run_generator(root: &Path, mode: &str) -> Output {
 }
 
 fn write_fixture(root: &Path, actions: usize, duplicate_package: bool) {
-    for directory in ["scripts", "release/changes"] {
+    for directory in ["scripts", "release/changes/unreleased"] {
         fs::create_dir_all(root.join(directory))
             .expect("Fix: release document fixture directories must be creatable");
     }
@@ -72,8 +72,8 @@ packages = ["a"]
     fs::write(root.join("release/release-train.toml"), train)
         .expect("Fix: fixture release train must be writable");
     fs::write(
-        root.join("release/changes/unreleased.toml"),
-        "schema_version = 1\n\n[[fragments]]\nid = \"exact-fix\"\ncategory = \"Fixed\"\ntext = \"The exact release regression is fixed.\"\n",
+        root.join("release/changes/unreleased/exact-fix.toml"),
+        "category = \"Fixed\"\ntext = \"The exact release regression is fixed.\"\n",
     )
     .expect("Fix: fixture changelog fragments must be writable");
     fs::write(
@@ -120,6 +120,52 @@ fn write_derives_the_changelog_from_fragments() {
     ));
     assert!(changelog.contains("Backend crates carried at that version: `a@1.2.3`."));
     assert!(changelog.contains("## [1.2.2]"));
+}
+
+/// WHY: a fragment used to be a `[[fragments]]` table in one shared file, and a
+/// merge ate the header ten times in one week: every fragment opens with that
+/// identical line, so diff3 treats it as common context between two appended
+/// blocks and only one copy survives, leaving the second fragment's keys inside
+/// the first. The id is the file name now, so a file carrying the old shape is
+/// not a fragment that merged badly, it is a file nobody migrated, and it is
+/// rejected by name rather than folded into its neighbour.
+#[test]
+fn a_fragment_file_in_the_retired_shape_is_rejected_by_name() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_fixture(temp.path(), 3, false);
+    fs::write(
+        temp.path().join("release/changes/unreleased/legacy-shape.toml"),
+        "[[fragments]]\nid = \"legacy-shape\"\ncategory = \"Fixed\"\ntext = \"Carried the retired table shape.\"\n",
+    )
+    .expect("Fix: retired-shape fixture fragment must be writable");
+
+    let output = run_generator(temp.path(), "--check");
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("release/changes/unreleased/legacy-shape.toml: unexpected key(s) fragments"),
+        "the rejection must name the file and the key: {stderr}"
+    );
+}
+
+/// WHY: the reason a fragment is its own file is that two of them written
+/// independently must both survive being brought together. Two files, two
+/// entries, no shared line to lose.
+#[test]
+fn two_independently_written_fragments_both_reach_the_changelog() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_fixture(temp.path(), 3, false);
+    fs::write(
+        temp.path().join("release/changes/unreleased/second-change.toml"),
+        "category = \"Changed\"\ntext = \"The second author's change is recorded too.\"\n",
+    )
+    .expect("Fix: second fixture fragment must be writable");
+    assert!(run_generator(temp.path(), "--write").status.success());
+
+    let changelog = fs::read_to_string(temp.path().join("CHANGELOG.md"))
+        .expect("Fix: generated changelog must be readable");
+    assert!(changelog.contains("- The exact release regression is fixed."));
+    assert!(changelog.contains("- The second author's change is recorded too."));
 }
 
 /// Prevents a hand edit to the generated changelog section from silently

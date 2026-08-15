@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Weighted paged-corpus scans now expose per-device timing and byte balance. The physical two-adapter benchmark verifies exact single-device parity and records paired end-to-end speedup, topology, staging overhead, and raw samples."
