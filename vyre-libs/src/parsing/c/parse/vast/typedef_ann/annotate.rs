@@ -272,9 +272,9 @@ pub(super) fn c11_annotate_typedef_names_impl(
             Expr::and(
                 Expr::var("possible_declarator"),
                 Expr::and(
-                    Expr::not(is_precomputed_declaration_previous_disqualifier_token(
-                        Expr::var("prev_kind"),
-                    )),
+                    Expr::not(is_declaration_previous_disqualifier_token(Expr::var(
+                        "prev_kind",
+                    ))),
                     Expr::ne(Expr::var("next_kind"), Expr::u32(TOK_COLON)),
                 ),
             ),

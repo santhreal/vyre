@@ -32,7 +32,7 @@ Any other normal or build dependency requires an ownership-registry change.
 Run the checked-in behavior from `vyre-safetensors/tests/ingestion.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-safetensors --test ingestion
+./cargo_full test -p vyre-safetensors --test ingestion
 ```
 
 ### Features

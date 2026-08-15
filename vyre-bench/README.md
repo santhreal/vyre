@@ -244,7 +244,7 @@ Any other normal or build dependency requires an ownership-registry change.
 Run the checked-in behavior from `vyre-bench/src/main.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-bench -- --help
+./cargo_full run -p vyre-bench -- --help
 ```
 
 ### Features
