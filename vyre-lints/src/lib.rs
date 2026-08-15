@@ -29,12 +29,27 @@ use anyhow::{Context, Result};
 use std::io::Read;
 use std::path::Path;
 
-const LINT_SOURCE_READ_CAP: usize = 64 * 1024 * 1024;
-
-/// Read one file as text, bounded by [`LINT_SOURCE_READ_CAP`].
+/// Largest file [`read_source_bounded`] will read, in bytes.
 ///
-/// The binary reads the workspace manifest through this too: one reader with one
-/// cap, so a pathological file cannot exhaust memory on either path.
+/// Public because the bound is part of the reader's contract: a caller that
+/// hands this crate a generated or vendored file has to know the size at which
+/// it is refused, and a number restated in prose beside the constant is a
+/// second copy that can disagree with it.
+pub const LINT_SOURCE_READ_CAP: usize = 64 * 1024 * 1024;
+
+/// Read one file as text, refusing anything over [`LINT_SOURCE_READ_CAP`].
+///
+/// Public surface, not a leaked helper. The `vyre-lints` binary is a separate
+/// compilation unit and reads the workspace manifest through this, so one
+/// reader with one cap covers the lint walk and the manifest read both. The
+/// alternative was a second reader in the binary with a second cap, which is
+/// the shape this crate exists to report elsewhere.
+///
+/// # Errors
+///
+/// Returns an error naming `path` when it cannot be opened, when it is larger
+/// than the cap either by its recorded length or by what the read produces, or
+/// when its bytes are not UTF-8.
 pub fn read_source_bounded(path: &Path) -> Result<String> {
     let mut file = std::fs::File::open(path).with_context(|| format!("open {}", path.display()))?;
     let len = file
