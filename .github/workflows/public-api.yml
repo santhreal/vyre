@@ -17,6 +17,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
       - name: Install cargo-public-api
-        run: cargo install cargo-public-api --locked
+        run: cargo +nightly install cargo-public-api --locked
       - name: Diff every publishable crate
         run: bash scripts/check_public_api_snapshot.sh

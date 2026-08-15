@@ -8,10 +8,10 @@ use vyre_foundation::ir::Ident;
 
 #[derive(Clone, Default)]
 pub(super) struct VarScope {
-    bindings: im::HashMap<Ident, u32>,
+    bindings: imbl::HashMap<Ident, u32>,
 }
 
-pub(super) type ScopeSnapshot = im::HashMap<Ident, u32>;
+pub(super) type ScopeSnapshot = imbl::HashMap<Ident, u32>;
 
 impl VarScope {
     pub(super) fn bind(&mut self, name: Ident, result: u32) -> Option<u32> {

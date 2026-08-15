@@ -27,8 +27,7 @@ pub fn bfs_expand_via(
     frontier_in: &[u32],
 ) -> Result<(Vec<u32>, u32, u32), DispatchError> {
     let mut frontier = Vec::new();
-    let (changed, converged) =
-        bfs_expand_via_into(dispatcher, inputs, frontier_in, &mut frontier)?;
+    let (changed, converged) = bfs_expand_via_into(dispatcher, inputs, frontier_in, &mut frontier)?;
     Ok((frontier, changed, converged))
 }
 

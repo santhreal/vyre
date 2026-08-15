@@ -346,9 +346,7 @@ pub fn node_scalars(node: &Node) -> NodeScalars<'_> {
             binding: Some((NameBinding::Induction, var)),
             operands: [Some(from), Some(to)],
         },
-        Node::Store { index, value, .. } => {
-            NodeScalars::operands_only([Some(index), Some(value)])
-        }
+        Node::Store { index, value, .. } => NodeScalars::operands_only([Some(index), Some(value)]),
         Node::If { cond, .. } => NodeScalars::operands_only([Some(cond), None]),
         Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
             NodeScalars::operands_only([Some(offset), Some(size)])
@@ -1301,8 +1299,7 @@ pub(crate) mod fixtures {
     pub(crate) fn arb_generator() -> BoxedStrategy<String> {
         prop_oneof![
             prop::sample::select(&["region.a", "region.b"][..]).prop_map(str::to_string),
-            prop::sample::select(&["excl.a", "excl.b"][..])
-                .prop_map(mark_self_exclusive_region),
+            prop::sample::select(&["excl.a", "excl.b"][..]).prop_map(mark_self_exclusive_region),
         ]
         .boxed()
     }
@@ -1361,15 +1358,13 @@ pub(crate) mod fixtures {
                 arb_expr(),
                 arb_async_tag(),
             )
-                .prop_map(
-                    |(source, destination, offset, size, tag)| Node::AsyncLoad {
-                        source: source.into(),
-                        destination: destination.into(),
-                        offset: Box::new(offset),
-                        size: Box::new(size),
-                        tag: tag.into(),
-                    },
-                )
+                .prop_map(|(source, destination, offset, size, tag)| Node::AsyncLoad {
+                    source: source.into(),
+                    destination: destination.into(),
+                    offset: Box::new(offset),
+                    size: Box::new(size),
+                    tag: tag.into(),
+                })
                 .boxed(),
             (
                 arb_buffer_name(),
@@ -1484,8 +1479,7 @@ pub(crate) mod fixtures {
                 )
                     .prop_map(|(generator, source_region, body)| Node::Region {
                         generator: Ident::from(generator),
-                        source_region: source_region
-                            .map(|name| GeneratorRef { name }),
+                        source_region: source_region.map(|name| GeneratorRef { name }),
                         body: Arc::new(body),
                     }),
             ]

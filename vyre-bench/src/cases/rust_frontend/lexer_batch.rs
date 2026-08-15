@@ -3,9 +3,7 @@ use super::lex_columns::{
     u32s_to_bytes, LexColumns, LexColumnsContract, LexSample, LEX_SUITES,
 };
 use super::rust_source_words;
-use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
-};
+use crate::api::case::{BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, WorkloadClass};
 use crate::api::metric::{elapsed_ns, MetricPoint};
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
 use vyre_foundation::ir::Program;
@@ -42,15 +40,11 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
     ],
     layer: BenchLayer::Libs,
     workload: WorkloadClass::Macro,
-    determinism: DeterminismClass::Deterministic,
     owner_crate: "vyre-frontend-rust",
     suites: LEX_SUITES,
-    needs_gpu: true,
-    needs_network: false,
-    min_vram_bytes: None,
     min_input_bytes: Some((RUST_LEXER_BATCH_SOURCES * 192) as u64),
     feature_set: &["rust-frontend", "gpu-lexer", "batched-lexer", "ir-lexer"],
-    contract: None,
+    ..WorkloadDescription::BASE
 };
 
 static OPS: CaseOps<RustLexerBatchPrepared> = CaseOps {

@@ -2,7 +2,7 @@
   "schema_version": 3,
   "publishable_package_count": 26,
   "vyre_package_count": 26,
-  "internal_tooling_count": 12,
+  "internal_tooling_count": 13,
   "root_patch_section_count": 0,
   "required_release_surfaces": [
     "vyre",
@@ -505,6 +505,22 @@
       "release_surface": "vyre-crate",
       "expected_version": "0.7.2",
       "publish_policy": "publishable release crate",
+      "blockers": []
+    },
+    {
+      "name": "vyre-registry-link",
+      "manifest": "vyre-registry-link/Cargo.toml",
+      "version": "0.7.2",
+      "description": "Sole owner of inventory registry link anchors and the per-source floor every registry read is judged against.",
+      "license": "MIT OR Apache-2.0",
+      "readme": null,
+      "repository": "https://github.com/santhreal/vyre",
+      "publish": false,
+      "release_kind": "internal-tooling",
+      "release_group": "internal-tooling",
+      "release_surface": "internal-tooling",
+      "expected_version": null,
+      "publish_policy": "publish=false allowed for release tooling that is not a crates.io artifact",
       "blockers": []
     },
     {

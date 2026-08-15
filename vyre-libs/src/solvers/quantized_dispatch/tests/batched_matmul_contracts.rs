@@ -27,7 +27,9 @@ fn i4x8_batched_matmul_f32_scaled_via_dispatches_boundary_batches() {
         rows,
         cols,
     )
-    .expect("Fix: fake batched matmul dispatcher must complete scaled INT4 matmul without a backend");
+    .expect(
+        "Fix: fake batched matmul dispatcher must complete scaled INT4 matmul without a backend",
+    );
     let expected = i4x8_batched_matmul_f32_scaled_cpu(
         &weights,
         &activations,

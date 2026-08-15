@@ -119,9 +119,16 @@ fn flop_count(value: u64) -> MetricPoint {
     }
 }
 
+/// This owner's name, as reported by every case it builds.
+pub(crate) const MICRO_OWNER: &str = "cases::micro::MicroCase";
+
 impl BenchCase for MicroCase {
     fn id(&self) -> BenchId {
         BenchId(self.id.to_string())
+    }
+
+    fn declaration_owner(&self) -> &'static str {
+        MICRO_OWNER
     }
 
     fn metadata(&self) -> BenchMetadata {

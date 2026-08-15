@@ -217,13 +217,19 @@ fn scalar_evaluators_reject_wrong_arity_and_unaligned_payloads() {
 /// recorded decision, not an exemption.
 const NOT_A_SCALAR_WORD_PAIR: &[(&str, &str)] = &[
     ("Gather", "indexed read: a data buffer and an index buffer"),
-    ("Scatter", "indexed write: a data buffer, an index buffer and values"),
+    (
+        "Scatter",
+        "indexed write: a data buffer, an index buffer and values",
+    ),
     ("Shuffle", "lane permutation across a workgroup payload"),
     ("Reduce", "folds a whole buffer to one word"),
     ("Scan", "prefix over a whole buffer"),
     ("HashBlake3", "digest over a byte payload of any length"),
     ("HashFnv1a", "digest over a byte payload of any length"),
-    ("PatternMatchDfa", "compiled automaton plus a subject buffer"),
+    (
+        "PatternMatchDfa",
+        "compiled automaton plus a subject buffer",
+    ),
     ("PatternMatchLiteral", "needle buffer plus a subject buffer"),
 ];
 
@@ -251,7 +257,10 @@ fn every_reference_evaluator_is_swept_or_recorded_as_non_scalar() {
          the payload shape it takes."
     );
 
-    let both: Vec<&&str> = swept.iter().filter(|marker| recorded.contains(**marker)).collect();
+    let both: Vec<&&str> = swept
+        .iter()
+        .filter(|marker| recorded.contains(**marker))
+        .collect();
     assert!(
         both.is_empty(),
         "Fix: {both:?} are swept as scalar word evaluators and also recorded as taking another \

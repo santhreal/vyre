@@ -24,6 +24,15 @@ ignore = [
     # dependency is transitive, so the switch belongs to the crates that pull
     # it rather than to this workspace.
     { id = "RUSTSEC-2024-0436", reason = "paste is archived upstream, reached transitively; the replacement is the dependents' to make." },
+    # bitmaps 3.2.1: reached only through imbl, the maintained fork of im that
+    # this workspace moved to in order to clear im's own unmaintained advisory
+    # and RUSTSEC-2023-0126, the OrdSet aliasing violation. The persistent
+    # collections are load-bearing: the DCE live set is cloned at every branch
+    # arm and the lowering scope snapshots its binding map per scope, so a std
+    # map would deep-copy every identifier instead of sharing structure.
+    # Nothing depends on bitmaps directly and there is no advisory of substance
+    # against it, only lack of maintenance.
+    { id = "RUSTSEC-2026-0247", reason = "bitmaps is unmaintained, reached transitively through imbl; no vulnerability and no successor to move to." },
 ]
 
 [licenses]

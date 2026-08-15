@@ -62,8 +62,8 @@ use super::dispatch::CudaBackend;
 use super::output_range::cuda_output_readback_for_binding;
 use super::staging_reserve::reserve_smallvec;
 use crate::backend::copy::aligned_async_copy_len;
-use crate::input_identity::{exact_input_key, ExactInputKey};
 use crate::numeric::CUDA_NUMERIC;
+use vyre_driver::input_identity::{exact_input_key, ExactInputKey};
 
 const CUDA_GRAPH_REPLAY_ACCOUNTING: TransferAccountingPolicy =
     TransferAccountingPolicy::new("CUDA graph", "record a smaller graph shape");

@@ -23,7 +23,14 @@ pub(crate) struct QueueSequenceRun {
     pub(crate) bytes_written: u64,
 }
 
-pub(crate) fn queue_materialize_sequence_fingerprint(
+/// Hash the programs and grids of a staged queue sequence into one value.
+///
+/// Named for its inputs rather than for the queue-materialize case, because
+/// `cases::queue_materialize::queue_materialize_sequence_fingerprint` is the
+/// spelling that takes a prepared case and is the only one a case should call.
+/// Two functions with one name meant two things could disagree about what a
+/// sample hashed with nothing to say which was meant.
+pub(crate) fn staged_sequence_fingerprint(
     domain: &[u8],
     programs: [&Program; 3],
     high_traverse_program: Option<&Program>,
