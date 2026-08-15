@@ -81,11 +81,10 @@ pub fn i4x8_dot_f32_scaled_via_with_scratch_into(
     write_f32_slice_le_bytes(&mut inputs[3], &[rhs_scale]);
 
     let outputs = dispatcher.dispatch(program, &inputs[..4], Some([1, 1, 1]))?;
-    if outputs.len() != 1 {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: i4x8_dot_f32_scaled_via expected exactly one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_f32_output_exact(&outputs[0], 1, "i4x8_dot_f32_scaled_via", out)
+    decode_f32_output_exact(
+        expect_one_output("i4x8_dot_f32_scaled_via", &outputs)?,
+        1,
+        "i4x8_dot_f32_scaled_via",
+        out,
+    )
 }

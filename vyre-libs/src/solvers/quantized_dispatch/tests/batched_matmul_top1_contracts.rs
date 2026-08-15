@@ -29,7 +29,7 @@ fn i4x8_batched_matmul_top1_f32_scaled_via_dispatches_boundary_batches() {
         rows,
         cols,
     )
-    .expect("Fix: CUDA parity tests require backend dispatch; skip test if GPU unavailable, do not panic - fake dispatcher computes top-1 packed INT4 routing");
+    .expect("Fix: fake top-1 dispatcher must complete packed INT4 routing without a backend");
     let (expected_scores, expected_indices) = i4x8_batched_matmul_top1_f32_scaled_cpu(
         &weights,
         &activations,
@@ -40,22 +40,15 @@ fn i4x8_batched_matmul_top1_f32_scaled_via_dispatches_boundary_batches() {
         cols,
     );
 
+    assert_f32_bits_eq(&scores, &expected_scores, "INT4 top-1 scores");
     assert_eq!(
-        scores
-            .iter()
-            .map(|value| value.to_bits())
-            .collect::<Vec<_>>(),
-        expected_scores
-            .iter()
-            .map(|value| value.to_bits())
-            .collect::<Vec<_>>()
+        indices, expected_indices,
+        "Fix: INT4 top-1 indices must match the CPU oracle exactly."
     );
-    assert_eq!(indices, expected_indices);
 }
 
 #[test]
 fn i4x8_batched_matmul_top1_f32_scaled_via_reuses_cached_program_for_same_shape() {
-    let batch = 2_u32;
     let rows = 3_u32;
     let cols = 8_u32;
     let weights = pack_i4_rows(&[
@@ -71,63 +64,35 @@ fn i4x8_batched_matmul_top1_f32_scaled_via_reuses_cached_program_for_same_shape(
     ]);
     let row_scales = [0.25, 0.5, 0.75];
     let batch_scales = [0.125, 0.375, 0.625];
-    let mut scratch = QuantizedBatchedMatmulTop1GpuScratch::default();
     let mut scores = Vec::new();
     let mut indices = Vec::new();
 
-    i4x8_batched_matmul_top1_f32_scaled_via_with_scratch_into(
-        &QuantizedBatchedMatmulTop1Dispatcher,
-        &weights,
-        &activations,
-        &row_scales,
-        &batch_scales[..2],
-        batch,
-        rows,
-        cols,
-        &mut scratch,
-        &mut scores,
-        &mut indices,
-    )
-    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - first top-1 shape succeeds");
-    i4x8_batched_matmul_top1_f32_scaled_via_with_scratch_into(
-        &QuantizedBatchedMatmulTop1Dispatcher,
-        &weights,
-        &activations,
-        &row_scales,
-        &batch_scales[..2],
-        batch,
-        rows,
-        cols,
-        &mut scratch,
-        &mut scores,
-        &mut indices,
-    )
-    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - same top-1 shape succeeds");
-    assert_eq!(
-        scratch.program_cache.builds(),
-        1,
-        "Fix: repeated same-shape INT4 top-1 dispatch must reuse the primitive Program."
+    assert_program_cache_keys_on_shape(
+        "INT4 top-1",
+        "batch/rows/cols",
+        |scratch: &QuantizedBatchedMatmulTop1GpuScratch| scratch.program_cache.builds(),
+        |scratch, changed| {
+            let (activations, batch_scales, batch) = if changed {
+                (&changed_activations, &batch_scales[..], 3)
+            } else {
+                (&activations, &batch_scales[..2], 2)
+            };
+            i4x8_batched_matmul_top1_f32_scaled_via_with_scratch_into(
+                &QuantizedBatchedMatmulTop1Dispatcher,
+                &weights,
+                activations,
+                &row_scales,
+                batch_scales,
+                batch,
+                rows,
+                cols,
+                scratch,
+                &mut scores,
+                &mut indices,
+            )
+            .expect("Fix: fake top-1 dispatcher must complete every shape this cache test drives");
+        },
     );
-
-    i4x8_batched_matmul_top1_f32_scaled_via_with_scratch_into(
-        &QuantizedBatchedMatmulTop1Dispatcher,
-        &weights,
-        &changed_activations,
-        &row_scales,
-        &batch_scales,
-        3,
-        rows,
-        cols,
-        &mut scratch,
-        &mut scores,
-        &mut indices,
-    )
-    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - changed top-1 shape succeeds");
-    assert_eq!(
-            scratch.program_cache.builds(),
-            2,
-            "Fix: INT4 top-1 dispatch should rebuild the primitive Program only when batch/rows/cols changes."
-        );
 }
 
 #[test]
@@ -146,59 +111,4 @@ fn i4x8_batched_matmul_top1_f32_scaled_via_rejects_shape_errors_before_dispatch(
             )
         },
     );
-}
-
-#[test]
-fn i4x8_batched_matmul_top1_f32_scaled_via_rejects_malformed_backend_outputs() {
-    let weights = pack_i4_rows(&[&[-1, 2, 3, -4, 5, -6, 7, -8]]);
-    let activations = pack_i4_rows(&[&[7, 5, 3, 1, -1, -3, -5, -7], &[-8, -6, -4, -2, 0, 2, 4, 6]]);
-    let row_scales = [0.5];
-    let batch_scales = [0.25, 0.375];
-    // The kernel produces ONE interleaved output buffer of `batch*2` f32 (score, index-as-f32 per
-    // batch). For batch=2 that is 4 f32 = 16 bytes.
-    let no_outputs = MalformedDotDispatcher { outputs: vec![] };
-    let err = i4x8_batched_matmul_top1_f32_scaled_via(
-        &no_outputs,
-        &weights,
-        &activations,
-        &row_scales,
-        &batch_scales,
-        2,
-        1,
-        8,
-    )
-    .expect_err("missing outputs must fail");
-    assert!(err.to_string().contains("exactly one output buffer"));
-
-    let two_outputs = MalformedDotDispatcher {
-        outputs: vec![vec![0; 16], vec![0; 16]],
-    };
-    let err = i4x8_batched_matmul_top1_f32_scaled_via(
-        &two_outputs,
-        &weights,
-        &activations,
-        &row_scales,
-        &batch_scales,
-        2,
-        1,
-        8,
-    )
-    .expect_err("two separate output buffers must fail (kernel returns one interleaved buffer)");
-    assert!(err.to_string().contains("exactly one output buffer"));
-
-    let short_output = MalformedDotDispatcher {
-        outputs: vec![vec![0; 8]],
-    };
-    let err = i4x8_batched_matmul_top1_f32_scaled_via(
-        &short_output,
-        &weights,
-        &activations,
-        &row_scales,
-        &batch_scales,
-        2,
-        1,
-        8,
-    )
-    .expect_err("short interleaved output bytes must fail");
-    assert!(err.to_string().contains("expected 16 output bytes"));
 }

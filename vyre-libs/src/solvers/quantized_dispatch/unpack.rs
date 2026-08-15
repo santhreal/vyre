@@ -74,11 +74,10 @@ pub fn unpack_i4x8_via_with_scratch_into(
         &inputs[..2],
         Some([ceil_div_u32(lane_count, 256), 1, 1]),
     )?;
-    if outputs.len() != 1 {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: unpack_i4x8_via expected exactly one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_i32_output_exact(&outputs[0], lane_words, "unpack_i4x8_via", out)
+    decode_i32_output_exact(
+        expect_one_output("unpack_i4x8_via", &outputs)?,
+        lane_words,
+        "unpack_i4x8_via",
+        out,
+    )
 }

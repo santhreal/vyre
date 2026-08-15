@@ -95,14 +95,8 @@ pub fn i4x8_matvec_f32_scaled_via_with_scratch_into(
     write_f32_slice_le_bytes(&mut inputs[2], row_scales);
 
     let outputs = dispatcher.dispatch(program, &inputs[..3], Some([rows, 1, 1]))?;
-    if outputs.len() != 1 {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: i4x8_matvec_f32_scaled_via expected exactly one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
     decode_f32_output_exact(
-        &outputs[0],
+        expect_one_output("i4x8_matvec_f32_scaled_via", &outputs)?,
         rows as usize,
         "i4x8_matvec_f32_scaled_via",
         out,

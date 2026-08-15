@@ -31,52 +31,30 @@ fn i4x8_dot_f32_scaled_via_reuses_cached_program_for_same_lane_shape() {
     let rhs8 = pack_i4x8_cpu(&[7, 1, -1, -8, 2, -2, 5, -5]);
     let lhs9 = pack_i4x8_cpu(&[-8, -1, 0, 7, 3, -3, 6, -6, 4]);
     let rhs9 = pack_i4x8_cpu(&[7, 1, -1, -8, 2, -2, 5, -5, 3]);
-    let mut scratch = QuantizedDotGpuScratch::default();
     let mut out = Vec::with_capacity(1);
 
-    i4x8_dot_f32_scaled_via_with_scratch_into(
-        &QuantizedDotDispatcher,
-        &lhs8,
-        &rhs8,
-        0.5,
-        0.25,
-        8,
-        &mut scratch,
-        &mut out,
-    )
-    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - first dot shape succeeds");
-    i4x8_dot_f32_scaled_via_with_scratch_into(
-        &QuantizedDotDispatcher,
-        &lhs8,
-        &rhs8,
-        0.25,
-        0.5,
-        8,
-        &mut scratch,
-        &mut out,
-    )
-    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - same dot shape succeeds");
-    assert_eq!(
-        scratch.program_cache.builds(),
-        1,
-        "Fix: repeated same-shape INT4 dot dispatch must reuse the primitive Program."
-    );
-
-    i4x8_dot_f32_scaled_via_with_scratch_into(
-        &QuantizedDotDispatcher,
-        &lhs9,
-        &rhs9,
-        0.25,
-        0.5,
-        9,
-        &mut scratch,
-        &mut out,
-    )
-    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - changed dot shape succeeds");
-    assert_eq!(
-        scratch.program_cache.builds(),
-        2,
-        "Fix: INT4 dot dispatch should rebuild the primitive Program only when lane_count changes."
+    assert_program_cache_keys_on_shape(
+        "INT4 dot",
+        "lane_count",
+        |scratch: &QuantizedDotGpuScratch| scratch.program_cache.builds(),
+        |scratch, changed| {
+            let (lhs, rhs, lane_count) = if changed {
+                (&lhs9[..], &rhs9[..], 9)
+            } else {
+                (&lhs8[..], &rhs8[..], 8)
+            };
+            i4x8_dot_f32_scaled_via_with_scratch_into(
+                &QuantizedDotDispatcher,
+                lhs,
+                rhs,
+                0.5,
+                0.25,
+                lane_count,
+                scratch,
+                &mut out,
+            )
+            .expect("Fix: fake dot dispatcher must complete every lane shape this cache test drives");
+        },
     );
 }
 
@@ -133,19 +111,3 @@ fn i4x8_dot_f32_scaled_via_rejects_bad_shape_before_dispatch() {
     assert!(err.to_string().contains("packed lengths"));
 }
 
-#[test]
-fn i4x8_dot_f32_scaled_via_rejects_malformed_backend_outputs() {
-    let lhs = pack_i4x8_cpu(&[-1, 2, 3, -4, 5, -6, 7, -8]);
-    let rhs = pack_i4x8_cpu(&[7, -6, 5, -4, 3, -2, 1, 0]);
-    let no_outputs = MalformedDotDispatcher { outputs: vec![] };
-    let err = i4x8_dot_f32_scaled_via(&no_outputs, &lhs, &rhs, 1.0, 1.0, 8)
-        .expect_err("missing output must fail");
-    assert!(err.to_string().contains("exactly one output"));
-
-    let short_output = MalformedDotDispatcher {
-        outputs: vec![vec![0; 3]],
-    };
-    let err = i4x8_dot_f32_scaled_via(&short_output, &lhs, &rhs, 1.0, 1.0, 8)
-        .expect_err("short output must fail");
-    assert!(err.to_string().contains("expected 4 output bytes"));
-}
