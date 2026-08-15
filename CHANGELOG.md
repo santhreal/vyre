@@ -4,6 +4,9 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ## [Unreleased]
 
+Vyre 0.7.2 releases from candidate tag `vyre-v0.7.2-rc.1` and final tag `vyre-v0.7.2`.
+Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-wgpu@0.7.2`.
+
 ### Added
 
 - Grouped affine INT4 linear now provides a typed batched program builder that
@@ -1811,6 +1814,16 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   the one declared seam: `nn::linear` reaches `MatmulBiasTiled` and `reasoning`
   reaches `reachability_closure_via_into` through it, and the prelude names
   both.
+- `xtask gates` no longer accepts a failing gate. `xtask/gate-baselines.toml`
+  pinned both a `status` and an `owner` sentence per row, and the sweep treated
+  `status = "red"` as the expected result whenever the row named an owner, so a
+  gate could fail indefinitely while the sweep reported that every gate held
+  its baseline; three did, for a fortnight. Both fields are gone from the
+  schema and a row that still carries either fails to load rather than being
+  ignored, because a default derive would accept and discard it. What remains
+  is a finding ratchet: `output_lines` may fall and be lowered, may not grow,
+  and a nonzero exit is a failure whatever the pin says. `--write-baseline`
+  refuses to record a run in which any gate failed.
 
 ### Removed
 
@@ -1883,6 +1896,19 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   had two paths and a reader could not tell which was the owner. Every caller
   inside and outside the crate imports `vyre_foundation::fp_parity` directly;
   no alias remains.
+- The mdbook is deleted: 134 files, every `.md` under `docs/` plus `book.toml`.
+  It described a tree that had moved out from under it, and a document that
+  contradicts source is worse than no document, because a reader who checks it
+  is misled and a reader who does not is unserved. What remains under `docs/`
+  is machine-readable contract data that gates read directly: the `.toml`
+  policies including `OWNERSHIP.toml`, `HOT_PATHS.toml`, `OP_MATRIX.toml`,
+  `TESTING.toml` and `STRUCTURAL_GATES.toml`, the per-crate public-API `.txt`
+  snapshots, `OP_SCHEMA.json` and `architecture.svg`. `README.md` and per-crate
+  `README` files remain the documentation surface. `scripts/release_docs.py`
+  accordingly generates `CHANGELOG.md` alone, and the release train's required
+  artifact tokens are generated into its unreleased section from
+  `release/release-train.toml` rather than checked against prose that could
+  disagree with it.
 
 ### Fixed
 
