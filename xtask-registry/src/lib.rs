@@ -26,9 +26,12 @@ pub static GATES: &[&dyn xtask::gate::Gate] = &[
     &release::optimization_matrix::OptimizationMatrixGate,
 ];
 
-/// Every subcommand this crate implements, keyed by the name typed on the
-/// command line. `xtask` routes to this crate by name and this table resolves
-/// it, so the two lists have to agree; the test below is what enforces that.
+/// The subcommands this crate still implements as bare functions.
+///
+/// `xtask` no longer routes to any of these: the parent reaches a delegated
+/// crate only through a registered gate, so every name here is unreachable
+/// until it is converted and moved into `GATES`. The table holds the
+/// implementations so the conversion has something to convert.
 pub const IMPLEMENTED: &[(&str, fn(&[String]))] = &[
     ("abstraction-gate", gates::abstraction_gate::run),
     ("catalog", docs::catalog::run),
@@ -54,14 +57,14 @@ pub const IMPLEMENTED: &[(&str, fn(&[String]))] = &[
 mod tests {
     use super::*;
 
-    /// WHY: this crate is built and run only when `xtask` decides a subcommand
+    /// WHY: this crate is built and run only when `xtask` decides a gate
     /// belongs here, so its table and the assignment in `xtask` are two
     /// declarations that must agree exactly, once each, and answer to nothing
     /// else. The checker derives both sides at call time.
     #[test]
-    fn the_dispatch_table_agrees_with_the_assignment_in_xtask() {
+    fn the_gate_table_agrees_with_the_assignment_in_xtask() {
         assert_eq!(
-            xtask::subcommands::delegate_table_problems("xtask-registry", IMPLEMENTED),
+            xtask::subcommands::delegate_table_problems("xtask-registry", GATES),
             Vec::<String>::new()
         );
     }

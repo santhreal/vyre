@@ -7,7 +7,7 @@
 fn main() {
     xtask::delegate::run_delegated_main(
         "xtask-registry",
-        "`xtask` assigns these subcommands here because each one reads the live operation registry.",
-        xtask_registry::IMPLEMENTED,
+        "`xtask` assigns these gates here because each one reads the live operation registry.",
+        xtask_registry::GATES,
     );
 }

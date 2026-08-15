@@ -2,6 +2,7 @@ use std::fs;
 use std::path::Path;
 
 use serde_json::Value;
+use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
 use super::args::{parse_args, Config};
 use super::cpu_sota_proof::write_cpu_100x_proof;
@@ -20,21 +21,142 @@ use super::suite_inspect::{
     write_backend_suite_with_extra_blockers,
 };
 
-pub(crate) fn run(args: &[String]) {
-    let config = match parse_args(args) {
-        Ok(config) => config,
-        Err(message) => {
-            eprintln!("{message}");
-            std::process::exit(2);
+const MATRIX_ARTIFACT: &str = "release/evidence/benchmarks/release-workload-matrix.json";
+
+pub struct ReleaseBenchmarksGate;
+
+impl Gate for ReleaseBenchmarksGate {
+    fn name(&self) -> &'static str {
+        "release-benchmarks"
+    }
+
+    fn help(&self) -> &'static str {
+        "Hold every recorded release benchmark artifact to its blocker contract. `--write` \
+         re-measures the suite on a release host."
+    }
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        let config = match parse_args(&ctx.args) {
+            Ok(config) => config,
+            Err(message) => {
+                report.find(Finding::new(message, "Correct the flags and rerun."));
+                return Ok(report);
+            }
+        };
+        if ctx.write {
+            measure(&ctx.root, &config, &mut report);
+        } else {
+            audit(&ctx.root, &config, &mut report);
+        }
+        Ok(report)
+    }
+}
+
+/// Read the recorded artifacts and hold each to its blocker contract.
+///
+/// This runs no benchmark and needs no device. The old command measured on
+/// every invocation, so the check that recorded evidence is coherent ran only
+/// on a release host with a GPU, and therefore almost never.
+fn audit(workspace_root: &Path, config: &Config, report: &mut Report) {
+    let Some(matrix) = read_matrix(workspace_root, report) else {
+        return;
+    };
+    let families = benchmark_suite_families(&matrix, config.only.as_deref());
+    if families.is_empty() {
+        report.find(Finding::in_file(
+            std::path::PathBuf::from(MATRIX_ARTIFACT),
+            match config.only.as_deref() {
+                Some(only) => format!("`--only {only}` selected zero benchmark families"),
+                None => "the release workload matrix declares zero benchmark families".to_string(),
+            },
+            "Name a family the matrix declares, or regenerate the matrix with `cargo xtask \
+             release-workload-matrix --write`.",
+        ));
+        return;
+    }
+    for family in &families {
+        let prefer = requires_release_cpu_sota_100x_proof(&config.backend, family)
+            || config.backend == "wgpu";
+        if select_release_benchmark_case(family, prefer).is_none() {
+            report.find(Finding::in_file(
+                std::path::PathBuf::from(MATRIX_ARTIFACT),
+                format!(
+                    "release workload family `{}` has no matched benchmark case",
+                    family.id
+                ),
+                "Register a benchmark case for the family, or drop the family from the release \
+                 workload matrix. A family with no case measures nothing.",
+            ));
+        }
+    }
+    let paths = generated_release_benchmark_evidence_paths(
+        &config.backend,
+        config.backend == "cuda",
+        config.backend == "cuda",
+        config.include_wgpu_comparison && config.only.is_none() && config.backend == "cuda",
+        should_write_optimization_manifest(config, true),
+    );
+    for blocker in generated_benchmark_evidence_blockers(workspace_root, &paths) {
+        report.find(Finding::new(
+            format!("generated release benchmark evidence blocker: {blocker}"),
+            "Rerun `cargo xtask release-benchmarks --write --backend <backend>` on a release host \
+             and commit the artifact. A blocker recorded in an artifact is a measurement that did \
+             not complete.",
+        ));
+    }
+    report.note(format!(
+        "audited {} recorded artifact(s) for backend `{}` across {} family(ies)",
+        paths.len(),
+        config.backend,
+        families.len()
+    ));
+}
+
+fn read_matrix(workspace_root: &Path, report: &mut Report) -> Option<ReleaseWorkloadMatrix> {
+    let matrix_path = workspace_root.join(MATRIX_ARTIFACT);
+    let matrix_text = match read_text_bounded(&matrix_path, MAX_RELEASE_BENCHMARK_TEXT_BYTES) {
+        Ok(text) => text,
+        Err(error) => {
+            report.find(Finding::in_file(
+                std::path::PathBuf::from(MATRIX_ARTIFACT),
+                format!("release workload matrix is unreadable: {error}"),
+                "Run `cargo xtask release-workload-matrix --write` and commit the artifact.",
+            ));
+            return None;
         }
     };
-    let workspace_root = xtask::checkout::checkout_root();
-    let matrix_path =
-        workspace_root.join("release/evidence/benchmarks/release-workload-matrix.json");
+    match serde_json::from_str::<ReleaseWorkloadMatrix>(&matrix_text) {
+        Ok(matrix) => Some(matrix),
+        Err(error) => {
+            report.find(Finding::in_file(
+                std::path::PathBuf::from(MATRIX_ARTIFACT),
+                format!("release workload matrix JSON is invalid: {error}"),
+                "Run `cargo xtask release-workload-matrix --write` and commit the artifact.",
+            ));
+            None
+        }
+    }
+}
+
+/// Measure the suite and record every artifact it owns.
+///
+/// Every abort in here used to be `std::process::exit`, which in a delegated
+/// child truncates the report the parent reads off stdout. They are findings.
+fn measure(root: &Path, config: &Config, report: &mut Report) {
+    let workspace_root = root.to_path_buf();
+    let matrix_path = workspace_root.join(MATRIX_ARTIFACT);
     if let Some(parent) = matrix_path.parent() {
         if let Err(error) = fs::create_dir_all(parent) {
-            eprintln!("Fix: failed to create `{}`: {error}", parent.display());
-            std::process::exit(1);
+            report.find(Finding::new(
+                format!("failed to create `{}`: {error}", parent.display()),
+                "Check the permissions on the evidence directory.",
+            ));
+            return;
         }
     }
     run_command(
@@ -49,23 +171,12 @@ pub(crate) fn run(args: &[String]) {
             "--format",
             "json",
             "--output",
-            "release/evidence/benchmarks/release-workload-matrix.json",
+            MATRIX_ARTIFACT,
             "--enforce",
         ],
     );
-    let matrix_text = match read_text_bounded(&matrix_path, MAX_RELEASE_BENCHMARK_TEXT_BYTES) {
-        Ok(text) => text,
-        Err(error) => {
-            eprintln!("Fix: failed to read `{}`: {error}", matrix_path.display());
-            std::process::exit(1);
-        }
-    };
-    let matrix = match serde_json::from_str::<ReleaseWorkloadMatrix>(&matrix_text) {
-        Ok(matrix) => matrix,
-        Err(error) => {
-            eprintln!("Fix: release workload matrix JSON is invalid: {error}");
-            std::process::exit(1);
-        }
+    let Some(matrix) = read_matrix(&workspace_root, report) else {
+        return;
     };
 
     let mut suite_artifacts = Vec::new();
@@ -78,11 +189,16 @@ pub(crate) fn run(args: &[String]) {
         let required_reuse_speedup = reusable_cpu_sota_min_speedup(&config.backend, family);
         let prefer_cpu_sota_case = cpu_100x_family || config.backend == "wgpu";
         let Some(case_id) = select_release_benchmark_case(family, prefer_cpu_sota_case) else {
-            eprintln!(
-                "Fix: release workload `{}` has no matched benchmark case.",
-                family.id
-            );
-            std::process::exit(1);
+            report.find(Finding::in_file(
+                std::path::PathBuf::from(MATRIX_ARTIFACT),
+                format!(
+                    "release workload family `{}` has no matched benchmark case",
+                    family.id
+                ),
+                "Register a benchmark case for the family, or drop the family from the release \
+                 workload matrix.",
+            ));
+            continue;
         };
         let evidence_artifact =
             backend_workload_artifact(&config.backend, &family.evidence_artifact);
@@ -169,11 +285,17 @@ pub(crate) fn run(args: &[String]) {
         let mut wgpu_suite_failures = Vec::new();
         for family in benchmark_suite_families(&matrix, None) {
             let Some(case_id) = select_release_benchmark_case(family, true) else {
-                eprintln!(
-                    "Fix: release workload `{}` has no matched benchmark case.",
-                    family.id
-                );
-                std::process::exit(1);
+                report.find(Finding::in_file(
+                    std::path::PathBuf::from(MATRIX_ARTIFACT),
+                    format!(
+                        "release workload family `{}` has no matched benchmark case for the wgpu \
+                         comparison",
+                        family.id
+                    ),
+                    "Register a benchmark case for the family, or drop the family from the \
+                     release workload matrix.",
+                ));
+                continue;
             };
             let output = prefixed_benchmark_artifact(&family.evidence_artifact, "wgpu");
             if !config.refresh_suites_only
@@ -218,7 +340,7 @@ pub(crate) fn run(args: &[String]) {
         );
     }
     let wrote_optimization_manifest =
-        should_write_optimization_manifest(&config, workload_failures.is_empty());
+        should_write_optimization_manifest(config, workload_failures.is_empty());
     if wrote_optimization_manifest {
         if !config.refresh_suites_only {
             run_named_benchmark_if_needed(
@@ -249,15 +371,16 @@ pub(crate) fn run(args: &[String]) {
                 "--quiet",
                 "--",
                 "optimization-matrix",
-                "--output",
-                "release/evidence/optimization/optimization-integration-matrix.json",
+                "--write",
             ],
         );
         write_optimization_benchmark_manifest(&workspace_root, &config.backend);
     }
     if ran == 0 {
-        eprintln!("Fix: release-benchmarks selected zero benchmark families.");
-        std::process::exit(1);
+        report.find(Finding::new(
+            "release-benchmarks selected zero benchmark families".to_string(),
+            "Name a family the release workload matrix declares, or omit --only.",
+        ));
     }
     if config.backend == "cuda" {
         write_cpu_100x_proof(&workspace_root, &cpu_100x_artifacts);
@@ -279,22 +402,26 @@ pub(crate) fn run(args: &[String]) {
         config.include_wgpu_comparison && config.only.is_none() && config.backend == "cuda",
         wrote_optimization_manifest,
     );
-    let generated_blockers =
-        generated_benchmark_evidence_blockers(&workspace_root, &generated_evidence_paths);
     for failure in &workload_failures {
-        eprintln!("Fix: release workload benchmark failed: {failure}");
+        report.find(Finding::new(
+            format!("release workload benchmark failed: {failure}"),
+            "Rerun the named case on a release host. A failed measurement leaves the artifact \
+             describing the previous tree.",
+        ));
     }
-    for blocker in &generated_blockers {
-        eprintln!("Fix: generated release benchmark evidence blocker: {blocker}");
+    for blocker in
+        generated_benchmark_evidence_blockers(&workspace_root, &generated_evidence_paths)
+    {
+        report.find(Finding::new(
+            format!("generated release benchmark evidence blocker: {blocker}"),
+            "Resolve the blocker on the release host and rerun with --write.",
+        ));
     }
-    if !workload_failures.is_empty() || !generated_blockers.is_empty() {
-        std::process::exit(1);
-    }
-    if config.refresh_suites_only {
-        println!("release-benchmarks: refreshed suite evidence for {ran} benchmark artifact(s)");
+    report.note(if config.refresh_suites_only {
+        format!("refreshed suite evidence for {ran} benchmark artifact(s)")
     } else {
-        println!("release-benchmarks: wrote {ran} benchmark artifact(s)");
-    }
+        format!("wrote {ran} benchmark artifact(s)")
+    });
 }
 
 fn should_write_optimization_manifest(config: &Config, workload_failures_empty: bool) -> bool {

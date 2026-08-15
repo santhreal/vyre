@@ -17,32 +17,25 @@ pub(crate) mod report_fixture;
 /// this table, runs the gate and prints one `Report` on stdout.
 pub static GATES: &[&dyn xtask::gate::Gate] = &[
     &release::backend_matrix::BackendMatrixGate,
+    &bench::bench_crossback::BenchCrossbackGate,
     &bench::bench_release::BenchReleaseGate,
+    &bench::release_benchmarks::ReleaseBenchmarksGate,
+    &release::release_evidence::ReleaseEvidenceGate,
     &release::release_workload_matrix::ReleaseWorkloadMatrixGate,
-];
-
-/// Every subcommand this crate implements, keyed by the name typed on the
-/// command line. `xtask` routes to this crate by name and this table resolves
-/// it, so the two lists have to agree; the test below is what enforces that.
-pub const IMPLEMENTED: &[(&str, fn(&[String]))] = &[
-    ("bench-crossback", bench::bench_crossback::run),
-    ("release-benchmarks", bench::release_benchmarks::run),
-    ("release-evidence", release::release_evidence::run),
-    ("vyre-release-gate", release::vyre_release_gate::run),
 ];
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// WHY: this crate is built and run only when `xtask` decides a subcommand
+    /// WHY: this crate is built and run only when `xtask` decides a gate
     /// belongs here, so its table and the assignment in `xtask` are two
     /// declarations that must agree exactly, once each, and answer to nothing
     /// else. The checker derives both sides at call time.
     #[test]
-    fn the_dispatch_table_agrees_with_the_assignment_in_xtask() {
+    fn the_gate_table_agrees_with_the_assignment_in_xtask() {
         assert_eq!(
-            xtask::subcommands::delegate_table_problems("xtask-evidence", IMPLEMENTED),
+            xtask::subcommands::delegate_table_problems("xtask-evidence", GATES),
             Vec::<String>::new()
         );
     }

@@ -258,15 +258,45 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
         "release bench report",
     )
 }
-        _ => None,
-    }
-}
 
 #[cfg(test)]
 mod tests {
     use std::fs;
 
     use super::*;
+
+    /// The axes, when the fixture is coherent.
+    ///
+    /// `load_release_axes` reports through a `Report` now instead of returning
+    /// `Result`, because one bad axis used to abort the whole gate and hide
+    /// every axis after it. These two helpers keep the tests asserting the same
+    /// two outcomes: a fixture loads, or it is rejected with a stated reason.
+    fn axes_or_findings(benchmark_dir: &Path) -> Option<Value> {
+        let mut report = Report::clean();
+        let axes = load_release_axes(benchmark_dir, &mut report);
+        assert!(
+            report.findings.is_empty(),
+            "Fix: a coherent fixture must report nothing; got {:?}",
+            report.findings
+        );
+        axes
+    }
+
+    /// The one message a rejected fixture was rejected with.
+    fn axes_findings(benchmark_dir: &Path) -> Option<String> {
+        let mut report = Report::clean();
+        let _ = load_release_axes(benchmark_dir, &mut report);
+        assert!(
+            report.findings.len() <= 1,
+            "Fix: these fixtures each carry one defect; got {:?}",
+            report.findings
+        );
+        report
+            .findings
+            .into_iter()
+            .next()
+            .map(|finding| finding.message)
+    }
 
     fn write_canonical_axes_fixture(
         benchmark_dir: &Path,
@@ -370,12 +400,12 @@ mod tests {
         )
         .expect("Fix: write temporary decoy axis.");
 
-        let axes = load_release_axes(&benchmark_dir)
+        let axes = axes_or_findings(&benchmark_dir)
             .expect("Fix: canonical CUDA release axes fixture should load.");
 
         assert_eq!(
-            require_f64_axis(&axes, AXIS_WARM_US_PER_FILE),
-            Ok(17.0),
+            axis_value(&axes, AXIS_WARM_US_PER_FILE, AxisKind::Float),
+            Ok("17".to_string()),
             "Fix: bench-release must print the canonical bench-release-axes value, not whichever JSON directory entry exposes a top-level axis."
         );
     }
@@ -387,8 +417,8 @@ mod tests {
         let benchmark_dir = dir.path().join("release/evidence/benchmarks");
         write_canonical_axes_fixture(&benchmark_dir, dir.path(), Some(7));
 
-        let error = load_release_axes(&benchmark_dir)
-            .expect_err("Fix: WGPU artifacts must not satisfy CUDA bench-release axes.");
+        let error = axes_findings(&benchmark_dir)
+            .expect("Fix: WGPU artifacts must not satisfy CUDA bench-release axes.");
 
         assert!(
             error.contains("selected_backend must be cuda"),
@@ -415,8 +445,8 @@ mod tests {
         )
         .expect("Fix: write drifted temporary CUDA axis artifact.");
 
-        let error = load_release_axes(&benchmark_dir)
-            .expect_err("Fix: WGPU cases must not satisfy CUDA bench-release axes.");
+        let error = axes_findings(&benchmark_dir)
+            .expect("Fix: WGPU cases must not satisfy CUDA bench-release axes.");
 
         assert!(
             error.contains("backend_id `wgpu` does not match selected_backend `cuda`"),
@@ -446,8 +476,8 @@ mod tests {
         )
         .expect("Fix: write polluted temporary CUDA axis artifact.");
 
-        let error = load_release_axes(&benchmark_dir)
-            .expect_err("Fix: borrowed resident fallback source artifacts must not load.");
+        let error = axes_findings(&benchmark_dir)
+            .expect("Fix: borrowed resident fallback source artifacts must not load.");
 
         assert!(
             error.contains("cuda_resident_borrowed_fallback_dispatches p50=2")
@@ -479,8 +509,8 @@ mod tests {
         )
         .expect("Fix: write metric-poisoned temporary CUDA axis artifact.");
 
-        let error = load_release_axes(&benchmark_dir)
-            .expect_err("Fix: source artifacts missing axis metrics must not load.");
+        let error = axes_findings(&benchmark_dir)
+            .expect("Fix: source artifacts missing axis metrics must not load.");
 
         assert!(
             error.contains("has no positive p50 cold/compile metric for cold_pipeline_build_ms"),
@@ -510,8 +540,8 @@ mod tests {
         )
         .expect("Fix: write drifted temporary release axes.");
 
-        let error = load_release_axes(&benchmark_dir)
-            .expect_err("Fix: drifted release axes must not load.");
+        let error = axes_findings(&benchmark_dir)
+            .expect("Fix: drifted release axes must not load.");
 
         assert!(
             error.contains("gbs_scan_throughput=999 does not match source artifacts 4"),
@@ -540,8 +570,8 @@ mod tests {
         )
         .expect("Fix: write blockerless temporary release axes.");
 
-        let error = load_release_axes(&benchmark_dir)
-            .expect_err("Fix: release axes without blockers array must not load.");
+        let error = axes_findings(&benchmark_dir)
+            .expect("Fix: release axes without blockers array must not load.");
 
         assert!(
             error.contains("bench-release-axes.json` is missing blockers array"),
@@ -567,8 +597,8 @@ mod tests {
         )
         .expect("Fix: write temporary CUDA release suite without inventory.");
 
-        let error = load_release_axes(&benchmark_dir)
-            .expect_err("Fix: suite evidence without artifact_statuses must not load.");
+        let error = axes_findings(&benchmark_dir)
+            .expect("Fix: suite evidence without artifact_statuses must not load.");
 
         assert!(
             error.contains("cuda-release-suite.json` is missing artifact_statuses array"),
@@ -600,8 +630,8 @@ mod tests {
         )
         .expect("Fix: write temporary CUDA release suite with nested blocker.");
 
-        let error = load_release_axes(&benchmark_dir)
-            .expect_err("Fix: suite evidence with nested blockers must not load.");
+        let error = axes_findings(&benchmark_dir)
+            .expect("Fix: suite evidence with nested blockers must not load.");
 
         assert!(
             error.contains("artifact_statuses[0]")
@@ -641,8 +671,8 @@ mod tests {
         )
         .expect("Fix: write temporary CUDA release suite with inventory drift.");
 
-        let error = load_release_axes(&benchmark_dir)
-            .expect_err("Fix: suite evidence with status inventory drift must not load.");
+        let error = axes_findings(&benchmark_dir)
+            .expect("Fix: suite evidence with status inventory drift must not load.");
 
         assert!(
             error.contains(
@@ -676,8 +706,8 @@ mod tests {
         )
         .expect("Fix: write mislabeled temporary CUDA release suite.");
 
-        let error = load_release_axes(&benchmark_dir)
-            .expect_err("Fix: mislabeled CUDA release suites must not satisfy bench-release axes.");
+        let error = axes_findings(&benchmark_dir)
+            .expect("Fix: mislabeled CUDA release suites must not satisfy bench-release axes.");
 
         assert!(
             error.contains("cuda-release-suite backend `wgpu` does not match required `cuda`"),
