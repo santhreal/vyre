@@ -6,8 +6,7 @@ use vyre_driver::materialize::{
 };
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingRole, BindingSet,
-    CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig, ResidentOwner,
-    Submission,
+    CompiledPipeline, Completion, DeviceIdentity, DispatchConfig, ResidentOwner, Submission,
 };
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
@@ -58,33 +57,7 @@ pub(crate) struct CudaMaterializer {
 }
 
 impl ArtifactMaterializer for CudaMaterializer {
-    fn device(&self) -> &dyn Device {
-        &self.descriptor
-    }
-    fn allocate_resident(&self, byte_len: usize) -> Result<vyre_driver::Resource, BackendError> {
-        vyre_driver::VyreBackend::allocate_resident(&self.resident, byte_len)
-    }
-
-    fn upload_resident(
-        &self,
-        resource: &vyre_driver::Resource,
-        bytes: &[u8],
-    ) -> Result<(), BackendError> {
-        vyre_driver::VyreBackend::upload_resident(&self.resident, resource, bytes)
-    }
-
-    fn upload_resident_at(
-        &self,
-        resource: &vyre_driver::Resource,
-        offset_bytes: usize,
-        bytes: &[u8],
-    ) -> Result<(), BackendError> {
-        vyre_driver::VyreBackend::upload_resident_at(&self.resident, resource, offset_bytes, bytes)
-    }
-
-    fn free_resident(&self, resource: vyre_driver::Resource) -> Result<(), BackendError> {
-        vyre_driver::VyreBackend::free_resident(&self.resident, resource)
-    }
+    vyre_driver::materializer_passthrough!(resident);
 
     fn materialize(
         &self,

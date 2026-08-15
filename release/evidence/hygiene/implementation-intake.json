@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "release_blocker_count": 0,
+  "release_blocker_count": 8,
   "intake_summary": [
     {
       "owner_lane": "bench_harness",
@@ -72,7 +72,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 10
+      "count": 12
     },
     {
       "owner_lane": "coordination",
@@ -126,7 +126,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 5
+      "count": 8
     },
     {
       "owner_lane": "driver_shared",
@@ -310,6 +310,15 @@
     },
     {
       "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "pattern": "raw_workspace_cargo",
+      "release_blocker": true,
+      "count": 8
+    },
+    {
+      "owner_lane": "testing_evidence",
       "surface": "test",
       "risk": "informational",
       "hot_path": false,
@@ -318,5 +327,7 @@
       "count": 4
     }
   ],
-  "blockers": []
+  "blockers": [
+    "8 release-blocking hygiene finding(s) remain; implementation-intake.json groups them by owner lane, surface, risk, hot-path flag, and pattern"
+  ]
 }

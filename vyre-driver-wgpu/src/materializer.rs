@@ -61,33 +61,7 @@ pub(crate) struct WgpuMaterializer {
 }
 
 impl ArtifactMaterializer for WgpuMaterializer {
-    fn device(&self) -> &dyn Device {
-        &self.descriptor
-    }
-    fn allocate_resident(&self, byte_len: usize) -> Result<vyre_driver::Resource, BackendError> {
-        vyre_driver::VyreBackend::allocate_resident(&self.backend, byte_len)
-    }
-
-    fn upload_resident(
-        &self,
-        resource: &vyre_driver::Resource,
-        bytes: &[u8],
-    ) -> Result<(), BackendError> {
-        vyre_driver::VyreBackend::upload_resident(&self.backend, resource, bytes)
-    }
-
-    fn upload_resident_at(
-        &self,
-        resource: &vyre_driver::Resource,
-        offset_bytes: usize,
-        bytes: &[u8],
-    ) -> Result<(), BackendError> {
-        vyre_driver::VyreBackend::upload_resident_at(&self.backend, resource, offset_bytes, bytes)
-    }
-
-    fn free_resident(&self, resource: vyre_driver::Resource) -> Result<(), BackendError> {
-        vyre_driver::VyreBackend::free_resident(&self.backend, resource)
-    }
+    vyre_driver::materializer_passthrough!(backend);
 
     fn materialize(
         &self,

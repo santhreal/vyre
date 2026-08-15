@@ -792,6 +792,68 @@ macro_rules! artifact_instance_identity {
     };
 }
 
+/// Answer [`crate::ArtifactMaterializer::device`] from a [`MaterializerDevice`]
+/// field named `descriptor`, and optionally forward the four resident-resource
+/// methods to a [`crate::VyreBackend`] field.
+///
+/// The device accessor is the same line in every backend, because the device a
+/// materializer reports is exactly the descriptor it was acquired with. The
+/// resident four are the same four bodies wherever the backend has a resident
+/// path at all: the materializer owns no allocator of its own, so each one
+/// names the backend field and forwards unchanged. A backend without a resident
+/// path passes no field and keeps the trait's refusals.
+///
+/// ```ignore
+/// impl ArtifactMaterializer for CudaMaterializer {
+///     vyre_driver::materializer_passthrough!(resident);
+///
+///     fn materialize(&self, artifact: &Artifact, payload: &TargetPayload)
+///         -> Result<Box<dyn ArtifactInstance>, BackendError> { /* per backend */ }
+/// }
+/// ```
+#[macro_export]
+macro_rules! materializer_passthrough {
+    () => {
+        fn device(&self) -> &dyn $crate::Device {
+            &self.descriptor
+        }
+    };
+    ($backend:ident) => {
+        $crate::materializer_passthrough!();
+
+        fn allocate_resident(
+            &self,
+            byte_len: usize,
+        ) -> ::std::result::Result<$crate::Resource, $crate::BackendError> {
+            $crate::VyreBackend::allocate_resident(&self.$backend, byte_len)
+        }
+
+        fn upload_resident(
+            &self,
+            resource: &$crate::Resource,
+            bytes: &[u8],
+        ) -> ::std::result::Result<(), $crate::BackendError> {
+            $crate::VyreBackend::upload_resident(&self.$backend, resource, bytes)
+        }
+
+        fn upload_resident_at(
+            &self,
+            resource: &$crate::Resource,
+            offset_bytes: usize,
+            bytes: &[u8],
+        ) -> ::std::result::Result<(), $crate::BackendError> {
+            $crate::VyreBackend::upload_resident_at(&self.$backend, resource, offset_bytes, bytes)
+        }
+
+        fn free_resident(
+            &self,
+            resource: $crate::Resource,
+        ) -> ::std::result::Result<(), $crate::BackendError> {
+            $crate::VyreBackend::free_resident(&self.$backend, resource)
+        }
+    };
+}
+
 /// A submission whose execution already finished when it was created.
 struct ReadySubmission {
     result: Option<Result<Completion, BackendError>>,

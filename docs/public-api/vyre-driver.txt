@@ -1288,6 +1288,7 @@ pub fn vyre_driver::validation::validate_program_for_backend(backend: &dyn vyre_
 pub fn vyre_foundation::optimizer::ctx::AdapterCaps::from(profile: vyre_driver::device_profile::DeviceProfile) -> Self
 pub fn vyre_foundation::validate::options::BackendCapabilities::from(profile: vyre_driver::device_profile::DeviceProfile) -> Self
 pub macro vyre_driver::artifact_instance_identity!
+pub macro vyre_driver::materializer_passthrough!
 pub mod vyre_driver
 pub mod vyre_driver::accounting
 pub mod vyre_driver::allocation

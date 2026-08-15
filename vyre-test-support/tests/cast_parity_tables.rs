@@ -21,10 +21,11 @@
 //! cast wrongly. That is what each driver's parity target proves on real
 //! hardware, and it is why each of those keeps its own reference arm.
 
+use std::collections::BTreeSet;
+
 use vyre_test_support::cast_parity::{
-    signed_widening_words, I32_TO_I64_EXPECTED, NARROWING_INPUTS, SIGNED_WIDENING_INPUTS,
-    U32_TO_I16_EXPECTED, U32_TO_I8_EXPECTED, U32_TO_U16_EXPECTED, U32_TO_U8_EXPECTED,
-    UNSIGNED_TO_SIGNED_WIDENING_INPUTS, UNSIGNED_WIDENING_INPUTS,
+    signed_widening_words, I32_TO_I64_EXPECTED, NARROWING_CASES, NARROWING_INPUTS,
+    SIGNED_WIDENING_INPUTS, UNSIGNED_TO_SIGNED_WIDENING_INPUTS, UNSIGNED_WIDENING_INPUTS,
 };
 
 /// Minimum probe words a corpus must carry, so a corpus emptied or trimmed to a
@@ -54,52 +55,100 @@ fn every_pinned_widening_result_is_what_rust_as_computes() {
 
 #[test]
 fn every_pinned_narrowing_result_is_what_rust_as_computes() {
-    for (label, pinned, computed) in [
-        (
-            "u32->u8",
-            U32_TO_U8_EXPECTED.to_vec(),
-            NARROWING_INPUTS
-                .iter()
-                .map(|&v| u32::from(v as u8))
-                .collect::<Vec<u32>>(),
-        ),
-        (
-            "u32->u16",
-            U32_TO_U16_EXPECTED.to_vec(),
-            NARROWING_INPUTS
-                .iter()
-                .map(|&v| u32::from(v as u16))
-                .collect(),
-        ),
-    ] {
+    assert!(
+        !NARROWING_CASES.is_empty(),
+        "the narrowing matrix is empty, so this gate checks no pin at all"
+    );
+    for case in NARROWING_CASES {
         assert_eq!(
-            pinned, computed,
-            "pinned {label} narrowing disagrees with Rust `as` over NARROWING_INPUTS"
+            case.reference_words().len(),
+            NARROWING_INPUTS.len(),
+            "the `u32 {}` reference must answer every probe word",
+            case.label
         );
+        case.assert_pin_holds();
     }
-    for (label, pinned, computed) in [
-        (
-            "u32->i8",
-            U32_TO_I8_EXPECTED.to_vec(),
-            NARROWING_INPUTS
-                .iter()
-                .map(|&v| i32::from(v as u8 as i8))
-                .collect::<Vec<i32>>(),
-        ),
-        (
-            "u32->i16",
-            U32_TO_I16_EXPECTED.to_vec(),
-            NARROWING_INPUTS
-                .iter()
-                .map(|&v| i32::from(v as u16 as i16))
-                .collect(),
-        ),
-    ] {
-        assert_eq!(
-            pinned, computed,
-            "pinned {label} narrowing disagrees with Rust `as` over NARROWING_INPUTS"
-        );
-    }
+}
+
+/// Every integer the IR admits as a cast-participating scalar and that is
+/// narrower than the 32-bit source must have a case.
+///
+/// The variant space comes from `vyre_foundation::validate::cast`, the owner of
+/// which types an integer cast may name, read at run time from its own source.
+/// `DataType` also declares sub-byte quantization storage families such as `I4`
+/// that the cast table deliberately excludes, so enumerating the enum instead
+/// would demand a case for a type no backend can lower. Admit a narrower
+/// integer there and this turns red until both backend arms dispatch it; a
+/// hand-written list of four types would instead let it land proven nowhere,
+/// which is indistinguishable from a clean sweep.
+#[test]
+fn the_matrix_covers_every_narrowing_target_the_cast_table_admits() {
+    let root = structure_gate::workspace_root();
+    let source_path =
+        structure_gate::member_directory(&root, "vyre-foundation").join("src/validate/cast.rs");
+    let source = std::fs::read_to_string(&source_path).unwrap_or_else(|error| {
+        panic!(
+            "Fix: the narrowing coverage gate cannot read {}: {error}",
+            source_path.display()
+        )
+    });
+
+    let admitted = cast_participating_scalars(&source);
+    assert!(
+        admitted.len() > 4,
+        "Fix: only {} cast-participating scalar(s) were parsed out of {}; the gate is reading the wrong shape and would report success over nothing",
+        admitted.len(),
+        source_path.display()
+    );
+    let declared: BTreeSet<String> = admitted
+        .into_iter()
+        .filter(|variant| integer_bit_width(variant).is_some_and(|bits| bits < 32))
+        .collect();
+
+    let covered: BTreeSet<String> = NARROWING_CASES
+        .iter()
+        .map(|case| format!("{:?}", case.narrow))
+        .collect();
+    assert_eq!(
+        covered, declared,
+        "every cast-participating integer narrower than 32 bits needs a narrowing-cast case; \
+         a target without one is dispatched by no backend"
+    );
+}
+
+/// `DataType` variants the cast table treats as integer-like scalars.
+///
+/// Read from the `is_integer_like_scalar` predicate's own match arms, which is
+/// where that decision lives.
+fn cast_participating_scalars(source: &str) -> BTreeSet<String> {
+    let Some(body) = source
+        .split_once("fn is_integer_like_scalar")
+        .map(|(_, rest)| rest)
+    else {
+        return BTreeSet::new();
+    };
+    let Some(arms) = body.split_once('}').map(|(head, _)| head) else {
+        return BTreeSet::new();
+    };
+    arms.split("DataType::")
+        .skip(1)
+        .filter_map(|fragment| {
+            let name: String = fragment
+                .chars()
+                .take_while(|character| character.is_ascii_alphanumeric() || *character == '_')
+                .collect();
+            (!name.is_empty()).then_some(name)
+        })
+        .collect()
+}
+
+/// Bit width of an integer variant named as a signedness letter and a width,
+/// or `None` for any other variant.
+fn integer_bit_width(variant: &str) -> Option<u32> {
+    let bits = variant
+        .strip_prefix('U')
+        .or_else(|| variant.strip_prefix('I'))?;
+    bits.parse().ok()
 }
 
 #[test]
