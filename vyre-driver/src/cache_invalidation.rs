@@ -2,15 +2,15 @@
 //!
 //! Backends provide their cache keys and lineage cells; this module owns
 //! the shared causal-impact/provenance walk so the backend crates do not
-//! depend on self-substrate implementation modules directly.
+//! depend on the composition modules that implement it directly.
 
-#[cfg(feature = "self-substrate-adapters")]
+#[cfg(feature = "libs-compositions")]
 use vyre_foundation::program_dispatch::{
-    DispatchError as SelfSubstrateDispatchError, ProgramDispatcher,
+    DispatchError as ProgramDispatchError, ProgramDispatcher,
 };
-#[cfg(feature = "self-substrate-adapters")]
+#[cfg(feature = "libs-compositions")]
 use vyre_libs::encoding::scallop_provenance::provenance_closure_via_into;
-#[cfg(feature = "self-substrate-adapters")]
+#[cfg(feature = "libs-compositions")]
 use vyre_libs::reasoning::do_calculus_change_impact::{
     predict_impact_via_into, DoCalculusImpactScratch,
 };
@@ -37,9 +37,9 @@ impl std::fmt::Display for CacheInvalidationError {
 
 impl std::error::Error for CacheInvalidationError {}
 
-#[cfg(feature = "self-substrate-adapters")]
-impl From<SelfSubstrateDispatchError> for CacheInvalidationError {
-    fn from(error: SelfSubstrateDispatchError) -> Self {
+#[cfg(feature = "libs-compositions")]
+impl From<ProgramDispatchError> for CacheInvalidationError {
+    fn from(error: ProgramDispatchError) -> Self {
         Self::new(error.to_string())
     }
 }
@@ -47,19 +47,19 @@ impl From<SelfSubstrateDispatchError> for CacheInvalidationError {
 /// Reusable scratch for shared pipeline-cache invalidation.
 #[derive(Debug, Default)]
 pub struct CacheInvalidationScratch {
-    #[cfg(feature = "self-substrate-adapters")]
+    #[cfg(feature = "libs-compositions")]
     impact: DoCalculusImpactScratch,
-    #[cfg(feature = "self-substrate-adapters")]
+    #[cfg(feature = "libs-compositions")]
     closure: Vec<u32>,
 }
 
 /// Compute a 0/1 impact mask for cache entries.
 ///
-/// Production builds use the self-substrate implementation. Builds that
-/// explicitly disable `self-substrate-adapters` fail loudly instead of running
+/// Production builds run the composed implementation. Builds that
+/// explicitly disable `libs-compositions` fail loudly instead of running
 /// a hidden reference cache-invalidation path.
 pub fn impacted_entries_into(
-    #[cfg(feature = "self-substrate-adapters")] dispatcher: &dyn ProgramDispatcher,
+    #[cfg(feature = "libs-compositions")] dispatcher: &dyn ProgramDispatcher,
     intervention_mask: &[u32],
     rule_adj: &[u32],
     state: &[u32],
@@ -74,7 +74,7 @@ pub fn impacted_entries_into(
     reserve_impact_mask(out, lineage_cells.len())?;
     out.resize(lineage_cells.len(), 0);
 
-    #[cfg(not(feature = "self-substrate-adapters"))]
+    #[cfg(not(feature = "libs-compositions"))]
     {
         let _ = (
             intervention_mask,
@@ -87,11 +87,11 @@ pub fn impacted_entries_into(
             _scratch,
         );
         Err(CacheInvalidationError::new(
-            "vyre-driver cache invalidation requires the `self-substrate-adapters` feature. Fix: enable the feature; production builds must not run the reference cache-invalidation oracle.",
+            "vyre-driver cache invalidation requires the `libs-compositions` feature. Fix: enable the feature; production builds must not run the reference cache-invalidation oracle.",
         ))
     }
 
-    #[cfg(feature = "self-substrate-adapters")]
+    #[cfg(feature = "libs-compositions")]
     {
         let n_us = n as usize;
         let Some(matrix_len) = n_us.checked_mul(n_us) else {
@@ -182,7 +182,7 @@ pub fn impacted_entries_into(
 /// Compute a 0/1 impact mask using temporary scratch.
 #[must_use]
 pub fn impacted_entries(
-    #[cfg(feature = "self-substrate-adapters")] dispatcher: &dyn ProgramDispatcher,
+    #[cfg(feature = "libs-compositions")] dispatcher: &dyn ProgramDispatcher,
     intervention_mask: &[u32],
     rule_adj: &[u32],
     state: &[u32],
@@ -194,7 +194,7 @@ pub fn impacted_entries(
     let mut out = reserved_impact_mask(lineage_cells.len())?;
     let mut scratch = CacheInvalidationScratch::default();
     impacted_entries_into(
-        #[cfg(feature = "self-substrate-adapters")]
+        #[cfg(feature = "libs-compositions")]
         dispatcher,
         intervention_mask,
         rule_adj,
@@ -223,7 +223,7 @@ fn reserved_impact_mask(len: usize) -> Result<Vec<u32>, CacheInvalidationError> 
     Ok(out)
 }
 
-#[cfg(all(test, feature = "self-substrate-adapters"))]
+#[cfg(all(test, feature = "libs-compositions"))]
 mod tests {
     use super::*;
     use vyre_foundation::ir::Program;
@@ -236,7 +236,7 @@ mod tests {
             _program: &Program,
             inputs: &[Vec<u8>],
             _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, SelfSubstrateDispatchError> {
+        ) -> Result<Vec<Vec<u8>>, ProgramDispatchError> {
             Ok(vec![inputs.first().cloned().unwrap_or_default()])
         }
     }

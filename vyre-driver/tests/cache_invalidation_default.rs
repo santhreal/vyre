@@ -1,6 +1,6 @@
 //! Contract test for adapter-backed cache-invalidation behavior.
 //!
-//! The `self-substrate-adapters` feature wires cache invalidation through
+//! The `libs-compositions` feature wires cache invalidation through
 //! the optimizer dispatcher; production cache invalidation must not rely on
 //! a hidden CPU fallback.
 

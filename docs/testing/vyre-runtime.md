@@ -24,7 +24,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --all-features
 ## Feature sets
 
 - Default feature members: None
-- Available manifest features: `default`, `megakernel-batch`, `remote-cache`, `self-substrate-adapters`, `subgroup-ops`, `uring-cmd-nvme`
+- Available manifest features: `default`, `libs-compositions`, `megakernel-batch`, `remote-cache`, `subgroup-ops`, `uring-cmd-nvme`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets

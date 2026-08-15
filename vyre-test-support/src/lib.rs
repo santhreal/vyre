@@ -153,6 +153,8 @@ pub mod binop_parity;
 pub mod case_table;
 pub mod cast_parity;
 pub mod consumer_boundary;
+#[cfg(feature = "ir-fixtures")]
+pub mod data_type_variants;
 pub mod exploded_ifds_cases;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_regions;

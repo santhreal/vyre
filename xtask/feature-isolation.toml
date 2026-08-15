@@ -126,7 +126,7 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver"
-feature = "(default),self-substrate-adapters"
+feature = "(default),libs-compositions"
 outcome = "compiles"
 
 [[pair]]
@@ -141,7 +141,7 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-driver"
-feature = "self-substrate-adapters"
+feature = "libs-compositions"
 outcome = "compiles"
 
 [[pair]]
@@ -991,7 +991,7 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-runtime"
-feature = "self-substrate-adapters"
+feature = "libs-compositions"
 outcome = "compiles"
 
 [[pair]]

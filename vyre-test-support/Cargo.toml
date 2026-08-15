@@ -20,7 +20,10 @@ default = []
 # Fixtures over the IR statement enum. Opt-in because it pulls vyre-foundation
 # into the dev graph of whichever crate enables it, and most consumers of this
 # crate only want the source-text closure enumerator.
-ir-fixtures = ["dep:vyre-foundation"]
+# The DataType fixtures name payload types (`TypeId`, quantization scale and
+# zero point) that vyre-foundation does not re-export, and build inline shapes
+# with smallvec, so both join the graph with the fixtures.
+ir-fixtures = ["dep:vyre-foundation", "dep:vyre-spec", "dep:smallvec"]
 
 [dependencies]
 # The one owner of "which checkout am I reporting on". Resolved from the working
@@ -28,6 +31,8 @@ ir-fixtures = ["dep:vyre-foundation"]
 # `structure_gate::workspace_root` rather than resolving a second time.
 structure-gate = { path = "../structure-gate" }
 vyre-foundation = { workspace = true, optional = true }
+vyre-spec = { workspace = true, optional = true }
+smallvec = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true

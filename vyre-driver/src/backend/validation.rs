@@ -1,7 +1,7 @@
 //! Backend support validation before dispatch.
 
 use super::capability::Backend;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 pub use vyre_foundation::ir::model::node::node_op_id;
 use vyre_foundation::ir::model::node::Node;
 use vyre_foundation::ir::{OpId, Program, ValidationError};
@@ -43,31 +43,28 @@ pub fn validate_program(program: &Program, backend: &dyn Backend) -> Result<(), 
 
 /// Default core operation support set for legacy backends.
 pub fn default_supported_ops() -> &'static std::collections::HashSet<OpId> {
-    static OPS: std::sync::OnceLock<std::collections::HashSet<OpId>> = std::sync::OnceLock::new();
-    OPS.get_or_init(|| {
-        let mut ops = std::collections::HashSet::new();
-        ops.reserve(CORE_SUPPORTED_OP_IDS.len());
+    static OPS: LazyLock<std::collections::HashSet<OpId>> = LazyLock::new(|| {
+        let mut ops = std::collections::HashSet::with_capacity(CORE_SUPPORTED_OP_IDS.len());
         ops.extend(CORE_SUPPORTED_OP_IDS.iter().copied().map(Arc::<str>::from));
         ops
-    })
+    });
+    &OPS
 }
 
 /// Default core operation set plus `Node::Trap`.
 ///
 /// `Trap` is a structural control-flow node, not a concrete-driver extension:
 /// backends that lower it as lane termination should use this shared set
-/// instead of carrying a backend-local `OnceLock` and literal allocation.
+/// instead of carrying a backend-local static and literal allocation.
 pub fn default_supported_ops_with_trap() -> &'static std::collections::HashSet<OpId> {
-    static OPS: std::sync::OnceLock<std::collections::HashSet<OpId>> = std::sync::OnceLock::new();
-    OPS.get_or_init(|| {
+    static OPS: LazyLock<std::collections::HashSet<OpId>> = LazyLock::new(|| {
         let base = default_supported_ops();
-        let reserve = base.len().saturating_add(1);
-        let mut ops = std::collections::HashSet::new();
-        ops.reserve(reserve);
+        let mut ops = std::collections::HashSet::with_capacity(base.len().saturating_add(1));
         ops.extend(base.iter().cloned());
         ops.insert(Arc::<str>::from("vyre.node.trap"));
         ops
-    })
+    });
+    &OPS
 }
 
 /// Check every node in `nodes` and in every body nested under it.

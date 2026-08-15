@@ -286,7 +286,7 @@ pub const Q16_ONE: u32 = 1 << 16;
 /// launch configurations. Latency samples become a softmax over
 /// `-elapsed_ns / temperature_ns`; the supplied inverse-Fisher square-root
 /// matrix preconditions that probability/gradient vector before the driver
-/// picks the next candidate. CUDA/self-substrate can produce the same
+/// picks the next candidate. A concrete backend can produce the same
 /// fixed-point matrix through the primitive-backed natural-gradient path.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NaturalGradientPolicy {
@@ -642,7 +642,7 @@ impl Tuner {
     /// This keeps the best-of-N timing hook compatible while giving CUDA and
     /// other GPU backends a richer update rule than "pick the current fastest
     /// sample forever." Backends can feed `fisher_inv_sqrt_q16` from the
-    /// primitive-backed natural-gradient self-substrate path.
+    /// primitive-backed natural-gradient path.
     ///
     /// # Errors
     ///

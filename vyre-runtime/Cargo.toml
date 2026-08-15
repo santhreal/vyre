@@ -21,7 +21,11 @@ rustdoc-args = ["--cfg", "docsrs"]
 default = []
 megakernel-batch = []
 subgroup-ops = []
-self-substrate-adapters = [
+# The megakernel planner's program builders, each a vyre-libs composition.
+# Named `self-substrate-adapters` until the crate it was named for,
+# vyre-self-substrate, became vyre-pass-engine; the feature never depended on
+# that crate, so the name described nothing.
+libs-compositions = [
     "dep:vyre-libs",
     "vyre-libs/analysis",
     "vyre-libs/encoding",
