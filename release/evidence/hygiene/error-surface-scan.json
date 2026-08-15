@@ -142,7 +142,7 @@
     },
     {
       "path": "vyre-libs/src/scan/classic_ac/bounded_ranges/mod.rs",
-      "line": 289,
+      "line": 312,
       "pattern": "panic_macro",
       "text": "Err(error) => panic!("
     },
@@ -208,19 +208,19 @@
     },
     {
       "path": "vyre-libs/src/parsing/c/parse/vast/typedef_ann/annotate.rs",
-      "line": 268,
+      "line": 230,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"precomputed-context annotation requires the visible-type side table\");"
     },
     {
       "path": "vyre-libs/src/parsing/c/parse/vast/typedef_ann/annotate.rs",
-      "line": 341,
+      "line": 288,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"precomputed-context annotation requires the visible-type side table\");"
     },
     {
       "path": "vyre-libs/src/parsing/c/parse/vast/typedef_ann/annotate.rs",
-      "line": 480,
+      "line": 422,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"precomputed-context annotation requires the visible-type side table\");"
     },
@@ -544,7 +544,7 @@
     },
     {
       "path": "vyre-primitives/src/graph/csr_bidirectional.rs",
-      "line": 878,
+      "line": 874,
       "pattern": "documented_panic_contract",
       "text": "try_merge_frontier_or_changed(current, next).unwrap_or_else(|error| panic!(\"{error}\"))"
     },
@@ -784,13 +784,13 @@
     },
     {
       "path": "xtask-registry/src/release/conformance_matrix.rs",
-      "line": 170,
+      "line": 169,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"backend registry startup failed: {error}\"));"
     },
     {
       "path": "xtask-registry/src/release/conformance_matrix.rs",
-      "line": 174,
+      "line": 173,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"backend registry startup failed: {error}\"))"
     }

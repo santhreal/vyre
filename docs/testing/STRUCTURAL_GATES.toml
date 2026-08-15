@@ -135,3 +135,23 @@ Asserts that each source crate's widest aggregate feature turns on every
 feature that gates a registration. The subject is that crate's feature table,
 which is consumed by cargo before any code runs.
 """
+
+[[gate]]
+file = "vyre-libs/src/graph/dispatch/adaptive_traverse/tests/sparse_queue_materializer_contracts.rs"
+test = "every_resident_queue_materializer_variant_has_a_step_sequence_case"
+reason = """
+Derives the published ResidentCsrQueueMaterializer variant set from the source
+that declares it, so a variant added without a step-sequence case is red on its
+first run. A variant nothing exercises has no run-time witness: the property
+being asserted is the absence of a case, which no execution can observe.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/quantized_dispatch_variant_coverage_gate.rs"
+test = "every_published_quantized_entry_point_has_a_readback_contract_row"
+reason = """
+Derives the published quantized dispatch entry points from the `pub use
+..._via` re-exports that declare them, so an entry point shipped without a
+readback contract row is red on its first run. The subject is the public
+export list, which no run of the covered entry points can report on.
+"""
