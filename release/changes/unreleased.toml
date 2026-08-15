@@ -1658,3 +1658,8 @@ text = "`xtask --help` is checked against the registered subcommand table rather
 id = "public-api-refresh-build-jobs"
 category = "Fixed"
 text = "The public-API snapshot fixture no longer forces `CARGO_BUILD_JOBS=1` on the refresh it runs. Parallelism is declared in `.cargo/config.toml`, and an environment variable overrides it, so the fixture rebuilt one codegen job at a time regardless of the host."
+
+[[fragments]]
+id = "cli-contract-without-the-book"
+category = "Changed"
+text = "The command-line contract no longer renders a book page. `scripts/cli_docs.py` kept generating `docs/CLI.md`, which is deleted, so the gate compared a generated document against a file that is not there while its real verdicts went unread: the manifest schema, the README each binary names, the declared binary set against cargo metadata, every help route exiting zero with bounded non-empty output, and the xtask help table against the registered subcommands. Those verdicts stay and the CLI section of each crate README is still generated. The contract test reads the subcommand count back out of the generated README blocks instead of out of the deleted page, and the build it runs no longer forces one codegen job."
