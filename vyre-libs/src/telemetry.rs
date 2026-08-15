@@ -1,7 +1,7 @@
 //! Composition-call observability counters.
 //!
 //! Each consumer module increments a global atomic counter on every
-//! call. Operators read snapshots via [`snapshot_counters`] for
+//! call. Operators read snapshots via [`crate::telemetry::snapshot_counters`] for
 //! Prometheus / OpenTelemetry / Datadog dashboards. Lets us answer:
 //!
 //! - Which composition modules are actually consumed in production
@@ -11,7 +11,7 @@
 //!
 //! The counters are lock-free (`AtomicU64` with relaxed ordering) so
 //! they don't add overhead to the hot path. Reading the snapshot is
-//! also lock-free. The statics and [`bump`] are public because the
+//! also lock-free. The statics and [`crate::telemetry::bump`] are public because the
 //! instrumented modules span crate boundaries during migration and
 //! because a dashboard that wants one counter should not have to walk
 //! the whole snapshot.

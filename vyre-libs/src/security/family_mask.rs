@@ -6,7 +6,7 @@
 //! which bit a family lives at.
 //!
 //! Every family used in any rule must be represented explicitly in
-//! [`CANONICAL_BITS`]. There is no synthetic-bit fallback  -  a family
+//! [`crate::security::family_mask::CANONICAL_BITS`]. There is no synthetic-bit fallback  -  a family
 //! without an entry is a compile-time error.
 //!
 //! # Bit layout

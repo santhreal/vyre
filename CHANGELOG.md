@@ -2776,6 +2776,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   commit would carry: tracked files plus new files no rule excludes, so a copy
   still counts before it is committed. Running the gate outside a git checkout
   now fails with that as the remedy instead of measuring whatever is on disk.
+- Every intra-doc link in the workspace resolves, so `cargo doc` builds with
+  `broken_intra_doc_links` denied. The regex DFA module pointed readers at
+  `crate::scan::RegionEvidencePipeline`, a type that exists nowhere in the
+  tree; it now names `crate::scan::regex_anchored_window`, the module that
+  actually consumes candidate origins from a prefilter, and disambiguates
+  `nfa_to_dfa()` from the module of the same name. A module header comment
+  resolves its links in the scope of the parent that declares the module, so
+  the telemetry and security family-mask headers name their items by full path
+  instead of by bare name.
 - An artifact under `release/evidence` is written only when the tree it records
   can be identified. The recorder captures one `git:<commit>:dirty=false` or
   `git:<commit>:dirty=true:worktree=<digest>` fingerprint per run, stamps it at

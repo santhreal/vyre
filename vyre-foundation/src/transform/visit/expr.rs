@@ -26,7 +26,7 @@ pub enum ExprBufferRef<'a> {
 
 /// The buffer `expr` names, and what it does to it.
 ///
-/// The expression half of [`node_buffer_refs`]. `Expr::Atomic` is the case every
+/// The expression half of [`super::node_buffer_refs`]. `Expr::Atomic` is the case every
 /// buffer-set walk in this crate had recorded as a pure read, which is the
 /// direction that loses: a dependency walk that believes an atomic only reads
 /// sees no conflict with a store to the same buffer.
@@ -63,7 +63,7 @@ pub fn expr_buffer_ref(expr: &Expr) -> ExprBufferRef<'_> {
 /// Every operand expression of `expr`, in source order.
 ///
 /// This is the ONE owner of the question "which expression variants contain
-/// other expressions", the [`child_bodies`] of the value namespace. Adding an
+/// other expressions", the [`super::child_bodies`] of the value namespace. Adding an
 /// `Expr` variant fails to compile in [`expr_children`], and that failure is
 /// the mechanism that keeps every expression walk in the crate correct.
 ///

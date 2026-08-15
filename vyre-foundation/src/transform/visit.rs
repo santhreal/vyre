@@ -7,11 +7,11 @@
 //! ASTs (e.g., highly nested `If` or `Block` nodes) during adversarial or
 //! extreme workloads.
 //!
-//! The split is by what is being visited. [`node`] owns the per-variant
-//! decisions a `Node` traversal needs, [`expr`] owns the same for the value
-//! namespace, and [`walk`] owns the traversals, which are written entirely
-//! against those two and restate neither. Every item is re-exported here, so
-//! `transform::visit` is still the one path a caller names.
+//! The file split is by what is being visited. `node` owns the per-variant
+//! decisions a `Node` traversal needs, `expr` owns the same for the value
+//! namespace, and `walk` owns the traversals, which are written entirely
+//! against those two and restate neither. All three are private and every item
+//! is re-exported here, so `transform::visit` is the one path a caller names.
 
 /// Per-variant `Node` decisions: nesting, scalar binding, operands, buffers.
 mod node;

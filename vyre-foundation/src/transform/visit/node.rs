@@ -36,7 +36,7 @@ pub struct NodeShape {
     /// skips a whole subtree, and a barrier, store, or early exit inside that
     /// subtree then reads as absent rather than as unknown.
     pub nests_nodes: bool,
-    /// The variant owns operand expressions reachable from [`walk_exprs`].
+    /// The variant owns operand expressions reachable from [`super::walk_exprs`].
     ///
     /// An analysis that collects buffer reads, variable uses, or literal
     /// operands must visit them or it under-reports the node's effects.
@@ -422,7 +422,7 @@ impl<'a> BufferRefs<'a> {
 ///
 /// This is the ONE owner of "what does this statement do to a buffer BY NAME".
 /// A buffer reached through an operand expression is not here: that is
-/// [`node_operands`] followed by [`expr_buffer_ref`], and the two answers
+/// [`node_operands`] followed by [`super::expr_buffer_ref`], and the two answers
 /// compose. Adding a `Node` variant fails to compile here.
 ///
 /// The four collective variants are the reason this exists. They name their

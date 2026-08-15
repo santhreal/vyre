@@ -3,15 +3,15 @@
 //! The builder composes three primitives:
 //!
 //! 1. [`compile_regex_set`] lowers regex sources to a bit-vector NFA.
-//! 2. [`nfa_to_dfa`] performs subset construction.
+//! 2. [`nfa_to_dfa()`] performs subset construction.
 //! 3. The exact-range program replays the anchored DFA forward from each byte
 //!    origin and emits `(pattern_id, origin, end)`.
 //!
 //! This keeps one dense transition lookup per replayed byte. The full-buffer
 //! program costs `O(haystack_len * replay_limit)`, but unlike the historical
 //! suffix replay it reports exact starts for bounded and open-ended
-//! variable-length patterns. Use [`crate::scan::RegionEvidencePipeline`] when a
-//! prefilter already supplies a smaller candidate set.
+//! variable-length patterns. Use [`crate::scan::regex_anchored_window`] when a
+//! prefilter already supplies the candidate origins.
 //!
 //! Subset construction can exceed `max_dfa_states`. In that case, shard the
 //! pattern set or use `ScanProgram`.

@@ -254,7 +254,7 @@ pub fn for_each_node<'a>(nodes: &'a [Node], mut f: impl FnMut(&'a Node)) {
 /// Descent is [`child_bodies`], the single exhaustive owner, so a new nesting
 /// variant is a compile error there rather than a silently empty answer here.
 /// A caller that also needs the expressions a node carries takes them from
-/// [`node_operands`], and the buffers it names from [`node_buffer_refs`]; both
+/// [`node_operands`], and the buffers it names from [`super::node_buffer_refs`]; both
 /// are exhaustive for the same reason.
 ///
 /// The walk is iterative, so nesting depth costs heap rather than native stack.
