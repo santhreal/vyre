@@ -1,4 +1,5 @@
 use super::*;
+use vyre_primitives::graph::csr_closure_inputs::graphs;
 use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 
 /// Adversarial: closure on disjoint components must not bridge

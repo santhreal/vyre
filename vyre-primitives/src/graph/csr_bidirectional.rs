@@ -964,10 +964,7 @@ mod tests {
 
     #[test]
     fn closure_reaches_full_linear_component() {
-        let out = cpu_ref_closure(
-            CsrClosureInputs::allow_all(graphs::CHAIN_4.view(), 5),
-            &[0b0001],
-        );
+        let out = cpu_ref_closure(CsrClosureInputs::allow_all(graphs::CHAIN_4, 5), &[0b0001]);
         assert_eq!(out, vec![0b1111]);
     }
 
@@ -976,7 +973,7 @@ mod tests {
         let mut current = Vec::with_capacity(8);
         let mut next = Vec::with_capacity(8);
         cpu_ref_closure_into(
-            CsrClosureInputs::allow_all(graphs::CHAIN_4.view(), 5),
+            CsrClosureInputs::allow_all(graphs::CHAIN_4, 5),
             &[0b0001],
             &mut current,
             &mut next,
@@ -1081,7 +1078,7 @@ mod tests {
         let current_capacity = current.capacity();
         let next_capacity = next.capacity();
         let err = try_cpu_ref_closure_into(
-            CsrClosureInputs::allow_all(graphs::CHAIN_4.view(), 4),
+            CsrClosureInputs::allow_all(graphs::CHAIN_4, 4),
             &[],
             &mut current,
             &mut next,
@@ -1118,7 +1115,7 @@ mod tests {
             )
         );
 
-        let inputs = CsrClosureInputs::allow_all(graphs::CHAIN_4.view(), 5);
+        let inputs = CsrClosureInputs::allow_all(graphs::CHAIN_4, 5);
         let closure = try_cpu_ref_closure(inputs, &[0b0001])
             .expect("Fix: operation must return Err on failure; tests may use expect only with Fix: recovery text - valid closure should succeed");
         assert_eq!(closure, cpu_ref_closure(inputs, &[0b0001]));
