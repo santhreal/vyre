@@ -31,15 +31,7 @@ pub use prefilter::{
     build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
     build_ac_bounded_ranges_suffix3_prefilter_program,
     build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
-    classic_ac_bounded_ranges_prefilter_program,
-    classic_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
-    classic_ac_bounded_ranges_suffix3_prefilter_program,
-    classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
-    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
-    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered,
-    classic_ac_bounded_ranges_suffix3_presence_by_region_program,
-    classic_ac_bounded_ranges_suffix3_presence_program, presence_bitmap_words,
-    presence_by_region_words, try_build_ac_bounded_ranges_prefilter_program,
+    presence_bitmap_words, presence_by_region_words, try_build_ac_bounded_ranges_prefilter_program,
     try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
     try_build_ac_bounded_ranges_suffix3_prefilter_program,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
@@ -348,7 +340,7 @@ pub(in crate::scan) fn ac_ranges_program_or_fail_closed(
 /// invisible because the walk never sees their first byte.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_program(
+fn classic_ac_bounded_ranges_program(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -391,7 +383,7 @@ pub fn classic_ac_bounded_ranges_program(
 /// can't emit `subgroup_ballot`/`subgroup_shuffle`.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_program_with_subgroup_coalesce(
+fn classic_ac_bounded_ranges_program_with_subgroup_coalesce(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,

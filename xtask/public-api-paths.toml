@@ -67,7 +67,7 @@ duplicate_paths = 50
 
 [[crate]]
 name = "vyre-libs"
-duplicate_paths = 234
+duplicate_paths = 232
 
 [[crate]]
 name = "vyre-lints"

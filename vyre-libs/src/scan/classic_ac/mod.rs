@@ -26,22 +26,18 @@ pub(crate) mod test_dispatch_and_decode;
 
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use bounded_ranges::classic_ac_bounded_ranges_scan;
+/// The `build_*`/`try_build_*` form is the published entry for each program.
+/// The buffer-name form each one wraps stays inside `crate::scan`: the names it
+/// takes are the ABI every gate, prefilter row and parity test pins, so a
+/// caller passing its own names would build a program no gate here judges, and
+/// publishing both put two paths to one program in the surface.
 pub use bounded_ranges::{
     build_ac_bounded_ranges_prefilter_program,
     build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
     build_ac_bounded_ranges_program, build_ac_bounded_ranges_program_with_subgroup_coalesce,
     build_ac_bounded_ranges_suffix3_prefilter_program,
     build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
-    classic_ac_bounded_ranges_prefilter_program,
-    classic_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
-    classic_ac_bounded_ranges_program, classic_ac_bounded_ranges_program_with_subgroup_coalesce,
-    classic_ac_bounded_ranges_suffix3_prefilter_program,
-    classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
-    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
-    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered,
-    classic_ac_bounded_ranges_suffix3_presence_by_region_program,
-    classic_ac_bounded_ranges_suffix3_presence_program, presence_bitmap_words,
-    presence_by_region_words, try_build_ac_bounded_ranges_prefilter_program,
+    presence_bitmap_words, presence_by_region_words, try_build_ac_bounded_ranges_prefilter_program,
     try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
     try_build_ac_bounded_ranges_program,
     try_build_ac_bounded_ranges_program_with_subgroup_coalesce,
@@ -59,9 +55,7 @@ pub use count_program::ascii_case_variants;
 pub use count_program::{
     build_ac_bounded_count_prefilter_program, build_ac_bounded_count_program,
     build_ac_bounded_count_suffix2_prefilter_program,
-    build_ac_bounded_count_suffix3_prefilter_program, classic_ac_bounded_count_prefilter_program,
-    classic_ac_bounded_count_program, classic_ac_bounded_count_suffix2_prefilter_program,
-    classic_ac_bounded_count_suffix3_prefilter_program, classic_ac_candidate_end_byte_mask_words,
+    build_ac_bounded_count_suffix3_prefilter_program, classic_ac_candidate_end_byte_mask_words,
     classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,
     classic_ac_candidate_suffix3_bloom_words_ci, classic_ac_suffix3_bloom_contains,
     CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,

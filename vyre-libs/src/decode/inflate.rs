@@ -5,12 +5,12 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 #[cfg(test)]
 use crate::buffer_names::fixed_name;
 use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decoded_output_buffer};
-use crate::decode::scan::{linear_aho_scan_body, tiled_decode_aho_scan_body};
+use crate::decode::scan::tiled_decode_aho_scan_body;
 use crate::region::wrap_anonymous;
 #[cfg(test)]
 use vyre_primitives::decode::inflate::inflate_stored_reference_bytes;
 use vyre_primitives::decode::inflate::{
-    inflate_stored as primitive_inflate_stored, inflate_stored_child, inflate_stored_header_nodes,
+    inflate_stored as primitive_inflate_stored, inflate_stored_header_nodes,
     inflate_stored_invalid_len_trap_node, inflate_stored_len_is_valid_expr,
     inflate_stored_non_stored_trap_nodes, inflate_stored_payload_expr,
     INFLATE_STORED_WORKGROUP_SIZE,
@@ -22,8 +22,6 @@ use vyre_primitives::decode::inflate::{
 
 const OP_ID: &str = "vyre-libs::decode::inflate_stored_block";
 const FUSED_SCAN_OP_ID: &str = "vyre-libs::decode::inflate_stored_block_then_aho_corasick";
-const TILED_FUSED_SCAN_OP_ID: &str =
-    "vyre-libs::decode::inflate_stored_block_tiled_then_aho_corasick";
 const FAMILY_PREFIX: &str = "decode_inflate";
 const INFLATED_LEN_BUFFER: &str = "__vyre_decode_inflate_inflated_len";
 const DEFAULT_DECODE_SCAN_TILE: u32 = 64;
@@ -83,7 +81,7 @@ pub fn inflate_stored_block_then_aho_corasick(
     input_len: u32,
     state_count: u32,
 ) -> Program {
-    inflate_stored_block_tiled_then_aho_corasick(
+    fused_scan_program(
         input,
         decoded,
         transitions,
@@ -95,15 +93,15 @@ pub fn inflate_stored_block_then_aho_corasick(
     )
 }
 
-/// Build a stored-block inflate→scan program that scans bytes as they are
-/// copied from the stored block payload.
+/// Scan bytes as they are copied from the stored block payload, at an explicit
+/// tile width.
 ///
 /// Stored DEFLATE blocks have no entropy decode dependency, so the fused path
 /// can keep DFA state in registers and avoid a second pass over the decoded
 /// global buffer. The decoded buffer remains populated to preserve the existing
-/// output contract.
-#[must_use]
-pub fn inflate_stored_block_tiled_then_aho_corasick(
+/// output contract. `inflate_stored_block_then_aho_corasick` is the published
+/// entry and picks the tile width, so this form takes one.
+fn fused_scan_program(
     input: &str,
     decoded: &str,
     transitions: &str,
@@ -148,49 +146,6 @@ pub fn inflate_stored_block_tiled_then_aho_corasick(
         ],
     )]);
     entry.extend(inflate_stored_non_stored_trap_nodes());
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(&input, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(input_len),
-            BufferDecl::read_write(&decoded, 1, DataType::U32).with_count(input_len),
-            BufferDecl::storage(transitions, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_mul(256)),
-            BufferDecl::storage(accept, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count),
-            BufferDecl::output(matches, 4, DataType::U32).with_count(input_len),
-            BufferDecl::read_write(INFLATED_LEN_BUFFER, 5, DataType::U32).with_count(1),
-        ],
-        INFLATE_STORED_WORKGROUP_SIZE,
-        vec![wrap_anonymous(TILED_FUSED_SCAN_OP_ID, entry)],
-    )
-}
-
-/// Compatibility builder for the legacy decode-buffer scan shape.
-#[must_use]
-pub fn inflate_stored_block_buffered_then_aho_corasick(
-    input: &str,
-    decoded: &str,
-    transitions: &str,
-    accept: &str,
-    matches: &str,
-    input_len: u32,
-    state_count: u32,
-) -> Program {
-    let input = scoped_decode_input_buffer(FAMILY_PREFIX, input);
-    let decoded = scoped_decoded_output_buffer(FAMILY_PREFIX, decoded);
-    let mut entry = vec![inflate_stored_child(
-        FUSED_SCAN_OP_ID,
-        &input,
-        &decoded,
-        INFLATED_LEN_BUFFER,
-    )];
-    entry.extend(linear_aho_scan_body(
-        &decoded,
-        transitions,
-        accept,
-        matches,
-        Expr::load(INFLATED_LEN_BUFFER, Expr::u32(0)),
-    ));
     Program::wrapped(
         vec![
             BufferDecl::storage(&input, 0, BufferAccess::ReadOnly, DataType::U32)

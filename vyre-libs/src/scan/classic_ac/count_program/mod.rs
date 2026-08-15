@@ -12,14 +12,12 @@ mod suffix2;
 mod suffix3;
 
 pub use suffix2::{
-    build_ac_bounded_count_suffix2_prefilter_program,
-    classic_ac_bounded_count_suffix2_prefilter_program, classic_ac_candidate_suffix2_mask_words,
+    build_ac_bounded_count_suffix2_prefilter_program, classic_ac_candidate_suffix2_mask_words,
     CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
 pub use suffix3::ascii_case_variants;
 pub use suffix3::{
-    build_ac_bounded_count_suffix3_prefilter_program,
-    classic_ac_bounded_count_suffix3_prefilter_program, classic_ac_candidate_suffix3_bloom_words,
+    build_ac_bounded_count_suffix3_prefilter_program, classic_ac_candidate_suffix3_bloom_words,
     classic_ac_candidate_suffix3_bloom_words_ci, classic_ac_suffix3_bloom_contains,
     CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
@@ -185,7 +183,7 @@ fn count_suffix2_prefilter_buffers(
 /// This is the GPU preflight shape for irregular scans: one pass over the
 /// packed haystack, no match-triple output allocation, and a four-byte readback.
 #[must_use]
-pub fn classic_ac_bounded_count_program(
+fn classic_ac_bounded_count_program(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -237,7 +235,7 @@ pub fn classic_ac_bounded_count_program(
 /// security/parser scans with a small literal set.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_count_prefilter_program(
+fn classic_ac_bounded_count_prefilter_program(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,

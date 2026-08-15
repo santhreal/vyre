@@ -19,7 +19,7 @@ const CLASSIC_AC_SUFFIX3_BLOOM_INDEX_MASK: u32 = CLASSIC_AC_SUFFIX3_BLOOM_BITS -
 /// bounded DFA replay path while true matches cannot be filtered out.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_count_suffix3_prefilter_program(
+fn classic_ac_bounded_count_suffix3_prefilter_program(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,

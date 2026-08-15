@@ -2434,6 +2434,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `build_transition_table_lane_major` packer, its fallible counterpart, the
   `bench` feature and the `scan::nfa::bench` module that was its only non-test
   consumer are gone.
+- The buffer-name form of each classic Aho-Corasick program left the published
+  surface of vyre-libs. The `build_*`/`try_build_*` entry that binds the pinned
+  ABI names is the one published path per program. The legacy buffered
+  inflate-then-scan builder is deleted, and the tile-width form of the fused
+  stored-block scan is internal to its module.
 - Routing has no host arm. `PolicyRoute::CpuSimd`, `RoutingDecision::CpuSimd`,
   `ExecutionPolicy::use_cpu_fast_path` and the two host fast-path thresholds
   that only fed it are gone, and `ExecutionPolicy::route` no longer takes a

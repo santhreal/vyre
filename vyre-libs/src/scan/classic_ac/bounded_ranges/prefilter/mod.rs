@@ -31,20 +31,14 @@ mod suffix3;
 pub use suffix3::{
     build_ac_bounded_ranges_suffix3_prefilter_program,
     build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
-    classic_ac_bounded_ranges_suffix3_prefilter_program,
-    classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
-    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
-    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered,
-    classic_ac_bounded_ranges_suffix3_presence_by_region_program,
-    classic_ac_bounded_ranges_suffix3_presence_program, presence_bitmap_words,
-    presence_by_region_words, try_build_ac_bounded_ranges_suffix3_prefilter_program,
+    presence_bitmap_words, presence_by_region_words,
+    try_build_ac_bounded_ranges_suffix3_prefilter_program,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
-
 /// The canonical buffer names every bounded-ranges dispatch binds, in binding
 /// order: inputs 0-5, the match counter at 6, the gate masks, the match sink.
 /// The `try_build_*` entrypoints all bind these, so they are spelled once.
@@ -377,7 +371,7 @@ pub(in crate::scan) fn build_ranges_scan(
 /// bounded replay window and match append path entirely.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_prefilter_program(
+fn classic_ac_bounded_ranges_prefilter_program(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -416,7 +410,7 @@ pub fn classic_ac_bounded_ranges_prefilter_program(
 /// control over subgroup match-append coalescing.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
+fn classic_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,

@@ -29,10 +29,13 @@ const COVERAGE_WAIVER: &[&str] = &[];
 
 /// Minimum builder count the source enumeration must find.
 ///
-/// Well under the current population, high enough that a parser regression
-/// which drops most of the tree fails instead of reporting a clean sweep of a
-/// nearly empty set.
-const BUILDER_FLOOR: usize = 320;
+/// Under the current population, high enough that a parser regression which
+/// drops most of the tree fails instead of reporting a clean sweep of a nearly
+/// empty set. It moved down from 320 when the classic Aho-Corasick programs
+/// stopped publishing both a buffer-name form and the `build_*` form that wraps
+/// it: sixteen builders left the published surface without a program leaving the
+/// crate.
+const BUILDER_FLOOR: usize = 300;
 
 #[test]
 fn every_program_builder_is_tested_registered_or_explicitly_waived() {

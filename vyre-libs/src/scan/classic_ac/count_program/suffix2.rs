@@ -17,7 +17,7 @@ pub const CLASSIC_AC_SUFFIX2_MASK_WORDS: usize = 2048;
 /// preserved.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_count_suffix2_prefilter_program(
+fn classic_ac_bounded_count_suffix2_prefilter_program(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,

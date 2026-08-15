@@ -28,7 +28,7 @@ const FIRST_REGION_BINDING: u32 = FIRST_GATE_BINDING + PrefilterWidth::Suffix3.m
 /// candidate filters before match-emitting replay.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_suffix3_prefilter_program(
+fn classic_ac_bounded_ranges_suffix3_prefilter_program(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -71,7 +71,7 @@ pub fn classic_ac_bounded_ranges_suffix3_prefilter_program(
 /// explicit control over subgroup match-append coalescing.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
+fn classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -133,7 +133,7 @@ pub fn presence_bitmap_words(pattern_count: u32) -> u32 {
 /// readback is the small bitmap (removing the dense-workload output bottleneck).
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_suffix3_presence_program(
+fn classic_ac_bounded_ranges_suffix3_presence_program(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -264,7 +264,7 @@ fn region_table_decls(region_starts: &str, region_base: &str) -> Vec<BufferDecl>
 /// count is read from `buf_len(region_starts)`).
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_suffix3_presence_by_region_program(
+fn classic_ac_bounded_ranges_suffix3_presence_by_region_program(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -373,7 +373,7 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
 /// same `output_records` iteration).
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program(
+fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -425,7 +425,7 @@ pub fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_progra
 /// pattern; only the atomic triple append is filtered.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered(
+fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
