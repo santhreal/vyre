@@ -39,10 +39,10 @@
 use vyre::ir::{Expr, Program};
 use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes};
 use vyre_libs::parsing::c::parse::vast::{
-    c11_annotate_typedef_names, c11_annotate_typedef_names_precomputed_scope,
-    c11_build_vast_nodes, c11_classify_vast_node_kinds, c11_precompute_vast_scopes,
-    c11_prehash_vast_identifiers, reference_c11_annotate_typedef_names,
-    reference_c11_build_vast_nodes, reference_c11_classify_vast_node_kinds,
+    c11_annotate_typedef_names, c11_annotate_typedef_names_precomputed_scope, c11_build_vast_nodes,
+    c11_classify_vast_node_kinds, c11_precompute_vast_scopes, c11_prehash_vast_identifiers,
+    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
+    reference_c11_classify_vast_node_kinds,
 };
 
 use super::rows::{

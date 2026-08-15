@@ -1420,6 +1420,17 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   envelope's answer for the same inputs, and that a resident-cache
   domain-separated key cannot reach materialized replay outputs for inputs that
   still hit under the plain envelope.
+- `vyre_primitives::graph::csr_closure_inputs` owns two things the CSR closure
+  tests restated at every case: `CsrClosureInputs::allow_all` names the
+  all-ones edge filter a case picks when the filter is not what it is testing,
+  and `graphs::CHAIN_4` and `graphs::DIAMOND_4` name the two small graphs whose
+  closure is known by inspection. Fifty-six call sites across
+  `vyre-primitives`, `vyre-libs` and `vyre-driver-cuda` restated the filter as
+  a bare `0xFFFF_FFFF` beside a four-field graph literal, and seventeen more
+  restated one of those two graphs inline, so two cases could not be told apart
+  by their graph and rustfmt put every field on its own row. The redundant
+  `name: name` half of eighty-four fields the positional-to-named rewrite left
+  behind is gone as well.
 
 ### Removed
 

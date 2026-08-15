@@ -291,16 +291,15 @@ fn gpu_refreshes_static_inputs_when_same_shape_graph_content_changes() {
     ] {
         forward_closure_via_change_flag_gpu_with_scratch_into(
             &dispatcher,
-            CsrClosureInputs {
-                graph: CsrGraphView {
+            CsrClosureInputs::allow_all(
+                CsrGraphView {
                     node_count: 4,
                     edge_offsets: &edge_offsets,
                     edge_targets,
                     edge_kind_mask: &edge_kind_mask,
                 },
-                allow_mask: 0xFFFF_FFFF,
-                max_iters: 1,
-            },
+                1,
+            ),
             &[0b0001],
             &mut scratch,
             &mut frontier,
@@ -402,16 +401,15 @@ fn gpu_rejects_mismatched_edge_arrays() {
     };
     let err = forward_closure_via_change_flag_gpu(
         &dispatcher,
-        CsrClosureInputs {
-            graph: CsrGraphView {
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
                 node_count: 2,
                 edge_offsets: &[0, 1, 1],
                 edge_targets: &[1],
                 edge_kind_mask: &[],
             },
-            allow_mask: 0xFFFF_FFFF,
-            max_iters: 1,
-        },
+            1,
+        ),
         &[0b01],
     )
     .expect_err("mismatched edge arrays must be rejected");
@@ -439,16 +437,15 @@ fn generated_gpu_seed_copy_bounds_to_primitive_frontier_words() {
 
             let result = forward_closure_via_change_flag_gpu_into(
                 &dispatcher,
-                CsrClosureInputs {
-                    graph: CsrGraphView {
+                CsrClosureInputs::allow_all(
+                    CsrGraphView {
                         node_count,
                         edge_offsets: &edge_offsets,
                         edge_targets: &[],
                         edge_kind_mask: &[],
                     },
-                    allow_mask: 0xFFFF_FFFF,
-                    max_iters: 1,
-                },
+                    1,
+                ),
                 &seed,
                 &mut frontier,
             );

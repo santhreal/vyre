@@ -10,16 +10,15 @@ fn closure_does_not_bridge_disjoint_components() {
     let tgt = vec![1, 3];
     let msk = vec![1, 1];
     let out = reference_bidirectional_closure(
-        CsrClosureInputs {
-            graph: CsrGraphView {
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
                 node_count: 4,
                 edge_offsets: &off,
                 edge_targets: &tgt,
                 edge_kind_mask: &msk,
             },
-            allow_mask: 0xFFFF_FFFF,
-            max_iters: 5,
-        },
+            5,
+        ),
         &[0b0001],
     );
     // Reaches {0, 1} only.

@@ -38,16 +38,15 @@ fn matches_primitive_directly() {
 fn closure_reaches_full_chain_via_change_flag() {
     let (off, tgt, msk) = linear_graph();
     let out = reference_forward_closure_via_change_flag(
-        CsrClosureInputs {
-            graph: CsrGraphView {
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
                 node_count: 4,
                 edge_offsets: &off,
                 edge_targets: &tgt,
                 edge_kind_mask: &msk,
             },
-            allow_mask: 0xFFFF_FFFF,
-            max_iters: 10,
-        },
+            10,
+        ),
         &[0b0001],
     );
     assert_eq!(out, vec![0b1111]);
@@ -74,16 +73,15 @@ fn closure_terminates_with_self_loop_under_max_iters() {
     let tgt = vec![0];
     let msk = vec![1];
     let out = reference_forward_closure_via_change_flag(
-        CsrClosureInputs {
-            graph: CsrGraphView {
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
                 node_count: 2,
                 edge_offsets: &off,
                 edge_targets: &tgt,
                 edge_kind_mask: &msk,
             },
-            allow_mask: 0xFFFF_FFFF,
-            max_iters: 50,
-        },
+            50,
+        ),
         &[0b01],
     );
     // Self-loop never adds new bits -> terminates immediately.

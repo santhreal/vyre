@@ -1,4 +1,3 @@
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use crate::api::case::BenchError;
 use crate::cases::mix32;
 use crate::cases::queue_closure_oracle::{
@@ -6,6 +5,7 @@ use crate::cases::queue_closure_oracle::{
 };
 use crate::cases::skewed_graph::{skewed_degree as shared_skewed_degree, skewed_target};
 use vyre_primitives::bitset::frontier::materialize_frontier_queue_exact_count_into;
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use vyre_primitives::predicate::edge_kind;
 
 pub(super) const NODE_COUNT: u32 = 1_048_576;
@@ -329,9 +329,24 @@ pub(super) fn ifds_skewed_closure_oracle(
     let mut current = Vec::new();
     let mut next = Vec::new();
     let mut iterations = 0_u32;
-    vyre_primitives::graph::csr_forward_or_changed::cpu_ref_closure_into_with_step_hook(CsrClosureInputs { graph: CsrGraphView { node_count: fixture.stats.nodes, edge_offsets: &fixture.edge_offsets, edge_targets: &fixture.edge_targets, edge_kind_mask: &fixture.edge_kind_mask }, allow_mask: IFDS_REACH_MASK, max_iters }, &fixture.frontier_in, &mut current, &mut next, |_| {
+    vyre_primitives::graph::csr_forward_or_changed::cpu_ref_closure_into_with_step_hook(
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: fixture.stats.nodes,
+                edge_offsets: &fixture.edge_offsets,
+                edge_targets: &fixture.edge_targets,
+                edge_kind_mask: &fixture.edge_kind_mask,
+            },
+            allow_mask: IFDS_REACH_MASK,
+            max_iters,
+        },
+        &fixture.frontier_in,
+        &mut current,
+        &mut next,
+        |_| {
             iterations = iterations.saturating_add(1);
-        });
+        },
+    );
     let changed = u32::from(current != fixture.frontier_in);
     IfdsSkewedClosureOracle {
         output_words_set: current.iter().filter(|word| **word != 0).count() as u64,

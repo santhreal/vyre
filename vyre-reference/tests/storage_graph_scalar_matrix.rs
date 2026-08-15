@@ -85,10 +85,7 @@ impl Draw {
     /// Operand indices for one binary case.
     fn pair(self, case: usize, len: usize) -> (usize, usize) {
         match self {
-            Self::Strided {
-                multiplier,
-                addend,
-            } => (
+            Self::Strided { multiplier, addend } => (
                 case % len,
                 case.wrapping_mul(multiplier).wrapping_add(addend) % len,
             ),
@@ -99,10 +96,9 @@ impl Draw {
     /// Operand index for one unary case.
     fn single(self, case: usize, len: usize) -> usize {
         match self {
-            Self::Strided {
-                multiplier,
-                addend,
-            } => case.wrapping_mul(multiplier).wrapping_add(addend) % len,
+            Self::Strided { multiplier, addend } => {
+                case.wrapping_mul(multiplier).wrapping_add(addend) % len
+            }
             Self::Exhaustive => case % len,
         }
     }
@@ -426,9 +422,9 @@ fn u64_binary(op: BinOp, left: &NodeStorage, right: &NodeStorage) -> Option<Expe
         BinOp::SaturatingSub => IrValue::U64(left.saturating_sub(right)),
         BinOp::SaturatingMul => IrValue::U64(left.saturating_mul(right)),
         BinOp::AbsDiff => IrValue::U64(left.abs_diff(right)),
-        BinOp::MulHigh => IrValue::U64(
-            (u128::from(left).wrapping_mul(u128::from(right)) >> 64) as u64,
-        ),
+        BinOp::MulHigh => {
+            IrValue::U64((u128::from(left).wrapping_mul(u128::from(right)) >> 64) as u64)
+        }
         BinOp::And => IrValue::Bool(left != 0 && right != 0),
         BinOp::Or => IrValue::Bool(left != 0 || right != 0),
         _ => return None,
@@ -671,8 +667,24 @@ fn every_row_sweeps_the_full_depth_or_declares_why_not() {
             row.literal
         );
 
-        assert_depth(&row, row.binary_draw, row.binary_cases, len, len * len, BINARY_DEPTH, "binary");
-        assert_depth(&row, row.unary_draw, row.unary_cases, len, len, UNARY_DEPTH, "unary");
+        assert_depth(
+            &row,
+            row.binary_draw,
+            row.binary_cases,
+            len,
+            len * len,
+            BINARY_DEPTH,
+            "binary",
+        );
+        assert_depth(
+            &row,
+            row.unary_draw,
+            row.unary_cases,
+            len,
+            len,
+            UNARY_DEPTH,
+            "unary",
+        );
 
         let sampled = matches!(row.binary_draw, Draw::Strided { .. })
             && matches!(row.unary_draw, Draw::Strided { .. });
@@ -764,7 +776,10 @@ fn declared_binary_semantics_match_the_storage_graph_oracle() {
                     continue;
                 };
                 assert_case(binary_result(op, left, right), &expected, || {
-                    format!("{} {op:?} case {case} left={left:?} right={right:?}", row.literal)
+                    format!(
+                        "{} {op:?} case {case} left={left:?} right={right:?}",
+                        row.literal
+                    )
                 });
                 checked += 1;
             }

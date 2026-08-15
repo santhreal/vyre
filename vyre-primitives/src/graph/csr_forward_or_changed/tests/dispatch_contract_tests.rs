@@ -1,19 +1,11 @@
 use super::super::*;
+use crate::graph::csr_closure_inputs::graphs::CHAIN_4;
 use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 
 #[test]
 fn static_input_key_tracks_same_shape_graph_content() {
-    let plan = plan_csr_forward_or_changed_launch(CsrClosureInputs {
-        graph: CsrGraphView {
-            node_count: 4,
-            edge_offsets: &[0, 1, 2, 3, 3],
-            edge_targets: &[1, 2, 3],
-            edge_kind_mask: &[1, 1, 1],
-        },
-        allow_mask: 0xFFFF_FFFF,
-        max_iters: 4,
-    })
-    .expect("Fix: valid CSR should produce a launch plan");
+    let plan = plan_csr_forward_or_changed_launch(CsrClosureInputs::allow_all(CHAIN_4, 4))
+        .expect("Fix: valid CSR should produce a launch plan");
     let first = plan
         .static_input_key(&[0, 1, 2, 3, 3], &[1, 2, 3], &[1, 1, 1])
         .expect("Fix: matching CSR should produce a static input key");

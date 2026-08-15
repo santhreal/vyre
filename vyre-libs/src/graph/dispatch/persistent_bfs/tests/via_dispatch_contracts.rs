@@ -248,16 +248,15 @@ fn via_large_graph_allocates_changed_active_scratch_without_extra_outputs() {
 
     let (changed, converged) = bfs_expand_via_into(
         &dispatcher,
-        CsrClosureInputs {
-            graph: CsrGraphView {
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
                 node_count,
                 edge_offsets: &edge_offsets,
                 edge_targets: &[],
                 edge_kind_mask: &[],
             },
-            allow_mask: 0xFFFF_FFFF,
-            max_iters: 64,
-        },
+            64,
+        ),
         &frontier_in,
         &mut frontier,
     )
@@ -330,16 +329,15 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
     ] {
         bfs_expand_via_with_scratch_into(
             &dispatcher,
-            CsrClosureInputs {
-                graph: CsrGraphView {
+            CsrClosureInputs::allow_all(
+                CsrGraphView {
                     node_count: 4,
                     edge_offsets: &edge_offsets,
                     edge_targets,
                     edge_kind_mask: &edge_kind_mask,
                 },
-                allow_mask: 0xFFFF_FFFF,
-                max_iters: 4,
-            },
+                4,
+            ),
             &[0b0001],
             &mut scratch,
             &mut frontier,
@@ -426,16 +424,15 @@ fn via_rejects_mismatched_edge_arrays() {
     };
     let err = bfs_expand_via(
         &dispatcher,
-        CsrClosureInputs {
-            graph: CsrGraphView {
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
                 node_count: 2,
                 edge_offsets: &[0, 1, 1],
                 edge_targets: &[1],
                 edge_kind_mask: &[],
             },
-            allow_mask: 0xFFFF_FFFF,
-            max_iters: 1,
-        },
+            1,
+        ),
         &[0b01],
     )
     .expect_err("mismatched edge arrays must be rejected");

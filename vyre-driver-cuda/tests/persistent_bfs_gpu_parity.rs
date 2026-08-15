@@ -44,30 +44,28 @@ fn cuda_bfs_expand_via_matches_reference_chain() {
         let seed = vec![0b0000_0001u32]; // node 0 only
         let (gpu_out, gpu_changed, gpu_converged) = bfs_expand_via(
             &dispatcher,
-            CsrClosureInputs {
-                graph: CsrGraphView {
+            CsrClosureInputs::allow_all(
+                CsrGraphView {
                     node_count: n,
                     edge_offsets: &off,
                     edge_targets: &tgt,
                     edge_kind_mask: &msk,
                 },
-                allow_mask: 0xFFFF_FFFF,
-                max_iters: n,
-            },
+                n,
+            ),
             &seed,
         )
         .expect("GPU bfs_expand_via dispatch");
         let (reference_out, reference) = try_bfs_expand_converged(
-            CsrClosureInputs {
-                graph: CsrGraphView {
+            CsrClosureInputs::allow_all(
+                CsrGraphView {
                     node_count: n,
                     edge_offsets: &off,
                     edge_targets: &tgt,
                     edge_kind_mask: &msk,
                 },
-                allow_mask: 0xFFFF_FFFF,
-                max_iters: n,
-            },
+                n,
+            ),
             &seed,
         )
         .expect("reference persistent BFS convergence");
@@ -206,30 +204,28 @@ fn cuda_bfs_expand_via_saturated_seed_reports_no_change() {
             let seed = vec![0b1111u32];
             let (_gpu_out, gpu_changed, gpu_converged) = bfs_expand_via(
                 &dispatcher,
-                CsrClosureInputs {
-                    graph: CsrGraphView {
+                CsrClosureInputs::allow_all(
+                    CsrGraphView {
                         node_count: n,
                         edge_offsets: &off,
                         edge_targets: &tgt,
                         edge_kind_mask: &msk,
                     },
-                    allow_mask: 0xFFFF_FFFF,
-                    max_iters: n,
-                },
+                    n,
+                ),
                 &seed,
             )
             .expect("dispatch");
             let (_reference_out, reference) = try_bfs_expand_converged(
-                CsrClosureInputs {
-                    graph: CsrGraphView {
+                CsrClosureInputs::allow_all(
+                    CsrGraphView {
                         node_count: n,
                         edge_offsets: &off,
                         edge_targets: &tgt,
                         edge_kind_mask: &msk,
                     },
-                    allow_mask: 0xFFFF_FFFF,
-                    max_iters: n,
-                },
+                    n,
+                ),
                 &seed,
             )
             .expect("reference persistent BFS convergence");
@@ -270,16 +266,15 @@ fn cuda_resident_bfs_graph_matches_reference_across_repeated_queries() {
                 )
                 .expect("resident graph BFS query");
                 let (reference_out, reference) = try_bfs_expand_converged(
-                    CsrClosureInputs {
-                        graph: CsrGraphView {
+                    CsrClosureInputs::allow_all(
+                        CsrGraphView {
                             node_count: n,
                             edge_offsets: &off,
                             edge_targets: &tgt,
                             edge_kind_mask: &msk,
                         },
-                        allow_mask: 0xFFFF_FFFF,
-                        max_iters: n,
-                    },
+                        n,
+                    ),
                     &seed_words,
                 )
                 .expect("reference persistent BFS convergence");
@@ -344,16 +339,15 @@ fn cuda_resident_bfs_graph_batch_matches_reference() {
             let mut expected_changed = Vec::with_capacity(seeds.len());
             for seed in seeds {
                 let (frontier, changed) = reference_bfs_expand(
-                    CsrClosureInputs {
-                        graph: CsrGraphView {
+                    CsrClosureInputs::allow_all(
+                        CsrGraphView {
                             node_count: n,
                             edge_offsets: &off,
                             edge_targets: &tgt,
                             edge_kind_mask: &msk,
                         },
-                        allow_mask: 0xFFFF_FFFF,
-                        max_iters: n,
-                    },
+                        n,
+                    ),
                     &[seed],
                 );
                 expected_frontiers.extend_from_slice(&frontier);

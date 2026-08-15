@@ -45,16 +45,15 @@ fn dispatch_plans_pin_grid_cache_shape_and_program_builders() {
     let edge_targets = [1, 2, 3];
     let edge_kind_mask = [1, 1, 1];
     let plan = plan_persistent_bfs_dispatch(
-        CsrClosureInputs {
-            graph: CsrGraphView {
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
                 node_count: 4,
                 edge_offsets: &edge_offsets,
                 edge_targets: &edge_targets,
                 edge_kind_mask: &edge_kind_mask,
             },
-            allow_mask: 0xFFFF_FFFF,
-            max_iters: 8,
-        },
+            8,
+        ),
         &[0b0001],
     )
     .expect("Fix: canonical persistent-BFS dispatch plan should validate");
@@ -109,16 +108,15 @@ fn dispatch_plans_pin_grid_cache_shape_and_program_builders() {
     );
 
     let empty_edge_plan = plan_persistent_bfs_dispatch(
-        CsrClosureInputs {
-            graph: CsrGraphView {
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
                 node_count: 2,
                 edge_offsets: &[0, 0, 0],
                 edge_targets: &[],
                 edge_kind_mask: &[],
             },
-            allow_mask: 0xFFFF_FFFF,
-            max_iters: 1,
-        },
+            1,
+        ),
         &[0],
     )
     .expect("Fix: zero-edge persistent-BFS graph is a valid dispatch shape");
@@ -239,16 +237,15 @@ fn large_dispatch_plans_cover_every_node_with_parallel_grid() {
     }
     let seed = vec![1u32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // 513 bits.
     let plan = plan_persistent_bfs_dispatch(
-        CsrClosureInputs {
-            graph: CsrGraphView {
+        CsrClosureInputs::allow_all(
+            CsrGraphView {
                 node_count,
                 edge_offsets: &edge_offsets,
                 edge_targets: &edge_targets,
                 edge_kind_mask: &edge_kind_mask,
             },
-            allow_mask: 0xFFFF_FFFF,
-            max_iters: node_count,
-        },
+            node_count,
+        ),
         &seed,
     )
     .expect("Fix: large persistent-BFS chain should plan");
