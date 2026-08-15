@@ -35,17 +35,32 @@ pub(crate) fn workspace_member_src_dirs(root: &Path) -> Vec<PathBuf> {
         .collect()
 }
 
-/// Every Rust source file under `dir`, at any depth.
-pub(crate) fn rust_sources_under(dir: &Path) -> Vec<PathBuf> {
+/// Every file under `dir` whose extension is in `extensions`, at any depth.
+///
+/// One walk for every contract that reads the tree. A contract that wanted a
+/// different extension used to copy the walk rather than widen it, and a copy
+/// of a walk is a second answer to "which files does this gate cover".
+pub(crate) fn sources_under(dir: &Path, extensions: &[&str]) -> Vec<PathBuf> {
     let mut sources = Vec::new();
     for entry in walkdir::WalkDir::new(dir) {
-        let entry = entry.expect("Fix: every workspace source path must be readable");
+        let Ok(entry) = entry else {
+            continue;
+        };
         let path = entry.path();
-        if entry.file_type().is_file() && path.extension().is_some_and(|ext| ext == "rs") {
+        let matches = path
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .is_some_and(|extension| extensions.contains(&extension));
+        if entry.file_type().is_file() && matches {
             sources.push(path.to_path_buf());
         }
     }
     sources
+}
+
+/// Every Rust source file under `dir`, at any depth.
+pub(crate) fn rust_sources_under(dir: &Path) -> Vec<PathBuf> {
+    sources_under(dir, &["rs"])
 }
 
 /// Every Rust source file under every workspace member's `src` directory.

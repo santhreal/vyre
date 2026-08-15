@@ -21,7 +21,6 @@ control plane.
 | File | Use it for |
 |---|---|
 | `audits/VYRE_OPTIMIZER.md` | Historical optimizer findings. |
-| `audits/VYRE_PERFORMANCE_ARCHITECTURE_INVENTORY_2026-04-28.md` | Point-in-time performance inventory. |
 | Prior driver-consolidation evidence | Private historical audit record. |
 | `.internals/**` | Private evidence and maintainer notes. |
 

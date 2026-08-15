@@ -31,7 +31,7 @@ fn skewed_high_degree_resident_query_uses_bounded_split_queue() {
     .expect("Fix: recording dispatcher should complete high-degree resident CSR query");
 
     let handles = scratch
-        .handles
+        .slots
         .expect("Fix: mixed split resident query should allocate scratch handles");
     let high_queue = handles
         .high_queue
@@ -39,7 +39,13 @@ fn skewed_high_degree_resident_query_uses_bounded_split_queue() {
     let high_len = handles
         .high_len
         .expect("Fix: mixed split resident query should allocate high_len");
-    assert_eq!(handles.high_queue_capacity, 1);
+    assert_eq!(
+        scratch
+            .shape
+            .expect("Fix: mixed split resident query should retain scratch shape")
+            .high_queue_capacity,
+        1
+    );
     let steps = dispatcher
         .sequence_step_handles
         .borrow()
@@ -117,11 +123,11 @@ fn single_superhub_resident_query_sizes_split_queue_from_high_row_count() {
     )
     .expect("Fix: recording dispatcher should complete superhub resident CSR query");
 
-    let handles = scratch
-        .handles
-        .expect("Fix: superhub mixed split query should allocate scratch handles");
+    let shape = scratch
+        .shape
+        .expect("Fix: superhub mixed split query should retain scratch shape");
     assert_eq!(
-        handles.high_queue_capacity, 1,
+        shape.high_queue_capacity, 1,
         "one enormous row should allocate one high-row slot, not edge_count / threshold slots"
     );
     assert_eq!(
@@ -159,7 +165,7 @@ fn uniformly_high_degree_resident_query_uses_row_strided_traverse_grid() {
     .expect("Fix: recording dispatcher should complete uniformly high-degree resident CSR query");
 
     let handles = scratch
-        .handles
+        .slots
         .expect("Fix: resident CSR query should allocate scratch handles");
     assert!(handles.high_queue.is_none());
     assert!(handles.high_len.is_none());

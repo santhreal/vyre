@@ -3,7 +3,7 @@
 Run the default crate suite from the workspace root:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-registry-link
+./cargo_full test -p vyre-registry-link
 ```
 
 Own every inventory registry link anchor, report which sources a build links, and assert that each linked source reached the registry it submits into.
@@ -14,11 +14,11 @@ The crate lives at `vyre-registry-link`. The `registry-link` owner maintains its
 ## Commands
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-registry-link
+./cargo_full test -p vyre-registry-link
 ```
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-registry-link --all-features
+./cargo_full test -p vyre-registry-link --all-features
 ```
 
 ## Feature sets
@@ -31,8 +31,8 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-registry-link --all-features
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_registry_link` | `vyre-registry-link/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-registry-link` |
-| `test` | `registry_link_rules` | `vyre-registry-link/tests/registry_link_rules.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-registry-link --test registry_link_rules` |
+| `lib` | `vyre_registry_link` | `vyre-registry-link/src/lib.rs` | None | `./cargo_full test -p vyre-registry-link` |
+| `test` | `registry_link_rules` | `vyre-registry-link/tests/registry_link_rules.rs` | None | `./cargo_full test -p vyre-registry-link --test registry_link_rules` |
 
 ## Test classes
 

@@ -763,7 +763,6 @@ mod tests {
             title: "cuda first".to_string(),
             status: "required".to_string(),
             evidence: vec!["cuda-blocked-benchmark.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -802,7 +801,6 @@ mod tests {
             title: "wgpu fallback".to_string(),
             status: "required".to_string(),
             evidence: vec!["wgpu-hidden-invalid.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -853,7 +851,6 @@ mod tests {
             title: "wgpu fallback".to_string(),
             status: "required".to_string(),
             evidence: vec!["evidence/benchmarks/wgpu-missing-source-artifact.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -907,7 +904,6 @@ mod tests {
             title: "wgpu fallback".to_string(),
             status: "required".to_string(),
             evidence: vec!["evidence/benchmarks/wgpu-absolute-source-artifact.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -952,7 +948,6 @@ mod tests {
             title: "wgpu fallback".to_string(),
             status: "required".to_string(),
             evidence: vec!["wgpu-stale-total-cases.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -1000,7 +995,6 @@ mod tests {
             title: "wgpu fallback".to_string(),
             status: "required".to_string(),
             evidence: vec!["wgpu-missing-source.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -1059,7 +1053,6 @@ mod tests {
             title: "wgpu fallback".to_string(),
             status: "required".to_string(),
             evidence: vec!["wgpu-missing-case-provenance.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -1117,7 +1110,6 @@ mod tests {
             title: "wgpu fallback".to_string(),
             status: "required".to_string(),
             evidence: vec!["release/evidence/benchmarks/wgpu-stale-source.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -1162,7 +1154,6 @@ mod tests {
             title: "wgpu fallback".to_string(),
             status: "required".to_string(),
             evidence: vec!["wgpu-backend-drift.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -1210,7 +1201,6 @@ mod tests {
             title: "cuda first".to_string(),
             status: "required".to_string(),
             evidence: vec!["cuda-borrowed-escape-hatch.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -1255,7 +1245,6 @@ mod tests {
             title: "wgpu fallback".to_string(),
             status: "required".to_string(),
             evidence: vec!["wgpu-blank-case-id.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 
@@ -1305,7 +1294,6 @@ mod tests {
             title: "wgpu fallback".to_string(),
             status: "required".to_string(),
             evidence: vec!["wgpu-duplicate-case-id.json".to_string()],
-            minimum_evidence: 0,
         };
         let mut failures = Vec::new();
 

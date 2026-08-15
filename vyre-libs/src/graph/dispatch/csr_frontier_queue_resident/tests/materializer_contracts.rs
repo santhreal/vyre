@@ -34,10 +34,13 @@ fn large_single_word_resident_query_uses_atomic_word_materializer() {
     .expect("Fix: recording dispatcher should complete large resident CSR queue query");
 
     let handles = scratch
-        .handles
+        .slots
         .expect("Fix: large resident CSR queue query should allocate scratch handles");
     assert_eq!(
-        handles.materializer,
+        scratch
+            .shape
+            .expect("Fix: large resident CSR queue query should retain scratch shape")
+            .materializer,
         ResidentCsrQueueMaterializer::AtomicWordScan
     );
     assert!(handles.word_partials.is_none());
@@ -95,10 +98,13 @@ fn large_dense_resident_query_uses_word_prefix_queue_materializer() {
     .expect("Fix: recording dispatcher should complete large dense resident CSR queue query");
 
     let handles = scratch
-        .handles
+        .slots
         .expect("Fix: large dense resident CSR queue query should allocate scratch handles");
     assert_eq!(
-        handles.materializer,
+        scratch
+            .shape
+            .expect("Fix: large dense resident CSR queue query should retain scratch shape")
+            .materializer,
         ResidentCsrQueueMaterializer::DeterministicWordPrefix
     );
     let word_partials = handles
@@ -164,7 +170,7 @@ fn small_multiblock_resident_query_inlines_block_offsets() {
     .expect("Fix: recording dispatcher should complete multiblock resident CSR queue query");
 
     let handles = scratch
-        .handles
+        .slots
         .expect("Fix: multiblock resident CSR queue query should allocate scratch handles");
     let word_partials = handles
         .word_partials
@@ -229,7 +235,7 @@ fn many_block_resident_query_scans_block_offsets_once() {
     .expect("Fix: recording dispatcher should complete many-block resident CSR queue query");
 
     let handles = scratch
-        .handles
+        .slots
         .expect("Fix: many-block resident CSR queue query should allocate scratch handles");
     let word_partials = handles
         .word_partials

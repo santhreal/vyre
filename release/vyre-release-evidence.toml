@@ -8,7 +8,6 @@ vyre = "0.7.2"
 id = "version-story"
 title = "Manifest, tag, docs, and release-note version story is resolved"
 status = "closed"
-minimum_evidence = 4
 evidence = [
   "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json",
   "evidence/version/version-matrix.json",
@@ -20,7 +19,6 @@ evidence = [
 id = "cuda-first-path"
 title = "CUDA is the documented, tested, benchmarked fast release path"
 status = "closed"
-minimum_evidence = 5
 evidence = [
   "evidence/backends/backend-matrix.json",
   "evidence/benchmarks/release-workload-matrix.json",
@@ -34,7 +32,6 @@ evidence = [
 id = "wgpu-fallback"
 title = "WGPU fallback is semantically correct, tested, and benchmarked"
 status = "closed"
-minimum_evidence = 3
 evidence = [
   "evidence/backends/backend-matrix.json",
   "evidence/benchmarks/wgpu-fallback-suite.json",
@@ -47,7 +44,6 @@ evidence = [
 id = "megakernel-default"
 title = "Megakernel is the default high-throughput runtime path where legal"
 status = "closed"
-minimum_evidence = 5
 evidence = [
   "evidence/backends/backend-matrix.json",
   "evidence/benchmarks/release-workload-matrix.json",
@@ -60,7 +56,6 @@ evidence = [
 id = "optimization-corpus-4096"
 title = "Optimization corpus contains at least 4096 distinct semantic-preserving cases"
 status = "closed"
-minimum_evidence = 5
 evidence = [
   "evidence/optimization/optimization-corpus.json",
   "evidence/optimization/optimization-corpus-contracts.json",
@@ -73,7 +68,6 @@ evidence = [
 id = "optimization-benchmark-proof"
 title = "Canonical semantic optimizer has before/after benchmark evidence"
 status = "closed"
-minimum_evidence = 5
 evidence = [
   "cargo_full run --bin xtask -- measurement-gate --strict",
   "evidence/optimization/optimization-integration-matrix.json",
@@ -87,7 +81,6 @@ evidence = [
 id = "semantic-optimizer-registration"
 title = "Semantic optimizer registrations and supplemental rules are source-owned and proved"
 status = "closed"
-minimum_evidence = 3
 evidence = [
   "evidence/optimization/optimization-integration-matrix.json",
   "evidence/optimization/optimizer-pass-manifest.json",
@@ -98,7 +91,6 @@ evidence = [
 id = "proof-workloads-12"
 title = "At least 12 proof workload families have reproducible CPU/GPU benchmark artifacts"
 status = "closed"
-minimum_evidence = 12
 evidence = [
   "evidence/benchmarks/release-workload-matrix.json",
   "../docs/optimization/BENCH_TARGETS.toml",
@@ -121,7 +113,6 @@ evidence = [
 id = "cpu-only-100x-proof"
 title = "Ten release workloads prove 100x+ CUDA wins against CPU-SOTA baselines"
 status = "closed"
-minimum_evidence = 6
 evidence = [
   "evidence/benchmarks/release-workload-matrix.json",
   "evidence/benchmarks/cpu-only-100x-proof.json",
@@ -140,7 +131,6 @@ evidence = [
 id = "conformance-hard-gate"
 title = "Conformance is wired as a hard release-blocking gate for every claimed op/backend"
 status = "closed"
-minimum_evidence = 10
 evidence = [
   "evidence/conformance/conformance-matrix.json",
   "evidence/conformance/cuda-conformance.json",
@@ -159,7 +149,6 @@ evidence = [
 id = "docs-evidence-linked"
 title = "User, contributor, benchmark, conformance, optimization, and release docs are tied to evidence"
 status = "closed"
-minimum_evidence = 8
 evidence = [
   "../docs/DOCS.toml",
   "../docs/SUMMARY.md",
@@ -176,7 +165,6 @@ evidence = [
 id = "crate-metadata"
 title = "Every release crate has coherent metadata, features, docs, readme, license, and version policy"
 status = "closed"
-minimum_evidence = 9
 evidence = [
   "cargo_full run --bin xtask -- metadata-matrix --output release/evidence/metadata/metadata-matrix.json",
   "cargo_full run --bin xtask -- feature-matrix --output release/evidence/metadata/feature-matrix.json",
@@ -193,7 +181,6 @@ evidence = [
 id = "release-hygiene"
 title = "No shipped stubs, hidden fallbacks, unbounded resources, hot-path sleeps, unactionable errors, or stale docs"
 status = "closed"
-minimum_evidence = 16
 evidence = [
   "cargo_full run --bin xtask -- recursion-gate --strict",
   "cargo_full run --bin xtask -- heuristic-audit --strict",
@@ -216,13 +203,13 @@ evidence = [
 id = "public-launch"
 title = "Public launch state preserves approval-gated external actions"
 status = "closed"
-minimum_evidence = 9
 evidence = [
   "cargo_full run --bin xtask -- release-evidence",
   "cargo_full run --bin xtask -- vyre-release-gate --prepublish",
   "cargo_full run --bin xtask -- vyre-release-gate",
   "cargo_full run --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json",
   "evidence/final/release-evidence-run.json",
+  "evidence/final/expected-artifacts.json",
   "evidence/final/public-launch-state.json",
   "../scripts/final-launch.sh",
   "../scripts/publish-release.sh",

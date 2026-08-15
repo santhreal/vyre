@@ -25,7 +25,7 @@ fn batch_queries_initialize_queue_len_on_device() {
     .expect("Fix: recording dispatcher should complete resident CSR queue batch");
 
     let expected_uploads: Vec<u64> = scratch
-        .handles
+        .slots
         .iter()
         .map(|handles| handles.frontier)
         .collect();
@@ -50,24 +50,24 @@ fn batch_queries_initialize_queue_len_on_device() {
         6,
         "atomic-word resident CSR queue batches should initialize queue_len, compact packed words while clearing output, then traverse per query"
     );
-    assert_eq!(steps[0], vec![scratch.handles[0].queue_len]);
+    assert_eq!(steps[0], vec![scratch.slots[0].queue_len]);
     assert_eq!(
         steps[1],
         vec![
-            scratch.handles[0].frontier,
-            scratch.handles[0].active_queue,
-            scratch.handles[0].queue_len,
-            scratch.handles[0].frontier_out,
+            scratch.slots[0].frontier,
+            scratch.slots[0].active_queue,
+            scratch.slots[0].queue_len,
+            scratch.slots[0].frontier_out,
         ]
     );
-    assert_eq!(steps[3], vec![scratch.handles[1].queue_len]);
+    assert_eq!(steps[3], vec![scratch.slots[1].queue_len]);
     assert_eq!(
         steps[4],
         vec![
-            scratch.handles[1].frontier,
-            scratch.handles[1].active_queue,
-            scratch.handles[1].queue_len,
-            scratch.handles[1].frontier_out,
+            scratch.slots[1].frontier,
+            scratch.slots[1].active_queue,
+            scratch.slots[1].queue_len,
+            scratch.slots[1].frontier_out,
         ]
     );
     assert_eq!(outputs, vec![vec![0; 4], vec![0; 4]]);

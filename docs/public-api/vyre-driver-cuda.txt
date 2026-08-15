@@ -18,7 +18,6 @@ impl core::error::Error for vyre_driver_cuda::megakernel_speedup_gate::CudaMegak
 impl core::error::Error for vyre_driver_cuda::resident_graph_session::CudaResidentGraphSessionError
 impl core::error::Error for vyre_driver_cuda::resident_graph_session::CudaResidentGraphSessionEvidenceError
 impl core::error::Error for vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError
-impl core::error::Error for vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayoutError
 impl core::error::Error for vyre_driver_cuda::warp_word_automata::CudaWarpWordAutomataLayoutError
 impl core::fmt::Display for vyre_driver_cuda::CudaEGraphKernelPlanError
 impl core::fmt::Display for vyre_driver_cuda::egraph_device_image::CudaEGraphDeviceUploadError
@@ -28,7 +27,6 @@ impl core::fmt::Display for vyre_driver_cuda::megakernel_speedup_gate::CudaMegak
 impl core::fmt::Display for vyre_driver_cuda::resident_graph_session::CudaResidentGraphSessionError
 impl core::fmt::Display for vyre_driver_cuda::resident_graph_session::CudaResidentGraphSessionEvidenceError
 impl core::fmt::Display for vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError
-impl core::fmt::Display for vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayoutError
 impl core::fmt::Display for vyre_driver_cuda::warp_word_automata::CudaWarpWordAutomataLayoutError
 impl core::marker::Send for vyre_driver_cuda::backend::cuda_graph::CachedCudaGraph
 impl core::marker::Send for vyre_driver_cuda::backend::stream_ordered_pool::CudaStreamOrderedPool
@@ -37,7 +35,6 @@ impl core::ops::drop::Drop for vyre_driver_cuda::backend::cuda_graph::CachedCuda
 impl core::ops::drop::Drop for vyre_driver_cuda::profiler::CudaProfilerRange
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver_cuda::frontier_typed_ir_adapter::CudaFrontierTypedIrAdapterError
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver_cuda::resident_graph_session::CudaResidentGraphSessionError
-impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayoutError
 impl vyre_driver::backend::device_buffer::DeviceBuffer for vyre_driver_cuda::CudaDeviceBuffer
 impl vyre_driver::backend::private::Sealed for vyre_driver_cuda::CudaBackendRegistration
 impl vyre_driver::backend::vyre_backend::VyreBackend for vyre_driver_cuda::CudaBackendRegistration
@@ -65,7 +62,6 @@ impl vyre_driver_cuda::megakernel_scheduler::CudaMegakernelScheduleSample
 impl vyre_driver_cuda::occupancy::OccupancyEstimate
 impl vyre_driver_cuda::profiler::CudaProfilerRange
 impl vyre_driver_cuda::regex_hardware_comparison::CudaRegexHardwareComparisonEvidence
-impl vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout
 impl vyre_driver_cuda::warp_word_automata::CudaWarpWordAutomataLayoutEvidence
 impl vyre_driver_cuda::warp_word_automata::CudaWarpWordAutomataLayoutRequest
 impl vyre_driver_cuda::warp_word_automata::CudaWarpWordInstructionClass
@@ -116,7 +112,6 @@ pub const fn vyre_driver_cuda::egraph_device_image::CudaResidentEGraphDeviceImag
 pub const fn vyre_driver_cuda::egraph_device_image::CudaResidentEGraphDeviceImage::word_count(&self) -> usize
 pub const fn vyre_driver_cuda::profiler::CudaProfilerRange::is_active(&self) -> bool
 pub const fn vyre_driver_cuda::profiler::cuda_profiler_range_catalog() -> &'static [vyre_driver_cuda::profiler::CudaProfilerRangeSpec]
-pub const fn vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout::from_aggregate_fields(graph_shape: vyre_driver::megakernel_execution::MegakernelGraphShape, node_record_bytes: u64, edge_record_bytes: u64, node_bytes: u64, edge_bytes: u64, payload_bytes: u64, resident_bytes: u64) -> Self
 pub const fn vyre_driver_cuda::warp_word_automata::CudaWarpWordAutomataLayoutEvidence::is_complete(self) -> bool
 pub const fn vyre_driver_cuda::warp_word_automata::CudaWarpWordAutomataLayoutRequest::new(nfa_state_count: u32, pattern_count: u32, haystack_chunk_bytes: u64, warp_size: u32, word_bits: u32, bit_parallel_registers_per_thread: u16, max_registers_per_thread: u16, shared_memory_bytes: u32, max_shared_memory_bytes: u32, bit_parallel_throughput_bytes_per_second: u64, table_driven_throughput_bytes_per_second: u64, bit_parallel_match_digest: u64, table_driven_match_digest: u64) -> Self
 pub const fn vyre_driver_cuda::warp_word_automata::CudaWarpWordInstructionClass::as_str(self) -> &'static str
@@ -131,8 +126,6 @@ pub const vyre_driver_cuda::CUDA_EGRAPH_STRUCTURAL_EQUIVALENCE_KERNEL_ENTRY: &st
 pub const vyre_driver_cuda::CUDA_EGRAPH_STRUCTURAL_EQUIVALENCE_KERNEL_PARAM_COUNT: usize
 pub const vyre_driver_cuda::CUDA_REGEX_HARDWARE_COMPARISON_SCHEMA_VERSION: u32
 pub const vyre_driver_cuda::CUDA_TARGET_ID: vyre_foundation::operation::TargetId
-pub const vyre_driver_cuda::CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS: usize
-pub const vyre_driver_cuda::CUDA_TOKEN_FACT_DEGREE_PROFILE_RANKS: [u64; 16]
 pub const vyre_driver_cuda::CUDA_WARP_WORD_AUTOMATA_LAYOUT_SCHEMA_VERSION: u32
 pub const vyre_driver_cuda::MEGAKERNEL_SPEEDUP_EVIDENCE_CSV_HEADER: &str
 pub const vyre_driver_cuda::egraph_kernel_plan::CUDA_EGRAPH_CANONICAL_REWRITE_KERNEL_ENTRY: &str
@@ -154,8 +147,6 @@ pub const vyre_driver_cuda::profiler::CUDA_PROFILER_RANGE_CATALOG: &[vyre_driver
 pub const vyre_driver_cuda::profiler::CUDA_RESIDENT_DISPATCH_RANGE: &[u8]
 pub const vyre_driver_cuda::regex_hardware_comparison::CUDA_REGEX_HARDWARE_COMPARISON_SCHEMA_VERSION: u32
 pub const vyre_driver_cuda::synthetic_device_caps::SYNTHETIC_SM120_DEFAULT_MEMORY_BYTES: u64
-pub const vyre_driver_cuda::token_fact_graph_cuda_adapter::CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS: usize
-pub const vyre_driver_cuda::token_fact_graph_cuda_adapter::CUDA_TOKEN_FACT_DEGREE_PROFILE_RANKS: [u64; 16]
 pub const vyre_driver_cuda::warp_word_automata::CUDA_WARP_WORD_AUTOMATA_LAYOUT_SCHEMA_VERSION: u32
 pub enum vyre_driver_cuda::CudaEGraphDeviceUploadError
 pub enum vyre_driver_cuda::CudaEGraphFixedPointReadback
@@ -170,7 +161,6 @@ pub enum vyre_driver_cuda::CudaResidentGraphReadback
 pub enum vyre_driver_cuda::CudaResidentGraphSessionError
 pub enum vyre_driver_cuda::CudaResidentGraphSessionEvidenceError
 pub enum vyre_driver_cuda::CudaTokenFactFrontierExecutionError
-pub enum vyre_driver_cuda::CudaTokenFactGraphLayoutError
 pub enum vyre_driver_cuda::CudaWarpWordInstructionClass
 pub enum vyre_driver_cuda::egraph_device_image::CudaEGraphDeviceUploadError
 pub enum vyre_driver_cuda::egraph_kernel_plan::CudaEGraphFixedPointReadback
@@ -188,7 +178,6 @@ pub enum vyre_driver_cuda::resident_graph_session::CudaResidentGraphSessionError
 pub enum vyre_driver_cuda::resident_graph_session::CudaResidentGraphSessionEvidenceError
 pub enum vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError
 pub enum vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactGraphResidency
-pub enum vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayoutError
 pub enum vyre_driver_cuda::warp_word_automata::CudaWarpWordInstructionClass
 pub fn vyre_driver_cuda::CudaBackendRegistration::allocate_device_buffer(&self, byte_len: usize) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::device_buffer::DeviceBuffer>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_cuda::CudaBackendRegistration::allocate_resident(&self, byte_len: usize) -> core::result::Result<vyre_driver::backend::resource::Resource, vyre_driver::backend::error::BackendError>
@@ -266,7 +255,6 @@ pub fn vyre_driver_cuda::CudaTelemetrySnapshot::device_pool_hit_rate_bps(&self) 
 pub fn vyre_driver_cuda::CudaTelemetrySnapshot::mean_occupancy_bps(&self) -> u32
 pub fn vyre_driver_cuda::CudaTelemetrySnapshot::to_prometheus_text(self) -> alloc::string::String
 pub fn vyre_driver_cuda::adapt_frontier_typed_ir_to_cuda(plan: &vyre_libs::scheduling::frontier_typed_ir::FrontierTypedPlan, frontier_bytes_per_active_item: u64, scratch_bytes_per_active_item: u64, output_bytes_per_wave: u64) -> core::result::Result<vyre_driver_cuda::frontier_typed_ir_adapter::CudaFrontierTypedIrInput, vyre_driver_cuda::frontier_typed_ir_adapter::CudaFrontierTypedIrAdapterError>
-pub fn vyre_driver_cuda::adapt_token_fact_graph_to_cuda_layout(graph: &vyre_libs::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph, node_record_bytes: u64, edge_record_bytes: u64) -> core::result::Result<vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout, vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayoutError>
 pub fn vyre_driver_cuda::backend::cuda_graph::CachedCudaGraph::drop(&mut self)
 pub fn vyre_driver_cuda::backend::dispatch::CudaBackend::acquire() -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_driver_cuda::backend::dispatch::CudaBackend::acquire_ordinal(ordinal: usize) -> core::result::Result<Self, alloc::string::String>
@@ -494,8 +482,8 @@ pub fn vyre_driver_cuda::plan_cuda_egraph_union_compaction(equivalences: &[vyre_
 pub fn vyre_driver_cuda::plan_cuda_frontier_megakernel_execution(cache: &mut vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelPlanCache, graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelDeviceKey, sample: vyre_driver_cuda::megakernel_scheduler::CudaMegakernelScheduleSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, bytes_per_node: u64, bytes_per_edge: u64, waves: &[vyre_driver::megakernel_frontier::MegakernelFrontierWave], dependencies: &[vyre_driver::megakernel_barrier::MegakernelWaveDependency], budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64) -> core::result::Result<vyre_driver_cuda::megakernel_barrier_planner::CudaMegakernelFrontierExecutionPlan, vyre_driver_cuda::megakernel_barrier_planner::CudaMegakernelFrontierExecutionPlanError>
 pub fn vyre_driver_cuda::plan_cuda_frontier_megakernel_execution_with_scratch(cache: &mut vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelPlanCache, graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelDeviceKey, sample: vyre_driver_cuda::megakernel_scheduler::CudaMegakernelScheduleSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, bytes_per_node: u64, bytes_per_edge: u64, waves: &[vyre_driver::megakernel_frontier::MegakernelFrontierWave], dependencies: &[vyre_driver::megakernel_barrier::MegakernelWaveDependency], budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64, scratch: &mut vyre_driver::megakernel_barrier::MegakernelBarrierScratch) -> core::result::Result<vyre_driver_cuda::megakernel_barrier_planner::CudaMegakernelFrontierExecutionPlan, vyre_driver_cuda::megakernel_barrier_planner::CudaMegakernelFrontierExecutionPlanError>
 pub fn vyre_driver_cuda::plan_cuda_resident_graph_session(profile: vyre_driver_cuda::resident_graph_session::CudaResidentGraphSessionProfile) -> core::result::Result<vyre_driver_cuda::resident_graph_session::CudaResidentGraphSessionPlan, vyre_driver_cuda::resident_graph_session::CudaResidentGraphSessionError>
-pub fn vyre_driver_cuda::plan_cuda_token_fact_frontier_execution(cache: &mut vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelPlanCache, graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelDeviceKey, sample: vyre_driver_cuda::megakernel_scheduler::CudaMegakernelScheduleSample, graph_layout: vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout, frontier_input: &vyre_driver_cuda::frontier_typed_ir_adapter::CudaFrontierTypedIrInput, budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64) -> core::result::Result<vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionPlan, vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError>
-pub fn vyre_driver_cuda::plan_cuda_token_fact_frontier_execution_with_scratch(cache: &mut vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelPlanCache, graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelDeviceKey, sample: vyre_driver_cuda::megakernel_scheduler::CudaMegakernelScheduleSample, graph_layout: vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout, frontier_input: &vyre_driver_cuda::frontier_typed_ir_adapter::CudaFrontierTypedIrInput, budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64, barrier_scratch: &mut vyre_driver::megakernel_barrier::MegakernelBarrierScratch) -> core::result::Result<vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionPlan, vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError>
+pub fn vyre_driver_cuda::plan_cuda_token_fact_frontier_execution(cache: &mut vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelPlanCache, graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelDeviceKey, sample: vyre_driver_cuda::megakernel_scheduler::CudaMegakernelScheduleSample, graph_layout: vyre_libs::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout, frontier_input: &vyre_driver_cuda::frontier_typed_ir_adapter::CudaFrontierTypedIrInput, budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64) -> core::result::Result<vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionPlan, vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError>
+pub fn vyre_driver_cuda::plan_cuda_token_fact_frontier_execution_with_scratch(cache: &mut vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelPlanCache, graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelDeviceKey, sample: vyre_driver_cuda::megakernel_scheduler::CudaMegakernelScheduleSample, graph_layout: vyre_libs::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout, frontier_input: &vyre_driver_cuda::frontier_typed_ir_adapter::CudaFrontierTypedIrInput, budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64, barrier_scratch: &mut vyre_driver::megakernel_barrier::MegakernelBarrierScratch) -> core::result::Result<vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionPlan, vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError>
 pub fn vyre_driver_cuda::plan_cuda_warp_word_automata_layout(request: vyre_driver_cuda::warp_word_automata::CudaWarpWordAutomataLayoutRequest) -> core::result::Result<vyre_driver_cuda::warp_word_automata::CudaWarpWordAutomataLayoutEvidence, vyre_driver_cuda::warp_word_automata::CudaWarpWordAutomataLayoutError>
 pub fn vyre_driver_cuda::profiler::CudaProfilerRange::drop(&mut self)
 pub fn vyre_driver_cuda::profiler::cuda_profiler_range(label: &'static [u8]) -> vyre_driver_cuda::profiler::CudaProfilerRange
@@ -520,7 +508,6 @@ pub fn vyre_driver_cuda::resident_dispatcher::CudaProgramDispatcher<'a>::new(bac
 pub fn vyre_driver_cuda::resident_dispatcher::CudaProgramDispatcher<'a>::read_resident(&self, id: u64) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_driver_cuda::resident_dispatcher::CudaProgramDispatcher<'a>::read_resident_many(&self, ids: &[u64]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_driver_cuda::resident_dispatcher::CudaProgramDispatcher<'a>::read_resident_ranges(&self, ranges: &[vyre_foundation::program_dispatch::ResidentReadRange]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_driver_cuda::resident_dispatcher::CudaProgramDispatcher<'a>::release_resident_static_uploads(&self, set: vyre_foundation::program_dispatch::ResidentStaticBufferSet) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_driver_cuda::resident_dispatcher::CudaProgramDispatcher<'a>::supports_persistent(&self) -> bool
 pub fn vyre_driver_cuda::resident_dispatcher::CudaProgramDispatcher<'a>::upload_resident(&self, id: u64, bytes: &[u8]) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_driver_cuda::resident_dispatcher::CudaProgramDispatcher<'a>::upload_resident_many(&self, uploads: &[(u64, &[u8])]) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
@@ -545,13 +532,10 @@ pub fn vyre_driver_cuda::synthetic_device_caps::synthetic_sm120_envelope_default
 pub fn vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError::from(err: vyre_driver::device_work_queue::DeviceWorkQueueError) -> Self
 pub fn vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError::from(err: vyre_driver_cuda::megakernel_barrier_planner::CudaMegakernelFrontierExecutionPlanError) -> Self
-pub fn vyre_driver_cuda::token_fact_frontier_execution::plan_cuda_token_fact_frontier_execution(cache: &mut vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelPlanCache, graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelDeviceKey, sample: vyre_driver_cuda::megakernel_scheduler::CudaMegakernelScheduleSample, graph_layout: vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout, frontier_input: &vyre_driver_cuda::frontier_typed_ir_adapter::CudaFrontierTypedIrInput, budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64) -> core::result::Result<vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionPlan, vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError>
-pub fn vyre_driver_cuda::token_fact_frontier_execution::plan_cuda_token_fact_frontier_execution_envelope(cache: &mut vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelPlanCache, graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelDeviceKey, sample: vyre_driver_cuda::megakernel_scheduler::CudaMegakernelScheduleSample, graph_layout: vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout, graph_residency: vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactGraphResidency, frontier_input: &vyre_driver_cuda::frontier_typed_ir_adapter::CudaFrontierTypedIrInput, budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64) -> core::result::Result<vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionEnvelope, vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError>
-pub fn vyre_driver_cuda::token_fact_frontier_execution::plan_cuda_token_fact_frontier_execution_envelope_with_scratch(cache: &mut vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelPlanCache, graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelDeviceKey, sample: vyre_driver_cuda::megakernel_scheduler::CudaMegakernelScheduleSample, graph_layout: vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout, graph_residency: vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactGraphResidency, frontier_input: &vyre_driver_cuda::frontier_typed_ir_adapter::CudaFrontierTypedIrInput, budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64, barrier_scratch: &mut vyre_driver::megakernel_barrier::MegakernelBarrierScratch) -> core::result::Result<vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionEnvelope, vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError>
-pub fn vyre_driver_cuda::token_fact_frontier_execution::plan_cuda_token_fact_frontier_execution_with_scratch(cache: &mut vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelPlanCache, graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelDeviceKey, sample: vyre_driver_cuda::megakernel_scheduler::CudaMegakernelScheduleSample, graph_layout: vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout, frontier_input: &vyre_driver_cuda::frontier_typed_ir_adapter::CudaFrontierTypedIrInput, budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64, barrier_scratch: &mut vyre_driver::megakernel_barrier::MegakernelBarrierScratch) -> core::result::Result<vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionPlan, vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError>
-pub fn vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayoutError::arithmetic_overflow(field: &'static str) -> Self
-pub fn vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayoutError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_driver_cuda::token_fact_graph_cuda_adapter::adapt_token_fact_graph_to_cuda_layout(graph: &vyre_libs::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph, node_record_bytes: u64, edge_record_bytes: u64) -> core::result::Result<vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout, vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayoutError>
+pub fn vyre_driver_cuda::token_fact_frontier_execution::plan_cuda_token_fact_frontier_execution(cache: &mut vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelPlanCache, graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelDeviceKey, sample: vyre_driver_cuda::megakernel_scheduler::CudaMegakernelScheduleSample, graph_layout: vyre_libs::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout, frontier_input: &vyre_driver_cuda::frontier_typed_ir_adapter::CudaFrontierTypedIrInput, budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64) -> core::result::Result<vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionPlan, vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError>
+pub fn vyre_driver_cuda::token_fact_frontier_execution::plan_cuda_token_fact_frontier_execution_envelope(cache: &mut vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelPlanCache, graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelDeviceKey, sample: vyre_driver_cuda::megakernel_scheduler::CudaMegakernelScheduleSample, graph_layout: vyre_libs::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout, graph_residency: vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactGraphResidency, frontier_input: &vyre_driver_cuda::frontier_typed_ir_adapter::CudaFrontierTypedIrInput, budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64) -> core::result::Result<vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionEnvelope, vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError>
+pub fn vyre_driver_cuda::token_fact_frontier_execution::plan_cuda_token_fact_frontier_execution_envelope_with_scratch(cache: &mut vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelPlanCache, graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelDeviceKey, sample: vyre_driver_cuda::megakernel_scheduler::CudaMegakernelScheduleSample, graph_layout: vyre_libs::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout, graph_residency: vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactGraphResidency, frontier_input: &vyre_driver_cuda::frontier_typed_ir_adapter::CudaFrontierTypedIrInput, budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64, barrier_scratch: &mut vyre_driver::megakernel_barrier::MegakernelBarrierScratch) -> core::result::Result<vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionEnvelope, vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError>
+pub fn vyre_driver_cuda::token_fact_frontier_execution::plan_cuda_token_fact_frontier_execution_with_scratch(cache: &mut vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelPlanCache, graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::megakernel_plan_cache::CudaMegakernelDeviceKey, sample: vyre_driver_cuda::megakernel_scheduler::CudaMegakernelScheduleSample, graph_layout: vyre_libs::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout, frontier_input: &vyre_driver_cuda::frontier_typed_ir_adapter::CudaFrontierTypedIrInput, budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64, barrier_scratch: &mut vyre_driver::megakernel_barrier::MegakernelBarrierScratch) -> core::result::Result<vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionPlan, vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionError>
 pub fn vyre_driver_cuda::validate_cuda_megakernel_speedup_evidence_csv(csv: &str, required_speedup_x: f64) -> core::result::Result<vyre_driver_cuda::megakernel_speedup_gate::CudaMegakernelSpeedupProof, vyre_driver_cuda::megakernel_speedup_gate::CudaMegakernelSpeedupGateError>
 pub fn vyre_driver_cuda::validate_cuda_megakernel_speedup_gate(samples: &[vyre_driver_cuda::megakernel_speedup_gate::CudaMegakernelSpeedupSample], required_speedup_x: f64) -> core::result::Result<vyre_driver_cuda::megakernel_speedup_gate::CudaMegakernelSpeedupProof, vyre_driver_cuda::megakernel_speedup_gate::CudaMegakernelSpeedupGateError>
 pub fn vyre_driver_cuda::warp_word_automata::CudaWarpWordAutomataLayoutError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -580,7 +564,6 @@ pub mod vyre_driver_cuda::resident_dispatcher
 pub mod vyre_driver_cuda::resident_graph_session
 pub mod vyre_driver_cuda::synthetic_device_caps
 pub mod vyre_driver_cuda::token_fact_frontier_execution
-pub mod vyre_driver_cuda::token_fact_graph_cuda_adapter
 pub mod vyre_driver_cuda::warp_word_automata
 pub struct vyre_driver_cuda::CudaBackend
 pub struct vyre_driver_cuda::CudaBackendRegistration
@@ -646,7 +629,6 @@ pub struct vyre_driver_cuda::CudaResidentGraphSessionProfile
 pub struct vyre_driver_cuda::CudaStreamOrderedPool
 pub struct vyre_driver_cuda::CudaTelemetrySnapshot
 pub struct vyre_driver_cuda::CudaTokenFactFrontierExecutionPlan
-pub struct vyre_driver_cuda::CudaTokenFactGraphLayout
 pub struct vyre_driver_cuda::CudaWarpWordAutomataLayoutEvidence
 pub struct vyre_driver_cuda::CudaWarpWordAutomataLayoutRequest
 pub struct vyre_driver_cuda::backend::CachedCudaGraph
@@ -719,7 +701,6 @@ pub struct vyre_driver_cuda::resident_graph_session::CudaResidentGraphSessionPla
 pub struct vyre_driver_cuda::resident_graph_session::CudaResidentGraphSessionProfile
 pub struct vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionEnvelope
 pub struct vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionPlan
-pub struct vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout
 pub struct vyre_driver_cuda::warp_word_automata::CudaWarpWordAutomataLayoutEvidence
 pub struct vyre_driver_cuda::warp_word_automata::CudaWarpWordAutomataLayoutRequest
 pub type vyre_driver_cuda::CudaMegakernelFrontierExecutionPlan = vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlan
@@ -1186,21 +1167,6 @@ pub vyre_driver_cuda::CudaTokenFactFrontierExecutionPlan::resident_payload_bytes
 pub vyre_driver_cuda::CudaTokenFactFrontierExecutionPlan::resident_work_queue_bytes: u64
 pub vyre_driver_cuda::CudaTokenFactFrontierExecutionPlan::total_required_bytes: u64
 pub vyre_driver_cuda::CudaTokenFactFrontierExecutionPlan::work_queue: vyre_driver::device_work_queue::DeviceWorkQueuePlan
-pub vyre_driver_cuda::CudaTokenFactGraphLayout::edge_bytes: u64
-pub vyre_driver_cuda::CudaTokenFactGraphLayout::edge_record_bytes: u64
-pub vyre_driver_cuda::CudaTokenFactGraphLayout::graph_shape: vyre_driver::megakernel_execution::MegakernelGraphShape
-pub vyre_driver_cuda::CudaTokenFactGraphLayout::max_out_degree: u64
-pub vyre_driver_cuda::CudaTokenFactGraphLayout::node_bytes: u64
-pub vyre_driver_cuda::CudaTokenFactGraphLayout::node_record_bytes: u64
-pub vyre_driver_cuda::CudaTokenFactGraphLayout::payload_bytes: u64
-pub vyre_driver_cuda::CudaTokenFactGraphLayout::resident_bytes: u64
-pub vyre_driver_cuda::CudaTokenFactGraphLayout::top_out_degree_prefix_sums: [u64; 16]
-pub vyre_driver_cuda::CudaTokenFactGraphLayoutError::ByteCountOverflow
-pub vyre_driver_cuda::CudaTokenFactGraphLayoutError::ByteCountOverflow::field: &'static str
-pub vyre_driver_cuda::CudaTokenFactGraphLayoutError::InvalidCsrShape
-pub vyre_driver_cuda::CudaTokenFactGraphLayoutError::InvalidCsrShape::field: &'static str
-pub vyre_driver_cuda::CudaTokenFactGraphLayoutError::ZeroRecordWidth
-pub vyre_driver_cuda::CudaTokenFactGraphLayoutError::ZeroRecordWidth::field: &'static str
 pub vyre_driver_cuda::CudaWarpWordAutomataLayoutError::InvalidWarpSize
 pub vyre_driver_cuda::CudaWarpWordAutomataLayoutError::InvalidWarpSize::warp_size: u32
 pub vyre_driver_cuda::CudaWarpWordAutomataLayoutError::InvalidWordBits
@@ -1738,21 +1704,6 @@ pub vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecut
 pub vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactFrontierExecutionPlan::work_queue: vyre_driver::device_work_queue::DeviceWorkQueuePlan
 pub vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactGraphResidency::ColdUpload
 pub vyre_driver_cuda::token_fact_frontier_execution::CudaTokenFactGraphResidency::WarmResident
-pub vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout::edge_bytes: u64
-pub vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout::edge_record_bytes: u64
-pub vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout::graph_shape: vyre_driver::megakernel_execution::MegakernelGraphShape
-pub vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout::max_out_degree: u64
-pub vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout::node_bytes: u64
-pub vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout::node_record_bytes: u64
-pub vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout::payload_bytes: u64
-pub vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout::resident_bytes: u64
-pub vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout::top_out_degree_prefix_sums: [u64; 16]
-pub vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayoutError::ByteCountOverflow
-pub vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayoutError::ByteCountOverflow::field: &'static str
-pub vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayoutError::InvalidCsrShape
-pub vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayoutError::InvalidCsrShape::field: &'static str
-pub vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayoutError::ZeroRecordWidth
-pub vyre_driver_cuda::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayoutError::ZeroRecordWidth::field: &'static str
 pub vyre_driver_cuda::warp_word_automata::CudaWarpWordAutomataLayoutError::InvalidWarpSize
 pub vyre_driver_cuda::warp_word_automata::CudaWarpWordAutomataLayoutError::InvalidWarpSize::warp_size: u32
 pub vyre_driver_cuda::warp_word_automata::CudaWarpWordAutomataLayoutError::InvalidWordBits

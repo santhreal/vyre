@@ -47,13 +47,13 @@ fn large_sparse_batch_queries_use_atomic_word_materializer() {
         .cloned()
         .expect("Fix: expected one resident step sequence");
     assert_eq!(steps.len(), 6);
-    assert_eq!(steps[0], vec![scratch.handles[0].queue_len]);
+    assert_eq!(steps[0], vec![scratch.slots[0].queue_len]);
     assert_eq!(
         steps[1],
         scratch.atomic_word_queue_handle_sets[0].as_slice(),
         "wide sparse batch query should use single-pass atomic word compaction"
     );
-    assert_eq!(steps[3], vec![scratch.handles[1].queue_len]);
+    assert_eq!(steps[3], vec![scratch.slots[1].queue_len]);
     assert_eq!(
         steps[4],
         scratch.atomic_word_queue_handle_sets[1].as_slice()
@@ -109,7 +109,7 @@ fn large_dense_batch_queries_use_word_prefix_queue_materializer() {
         .cloned()
         .expect("Fix: expected one resident step sequence");
     assert_eq!(steps.len(), 8);
-    assert_eq!(steps[0], vec![scratch.handles[0].frontier_out]);
+    assert_eq!(steps[0], vec![scratch.slots[0].frontier_out]);
     assert_eq!(
         steps[1],
         scratch.word_count_handle_sets[0].as_slice(),
@@ -120,7 +120,7 @@ fn large_dense_batch_queries_use_word_prefix_queue_materializer() {
         scratch.word_prefix_queue_handle_sets[0].as_slice(),
         "large dense batch query must run deterministic word-prefix scatter"
     );
-    assert_eq!(steps[4], vec![scratch.handles[1].frontier_out]);
+    assert_eq!(steps[4], vec![scratch.slots[1].frontier_out]);
     assert_eq!(steps[5], scratch.word_count_handle_sets[1].as_slice());
     assert_eq!(
         steps[6],
@@ -174,13 +174,13 @@ fn small_multiblock_batch_queries_inline_block_offsets() {
         .cloned()
         .expect("Fix: expected one resident step sequence");
     assert_eq!(steps.len(), 8);
-    assert_eq!(steps[0], vec![scratch.handles[0].frontier_out]);
+    assert_eq!(steps[0], vec![scratch.slots[0].frontier_out]);
     assert_eq!(steps[1], scratch.word_count_handle_sets[0].as_slice());
     assert_eq!(
         steps[2],
         scratch.word_prefix_queue_handle_sets[0].as_slice()
     );
-    assert_eq!(steps[4], vec![scratch.handles[1].frontier_out]);
+    assert_eq!(steps[4], vec![scratch.slots[1].frontier_out]);
     assert_eq!(steps[5], scratch.word_count_handle_sets[1].as_slice());
     assert_eq!(
         steps[6],
@@ -233,7 +233,7 @@ fn many_block_batch_queries_scan_block_offsets_once_per_query() {
         .cloned()
         .expect("Fix: expected one resident step sequence");
     assert_eq!(steps.len(), 10);
-    assert_eq!(steps[0], vec![scratch.handles[0].frontier_out]);
+    assert_eq!(steps[0], vec![scratch.slots[0].frontier_out]);
     assert_eq!(steps[1], scratch.word_count_handle_sets[0].as_slice());
     assert_eq!(
         steps[2],
@@ -244,7 +244,7 @@ fn many_block_batch_queries_scan_block_offsets_once_per_query() {
         steps[3],
         scratch.word_prefix_queue_handle_sets[0].as_slice()
     );
-    assert_eq!(steps[5], vec![scratch.handles[1].frontier_out]);
+    assert_eq!(steps[5], vec![scratch.slots[1].frontier_out]);
     assert_eq!(steps[6], scratch.word_count_handle_sets[1].as_slice());
     assert_eq!(
         steps[7],

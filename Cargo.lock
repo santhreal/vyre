@@ -3740,6 +3740,7 @@ dependencies = [
  "serde",
  "serde_json",
  "smallvec",
+ "structure-gate",
  "thiserror 2.0.19",
  "tracing",
  "tree-sitter",

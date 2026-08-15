@@ -20,7 +20,7 @@
 #![forbid(unsafe_code)]
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Fewer invocations than this means the scan is broken, not the tree.
 ///
@@ -252,7 +252,7 @@ fn key_value(line: &str, key: &str) -> Option<String> {
 fn scan_invocations(root: &Path) -> Vec<Invocation> {
     let mut found = Vec::new();
     for directory in [root.join(".github/workflows"), root.join("scripts")] {
-        for file in text_files(&directory) {
+        for file in crate::common::sources_under(&directory, &["yml", "yaml", "sh", "py"]) {
             let Ok(text) = std::fs::read_to_string(&file) else {
                 continue;
             };
@@ -339,28 +339,4 @@ fn parse_invocation(line: &str) -> Option<Invocation> {
         binary,
         text: trimmed.to_string(),
     })
-}
-
-/// Every YAML, shell and Python file under `directory`, at any depth.
-fn text_files(directory: &Path) -> Vec<PathBuf> {
-    let mut files = Vec::new();
-    let mut pending = vec![directory.to_path_buf()];
-    while let Some(current) = pending.pop() {
-        let Ok(entries) = std::fs::read_dir(&current) else {
-            continue;
-        };
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                pending.push(path);
-            } else if path
-                .extension()
-                .and_then(|extension| extension.to_str())
-                .is_some_and(|extension| matches!(extension, "yml" | "yaml" | "sh" | "py"))
-            {
-                files.push(path);
-            }
-        }
-    }
-    files
 }

@@ -3,7 +3,7 @@
 Run the default crate suite from the workspace root:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support
+./cargo_full test -p vyre-test-support
 ```
 
 Provide shared deterministic fixtures and assertions for workspace tests.
@@ -14,11 +14,11 @@ The crate lives at `vyre-test-support`. The `test-support` owner maintains its
 ## Commands
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support
+./cargo_full test -p vyre-test-support
 ```
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --all-features
+./cargo_full test -p vyre-test-support --all-features
 ```
 
 ## Feature sets
@@ -31,12 +31,12 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --all-features
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_test_support` | `vyre-test-support/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support` |
-| `test` | `binop_parity_tables` | `vyre-test-support/tests/binop_parity_tables.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --test binop_parity_tables` |
-| `test` | `binop_parity_tables` | `vyre-test-support/tests/binop_parity_tables.rs` | `ir-fixtures` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --test binop_parity_tables` |
-| `test` | `cast_parity_tables` | `vyre-test-support/tests/cast_parity_tables.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --test cast_parity_tables` |
-| `test` | `cast_parity_tables` | `vyre-test-support/tests/cast_parity_tables.rs` | `ir-fixtures` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --test cast_parity_tables` |
-| `test` | `workspace_root_follows_the_working_directory` | `vyre-test-support/tests/workspace_root_follows_the_working_directory.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support --test workspace_root_follows_the_working_directory` |
+| `lib` | `vyre_test_support` | `vyre-test-support/src/lib.rs` | None | `./cargo_full test -p vyre-test-support` |
+| `test` | `binop_parity_tables` | `vyre-test-support/tests/binop_parity_tables.rs` | None | `./cargo_full test -p vyre-test-support --test binop_parity_tables` |
+| `test` | `binop_parity_tables` | `vyre-test-support/tests/binop_parity_tables.rs` | `ir-fixtures` | `./cargo_full test -p vyre-test-support --test binop_parity_tables` |
+| `test` | `cast_parity_tables` | `vyre-test-support/tests/cast_parity_tables.rs` | None | `./cargo_full test -p vyre-test-support --test cast_parity_tables` |
+| `test` | `cast_parity_tables` | `vyre-test-support/tests/cast_parity_tables.rs` | `ir-fixtures` | `./cargo_full test -p vyre-test-support --test cast_parity_tables` |
+| `test` | `workspace_root_follows_the_working_directory` | `vyre-test-support/tests/workspace_root_follows_the_working_directory.rs` | None | `./cargo_full test -p vyre-test-support --test workspace_root_follows_the_working_directory` |
 
 ## Test classes
 

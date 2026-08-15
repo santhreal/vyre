@@ -9,18 +9,19 @@ use crate::megakernel_plan_cache::{
     CudaMegakernelAnalysisKind, CudaMegakernelDeviceKey, CudaMegakernelPlanCache,
 };
 use crate::megakernel_scheduler::CudaMegakernelScheduleSample;
-use crate::token_fact_graph_cuda_adapter::{
-    CudaTokenFactGraphLayout, CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS,
-    CUDA_TOKEN_FACT_DEGREE_PROFILE_RANKS,
-};
 use vyre_driver::device_work_queue::{
     plan_device_work_queue_with_expansion, DeviceWorkQueueError, DeviceWorkQueueExpansionProfile,
     DeviceWorkQueuePlan, WorkQueueHostSync,
 };
 use vyre_driver::megakernel_barrier::MegakernelBarrierScratch;
+use vyre_driver::megakernel_execution::MegakernelGraphShape;
 use vyre_driver::megakernel_frontier::megakernel_frontier_fused_wave_budget_bytes;
 use vyre_driver::megakernel_frontier::MegakernelFrontierWave;
 use vyre_driver::ResidentGraphReuseTelemetry;
+use vyre_libs::device::device_resident_token_fact_graph::{
+    DeviceResidentTokenFactGraphLayout, TOKEN_FACT_DEGREE_PROFILE_BUCKETS,
+    TOKEN_FACT_DEGREE_PROFILE_RANKS,
+};
 
 /// Dependency-aware CUDA execution plan for a unified token/fact graph.
 #[derive(Clone, Debug, PartialEq)]
@@ -159,7 +160,7 @@ pub fn plan_cuda_token_fact_frontier_execution(
     analysis_kind: CudaMegakernelAnalysisKind,
     device: CudaMegakernelDeviceKey,
     sample: CudaMegakernelScheduleSample,
-    graph_layout: CudaTokenFactGraphLayout,
+    graph_layout: DeviceResidentTokenFactGraphLayout,
     frontier_input: &CudaFrontierTypedIrInput,
     budget_bytes: u64,
     launch_overhead_ns: f64,
@@ -193,7 +194,7 @@ pub fn plan_cuda_token_fact_frontier_execution_envelope(
     analysis_kind: CudaMegakernelAnalysisKind,
     device: CudaMegakernelDeviceKey,
     sample: CudaMegakernelScheduleSample,
-    graph_layout: CudaTokenFactGraphLayout,
+    graph_layout: DeviceResidentTokenFactGraphLayout,
     graph_residency: CudaTokenFactGraphResidency,
     frontier_input: &CudaFrontierTypedIrInput,
     budget_bytes: u64,
@@ -228,7 +229,7 @@ pub fn plan_cuda_token_fact_frontier_execution_with_scratch(
     analysis_kind: CudaMegakernelAnalysisKind,
     device: CudaMegakernelDeviceKey,
     sample: CudaMegakernelScheduleSample,
-    graph_layout: CudaTokenFactGraphLayout,
+    graph_layout: DeviceResidentTokenFactGraphLayout,
     frontier_input: &CudaFrontierTypedIrInput,
     budget_bytes: u64,
     launch_overhead_ns: f64,
@@ -262,7 +263,7 @@ pub fn plan_cuda_token_fact_frontier_execution_envelope_with_scratch(
     analysis_kind: CudaMegakernelAnalysisKind,
     device: CudaMegakernelDeviceKey,
     sample: CudaMegakernelScheduleSample,
-    graph_layout: CudaTokenFactGraphLayout,
+    graph_layout: DeviceResidentTokenFactGraphLayout,
     graph_residency: CudaTokenFactGraphResidency,
     frontier_input: &CudaFrontierTypedIrInput,
     budget_bytes: u64,
@@ -278,6 +279,13 @@ pub fn plan_cuda_token_fact_frontier_execution_envelope_with_scratch(
             },
         );
     }
+    // The only place the neutral resident layout becomes a scheduler type. The
+    // layout itself, including its byte envelope and out-degree profile, is
+    // owned by vyre-libs and is not restated here.
+    let graph_shape = MegakernelGraphShape {
+        node_count: graph_layout.node_count,
+        edge_count: graph_layout.edge_count,
+    };
     let resident_graph_bytes = graph_layout
         .node_bytes
         .checked_add(graph_layout.edge_bytes)
@@ -315,7 +323,7 @@ pub fn plan_cuda_token_fact_frontier_execution_envelope_with_scratch(
     } else {
         let expansion_items = estimated_queue_expansion_items(
             active_items,
-            graph_layout.graph_shape,
+            graph_shape,
             graph_layout.max_out_degree,
             graph_layout.top_out_degree_prefix_sums,
         )?;
@@ -339,7 +347,7 @@ pub fn plan_cuda_token_fact_frontier_execution_envelope_with_scratch(
         analysis_kind,
         device,
         sample,
-        graph_layout.graph_shape,
+        graph_shape,
         graph_layout.node_record_bytes,
         graph_layout.edge_record_bytes,
         &frontier_input.waves,
@@ -406,9 +414,9 @@ fn total_active_items(active_items: &[u64]) -> Result<u64, CudaTokenFactFrontier
 
 fn estimated_queue_expansion_items(
     active_items: u64,
-    graph: vyre_driver::megakernel_execution::MegakernelGraphShape,
+    graph: MegakernelGraphShape,
     max_out_degree: u64,
-    top_out_degree_prefix_sums: [u64; CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
+    top_out_degree_prefix_sums: [u64; TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
 ) -> Result<u64, CudaTokenFactFrontierExecutionError> {
     if active_items == 0 || graph.edge_count == 0 {
         return Ok(0);
@@ -440,9 +448,9 @@ fn estimated_queue_expansion_items(
 fn top_out_degree_profile_bound(
     active_items: u64,
     edge_count: u64,
-    top_out_degree_prefix_sums: [u64; CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
+    top_out_degree_prefix_sums: [u64; TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
 ) -> Option<u64> {
-    for (rank, prefix_sum) in CUDA_TOKEN_FACT_DEGREE_PROFILE_RANKS
+    for (rank, prefix_sum) in TOKEN_FACT_DEGREE_PROFILE_RANKS
         .iter()
         .zip(top_out_degree_prefix_sums)
     {
@@ -493,10 +501,10 @@ fn empty_device_work_queue_plan() -> DeviceWorkQueuePlan {
 mod tests {
     use super::*;
     use crate::frontier_typed_ir_adapter::adapt_frontier_typed_ir_to_cuda;
-    use crate::token_fact_graph_cuda_adapter::adapt_token_fact_graph_to_cuda_layout;
     use vyre_libs::device::device_resident_token_fact_graph::{
-        plan_device_resident_token_fact_graph, TokenFactEdge, TokenFactEdgeKind, TokenFactNode,
-        TokenFactNodeKind,
+        plan_device_resident_token_fact_graph,
+        plan_device_resident_token_fact_graph_layout, TokenFactEdge, TokenFactEdgeKind,
+        TokenFactNode, TokenFactNodeKind,
     };
     use vyre_libs::scheduling::frontier_typed_ir::{
         plan_frontier_typed_ir, FrontierDependency, FrontierDomain, FrontierNode,
@@ -506,18 +514,18 @@ mod tests {
     fn planner_combines_token_fact_residency_with_frontier_barriers() {
         let graph = plan_device_resident_token_fact_graph(
             &[
-                node(1, TokenFactNodeKind::Token, 0, 16),
-                node(2, TokenFactNodeKind::Semantic, 16, 16),
-                node(3, TokenFactNodeKind::Fact, 32, 16),
+                TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 16),
+                TokenFactNode::new(2, TokenFactNodeKind::Semantic, 16, 16),
+                TokenFactNode::new(3, TokenFactNodeKind::Fact, 32, 16),
             ],
             &[
-                edge(1, 2, TokenFactEdgeKind::SemanticFact),
-                edge(2, 3, TokenFactEdgeKind::FactDependency),
+                TokenFactEdge::new(1, 2, TokenFactEdgeKind::SemanticFact),
+                TokenFactEdge::new(2, 3, TokenFactEdgeKind::FactDependency),
             ],
             48,
         )
         .expect("Fix: token/fact graph should pack");
-        let graph_layout = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+        let graph_layout = plan_device_resident_token_fact_graph_layout(&graph, 32, 16)
             .expect("Fix: token/fact graph should adapt");
         let frontier_plan = plan_frontier_typed_ir(
             &[
@@ -570,7 +578,7 @@ mod tests {
     fn planner_sizes_resident_work_queue_for_edge_expansion_headroom() {
         let nodes = (0_u32..5)
             .map(|index| {
-                node(
+                TokenFactNode::new(
                     index + 1,
                     TokenFactNodeKind::Fact,
                     u64::from(index) * 16,
@@ -581,7 +589,7 @@ mod tests {
         let edges = complete_directed_edges(5, TokenFactEdgeKind::FactDependency);
         let graph = plan_device_resident_token_fact_graph(&nodes, &edges, 80)
             .expect("Fix: fanout-heavy token/fact graph should pack");
-        let graph_layout = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+        let graph_layout = plan_device_resident_token_fact_graph_layout(&graph, 32, 16)
             .expect("Fix: fanout-heavy token/fact graph should adapt");
         let frontier_input = CudaFrontierTypedIrInput {
             waves: vec![vyre_driver::megakernel_frontier::MegakernelFrontierWave {
@@ -624,7 +632,7 @@ mod tests {
     fn planner_avoids_total_edge_queue_reservation_for_sparse_dense_graph_frontiers() {
         let nodes = (0_u32..100)
             .map(|index| {
-                node(
+                TokenFactNode::new(
                     index + 1,
                     TokenFactNodeKind::Fact,
                     u64::from(index) * 16,
@@ -635,7 +643,7 @@ mod tests {
         let edges = complete_directed_edges(100, TokenFactEdgeKind::FactDependency);
         let graph = plan_device_resident_token_fact_graph(&nodes, &edges, 1_600)
             .expect("Fix: dense token/fact graph should pack");
-        let graph_layout = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+        let graph_layout = plan_device_resident_token_fact_graph_layout(&graph, 32, 16)
             .expect("Fix: dense token/fact graph should adapt");
         let frontier_input = CudaFrontierTypedIrInput {
             waves: vec![vyre_driver::megakernel_frontier::MegakernelFrontierWave {
@@ -678,7 +686,7 @@ mod tests {
     fn planner_reserves_hub_degree_headroom_for_sparse_star_frontier() {
         let nodes = (0_u32..100)
             .map(|index| {
-                node(
+                TokenFactNode::new(
                     index + 1,
                     TokenFactNodeKind::Fact,
                     u64::from(index) * 16,
@@ -687,11 +695,11 @@ mod tests {
             })
             .collect::<Vec<_>>();
         let edges = (2_u32..=100)
-            .map(|to| edge(1, to, TokenFactEdgeKind::FactDependency))
+            .map(|to| TokenFactEdge::new(1, to, TokenFactEdgeKind::FactDependency))
             .collect::<Vec<_>>();
         let graph = plan_device_resident_token_fact_graph(&nodes, &edges, 1_600)
             .expect("Fix: hub-heavy token/fact graph should pack");
-        let graph_layout = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+        let graph_layout = plan_device_resident_token_fact_graph_layout(&graph, 32, 16)
             .expect("Fix: hub-heavy token/fact graph should adapt");
         let frontier_input = CudaFrontierTypedIrInput {
             waves: vec![vyre_driver::megakernel_frontier::MegakernelFrontierWave {
@@ -731,7 +739,7 @@ mod tests {
     fn planner_uses_top_degree_profile_for_power_law_frontier_headroom() {
         let nodes = (0_u32..128)
             .map(|index| {
-                node(
+                TokenFactNode::new(
                     index + 1,
                     TokenFactNodeKind::Fact,
                     u64::from(index) * 16,
@@ -740,17 +748,17 @@ mod tests {
             })
             .collect::<Vec<_>>();
         let mut edges = (2_u32..=65)
-            .map(|to| edge(1, to, TokenFactEdgeKind::FactDependency))
+            .map(|to| TokenFactEdge::new(1, to, TokenFactEdgeKind::FactDependency))
             .collect::<Vec<_>>();
         for from in 2_u32..=128 {
             for step in 1_u32..=4 {
                 let to = ((from - 1 + step) % 128) + 1;
-                edges.push(edge(from, to, TokenFactEdgeKind::FactDependency));
+                edges.push(TokenFactEdge::new(from, to, TokenFactEdgeKind::FactDependency));
             }
         }
         let graph = plan_device_resident_token_fact_graph(&nodes, &edges, 2_048)
             .expect("Fix: power-law token/fact graph should pack");
-        let graph_layout = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+        let graph_layout = plan_device_resident_token_fact_graph_layout(&graph, 32, 16)
             .expect("Fix: power-law token/fact graph should adapt");
         let frontier_input = CudaFrontierTypedIrInput {
             waves: vec![vyre_driver::megakernel_frontier::MegakernelFrontierWave {
@@ -797,7 +805,7 @@ mod tests {
                     edge_count: 9_900,
                 },
                 99,
-                [9_900; CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
+                [9_900; TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
             )
             .expect("Fix: dense frontier queue expansion estimate should fit"),
             9_900
@@ -806,7 +814,7 @@ mod tests {
 
     #[test]
     fn queue_expansion_estimate_prefers_top_degree_profile_when_rank_is_available() {
-        let mut profile = [512_u64; CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS];
+        let mut profile = [512_u64; TOKEN_FACT_DEGREE_PROFILE_BUCKETS];
         profile[0] = 64;
         profile[1] = 68;
         profile[2] = 76;
@@ -836,7 +844,7 @@ mod tests {
                     edge_count: 128,
                 },
                 0,
-                [0; CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
+                [0; TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
             )
             .expect("Fix: malformed zero-node graph should fall back to total-edge headroom"),
             128
@@ -853,7 +861,7 @@ mod tests {
                     edge_count: u64::MAX,
                 },
                 u64::MAX,
-                [0; CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
+                [0; TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
             )
             .expect_err("overflowed active frontier expansion should fail before queue planning"),
             CudaTokenFactFrontierExecutionError::ByteCountOverflow {
@@ -866,7 +874,7 @@ mod tests {
     fn planner_clamps_queue_expansion_after_graph_and_frontier_reserve() {
         let nodes = (0_u32..10)
             .map(|index| {
-                node(
+                TokenFactNode::new(
                     index + 1,
                     TokenFactNodeKind::Fact,
                     u64::from(index) * 16,
@@ -877,7 +885,7 @@ mod tests {
         let edges = complete_directed_edges(10, TokenFactEdgeKind::FactDependency);
         let graph = plan_device_resident_token_fact_graph(&nodes, &edges, 160)
             .expect("Fix: dense token/fact graph should pack");
-        let graph_layout = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+        let graph_layout = plan_device_resident_token_fact_graph_layout(&graph, 32, 16)
             .expect("Fix: dense token/fact graph should adapt");
         let frontier_input = CudaFrontierTypedIrInput {
             waves: vec![vyre_driver::megakernel_frontier::MegakernelFrontierWave {
@@ -938,15 +946,13 @@ mod tests {
                     frontier_density: 0.0,
                     readback_bytes: 0,
                 },
-                CudaTokenFactGraphLayout {
-                    graph_shape: vyre_driver::megakernel_execution::MegakernelGraphShape {
-                        node_count: 1,
-                        edge_count: u64::MAX,
-                    },
+                DeviceResidentTokenFactGraphLayout {
+                    node_count: 1,
+                    edge_count: u64::MAX,
                     node_record_bytes: 32,
                     edge_record_bytes: 16,
                     max_out_degree: u64::MAX,
-                    top_out_degree_prefix_sums: [0; CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
+                    top_out_degree_prefix_sums: [0; TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
                     node_bytes: 32,
                     edge_bytes: 0,
                     payload_bytes: 0,
@@ -969,12 +975,12 @@ mod tests {
     #[test]
     fn planner_rejects_payload_that_exceeds_budget_before_frontier_planning() {
         let graph = plan_device_resident_token_fact_graph(
-            &[node(1, TokenFactNodeKind::Token, 0, 64)],
+            &[TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 64)],
             &[],
             64,
         )
         .expect("Fix: token/fact graph should pack");
-        let graph_layout = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+        let graph_layout = plan_device_resident_token_fact_graph_layout(&graph, 32, 16)
             .expect("Fix: token/fact graph should adapt");
         let frontier_input = CudaFrontierTypedIrInput {
             waves: Vec::new(),
@@ -1029,15 +1035,13 @@ mod tests {
                 CudaMegakernelAnalysisKind::ParserFrontend,
                 device(),
                 sample,
-                CudaTokenFactGraphLayout {
-                    graph_shape: vyre_driver::megakernel_execution::MegakernelGraphShape {
-                        node_count: 0,
-                        edge_count: 0,
-                    },
+                DeviceResidentTokenFactGraphLayout {
+                    node_count: 0,
+                    edge_count: 0,
                     node_record_bytes: 32,
                     edge_record_bytes: 16,
                     max_out_degree: 0,
-                    top_out_degree_prefix_sums: [0; CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
+                    top_out_degree_prefix_sums: [0; TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
                     node_bytes: 0,
                     edge_bytes: 0,
                     payload_bytes: 0,
@@ -1059,15 +1063,13 @@ mod tests {
                 CudaMegakernelAnalysisKind::ParserFrontend,
                 device(),
                 sample,
-                CudaTokenFactGraphLayout {
-                    graph_shape: vyre_driver::megakernel_execution::MegakernelGraphShape {
-                        node_count: 1,
-                        edge_count: 1,
-                    },
+                DeviceResidentTokenFactGraphLayout {
+                    node_count: 1,
+                    edge_count: 1,
                     node_record_bytes: 32,
                     edge_record_bytes: 16,
                     max_out_degree: 1,
-                    top_out_degree_prefix_sums: [1; CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
+                    top_out_degree_prefix_sums: [1; TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
                     node_bytes: 32,
                     edge_bytes: 16,
                     payload_bytes: 8,
@@ -1089,12 +1091,12 @@ mod tests {
     #[test]
     fn planner_accounts_warm_resident_graph_without_upload_pressure() {
         let graph = plan_device_resident_token_fact_graph(
-            &[node(1, TokenFactNodeKind::Token, 0, 16)],
+            &[TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 16)],
             &[],
             16,
         )
         .expect("Fix: token/fact graph should pack");
-        let graph_layout = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+        let graph_layout = plan_device_resident_token_fact_graph_layout(&graph, 32, 16)
             .expect("Fix: token/fact graph should adapt");
         let frontier_input = CudaFrontierTypedIrInput {
             waves: Vec::new(),
@@ -1160,12 +1162,12 @@ mod tests {
     #[test]
     fn planner_rejects_frontier_waves_without_matching_active_item_counts() {
         let graph = plan_device_resident_token_fact_graph(
-            &[node(1, TokenFactNodeKind::Token, 0, 16)],
+            &[TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 16)],
             &[],
             16,
         )
         .expect("Fix: token/fact graph should pack");
-        let graph_layout = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+        let graph_layout = plan_device_resident_token_fact_graph_layout(&graph, 32, 16)
             .expect("Fix: token/fact graph should adapt");
         let frontier_input = CudaFrontierTypedIrInput {
             waves: vec![vyre_driver::megakernel_frontier::MegakernelFrontierWave {
@@ -1206,12 +1208,12 @@ mod tests {
     #[test]
     fn planner_does_not_allocate_resident_work_queue_for_empty_frontier() {
         let graph = plan_device_resident_token_fact_graph(
-            &[node(1, TokenFactNodeKind::Token, 0, 16)],
+            &[TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 16)],
             &[],
             16,
         )
         .expect("Fix: token/fact graph should pack");
-        let graph_layout = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+        let graph_layout = plan_device_resident_token_fact_graph_layout(&graph, 32, 16)
             .expect("Fix: token/fact graph should adapt");
         let frontier_input = CudaFrontierTypedIrInput {
             waves: Vec::new(),
@@ -1244,30 +1246,13 @@ mod tests {
         assert!(plan.work_queue.final_only_host_sync);
     }
 
-    fn node(
-        id: u32,
-        kind: TokenFactNodeKind,
-        payload_offset: u64,
-        payload_bytes: u64,
-    ) -> TokenFactNode {
-        TokenFactNode {
-            id,
-            kind,
-            payload_offset,
-            payload_bytes,
-        }
-    }
-
-    fn edge(from: u32, to: u32, kind: TokenFactEdgeKind) -> TokenFactEdge {
-        TokenFactEdge { from, to, kind }
-    }
 
     fn complete_directed_edges(node_count: u32, kind: TokenFactEdgeKind) -> Vec<TokenFactEdge> {
         let mut edges = Vec::new();
         for from in 1..=node_count {
             for to in 1..=node_count {
                 if from != to {
-                    edges.push(edge(from, to, kind));
+                    edges.push(TokenFactEdge::new(from, to, kind));
                 }
             }
         }

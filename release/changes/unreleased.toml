@@ -1011,6 +1011,21 @@ category = "Fixed"
 text = "Six intra-doc links were unresolved or pointed at a private item, and each was reported only by the public-API gate's rustdoc pass rather than by a build. A module carrying both an outer doc comment on its `mod` declaration and an inner `//!` header has the two merged and resolved in the PARENT scope, which is why `vyre-driver`'s `TargetDialect` link failed from inside the module that defines it; that one is now fully qualified. The five links naming a private item are plain code spans, because a link to an item a reader cannot reach is not a link."
 
 [[fragments]]
+id = "c-integer-literal-grammar-one-owner"
+category = "Fixed"
+text = "The radix prefix table, digit-value decode, type-suffix set and digit accumulator of a C integer literal are owned by `parsing::c::preprocess::c_int_literal_grammar`. The standalone scanner and the inline scan in the `#if` evaluator each carried a copy and the copies had drifted: the evaluator accumulated with wrapping `u32` arithmetic, so a literal above `u32::MAX` could carry to zero and flip a conditional, and it consumed a type suffix after a radix prefix with no digits after it. The scanner and the CPU `consume_integer` saturate and reject, and that is now the only spelling."
+
+[[fragments]]
+id = "declaration-prefix-walk-one-owner"
+category = "Fixed"
+text = "The declaration-prefix walk in front of a VAST row is owned by `parsing::c::parse::vast::declaration_prefix_scan`. The precomputed-context declaration classifier walked the prefix forwards with no delimiter depth, so the `int` inside a cast reached the identifier after it and `(int) a;` classified `a` as an ordinary declarator; the self-contained classifier skipped balanced paren and brace groups. Both call the same walk."
+
+[[fragments]]
+id = "declaration-token-tables-one-owner"
+category = "Fixed"
+text = "Four token tables that decide whether an identifier is a declarator name are single-owner in `parsing::c::parse::vast::token_grammar::declarations`. The declarator-follower set no longer admits `]`, which had made the bound in `int a[N];` a declarator on the precomputed path only. The declaration-prefix set gained `auto` and `register`, and the precomputed path now reads it instead of a 23-entry copy that omitted every C23 scalar type, `_Alignas`, `typeof` and the GNU specifiers. A new matrix reads the token vocabulary out of `vyre-spec` at test time and fails when any kind is classified differently by the two paths."
+
+[[fragments]]
 id = "dataflow-closure-shims-deleted"
 category = "Changed"
 text = "The host dataflow closures are read from their owner. `vyre-libs` carried a module whose six public functions each did nothing but call the identically named function in `vyre_foundation::pass_substrate::dataflow_fixpoint`, and it had grown a copy of the owner's whole test module: five assertions verbatim, plus two that could not fail because they compared the forwarder against the function it forwards to. The forwarders are gone and the module re-exports the owner, so the documented paths still resolve. What remains is the one thing this crate adds, the call counter, in a file named for it."
@@ -1480,21 +1495,6 @@ category = "Fixed"
 text = "The gate crates resolve the checkout they report on from the working directory at run time, through `structure_gate::workspace_root`, and no checkout-identifying variable is declared in the cargo config. A `VYRE_CHECKOUT_ROOT` with `relative = true`, read with `env!` so its value entered each crate's dep-info, was tried as the way to stop one checkout being handed a binary another compiled; cargo does not export such a variable to the process it runs, so every gate fell through to its compiled-in value and the shared binary reported a worktree's numbers as this tree's. The declaration is rejected rather than absent, and the comment saying so is the only thing that stops it coming back. `structure-gate/tests/checkout_provenance.rs` rejects both spellings, assembling each from parts at run time so the gate does not report itself and needs no exemption."
 
 [[fragments]]
-id = "c-integer-literal-grammar-one-owner"
-category = "Fixed"
-text = "The radix prefix table, digit-value decode, type-suffix set and digit accumulator of a C integer literal are owned by `parsing::c::preprocess::c_int_literal_grammar`. The standalone scanner and the inline scan in the `#if` evaluator each carried a copy and the copies had drifted: the evaluator accumulated with wrapping `u32` arithmetic, so a literal above `u32::MAX` could carry to zero and flip a conditional, and it consumed a type suffix after a radix prefix with no digits after it. The scanner and the CPU `consume_integer` saturate and reject, and that is now the only spelling."
-
-[[fragments]]
-id = "declaration-prefix-walk-one-owner"
-category = "Fixed"
-text = "The declaration-prefix walk in front of a VAST row is owned by `parsing::c::parse::vast::declaration_prefix_scan`. The precomputed-context declaration classifier walked the prefix forwards with no delimiter depth, so the `int` inside a cast reached the identifier after it and `(int) a;` classified `a` as an ordinary declarator; the self-contained classifier skipped balanced paren and brace groups. Both call the same walk."
-
-[[fragments]]
-id = "declaration-token-tables-one-owner"
-category = "Fixed"
-text = "Four token tables that decide whether an identifier is a declarator name are single-owner in `parsing::c::parse::vast::token_grammar::declarations`. The declarator-follower set no longer admits `]`, which had made the bound in `int a[N];` a declarator on the precomputed path only. The declaration-prefix set gained `auto` and `register`, and the precomputed path now reads it instead of a 23-entry copy that omitted every C23 scalar type, `_Alignas`, `typeof` and the GNU specifiers. A new matrix reads the token vocabulary out of `vyre-spec` at test time and fails when any kind is classified differently by the two paths."
-
-[[fragments]]
 id = "tooling-frontend-invocation-resolves-gate"
 category = "Added"
 text = "`xtask` declares `default-run`, and a tree contract derives every `cargo run` in the workflows and scripts at run time, derives the binary targets from every member's manifest and source layout, and fails when an invocation does not resolve to exactly one target. A package that ships more than one binary and declares no default makes a bare `cargo run -p <package>` exit 101 before running anything, which is a property of the manifest rather than of any line of code: adding a second file under `xtask/src/bin` failed nineteen hosted jobs at their first step and nothing in the workspace could see it. The sweep already asserted that every registered subcommand is named by a workflow; this is the other direction. An invocation form the scan cannot attribute is an error rather than a skip, because a form nobody checked is how this reached CI."
@@ -1533,6 +1533,14 @@ text = "The generated CSR sweep shape stream has one owner: five copies of the s
 id = "genmatvec-persistent-closure-oracle-one-owner"
 category = "Changed"
 text = "The masked forward-closure reference oracle used by the persistent-BFS sweeps has one owner instead of a verbatim copy in each of the two crates that claimed to check each other with independent references."
+id = "tooling-frontend-testing-guides-set-no-build-variable"
+category = "Changed"
+text = "The thirty-six generated testing guides, their `docs/testing/TESTING.toml` command rows, the contributor gate list, and the performance notes all invoke `./cargo_full` with no `CARGO_BUILD_JOBS=1` prefix. The wrapper already exports that variable, so every prefixed command was a second copy of one setting, and the copies taught a rule the repository forbids: a build-affecting variable belongs in the cargo config or the wrapper, not on a command line. The generator and the two contract tests that pinned the prefixed text move together, and the contributor guide no longer claims a `rustc-wrapper` the cargo config does not declare."
+
+[[fragments]]
+id = "tooling-frontend-gated-delta-one-spec"
+category = "Changed"
+text = "`recurrent_gated_delta` and `chunked_gated_delta` take `&GatedDeltaSpec`, which is now public, and the chunked schedule is exported from the module that builds it. Each entry point had restated the same sixteen positional parameters and then rebuilt the same spec literal field by field, so eighty-two lines existed only to pass a value straight through, and any two of the eight buffer names could be swapped at a call site without a type error. The two builders that consume the spec are the entry points, so there is no wrapper left to drift. `nn_attention_clone_family_ir_invariance` pins the built IR of both schedules at both dtypes by hash, and those hashes are unchanged."
 
 
 [[fragments]]

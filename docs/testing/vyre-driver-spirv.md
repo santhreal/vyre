@@ -3,7 +3,7 @@
 Run the default crate suite from the workspace root:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv
+./cargo_full test -p vyre-driver-spirv
 ```
 
 Own SPIR-V target compilation, immutable module-bundle emission, Vulkan materialization and dispatch integration, and backend evidence.
@@ -14,11 +14,11 @@ The crate lives at `vyre-driver-spirv`. The `spirv-driver` owner maintains its
 ## Commands
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv
+./cargo_full test -p vyre-driver-spirv
 ```
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --all-features
+./cargo_full test -p vyre-driver-spirv --all-features
 ```
 
 ## Feature sets
@@ -31,14 +31,14 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --all-features
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vulkan_probe` | `vyre-driver-spirv/examples/vulkan_probe.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --example vulkan_probe` |
-| `lib` | `vyre_driver_spirv` | `vyre-driver-spirv/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv` |
-| `test` | `dispatch` | `vyre-driver-spirv/tests/dispatch.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --test dispatch` |
-| `test` | `hostile_input_closure_contract` | `vyre-driver-spirv/tests/hostile_input_closure_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --test hostile_input_closure_contract` |
-| `test` | `shared_target_contract_discrimination` | `vyre-driver-spirv/tests/shared_target_contract_discrimination.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --test shared_target_contract_discrimination` |
-| `test` | `spirv_parity` | `vyre-driver-spirv/tests/spirv_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --test spirv_parity` |
-| `test` | `spirv_parity` | `vyre-driver-spirv/tests/spirv_parity.rs` | `spirv-val` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --test spirv_parity` |
-| `test` | `target_payload_admission_contract` | `vyre-driver-spirv/tests/target_payload_admission_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-spirv --test target_payload_admission_contract` |
+| `example` | `vulkan_probe` | `vyre-driver-spirv/examples/vulkan_probe.rs` | None | `./cargo_full test -p vyre-driver-spirv --example vulkan_probe` |
+| `lib` | `vyre_driver_spirv` | `vyre-driver-spirv/src/lib.rs` | None | `./cargo_full test -p vyre-driver-spirv` |
+| `test` | `dispatch` | `vyre-driver-spirv/tests/dispatch.rs` | None | `./cargo_full test -p vyre-driver-spirv --test dispatch` |
+| `test` | `hostile_input_closure_contract` | `vyre-driver-spirv/tests/hostile_input_closure_contract.rs` | None | `./cargo_full test -p vyre-driver-spirv --test hostile_input_closure_contract` |
+| `test` | `shared_target_contract_discrimination` | `vyre-driver-spirv/tests/shared_target_contract_discrimination.rs` | None | `./cargo_full test -p vyre-driver-spirv --test shared_target_contract_discrimination` |
+| `test` | `spirv_parity` | `vyre-driver-spirv/tests/spirv_parity.rs` | None | `./cargo_full test -p vyre-driver-spirv --test spirv_parity` |
+| `test` | `spirv_parity` | `vyre-driver-spirv/tests/spirv_parity.rs` | `spirv-val` | `./cargo_full test -p vyre-driver-spirv --test spirv_parity` |
+| `test` | `target_payload_admission_contract` | `vyre-driver-spirv/tests/target_payload_admission_contract.rs` | None | `./cargo_full test -p vyre-driver-spirv --test target_payload_admission_contract` |
 
 ## Test classes
 

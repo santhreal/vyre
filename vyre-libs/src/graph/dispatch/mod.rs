@@ -7,6 +7,17 @@
 
 pub mod adaptive_traverse;
 pub mod alias_registry;
+/// Parity-only host dispatcher, never part of the shipped dispatch surface.
+///
+/// Vyre executes on a device. The only host execution this workspace admits is
+/// a reference oracle used as the comparison arm of a parity test, so this
+/// module is absent from a default build: an ungated `pub mod` let any consumer
+/// of this crate construct a host `ProgramDispatcher` and run a Program off the
+/// device. Every caller is either an in-crate `#[cfg(test)]` module or an
+/// integration test whose `[[test]]` row already declares `cpu-parity`, so the
+/// gate costs nothing and `vyre-libs/tests/host_dispatch_is_parity_only.rs`
+/// keeps it that way.
+#[cfg(any(test, feature = "cpu-parity"))]
 pub mod cpu_oracle;
 pub mod csr_bidirectional;
 pub mod csr_forward_or_changed;

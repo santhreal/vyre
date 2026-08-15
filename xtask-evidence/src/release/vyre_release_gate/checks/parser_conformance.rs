@@ -208,7 +208,6 @@ mod backend_conformance_tests {
             title: "conformance".to_string(),
             status: "required".to_string(),
             evidence: vec!["cuda-conformance.json".to_string()],
-            minimum_evidence: 1,
         };
         let mut failures = Vec::new();
 

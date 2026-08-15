@@ -8,13 +8,13 @@ use common::{
 };
 
 use vyre::ir::DataType;
-use vyre_libs::nn::attention::{chunked_gated_delta, recurrent_gated_delta};
+use vyre_libs::nn::attention::{chunked_gated_delta, recurrent_gated_delta, GatedDeltaSpec};
 use vyre_reference::value::Value;
 
 /// One gated-delta schedule run: build at `source` dtype, evaluate over the
 /// five source lanes, and return the raw output-lane bytes with the F32 final
 /// state. Every arm of this file's contract goes through here, so the schedule
-/// selection and the 16-position build call are stated once.
+/// selection and the build spec are stated once.
 fn run_schedule(
     sequence: u32,
     chunked: bool,
@@ -32,24 +32,24 @@ fn run_schedule(
         chunked_gated_delta
     } else {
         recurrent_gated_delta
-    }(
-        "query",
-        "key",
-        "value",
-        "decay",
-        "beta",
-        "state.in",
-        "output",
-        "state.out",
-        1,
+    }(&GatedDeltaSpec {
+        query: "query",
+        key: "key",
+        value: "value",
+        decay_log: "decay",
+        beta_logits: "beta",
+        state_input: "state.in",
+        output: "output",
+        state_output: "state.out",
+        batch: 1,
         sequence,
-        1,
-        1,
-        1,
-        1,
-        0.0,
-        source,
-    )
+        key_heads: 1,
+        value_heads: 1,
+        key_dim: 1,
+        value_dim: 1,
+        eps: 0.0,
+        dtype: source,
+    })
     .expect("Fix: valid delta fixture must build");
     let outputs = vyre_reference::reference_eval(
         &program,
@@ -162,24 +162,24 @@ fn execute_chunk_fixture(
     key_dim: u32,
     value_dim: u32,
 ) -> (Vec<f32>, Vec<f32>) {
-    let program = chunked_gated_delta(
-        "query",
-        "key",
-        "value",
-        "decay",
-        "beta",
-        "state.in",
-        "output",
-        "state.out",
-        1,
+    let program = chunked_gated_delta(&GatedDeltaSpec {
+        query: "query",
+        key: "key",
+        value: "value",
+        decay_log: "decay",
+        beta_logits: "beta",
+        state_input: "state.in",
+        output: "output",
+        state_output: "state.out",
+        batch: 1,
         sequence,
-        1,
-        1,
+        key_heads: 1,
+        value_heads: 1,
         key_dim,
         value_dim,
-        1e-6,
-        DataType::F32,
-    )
+        eps: 1e-6,
+        dtype: DataType::F32,
+    })
     .expect("Fix: authoritative chunk fixture must build");
     let outputs = vyre_reference::reference_eval(
         &program,
@@ -493,24 +493,24 @@ fn grouped_value_heads_match_recurrent_without_cross_head_state() {
             chunked_gated_delta
         } else {
             recurrent_gated_delta
-        }(
-            "query",
-            "key",
-            "value",
-            "decay",
-            "beta",
-            "state.in",
-            "output",
-            "state.out",
-            1,
+        }(&GatedDeltaSpec {
+            query: "query",
+            key: "key",
+            value: "value",
+            decay_log: "decay",
+            beta_logits: "beta",
+            state_input: "state.in",
+            output: "output",
+            state_output: "state.out",
+            batch: 1,
             sequence,
-            1,
-            2,
-            1,
-            1,
-            0.0,
-            DataType::F32,
-        )
+            key_heads: 1,
+            value_heads: 2,
+            key_dim: 1,
+            value_dim: 1,
+            eps: 0.0,
+            dtype: DataType::F32,
+        })
         .expect("Fix: grouped delta schedule must build");
         let outputs = vyre_reference::reference_eval(
             &program,

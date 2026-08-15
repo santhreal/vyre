@@ -3,7 +3,7 @@
 Run the default crate suite from the workspace root:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-megakernel
+./cargo_full test -p vyre-megakernel
 ```
 
 Explore and select legal whole-ProgramGraph fusion schedules under explicit SearchBudget bounds, expose selected modules and canonical ABI to registered target compilers, then emit canonical Artifact and ArtifactEnvelope records without owning admission, execution, or lifecycle policy.
@@ -14,7 +14,7 @@ The crate lives at `vyre-megakernel`. The `megakernel-compiler` owner maintains 
 ## Commands
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-megakernel
+./cargo_full test -p vyre-megakernel
 ```
 
 ## Feature sets
@@ -25,9 +25,9 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_megakernel` | `vyre-megakernel/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-megakernel` |
-| `test` | `artifact_contract` | `vyre-megakernel/tests/artifact_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-megakernel --test artifact_contract` |
-| `test` | `target_payload_contract` | `vyre-megakernel/tests/target_payload_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-megakernel --test target_payload_contract` |
+| `lib` | `vyre_megakernel` | `vyre-megakernel/src/lib.rs` | None | `./cargo_full test -p vyre-megakernel` |
+| `test` | `artifact_contract` | `vyre-megakernel/tests/artifact_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test artifact_contract` |
+| `test` | `target_payload_contract` | `vyre-megakernel/tests/target_payload_contract.rs` | None | `./cargo_full test -p vyre-megakernel --test target_payload_contract` |
 
 ## Test classes
 
