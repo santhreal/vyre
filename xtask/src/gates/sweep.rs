@@ -31,6 +31,14 @@ use serde::Deserialize;
 use crate::gate::{self, GateCtx, GateError, Report};
 use crate::subcommands::{self, SUBSETS};
 
+/// The name the dispatcher answers to with this runner.
+///
+/// The dispatcher, the generated help and the workflow-reference check each
+/// needed to know the one accepted name that is not a gate. Three literals meant
+/// the check that every subcommand a workflow names is dispatchable read only
+/// the gate half of the table and reported the runner itself as unregistered.
+pub const RUNNER: &str = "gates";
+
 /// Pinned finding count for one gate.
 ///
 /// `deny_unknown_fields` is load-bearing. This file used to carry `status` and

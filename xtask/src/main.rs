@@ -22,7 +22,7 @@ fn main() {
         print!("{}", subcommands::help_text());
         process::exit(0);
     }
-    if name == "gates" {
+    if name == sweep::RUNNER {
         sweep::run(&args[2..]);
         return;
     }

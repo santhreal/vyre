@@ -413,7 +413,7 @@ pub fn help_text() -> String {
     }
     text.push_str(&format!(
         "  {:width$}  Run every registered gate and hold each to its pinned finding count\n",
-        "gates"
+        crate::gates::sweep::RUNNER
     ));
     text.push_str(&format!("  {:width$}  Print this message\n", "--help"));
     text.push_str("\nSUBSETS:\n");
@@ -461,8 +461,8 @@ mod tests {
     /// sweep recurse into itself, and a subset named `gates` would do the same.
     #[test]
     fn the_runner_is_not_a_gate() {
-        assert!(find("gates").is_none());
-        assert!(subset("gates").is_none());
+        assert!(find(crate::gates::sweep::RUNNER).is_none());
+        assert!(subset(crate::gates::sweep::RUNNER).is_none());
     }
 
     /// WHY: help is generated from the registry, so it cannot drift from

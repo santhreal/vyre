@@ -396,7 +396,7 @@ fn every_script_a_workflow_runs_is_published() {
     );
 }
 
-/// Every gate a workflow passes to the runner is registered.
+/// Every subcommand a workflow passes to the runner is dispatchable.
 ///
 /// WHY: `xtask` resolves a subcommand by name and exits with an error when the
 /// name is not in the table. A row renamed or removed leaves the step naming a
@@ -404,12 +404,18 @@ fn every_script_a_workflow_runs_is_published() {
 /// exists, the binary exists, and the name is one shell token in a `run:` line.
 /// `xtask gates` judges the other direction, that a registered row is wired
 /// into CI, so this closes the pair.
+///
+/// The dispatchable set is every gate plus the sweep runner, which is the one
+/// accepted name that is not a gate. Comparing against the gate registry alone
+/// reported every workflow step that runs the sweep as unregistered, which is
+/// the whole tree-rules job.
 #[test]
-fn every_xtask_subcommand_a_workflow_names_is_registered() {
+fn every_xtask_subcommand_a_workflow_names_is_dispatchable() {
     let root = workspace_root();
     let registered: BTreeSet<&str> = xtask::subcommands::registry()
         .iter()
         .map(|gate| gate.name())
+        .chain([xtask::gates::sweep::RUNNER])
         .collect();
     let mut offenders = Vec::new();
     let mut checked = 0_usize;
@@ -436,8 +442,8 @@ fn every_xtask_subcommand_a_workflow_names_is_registered() {
     );
     assert!(
         offenders.is_empty(),
-        "{offenders:#?} pass a subcommand no row of the table registers, so the step fails with \
-         `unknown subcommand` on the first CI run that reaches it. Fix: name a registered \
-         subcommand, or drop the step with the row it followed."
+        "{offenders:#?} pass a subcommand the dispatcher does not accept, so the step fails with \
+         `unknown subcommand` on the first CI run that reaches it. Fix: name a registered gate or \
+         the sweep runner, or drop the step with the row it followed."
     );
 }

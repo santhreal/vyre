@@ -3693,6 +3693,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   registry at run time and run through every safety rule, including reversed
   and rotated lane orders, so a new intrinsic cannot arrive with a witness
   program no gate executes.
+- The sweep runner's name has one owner. `gates` was a literal in the
+  dispatcher, in the generated help and in the check that every subcommand a
+  workflow names is dispatchable, and that check compared against the gate
+  registry alone, so it reported every workflow step that runs the sweep as an
+  unregistered subcommand: the whole tree-rules job and the release-evidence
+  workflow. The name is now `xtask::gates::sweep::RUNNER`, the check accepts
+  every gate plus the runner, and it still fails on a workflow step naming a
+  subcommand nothing dispatches.
 - Three gates that reported `could not run` now run and report a number.
   `list-ops` and `catalog` failed while building the canonical operation
   schema: five registered `vyre-primitives::math` operations, the
