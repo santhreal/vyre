@@ -96,4 +96,3 @@ fn i4x8_matvec_f32_scaled_via_rejects_shape_errors_before_dispatch() {
         .expect_err("missing scale must fail");
     assert!(err.to_string().contains("row_scales.len() == rows"));
 }
-

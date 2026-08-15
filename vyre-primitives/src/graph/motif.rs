@@ -1142,25 +1142,13 @@ mod tests {
 
     #[test]
     fn three_node_chain_motif_marks_every_participant() {
-        let witness = cpu_ref(
-            3,
-            &[0, 1, 2, 2],
-            &[1, 2],
-            &[1, 1],
-            &TWO_EDGE_PATH_MOTIF,
-        );
+        let witness = cpu_ref(3, &[0, 1, 2, 2], &[1, 2], &[1, 1], &TWO_EDGE_PATH_MOTIF);
         assert_eq!(witness, vec![1, 1, 1]);
     }
 
     #[test]
     fn missing_motif_edge_clears_all_participants() {
-        let witness = cpu_ref(
-            3,
-            &[0, 1, 1, 1],
-            &[1],
-            &[1],
-            &TWO_EDGE_PATH_MOTIF,
-        );
+        let witness = cpu_ref(3, &[0, 1, 1, 1], &[1], &[1], &TWO_EDGE_PATH_MOTIF);
         assert_eq!(witness, vec![0, 0, 0]);
     }
 

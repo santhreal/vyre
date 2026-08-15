@@ -731,7 +731,10 @@ fn unknown_variable_errors(program: &Program) -> Vec<String> {
 #[test]
 fn a_let_inside_a_region_does_not_outlive_the_region() {
     let program = alias_hazard_program(vec![
-        region("stage.accumulate", vec![Node::let_bind("acc", Expr::u32(1))]),
+        region(
+            "stage.accumulate",
+            vec![Node::let_bind("acc", Expr::u32(1))],
+        ),
         region(
             "stage.write",
             vec![Node::store("out", Expr::u32(0), Expr::var("acc"))],

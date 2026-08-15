@@ -529,13 +529,11 @@ impl AdjointEnv {
 /// compile in `node_scalars` rather than dropping a forward local whose adjoint
 /// then reads as zero.
 fn collect_adjoint_targets(nodes: &[Node], out: &mut Vec<Ident>) {
-    for_each_node(nodes, |node| {
-        match node_scalars(node).binding {
-            Some((NameBinding::Declare | NameBinding::Reassign, name)) => {
-                push_unique_ident(out, name);
-            }
-            Some((NameBinding::Induction, _)) | None => {}
+    for_each_node(nodes, |node| match node_scalars(node).binding {
+        Some((NameBinding::Declare | NameBinding::Reassign, name)) => {
+            push_unique_ident(out, name);
         }
+        Some((NameBinding::Induction, _)) | None => {}
     });
 }
 

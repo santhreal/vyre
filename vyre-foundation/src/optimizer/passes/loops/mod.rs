@@ -54,7 +54,8 @@ mod test_fixtures;
 /// Every scalar name an expression anywhere in `nodes` reads, name-sorted.
 ///
 /// This is the read set every loop restructuring pass asks about before it
-/// reorders statements, and it is the public form of [`collect_var_reads`].
+/// reorders statements. It allocates; the accumulating form inside this module
+/// is what the passes use when they already own a set.
 #[must_use]
 pub fn var_reads(nodes: &[crate::ir::Node]) -> Vec<crate::ir::Ident> {
     let mut set = rustc_hash::FxHashSet::default();
@@ -65,8 +66,8 @@ pub fn var_reads(nodes: &[crate::ir::Node]) -> Vec<crate::ir::Ident> {
 /// Every buffer any statement in `nodes` touches, name-sorted.
 ///
 /// Reads and writes are collapsed because the disjointness question the loop
-/// passes ask cares only about overlap. This is the public form of
-/// [`collect_touched_buffers`].
+/// passes ask cares only about overlap. It allocates; the accumulating form
+/// inside this module is what the passes use when they already own a set.
 #[must_use]
 pub fn touched_buffers(nodes: &[crate::ir::Node]) -> Vec<crate::ir::Ident> {
     let mut set = rustc_hash::FxHashSet::default();

@@ -27,10 +27,7 @@ pub const SCALLOP_JOIN_WIDE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// the zero-relation case still yields a launchable grid.
 #[must_use]
 pub const fn scallop_join_wide_dispatch_grid(_n: u32, _w: u32) -> [u32; 3] {
-    crate::graph::lane_grid(
-        _n.saturating_mul(_n),
-        SCALLOP_JOIN_WIDE_WORKGROUP_SIZE[0],
-    )
+    crate::graph::lane_grid(_n.saturating_mul(_n), SCALLOP_JOIN_WIDE_WORKGROUP_SIZE[0])
 }
 
 /// Emits a generic `M × K · K × N → M × N` matmul Program for `W`-wide lineage cells.

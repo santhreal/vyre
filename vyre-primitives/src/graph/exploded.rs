@@ -43,6 +43,9 @@
 mod abi;
 #[path = "exploded/canonicalize.rs"]
 mod canonicalize;
+#[cfg(any(test, feature = "cpu-parity"))]
+#[path = "exploded/case_family.rs"]
+mod case_family;
 #[path = "exploded/cpu_ref.rs"]
 mod cpu_ref;
 #[path = "exploded/dispatch_plan.rs"]
@@ -73,6 +76,8 @@ pub use abi::{
     IFDS_CSR_WORKGROUP_SIZE, OP_ID,
 };
 pub use canonicalize::{canonicalize_csr_within_rows, canonicalize_csr_within_rows_in_place};
+#[cfg(any(test, feature = "cpu-parity"))]
+pub use case_family::{exploded_ifds_case, ExplodedIfdsCase, EXPLODED_IFDS_CASE_COUNT};
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use cpu_ref::{
     build_cpu_reference, try_build_cpu_reference, try_build_cpu_reference_into,

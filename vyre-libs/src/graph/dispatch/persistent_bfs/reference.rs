@@ -12,8 +12,9 @@ use vyre_primitives::graph::persistent_bfs::{
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn bfs_expand(inputs: CsrClosureInputs<'_>, frontier_in: &[u32]) -> (Vec<u32>, u32) {
-    try_bfs_expand(inputs, frontier_in)
-        .unwrap_or_else(|err| panic!("persistent BFS self-substrate reference rejected input. {err}"))
+    try_bfs_expand(inputs, frontier_in).unwrap_or_else(|err| {
+        panic!("persistent BFS self-substrate reference rejected input. {err}")
+    })
 }
 
 /// Fallible persistent-BFS substrate reference wrapper.

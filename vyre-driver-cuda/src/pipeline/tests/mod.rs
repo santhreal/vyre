@@ -1,12 +1,13 @@
 mod cache_core_contracts;
 mod cache_pressure_contracts;
-mod input_key_contracts;
+mod input_key_owner_contracts;
 mod pipeline_contracts;
 
 use std::sync::Arc;
 
 use smallvec::smallvec;
 use vyre_driver::binding::{Binding, BindingPlan, BindingRole};
+use vyre_driver::input_identity::exact_input_key;
 use vyre_driver::replace_output_buffers_preserving_slots;
 use vyre_driver::LaunchPlan;
 
@@ -14,7 +15,7 @@ use crate::backend::CudaDispatchPlan;
 use crate::synthetic_device_caps::synthetic_sm120_envelope;
 
 use super::{
-    cuda_compiled_pipeline_identity_key, cuda_graph_lane_count_for_batch, materialized_input_key,
+    cuda_compiled_pipeline_identity_key, cuda_graph_lane_count_for_batch,
     MaterializedPipelineOutputCache, MaterializedPipelineOutputCacheEntry,
     MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE, MAX_MATERIALIZED_OUTPUT_CACHE_BYTES_PER_PIPELINE,
 };

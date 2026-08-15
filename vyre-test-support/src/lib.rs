@@ -153,6 +153,8 @@ pub mod binop_parity;
 pub mod cast_parity;
 pub mod consumer_boundary;
 #[cfg(feature = "ir-fixtures")]
+pub mod ir_regions;
+#[cfg(feature = "ir-fixtures")]
 pub mod ir_variants;
 pub mod monorepo;
 #[cfg(feature = "ir-fixtures")]

@@ -229,9 +229,9 @@ fn published_materializer_variants() -> Vec<String> {
             panic!("Fix: {path:?} must declare `pub(crate) enum ResidentCsrQueueMaterializer`; this gate reads its variants from that declaration.")
         });
     let body = &source[start..];
-    let end = body
-        .find("\n}")
-        .expect("Fix: the ResidentCsrQueueMaterializer declaration must close with a `}` at column zero.");
+    let end = body.find("\n}").expect(
+        "Fix: the ResidentCsrQueueMaterializer declaration must close with a `}` at column zero.",
+    );
 
     let mut variants = Vec::new();
     for line in body[..end].lines().skip(1) {

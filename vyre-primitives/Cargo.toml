@@ -124,7 +124,7 @@ vyre-driver-reference = { path = "../vyre-driver-reference" }
 vyre-reference = { path = "../vyre-reference" }
 proptest.workspace = true
 criterion.workspace = true
-vyre-test-support.workspace = true
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 
 [package.metadata.docs.rs]
 all-features = true

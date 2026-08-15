@@ -67,9 +67,9 @@
 //! See `docs/lego-block-rule.md` and `docs/lego-block-rule.md` for
 //! the tier rule, admission criteria, and Gate 1 enforcement.
 
+mod dispatch_grid;
 #[cfg(feature = "vyre-foundation")]
 pub mod ir_safe;
-mod dispatch_grid;
 mod markers;
 pub mod wire;
 #[cfg(feature = "vyre-foundation")]
