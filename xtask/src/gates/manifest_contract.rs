@@ -27,7 +27,11 @@ const DEP_TABLES: &[&str] = &["dependencies", "dev-dependencies", "build-depende
 /// part of the workspace graph. The entry is reported rather than silently
 /// honoured, because an allowance nobody sees is how an orphan crate stops being
 /// noticed.
-const REVIEWED_ORPHANS: &[&str] = &["vyre-bench/competitors", "target-codex/package"];
+///
+/// The shell form also excluded `target-codex/package`, which is a build output
+/// directory and never tracked, so that allowance could not match any manifest
+/// this gate reads.
+const REVIEWED_ORPHANS: &[&str] = &["vyre-bench/competitors"];
 
 /// Every manifest on disk is a workspace member or its own workspace root.
 pub struct WorkspaceMembership;
@@ -563,7 +567,7 @@ fn excluded_directories(tree: &Tree) -> Result<BTreeSet<String>, GateError> {
 
 /// The top-level table plus every `[target.<triple>]` table, with the prefix a
 /// finding names them by.
-fn dependency_hosts(table: &toml::Table) -> Vec<(String, toml::Table)> {
+pub(crate) fn dependency_hosts(table: &toml::Table) -> Vec<(String, toml::Table)> {
     let mut hosts = vec![(String::new(), table.clone())];
     if let Some(targets) = table.get("target").and_then(toml::Value::as_table) {
         for (triple, host) in targets {
@@ -577,7 +581,7 @@ fn dependency_hosts(table: &toml::Table) -> Vec<(String, toml::Table)> {
 
 /// One dependency table's entries, each normalised to a table so a bare version
 /// string and a full specification read the same way.
-fn entries(table: &toml::Table, name: &str) -> Vec<(String, toml::Table)> {
+pub(crate) fn entries(table: &toml::Table, name: &str) -> Vec<(String, toml::Table)> {
     let Some(inner) = table.get(name).and_then(toml::Value::as_table) else {
         return Vec::new();
     };
@@ -642,7 +646,7 @@ fn resolved_manifest(manifest: &Path, raw: &str) -> Option<PathBuf> {
 
 /// The package a dependency key names, following a `package =` rename through
 /// workspace inheritance.
-fn target_package(key: &str, spec: &toml::Table, workspace_deps: &toml::Table) -> String {
+pub(crate) fn target_package(key: &str, spec: &toml::Table, workspace_deps: &toml::Table) -> String {
     if let Some(renamed) = spec.get("package").and_then(toml::Value::as_str) {
         return renamed.to_string();
     }

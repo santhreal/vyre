@@ -147,6 +147,10 @@ name = "invariant-paths"
 findings = 0
 
 [[gate]]
+name = "layering"
+findings = 0
+
+[[gate]]
 name = "launch-state"
 findings = 0
 

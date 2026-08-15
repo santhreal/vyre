@@ -35,17 +35,6 @@ jobs:
       - name: External IR extension demo builds standalone
         run: bash scripts/check_external_ir_extension_ci.sh
 
-      # Manifest text gives direct edges only, which is all that
-      # check_architectural_invariants.sh and `xtask check-tier-deps` read. A
-      # forbidden edge three crates below a member is invisible to both and
-      # exists only in the resolved graph, so this runs `cargo tree` per member
-      # and holds every transitive internal edge to the closure
-      # docs/CRATE_OWNERSHIP.toml declares. It used to send cargo's stderr to
-      # /dev/null, so a cargo that could not resolve the workspace printed "All
-      # layer invariants green." and exited 0.
-      - name: Transitive layer closure per member
-        run: bash scripts/check_layering.sh
-
       # bench-regression.yml times one case, which proves the runner works, not
       # that the registry still covers the dimensions the audit rows claim. This
       # holds each dimension to a named case and resolves every `--case`

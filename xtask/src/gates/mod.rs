@@ -23,6 +23,7 @@ pub mod hot_path;
 pub mod hot_path_scan;
 pub mod hygiene_matrix;
 pub mod implementation_family;
+pub mod layering;
 pub mod lint_hygiene;
 pub mod lockfile;
 pub mod manifest_contract;
@@ -72,6 +73,7 @@ pub static GATES: &[&dyn Gate] = &[
     &hot_path::UnboundedRead,
     &hot_path_scan::HotPathScan,
     &hygiene_matrix::HygieneMatrix,
+    &layering::Layering,
     &lint_hygiene::ExpectHasFix,
     &lint_hygiene::MissingDocsOverride,
     &lint_hygiene::UnsafeBudget,

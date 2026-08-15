@@ -69,11 +69,12 @@ pub static SUBSETS: &[Subset] = &[
     },
     Subset {
         name: "manifest-rules",
-        help: "What the manifests must say about each other, read without cargo",
+        help: "What the manifests must say about each other and about the layering, read without cargo",
         gates: &[
             "workspace-membership",
             "path-deps-resolve",
             "internal-dep-versions",
+            "layering",
         ],
     },
     Subset {

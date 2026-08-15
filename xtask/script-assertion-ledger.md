@@ -757,9 +757,9 @@ Findings:
 
 ### `scripts/check_layering.sh`
 
-Subject: present.
+Subject: present. File deleted; every assertion is in `layering`.
 
-Invoked by: gates.yml.
+Invoked by: nothing. The gates workflow now names the `manifest-rules` subset.
 
 Gate: xtask/src/gates/layering.rs.
 
@@ -1451,7 +1451,7 @@ Findings:
 
 - `set -uo pipefail` without `-e`.
 - `find -maxdepth 4` decides the roster, so a crate nested deeper is never checked, and the members list is parsed with awk over manifest text rather than a TOML reader.
-- Two path patterns are excluded by name (target-codex/package, vyre-bench/competitors); the Rust gate keeps them as declared exemptions and reports one that matches nothing.
+- Two path patterns are excluded by name (target-codex/package, vyre-bench/competitors). The gate keeps `vyre-bench/competitors` as a declared exemption and reports it, so the orphan stays visible. `target-codex/package` is a build output directory, never tracked, so it could not match anything the gate reads; the gate reported it as an allowance naming no manifest and the allowance is deleted. `workspace-membership` therefore reports 1, the reviewed orphan, which is its honest number.
 
 ### `scripts/cli_docs.py`
 
@@ -1839,9 +1839,9 @@ Exits nonzero on:
 
 ### `scripts/lib/check_layering.py`
 
-Subject: present.
+Subject: present. File deleted; every assertion is in `layering`.
 
-Invoked by: check_layering.sh from gates.yml.
+Invoked by: nothing. It ran from check_layering.sh, which is also deleted.
 
 Gate: xtask/src/gates/layering.rs.
 
@@ -1865,6 +1865,14 @@ Exits nonzero on:
 - cargo tree failure
 - empty workspace.members
 - empty [[crate]] registry
+
+The gate reads the graph from the manifests and `Cargo.lock` rather than from
+`cargo tree`, so the cargo-failure assertion has no subject left: there is no
+cargo invocation to fail. The manifest edge set is the member's own default
+features, which is what `cargo tree --edges=normal` prints, and the lockfile
+supplies third-party edges, so a neutral crate that reaches a backend API only
+through another third-party crate is now caught where the tree-based form saw it
+only if cargo printed it.
 
 ### `scripts/lib/check_path_deps_resolve.py`
 
@@ -2409,6 +2417,12 @@ The `findings` column is the count with the injection applied, given the pin in
 | `audit-status` | Remove one status tag from a row in a status-managed audit document. | 0 to 1 |
 | `repo-hygiene` | Add a second `BACKLOG.md` under any crate directory and track it. | 2 to 3 |
 | `shader-source` | Add `out.push_str("@compute");` to a file under `vyre-driver-wgpu/src`. | 0 to 1 |
+| `layering` | Add `vyre-lints.workspace = true` to `[dependencies]` in `vyre-spec/Cargo.toml`. | 0 to 29, one per member that reaches it, each naming the chain |
+| `layering` | Add `wgpu.workspace = true` to `[dependencies]` in `vyre-spec/Cargo.toml`. | 0 to 48, every neutral member that reaches vyre-spec |
+| `layering` | Delete the `[[crate]]` entry for `vyre-spec` from `docs/CRATE_OWNERSHIP.toml`. | gate errors: an unregistered member has an empty closure, so the roster is unreviewed rather than clean |
+| `layering` | Change `layer` on the `vyre-spec` entry to a name NEUTRAL_LAYERS does not hold. | gate errors: a layer with no neutrality decision would be skipped |
+| `layering` | Add `("invented", true)` to `NEUTRAL_LAYERS`. | gate errors: a decision no member uses is an allowance nothing needs |
+| `layering` | Add `"not-a-crate"` to `BACKEND_APIS`. | gate errors: a boundary named after a crate the workspace never resolves cannot be crossed |
 
 Three of these are negative controls rather than injections: the reindented
 frozen enum, the version string cited as a path, and the loud abort added beside a
