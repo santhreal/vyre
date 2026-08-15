@@ -6,9 +6,7 @@
 //! own: the exploded-supergraph fixture, the cross-check against the full bitset
 //! closure, and its metric points.
 
-use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
-};
+use crate::api::case::{BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, WorkloadClass};
 use crate::api::suite::SuiteKind;
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
 use crate::cases::queue_closure::{
@@ -59,11 +57,8 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
     ],
     layer: BenchLayer::Libs,
     workload: WorkloadClass::Macro,
-    determinism: DeterminismClass::Deterministic,
     owner_crate: "vyre-primitives",
     suites: QUEUE_CLOSURE_SUITES,
-    needs_gpu: true,
-    needs_network: false,
     min_vram_bytes: Some(128 * 1024 * 1024),
     min_input_bytes: Some(NODE_COUNT as u64 * 20),
     feature_set: &[
@@ -75,7 +70,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
         "seed-queue",
         "resident-sequence",
     ],
-    contract: None,
+    ..WorkloadDescription::BASE
 };
 
 static OPS: CaseOps<DataflowIfdsSkewedQueueClosurePrepared> = CaseOps {

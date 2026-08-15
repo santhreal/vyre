@@ -116,7 +116,7 @@ pub fn hex_words(bytes: &[u8]) -> String {
 /// Panics when the golden is unreadable or when the rendered corpus differs,
 /// naming the first case whose section changed.
 pub fn assert_matches_golden(path: &Path, actual: &str) {
-    let expected = fs::read_to_string(path).unwrap_or_else(|error| {
+    let expected = read_golden_bounded(path).unwrap_or_else(|error| {
         panic!(
             "Fix: cannot read emitted-artifact golden {}: {error}. Run the bless test in this file to create it.",
             path.display()
@@ -151,6 +151,30 @@ pub fn write_golden(path: &Path, actual: &str) {
     fs::write(path, actual).unwrap_or_else(|error| {
         panic!("Fix: cannot write {}: {error}", path.display());
     });
+}
+
+/// Largest golden corpus this harness will read into memory.
+///
+/// A golden is a rendered text corpus over the shared success cases, which is
+/// tens of kilobytes today. The cap exists because the path comes from the
+/// caller: a golden replaced by a huge file must fail with a named limit rather
+/// than allocate whatever is on disk.
+const MAX_GOLDEN_BYTES: u64 = 16_777_216;
+
+/// Read a golden corpus, refusing anything over [`MAX_GOLDEN_BYTES`].
+fn read_golden_bounded(path: &Path) -> std::io::Result<String> {
+    use std::io::Read as _;
+
+    let file = fs::File::open(path)?;
+    if file.metadata()?.len() > MAX_GOLDEN_BYTES {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("{} exceeds {MAX_GOLDEN_BYTES} bytes", path.display()),
+        ));
+    }
+    let mut text = String::new();
+    file.take(MAX_GOLDEN_BYTES + 1).read_to_string(&mut text)?;
+    Ok(text)
 }
 
 /// Name the first case whose rendered section differs between two corpora.

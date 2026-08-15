@@ -1,11 +1,10 @@
 use super::super::*;
-use super::linear_graph;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::test_support::NeverDispatches;
 use std::cell::RefCell;
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use vyre_primitives::graph::csr_closure_inputs::{graphs, CsrClosureInputs, CsrGraphView};
 
 struct PersistentBfsDispatcher {
     outputs: Vec<Vec<u8>>,
@@ -83,28 +82,18 @@ impl ProgramDispatcher for LargeScratchPersistentBfsDispatcher {
     }
 }
 
-/// Expands one persistent-BFS step over [`linear_graph`] with every edge kind allowed, returning
-/// the changed and converged flags. The contracts below vary the dispatcher, the seed and the
-/// iteration budget; the graph itself is incidental to them.
+/// Expands one persistent-BFS step over [`graphs::CHAIN_4`] with every edge kind allowed,
+/// returning the changed and converged flags. The contracts below vary the dispatcher, the seed
+/// and the iteration budget; the graph itself is incidental to them.
 fn linear_expand_into(
     dispatcher: &dyn ProgramDispatcher,
     seed: &[u32],
     max_iters: u32,
     frontier: &mut Vec<u32>,
 ) -> Result<(u32, u32), DispatchError> {
-    let (off, tgt, msk) = linear_graph();
     bfs_expand_via_into(
         dispatcher,
-        CsrClosureInputs {
-            graph: CsrGraphView {
-                node_count: 4,
-                edge_offsets: &off,
-                edge_targets: &tgt,
-                edge_kind_mask: &msk,
-            },
-            allow_mask: 0xFFFF_FFFF,
-            max_iters,
-        },
+        CsrClosureInputs::allow_all(graphs::CHAIN_4, max_iters),
         seed,
         frontier,
     )
@@ -118,19 +107,9 @@ fn linear_expand_with_scratch(
     scratch: &mut PersistentBfsGpuScratch,
     frontier: &mut Vec<u32>,
 ) -> Result<(u32, u32), DispatchError> {
-    let (off, tgt, msk) = linear_graph();
     bfs_expand_via_with_scratch_into(
         dispatcher,
-        CsrClosureInputs {
-            graph: CsrGraphView {
-                node_count: 4,
-                edge_offsets: &off,
-                edge_targets: &tgt,
-                edge_kind_mask: &msk,
-            },
-            allow_mask: 0xFFFF_FFFF,
-            max_iters,
-        },
+        CsrClosureInputs::allow_all(graphs::CHAIN_4, max_iters),
         seed,
         scratch,
         frontier,
@@ -143,19 +122,9 @@ fn linear_expand(
     seed: &[u32],
     max_iters: u32,
 ) -> Result<(Vec<u32>, u32, u32), DispatchError> {
-    let (off, tgt, msk) = linear_graph();
     bfs_expand_via(
         dispatcher,
-        CsrClosureInputs {
-            graph: CsrGraphView {
-                node_count: 4,
-                edge_offsets: &off,
-                edge_targets: &tgt,
-                edge_kind_mask: &msk,
-            },
-            allow_mask: 0xFFFF_FFFF,
-            max_iters,
-        },
+        CsrClosureInputs::allow_all(graphs::CHAIN_4, max_iters),
         seed,
     )
 }
@@ -250,7 +219,7 @@ fn via_large_graph_allocates_changed_active_scratch_without_extra_outputs() {
         &dispatcher,
         CsrClosureInputs::allow_all(
             CsrGraphView {
-                node_count,
+                node_count: node_count,
                 edge_offsets: &edge_offsets,
                 edge_targets: &[],
                 edge_kind_mask: &[],
@@ -333,7 +302,7 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
                 CsrGraphView {
                     node_count: 4,
                     edge_offsets: &edge_offsets,
-                    edge_targets,
+                    edge_targets: edge_targets,
                     edge_kind_mask: &edge_kind_mask,
                 },
                 4,

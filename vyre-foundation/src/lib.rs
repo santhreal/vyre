@@ -103,6 +103,9 @@ pub mod memory_model;
 pub mod perf;
 /// Program capability analysis.
 pub mod program_caps;
+/// Single owner of scalar operator semantics, shared by the literal folder
+/// and the reference interpreter.
+pub(crate) mod scalar_ops;
 
 /// Operation schema and opaque IR extension surfaces.
 pub mod dispatch;

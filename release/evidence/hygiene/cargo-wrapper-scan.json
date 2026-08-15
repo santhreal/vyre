@@ -39,78 +39,58 @@
       "text": "Fix: regenerate the witness via `cargo xtask trace-f32 {}` or repair the reference.\","
     },
     {
-      "path": "scripts/check_every_source_file_is_reachable.sh",
-      "line": 34,
-      "pattern": "heredoc",
-      "text": "python3 - \"$ROOT\" <<'PY'"
-    },
-    {
-      "path": "scripts/check_internal_deps_have_versions.sh",
-      "line": 32,
-      "pattern": "heredoc",
-      "text": "python3 - \"$ROOT\" <<'PY'"
-    },
-    {
-      "path": "scripts/check_internal_deps_have_versions.sh",
-      "line": 169,
+      "path": ".github/workflows/miri.yml",
+      "line": 29,
       "pattern": "raw_workspace_cargo",
-      "text": "f\"against a versioned table entry. Path-only blocks `cargo publish` from \""
+      "text": "cargo +nightly miri setup"
     },
     {
-      "path": "scripts/check_deep_bench_coverage.sh",
-      "line": 28,
-      "pattern": "heredoc",
-      "text": "python3 - \"$ROOT\" \"$CARGO_RUNNER\" <<'PY'"
+      "path": ".github/workflows/miri.yml",
+      "line": 30,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly miri test -p vyre-spec --lib"
     },
     {
-      "path": "scripts/check_feature_msrv.sh",
-      "line": 35,
-      "pattern": "heredoc",
-      "text": "python3 - \"$ROOT\" \"$CARGO_RUNNER\" \"${1:-}\" <<'PY'"
+      "path": ".github/workflows/miri.yml",
+      "line": 31,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly miri test -p vyre-foundation --lib"
     },
     {
-      "path": "scripts/check_every_source_file_parses.sh",
-      "line": 38,
-      "pattern": "heredoc",
-      "text": "python3 - \"$ROOT\" <<'PY'"
+      "path": ".github/workflows/miri.yml",
+      "line": 32,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly miri test -p vyre -p vyre-reference --lib --no-default-features"
     },
     {
-      "path": "scripts/check_layering.sh",
-      "line": 28,
-      "pattern": "heredoc",
-      "text": "python3 - \"$PWD\" \"$CARGO_RUNNER\" <<'PY'"
+      "path": ".github/workflows/miri.yml",
+      "line": 29,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly miri setup"
     },
     {
-      "path": "scripts/check_path_deps_resolve.sh",
-      "line": 18,
-      "pattern": "heredoc",
-      "text": "python3 - \"$ROOT\" <<'PY'"
+      "path": ".github/workflows/miri.yml",
+      "line": 30,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly miri test -p vyre-spec --lib"
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 31,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly miri test -p vyre-foundation --lib"
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 32,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly miri test -p vyre -p vyre-reference --lib --no-default-features"
     }
   ],
   "release_blocking_findings": [
     {
-      "path": "scripts/check_every_source_file_is_reachable.sh",
-      "line": 34,
-      "pattern": "heredoc",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "scripts/check_internal_deps_have_versions.sh",
-      "line": 32,
-      "pattern": "heredoc",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "scripts/check_internal_deps_have_versions.sh",
-      "line": 169,
+      "path": ".github/workflows/miri.yml",
+      "line": 29,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -119,9 +99,9 @@
       "release_blocker": true
     },
     {
-      "path": "scripts/check_deep_bench_coverage.sh",
-      "line": 28,
-      "pattern": "heredoc",
+      "path": ".github/workflows/miri.yml",
+      "line": 30,
+      "pattern": "raw_workspace_cargo",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
       "risk": "release_blocker",
@@ -129,9 +109,9 @@
       "release_blocker": true
     },
     {
-      "path": "scripts/check_feature_msrv.sh",
-      "line": 35,
-      "pattern": "heredoc",
+      "path": ".github/workflows/miri.yml",
+      "line": 31,
+      "pattern": "raw_workspace_cargo",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
       "risk": "release_blocker",
@@ -139,9 +119,9 @@
       "release_blocker": true
     },
     {
-      "path": "scripts/check_every_source_file_parses.sh",
-      "line": 38,
-      "pattern": "heredoc",
+      "path": ".github/workflows/miri.yml",
+      "line": 32,
+      "pattern": "raw_workspace_cargo",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
       "risk": "release_blocker",
@@ -149,9 +129,9 @@
       "release_blocker": true
     },
     {
-      "path": "scripts/check_layering.sh",
-      "line": 28,
-      "pattern": "heredoc",
+      "path": ".github/workflows/miri.yml",
+      "line": 29,
+      "pattern": "raw_workspace_cargo",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
       "risk": "release_blocker",
@@ -159,9 +139,29 @@
       "release_blocker": true
     },
     {
-      "path": "scripts/check_path_deps_resolve.sh",
-      "line": 18,
-      "pattern": "heredoc",
+      "path": ".github/workflows/miri.yml",
+      "line": 30,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 31,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": ".github/workflows/miri.yml",
+      "line": 32,
+      "pattern": "raw_workspace_cargo",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
       "risk": "release_blocker",

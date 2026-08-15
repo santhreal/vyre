@@ -15,7 +15,7 @@ use crate::{
     value::Value,
     workgroup::{Frame, InvocationIds},
 };
-use im::HashMap;
+use imbl::HashMap;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 use vyre_foundation::ir::{Node, Program};

@@ -1,120 +1,78 @@
-//! P0 inventory #35  -  [`vyre_foundation::optimizer::pre_lowering`] should reach a fixed
-//! point on the canonical wire form: successive runs must not perturb semantics or
-//! serialized bytes.
+//! Every optimizer entry point must reach a fixed point without changing what
+//! the program computes.
 //!
-//! P1 inventory #109  -  wire codec round-trips the shape produced by the optimizer
-//! (see also inventory #39 for IR ↔ wire field coverage).
+//! The entry points are a declared table, not one test each: `canonicalize` and
+//! the full registered pipeline owe the same contract, and the two suites that
+//! asserted them had drifted into asserting different halves of it -- one
+//! compared structural equality after two runs, the other wire bytes after
+//! three, and only one checked reference semantics. The table runs the union on
+//! every row.
+//!
+//! The per-pass corpus below is the second half: a fixed point over the whole
+//! pipeline does not imply one for each pass in isolation, which is the
+//! property the scheduler's convergence loop depends on.
 
 use proptest::prelude::*;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::optimizer as optimize;
-use vyre_foundation::optimizer::passes::{
-    algebraic::{
-        const_fold::ConstFold, normalize_atomics::NormalizeAtomicsPass,
-        strength_reduce::StrengthReduce,
-    },
-    fusion_cse::fusion::Fusion,
-    memory::{dead_buffer_elim::DeadBufferElim, vectorization::Vectorization},
-    specialization::autotune::Autotune,
+use vyre_foundation::optimizer::passes::algebraic::canonicalize_engine as canonicalize;
+use vyre_foundation::optimizer::{
+    registered_pass_registrations, PassScheduler, ProgramPassKind, ProgramPassRegistration,
 };
-use vyre_foundation::optimizer::{PassScheduler, ProgramPassKind};
-use vyre_reference::value::Value;
 
-fn test_output_buffer() -> BufferDecl {
-    BufferDecl::read_write("out", 0, DataType::U32).with_count(1)
+#[path = "contract_cases/optimizer_program_corpus.rs"]
+mod corpus;
+
+use corpus::{
+    assert_fixed_point_and_semantics, canonical_wire, output_only_store, program_strategy,
+    program_with_body, test_output_buffer, OptimizerEntryPoint,
+};
+
+/// Every optimizer entry point held to the fixed-point contract.
+const ENTRY_POINTS: &[OptimizerEntryPoint] = &[
+    OptimizerEntryPoint {
+        label: "vyre_foundation::optimizer::passes::algebraic::canonicalize_engine::run",
+        run: canonicalize::run,
+    },
+    OptimizerEntryPoint {
+        label: "vyre_foundation::optimizer::optimize",
+        run: run_full_optimizer,
+    },
+];
+
+fn run_full_optimizer(program: Program) -> Program {
+    optimize::optimize(program).expect("Fix: the registered optimizer must converge")
 }
 
-fn program_with_body(body: Vec<Node>) -> Program {
-    Program::wrapped(vec![test_output_buffer()], [1, 1, 1], body)
-}
+proptest! {
+    #![proptest_config(ProptestConfig { cases: 96, .. ProptestConfig::default() })]
 
-fn run_reference(program: &Program) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
-    vyre_reference::reference_eval(program, &[Value::U32(0)])
-}
-
-fn leaf_expr() -> impl Strategy<Value = Expr> {
-    prop_oneof![
-        (0_u16..=1024).prop_map(|value| Expr::u32(u32::from(value))),
-        Just(Expr::gid_x()),
-    ]
-}
-
-fn non_zero_literal() -> impl Strategy<Value = Expr> {
-    (1_u16..=1024).prop_map(|value| Expr::u32(u32::from(value)))
-}
-
-fn shift_amount() -> impl Strategy<Value = Expr> {
-    (0_u8..=31).prop_map(|value| Expr::u32(u32::from(value)))
-}
-
-/// Bounded pure u32 expression surface (aligned with `adversarial_graph_canonical_laws`).
-fn u32_expr() -> impl Strategy<Value = Expr> {
-    leaf_expr().prop_recursive(5, 64, 4, |inner| {
-        prop_oneof![
-            (inner.clone(), inner.clone()).prop_map(|(left, right)| Expr::add(left, right)),
-            (inner.clone(), inner.clone()).prop_map(|(left, right)| Expr::mul(left, right)),
-            (inner.clone(), inner.clone()).prop_map(|(left, right)| Expr::bitand(left, right)),
-            (inner.clone(), inner.clone()).prop_map(|(left, right)| Expr::bitor(left, right)),
-            (inner.clone(), inner.clone()).prop_map(|(left, right)| Expr::bitxor(left, right)),
-            (inner.clone(), inner.clone()).prop_map(|(left, right)| Expr::sub(left, right)),
-            (inner.clone(), non_zero_literal()).prop_map(|(left, right)| Expr::div(left, right)),
-            (inner.clone(), shift_amount()).prop_map(|(left, right)| Expr::shl(left, right)),
-            (inner.clone(), shift_amount()).prop_map(|(left, right)| Expr::shr(left, right)),
-        ]
-    })
-}
-
-fn program_strategy() -> impl Strategy<Value = Program> {
-    prop::collection::vec(u32_expr(), 1..16).prop_map(|exprs| {
-        let mut body = Vec::with_capacity(exprs.len() + 1);
-        for (index, expr) in exprs.into_iter().enumerate() {
-            body.push(Node::let_bind(format!("v{index}"), expr));
+    #[test]
+    fn every_optimizer_entry_point_is_a_semantics_preserving_fixed_point(
+        program in program_strategy(),
+    ) {
+        for entry in ENTRY_POINTS {
+            assert_fixed_point_and_semantics(entry, program.clone())?;
         }
-        body.push(Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::var(format!("v{}", body.len().saturating_sub(1))),
-        ));
-        program_with_body(body)
-    })
+    }
 }
 
-fn output_only_store(expr: Expr) -> Program {
-    program_with_body(vec![Node::store("out", Expr::u32(0), expr)])
+#[test]
+fn optimize_then_wire_roundtrip_preserves_program_smoke() {
+    // Mirrors `optimizer_reference_parity_smoke`  -  enough IR for canonicalize, const fold,
+    // CSE/DCE, then full wire round-trip.
+    let program = output_only_store(Expr::add(
+        Expr::mul(Expr::u32(3), Expr::u32(4)),
+        Expr::sub(Expr::u32(10), Expr::u32(2)),
+    ));
+    let optimized = run_full_optimizer(program);
+    let bytes = canonical_wire("vyre_foundation::optimizer::optimize", &optimized);
+    let back = Program::from_wire(&bytes).expect("Fix: optimized smoke program must decode");
+    assert_eq!(back, optimized);
 }
 
-fn built_in_pass_names() -> [&'static str; 7] {
-    [
-        "autotune",
-        "const_fold",
-        "dead_buffer_elim",
-        "fusion",
-        "normalize_atomics",
-        "strength_reduce",
-        "vectorization",
-    ]
-}
-
-fn scheduler_for_pass(pass_name: &str) -> PassScheduler {
-    let passes = match pass_name {
-        "autotune" => vec![ProgramPassKind::new(Autotune)],
-        "const_fold" => vec![ProgramPassKind::new(ConstFold)],
-        "dead_buffer_elim" => vec![
-            ProgramPassKind::new(Fusion),
-            ProgramPassKind::new(DeadBufferElim),
-        ],
-        "fusion" => vec![ProgramPassKind::new(Fusion)],
-        "normalize_atomics" => vec![ProgramPassKind::new(NormalizeAtomicsPass)],
-        "strength_reduce" => vec![
-            ProgramPassKind::new(ConstFold),
-            ProgramPassKind::new(StrengthReduce),
-        ],
-        "vectorization" => vec![ProgramPassKind::new(Vectorization)],
-        other => panic!("Fix: unhandled built-in optimizer pass `{other}`"),
-    };
-    PassScheduler::with_passes(passes).with_max_iterations(8)
-}
-
+/// Programs that make at least one registered pass fire, so the per-pass fixed
+/// point below is measured on passes that actually rewrote something.
 fn pass_contract_corpus() -> Vec<Program> {
     let arithmetic = output_only_store(Expr::add(
         Expr::mul(Expr::u32(3), Expr::u32(4)),
@@ -154,113 +112,83 @@ fn pass_contract_corpus() -> Vec<Program> {
         )],
     );
 
+    let redundant_store = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(4)],
+        [1, 1, 1],
+        vec![
+            Node::store("out", Expr::u32(0), Expr::u32(1)),
+            Node::store("out", Expr::u32(0), Expr::u32(2)),
+            Node::let_bind("forwarded", Expr::load("out", Expr::u32(0))),
+            Node::store("out", Expr::u32(1), Expr::var("forwarded")),
+        ],
+    );
+
     vec![
         arithmetic,
         dead_buffer,
         fusion_candidate,
         autotune_candidate,
         atomic_condition,
+        redundant_store,
     ]
 }
 
-fn canonical_wire(program: &Program) -> Vec<u8> {
-    program
-        .to_wire()
-        .unwrap_or_else(|e| panic!("Fix: optimizer pass output must encode: {e}"))
+/// A scheduler holding `registration` and every pass it declares a requirement
+/// on, so a pass whose candidate shape another pass produces still gets a
+/// program it can rewrite.
+fn scheduler_for(registration: &'static ProgramPassRegistration) -> PassScheduler {
+    let required = registration.metadata.requires;
+    let mut passes: Vec<ProgramPassKind> = registered_pass_registrations()
+        .expect("Fix: the registered pass graph must schedule")
+        .iter()
+        .filter(|candidate| required.contains(&candidate.metadata.name))
+        .map(|candidate| ProgramPassKind::from_boxed((candidate.factory)()))
+        .collect();
+    passes.push(ProgramPassKind::from_boxed((registration.factory)()));
+    PassScheduler::with_passes(passes).with_max_iterations(8)
 }
 
-proptest! {
-    #![proptest_config(ProptestConfig {
-        cases: 96,
-        .. ProptestConfig::default()
-    })]
-
-    #[test]
-    fn full_optimize_is_idempotent_on_canonical_wire(program in program_strategy()) {
-        let ref_original = run_reference(&program)
-            .expect("Fix: generated original program must run on the reference interpreter");
-        let once = optimize::optimize(program).expect("registered optimizer must converge");
-        let wire_once = once
-            .to_wire()
-            .unwrap_or_else(|e| panic!("Fix: optimize output must encode: {e}"));
-        let twice =
-            optimize::optimize(once.clone()).expect("registered optimizer must converge");
-        let wire_twice = twice
-            .to_wire()
-            .unwrap_or_else(|e| panic!("Fix: second optimize must encode: {e}"));
-        prop_assert_eq!(&wire_once, &wire_twice);
-
-        let thrice =
-            optimize::optimize(twice.clone()).expect("registered optimizer must converge");
-        let wire_thrice = thrice
-            .to_wire()
-            .unwrap_or_else(|e| panic!("Fix: third optimize must encode: {e}"));
-        prop_assert_eq!(&wire_twice, &wire_thrice);
-
-        let ref_once = run_reference(&once)
-            .expect("Fix: once-optimized program must run on the reference interpreter");
-        let ref_twice = run_reference(&twice)
-            .expect("Fix: twice-optimized program must run on the reference interpreter");
-        let ref_thrice = run_reference(&thrice)
-            .expect("Fix: thrice-optimized program must run on the reference interpreter");
-        prop_assert_eq!(&ref_original, &ref_once);
-        prop_assert_eq!(&ref_once, &ref_twice);
-        prop_assert_eq!(&ref_twice, &ref_thrice);
-    }
-}
-
+/// Every registered pass, run alone, must converge and hold its fixed point.
+///
+/// The pass set comes from the inventory registry at run time. The list of
+/// seven names this replaces named a fifth of the registry and could not go
+/// stale loudly: a pass registered after it was written was simply never held
+/// to the contract, and nothing said so.
 #[test]
-fn optimize_then_wire_roundtrip_preserves_program_smoke() {
-    // Mirrors `optimizer_reference_parity_smoke`  -  enough IR for canonicalize, const fold,
-    // CSE/DCE, then full wire round-trip.
-    let program = output_only_store(Expr::add(
-        Expr::mul(Expr::u32(3), Expr::u32(4)),
-        Expr::sub(Expr::u32(10), Expr::u32(2)),
-    ));
-    let optimized = optimize::optimize(program).expect("registered optimizer must converge");
-    let bytes = optimized
-        .to_wire()
-        .expect("Fix: optimized smoke program must encode");
-    let back = Program::from_wire(&bytes).expect("Fix: optimized smoke program must decode");
-    assert_eq!(back, optimized);
-}
-
-#[test]
-fn every_builtin_optimizer_pass_converges_and_is_idempotent_on_contract_corpus() {
+fn every_registered_optimizer_pass_converges_and_is_idempotent_on_contract_corpus() {
+    let registrations =
+        registered_pass_registrations().expect("Fix: the registered pass graph must schedule");
+    assert!(
+        registrations.len() > 1,
+        "Fix: the pass registry reported {} passes, so this gate proves nothing",
+        registrations.len()
+    );
     let corpus = pass_contract_corpus();
 
-    for pass_name in built_in_pass_names() {
+    for registration in registrations.iter() {
+        let pass_name = registration.metadata.name;
         for (case_index, program) in corpus.iter().enumerate() {
-            let once = scheduler_for_pass(pass_name)
-                .run(program.clone())
-                .unwrap_or_else(|e| {
-                    panic!(
-                        "Fix: optimizer pass `{pass_name}` must converge on contract corpus case {case_index}: {e}"
-                    )
-                });
-            let twice = scheduler_for_pass(pass_name)
-                .run(once.clone())
-                .unwrap_or_else(|e| {
-                    panic!(
-                        "Fix: optimizer pass `{pass_name}` must converge after first run on contract corpus case {case_index}: {e}"
-                    )
-                });
-            let thrice = scheduler_for_pass(pass_name)
-                .run(twice.clone())
-                .unwrap_or_else(|e| {
-                    panic!(
-                        "Fix: optimizer pass `{pass_name}` must converge after second run on contract corpus case {case_index}: {e}"
-                    )
-                });
+            let run = |input: Program, stage: &str| {
+                scheduler_for(registration)
+                    .run(input)
+                    .unwrap_or_else(|error| {
+                        panic!(
+                            "Fix: optimizer pass `{pass_name}` must converge {stage} on contract corpus case {case_index}: {error}"
+                        )
+                    })
+            };
+            let once = run(program.clone(), "from the input");
+            let twice = run(once.clone(), "after the first run");
+            let thrice = run(twice.clone(), "after the second run");
 
             assert_eq!(
-                canonical_wire(&once),
-                canonical_wire(&twice),
+                canonical_wire(pass_name, &once),
+                canonical_wire(pass_name, &twice),
                 "Fix: optimizer pass `{pass_name}` is not idempotent after convergence on contract corpus case {case_index}"
             );
             assert_eq!(
-                canonical_wire(&twice),
-                canonical_wire(&thrice),
+                canonical_wire(pass_name, &twice),
+                canonical_wire(pass_name, &thrice),
                 "Fix: optimizer pass `{pass_name}` did not hold its fixed point on contract corpus case {case_index}"
             );
         }

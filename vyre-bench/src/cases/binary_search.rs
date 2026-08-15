@@ -1,16 +1,13 @@
 //! `search.binary.u32.1m`  -  divergent binary search over a sorted table.
 
 use super::byte_pack::u32_bytes;
-use crate::api::case::{
-    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, PerformanceContract, PreparedCase,
+use crate::api::case::{BenchCase, BenchContext, BenchError};
+use crate::cases::harness::{
+    verify_exact, CaseOps, ContractDescription, HarnessCase, WorkloadDescription,
 };
-use crate::api::resident::{
-    dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
+use crate::cases::reference_sample::{
+    measure_against_reference, referenced_program, HostReferencePayload, HostReferenced,
 };
-use crate::api::suite::SuiteKind;
-use crate::cases::honest_case::{honest_gpu_requirements, honest_metadata, HONEST_SUITES};
-use crate::cases::reference_sample::{run_against_reference, timed_reference, ReferenceSample};
 use rayon::prelude::*;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -19,203 +16,148 @@ const QUERY_COUNT: u32 = 1 << 20;
 const MISS: u32 = u32::MAX;
 const SEARCH_STEPS: u32 = 21;
 
-pub struct BinarySearchU32;
-
 struct BinarySearchPrepared {
-    program: Program,
+    dispatch: HostReferencePayload,
     keys: Vec<u32>,
     queries: Vec<u32>,
-    inputs: Vec<Vec<u8>>,
-    input_bytes_total: u64,
-    resident: Option<ResidentInputSet>,
 }
 
-impl BenchCase for BinarySearchU32 {
-    fn id(&self) -> BenchId {
-        BenchId("search.binary.u32.1m".to_string())
+impl HostReferenced for BinarySearchPrepared {
+    fn dispatch(&self) -> &HostReferencePayload {
+        &self.dispatch
     }
 
-    fn metadata(&self) -> BenchMetadata {
-        honest_metadata(
-            self.id(),
-            "Binary Search U32 1M",
-            "Divergent binary search: 1M queries against a sorted 1M-entry u32 table",
-            &["honest", "cpu-favorable", "branchy", "cache"],
-        )
+    fn reference(&self) -> Result<Vec<u8>, BenchError> {
+        Ok(cpu_binary_search_results(&self.keys, &self.queries))
     }
+}
 
-    fn suites(&self) -> &'static [SuiteKind] {
-        HONEST_SUITES
-    }
+static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
+    "search.binary.u32.1m",
+    "Binary Search U32 1M",
+    "Divergent binary search: 1M queries against a sorted 1M-entry u32 table",
+    &["honest", "cpu-favorable", "branchy", "cache"],
+    (KEY_COUNT as u64 + QUERY_COUNT as u64 * 2) * 4,
+    Some(ContractDescription {
+        primitive: "Divergent binary search",
+        baseline_crate: "std+rayon",
+        baseline_name: "Rust slice::binary_search with Rayon parallel query partitioning",
+        min_speedup_x: 3.0,
+    }),
+);
 
-    fn requirements(&self) -> BenchRequirements {
-        honest_gpu_requirements((u64::from(KEY_COUNT) + u64::from(QUERY_COUNT) * 2) * 4)
-    }
+static OPS: CaseOps<BinarySearchPrepared> = CaseOps {
+    build: prepare_binary_search,
+    measure: measure_against_reference::<BinarySearchPrepared>,
+    verify: verify_exact,
+    program: referenced_program::<BinarySearchPrepared>,
+    fingerprint: None,
+    bytes_touched: bytes_touched,
+};
 
-    fn performance_contract(&self) -> Option<PerformanceContract> {
-        Some(PerformanceContract::cpu_sota_3x(
-            "Divergent binary search",
-            "std+rayon",
-            "Rust slice::binary_search with Rayon parallel query partitioning",
-        ))
-    }
+static CASE: HarnessCase<BinarySearchPrepared> = HarnessCase {
+    workload: &WORKLOAD,
+    ops: &OPS,
+};
 
-    fn bytes_touched(&self, prepared: &PreparedCase) -> (u64, u64) {
-        let read = prepared
-            .downcast_ref::<BinarySearchPrepared>()
-            .map(|prepared| prepared.input_bytes_total)
-            .unwrap_or_else(|| (u64::from(KEY_COUNT) + u64::from(QUERY_COUNT)) * 4);
-        let write = u64::from(QUERY_COUNT) * 4;
-        (read, write)
-    }
+/// Reads are the uploaded key and query tables; writes are one result per query.
+fn bytes_touched(prepared: &BinarySearchPrepared) -> (u64, u64) {
+    (
+        prepared.dispatch.input_bytes_total,
+        u64::from(QUERY_COUNT) * 4,
+    )
+}
 
-    fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let program = Program::wrapped(
-            vec![
-                BufferDecl::storage("keys", 0, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(KEY_COUNT),
-                BufferDecl::storage("queries", 1, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(QUERY_COUNT),
-                BufferDecl::output("results", 2, DataType::U32).with_count(QUERY_COUNT),
-            ],
-            [256, 1, 1],
-            vec![
-                Node::let_bind("tid", Expr::gid_x()),
-                Node::if_then(
-                    Expr::lt(Expr::var("tid"), Expr::u32(QUERY_COUNT)),
-                    vec![
-                        Node::let_bind("query", Expr::load("queries", Expr::var("tid"))),
-                        Node::let_bind("low", Expr::u32(0)),
-                        Node::let_bind("high", Expr::u32(KEY_COUNT)),
-                        Node::Loop {
-                            var: "step".into(),
-                            from: Expr::u32(0),
-                            to: Expr::u32(SEARCH_STEPS),
-                            body: vec![
-                                Node::let_bind(
-                                    "mid",
-                                    Expr::shr(
-                                        Expr::add(Expr::var("low"), Expr::var("high")),
-                                        Expr::u32(1),
-                                    ),
+fn binary_search_program() -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("keys", 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(KEY_COUNT),
+            BufferDecl::storage("queries", 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(QUERY_COUNT),
+            BufferDecl::output("results", 2, DataType::U32).with_count(QUERY_COUNT),
+        ],
+        [256, 1, 1],
+        vec![
+            Node::let_bind("tid", Expr::gid_x()),
+            Node::if_then(
+                Expr::lt(Expr::var("tid"), Expr::u32(QUERY_COUNT)),
+                vec![
+                    Node::let_bind("query", Expr::load("queries", Expr::var("tid"))),
+                    Node::let_bind("low", Expr::u32(0)),
+                    Node::let_bind("high", Expr::u32(KEY_COUNT)),
+                    Node::Loop {
+                        var: "step".into(),
+                        from: Expr::u32(0),
+                        to: Expr::u32(SEARCH_STEPS),
+                        body: vec![
+                            Node::let_bind(
+                                "mid",
+                                Expr::shr(
+                                    Expr::add(Expr::var("low"), Expr::var("high")),
+                                    Expr::u32(1),
                                 ),
-                                Node::let_bind("mid_key", Expr::load("keys", Expr::var("mid"))),
-                                Node::let_bind(
-                                    "go_right",
-                                    Expr::lt(Expr::var("mid_key"), Expr::var("query")),
+                            ),
+                            Node::let_bind("mid_key", Expr::load("keys", Expr::var("mid"))),
+                            Node::let_bind(
+                                "go_right",
+                                Expr::lt(Expr::var("mid_key"), Expr::var("query")),
+                            ),
+                            Node::let_bind(
+                                "next_low",
+                                Expr::select(
+                                    Expr::var("go_right"),
+                                    Expr::add(Expr::var("mid"), Expr::u32(1)),
+                                    Expr::var("low"),
                                 ),
-                                Node::let_bind(
-                                    "next_low",
-                                    Expr::select(
-                                        Expr::var("go_right"),
-                                        Expr::add(Expr::var("mid"), Expr::u32(1)),
-                                        Expr::var("low"),
-                                    ),
+                            ),
+                            Node::let_bind(
+                                "next_high",
+                                Expr::select(
+                                    Expr::var("go_right"),
+                                    Expr::var("high"),
+                                    Expr::var("mid"),
                                 ),
-                                Node::let_bind(
-                                    "next_high",
-                                    Expr::select(
-                                        Expr::var("go_right"),
-                                        Expr::var("high"),
-                                        Expr::var("mid"),
-                                    ),
-                                ),
-                                Node::assign("low", Expr::var("next_low")),
-                                Node::assign("high", Expr::var("next_high")),
-                            ],
-                        },
-                        Node::if_then_else(
-                            Expr::lt(Expr::var("low"), Expr::u32(KEY_COUNT)),
-                            vec![
-                                Node::let_bind("candidate", Expr::load("keys", Expr::var("low"))),
-                                Node::if_then_else(
-                                    Expr::eq(Expr::var("candidate"), Expr::var("query")),
-                                    vec![Node::store(
-                                        "results",
-                                        Expr::var("tid"),
-                                        Expr::var("low"),
-                                    )],
-                                    vec![Node::store("results", Expr::var("tid"), Expr::u32(MISS))],
-                                ),
-                            ],
-                            vec![Node::store("results", Expr::var("tid"), Expr::u32(MISS))],
-                        ),
-                    ],
-                ),
-            ],
-        );
-        let keys: Vec<u32> = (0..KEY_COUNT)
-            .map(|value| value.saturating_mul(2))
-            .collect();
-        let queries = build_queries();
-        let inputs = vec![u32_bytes(&keys), u32_bytes(&queries)];
-        let input_bytes_total = input_bytes_total(&inputs);
-        // Raw-IR resident dispatch (`dispatch_program_timed`) routes through the
-        // CUDA `prepare_resident_dispatch` ABI, which requires one resident
-        // handle per non-shared binding -- INCLUDING the `results` output. The
-        // inputs-only `upload_optional` provides keys+queries (2) but the program
-        // has 3 non-shared bindings, so dispatch fails closed ("expected 3 ...
-        // received 2"). Build inputs + a zeroed output resource in binding order.
-        let resident = ResidentInputSet::upload_program_ordered_with_zeroed_outputs_optional(
+                            ),
+                            Node::assign("low", Expr::var("next_low")),
+                            Node::assign("high", Expr::var("next_high")),
+                        ],
+                    },
+                    Node::if_then_else(
+                        Expr::lt(Expr::var("low"), Expr::u32(KEY_COUNT)),
+                        vec![
+                            Node::let_bind("candidate", Expr::load("keys", Expr::var("low"))),
+                            Node::if_then_else(
+                                Expr::eq(Expr::var("candidate"), Expr::var("query")),
+                                vec![Node::store("results", Expr::var("tid"), Expr::var("low"))],
+                                vec![Node::store("results", Expr::var("tid"), Expr::u32(MISS))],
+                            ),
+                        ],
+                        vec![Node::store("results", Expr::var("tid"), Expr::u32(MISS))],
+                    ),
+                ],
+            ),
+        ],
+    )
+}
+
+fn prepare_binary_search(ctx: &mut BenchContext) -> Result<BinarySearchPrepared, BenchError> {
+    let keys: Vec<u32> = (0..KEY_COUNT)
+        .map(|value| value.saturating_mul(2))
+        .collect();
+    let queries = build_queries();
+    let inputs = vec![u32_bytes(&keys), u32_bytes(&queries)];
+
+    Ok(BinarySearchPrepared {
+        dispatch: HostReferencePayload::program_ordered_resident(
             ctx,
-            &program,
-            &inputs,
-            "binary search bench",
-        )?;
-
-        Ok(Box::new(BinarySearchPrepared {
-            program,
-            keys,
-            queries,
+            binary_search_program(),
             inputs,
-            input_bytes_total,
-            resident,
-        }))
-    }
-
-    fn program<'a>(&self, prepared: &'a PreparedCase) -> Option<&'a Program> {
-        prepared
-            .downcast_ref::<BinarySearchPrepared>()
-            .map(|prepared| &prepared.program)
-    }
-
-    fn run(
-        &self,
-        ctx: &mut BenchContext,
-        prepared: &mut PreparedCase,
-    ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared_as::<BinarySearchPrepared>(prepared, "binary search")?;
-
-        let dispatch = dispatch_program_timed(
-            ctx,
-            &prepared.program,
-            prepared.resident.as_ref(),
-            &prepared.inputs,
-            &ctx.dispatch_config,
-        )?;
-        let resident_used = dispatch.resident_used;
-        let timed = dispatch.timed;
-
-        let (baseline, elapsed_ref) =
-            timed_reference(|| cpu_binary_search_results(&prepared.keys, &prepared.queries));
-        let input_bytes = prepared.input_bytes_total;
-        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
-
-        Ok(run_against_reference(
-            timed,
-            input_bytes,
-            transfer_accounting(input_bytes, output_bytes, resident_used),
-            ReferenceSample {
-                outputs: vec![baseline],
-                wall_ns: elapsed_ref,
-                input_bytes,
-            },
-        ))
-    }
-
-    fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
-        run.verify_exact_outputs()
-    }
+            "binary search bench",
+        )?,
+        keys,
+        queries,
+    })
 }
 
 fn build_queries() -> Vec<u32> {
@@ -245,5 +187,5 @@ fn cpu_binary_search_results(keys: &[u32], queries: &[u32]) -> Vec<u8> {
 }
 
 inventory::submit! {
-    &BinarySearchU32 as &'static dyn BenchCase
+    &CASE as &'static dyn BenchCase
 }

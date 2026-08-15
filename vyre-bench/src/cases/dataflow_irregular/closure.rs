@@ -1,8 +1,6 @@
 use std::time::Instant;
 
-use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
-};
+use crate::api::case::{BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, WorkloadClass};
 use crate::api::metric::{elapsed_ns, BenchMetrics};
 use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, ResidentInputSet, TransferAccounting,
@@ -74,11 +72,8 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
     ],
     layer: BenchLayer::Libs,
     workload: WorkloadClass::Macro,
-    determinism: DeterminismClass::Deterministic,
     owner_crate: "vyre-primitives",
     suites: SUITES,
-    needs_gpu: true,
-    needs_network: false,
     min_vram_bytes: Some(96 * 1024 * 1024),
     min_input_bytes: Some(NODE_COUNT as u64 * 20),
     feature_set: &[
@@ -87,7 +82,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
         "skewed-csr",
         "resident-frontier",
     ],
-    contract: None,
+    ..WorkloadDescription::BASE
 };
 
 static OPS: CaseOps<DataflowIfdsSkewedClosurePrepared> = CaseOps {

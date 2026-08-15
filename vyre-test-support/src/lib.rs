@@ -150,9 +150,13 @@ macro_rules! test_node_extension {
 
 #[cfg(feature = "ir-fixtures")]
 pub mod binop_parity;
+pub mod case_table;
 #[cfg(feature = "ir-fixtures")]
 pub mod cast_parity;
 pub mod consumer_boundary;
+pub mod exploded_ifds_cases;
+#[cfg(feature = "ir-fixtures")]
+pub mod ir_regions;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_variants;
 pub mod monorepo;

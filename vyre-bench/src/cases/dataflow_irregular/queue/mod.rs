@@ -6,9 +6,7 @@
 //! [`crate::cases::queue_traverse_plan`]. What is this case's own: the fixture,
 //! the queue sizing, and its metric points.
 
-use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
-};
+use crate::api::case::{BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, WorkloadClass};
 use crate::cases::frontier_step::{
     dispatch_frontier_step, frontier_step, frontier_step_run, FrontierStep, StepGrid,
 };
@@ -75,11 +73,8 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
     ],
     layer: BenchLayer::Libs,
     workload: WorkloadClass::Macro,
-    determinism: DeterminismClass::Deterministic,
     owner_crate: "vyre-primitives",
     suites: SUITES,
-    needs_gpu: true,
-    needs_network: false,
     min_vram_bytes: Some(96 * 1024 * 1024),
     min_input_bytes: Some(NODE_COUNT as u64 * 12),
     feature_set: &[
@@ -89,7 +84,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
         "frontier-queue",
         "active-queue",
     ],
-    contract: None,
+    ..WorkloadDescription::BASE
 };
 
 static OPS: CaseOps<DataflowIfdsSkewedActiveQueuePrepared> = CaseOps {

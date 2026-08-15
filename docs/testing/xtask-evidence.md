@@ -27,6 +27,7 @@ This crate declares no Cargo features.
 | --- | --- | --- | --- | --- |
 | `bin` | `xtask-evidence` | `xtask-evidence/src/main.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask-evidence --bin xtask-evidence` |
 | `lib` | `xtask_evidence` | `xtask-evidence/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask-evidence` |
+| `test` | `release_evidence_dispatch` | `xtask-evidence/tests/release_evidence_dispatch.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask-evidence --test release_evidence_dispatch` |
 
 ## Test classes
 

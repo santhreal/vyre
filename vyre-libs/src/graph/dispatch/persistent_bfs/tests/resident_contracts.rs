@@ -1,10 +1,10 @@
 use super::super::resident_scratch::PersistentBfsPlanCache;
 use super::super::*;
-use super::linear_graph;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use std::cell::{Cell, RefCell};
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentReadRange};
+use vyre_primitives::graph::csr_closure_inputs::graphs;
 
 #[derive(Default)]
 struct ResidentPersistentBfsDispatcher {
@@ -111,9 +111,15 @@ impl ProgramDispatcher for ResidentPersistentBfsDispatcher {
 #[test]
 fn resident_graph_uploads_topology_once_and_reuses_frontier_handles() {
     let dispatcher = ResidentPersistentBfsDispatcher::new();
-    let (off, tgt, msk) = linear_graph();
-    let graph =
-        upload_resident_bfs_graph(&dispatcher, 4, &off, &tgt, &msk).expect("Fix: resident upload");
+    let g = graphs::CHAIN_4;
+    let graph = upload_resident_bfs_graph(
+        &dispatcher,
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+    )
+    .expect("Fix: resident upload");
     assert_eq!(
         dispatcher.topology_upload_batch_sizes.borrow().as_slice(),
         &[4]
@@ -188,9 +194,15 @@ fn resident_graph_uploads_topology_once_and_reuses_frontier_handles() {
 #[test]
 fn resident_single_zero_iters_returns_seed_without_query_allocation_or_dispatch() {
     let dispatcher = ResidentPersistentBfsDispatcher::new();
-    let (off, tgt, msk) = linear_graph();
-    let graph =
-        upload_resident_bfs_graph(&dispatcher, 4, &off, &tgt, &msk).expect("Fix: resident upload");
+    let g = graphs::CHAIN_4;
+    let graph = upload_resident_bfs_graph(
+        &dispatcher,
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+    )
+    .expect("Fix: resident upload");
     let topology_allocs = dispatcher.alloc_sizes.borrow().len();
     let mut scratch = PersistentBfsResidentScratch::default();
     let mut frontier = Vec::with_capacity(4);
@@ -291,9 +303,15 @@ fn resident_query_handle_allocation_rolls_back_partial_allocations() {
 #[test]
 fn resident_graph_batch_reuses_topology_and_frontier_handles() {
     let dispatcher = ResidentPersistentBfsDispatcher::new();
-    let (off, tgt, msk) = linear_graph();
-    let graph =
-        upload_resident_bfs_graph(&dispatcher, 4, &off, &tgt, &msk).expect("Fix: resident upload");
+    let g = graphs::CHAIN_4;
+    let graph = upload_resident_bfs_graph(
+        &dispatcher,
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+    )
+    .expect("Fix: resident upload");
     assert_eq!(graph.words(), 1);
 
     let mut scratch = PersistentBfsResidentScratch::default();
@@ -355,9 +373,15 @@ fn resident_graph_batch_reuses_topology_and_frontier_handles() {
 #[test]
 fn resident_batch_zero_iters_returns_seed_and_zero_changed_without_query_allocation_or_dispatch() {
     let dispatcher = ResidentPersistentBfsDispatcher::new();
-    let (off, tgt, msk) = linear_graph();
-    let graph =
-        upload_resident_bfs_graph(&dispatcher, 4, &off, &tgt, &msk).expect("Fix: resident upload");
+    let g = graphs::CHAIN_4;
+    let graph = upload_resident_bfs_graph(
+        &dispatcher,
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+    )
+    .expect("Fix: resident upload");
     let topology_allocs = dispatcher.alloc_sizes.borrow().len();
     let mut scratch = PersistentBfsResidentScratch::default();
     let mut frontiers = Vec::with_capacity(4);
@@ -403,9 +427,15 @@ fn resident_batch_zero_iters_returns_seed_and_zero_changed_without_query_allocat
 #[test]
 fn resident_plan_cache_keys_include_device_features() {
     let dispatcher = ResidentPersistentBfsDispatcher::new();
-    let (off, tgt, msk) = linear_graph();
-    let graph =
-        upload_resident_bfs_graph(&dispatcher, 4, &off, &tgt, &msk).expect("Fix: resident upload");
+    let g = graphs::CHAIN_4;
+    let graph = upload_resident_bfs_graph(
+        &dispatcher,
+        g.node_count,
+        g.edge_offsets,
+        g.edge_targets,
+        g.edge_kind_mask,
+    )
+    .expect("Fix: resident upload");
     let mut scratch = PersistentBfsResidentScratch::default();
     let mut frontier = Vec::new();
 

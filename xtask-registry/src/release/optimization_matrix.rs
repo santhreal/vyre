@@ -62,11 +62,7 @@ pub(crate) fn run(args: &[String]) {
         blockers,
     };
     xtask::output_arg::write_json(&output, &matrix);
-    xtask::output_arg::report_evidence_artifact(
-        "optimization-matrix",
-        &output,
-        matrix.blockers.len(),
-    );
+    xtask::output_arg::report_evidence_artifact("optimization-matrix", &output, &matrix.blockers);
 }
 
 fn parse_output(args: &[String]) -> Result<PathBuf, String> {

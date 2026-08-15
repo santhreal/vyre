@@ -8,9 +8,7 @@
 use crate::api::metric::elapsed_ns;
 use std::time::Instant;
 
-use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
-};
+use crate::api::case::{BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, WorkloadClass};
 use crate::api::resident::{input_bytes_total, ResidentInputSet};
 use crate::api::suite::SuiteKind;
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
@@ -61,11 +59,8 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
     ],
     layer: BenchLayer::Libs,
     workload: WorkloadClass::Macro,
-    determinism: DeterminismClass::Deterministic,
     owner_crate: "vyre-primitives",
     suites: QUEUE_MATERIALIZE_SUITES,
-    needs_gpu: true,
-    needs_network: false,
     min_vram_bytes: Some(96 * 1024 * 1024),
     min_input_bytes: Some(NODE_COUNT as u64 * 12),
     feature_set: &[
@@ -75,7 +70,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
         "frontier-queue",
         "resident-sequence",
     ],
-    contract: None,
+    ..WorkloadDescription::BASE
 };
 
 static OPS: CaseOps<DataflowIfdsSkewedQueuePrepared> = CaseOps {

@@ -24,6 +24,7 @@ use vyre_primitives::graph::csr_forward_or_changed::plan_csr_forward_or_changed_
 use vyre_primitives::graph::csr_queue_delta::{
     csr_queue_delta_enqueue, csr_queue_delta_strided_enqueue,
 };
+use vyre_test_support::ir_regions::{canonicalize, edge_guard, region};
 
 use super::{
     resident_csr_queue_atomic_word_scan_program, resident_csr_queue_block_offsets_program,
@@ -319,44 +320,6 @@ fn resident_sites_build_identical_traverse_programs() {
             "Fix: adaptive traversal must build the same {role} Program as the resident sites."
         );
     }
-}
-
-/// Erase one builder's private variable prefix so two uses of the same loop
-/// compare equal. Every builder in this family uses exactly one prefix.
-fn canonicalize(program: &Program, prefix: &str) -> String {
-    format!("{:?}", program.entry()).replace(&format!("{prefix}_"), "Q_")
-}
-
-/// Slice a canonicalized dump between two `Let`-introduced markers, cutting
-/// each bound back to the start of its binding so a region always begins and
-/// ends on a whole binding. The slice deliberately starts inside the region
-/// body: the enclosing `Node::Region` carries the entry point's own op id,
-/// which is part of the public contract and differs by construction.
-fn region(dump: &str, from: &str, to: &str) -> String {
-    let bind_start = |marker: &str| {
-        let at = dump
-            .find(marker)
-            .unwrap_or_else(|| panic!("Fix: canonicalized dump must contain `{marker}`:\n{dump}"));
-        dump[..at].rfind("Let {").unwrap_or_else(|| {
-            panic!("Fix: `{marker}` must be introduced by a Let binding:\n{dump}")
-        })
-    };
-    let start = bind_start(from);
-    let end = bind_start(to);
-    assert!(
-        start < end,
-        "Fix: region markers are out of order in:\n{dump}"
-    );
-    dump[start..end].to_string()
-}
-
-/// The edge-kind allow test, destination load, destination bound check, and
-/// destination word/bit split. Shared by every queue Program in the family;
-/// the emit that follows it is what legitimately differs.
-fn edge_guard(program: &Program, prefix: &str, emit_var: &str) -> String {
-    let dump = canonicalize(program, prefix);
-    let emit = format!("Ident(\"{emit_var}\")").replace(&format!("{prefix}_"), "Q_");
-    region(&dump, "Ident(\"Q_kind\")", &emit)
 }
 
 /// A delta-emit queue step over the SAME resident buffers. It is built by the

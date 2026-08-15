@@ -8,9 +8,7 @@
 use crate::api::metric::elapsed_ns;
 use std::time::Instant;
 
-use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
-};
+use crate::api::case::{BenchCase, BenchContext, BenchError, BenchRun, WorkloadClass};
 use crate::api::resident::{input_bytes_total, ResidentInputSet};
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
 use crate::cases::queue_materialize::{
@@ -56,13 +54,9 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
         "resident",
         "release",
     ],
-    layer: BenchLayer::Foundation,
     workload: WorkloadClass::Macro,
-    determinism: DeterminismClass::Deterministic,
     owner_crate: "vyre-primitives",
     suites: SUITES,
-    needs_gpu: true,
-    needs_network: false,
     min_vram_bytes: Some(96 * 1024 * 1024),
     min_input_bytes: Some(CSR_NODE_COUNT as u64 * 12),
     feature_set: &[
@@ -72,7 +66,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
         "graph.skewed-degree",
         "resident-sequence",
     ],
-    contract: None,
+    ..WorkloadDescription::BASE
 };
 
 static OPS: CaseOps<GraphCsrSkewedQueuePrepared> = CaseOps {
