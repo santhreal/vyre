@@ -20,7 +20,7 @@ fn run_generator(root: &Path, mode: &str) -> Output {
 }
 
 fn write_fixture(root: &Path, actions: usize, duplicate_package: bool) {
-    for directory in ["scripts", "release/changes", "docs/release"] {
+    for directory in ["scripts", "release/changes"] {
         fs::create_dir_all(root.join(directory))
             .expect("Fix: release document fixture directories must be creatable");
     }
@@ -81,16 +81,6 @@ packages = ["a"]
         "# Changelog\n\n## [Unreleased]\n\n### Fixed\n\n- stale text\n\n## [1.2.2]\n\n- prior release\n",
     )
     .expect("Fix: fixture changelog must be writable");
-    fs::write(
-        root.join("docs/release/v1.2.3.md"),
-        "# stale preamble\n\n## What is in this release\n\nThe exact release regression is fixed.\n",
-    )
-    .expect("Fix: fixture release notes must be writable");
-    fs::write(
-        root.join("docs/RELEASE.md"),
-        "# Release\n\nVyre 1.2.3.\nrelease/release-train.toml\nRELEASE_CHECKLIST.md\nrelease/changes/unreleased.toml\n--prepublish\n\n## Rollback\n",
-    )
-    .expect("Fix: fixture release runbook must be writable");
 }
 
 /// Locks the repository release surfaces to the train, fragment, and generated-view authorities.
@@ -104,13 +94,13 @@ fn workspace_release_documents_are_current() {
     );
     assert_eq!(
         String::from_utf8(output.stdout).expect("Fix: generator output must be UTF-8"),
-        "release-docs: release train, fragments, notes, and checklist agree\n"
+        "release-docs: release train, fragments, and changelog agree\n"
     );
 }
 
-/// Proves one write derives changelog text, package ownership, repository ownership, and tag order from data.
+/// Proves one write derives the changelog section from the train and the fragments.
 #[test]
-fn write_derives_every_release_metadata_surface() {
+fn write_derives_the_changelog_from_fragments() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), 3, false);
     let output = run_generator(temp.path(), "--write");
@@ -125,30 +115,23 @@ fn write_derives_every_release_metadata_surface() {
     assert!(changelog.contains("- The exact release regression is fixed."));
     assert!(!changelog.contains("stale text"));
 
-    let notes = fs::read_to_string(temp.path().join("docs/release/v1.2.3.md"))
-        .expect("Fix: generated release notes must be readable");
-    assert!(notes.contains("| `vyre` | `owner/vyre` | `1.2.3` | `a@1.2.3` |"));
-    assert!(notes.contains("| Final | Vyre | `vyre-v1.2.3` |"));
-    assert!(notes.contains("## Validated changes"));
-    assert!(notes.contains("- The exact release regression is fixed."));
-
-    let checklist = fs::read_to_string(temp.path().join("docs/RELEASE_CHECKLIST.md"))
-        .expect("Fix: generated release checklist must be readable");
-    assert!(checklist.contains("`action-0`: External action 0."));
-    assert!(checklist.contains("Push Vyre candidate tag `vyre-v1.2.3-rc.1`"));
 }
 
-/// Prevents a hand edit to a generated checklist from silently changing operator release instructions.
+/// Prevents a hand edit to generated changelog content from surviving `--check`.
+///
+/// The generated artifact is the `[Unreleased]` section of `CHANGELOG.md`. Text
+/// edited into it is a release note nobody derived from a fragment, so `--check`
+/// has to refuse it rather than read it as current.
 #[test]
-fn check_rejects_generated_release_document_drift() {
+fn check_rejects_generated_changelog_drift() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), 3, false);
     assert!(run_generator(temp.path(), "--write").status.success());
     fs::write(
-        temp.path().join("docs/RELEASE_CHECKLIST.md"),
-        "# locally edited release procedure\n",
+        temp.path().join("CHANGELOG.md"),
+        "# Changelog\n\n## [Unreleased]\n\n### Fixed\n\n- locally edited release note\n\n## [1.2.2]\n\n- prior release\n",
     )
-    .expect("Fix: stale fixture checklist must be writable");
+    .expect("Fix: stale fixture changelog must be writable");
 
     let output = run_generator(temp.path(), "--check");
     assert!(!output.status.success());
@@ -197,7 +180,7 @@ fn missing_release_note_token_fails_closed() {
     let output = run_generator(temp.path(), "--check");
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr)
-        .contains("missing required token `required-but-absent`"));
+        .contains("missing required release token `required-but-absent`"));
 }
 
 /// Prevents completion evidence from claiming publish or push success before those actions run.
