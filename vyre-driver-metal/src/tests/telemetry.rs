@@ -3,7 +3,6 @@
 use crate::*;
 
 use std::collections::BTreeMap;
-use std::sync::Arc;
 
 use super::fixtures::stores_word;
 use vyre_driver::DispatchConfig;
