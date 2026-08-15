@@ -3,20 +3,14 @@ use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    failure, Artifact, ArtifactNodeId, ArtifactValueId, CompileError, CompilerFailureKind, Digest,
+    failure, frame, frame::Frame, Artifact, ArtifactNodeId, ArtifactValueId, CompileError,
+    CompilerFailureKind, Digest,
 };
 
 /// Current schema for the artifact envelope that carries neutral data and target payloads.
 pub const ARTIFACT_ENVELOPE_SCHEMA_VERSION: u16 = 2;
 /// Current schema for one target payload attachment.
 pub const TARGET_PAYLOAD_SCHEMA_VERSION: u16 = 3;
-
-const ENVELOPE_MAGIC: &[u8; 4] = b"VME0";
-const TARGET_PAYLOAD_MAGIC: &[u8; 4] = b"VTP0";
-const FRAME_HEADER_BYTES: usize = 10;
-const DIGEST_BYTES: usize = 32;
-const ENVELOPE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-envelope-v2\0";
-const TARGET_PAYLOAD_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-target-payload-v3\0";
 
 /// Versioned identity of target bytes without assigning concrete target semantics.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -280,7 +274,7 @@ impl TargetPayload {
             entries,
             bytes,
         };
-        let digest = body_digest(TARGET_PAYLOAD_DIGEST_DOMAIN, &body)?;
+        let digest = body_digest(&frame::TARGET_PAYLOAD, &body)?;
         Ok(Self { body, digest })
     }
 
@@ -328,26 +322,16 @@ impl TargetPayload {
 
     /// Encode this authenticated target payload.
     pub fn to_bytes(&self) -> Result<Vec<u8>, CompileError> {
-        encode_frame(
-            TARGET_PAYLOAD_MAGIC,
-            self.body.schema_version,
-            TARGET_PAYLOAD_DIGEST_DOMAIN,
-            &self.body,
-        )
+        let body = serde_json::to_vec(&self.body).map_err(serialization_failure)?;
+        Ok(frame::TARGET_PAYLOAD
+            .encode(self.body.schema_version, &body)?
+            .bytes)
     }
 
     /// Decode and authenticate one target payload attachment.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, CompileError> {
-        let (version, body, encoded_digest) = decode_frame(
-            bytes,
-            TARGET_PAYLOAD_MAGIC,
-            TARGET_PAYLOAD_SCHEMA_VERSION,
-            TARGET_PAYLOAD_DIGEST_DOMAIN,
-            "target_payload",
-            CompilerFailureKind::TargetPayloadVersionSkew,
-            CompilerFailureKind::TargetPayloadDigestMismatch,
-        )?;
-        let body: TargetPayloadBody = serde_json::from_slice(body).map_err(|error| {
+        let decoded = frame::TARGET_PAYLOAD.decode(bytes)?;
+        let body: TargetPayloadBody = serde_json::from_slice(decoded.body).map_err(|error| {
             failure(
                 CompilerFailureKind::MalformedTargetPayload,
                 "target_payload.body",
@@ -355,7 +339,7 @@ impl TargetPayload {
                 "supply canonical target payload bytes emitted by this crate",
             )
         })?;
-        if body.schema_version != version {
+        if body.schema_version != decoded.version {
             return Err(failure(
                 CompilerFailureKind::TargetPayloadVersionSkew,
                 "target_payload.body.schema_version",
@@ -364,8 +348,7 @@ impl TargetPayload {
             ));
         }
         let canonical = serde_json::to_vec(&body).map_err(serialization_failure)?;
-        if canonical.as_slice() != &bytes[FRAME_HEADER_BYTES..FRAME_HEADER_BYTES + canonical.len()]
-        {
+        if canonical.as_slice() != decoded.body {
             return Err(failure(
                 CompilerFailureKind::MalformedTargetPayload,
                 "target_payload.body",
@@ -375,7 +358,7 @@ impl TargetPayload {
         }
         Ok(Self {
             body,
-            digest: Digest(encoded_digest),
+            digest: Digest(decoded.digest),
         })
     }
 }
@@ -509,26 +492,16 @@ impl ArtifactEnvelope {
                 .map(TargetPayload::to_bytes)
                 .collect::<Result<_, _>>()?,
         };
-        encode_frame(
-            ENVELOPE_MAGIC,
-            body.schema_version,
-            ENVELOPE_DIGEST_DOMAIN,
-            &body,
-        )
+        let body = serde_json::to_vec(&body).map_err(serialization_failure)?;
+        Ok(frame::ENVELOPE
+            .encode(ARTIFACT_ENVELOPE_SCHEMA_VERSION, &body)?
+            .bytes)
     }
 
     /// Decode, authenticate, and validate a complete artifact envelope.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, CompileError> {
-        let (version, body, _) = decode_frame(
-            bytes,
-            ENVELOPE_MAGIC,
-            ARTIFACT_ENVELOPE_SCHEMA_VERSION,
-            ENVELOPE_DIGEST_DOMAIN,
-            "envelope",
-            CompilerFailureKind::VersionSkew,
-            CompilerFailureKind::DigestMismatch,
-        )?;
-        let body: EnvelopeBody = serde_json::from_slice(body).map_err(|error| {
+        let decoded = frame::ENVELOPE.decode(bytes)?;
+        let body: EnvelopeBody = serde_json::from_slice(decoded.body).map_err(|error| {
             failure(
                 CompilerFailureKind::MalformedArtifact,
                 "envelope.body",
@@ -536,7 +509,7 @@ impl ArtifactEnvelope {
                 "supply canonical envelope bytes emitted by this crate",
             )
         })?;
-        if body.schema_version != version {
+        if body.schema_version != decoded.version {
             return Err(failure(
                 CompilerFailureKind::VersionSkew,
                 "envelope.body.schema_version",
@@ -545,8 +518,7 @@ impl ArtifactEnvelope {
             ));
         }
         let canonical = serde_json::to_vec(&body).map_err(serialization_failure)?;
-        if canonical.as_slice() != &bytes[FRAME_HEADER_BYTES..FRAME_HEADER_BYTES + canonical.len()]
-        {
+        if canonical.as_slice() != decoded.body {
             return Err(failure(
                 CompilerFailureKind::MalformedArtifact,
                 "envelope.body",
@@ -588,7 +560,7 @@ fn validate_target_payload(
         ));
     }
     validate_entries(neutral, payload.profile(), payload.entries())?;
-    let digest = body_digest(TARGET_PAYLOAD_DIGEST_DOMAIN, &payload.body)?;
+    let digest = body_digest(&frame::TARGET_PAYLOAD, &payload.body)?;
     if digest != payload.digest() {
         return Err(failure(
             CompilerFailureKind::TargetPayloadDigestMismatch,
@@ -760,120 +732,9 @@ fn validate_entries(
     Ok(())
 }
 
-fn encode_frame<T: Serialize>(
-    magic: &[u8; 4],
-    version: u16,
-    domain: &[u8],
-    body: &T,
-) -> Result<Vec<u8>, CompileError> {
+fn body_digest<T: Serialize>(frame: &Frame, body: &T) -> Result<Digest, CompileError> {
     let body = serde_json::to_vec(body).map_err(serialization_failure)?;
-    let body_len = u32::try_from(body.len()).map_err(|_| {
-        failure(
-            CompilerFailureKind::MalformedArtifact,
-            "envelope.body",
-            "canonical body exceeds the u32 framing limit",
-            "reduce or detach target payload bytes",
-        )
-    })?;
-    let digest = digest_bytes(domain, version, &body);
-    let mut bytes = Vec::with_capacity(FRAME_HEADER_BYTES + body.len() + DIGEST_BYTES);
-    bytes.extend_from_slice(magic);
-    bytes.extend_from_slice(&version.to_le_bytes());
-    bytes.extend_from_slice(&body_len.to_le_bytes());
-    bytes.extend_from_slice(&body);
-    bytes.extend_from_slice(&digest);
-    Ok(bytes)
-}
-
-fn decode_frame<'a>(
-    bytes: &'a [u8],
-    magic: &[u8; 4],
-    expected_version: u16,
-    domain: &[u8],
-    path: &str,
-    version_code: CompilerFailureKind,
-    digest_code: CompilerFailureKind,
-) -> Result<(u16, &'a [u8], [u8; 32]), CompileError> {
-    if bytes.len() < FRAME_HEADER_BYTES + DIGEST_BYTES {
-        return Err(failure(
-            CompilerFailureKind::MalformedArtifact,
-            format!("{path}.header"),
-            "framed bytes are shorter than the fixed header and digest",
-            "supply one complete canonical frame",
-        ));
-    }
-    if &bytes[..4] != magic {
-        return Err(failure(
-            CompilerFailureKind::MalformedArtifact,
-            format!("{path}.magic"),
-            "framing magic is invalid",
-            "supply bytes emitted for the expected artifact layer",
-        ));
-    }
-    let version = u16::from_le_bytes([bytes[4], bytes[5]]);
-    if version != expected_version {
-        return Err(failure(
-            version_code,
-            format!("{path}.schema_version"),
-            format!("schema {version} is unsupported; expected {expected_version}"),
-            "recompile or re-materialize with a compatible schema version",
-        ));
-    }
-    let body_len = u32::from_le_bytes(bytes[6..10].try_into().expect("fixed frame slice")) as usize;
-    let expected_len = FRAME_HEADER_BYTES
-        .checked_add(body_len)
-        .and_then(|len| len.checked_add(DIGEST_BYTES))
-        .ok_or_else(|| {
-            failure(
-                CompilerFailureKind::MalformedArtifact,
-                format!("{path}.body_length"),
-                "framed body length overflowed addressable memory",
-                "supply bounded canonical artifact bytes",
-            )
-        })?;
-    if bytes.len() != expected_len {
-        return Err(failure(
-            CompilerFailureKind::MalformedArtifact,
-            format!("{path}.body_length"),
-            format!(
-                "framing declares {expected_len} bytes but received {}",
-                bytes.len()
-            ),
-            "supply exactly one complete canonical frame",
-        ));
-    }
-    let body = &bytes[FRAME_HEADER_BYTES..FRAME_HEADER_BYTES + body_len];
-    let expected_digest = digest_bytes(domain, version, body);
-    let encoded_digest: [u8; 32] = bytes[FRAME_HEADER_BYTES + body_len..]
-        .try_into()
-        .expect("validated digest length");
-    if expected_digest != encoded_digest {
-        return Err(failure(
-            digest_code,
-            format!("{path}.digest"),
-            "framed body does not match its content identity",
-            "discard the corrupted bytes and regenerate them",
-        ));
-    }
-    Ok((version, body, encoded_digest))
-}
-
-fn body_digest<T: Serialize>(domain: &[u8], body: &T) -> Result<Digest, CompileError> {
-    let body = serde_json::to_vec(body).map_err(serialization_failure)?;
-    Ok(Digest(digest_bytes(
-        domain,
-        TARGET_PAYLOAD_SCHEMA_VERSION,
-        &body,
-    )))
-}
-
-fn digest_bytes(domain: &[u8], version: u16, body: &[u8]) -> [u8; 32] {
-    let mut hasher = blake3::Hasher::new();
-    hasher.update(domain);
-    hasher.update(&version.to_le_bytes());
-    hasher.update(&(body.len() as u64).to_le_bytes());
-    hasher.update(body);
-    *hasher.finalize().as_bytes()
+    Ok(Digest(frame.digest(frame.version, &body)))
 }
 
 fn serialization_failure(error: serde_json::Error) -> CompileError {

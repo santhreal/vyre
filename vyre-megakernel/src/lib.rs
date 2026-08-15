@@ -19,6 +19,7 @@ mod candidate;
 pub mod cost;
 mod envelope;
 mod facts;
+mod frame;
 /// Stable semantic legality decisions for whole-program fusion.
 pub mod legality;
 mod normalize;
@@ -52,10 +53,6 @@ use vyre_foundation::validate::{validate_with_options, BackendCapabilities, Vali
 
 /// Current canonical artifact schema.
 pub const ARTIFACT_SCHEMA_VERSION: u16 = 4;
-const ARTIFACT_MAGIC: &[u8; 4] = b"VMK0";
-const ARTIFACT_HEADER_BYTES: usize = 10;
-const ARTIFACT_DIGEST_BYTES: usize = 32;
-const ARTIFACT_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-artifact-v4\0";
 const SOURCE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-source-v2\0";
 const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v2\0";
 const COMPILER_IR_CAPABILITIES: BackendCapabilities = BackendCapabilities {
@@ -731,73 +728,13 @@ impl Artifact {
 
     /// Encode canonical versioned bytes with an authenticated body.
     pub fn to_bytes(&self) -> Result<Vec<u8>, CompileError> {
-        encode_payload(&self.payload)
+        Ok(encode_payload(&self.payload)?.bytes)
     }
 
     /// Decode, authenticate, and reject non-canonical or incompatible bytes.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, CompileError> {
-        if bytes.len() < ARTIFACT_HEADER_BYTES + ARTIFACT_DIGEST_BYTES {
-            return Err(failure(
-                CompilerFailureKind::MalformedArtifact,
-                "artifact.header",
-                "artifact is shorter than its fixed framing",
-                "supply complete VMK0 bytes",
-            ));
-        }
-        if &bytes[..4] != ARTIFACT_MAGIC {
-            return Err(failure(
-                CompilerFailureKind::MalformedArtifact,
-                "artifact.magic",
-                "artifact magic is not VMK0",
-                "supply canonical megakernel artifact bytes",
-            ));
-        }
-        let version = u16::from_le_bytes([bytes[4], bytes[5]]);
-        if version != ARTIFACT_SCHEMA_VERSION {
-            return Err(failure(
-                CompilerFailureKind::VersionSkew,
-                "artifact.schema_version",
-                format!("schema {version} is unsupported; expected {ARTIFACT_SCHEMA_VERSION}"),
-                "recompile the source graph with this compiler version",
-            ));
-        }
-        let body_len = u32::from_le_bytes(bytes[6..10].try_into().expect("fixed slice")) as usize;
-        let expected_len = ARTIFACT_HEADER_BYTES
-            .checked_add(body_len)
-            .and_then(|len| len.checked_add(ARTIFACT_DIGEST_BYTES))
-            .ok_or_else(|| {
-                failure(
-                    CompilerFailureKind::MalformedArtifact,
-                    "artifact.body_length",
-                    "framed body length overflowed addressable memory",
-                    "supply bounded canonical artifact bytes",
-                )
-            })?;
-        if bytes.len() != expected_len {
-            return Err(failure(
-                CompilerFailureKind::MalformedArtifact,
-                "artifact.body_length",
-                format!(
-                    "framing declares {expected_len} bytes but received {}",
-                    bytes.len()
-                ),
-                "supply exactly one complete canonical artifact",
-            ));
-        }
-        let body = &bytes[ARTIFACT_HEADER_BYTES..ARTIFACT_HEADER_BYTES + body_len];
-        let expected_digest = artifact_digest(version, body);
-        let encoded_digest: [u8; 32] = bytes[ARTIFACT_HEADER_BYTES + body_len..]
-            .try_into()
-            .expect("validated digest length");
-        if expected_digest.0 != encoded_digest {
-            return Err(failure(
-                CompilerFailureKind::DigestMismatch,
-                "artifact.digest",
-                "artifact body does not match its content identity",
-                "discard the corrupted artifact and recompile",
-            ));
-        }
-        let payload: ArtifactPayload = serde_json::from_slice(body).map_err(|error| {
+        let decoded = frame::ARTIFACT.decode(bytes)?;
+        let payload: ArtifactPayload = serde_json::from_slice(decoded.body).map_err(|error| {
             failure(
                 CompilerFailureKind::MalformedArtifact,
                 "artifact.body",
@@ -805,7 +742,7 @@ impl Artifact {
                 "supply a canonical body emitted by this crate",
             )
         })?;
-        if payload.schema_version != version {
+        if payload.schema_version != decoded.version {
             return Err(failure(
                 CompilerFailureKind::VersionSkew,
                 "artifact.body.schema_version",
@@ -814,7 +751,7 @@ impl Artifact {
             ));
         }
         let canonical = serde_json::to_vec(&payload).map_err(serialization_failure)?;
-        if canonical != body {
+        if canonical != decoded.body {
             return Err(failure(
                 CompilerFailureKind::MalformedArtifact,
                 "artifact.body",
@@ -824,7 +761,7 @@ impl Artifact {
         }
         Ok(Self {
             payload,
-            digest: expected_digest,
+            digest: Digest(decoded.digest),
         })
     }
 }
@@ -903,8 +840,8 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileErr
         geometry,
         provenance,
     };
-    let bytes = encode_payload(&payload)?;
-    let byte_len = u64::try_from(bytes.len())
+    let framed = encode_payload(&payload)?;
+    let byte_len = u64::try_from(framed.bytes.len())
         .map_err(|_| overflow("artifact", "artifact length exceeds u64"))?;
     if byte_len > request.max_artifact_bytes {
         return Err(failure(
@@ -917,12 +854,9 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileErr
             "raise the explicit artifact bound or reduce the source graph",
         ));
     }
-    let digest: [u8; 32] = bytes[bytes.len() - ARTIFACT_DIGEST_BYTES..]
-        .try_into()
-        .expect("encoded digest length");
     Ok(Artifact {
         payload,
-        digest: Digest(digest),
+        digest: Digest(framed.digest),
     })
 }
 
@@ -1324,35 +1258,9 @@ fn build_resources(
     ))
 }
 
-fn encode_payload(payload: &ArtifactPayload) -> Result<Vec<u8>, CompileError> {
+fn encode_payload(payload: &ArtifactPayload) -> Result<frame::Framed, CompileError> {
     let body = serde_json::to_vec(payload).map_err(serialization_failure)?;
-    let body_len = u32::try_from(body.len()).map_err(|_| {
-        overflow(
-            "artifact.body",
-            "canonical body exceeds the u32 framing limit",
-        )
-    })?;
-    let digest = artifact_digest(payload.schema_version, &body);
-    let capacity = ARTIFACT_HEADER_BYTES
-        .checked_add(body.len())
-        .and_then(|len| len.checked_add(ARTIFACT_DIGEST_BYTES))
-        .ok_or_else(|| overflow("artifact", "encoded artifact length overflowed usize"))?;
-    let mut bytes = Vec::with_capacity(capacity);
-    bytes.extend_from_slice(ARTIFACT_MAGIC);
-    bytes.extend_from_slice(&payload.schema_version.to_le_bytes());
-    bytes.extend_from_slice(&body_len.to_le_bytes());
-    bytes.extend_from_slice(&body);
-    bytes.extend_from_slice(&digest.0);
-    Ok(bytes)
-}
-
-fn artifact_digest(version: u16, body: &[u8]) -> Digest {
-    let mut hasher = blake3::Hasher::new();
-    hasher.update(ARTIFACT_DIGEST_DOMAIN);
-    hasher.update(&version.to_le_bytes());
-    hasher.update(&(body.len() as u64).to_le_bytes());
-    hasher.update(body);
-    Digest(*hasher.finalize().as_bytes())
+    frame::ARTIFACT.encode(payload.schema_version, &body)
 }
 
 fn domain_digest(domain: &[u8], bytes: &[u8]) -> Digest {
