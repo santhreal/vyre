@@ -15,8 +15,8 @@ use crate::engine::record_and_readback::{record_and_readback, DispatchLabels, Re
 use crate::runtime::cache::pipeline::LruPipelineCache;
 use crate::runtime::device::EnabledFeatures;
 use crate::DispatchArena;
-use vyre_driver::pipeline::DEFAULT_PIPELINE_CACHE_ENTRIES;
 use vyre_driver::BackendError;
+use vyre_driver::DEFAULT_PIPELINE_CACHE_ENTRIES;
 
 /// Device, queue, dispatch config and the two compile caches every pipeline
 /// contract test needs. Each test used to spell this block out again.

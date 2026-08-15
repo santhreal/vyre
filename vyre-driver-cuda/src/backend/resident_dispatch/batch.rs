@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use rustc_hash::FxHashSet;
 use smallvec::SmallVec;
-use vyre_driver::binding::BindingRole;
+use vyre_driver::BindingRole;
 use vyre_driver::{BackendError, DispatchConfig, ResidentHandle};
 use vyre_foundation::ir::Program;
 

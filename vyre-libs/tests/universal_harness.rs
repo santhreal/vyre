@@ -6,10 +6,7 @@
 #![allow(deprecated)]
 use blake3::Hash;
 use vyre::ir::Program;
-use vyre_driver::{
-    backend::{backend_dispatches, registered_backends},
-    BackendRegistration, DispatchConfig,
-};
+use vyre_driver::{backend_dispatches, registered_backends, BackendRegistration, DispatchConfig};
 use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::optimizer::optimize;
 use vyre_foundation::validate::{BackendCapabilities, ValidationOptions};

@@ -14,7 +14,7 @@
 //!
 //! [`cell_grid_fill`]: crate::visual::cell_grid::cell_grid_fill
 
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::cell_grid::{cell_lookup_nodes, GridShape};

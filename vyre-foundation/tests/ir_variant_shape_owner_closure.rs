@@ -636,7 +636,10 @@ fn the_optimizer_expression_rewrite_reaches_every_operand_slot() {
             sample.label()
         );
         let rewritten = pass
-            .batch_apply(program, &vyre_foundation::optimizer::AdapterCaps::conservative())
+            .batch_apply(
+                program,
+                &vyre_foundation::optimizer::AdapterCaps::conservative(),
+            )
             .program;
         assert!(
             !marker_survives(&rewritten),
@@ -773,7 +776,10 @@ fn scan_node_visitor_implementations(hooks: &BTreeSet<String>) -> BTreeMap<Strin
                 .filter(|hook| body.contains(&format!("fn {hook}(")))
                 .count();
             if per_variant >= 3 {
-                found.insert(name, path.strip_prefix(&root).unwrap_or(&path).to_path_buf());
+                found.insert(
+                    name,
+                    path.strip_prefix(&root).unwrap_or(&path).to_path_buf(),
+                );
             }
         }
     }

@@ -22,7 +22,7 @@ mod definition;
 mod meta;
 mod scope;
 /// Per-node-kind bitset constants for `ProgramStats`.
-pub mod stats;
+pub(crate) mod stats;
 
 #[cfg(test)]
 mod stats_test;

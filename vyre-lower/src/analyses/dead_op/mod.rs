@@ -242,7 +242,7 @@ mod tests {
             .dispatch(64, 1, 1)
             .body(body().op(effect(
                 KernelOpKind::Barrier {
-                    ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+                    ordering: vyre_foundation::MemoryOrdering::SeqCst,
                 },
                 [],
             )))

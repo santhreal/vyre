@@ -5,7 +5,7 @@
 //! materialization is registered only on Apple targets; `acquire()` on other
 //! targets returns an actionable unsupported error.
 
-use vyre_driver::backend::{BackendError, VyreBackend};
+use vyre_driver::{BackendError, VyreBackend};
 
 /// Stable backend id for native Metal execution.
 pub const METAL_BACKEND_ID: &str = "metal";
@@ -79,14 +79,14 @@ pub fn registered_backend_id() -> Option<&'static str> {
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 inventory::submit! {
-    vyre_driver::backend::BackendRegistration {
+    vyre_driver::BackendRegistration {
         id: METAL_BACKEND_ID,
         target_id: METAL_TARGET_ID,
         payload_format: Some(target_compiler::METAL_TARGET_FORMAT),
         reference_oracle: false,
         factory: acquire,
-        supported_ops: vyre_driver::backend::core_supported_ops,
-        semantic_operations: vyre_driver::backend::dialect_only_supported_ops,
+        supported_ops: vyre_driver::core_supported_ops,
+        semantic_operations: vyre_driver::dialect_only_supported_ops,
         target_compiler: Some(target_compiler::target_compiler_factory),
         materializer: Some(materializer::materializer_factory),
     }
@@ -94,7 +94,7 @@ inventory::submit! {
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 inventory::submit! {
-    vyre_driver::backend::BackendCapability {
+    vyre_driver::BackendCapability {
         id: METAL_BACKEND_ID,
         dispatches: true,
     }
@@ -102,7 +102,7 @@ inventory::submit! {
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 inventory::submit! {
-    vyre_driver::backend::BackendPrecedence {
+    vyre_driver::BackendPrecedence {
         id: METAL_BACKEND_ID,
         rank: 25,
     }

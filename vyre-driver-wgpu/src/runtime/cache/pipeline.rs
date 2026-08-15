@@ -48,10 +48,7 @@ impl LruPipelineCache {
     /// Create a cache capped at `max_entries`, with the production byte budget.
     #[cfg(test)]
     pub(crate) fn new(max_entries: u32) -> Self {
-        Self::with_limits(
-            max_entries,
-            vyre_driver::pipeline::DEFAULT_PIPELINE_CACHE_BYTES,
-        )
+        Self::with_limits(max_entries, vyre_driver::DEFAULT_PIPELINE_CACHE_BYTES)
     }
 
     /// Create a cache capped by entry count and estimated artifact bytes.

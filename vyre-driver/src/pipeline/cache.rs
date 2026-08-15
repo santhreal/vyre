@@ -12,7 +12,7 @@ use vyre_foundation::ir::Program;
 use vyre_spec::BackendId;
 
 /// Maximum persistent pipeline blob read into memory.
-pub const MAX_DISK_PIPELINE_BLOB_BYTES: u64 = 64 * 1024 * 1024;
+const MAX_DISK_PIPELINE_BLOB_BYTES: u64 = 64 * 1024 * 1024;
 
 /// Disk cache for compiled pipeline blobs keyed by program and device.
 pub struct DiskPipelineCache {

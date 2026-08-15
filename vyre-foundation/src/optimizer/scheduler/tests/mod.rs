@@ -63,7 +63,7 @@ struct TestPass {
     changes: bool,
 }
 
-impl crate::optimizer::private::Sealed for TestPass {}
+impl crate::optimizer::sealed::Sealed for TestPass {}
 
 impl ProgramPass for TestPass {
     fn metadata(&self) -> PassMetadata {
@@ -101,7 +101,7 @@ struct IdenticalRewritePass {
     metadata: PassMetadata,
 }
 
-impl crate::optimizer::private::Sealed for IdenticalRewritePass {}
+impl crate::optimizer::sealed::Sealed for IdenticalRewritePass {}
 
 impl ProgramPass for IdenticalRewritePass {
     fn metadata(&self) -> PassMetadata {
@@ -131,7 +131,7 @@ struct BarrierAddingPass {
     allowed: ProgramEffects,
 }
 
-impl crate::optimizer::private::Sealed for BarrierAddingPass {}
+impl crate::optimizer::sealed::Sealed for BarrierAddingPass {}
 
 impl ProgramPass for BarrierAddingPass {
     fn metadata(&self) -> PassMetadata {
@@ -172,7 +172,7 @@ struct LinearBreakingPass {
     metadata: PassMetadata,
 }
 
-impl crate::optimizer::private::Sealed for LinearBreakingPass {}
+impl crate::optimizer::sealed::Sealed for LinearBreakingPass {}
 
 impl ProgramPass for LinearBreakingPass {
     fn metadata(&self) -> PassMetadata {
@@ -209,7 +209,7 @@ struct ShapeBreakingPass {
     metadata: PassMetadata,
 }
 
-impl crate::optimizer::private::Sealed for ShapeBreakingPass {}
+impl crate::optimizer::sealed::Sealed for ShapeBreakingPass {}
 
 impl ProgramPass for ShapeBreakingPass {
     fn metadata(&self) -> PassMetadata {
@@ -241,7 +241,7 @@ struct ShapeRepairingPass {
     metadata: PassMetadata,
 }
 
-impl crate::optimizer::private::Sealed for ShapeRepairingPass {}
+impl crate::optimizer::sealed::Sealed for ShapeRepairingPass {}
 
 impl ProgramPass for ShapeRepairingPass {
     fn metadata(&self) -> PassMetadata {
@@ -273,7 +273,7 @@ struct ExprOnlyPass {
     metadata: PassMetadata,
 }
 
-impl crate::optimizer::private::Sealed for ExprOnlyPass {}
+impl crate::optimizer::sealed::Sealed for ExprOnlyPass {}
 
 impl ProgramPass for ExprOnlyPass {
     fn metadata(&self) -> PassMetadata {
@@ -307,7 +307,7 @@ struct StoreValueRewritePass {
     to: u32,
 }
 
-impl crate::optimizer::private::Sealed for StoreValueRewritePass {}
+impl crate::optimizer::sealed::Sealed for StoreValueRewritePass {}
 
 impl ProgramPass for StoreValueRewritePass {
     fn metadata(&self) -> PassMetadata {
@@ -337,7 +337,7 @@ impl ProgramPass for StoreValueRewritePass {
 #[derive(Debug)]
 struct SkipPass;
 
-impl crate::optimizer::private::Sealed for SkipPass {}
+impl crate::optimizer::sealed::Sealed for SkipPass {}
 
 impl ProgramPass for SkipPass {
     fn metadata(&self) -> PassMetadata {
@@ -362,7 +362,7 @@ struct RefusingPass {
     metadata: PassMetadata,
 }
 
-impl crate::optimizer::private::Sealed for RefusingPass {}
+impl crate::optimizer::sealed::Sealed for RefusingPass {}
 
 impl ProgramPass for RefusingPass {
     fn metadata(&self) -> PassMetadata {
@@ -400,7 +400,7 @@ struct BatchingPass {
     threshold: usize,
 }
 
-impl crate::optimizer::private::Sealed for BatchingPass {}
+impl crate::optimizer::sealed::Sealed for BatchingPass {}
 
 impl ProgramPass for BatchingPass {
     fn metadata(&self) -> PassMetadata {

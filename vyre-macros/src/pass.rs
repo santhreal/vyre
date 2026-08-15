@@ -343,7 +343,7 @@ pub(crate) fn vyre_pass_impl(args: TokenStream, item: TokenStream) -> TokenStrea
     quote! {
         #item
 
-        impl ::vyre::optimizer::private::Sealed for #ident {}
+        impl ::vyre::optimizer::sealed::Sealed for #ident {}
 
         impl ::vyre::optimizer::ProgramPass for #ident {
             #[inline]

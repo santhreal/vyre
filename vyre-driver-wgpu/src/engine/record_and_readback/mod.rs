@@ -245,10 +245,7 @@ fn record_dispatch_unsubmitted_impl(
                 .transpose()?;
             if let Some(words) = resolved_words {
                 request.workgroup_count =
-                    vyre_driver::program_walks::infer_dispatch_grid_for_count(
-                        words,
-                        workgroup_shape,
-                    )?;
+                    vyre_driver::infer_dispatch_grid_for_count(words, workgroup_shape)?;
             }
         }
     }

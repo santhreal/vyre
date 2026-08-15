@@ -7,8 +7,8 @@ use std::sync::Arc;
 use cudarc::driver::sys::CUstream;
 use smallvec::SmallVec;
 use vyre_driver::accounting::checked_add_usize_lazy;
-use vyre_driver::binding::BindingRole;
 use vyre_driver::transfer_accounting::TransferAccountingPolicy;
+use vyre_driver::BindingRole;
 use vyre_driver::{BackendError, DispatchConfig, OutputBuffers, PendingDispatch, VyreBackend};
 use vyre_foundation::ir::Program;
 
@@ -52,7 +52,7 @@ struct CudaReadyPending {
 const CUDA_HOST_TRANSFER_ACCOUNTING: TransferAccountingPolicy =
     TransferAccountingPolicy::new("CUDA", "split the dispatch into bounded chunks");
 
-impl vyre_driver::backend::private::Sealed for CudaReadyPending {}
+impl vyre_driver::sealed::Sealed for CudaReadyPending {}
 
 impl PendingDispatch for CudaReadyPending {
     fn is_ready(&self) -> bool {
@@ -66,7 +66,7 @@ impl PendingDispatch for CudaReadyPending {
 
 struct GridSyncSplitCudaBackend<'a>(&'a CudaBackend);
 
-impl vyre_driver::backend::private::Sealed for GridSyncSplitCudaBackend<'_> {}
+impl vyre_driver::sealed::Sealed for GridSyncSplitCudaBackend<'_> {}
 
 impl VyreBackend for GridSyncSplitCudaBackend<'_> {
     fn id(&self) -> &'static str {
@@ -378,7 +378,7 @@ impl CudaBackend {
         let (outputs, device_ns) = pending.await_timed_result()?;
         let wait_ns = CUDA_NUMERIC.elapsed_nanos_u64(wait_started, "host-dispatch wait latency")?;
         if let Some(measured_device_ns) = device_ns {
-            let _accepted = vyre_driver::launch::record_launch_measurement(
+            let _accepted = vyre_driver::record_launch_measurement(
                 program,
                 config,
                 self.launch_limits(),
@@ -1011,8 +1011,8 @@ mod tests {
     use crate::backend::CudaDispatchPlan;
     use smallvec::smallvec;
     use std::sync::Arc;
-    use vyre_driver::binding::{Binding, BindingPlan, BindingRole};
     use vyre_driver::LaunchPlan;
+    use vyre_driver::{Binding, BindingPlan, BindingRole};
 
     #[test]
     fn host_upload_batch_capacity_counts_inputs_once_plus_params() {

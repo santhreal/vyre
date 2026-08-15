@@ -1227,6 +1227,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `vyre_foundation::optimizer::passes::fusion_cse::dce::LiveSet` is new and is
   the one place the live-set type is named, replacing the concrete set spelled
   in four files.
+- Items no consumer can reach are no longer declared public: the value-range
+  body walk, the shared-memory promotion budget entry, and the pipeline blob
+  ceiling are private to their crates, and the deprecation warning code has one
+  published path at vyre_driver::DEPRECATED_OP_CODE.
 - The IR-shape proptest corpus generates all twenty `Node` variants, up from
   eight. Async transfers and waits, traps and resumes, the four collectives,
   indirect dispatch, regions and opaque extensions were never produced, so
@@ -1564,6 +1568,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   traversal answered to two paths; the submodules are private and the re-export
   at `transform::visit` is the one path, which is what its own module
   documentation already claimed.
+- Every item a vyre crate publishes is reachable at one public path. A
+  submodule that exists because a file was split is now private to its crate
+  and the owning module re-exports what it holds, so vyre-foundation,
+  vyre-libs, vyre-driver, vyre-driver-cuda, vyre-lower and vyre-spec no longer
+  publish the same item under both a flat name and a deep module path. Measured
+  second paths fall from 3331 to 493 across the 26 committed snapshots.
 - Every resident work queue item is published at one path. The parent module
   blanket re-export of 174 names from its public submodules is gone, so a
   caller names the submodule that owns the item, and the crate duplicate-path
@@ -2134,6 +2144,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   whose generator was retired is stale by construction, and the README sections
   plus `--help` are the live surface. `scripts/cli_docs.py` and
   `scripts/lib/cargo_runner.py` are gone.
+- vyre_foundation::ir publishes each IR type once. The facade previously
+  re-exported the whole private model tree, so every expression, node, and
+  program type answered to both ir::Name and ir::model::<submodule>::Name.
+  Callers use the flat ir:: path; GeneratorRef, node_op_id, Scope and the
+  program-graph identity types joined it.
 - The runtime module that owns persistent slot residency is
   `vyre-runtime/src/resident_work_queue/`, and its lane, its test files, and
   its architecture page carry the same name. The directory was `megakernel/`, a
@@ -2147,6 +2162,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `vyre-runtime/ARCHITECTURE.md` described three types that do not exist and a
   directory that no longer did; it now describes the real submodules and the
   real public surface.
+- The marker trait that seals the driver, optimizer and registry traits lives
+  in a module named sealed rather than private, and vyre-driver publishes it at
+  vyre_driver::sealed. A module name states what a module contains, not who may
+  reach it.
 - `recurrent_gated_delta` and `chunked_gated_delta` take `&GatedDeltaSpec`,
   which is now public, and the chunked schedule is exported from the module
   that builds it. Each entry point had restated the same sixteen positional
@@ -2349,6 +2368,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   wire round trip exercises is the sample grammar `vyre-grammar-gen/src/lr.rs`
   already owned, not a second copy of it. Pins lowered to the measured tree:
   vyre 22 to 0, vyre-grammar-gen 137 to 119.
+- The wire-format round-trip and corruption assertions live in
+  vyre_foundation::serial::wire_round_trip instead of a test_helpers module
+  nested inside envelope.rs. vyre_primitives::serial_data re-exports the new
+  module.
 - Every witness input expansion routes through `WitnessInputPlan`. Three copies
   of the planner existed beside the owner: the per-op ULP audit and the
   cross-backend parity matrix each carried a full reimplementation differing
@@ -2379,6 +2402,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 
 ### Removed
 
+- The use-path classifier no longer special-cases a test_helpers file stem. No
+  file in the tree carries that name, and the shape it described is one the
+  tree rejects.
 - `vyre-runtime/src/resident_work_queue/scaling.rs` is gone. It declared no
   item of its own: every line was a `pub use` of a `planner` or `policy` item,
   so each of those 77 items had two public paths and a reader had to pick. Its
@@ -3898,6 +3924,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   six files split in this change are replaced by rows measuring their largest
   children, so each one is now held to a tighter number than the file it came
   from.
+- vyre_libs::prelude exported the decode::inflate module where it meant the two
+  inflate builders. It now re-exports inflate_stored_block and
+  inflate_stored_block_then_aho_corasick.
 - The crate ownership registry records the feature selection each dependency
   edge is built with. The `xtask-registry` to `vyre-libs` row named no features
   while the edge enables `full` and `matching-regex`, so the derived crate

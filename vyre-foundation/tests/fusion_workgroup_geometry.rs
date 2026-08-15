@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 use vyre_foundation::execution_plan::fusion::{fuse_programs, FusionError};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::memory_model::MemoryOrdering;
+use vyre_foundation::MemoryOrdering;
 
 /// An arm with the given workgroup size whose invocations are independent.
 ///

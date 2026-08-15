@@ -27,13 +27,13 @@
 //!   cache descriptors on disk.
 //!
 //! Every public descriptor type is declared in this file: the public API
-//! snapshot pins their path at `vyre_lower::descriptor::*`. Each child
+//! snapshot pins their path at `vyre_lower::*`. Each child
 //! module owns the behavior for one concern.
 
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use vyre_foundation::ir::{AtomicOp, BinOp, DataType, SubgroupReduceOp, UnOp};
-use vyre_foundation::memory_model::MemoryOrdering;
+use vyre_foundation::MemoryOrdering;
 
 mod binding_layout;
 mod intent;

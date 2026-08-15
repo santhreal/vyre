@@ -21,7 +21,7 @@
 
 use std::env;
 
-use vyre_driver::backend::{backend_dispatches, registered_backends_by_precedence_slice};
+use vyre_driver::{backend_dispatches, registered_backends_by_precedence_slice};
 use vyre_driver::{BackendError, BackendRegistration};
 use vyre_foundation::ir::Program;
 
@@ -100,7 +100,7 @@ impl BackendRouter {
         _program: &Program,
         source: Override<'_>,
     ) -> Result<RouterDecision, BackendError> {
-        let registered = vyre_driver::backend::registered_backends()?;
+        let registered = vyre_driver::registered_backends()?;
 
         let forced: Option<String> = match source {
             Override::FromEnv => env::var(OVERRIDE_ENV).ok(),
@@ -168,7 +168,7 @@ impl BackendRouter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_driver::backend::backend_precedence;
+    use vyre_driver::backend_precedence;
 
     fn noop_program() -> Program {
         // Programs built without any buffers / nodes are valid for

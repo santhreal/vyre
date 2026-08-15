@@ -2,7 +2,7 @@
 
 mod common;
 use common::u32_bytes;
-use vyre_driver::binding::{BindingPlan, BindingRole};
+use vyre_driver::{BindingPlan, BindingRole};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[test]

@@ -36,7 +36,7 @@ fn store_one_kernel(id: &str, slot: vyre_lower::BindingSlot) -> KernelDescriptor
 /// dropped the id would otherwise be caught only where someone remembered to
 /// list that layer.
 fn assert_audits_carry_kernel_id(desc: &KernelDescriptor, target: ComputeCapability) {
-    assert_eq!(vyre_lower::audit::audit(desc).kernel_id, desc.id);
+    assert_eq!(vyre_lower::audit(desc).kernel_id, desc.id);
     assert_eq!(vyre_emit_naga::patterns::audit(desc).kernel_id, desc.id);
     let ptx = vyre_emit_ptx::patterns::audit(desc, target);
     assert_eq!(ptx.kernel_id, desc.id);

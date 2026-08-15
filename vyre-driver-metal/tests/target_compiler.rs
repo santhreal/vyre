@@ -57,7 +57,7 @@ fn artifact() -> vyre_megakernel::Artifact {
 /// WHY: pure Metal target compilation remains available without acquiring a device on Apple hosts.
 #[test]
 fn registered_target_compiler_emits_selected_metal_bundle() {
-    let registration = vyre_driver::backend::registered_backends()
+    let registration = vyre_driver::registered_backends()
         .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == vyre_driver_metal::METAL_BACKEND_ID)
@@ -82,7 +82,7 @@ fn registered_target_compiler_emits_selected_metal_bundle() {
 #[test]
 fn non_apple_hosts_publish_no_metal_registration() {
     let registrations =
-        vyre_driver::backend::registered_backends().expect("valid backend registry");
+        vyre_driver::registered_backends().expect("valid backend registry");
     assert!(registrations
         .iter()
         .all(|registration| registration.id != vyre_driver_metal::METAL_BACKEND_ID));
@@ -92,7 +92,7 @@ fn non_apple_hosts_publish_no_metal_registration() {
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 #[test]
 fn registered_materializer_executes_authenticated_msl() {
-    let registration = vyre_driver::backend::registered_backends()
+    let registration = vyre_driver::registered_backends()
         .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == vyre_driver_metal::METAL_BACKEND_ID)

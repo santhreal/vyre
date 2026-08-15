@@ -1,11 +1,11 @@
 //! P3.9  -  primitive surface contract tests for Cat-A tiled/parallel
 //! variants. These gates compile-check the IR surface: a regression
-//! that removes `Node::Barrier { ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst }`, `DataType::Shared`, `BufferAccess::Workgroup`,
+//! that removes `Node::Barrier { ordering: vyre_foundation::MemoryOrdering::SeqCst }`, `DataType::Shared`, `BufferAccess::Workgroup`,
 //! or `BinOp::WaveReduce` fails CI.
 
 use vyre::ir::Node;
 
-/// Node::Barrier { ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst }
+/// Node::Barrier { ordering: vyre_foundation::MemoryOrdering::SeqCst }
 /// exists in the IR today; constructing it locks the public contract.
 #[test]
 fn contract_workgroup_barrier_exists() {

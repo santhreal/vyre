@@ -1,7 +1,7 @@
 //! Validator uniformity coverage.
 //!
 //! These tests pin the contract added with the uniformity analyzer:
-//! `Node::Barrier { ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst }` is legal inside a `Node::Loop` whose bounds are
+//! `Node::Barrier { ordering: vyre_foundation::MemoryOrdering::SeqCst }` is legal inside a `Node::Loop` whose bounds are
 //! workgroup-uniform and inside a `Node::If` whose condition is
 //! uniform; barriers in genuinely divergent control flow continue to
 //! emit V010. Each positive case has a sanitized negative twin.

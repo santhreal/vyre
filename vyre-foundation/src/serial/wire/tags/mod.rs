@@ -99,7 +99,7 @@ pub mod data_type_from_tag;
 /// Encode a `DataType` into its VIR0 wire tag and optional payload.
 ///
 /// See [`mod@data_type_from_tag`] for the inverse mapping.
-pub mod data_type_tag;
+pub(crate) mod data_type_tag;
 /// Decode a `UnOp` from its VIR0 wire tag.
 ///
 /// See [`mod@un_op_tag`] for the inverse mapping. Covers audit L.1.27 / I4.

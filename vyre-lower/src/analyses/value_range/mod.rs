@@ -20,7 +20,7 @@ mod analysis;
 mod carrier_staleness;
 mod report;
 
-pub use analysis::{analyze, analyze_body};
+pub use analysis::analyze;
 pub use report::{IntRange, ValueRangeReport};
 
 #[cfg(test)]

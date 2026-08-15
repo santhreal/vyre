@@ -54,7 +54,9 @@ pub(crate) fn buffers_equal_ignoring_declaration_order(
 /// `linear_type` and `shape_predicate` are encoded by the SAME functions the
 /// wire encoder uses, so program equality and `Program::fingerprint` cannot
 /// drift apart on these fields.
-pub(crate) fn buffer_decl_canonical_key(buffer: &crate::ir_inner::model::program::BufferDecl) -> Vec<u8> {
+pub(crate) fn buffer_decl_canonical_key(
+    buffer: &crate::ir_inner::model::program::BufferDecl,
+) -> Vec<u8> {
     use crate::serial::wire::encode::to_wire::{linear_type_tag, put_shape_predicate};
     use crate::serial::wire::framing::{put_len_u32, put_u32, put_u8};
     use crate::serial::wire::tags::put_data_type;
@@ -91,7 +93,10 @@ pub(crate) fn buffer_decl_canonical_key(buffer: &crate::ir_inner::model::program
             key.extend_from_slice(error.as_bytes());
         }
     }
-    put_u8(&mut key, crate::ir_inner::model::program::cache_digest::memory_kind_cache_tag(*kind));
+    put_u8(
+        &mut key,
+        crate::ir_inner::model::program::cache_digest::memory_kind_cache_tag(*kind),
+    );
     if let Err(error) = put_data_type(&mut key, element) {
         key.extend_from_slice(b"\0dtype-error\0");
         key.extend_from_slice(error.as_bytes());

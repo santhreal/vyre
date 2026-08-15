@@ -34,9 +34,9 @@ pub(crate) use is_commutative::is_commutative;
 pub(crate) use type_key::TypeKey;
 
 /// Per-pass context tracking seen expressions and their first binding name.
-pub mod cse_ctx;
+pub(crate) mod cse_ctx;
 /// Raw `cse(program)` and `cse_into(program, &mut ctx)` entry points.
-pub mod engine;
+pub(crate) mod engine;
 /// Conservative predicate: does this expression have observable side effects?
 pub mod expr_has_effect;
 /// Structural key for comparing candidate expressions during CSE.
@@ -50,7 +50,7 @@ pub mod impl_typekey_from;
 /// Which binary operators are commutative under CSE canonicalisation?
 pub mod is_commutative;
 /// Registered `CsePass` (ProgramPass impl) for the engine.
-pub mod program_pass;
+pub(crate) mod program_pass;
 /// Compact `Copy` key for expression result types used by the CSE table.
 pub mod type_key;
 

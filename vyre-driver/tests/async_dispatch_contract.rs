@@ -36,7 +36,7 @@ impl CountingBackend {
     }
 }
 
-impl vyre_driver::backend::private::Sealed for CountingBackend {}
+impl vyre_driver::sealed::Sealed for CountingBackend {}
 
 impl VyreBackend for CountingBackend {
     fn id(&self) -> &'static str {
@@ -57,7 +57,7 @@ impl VyreBackend for CountingBackend {
 /// Fails every ordinary dispatch so the error path is observable.
 struct FailingBackend;
 
-impl vyre_driver::backend::private::Sealed for FailingBackend {}
+impl vyre_driver::sealed::Sealed for FailingBackend {}
 
 impl VyreBackend for FailingBackend {
     fn id(&self) -> &'static str {
@@ -95,7 +95,7 @@ impl ResidentBackend {
     }
 }
 
-impl vyre_driver::backend::private::Sealed for ResidentBackend {}
+impl vyre_driver::sealed::Sealed for ResidentBackend {}
 
 impl VyreBackend for ResidentBackend {
     fn id(&self) -> &'static str {
@@ -252,7 +252,9 @@ fn default_resident_async_returns_ready_output_without_losing_dispatch_errors() 
     let backend = ResidentBackend::new(false);
     let pending = backend
         .dispatch_resident_async(&program, &[], &DispatchConfig::default())
-        .expect("Fix: default resident async dispatch must preserve a successful resident dispatch.");
+        .expect(
+            "Fix: default resident async dispatch must preserve a successful resident dispatch.",
+        );
     assert!(
         pending.is_ready(),
         "Fix: a backend using the synchronous fallback must return a ready handle."

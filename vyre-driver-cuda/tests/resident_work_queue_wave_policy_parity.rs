@@ -26,13 +26,13 @@ use vyre_driver::megakernel_frontier::{
     plan_megakernel_frontier_execution, MegakernelFrontierExecutionPlan,
     MegakernelFrontierExecutionPlanError, MegakernelFrontierWave,
 };
-use vyre_driver_cuda::megakernel_scheduler::{
-    plan_cuda_megakernel_execution, select_cuda_megakernel_topology,
-    select_cuda_megakernel_topology_stable,
-};
 use vyre_driver_cuda::{
     plan_cuda_frontier_megakernel_execution, CudaMegakernelAnalysisKind, CudaMegakernelDeviceKey,
     CudaMegakernelPlanCache, CudaMegakernelScheduleSample,
+};
+use vyre_driver_cuda::{
+    plan_cuda_megakernel_execution, select_cuda_megakernel_topology,
+    select_cuda_megakernel_topology_stable,
 };
 
 /// One frontier-scheduling decision, normalized so both entry points compare.

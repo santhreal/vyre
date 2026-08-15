@@ -18,7 +18,7 @@
 //! Migration 3 moved this op from `vyre-libs::crypto::blake3_compress`
 //! to `vyre-libs::hash::blake3_compress`.
 
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::hash::blake3::{blake3_round, BLAKE3_ROUND_OP_ID, MSG_SCHEDULE};
 

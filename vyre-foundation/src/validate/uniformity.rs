@@ -3,7 +3,7 @@
 //! An expression is *uniform* iff every invocation in the same
 //! workgroup, evaluating it at the same source position, produces
 //! the same value. Uniform `Loop` bounds and `If` conditions keep
-//! every invocation in lockstep, so a `Node::Barrier { ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst }` placed in
+//! every invocation in lockstep, so a `Node::Barrier { ordering: vyre_foundation::MemoryOrdering::SeqCst }` placed in
 //! such a body is well-defined under backend barrier semantics.
 //!
 //! The analyzer is intentionally conservative: anything we cannot

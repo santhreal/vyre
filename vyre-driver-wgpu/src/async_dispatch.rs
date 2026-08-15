@@ -28,7 +28,7 @@ struct WgpuLaunchFeedback {
     workgroup: [u32; 3],
 }
 
-impl vyre_driver::backend::private::Sealed for WgpuPendingDispatch {}
+impl vyre_driver::sealed::Sealed for WgpuPendingDispatch {}
 
 impl WgpuPendingDispatch {
     pub(crate) fn ready(
@@ -81,7 +81,7 @@ impl WgpuPendingDispatch {
         run_prefetch(prefetch);
         match kind {
             WgpuPendingKind::Ready(ready) => {
-                vyre_driver::backend::replace_output_buffers_preserving_slots(ready, outputs);
+                vyre_driver::replace_output_buffers_preserving_slots(ready, outputs);
                 Ok(())
             }
             WgpuPendingKind::Readback(pending) => match deadline(started, timeout) {
@@ -149,7 +149,7 @@ impl WgpuPendingDispatch {
             },
         };
         if let (Some(feedback), Some(measured_device_ns)) = (launch_feedback, device_ns) {
-            let _accepted = vyre_driver::launch::record_launch_measurement(
+            let _accepted = vyre_driver::record_launch_measurement(
                 &feedback.program,
                 &feedback.config,
                 feedback.limits,

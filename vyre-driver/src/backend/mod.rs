@@ -13,7 +13,7 @@ mod capability;
 mod dialect_supported_ops;
 pub mod lowering;
 mod registry;
-pub mod validation;
+pub(crate) mod validation;
 
 mod compiled_pipeline;
 mod device_buffer;
@@ -73,7 +73,8 @@ pub use vyre_backend::{
 };
 
 #[doc(hidden)]
-pub mod private {
+pub mod sealed {
+    /// Seals the driver traits: only this workspace implements them.
     pub trait Sealed {}
 }
 

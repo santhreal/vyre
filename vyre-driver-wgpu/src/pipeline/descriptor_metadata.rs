@@ -222,7 +222,7 @@ pub(crate) fn descriptor_trap_tags(
 
     fn walk(
         body: &vyre_lower::KernelBody,
-        seen: &mut FxHashSet<vyre_lower::descriptor::Name>,
+        seen: &mut FxHashSet<vyre_lower::Name>,
         out: &mut Vec<TrapTag>,
     ) -> Result<(), BackendError> {
         for op in &body.ops {

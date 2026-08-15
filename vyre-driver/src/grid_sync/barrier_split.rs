@@ -4,8 +4,8 @@
 use std::sync::Arc;
 
 use vyre_foundation::ir::{Ident, Node, Program};
-use vyre_foundation::memory_model::MemoryOrdering;
 use vyre_foundation::transform::visit::any_descendant;
+use vyre_foundation::MemoryOrdering;
 
 use super::let_propagation::propagate_let_bindings;
 use super::reserve_grid_sync_vec;

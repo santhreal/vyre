@@ -21,7 +21,7 @@
 use vyre_foundation::ir::{
     inline_calls_with_resolver, AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program,
 };
-use vyre_foundation::memory_model::MemoryOrdering;
+use vyre_foundation::MemoryOrdering;
 
 /// Callee reading `table[i]` where `table` is its input buffer and `i` its
 /// index parameter. `i` is a second read-only buffer so both binding kinds

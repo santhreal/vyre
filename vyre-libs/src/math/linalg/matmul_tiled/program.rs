@@ -1,4 +1,4 @@
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 use vyre_primitives::math::semiring_gemm::OP_ID as SEMIRING_GEMM_OP_ID;
 

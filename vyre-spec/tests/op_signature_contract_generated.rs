@@ -8,7 +8,7 @@
 mod spec_variants;
 
 use smallvec::smallvec;
-use vyre_spec::op_signature::SignatureParam;
+use vyre_spec::SignatureParam;
 use vyre_spec::{
     CapabilityId, CostHint, DataType, DeterminismClass, OpSignature, OperationContract,
     QuantizationScale, QuantizationZeroPoint, SideEffectClass, TypeId,

@@ -245,7 +245,7 @@ mod tests {
         spin: u32,
     }
 
-    impl crate::backend::private::Sealed for TimedBackend {}
+    impl crate::backend::sealed::Sealed for TimedBackend {}
 
     impl VyreBackend for TimedBackend {
         fn id(&self) -> &'static str {
@@ -296,7 +296,7 @@ mod tests {
         owned_calls: AtomicUsize,
     }
 
-    impl crate::backend::private::Sealed for BorrowCountingBackend {}
+    impl crate::backend::sealed::Sealed for BorrowCountingBackend {}
 
     impl VyreBackend for BorrowCountingBackend {
         fn id(&self) -> &'static str {

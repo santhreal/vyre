@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use crate::backend::staging_reserve::reserve_vec;
-use vyre_driver::aot::{AotLauncherFiles, AotLauncherRequest, LauncherDependency};
+use vyre_driver::{AotLauncherFiles, AotLauncherRequest, LauncherDependency};
 
 const CUDA_FFI: &str = include_str!("../templates/cuda_ffi.rs.tmpl");
 const NCCL_FFI: &str = include_str!("../templates/nccl_ffi.rs.tmpl");
@@ -475,7 +475,7 @@ fn read_final_metric_record(
 mod tests {
     use super::*;
     use crate::CUDA_TARGET_ID;
-    use vyre_driver::aot::AotLauncherRequest;
+    use vyre_driver::AotLauncherRequest;
 
     fn request(include_ttt_loop: bool) -> AotLauncherRequest<'static> {
         AotLauncherRequest {

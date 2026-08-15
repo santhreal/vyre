@@ -43,12 +43,12 @@ fn compile_case(case: &SemanticOperation) -> (Duration, Vec<Vec<u8>>) {
     )
     .validate()
     .expect("Fix: persistence regression compile request must validate");
-    let registration =
-        vyre_driver::backend::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
-            .expect("Fix: WGPU backend registration must be linked");
+    let registration = vyre_driver::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
+        .expect("Fix: WGPU backend registration must be linked");
     let compile_start = Instant::now();
-    let _session = vyre_runtime::artifact_admission::ArtifactSession::compile(registration, &request)
-        .expect("Fix: persistence regression must materialize an authenticated WGPU artifact");
+    let _session =
+        vyre_runtime::artifact_admission::ArtifactSession::compile(registration, &request)
+            .expect("Fix: persistence regression must materialize an authenticated WGPU artifact");
     let compile_time = compile_start.elapsed();
     let output = backend
         .dispatch(&program, &input_case, &DispatchConfig::default())

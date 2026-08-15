@@ -19,8 +19,8 @@ use std::sync::{Arc, OnceLock};
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{GeneratorRef, Ident};
 
 fn backend() -> &'static WgpuBackend {
     static BACKEND: OnceLock<WgpuBackend> = OnceLock::new();
@@ -173,10 +173,7 @@ fn scatter_position_nodes(k: u32) -> Vec<Node> {
 
 /// Fold `value` into `out[index]` with an atomic or, binding the prior word.
 fn atomic_or_lane(k: u32, index: Expr, value: Expr) -> Node {
-    Node::let_bind(
-        format!("prev_{k}"),
-        Expr::atomic_or("out", index, value),
-    )
+    Node::let_bind(format!("prev_{k}"), Expr::atomic_or("out", index, value))
 }
 
 /// `let w = InvocationId(0); if w < words { lanes }`, the grid gate every

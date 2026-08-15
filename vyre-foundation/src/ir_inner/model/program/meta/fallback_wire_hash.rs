@@ -6,9 +6,9 @@
 
 use std::hash::{Hash, Hasher as _};
 
-use rustc_hash::FxHasher;
 use crate::ir::{Expr, Node};
 use crate::transform::visit::{ExprVisitor, NodeVisitor};
+use rustc_hash::FxHasher;
 
 fn mix_wire_fallback_hashable<T: Hash>(hasher: &mut blake3::Hasher, value: &T) {
     let mut state = FxHasher::default();

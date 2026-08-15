@@ -1,5 +1,5 @@
 use crate::common::self_optimizer::{b_load_branch_program, binop, if_cond, run_pipeline};
-use vyre::ir::model::spec_types::UnOp;
+use vyre::ir::UnOp;
 use vyre::ir::{BinOp, Expr};
 
 #[test]

@@ -34,17 +34,17 @@ pub mod analyses;
 /// `descriptor_builder`: enable `test-fixtures` to reach it.
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod artifact_golden;
-pub mod audit;
+pub(crate) mod audit;
 mod canonicalize;
-pub mod descriptor;
+pub(crate) mod descriptor;
 /// Fixture builders for kernel descriptors. Every consumer is a test, so this
 /// is not part of the shipped surface: enable `test-fixtures` to reach it.
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod descriptor_builder;
 pub mod emit_adversarial_corpus;
-pub mod error;
+pub(crate) mod error;
 mod lower;
-pub mod op_facts;
+pub(crate) mod op_facts;
 pub mod operand_class;
 pub mod pattern_audit;
 /// Backend-neutral `Program` corpus shared by byte-stability goldens.
@@ -52,9 +52,9 @@ pub mod pattern_audit;
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod program_stability_corpus;
 pub(crate) mod result_id_remap;
-pub mod target;
+pub(crate) mod target;
 mod verified_lowering;
-pub mod verify;
+pub(crate) mod verify;
 
 pub use audit::{
     audit, audit_with_histogram, PerfAuditReport, Recommendation, RecommendationCategory,
@@ -231,6 +231,7 @@ impl std::fmt::Display for FullReport {
         f.write_str(&self.format_short())
     }
 }
+pub use verify::format_verify_errors;
 pub use verify::{verify, VerifyError, VerifyErrorKind, VerifyResult};
 
 pub use descriptor::{
@@ -242,6 +243,7 @@ pub use descriptor::{
     ScanConstructIntentMapping, DESCRIPTOR_INTENT_SCHEMA_VERSION, SCAN_CONSTRUCT_INTENT_MAPPINGS,
     TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
 };
+pub use descriptor::{KernelOpsIter, Name};
 pub use error::LowerError;
 pub use op_facts::{facts_for, OpFacts};
 pub use target::{

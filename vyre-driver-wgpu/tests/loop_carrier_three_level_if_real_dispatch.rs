@@ -63,7 +63,10 @@ fn backward_scope_walk(row: Expr) -> Vec<Node> {
     let mut body = vec![
         Node::let_bind(
             "scope_rev",
-            Expr::sub(Expr::sub(row.clone(), Expr::u32(1)), Expr::var("scope_scan")),
+            Expr::sub(
+                Expr::sub(row.clone(), Expr::u32(1)),
+                Expr::var("scope_scan"),
+            ),
         ),
         Node::let_bind("scope_kind", Expr::load("kinds", Expr::var("scope_rev"))),
     ];
@@ -197,12 +200,7 @@ fn nested_outer_loop_with_inner_scope_walker_per_row() {
         [1, 1, 1],
         vec![Node::if_then(
             Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-            vec![Node::loop_for(
-                "t",
-                Expr::u32(0),
-                Expr::u32(N),
-                outer_body,
-            )],
+            vec![Node::loop_for("t", Expr::u32(0), Expr::u32(N), outer_body)],
         )],
     );
 

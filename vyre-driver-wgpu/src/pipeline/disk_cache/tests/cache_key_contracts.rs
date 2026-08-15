@@ -48,7 +48,7 @@ fn manual_cache_key_strings_preserve_stable_format() {
     config.ulp_budget = Some(7);
     config.workgroup_override = Some([8, 16, 32]);
     assert_eq!(
-        vyre_driver::pipeline::dispatch_policy_cache_string(&config),
+        vyre_driver::dispatch_policy_cache_string(&config),
         "ulp=Some(7):wg=Some([8, 16, 32])"
     );
 }
@@ -70,7 +70,7 @@ fn content_digest_rejects_corrupted_payload() {
         program_abi_version: u32::from(WIRE_FORMAT_VERSION),
         naga_version: std::borrow::Cow::Borrowed(NAGA_VERSION),
         wgsl_lowering_contract: std::borrow::Cow::Borrowed(WGSL_LOWERING_CONTRACT),
-        policy: vyre_driver::pipeline::dispatch_policy_cache_string(&DispatchConfig::default()),
+        policy: vyre_driver::dispatch_policy_cache_string(&DispatchConfig::default()),
         wgsl_blake3: blake3_hex(wgsl.as_bytes()),
     };
     let mut file = std::fs::File::create(&meta_path).unwrap();
@@ -115,7 +115,7 @@ fn wgsl_cache_key_includes_lowering_contract() {
     legacy_hasher.update(b"\0naga\0");
     legacy_hasher.update(NAGA_VERSION.as_bytes());
     legacy_hasher.update(b"\0policy\0");
-    vyre_driver::pipeline::update_dispatch_policy_cache_hash(&mut legacy_hasher, &cfg);
+    vyre_driver::update_dispatch_policy_cache_hash(&mut legacy_hasher, &cfg);
 
     assert_ne!(
         real,
@@ -139,7 +139,7 @@ fn wgsl_metadata_rejects_stale_lowering_contract() {
         program_abi_version: u32::from(WIRE_FORMAT_VERSION),
         naga_version: std::borrow::Cow::Borrowed(NAGA_VERSION),
         wgsl_lowering_contract: std::borrow::Cow::Borrowed("old-contract"),
-        policy: vyre_driver::pipeline::dispatch_policy_cache_string(&DispatchConfig::default()),
+        policy: vyre_driver::dispatch_policy_cache_string(&DispatchConfig::default()),
         wgsl_blake3: blake3_hex(wgsl.as_bytes()),
     };
     let mut file = std::fs::File::create(&meta_path).unwrap();
@@ -315,8 +315,8 @@ fn normalized_cache_digest_erases_runtime_storage_lengths() {
     );
 
     assert_eq!(
-        vyre_driver::pipeline::normalized_program_cache_digest(&a),
-        vyre_driver::pipeline::normalized_program_cache_digest(&b),
+        vyre_driver::normalized_program_cache_digest(&a),
+        vyre_driver::normalized_program_cache_digest(&b),
         "storage buffer lengths must not perturb the compile fingerprint"
     );
 }
@@ -387,7 +387,7 @@ fn early_pipeline_cache_key_preserves_runtime_storage_lengths() {
 /// Wire a Program to a disk cache key exactly as `load_or_compile_disk_wgsl`
 /// does: normalized digest, then `wgsl_cache_key`.
 fn disk_cache_key_for(program: &vyre_foundation::ir::Program) -> [u8; 32] {
-    let norm_digest = vyre_driver::pipeline::try_normalized_program_cache_digest(program)
+    let norm_digest = vyre_driver::try_normalized_program_cache_digest(program)
         .expect("Fix: fixture Program must produce a normalized cache digest");
     wgsl_cache_key(
         &norm_digest,

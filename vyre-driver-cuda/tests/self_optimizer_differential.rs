@@ -33,7 +33,7 @@ fn run_gpu_pipeline(p: Program) -> Program {
 }
 
 fn run_cpu_dce_only(p: Program) -> Program {
-    use vyre_foundation::optimizer::passes::fusion_cse::dce::engine::dce as cpu_dce;
+    use vyre_foundation::optimizer::passes::fusion_cse::dce::dce as cpu_dce;
     cpu_dce(p)
 }
 

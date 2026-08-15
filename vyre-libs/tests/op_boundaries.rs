@@ -13,12 +13,12 @@
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
-use vyre_foundation::optimizer::ctx::AdapterCaps;
+use vyre_foundation::optimizer::AdapterCaps;
 use vyre_libs::nn::{
     attention::{Attention, Softmax},
     norm::LayerNorm,
 };
-use vyre_libs::tensor_ref::TensorRef;
+use vyre_libs::TensorRef;
 
 const MAX_WORKGROUP_LANES: u32 = AdapterCaps::high_end().max_invocations_per_workgroup;
 

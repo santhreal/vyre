@@ -100,8 +100,9 @@ fn documents_named_in(line: &str) -> Vec<&str> {
     const DIRECTORY: &str = "docs/";
     const SUFFIX: &str = ".md";
 
-    let path_character =
-        |character: char| character.is_ascii_alphanumeric() || matches!(character, '.' | '/' | '-' | '_');
+    let path_character = |character: char| {
+        character.is_ascii_alphanumeric() || matches!(character, '.' | '/' | '-' | '_')
+    };
     let bytes = line.as_bytes();
     let mut found = Vec::new();
     let mut cursor = 0;

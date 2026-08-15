@@ -1,7 +1,7 @@
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use vyre_spec::bin_op::OpIntensity;
+use vyre_spec::OpIntensity;
 
 use crate::ir::Node;
 use crate::ir_inner::model::expr::Ident;
@@ -16,9 +16,9 @@ mod fallback_wire_hash;
 /// Canonical buffer-declaration bytes, and the comparison that keys on them.
 mod buffer_key;
 
-use fallback_wire_hash::FallbackWireHasher;
-pub(crate) use buffer_key::buffers_equal_ignoring_declaration_order;
 pub(super) use buffer_key::buffer_decl_canonical_key;
+pub(crate) use buffer_key::buffers_equal_ignoring_declaration_order;
+use fallback_wire_hash::FallbackWireHasher;
 
 /// Provenance for mutations that invalidate Program validation/cache state.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

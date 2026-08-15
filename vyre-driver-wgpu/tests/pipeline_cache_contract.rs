@@ -13,7 +13,7 @@ mod common;
 use common::acquire_live_backend as live_backend;
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver::pipeline::DEFAULT_PIPELINE_CACHE_ENTRIES;
+use vyre_driver::DEFAULT_PIPELINE_CACHE_ENTRIES;
 use vyre_driver::{DispatchConfig, VyreBackend};
 
 fn tiny_unique_program(salt: u32) -> Program {

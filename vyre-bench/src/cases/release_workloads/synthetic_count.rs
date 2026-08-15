@@ -233,7 +233,7 @@ impl BenchCase for SyntheticCountWorkload {
         let mut dispatch_config = ctx.dispatch_config.clone();
         if self.pattern == SyntheticPattern::StringBitmapScatter {
             dispatch_config.grid_override = Some(
-                vyre_driver::program_walks::infer_dispatch_grid_for_count(
+                vyre_driver::infer_dispatch_grid_for_count(
                     self.records,
                     prepared.program.workgroup_size(),
                 )

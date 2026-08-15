@@ -11,7 +11,7 @@
 use std::sync::Arc;
 
 use vyre_emit_ptx::PtxEmitOptions;
-use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferDecl, Node, Program};
 
 /// Wrap `body` in one region named `generator` over `buffers`, dispatched across

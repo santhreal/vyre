@@ -23,9 +23,7 @@
 use vyre::ir::Expr;
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::parsing::c::lower::ast_to_pg_nodes::{
-    c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes,
-};
+use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes};
 use vyre_primitives::predicate::node_kind;
 
 const VAST_STRIDE_U32: usize = 10;

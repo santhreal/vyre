@@ -4,7 +4,7 @@
 //! only as explicit parity oracles and test fixtures.
 
 /// AST to PG nodes lowering pass.
-pub mod ast_to_pg_nodes;
+pub(crate) mod ast_to_pg_nodes;
 mod semantic_edges;
 
 pub(crate) fn valid_node_index_expr(
@@ -39,6 +39,10 @@ pub use ast_to_pg_nodes::{
     C_AST_PG_ROLE_RANGE_DESIGNATOR, C_AST_PG_ROLE_RETURN, C_AST_PG_ROLE_SELECTION,
     C_AST_PG_ROLE_STATEMENT_EXPR, C_AST_PG_ROLE_STATIC_ASSERT_DECL, C_AST_PG_ROLE_SWITCH,
     C_AST_PG_ROLE_TYPEDEF_DECL, C_AST_PG_ROLE_UNREACHABLE, C_AST_PG_SEMANTIC_NODE_STRIDE_U32,
+};
+pub use ast_to_pg_nodes::{
+    c_lower_ast_to_pg_semantic_graph_with_pg,
+    c_lower_ast_to_pg_semantic_graph_with_pg_no_control_resolution,
 };
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use ast_to_pg_nodes::{

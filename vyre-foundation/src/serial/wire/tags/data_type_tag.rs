@@ -333,7 +333,7 @@ mod tests {
             DataType::FP4,
             DataType::NF4,
             DataType::Array { element_size: 16 },
-            DataType::Handle(vyre_spec::data_type::TypeId(0xDEAD_BEEF)),
+            DataType::Handle(vyre_spec::TypeId(0xDEAD_BEEF)),
             DataType::Vec {
                 element: Box::new(DataType::F32),
                 count: 4,

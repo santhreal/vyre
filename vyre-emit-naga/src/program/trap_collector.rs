@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use rustc_hash::FxHashSet;
 
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{Expr, Ident, Node};
 use vyre_foundation::visit::NodeVisitor;
 

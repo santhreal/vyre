@@ -5,7 +5,7 @@ use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
 
 struct GridLimitBackend;
 
-impl vyre_driver::backend::private::Sealed for GridLimitBackend {}
+impl vyre_driver::sealed::Sealed for GridLimitBackend {}
 
 impl VyreBackend for GridLimitBackend {
     fn id(&self) -> &'static str {
@@ -86,7 +86,7 @@ fn backend_error_preserves_structured_validation_source() {
     let error = vyre_driver::validation::validate_program_contract(
         &program,
         vyre_foundation::validate::ValidationOptions::default(),
-        vyre_driver::backend::validation::default_supported_ops(),
+        vyre_driver::default_supported_ops(),
         caps,
     )
     .expect_err("zero workgroup axis must fail validation");

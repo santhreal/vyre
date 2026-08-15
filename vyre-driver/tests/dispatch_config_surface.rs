@@ -4,7 +4,7 @@
 //! defaults or missing fields can cause dispatch failures.
 
 use std::time::Duration;
-use vyre_driver::backend::DispatchConfig;
+use vyre_driver::DispatchConfig;
 
 #[test]
 fn dispatch_config_default_is_constructible() {

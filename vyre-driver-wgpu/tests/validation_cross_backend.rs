@@ -8,7 +8,7 @@
 //!   2. `WgpuBackend::validation_cache: DashSet<blake3::Hash>`  -
 //!      per-backend, covers capability checks (SUBGROUP
 //!      availability, workgroup-size limits, feature flags).
-//!   3. `vyre_driver::backend::validation::validate_program(program,
+//!   3. `vyre_driver::validation::validate_program(program,
 //!      backend)`  -  the real validator.
 //!
 //! A backend MUST NOT consume structural validation as a shortcut past its own
@@ -29,7 +29,7 @@ struct ReducedBackend {
     id: &'static str,
 }
 
-impl vyre_driver::backend::private::Sealed for ReducedBackend {}
+impl vyre_driver::sealed::Sealed for ReducedBackend {}
 
 impl VyreBackend for ReducedBackend {
     fn id(&self) -> &'static str {

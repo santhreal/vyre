@@ -1,8 +1,8 @@
 //! CUDA capability, feature-flag, and validation policy.
 
 use std::sync::Arc;
-use vyre_driver::binding::BindingRole;
 use vyre_driver::validation::{LaunchGeometryLimits, ProgramValidationCaps};
+use vyre_driver::BindingRole;
 use vyre_driver::{BackendError, DispatchConfig, LaunchPlan};
 use vyre_foundation::ir::Program;
 use vyre_foundation::validate::ValidationOptions;
@@ -202,22 +202,22 @@ impl CudaBackend {
 
     /// Pipeline feature flags that participate in shared cache identity.
     #[must_use]
-    pub fn pipeline_feature_flags(&self) -> vyre_driver::pipeline::PipelineFeatureFlags {
-        let mut flags = vyre_driver::pipeline::PipelineFeatureFlags::empty();
+    pub fn pipeline_feature_flags(&self) -> vyre_driver::PipelineFeatureFlags {
+        let mut flags = vyre_driver::PipelineFeatureFlags::empty();
         if self.hardware_supports_subgroup_ops() {
-            flags = flags.union(vyre_driver::pipeline::PipelineFeatureFlags::SUBGROUP_OPS);
+            flags = flags.union(vyre_driver::PipelineFeatureFlags::SUBGROUP_OPS);
         }
         if self.hardware_supports_f16() {
-            flags = flags.union(vyre_driver::pipeline::PipelineFeatureFlags::F16);
+            flags = flags.union(vyre_driver::PipelineFeatureFlags::F16);
         }
         if self.hardware_supports_bf16() {
-            flags = flags.union(vyre_driver::pipeline::PipelineFeatureFlags::BF16);
+            flags = flags.union(vyre_driver::PipelineFeatureFlags::BF16);
         }
         if self.hardware_supports_tensor_cores() && self.lowers_tensor_core_ops() {
-            flags = flags.union(vyre_driver::pipeline::PipelineFeatureFlags::TENSOR_CORES);
+            flags = flags.union(vyre_driver::PipelineFeatureFlags::TENSOR_CORES);
         }
         if self.hardware_supports_async_compute() {
-            flags = flags.union(vyre_driver::pipeline::PipelineFeatureFlags::ASYNC_COMPUTE);
+            flags = flags.union(vyre_driver::PipelineFeatureFlags::ASYNC_COMPUTE);
         }
         flags
     }
@@ -672,8 +672,8 @@ mod tests {
     use std::sync::Arc;
 
     use smallvec::smallvec;
-    use vyre_driver::binding::{Binding, BindingPlan, BindingRole};
     use vyre_driver::{BackendError, LaunchPlan};
+    use vyre_driver::{Binding, BindingPlan, BindingRole};
 
     use super::{
         cuda_transient_dispatch_budget_bytes, cuda_transient_dispatch_live_available_budget_bytes,
@@ -682,7 +682,7 @@ mod tests {
     use crate::backend::CudaDispatchPlan;
     use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
     use vyre_foundation::lower::lower_subgroup_reductions;
-    use vyre_foundation::optimizer::ctx::AdapterCaps;
+    use vyre_foundation::optimizer::AdapterCaps;
 
     use super::cache_identity_program;
 
@@ -913,9 +913,9 @@ mod tests {
         let program = plain_program();
         let lowered = lower_subgroup_reductions(program.clone(), &subgroup_caps());
 
-        let from_original = vyre_driver::pipeline::try_normalized_program_cache_digest(&program)
+        let from_original = vyre_driver::try_normalized_program_cache_digest(&program)
             .expect("Fix: fixture program must produce a normalized cache digest");
-        let from_lowered = vyre_driver::pipeline::try_normalized_program_cache_digest(&lowered)
+        let from_lowered = vyre_driver::try_normalized_program_cache_digest(&lowered)
             .expect("Fix: lowered fixture must produce a normalized cache digest");
 
         assert_eq!(
@@ -937,9 +937,9 @@ mod tests {
         let program = lowering_program();
         let lowered = lower_subgroup_reductions(program.clone(), &subgroup_caps());
 
-        let from_original = vyre_driver::pipeline::try_normalized_program_cache_digest(&program)
+        let from_original = vyre_driver::try_normalized_program_cache_digest(&program)
             .expect("Fix: fixture program must produce a normalized cache digest");
-        let from_lowered = vyre_driver::pipeline::try_normalized_program_cache_digest(&lowered)
+        let from_lowered = vyre_driver::try_normalized_program_cache_digest(&lowered)
             .expect("Fix: lowered fixture must produce a normalized cache digest");
 
         assert_ne!(

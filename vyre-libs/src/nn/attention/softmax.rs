@@ -357,9 +357,7 @@ mod tests {
         let generators: Vec<&str> = descriptor
             .ops_iter()
             .filter_map(|op| match &op.kind {
-                vyre_lower::descriptor::KernelOpKind::Region { generator } => {
-                    Some(generator.as_ref())
-                }
+                vyre_lower::KernelOpKind::Region { generator } => Some(generator.as_ref()),
                 _ => None,
             })
             .collect();

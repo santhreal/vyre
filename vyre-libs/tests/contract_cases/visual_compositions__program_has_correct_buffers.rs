@@ -3,9 +3,7 @@
 // ================================================================
 
 mod blur {
-    use vyre_libs::visual::blur::{
-        gaussian_blur_2pass, gaussian_blur_2pass_with_kernel, GaussianKernel,
-    };
+    use vyre_libs::visual::{gaussian_blur_2pass, gaussian_blur_2pass_with_kernel, GaussianKernel};
 
     #[test]
     fn program_has_correct_buffers() {
@@ -113,7 +111,7 @@ mod blur {
 // ================================================================
 
 mod shadow {
-    use vyre_libs::visual::shadow::box_shadow;
+    use vyre_libs::visual::box_shadow;
 
     #[test]
     fn program_has_correct_output_buffer() {
@@ -144,7 +142,7 @@ mod shadow {
 // ================================================================
 
 mod filter_chain_tests {
-    use vyre_libs::visual::filter_chain::filter_chain;
+    use vyre_libs::visual::filter_chain;
 
     #[test]
     fn identity_program_has_single_buffer() {
@@ -185,7 +183,7 @@ mod filter_chain_tests {
 // ================================================================
 
 mod composite {
-    use vyre_libs::visual::composite::alpha_over;
+    use vyre_libs::visual::alpha_over;
 
     #[test]
     fn program_has_three_buffers() {
@@ -207,7 +205,7 @@ mod composite {
 // ================================================================
 
 mod gradient {
-    use vyre_libs::visual::gradient::{linear_gradient, ColorStop};
+    use vyre_libs::visual::{linear_gradient, ColorStop};
     use vyre_reference::value::Value;
 
     fn render_u32(program: &vyre::ir::Program, pixels: usize) -> Vec<u32> {
@@ -340,7 +338,7 @@ mod gradient {
 
     #[test]
     fn single_stop_returns_error_contract() {
-        let error = vyre_libs::visual::gradient::try_linear_gradient(
+        let error = vyre_libs::visual::try_linear_gradient(
             "out",
             4,
             4,
@@ -363,7 +361,7 @@ mod gradient {
 // ================================================================
 
 mod downsample {
-    use vyre_libs::visual::downsample::downsample_2x;
+    use vyre_libs::visual::downsample_2x;
 
     #[test]
     fn program_has_correct_buffer_sizes() {

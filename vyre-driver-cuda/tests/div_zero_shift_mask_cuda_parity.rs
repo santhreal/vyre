@@ -34,8 +34,8 @@ use vyre_driver::parity_harness::u32_binop_parity;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_test_support::binop_parity::{
-    assert_covers_every_total_op, total_u32_reference_ops, total_u32_reference_values, TotalU32Case,
-    TOTAL_U32_CASES,
+    assert_covers_every_total_op, total_u32_reference_ops, total_u32_reference_values,
+    TotalU32Case, TOTAL_U32_CASES,
 };
 
 /// Why a divergence here is a PTX miscompile and not a hardware liberty.
@@ -84,7 +84,8 @@ fn every_total_u32_op_forces_its_contract_on_cuda() {
         let reference = total_u32_reference_values(case);
         let gpu = dispatch(&backend, case);
         assert_eq!(
-            gpu, reference,
+            gpu,
+            reference,
             "CUDA u32 `{}` diverged from the oracle ({}).\n  cases: {:?}\n  \
              expected: {reference:?}\n  gpu: {gpu:?}",
             case.op,

@@ -7,8 +7,8 @@
 
 use std::sync::Arc;
 
-use crate::ir::model::expr::{Expr, GeneratorRef, Ident};
 use crate::ir::{BufferDecl, DataType, Node, Program};
+use crate::ir::{Expr, GeneratorRef, Ident};
 use rustc_hash::FxHashMap;
 
 /// Generator suffix marking a region as non-composable with itself.
@@ -261,8 +261,14 @@ mod tests {
         assert_eq!(buffer.element, DataType::F32);
         assert_eq!(buffer.count, 1);
 
-        let Some(Node::Region { generator, body, .. }) = with_output.entry().first() else {
-            panic!("a trap program's entry is one region: {:?}", with_output.entry());
+        let Some(Node::Region {
+            generator, body, ..
+        }) = with_output.entry().first()
+        else {
+            panic!(
+                "a trap program's entry is one region: {:?}",
+                with_output.entry()
+            );
         };
         assert_eq!(generator.as_str(), "vyre.test.reduce");
         assert!(
@@ -290,7 +296,12 @@ mod tests {
         assert_eq!(*source_region, None);
         assert_eq!(body.as_slice(), single_invocation(vec![Node::Return]));
 
-        let [Node::If { cond, then, otherwise }] = body.as_slice() else {
+        let [Node::If {
+            cond,
+            then,
+            otherwise,
+        }] = body.as_slice()
+        else {
             panic!("the region body is one guarded branch: {body:?}");
         };
         assert_eq!(

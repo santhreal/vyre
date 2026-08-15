@@ -1,5 +1,5 @@
 use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op-id under which this VFS resolver registers itself in the

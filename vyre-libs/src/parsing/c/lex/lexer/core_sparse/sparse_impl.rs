@@ -482,7 +482,7 @@ pub(super) fn c11_lexer_regular_sparse_impl(spec: &SparseLexerSpec<'_>) -> Progr
             Node::store(scratch_a, lane.clone(), Expr::u32(0)),
             Node::if_then(is_start, classify_at_pos),
             Node::Barrier {
-                ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+                ordering: vyre_foundation::MemoryOrdering::SeqCst,
             },
         ]);
         let mut stride = 1_u32;
@@ -505,7 +505,7 @@ pub(super) fn c11_lexer_regular_sparse_impl(spec: &SparseLexerSpec<'_>) -> Progr
                 )],
             ));
             body.push(Node::Barrier {
-                ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+                ordering: vyre_foundation::MemoryOrdering::SeqCst,
             });
             body.push(Node::store(
                 scratch_a,
@@ -513,7 +513,7 @@ pub(super) fn c11_lexer_regular_sparse_impl(spec: &SparseLexerSpec<'_>) -> Progr
                 Expr::load(scratch_b, lane.clone()),
             ));
             body.push(Node::Barrier {
-                ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+                ordering: vyre_foundation::MemoryOrdering::SeqCst,
             });
             stride *= 2;
         }

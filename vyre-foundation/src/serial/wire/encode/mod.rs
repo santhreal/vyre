@@ -168,7 +168,7 @@ pub use to_wire::to_wire_into;
 pub use to_wire::to_wire_with_buffer_order_into;
 
 /// Zero-allocation error type for hot-path wire encoders.
-pub mod error;
+pub(crate) mod error;
 pub use error::WireEncodeErr;
 
 /// Expression tag-and-payload encoder.
@@ -198,7 +198,7 @@ pub(crate) mod put_node;
 /// bodies, etc.).
 ///
 /// See [`put_nodes()`] for the public entry point.
-pub mod put_nodes;
+pub(crate) mod put_nodes;
 
 /// Top-level program encoder.
 ///
@@ -208,4 +208,4 @@ pub mod put_nodes;
 /// [`crate::serial::wire::framing::WIRE_FORMAT_VERSION`] (audit L.1.47).
 ///
 /// See [`to_wire()`] for the public entry point.
-pub mod to_wire;
+pub(crate) mod to_wire;

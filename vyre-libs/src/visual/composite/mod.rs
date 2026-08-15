@@ -5,7 +5,7 @@
 //! Category A composition  -  pure IR over existing expressions.
 //! No Tier 2.5 primitives consumed.
 
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::composite";

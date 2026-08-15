@@ -26,7 +26,7 @@ fn finite_queue_program_compiles_to_authenticated_cuda_payload() {
     vyre_registry_link::backend::live_backend_registry()
         .expect("Fix: the backend registry must freeze cleanly");
     let registration =
-        vyre_driver::backend::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
+        vyre_driver::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
             .expect("CUDA target compiler registration must be linked");
     let compiler = registration
         .target_compiler()

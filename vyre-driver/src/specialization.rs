@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use vyre_foundation::ir::Program;
 use vyre_foundation::serial::wire::tags::data_type_tag;
-use vyre_spec::data_type::DataType;
+use vyre_spec::DataType;
 
 /// One specializable scalar attribute value.
 ///
@@ -366,8 +366,7 @@ mod tests {
         let mut tags: std::collections::BTreeMap<u32, DataType> = std::collections::BTreeMap::new();
         for dtype in samples {
             let expected = u32::from(
-                data_type_tag(&dtype)
-                    .expect("Fix: every declared DataType needs a VIR0 wire tag"),
+                data_type_tag(&dtype).expect("Fix: every declared DataType needs a VIR0 wire tag"),
             );
             let tag = dtype_tag(&dtype);
             assert_eq!(

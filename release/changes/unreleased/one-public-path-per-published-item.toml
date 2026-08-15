@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every item a vyre crate publishes is reachable at one public path. A submodule that exists because a file was split is now private to its crate and the owning module re-exports what it holds, so vyre-foundation, vyre-libs, vyre-driver, vyre-driver-cuda, vyre-lower and vyre-spec no longer publish the same item under both a flat name and a deep module path. Measured second paths fall from 3331 to 493 across the 26 committed snapshots."

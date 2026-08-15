@@ -7,8 +7,8 @@
 //! on `BodyCtx` in a sibling module named for the concept it emits.
 
 use rustc_hash::{FxHashMap, FxHashSet};
-use vyre_lower::descriptor::Name;
 use vyre_lower::BindingSlot;
+use vyre_lower::Name;
 
 use crate::reg::Reg;
 use crate::PtxEmitOptions;

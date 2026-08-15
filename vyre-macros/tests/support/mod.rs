@@ -104,12 +104,11 @@ pub mod optimizer {
         pass_result(program, false)
     }
 
-
-    pub mod private {
+    pub mod sealed {
         pub trait Sealed {}
     }
 
-    pub trait ProgramPass: private::Sealed + Send + Sync {
+    pub trait ProgramPass: sealed::Sealed + Send + Sync {
         fn metadata(&self) -> PassMetadata;
         fn analyze(&self, program: &Program) -> PassAnalysis;
         fn transform(&self, program: Program) -> PassResult;

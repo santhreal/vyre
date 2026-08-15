@@ -14,10 +14,8 @@
 //! rather than element-wise, because near-degenerate eigenvalues admit different-but-valid
 //! eigenvector bases.
 
-use vyre_foundation::composition::{
-    trap_program, wrap_anonymous_region, wrap_child_region,
-};
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::math::eigenvector_column_sign::eigenvector_column_sign_region;

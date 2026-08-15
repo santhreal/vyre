@@ -1,17 +1,17 @@
 //! Activation sub-dialect + utility nn ops.
-pub mod cross_entropy;
-pub mod embedding;
-pub mod gelu;
-pub mod leaky_relu_sq;
-pub mod logit_softcap;
-pub mod mlp_4x_leaky_sq;
-pub mod parallel_residual_block;
-pub mod relu;
-pub mod residual_add;
-pub mod sigmoid_gate;
-pub mod silu;
-pub mod skip_gate;
-pub mod swiglu;
+pub(crate) mod cross_entropy;
+pub(crate) mod embedding;
+pub(crate) mod gelu;
+pub(crate) mod leaky_relu_sq;
+pub(crate) mod logit_softcap;
+pub(crate) mod mlp_4x_leaky_sq;
+pub(crate) mod parallel_residual_block;
+pub(crate) mod relu;
+pub(crate) mod residual_add;
+pub(crate) mod sigmoid_gate;
+pub(crate) mod silu;
+pub(crate) mod skip_gate;
+pub(crate) mod swiglu;
 pub(crate) mod unary;
 
 pub use cross_entropy::{cross_entropy, try_cross_entropy};

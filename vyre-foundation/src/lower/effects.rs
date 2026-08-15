@@ -33,7 +33,7 @@ impl ProgramEffects {
     pub const HOST_IO: Self = Self(1 << 2);
     /// Nested GPU dispatch  -  `Node::IndirectDispatch`.
     pub const GPU_DISPATCH: Self = Self(1 << 3);
-    /// Synchronization  -  `Node::Barrier { ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst }`.
+    /// Synchronization  -  `Node::Barrier { ordering: vyre_foundation::MemoryOrdering::SeqCst }`.
     pub const BARRIER: Self = Self(1 << 4);
     /// Async load fetching from streaming storage  -
     /// `Node::AsyncLoad`.

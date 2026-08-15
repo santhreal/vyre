@@ -31,14 +31,14 @@ mod tests;
 pub use expr::{
     any_subexpr, expr_buffer_ref, expr_children, for_each_subexpr, ExprBufferRef, ExprChildren,
 };
+pub(crate) use node::map_bodies_cow;
 pub use node::{
     child_bodies, child_bodies_mut, node_bound_name, node_buffer_refs, node_operands, node_scalars,
     node_shape, BufferRefs, NameBinding, NodeScalars, NodeShape,
 };
-pub(crate) use node::map_bodies_cow;
+pub(crate) use walk::{any_body, for_each_descendant};
 pub use walk::{
     any_descendant, any_expr_in, collect_call_op_ids, for_each_expr, for_each_node,
     referenced_buffers, try_for_each_expr, try_for_each_node, walk_exprs, walk_nodes,
     walk_nodes_and_exprs, walk_nodes_mut, ExprVisitor, NodeVisitor,
 };
-pub(crate) use walk::{any_body, for_each_descendant};

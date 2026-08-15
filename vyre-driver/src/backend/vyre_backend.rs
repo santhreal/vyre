@@ -9,7 +9,7 @@ use crate::backend::resident_sequence::{
     dispatch_resident_steps, read_resident_ranges_into, resident_step_config,
 };
 use crate::backend::{
-    device_buffer::unsupported_device_buffer, private, BackendError, DeviceBuffer, DispatchConfig,
+    device_buffer::unsupported_device_buffer, sealed, BackendError, DeviceBuffer, DispatchConfig,
     OutputBuffers, PendingDispatch, Resource, TimedDispatchResult,
 };
 
@@ -63,7 +63,7 @@ pub struct ResidentSequenceTiming {
 ///
 /// # Examples
 ///
-pub trait VyreBackend: private::Sealed + Send + Sync {
+pub trait VyreBackend: sealed::Sealed + Send + Sync {
     /// Stable backend identifier used for logging, certificates, and adapter selection.
     ///
     /// The identifier must be unique among all backends linked into the
@@ -1126,7 +1126,7 @@ mod tests {
 
     struct TelemetryBackend;
 
-    impl private::Sealed for TelemetryBackend {}
+    impl sealed::Sealed for TelemetryBackend {}
 
     impl VyreBackend for TelemetryBackend {
         fn id(&self) -> &'static str {
@@ -1147,7 +1147,7 @@ mod tests {
         dispatches: AtomicUsize,
     }
 
-    impl private::Sealed for SequenceTimingBackend {}
+    impl sealed::Sealed for SequenceTimingBackend {}
 
     impl VyreBackend for SequenceTimingBackend {
         fn id(&self) -> &'static str {

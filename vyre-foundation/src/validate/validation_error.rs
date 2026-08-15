@@ -6,10 +6,10 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
+use super::catalog::{ValidationRule, VALIDATION_RULES};
 use crate::diagnostics::{
     Diagnostic, DiagnosticCode, DiagnosticStage, OpLocation, RetryClass, Severity,
 };
-use super::catalog::{ValidationRule, VALIDATION_RULES};
 
 /// Stable validation rule identity.
 ///

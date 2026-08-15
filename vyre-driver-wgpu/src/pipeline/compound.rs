@@ -7,7 +7,7 @@ use crate::numeric::WGPU_NUMERIC;
 use crate::pipeline::{DispatchItem, OutputLayout, WgpuPipeline};
 use smallvec::SmallVec;
 use std::sync::mpsc::Receiver;
-use vyre_driver::program_walks::enforce_output_budget;
+use vyre_driver::enforce_output_budget;
 use vyre_driver::{BackendError, BatchOutputs, DispatchConfig, ResidentHandle, Resource};
 
 /// Per-dispatch view of one bound resource.

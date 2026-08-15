@@ -1,9 +1,9 @@
 //! Concrete executable cache identity, persistence, and telemetry.
 
 /// Shared on-disk compiled-pipeline cache.
-pub mod cache;
+pub(crate) mod cache;
 /// Stable cache hashing and device fingerprint helpers.
-pub mod hashing;
+pub(crate) mod hashing;
 
 pub use cache::{
     DiskPipelineCache, PipelineCacheIdentity, PipelineCacheKey, PipelineCacheMissEvidence,

@@ -7,7 +7,7 @@
 //! into the N2 adoption verdict.
 
 use vyre_driver::autotune_store::{AutotuneRecord, AutotuneStore};
-use vyre_driver::speculate::{
+use vyre_driver::{
     record_speculative_variant_race, SpeculativeVariantDecision, SpeculativeVariantKeys,
     SpeculativeVariantRace,
 };
@@ -156,8 +156,8 @@ impl RunningMean {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_driver::specialization::SpecCacheKey;
-    use vyre_driver::speculate::SpeculativeVariantKind;
+    use vyre_driver::SpecCacheKey;
+    use vyre_driver::SpeculativeVariantKind;
 
     fn key(id: u64) -> SpecCacheKey {
         SpecCacheKey {

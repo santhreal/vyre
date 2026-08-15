@@ -4,12 +4,12 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::model::program_graph_identity::{
-    ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,
-};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, GraphInput, GraphOutput, Program, ProgramGraph, ShapeDim,
     ValueContract, ValueLifetime,
+};
+use vyre_foundation::ir::{
+    ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,
 };
 
 fn tensor(

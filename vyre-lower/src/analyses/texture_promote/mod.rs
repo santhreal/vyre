@@ -18,8 +18,8 @@
 //! loads. Phase 2 (follow-up): infer 2D/3D access pattern via index
 //! decomposition; emit substrate-specific texture binding decoration.
 
-pub mod analysis;
-pub mod plan;
+pub(crate) mod analysis;
+pub(crate) mod plan;
 
 pub use analysis::analyze;
 pub use plan::{TextureCandidate, TexturePromotionPlan};

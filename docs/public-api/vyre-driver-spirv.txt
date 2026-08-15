@@ -1,5 +1,5 @@
 impl core::default::Default for vyre_driver_spirv::backend::SpirvBackend
-impl vyre_driver::backend::private::Sealed for vyre_driver_spirv::SpirvBackendRegistration
+impl vyre_driver::backend::sealed::Sealed for vyre_driver_spirv::SpirvBackendRegistration
 impl vyre_driver::backend::vyre_backend::VyreBackend for vyre_driver_spirv::SpirvBackendRegistration
 impl vyre_driver_spirv::SpirvBackendRegistration
 impl vyre_driver_spirv::backend::SpirvBackend

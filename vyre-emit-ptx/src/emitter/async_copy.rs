@@ -1,8 +1,8 @@
 use std::fmt::Write as _;
 
 use vyre_foundation::ir::DataType;
-use vyre_lower::descriptor::Name;
 use vyre_lower::MemoryClass;
+use vyre_lower::Name;
 
 use super::memory::AsyncCopyDirection;
 use super::BodyCtx;

@@ -21,7 +21,7 @@ impl<'a> BodyBuilder<'a> {
     pub(super) fn emit_loop_index(
         &mut self,
         op: &KernelOp,
-        loop_var: &vyre_lower::descriptor::Name,
+        loop_var: &vyre_lower::Name,
     ) -> Result<(), EmitError> {
         let local = *self.loop_locals.get(loop_var).ok_or_else(|| {
             EmitError::InvalidDescriptor(format!(
@@ -40,7 +40,7 @@ impl<'a> BodyBuilder<'a> {
         &mut self,
         body: &KernelBody,
         op: &KernelOp,
-        loop_var: &vyre_lower::descriptor::Name,
+        loop_var: &vyre_lower::Name,
     ) -> Result<(), EmitError> {
         // Q7: identify loop-carried result ids  -  values produced
         // inside the loop child body that the parent body references

@@ -236,26 +236,26 @@ inventory::submit! {
         factory: || WgpuBackend::acquire().map(|backend| {
             Box::new(backend) as Box<dyn vyre_driver::VyreBackend>
         }),
-        supported_ops: vyre_driver::backend::validation::default_supported_ops_with_trap,
-        semantic_operations: vyre_driver::backend::dialect_only_supported_ops,
+        supported_ops: vyre_driver::default_supported_ops_with_trap,
+        semantic_operations: vyre_driver::dialect_only_supported_ops,
         target_compiler: Some(target_compiler::target_compiler_factory),
         materializer: Some(materializer::materializer_factory),
     }
 }
 
 inventory::submit! {
-    vyre_driver::backend::BackendPrecedence {
+    vyre_driver::BackendPrecedence {
         id: "wgpu",
         rank: 30,
     }
 }
 
 inventory::submit! {
-    vyre_driver::backend::BackendCapability {
+    vyre_driver::BackendCapability {
         id: "wgpu",
         dispatches: true,
     }
 }
 
-impl vyre_driver::backend::private::Sealed for crate::pipeline::WgpuPipeline {}
-impl vyre_driver::backend::private::Sealed for WgpuBackend {}
+impl vyre_driver::sealed::Sealed for crate::pipeline::WgpuPipeline {}
+impl vyre_driver::sealed::Sealed for WgpuBackend {}

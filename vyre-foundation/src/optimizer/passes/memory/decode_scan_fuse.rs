@@ -342,16 +342,16 @@ mod tests {
         assert_eq!(
             count_opportunities(
                 &Program::wrapped(
-                vec![
-                    BufferDecl::storage("b", 0, BufferAccess::ReadWrite, DataType::U32)
-                        .with_count(16)
-                ],
-                [64, 1, 1],
-                vec![Node::AllReduce {
-                    buffer: "b".into(),
-                    op: CollectiveOp::Sum,
-                    group: CommGroup::WORLD,
-                }],
+                    vec![
+                        BufferDecl::storage("b", 0, BufferAccess::ReadWrite, DataType::U32)
+                            .with_count(16)
+                    ],
+                    [64, 1, 1],
+                    vec![Node::AllReduce {
+                        buffer: "b".into(),
+                        op: CollectiveOp::Sum,
+                        group: CommGroup::WORLD,
+                    }],
                 ),
                 &AdapterCaps::conservative()
             ),
@@ -429,7 +429,10 @@ mod tests {
 
     #[test]
     fn count_opportunities_finds_one_candidate() {
-        assert_eq!(count_opportunities(&decoder_like(), &AdapterCaps::conservative()), 1);
+        assert_eq!(
+            count_opportunities(&decoder_like(), &AdapterCaps::conservative()),
+            1
+        );
     }
 
     /// A ReadWrite handoff larger than the reported shared-memory budget

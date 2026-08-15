@@ -4,7 +4,7 @@
 //! but it cannot see hazards introduced when independently valid nodes are
 //! fused into the same kernel. This pass walks node sequences and rejects
 //! mixed atomic / non-atomic access to the same buffer unless an explicit
-//! `Node::Barrier { ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst }` separates them.
+//! `Node::Barrier { ordering: vyre_foundation::MemoryOrdering::SeqCst }` separates them.
 //!
 //! # Sole owner of `V116`
 //!

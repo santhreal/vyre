@@ -18,10 +18,7 @@ fn dynamic_four_byte_pack_writer_program(words: u32) -> Program {
             BufferDecl::output("out", 1, DataType::U32).with_count(words),
         ],
         [256, 1, 1],
-        invocation_gated(
-            words,
-            vec![Node::store("out", Expr::var("w"), packed)],
-        ),
+        invocation_gated(words, vec![Node::store("out", Expr::var("w"), packed)]),
     )
 }
 
@@ -126,4 +123,3 @@ fn clamped_dynamic_byte_loads_atomic_or_pack_invocation_indexed_lanes_from_u8_in
         "buf_len-clamped byte variables must preserve invocation-indexed U8 lanes before byte compaction."
     );
 }
-

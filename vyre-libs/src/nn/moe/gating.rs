@@ -3,7 +3,7 @@
 //! Category-A composition over `nn::softmax` and `nn::top_k`.
 
 use crate::region::{wrap_anonymous, wrap_child};
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::nn::quest_paging_passes::{quest_select_top_k_body, QUEST_SELECT_TOP_K_OP_ID};
 

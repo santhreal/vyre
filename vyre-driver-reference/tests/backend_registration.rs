@@ -1,6 +1,6 @@
 //! Registration contract for the pure Rust reference backend adapter.
 
-use vyre_driver::backend::{acquire, backend_dispatches};
+use vyre_driver::{acquire, backend_dispatches};
 use vyre_foundation::ir::{Expr, Node, Program};
 
 mod support;

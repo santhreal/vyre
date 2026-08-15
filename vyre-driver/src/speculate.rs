@@ -745,7 +745,7 @@ mod tests {
 
     struct TailBackend;
 
-    impl crate::backend::private::Sealed for TailBackend {}
+    impl crate::backend::sealed::Sealed for TailBackend {}
 
     impl VyreBackend for TailBackend {
         fn id(&self) -> &'static str {

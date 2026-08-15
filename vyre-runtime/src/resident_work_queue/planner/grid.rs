@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 
 use rustc_hash::FxHashMap;
-use vyre_driver::backend::BackendError;
+use vyre_driver::BackendError;
 
 use super::geometry::ResidentLaunchGeometry;
 use super::sizing::ResidentSizingPolicy;

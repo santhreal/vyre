@@ -157,18 +157,18 @@ impl HotPathHints {
         match self.records.get_mut(region_generator) {
             Some(mut entry) => entry.accumulate(timestamp, kernel_ns, bytes_touched),
             None => {
-                let mut entry = self
-                    .records
-                    .entry(region_generator.to_owned())
-                    .or_insert(HintEntry {
-                        record: RegionRecord {
-                            dispatch_count: 0,
-                            kernel_ns_total: 0,
-                            kernel_ns_max: 0,
-                            bytes_total: 0,
-                        },
-                        timestamp,
-                    });
+                let mut entry =
+                    self.records
+                        .entry(region_generator.to_owned())
+                        .or_insert(HintEntry {
+                            record: RegionRecord {
+                                dispatch_count: 0,
+                                kernel_ns_total: 0,
+                                kernel_ns_max: 0,
+                                bytes_total: 0,
+                            },
+                            timestamp,
+                        });
                 entry.accumulate(timestamp, kernel_ns, bytes_touched);
             }
         }

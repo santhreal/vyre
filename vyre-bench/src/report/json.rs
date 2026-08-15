@@ -341,7 +341,7 @@ struct LowerFullReportArtifact<'a> {
     kind: &'static str,
     descriptor_id: &'a str,
     verify_status: &'static str,
-    histogram: &'a vyre_lower::analyses::op_histogram::OpHistogram,
+    histogram: &'a vyre_lower::analyses::OpHistogram,
     fix_text: &'a str,
     full_report: &'a vyre_lower::FullReport,
 }

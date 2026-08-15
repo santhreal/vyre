@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use vyre_driver::backend::{BackendError, DispatchConfig};
+use vyre_driver::{BackendError, DispatchConfig};
 
 use super::grid::cached_geometry_from_slots;
 use super::sizing::ResidentSizingPolicy;

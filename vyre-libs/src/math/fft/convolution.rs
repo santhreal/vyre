@@ -8,7 +8,7 @@
 use std::sync::Arc;
 use vyre_foundation::composition::wrap_child_region;
 
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
 use super::complex_length::validate_complex_len;

@@ -6,7 +6,7 @@ use std::path::Path;
 use std::process::Command;
 
 use serde::Serialize;
-use vyre_driver::backend::{
+use vyre_driver::{
     acquire, acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
 };
 use xtask::artifact_gate::Inspection;
@@ -771,7 +771,7 @@ fn collect_backend_capability_rows(
     rows.push(BackendCapabilityRow {
         backend_id: "wgpu".to_string(),
         capability_id: "adapter-live-acquire".to_string(),
-        probe_source: "vyre_driver::backend::acquire(\"wgpu\")".to_string(),
+        probe_source: "vyre_driver::acquire(\"wgpu\")".to_string(),
         probed_value: wgpu.map(|backend| {
             format!(
                 "dispatches={},acquire_ok={},precedence={}",

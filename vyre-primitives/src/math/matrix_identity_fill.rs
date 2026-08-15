@@ -3,10 +3,8 @@
 //! Every rotation accumulator starts from the identity, so the seeding pass is
 //! its own operation rather than three lines repeated inside each solver.
 
-use vyre_foundation::composition::{
-    trap_program, wrap_anonymous_region, wrap_child_region,
-};
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use crate::operand_shape::square_matrix_cells;

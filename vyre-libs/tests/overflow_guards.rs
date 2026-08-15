@@ -10,7 +10,7 @@
 
 use vyre_libs::math::linalg::{matmul, matmul_tiled, Matmul, MatmulTiled};
 use vyre_libs::nn::attention::{attention, Attention};
-use vyre_libs::tensor_ref::TensorRef;
+use vyre_libs::TensorRef;
 
 /// Near-overflow bound: any `a*b > u32::MAX` must panic.
 const PIVOT: u32 = 1u32 << 16; // 65_536; 65_536 * 65_536 = u32::MAX + 1

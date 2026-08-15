@@ -5,7 +5,7 @@
 use crate::EmitError;
 use naga::{BinaryOperator, Literal, ScalarKind, UnaryOperator};
 use vyre_foundation::ir::{BinOp, DataType, UnOp};
-use vyre_foundation::memory_model::MemoryOrdering;
+use vyre_foundation::MemoryOrdering;
 use vyre_lower::LiteralValue;
 
 pub(super) fn naga_literal(literal: &LiteralValue) -> Result<Literal, EmitError> {

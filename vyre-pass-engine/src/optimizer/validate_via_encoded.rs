@@ -26,7 +26,7 @@
 
 use std::sync::Arc;
 
-use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use vyre_libs::dispatch_buffers::{decode_u32_output_exact, u32_slice_to_le_bytes};
@@ -51,8 +51,7 @@ pub const DEFAULT_MAX_EXPR_DEPTH: u32 = 1024;
 /// passes one and is rejected by the other (the V019 regression that broke a
 /// downstream megakernel-bundle scan). Single source of truth lives
 /// in `vyre_foundation::validate::depth`.
-pub const DEFAULT_MAX_NODE_COUNT: u32 =
-    vyre_foundation::validate::depth::DEFAULT_MAX_NODE_COUNT as u32;
+pub const DEFAULT_MAX_NODE_COUNT: u32 = vyre_foundation::validate::DEFAULT_MAX_NODE_COUNT as u32;
 
 /// Workgroup size for the limit-validator kernel.
 const VALIDATOR_WORKGROUP_X: u32 = 256;

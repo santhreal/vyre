@@ -23,7 +23,7 @@
 
 use std::collections::BTreeMap;
 
-use vyre_driver::backend::BackendRegistration;
+use vyre_driver::BackendRegistration;
 use vyre_driver::{BindingSet, BoundResource};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphOutput, Node, Program, ProgramGraph, ShapeDim,
@@ -105,14 +105,14 @@ pub(crate) fn single_lane_artifact(access: BufferAccess, facts_seed: u8) -> Arti
 /// discovery paths, and each caller used only one of them. A backend that
 /// answered one and not the other satisfied every test that existed.
 pub(crate) fn registration(backend_id: &str) -> &'static BackendRegistration {
-    let enumerated = vyre_driver::backend::registered_backends()
+    let enumerated = vyre_driver::registered_backends()
         .expect("backend registry must build")
         .iter()
         .find(|candidate| candidate.id == backend_id)
         .unwrap_or_else(|| {
             panic!("Fix: link the driver crate that registers backend `{backend_id}`")
         });
-    let by_id = vyre_driver::backend::backend_registration(backend_id).unwrap_or_else(|error| {
+    let by_id = vyre_driver::backend_registration(backend_id).unwrap_or_else(|error| {
         panic!("Fix: backend `{backend_id}` is enumerated but its id lookup failed: {error}")
     });
     assert!(

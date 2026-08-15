@@ -60,20 +60,21 @@ pub mod range_ordering;
 
 /// `TensorRef`  -  typed buffer-argument wrapper used by every Cat-A
 /// composition for dtype + shape + name-uniqueness validation.
-pub mod tensor_ref;
+pub(crate) mod tensor_ref;
 
 pub use tensor_ref::{check_dtype, check_shape, check_unique_names, TensorRef, TensorRefError};
 
 /// Shared builder helpers every Cat-A composition reuses.
-pub mod builder;
+pub(crate) mod builder;
 mod builder_catalog;
 
+pub use builder::{check_same_shape, checked_element_count};
 pub use builder::{check_tensors, BuildOptions};
 
 pub mod buffer_names;
 
 /// `ProgramDescriptor`  -  introspection surface for Cat-A Programs.
-pub mod descriptor;
+pub(crate) mod descriptor;
 
 /// Host-side byte marshalling for `ProgramDispatcher` calls.
 pub mod dispatch_buffers;
@@ -237,7 +238,7 @@ pub mod intern;
 /// Operation contract presets used by catalog entries.
 pub mod contracts;
 /// Type-signature constants shared across op definitions.
-pub mod signatures;
+pub(crate) mod signatures;
 /// Re-exports every type-signature constant at the crate root for convenient access.
 pub use signatures::{
     BOOL_OUTPUTS, BYTES_TO_BYTES_INPUTS, BYTES_TO_BYTES_OUTPUTS, BYTES_TO_U32_OUTPUTS,
@@ -263,7 +264,7 @@ pub mod test_support;
 /// composes another dialect's work names it here, so the coupling is one
 /// reviewable list rather than a reach into another module tree.
 pub mod prelude {
-    pub use vyre_foundation::ir::model::expr::GeneratorRef;
+    pub use vyre_foundation::ir::GeneratorRef;
     pub use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
     // P2.1 / P2.2: the typed-tensor API + shared builder primitives.
@@ -283,7 +284,10 @@ pub mod prelude {
     #[cfg(feature = "analysis")]
     pub use crate::analysis::dataflow_fixpoint::reachability_closure_via_into;
     #[cfg(feature = "decode")]
-    pub use crate::decode::{base64_decode, hex_decode, inflate, ziftsieve_gpu};
+    pub use crate::decode::{
+        base64_decode, hex_decode, inflate_stored_block, inflate_stored_block_then_aho_corasick,
+        ziftsieve_gpu,
+    };
     #[cfg(feature = "crypto-blake3")]
     pub use crate::hash::blake3_compress;
     #[cfg(feature = "logical")]

@@ -1,4 +1,4 @@
-impl vyre_driver::backend::private::Sealed for vyre_driver_reference::CpuRefBackend
+impl vyre_driver::backend::sealed::Sealed for vyre_driver_reference::CpuRefBackend
 impl vyre_driver::backend::vyre_backend::VyreBackend for vyre_driver_reference::CpuRefBackend
 pub const vyre_driver_reference::CPU_REF_BACKEND_ID: &str
 pub const vyre_driver_reference::CPU_REF_TARGET_ID: vyre_foundation::operation::TargetId

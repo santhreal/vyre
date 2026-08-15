@@ -58,7 +58,7 @@
 use super::is_invocation_id_eq_constant;
 use crate::ir::{Expr, Node, Program};
 use crate::optimizer::RefusalReason;
-use vyre_spec::op_contract::SideEffectClass;
+use vyre_spec::SideEffectClass;
 
 /// Memory-ordering tag carried by `ReadWriteAtomic`. Mirrors the wire-frozen
 /// `MemoryOrdering` in `vyre-foundation::memory_model` but reduced to the

@@ -9,7 +9,7 @@
 //! scalar row-loop reference remains available through [`attention_reference`].
 
 use vyre_foundation::composition::trap_program;
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::nn::attention_passes::{
     attention_max_pass, attention_sum_pass, attention_write_pass, ATTENTION_MAX_PASS_OP_ID,

@@ -170,7 +170,7 @@ fn build_registered_backend() -> &'static vyre_driver::BackendRegistration {
             // The lens compares a backend against the CPU reference, so the
             // reference oracle would be compared against itself.
             !registration.reference_oracle
-                && vyre_driver::backend::backend_dispatches(registration.id)
+                && vyre_driver::backend_dispatches(registration.id)
                     .expect("valid backend registry")
                 && selected
                     .as_deref()

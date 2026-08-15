@@ -50,7 +50,7 @@ pub(crate) fn load_or_compile_disk_wgsl(
     let fingerprint = adapter_fingerprint(adapter_info);
 
     let norm_digest =
-        vyre_driver::pipeline::try_normalized_program_cache_digest(program).map_err(|error| {
+        vyre_driver::try_normalized_program_cache_digest(program).map_err(|error| {
             BackendError::new(format!("WGSL disk pipeline cache digest failed: {error}"))
         })?;
     let cache_key = wgsl_cache_key(&norm_digest, &fingerprint, config);
@@ -99,7 +99,7 @@ pub(crate) fn early_pipeline_cache_key(
     hasher.update(NAGA_VERSION.as_bytes());
     update_wgsl_lowering_contract(&mut hasher);
     hasher.update(b"\0policy\0");
-    vyre_driver::pipeline::update_dispatch_policy_cache_hash(&mut hasher, config);
+    vyre_driver::update_dispatch_policy_cache_hash(&mut hasher, config);
     hasher.update(b"\0workgroup_override\0");
     if let Some(wg) = config.workgroup_override {
         for axis in wg {
@@ -231,7 +231,7 @@ fn persist_disk_wgsl(
         program_abi_version: u32::from(WIRE_FORMAT_VERSION),
         naga_version: std::borrow::Cow::Borrowed(NAGA_VERSION),
         wgsl_lowering_contract: std::borrow::Cow::Borrowed(WGSL_LOWERING_CONTRACT),
-        policy: vyre_driver::pipeline::dispatch_policy_cache_string(config),
+        policy: vyre_driver::dispatch_policy_cache_string(config),
         wgsl_blake3: blake3_hex(wgsl.as_bytes()),
     };
     persist_bytes(dir, wgsl_path, meta_path, wgsl.as_bytes(), &metadata)
@@ -254,7 +254,7 @@ fn wgsl_metadata_matches(
         && metadata.program_abi_version == u32::from(WIRE_FORMAT_VERSION)
         && metadata.naga_version == NAGA_VERSION
         && metadata.wgsl_lowering_contract == WGSL_LOWERING_CONTRACT
-        && metadata.policy == vyre_driver::pipeline::dispatch_policy_cache_string(config)
+        && metadata.policy == vyre_driver::dispatch_policy_cache_string(config)
         && metadata.wgsl_blake3 == blake3_hex(wgsl.as_bytes())
 }
 
@@ -500,7 +500,7 @@ fn wgsl_cache_key(norm_digest: &[u8], fingerprint: &str, config: &DispatchConfig
     hasher.update(NAGA_VERSION.as_bytes());
     update_wgsl_lowering_contract(&mut hasher);
     hasher.update(b"\0policy\0");
-    vyre_driver::pipeline::update_dispatch_policy_cache_hash(&mut hasher, config);
+    vyre_driver::update_dispatch_policy_cache_hash(&mut hasher, config);
     *hasher.finalize().as_bytes()
 }
 

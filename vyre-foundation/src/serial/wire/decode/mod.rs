@@ -16,7 +16,7 @@ pub(crate) fn reject_reserved_extension_id(raw: u32, surface: &str) -> Result<u3
 }
 
 /// Top-level wire-format program decoder.
-pub mod from_wire;
+pub(crate) mod from_wire;
 /// Per-variant Reader methods (reads each Node/Expr shape).
 pub mod impl_reader;
 /// Semantic decode invariants shared by wire readers.

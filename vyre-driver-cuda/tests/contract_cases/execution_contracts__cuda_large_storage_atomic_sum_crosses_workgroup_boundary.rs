@@ -61,7 +61,7 @@ fn cuda_artifact_dispatch_matches_direct_dispatch_for_multi_block_atomics() {
         CudaBackend::acquire().expect("Fix: CUDA backend must acquire on the GPU-required host.");
     let values = u32_bytes(&vec![1; count as usize]);
     let initial_sum = u32_bytes(&[0]);
-    let grid = vyre_driver::program_walks::infer_dispatch_grid(
+    let grid = vyre_driver::infer_dispatch_grid(
         &program,
         &[initial_sum.clone(), values.clone()],
         &DispatchConfig::default(),

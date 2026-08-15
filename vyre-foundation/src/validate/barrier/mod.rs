@@ -29,7 +29,7 @@ use crate::validate::{err, ValidationError};
 ///
 /// `check_barrier` is `pub(crate)`; it's exercised indirectly through
 /// [`crate::validate::rule_pipeline::validate`] when a program contains a
-/// `Node::Barrier { ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst }` inside a divergent `Node::If`. See the unit tests on
+/// `Node::Barrier { ordering: vyre_foundation::MemoryOrdering::SeqCst }` inside a divergent `Node::If`. See the unit tests on
 /// [`crate::validate::rule_pipeline::validate`] for a runnable example.
 ///
 /// # Errors

@@ -19,8 +19,8 @@
 
 use std::sync::Arc;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{GeneratorRef, Ident};
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::math::sheaf_laplacian_eigenvalue";

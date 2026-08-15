@@ -516,10 +516,10 @@ fn descriptor_trap_sidecar_slot(desc: &KernelDescriptor) -> Result<Option<u32>, 
     Ok(Some(slot.slot))
 }
 
-fn descriptor_trap_tag_codes(body: &KernelBody) -> FxHashMap<vyre_lower::descriptor::Name, u32> {
+fn descriptor_trap_tag_codes(body: &KernelBody) -> FxHashMap<vyre_lower::Name, u32> {
     fn walk(
         body: &KernelBody,
-        tags: &mut FxHashMap<vyre_lower::descriptor::Name, u32>,
+        tags: &mut FxHashMap<vyre_lower::Name, u32>,
         next: &mut u32,
     ) {
         for op in &body.ops {

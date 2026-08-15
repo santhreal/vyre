@@ -5,7 +5,7 @@ use super::*;
 #[derive(Debug)]
 struct ObserveLateRewrite;
 
-impl crate::optimizer::private::Sealed for ObserveLateRewrite {}
+impl crate::optimizer::sealed::Sealed for ObserveLateRewrite {}
 
 impl ProgramPass for ObserveLateRewrite {
     fn metadata(&self) -> PassMetadata {
@@ -35,7 +35,7 @@ impl ProgramPass for ObserveLateRewrite {
 #[derive(Debug)]
 struct IntroduceLateRewrite;
 
-impl crate::optimizer::private::Sealed for IntroduceLateRewrite {}
+impl crate::optimizer::sealed::Sealed for IntroduceLateRewrite {}
 
 impl ProgramPass for IntroduceLateRewrite {
     fn metadata(&self) -> PassMetadata {

@@ -28,7 +28,7 @@ fn matrix_mma_emits_real_mma_sync_and_binds_all_four_results() {
         .body(body().ops(ops).literals(literals))
         .build();
 
-    vyre_lower::verify::verify(&kernel)
+    vyre_lower::verify(&kernel)
         .expect("MatrixMma must publish result ids base..base+4 to verifier");
     let s = emit_with_target(&kernel, ComputeCapability::SM_70).unwrap();
     assert!(s.contains("mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32"));

@@ -64,31 +64,31 @@ pub(crate) mod impl_reader;
 /// Audit L.1.47: version mismatch is detected immediately after magic
 /// validation so callers receive an actionable error rather than
 /// arbitrary downstream parse failures.
-pub mod magic;
+pub(crate) mod magic;
 
 /// Length-field encoder for wire-format sequences.
 ///
 /// Bridges Rust `usize` (platform pointer size) to the fixed `u32`
 /// length field used in VIR0. Overflow is rejected with a `Fix:` hint
 /// so that hostile or oversized programs cannot be serialized.
-pub mod put_len_u32;
+pub(crate) mod put_len_u32;
 
 /// UTF-8 string encoder for the IR wire format.
 ///
 /// Bounds string lengths against `MAX_STRING_LEN` before writing
 /// the length-prefixed payload. Guarantees that every encoded string
 /// can be decoded without unbounded allocation.
-pub mod put_string;
+pub(crate) mod put_string;
 
 /// Little-endian `u32` framing helper.
 ///
 /// Emits four little-endian bytes for scalar fields. This module
 /// contains the canonical implementation; all `u32` wire fields go
 /// through here so endianness is consistent across architectures.
-pub mod put_u32;
+pub(crate) mod put_u32;
 
 /// Single-byte framing helper.
 ///
 /// Emits one raw byte for compact discriminants. Used for enum tags
 /// and boolean-like flags where a full multi-byte word is unnecessary.
-pub mod put_u8;
+pub(crate) mod put_u8;

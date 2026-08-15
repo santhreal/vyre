@@ -11,7 +11,7 @@
 //! cross-body reuse rather than leaving it to a backend to miscompile.
 
 use vyre_foundation::ir::DataType;
-use vyre_lower::verify::{verify, VerifyErrorKind};
+use vyre_lower::{verify, VerifyErrorKind};
 use vyre_lower::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
     KernelOp, KernelOpKind, LiteralValue, MemoryClass,

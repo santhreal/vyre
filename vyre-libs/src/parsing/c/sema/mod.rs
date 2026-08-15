@@ -7,12 +7,12 @@
 /// Identifier interning IR fragments.
 pub mod intern;
 /// Host-side lazy scope/name resolution cache.
-pub mod lazy_scope;
+pub(crate) mod lazy_scope;
 /// Declaration lookup IR fragments.
 pub mod lookup;
 mod predicates;
 /// Registered C semantic-analysis programs.
-pub mod registry;
+pub(crate) mod registry;
 mod scan;
 /// Scope-walk IR fragments.
 pub mod walk;

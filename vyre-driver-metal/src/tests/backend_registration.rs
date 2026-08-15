@@ -20,7 +20,7 @@ fn non_apple_acquire_fails_actionably() {
 #[test]
 fn non_apple_build_does_not_register_fake_backend() {
     assert!(
-        vyre_driver::backend::registered_backends()
+        vyre_driver::registered_backends()
             .expect("valid backend registry")
             .iter()
             .all(|registration| registration.id != METAL_BACKEND_ID),
@@ -36,18 +36,18 @@ fn apple_acquire_registers_dispatch_backend() {
     );
     assert_eq!(backend.id(), METAL_BACKEND_ID);
     assert!(
-        vyre_driver::backend::registered_backends()
+        vyre_driver::registered_backends()
             .expect("valid backend registry")
             .iter()
             .any(|registration| registration.id == METAL_BACKEND_ID),
         "Fix: Apple Metal builds must submit a real backend registration."
     );
     assert!(
-        vyre_driver::backend::backend_dispatches(METAL_BACKEND_ID).expect("valid backend registry"),
+        vyre_driver::backend_dispatches(METAL_BACKEND_ID).expect("valid backend registry"),
         "Fix: Apple Metal registration must declare live dispatch capability."
     );
     assert_eq!(
-        vyre_driver::backend::backend_precedence(METAL_BACKEND_ID)
+        vyre_driver::backend_precedence(METAL_BACKEND_ID)
             .expect("valid backend registry"),
         25,
         "Fix: Metal precedence must stay above portable fallbacks only after live native dispatch exists."

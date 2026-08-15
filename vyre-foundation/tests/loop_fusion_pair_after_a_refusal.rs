@@ -39,7 +39,11 @@ fn write_loop(var: &str, buffer: &str, value: u32) -> Node {
 fn program_with_one_fusable_pair(count: usize, pair_at: usize) -> Program {
     let entry = (0..count)
         .map(|index| {
-            let buffer = if index == pair_at + 1 { "other" } else { "same" };
+            let buffer = if index == pair_at + 1 {
+                "other"
+            } else {
+                "same"
+            };
             write_loop(&format!("v{index}"), buffer, index as u32)
         })
         .collect();

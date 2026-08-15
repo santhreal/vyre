@@ -12,7 +12,7 @@
 #![cfg(feature = "security")]
 #![forbid(unsafe_code)]
 
-use vyre_libs::security::flows_to::{flows_to, flows_to_alias_only};
+use vyre_libs::security::{flows_to, flows_to_alias_only};
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
 use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};

@@ -191,10 +191,10 @@ impl WgpuProgram {
 pub(crate) fn emit_naga_module_for_descriptor(
     descriptor: &vyre_lower::KernelDescriptor,
 ) -> Result<naga::Module, LoweringError> {
-    if let Err(errors) = vyre_lower::verify::verify(descriptor) {
+    if let Err(errors) = vyre_lower::verify(descriptor) {
         return Err(LoweringError::invalid(format!(
             "KernelDescriptor verification failed after wgpu workgroup selection: {}. Fix: keep DispatchConfig.workgroup_override within descriptor limits.",
-            vyre_lower::verify::format_verify_errors(&errors)
+            vyre_lower::format_verify_errors(&errors)
         )));
     }
     vyre_emit_naga::emit(descriptor).map_err(|error| {

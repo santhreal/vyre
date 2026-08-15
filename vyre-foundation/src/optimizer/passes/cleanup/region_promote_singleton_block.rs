@@ -111,7 +111,7 @@ fn is_singleton_block_region(node: &Node) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::model::expr::Ident;
+    use crate::ir::Ident;
     use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
 
     fn buf() -> BufferDecl {

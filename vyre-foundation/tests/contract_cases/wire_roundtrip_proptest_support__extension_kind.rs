@@ -10,12 +10,10 @@ use ir_arbitrary::*;
 use proptest::prelude::*;
 use smallvec::smallvec;
 use std::sync::Arc;
-use vyre_foundation::ir::{
-    AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp,
-};
+use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_foundation::MemoryOrdering;
-use vyre_spec::data_type::TypeId;
 use vyre_spec::extension::ExtensionDataTypeId;
+use vyre_spec::TypeId;
 
 #[path = "../support/opaque_echo_extension.rs"]
 mod opaque_echo_extension;

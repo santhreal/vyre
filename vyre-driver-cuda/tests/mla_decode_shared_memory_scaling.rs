@@ -1,6 +1,6 @@
 //! Live CUDA witness for MLA decode shared-memory scaling against `head_dim`.
 //!
-//! `vyre_libs::nn::attention::mla::mla_decode` pins its workgroup at a fixed
+//! `vyre_libs::nn::attention::mla_decode` pins its workgroup at a fixed
 //! 64 lanes (`WORKGROUP_LANES`) while all three of its workgroup scratch
 //! buffers scale with the runtime `head_dim`:
 //!
@@ -39,7 +39,7 @@ mod common;
 use common::{live_dispatcher, reference_outputs};
 use vyre_driver::DispatchConfig;
 use vyre_foundation::ir::Program;
-use vyre_libs::nn::attention::mla::mla_decode;
+use vyre_libs::nn::attention::mla_decode;
 
 /// Lane count pinned inside `mla_decode`, mirrored here so the byte
 /// arithmetic below is checked against the value the builder actually uses.

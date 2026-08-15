@@ -21,10 +21,10 @@ use proptest::prelude::*;
 use spec_variant_tables::{builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
 use vyre_foundation::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_foundation::MemoryOrdering;
-use vyre_spec::data_type::TypeId;
 use vyre_spec::extension::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionUnOpId,
 };
+use vyre_spec::TypeId;
 pub(crate) use vyre_test_support::data_type_elements::flat_buffer_element_types;
 
 pub(crate) const VAR_NAMES: &[&str] = &["", "x", "alpha", "snow_雪", "nul\0name"];

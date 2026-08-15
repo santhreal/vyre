@@ -1,6 +1,6 @@
 //! Resident megakernel launch policy and queue-pressure decisions.
 
-use vyre_driver::backend::BackendError;
+use vyre_driver::BackendError;
 
 mod cache;
 use super::planner::{ResidentGridLimits, ResidentGridRequest, ResidentLaunchGeometry};

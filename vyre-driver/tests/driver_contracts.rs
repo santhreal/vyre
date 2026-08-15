@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use vyre_driver::backend::{validate_program, BackendError, VyreBackend};
+use vyre_driver::{validate_program, BackendError, VyreBackend};
 use vyre_foundation::ir::{Node, OpId, Program};
 use vyre_foundation::program_caps::{check_backend_capabilities, RequiredCapabilities};
 
@@ -65,7 +65,7 @@ fn backend_error_new_preserves_complete_message() {
 fn empty_capability_set_rejects_any_program_with_nodes() {
     struct NoOpBackend;
 
-    impl vyre_driver::backend::private::Sealed for NoOpBackend {}
+    impl vyre_driver::sealed::Sealed for NoOpBackend {}
 
     impl VyreBackend for NoOpBackend {
         fn id(&self) -> &'static str {
@@ -148,7 +148,7 @@ fn capability_negotiation_lists_all_missing_bits() {
 fn validation_rejects_unsupported_operation() {
     struct UnsupportedOpsBackend;
 
-    impl vyre_driver::backend::private::Sealed for UnsupportedOpsBackend {}
+    impl vyre_driver::sealed::Sealed for UnsupportedOpsBackend {}
 
     impl VyreBackend for UnsupportedOpsBackend {
         fn id(&self) -> &'static str {
@@ -207,7 +207,7 @@ fn external_fixture_drives_validation_rejection() {
 
     struct DenyAllBackend;
 
-    impl vyre_driver::backend::private::Sealed for DenyAllBackend {}
+    impl vyre_driver::sealed::Sealed for DenyAllBackend {}
 
     impl VyreBackend for DenyAllBackend {
         fn id(&self) -> &'static str {

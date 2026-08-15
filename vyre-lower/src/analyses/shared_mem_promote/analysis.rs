@@ -33,7 +33,7 @@ pub fn analyze(desc: &KernelDescriptor) -> PromotionPlan {
 /// Run promotion analysis with an explicit per-workgroup
 /// shared-memory budget (in bytes).
 #[must_use]
-pub fn analyze_with_budget(desc: &KernelDescriptor, budget_bytes: u32) -> PromotionPlan {
+pub(crate) fn analyze_with_budget(desc: &KernelDescriptor, budget_bytes: u32) -> PromotionPlan {
     let access_counts = access_counts(&desc.body);
 
     let workgroup_size = desc.dispatch.workgroup_size[0].max(1);

@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use vyre_driver::backend::backend_dispatches;
-use vyre_libs::scan::regex_compile::{regex_construct_diagnostic_code, RegexConstruct};
+use vyre_driver::backend_dispatches;
+use vyre_libs::scan::{regex_construct_diagnostic_code, RegexConstruct};
 use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 use xtask::release::conformance_op_matrix::{
     evaluate_op_matrix_coverage, read_conformance_required_op_matrix, OpMatrixReleaseBackendSpec,

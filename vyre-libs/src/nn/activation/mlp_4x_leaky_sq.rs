@@ -6,7 +6,7 @@ use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::{wrap_anonymous, wrap_child};
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 
 const OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq";
 const MLP_WORKGROUP: u32 = 256;

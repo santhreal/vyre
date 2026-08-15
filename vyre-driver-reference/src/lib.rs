@@ -4,8 +4,8 @@
 
 use std::sync::Arc;
 
-use vyre_driver::backend::private;
-use vyre_driver::backend::{
+use vyre_driver::sealed;
+use vyre_driver::{
     core_supported_ops, BackendCapability, BackendError, BackendPrecedence, BackendRegistration,
 };
 use vyre_driver::{DispatchConfig, VyreBackend};
@@ -22,7 +22,7 @@ pub const CPU_REF_TARGET_ID: vyre_foundation::operation::TargetId =
 #[derive(Debug, Default, Clone, Copy)]
 pub struct CpuRefBackend;
 
-impl private::Sealed for CpuRefBackend {}
+impl sealed::Sealed for CpuRefBackend {}
 
 impl VyreBackend for CpuRefBackend {
     fn id(&self) -> &'static str {
@@ -158,7 +158,7 @@ inventory::submit! {
         reference_oracle: true,
         factory: acquire_cpu_ref,
         supported_ops: core_supported_ops,
-        semantic_operations: vyre_driver::backend::dialect_only_supported_ops,
+        semantic_operations: vyre_driver::dialect_only_supported_ops,
         target_compiler: None,
         materializer: None,
     }

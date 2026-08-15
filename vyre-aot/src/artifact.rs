@@ -10,7 +10,7 @@ pub use vyre_foundation::operation::TargetId;
 pub fn registration(
     target: &TargetId,
 ) -> Result<&'static vyre_driver::BackendRegistration, vyre_driver::BackendError> {
-    vyre_driver::backend::registered_backends()?
+    vyre_driver::registered_backends()?
         .iter()
         .find(|registration| registration.target_id.as_str() == target.as_str())
         .ok_or_else(|| {

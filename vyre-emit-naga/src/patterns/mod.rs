@@ -16,7 +16,7 @@ use vyre_lower::KernelDescriptor;
 
 /// Unified naga-side pattern audit. Runs every shipped naga pattern
 /// against the descriptor and bundles the reports. Mirror of
-/// `vyre_emit_ptx::patterns::audit` and `vyre_lower::audit::audit`,
+/// `vyre_emit_ptx::patterns::audit` and `vyre_lower::audit`,
 /// but for naga-specific patterns (vec packing, pipeline prewarm).
 ///
 /// Finding totals, the clean/any predicates, and the one-line summary come

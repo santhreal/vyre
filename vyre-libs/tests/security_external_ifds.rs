@@ -16,14 +16,12 @@ use external_dataflow_engine::ifds_gpu::{
     ifds_gpu_step, IfdsShape, OP_ID as EXTERNAL_IFDS_GPU_OP_ID,
 };
 use external_dataflow_engine::reachability_witness::{ExtractedPath, ExtractedStatement};
-use vyre_libs::security::facts::{
-    FindingProofBundle, FindingProofStep, SourceToSinkFindingRequest,
-};
 use vyre_libs::security::{
     route_security_taint_through_external_ifds, security_witness_path_from_external_path,
     AnalysisFact, AnalysisFactTable, AnalysisSourceSpan, ExternalIfdsSecurityBuffers, FactId,
     FactKind, EXTERNAL_IFDS_SECURITY_BACKEND_ID,
 };
+use vyre_libs::security::{FindingProofBundle, FindingProofStep, SourceToSinkFindingRequest};
 use vyre_primitives::predicate::edge_kind;
 use vyre_spec::soundness::{DynamicPrimitiveSoundness, PrecisionContract, Soundness};
 

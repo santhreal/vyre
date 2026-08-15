@@ -58,7 +58,7 @@ impl CudaPtxSourceCache {
         config: &DispatchConfig,
         ptx_target_sm: u32,
         subgroup_size: u32,
-        feature_flags: vyre_driver::pipeline::PipelineFeatureFlags,
+        feature_flags: vyre_driver::PipelineFeatureFlags,
     ) -> Result<PtxSourceCacheKey, BackendError> {
         ptx_source_cache_key_from_program_identity(
             program,
@@ -305,12 +305,12 @@ mod tests {
                 ]);
             }
             let flags = match case & 3 {
-                0 => vyre_driver::pipeline::PipelineFeatureFlags::empty(),
-                1 => vyre_driver::pipeline::PipelineFeatureFlags::SUBGROUP_OPS,
-                2 => vyre_driver::pipeline::PipelineFeatureFlags::F16
-                    .union(vyre_driver::pipeline::PipelineFeatureFlags::BF16),
-                _ => vyre_driver::pipeline::PipelineFeatureFlags::TENSOR_CORES
-                    .union(vyre_driver::pipeline::PipelineFeatureFlags::ASYNC_COMPUTE),
+                0 => vyre_driver::PipelineFeatureFlags::empty(),
+                1 => vyre_driver::PipelineFeatureFlags::SUBGROUP_OPS,
+                2 => vyre_driver::PipelineFeatureFlags::F16
+                    .union(vyre_driver::PipelineFeatureFlags::BF16),
+                _ => vyre_driver::PipelineFeatureFlags::TENSOR_CORES
+                    .union(vyre_driver::PipelineFeatureFlags::ASYNC_COMPUTE),
             };
             let ptx_target_sm = 70 + (case % 30);
             let subgroup_size = 1 + (case.rotate_left(3) % 64);
@@ -339,8 +339,7 @@ mod tests {
                 "Fix: CUDA PTX source cache identity must include subgroup size for generated case {case}."
             );
 
-            let changed_flags =
-                flags.union(vyre_driver::pipeline::PipelineFeatureFlags::PERSISTENT_THREAD);
+            let changed_flags = flags.union(vyre_driver::PipelineFeatureFlags::PERSISTENT_THREAD);
             assert_ne!(
                 key,
                 cache
@@ -382,7 +381,7 @@ mod tests {
                 &vyre_driver::DispatchConfig::default(),
                 86,
                 32,
-                vyre_driver::pipeline::PipelineFeatureFlags::empty(),
+                vyre_driver::PipelineFeatureFlags::empty(),
             )
             .expect("Fix: fixture Program must produce a PTX source cache key")
     }
@@ -485,9 +484,9 @@ mod tests {
         let small = build(1024);
         let large = build(1_048_576);
 
-        let small_digest = vyre_driver::pipeline::try_normalized_program_cache_digest(&small)
+        let small_digest = vyre_driver::try_normalized_program_cache_digest(&small)
             .expect("Fix: fixture Program must produce a normalized cache digest");
-        let large_digest = vyre_driver::pipeline::try_normalized_program_cache_digest(&large)
+        let large_digest = vyre_driver::try_normalized_program_cache_digest(&large)
             .expect("Fix: fixture Program must produce a normalized cache digest");
         assert_eq!(
             small_digest, large_digest,

@@ -12,7 +12,7 @@
 #![forbid(unsafe_code)]
 
 use vyre::ir::Expr;
-use vyre_libs::parsing::c::lower::ast_to_pg_nodes::{
+use vyre_libs::parsing::c::lower::{
     c_lower_ast_to_pg_semantic_graph_with_pg,
     c_lower_ast_to_pg_semantic_graph_with_pg_no_control_resolution,
 };

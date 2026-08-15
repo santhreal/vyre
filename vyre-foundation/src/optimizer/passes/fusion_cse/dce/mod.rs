@@ -59,11 +59,11 @@ pub mod eliminate_dead_lets;
 /// Forward pass folding constant branches and truncating after `Return`.
 pub mod eliminate_unreachable;
 /// Entry point for the dead-code elimination pass.
-pub mod engine;
+pub(crate) mod engine;
 /// Result bundle returned by `eliminate_dead_lets`.
 pub mod live_result;
 /// Registered `DcePass` (ProgramPass impl) for the engine.
-pub mod program_pass;
+pub(crate) mod program_pass;
 /// Slice the node list up to the first unconditional `Return`.
 pub mod reachable_prefix;
 

@@ -24,7 +24,7 @@ use vyre_foundation::match_result::ByteRange;
 use vyre_libs::scan::{build_regex_dfa_pipeline, AnchoredWindowValidator};
 
 /// Build the anchored DFA for one pattern and return its validator-ready DFA.
-fn dfa_for(pattern: &str) -> vyre_libs::scan::regex_dfa::RegexDfaPipeline {
+fn dfa_for(pattern: &str) -> vyre_libs::scan::RegexDfaPipeline {
     build_regex_dfa_pipeline(&[pattern], 4096, 16_384)
         .unwrap_or_else(|e| panic!("pattern {pattern:?} must compile to an anchored DFA: {e:?}"))
 }
@@ -144,13 +144,13 @@ fn open_ended_repeat_window_uses_the_bounded_replay_policy() {
     let plus = dfa_for("k[0-9]+");
     assert_eq!(
         plus.dfa.max_pattern_len,
-        vyre_libs::scan::regex_compile::DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
+        vyre_libs::scan::DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
         "open-ended `+` must use the finite default replay budget"
     );
     let lower_bounded = dfa_for("k[0-9]{3,}");
     assert_eq!(
         lower_bounded.dfa.max_pattern_len,
-        vyre_libs::scan::regex_compile::DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
+        vyre_libs::scan::DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
         "open-ended `{{3,}}` must use the same finite default replay budget"
     );
 }

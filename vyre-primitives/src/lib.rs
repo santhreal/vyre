@@ -308,9 +308,8 @@ pub mod vfs;
 /// (every primitive domain enables it).
 #[cfg(feature = "vyre-foundation")]
 pub mod serial_data {
-    pub use vyre_foundation::serial::envelope::{
-        test_helpers, EnvelopeError, WireReader, WireWriter,
-    };
+    pub use vyre_foundation::serial::wire_round_trip;
+    pub use vyre_foundation::serial::{EnvelopeError, WireReader, WireWriter};
 }
 
 /// Curated prelude - the byte-pack/decode primitives every consumer

@@ -8,7 +8,7 @@
 
 use std::sync::LazyLock;
 
-use vyre_driver::backend::{
+use vyre_driver::{
     registered_backends, registered_backends_by_precedence_slice, BackendRegistration,
 };
 use vyre_driver::BackendError;

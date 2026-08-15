@@ -20,12 +20,13 @@
 use std::fs;
 use std::path::PathBuf;
 
-use vyre_driver::backend::error_catalog::render_catalog_toml;
-use vyre_driver::backend::ErrorCode;
-use vyre_driver::registry::migration::DEPRECATED_OP_CODE;
+use vyre_driver::error_catalog::render_catalog_toml;
+use vyre_driver::ErrorCode;
+use vyre_driver::DEPRECATED_OP_CODE;
 
 fn catalog_path() -> PathBuf {
-    vyre_test_support::monorepo::vyre_workspace_root().join("docs/generated/driver-error-codes.toml")
+    vyre_test_support::monorepo::vyre_workspace_root()
+        .join("docs/generated/driver-error-codes.toml")
 }
 
 #[test]
@@ -58,7 +59,10 @@ fn committed_catalog_matches_the_rendered_one() {
     let rendered_lines: Vec<&str> = rendered.lines().collect();
     for (index, (have, want)) in committed_lines.iter().zip(&rendered_lines).enumerate() {
         if have != want {
-            findings.push(format!("line {}: committed {have:?}, source {want:?}", index + 1));
+            findings.push(format!(
+                "line {}: committed {have:?}, source {want:?}",
+                index + 1
+            ));
         }
     }
     match committed_lines.len().cmp(&rendered_lines.len()) {
@@ -103,7 +107,11 @@ fn every_variant_is_catalogued_with_its_stable_id_and_a_description() {
         let id = row["id"].as_integer().expect("id is an integer");
         let summary = row["summary"].as_str().expect("summary is a string");
 
-        assert_eq!(variant, format!("{code:?}"), "row order follows ErrorCode::ALL");
+        assert_eq!(
+            variant,
+            format!("{code:?}"),
+            "row order follows ErrorCode::ALL"
+        );
         assert_eq!(
             u32::try_from(id).expect("id fits u32"),
             code.stable_id(),

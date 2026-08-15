@@ -334,7 +334,7 @@ mod tests {
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
     use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
-    use vyre_foundation::memory_model::MemoryOrdering;
+    use vyre_foundation::MemoryOrdering;
 
     struct ReuseCheckingBackend {
         calls: AtomicUsize,
@@ -342,7 +342,7 @@ mod tests {
         final_slot_addr: usize,
     }
 
-    impl crate::backend::private::Sealed for ReuseCheckingBackend {}
+    impl crate::backend::sealed::Sealed for ReuseCheckingBackend {}
 
     impl VyreBackend for ReuseCheckingBackend {
         fn id(&self) -> &'static str {
@@ -422,7 +422,7 @@ mod tests {
         calls: AtomicUsize,
     }
 
-    impl crate::backend::private::Sealed for IncrementingBackend {}
+    impl crate::backend::sealed::Sealed for IncrementingBackend {}
 
     impl VyreBackend for IncrementingBackend {
         fn id(&self) -> &'static str {
@@ -619,7 +619,7 @@ mod tests {
         calls: AtomicUsize,
     }
 
-    impl crate::backend::private::Sealed for OwnedFinalReserveBackend {}
+    impl crate::backend::sealed::Sealed for OwnedFinalReserveBackend {}
 
     impl VyreBackend for OwnedFinalReserveBackend {
         fn id(&self) -> &'static str {
@@ -713,7 +713,7 @@ mod tests {
         first_slot_addr: AtomicUsize,
     }
 
-    impl crate::backend::private::Sealed for IntermediateReuseBackend {}
+    impl crate::backend::sealed::Sealed for IntermediateReuseBackend {}
 
     impl VyreBackend for IntermediateReuseBackend {
         fn id(&self) -> &'static str {
@@ -795,7 +795,7 @@ mod tests {
         calls: AtomicUsize,
     }
 
-    impl crate::backend::private::Sealed for SlotStoringBackend {}
+    impl crate::backend::sealed::Sealed for SlotStoringBackend {}
 
     impl VyreBackend for SlotStoringBackend {
         fn id(&self) -> &'static str {
@@ -908,7 +908,7 @@ mod tests {
         cap: u8,
     }
 
-    impl crate::backend::private::Sealed for SaturatingBackend {}
+    impl crate::backend::sealed::Sealed for SaturatingBackend {}
 
     impl VyreBackend for SaturatingBackend {
         fn id(&self) -> &'static str {

@@ -13,6 +13,7 @@
 //! linear threshold).
 
 /// CHD perfect-hash construction + lookup.
-pub mod perfect_hash;
+pub(crate) mod perfect_hash;
 
 pub use perfect_hash::{build_chd, PerfectHash};
+pub use perfect_hash::{try_build_chd, BuildError};

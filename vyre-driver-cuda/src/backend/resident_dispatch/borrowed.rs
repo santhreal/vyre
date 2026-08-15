@@ -1,7 +1,7 @@
 use std::ffi::c_void;
 
 use smallvec::SmallVec;
-use vyre_driver::binding::BindingRole;
+use vyre_driver::BindingRole;
 use vyre_driver::{BackendError, BindingPlan, DispatchConfig};
 use vyre_foundation::ir::Program;
 

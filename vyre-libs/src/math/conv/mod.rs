@@ -16,8 +16,8 @@
 //! contracted with the kernel equals `conv2d_3x3_direct`" structural rather
 //! than a coincidence between two hand-written walks.
 
-pub mod conv2d;
-pub mod im2col;
+pub(crate) mod conv2d;
+pub(crate) mod im2col;
 
 pub use conv2d::conv2d_3x3_direct;
 pub use im2col::im2col_3x3;

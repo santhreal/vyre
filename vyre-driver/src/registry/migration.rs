@@ -212,7 +212,7 @@ impl std::error::Error for MigrationError {}
 /// Dialect crates register migrations via:
 ///
 /// ```
-/// use vyre_driver::registry::{AttrMap, Migration, MigrationError, Semver};
+/// use vyre_driver::{AttrMap, Migration, MigrationError, Semver};
 ///
 /// fn rename_mode(attrs: &mut AttrMap) -> Result<(), MigrationError> {
 ///     attrs.rename("mode", "overflow_behavior");

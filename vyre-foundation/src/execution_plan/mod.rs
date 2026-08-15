@@ -8,7 +8,7 @@ use crate::program_caps::{self, RequiredCapabilities};
 use crate::validate::{validate_with_options, ValidationOptions};
 
 pub mod fusion;
-pub mod memory_budget;
+pub(crate) mod memory_budget;
 mod policy;
 mod strategy;
 pub use memory_budget::{DeviceMemoryBudget, MemoryBudgetReport};

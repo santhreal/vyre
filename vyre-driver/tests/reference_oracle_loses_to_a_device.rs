@@ -14,7 +14,7 @@
 mod common;
 
 use common::FixtureBackend;
-use vyre_driver::backend::acquire_preferred_dispatch_backend;
+use vyre_driver::acquire_preferred_dispatch_backend;
 use vyre_driver::{BackendError, VyreBackend};
 
 const ORACLE_ID: &str = "fixture-ranked-oracle";

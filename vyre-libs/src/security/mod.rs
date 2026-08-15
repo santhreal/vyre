@@ -141,7 +141,7 @@ macro_rules! define_bitset_and_not_security_op {
     };
 }
 
-pub mod aliases_dataflow;
+pub(crate) mod aliases_dataflow;
 define_bitset_and_security_op!(
     auth_check_dominates,
     auth_check_dominates,
@@ -157,7 +157,7 @@ define_bitset_and_security_op!(
         no_auth_checks: (&[0], &[0xFFFF]) => vec![0];
     }
 );
-pub mod bounded_by_comparison;
+pub(crate) mod bounded_by_comparison;
 define_bitset_and_security_op!(
     buffer_size_check,
     buffer_size_check,
@@ -174,14 +174,14 @@ define_bitset_and_security_op!(
     }
 );
 mod catalog;
-pub mod dominance_predecessors;
-pub mod facts;
+pub(crate) mod dominance_predecessors;
+pub(crate) mod facts;
 /// Canonical `@family` name to tag-bit allocation shared by rule labels.
 pub mod family_mask;
 pub(crate) mod flow_composition;
-pub mod flows_to;
-pub mod flows_to_to_sink;
-pub mod flows_to_with_sanitizer;
+pub(crate) mod flows_to;
+pub(crate) mod flows_to_to_sink;
+pub(crate) mod flows_to_with_sanitizer;
 // `external_ifds` is an INCOMPLETE integration: it `use`s a crate
 // `external_dataflow_engine` that is wired into no Cargo.toml and exists nowhere
 // on the tree, so it does not compile under `--features security` and broke every
@@ -196,7 +196,7 @@ pub mod flows_to_with_sanitizer;
 // integration: add the `external_dataflow_engine` crate to the workspace + this
 // crate's deps, then restore these guards to `#[cfg(feature = "security")]`.
 #[cfg(feature = "external_ifds_engine")]
-pub mod external_ifds;
+pub(crate) mod external_ifds;
 define_bitset_and_not_security_op!(
     format_string_check,
     format_string_check,
@@ -212,8 +212,8 @@ define_bitset_and_not_security_op!(
         distributes: (&[0xFFFF, 0x0F0F], &[0xFF00, 0x0000]) => vec![0x00FF, 0x0F0F];
     }
 );
-pub mod integer_overflow_arith;
-pub mod label_by_family;
+pub(crate) mod integer_overflow_arith;
+pub(crate) mod label_by_family;
 define_bitset_and_security_op!(
     lock_dominates,
     lock_dominates,
@@ -244,10 +244,10 @@ define_bitset_and_security_op!(
         distributes: (&[0xFF00, 0x00FF], &[0xFFFF, 0xFFFF]) => vec![0xFF00, 0x00FF];
     }
 );
-pub mod predicate_catalog;
-pub mod relation_analyzer;
-pub mod reporter;
-pub mod sanitized_by;
+pub(crate) mod predicate_catalog;
+pub(crate) mod relation_analyzer;
+pub(crate) mod reporter;
+pub(crate) mod sanitized_by;
 define_bitset_and_security_op!(
     sanitizer_dominates,
     sanitizer_dominates,
@@ -263,7 +263,7 @@ define_bitset_and_security_op!(
         distributes_per_word: (&[0xFF00, 0x00FF], &[0x0FF0, 0x0FF0]) => vec![0x0F00, 0x00F0];
     }
 );
-pub mod sink_intersection;
+pub(crate) mod sink_intersection;
 define_bitset_and_security_op!(
     sql_param_bound,
     sql_param_bound,
@@ -279,9 +279,9 @@ define_bitset_and_security_op!(
         distributes: (&[0xFF00, 0xF0F0], &[0x0FF0, 0x0F0F]) => vec![0x0F00, 0x0000];
     }
 );
-pub mod taint_flow;
-pub mod taint_kill;
-pub mod taint_pollution;
+pub(crate) mod taint_flow;
+pub(crate) mod taint_kill;
+pub(crate) mod taint_pollution;
 define_bitset_and_not_security_op!(
     unchecked_return,
     unchecked_return,
@@ -313,18 +313,26 @@ define_bitset_and_security_op!(
     }
 );
 
+pub use aliases_dataflow::OP_ID;
 pub use aliases_dataflow::{aliases_dataflow, try_aliases_dataflow};
 pub use auth_check_dominates::auth_check_dominates;
 pub use bounded_by_comparison::bounded_by_comparison;
 pub use buffer_size_check::buffer_size_check;
 pub use dominance_predecessors::dominance_predecessors;
+pub use facts::{finding_from_sanitized_source_to_sink_query, SourceToSinkFindingRequest};
 pub use facts::{
     AnalysisFact, AnalysisFactColumns, AnalysisFactError, AnalysisFactTable, AnalysisSourceSpan,
     FactId, FactKind, FindingProofBundle, FindingProofStep,
 };
 pub use flows_to::flows_to;
+pub use flows_to::{flows_to_alias_only, ALIAS_PROPAGATION_MASK, FLOWS_TO_MASK};
 pub use flows_to_to_sink::flows_to_to_sink;
 pub use flows_to_with_sanitizer::flows_to_with_sanitizer;
+pub use flows_to_with_sanitizer::{
+    sanitized_flow_final_finding_soundness, sanitized_flow_final_soundness_contract,
+    sanitized_flow_soundness_contract, SanitizedFlowContractViolation, SanitizedFlowExecutionMode,
+    SanitizedFlowSoundnessContract, FIXPOINT_OP_ID,
+};
 // Gated off with `external_ifds` above (incomplete integration; missing the
 // `external_dataflow_engine` crate). Restore to `#[cfg(feature = "security")]`
 // once that crate is wired into the workspace.
@@ -337,6 +345,7 @@ pub use external_ifds::{
 };
 pub use format_string_check::format_string_check;
 pub use integer_overflow_arith::integer_overflow_arith;
+pub use integer_overflow_arith::IntegerOverflowArith;
 pub use label_by_family::label_by_family;
 pub use lock_dominates::lock_dominates;
 pub use path_canonical::path_canonical;
@@ -359,10 +368,13 @@ pub use reporter::{
 pub use sanitized_by::sanitized_by;
 pub use sanitizer_dominates::sanitizer_dominates;
 pub use sink_intersection::sink_intersection;
+pub use sink_intersection::SinkIntersection;
 pub use sql_param_bound::sql_param_bound;
 pub use taint_flow::taint_flow;
 pub use taint_kill::taint_kill;
+pub use taint_kill::TaintKill;
 pub use taint_pollution::taint_pollution;
+pub use taint_pollution::TaintPollution;
 pub use unchecked_return::unchecked_return;
 pub use xss_escape::xss_escape;
 

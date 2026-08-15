@@ -369,14 +369,14 @@ mod tests {
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
     use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node};
-    use vyre_foundation::memory_model::MemoryOrdering;
+    use vyre_foundation::MemoryOrdering;
 
     struct ResidentReuseBackend {
         calls: AtomicUsize,
         owner: crate::ResidentOwner,
     }
 
-    impl crate::backend::private::Sealed for ResidentReuseBackend {}
+    impl crate::backend::sealed::Sealed for ResidentReuseBackend {}
 
     impl VyreBackend for ResidentReuseBackend {
         fn id(&self) -> &'static str {
@@ -502,7 +502,7 @@ mod tests {
         }
     }
 
-    impl crate::backend::private::Sealed for ResidentDeviceBackend {}
+    impl crate::backend::sealed::Sealed for ResidentDeviceBackend {}
 
     impl VyreBackend for ResidentDeviceBackend {
         fn id(&self) -> &'static str {

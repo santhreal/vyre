@@ -16,14 +16,14 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use vyre_driver::backend::Backend;
+use vyre_driver::Backend;
 use vyre_driver::{BackendError, CompiledPipeline, DispatchConfig, VyreBackend};
 use vyre_foundation::ir::Program;
 
 /// Overrides nothing beyond the two required methods.
 struct MinimalBackend;
 
-impl vyre_driver::backend::private::Sealed for MinimalBackend {}
+impl vyre_driver::sealed::Sealed for MinimalBackend {}
 
 impl VyreBackend for MinimalBackend {
     fn id(&self) -> &'static str {
@@ -62,7 +62,7 @@ impl FullBackend {
     }
 }
 
-impl vyre_driver::backend::private::Sealed for FullBackend {}
+impl vyre_driver::sealed::Sealed for FullBackend {}
 
 impl VyreBackend for FullBackend {
     fn id(&self) -> &'static str {

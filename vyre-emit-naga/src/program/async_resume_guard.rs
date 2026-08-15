@@ -16,7 +16,7 @@
 
 use std::ops::ControlFlow::{self, Break, Continue};
 
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::Node;
 use vyre_foundation::ir::{Expr, Ident, NodeExtension, Program};
 use vyre_foundation::visit::{visit_node_preorder, NodeVisitor};

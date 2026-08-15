@@ -22,7 +22,7 @@ use rustc_hash::FxHashSet;
 /// declared as mutable (for assignment validation), and whether
 /// it holds a value that is *uniform* across every invocation in
 /// the same workgroup. The uniformity bit feeds the relaxed
-/// barrier-placement rule: a `Node::Barrier { ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst }` inside a `Node::Loop`
+/// barrier-placement rule: a `Node::Barrier { ordering: vyre_foundation::MemoryOrdering::SeqCst }` inside a `Node::Loop`
 /// or `Node::If` is legal when the loop bounds (or `If` condition)
 /// are uniform, because every invocation reaches the barrier
 /// through the same iteration count and branch.

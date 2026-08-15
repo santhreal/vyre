@@ -19,7 +19,7 @@ pub mod accounting;
 /// Backend-neutral fallible allocation reservation helpers.
 pub mod allocation;
 /// Backend-neutral ahead-of-time emission registry.
-pub mod aot;
+pub(crate) mod aot;
 /// Independent-arm detection for queue-parallel dispatch (ROADMAP D2).
 /// Pure set arithmetic over (reads, writes) summaries; the dispatcher
 /// uses `can_dispatch_concurrently` to decide whether two megakernel
@@ -33,11 +33,11 @@ pub mod async_copy_overlap;
 /// Persistent autotuning record store (ROADMAP I3).
 pub mod autotune_store;
 /// VyreBackend trait, BackendError, capability records, validation.
-pub mod backend;
+pub(crate) mod backend;
 /// Backend-neutral benchmark-driven optimization pass selection.
 pub mod benchmark_pass_selection;
 /// Backend-neutral program binding plans.
-pub mod binding;
+pub(crate) mod binding;
 /// Bindless buffers / textures decision policy (ROADMAP D9). Decides
 /// whether to use a bindless descriptor array or traditional per-
 /// resource bindings, given the kernel's resource count and the
@@ -62,27 +62,27 @@ pub mod command_reuse_policy;
 pub mod device_convergence;
 /// Backend-neutral device diagnostic aggregation planning.
 pub mod device_diagnostic_aggregation;
-pub mod device_extraction;
+pub(crate) mod device_extraction;
 /// Backend-neutral device capability profile and projections.
-pub mod device_profile;
+pub(crate) mod device_profile;
 /// Tier-B device signature TOML loader.
-pub mod device_signature;
+pub(crate) mod device_signature;
 /// Backend-neutral device-side work queue planning.
 pub mod device_work_queue;
 /// Structured, machine-readable diagnostic rendering.
-pub mod diagnostics;
+pub(crate) mod diagnostics;
 /// Bundled D-series + I2 policy invocation. One-shot eval of every
 /// dispatch-side decision substrate so the runtime threads a single
 /// `DispatchPolicyVerdict` instead of six per-substrate verdicts.
 pub mod dispatch_policy;
 /// Backend-neutral dispatch-shape comparison helpers.
-pub mod dispatch_shape;
+pub(crate) mod dispatch_shape;
 /// Backend-neutral bounded fan-out for durability work on a path set.
 pub mod durable_fanout;
 /// Device-profile-aware extraction cost helpers (ROADMAP A7).
 pub mod extraction_cost;
 /// Backend-neutral fixpoint-iteration resolution.
-pub mod fixpoint_iterations;
+pub(crate) mod fixpoint_iterations;
 /// Cross-dispatch fusion decision types and pure analysis.
 pub mod fusion;
 /// Backend-neutral replayable graph-capture binding planning.
@@ -113,7 +113,7 @@ pub mod parity_harness;
 /// no Program walk.
 pub mod persistent_kernel_policy;
 /// Compiled-pipeline cache, dispatch config, batched dispatch.
-pub mod pipeline;
+pub(crate) mod pipeline;
 /// N4 substrate: cross-pipeline disjoint-binding fusion analysis.
 /// Lifts D2's in-megakernel-arm independence check to the
 /// cross-dispatch boundary so consecutive pipelines with disjoint
@@ -121,11 +121,11 @@ pub mod pipeline;
 /// fence instead of a full grid-sync.
 pub mod pipeline_fusion;
 /// Read-only semantic operation projections, migrations, and policy.
-pub mod registry;
+pub(crate) mod registry;
 /// Backend-neutral reservation policy adapters.
 pub mod reservation_policy;
 /// Backend-neutral resident-resource reuse telemetry.
-pub mod residency;
+pub(crate) mod residency;
 /// Canonical resident transfer fusion test model shared by the neutral fusion
 /// tests and the concrete driver crates' adapter gates.
 #[cfg(any(test, feature = "test-fixtures"))]
@@ -135,7 +135,7 @@ pub mod resident_transfer_fusion;
 /// Backend-neutral compact result readback planning.
 pub mod result_compaction;
 /// Runtime routing: profile-guided variant selection, algorithm heuristics.
-pub mod routing;
+pub(crate) mod routing;
 /// Canonical self-hosted optimizer scaling bench shared by every concrete
 /// driver crate's scaling suite.
 #[cfg(any(test, feature = "test-fixtures"))]
@@ -148,13 +148,13 @@ pub mod shadow;
 /// the predicted pipeline cache key during the GPU wait window.
 pub mod shape_prediction;
 /// Backend-neutral shader specialization values and cache key inputs.
-pub mod specialization;
+pub(crate) mod specialization;
 /// N2 substrate (foundation half): per-rewrite speculation-as-substrate
 /// decision policy. Given baseline + speculative dispatch observations
 /// + side-compile cost, returns Adopt / Reject / KeepRacing.
 pub mod speculation_verdict;
 /// Canonical subgroup operation taxonomy and capability records.
-pub mod subgroup;
+pub(crate) mod subgroup;
 /// Target-compiler shell shared by every backend's dialect.
 pub mod target_dialect;
 /// Trace-based JIT specialization decision policy (ROADMAP I2).
@@ -178,7 +178,7 @@ pub mod validation;
 pub mod strategy;
 
 /// Pure [`vyre_foundation::ir::Program`] analysis shared by all backends.
-pub mod program_walks;
+pub(crate) mod program_walks;
 
 /// Driver-tier observability surface (P-OBS-1). Substrate-call
 /// counters, cache hit rates, and a Prometheus exposition format.
@@ -188,7 +188,7 @@ pub mod observability;
 /// expensive confirmer on every tile, commits only tiles whose
 /// pre-filter passed. Hides gather latency + improves subgroup
 /// uniformity. Scaffold.
-pub mod speculate;
+pub(crate) mod speculate;
 
 /// Cross-grid synchronization: kernel-split fallback for backends
 /// that lack a native cooperative-launch grid barrier. Splits a
@@ -197,7 +197,7 @@ pub mod speculate;
 /// itself is the grid-level fence.
 pub mod grid_sync;
 /// Backend-neutral launch preparation and program fingerprint wrappers.
-pub mod launch;
+pub(crate) mod launch;
 /// Backend-neutral adjacent-stage launch fusion planning.
 pub mod launch_fusion;
 /// Backend-neutral megakernel wave barrier planning.
@@ -220,6 +220,29 @@ pub mod numeric;
 pub mod persistent;
 
 pub use aot::AotTargetId;
+pub use aot::{
+    emit_aot_launcher_target, registered_aot_launcher_emitters, AotLauncherEmitter,
+    AotLauncherFiles, AotLauncherRequest, LauncherDependency,
+};
+/// Error-code catalog rendering for the driver-tier diagnostics surface.
+pub use backend::error_catalog;
+/// Backend-neutral lowering entry points concrete drivers compose.
+pub use backend::lowering;
+/// Marker trait that seals the driver traits against outside implementations.
+pub use backend::sealed;
+pub use backend::{
+    acquire, acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
+    backend_registration, core_supported_ops, default_supported_ops,
+    default_supported_ops_with_trap, dialect_and_language_supported_ops,
+    dialect_only_supported_ops, node_op_id, registered_backends, registered_backends_by_precedence,
+    registered_backends_by_precedence_slice, registered_target_operation_facets,
+    replace_output_buffers_preserving_slots_with_memory_stats,
+    replace_output_buffers_preserving_slots_with_stats, validate_program, Backend,
+    BackendCapability, BackendPrecedence, ErrorCode, OutputReplacementStats, OutputSlotByteStats,
+    OutputSlotStats, RegexAcceleratorCapability, RegexAcceleratorClass, RegexAcceleratorEvidence,
+    RegexAcceleratorMatchSchema, RegexAcceleratorStreamMode,
+    REGEX_ACCELERATOR_EVIDENCE_SCHEMA_VERSION,
+};
 pub use backend::{
     borrowed_input_slices, default_dispatch_with_device_buffers,
     replace_output_buffers_preserving_slots, validate_buffer_ownership,
@@ -241,17 +264,28 @@ pub use device_extraction::{
 pub use device_profile::{DeviceProfile, DeviceTimingQuality};
 pub use device_signature::{DeviceSignature, DeviceSignatureTable};
 pub use diagnostics::{Diagnostic, DiagnosticCode, OpLocation, Severity};
+pub use diagnostics::{DiagnosticCause, DiagnosticStage, RetryClass};
 pub use dispatch_shape::{
     borrowed_input_batch_shapes_match, borrowed_input_shapes_match,
     dispatch_configs_share_launch_shape,
 };
 pub use fixpoint_iterations::{resolve_fixpoint_iterations, resolve_fixpoint_iterations_usize};
 pub use launch::{program_vsa_fingerprint, program_vsa_fingerprint_words, LaunchPlan};
+pub use launch::{
+    record_launch_measurement, resolve_launch_workgroup, resolve_launch_workgroup_for_mode,
+};
+pub use pipeline::{
+    dispatch_policy_cache_digest, dispatch_policy_cache_string, normalized_program_cache_digest,
+    pipeline_cache_limits_from_env, push_lower_hex, try_normalized_program_cache_digest,
+    update_dispatch_policy_cache_hash, PipelineCacheAudit, PipelineCacheAuditReport,
+    DEFAULT_1D_WORKGROUP_SIZE, DEFAULT_PIPELINE_CACHE_BYTES, DEFAULT_PIPELINE_CACHE_ENTRIES,
+};
 pub use pipeline::{
     hex_encode, hex_short, DiskPipelineCache, PipelineCacheIdentity, PipelineCacheKey,
     PipelineCacheMissEvidence, PipelineCacheMissReason, PipelineCacheSnapshot,
     PipelineDeviceFingerprint, PipelineFeatureFlags, CURRENT_PIPELINE_CACHE_KEY_VERSION,
 };
+pub use program_walks::{auto_grid, enforce_output_budget, output_binding_layouts_into};
 pub use program_walks::{
     coerce_to_pow2_with_tail_mask, dispatch_element_count, dispatch_element_count_for_program,
     dispatch_param_words_into, element_size_bytes, enforce_actual_output_budget,
@@ -261,15 +295,30 @@ pub use program_walks::{
     try_dispatch_param_words_into, IndirectDispatch, OutputBindingLayout, OutputLayout,
     TailMaskPolicy,
 };
+pub use registry::DEPRECATED_OP_CODE;
+pub use registry::{
+    deprecation_diagnostic, AttrMap, AttrValue, Deprecation, Migration, MigrationError,
+    MigrationRegistry, Semver,
+};
 pub use registry::{
     validate_intrinsic_lowering, Chain, EnforceGate, EnforceVerdict, IntrinsicRegistrationError,
     MutationClass,
 };
 pub use residency::{ResidentGraphReuseTelemetry, ResidentGraphReuseTelemetryError};
+pub use routing::pgo;
 pub use routing::{select_sort_backend, Distribution, RoutingTable, SortBackend};
+pub use specialization::{versioned_specialization_artifact_key, vsa_specialization_key};
 pub use specialization::{SpecCacheKey, SpecMap, SpecValue};
+pub use speculate::{
+    dispatch_prefilter_confirm, encode_counter_tail, parse_counter_tail, AdaptiveSpeculator,
+    SpeculationMode, SpeculationReport, SpeculativeDispatchOutcome, SpeculativeDispatchPlan,
+    COUNTER_TAIL_BYTES, DEFAULT_THRESHOLD_PCT,
+};
 pub use speculate::{
     record_speculative_variant_race, SpeculativeVariantDecision, SpeculativeVariantKeys,
     SpeculativeVariantKind, SpeculativeVariantRace,
+};
+pub use subgroup::{
+    reduction_offsets, reduction_offsets_into, try_reduction_offsets, try_reduction_offsets_into,
 };
 pub use subgroup::{SubgroupCaps, SubgroupOp};

@@ -28,8 +28,8 @@
 //! Caller can override the default bank count via
 //! `analyze_with_bank_count`.
 
-pub mod analysis;
-pub mod report;
+pub(crate) mod analysis;
+pub(crate) mod report;
 
 pub use analysis::{analyze, analyze_with_bank_count};
 pub use report::{BankAccessSite, BankConflictKind, BankConflictReport, ConflictSeverity};

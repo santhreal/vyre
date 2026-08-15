@@ -3,7 +3,7 @@ use crate::descriptor::test_descriptors::build;
 use crate::descriptor::{BindingLayout, BindingSlot, BindingVisibility, LiteralValue, MemoryClass};
 use crate::descriptor_builder::{effect, for_loop, if_then, lit, op};
 use vyre_foundation::ir::DataType;
-use vyre_foundation::memory_model::MemoryOrdering;
+use vyre_foundation::MemoryOrdering;
 
 fn binding(slot: u32, element: DataType, mc: MemoryClass) -> BindingSlot {
     BindingSlot {

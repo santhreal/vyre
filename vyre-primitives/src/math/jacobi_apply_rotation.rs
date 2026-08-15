@@ -12,11 +12,9 @@
 //! loop-carried pivot variables while the standalone Program passes constants.
 //! The rotation is the operation; choosing the pivot is not part of it.
 
-use vyre_foundation::composition::{
-    trap_program, wrap_anonymous_region, wrap_child_region,
-};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::math::givens_rotate_pair::givens_rotate_pair_region;

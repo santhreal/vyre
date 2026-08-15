@@ -169,7 +169,7 @@ impl Reader<'_> {
                 let presence = self.u8()?;
                 let source_region = match presence {
                     0 => None,
-                    1 => Some(crate::ir::model::expr::GeneratorRef {
+                    1 => Some(crate::ir::GeneratorRef {
                         name: self.string()?,
                     }),
                     other => {
@@ -312,7 +312,7 @@ impl Reader<'_> {
             return Ok(DataType::Array { element_size });
         }
         if tag == 0x13 {
-            return Ok(DataType::Handle(vyre_spec::data_type::TypeId(self.u32()?)));
+            return Ok(DataType::Handle(vyre_spec::TypeId(self.u32()?)));
         }
         if tag == 0x14 {
             let element = Box::new(self.data_type()?);

@@ -7,7 +7,7 @@
 
 use std::collections::HashSet;
 
-use vyre_driver::backend::{BackendError, ErrorCode};
+use vyre_driver::{BackendError, ErrorCode};
 
 #[test]
 fn all_backend_error_variants_contain_fix() {

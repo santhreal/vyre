@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "vyre_libs::prelude exported the decode::inflate module where it meant the two inflate builders. It now re-exports inflate_stored_block and inflate_stored_block_then_aho_corasick."

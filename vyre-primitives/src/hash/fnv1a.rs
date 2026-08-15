@@ -470,7 +470,7 @@ mod tests {
 
     #[test]
     fn gpu_builder_matches_cpu_ref() {
-        use vyre_foundation::ir::model::expr::Ident;
+        use vyre_foundation::ir::Ident;
         let program = fnv1a32_program("src", "out", 5);
         // Validate region chain wrap.
         match &program.entry()[0] {

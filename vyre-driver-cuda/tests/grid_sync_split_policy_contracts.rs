@@ -32,13 +32,13 @@ use common::{
     cross_block_grid_sync_expected, cross_block_grid_sync_inputs, cross_block_grid_sync_program,
     CROSS_BLOCK_GRID_SYNC_WORKGROUP,
 };
-use vyre_driver::launch::resolve_launch_workgroup;
+use vyre_driver::resolve_launch_workgroup;
 use vyre_driver::validation::LaunchGeometryLimits;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::occupancy::cooperative_thread_residency_block_limit;
 use vyre_driver_cuda::{cuda_factory, CudaBackend};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::memory_model::MemoryOrdering;
+use vyre_foundation::MemoryOrdering;
 
 /// Grid barriers in [`five_barrier_chain_program`], matching the count shipped in
 /// `vyre-libs/src/parsing/c/parse/structure_statement.rs`.

@@ -6,7 +6,7 @@ use crate::ir_inner::model::spec_types::DataType;
 use crate::validate::Binding;
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
-use vyre_spec::bin_op::BinOpResult;
+use vyre_spec::BinOpResult;
 
 /// Environment the one expression type walker reads its free names from.
 ///

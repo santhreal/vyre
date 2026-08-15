@@ -68,7 +68,7 @@ impl SpirvBackendRegistration {
     }
 }
 
-impl vyre_driver::backend::private::Sealed for SpirvBackendRegistration {}
+impl vyre_driver::sealed::Sealed for SpirvBackendRegistration {}
 
 fn spirv_device_buffer_unsupported() -> BackendError {
     BackendError::UnsupportedFeature {
@@ -223,7 +223,7 @@ pub fn spirv_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
 /// all SPIRV dispatch even when the op is supported, silently degrading to a
 /// lower-precedence backend.
 pub fn spirv_supported_ops() -> &'static std::collections::HashSet<vyre_foundation::ir::OpId> {
-    vyre_driver::backend::core_supported_ops()
+    vyre_driver::core_supported_ops()
 }
 
 /// Backend id this crate submits into the backend registry on this target.
@@ -247,7 +247,7 @@ inventory::submit! {
         reference_oracle: false,
         factory: spirv_factory,
         supported_ops: spirv_supported_ops,
-        semantic_operations: vyre_driver::backend::dialect_only_supported_ops,
+        semantic_operations: vyre_driver::dialect_only_supported_ops,
         target_compiler: Some(target_compiler::target_compiler_factory),
         materializer: Some(materializer::materializer_factory),
     }
@@ -274,14 +274,14 @@ mod tests {
 
 // V7-EXT-021: declare router precedence inline. SPIR-V is rank 30.
 inventory::submit! {
-    vyre_driver::backend::BackendPrecedence {
+    vyre_driver::BackendPrecedence {
         id: SPIRV_BACKEND_ID,
         rank: 30,
     }
 }
 
 inventory::submit! {
-    vyre_driver::backend::BackendCapability {
+    vyre_driver::BackendCapability {
         id: SPIRV_BACKEND_ID,
         dispatches: true,
     }

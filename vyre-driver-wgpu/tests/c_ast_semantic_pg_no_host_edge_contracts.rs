@@ -28,7 +28,7 @@ use c_ast_gpu_parity_support::{
 };
 use c_frontend::spelling::c_tokens;
 use vyre_libs::parsing::c::lex::tokens::*;
-use vyre_libs::parsing::c::lower::ast_to_pg_nodes::C_AST_PG_ROLE_AGGREGATE_DECL;
+use vyre_libs::parsing::c::lower::C_AST_PG_ROLE_AGGREGATE_DECL;
 use vyre_libs::parsing::c::lower::{
     C_AST_PG_CATEGORY_CONTROL, C_AST_PG_CATEGORY_DECLARATION, C_AST_PG_EDGE_GOTO_TARGET,
     C_AST_PG_EDGE_PARENT, C_AST_PG_EDGE_ROWS_PER_NODE, C_AST_PG_EDGE_STRIDE_U32,

@@ -1,5 +1,5 @@
 use crate::region::wrap_child;
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::Node;
 
 #[cfg_attr(

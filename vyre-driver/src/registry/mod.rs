@@ -6,16 +6,17 @@
 //! operation registration.
 
 /// Policy enforcement contracts.
-pub mod enforce;
+pub(crate) mod enforce;
 /// Target-facet semantic identity validation.
-pub mod intrinsic_adapter;
+pub(crate) mod intrinsic_adapter;
 /// Operation identifier migrations and deprecations.
-pub mod migration;
+pub(crate) mod migration;
 /// Operation mutation classification.
-pub mod mutation;
+pub(crate) mod mutation;
 
 pub use enforce::{Chain, EnforceGate, EnforceVerdict};
 pub use intrinsic_adapter::{validate_intrinsic_lowering, IntrinsicRegistrationError};
+pub use migration::DEPRECATED_OP_CODE;
 pub use migration::{
     deprecation_diagnostic, AttrMap, AttrValue, Deprecation, Migration, MigrationError,
     MigrationRegistry, Semver,

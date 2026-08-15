@@ -4,7 +4,7 @@
 //! Follow `AUTHORING.md` in vyre-libs for the pattern.
 
 use {{crate_name_snake}}::ExampleOp;
-use vyre_libs::tensor_ref::TensorRef;
+use vyre_libs::TensorRef;
 use vyre_reference::value::Value;
 
 fn u32_bytes(words: &[u32]) -> Vec<u8> {

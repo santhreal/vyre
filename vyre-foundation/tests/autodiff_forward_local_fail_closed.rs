@@ -15,8 +15,8 @@
 //! confirms the gradient value.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::transform::autodiff::error::AutodiffError;
-use vyre_foundation::transform::autodiff::grad::grad;
+use vyre_foundation::transform::autodiff::grad;
+use vyre_foundation::transform::autodiff::AutodiffError;
 use vyre_reference::value::Value;
 
 /// Forward: `let a = x[0]; out[0] = a * a`. The adjoint needs `a`'s forward

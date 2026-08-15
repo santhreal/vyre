@@ -40,24 +40,26 @@ pub mod ir {
             fold_unary_literal,
         };
     }
-    pub use crate::ir_inner::model;
     pub use crate::ir_inner::model::arena::{ArenaProgram, ExprArena, ExprRef};
-    pub use crate::ir_inner::model::expr::{Expr, ExprNode, Ident};
+    pub use crate::ir_inner::model::expr::{Expr, ExprNode, GeneratorRef, Ident};
     pub use crate::ir_inner::model::generated::{
         expr_variant_name, node_variant_name, EXPR_VARIANT_NAMES, NODE_VARIANT_NAMES,
     };
-    pub use crate::ir_inner::model::node::{Node, NodeExtension};
+    pub use crate::ir_inner::model::node::{node_op_id, Node, NodeExtension};
     pub use crate::ir_inner::model::node_kind::{
         EvalError, InterpCtx, NodeId, NodeStorage, OpId, RegionId, Value, VarId,
     };
     pub use crate::ir_inner::model::program::{
-        BufferDecl, CacheLocality, LinearType, MemoryHints, MemoryKind, Program, ShapePredicate,
-        NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION,
+        BufferDecl, CacheLocality, LinearType, MemoryHints, MemoryKind, Program, Scope,
+        ShapePredicate, NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION,
     };
     pub use crate::ir_inner::model::program_graph::{
         GraphInput, GraphNodeId, GraphOutput, GraphValueId, LivenessInterval, ProgramGraph,
         ProgramGraphError, ProgramGraphNode, ProgramGraphValue, ShapeDim, ValueContract,
         ValueLifetime,
+    };
+    pub use crate::ir_inner::model::program_graph_identity::{
+        ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,
     };
     /// Per-Node-variant bit-position constants for `ProgramStats::node_kinds_present`.
     /// Compose with `ProgramStats::has_any_node_kind` for O(1) `analyze_impl` gates.
@@ -76,7 +78,6 @@ pub mod ir {
         AtomicOp, BinOp, BufferAccess, CollectiveOp, CommGroup, Convention, DataType, OpSignature,
         SubgroupReduceOp, UnOp,
     };
-    pub use crate::memory_model;
     pub use crate::memory_model::MemoryOrdering;
     pub use crate::optimizer::passes::fusion_cse::{cse, dce};
     pub use crate::serial::text;
@@ -98,7 +99,7 @@ pub(crate) mod ir_eval;
 /// Domain-neutral byte-range result types.
 pub mod match_result;
 /// Substrate-neutral memory ordering.
-pub mod memory_model;
+pub(crate) mod memory_model;
 /// Optimizer performance counters.
 pub mod perf;
 /// Program capability analysis.
@@ -136,7 +137,7 @@ pub mod vast;
 
 // The generated AST is owner-local; public consumers use `pub mod ir`.
 mod ir_inner {
-    pub mod model;
+    pub(crate) mod model;
 }
 
 /// Deterministic field framing for content-addressed hashes.
@@ -167,7 +168,7 @@ pub mod execution_plan;
 pub mod program_dispatch;
 
 /// Foundation-owned IR and Program wire failures.
-pub mod error;
+pub(crate) mod error;
 pub use error::{IrError, IrResult};
 
 /// Test utilities shared across optimizer and transform test suites.

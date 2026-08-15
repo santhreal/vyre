@@ -1,6 +1,6 @@
 //! Staging-capacity size classes and the configured slot count.
 
-use vyre_driver::backend::BackendError;
+use vyre_driver::BackendError;
 
 pub(super) const MIN_RING_SIZE: usize = 2;
 pub(super) const MAX_RING_SIZE: usize = 256;

@@ -2,7 +2,7 @@
 
 use vyre_conform::lens::{self, LensOutcome};
 fn backend() -> &'static vyre_driver::BackendRegistration {
-    vyre_driver::backend::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
+    vyre_driver::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
         .expect("Fix: WGPU driver crate must register its authenticated artifact target.")
 }
 

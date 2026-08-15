@@ -10,7 +10,7 @@ use ir_arbitrary::*;
 use proptest::collection::vec as prop_vec;
 use proptest::prelude::*;
 use std::sync::Arc;
-use vyre_foundation::ir::model::program::ProgramStats;
+use vyre_foundation::ir::ProgramStats;
 use vyre_foundation::ir::{DataType, Expr, ExprNode, Node, NodeExtension, Program};
 
 // ─── capability constants (mirroring src/ir_inner/model/program/stats.rs) ───

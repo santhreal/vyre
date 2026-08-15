@@ -13,7 +13,7 @@
 
 use std::sync::Arc;
 
-use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 use vyre_primitives::math::multigrid::{jacobi_smooth_step, jacobi_smooth_step_serial_body};
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};

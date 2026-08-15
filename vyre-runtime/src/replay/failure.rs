@@ -6,7 +6,7 @@
 //! outputs observed at failure, so a later replay diffs against what the
 //! original run actually saw rather than against silence.
 
-use vyre_driver::backend::BackendError;
+use vyre_driver::BackendError;
 use vyre_foundation::diagnostics::RetryClass;
 
 use super::output_digest;

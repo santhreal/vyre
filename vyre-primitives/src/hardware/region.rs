@@ -3,8 +3,8 @@
 //! and a composition chain stays visible from caller to callee.
 
 use std::sync::Arc;
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::Node;
+use vyre_foundation::ir::{GeneratorRef, Ident};
 
 /// Wrap `body` in a `Node::Region` tagged with `generator`. A `source_region`
 /// records the composition edge from caller to callee, which every intrinsic

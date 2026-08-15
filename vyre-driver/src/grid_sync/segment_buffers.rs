@@ -315,7 +315,7 @@ mod tests {
     use super::*;
     use crate::grid_sync::test_programs::{cross_segment_store_program, region};
     use vyre_foundation::ir::DataType;
-    use vyre_foundation::memory_model::MemoryOrdering;
+    use vyre_foundation::MemoryOrdering;
 
     #[test]
     fn split_keeps_multi_segment_output_as_readwrite_accumulator() {

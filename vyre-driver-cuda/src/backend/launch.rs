@@ -4,8 +4,8 @@ use std::ffi::c_void;
 
 use cudarc::driver::sys::{CUfunction, CUresult, CUstream};
 use smallvec::SmallVec;
-use vyre_driver::binding::BindingPlan;
 use vyre_driver::validation::validate_launch_geometry;
+use vyre_driver::BindingPlan;
 use vyre_driver::{BackendError, DispatchConfig, LaunchPlan};
 use vyre_foundation::ir::Program;
 

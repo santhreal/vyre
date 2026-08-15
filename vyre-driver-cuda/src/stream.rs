@@ -11,7 +11,7 @@ use cudarc::driver::{
     sys::{CUevent, CUevent_flags, CUresult, CUstream, CUstream_flags, CUstream_st},
     CudaContext,
 };
-use vyre_driver::{backend::private, BackendError, PendingDispatch};
+use vyre_driver::{sealed, BackendError, PendingDispatch};
 
 use crate::backend::telemetry::CudaTelemetry;
 use crate::backend::{cuda_check, DispatchAllocations, HostTransferAllocations, ResidentUseGuard};
@@ -819,7 +819,7 @@ impl CudaPendingDispatch {
     }
 }
 
-impl private::Sealed for CudaPendingDispatch {}
+impl sealed::Sealed for CudaPendingDispatch {}
 
 impl PendingDispatch for CudaPendingDispatch {
     fn is_ready(&self) -> bool {

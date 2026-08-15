@@ -31,7 +31,7 @@
 
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
 use vyre_foundation::transform::visit::{child_bodies, for_each_subexpr, node_operands};
 

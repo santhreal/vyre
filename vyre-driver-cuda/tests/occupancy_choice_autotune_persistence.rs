@@ -5,7 +5,7 @@
 use std::path::PathBuf;
 
 use vyre_driver::autotune_store::{AutotuneKey, AutotuneRecord, AutotuneStore};
-use vyre_driver::specialization::{SpecCacheKey, SpecMap};
+use vyre_driver::{SpecCacheKey, SpecMap};
 use vyre_driver_cuda::occupancy::{pick_workgroup_size_for_occupancy, KernelResourceUsage};
 use vyre_driver_cuda::synthetic_device_caps::synthetic_sm120_envelope_default;
 

@@ -32,11 +32,11 @@
 use super::*;
 use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use crate::wire::pack_u32_slice;
-use vyre_driver::backend::VyreBackend;
 use vyre_driver::grid_sync::{
     contains_grid_sync, dispatch_with_grid_sync_split, dispatch_with_grid_sync_split_via,
 };
 use vyre_driver::DispatchConfig;
+use vyre_driver::VyreBackend;
 use vyre_driver_reference::CpuRefBackend;
 use vyre_foundation::ir::{BufferAccess, Program};
 use vyre_reference::{output_index, reference_eval, reference_eval_with_grid};

@@ -48,9 +48,9 @@ use std::sync::Arc;
 
 use cudarc::driver::sys::{CUgraphExec_st, CUgraph_st, CUstream_st};
 use smallvec::SmallVec;
-use vyre_driver::binding::BindingRole;
 use vyre_driver::graph_capture::plan_graph_capture_bindings;
 use vyre_driver::transfer_accounting::TransferAccountingPolicy;
+use vyre_driver::BindingRole;
 use vyre_driver::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
 

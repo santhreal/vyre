@@ -38,7 +38,11 @@ pub struct LimitState {
 
 /// Increment `limits` and emit errors if depth or node count exceeds defaults.
 #[inline]
-pub fn check_limits(limits: &mut LimitState, depth: usize, errors: &mut Vec<ValidationError>) {
+pub(crate) fn check_limits(
+    limits: &mut LimitState,
+    depth: usize,
+    errors: &mut Vec<ValidationError>,
+) {
     limits.node_count = limits.node_count.saturating_add(1);
     if limits.node_count > DEFAULT_MAX_NODE_COUNT && !limits.node_count_reported {
         limits.node_count_reported = true;
@@ -69,7 +73,7 @@ pub fn check_limits(limits: &mut LimitState, depth: usize, errors: &mut Vec<Vali
 /// Return true when the expression nesting depth is still within bounds.
 #[inline]
 #[must_use]
-pub fn check_expr_depth(depth: usize, errors: &mut Vec<ValidationError>) -> bool {
+pub(crate) fn check_expr_depth(depth: usize, errors: &mut Vec<ValidationError>) -> bool {
     if depth > DEFAULT_MAX_EXPR_DEPTH {
         errors.push(err(
             "V033",
@@ -93,7 +97,7 @@ pub fn check_expr_depth(depth: usize, errors: &mut Vec<ValidationError>) -> bool
 /// Returns the offending `depth` when it exceeds [`DEFAULT_MAX_CALL_DEPTH`].
 #[inline]
 #[must_use]
-pub fn max_call_depth(_op_id: &str, depth: usize) -> Result<usize, usize> {
+pub(crate) fn max_call_depth(_op_id: &str, depth: usize) -> Result<usize, usize> {
     if depth > DEFAULT_MAX_CALL_DEPTH {
         return Err(depth);
     }

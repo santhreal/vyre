@@ -5,33 +5,35 @@
 //! deliberately owned by upper integration crates.
 
 pub mod builders;
-pub mod haystack;
-pub mod hit_buffer;
+pub(crate) mod haystack;
+pub(crate) mod hit_buffer;
 
 #[cfg(feature = "matching-dfa")]
 pub mod classic_ac;
 #[cfg(feature = "matching-dfa")]
-pub mod dfa;
+pub(crate) mod dfa;
 #[cfg(feature = "matching-nfa")]
 pub mod nfa;
-pub mod post_process;
+pub(crate) mod post_process;
 #[cfg(feature = "matching-nfa")]
-pub mod scan_program;
+pub(crate) mod scan_program;
 #[cfg(feature = "matching-substring")]
-pub mod substring;
+pub(crate) mod substring;
 
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
-pub mod fused_region_evidence;
+pub(crate) mod fused_region_evidence;
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
-pub mod regex_anchored_window;
+pub(crate) mod regex_anchored_window;
 #[cfg(feature = "matching-regex")]
-pub mod regex_compile;
+pub(crate) mod regex_compile;
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
-pub mod regex_dfa;
+pub(crate) mod regex_dfa;
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
-pub mod regex_region_admission;
+pub(crate) mod regex_region_admission;
 
 pub use dfa::aho_corasick;
+#[cfg(feature = "matching-dfa")]
+pub use dfa::{aho_corasick_bounded, cooperative_dfa_scan, cooperative_dfa_scan_body_with_store};
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
 pub use fused_region_evidence::{
     fused_region_evidence_program, fused_region_evidence_reference, FusedRegionEvidence,
@@ -62,6 +64,8 @@ pub use regex_compile::{
     RegexCompileError, RegexConstruct, RegexPatternExtent, RegexReplayPolicy,
     DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
 };
+#[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
+pub use regex_dfa::build_regex_dfa_pipeline_with_subgroup_coalesce;
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
 pub use regex_dfa::{
     build_regex_dfa_pipeline, build_regex_dfa_pipeline_with_policy,

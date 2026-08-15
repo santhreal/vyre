@@ -21,9 +21,9 @@
 //! pointwise complex multiply, and inverse FFT.
 
 mod complex_length;
-pub mod convolution;
-pub mod fft4;
-pub mod fft_radix2;
+pub(crate) mod convolution;
+pub(crate) mod fft4;
+pub(crate) mod fft_radix2;
 
 pub use convolution::fft_convolve_circular_complex;
 pub use fft4::fft4_complex;

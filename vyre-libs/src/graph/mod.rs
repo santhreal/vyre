@@ -3,7 +3,7 @@
 //! Host-side packed layout lives in [`vyre_foundation::vast`]. The programs
 //! here are minimal GPU-facing slices of that contract.
 
-pub mod ast_walk;
+pub(crate) mod ast_walk;
 
 /// Graph traversal, dominance, and dispatch-pipeline compositions.
 #[cfg(feature = "graph-dispatch")]

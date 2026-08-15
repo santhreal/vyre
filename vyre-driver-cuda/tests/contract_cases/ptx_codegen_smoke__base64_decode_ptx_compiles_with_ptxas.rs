@@ -131,7 +131,7 @@ fn ptx_shared_memory_declaration_uses_element_byte_width() {
         vec![
             Node::store("scratch", Expr::u32(0), Expr::u32(7)),
             Node::Barrier {
-                ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+                ordering: vyre_foundation::MemoryOrdering::SeqCst,
             },
             Node::store("out", Expr::u32(0), Expr::load("scratch", Expr::u32(0))),
         ],
@@ -156,7 +156,7 @@ fn ptx_dynamic_shared_memory_offsets_use_u32_registers() {
         vec![
             Node::store("scratch", Expr::InvocationId { axis: 0 }, Expr::u32(7)),
             Node::Barrier {
-                ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+                ordering: vyre_foundation::MemoryOrdering::SeqCst,
             },
             Node::store(
                 "out",

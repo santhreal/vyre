@@ -9,8 +9,8 @@ use std::sync::Arc;
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_foundation::memory_model::MemoryOrdering;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_foundation::MemoryOrdering;
 use vyre_reference::value::Value;
 
 /// Default generated-matrix lane count for live CUDA/reference differential tests.
@@ -144,11 +144,10 @@ pub(crate) fn compiled_cuda_outputs_with_config(
     let artifact = vyre_megakernel::compile(&request).unwrap_or_else(|error| {
         panic!("Fix: CUDA generated case `{case_name}` compiler failed: {error}")
     });
-    let registration =
-        vyre_driver::backend::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
-            .unwrap_or_else(|error| {
-                panic!("Fix: CUDA generated case `{case_name}` registration failed: {error}")
-            });
+    let registration = vyre_driver::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
+        .unwrap_or_else(|error| {
+            panic!("Fix: CUDA generated case `{case_name}` registration failed: {error}")
+        });
     let compiler = registration.target_compiler().unwrap_or_else(|error| {
         panic!("Fix: CUDA generated case `{case_name}` target compiler failed: {error}")
     });

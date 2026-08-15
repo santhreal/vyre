@@ -71,10 +71,7 @@ fn dynamic_masked_comment_scatter_pack_writer_program(words: u32) -> Program {
                 vec![
                     Node::let_bind(format!("m_{k}"), Expr::load("mask", addr.clone())),
                     Node::let_bind(format!("off_{k}"), Expr::load("offsets", addr)),
-                    Node::if_then(
-                        Expr::eq(Expr::var(format!("m_{k}")), Expr::u32(1)),
-                        kept,
-                    ),
+                    Node::if_then(Expr::eq(Expr::var(format!("m_{k}")), Expr::u32(1)), kept),
                 ],
             )]
         }),
@@ -138,4 +135,3 @@ fn dynamic_masked_comment_scatter_packs_expected_lanes_from_u8_input() {
         "mask/comment-driven byte scatter must match simple line comment compaction."
     );
 }
-

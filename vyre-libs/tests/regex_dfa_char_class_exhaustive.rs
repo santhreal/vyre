@@ -7,7 +7,7 @@
 //! suites assume; locking it makes those suites' "body is `[class]`" premise sound.
 #![cfg(feature = "matching-regex")]
 
-use vyre_libs::scan::regex_dfa::build_regex_dfa_unanchored;
+use vyre_libs::scan::build_regex_dfa_unanchored;
 
 /// `true` iff the unanchored DFA for `pattern` (a single one-char class) accepts
 /// after consuming exactly `byte` from the start state. For a one-char pattern the

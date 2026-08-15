@@ -6,7 +6,7 @@ mod support;
 
 use support::optimizer::assert_optimizer_is_idempotent;
 use vyre::ir::Expr;
-use vyre_libs::parsing::c::sema::registry::c_sema_scope;
+use vyre_libs::parsing::c::sema::c_sema_scope;
 
 #[test]
 fn c_sema_scope_pre_lowering_optimizer_is_idempotent() {

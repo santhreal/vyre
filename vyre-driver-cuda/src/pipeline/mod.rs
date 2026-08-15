@@ -4,9 +4,9 @@ use std::sync::{Arc, Mutex};
 
 use smallvec::SmallVec;
 use vyre_driver::accounting::checked_add_usize_lazy;
-use vyre_driver::binding::BindingRole;
 use vyre_driver::input_identity::{domain_separated_exact_input_key, ExactInputKey};
-use vyre_driver::{backend::private, BackendError, DispatchConfig, LaunchPlan};
+use vyre_driver::BindingRole;
+use vyre_driver::{sealed, BackendError, DispatchConfig, LaunchPlan};
 use vyre_foundation::ir::Program;
 
 use crate::backend::allocations::DeviceAllocation;
@@ -191,7 +191,7 @@ impl Drop for CudaCompiledPipeline {
     }
 }
 
-impl private::Sealed for CudaCompiledPipeline {}
+impl sealed::Sealed for CudaCompiledPipeline {}
 
 fn cuda_graph_replay_enabled() -> bool {
     crate::instrumentation::cuda_graph_replay_enabled()

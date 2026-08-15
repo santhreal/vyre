@@ -164,7 +164,7 @@ pub(super) fn read_memory_regions(
             let id_value = u32::try_from(shape_reader.leb_u64()?).map_err(|err| {
                 format!("TruncatedPayload: handle DataType id cannot fit u32 ({err}). Fix: reject this payload.")
             })?;
-            DataType::Handle(vyre_spec::data_type::TypeId(id_value))
+            DataType::Handle(vyre_spec::TypeId(id_value))
         } else if element_tag == 0x80 {
             let id_value = u32::try_from(shape_reader.leb_u64()?).map_err(|err| {
                 format!("TruncatedPayload: opaque DataType id cannot fit u32 ({err}). Fix: reject this payload.")

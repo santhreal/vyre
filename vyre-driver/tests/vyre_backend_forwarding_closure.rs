@@ -90,7 +90,7 @@ fn method_names(text: &str, opening: &str, indent: &str) -> BTreeSet<String> {
 fn trait_methods() -> BTreeSet<String> {
     method_names(
         &source("src/backend/vyre_backend.rs"),
-        "pub trait VyreBackend: private::Sealed + Send + Sync {",
+        "pub trait VyreBackend: sealed::Sealed + Send + Sync {",
         "    ",
     )
 }

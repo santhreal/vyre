@@ -61,7 +61,7 @@ fn artifact_for(case: &StabilityCase) -> Artifact {
 
 /// The registered CUDA target compiler, acquired without a device.
 fn cuda_target_compiler() -> Box<dyn TargetCompiler> {
-    vyre_driver::backend::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
+    vyre_driver::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
         .expect("Fix: the CUDA backend registration must be linked into this test binary.")
         .target_compiler()
         .expect("Fix: CUDA target-payload production must not require a device.")

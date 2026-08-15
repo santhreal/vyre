@@ -199,7 +199,7 @@ fn device_memory_budget_rejects_oversized_hit_plan_before_allocation() {
         .expect_err("Fix: launch policy must reject plans that exceed explicit device budget");
 
     match err {
-        vyre_driver::backend::BackendError::DeviceOutOfMemory {
+        vyre_driver::BackendError::DeviceOutOfMemory {
             requested,
             available,
         } => {

@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
-use vyre_foundation::memory_model::MemoryOrdering;
 use vyre_foundation::transform::visit::child_bodies;
+use vyre_foundation::MemoryOrdering;
 
 pub(super) fn buffer() -> BufferDecl {
     BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)

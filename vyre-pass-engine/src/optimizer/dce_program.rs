@@ -19,7 +19,7 @@
 
 use std::sync::Arc;
 
-use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::persistent_bfs::{

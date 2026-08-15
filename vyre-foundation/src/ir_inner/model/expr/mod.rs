@@ -456,7 +456,6 @@ impl Expr {
 mod atomics;
 mod builders;
 
-
 #[cfg(test)]
 mod tests {
     use super::Expr;

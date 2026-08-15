@@ -5,11 +5,9 @@
 //! rotated Gram matrix. The read-out is one operation, not a loop each of them
 //! spells again.
 
-use vyre_foundation::composition::{
-    trap_program, wrap_anonymous_region, wrap_child_region,
-};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.

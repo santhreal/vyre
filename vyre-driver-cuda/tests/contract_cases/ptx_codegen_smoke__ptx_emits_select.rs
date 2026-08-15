@@ -30,7 +30,7 @@ fn ptx_emits_barrier() {
         [64, 1, 1],
         vec![
             Node::Barrier {
-                ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+                ordering: vyre_foundation::MemoryOrdering::SeqCst,
             },
             Node::store("out", Expr::gid_x(), Expr::u32(0)),
         ],
@@ -126,7 +126,7 @@ fn ptx_declares_shared_memory() {
         vec![
             Node::store("scratch", Expr::u32(0), Expr::u32(7)),
             Node::Barrier {
-                ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+                ordering: vyre_foundation::MemoryOrdering::SeqCst,
             },
             Node::store("out", Expr::u32(0), Expr::load("scratch", Expr::u32(0))),
         ],
@@ -192,7 +192,7 @@ fn assert_ptx_is_ascii(label: &str, ptx: &str) {
 
 #[test]
 fn ptx_is_pure_ascii_for_every_barrier_ordering() {
-    use vyre_foundation::memory_model::MemoryOrdering;
+    use vyre_foundation::MemoryOrdering;
     for ordering in [
         MemoryOrdering::Acquire,
         MemoryOrdering::Release,
@@ -215,7 +215,7 @@ fn ptx_is_pure_ascii_for_every_barrier_ordering() {
 
 #[test]
 fn ptx_emits_cooperative_grid_barrier_not_cta_downgrade() {
-    use vyre_foundation::memory_model::MemoryOrdering;
+    use vyre_foundation::MemoryOrdering;
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [64, 1, 1],

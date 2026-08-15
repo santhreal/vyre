@@ -1079,7 +1079,7 @@ mod tests {
         let inputs = vec![vec![0u8; 32], vec![0u8; 32]]; // keys, queries (8 u32 each)
 
         // Driver-side requirement: one resident handle per non-shared binding.
-        let plan = vyre_driver::binding::BindingPlan::build(&program)
+        let plan = vyre_driver::BindingPlan::build(&program)
             .expect("binding plan for a well-formed program must build");
         let required_handles = plan.bindings.len() - plan.shared_indices.len();
         assert_eq!(

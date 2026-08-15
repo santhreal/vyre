@@ -12,8 +12,8 @@ use metal::{
     Buffer, CommandBuffer, ComputePipelineState, Device, MTLCommandBufferStatus,
     MTLResourceOptions, MTLSize, NSUInteger,
 };
-use vyre_driver::backend::{private, BackendError, PendingDispatch};
-use vyre_driver::pipeline::{PipelineCacheIdentity, PipelineCacheMissReason};
+use vyre_driver::{private, BackendError, PendingDispatch};
+use vyre_driver::{PipelineCacheIdentity, PipelineCacheMissReason};
 use vyre_driver::resident_transfer_fusion::{
     fuse_resident_transfer_intervals, ResidentTransferInterval, ResidentTransferView,
 };
@@ -60,7 +60,7 @@ impl std::fmt::Debug for MetalBackend {
     }
 }
 
-impl private::Sealed for MetalBackend {}
+impl sealed::Sealed for MetalBackend {}
 
 // SAFETY: `MTLDevice` and `MTLCommandQueue` are Objective-C Metal objects whose
 // public API is designed for cross-thread command creation and submission. This
@@ -873,7 +873,7 @@ impl VyreBackend for MetalBackend {
     }
 
     fn supported_ops(&self) -> &std::collections::HashSet<OpId> {
-        vyre_driver::backend::core_supported_ops()
+        vyre_driver::core_supported_ops()
     }
 
     fn max_workgroup_size(&self) -> [u32; 3] {
@@ -966,7 +966,7 @@ impl VyreBackend for MetalBackend {
         inputs: &[Vec<u8>],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
-        let borrowed = vyre_driver::backend::borrowed_input_slices(inputs, "metal inputs")?;
+        let borrowed = vyre_driver::borrowed_input_slices(inputs, "metal inputs")?;
         self.dispatch_borrowed(program, &borrowed, config)
     }
 
@@ -1513,7 +1513,7 @@ unsafe impl Send for MetalPendingDispatch {}
 // handle, so no mutable buffer access can race another pending-handle operation.
 unsafe impl Sync for MetalPendingDispatch {}
 
-impl private::Sealed for MetalPendingDispatch {}
+impl sealed::Sealed for MetalPendingDispatch {}
 
 impl MetalPendingDispatch {
     fn retire_timed(self) -> Result<TimedDispatchResult, BackendError> {
@@ -2301,7 +2301,7 @@ fn metal_pipeline_cache_key(
         env!("CARGO_PKG_VERSION"),
         device_name
     );
-    let fingerprint = vyre_driver::pipeline::PipelineDeviceFingerprint::from_parts(
+    let fingerprint = vyre_driver::PipelineDeviceFingerprint::from_parts(
         0x106b,
         0,
         "metal",

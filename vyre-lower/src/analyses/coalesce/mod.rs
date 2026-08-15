@@ -28,8 +28,9 @@
 //! bug for any rewrite that depends on this report, so the
 //! classification is intentionally conservative.
 
-pub mod analysis;
-pub mod report;
+pub(crate) mod analysis;
+pub(crate) mod report;
 
 pub use analysis::analyze;
 pub use report::{AccessPattern, AccessSite, CoalescenceReport};
+pub use report::{CoalescenceRewrite, CoalescenceWarning};

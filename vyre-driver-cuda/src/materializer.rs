@@ -51,40 +51,39 @@ impl ArtifactMaterializer for CudaMaterializer {
         artifact: &Artifact,
         payload: &TargetPayload,
     ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
-        let modules = self.descriptor.admit_modules(
-            CUDA_BACKEND_ID,
-            artifact,
-            payload,
-            |module| {
-                let ptx = std::str::from_utf8(&module.image.bytes).map_err(|error| {
-                    materialize::invalid_module(&format!("PTX target module is not UTF-8: {error}"))
+        let modules =
+            self.descriptor
+                .admit_modules(CUDA_BACKEND_ID, artifact, payload, |module| {
+                    let ptx = std::str::from_utf8(&module.image.bytes).map_err(|error| {
+                        materialize::invalid_module(&format!(
+                            "PTX target module is not UTF-8: {error}"
+                        ))
+                    })?;
+                    if !ptx.contains(".visible .entry main(") {
+                        return Err(materialize::invalid_module(
+                            "PTX target module does not define `.visible .entry main`",
+                        ));
+                    }
+                    let prepared = self
+                        .backend
+                        .prepare_static_dispatch(&module.program, &module.config)?;
+                    let module_key = self.backend.module_cache_key_for_raw_ptx_artifact(ptx)?;
+                    self.backend.module_for_ptx_with_key(ptx, module_key)?;
+                    let ptx: Arc<str> = Arc::from(ptx);
+                    let pipeline = Arc::new(CudaCompiledPipeline::new_from_target_payload(
+                        self.backend.clone(),
+                        Arc::clone(&module.program),
+                        ptx,
+                        module_key,
+                        &module.config,
+                        prepared,
+                    )?);
+                    Ok(CudaExecutableModule {
+                        program: module.program,
+                        pipeline,
+                        config: module.config,
+                    })
                 })?;
-                if !ptx.contains(".visible .entry main(") {
-                    return Err(materialize::invalid_module(
-                        "PTX target module does not define `.visible .entry main`",
-                    ));
-                }
-                let prepared = self
-                    .backend
-                    .prepare_static_dispatch(&module.program, &module.config)?;
-                let module_key = self.backend.module_cache_key_for_raw_ptx_artifact(ptx)?;
-                self.backend.module_for_ptx_with_key(ptx, module_key)?;
-                let ptx: Arc<str> = Arc::from(ptx);
-                let pipeline = Arc::new(CudaCompiledPipeline::new_from_target_payload(
-                    self.backend.clone(),
-                    Arc::clone(&module.program),
-                    ptx,
-                    module_key,
-                    &module.config,
-                    prepared,
-                )?);
-                Ok(CudaExecutableModule {
-                    program: module.program,
-                    pipeline,
-                    config: module.config,
-                })
-            },
-        )?;
         Ok(Box::new(CudaArtifactInstance {
             core: self.descriptor.instance(artifact, payload, MESSAGES),
             modules,

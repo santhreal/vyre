@@ -34,8 +34,8 @@ impl core::fmt::Debug for vyre_driver_wgpu::pipeline::WgpuPipeline
 impl core::fmt::Display for vyre_driver_wgpu::runtime::cache::tiered_cache::CacheError
 impl vyre_driver::backend::compiled_pipeline::CompiledPipeline for vyre_driver_wgpu::pipeline::WgpuPipeline
 impl vyre_driver::backend::device_buffer::DeviceBuffer for vyre_driver_wgpu::WgpuDeviceBuffer
-impl vyre_driver::backend::private::Sealed for vyre_driver_wgpu::WgpuBackend
-impl vyre_driver::backend::private::Sealed for vyre_driver_wgpu::pipeline::WgpuPipeline
+impl vyre_driver::backend::sealed::Sealed for vyre_driver_wgpu::WgpuBackend
+impl vyre_driver::backend::sealed::Sealed for vyre_driver_wgpu::pipeline::WgpuPipeline
 impl vyre_driver::backend::vyre_backend::VyreBackend for vyre_driver_wgpu::WgpuBackend
 impl vyre_driver_wgpu::DispatchArena
 impl vyre_driver_wgpu::WgpuBackend

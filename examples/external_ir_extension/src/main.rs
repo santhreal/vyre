@@ -123,7 +123,7 @@ fn main() {
     .validate()
     .expect("valid extension compile request");
     let artifact = compiler::compile(&request).expect("neutral extension artifact");
-    let target = vyre_driver::backend::backend_registration(TARGET_NAME)
+    let target = vyre_driver::backend_registration(TARGET_NAME)
         .expect("linked extension target");
     let compiler = target.target_compiler().expect("extension target compiler");
     let envelope =
@@ -132,7 +132,7 @@ fn main() {
         .require_target_payload(compiler.format())
         .expect("attached extension payload");
     assert!(
-        vyre_driver::backend::registered_target_operation_facets()
+        vyre_driver::registered_target_operation_facets()
             .expect("valid target facet registry")
             .iter()
             .any(|facet| facet.operation_id == OPERATION_ID && facet.target_id == TARGET_ID)

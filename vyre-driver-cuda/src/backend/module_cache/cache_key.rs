@@ -43,16 +43,16 @@ pub(super) fn ptx_source_cache_key_from_program_identity(
     config: &DispatchConfig,
     ptx_target_sm: u32,
     subgroup_size: u32,
-    feature_flags: vyre_driver::pipeline::PipelineFeatureFlags,
+    feature_flags: vyre_driver::PipelineFeatureFlags,
 ) -> Result<PtxSourceCacheKey, BackendError> {
     let normalized_digest = probe::measure_nested(probe::Nested::PtxDigest, || {
-        vyre_driver::pipeline::try_normalized_program_cache_digest(program)
+        vyre_driver::try_normalized_program_cache_digest(program)
     })
     .map_err(|error| BackendError::new(format!("CUDA PTX source cache digest failed: {error}")))?;
     let vsa_bytes = probe::measure_nested(probe::Nested::PtxVsa, || {
         vsa_fingerprint_cache_bytes(vyre_driver::program_vsa_fingerprint_words(program))
     });
-    let dispatch_policy_digest = vyre_driver::pipeline::dispatch_policy_cache_digest(config);
+    let dispatch_policy_digest = vyre_driver::dispatch_policy_cache_digest(config);
     let feature_flag_bytes = feature_flags.bits().to_le_bytes();
     let key = domain_separated_exact_input_key(
         CUDA_PTX_SOURCE_FROM_PROGRAM_DOMAIN,

@@ -19,8 +19,8 @@
 //! candidates so the optimizer can decide whether to invoke the
 //! rewrite.
 
-pub mod analysis;
-pub mod plan;
+pub(crate) mod analysis;
+pub(crate) mod plan;
 
 pub use analysis::analyze;
 pub use plan::{LayoutCandidate, LayoutTransformPlan};

@@ -47,9 +47,9 @@
 //! literal-bound implication today.
 
 use super::substitution::body_writes_loop_var;
-use crate::transform::visit;
 use crate::ir::{BinOp, Expr, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::visit;
 
 /// Drop redundant `if loop_var < to { ... }` guards inside loops with
 /// matching literal upper bounds.
@@ -263,7 +263,7 @@ fn has_redundant_guard_with_ctx(node: &Node, loop_ctx: Option<(&str, u32)>) -> b
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::model::expr::Ident;
+    use crate::ir::Ident;
     use crate::ir::{BufferAccess, BufferDecl, DataType};
 
     fn buf() -> BufferDecl {

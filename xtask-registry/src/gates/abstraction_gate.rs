@@ -216,7 +216,7 @@ fn walk(
 mod tests {
     use std::sync::Arc;
 
-    use vyre::ir::model::expr::GeneratorRef;
+    use vyre::ir::GeneratorRef;
     use vyre::ir::{Expr, Ident};
 
     use super::*;

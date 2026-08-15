@@ -2,8 +2,8 @@
 
 use super::capability::Backend;
 use std::sync::{Arc, LazyLock};
-pub use vyre_foundation::ir::model::node::node_op_id;
-use vyre_foundation::ir::model::node::Node;
+pub use vyre_foundation::ir::node_op_id;
+use vyre_foundation::ir::Node;
 use vyre_foundation::ir::{OpId, Program, ValidationError};
 use vyre_foundation::transform::visit::child_bodies;
 
@@ -84,7 +84,13 @@ fn validate_nodes(
     supported: &std::collections::HashSet<OpId>,
 ) -> Result<(), ValidationError> {
     let mut stack: Vec<(&Node, usize)> = Vec::with_capacity(nodes.len());
-    stack.extend(nodes.iter().enumerate().rev().map(|(index, node)| (node, index)));
+    stack.extend(
+        nodes
+            .iter()
+            .enumerate()
+            .rev()
+            .map(|(index, node)| (node, index)),
+    );
     while let Some((node, index)) = stack.pop() {
         let op = node_op_id(node);
         if !supported.contains(op) {
@@ -94,7 +100,12 @@ fn validate_nodes(
         // Groups in reverse, each reversed, so `then` pops before `otherwise`
         // and both in source order: the same visit order as the recursion.
         for body in child_bodies(node).into_iter().rev() {
-            stack.extend(body.iter().enumerate().rev().map(|(index, node)| (node, index)));
+            stack.extend(
+                body.iter()
+                    .enumerate()
+                    .rev()
+                    .map(|(index, node)| (node, index)),
+            );
         }
     }
     Ok(())

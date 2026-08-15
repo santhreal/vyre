@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use vyre_driver::backend::{
+use vyre_driver::{
     ArtifactInstance, BackendError, BindingSet, DeviceIdentity, ResidentOwner, Resource, Submission,
 };
 use vyre_megakernel::Digest;

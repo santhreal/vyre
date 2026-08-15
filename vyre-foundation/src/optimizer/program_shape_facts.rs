@@ -18,7 +18,7 @@ use std::sync::Arc;
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::program::Program;
 use rustc_hash::FxHashMap;
-use vyre_spec::data_type::DataType;
+use vyre_spec::DataType;
 
 use super::shape_facts;
 

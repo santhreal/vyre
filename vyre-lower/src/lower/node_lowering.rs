@@ -3,7 +3,7 @@
 use crate::descriptor::{KernelBody, KernelOp, KernelOpKind, OpaqueNodeData};
 use crate::error::LowerError;
 use rustc_hash::FxHashSet;
-use vyre_foundation::ir::model::node::node_op_id;
+use vyre_foundation::ir::node_op_id;
 use vyre_foundation::ir::{Expr, Ident, Node};
 
 use super::body_assembly::{empty_body_for_nodes, push_child};

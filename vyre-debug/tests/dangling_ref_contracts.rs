@@ -88,7 +88,7 @@ fn find_dangling_refs_matches_verifier_verdict() {
 
     let danglings = find_dangling_refs(&desc);
 
-    let verify_errs = vyre_lower::verify::verify(&desc).unwrap_err();
+    let verify_errs = vyre_lower::verify(&desc).unwrap_err();
     let verify_dangling_ids: Vec<u32> = verify_errs
         .iter()
         .filter_map(|e| {

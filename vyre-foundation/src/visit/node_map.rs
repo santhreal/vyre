@@ -69,8 +69,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::model::expr::Ident;
     use crate::ir::Expr;
+    use crate::ir::Ident;
     use std::sync::Arc;
 
     fn store_at(idx: u32, value: u32) -> Node {

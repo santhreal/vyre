@@ -12,7 +12,7 @@ use vyre_libs::parsing::c::parse::vast::{
     c11_annotate_typedef_names, c11_annotate_typedef_names_packed_haystack,
     c11_prehash_vast_identifiers, c11_prehash_vast_identifiers_packed_haystack,
 };
-use vyre_libs::parsing::c::sema::registry::{
+use vyre_libs::parsing::c::sema::{
     c_sema_scope, c_sema_scope_packed_haystack, c_sema_scope_symbols_packed_haystack,
 };
 use vyre_reference::value::Value;

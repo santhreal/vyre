@@ -19,7 +19,7 @@
 //!
 //! The branch traversal is `vyre_lower::analyses::structured_walk`, not a
 //! copy of it, and which op kinds carry a retained effect comes from
-//! `vyre_lower::op_facts::facts_for`, which is that crate's only enumeration of
+//! `vyre_lower::facts_for`, which is that crate's only enumeration of
 //! `KernelOpKind`. What stays here is the PTX judgment: `is_predicatable`
 //! names the retained effects a `@%p` instruction predicate can still guard,
 //! which is a property of the predication encoding and has no meaning on a
@@ -266,7 +266,7 @@ mod tests {
                     .children([body().ops([op(
                         KernelOpKind::Atomic {
                             op: vyre_foundation::ir::AtomicOp::Add,
-                            ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+                            ordering: vyre_foundation::MemoryOrdering::SeqCst,
                         },
                         [0, 0, 1],
                         2,
@@ -361,7 +361,7 @@ mod tests {
             (KernelOpKind::StoreShared, false),
             (
                 KernelOpKind::Barrier {
-                    ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+                    ordering: vyre_foundation::MemoryOrdering::SeqCst,
                 },
                 true,
             ),

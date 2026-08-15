@@ -9,7 +9,7 @@ pub(crate) fn validate_and_analyze(
 ) -> Result<vyre_lower::KernelDescriptor, String> {
     let descriptor = lower_for_cuda_emit(program)?;
     if crate::instrumentation::cuda_descriptor_audit_enabled() {
-        let neutral = vyre_lower::audit::audit(&descriptor);
+        let neutral = vyre_lower::audit(&descriptor);
         let concrete = vyre_emit_ptx::patterns::audit(&descriptor, compute_capability(target_sm));
         tracing::trace!(
             target: "vyre_driver_cuda::descriptor",
@@ -74,7 +74,7 @@ mod tests {
 
         assert_eq!(descriptor.dispatch.workgroup_size, [128, 1, 1]);
         assert_eq!(descriptor.bindings.slots.len(), 1);
-        assert!(vyre_lower::verify::verify(&descriptor).is_ok());
+        assert!(vyre_lower::verify(&descriptor).is_ok());
     }
 
     #[test]

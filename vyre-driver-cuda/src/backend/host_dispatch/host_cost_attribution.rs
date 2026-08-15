@@ -85,7 +85,7 @@ use std::io::Read;
 use std::path::Path;
 use std::time::Instant;
 
-use vyre_driver::binding::BindingPlan;
+use vyre_driver::BindingPlan;
 use vyre_driver::{BackendError, DispatchConfig, LaunchPlan};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -926,9 +926,8 @@ mod tests {
 
         cells.push(
             measure_cell("K2 try_normalized_program_cache_digest", || {
-                let digest =
-                    vyre_driver::pipeline::try_normalized_program_cache_digest(black_box(program))
-                        .map_err(BackendError::new)?;
+                let digest = vyre_driver::try_normalized_program_cache_digest(black_box(program))
+                    .map_err(BackendError::new)?;
                 Ok(digest_bytes(&digest))
             })
             .expect("Fix: K2 cell must measure."),
@@ -956,7 +955,7 @@ mod tests {
 
         cells.push(
             measure_cell("K4 dispatch_policy_cache_digest", || {
-                let digest = vyre_driver::pipeline::dispatch_policy_cache_digest(black_box(config));
+                let digest = vyre_driver::dispatch_policy_cache_digest(black_box(config));
                 Ok(digest_bytes(&digest))
             })
             .expect("Fix: K4 cell must measure."),

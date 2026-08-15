@@ -19,7 +19,7 @@
 //! Var-bound let becomes unused).
 
 use rustc_hash::FxHashMap;
-use vyre_foundation::ir::model::spec_types::{BinOp, UnOp};
+use vyre_foundation::ir::{BinOp, UnOp};
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
 use vyre_foundation::transform::rewrite_walk::NodeRewrite;
 

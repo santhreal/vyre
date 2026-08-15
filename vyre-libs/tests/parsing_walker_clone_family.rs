@@ -22,12 +22,12 @@ mod support;
 use support::ir_fingerprint::assert_pinned_ir_fingerprints;
 use vyre_foundation::ir::{Expr, Node, Program};
 use vyre_foundation::operation::OperationRegistry;
-use vyre_libs::parsing::c::lower::ast_to_pg_nodes::{
+use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_semantic_graph};
+use vyre_libs::parsing::c::lower::{
     c_lower_ast_to_pg_semantic_graph, c_lower_ast_to_pg_semantic_graph_with_pg,
     c_lower_ast_to_pg_semantic_graph_with_pg_no_control_resolution,
     C_AST_PG_SEMANTIC_NODE_STRIDE_U32,
 };
-use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_semantic_graph};
 use vyre_libs::parsing::c::parse::vast::{
     c11_annotate_typedef_names, c11_annotate_typedef_names_packed_haystack,
     c11_annotate_typedef_names_precomputed_context,

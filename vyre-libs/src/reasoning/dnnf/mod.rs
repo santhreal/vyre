@@ -19,7 +19,7 @@
 //! builds the device program that evaluates a compiled DAG bottom-up, over the
 //! graph wave scheduler.
 
-pub mod compile;
+pub(crate) mod compile;
 
 pub use compile::{compile_dnnf, is_satisfiable, is_tautology, model_count, DnnfDag, DnnfGate};
 #[cfg(any(test, feature = "cpu-parity"))]

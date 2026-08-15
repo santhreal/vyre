@@ -375,7 +375,7 @@ fn every_registered_primitive_is_race_free_under_lane_reversal() {
 #[test]
 fn lane_reversal_detects_a_deliberate_write_write_race() {
     use std::sync::Arc;
-    use vyre_foundation::ir::model::expr::Ident;
+    use vyre_foundation::ir::Ident;
     use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
     // Four lanes each unconditionally `store(out[0], local_x)`: a textbook race on
@@ -418,7 +418,7 @@ fn lane_reversal_detects_a_deliberate_write_write_race() {
 #[test]
 fn lane_reversal_is_invariant_for_a_race_free_program() {
     use std::sync::Arc;
-    use vyre_foundation::ir::model::expr::Ident;
+    use vyre_foundation::ir::Ident;
     use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
     // Each lane writes out[local_x] = local_x (disjoint slots, no shared write).

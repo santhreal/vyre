@@ -160,7 +160,11 @@ fn fixture_compound_literal_stress() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
 fn every_hostile_fixture_spells_the_stream_its_contracts_index() {
     let (types, starts, lens) = fixture_typedef_expr_ambiguity();
     assert_eq!(types.len(), 39, "typedef/expression ambiguity token count");
-    assert_eq!(lens, vec![1; types.len()], "every hostile token is one byte");
+    assert_eq!(
+        lens,
+        vec![1; types.len()],
+        "every hostile token is one byte"
+    );
     // `starts_for_lens` separates adjacent lexemes, so a one-byte token stream
     // lays out on a stride of two. What a span contract needs is that the spans
     // are disjoint and ordered, not the stride itself.

@@ -128,7 +128,10 @@ pub(crate) fn put_shape_predicate(
     Ok(())
 }
 
-pub(super) fn put_memory_regions(out: &mut Vec<u8>, buffers: &[BufferDecl]) -> Result<(), WireEncodeErr> {
+pub(super) fn put_memory_regions(
+    out: &mut Vec<u8>,
+    buffers: &[BufferDecl],
+) -> Result<(), WireEncodeErr> {
     let mut scratch = RegionPayloadScratch {
         shape: Vec::with_capacity(16),
         hints: Vec::with_capacity(16),

@@ -13,7 +13,7 @@
 //! or `compare_exchange` semantics under single-lane contention.
 
 use vyre_foundation::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::memory_model::MemoryOrdering;
+use vyre_foundation::MemoryOrdering;
 
 // --- Macros must be defined before `pub mod` declarations so child modules
 // can name them. `macro_rules!` is textual and scoped to what appears
@@ -118,7 +118,7 @@ pub mod atomic_and {
     );
 }
 
-pub mod atomic_compare_exchange;
+pub(crate) mod atomic_compare_exchange;
 /// Cat-B atomic-exchange composition.
 pub mod atomic_exchange {
     define_atomic_serial_module!(
@@ -133,7 +133,7 @@ pub mod atomic_exchange {
     );
 }
 
-pub mod atomic_lru_update;
+pub(crate) mod atomic_lru_update;
 /// Cat-B atomic-max composition.
 pub mod atomic_max {
     define_atomic_serial_module!(

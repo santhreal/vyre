@@ -16,10 +16,10 @@
 use vyre_foundation::ir::{
     AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program,
 };
-use vyre_foundation::memory_model::MemoryOrdering;
 use vyre_foundation::optimizer::passes::algebraic::atomic_minimize::AtomicMinimizePass;
 use vyre_foundation::optimizer::{PassAnalysis, ProgramPass};
 use vyre_foundation::transform::visit::walk_exprs;
+use vyre_foundation::MemoryOrdering;
 
 fn program(entry: Vec<Node>) -> Program {
     Program::wrapped(

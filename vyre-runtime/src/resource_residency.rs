@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use thiserror::Error;
-use vyre_driver::backend::{ArtifactInstance, ArtifactMaterializer, BackendError, Resource};
+use vyre_driver::{ArtifactInstance, ArtifactMaterializer, BackendError, Resource};
 
 const ZERO_UPLOAD_CHUNK_BYTES: usize = 1024 * 1024;
 

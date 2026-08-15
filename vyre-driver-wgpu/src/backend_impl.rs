@@ -9,7 +9,7 @@ use std::sync::{
 };
 use std::time::Instant;
 use vyre_driver::persistent::PersistentThreadMode;
-use vyre_driver::speculate::SpeculationMode;
+use vyre_driver::SpeculationMode;
 use vyre_foundation::ir::Program;
 
 fn empty_batch_result_slots<T>(
@@ -130,7 +130,7 @@ impl WgpuBackend {
             cache_tiers,
         )?;
         let (pipeline_cache_entries, pipeline_cache_bytes) =
-            vyre_driver::pipeline::pipeline_cache_limits_from_env();
+            vyre_driver::pipeline_cache_limits_from_env();
         Ok(Self {
             adapter_name,
             adapter_info,
@@ -483,18 +483,18 @@ impl WgpuBackend {
     /// Dispatch a real prefilter/confirm scan through the adaptive speculative path.
     pub fn dispatch_speculative_prefilter_confirm<F>(
         &self,
-        speculator: &vyre_driver::speculate::AdaptiveSpeculator,
-        plan: vyre_driver::speculate::SpeculativeDispatchPlan<'_>,
+        speculator: &vyre_driver::AdaptiveSpeculator,
+        plan: vyre_driver::SpeculativeDispatchPlan<'_>,
         inputs: &[&[u8]],
         config: &vyre_driver::DispatchConfig,
         confirm_serial: F,
-    ) -> Result<vyre_driver::speculate::SpeculativeDispatchOutcome, vyre_driver::BackendError>
+    ) -> Result<vyre_driver::SpeculativeDispatchOutcome, vyre_driver::BackendError>
     where
         F: FnMut(
             vyre_driver::OutputBuffers,
         ) -> Result<vyre_driver::OutputBuffers, vyre_driver::BackendError>,
     {
-        vyre_driver::speculate::dispatch_prefilter_confirm(
+        vyre_driver::dispatch_prefilter_confirm(
             self,
             speculator,
             plan,
@@ -722,7 +722,7 @@ impl vyre_driver::VyreBackend for WgpuBackend {
     }
 
     fn supported_ops(&self) -> &std::collections::HashSet<vyre_foundation::ir::OpId> {
-        vyre_driver::backend::validation::default_supported_ops_with_trap()
+        vyre_driver::default_supported_ops_with_trap()
     }
 
     fn dispatch(
@@ -845,7 +845,7 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         program: &Program,
         inputs: &[Vec<u8>],
         config: &vyre_driver::DispatchConfig,
-    ) -> Result<Box<dyn vyre_driver::backend::PendingDispatch>, vyre_driver::BackendError> {
+    ) -> Result<Box<dyn vyre_driver::PendingDispatch>, vyre_driver::BackendError> {
         let _span = tracing::trace_span!(
             "vyre.dispatch_async",
             backend = "wgpu",
@@ -868,7 +868,7 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         program: &Program,
         inputs: &[&[u8]],
         config: &vyre_driver::DispatchConfig,
-    ) -> Result<Box<dyn vyre_driver::backend::PendingDispatch>, vyre_driver::BackendError> {
+    ) -> Result<Box<dyn vyre_driver::PendingDispatch>, vyre_driver::BackendError> {
         Ok(Box::new(WgpuBackend::dispatch_borrowed_async(
             self, program, inputs, config,
         )?))
@@ -1074,8 +1074,8 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         Ok(())
     }
 
-    fn pipeline_cache_snapshot(&self) -> Option<vyre_driver::pipeline::PipelineCacheSnapshot> {
-        Some(vyre_driver::pipeline::PipelineCacheSnapshot {
+    fn pipeline_cache_snapshot(&self) -> Option<vyre_driver::PipelineCacheSnapshot> {
+        Some(vyre_driver::PipelineCacheSnapshot {
             hits: self.pipeline_cache.hits(),
             misses: self.pipeline_cache.misses(),
         })

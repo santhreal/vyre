@@ -3,13 +3,13 @@
 //! These builders keep encoded bytes in the same IR surface used by the
 //! matching kernels so decode→scan chains can stay on-device.
 
-pub mod base64;
+pub(crate) mod base64;
 mod buffers;
-pub mod encodex;
-pub mod hex;
-pub mod inflate;
+pub(crate) mod encodex;
+pub(crate) mod hex;
+pub(crate) mod inflate;
 mod scan;
-pub mod ziftsieve;
+pub(crate) mod ziftsieve;
 
 /// Streaming decode → scan adapter. Fuses a decoder
 /// Program with a scanner Program so decoded bytes hand off through
@@ -17,7 +17,12 @@ pub mod ziftsieve;
 pub mod streaming;
 
 pub use base64::{base64_decode, base64_decode_then_aho_corasick, BASE64_DECODE_TABLE_BUFFER};
+pub use encodex::{
+    classify_from_histogram, encoding_classify_child, ENC_ASCII, ENC_BINARY, ENC_ISO8859_1,
+    ENC_UTF16BE, ENC_UTF16LE, ENC_UTF8,
+};
 pub use encodex::{encodex_gpu, encodex_reference};
+pub use hex::hex_decode_table_ref;
 pub use hex::{
     hex_decode, hex_decode_table, hex_decode_then_aho_corasick, HEX_DECODE_TABLE_BUFFER,
 };

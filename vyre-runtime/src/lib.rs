@@ -93,8 +93,8 @@ impl PipelineError {
     }
 }
 
-impl From<vyre_driver::backend::BackendError> for PipelineError {
-    fn from(err: vyre_driver::backend::BackendError) -> Self {
+impl From<vyre_driver::BackendError> for PipelineError {
+    fn from(err: vyre_driver::BackendError) -> Self {
         PipelineError::Backend(err.to_string())
     }
 }

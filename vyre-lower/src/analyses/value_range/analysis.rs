@@ -20,7 +20,7 @@ pub fn analyze(desc: &KernelDescriptor) -> ValueRangeReport {
 
 /// Analyze one body for integer value ranges.
 #[must_use]
-pub fn analyze_body(body: &KernelBody) -> ValueRangeReport {
+fn analyze_body(body: &KernelBody) -> ValueRangeReport {
     let mut ranges: FxHashMap<u32, IntRange> = FxHashMap::default();
 
     // Phase 1a: seed from Literal ops.

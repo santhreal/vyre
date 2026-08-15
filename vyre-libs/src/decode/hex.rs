@@ -67,7 +67,7 @@ pub fn hex_decode(input: &str, output: &str, input_len: u32) -> Program {
 /// stages.
 ///
 /// ```ignore
-/// use vyre_libs::decode::hex::hex_decode_then_aho_corasick;
+/// use vyre_libs::decode::hex_decode_then_aho_corasick;
 ///
 /// let program = hex_decode_then_aho_corasick(
 ///     "encoded",

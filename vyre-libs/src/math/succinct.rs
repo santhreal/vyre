@@ -9,7 +9,7 @@ use core::fmt;
 use vyre_foundation::composition::trap_program;
 
 use crate::region::{wrap_anonymous, wrap_child};
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const RANK_SUPERBLOCKS_OP_ID: &str = "vyre-libs::math::succinct::rank1_superblocks";

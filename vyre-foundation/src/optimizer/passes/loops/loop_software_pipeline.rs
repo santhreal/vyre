@@ -60,10 +60,10 @@
 //!   the `Var(name)` read  -  no Load (other than via name), no
 //!   Atomic, no Call, no Opaque, no Subgroup.
 
-use crate::transform::visit;
 use crate::ir::{BinOp, Expr, Ident, Node, Program};
 use crate::optimizer::program_soa::ProgramFacts;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::visit;
 
 /// 2-stage Load-then-Store software pipeline pass.
 #[derive(Debug, Default)]

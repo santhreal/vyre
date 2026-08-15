@@ -20,7 +20,7 @@
 /// module stays off the public API surface.
 pub(crate) mod bound_names;
 /// Expr visitor contract + recursive traversal entry points.
-pub mod expr;
+pub(crate) mod expr;
 /// Owning child-recursive `Node` map shared by the cleanup catalog
 /// (`empty_block_collapse`, `region_promote_singleton_block`,
 /// `if_constant_branch_eliminate`, `noop_assign_eliminate`,
@@ -28,7 +28,7 @@ pub mod expr;
 /// Descendant search lives in `transform::visit::any_descendant`.
 pub mod node_map;
 /// Cross-cutting visitor contracts: `NodeVisitor`, `Lowerable`, `Evaluatable`.
-pub mod traits;
+pub(crate) mod traits;
 
 /// Recursive traversal order for visitor entry points and default child walking.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

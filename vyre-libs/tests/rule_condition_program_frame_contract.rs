@@ -20,10 +20,10 @@
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_libs::rule::builder::RULE_SET_OP_ID;
 use vyre_libs::rule::condition_op::{
     condition_program, file_size, pattern_count, pattern_state, threshold, WORKGROUP_SIZE,
 };
+use vyre_libs::rule::RULE_SET_OP_ID;
 use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
 use vyre_reference::value::Value;
 

@@ -200,7 +200,7 @@ mod tests {
     use super::*;
     use vyre_foundation::ir::{Expr, Node, Program};
     use vyre_foundation::optimizer::fingerprint_program;
-    use vyre_foundation::optimizer::passes::fusion_cse::dce::engine::dce as oracle_cpu_dce;
+    use vyre_foundation::optimizer::passes::fusion_cse::dce::dce as oracle_cpu_dce;
     use vyre_foundation::program_dispatch::DispatchError;
     use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher;

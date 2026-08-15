@@ -67,7 +67,7 @@ pub fn declared_data_type_variants() -> BTreeSet<String> {
 pub fn data_type_variant_samples() -> Vec<DataType> {
     let mut samples = crate::data_type_elements::flat_buffer_element_types(1);
     samples.extend([
-        DataType::Handle(vyre_spec::data_type::TypeId(0)),
+        DataType::Handle(vyre_spec::TypeId(0)),
         DataType::Vec {
             element: Box::new(DataType::U32),
             count: 1,
@@ -239,7 +239,7 @@ pub enum DataType {
     fn variant_names_cover_unit_tuple_and_struct_shapes() {
         assert_eq!(variant_name(&DataType::U8), "U8");
         assert_eq!(
-            variant_name(&DataType::Handle(vyre_spec::data_type::TypeId(0))),
+            variant_name(&DataType::Handle(vyre_spec::TypeId(0))),
             "Handle"
         );
         assert_eq!(variant_name(&DataType::Array { element_size: 1 }), "Array");

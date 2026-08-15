@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use vyre_driver::backend::BackendError;
+use vyre_driver::BackendError;
 
 use super::super::policy::{
     ResidentLaunchPolicy, ResidentLaunchRecommendation, ResidentLaunchRequest,

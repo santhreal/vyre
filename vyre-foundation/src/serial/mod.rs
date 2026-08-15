@@ -29,8 +29,15 @@ pub mod output_set;
 /// `vyre-primitives`, `GpuLiteralSet` in `vyre-libs`, and scan databases in
 /// `vyre-scan` compose this primitive instead of reimplementing framing,
 /// version, and truncation handling.
-pub mod envelope;
+pub(crate) mod envelope;
 pub use envelope::{EnvelopeError, WireReader, WireWriter};
+
+/// Round-trip and corruption assertions every wire-format type is held to.
+///
+/// A consumer implements [`wire_round_trip::WireRoundTrip`] for its type and
+/// calls [`wire_round_trip::assert_envelope_roundtrip`] once instead of
+/// restating the same five encode/decode tests.
+pub mod wire_round_trip;
 
 pub(crate) fn put_leb_u32(out: &mut Vec<u8>, value: u32) {
     put_leb_u64(out, u64::from(value));

@@ -20,8 +20,8 @@
 mod spec_variant_tables;
 
 use spec_variant_tables::builtin_bin_ops;
-use vyre_spec::bin_op::{BinOp, BinOpResult};
 use vyre_spec::extension::ExtensionBinOpId;
+use vyre_spec::{BinOp, BinOpResult};
 
 /// The case that made two lists necessary and then let them drift.
 #[test]

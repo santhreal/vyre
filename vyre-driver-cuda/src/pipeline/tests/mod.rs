@@ -6,10 +6,10 @@ mod pipeline_contracts;
 use std::sync::Arc;
 
 use smallvec::smallvec;
-use vyre_driver::binding::{Binding, BindingPlan, BindingRole};
 use vyre_driver::input_identity::exact_input_key;
 use vyre_driver::replace_output_buffers_preserving_slots;
 use vyre_driver::LaunchPlan;
+use vyre_driver::{Binding, BindingPlan, BindingRole};
 
 use crate::backend::CudaDispatchPlan;
 use crate::synthetic_device_caps::synthetic_sm120_envelope;

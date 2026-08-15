@@ -5,7 +5,7 @@
 //! runtime policy and evidence contract for choosing a non-blocking worklist
 //! path without introducing automata-specific protocol words.
 
-use vyre_driver::backend::BackendError;
+use vyre_driver::BackendError;
 
 use super::planner::ResidentWorkItem;
 use super::task::{TaskPriority, TaskState, TaskWorkItem, TASK_FLAG_REQUEUE_REQUESTED};

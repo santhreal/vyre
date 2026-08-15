@@ -195,8 +195,8 @@ pub(super) fn dispatcher_step<'a>(
 pub(super) fn step<'a>(
     program: &'a Program,
     resources: &'a [Resource],
-) -> vyre_driver::backend::ResidentDispatchStep<'a> {
-    vyre_driver::backend::ResidentDispatchStep {
+) -> vyre_driver::ResidentDispatchStep<'a> {
+    vyre_driver::ResidentDispatchStep {
         program,
         resources,
         grid_override: None,
@@ -209,8 +209,8 @@ pub(super) fn read_range(
     resource: &Resource,
     byte_offset: usize,
     byte_len: usize,
-) -> vyre_driver::backend::ResidentReadRange<'_> {
-    vyre_driver::backend::ResidentReadRange {
+) -> vyre_driver::ResidentReadRange<'_> {
+    vyre_driver::ResidentReadRange {
         resource,
         byte_offset,
         byte_len,

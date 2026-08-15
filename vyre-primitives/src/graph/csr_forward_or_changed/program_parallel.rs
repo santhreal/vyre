@@ -1,6 +1,6 @@
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{Expr, Node, Program};
 use vyre_foundation::MemoryOrdering;
 

@@ -5,7 +5,7 @@
 //! conservatively and acquisition has to fail loudly instead of substituting a
 //! host execution path.
 
-use vyre_driver::backend::{
+use vyre_driver::{
     acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
     registered_backends, registered_backends_by_precedence,
 };

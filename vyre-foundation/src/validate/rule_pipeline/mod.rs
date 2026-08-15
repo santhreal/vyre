@@ -6,10 +6,6 @@
 //! and output markers. Every error is returned as a `ValidationError`
 //! with an actionable `Fix:` hint.
 
-pub use super::depth::{
-    DEFAULT_MAX_CALL_DEPTH, DEFAULT_MAX_EXPR_DEPTH, DEFAULT_MAX_NESTING_DEPTH,
-    DEFAULT_MAX_NODE_COUNT,
-};
 use super::expr_rules::validate_output_markers;
 use crate::validate::{ValidationLocation, ValidationPhase};
 use std::borrow::Cow;

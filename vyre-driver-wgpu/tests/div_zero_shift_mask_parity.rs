@@ -36,8 +36,8 @@ mod common;
 use binop_parity_support::program;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_test_support::binop_parity::{
-    assert_covers_every_total_op, total_u32_reference_ops, total_u32_reference_values, TotalU32Case,
-    TOTAL_U32_CASES,
+    assert_covers_every_total_op, total_u32_reference_ops, total_u32_reference_values,
+    TotalU32Case, TOTAL_U32_CASES,
 };
 
 /// Why a divergence here is a naga miscompile and not a hardware liberty.
@@ -94,7 +94,8 @@ fn every_total_u32_op_forces_its_contract_on_gpu() {
         let reference = total_u32_reference_values(case);
         let gpu = dispatch(&backend, case);
         assert_eq!(
-            gpu, reference,
+            gpu,
+            reference,
             "GPU u32 `{}` diverged from the oracle ({}).\n  cases: {:?}\n  \
              expected: {reference:?}\n  gpu: {gpu:?}",
             case.op,

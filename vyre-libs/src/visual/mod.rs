@@ -24,37 +24,42 @@
 use vyre_foundation::ir::Expr;
 
 /// Two-pass separable Gaussian blur (composes `math::conv1d`).
-pub mod blur;
+pub(crate) mod blur;
 /// Character-cell grid expansion for terminal and text surfaces.
-pub mod cell_grid;
+pub(crate) mod cell_grid;
 /// Porter-Duff alpha compositing.
-pub mod composite;
+pub(crate) mod composite;
 /// 2× box-filter downsample for half-resolution blur.
-pub mod downsample;
+pub(crate) mod downsample;
 /// Composable per-pixel filter chain (brightness, contrast, saturate, invert).
-pub mod filter_chain;
+pub(crate) mod filter_chain;
 /// Complete glass material (blur + tint + border)  -  the hero composition.
-pub mod glass;
+pub(crate) mod glass;
 /// Glyph compositing over a character-cell grid.
-pub mod glyph_grid;
+pub(crate) mod glyph_grid;
 /// CSS-compatible gradient rasterization (linear, radial, conic).
-pub mod gradient;
+pub(crate) mod gradient;
 /// GPU-computed box shadow with SDF falloff.
-pub mod shadow;
+pub(crate) mod shadow;
 pub(crate) mod u32_word_bytes;
 /// 2× nearest-neighbor upsample for the half-resolution blur return path.
-pub mod upsample;
+pub(crate) mod upsample;
 
 // Re-exports for the public API surface.
 pub use blur::{gaussian_blur_2pass, GaussianBlurStages};
+pub use blur::{
+    gaussian_blur_2pass_with_kernel, gaussian_weights, GaussianKernel, GaussianKernelError,
+};
 pub use cell_grid::{cell_grid_fill, GridShape};
 pub use composite::alpha_over;
 pub use downsample::downsample_2x;
 pub use filter_chain::filter_chain;
+pub use glass::GlassHalfResPipeline;
 pub use glass::{
     glass_blur_stage, glass_filter_stage, glass_stages, glass_stages_half_res, GlassParams,
 };
 pub use glyph_grid::glyph_grid_blend;
+pub use gradient::try_linear_gradient;
 pub use gradient::{linear_gradient, ColorStop};
 pub use shadow::box_shadow;
 pub use upsample::upsample_2x;

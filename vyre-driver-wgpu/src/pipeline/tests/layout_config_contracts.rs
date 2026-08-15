@@ -3,9 +3,9 @@ use super::*;
 #[test]
 fn hex_short_truncates_to_eight_bytes() {
     let hash = *blake3::hash(b"vyre-pipeline").as_bytes();
-    let expected = vyre_driver::pipeline::hex_encode(&hash[..8]);
-    assert_eq!(vyre_driver::pipeline::hex_short(&hash).len(), 16);
-    assert_eq!(vyre_driver::pipeline::hex_short(&hash), expected);
+    let expected = vyre_driver::hex_encode(&hash[..8]);
+    assert_eq!(vyre_driver::hex_short(&hash).len(), 16);
+    assert_eq!(vyre_driver::hex_short(&hash), expected);
 }
 
 #[test]
@@ -38,7 +38,7 @@ fn output_layout_matches_trimmed_execution_plan() {
             avoided_bytes: 4088,
         }
     );
-    let layouts = vyre_driver::program_walks::output_binding_layouts(&program)
+    let layouts = vyre_driver::output_binding_layouts(&program)
         .expect("Fix: layout must derive; restore this invariant before continuing.");
     assert_eq!(layouts[0].layout.read_size, 8);
     assert_eq!(layouts[0].layout.copy_size, 8);

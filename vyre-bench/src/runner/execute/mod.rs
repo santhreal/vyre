@@ -136,7 +136,7 @@ pub fn execute_suite(
                 }
             };
         let preferred_registration =
-            match vyre_driver::backend::backend_registration(preferred_backend.id()) {
+            match vyre_driver::backend_registration(preferred_backend.id()) {
                 Ok(registration) => registration,
                 Err(error) => {
                     failed += 1;
@@ -371,9 +371,9 @@ fn acquire_backend(
     }
 
     let backend: Arc<dyn vyre_driver::VyreBackend> = match backend_id {
-        Some(id) => vyre_driver::backend::acquire(id)
+        Some(id) => vyre_driver::acquire(id)
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?,
-        None => vyre_driver::backend::acquire_preferred_dispatch_backend()
+        None => vyre_driver::acquire_preferred_dispatch_backend()
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?,
     }
     .into();
@@ -440,7 +440,7 @@ pub fn evaluate_candidate_headless(
     let preferred_backend: Arc<dyn vyre_driver::VyreBackend> =
         acquire_backend(config.backend_id.as_deref())
             .map_err(|error| format!("Backend error: {}", error))?;
-    let preferred_registration = vyre_driver::backend::backend_registration(preferred_backend.id())
+    let preferred_registration = vyre_driver::backend_registration(preferred_backend.id())
         .map_err(|error| format!("Backend registration error: {error}"))?;
     let materializer = Arc::from(
         preferred_registration

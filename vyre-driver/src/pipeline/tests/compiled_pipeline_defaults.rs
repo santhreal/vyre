@@ -9,7 +9,7 @@ fn compiled_pipeline_borrowed_batch_default_preserves_order() {
         calls: std::sync::Mutex<Vec<Vec<u8>>>,
     }
 
-    impl crate::backend::private::Sealed for BatchDefaultPipeline {}
+    impl crate::backend::sealed::Sealed for BatchDefaultPipeline {}
 
     impl CompiledPipeline for BatchDefaultPipeline {
         fn id(&self) -> &str {
@@ -59,7 +59,7 @@ fn compiled_pipeline_borrowed_batch_default_preserves_order() {
 fn compiled_pipeline_default_into_records_dispatch_telemetry() {
     struct TelemetryPipeline;
 
-    impl crate::backend::private::Sealed for TelemetryPipeline {}
+    impl crate::backend::sealed::Sealed for TelemetryPipeline {}
 
     impl CompiledPipeline for TelemetryPipeline {
         fn id(&self) -> &str {
@@ -103,7 +103,7 @@ fn compiled_pipeline_borrowed_batch_into_reuses_output_slots() {
         calls: std::sync::Mutex<Vec<Vec<u8>>>,
     }
 
-    impl crate::backend::private::Sealed for BatchDefaultPipeline {}
+    impl crate::backend::sealed::Sealed for BatchDefaultPipeline {}
 
     impl CompiledPipeline for BatchDefaultPipeline {
         fn id(&self) -> &str {
@@ -167,7 +167,7 @@ fn compiled_pipeline_persistent_handle_into_default_reuses_output_slots() {
         calls: std::sync::Mutex<Vec<Vec<u8>>>,
     }
 
-    impl crate::backend::private::Sealed for PersistentDefaultPipeline {}
+    impl crate::backend::sealed::Sealed for PersistentDefaultPipeline {}
 
     impl CompiledPipeline for PersistentDefaultPipeline {
         fn id(&self) -> &str {
@@ -222,7 +222,7 @@ fn compiled_pipeline_persistent_handle_into_default_reuses_output_slots() {
 fn compiled_pipeline_persistent_defaults_fail_explicitly_without_host_fallback() {
     struct UnsupportedPersistentPipeline;
 
-    impl crate::backend::private::Sealed for UnsupportedPersistentPipeline {}
+    impl crate::backend::sealed::Sealed for UnsupportedPersistentPipeline {}
 
     impl CompiledPipeline for UnsupportedPersistentPipeline {
         fn id(&self) -> &str {

@@ -1,23 +1,23 @@
 //! Attention sub-dialect: softmax + scaled dot-product + GQA + RoPE + MLA.
-pub mod flash_attention;
-pub mod flash_attention_2;
+pub(crate) mod flash_attention;
+pub(crate) mod flash_attention_2;
 mod gated_delta;
 mod gated_delta_chunked;
 mod gated_delta_layout;
-pub mod gqa_attention;
+pub(crate) mod gqa_attention;
 mod head_to_token;
 mod kv_cache;
 mod layout_permute;
-pub mod mla;
-pub mod partial_rope;
-pub mod planner;
-pub mod qk_gain;
-pub mod quest;
+pub(crate) mod mla;
+pub(crate) mod partial_rope;
+pub(crate) mod planner;
+pub(crate) mod qk_gain;
+pub(crate) mod quest;
 mod scaled_dot_product;
 mod softmax;
 mod tiled_online_softmax;
 mod token_to_head;
-pub mod turboquant;
+pub(crate) mod turboquant;
 
 pub use flash_attention::flash_attention;
 pub use flash_attention_2::{flash_attention_2, flash_attention_2_reference};
@@ -29,6 +29,7 @@ pub use head_to_token::{attention_head_to_token, attention_head_to_token_typed};
 pub use kv_cache::{kv_cache_append, kv_cache_append_typed, KvCacheAppendError};
 pub use mla::{mla_compress_kv, mla_decode};
 pub use partial_rope::{partial_rope, partial_rope_at_offset, partial_rope_at_offset_typed};
+pub use planner::FLASH_ATTENTION_OUTPUT_TOLERANCE_ABS;
 pub use planner::{
     plan_flash_attention_scalar, plan_flash_attention_tiled, FlashAttentionBenchMetrics,
     FlashAttentionKernelKind, FlashAttentionMemoryTraffic, FlashAttentionWorkPlan,

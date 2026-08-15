@@ -33,7 +33,7 @@
 
 use std::sync::Arc;
 
-use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{
     BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Node, NodeExtension, Program,
     NODE_VARIANT_NAMES,

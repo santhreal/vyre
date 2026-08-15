@@ -14,14 +14,14 @@ pub(crate) mod capabilities;
 pub(crate) mod copy;
 /// cudaGraph capture-and-replay path. Records one full Program dispatch into
 /// a `CUgraph` then replays it on demand to reduce hot-path launch overhead.
-pub mod cuda_graph;
+pub(crate) mod cuda_graph;
 /// cudaGraph replay path.
 pub(crate) mod cuda_graph_replay;
 /// CUDA backend handle, launch geometry, and kernel-launch orchestration  -
 /// including the cooperative-launch path that routes through
 /// `cuLaunchCooperativeKernel` when the caller opts in via
 /// `DispatchConfig::cooperative`.
-pub mod dispatch;
+pub(crate) mod dispatch;
 /// Per-dispatch host and device phase attribution for the timed dispatch path.
 pub(crate) mod dispatch_phase_probe;
 /// Release path shared by every dispatch enqueue that fails partway through.
@@ -59,7 +59,7 @@ pub(crate) mod resident_upload_fusion;
 /// Shared fallible staging reservation helpers for backend hot paths.
 pub(crate) mod staging_reserve;
 /// Stream-ordered device allocator over the driver's default memory pool.
-pub mod stream_ordered_pool;
+pub(crate) mod stream_ordered_pool;
 /// Atomic CUDA runtime telemetry counters.
 pub(crate) mod telemetry;
 

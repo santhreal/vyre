@@ -31,7 +31,7 @@ use std::sync::Arc;
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::lower::lower_subgroup_reductions;
-use vyre_foundation::optimizer::ctx::AdapterCaps;
+use vyre_foundation::optimizer::AdapterCaps;
 
 fn caps() -> AdapterCaps {
     AdapterCaps {
@@ -55,7 +55,7 @@ fn wide_program(statements: u32) -> Program {
 }
 
 fn digest_of(program: &Program) -> [u8; 32] {
-    vyre_driver::pipeline::try_normalized_program_cache_digest(program)
+    vyre_driver::try_normalized_program_cache_digest(program)
         .expect("Fix: fixture program must produce a normalized cache digest")
 }
 

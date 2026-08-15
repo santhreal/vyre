@@ -16,7 +16,7 @@ use common::self_optimizer::{
     binds_any_let, binds_let, binop, folded_store_value, is_lit_u32, run_pipeline, store_value,
     taken_branch_marker, unop,
 };
-use vyre::ir::model::spec_types::UnOp;
+use vyre::ir::UnOp;
 use vyre::ir::{BinOp, Expr, Node, Program};
 
 #[test]

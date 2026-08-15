@@ -1,10 +1,10 @@
 use super::fixtures::arb_program;
 use super::*;
+use crate::ir::{AtomicOp, BufferDecl, DataType, Expr, Node, Program};
 use crate::ir_inner::model::expr::Ident;
+use proptest::prelude::*;
 use std::collections::HashSet;
 use std::sync::Arc;
-use crate::ir::{AtomicOp, BufferDecl, DataType, Expr, Node, Program};
-use proptest::prelude::*;
 
 /// The buffer set as the two visit owners report it, node walk then expression
 /// walk.
@@ -157,8 +157,7 @@ fn corpus_generates_every_node_variant() {
          {unknown_exclusions:?}"
     );
 
-    let generated_but_excluded: Vec<&str> =
-        generated.intersection(&excluded).copied().collect();
+    let generated_but_excluded: Vec<&str> = generated.intersection(&excluded).copied().collect();
     assert!(
         generated_but_excluded.is_empty(),
         "Fix: these variants are generated and also listed as excluded, so the recorded \

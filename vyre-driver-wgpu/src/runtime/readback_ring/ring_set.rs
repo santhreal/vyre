@@ -5,7 +5,7 @@ use dashmap::DashMap;
 use rustc_hash::FxHasher;
 use std::hash::BuildHasherDefault;
 use std::sync::Arc;
-use vyre_driver::backend::BackendError;
+use vyre_driver::BackendError;
 
 use super::capacity::{
     readback_ring_slots_from_env, readback_ring_slots_from_raw, ring_capacity_class,

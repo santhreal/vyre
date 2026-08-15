@@ -502,9 +502,8 @@ mod tests {
     use super::*;
     use crate::frontier_typed_ir_adapter::adapt_frontier_typed_ir_to_cuda;
     use vyre_libs::device::device_resident_token_fact_graph::{
-        plan_device_resident_token_fact_graph,
-        plan_device_resident_token_fact_graph_layout, TokenFactEdge, TokenFactEdgeKind,
-        TokenFactNode, TokenFactNodeKind,
+        plan_device_resident_token_fact_graph, plan_device_resident_token_fact_graph_layout,
+        TokenFactEdge, TokenFactEdgeKind, TokenFactNode, TokenFactNodeKind,
     };
     use vyre_libs::scheduling::frontier_typed_ir::{
         plan_frontier_typed_ir, FrontierDependency, FrontierDomain, FrontierNode,
@@ -753,7 +752,11 @@ mod tests {
         for from in 2_u32..=128 {
             for step in 1_u32..=4 {
                 let to = ((from - 1 + step) % 128) + 1;
-                edges.push(TokenFactEdge::new(from, to, TokenFactEdgeKind::FactDependency));
+                edges.push(TokenFactEdge::new(
+                    from,
+                    to,
+                    TokenFactEdgeKind::FactDependency,
+                ));
             }
         }
         let graph = plan_device_resident_token_fact_graph(&nodes, &edges, 2_048)
@@ -1245,7 +1248,6 @@ mod tests {
         assert_eq!(plan.resident_work_queue_bytes, 0);
         assert!(plan.work_queue.final_only_host_sync);
     }
-
 
     fn complete_directed_edges(node_count: u32, kind: TokenFactEdgeKind) -> Vec<TokenFactEdge> {
         let mut edges = Vec::new();

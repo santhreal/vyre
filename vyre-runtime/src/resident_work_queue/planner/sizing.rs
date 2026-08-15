@@ -1,4 +1,4 @@
-use vyre_driver::backend::BackendError;
+use vyre_driver::BackendError;
 use vyre_foundation::execution_plan::SchedulingPolicy;
 
 use super::{ResidentGridLimits, ResidentGridPlan, ResidentGridRequest, ResidentLaunchGeometry};

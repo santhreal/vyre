@@ -16,7 +16,7 @@ pub(crate) use common::self_optimizer::{
     assert_var, b_load_branch_program, binop, folded_x_store_value, folded_xy_store_value,
     run_pipeline, unop,
 };
-pub(crate) use vyre::ir::model::spec_types::UnOp;
+pub(crate) use vyre::ir::UnOp;
 pub(crate) use vyre::ir::{BinOp, Expr};
 
 #[path = "self_optimizer_pattern_match_extended/arithmetic_cse_contracts.rs"]

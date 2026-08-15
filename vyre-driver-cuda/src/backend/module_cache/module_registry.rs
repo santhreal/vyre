@@ -187,8 +187,8 @@ impl CudaModuleCache {
         self.modules.len()
     }
 
-    pub(crate) fn snapshot(&self) -> vyre_driver::pipeline::PipelineCacheSnapshot {
-        vyre_driver::pipeline::PipelineCacheSnapshot {
+    pub(crate) fn snapshot(&self) -> vyre_driver::PipelineCacheSnapshot {
+        vyre_driver::PipelineCacheSnapshot {
             hits: self.hits.load(Ordering::Relaxed),
             misses: self.misses.load(Ordering::Relaxed),
         }

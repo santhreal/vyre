@@ -197,7 +197,7 @@ pub(crate) fn run_hashmap_reference(
     explicit_grid: Option<[u32; 3]>,
 ) -> Result<Vec<Value>, ReferenceError> {
     #[cfg(feature = "subgroup-ops")]
-    let validation_report = vyre_foundation::validate::rule_pipeline::validate_with_options(
+    let validation_report = vyre_foundation::validate::validate_with_options(
         program,
         vyre_foundation::validate::ValidationOptions::default().with_backend_capabilities(
             vyre_foundation::validate::BackendCapabilities {
@@ -207,7 +207,7 @@ pub(crate) fn run_hashmap_reference(
         ),
     );
     #[cfg(not(feature = "subgroup-ops"))]
-    let validation_report = vyre_foundation::validate::rule_pipeline::validate_with_options(
+    let validation_report = vyre_foundation::validate::validate_with_options(
         program,
         vyre_foundation::validate::ValidationOptions::default(),
     );

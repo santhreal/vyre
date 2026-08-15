@@ -1,7 +1,7 @@
 //! Backend executable-module dispatch contract.
 
 use crate::backend::{
-    private, BackendError, DispatchConfig, OutputBuffers, Resource, TimedDispatchResult,
+    sealed, BackendError, DispatchConfig, OutputBuffers, Resource, TimedDispatchResult,
 };
 
 /// A materialized backend executable ready for repeated dispatch.
@@ -9,7 +9,7 @@ use crate::backend::{
 /// Canonical artifact materializers construct concrete implementations after
 /// authenticating a target payload. Dispatch must remain bit-identical across
 /// host and resident bindings for the same artifact ABI.
-pub trait CompiledPipeline: private::Sealed + Send + Sync {
+pub trait CompiledPipeline: sealed::Sealed + Send + Sync {
     /// Stable identifier for this pipeline (typically `<backend>:<program-fingerprint>`).
     ///
     /// Used by certificates and debugging to confirm a particular cached

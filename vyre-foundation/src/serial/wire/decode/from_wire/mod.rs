@@ -409,10 +409,7 @@ fn read_metadata(
 
 mod buffer_table;
 
-use buffer_table::{
-    linear_type_from_tag, read_memory_regions, read_shape_predicate,
-};
-
+use buffer_table::{linear_type_from_tag, read_memory_regions, read_shape_predicate};
 
 fn reserve_decoded_vec_capacity<T>(
     vec: &mut Vec<T>,

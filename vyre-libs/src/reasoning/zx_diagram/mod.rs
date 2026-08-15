@@ -21,7 +21,7 @@
 //! The optimizer's pattern-simplification pass treats commutative same-color
 //! operators in the IR Region tree as Z spiders and folds them here.
 
-pub mod rewrite;
+pub(crate) mod rewrite;
 
 pub use rewrite::{
     color_change, identity_removal, simplified_diagram, spider_fusion, ZxColor, ZxDiagram, ZxSpider,

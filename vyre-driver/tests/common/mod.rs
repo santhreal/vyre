@@ -23,7 +23,7 @@ use vyre_foundation::ir::{OpId, Program};
 /// values would be host arithmetic in a driver test.
 pub(crate) struct FixtureBackend(pub(crate) &'static str);
 
-impl vyre_driver::backend::private::Sealed for FixtureBackend {}
+impl vyre_driver::sealed::Sealed for FixtureBackend {}
 
 impl VyreBackend for FixtureBackend {
     fn id(&self) -> &'static str {
@@ -54,7 +54,7 @@ pub(crate) fn no_supported_ops() -> &'static HashSet<OpId> {
 macro_rules! register_dispatchable_backend {
     (id: $id:expr, oracle: $oracle:expr, rank: $rank:expr, factory: $factory:path $(,)?) => {
         inventory::submit! {
-            vyre_driver::backend::BackendRegistration {
+            vyre_driver::BackendRegistration {
                 id: $id,
                 target_id: vyre_foundation::operation::TargetId::expect_valid($id),
                 payload_format: None,
@@ -68,11 +68,11 @@ macro_rules! register_dispatchable_backend {
         }
 
         inventory::submit! {
-            vyre_driver::backend::BackendCapability { id: $id, dispatches: true }
+            vyre_driver::BackendCapability { id: $id, dispatches: true }
         }
 
         inventory::submit! {
-            vyre_driver::backend::BackendPrecedence { id: $id, rank: $rank }
+            vyre_driver::BackendPrecedence { id: $id, rank: $rank }
         }
     };
 }

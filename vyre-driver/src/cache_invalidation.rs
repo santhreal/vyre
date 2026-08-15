@@ -5,9 +5,7 @@
 //! depend on the composition modules that implement it directly.
 
 #[cfg(feature = "libs-compositions")]
-use vyre_foundation::program_dispatch::{
-    DispatchError as ProgramDispatchError, ProgramDispatcher,
-};
+use vyre_foundation::program_dispatch::{DispatchError as ProgramDispatchError, ProgramDispatcher};
 #[cfg(feature = "libs-compositions")]
 use vyre_libs::encoding::scallop_provenance::provenance_closure_via_into;
 #[cfg(feature = "libs-compositions")]

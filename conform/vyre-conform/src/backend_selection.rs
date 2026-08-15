@@ -1,6 +1,6 @@
 //! Discovery and filtering of dispatch-capable registered backends.
 
-use vyre_driver::backend::backend_dispatches;
+use vyre_driver::backend_dispatches;
 use vyre_registry_link::backend::live_backend_registry;
 
 pub(crate) fn backend_registration(

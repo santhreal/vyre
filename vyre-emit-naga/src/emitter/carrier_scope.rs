@@ -122,8 +122,8 @@ fn op_position(body: &KernelBody, op: &KernelOp) -> usize {
 /// Restore the binding `key` shadowed while a nested scope was open, or drop
 /// the key when the nested scope introduced it.
 fn restore_shadowed<V>(
-    map: &mut FxHashMap<vyre_lower::descriptor::Name, V>,
-    key: &vyre_lower::descriptor::Name,
+    map: &mut FxHashMap<vyre_lower::Name, V>,
+    key: &vyre_lower::Name,
     previous: Option<V>,
 ) {
     match previous {
@@ -506,7 +506,7 @@ impl BodyBuilder<'_> {
     /// source-level loop carrier `name`.
     fn ensure_named_carrier_local(
         &mut self,
-        name: &vyre_lower::descriptor::Name,
+        name: &vyre_lower::Name,
         seed_handle: naga::Handle<Expression>,
     ) -> naga::Handle<LocalVariable> {
         if let Some(existing) = self.named_carrier_locals.get(name).copied() {
@@ -529,7 +529,7 @@ impl BodyBuilder<'_> {
     pub(super) fn emit_loop_carrier_init(
         &mut self,
         op: &KernelOp,
-        name: &vyre_lower::descriptor::Name,
+        name: &vyre_lower::Name,
     ) -> Result<(), EmitError> {
         let seed = self.value_operand(op, 0)?;
         let local = self.ensure_named_carrier_local(name, seed);
@@ -540,7 +540,7 @@ impl BodyBuilder<'_> {
     pub(super) fn emit_loop_carrier_read(
         &mut self,
         op: &KernelOp,
-        name: &vyre_lower::descriptor::Name,
+        name: &vyre_lower::Name,
     ) -> Result<(), EmitError> {
         let local = *self.named_carrier_locals.get(name).ok_or_else(|| {
             EmitError::InvalidDescriptor(format!(
@@ -566,7 +566,7 @@ impl BodyBuilder<'_> {
     pub(super) fn emit_loop_carrier_end(
         &mut self,
         op: &KernelOp,
-        name: &vyre_lower::descriptor::Name,
+        name: &vyre_lower::Name,
     ) -> Result<(), EmitError> {
         let value = self.value_operand(op, 0)?;
         let local = *self.named_carrier_locals.get(name).ok_or_else(|| {
@@ -582,7 +582,7 @@ impl BodyBuilder<'_> {
     /// variable name.
     pub(super) fn restore_loop_bindings(
         &mut self,
-        loop_var: &vyre_lower::descriptor::Name,
+        loop_var: &vyre_lower::Name,
         previous_local: Option<naga::Handle<LocalVariable>>,
         previous_type: Option<naga::Handle<Type>>,
     ) {

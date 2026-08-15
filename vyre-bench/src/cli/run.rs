@@ -34,7 +34,7 @@ fn dispatch_backend_ids() -> anyhow::Result<Vec<&'static str>> {
     let registered = vyre_registry_link::backend::live_backend_registry_by_precedence()?;
     let mut backends = Vec::new();
     for backend in registered {
-        if vyre_driver::backend::backend_dispatches(backend.id)? {
+        if vyre_driver::backend_dispatches(backend.id)? {
             backends.push(backend.id);
         }
     }

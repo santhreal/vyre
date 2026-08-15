@@ -1,10 +1,10 @@
 //! Rule-engine dialect: typed conditions, formulas, and program builder.
 
 /// Typed condition / formula AST consumed by every rule-set builder.
-pub mod ast;
+pub(crate) mod ast;
 /// Rule-set IR program builder  -  walks a `[(RuleFormula, rule_id)]` table
 /// and emits one `Node::Store` per rule into the shared `verdicts` buffer.
-pub mod builder;
+pub(crate) mod builder;
 /// Shared Cat-A helpers for scalar rule-condition ops (Tier-3 plumbing).
 pub mod condition_op;
 
@@ -133,10 +133,15 @@ pub mod pattern_exists;
 /// Reference evaluator for `RuleCondition` / `RuleFormula` trees.
 /// Mirror of the GPU lowering for parity checks, CI gates, and unit
 /// tests that need deterministic rule outcomes without backend dispatch.
-pub mod reference_eval;
+pub(crate) mod reference_eval;
 
 pub use ast::{RuleCondition, RuleFormula};
 pub use builder::build_rule_program;
+pub use builder::{
+    condition_expr, file_size_cmp, formula_expr, pattern_count, pattern_state, rule_buffers,
+    rule_nodes, try_build_rule_program, try_condition_expr, try_formula_expr, try_rule_nodes,
+    RuleBuildError, RULE_SET_OP_ID, WORKGROUP_SIZE,
+};
 pub use reference_eval::{evaluate_condition, evaluate_formula, RuleEvaluationContext};
 
 #[cfg(test)]

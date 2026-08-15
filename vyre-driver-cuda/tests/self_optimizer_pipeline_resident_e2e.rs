@@ -72,7 +72,7 @@ fn synthetic_tree_program(n: usize) -> Program {
 
 fn run_cpu_pipeline(p: Program) -> Program {
     use vyre_foundation::optimizer::passes::algebraic::canonicalize_engine::run as cpu_canonicalize;
-    use vyre_foundation::optimizer::passes::fusion_cse::dce::engine::dce as cpu_dce;
+    use vyre_foundation::optimizer::passes::fusion_cse::dce::dce as cpu_dce;
     let p = cpu_canonicalize(p);
     let p = vyre_foundation::optimizer::optimize(p).expect("registered optimizer must converge");
     cpu_dce(p)

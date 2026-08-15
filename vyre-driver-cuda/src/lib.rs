@@ -24,18 +24,18 @@
 
 mod aot_launcher;
 /// CUDA backend core: device management and dispatch.
-pub mod backend;
+pub(crate) mod backend;
 /// PTX code generation from vyre IR.
 pub mod codegen;
 /// CUDA device capability probing.
-pub mod device;
+pub(crate) mod device;
 /// CUDA upload planning for GPU e-graph device images.
-pub mod egraph_device_image;
+pub(crate) mod egraph_device_image;
 /// CUDA launch-wave planning for resident e-graph device images.
-pub mod egraph_kernel_plan;
+pub(crate) mod egraph_kernel_plan;
 mod egraph_readback;
 /// Adapter from frontier-typed IR plans to CUDA frontier wave envelopes.
-pub mod frontier_typed_ir_adapter;
+pub(crate) mod frontier_typed_ir_adapter;
 mod instrumentation;
 /// Cross-process persistent CUDA JIT cache wiring (E4 + E5): configures
 /// the NVIDIA driver's built-in disk cache at backend bring-up so the
@@ -43,11 +43,11 @@ mod instrumentation;
 /// vyre process on the host.
 pub mod jit_cache;
 /// Actionable CUDA kernel capability diagnostics.
-pub mod kernel_failure_diagnostics;
+pub(crate) mod kernel_failure_diagnostics;
 mod materializer;
 /// Bounded CUDA megakernel plan cache keyed by graph, analysis, device, and
 /// runtime pressure buckets.
-pub mod megakernel_plan_cache;
+pub(crate) mod megakernel_plan_cache;
 mod numeric;
 /// Occupancy-aware empirical autotuning (I4): pure estimator that picks
 /// the workgroup size with the highest predicted hardware occupancy from
@@ -58,14 +58,14 @@ mod pipeline;
 /// CUDA profiler range integration for Nsight/NVTX without mandatory NVTX linkage.
 pub mod profiler;
 /// CUDA regex hardware-comparison evidence.
-pub mod regex_hardware_comparison;
+pub(crate) mod regex_hardware_comparison;
 /// CUDA-resident `ProgramDispatcher`: allocate once, upload once, dispatch
 /// many times against the same device buffers. This is the persistent
 /// execution path the pass engine's multi-pass pipeline runs on. External
 /// parity tests reach in through the `CudaProgramDispatcher` re-export below.
-pub mod resident_dispatcher;
+pub(crate) mod resident_dispatcher;
 /// Repeated execution over persistent CUDA-resident graph state.
-pub mod resident_graph_session;
+pub(crate) mod resident_graph_session;
 mod stream;
 // Neutral policies are imported from `vyre-driver`; CUDA exports only concrete behavior.
 /// A fixed synthetic device envelope for context-free estimator tests. Not a
@@ -73,20 +73,21 @@ mod stream;
 pub mod synthetic_device_caps;
 mod target_compiler;
 /// CUDA execution planning for unified token/fact graph frontier waves.
-pub mod token_fact_frontier_execution;
+pub(crate) mod token_fact_frontier_execution;
 /// CUDA warp-word bit-parallel automata layout evidence.
-pub mod warp_word_automata;
+pub(crate) mod warp_word_automata;
 
+pub use backend::{allocations, CachedCudaGraph};
 pub use backend::{
     CudaBackend, CudaPtxSourceCacheSnapshot, CudaResidentBuffer, CudaStreamOrderedPool,
     CudaTelemetrySnapshot,
 };
 pub use stream::CudaLaunchResourceCounts;
 /// CUDA megakernel global-barrier minimization for dependency-typed waves.
-pub mod megakernel_barrier_planner;
-pub mod megakernel_scheduler;
+pub(crate) mod megakernel_barrier_planner;
+pub(crate) mod megakernel_scheduler;
 /// Release gate for steady-state CUDA megakernel speedup claims.
-pub mod megakernel_speedup_gate;
+pub(crate) mod megakernel_speedup_gate;
 pub use device::{CudaDeviceCaps, CudaDeviceHandle};
 pub use egraph_device_image::{
     plan_cuda_egraph_device_upload, plan_cuda_egraph_device_upload_from_image,
@@ -94,6 +95,7 @@ pub use egraph_device_image::{
     CudaEGraphDeviceByteLayout, CudaEGraphDeviceByteSpan, CudaEGraphDeviceKernelView,
     CudaEGraphDeviceUploadError, CudaEGraphDeviceUploadPlan, CudaResidentEGraphDeviceImage,
 };
+pub use egraph_kernel_plan::plan_cuda_egraph_structural_equivalence_launch_artifact_from_plan;
 pub use egraph_kernel_plan::{
     collect_cuda_egraph_structural_equivalences, cuda_egraph_canonical_rewrite_kernel_ptx,
     cuda_egraph_signature_pair_rows, cuda_egraph_signature_refresh_kernel_ptx,
@@ -123,6 +125,7 @@ pub use egraph_kernel_plan::{
     CUDA_EGRAPH_STRUCTURAL_EQUIVALENCE_KERNEL_ENTRY,
     CUDA_EGRAPH_STRUCTURAL_EQUIVALENCE_KERNEL_PARAM_COUNT,
 };
+pub use frontier_typed_ir_adapter::adapt_frontier_typed_ir_to_cuda_into;
 pub use frontier_typed_ir_adapter::{
     adapt_frontier_typed_ir_to_cuda, CudaFrontierTypedIrAdapterError, CudaFrontierTypedIrInput,
 };
@@ -140,6 +143,9 @@ pub use megakernel_barrier_planner::{
 pub use megakernel_plan_cache::{
     CudaMegakernelAnalysisKind, CudaMegakernelCachedPlan, CudaMegakernelDeviceKey,
     CudaMegakernelPlanCache, CudaMegakernelPlanCacheKey, CudaMegakernelPlanCacheStats,
+};
+pub use megakernel_scheduler::{
+    plan_cuda_megakernel_execution, select_cuda_megakernel_topology_stable,
 };
 pub use megakernel_scheduler::{
     schedule_megakernel_from_cuda_samples, schedule_megakernel_from_cuda_samples_into,
@@ -166,6 +172,11 @@ pub use resident_graph_session::{
 pub use token_fact_frontier_execution::{
     plan_cuda_token_fact_frontier_execution, plan_cuda_token_fact_frontier_execution_with_scratch,
     CudaTokenFactFrontierExecutionError, CudaTokenFactFrontierExecutionPlan,
+};
+pub use token_fact_frontier_execution::{
+    plan_cuda_token_fact_frontier_execution_envelope,
+    plan_cuda_token_fact_frontier_execution_envelope_with_scratch,
+    CudaTokenFactFrontierExecutionEnvelope, CudaTokenFactGraphResidency,
 };
 pub use warp_word_automata::{
     plan_cuda_warp_word_automata_layout, CudaWarpWordAutomataLayoutError,
@@ -320,7 +331,7 @@ impl CudaBackendRegistration {
 
     fn resolve_read_ranges(
         &self,
-        read_ranges: &[vyre_driver::backend::ResidentReadRange<'_>],
+        read_ranges: &[vyre_driver::ResidentReadRange<'_>],
     ) -> Result<ResolvedReadRanges, BackendError> {
         let mut handles = SmallVec::<[CudaResidentBuffer; 8]>::new();
         let mut concrete_readbacks =
@@ -347,7 +358,7 @@ impl CudaBackendRegistration {
 
     fn resolve_step_handle_sets(
         &self,
-        steps: &[vyre_driver::backend::ResidentDispatchStep<'_>],
+        steps: &[vyre_driver::ResidentDispatchStep<'_>],
         field: &'static str,
     ) -> Result<SmallVec<[SmallVec<[crate::backend::CudaResidentBuffer; 8]>; 8]>, BackendError>
     {
@@ -362,7 +373,7 @@ impl CudaBackendRegistration {
 
     fn resolve_repeated_step_handle_sets(
         &self,
-        steps: &[vyre_driver::backend::ResidentDispatchStep<'_>],
+        steps: &[vyre_driver::ResidentDispatchStep<'_>],
         repeat_count: usize,
     ) -> Result<SmallVec<[SmallVec<[crate::backend::CudaResidentBuffer; 8]>; 8]>, BackendError>
     {
@@ -383,7 +394,7 @@ impl CudaBackendRegistration {
     }
 
     fn concrete_resident_steps<'program: 'handles, 'handles>(
-        steps: &[vyre_driver::backend::ResidentDispatchStep<'program>],
+        steps: &[vyre_driver::ResidentDispatchStep<'program>],
         handle_sets: &'handles [SmallVec<[crate::backend::CudaResidentBuffer; 8]>],
         field: &'static str,
     ) -> Result<SmallVec<[crate::backend::CudaResidentDispatchStep<'handles>; 8]>, BackendError>
@@ -451,7 +462,7 @@ impl CudaBackendRegistration {
 
     fn validate_resident_steps_for_dispatch(
         &self,
-        steps: &[vyre_driver::backend::ResidentDispatchStep<'_>],
+        steps: &[vyre_driver::ResidentDispatchStep<'_>],
     ) -> Result<(), BackendError> {
         for step in steps {
             self.validate_program_for_dispatch(step.program)?;
@@ -460,7 +471,7 @@ impl CudaBackendRegistration {
     }
 }
 
-impl vyre_driver::backend::private::Sealed for CudaBackendRegistration {}
+impl vyre_driver::sealed::Sealed for CudaBackendRegistration {}
 
 impl VyreBackend for CudaBackendRegistration {
     fn id(&self) -> &'static str {
@@ -783,8 +794,8 @@ impl VyreBackend for CudaBackendRegistration {
 
     fn dispatch_resident_sequence_read_ranges_into(
         &self,
-        steps: &[vyre_driver::backend::ResidentDispatchStep<'_>],
-        read_ranges: &[vyre_driver::backend::ResidentReadRange<'_>],
+        steps: &[vyre_driver::ResidentDispatchStep<'_>],
+        read_ranges: &[vyre_driver::ResidentReadRange<'_>],
         outputs: &mut [&mut Vec<u8>],
     ) -> Result<(), BackendError> {
         self.validate_resident_steps_for_dispatch(steps)?;
@@ -817,10 +828,10 @@ impl VyreBackend for CudaBackendRegistration {
 
     fn dispatch_resident_repeated_sequence_read_ranges_into(
         &self,
-        prefix_steps: &[vyre_driver::backend::ResidentDispatchStep<'_>],
-        repeated_steps: &[vyre_driver::backend::ResidentDispatchStep<'_>],
+        prefix_steps: &[vyre_driver::ResidentDispatchStep<'_>],
+        repeated_steps: &[vyre_driver::ResidentDispatchStep<'_>],
         repeat_count: u32,
-        read_ranges: &[vyre_driver::backend::ResidentReadRange<'_>],
+        read_ranges: &[vyre_driver::ResidentReadRange<'_>],
         outputs: &mut [&mut Vec<u8>],
     ) -> Result<(), BackendError> {
         self.validate_resident_steps_for_dispatch(prefix_steps)?;
@@ -870,7 +881,7 @@ impl VyreBackend for CudaBackendRegistration {
             )
     }
 
-    fn pipeline_cache_snapshot(&self) -> Option<vyre_driver::pipeline::PipelineCacheSnapshot> {
+    fn pipeline_cache_snapshot(&self) -> Option<vyre_driver::PipelineCacheSnapshot> {
         Some(self.inner.pipeline_cache_snapshot())
     }
 
@@ -1051,11 +1062,11 @@ pub fn cuda_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
 /// Op-support set  -  CUDA supports every op the foundation IR defines
 /// plus hardware intrinsics. Populated at runtime by the conform runner.
 pub fn cuda_supported_ops() -> &'static std::collections::HashSet<vyre_foundation::ir::OpId> {
-    vyre_driver::backend::validation::default_supported_ops_with_trap()
+    vyre_driver::default_supported_ops_with_trap()
 }
 
 fn cuda_semantic_operations() -> &'static std::collections::HashSet<vyre_foundation::ir::OpId> {
-    vyre_driver::backend::dialect_only_supported_ops()
+    vyre_driver::dialect_only_supported_ops()
 }
 
 /// Backend id this crate submits into the backend registry on this target.
@@ -1087,7 +1098,7 @@ inventory::submit! {
 
 // rank 5 - CUDA is the canonical release dispatch backend when linked.
 inventory::submit! {
-    vyre_driver::backend::BackendPrecedence {
+    vyre_driver::BackendPrecedence {
         id: CUDA_BACKEND_ID,
         rank: 5,
     }
@@ -1095,14 +1106,14 @@ inventory::submit! {
 
 // CUDA owns a live dispatch stack, so conform can prove against it.
 inventory::submit! {
-    vyre_driver::backend::BackendCapability {
+    vyre_driver::BackendCapability {
         id: CUDA_BACKEND_ID,
         dispatches: true,
     }
 }
 
 inventory::submit! {
-    vyre_driver::aot::AotLauncherEmitter {
+    vyre_driver::AotLauncherEmitter {
         target: CUDA_TARGET_ID,
         emit: aot_launcher::emit_launcher,
     }

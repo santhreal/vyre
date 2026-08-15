@@ -11,7 +11,7 @@ use std::rc::Rc;
 /// # Examples
 ///
 /// ```
-/// use vyre::ir::model::program::Scope;
+/// use vyre::ir::Scope;
 ///
 /// let mut root = Scope::new();
 /// root.insert("idx".to_string(), 0_u32);
@@ -46,7 +46,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::model::program::Scope;
+    /// use vyre::ir::Scope;
     ///
     /// let scope: Scope<String, u32> = Scope::new();
     /// assert!(scope.is_empty());
@@ -63,7 +63,7 @@ where
     ///
     /// ```
     /// use std::collections::HashMap;
-    /// use vyre::ir::model::program::Scope;
+    /// use vyre::ir::Scope;
     ///
     /// let scope = Scope::from_map(HashMap::from([("idx".to_string(), 0_u32)]));
     /// assert_eq!(scope.get("idx"), Some(&0));
@@ -81,7 +81,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::model::program::Scope;
+    /// use vyre::ir::Scope;
     ///
     /// let mut parent = Scope::new();
     /// parent.insert("a".to_string(), 1_u32);
@@ -101,7 +101,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::model::program::Scope;
+    /// use vyre::ir::Scope;
     ///
     /// let mut scope = Scope::new();
     /// scope.insert("flag".to_string(), true);
@@ -122,7 +122,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::model::program::Scope;
+    /// use vyre::ir::Scope;
     ///
     /// let mut scope = Scope::new();
     /// scope.insert("x".to_string(), 7_u32);
@@ -143,7 +143,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::model::program::Scope;
+    /// use vyre::ir::Scope;
     ///
     /// let mut scope = Scope::new();
     /// assert_eq!(scope.insert("x".to_string(), 1_u32), None);
@@ -161,7 +161,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::model::program::Scope;
+    /// use vyre::ir::Scope;
     ///
     /// let mut scope = Scope::new();
     /// scope.insert("x".to_string(), 1_u32);
@@ -178,7 +178,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::model::program::Scope;
+    /// use vyre::ir::Scope;
     ///
     /// let scope: Scope<String, u32> = Scope::new();
     /// assert!(scope.is_empty());

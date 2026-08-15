@@ -260,7 +260,7 @@ pub(super) fn emit_sparse_record_output_init(
         record_words,
     ));
     nodes.push(Node::Barrier {
-        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+        ordering: vyre_foundation::MemoryOrdering::SeqCst,
     });
     nodes
 }

@@ -4,7 +4,7 @@ mod spec_variants;
 
 use proptest::prelude::*;
 use spec_variants::data_type_strategy;
-use vyre_spec::op_signature::SignatureParam;
+use vyre_spec::SignatureParam;
 use vyre_spec::{DataType, OpSignature};
 
 fn signature_param_strategy() -> impl Strategy<Value = SignatureParam> {

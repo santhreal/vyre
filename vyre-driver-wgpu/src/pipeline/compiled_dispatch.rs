@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use smallvec::SmallVec;
-use vyre_driver::program_walks::enforce_actual_output_budget;
+use vyre_driver::enforce_actual_output_budget;
 use vyre_driver::{
     resolve_fixpoint_iterations_usize, BackendError, CompiledPipeline, DispatchConfig,
     OutputBuffers, TimedDispatchResult,
@@ -35,7 +35,7 @@ pub(crate) struct WgpuPendingPersistentDispatch {
     config: DispatchConfig,
 }
 
-impl vyre_driver::backend::private::Sealed for WgpuPendingPersistentDispatch {}
+impl vyre_driver::sealed::Sealed for WgpuPendingPersistentDispatch {}
 
 impl WgpuPendingPersistentDispatch {
     fn is_ready_inner(&self) -> bool {

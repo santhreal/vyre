@@ -6,10 +6,10 @@ use dashmap::DashMap;
 
 use cudarc::driver::CudaContext;
 use smallvec::SmallVec;
-use vyre_driver::binding::{BindingPlan, BindingRole};
-use vyre_driver::speculate::SpeculationMode;
 use vyre_driver::validation::ValidationCache;
+use vyre_driver::SpeculationMode;
 use vyre_driver::{resolve_fixpoint_iterations, BackendError, DispatchConfig, LaunchPlan};
+use vyre_driver::{BindingPlan, BindingRole};
 use vyre_foundation::ir::Program;
 
 use super::allocations::{DeviceAllocationPool, PinnedHostAllocationPool};
@@ -1059,7 +1059,7 @@ impl CudaBackend {
 
     /// Compiled module cache counters for honest compile telemetry.
     #[must_use]
-    pub fn pipeline_cache_snapshot(&self) -> vyre_driver::pipeline::PipelineCacheSnapshot {
+    pub fn pipeline_cache_snapshot(&self) -> vyre_driver::PipelineCacheSnapshot {
         self.module_cache.snapshot()
     }
 

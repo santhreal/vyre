@@ -108,7 +108,7 @@ fn terminated(mut entry: Vec<Node>, count: usize) -> Vec<Node> {
 /// The CPU optimizer stack the GPU pipeline is measured against.
 pub fn cpu_pipeline(program: Program) -> Program {
     use vyre_foundation::optimizer::passes::algebraic::canonicalize_engine::run as cpu_canonicalize;
-    use vyre_foundation::optimizer::passes::fusion_cse::dce::engine::dce as cpu_dce;
+    use vyre_foundation::optimizer::passes::fusion_cse::dce::dce as cpu_dce;
     let program = cpu_canonicalize(program);
     let program =
         vyre_foundation::optimizer::optimize(program).expect("registered optimizer must converge");

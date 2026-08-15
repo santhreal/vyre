@@ -250,7 +250,7 @@ mod tests {
         run: Arc<FakeRun>,
     }
 
-    impl crate::backend::private::Sealed for FakePipeline {}
+    impl crate::backend::sealed::Sealed for FakePipeline {}
 
     impl CompiledPipeline for FakePipeline {
         fn id(&self) -> &str {

@@ -27,7 +27,7 @@
 //!     epoch:          u32                (4 bytes)   -  observed at publish time
 //!     slot_status:    u32                (4 bytes)   -  terminal ring status, zero when unknown
 //!     failure_class:  u32                (4 bytes)   -  [`ReplayFailureClass`] discriminant
-//!     backend_code:   u32                (4 bytes)   -  stable [`vyre_driver::backend::ErrorCode`]
+//!     backend_code:   u32                (4 bytes)   -  stable [`vyre_driver::ErrorCode`]
 //!     output_digest:  u64                (8 bytes)   -  digest of output bytes observed at failure
 //! ```
 //!

@@ -14,9 +14,9 @@
 //! reaches for a categorical fact is visible in telemetry whether or not the
 //! fact was cheap to compute.
 
-pub mod adjoint;
-pub mod kan_extension;
-pub mod yoneda;
+pub(crate) mod adjoint;
+pub(crate) mod kan_extension;
+pub(crate) mod yoneda;
 
 pub use adjoint::{adjoint_pair, AdjointPair, FiniteFunctor};
 pub use kan_extension::{kan_extension_at, kan_extension_table, KanDirection};

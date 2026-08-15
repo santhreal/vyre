@@ -146,7 +146,7 @@ pub fn build_char_class_table() -> [u32; 256] {
 
 fn char_class_body(source: &str, classified: &str, n: u32) -> Vec<Node> {
     vec![Node::Region {
-        generator: vyre_foundation::ir::model::expr::Ident::from(CHAR_CLASS_OP_ID),
+        generator: vyre_foundation::ir::Ident::from(CHAR_CLASS_OP_ID),
         source_region: None,
         body: std::sync::Arc::new(vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),

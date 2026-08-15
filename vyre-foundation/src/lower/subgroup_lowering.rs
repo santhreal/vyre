@@ -502,9 +502,10 @@ mod tests {
     /// passing after the lowering moved a select into a position neither list
     /// named.
     fn nodes_contain_select_false(nodes: &[Node], predicate: fn(&Expr) -> bool) -> bool {
-        any_expr_matching(nodes, &|expr| {
-            matches!(expr, Expr::Select { false_val, .. } if predicate(false_val))
-        })
+        any_expr_matching(
+            nodes,
+            &|expr| matches!(expr, Expr::Select { false_val, .. } if predicate(false_val)),
+        )
     }
 
     /// True when some expression anywhere under `nodes` satisfies `predicate`.
@@ -975,8 +976,6 @@ mod tests {
 
     /// True when some expression under `nodes` is a subgroup reduce.
     fn nodes_contain_subgroup_add(nodes: &[Node]) -> bool {
-        any_expr_matching(nodes, &|expr| {
-            matches!(expr, Expr::SubgroupReduce { .. })
-        })
+        any_expr_matching(nodes, &|expr| matches!(expr, Expr::SubgroupReduce { .. }))
     }
 }

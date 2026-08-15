@@ -92,10 +92,10 @@ fn emit_module_impl(
         ))
     })?;
     lowered.descriptor.dispatch.workgroup_size = workgroup_size;
-    if let Err(errors) = vyre_lower::verify::verify(&lowered.descriptor) {
+    if let Err(errors) = vyre_lower::verify(&lowered.descriptor) {
         return Err(LoweringError::invalid(format!(
             "KernelDescriptor verification failed after Naga Program compatibility workgroup override: {}. Fix: keep the requested workgroup size valid before emission.",
-            vyre_lower::verify::format_verify_errors(&errors)
+            vyre_lower::format_verify_errors(&errors)
         )));
     }
     let emitted = match target {

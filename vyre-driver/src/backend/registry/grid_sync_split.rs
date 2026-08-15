@@ -17,7 +17,7 @@ struct GridSyncSplitBackend {
     inner: Box<dyn VyreBackend>,
 }
 
-impl super::super::private::Sealed for GridSyncSplitBackend {}
+impl crate::backend::sealed::Sealed for GridSyncSplitBackend {}
 
 /// Only the `Program`-carrying half of the contract is written here. Everything
 /// else, identity through lifecycle, comes from the one forwarding owner: this
@@ -269,7 +269,7 @@ mod tests {
     use smallvec::SmallVec;
     use std::sync::{Arc, Mutex};
     use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
-    use vyre_foundation::memory_model::MemoryOrdering;
+    use vyre_foundation::MemoryOrdering;
 
     /// The owned-dispatch stub every borrowed-path probe below needs.
     ///
@@ -307,7 +307,7 @@ mod tests {
         calls: Mutex<Vec<(bool, Vec<Vec<u8>>)>>,
     }
 
-    impl super::super::super::private::Sealed for SegmentRecorder {}
+    impl crate::backend::sealed::Sealed for SegmentRecorder {}
 
     impl VyreBackend for SegmentRecorder {
         fn id(&self) -> &'static str {
@@ -403,7 +403,7 @@ mod tests {
         calls: Mutex<usize>,
     }
 
-    impl super::super::super::private::Sealed for NativeGridSyncProbe {}
+    impl crate::backend::sealed::Sealed for NativeGridSyncProbe {}
 
     impl VyreBackend for NativeGridSyncProbe {
         fn id(&self) -> &'static str {
@@ -460,7 +460,7 @@ mod tests {
         uploads: Mutex<Vec<(u64, usize, usize)>>,
     }
 
-    impl super::super::super::private::Sealed for ResidentUploadProbe {}
+    impl crate::backend::sealed::Sealed for ResidentUploadProbe {}
 
     impl VyreBackend for ResidentUploadProbe {
         fn id(&self) -> &'static str {
@@ -514,7 +514,7 @@ mod tests {
         calls: Mutex<Vec<(usize, usize, u32, usize)>>,
     }
 
-    impl super::super::super::private::Sealed for ResidentSequenceProbe {}
+    impl crate::backend::sealed::Sealed for ResidentSequenceProbe {}
 
     impl VyreBackend for ResidentSequenceProbe {
         fn id(&self) -> &'static str {
@@ -612,7 +612,7 @@ mod tests {
         inner: Arc<T>,
     }
 
-    impl<T: VyreBackend + 'static> super::super::super::private::Sealed for ArcBackend<T> {}
+    impl<T: VyreBackend + 'static> crate::backend::sealed::Sealed for ArcBackend<T> {}
 
     /// Forwards the WHOLE contract, so a probe below observes what a real
     /// backend behind the wrapper would, rather than the trait defaults.
@@ -625,7 +625,7 @@ mod tests {
         calls: Mutex<usize>,
     }
 
-    impl super::super::super::private::Sealed for GridSyncSplitOptOutProbe {}
+    impl crate::backend::sealed::Sealed for GridSyncSplitOptOutProbe {}
 
     impl VyreBackend for GridSyncSplitOptOutProbe {
         fn id(&self) -> &'static str {
@@ -683,7 +683,7 @@ mod tests {
     /// These four were the ones it forgot.
     struct CapabilityProbe;
 
-    impl super::super::super::private::Sealed for CapabilityProbe {}
+    impl crate::backend::sealed::Sealed for CapabilityProbe {}
 
     impl VyreBackend for CapabilityProbe {
         fn id(&self) -> &'static str {

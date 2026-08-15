@@ -38,9 +38,9 @@ pub mod corpus;
 /// post-condition gate compares pre/post and refuses cost-up rewrites that
 /// did not declare `RefusalReason::CostIncrease`.
 pub mod cost;
-pub mod ctx;
+pub(crate) mod ctx;
 /// Derived pass-order artifact for optimizer release validation.
-pub mod derived_order;
+pub(crate) mod derived_order;
 /// Differential compilation via wire-content-hash Merkle. Per-Node + per-Region
 /// content hashes derived from the canonical wire encoding let backends maintain
 /// `<subtree_hash, CompiledArtifact>` caches that survive deep IR rewrites where
@@ -53,7 +53,7 @@ pub mod diff_compile;
 /// or `RefusalReason::EffectLatticeViolation` with a structured fix string.
 pub mod effect_lattice;
 pub mod fact_cache;
-pub mod fusion_cert;
+pub(crate) mod fusion_cert;
 /// Program-level shape-facts analysis (audit P0 #38). Derives one
 /// `BufferShapeFacts` per `BufferDecl`; downstream passes consume the
 /// derived map instead of recomputing buffer sizes ad hoc.
@@ -103,19 +103,19 @@ pub mod megakernel;
 pub mod pass_catalog;
 /// Stable pass-explanation records derived from scheduler metrics and the live
 /// optimizer catalog.
-pub mod pass_explain;
+pub(crate) mod pass_explain;
 /// Pass verifier: runs every registered pass against a synthetic corpus
 /// and asserts cost-monotone-down plus structural validity. Surfaces
 /// contract violations at test time so they're caught before merge instead
 /// of at the scheduler's runtime gate.
 pub mod pass_invariants;
 /// Machine-checkable pass-order validation for release gates and contributors.
-pub mod pass_order;
+pub(crate) mod pass_order;
 /// Benchmark/hot-path-driven pass selection.
-pub mod pass_selection;
+pub(crate) mod pass_selection;
 pub mod passes;
 /// Backend-neutral planar rewrite batching used by optimizer passes.
-pub mod planar_batch;
+pub(crate) mod planar_batch;
 /// Columnar / SoA fact view of a `Program` that hot
 /// optimizer passes can opt into. Built once via
 /// `ProgramFacts::build(&program)` and then queried in O(1) hash
@@ -414,12 +414,12 @@ pub struct ProgramPassRegistration {
 
 inventory::collect!(ProgramPassRegistration);
 
-pub(crate) mod private {
+pub(crate) mod sealed {
     pub trait Sealed {}
 }
 
 /// One IR-to-IR optimizer pass.
-pub trait ProgramPass: private::Sealed + Send + Sync {
+pub trait ProgramPass: sealed::Sealed + Send + Sync {
     /// Static metadata for scheduling and diagnostics.
     fn metadata(&self) -> PassMetadata;
 
@@ -526,7 +526,11 @@ pub trait ProgramPass: private::Sealed + Send + Sync {
     ///
     /// Returns [`RefusalReason`] when the pass proves that applying its rewrite
     /// would violate cost, effect, or wire-contract constraints.
-    fn try_transform(&self, program: Program, caps: &AdapterCaps) -> Result<PassResult, RefusalReason> {
+    fn try_transform(
+        &self,
+        program: Program,
+        caps: &AdapterCaps,
+    ) -> Result<PassResult, RefusalReason> {
         Ok(self.transform_for_adapter(program, caps))
     }
 

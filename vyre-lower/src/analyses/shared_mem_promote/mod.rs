@@ -33,8 +33,8 @@
 //! Output: `PromotionPlan` with one entry per candidate binding,
 //! including projected savings.
 
-pub mod analysis;
-pub mod plan;
+pub(crate) mod analysis;
+pub(crate) mod plan;
 
 pub use analysis::analyze;
 pub use plan::{PromotionCandidate, PromotionPlan};

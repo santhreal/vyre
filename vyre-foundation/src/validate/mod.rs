@@ -16,14 +16,14 @@ pub mod binding;
 ///
 /// One owner for every stable `V###` rule: its phase, the invariant it
 /// enforces, and the correction it offers.
-pub mod catalog;
+pub(crate) mod catalog;
 
 /// Default depth limits and limit tracking for recursive validation.
 ///
 /// Defines the maximum call depth, nesting depth, and node count that
 /// the validator will accept. These limits prevent pathological programs
 /// from causing stack overflow or adapter limit violations.
-pub mod depth;
+pub(crate) mod depth;
 
 /// Validation error construction helpers.
 ///
@@ -31,7 +31,7 @@ pub mod depth;
 /// with actionable `Fix:` messages.
 pub mod err;
 /// Validation options + backend capability hooks.
-pub mod options;
+pub(crate) mod options;
 
 /// Adapter limit validation.
 ///
@@ -43,15 +43,15 @@ pub mod limits;
 ///
 /// `validate` is the top-level function that runs every validation pass
 /// and returns a vector of errors (empty on success).
-pub mod rule_pipeline;
+pub(crate) mod rule_pipeline;
 
 /// Validation report containing hard failures and warnings.
-pub mod report;
+pub(crate) mod report;
 /// Detailed validation failure report.
 ///
 /// `ValidationError` describes exactly which invariant was violated,
 /// where in the program it occurred, and how to fix it.
-pub mod validation_error;
+pub(crate) mod validation_error;
 
 mod atomic_rules;
 mod barrier;

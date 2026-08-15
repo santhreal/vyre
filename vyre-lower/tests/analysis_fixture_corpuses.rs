@@ -93,15 +93,15 @@ fn a13_coalesce_corpus_classifies_unit_stride_strided_and_broadcast() {
     assert_eq!(report.sites.len(), 3);
     assert_eq!(
         report.sites[0].pattern,
-        vyre_lower::analyses::coalesce::AccessPattern::CoalescedUnitStride
+        vyre_lower::analyses::AccessPattern::CoalescedUnitStride
     );
     assert_eq!(
         report.sites[1].pattern,
-        vyre_lower::analyses::coalesce::AccessPattern::Strided { stride: 4 }
+        vyre_lower::analyses::AccessPattern::Strided { stride: 4 }
     );
     assert_eq!(
         report.sites[2].pattern,
-        vyre_lower::analyses::coalesce::AccessPattern::Broadcast
+        vyre_lower::analyses::AccessPattern::Broadcast
     );
     assert_eq!(report.problematic_count(), 1);
 }
@@ -147,7 +147,7 @@ fn a15_bank_conflict_corpus_detects_full_warp_serialization() {
     assert_eq!(report.sites.len(), 1);
     assert_eq!(
         report.sites[0].conflict,
-        vyre_lower::analyses::bank_conflict::BankConflictKind::Conflict { way_count: 32 }
+        vyre_lower::analyses::BankConflictKind::Conflict { way_count: 32 }
     );
     assert_eq!(report.critical_count(), 1);
 }

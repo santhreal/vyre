@@ -41,7 +41,7 @@ use vyre_primitives::wire::pack_u32_slice as pack_words;
 /// output can chain directly into Aho-Corasick transition-table programs.
 ///
 /// ```ignore
-/// use vyre_libs::decode::base64::base64_decode;
+/// use vyre_libs::decode::base64_decode;
 ///
 /// let program = base64_decode("encoded", "decoded", 8);
 /// assert_eq!(program.workgroup_size(), [64, 1, 1]);
@@ -68,7 +68,7 @@ pub fn base64_decode(input: &str, output: &str, input_len: u32) -> Program {
 /// stages.
 ///
 /// ```ignore
-/// use vyre_libs::decode::base64::base64_decode_then_aho_corasick;
+/// use vyre_libs::decode::base64_decode_then_aho_corasick;
 ///
 /// let program = base64_decode_then_aho_corasick(
 ///     "encoded",

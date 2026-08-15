@@ -21,7 +21,7 @@ use crate::ComputeCapability;
 
 /// Unified PTX-side audit: runs every shipped pattern against the
 /// descriptor and returns the combined report. Mirror of
-/// `vyre_lower::audit::audit` but for PTX-specific patterns.
+/// `vyre_lower::audit` but for PTX-specific patterns.
 ///
 /// `target` controls capability-gated patterns (tensor cores require
 /// sm_70+; ldmatrix.cp.async requires sm_80+).

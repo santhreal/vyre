@@ -240,11 +240,11 @@ mod tests {
     use vyre_foundation::ir::{OpId, Program};
 
     use super::*;
-    use crate::backend::private;
+    use crate::backend::sealed;
 
     struct EchoBackend;
 
-    impl private::Sealed for EchoBackend {}
+    impl sealed::Sealed for EchoBackend {}
 
     impl VyreBackend for EchoBackend {
         fn id(&self) -> &'static str {

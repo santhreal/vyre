@@ -17,7 +17,7 @@
 
 use rustc_hash::FxHashSet;
 use std::sync::Arc;
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferDecl, Node, Program};
 
 use super::classify::{c11_lexer, c11_lexer_regular};

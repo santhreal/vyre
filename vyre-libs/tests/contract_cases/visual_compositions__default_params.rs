@@ -1,7 +1,5 @@
 mod glass {
-    use vyre_libs::visual::glass::{
-        glass_blur_stage, glass_filter_stage, glass_stages, GlassParams,
-    };
+    use vyre_libs::visual::{glass_blur_stage, glass_filter_stage, glass_stages, GlassParams};
 
     fn default_params() -> GlassParams {
         GlassParams {

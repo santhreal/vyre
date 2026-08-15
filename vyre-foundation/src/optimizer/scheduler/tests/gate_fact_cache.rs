@@ -74,7 +74,7 @@ struct SilentShrinkPass {
     metadata: PassMetadata,
 }
 
-impl crate::optimizer::private::Sealed for SilentShrinkPass {}
+impl crate::optimizer::sealed::Sealed for SilentShrinkPass {}
 
 impl ProgramPass for SilentShrinkPass {
     fn metadata(&self) -> PassMetadata {
@@ -122,7 +122,7 @@ struct StoreAppendPass {
     metadata: PassMetadata,
 }
 
-impl crate::optimizer::private::Sealed for StoreAppendPass {}
+impl crate::optimizer::sealed::Sealed for StoreAppendPass {}
 
 impl ProgramPass for StoreAppendPass {
     fn metadata(&self) -> PassMetadata {

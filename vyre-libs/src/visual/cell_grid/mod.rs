@@ -11,7 +11,7 @@
 //! the Tier 2.5 `packed_rgba_map` shape. No new IR variant, no target
 //! lowering.
 
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::cell_grid";

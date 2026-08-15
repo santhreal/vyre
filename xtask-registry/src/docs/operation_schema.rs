@@ -251,7 +251,7 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
         .map(|facet| facet.operation_id)
         .collect::<BTreeSet<_>>();
     let mut target_facets: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
-    match vyre_driver::backend::registered_target_operation_facets() {
+    match vyre_driver::registered_target_operation_facets() {
         Ok(facets) => {
             for facet in facets {
                 target_facets

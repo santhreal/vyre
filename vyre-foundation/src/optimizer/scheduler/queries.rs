@@ -15,8 +15,7 @@ use super::topo::{
 use super::{PassResearchTrace, PassScheduler, PassSchedulingError, DEFAULT_MAX_ITERATIONS};
 use crate::optimizer::{
     registered_passes, requirements_satisfied, AdapterCaps, OptimizerError, PassMetadata,
-    ProgramPassKind,
-    ProgramPassRegistration,
+    ProgramPassKind, ProgramPassRegistration,
 };
 
 impl PassScheduler {

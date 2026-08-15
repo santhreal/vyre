@@ -214,9 +214,7 @@ fn a_parameter_reached_through_a_buffer_ref_is_not_leaked() {
                 vec![Node::store(
                     "result",
                     Expr::u32(0),
-                    Expr::BufLen {
-                        buffer: "p".into(),
-                    },
+                    Expr::BufLen { buffer: "p".into() },
                 )],
             )
         })

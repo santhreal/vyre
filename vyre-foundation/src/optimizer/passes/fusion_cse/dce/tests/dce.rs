@@ -1,11 +1,11 @@
 //! Integration test crate for the containing Vyre package.
 
 use crate::ir::{Expr, Node};
-use crate::optimizer::passes::fusion_cse::dce::LiveSet;
 use crate::optimizer::passes::fusion_cse::dce::const_loop_empty;
 use crate::optimizer::passes::fusion_cse::dce::const_truth;
 use crate::optimizer::passes::fusion_cse::dce::eliminate_unreachable;
 use crate::optimizer::passes::fusion_cse::dce::reachable_prefix;
+use crate::optimizer::passes::fusion_cse::dce::LiveSet;
 
 #[test]
 fn test_const_truth_evaluation() {

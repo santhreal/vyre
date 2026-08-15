@@ -17,7 +17,7 @@
 //! this). Every Cat-A op exposes its builder as `<Op>Builder::new(...)`
 //! and delegates defaults through `BuildOptions::default()`.
 
-use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use crate::tensor_ref::{TensorRef, TensorRefError};

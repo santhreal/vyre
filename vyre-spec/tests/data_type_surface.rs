@@ -4,7 +4,7 @@
 
 mod spec_variants;
 
-use vyre_spec::data_type::{DataType, QuantizationScale, QuantizationZeroPoint};
+use vyre_spec::{DataType, QuantizationScale, QuantizationZeroPoint};
 
 use spec_variants::{QUANTIZED_STORAGE_TYPES, SCALAR_LEAF_TYPES};
 
