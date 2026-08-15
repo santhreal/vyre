@@ -8,10 +8,6 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Build task runner for the vyre workspace."
-# This package also ships two rule-authoring binaries, so a bare
-# `cargo run -p xtask` cannot decide which to build without this. Every
-# workflow step and script invokes the runner that way.
-default-run = "xtask"
 # Internal build-task runner, not a published crate. `cargo publish` on the
 # workspace must skip it.
 publish = false
