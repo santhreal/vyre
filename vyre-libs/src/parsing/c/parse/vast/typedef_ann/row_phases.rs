@@ -137,7 +137,7 @@ fn phase_program(op_id: &str, with_haystack: bool, out_name: &str, mut body: Vec
     buffers.push(BufferDecl::output(RESULT, out_binding, DataType::U32).with_count(1));
 
     body.push(Node::store(RESULT, Expr::u32(0), Expr::var(out_name)));
-    Program::wrapped(buffers, [256, 1, 1], vec![wrap_anonymous(op_id, body)])
+    Program::wrapped(buffers, [256, 1, 1], vec![wrap_anonymous_region(op_id, body)])
         .with_entry_op_id(op_id)
 }
 

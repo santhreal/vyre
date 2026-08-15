@@ -3,9 +3,8 @@
 //! Unpack: `x = packed * scale[row]` (F32 output).
 //! Pack: mask to 8 bits (U32→U32).
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 const PACK_OP_ID: &str = "vyre-libs::quant::int8_pack";
 const UNPACK_OP_ID: &str = "vyre-libs::quant::int8_unpack";
@@ -45,7 +44,7 @@ pub fn int8_unpack(packed: &str, scales: &str, output: &str, n: u32, cols: u32) 
             BufferDecl::output(output, 2, DataType::F32).with_count(n),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(UNPACK_OP_ID, body)],
+        vec![wrap_anonymous_region(UNPACK_OP_ID, body)],
     )
 }
 
@@ -73,7 +72,7 @@ pub fn int8_pack(input: &str, output: &str, n: u32) -> Program {
             BufferDecl::output(output, 1, DataType::U32).with_count(n),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(PACK_OP_ID, body)],
+        vec![wrap_anonymous_region(PACK_OP_ID, body)],
     )
 }
 

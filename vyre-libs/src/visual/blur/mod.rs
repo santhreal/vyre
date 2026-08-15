@@ -11,7 +11,7 @@
 //!
 //! Category A composition  -  composes Tier 2.5 `math::conv1d`.
 
-use vyre_foundation::composition::wrap_child_region;
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -386,7 +386,7 @@ fn gaussian_blur_pass(
                 .with_count(count),
         ],
         super::PIXEL_WORKGROUP_SIZE,
-        vec![crate::region::wrap_anonymous(OP_ID, vec![blur_pass])],
+        vec![wrap_anonymous_region(OP_ID, vec![blur_pass])],
     )
 }
 

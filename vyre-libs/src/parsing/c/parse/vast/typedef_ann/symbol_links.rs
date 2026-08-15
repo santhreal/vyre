@@ -106,7 +106,7 @@ pub fn c11_link_vast_typedef_symbols(
             BufferDecl::workgroup("__vast_typedef_symbol_heads", BUCKETS, DataType::U32),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             LINK_VAST_TYPEDEF_SYMBOLS_OP_ID,
             vec![Node::if_then(Expr::eq(t, Expr::u32(0)), body)],
         )],

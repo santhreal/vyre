@@ -6,14 +6,13 @@
 //! complex buffers `[re0, im0, re1, im1, ...]` with length `2 * n`.
 
 use std::sync::Arc;
-use vyre_foundation::composition::wrap_child_region;
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
 use super::complex_length::validate_complex_len;
 use super::fft_radix2_complex;
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::math::fft::fft_convolve_circular_complex";
 const FFT_OP_ID: &str = "vyre-libs::math::fft::fft_radix2";
@@ -94,7 +93,7 @@ pub fn fft_convolve_circular_complex(
             BufferDecl::output(output, 2, DataType::F32).with_count(elements),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(OP_ID, entry)],
+        vec![wrap_anonymous_region(OP_ID, entry)],
     )
     .with_entry_op_id(OP_ID))
 }
@@ -255,7 +254,7 @@ fn pointwise_complex_multiply_conjugate_program() -> Program {
             BufferDecl::output("product_freq", 2, DataType::F32).with_count(elements),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             MULTIPLY_OP_ID,
             multiply_and_conjugate_body("signal_freq", "kernel_freq", "product_freq", n),
         )],
@@ -273,7 +272,7 @@ fn scale_conjugate_inverse_program() -> Program {
             BufferDecl::output("output", 1, DataType::F32).with_count(elements),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             SCALE_OP_ID,
             scale_conjugate_body_from("product_freq", "output", n),
         )],

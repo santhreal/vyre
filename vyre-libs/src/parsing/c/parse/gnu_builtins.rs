@@ -3,7 +3,7 @@ use crate::parsing::c::parse::vast_kinds::{
     C_AST_KIND_BUILTIN_OBJECT_SIZE_EXPR, C_AST_KIND_BUILTIN_OFFSETOF_EXPR,
     C_AST_KIND_BUILTIN_PREFETCH_EXPR, C_AST_KIND_BUILTIN_UNREACHABLE_STMT,
 };
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Compatibility opcode for front-end streams that tag `__builtin_expect`.
@@ -164,7 +164,7 @@ pub fn c11_gnu_builtins_pass(
                 .with_count(ast_count),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::c11_gnu_builtins_pass",
             vec![Node::if_then(Expr::lt(t.clone(), num_ast_nodes), loop_body)],
         )],

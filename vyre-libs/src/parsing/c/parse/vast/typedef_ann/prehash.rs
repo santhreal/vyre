@@ -81,7 +81,7 @@ pub(super) fn c11_prehash_vast_identifiers_impl(
             vast_nodes_scratch(out_hashed_vast_nodes, 2, rows),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             PREHASH_VAST_IDENTIFIERS_OP_ID,
             vec![Node::if_then(Expr::lt(t, num_nodes), loop_body)],
         )],

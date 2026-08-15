@@ -1,12 +1,12 @@
 //! GPU DEFLATE stored-block decode composition.
 
+use vyre_foundation::composition::{tag_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[cfg(test)]
 use crate::buffer_names::fixed_name;
 use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decoded_output_buffer};
 use crate::decode::scan::tiled_decode_aho_scan_body;
-use crate::region::wrap_anonymous;
 #[cfg(test)]
 use vyre_primitives::decode::inflate::inflate_stored_reference_bytes;
 use vyre_primitives::decode::inflate::{
@@ -45,7 +45,7 @@ use vyre_primitives::wire::pack_u32_slice as pack_words;
 pub fn inflate_stored_block(input: &str, output: &str, input_len: u32) -> Program {
     let input = scoped_decode_input_buffer(FAMILY_PREFIX, input);
     let output = scoped_decoded_output_buffer(FAMILY_PREFIX, output);
-    crate::region::tag_program(
+    tag_program(
         OP_ID,
         primitive_inflate_stored(&input, &output, INFLATED_LEN_BUFFER, input_len),
     )
@@ -159,7 +159,7 @@ fn fused_scan_program(
             BufferDecl::read_write(INFLATED_LEN_BUFFER, 5, DataType::U32).with_count(1),
         ],
         INFLATE_STORED_WORKGROUP_SIZE,
-        vec![wrap_anonymous(FUSED_SCAN_OP_ID, entry)],
+        vec![wrap_anonymous_region(FUSED_SCAN_OP_ID, entry)],
     )
 }
 

@@ -25,7 +25,7 @@ Skeleton:
 
 ```rust
 use vyre_foundation::ir::{DataType, Program};
-use vyre_libs::region::wrap;
+use vyre_foundation::composition::wrap_region;
 use vyre_libs::{check_tensors, TensorRef, TensorRefError};
 
 fn my_op(input: TensorRef, output: TensorRef) -> Result<Program, TensorRefError> {
@@ -44,7 +44,7 @@ fn my_op(input: TensorRef, output: TensorRef) -> Result<Program, TensorRefError>
                 .with_count(output.element_count().expect("checked above")),
         ],
         [64, 1, 1],
-        vec![wrap("vyre-libs::dialect::my_op", body, None)],
+        vec![wrap_region("vyre-libs::dialect::my_op", body, None)],
     ))
 }
 ```

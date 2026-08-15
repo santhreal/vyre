@@ -28,11 +28,11 @@
 //! seeds the same transition table at the same origins and must produce the
 //! byte-identical match set this walk defines.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::match_result::ByteRange;
 use vyre_primitives::matching::CompiledDfa;
 
-use crate::region::wrap_anonymous;
 use crate::scan::builders::append_match;
 use crate::scan::classic_ac::bounded_ranges::{
     ac_output_span_nodes, ac_transition_step_nodes, output_record_loop_node,
@@ -370,7 +370,7 @@ pub fn anchored_window_extract_program(
                 .with_count(max_matches.saturating_mul(3)),
         ],
         [128, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::matching::regex_anchored_window",
             walk_body,
         )],

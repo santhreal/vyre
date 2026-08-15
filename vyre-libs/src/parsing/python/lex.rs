@@ -1,5 +1,5 @@
 use crate::parsing::composition::child_phase;
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Python lexer token ids. `vyre_spec::python_token` owns the numbering; the
@@ -513,7 +513,7 @@ pub fn python312_lexer(
                 .with_count(1),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::python312_lexer",
             vec![child_phase(
                 "vyre-libs::parsing::python312_lexer",

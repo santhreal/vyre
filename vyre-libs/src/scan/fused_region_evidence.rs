@@ -31,11 +31,11 @@
 //! (`scan_presence_by_region` + `scan` + `regex_admission_by_region_program`).
 //! Prefer those until a segmentation/occupancy redesign makes fusion pay.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::match_result::ByteRange;
 use vyre_primitives::matching::CompiledDfa;
 
-use crate::region::wrap_anonymous;
 use crate::scan::builders::append_match;
 use crate::scan::classic_ac::bounded_ranges::{
     output_record_loop_node, pattern_bitset_or_node, presence_bit_write_node,
@@ -224,7 +224,7 @@ pub fn fused_region_evidence_program(
     Program::wrapped(
         buffers,
         [128, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::matching::fused_region_evidence",
             walk_body,
         )],

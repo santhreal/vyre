@@ -3,6 +3,7 @@
 //! Applies brightness, contrast, saturate, and invert in sequence.
 //! All math is integer fixed-point 16.16. Category A  -  pure IR.
 
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -53,9 +54,9 @@ pub fn filter_chain(
                 .with_count(count),
         ],
         super::PIXEL_WORKGROUP_SIZE,
-        vec![crate::region::wrap_anonymous(
+        vec![wrap_anonymous_region(
             OP_ID,
-            vec![crate::region::wrap_child(
+            vec![wrap_child_region(
                 vyre_primitives::visual::packed_rgba_map::OP_ID,
                 GeneratorRef {
                     name: OP_ID.to_string(),

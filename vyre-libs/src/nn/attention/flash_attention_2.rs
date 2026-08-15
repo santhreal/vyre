@@ -12,11 +12,10 @@
 //!
 //! Category-A composition.
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use super::planner::plan_flash_attention_tiled;
-use crate::region::wrap_anonymous;
 use vyre_primitives::nn::attention_stability::{
     bounded_exp_arg, bounded_score, flush_tiny, positive_denominator,
 };
@@ -189,7 +188,7 @@ pub fn flash_attention_2(
             BufferDecl::output(out, 3, DataType::F32).with_count(plan.logical_elements),
         ],
         [plan.workgroup_lanes, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -400,7 +399,7 @@ pub fn flash_attention_2_reference(
             BufferDecl::output(out, 3, DataType::F32).with_count(elements),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(REFERENCE_OP_ID, body)],
+        vec![wrap_anonymous_region(REFERENCE_OP_ID, body)],
     )
 }
 

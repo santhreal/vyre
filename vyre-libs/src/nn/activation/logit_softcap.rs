@@ -3,9 +3,9 @@
 //! Category A composition  -  element-wise. Used in the Parameter Golf
 //! recipe to bound logits before cross-entropy loss (default cap=30.0).
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
-use crate::region::wrap_anonymous;
 use vyre_primitives::nn::f32_stability::flush_tiny;
 
 const OP_ID: &str = "vyre-libs::nn::logit_softcap";
@@ -44,7 +44,7 @@ pub fn logit_softcap(input: &str, output: &str, n: u32, cap: f32) -> Program {
                 .with_output_byte_range(0..(n as usize).saturating_mul(4)),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

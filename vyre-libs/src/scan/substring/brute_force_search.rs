@@ -6,9 +6,8 @@
 //! needles should compile to a DFA via the future `dfa_compile`
 //! function and use that as a prefilter.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 /// Canonical scan op id.
 pub const SCAN_SUBSTRING_OP_ID: &str = "vyre-libs::scan::substring_search";
@@ -130,7 +129,7 @@ fn build_substring_program(
             output,
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(SCAN_SUBSTRING_OP_ID, body)],
+        vec![wrap_anonymous_region(SCAN_SUBSTRING_OP_ID, body)],
     )
 }
 

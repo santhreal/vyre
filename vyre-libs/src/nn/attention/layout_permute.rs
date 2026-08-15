@@ -8,9 +8,8 @@
 //! index derivations, and each used to carry its own copy of the guard, the two
 //! buffer declarations, and the region wrapper.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 /// Reject the shape and dtype inputs no attention layout conversion can serve.
 ///
@@ -77,6 +76,6 @@ pub(super) fn layout_permute_program(
             BufferDecl::output(output, 1, dtype).with_count(count),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(op_id, body)],
+        vec![wrap_anonymous_region(op_id, body)],
     )
 }

@@ -3,12 +3,11 @@
 //! Category A composition: reads two equally-sized u32 buffers,
 //! multiplies element-wise, and reduces through workgroup scratch.
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::{
     builder::{check_tensors, strided_accumulate_child, BuildOptions},
-    region::wrap,
     tensor_ref::{TensorRef, TensorRefError},
 };
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
@@ -90,7 +89,7 @@ impl Dot {
         let out = self.out.name_str();
         let workgroup = self.options.workgroup_size.unwrap_or([DOT_TILE, 1, 1]);
         let tile = workgroup[0].max(1);
-        let region = wrap(
+        let region = wrap_region(
             self.options.region_generator.unwrap_or(OP_ID),
             dot_tiled_body(lhs, rhs, out, n, tile),
             None,
@@ -211,7 +210,7 @@ fn dot_reference(lhs: &str, rhs: &str, out: &str, n: u32) -> Program {
             BufferDecl::output(out, 2, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
-        vec![wrap(
+        vec![wrap_region(
             DOT_REFERENCE_OP_ID,
             dot_reference_body(lhs, rhs, out, n),
             None,

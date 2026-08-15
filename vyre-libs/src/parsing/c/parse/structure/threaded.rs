@@ -300,7 +300,7 @@ pub(super) fn threaded_structure_program(
     Program::wrapped(
         buffers,
         [STRUCTURE_WORKGROUP_SIZE, 1, 1],
-        vec![wrap_anonymous(entry_op_id, body)],
+        vec![wrap_anonymous_region(entry_op_id, body)],
     )
     .with_entry_op_id(entry_op_id)
     .with_non_composable_with_self(true)

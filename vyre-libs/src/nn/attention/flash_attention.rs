@@ -47,12 +47,11 @@
 //! over `d` lanes lands on top of this substrate; the algorithmic
 //! correctness gate is the per-row reference.
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use super::planner::plan_flash_attention_scalar;
 use super::scaled_dot_product::{attention_score_nodes, direct_attention_program};
-use crate::region::wrap_anonymous;
 use vyre_primitives::nn::attention_stability::{bounded_exp_arg, flush_tiny, positive_denominator};
 
 const OP_ID: &str = "vyre-libs::nn::flash_attention";
@@ -222,7 +221,7 @@ pub fn flash_attention(
             BufferDecl::output(out, 3, DataType::F32).with_count(elements),
         ],
         [plan.workgroup_lanes, 1, 1],
-        vec![wrap_anonymous(OP_ID, body_with_guard)],
+        vec![wrap_anonymous_region(OP_ID, body_with_guard)],
     ))
 }
 

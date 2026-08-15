@@ -1,9 +1,8 @@
 //! RMS normalization followed by learned scale and a SiLU gate.
 
 use thiserror::Error;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::gated_rms_norm";
 const LEARNED_OP_ID: &str = "vyre-libs::nn::learned_rms_norm";
@@ -240,7 +239,7 @@ fn rms_norm_impl(
     Ok(Program::wrapped(
         buffers,
         [64, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             if gate.is_some() { OP_ID } else { LEARNED_OP_ID },
             body,
         )],

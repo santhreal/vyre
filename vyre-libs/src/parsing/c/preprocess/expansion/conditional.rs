@@ -3,7 +3,7 @@
 #![allow(missing_docs)] // Internal macro-expansion helpers are documented at the owning module boundary.
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::composition::child_phase;
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::*;
@@ -36,7 +36,7 @@ pub fn opt_conditional_mask(tok_types: &str, out_mask: &str, num_tokens: Expr) -
                 .with_count(tok_buffer_count),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::opt_conditional_mask",
             entry,
         )],
@@ -320,7 +320,7 @@ pub fn opt_conditional_mask_with_directives(
                 .with_count(tok_buffer_count),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::opt_conditional_mask_with_directives",
             vec![child_phase(
                 "vyre-libs::parsing::opt_conditional_mask_with_directives",

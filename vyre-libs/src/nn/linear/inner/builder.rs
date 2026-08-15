@@ -1,11 +1,11 @@
 //! Linear builder + the canonical `linear()` Cat-A constructor.
 
+use vyre_foundation::composition::{tag_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::{
     builder::{check_tensors, BuildOptions},
     math::linalg::MatmulBias,
-    region::{tag_program, wrap_anonymous},
     tensor_ref::{TensorRef, TensorRefError},
 };
 
@@ -356,7 +356,7 @@ fn linear_rows_impl(
     Ok(Program::wrapped(
         buffers,
         [64, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::linear_rows", body)],
+        vec![wrap_anonymous_region("vyre-libs::nn::linear_rows", body)],
     ))
 }
 

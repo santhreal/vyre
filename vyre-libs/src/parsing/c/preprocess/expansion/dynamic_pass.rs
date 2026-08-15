@@ -3,7 +3,7 @@
 #![allow(missing_docs)] // Internal macro-expansion helpers are documented at the owning module boundary.
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::composition::child_phase;
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::macro_lookup::*;
@@ -181,7 +181,7 @@ pub fn opt_dynamic_macro_expansion(
                 .with_count(1),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::opt_dynamic_macro_expansion",
             vec![child_phase(
                 "vyre-libs::parsing::opt_dynamic_macro_expansion",

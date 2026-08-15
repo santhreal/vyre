@@ -4,10 +4,9 @@
 //! subgroup forward DFA state with [`Expr::SubgroupShuffle`] instead of
 //! replaying the whole prefix independently.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::matching::{dfa_compile, CompiledDfa};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::matching::cooperative_dfa";
 const ALPHABET_SIZE: u32 = 256;
@@ -162,7 +161,7 @@ pub fn cooperative_dfa_scan(
             BufferDecl::output(matches, 3, DataType::U32).with_count(input_len),
         ],
         [effective_subgroup, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

@@ -15,6 +15,7 @@
 //! Soundness: ``Exact``. The set difference
 //! is bit-precise on every word; no over- or under-approximation.
 
+use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
 use vyre_primitives::bitset::and_not::bitset_and_not;
 use vyre_primitives::bitset::bitset_words;
@@ -35,7 +36,7 @@ pub fn taint_kill(
     frontier_out: &str,
 ) -> Program {
     let words = bitset_words(node_count);
-    crate::region::tag_program(
+    tag_program(
         OP_ID,
         bitset_and_not(frontier_in, kill_set, frontier_out, words),
     )

@@ -13,6 +13,8 @@
 //! Both paths emit byte-identical IR.
 
 use vyre_foundation::composition::trap_program;
+#[cfg(test)]
+use vyre_foundation::composition::wrap_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
@@ -20,8 +22,6 @@ use crate::builder::{
     check_same_shape, check_tensors, checked_element_count, strided_accumulate2_child, BuildOptions,
 };
 use crate::nn::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
-#[cfg(test)]
-use crate::region::wrap;
 use crate::tensor_ref::{TensorRef, TensorRefError};
 
 const OP_ID: &str = "vyre-libs::nn::layer_norm";
@@ -351,7 +351,7 @@ fn layer_norm_reference_program(input: &str, output: &str, n: u32, eps: f32) -> 
             BufferDecl::output(output, 1, DataType::F32).with_count(n),
         ],
         [1, 1, 1],
-        vec![wrap(LAYER_NORM_REFERENCE_OP_ID, body, None)],
+        vec![wrap_region(LAYER_NORM_REFERENCE_OP_ID, body, None)],
     )
 }
 

@@ -16,9 +16,8 @@
 //!
 //! Dims beyond rope_dims: grad_x = grad_out (identity).
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::partial_rope_backward";
 
@@ -134,7 +133,7 @@ pub fn partial_rope_backward(
             BufferDecl::output(grad_in, 3, DataType::F32).with_count(total),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

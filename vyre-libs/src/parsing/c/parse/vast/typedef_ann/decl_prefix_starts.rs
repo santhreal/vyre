@@ -76,7 +76,7 @@ pub fn c11_precompute_vast_decl_prefix_starts(
                 decl_contexts_scratch(out_decl_contexts, 1, n),
             ],
             [1, 1, 1],
-            vec![wrap_anonymous(
+            vec![wrap_anonymous_region(
                 PRECOMPUTE_VAST_DECL_PREFIX_STARTS_OP_ID,
                 vec![Node::if_then(Expr::eq(t, Expr::u32(0)), body)],
             )],
@@ -167,7 +167,7 @@ pub fn c11_precompute_vast_decl_prefix_starts(
             decl_contexts_scratch(out_decl_contexts, 1, n),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             PRECOMPUTE_VAST_DECL_PREFIX_STARTS_OP_ID,
             vec![Node::if_then(Expr::lt(t, num_nodes), body)],
         )],

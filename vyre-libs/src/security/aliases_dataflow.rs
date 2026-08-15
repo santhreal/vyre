@@ -28,7 +28,7 @@
 //! `fixpoint_iterations` config  -  the same path single-direction
 //! flows_to uses.
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{tag_program, trap_program};
 use vyre_foundation::execution_plan::fusion::{fuse_programs, FusionError};
 use vyre_foundation::ir::Program;
 use vyre_foundation::ir::{BufferAccess, DataType};
@@ -171,10 +171,7 @@ pub fn try_aliases_dataflow(
             buffer
         })
         .collect();
-    Ok(crate::region::tag_program(
-        OP_ID,
-        fused.with_rewritten_buffers(buffers),
-    ))
+    Ok(tag_program(OP_ID, fused.with_rewritten_buffers(buffers)))
 }
 
 /// CPU oracle. Mirrors the GPU semantic over a host-side dataflow

@@ -9,7 +9,7 @@
 //! Downstream DMA / `AsyncLoad` is the scheduler's job  -  this op only
 //! tells the scheduler which pages to fetch.
 
-use crate::region::{wrap_anonymous, wrap_child};
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::nn::quest_paging_passes::{
@@ -52,18 +52,18 @@ pub fn quest_paging(
         name: OP_ID.to_string(),
     };
     let body = vec![
-        wrap_child(
+        wrap_child_region(
             QUEST_ZERO_FILL_OP_ID,
             parent.clone(),
             quest_zero_fill_body(io_queue, num_pages),
         ),
-        wrap_child(
+        wrap_child_region(
             QUEST_SCORE_PAGES_OP_ID,
             parent.clone(),
             quest_score_pages_body(query, page_metadata, scores, num_pages, d_head),
         ),
         Node::barrier(),
-        wrap_child(
+        wrap_child_region(
             QUEST_SELECT_TOP_K_OP_ID,
             parent,
             vec![Node::if_then(
@@ -84,7 +84,7 @@ pub fn quest_paging(
                 .with_count(num_pages),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

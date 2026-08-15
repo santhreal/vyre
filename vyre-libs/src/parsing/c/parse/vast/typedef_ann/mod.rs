@@ -3,7 +3,7 @@
 #![allow(missing_docs)] // Internal VAST-builder helpers are documented at the owning module boundary.
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::c::source_bytes::source_haystack_words;
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::build::*;

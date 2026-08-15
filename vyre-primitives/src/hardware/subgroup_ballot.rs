@@ -3,6 +3,7 @@
 //! Maps to the target-native subgroup ballot intrinsic via a concrete
 //! driver emitter arm.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::hardware::{packed_u32_input_with_output, MAP_WORKGROUP};
@@ -23,7 +24,7 @@ pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_ballot";
 /// well defined rather than dependent on the active mask of a divergent branch.
 #[must_use]
 pub fn subgroup_ballot(cond_input: &str, out: &str, n: u32) -> Program {
-    let body = vec![crate::hardware::region::wrap_anonymous(
+    let body = vec![wrap_anonymous_region(
         OP_ID,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),

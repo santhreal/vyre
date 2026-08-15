@@ -1,4 +1,4 @@
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Build a one-input u32 atomic collection pass.
@@ -62,7 +62,7 @@ where
             BufferDecl::storage(counter, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             op_id,
             vec![Node::if_then(Expr::lt(t, count), loop_body)],
         )],

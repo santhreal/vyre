@@ -130,7 +130,7 @@ fn c11_precompute_vast_visible_type_impl(
             BufferDecl::output(out_visible_type, 3, DataType::U32).with_count(rows),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             PRECOMPUTE_VAST_VISIBLE_TYPE_OP_ID,
             vec![Node::if_then(Expr::lt(t, num_nodes), row_body)],
         )],

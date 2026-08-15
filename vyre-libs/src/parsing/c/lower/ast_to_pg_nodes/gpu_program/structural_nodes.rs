@@ -1,4 +1,5 @@
 use super::*;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 /// Lower structural VAST rows (`kind`, `span`, `parent`, `payload`) into
 /// packed Program-Graph rows:
@@ -34,7 +35,7 @@ pub fn c_lower_ast_to_pg_nodes(vast_nodes: &str, num_nodes: Expr, out_pg_nodes: 
             BufferDecl::output(out_pg_nodes, 1, DataType::U32).with_count(out_words),
         ],
         [256, 1, 1],
-        vec![crate::region::wrap_anonymous(
+        vec![wrap_anonymous_region(
             OP_ID,
             vec![Node::if_then(
                 Expr::lt(t.clone(), num_nodes.clone()),

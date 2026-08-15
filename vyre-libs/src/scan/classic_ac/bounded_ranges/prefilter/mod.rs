@@ -12,9 +12,9 @@
 //! fail-closed rejection path stay with their owner in the parent module; this
 //! module calls them and restates neither.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::region::wrap_anonymous;
 use vyre_primitives::matching::CompiledDfa;
 
 use super::super::count_program::{
@@ -252,7 +252,11 @@ pub(in crate::scan) fn gated_ranges_program(
     buffers.push(result);
     buffers.extend(gate.decls());
     buffers.extend(trailing);
-    Program::wrapped(buffers, [128, 1, 1], vec![wrap_anonymous(generator, body)])
+    Program::wrapped(
+        buffers,
+        [128, 1, 1],
+        vec![wrap_anonymous_region(generator, body)],
+    )
 }
 
 /// The match-emitting bounded-ranges scan at one gate width: match counter at

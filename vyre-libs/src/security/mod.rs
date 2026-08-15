@@ -45,7 +45,7 @@ macro_rules! define_bitset_and_security_op {
                 out: &str,
             ) -> Program {
                 let words = bitset_words(node_count);
-                crate::region::tag_program(OP_ID, bitset_and($left, $right, out, words))
+                vyre_foundation::composition::tag_program(OP_ID, bitset_and($left, $right, out, words))
             }
 
             /// CPU oracle for this security bitset-intersection predicate.
@@ -107,7 +107,7 @@ macro_rules! define_bitset_and_not_security_op {
                 out: &str,
             ) -> Program {
                 let words = bitset_words(node_count);
-                crate::region::tag_program(OP_ID, bitset_and_not($left, $right, out, words))
+                vyre_foundation::composition::tag_program(OP_ID, bitset_and_not($left, $right, out, words))
             }
 
             /// CPU oracle for this security bitset-subtraction predicate.

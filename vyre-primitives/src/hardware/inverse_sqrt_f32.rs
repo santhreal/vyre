@@ -2,6 +2,7 @@
 //! Inputs that are non-finite, negative, zero, or subnormal are clamped to
 //! `f32::MIN_POSITIVE` before the reciprocal square root.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::hardware::{pack_f32, MAP_WORKGROUP};
@@ -11,7 +12,7 @@ pub const OP_ID: &str = "vyre-primitives::hardware::inverse_sqrt_f32";
 /// Build a Program that computes finite-domain `out[i] = 1.0 / sqrt(input[i])`.
 #[must_use]
 pub fn inverse_sqrt_f32(input: &str, out: &str, n: u32) -> Program {
-    let body = vec![crate::hardware::region::wrap_anonymous(
+    let body = vec![wrap_anonymous_region(
         OP_ID,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),

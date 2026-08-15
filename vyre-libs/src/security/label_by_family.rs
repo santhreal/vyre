@@ -1,6 +1,7 @@
 //! `label_by_family`  -  Tier-3 shim over
 //! [`vyre_primitives::label::resolve_family`].
 
+use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
 use vyre_primitives::label::resolve_family::resolve_family;
 
@@ -19,7 +20,7 @@ pub fn label_by_family(
         node_count,
         &[("node_tags", node_tags), ("nodeset_out", nodeset_out)],
     );
-    crate::region::tag_program(
+    tag_program(
         OP_ID,
         resolve_family(node_tags, nodeset_out, node_count, family_mask),
     )

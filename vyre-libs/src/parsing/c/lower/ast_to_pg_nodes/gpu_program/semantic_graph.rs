@@ -1,4 +1,5 @@
 use super::*;
+use vyre_foundation::composition::wrap_anonymous_region;
 
 /// Lower C VAST rows into semantic Program-Graph node and edge witnesses.
 ///
@@ -229,7 +230,7 @@ pub(super) fn c_lower_ast_to_pg_semantic_graph_impl(
     Program::wrapped(
         buffers,
         [256, 1, 1],
-        vec![crate::region::wrap_anonymous(
+        vec![wrap_anonymous_region(
             SEMANTIC_OP_ID,
             vec![Node::if_then(
                 Expr::lt(t.clone(), num_nodes.clone()),

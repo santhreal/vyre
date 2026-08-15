@@ -6,9 +6,8 @@
 //! pointer chasing for popcount math over coalesced words.
 
 use core::fmt;
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 
-use crate::region::{wrap_anonymous, wrap_child};
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -129,9 +128,9 @@ pub fn try_rank1_superblocks(
             BufferDecl::output(superblocks, 1, DataType::U32).with_count(out_count),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             RANK_SUPERBLOCKS_OP_ID,
-            vec![wrap_child(
+            vec![wrap_child_region(
                 vyre_primitives::graph::path_reconstruct::OP_ID,
                 GeneratorRef {
                     name: RANK_SUPERBLOCKS_OP_ID.to_string(),
@@ -270,7 +269,7 @@ pub fn try_rank1_query(
             BufferDecl::output(out, 3, DataType::U32).with_count(query_count.max(1)),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(RANK_QUERY_OP_ID, body)],
+        vec![wrap_anonymous_region(RANK_QUERY_OP_ID, body)],
     ))
 }
 

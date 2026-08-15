@@ -1,8 +1,8 @@
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::composition::child_phase;
-use crate::region::wrap_anonymous;
 use emit::{binary_token_body, emit_value_leaf, final_sweep_body, rparen_body};
 use operator::{is_assignment_token, is_value_token, precedence};
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 mod emit;
@@ -234,7 +234,7 @@ fn ast_shunting_yard_program(
                 ),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             OP_ID,
             vec![Node::if_then(
                 Expr::lt(

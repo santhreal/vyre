@@ -15,7 +15,9 @@
 //!   any_hit = bitset_any(hits)                (sink projection, optional)
 //! ```
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{
+    reparent_program_children, tag_program, trap_program, wrap_anonymous_region,
+};
 use vyre_foundation::execution_plan::fusion::fuse_programs;
 use vyre_foundation::ir::DataType;
 use vyre_foundation::ir::Program;
@@ -34,7 +36,6 @@ use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
 
-use crate::region::{reparent_program_children, wrap_anonymous};
 use crate::security::flows_to::{FLOWS_TO_MASK, OP_ID as FLOWS_TO_OP_ID};
 
 /// Iteration ceiling every flow-family op registers.
@@ -200,7 +201,7 @@ pub(crate) fn fuse_security_flow(op_id: &'static str, parts: &[Program], output:
     Program::wrapped(
         fused.buffers().to_vec(),
         fused.workgroup_size(),
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             op_id,
             reparent_program_children(&fused, op_id),
         )],
@@ -239,7 +240,7 @@ pub(crate) fn security_flow_program(options: SecurityFlowOptions<'_>) -> Program
     } else {
         options.op_id
     };
-    let traverse = crate::region::tag_program(
+    let traverse = tag_program(
         walk_owner,
         options
             .predicate

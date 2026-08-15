@@ -1,8 +1,7 @@
 //! Shared fused linear + activation builder.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 pub(super) fn linear_fused_activation<F>(
     op_name: &'static str,
@@ -75,7 +74,7 @@ where
             BufferDecl::output(out, 3, DataType::F32).with_count(out_dim),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(op_id, body)],
+        vec![wrap_anonymous_region(op_id, body)],
     ))
 }
 

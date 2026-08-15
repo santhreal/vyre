@@ -16,6 +16,7 @@
 //! This is visually indistinguishable from full-res blur because
 //! blur already destroys high-frequency detail.
 
+use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
 
 use super::blur::{gaussian_blur_2pass, GaussianBlurStages};
@@ -247,7 +248,7 @@ impl GlassHalfResPipeline {
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
-        || crate::region::tag_program(OP_ID, glass_blur_stage("scene", "output", "scratch", &GlassParams {
+        || tag_program(OP_ID, glass_blur_stage("scene", "output", "scratch", &GlassParams {
             width: 4,
             height: 4,
             blur_radius: 1,

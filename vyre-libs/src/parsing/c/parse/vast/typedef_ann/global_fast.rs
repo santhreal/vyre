@@ -506,7 +506,7 @@ pub fn c11_annotate_global_typedef_names_fast(
             vast_nodes_scratch(out_annotated_vast_nodes, 2, rows),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             ANNOTATE_TYPEDEF_OP_ID,
             vec![Node::if_then(Expr::lt(t, num_nodes), loop_body)],
         )],

@@ -2,9 +2,8 @@
 //!
 //! Category A composition. Each invocation computes one output element.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 /// Build a Program that computes batched matmul.
 ///
@@ -116,7 +115,7 @@ pub fn batch_matmul(
             BufferDecl::output(out, 2, DataType::F32).with_count(out_count),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::batch_matmul", body)],
+        vec![wrap_anonymous_region("vyre-libs::nn::batch_matmul", body)],
     ))
 }
 

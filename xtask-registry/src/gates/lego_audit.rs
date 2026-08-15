@@ -192,7 +192,7 @@ fn violation(text: String) -> Finding {
         Some((problem, fix)) => Finding::new(problem, fix),
         None => Finding::new(
             body,
-            "extract the shared work into a registered primitive and compose it through region::wrap_child",
+            "extract the shared work into a registered primitive and compose it through vyre_foundation::composition::wrap_child_region",
         ),
     }
 }
@@ -741,7 +741,7 @@ fn check_2_depth_of_composition(report: &mut Report, ops: &[OpInfo]) -> usize {
             continue; // Small ops are allowed to be flat.
         }
         if op.children.is_empty() || op.composed_nodes.saturating_mul(4) < total {
-            report.find(violation(format!("  ✗ {} Tier 3 op has own={} composed={} and {} child op(s)  -  registered child composition is below 25%. Wrap sub-bodies in region::wrap_child(<primitive_id>, ...), or explicitly classify an irreducible pure-IR leaf.",
+            report.find(violation(format!("  ✗ {} Tier 3 op has own={} composed={} and {} child op(s)  -  registered child composition is below 25%. Wrap sub-bodies in vyre_foundation::composition::wrap_child_region(<primitive_id>, ...), or explicitly classify an irreducible pure-IR leaf.",
                 op.id, op.own_nodes, op.composed_nodes, op.children.len())));
             flagged += 1;
         }
@@ -925,7 +925,7 @@ fn check_6_composition_chain_coverage(report: &mut Report, ops: &[OpInfo]) -> us
             continue;
         }
         if op.children.is_empty() {
-            report.find(violation(format!("  ⚠ {} has no registered child Regions  -  either mark it a leaf primitive or wrap inlined sub-bodies via region::wrap_child(<child_op_id>, ...).",
+            report.find(violation(format!("  ⚠ {} has no registered child Regions  -  either mark it a leaf primitive or wrap inlined sub-bodies via vyre_foundation::composition::wrap_child_region(<child_op_id>, ...).",
                 op.id)));
             flagged += 1;
         }
@@ -1188,7 +1188,7 @@ fn check_7_trend(report: &mut Report, ops: &[OpInfo]) -> usize {
         report.note(format!("  • previous tag `{tag}` predates composition baselines; comparing against the checked-in bootstrap baseline"));
         (current_baseline, "audits/lego-composition.tsv".to_string())
     } else {
-        report.find(violation(format!("  ✗ previous tag `{tag}` has no composition baseline and no bootstrap baseline is checked in. Fix: run `cargo run -p xtask --bin xtask -- lego-audit --write-baseline` and commit audits/lego-composition.tsv.")));
+        report.find(violation(format!("  ✗ previous tag `{tag}` has no composition baseline and no bootstrap baseline is checked in. Fix: run `./cargo_full run --bin xtask -- lego-audit --write-baseline` and commit audits/lego-composition.tsv.")));
         return 1;
     };
 
@@ -1338,7 +1338,7 @@ fn check_8_composability(report: &mut Report, ops: &[OpInfo]) -> usize {
         let upstream = callers.get(&op.id).copied().unwrap_or(0);
         let downstream = op.children.len();
         if upstream == 0 && downstream == 0 {
-            report.find(violation(format!("  ⚠ {} is an island: {} upstream caller(s), {} child op(s), {} total nodes. Fix: either wire it as a child of a caller, or wrap its body via region::wrap_child(<existing_primitive>, ...).",
+            report.find(violation(format!("  ⚠ {} is an island: {} upstream caller(s), {} child op(s), {} total nodes. Fix: either wire it as a child of a caller, or wrap its body via vyre_foundation::composition::wrap_child_region(<existing_primitive>, ...).",
                 op.id,
                 upstream,
                 downstream,

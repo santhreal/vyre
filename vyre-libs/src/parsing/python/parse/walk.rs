@@ -9,7 +9,7 @@ use super::{load_u32, search_next_token_into};
 use crate::parsing::composition::child_phase;
 use crate::parsing::python::lex::{TOK_DOT, TOK_IDENTIFIER};
 use crate::parsing::python::{INVALID_POS, MAX_DOTTED_SEGMENTS};
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// The `a.b.c` walk shared by every Python extractor that resolves a dotted
@@ -165,7 +165,7 @@ impl TokenPass<'_> {
         Program::wrapped(
             buffers,
             [256, 1, 1],
-            vec![wrap_anonymous(
+            vec![wrap_anonymous_region(
                 self.op_id,
                 vec![child_phase(
                     self.op_id,

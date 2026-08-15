@@ -2,9 +2,9 @@
 //!
 //! Category A composition.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
-use crate::region::wrap_anonymous;
 use vyre_primitives::nn::f32_stability::flush_tiny;
 
 /// Shared SiLU expression with the same tiny-value stabilization used by
@@ -52,7 +52,7 @@ pub fn silu(input: &str, output: &str, n: u32) -> Program {
                 .with_output_byte_range(0..(n as usize).saturating_mul(4)),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::silu", body)],
+        vec![wrap_anonymous_region("vyre-libs::nn::silu", body)],
     )
 }
 

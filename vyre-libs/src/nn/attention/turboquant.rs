@@ -13,7 +13,7 @@
 //! `(packed[flat / 10] >> ((flat % 10) * 3)) & 0x7`, cast value-preserving
 //! to f32.
 
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::nn::attention::turboquant";
@@ -111,7 +111,7 @@ pub fn turboquant_attention(
                     .with_count(d_head),
             ],
             [1, 1, 1],
-            vec![wrap_anonymous(
+            vec![wrap_anonymous_region(
                 OP_ID,
                 vec![Node::if_then(
                     Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
@@ -187,7 +187,7 @@ pub fn turboquant_attention(
             BufferDecl::storage(out, 3, BufferAccess::ReadWrite, DataType::F32).with_count(d_head),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             OP_ID,
             vec![Node::if_then(
                 Expr::lt(t.clone(), Expr::u32(d_head)),

@@ -437,7 +437,7 @@ pub(super) fn c11_annotate_typedef_names_impl(
     Program::wrapped(
         buffers,
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             ANNOTATE_TYPEDEF_OP_ID,
             vec![Node::if_then(Expr::lt(t, num_nodes), loop_body)],
         )],

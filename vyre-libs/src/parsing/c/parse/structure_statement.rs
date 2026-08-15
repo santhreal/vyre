@@ -1,6 +1,6 @@
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::composition::child_phase;
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -659,7 +659,7 @@ pub fn c11_statement_bounds(
             .with_count(c11_statement_bounds_scratch_words(tok_count)),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::c11_statement_bounds",
             vec![
                 Node::if_then(

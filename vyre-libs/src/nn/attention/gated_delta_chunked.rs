@@ -1,12 +1,12 @@
 //! Chunk-size-64 cumulative-decay triangular gated delta-rule prefill.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use super::gated_delta::RecurrentGatedDeltaError;
 use super::gated_delta_layout::{
     self, qk_index, scalar_index, state_index, value_index, GatedDeltaSpec,
 };
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::chunked_gated_delta";
 const CHUNK_SIZE: u32 = 64;
@@ -713,6 +713,6 @@ pub fn chunked_gated_delta(spec: &GatedDeltaSpec<'_>) -> Result<Program, Recurre
     Ok(Program::wrapped(
         buffers,
         [1, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }

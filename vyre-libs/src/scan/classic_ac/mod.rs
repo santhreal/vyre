@@ -11,9 +11,9 @@
 //! built in one BFS pass using dynamic programming on the failure
 //! links.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::region::wrap_anonymous;
 use vyre_primitives::matching::{dfa_compile, CompiledDfa};
 
 /// THE Aho-Corasick walk. Scan-level builders reach it directly rather than
@@ -232,7 +232,10 @@ pub fn classic_ac_program(
                 .with_count(max_matches),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous("vyre-libs::matching::classic_ac", walk_body)],
+        vec![wrap_anonymous_region(
+            "vyre-libs::matching::classic_ac",
+            walk_body,
+        )],
     )
 }
 

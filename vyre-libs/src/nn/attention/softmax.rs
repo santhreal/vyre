@@ -25,9 +25,8 @@ use crate::builder::{
     strided_writeback_child, BuildOptions,
 };
 use crate::nn::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
-use crate::region::wrap;
 use crate::tensor_ref::{TensorRef, TensorRefError};
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_region};
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
@@ -301,7 +300,7 @@ fn softmax_reference_program(
             BufferDecl::output(output, 1, DataType::F32).with_count(n),
         ],
         workgroup,
-        vec![wrap(
+        vec![wrap_region(
             generator,
             vec![
                 Node::let_bind("max_val", Expr::load(input, Expr::u32(0))),

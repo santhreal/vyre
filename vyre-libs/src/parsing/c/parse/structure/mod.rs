@@ -1,5 +1,5 @@
 use crate::parsing::c::lex::tokens::*;
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 mod body_scan;

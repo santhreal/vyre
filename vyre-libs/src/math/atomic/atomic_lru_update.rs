@@ -2,7 +2,7 @@
 //!
 //! Category-B composition over `AtomicOp::Max`.
 
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -28,7 +28,7 @@ pub fn atomic_lru_update_u32(buffer: &str, index: Expr, timestamp: Expr) -> Prog
     Program::wrapped(
         vec![BufferDecl::storage(buffer, 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
         [1, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::math::atomic::lru_update_u32",
             body,
         )],

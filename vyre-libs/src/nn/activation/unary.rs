@@ -1,8 +1,7 @@
 //! Shared F32 unary activation Program builder.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 /// Build `output[i] = op(input[i])` for an F32 activation.
 #[must_use]
@@ -36,7 +35,7 @@ where
                 .with_output_byte_range(0..(n as usize).saturating_mul(4)),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(op_id, body)],
+        vec![wrap_anonymous_region(op_id, body)],
     )
 }
 
@@ -71,7 +70,7 @@ pub(crate) fn typed_binary_activation_program(
             BufferDecl::output(output, 2, dtype).with_count(n),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(op_id, body)],
+        vec![wrap_anonymous_region(op_id, body)],
     )
 }
 

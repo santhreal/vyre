@@ -18,6 +18,7 @@
 //! - The host reference mirrors the GPU heuristics so conformance can
 //!   prove the on-device path without routing production work through it.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 use vyre_primitives::text::byte_histogram_256_child;
 pub use vyre_primitives::text::{
@@ -28,7 +29,6 @@ pub use vyre_primitives::text::{
 #[cfg(test)]
 use crate::buffer_names::fixed_name;
 use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decode_output_buffer};
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::decode::encodex";
 const FAMILY_PREFIX: &str = "decode_encodex";
@@ -75,7 +75,7 @@ pub fn encodex_gpu(input: &str, output: &str, count: u32) -> Program {
             BufferDecl::output(&output, 2, DataType::U32).with_count(1),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

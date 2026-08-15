@@ -4,7 +4,7 @@
 //! Nesterov update. The momentum/update IR body is centralized here so optimizer
 //! variants cannot drift.
 
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::nn::f32_stability::flush_tiny;
 
@@ -54,6 +54,6 @@ pub(crate) fn muon_step_program(
             BufferDecl::output(output, 3, DataType::F32).with_count(n),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(op_id, body)],
+        vec![wrap_anonymous_region(op_id, body)],
     )
 }

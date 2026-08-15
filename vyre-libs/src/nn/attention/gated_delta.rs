@@ -1,10 +1,10 @@
 //! Recurrent gated delta-rule attention with explicit matrix state.
 
 use thiserror::Error;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{DataType, Expr, Node, Program, UnOp};
 
 use super::gated_delta_layout::{self, GatedDeltaSpec};
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::recurrent_gated_delta";
 
@@ -306,6 +306,6 @@ pub fn recurrent_gated_delta(
     Ok(Program::wrapped(
         gated_delta_layout::gated_delta_buffers(spec, &counts),
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }

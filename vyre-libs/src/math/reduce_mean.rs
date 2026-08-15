@@ -3,7 +3,7 @@
 //! Category-A composition with a workgroup-tiled sum reduction.
 
 use crate::builder::strided_accumulate_child;
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
@@ -83,7 +83,7 @@ fn reduce_mean_tiled_program(input: &str, output: &str, n: u32) -> Program {
             BufferDecl::output(output, 1, DataType::F32).with_count(1),
         ],
         [tile, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -113,7 +113,7 @@ fn reduce_mean_reference_program(input: &str, output: &str, n: u32) -> Program {
             BufferDecl::output(output, 1, DataType::F32).with_count(1),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(REFERENCE_OP_ID, body)],
+        vec![wrap_anonymous_region(REFERENCE_OP_ID, body)],
     )
 }
 

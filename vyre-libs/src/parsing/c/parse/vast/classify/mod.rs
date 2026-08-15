@@ -3,7 +3,7 @@
 #![allow(missing_docs)] // Internal VAST-builder helpers are documented at the owning module boundary.
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::composition::child_phase;
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::token_grammar::*;
@@ -189,7 +189,7 @@ fn c11_classify_vast_node_kinds_impl(
     Program::wrapped(
         buffers,
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             CLASSIFY_VAST_OP_ID,
             vec![Node::if_then(
                 Expr::lt(t.clone(), num_nodes),

@@ -4,10 +4,9 @@
 //! matching pipeline appends only the live tuples into a flat u32 buffer:
 //! `(rule_id, file_id, span_start, span_len)`.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::execution_plan::fusion::{fuse_programs_vec, FusionError};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 const EMIT_HIT_OP_ID: &str = "vyre-libs::matching::emit_hit";
 const COMPACT_HITS_OP_ID: &str = "vyre-libs::matching::compact_hits";
@@ -125,7 +124,7 @@ pub fn emit_hit_with_layout(
             BufferDecl::read_write(HIT_BUFFER_OVERFLOW_COUNT, 6, DataType::U32).with_count(1),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(EMIT_HIT_OP_ID, body)],
+        vec![wrap_anonymous_region(EMIT_HIT_OP_ID, body)],
     )
 }
 
@@ -176,7 +175,7 @@ pub fn compact_hits_with_layout(
             BufferDecl::output(HIT_BUFFER_LIVE_LENGTH, 2, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(COMPACT_HITS_OP_ID, body)],
+        vec![wrap_anonymous_region(COMPACT_HITS_OP_ID, body)],
     )
 }
 

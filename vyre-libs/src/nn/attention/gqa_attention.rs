@@ -2,7 +2,7 @@
 //!
 //! Full 3-pass softmax (max, sum, weighted-write) with KV-head broadcasting.
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::nn::attention_passes::{
@@ -12,8 +12,6 @@ use vyre_primitives::nn::attention_passes::{
     ATTENTION_WRITE_PASS_OP_ID,
 };
 use vyre_primitives::nn::attention_stability::positive_denominator;
-
-use crate::region::{wrap_anonymous, wrap_child};
 
 const OP_ID: &str = "vyre-libs::nn::gqa_attention";
 
@@ -78,7 +76,7 @@ pub fn gqa_attention(
             Expr::lt(row_index, Expr::u32(q_rows)),
             vec![
                 Node::let_bind("max_val", Expr::f32(f32::MIN)),
-                wrap_child(
+                wrap_child_region(
                     ATTENTION_MAX_PASS_OP_ID,
                     parent.clone(),
                     attention_max_pass_with_bases(
@@ -92,7 +90,7 @@ pub fn gqa_attention(
                     ),
                 ),
                 Node::let_bind("sum_val", Expr::f32(0.0)),
-                wrap_child(
+                wrap_child_region(
                     ATTENTION_SUM_PASS_OP_ID,
                     parent.clone(),
                     attention_sum_pass_with_bases(
@@ -106,7 +104,7 @@ pub fn gqa_attention(
                     ),
                 ),
                 Node::let_bind("denom", positive_denominator(Expr::var("sum_val"))),
-                wrap_child(
+                wrap_child_region(
                     ATTENTION_WRITE_PASS_OP_ID,
                     parent,
                     attention_write_pass_with_bases(
@@ -136,7 +134,7 @@ pub fn gqa_attention(
             BufferDecl::output(output, 3, DataType::F32).with_count(q_total),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }
 
@@ -275,7 +273,7 @@ pub fn gqa_attention_causal_typed(
             Expr::lt(row, Expr::u32(rows)),
             vec![
                 Node::let_bind("max_val", Expr::f32(f32::MIN)),
-                wrap_child(
+                wrap_child_region(
                     ATTENTION_MAX_PASS_OP_ID,
                     parent.clone(),
                     attention_max_pass_bounded(
@@ -289,7 +287,7 @@ pub fn gqa_attention_causal_typed(
                     ),
                 ),
                 Node::let_bind("sum_val", Expr::f32(0.0)),
-                wrap_child(
+                wrap_child_region(
                     ATTENTION_SUM_PASS_OP_ID,
                     parent.clone(),
                     attention_sum_pass_bounded(
@@ -303,7 +301,7 @@ pub fn gqa_attention_causal_typed(
                     ),
                 ),
                 Node::let_bind("denom", positive_denominator(Expr::var("sum_val"))),
-                wrap_child(
+                wrap_child_region(
                     ATTENTION_WRITE_PASS_OP_ID,
                     parent,
                     attention_write_pass_bounded_typed(
@@ -333,7 +331,10 @@ pub fn gqa_attention_causal_typed(
             BufferDecl::output(output, 3, dtype).with_count(q_total),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::gqa_attention_causal", body)],
+        vec![wrap_anonymous_region(
+            "vyre-libs::nn::gqa_attention_causal",
+            body,
+        )],
     ))
 }
 

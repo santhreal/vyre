@@ -2,10 +2,9 @@
 //!
 //! Category A composition. Fused linear + activation without scratch buffer.
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::region::{wrap_anonymous, wrap_child};
 use vyre_foundation::ir::GeneratorRef;
 
 const OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq";
@@ -80,7 +79,7 @@ pub fn mlp_4x_leaky_sq(
         Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("lane"), Expr::u32(MLP_WORKGROUP)),
-            vec![wrap_child(
+            vec![wrap_child_region(
                 HIDDEN_PROJECTION_OP_ID,
                 parent.clone(),
                 hidden_projection_body(x, w1, b1, model_dim, hidden_dim),
@@ -89,7 +88,7 @@ pub fn mlp_4x_leaky_sq(
         Node::barrier(),
         Node::if_then(
             Expr::lt(Expr::var("lane"), Expr::u32(MLP_WORKGROUP)),
-            vec![wrap_child(
+            vec![wrap_child_region(
                 OUTPUT_PROJECTION_OP_ID,
                 parent,
                 output_projection_body(w2, b2, output, model_dim, hidden_dim),
@@ -111,7 +110,7 @@ pub fn mlp_4x_leaky_sq(
             BufferDecl::workgroup(HIDDEN_SCRATCH, hidden_dim, DataType::F32),
         ],
         [MLP_WORKGROUP, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }
 
@@ -285,7 +284,7 @@ fn hidden_projection_program() -> Program {
             BufferDecl::output(HIDDEN_SCRATCH, 3, DataType::F32).with_count(4),
         ],
         [MLP_WORKGROUP, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             HIDDEN_PROJECTION_OP_ID,
             vec![
                 Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
@@ -308,7 +307,7 @@ fn output_projection_program() -> Program {
             BufferDecl::output("out", 3, DataType::F32).with_count(2),
         ],
         [MLP_WORKGROUP, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             OUTPUT_PROJECTION_OP_ID,
             vec![
                 Node::let_bind("lane", Expr::InvocationId { axis: 0 }),

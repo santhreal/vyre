@@ -3,7 +3,7 @@
 //! Category-A composition that emits a single-invocation loop to compute
 //! the sum and sum-of-squares stably.
 
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::math::welford_sum_of_squares";
@@ -83,7 +83,7 @@ pub fn welford_sum_of_squares(input: &str, sum_out: &str, sum_sq_out: &str, n: u
             BufferDecl::read_write(sum_sq_out, 2, DataType::F32).with_count(1),
         ],
         [1, 1, 1], // Single invocation
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -95,7 +95,7 @@ fn welford_invalid_program(input: &str, sum_out: &str, sum_sq_out: &str) -> Prog
             BufferDecl::read_write(sum_sq_out, 2, DataType::F32).with_count(1),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             OP_ID,
             vec![Node::trap(Expr::u32(0), EMPTY_REDUCTION_FIX)],
         )],

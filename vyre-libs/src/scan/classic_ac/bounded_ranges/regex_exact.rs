@@ -1,7 +1,7 @@
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use super::{ac_output_span_nodes, ac_transition_step_nodes, AcInputBindings};
-use crate::region::wrap_anonymous;
 use crate::scan::builders::{append_match, append_match_subgroup};
 
 /// Build the regex whole-buffer program with exact origin-derived starts.
@@ -83,7 +83,7 @@ pub(in crate::scan) fn regex_exact_ranges_program(
     Program::wrapped(
         buffers,
         [128, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::matching::regex_exact_ranges",
             invocation,
         )],

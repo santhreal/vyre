@@ -3,7 +3,7 @@
 #![allow(missing_docs)] // Internal VAST-builder helpers are documented at the owning module boundary.
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::composition::child_phase;
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::token_grammar::*;
@@ -614,7 +614,7 @@ fn c11_build_expression_shape_nodes_impl(
                 .with_count(n.saturating_mul(C_EXPR_SHAPE_STRIDE_U32)),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             EXPR_SHAPE_OP_ID,
             vec![Node::if_then(
                 Expr::lt(t.clone(), num_nodes),

@@ -1,12 +1,12 @@
 //! GPU base64 decode compositions.
 
+use vyre_foundation::composition::{tag_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 #[cfg(test)]
 use crate::buffer_names::fixed_name;
 use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decoded_output_buffer};
 use crate::decode::scan::linear_aho_scan_body;
-use crate::region::wrap_anonymous;
 #[cfg(test)]
 use vyre_primitives::decode::base64::decode_standard_packed_reference;
 use vyre_primitives::decode::base64::{
@@ -51,7 +51,7 @@ use vyre_primitives::wire::pack_u32_slice as pack_words;
 pub fn base64_decode(input: &str, output: &str, input_len: u32) -> Program {
     let input = scoped_decode_input_buffer(FAMILY_PREFIX, input);
     let output = scoped_decoded_output_buffer(FAMILY_PREFIX, output);
-    crate::region::tag_program(
+    tag_program(
         OP_ID,
         primitive_base64_decode(
             &input,
@@ -129,7 +129,7 @@ pub fn base64_decode_then_aho_corasick(
             BufferDecl::read_write(DECODED_LEN_BUFFER, 6, DataType::U32).with_count(1),
         ],
         BASE64_WORKGROUP_SIZE,
-        vec![wrap_anonymous(FUSED_SCAN_OP_ID, entry)],
+        vec![wrap_anonymous_region(FUSED_SCAN_OP_ID, entry)],
     )
 }
 

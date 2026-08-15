@@ -9,9 +9,8 @@
 //!
 //! Simplified: computes grad_x by chaining transposes.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::mlp_backward";
 
@@ -147,7 +146,7 @@ pub fn mlp_backward(
             BufferDecl::output(grad_x, 5, DataType::F32).with_count(model_dim),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

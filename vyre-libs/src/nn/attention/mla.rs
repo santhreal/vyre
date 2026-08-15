@@ -15,12 +15,12 @@
 //!
 //! Category A composition.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use super::tiled_online_softmax::{
     scratch_index, tiled_online_softmax_body, TiledOnlineSoftmaxSpec,
 };
-use crate::region::wrap_anonymous;
 use vyre_primitives::nn::attention_stability::{bounded_exp_arg, bounded_score};
 
 /// Buffer names and shape for one [`mla_decode`] build.
@@ -367,7 +367,7 @@ fn mla_decode_impl(spec: &MlaDecodeSpec<'_>) -> Result<Program, String> {
             BufferDecl::output(out, 5, DataType::F32).with_count(num_heads * head_dim),
         ],
         [WORKGROUP_LANES, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::mla_decode", body)],
+        vec![wrap_anonymous_region("vyre-libs::nn::mla_decode", body)],
     ))
 }
 
@@ -436,7 +436,10 @@ pub fn mla_compress_kv(
             BufferDecl::output(c_out, 2, DataType::F32).with_count(kv_lora_rank),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::mla_compress_kv", body)],
+        vec![wrap_anonymous_region(
+            "vyre-libs::nn::mla_compress_kv",
+            body,
+        )],
     ))
 }
 

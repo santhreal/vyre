@@ -26,9 +26,8 @@
 //! plumbing for the base case and keeps the IR straight-line for
 //! const-fold + CSE to compress.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::math::fft::fft4_complex";
 
@@ -138,7 +137,7 @@ pub fn fft4_complex(input: &str, output: &str) -> Program {
             BufferDecl::output(output, 1, DataType::F32).with_count(8),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

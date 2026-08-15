@@ -1,9 +1,8 @@
 //! Explicit immutable-prior to next-generation KV cache updates.
 
 use thiserror::Error;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::kv_cache_append";
 
@@ -160,6 +159,6 @@ pub fn kv_cache_append_typed(
             BufferDecl::output(next, 2, dtype).with_count(cache_count),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }

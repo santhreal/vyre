@@ -2,9 +2,8 @@
 //!
 //! `grad_gate = grad_out * σ(g) * (1-σ(g)) * (branch - skip)`
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::skip_gate_backward";
 
@@ -66,7 +65,7 @@ pub fn skip_gate_backward(
             BufferDecl::output(grad_gate, 4, DataType::F32).with_count(n),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

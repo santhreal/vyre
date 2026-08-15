@@ -43,7 +43,7 @@ impl Gate for AbstractionGate {
 
             if !within_budget(&state) {
                 failures.insert(format!(
-                    "ABSTRACTION-BUDGET: `{}` has loops={} nodes={} registered-composed={:.1}%. Fix: extract reusable phases into registered Tier 2.5 primitives and wrap them with `region::wrap_child`.",
+                    "ABSTRACTION-BUDGET: `{}` has loops={} nodes={} registered-composed={:.1}%. Fix: extract reusable phases into registered Tier 2.5 primitives and wrap them with `vyre_foundation::composition::wrap_child_region`.",
                     op.id,
                     state.loops,
                     state.total_nodes,

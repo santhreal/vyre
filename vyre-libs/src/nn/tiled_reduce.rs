@@ -16,9 +16,8 @@
 //! consumer reach across a sibling dialect for it. `nn::rms` sits here for the
 //! same reason.
 
+use vyre_foundation::composition::wrap_region;
 use vyre_foundation::ir::{BufferDecl, Expr, Node, Program};
-
-use crate::region::wrap;
 
 /// One reduction pass over the input.
 pub(crate) struct ReducePhase {
@@ -74,5 +73,5 @@ pub(crate) fn tiled_reduce_program(spec: TiledReduceProgram) -> Program {
         }
     }
     body.push(writeback);
-    Program::wrapped(buffers, workgroup, vec![wrap(generator, body, None)])
+    Program::wrapped(buffers, workgroup, vec![wrap_region(generator, body, None)])
 }

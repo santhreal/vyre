@@ -1,9 +1,8 @@
 //! Floating depthwise causal convolution for sequence models.
 
 use thiserror::Error;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::depthwise_causal_conv1d";
 
@@ -209,7 +208,7 @@ pub fn depthwise_causal_conv1d(
     Ok(Program::wrapped(
         buffers,
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }
 
@@ -480,7 +479,7 @@ pub fn depthwise_causal_conv1d_update(
     Ok(Program::wrapped(
         buffers,
         [64, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::nn::depthwise_causal_conv1d_update",
             body,
         )],

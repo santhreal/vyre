@@ -3,9 +3,8 @@
 //! Forward: `out = x + attn_out + mlp_out`
 //! Backward: `grad_x = grad_attn = grad_mlp = grad_out` (addition broadcast).
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::residual_block_backward";
 
@@ -56,7 +55,7 @@ pub fn residual_block_backward(
             BufferDecl::storage(grad_mlp, 3, BufferAccess::ReadWrite, DataType::F32).with_count(n),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

@@ -17,6 +17,7 @@
 //! this). Every Cat-A op exposes its builder as `<Op>Builder::new(...)`
 //! and delegates defaults through `BuildOptions::default()`.
 
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
@@ -264,13 +265,9 @@ where
     Program::wrapped(
         buffers,
         workgroup_size,
-        vec![crate::region::wrap_anonymous(
+        vec![wrap_anonymous_region(
             op_id,
-            vec![crate::region::wrap_child(
-                INDEXED_MAP_OP_ID,
-                parent,
-                child_body,
-            )],
+            vec![wrap_child_region(INDEXED_MAP_OP_ID, parent, child_body)],
         )],
     )
 }
@@ -407,7 +404,7 @@ fn strided_loop(tile: u32, chunks: u32, n: u32, guarded_body: Vec<Node>) -> Node
 }
 
 fn child_region(parent_op_id: &'static str, child_op_id: &'static str, body: Vec<Node>) -> Node {
-    crate::region::wrap_child(
+    wrap_child_region(
         child_op_id,
         GeneratorRef {
             name: parent_op_id.to_string(),
@@ -523,7 +520,7 @@ where
             .with_count(n),
         ],
         group,
-        vec![crate::region::wrap_anonymous(op_id, body)],
+        vec![wrap_anonymous_region(op_id, body)],
     ))
 }
 
@@ -601,7 +598,7 @@ where
             .with_count(n),
         ],
         group,
-        vec![crate::region::wrap_anonymous(op_id, body)],
+        vec![wrap_anonymous_region(op_id, body)],
     ))
 }
 
@@ -691,7 +688,7 @@ mod tests {
         let program = Program::wrapped(
             vec![BufferDecl::output("out", 0, DataType::F32).with_count(4)],
             [4, 1, 1],
-            vec![crate::region::wrap_anonymous(
+            vec![wrap_anonymous_region(
                 "vyre-libs::test::row_reduction_user",
                 vec![
                     Node::let_bind("local", Expr::LocalId { axis: 0 }),

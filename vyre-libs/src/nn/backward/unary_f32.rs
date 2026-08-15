@@ -1,8 +1,7 @@
 //! Shared F32 unary backward kernel builder.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 pub(super) fn unary_f32_backward_program<F>(
     op_id: &'static str,
@@ -38,7 +37,7 @@ where
             BufferDecl::output(grad_in, 2, DataType::F32).with_count(n),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(op_id, body)],
+        vec![wrap_anonymous_region(op_id, body)],
     )
 }
 

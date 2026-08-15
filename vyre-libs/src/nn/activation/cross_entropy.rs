@@ -3,11 +3,10 @@
 //! Category A composition. One workgroup owns one token row and cooperatively
 //! reduces the vocabulary dimension with log-sum-exp stabilization.
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
-use crate::region::wrap_anonymous;
 use crate::tensor_ref::TensorRefError;
 
 const OP_ID: &str = "vyre-libs::nn::cross_entropy";
@@ -88,7 +87,7 @@ pub fn try_cross_entropy(
                 .with_output_byte_range(0..((n as usize) * core::mem::size_of::<f32>())),
         ],
         [CROSS_ENTROPY_TILE, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }
 

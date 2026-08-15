@@ -1,6 +1,6 @@
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::composition::child_phase;
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// LEGO Block 3: Declaration-local type-specifier propagation.
@@ -171,7 +171,7 @@ pub fn opt_propagate_type_specifiers(
             BufferDecl::output(node_out, 2, DataType::U32).with_count(tok_count),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::opt_propagate_type_specifiers",
             vec![child_phase(
                 "vyre-libs::parsing::opt_propagate_type_specifiers",

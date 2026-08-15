@@ -1,6 +1,6 @@
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
-use crate::region::wrap_anonymous;
 use vyre_primitives::matching::CompiledDfa;
 
 use super::count_scan_nodes;
@@ -58,7 +58,7 @@ fn classic_ac_bounded_count_suffix2_prefilter_program(
     Program::wrapped(
         buffers,
         [128, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::matching::classic_ac_bounded_count_suffix2_prefilter",
             body,
         )],

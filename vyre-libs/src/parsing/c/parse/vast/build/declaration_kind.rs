@@ -76,7 +76,7 @@ fn decl_kind_phase_program(op_id: &str, packed_haystack: bool) -> Program {
     Program::wrapped(
         buffers,
         [256, 1, 1],
-        vec![wrap_anonymous(op_id, vec![implementation])],
+        vec![wrap_anonymous_region(op_id, vec![implementation])],
     )
     .with_entry_op_id(op_id)
 }

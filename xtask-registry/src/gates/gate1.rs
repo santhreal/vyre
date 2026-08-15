@@ -111,11 +111,11 @@ impl Gate for Gate1 {
                 continue;
             }
             let fix = if verdict.inline_hot_spots.is_empty() {
-                "factor the inline work into a registered primitive call through region::wrap_child"
+                "factor the inline work into a registered primitive call through vyre_foundation::composition::wrap_child_region"
                     .to_string()
             } else {
                 format!(
-                    "extract each inline hot spot into a vyre-primitives operation and call it through region::wrap_child: {}",
+                    "extract each inline hot spot into a vyre-primitives operation and call it through vyre_foundation::composition::wrap_child_region: {}",
                     verdict.inline_hot_spots.join(", ")
                 )
             };

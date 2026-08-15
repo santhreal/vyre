@@ -4,6 +4,7 @@
 //! weights stay packed through the inner product. This avoids the extra global
 //! memory traffic of materializing an unpacked i32 lane buffer before a dot.
 
+use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
 use vyre_primitives::math::quantized::i4x8_batched_matmul_f32_scaled as primitive_i4x8_batched_matmul_f32_scaled;
 use vyre_primitives::math::quantized::i4x8_batched_matmul_top1_f32_scaled as primitive_i4x8_batched_matmul_top1_f32_scaled;
@@ -81,7 +82,7 @@ pub fn int4_batched_matmul_top1_scaled_extension_id() -> vyre_spec::extension::E
 /// Build a packed signed INT4 dot-product Program.
 #[must_use]
 pub fn int4_dot_i32(lhs_packed: &str, rhs_packed: &str, out: &str, lane_count: u32) -> Program {
-    crate::region::tag_program(
+    tag_program(
         DOT_OP_ID,
         primitive_i4x8_dot_i32(lhs_packed, rhs_packed, out, lane_count),
     )
@@ -97,7 +98,7 @@ pub fn int4_dot_f32_scaled(
     out: &str,
     lane_count: u32,
 ) -> Program {
-    crate::region::tag_program(
+    tag_program(
         DOT_SCALED_OP_ID,
         primitive_i4x8_dot_f32_scaled(
             lhs_packed, rhs_packed, lhs_scale, rhs_scale, out, lane_count,
@@ -115,7 +116,7 @@ pub fn int4_matvec_f32_scaled(
     rows: u32,
     cols: u32,
 ) -> Program {
-    crate::region::tag_program(
+    tag_program(
         MATVEC_SCALED_OP_ID,
         primitive_i4x8_matvec_f32_scaled(weights_packed, x, row_scales, out, rows, cols),
     )
@@ -132,7 +133,7 @@ pub fn int4_batched_matvec_f32_scaled(
     rows: u32,
     cols: u32,
 ) -> Program {
-    crate::region::tag_program(
+    tag_program(
         BATCHED_MATVEC_SCALED_OP_ID,
         primitive_i4x8_batched_matvec_f32_scaled(
             weights_packed,
@@ -158,7 +159,7 @@ pub fn int4_batched_matmul_f32_scaled(
     rows: u32,
     cols: u32,
 ) -> Program {
-    crate::region::tag_program(
+    tag_program(
         BATCHED_MATMUL_SCALED_OP_ID,
         primitive_i4x8_batched_matmul_f32_scaled(
             weights_packed,
@@ -185,7 +186,7 @@ pub fn int4_batched_matmul_top1_f32_scaled(
     rows: u32,
     cols: u32,
 ) -> Program {
-    crate::region::tag_program(
+    tag_program(
         BATCHED_MATMUL_TOP1_SCALED_OP_ID,
         primitive_i4x8_batched_matmul_top1_f32_scaled(
             weights_packed,

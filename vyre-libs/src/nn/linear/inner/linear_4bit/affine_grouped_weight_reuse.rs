@@ -1,6 +1,7 @@
 //! Grouped INT4 lowering that stages the packed weight column into a
 //! workgroup tile and reuses it across the batch rows a workgroup owns.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use super::grouped_layout::{
@@ -9,7 +10,6 @@ use super::grouped_layout::{
     AFFINE_GROUPED_LANES_PER_OUTPUT, AFFINE_GROUPED_OP_ID, AFFINE_GROUPED_WARPS_PER_WORKGROUP,
     AFFINE_GROUPED_WEIGHT_TILE, AFFINE_GROUPED_WORKGROUP_SIZE,
 };
-use crate::region::wrap_anonymous;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn linear_4bit_affine_grouped_weight_reuse(
@@ -177,7 +177,7 @@ pub(super) fn linear_4bit_affine_grouped_weight_reuse(
     Ok(Program::wrapped(
         buffers,
         AFFINE_GROUPED_WORKGROUP_SIZE,
-        vec![wrap_anonymous(AFFINE_GROUPED_OP_ID, body)],
+        vec![wrap_anonymous_region(AFFINE_GROUPED_OP_ID, body)],
     ))
 }
 

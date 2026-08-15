@@ -4,7 +4,7 @@
 //! identity on the region it hands out: `print-composition`, `gate1`, and the
 //! duplicate-family report all key on the entry region's `generator`, and an op
 //! that returns a bare body instead is invisible to every one of them. A
-//! builder that forgets `region::tag_program` still compiles, still lowers, and
+//! builder that forgets `vyre_foundation::composition::tag_program` still compiles, still lowers, and
 //! still passes its own fixture, so nothing else fails.
 //!
 //! # Why the member list is read from the registry
@@ -91,7 +91,7 @@ fn every_library_operation_stamps_its_own_id_on_its_entry_region() {
     assert!(
         offenders.is_empty(),
         "composition provenance lost: a library operation does not name itself on its entry \
-         region.\n{}\nFix: return `region::tag_program(OP_ID, program)` from the builder, or \
+         region.\n{}\nFix: return `vyre_foundation::composition::tag_program(OP_ID, program)` from the builder, or \
          record the reason in FOREIGN_ENTRY_REGION_OP_IDS.",
         offenders.join("\n")
     );

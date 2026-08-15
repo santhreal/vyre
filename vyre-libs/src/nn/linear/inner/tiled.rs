@@ -1,10 +1,9 @@
 //! Tiled linear-layer constructors (`linear_tiled`, `linear_tiled_reference`).
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{tag_program, trap_program, wrap_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::math::linalg::MatmulBiasTiled;
-use crate::region::{tag_program, wrap};
 use crate::tensor_ref::TensorRef;
 
 use super::builder::linear;
@@ -144,7 +143,7 @@ pub fn linear_tiled_reference(
             BufferDecl::output(out, 3, DataType::U32).with_count(out_dim),
         ],
         [256, 1, 1],
-        vec![wrap(LINEAR_TILED_REFERENCE_OP_ID, body, None)],
+        vec![wrap_region(LINEAR_TILED_REFERENCE_OP_ID, body, None)],
     ))
 }
 

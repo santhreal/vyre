@@ -598,7 +598,7 @@ pub(super) fn c11_lexer_regular_sparse_impl(spec: &SparseLexerSpec<'_>) -> Progr
     Program::wrapped(
         buffers,
         [workgroup_lanes, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::c_lexer_regular_sparse",
             region_body,
         )],

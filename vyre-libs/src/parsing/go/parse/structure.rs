@@ -2,7 +2,7 @@ use crate::parsing::go::lex::{TOK_LBRACE, TOK_LPAREN, TOK_RBRACE, TOK_RPAREN, TO
 use crate::parsing::go::parse::token_predicates::{
     token_is_ident, token_is_keyword, token_len, token_start, token_type_eq,
 };
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Words per emitted Go declaration record.
@@ -277,7 +277,7 @@ pub fn go_extract_packages_and_imports(
                 .with_count(1),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::go_extract_packages_and_imports",
             vec![Node::if_then(Expr::lt(t, num_tokens), body)],
         )],
@@ -417,7 +417,7 @@ pub fn go_extract_declarations(
                 .with_count(1),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::go_extract_declarations",
             vec![Node::if_then(Expr::lt(t, num_tokens), body)],
         )],

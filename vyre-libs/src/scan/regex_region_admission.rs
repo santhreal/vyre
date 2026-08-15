@@ -27,11 +27,11 @@
 //! [`AnchoredWindowValidator`] extractions to regions, one source of truth for
 //! the walk semantics.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use vyre_primitives::matching::CompiledDfa;
 
-use crate::region::wrap_anonymous;
 use crate::scan::classic_ac::bounded_ranges::{
     ac_output_span_nodes, ac_transition_step_nodes, classic_ac_dfa_buffer_decls,
     output_record_loop_node, presence_bit_write_node, region_search_prologue_nodes,
@@ -255,7 +255,7 @@ pub fn regex_admission_by_region_program(
     Program::wrapped(
         buffers,
         [128, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::matching::regex_admission_by_region",
             walk_body,
         )],

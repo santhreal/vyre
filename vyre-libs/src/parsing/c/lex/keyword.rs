@@ -1,6 +1,6 @@
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::c::source_bytes::{load_source_byte, source_haystack_words};
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 pub use vyre_primitives::hash::fnv1a::fnv1a32;
 
@@ -352,7 +352,7 @@ fn c_keyword_impl(
                 .with_count(num_keywords.saturating_mul(2)),
         ],
         [256, 1, 1], // Launch configuration
-        vec![wrap_anonymous(entry_op_id, body)],
+        vec![wrap_anonymous_region(entry_op_id, body)],
     )
     .with_entry_op_id(entry_op_id)
     .with_non_composable_with_self(true)

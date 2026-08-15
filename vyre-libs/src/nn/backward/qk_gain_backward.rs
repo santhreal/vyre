@@ -1,8 +1,7 @@
 //! Backward for `qk_gain`: `grad_q = grad_out * gain[h]`.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::qk_gain_backward";
 
@@ -48,7 +47,7 @@ pub fn qk_gain_backward(
             BufferDecl::output(grad_q, 2, DataType::F32).with_count(total),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

@@ -1,4 +1,4 @@
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Go lexer token ids. `vyre_spec::go_token` owns the numbering; the ids are
@@ -293,7 +293,7 @@ pub fn go_lexer(
                 .with_count(haystack_len),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::go_lexer",
             vec![Node::if_then(Expr::lt(t, Expr::u32(haystack_len)), body)],
         )],
@@ -361,7 +361,7 @@ pub fn go_quote_flags(haystack: &str, out_quote_flags: &str, haystack_len: u32) 
                 .with_count(haystack_len),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::go_quote_flags",
             vec![Node::if_then(
                 Expr::lt(t.clone(), Expr::u32(haystack_len)),
@@ -489,7 +489,7 @@ pub fn go_compact_tokens(
                 .with_count(1),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::go_compact_tokens",
             vec![Node::if_then(Expr::lt(t, Expr::u32(haystack_len)), body)],
         )],

@@ -420,7 +420,6 @@ pub mod vyre_libs::parsing::parallel_parse
 pub mod vyre_libs::parsing::source_cache
 pub mod vyre_libs::parsing::vast
 pub mod vyre_libs::range_ordering
-pub mod vyre_libs::region
 pub mod vyre_libs::representation
 pub mod vyre_libs::scan
 pub mod vyre_libs::scan::builders
@@ -458,11 +457,6 @@ pub use vyre_libs::decode::hex_decode_table_ref
 pub use vyre_libs::decode::ziftsieve_reference_extract_literals
 pub use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes
 pub use vyre_libs::graph::VastWalkOrder
-pub use vyre_libs::operation_catalog::reparent_program_children
-pub use vyre_libs::operation_catalog::tag_program
-pub use vyre_libs::operation_catalog::wrap
-pub use vyre_libs::operation_catalog::wrap_anonymous
-pub use vyre_libs::operation_catalog::wrap_child
 pub use vyre_libs::parsing::lr_tables::TOK_EOF
 pub use vyre_libs::parsing::lr_tables::TOK_ID
 pub use vyre_libs::parsing::lr_tables::TOK_LPAREN
@@ -484,11 +478,6 @@ pub use vyre_libs::parsing::vast::pack_spine_vast
 pub use vyre_libs::parsing::vast::validate_vast
 pub use vyre_libs::parsing::vast::walk_postorder_indices
 pub use vyre_libs::parsing::vast::walk_preorder_indices
-pub use vyre_libs::region::reparent_program_children
-pub use vyre_libs::region::tag_program
-pub use vyre_libs::region::wrap
-pub use vyre_libs::region::wrap_anonymous
-pub use vyre_libs::region::wrap_child
 pub use vyre_libs::scan::FusionError
 pub use vyre_libs::scan::RegionTriple
 pub use vyre_libs::scan::dedup_regions_flag_program

@@ -2,6 +2,7 @@
 
 use crate::rule::ast::{RuleCondition, RuleFormula};
 use std::sync::LazyLock;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 /// `WORKGROUP_SIZE` constant.
 pub const WORKGROUP_SIZE: [u32; 3] = [64, 1, 1];
@@ -64,7 +65,7 @@ pub fn build_rule_program(rules: &[(RuleFormula, u32)]) -> Result<Program, RuleB
     Ok(Program::wrapped(
         rule_buffers(),
         WORKGROUP_SIZE,
-        vec![crate::region::wrap_anonymous(RULE_SET_OP_ID, nodes)],
+        vec![wrap_anonymous_region(RULE_SET_OP_ID, nodes)],
     ))
 }
 

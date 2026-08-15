@@ -2,7 +2,7 @@
 //!
 //! Category-A compositions over `UnOp::Unpack*` primitives.
 
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Unpack 4-bit values from a u32 buffer into f32.
@@ -34,7 +34,7 @@ pub fn unpack_4bit_f32(input: &str, output: &str, n: u32) -> Program {
             BufferDecl::output(output, 1, DataType::F32).with_count(n),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::representation::unpack_4bit_f32",
             body,
         )],

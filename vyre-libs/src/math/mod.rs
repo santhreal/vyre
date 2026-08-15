@@ -11,6 +11,8 @@
 //! - `succinct`  -  rank/select bitvector metadata
 //!
 
+use vyre_foundation::composition::wrap_anonymous_region;
+
 #[cfg(feature = "math-linalg")]
 pub mod linalg;
 
@@ -70,7 +72,7 @@ fn invalid_f32_reduction_program(
             BufferDecl::output(output, 1, DataType::F32).with_count(1),
         ],
         [1, 1, 1],
-        vec![crate::region::wrap_anonymous(
+        vec![wrap_anonymous_region(
             op_id,
             vec![Node::trap(Expr::u32(0), fix)],
         )],

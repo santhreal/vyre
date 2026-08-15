@@ -7,8 +7,6 @@
 
 use vyre_foundation::operation::{OperationRegistry, OperationTier, SemanticOperation};
 
-pub use crate::region::{reparent_program_children, tag_program, wrap, wrap_anonymous, wrap_child};
-
 /// Iterate over canonical library composition registrations.
 pub fn all_entries() -> impl Iterator<Item = SemanticOperation> {
     OperationRegistry::global()

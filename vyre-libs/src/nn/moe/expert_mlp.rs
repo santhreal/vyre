@@ -5,9 +5,8 @@
 //! kept in the same dispatch body so the hidden activation does not need to
 //! materialize to a global intermediate buffer.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-
-use crate::region::wrap_anonymous;
 
 /// Build a Program that computes one expert MLP forward pass.
 ///
@@ -146,7 +145,10 @@ pub fn expert_mlp(
             BufferDecl::output(out, 7, DataType::F32).with_count(out_dim),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::moe::expert_mlp", body)],
+        vec![wrap_anonymous_region(
+            "vyre-libs::nn::moe::expert_mlp",
+            body,
+        )],
     ))
 }
 

@@ -6,9 +6,8 @@
 //! Every op here is a pure Category A composition over foundation IR primitives.
 
 use crate::builder::{build_elementwise_unary, BuildOptions};
-use crate::region::wrap_anonymous;
 use crate::tensor_ref::{check_dtype, check_shape, check_unique_names, TensorRef, TensorRefError};
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const JOIN_OP_ID: &str = "vyre-libs::math::algebra::join";
@@ -223,7 +222,7 @@ pub fn try_bool_semiring_matmul(
                 BufferDecl::output(out, 2, DataType::U32).with_count(out_count.max(1)),
             ],
             [1, 1, 1],
-            vec![wrap_anonymous(
+            vec![wrap_anonymous_region(
                 BOOL_MATMUL_OP_ID,
                 vec![Node::if_then(
                     Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
@@ -294,7 +293,7 @@ pub fn try_bool_semiring_matmul(
             BufferDecl::output(out, 2, DataType::U32).with_count(out_count.max(1)),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(BOOL_MATMUL_OP_ID, body)],
+        vec![wrap_anonymous_region(BOOL_MATMUL_OP_ID, body)],
     ))
 }
 

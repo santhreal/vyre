@@ -1,9 +1,9 @@
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::builder::{
     build_indexed_map, strided_accumulate_child, INDEXED_MAP_OP_ID, STRIDED_ACCUMULATE_OP_ID,
 };
-use crate::region::wrap_anonymous;
 
 fn u32s(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
@@ -54,7 +54,7 @@ fn strided_accumulate_program() -> Program {
             BufferDecl::output("out", 1, DataType::U32).with_count(1),
         ],
         [tile, 1, 1],
-        vec![wrap_anonymous(STRIDED_ACCUMULATE_OP_ID, body)],
+        vec![wrap_anonymous_region(STRIDED_ACCUMULATE_OP_ID, body)],
     )
 }
 

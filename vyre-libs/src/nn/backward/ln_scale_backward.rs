@@ -4,9 +4,8 @@
 //! Backward: `grad_x[i] = grad_out[i] * scale[i]`
 //!           `grad_scale[i] = grad_out[i] * x[i]`
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::ln_scale_backward";
 
@@ -56,7 +55,7 @@ pub fn ln_scale_backward(
                 .with_count(n),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

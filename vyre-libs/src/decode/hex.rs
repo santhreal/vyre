@@ -1,5 +1,6 @@
 //! GPU hex decode composition.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 #[cfg(test)]
 use vyre_primitives::decode::hex::hex_decode_reference_packed;
@@ -13,7 +14,6 @@ pub use vyre_primitives::decode::hex::{hex_decode_table, hex_decode_table_ref};
 use crate::buffer_names::fixed_name;
 use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decoded_output_buffer};
 use crate::decode::scan::tiled_decode_aho_scan_body;
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::decode::hex";
 const FUSED_SCAN_OP_ID: &str = "vyre-libs::decode::hex_then_aho_corasick";
@@ -58,7 +58,7 @@ pub fn hex_decode(input: &str, output: &str, input_len: u32) -> Program {
             .with_count(HEX_DECODE_TABLE_WORDS),
         ],
         HEX_WORKGROUP_SIZE,
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -121,7 +121,7 @@ pub fn hex_decode_then_aho_corasick(
             .with_count(HEX_DECODE_TABLE_WORDS),
         ],
         HEX_WORKGROUP_SIZE,
-        vec![wrap_anonymous(FUSED_SCAN_OP_ID, body)],
+        vec![wrap_anonymous_region(FUSED_SCAN_OP_ID, body)],
     )
 }
 

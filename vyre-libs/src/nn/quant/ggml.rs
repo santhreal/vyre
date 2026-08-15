@@ -6,9 +6,8 @@
 //!
 //! Category A composition.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 // ---------------------------------------------------------------------------
 // Q4_K: "type-1" 4-bit quantization
@@ -116,7 +115,7 @@ fn k_quant_unpack(
             BufferDecl::output(output, 3, DataType::F32).with_count(n),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(spec.unpack_op_id, body)],
+        vec![wrap_anonymous_region(spec.unpack_op_id, body)],
     ))
 }
 
@@ -326,7 +325,7 @@ fn k_quant_linear(
             BufferDecl::output(out, 5, DataType::F32).with_count(out_dim),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(spec.op_id, body)],
+        vec![wrap_anonymous_region(spec.op_id, body)],
     ))
 }
 

@@ -11,9 +11,8 @@
 //!
 //! Category A composition.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 /// Build a Program that computes a single-token MoE layer forward pass.
 ///
@@ -116,7 +115,10 @@ pub fn moe_layer_route_and_accumulate(
             BufferDecl::output(out, 6, DataType::F32).with_count(out_dim),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::moe_layer_accumulate", body)],
+        vec![wrap_anonymous_region(
+            "vyre-libs::nn::moe_layer_accumulate",
+            body,
+        )],
     ))
 }
 

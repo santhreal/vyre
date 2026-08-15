@@ -14,6 +14,7 @@
 //! op is admitted here only when it needs its own emitter arm and its own
 //! reference-interpreter arm.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::operation::{OperationRegistry, SemanticOperation};
 
@@ -220,13 +221,12 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
     };
 }
 
-/// Canonical Category C catalog: signatures, conformance geometry, registry view.
-pub mod catalog;
-/// Region-chain wrap helper every Category C builder applies to its body.
-pub mod region;
+/// Region-chain wrapping helper every Category C builder applies to its body.
 
 /// `bit_reverse_u32`  -  reverses every bit in each u32 lane via hardware `reverseBits`.
 pub mod bit_reverse_u32;
+/// Canonical Category C catalog: signatures, conformance geometry, registry view.
+pub mod catalog;
 /// `fma_f32`  -  IEEE-754 fused multiply-add (byte-identical to `f32::mul_add`).
 pub mod fma_f32;
 /// `inverse_sqrt_f32`  -  hardware `inverseSqrt()` approximation.
@@ -267,7 +267,7 @@ pub(crate) fn unary_u32_program<F>(
 where
     F: Fn(Expr) -> Expr,
 {
-    let body = vec![crate::hardware::region::wrap_anonymous(
+    let body = vec![wrap_anonymous_region(
         op_id,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
@@ -297,7 +297,7 @@ pub(crate) fn barrier_identity_u32_program(
     out: &str,
     n: u32,
 ) -> Program {
-    let body = vec![crate::hardware::region::wrap_anonymous(
+    let body = vec![wrap_anonymous_region(
         op_id,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
@@ -330,7 +330,7 @@ pub(crate) fn ternary_f32_program(
     out: &str,
     n: u32,
 ) -> Program {
-    let body = vec![crate::hardware::region::wrap_anonymous(
+    let body = vec![wrap_anonymous_region(
         op_id,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),

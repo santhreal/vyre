@@ -1,8 +1,8 @@
+use vyre_foundation::composition::{wrap_child_region, wrap_region};
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 use vyre_primitives::math::semiring_gemm::OP_ID as SEMIRING_GEMM_OP_ID;
 
-use crate::region::{wrap, wrap_child};
 use crate::tensor_ref::TensorRefError;
 
 use super::body::cooperative_matmul_body;
@@ -160,7 +160,7 @@ pub(super) fn build_matmul_tiled_program(
             name: out.to_string(),
             shape: vec![m, n],
         })?;
-    let body = vec![wrap_child(
+    let body = vec![wrap_child_region(
         SEMIRING_GEMM_OP_ID,
         GeneratorRef {
             name: generator.to_string(),
@@ -199,7 +199,7 @@ pub(super) fn build_matmul_tiled_program(
     Ok(Program::wrapped(
         buffers,
         dispatch_wg,
-        vec![wrap(generator, body, None)],
+        vec![wrap_region(generator, body, None)],
     ))
 }
 

@@ -12,6 +12,7 @@
 //! that matches `wrapping_{add,and,or,xor}`, `min`, `max`, `exchange`,
 //! or `compare_exchange` semantics under single-lane contention.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -221,7 +222,7 @@ pub(crate) fn build_atomic_serial(
     trace: &str,
     n: u32,
 ) -> Program {
-    let body = vec![crate::region::wrap_anonymous(
+    let body = vec![wrap_anonymous_region(
         op_id,
         vec![Node::if_then(
             Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
@@ -267,7 +268,7 @@ pub(crate) fn build_atomic_compare_exchange(
     trace: &str,
     n: u32,
 ) -> Program {
-    let body = vec![crate::region::wrap_anonymous(
+    let body = vec![wrap_anonymous_region(
         op_id,
         vec![Node::if_then(
             Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),

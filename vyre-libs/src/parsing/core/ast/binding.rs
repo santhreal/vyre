@@ -1,5 +1,5 @@
 use crate::parsing::c::lex::tokens::*;
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// SIMT Binding Strength Pass (Innovation 1: Divergence-Free Shunting Yard)
@@ -69,7 +69,7 @@ pub fn ast_binding_strength(
                 .with_count(tok_count),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::ast_binding_strength",
             vec![Node::if_then(Expr::lt(t.clone(), num_tokens), loop_body)],
         )],

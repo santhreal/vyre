@@ -1,9 +1,8 @@
 //! Unpack-on-demand INT4 linear: one nibble extracted per inner-loop step with
 //! no dequantized weight buffer.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 const INT4_LINEAR_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
@@ -92,7 +91,7 @@ pub fn linear_4bit(
             BufferDecl::output(out, 3, DataType::F32).with_count(out_dim),
         ],
         INT4_LINEAR_WORKGROUP_SIZE,
-        vec![wrap_anonymous("vyre-libs::nn::linear_4bit", body)],
+        vec![wrap_anonymous_region("vyre-libs::nn::linear_4bit", body)],
     ))
 }
 

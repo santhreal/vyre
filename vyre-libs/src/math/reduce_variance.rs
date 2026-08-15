@@ -2,7 +2,7 @@
 //!
 //! Category-A composition with a workgroup-tiled Welford reduction.
 
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::math::reduce_variance";
@@ -239,7 +239,7 @@ fn reduce_variance_tiled_program(input: &str, output: &str, n: u32, bessel: bool
             BufferDecl::output(output, 1, DataType::F32).with_count(1),
         ],
         [tile, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -288,7 +288,7 @@ fn reduce_variance_reference_program(input: &str, output: &str, n: u32, bessel: 
             BufferDecl::output(output, 1, DataType::F32).with_count(1),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(REFERENCE_OP_ID, body)],
+        vec![wrap_anonymous_region(REFERENCE_OP_ID, body)],
     )
 }
 

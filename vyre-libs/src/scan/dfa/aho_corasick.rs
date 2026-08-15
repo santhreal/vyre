@@ -16,9 +16,9 @@
 //! Callers that know the longest pattern length should use
 //! [`aho_corasick_bounded`] directly.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::region::wrap_anonymous;
 use crate::scan::classic_ac::ac_advance_state_node;
 
 /// Build a Program that scans `haystack` (u32 per byte) for any
@@ -110,7 +110,10 @@ pub fn aho_corasick_bounded(
             BufferDecl::output(matches, 3, DataType::U32).with_count(haystack_len),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous("vyre-libs::matching::aho_corasick", body)],
+        vec![wrap_anonymous_region(
+            "vyre-libs::matching::aho_corasick",
+            body,
+        )],
     )
 }
 

@@ -95,7 +95,7 @@ pub fn c11_precompute_vast_scopes(
             scope_stack_decl,
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(PRECOMPUTE_VAST_SCOPES_OP_ID, body)],
+        vec![wrap_anonymous_region(PRECOMPUTE_VAST_SCOPES_OP_ID, body)],
     )
     .with_entry_op_id(PRECOMPUTE_VAST_SCOPES_OP_ID)
     .with_non_composable_with_self(true)

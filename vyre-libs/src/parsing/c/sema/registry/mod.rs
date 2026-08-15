@@ -5,7 +5,7 @@ use crate::parsing::c::sema::{
 };
 use crate::parsing::c::source_bytes::source_haystack_words;
 use crate::parsing::composition::child_phase;
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[cfg(any(test, feature = "cpu-parity"))]
@@ -207,7 +207,7 @@ fn c_sema_scope_impl(
             BufferDecl::output(out_scope_tree, 4, DataType::U32).with_count(out_words),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             OP_ID,
             vec![Node::if_then(
                 Expr::lt(t.clone(), num_tokens.clone()),
@@ -420,7 +420,7 @@ fn c_sema_scope_phase(
             BufferDecl::output(out_scope_tree, 4, DataType::U32).with_count(out_words),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             phase_op_id,
             vec![Node::if_then(
                 Expr::lt(t, num_tokens.clone()),

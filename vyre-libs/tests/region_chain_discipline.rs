@@ -7,7 +7,7 @@
 //! that contract silently, so the entry Region is an invariant, not a style.
 //!
 //! If this test fails, DO NOT weaken the assertion. Add a
-//! [`crate::region::wrap_anonymous`] call to the offending op's
+//! [`vyre_foundation::composition::wrap_anonymous_region`] call to the offending op's
 //! `fn(...) -> Program` builder.
 
 use vyre_foundation::ir::Node;
@@ -55,7 +55,7 @@ fn every_cat_a_program_entry_is_a_single_generator_region() {
     assert!(
         violations.is_empty(),
         "Fix: {} op(s) violate the region-chain discipline. Wrap their \
-         bodies in crate::region::wrap_anonymous(OP_ID, ...) before \
+         bodies in vyre_foundation::composition::wrap_anonymous_region(OP_ID, ...) before \
          handing them to Program::new:\n  - {}",
         violations.len(),
         violations.join("\n  - "),

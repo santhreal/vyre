@@ -8,7 +8,7 @@
 //! The default builder maps one invocation to one query row. The
 //! scalar row-loop reference remains available through [`attention_reference`].
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_child_region, wrap_region};
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::nn::attention_passes::{
@@ -17,7 +17,6 @@ use vyre_primitives::nn::attention_passes::{
 };
 
 use crate::builder::{check_tensors, BuildOptions};
-use crate::region::{wrap, wrap_child};
 use crate::tensor_ref::{TensorRef, TensorRefError};
 use vyre_primitives::nn::attention_stability::{
     bounded_exp_arg, bounded_score, direct_score_expr, flush_tiny, positive_denominator,
@@ -171,7 +170,7 @@ pub(crate) fn direct_attention_program(
             BufferDecl::output(out, 3, DataType::F32).with_count(elements),
         ],
         [1, 1, 1],
-        vec![wrap(
+        vec![wrap_region(
             generator,
             vec![Node::if_then(
                 Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
@@ -533,7 +532,7 @@ fn attention_program(
                 .with_output_byte_range(0..(elements as usize * core::mem::size_of::<f32>())),
         ],
         workgroup,
-        vec![wrap(generator, body, None)],
+        vec![wrap_region(generator, body, None)],
     ))
 }
 
@@ -570,13 +569,13 @@ fn attention_reference_program(
         // target builder rejects Infinity literals in compute entry points; the
         // finite floor preserves max-reduction semantics for any finite score.
         Node::let_bind("max_val", Expr::f32(f32::MIN)),
-        wrap_child(
+        wrap_child_region(
             ATTENTION_MAX_PASS_OP_ID,
             parent.clone(),
             attention_max_pass(q, k, d, s, scale_expr.clone()),
         ),
         Node::let_bind("sum_val", Expr::f32(0.0)),
-        wrap_child(
+        wrap_child_region(
             ATTENTION_SUM_PASS_OP_ID,
             parent.clone(),
             attention_sum_pass(q, k, d, s, scale_expr.clone()),
@@ -592,7 +591,7 @@ fn attention_reference_program(
                 Expr::f32(f32::MIN_POSITIVE),
             ),
         ),
-        wrap_child(
+        wrap_child_region(
             ATTENTION_WRITE_PASS_OP_ID,
             parent.clone(),
             attention_write_pass(q, k, v, d, s, scale_expr, out),
@@ -616,7 +615,7 @@ fn attention_reference_program(
             BufferDecl::output(out, 3, DataType::F32).with_count(elements),
         ],
         workgroup,
-        vec![wrap(generator, vec![outer_loop], None)],
+        vec![wrap_region(generator, vec![outer_loop], None)],
     ))
 }
 

@@ -4,7 +4,7 @@
 
 use crate::parsing::c::lex::tokens::{TOK_IDENTIFIER, TOK_LPAREN};
 use crate::parsing::c::preprocess::materialization::C_MACRO_SOURCE_COUNT_BYTES;
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{Expr, Node};
 
 use super::macro_lookup::*;
@@ -286,7 +286,7 @@ pub(super) fn emit_named_expansion_driver(spec: NamedExpansionDriverSpec<'_>) ->
             Expr::var("named_source_out_idx"),
         ));
     }
-    wrap_anonymous(
+    wrap_anonymous_region(
         spec.op_id,
         vec![Node::if_then(
             Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),

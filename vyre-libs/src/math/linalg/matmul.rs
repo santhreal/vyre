@@ -5,11 +5,10 @@
 //! so the optimizer treats it as opaque unless an inline pass
 //! explicitly unrolls.
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::builder::{check_tensors, BuildOptions};
-use crate::region::{wrap, wrap_anonymous};
 use crate::tensor_ref::{TensorRef, TensorRefError};
 
 const OP_ID: &str = "vyre-libs::math::matmul";
@@ -127,7 +126,7 @@ impl Matmul {
                 BufferDecl::output(self.out.name_str(), 2, DataType::U32).with_count(out_count),
             ],
             workgroup,
-            vec![wrap(generator, body, None)],
+            vec![wrap_region(generator, body, None)],
         ))
     }
 }
@@ -270,14 +269,14 @@ impl MatmulBias {
                 BufferDecl::output(self.out.name_str(), 3, DataType::U32).with_count(out_count),
             ],
             workgroup,
-            vec![wrap(generator, body, None)],
+            vec![wrap_region(generator, body, None)],
         ))
     }
 }
 
 crate::builder::impl_cat_a_builder_options!(MatmulBias);
 
-const _: fn(&'static str, Vec<Node>) -> Node = wrap_anonymous;
+const _: fn(&'static str, Vec<Node>) -> Node = wrap_anonymous_region;
 
 /// Build a Program that computes `out = a @ b` where `a` is `m x k`,
 /// `b` is `k x n`, and `out` is `m x n`. The caller supplies buffer

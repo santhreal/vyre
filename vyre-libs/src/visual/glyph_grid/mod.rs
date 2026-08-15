@@ -14,6 +14,7 @@
 //!
 //! [`cell_grid_fill`]: crate::visual::cell_grid::cell_grid_fill
 
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -104,9 +105,9 @@ pub fn glyph_grid_blend(
                 .with_count(pixels),
         ],
         super::PIXEL_WORKGROUP_SIZE,
-        vec![crate::region::wrap_anonymous(
+        vec![wrap_anonymous_region(
             OP_ID,
-            vec![crate::region::wrap_child(
+            vec![wrap_child_region(
                 vyre_primitives::visual::packed_rgba_map::OP_ID,
                 GeneratorRef {
                     name: OP_ID.to_string(),

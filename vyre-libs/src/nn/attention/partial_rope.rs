@@ -4,10 +4,8 @@
 //! Category A composition. Recipe rotates first 16 of 64 head dims.
 //! Standard RoPE: `[x1*cos - x2*sin, x1*sin + x2*cos]` on pairs.
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::partial_rope";
 
@@ -217,7 +215,7 @@ fn build_partial_rope_at_offset(
             BufferDecl::output(output, 3, activation_dtype).with_count(total),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

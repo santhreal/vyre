@@ -45,9 +45,8 @@
 //! overhead across N^2 / 4 sub-matmuls, so the addition cost is a
 //! fixed fraction of the multiplication savings.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::math::linalg::matmul_strassen_2x2";
 
@@ -158,7 +157,7 @@ pub fn matmul_strassen_2x2(a: &str, b: &str, c: &str) -> Program {
             BufferDecl::output(c, 2, DataType::F32).with_count(4),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -471,7 +470,7 @@ pub fn matmul_strassen_one_level(a: &str, b: &str, c: &str, n: u32) -> Result<Pr
             BufferDecl::output(c, 2, DataType::F32).with_count(total),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::math::linalg::matmul_strassen_one_level",
             body,
         )],

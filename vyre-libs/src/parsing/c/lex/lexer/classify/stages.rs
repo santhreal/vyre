@@ -786,7 +786,7 @@ impl SerialLexer<'_> {
                         Node::store(self.out_counts, Expr::u32(0), Expr::var("tok_idx")),
                     ],
                 )];
-                vec![wrap_anonymous(self.op_id, entry_body)]
+                vec![wrap_anonymous_region(self.op_id, entry_body)]
             },
         )
         .with_entry_op_id(self.op_id)

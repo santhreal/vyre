@@ -4,7 +4,7 @@ use crate::parsing::go::parse::token_predicates::{
     token_is_chan_keyword, token_is_keyword, token_is_receive_leading_keyword, token_len,
     token_start, token_type_eq,
 };
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 macro_rules! define_go_keyword_call_extractor {
@@ -104,7 +104,7 @@ fn go_extract_keyword_calls(
                 .with_count(1),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             op_id,
             vec![Node::if_then(Expr::lt(t, num_tokens), body)],
         )],
@@ -201,7 +201,7 @@ pub fn go_extract_channel_sends(
                 .with_count(1),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::go_extract_channel_sends",
             vec![Node::if_then(Expr::lt(t, num_tokens), body)],
         )],
@@ -295,7 +295,7 @@ pub fn go_extract_channel_receives(
                 .with_count(1),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::go_extract_channel_receives",
             vec![Node::if_then(Expr::lt(t, num_tokens), body)],
         )],
@@ -371,7 +371,7 @@ pub fn go_extract_channel_creations(
                 .with_count(1),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::go_extract_channel_creations",
             vec![Node::if_then(Expr::lt(t, num_tokens), body)],
         )],

@@ -38,7 +38,7 @@ pub fn c11_lexer_regular_ranked(
             haystack_len,
         ),
         [LEXER_WORKGROUP_SIZE, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::c_lexer_regular_ranked",
             vec![
                 Node::if_then(

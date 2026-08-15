@@ -1,6 +1,7 @@
 //! Cat-C `subgroup_add`  -  per-lane sum reduction broadcast to every lane.
 //! Maps to hardware `subgroupAdd()`.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::hardware::{packed_u32_input_with_output, MAP_WORKGROUP};
@@ -11,7 +12,7 @@ pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_add";
 /// lanes.
 #[must_use]
 pub fn subgroup_add(values: &str, out: &str, n: u32) -> Program {
-    let body = vec![crate::hardware::region::wrap_anonymous(
+    let body = vec![wrap_anonymous_region(
         OP_ID,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),

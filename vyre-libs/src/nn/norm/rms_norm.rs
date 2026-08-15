@@ -6,9 +6,8 @@
 use crate::{
     builder::{strided_accumulate_child, strided_writeback_child},
     nn::rms::{inverse_rms_expr, square_expr, EMPTY_RMS_FIX},
-    region::wrap_anonymous,
 };
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
@@ -102,7 +101,7 @@ fn rms_norm_tiled_program(input: &str, output: &str, n: u32, eps: f32) -> Progra
             BufferDecl::output(output, 1, DataType::F32).with_count(n),
         ],
         [tile, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -139,7 +138,7 @@ fn rms_norm_reference_program(input: &str, output: &str, n: u32, eps: f32) -> Pr
             BufferDecl::output(output, 1, DataType::F32).with_count(n),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(REFERENCE_OP_ID, body)],
+        vec![wrap_anonymous_region(REFERENCE_OP_ID, body)],
     )
 }
 

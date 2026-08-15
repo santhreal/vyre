@@ -1,4 +1,4 @@
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[must_use]
@@ -109,7 +109,7 @@ fn c11_compact_sparse_tokens_impl(
             compact_output_decl_count(out_counts, 7, 1, explicit_outputs),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::c11_compact_sparse_tokens",
             vec![Node::if_then(
                 Expr::lt(t, Expr::buf_len(inclusive_offsets)),

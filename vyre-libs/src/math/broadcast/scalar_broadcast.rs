@@ -4,10 +4,8 @@
 //! shape-broadcasting version (NumPy semantics) belongs in a future
 //! `broadcast_shaped` function that takes source + target shapes.
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 /// Broadcast a scalar into every element of `dst`. `n` is the target
 /// element count  -  `dst` receives `n × sizeof(U32)` bytes.
@@ -40,7 +38,7 @@ pub fn broadcast(src: &str, dst: &str, n: u32) -> Program {
             output,
         ],
         [64, 1, 1],
-        vec![wrap_anonymous("vyre-libs::math::broadcast", body)],
+        vec![wrap_anonymous_region("vyre-libs::math::broadcast", body)],
     )
 }
 

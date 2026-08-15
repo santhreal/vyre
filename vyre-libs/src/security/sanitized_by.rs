@@ -7,6 +7,7 @@
 //! Source filtering is part of the CSR traversal stage. No intermediate
 //! clean-frontier buffer or cross-dispatch synchronization is required.
 
+use vyre_foundation::composition::tag_program;
 use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse_excluding;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
@@ -40,7 +41,7 @@ pub fn sanitized_by(
         frontier_out,
         crate::security::flows_to::FLOWS_TO_MASK,
     );
-    crate::region::tag_program(OP_ID, traverse)
+    tag_program(OP_ID, traverse)
 }
 
 inventory::submit! {

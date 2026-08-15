@@ -2,7 +2,7 @@
 //!
 //! Category-A composition over `nn::softmax` and `nn::top_k`.
 
-use crate::region::{wrap_anonymous, wrap_child};
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::nn::quest_paging_passes::{quest_select_top_k_body, QUEST_SELECT_TOP_K_OP_ID};
@@ -31,17 +31,17 @@ pub fn moe_gate(
     let body = vec![Node::if_then(
         Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
         vec![
-            wrap_child(
+            wrap_child_region(
                 SOFTMAX_STATS_OP_ID,
                 parent.clone(),
                 softmax_stats_body(input_scores, num_experts),
             ),
-            wrap_child(
+            wrap_child_region(
                 QUEST_SELECT_TOP_K_OP_ID,
                 parent.clone(),
                 quest_select_top_k_body(SCORES_SCRATCH, output_indices, num_experts, k, f32::MIN),
             ),
-            wrap_child(
+            wrap_child_region(
                 WEIGHT_WRITE_OP_ID,
                 parent,
                 weight_write_body(input_scores, output_indices, output_weights, k),
@@ -64,7 +64,7 @@ pub fn moe_gate(
             BufferDecl::workgroup(STATS_SCRATCH, 2, DataType::F32),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -195,7 +195,7 @@ fn softmax_stats_program() -> Program {
                 .with_count(2),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             SOFTMAX_STATS_OP_ID,
             vec![Node::if_then(
                 Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
@@ -215,7 +215,7 @@ fn weight_write_program() -> Program {
             BufferDecl::output("weights", 3, DataType::F32).with_count(2),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             WEIGHT_WRITE_OP_ID,
             vec![Node::if_then(
                 Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),

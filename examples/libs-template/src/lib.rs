@@ -7,7 +7,7 @@
 #![warn(missing_docs)]
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_libs::region::wrap;
+use vyre_foundation::composition::wrap_region;
 use vyre_libs::{check_tensors, BuildOptions, TensorRef, TensorRefError};
 
 const OP_ID: &str = "{{crate_name}}::example_op";
@@ -94,7 +94,7 @@ impl ExampleOp {
                     .with_count(n),
             ],
             workgroup,
-            vec![wrap(generator, body, None)],
+            vec![wrap_region(generator, body, None)],
         ))
     }
 }

@@ -1,9 +1,8 @@
 //! Last-dimension L2 normalization with float32 accumulation.
 
 use thiserror::Error;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::last_dim_l2_norm";
 
@@ -109,6 +108,6 @@ pub fn last_dim_l2_norm(
             BufferDecl::output(output, 1, dtype).with_count(total),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }

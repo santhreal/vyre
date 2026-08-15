@@ -318,7 +318,7 @@ pub fn c11_build_vast_nodes(
             stack_decl,
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             BUILD_VAST_OP_ID,
             vec![child_phase(
                 BUILD_VAST_OP_ID,

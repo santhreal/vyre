@@ -17,12 +17,12 @@
 
 use rustc_hash::FxHashSet;
 use std::sync::Arc;
+use vyre_foundation::composition::wrap_region;
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferDecl, Node, Program};
 
 use super::classify::{c11_lexer, c11_lexer_regular};
 use super::digraphs::c11_lex_digraphs;
-use crate::region::wrap;
 
 const OP_ID: &str = "vyre-libs::parsing::c11_lex_single_pass";
 const REGULAR_OP_ID: &str = "vyre-libs::parsing::c11_lex_regular_single_pass";
@@ -85,7 +85,7 @@ pub fn c11_lex_single_pass(
     Program::wrapped(
         buffers,
         workgroup_size,
-        vec![wrap(
+        vec![wrap_region(
             OP_ID,
             combined_body,
             Some(GeneratorRef {
@@ -151,7 +151,7 @@ pub fn c11_lex_regular_single_pass(
     Program::wrapped(
         buffers,
         workgroup_size,
-        vec![wrap(
+        vec![wrap_region(
             REGULAR_OP_ID,
             combined_body,
             Some(GeneratorRef {

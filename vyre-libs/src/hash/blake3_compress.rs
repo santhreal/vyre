@@ -18,12 +18,12 @@
 //! Migration 3 moved this op from `vyre-libs::crypto::blake3_compress`
 //! to `vyre-libs::hash::blake3_compress`.
 
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::hash::blake3::{blake3_round, BLAKE3_ROUND_OP_ID, MSG_SCHEDULE};
 
 use crate::buffer_names::scoped_generic_name;
-use crate::region::{wrap_anonymous, wrap_child};
 
 const OP_ID: &str = "vyre-libs::hash::blake3_compress";
 const FAMILY_PREFIX: &str = "hash_blake3_compress";
@@ -124,7 +124,7 @@ pub fn blake3_compress(
 
     // -- 7 rounds. Each round is a composed Tier 2.5 primitive. -----
     for (round_idx, perm) in MSG_SCHEDULE.iter().enumerate() {
-        body.push(wrap_child(
+        body.push(wrap_child_region(
             BLAKE3_ROUND_OP_ID,
             parent.clone(),
             blake3_round(round_idx, perm),
@@ -149,7 +149,7 @@ pub fn blake3_compress(
             BufferDecl::output(chaining_out, 3, DataType::U32).with_count(8),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

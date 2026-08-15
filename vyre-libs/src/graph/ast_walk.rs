@@ -8,11 +8,10 @@
 //! postorder after; the primitive owns both bodies behind one entry point, so
 //! this dialect layer only tags the Region with the `vyre-libs` op id.
 
+use vyre_foundation::composition::{tag_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::vast::{VastNode, NODE_STRIDE_U32, SENTINEL};
 use vyre_primitives::graph::vast_tree_walk;
-
-use crate::region::{tag_program, wrap_anonymous};
 
 pub use vyre_primitives::graph::vast_tree_walk::VastWalkOrder;
 
@@ -93,7 +92,7 @@ pub fn ast_walk_postorder(out: &str, node_count: u32) -> Program {
                 .with_count(out_words),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::graph::ast_walk_postorder_spine",
             body,
         )],

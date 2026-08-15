@@ -1,6 +1,7 @@
 //! Fused affine grouped INT4 linear: public entry points, strategy selection,
 //! and the lane-predicated lowering used when weight-tile reuse does not apply.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{DataType, Expr, Node, Program};
 
 use super::affine_grouped_weight_reuse::linear_4bit_affine_grouped_weight_reuse;
@@ -10,7 +11,6 @@ use super::grouped_layout::{
     AFFINE_GROUPED_LANES_PER_OUTPUT, AFFINE_GROUPED_OP_ID, AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP,
     AFFINE_GROUPED_WARPS_PER_WORKGROUP, AFFINE_GROUPED_WEIGHT_TILE, AFFINE_GROUPED_WORKGROUP_SIZE,
 };
-use crate::region::wrap_anonymous;
 
 /// Build a fused affine INT4 linear Program:
 ///
@@ -358,7 +358,7 @@ fn linear_4bit_affine_grouped_batch_impl(
             output_byte_len,
         ),
         AFFINE_GROUPED_WORKGROUP_SIZE,
-        vec![wrap_anonymous(AFFINE_GROUPED_OP_ID, body)],
+        vec![wrap_anonymous_region(AFFINE_GROUPED_OP_ID, body)],
     ))
 }
 

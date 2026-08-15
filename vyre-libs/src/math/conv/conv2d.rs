@@ -18,11 +18,10 @@
 //! buffers in row-major layout; kernel is length-9 F32 in
 //! row-major layout (`kernel[ky*3 + kx]`).
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::im2col::patch_taps;
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::math::conv::conv2d_3x3_direct";
 
@@ -91,7 +90,7 @@ pub fn conv2d_3x3_direct(
             BufferDecl::output(output, 2, DataType::F32).with_count(elements),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }
 

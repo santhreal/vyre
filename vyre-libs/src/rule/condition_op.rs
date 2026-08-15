@@ -1,5 +1,6 @@
 // Shared builders for rule condition operations.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_spec::AlgebraicLaw;
 
@@ -38,7 +39,7 @@ pub fn condition_program(op_id: &'static str, compute: fn() -> Expr) -> Program 
             BufferDecl::output("out", 6, DataType::U32).with_count(1),
         ],
         WORKGROUP_SIZE,
-        vec![crate::region::wrap_anonymous(
+        vec![wrap_anonymous_region(
             op_id,
             vec![Node::store("out", Expr::u32(0), compute())],
         )],

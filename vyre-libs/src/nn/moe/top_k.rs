@@ -6,8 +6,7 @@
 use super::topk_selection::{
     copy_top_k_indices, init_top_k_slots, insert_top_k_candidate, BEST_IDXS, BEST_VALS,
 };
-use crate::region::wrap_anonymous;
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Build a Program that finds the indices of the `k` largest elements in `input`.
@@ -55,7 +54,7 @@ pub fn top_k(input: &str, output_indices: &str, n: u32, k: u32) -> Program {
             BufferDecl::read_write(BEST_IDXS, 3, DataType::U32).with_count(k),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::top_k", body)],
+        vec![wrap_anonymous_region("vyre-libs::nn::top_k", body)],
     )
 }
 

@@ -1,6 +1,7 @@
 //! Cat-C `subgroup_shuffle`  -  per-lane permutation via source-lane indices.
 //! Maps to hardware `subgroupShuffle()`.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::hardware::MAP_WORKGROUP;
@@ -21,7 +22,7 @@ pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_shuffle";
 /// active mask of a divergent branch.
 #[must_use]
 pub fn subgroup_shuffle(values: &str, lanes: &str, out: &str, n: u32) -> Program {
-    let body = vec![crate::hardware::region::wrap_anonymous(
+    let body = vec![wrap_anonymous_region(
         OP_ID,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),

@@ -2,9 +2,9 @@
 //!
 //! Category A  -  element-wise weighted average. Recipe decay=0.9965.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::region::wrap_anonymous;
 use vyre_primitives::nn::f32_stability::flush_tiny;
 
 const OP_ID: &str = "vyre-libs::optim::ema_apply";
@@ -44,7 +44,7 @@ pub fn ema_apply(ema: &str, theta: &str, n: u32, decay: f32) -> Program {
             BufferDecl::storage(theta, 1, BufferAccess::ReadOnly, DataType::F32).with_count(n),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

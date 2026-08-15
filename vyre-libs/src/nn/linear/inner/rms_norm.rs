@@ -1,10 +1,9 @@
 //! Fused `rms_norm_linear` constructor.
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::nn::rms::{inverse_rms_expr, square_expr};
-use crate::region::wrap_anonymous;
 use crate::tensor_ref::TensorRefError;
 
 /// Fused RMSNorm + linear: `out = (input / rms(input)) @ W + b`.
@@ -124,7 +123,7 @@ pub fn try_rms_norm_linear(
             BufferDecl::output(out, 4, DataType::F32).with_count(out_dim),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::nn::rms_norm_linear",
             vec![
                 Node::let_bind("lane", Expr::InvocationId { axis: 0 }),

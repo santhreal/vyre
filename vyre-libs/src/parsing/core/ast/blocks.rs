@@ -1,5 +1,5 @@
 use crate::parsing::c::lex::tokens::*;
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Topological CFG Assembly (Agent A - Frontend)
@@ -87,7 +87,7 @@ pub fn ast_cfg_blocks(
                 .with_count(stmt_count),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::ast_cfg_blocks",
             vec![Node::if_then(
                 Expr::lt(t.clone(), num_statements),

@@ -7,8 +7,7 @@ use super::topk_selection::{
     copy_top_k_indices_and_normalized_weights, init_top_k_slots, insert_top_k_candidate, BEST_IDXS,
     BEST_VALS,
 };
-use crate::region::wrap_anonymous;
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 /// Build a Program that computes softmax over `scores`, then returns the
@@ -96,7 +95,7 @@ pub fn softmax_top_k(
             BufferDecl::read_write(BEST_IDXS, 4, DataType::U32).with_count(k),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::softmax_top_k", body)],
+        vec![wrap_anonymous_region("vyre-libs::nn::softmax_top_k", body)],
     )
 }
 

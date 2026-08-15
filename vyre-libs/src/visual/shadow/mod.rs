@@ -3,6 +3,7 @@
 //! Category A composition  -  pure IR. Private SDF helper (single caller,
 //! not promoted to Tier 2.5 per LEGO-BLOCK-RULE).
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::box_shadow";
@@ -45,7 +46,7 @@ pub fn box_shadow(
                 .with_count(count),
         ],
         super::PIXEL_WORKGROUP_SIZE,
-        vec![crate::region::wrap_anonymous(
+        vec![wrap_anonymous_region(
             OP_ID,
             vec![
                 Node::let_bind("idx", Expr::gid_x()),

@@ -26,6 +26,7 @@
 //! against the naive O(N²) DFT formula (1.0e-3 absolute tolerance
 //! for N=8 due to f32 rounding accumulating across log2(N) stages).
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::complex_length::validate_complex_len;
@@ -41,7 +42,6 @@ fn bit_reverse(value: u32, bits: usize) -> u32 {
     }
     result
 }
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::math::fft::fft_radix2";
 
@@ -162,7 +162,7 @@ pub fn fft_radix2_complex(input: &str, output: &str, n: u32) -> Result<Program, 
             BufferDecl::output(output, 1, DataType::F32).with_count(elements),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
     .with_entry_op_id(OP_ID))
 }

@@ -15,12 +15,11 @@
 //! profiling hooks are wired.
 
 use std::cmp::Ordering;
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::fixture_bytes::f32_bytes;
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::math::conv::im2col_3x3";
 
@@ -69,7 +68,7 @@ pub fn im2col_3x3(input: &str, output: &str, h: u32, w: u32) -> Result<Program, 
             BufferDecl::output(output, 1, DataType::F32).with_count(cells),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }
 

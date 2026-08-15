@@ -3,9 +3,8 @@
 //! Category A composition  -  one primitive per invocation. Element-wise
 //! so the optimizer can trivially fuse into any upstream operation.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 /// Shared unsigned ReLU expression used by the standalone activation builder.
 #[must_use]
@@ -53,7 +52,7 @@ pub fn relu(input: &str, output: &str, n: u32) -> Program {
     Program::wrapped(
         vec![input_decl, output_decl],
         [64, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::relu", body)],
+        vec![wrap_anonymous_region("vyre-libs::nn::relu", body)],
     )
 }
 

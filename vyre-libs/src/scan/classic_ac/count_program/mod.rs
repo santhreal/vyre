@@ -1,6 +1,6 @@
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::region::wrap_anonymous;
 use crate::scan::builders::load_packed_byte_expr;
 
 use super::bounded_ranges::{
@@ -220,7 +220,7 @@ fn classic_ac_bounded_count_program(
             BufferDecl::read_write(match_count, 4, DataType::U32).with_count(1),
         ],
         [128, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::matching::classic_ac_bounded_count",
             body,
         )],
@@ -268,7 +268,7 @@ fn classic_ac_bounded_count_prefilter_program(
             BufferDecl::read_write(match_count, 5, DataType::U32).with_count(1),
         ],
         [128, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::matching::classic_ac_bounded_count_prefilter",
             body,
         )],

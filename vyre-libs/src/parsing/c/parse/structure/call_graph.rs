@@ -139,7 +139,7 @@ pub fn c11_build_call_graph(
                 .with_count(1),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::c11_build_call_graph",
             vec![Node::if_then(
                 Expr::lt(t.clone(), num_calls.clone()),

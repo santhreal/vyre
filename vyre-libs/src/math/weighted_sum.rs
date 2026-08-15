@@ -17,10 +17,8 @@
 //! Critical for ML weighted aggregations (attention head-mixing,
 //! LayerNorm gain, gated reduction layers).
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::math::weighted_sum_fma_f32";
 
@@ -67,7 +65,7 @@ pub fn weighted_sum_fma_f32(
             BufferDecl::output(output, 2, DataType::F32).with_count(1),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }
 

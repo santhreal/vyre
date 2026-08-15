@@ -4,7 +4,7 @@
 //! workgroup scan for one-block inputs and the multi-block scan for larger
 //! buffers.
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::Program;
 use vyre_primitives::math::prefix_scan::{prefix_scan_with_op_id, ScanKind};
 use vyre_primitives::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
@@ -36,10 +36,7 @@ pub fn scan_prefix_sum(input: &str, output: &str, n: u32) -> Program {
 fn wrap_large_scan_program(program: Program) -> Program {
     // Only the entry changes, so rebuild only the entry. `Program::wrapped`
     // would deep-clone the buffer table and reset the metadata flags.
-    let tagged = vec![crate::region::wrap_anonymous(
-        OP_ID,
-        program.entry().to_vec(),
-    )];
+    let tagged = vec![wrap_anonymous_region(OP_ID, program.entry().to_vec())];
     program.with_rewritten_wrapped_entry(tagged)
 }
 

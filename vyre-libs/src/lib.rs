@@ -53,7 +53,6 @@
 #![allow(clippy::module_inception)]
 
 /// Region builder  -  the shared helper every composition routes through.
-pub mod region;
 
 /// Domain-neutral byte-range ordering predicates.
 pub mod range_ordering;

@@ -9,6 +9,7 @@
 //!
 //! CPU reference: `u32::clamp` bit-exact.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::math::clamp_u32";
@@ -16,7 +17,7 @@ const OP_ID: &str = "vyre-libs::math::clamp_u32";
 /// Map `out[i] = input[i].clamp(lo[i], hi[i])` over n elements.
 #[must_use]
 pub fn clamp_u32(input: &str, lo: &str, hi: &str, out: &str, n: u32) -> Program {
-    let body = vec![crate::region::wrap_anonymous(
+    let body = vec![wrap_anonymous_region(
         OP_ID,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),

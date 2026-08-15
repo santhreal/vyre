@@ -4,10 +4,8 @@
 //!
 //! Category A  -  broadcast mul. Recipe uses gain_init=5.25.
 
-use vyre_foundation::composition::trap_program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::qk_gain";
 
@@ -33,7 +31,7 @@ pub fn qk_gain(
                     .with_count(num_heads),
             ],
             [64, 1, 1],
-            vec![wrap_anonymous(OP_ID, vec![])],
+            vec![wrap_anonymous_region(OP_ID, vec![])],
         );
     }
     let per_head = match seq_len.checked_mul(head_dim) {
@@ -84,7 +82,7 @@ pub fn qk_gain(
                 .with_count(num_heads),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 

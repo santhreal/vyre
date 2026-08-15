@@ -241,7 +241,7 @@ pub fn c11_precompute_vast_decl_contexts(
             BufferDecl::workgroup("__vast_decl_symbol_heads", BUCKETS * 2, DataType::U32),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             PRECOMPUTE_VAST_DECL_CONTEXTS_OP_ID,
             vec![Node::if_then(Expr::eq(t, Expr::u32(0)), body)],
         )],

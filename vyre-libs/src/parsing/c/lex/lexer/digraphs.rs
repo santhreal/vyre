@@ -2,7 +2,7 @@
 
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::composition::child_phase;
-use crate::region::wrap_anonymous;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::classify::*;
@@ -212,7 +212,7 @@ pub fn c11_lex_digraphs(
                 .with_count(tok_count.max(1)),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous(
+        vec![wrap_anonymous_region(
             "vyre-libs::parsing::c11_lex_digraphs",
             vec![child_phase(
                 "vyre-libs::parsing::c11_lex_digraphs",

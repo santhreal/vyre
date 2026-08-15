@@ -2,9 +2,9 @@
 //!
 //! `clip_threshold = k * std(row)`  -  int6 uses k=12.85, int8 uses k=20.0.
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::region::wrap_anonymous;
 use vyre_primitives::nn::f32_stability::{finite_or, positive_finite_or_min as positive_scale};
 
 const ROUND_OP_ID: &str = "vyre-libs::quant::gptq_round";
@@ -53,7 +53,7 @@ pub fn gptq_round(input: &str, scale: &str, output: &str, n: u32, max_val: f32) 
             BufferDecl::output(output, 2, DataType::F32).with_count(n),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(ROUND_OP_ID, body)],
+        vec![wrap_anonymous_region(ROUND_OP_ID, body)],
     )
 }
 
@@ -85,7 +85,7 @@ pub fn gptq_sdclip(input: &str, output: &str, n: u32, k: f32) -> Program {
             BufferDecl::output(output, 1, DataType::F32).with_count(n),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous(SDCLIP_OP_ID, body)],
+        vec![wrap_anonymous_region(SDCLIP_OP_ID, body)],
     )
 }
 
