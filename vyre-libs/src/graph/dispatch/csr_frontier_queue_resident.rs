@@ -118,11 +118,7 @@ impl ResidentCsrQueueScratch {
         self.programs.clear();
         let mut handles_to_free = Vec::new();
         slots.extend_handles(&mut handles_to_free);
-        free_unique_resident_handles(
-            dispatcher,
-            &handles_to_free,
-            "resident CSR queue scratch",
-        )
+        free_unique_resident_handles(dispatcher, &handles_to_free, "resident CSR queue scratch")
     }
 }
 

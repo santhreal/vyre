@@ -10,9 +10,9 @@
 //! `bit_reverse_u32` / `popcount_u32` (bit instructions), `fma_f32`
 //! (single-round fused multiply-add), `inverse_sqrt_f32`.
 //!
-//! An op that composes over existing IR belongs in `vyre-libs`, not here.
-//! That is the split: a Category A op is a composition of existing IR, and a
-//! Category C op is an instruction no composition can synthesize.
+//! An op that composes over existing IR belongs in `vyre-libs`, not here. An
+//! op is admitted here only when it needs its own emitter arm and its own
+//! reference-interpreter arm.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::operation::{OperationRegistry, SemanticOperation};

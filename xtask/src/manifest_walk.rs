@@ -3,12 +3,13 @@
 //! Parse failures are collected as blockers rather than aborting the walk, so a
 //! gate reports every bad manifest in one run.
 //!
-//! This module also owns the read bound and the workspace-inheritance lookup,
-//! because four release generators each carried their own copy of both.
+//! This module also owns the read bound, the workspace-inheritance lookup and
+//! the read-parse-name sequence every package manifest goes through, because
+//! four release generators each carried their own copy of all three.
 
 use std::path::Path;
 
-use walkdir::WalkDir;
+use crate::tree_walk::{self, BUILD_OUTPUT_AND_VCS};
 
 /// Largest `Cargo.toml` this tooling will read.
 pub(crate) const MAX_MANIFEST_BYTES: u64 = 1_048_576;
@@ -59,17 +60,8 @@ pub(crate) fn collect_manifests<T>(
     blockers: &mut Vec<String>,
     mut parse: impl FnMut(&Path) -> Result<Option<T>, String>,
 ) {
-    for entry in WalkDir::new(root).into_iter().filter_entry(|entry| {
-        !matches!(
-            entry.file_name().to_string_lossy().as_ref(),
-            "target"
-                | "target-codex"
-                | "target_tests"
-                | ".git"
-                | ".cargo-target"
-                | "release"
-                | "examples"
-        )
+    for entry in tree_walk::pruned_by(root, |name| {
+        !BUILD_OUTPUT_AND_VCS.contains(&name) && !matches!(name, "release" | "examples")
     }) {
         let entry = match entry {
             Ok(entry) => entry,
@@ -94,4 +86,36 @@ pub(crate) fn collect_manifests<T>(
             Err(error) => blockers.push(error),
         }
     }
+}
+
+/// Read a package manifest and hand its document and `[package]` table to
+/// `build`.
+///
+/// `read_context` names the read cap in an over-size error and `noun` names the
+/// manifest in a read or parse failure, because two generators read the same
+/// file for different reasons and each says which reason it was serving.
+///
+/// `Ok(None)` for a manifest that declares no `[package]` table, which is what
+/// the workspace root manifest is. A manifest that declares one without a name
+/// is an error: an unnamed package cannot be reported against.
+pub(crate) fn parse_package_manifest<T>(
+    path: &Path,
+    read_context: &str,
+    noun: &str,
+    build: impl FnOnce(&str, &toml::Value, &toml::value::Table) -> Result<Option<T>, String>,
+) -> Result<Option<T>, String> {
+    let text = crate::output_arg::read_text_bounded(path, MAX_MANIFEST_BYTES, read_context)
+        .map_err(|error| format!("failed to read {noun} `{}`: {error}", path.display()))?;
+    let document = toml::from_str::<toml::Value>(&text)
+        .map_err(|error| format!("failed to parse {noun} `{}`: {error}", path.display()))?;
+    let Some(package) = document.get("package").and_then(toml::Value::as_table) else {
+        return Ok(None);
+    };
+    let Some(name) = package.get("name").and_then(toml::Value::as_str) else {
+        return Err(format!(
+            "package manifest `{}` is missing package.name",
+            path.display()
+        ));
+    };
+    build(name, &document, package)
 }

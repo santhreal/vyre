@@ -1,13 +1,8 @@
-//! Parked composition (belongs in vyre-libs): text primitives.
+//! Text kernels.
 //!
-//! The path IS the interface. Callers write
-//! `vyre_primitives::text::char_class::char_class(...)`  -  explicit
-//! paths keep the LEGO substrate visible at every call site. No
-//! wildcard re-exports; the subsystem exposes its sub-modules, not a
-//! flat namespace.
-//!
-//! A builder lands in this directory once a second dialect needs it; a single
-//! dialect's helper stays with that dialect.
+//! The path is the interface. Callers write
+//! `vyre_primitives::text::char_class::char_class(..)`, so this module exposes
+//! its sub-modules rather than a flat namespace.
 
 /// 256-bin byte histogram over source bytes.
 pub mod byte_histogram;

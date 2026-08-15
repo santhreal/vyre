@@ -15,14 +15,9 @@ use crate::backend::CudaBackend;
 use crate::pipeline::CudaCompiledPipeline;
 use crate::{CudaBackendRegistration, CUDA_BACKEND_ID};
 
-/// CUDA rejection text. Two strings differ from the neutral wording: this
-/// backend names the digest in a foreign-artifact rejection, and reports an
-/// unpreserved retained value as an unproduced output.
+/// CUDA rejection text. One string differs from the neutral wording: this
+/// backend reports an unpreserved retained value as an unproduced output.
 const MESSAGES: InstanceMessages = InstanceMessages {
-    foreign_artifact: || BackendError::InvalidProgram {
-        fix: "Fix: bind resources against the exact artifact digest owned by this instance."
-            .to_string(),
-    },
     missing_retained_value: |value| {
         materialize::invalid_module(&format!(
             "selected execution did not produce canonical output value {}",

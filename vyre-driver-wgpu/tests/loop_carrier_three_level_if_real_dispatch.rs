@@ -13,10 +13,9 @@ use common::acquire_live_backend as live_backend;
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_spec::c11_token::{TOK_LBRACE, TOK_RBRACE};
 
 const SENTINEL: u32 = u32::MAX;
-const TOK_LBRACE: u32 = 1;
-const TOK_RBRACE: u32 = 2;
 
 /// The two sequential conditionals the c-parser scope walker emits, reading
 /// `scope_kind` and latching `scope_open` to `latch`.

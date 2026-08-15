@@ -1,9 +1,8 @@
 //! Parked composition (belongs in vyre-libs): hash primitives.
 //!
 //! The path IS the interface. Callers write
-//! `vyre_primitives::hash::fnv1a::fnv1a32(...)`  -  explicit paths;
-//! no wildcard re-exports. A builder lands in this directory once a second
-//! dialect needs it; a single dialect's helper stays with that dialect.
+//! Callers write `vyre_primitives::hash::fnv1a::fnv1a32(..)`. The path is the
+//! interface, so this module re-exports nothing by wildcard.
 
 /// FNV-1a 32-bit + 64-bit hash primitives.
 pub mod fnv1a;

@@ -14,6 +14,11 @@
 //! makes about a variant stays in that suite: this file owns only which
 //! variants exist.
 //!
+//! The `DataType` element table is not here. `DataType` fixtures are owned by
+//! `vyre_test_support::data_type_variants`, which holds them to the enum
+//! declaration in `vyre-spec` at run time, and this file owns the operator
+//! enums only.
+//!
 //! `Opaque` is deliberately absent from every table. It carries an extension
 //! id, so each suite draws its own: the property suites want an arbitrary id,
 //! the freeze tests want a pinned one.
@@ -136,7 +141,6 @@ pub(crate) fn builtin_ternary_ops() -> Vec<TernaryOp> {
 pub(crate) fn buffer_data_types(element_size: usize) -> Vec<DataType> {
     vyre_test_support::data_type_elements::flat_buffer_element_types(element_size)
 }
-
 /// Variant names of `vyre_spec::<enum_name>` as the checked-in public-API
 /// snapshot records them, `Opaque` excluded.
 ///

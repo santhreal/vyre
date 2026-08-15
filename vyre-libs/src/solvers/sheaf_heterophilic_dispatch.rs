@@ -55,11 +55,11 @@
 //! substrate to model dispatch graphs as the heterophilic
 //! structures they actually are. Paradigm shift, not optimization.
 
-use crate::scratch::reserve_vec_capacity_or_panic;
 use crate::dispatch_buffers::{
     ceil_div_u32, checked_product_count, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
+use crate::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::sheaf::sheaf_diffusion_step;
 #[cfg(any(test, feature = "cpu-parity"))]

@@ -339,11 +339,18 @@ pub struct InstanceMessages {
 
 /// The rejection text that names nothing target-specific.
 ///
-/// Three of the four backends already shipped exactly these strings, so they
-/// are one code path now. A backend whose wording differs supplies its own
-/// record rather than moving anyone else's text.
+/// Every backend ships these strings. A backend whose wording differs supplies
+/// its own record rather than moving anyone else's text.
+///
+/// Two of the five name their corrective action directly instead of routing
+/// through [`invalid_module`], because recompiling the target payload does not
+/// fix them. A foreign artifact is a binding mistake at the call site, and a
+/// twice-consumed completion is a caller mistake; both payloads are fine.
 pub const NEUTRAL_MESSAGES: InstanceMessages = InstanceMessages {
-    foreign_artifact: || invalid_module("bindings name a different neutral artifact"),
+    foreign_artifact: || BackendError::InvalidProgram {
+        fix: "Fix: bind resources against the exact artifact digest owned by this instance."
+            .to_string(),
+    },
     unmapped_buffer: |name| {
         invalid_module(&format!(
             "Program buffer `{name}` is absent from the canonical artifact ABI"
@@ -361,7 +368,9 @@ pub const NEUTRAL_MESSAGES: InstanceMessages = InstanceMessages {
             value.0
         ))
     },
-    completion_consumed: || invalid_module("each Submission completion may be consumed only once"),
+    completion_consumed: || BackendError::InvalidProgram {
+        fix: "Fix: consume each Submission completion exactly once.".to_string(),
+    },
 };
 
 /// Rejection for a declared input whose canonical value was never bound.

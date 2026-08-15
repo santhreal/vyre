@@ -1,7 +1,7 @@
 //! Pre-emption / deadline cancellation.
 //!
-//! See `contracts/release.md`. `DispatchConfig.timeout` must be enforced
-//! as a dispatch deadline and leave the GPU in a recoverable state.
+//! `DispatchConfig.timeout` must be enforced as a dispatch deadline and leave
+//! the GPU in a recoverable state.
 
 use std::time::{Duration, Instant};
 use vyre_driver::{DispatchConfig, VyreBackend};

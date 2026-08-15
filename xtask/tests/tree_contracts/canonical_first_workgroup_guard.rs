@@ -134,14 +134,11 @@ fn workspace_sources_reject_raw_first_workgroup_predicates() {
                 path.display()
             )
         });
-        for location in locations {
-            violations.push(format!(
-                "{}:{}:{}",
-                path.strip_prefix(&root).unwrap_or(&path).display(),
-                location.line,
-                location.column + 1
-            ));
-        }
+        violations.extend(
+            locations
+                .into_iter()
+                .map(|location| super::common::violation_location(&root, &path, location)),
+        );
     }
 
     assert_eq!(

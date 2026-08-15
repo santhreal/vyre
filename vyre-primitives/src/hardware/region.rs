@@ -1,15 +1,14 @@
-//! Region builder. Every Category C hardware intrinsic wraps its body in one
-//! of these, so the IR records which operation built which nodes.
+//! Region builder. Every hardware intrinsic wraps its body in exactly one
+//! `Node::Region` naming its generator, so a pass can treat the op as atomic
+//! and a composition chain stays visible from caller to callee.
 
 use std::sync::Arc;
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::Node;
 
-/// Wrap `body` in a `Node::Region` tagged with `generator`. If `source_region`
-/// is `Some`, it records the composition chain from caller to callee  -  the
-/// invariant every Cat-C intrinsic must uphold: a body built by calling
-/// another operation's builder carries that operation's generator and a
-/// `source_region` naming the caller.
+/// Wrap `body` in a `Node::Region` tagged with `generator`. A `source_region`
+/// records the composition edge from caller to callee, which every intrinsic
+/// built by calling another operation's builder must carry.
 #[must_use]
 pub fn wrap(generator: &str, body: Vec<Node>, source_region: Option<GeneratorRef>) -> Node {
     Node::Region {
