@@ -741,11 +741,6 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
-feature = "bitset,fixpoint,graph,inventory-registry,math,reduce"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
 feature = "cat"
 outcome = "compiles"
 
