@@ -1807,3 +1807,8 @@ text = "ZX identity removal no longer splices out a phase-zero spider whose two 
 id = "kan-extension-one-owner"
 category = "Changed"
 text = "`reasoning::finite_category` states each construction once. Left and right Kan extension were four functions differing in whether the fold summed or multiplied and whether it ran per object or over a table; they are now `kan_extension_at` and `kan_extension_table` taking a `KanDirection`, over one shared fold. `is_adjoint_pair` is `adjoint_pair`, because it returns the pair and its witness rather than a bool, and `yoneda_natural_iso` is `natural_transformation_count`, because a count is what it returns."
+
+[[fragments]]
+id = "over-width-shift-chain-folds-to-zero"
+category = "Fixed"
+text = "Strength reduction folds a chained shift whose counts reach the register width to zero again. It had been changed to leave both shifts standing, on the reasoning that a right shift on a signed operand replicates the sign bit, but V094 rejects a shift whose operands are not `u32`, so that operand cannot reach the pass. The fused shift is not an alternative: the target text masks a shift count with `& 31`, so emitting `x << 32` would emit `x`."

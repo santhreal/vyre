@@ -259,27 +259,47 @@ fn a_nested_modulus_narrows_only_when_the_outer_divides_the_inner() {
 }
 
 #[test]
-fn an_over_width_shift_chain_keeps_both_shifts() {
-    // `(x >> 20) >> 20` is zero for an unsigned operand and -1 for a negative
-    // signed one. Nothing at this point knows which, so folding the pair to a
-    // constant is a miscompile on the signed half of the range.
+fn an_over_width_shift_chain_folds_to_zero() {
+    // Both operands of a shift are `u32`. V094 in `validate::typecheck` rejects
+    // any other type, so the signed operand whose sign bit would survive
+    // `(x >> 20) >> 20` cannot reach this pass. Every bit is gone once the
+    // counts reach the width, and the fused shift cannot be emitted instead:
+    // the target text masks the count with `& 31`, which turns `x << 32` back
+    // into `x`.
     for (inner, outer) in [(20u32, 20u32), (31, 1), (16, 24), (30, 30)] {
-        let source = Expr::shr(
-            Expr::shr(Expr::var("x"), Expr::u32(inner)),
-            Expr::u32(outer),
-        );
-        assert!(
-            reduce_expr(&source).is_none(),
-            "fused an over-width right-shift chain {inner} then {outer}"
-        );
-        let source = Expr::shl(
-            Expr::shl(Expr::var("x"), Expr::u32(inner)),
-            Expr::u32(outer),
-        );
-        assert!(
-            reduce_expr(&source).is_none(),
-            "fused an over-width left-shift chain {inner} then {outer}"
-        );
+        for (source, label) in [
+            (
+                Expr::shr(
+                    Expr::shr(Expr::var("x"), Expr::u32(inner)),
+                    Expr::u32(outer),
+                ),
+                "right",
+            ),
+            (
+                Expr::shl(
+                    Expr::shl(Expr::var("x"), Expr::u32(inner)),
+                    Expr::u32(outer),
+                ),
+                "left",
+            ),
+        ] {
+            let rewritten = reduce_expr(&source).unwrap_or_else(|| {
+                panic!("kept an over-width {label}-shift chain {inner} then {outer}")
+            });
+            assert_eq!(
+                rewritten,
+                Expr::u32(0),
+                "an over-width {label}-shift chain {inner} then {outer} discards every bit"
+            );
+            for x in sample_operands() {
+                assert_eq!(
+                    eval_u32(&source, x),
+                    0,
+                    "the {label}-shift chain {inner} then {outer} is not zero for {x}, so folding \
+                     it to zero would be a miscompile"
+                );
+            }
+        }
     }
 }
 
