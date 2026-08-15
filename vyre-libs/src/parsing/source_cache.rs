@@ -250,9 +250,11 @@ impl<T> ParsedSourceLru<T> {
         // the panic loudly (same poison policy as the readiness mutex below).
         // (The in-flight-parse state lock is a SEPARATE, deliberate protocol:
         // a panicking parse is an expected, flagged condition there.)
-        self.inner
-            .lock()
-            .expect("parsed-source LRU cache lock was poisoned")
+        self.inner.lock().expect(
+            "the parsed-source LRU lock is poisoned, so entries, recency, and coldest \
+             disagree. Fix: drop this cache and build a new one; the panic that poisoned \
+             it is the defect to chase, and it is reported by whichever parse panicked",
+        )
     }
 
     #[cfg(test)]

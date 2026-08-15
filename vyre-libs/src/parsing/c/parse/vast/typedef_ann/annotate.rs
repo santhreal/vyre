@@ -16,7 +16,6 @@ pub fn c11_annotate_typedef_names(
         false,
         false,
         None,
-        None,
     )
 }
 
@@ -35,7 +34,6 @@ pub fn c11_annotate_typedef_names_packed_haystack(
         out_annotated_vast_nodes,
         true,
         false,
-        None,
         None,
     )
 }
@@ -56,7 +54,6 @@ pub fn c11_annotate_typedef_names_precomputed_scope(
         false,
         true,
         None,
-        None,
     )
 }
 
@@ -75,7 +72,6 @@ pub fn c11_annotate_typedef_names_precomputed_scope_packed_haystack(
         out_annotated_vast_nodes,
         true,
         true,
-        None,
         None,
     )
 }
@@ -97,8 +93,10 @@ pub fn c11_annotate_typedef_names_precomputed_context(
         out_annotated_vast_nodes,
         false,
         true,
-        Some(decl_contexts),
-        Some(visible_type),
+        Some(PrecomputedTables {
+            decl_contexts,
+            visible_type,
+        }),
     )
 }
 
@@ -119,17 +117,25 @@ pub fn c11_annotate_typedef_names_precomputed_context_packed_haystack(
         out_annotated_vast_nodes,
         true,
         true,
-        Some(decl_contexts),
-        Some(visible_type),
+        Some(PrecomputedTables {
+            decl_contexts,
+            visible_type,
+        }),
     )
 }
 
+/// The two side tables the precomputed-context path reads, which are produced
+/// together by `c11_precompute_vast_decl_contexts` and
+/// `c11_precompute_vast_visible_type` and are only correct together.
+#[derive(Clone, Copy)]
+pub(super) struct PrecomputedTables<'a> {
+    /// Per-node declaration context words.
+    pub(super) decl_contexts: &'a str,
+    /// Per-node visible-type words.
+    pub(super) visible_type: &'a str,
+}
+
 /// Annotate typedef names over a VAST, emitting the visibility and declaration-kind passes.
-///
-/// # Panics
-/// Panics when precomputed-context annotation is requested without the visible-type
-/// side table. The two arrive together from the caller, so a missing table means the
-/// wiring is wrong rather than the input.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn c11_annotate_typedef_names_impl(
     vast_nodes: &str,
@@ -139,8 +145,7 @@ pub(super) fn c11_annotate_typedef_names_impl(
     out_annotated_vast_nodes: &str,
     packed_haystack: bool,
     precomputed_scope: bool,
-    decl_contexts: Option<&str>,
-    visible_type: Option<&str>,
+    precomputed: Option<PrecomputedTables<'_>>,
 ) -> Program {
     let t = Expr::InvocationId { axis: 0 };
     let base = Expr::mul(t.clone(), Expr::u32(VAST_NODE_STRIDE_U32));
@@ -225,13 +230,11 @@ pub(super) fn c11_annotate_typedef_names_impl(
     // where `typedef int S;` is later reused as `struct S { ... }`). The
     // scan produces a per-row result via the carrier; gating it here
     // diverged from the CPU contract on every tag spot.
-    if let Some(decl_contexts) = decl_contexts {
-        let visible_type = visible_type
-            .expect("precomputed-context annotation requires the visible-type side table");
+    if let Some(precomputed) = precomputed {
         identifier_annotation.extend(emit_typedef_visibility_scan_precomputed_context(
             vast_nodes,
-            decl_contexts,
-            visible_type,
+            precomputed.decl_contexts,
+            precomputed.visible_type,
             t.clone(),
         ));
     } else {
@@ -280,16 +283,11 @@ pub(super) fn c11_annotate_typedef_names_impl(
             ),
         ),
     ]);
-    let mut declaration_annotation = if let Some(decl_contexts) = decl_contexts {
-        // The precomputed-context path is only correct when it is paired with the
-        // per-node visible-type table (`c11_precompute_vast_visible_type`); the two
-        // public wrappers require both, so this unwrap is an internal invariant.
-        let visible_type = visible_type
-            .expect("precomputed-context annotation requires the visible-type side table");
+    let mut declaration_annotation = if let Some(precomputed) = precomputed {
         let mut nodes = emit_precomputed_declaration_kind_for_index(
             vast_nodes,
-            decl_contexts,
-            visible_type,
+            precomputed.decl_contexts,
+            precomputed.visible_type,
             t.clone(),
             "current_decl_result_kind",
             "current_decl_precomputed",
@@ -417,13 +415,16 @@ pub(super) fn c11_annotate_typedef_names_impl(
         vast_nodes_input(vast_nodes, 0, rows),
         haystack_input(haystack, 1, &haystack_len, packed_haystack),
     ];
-    let out_binding = if let Some(decl_contexts) = decl_contexts {
-        let visible_type = visible_type
-            .expect("precomputed-context annotation requires the visible-type side table");
-        buffers.push(decl_contexts_input(decl_contexts, 2, rows));
+    let out_binding = if let Some(precomputed) = precomputed {
+        buffers.push(decl_contexts_input(precomputed.decl_contexts, 2, rows));
         buffers.push(
-            BufferDecl::storage(visible_type, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(rows),
+            BufferDecl::storage(
+                precomputed.visible_type,
+                3,
+                BufferAccess::ReadOnly,
+                DataType::U32,
+            )
+            .with_count(rows),
         );
         4
     } else {

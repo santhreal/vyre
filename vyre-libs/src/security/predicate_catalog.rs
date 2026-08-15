@@ -88,7 +88,11 @@ pub fn try_security_predicate_rows() -> Result<&'static [SecurityPredicateRow], 
 /// recoverable diagnostics.
 #[must_use]
 pub fn security_predicate_rows() -> &'static [SecurityPredicateRow] {
-    try_security_predicate_rows().expect("bundled security predicate Tier-B TOML must parse")
+    try_security_predicate_rows().expect(
+        "the bundled Tier-B predicate data did not parse. \
+         Fix: repair vyre-libs/rules/security_predicates.toml, or call \
+         try_security_predicate_rows to handle the parse failure",
+    )
 }
 
 /// Find one security predicate row by stable op id.

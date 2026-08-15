@@ -68,13 +68,12 @@ pub(crate) fn resolved_semantic_edges(
 /// shape once at the entry so every downstream field read is in bounds.
 ///
 /// # Panics
-/// Panics when `node_count` multiplied by the row stride overflows `usize`, or when
-/// the buffer is shorter than that. Both mean a truncated VAST, which would silently
-/// resolve to `NONE` edges.
+/// Panics when the buffer is shorter than `node_count` rows, which means a
+/// truncated VAST that would silently resolve to `NONE` edges. A `node_count`
+/// so large that the row span overflows saturates instead, and no buffer can be
+/// that long, so it fails the same assertion with the same message.
 fn assert_vast_rows_present(vast_nodes: &[u32], node_count: usize) {
-    let required = node_count
-        .checked_mul(VAST_NODE_STRIDE_U32 as usize)
-        .expect("truncated VAST: node_count * row stride overflowed usize");
+    let required = node_count.saturating_mul(VAST_NODE_STRIDE_U32 as usize);
     assert!(
         vast_nodes.len() >= required,
         "truncated VAST: {} row word(s) for {node_count} node(s); need {required} \
