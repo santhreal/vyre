@@ -203,6 +203,39 @@ fn budget_exhaustion_returns_structured_error() {
         DfaCompileError::TrieStateCapExceeded { state_cap } => {
             assert!(state_cap <= 1024);
         }
+        other => panic!("a two-pattern set under a 1 KiB budget is a size failure: {other}"),
+    }
+}
+
+/// WHY: a compile failure is read by whoever supplied the patterns, so each one
+/// owes the numbers that caused it and the action that resolves it. Every
+/// variant is listed here rather than the one a caller happens to hit, so a new
+/// failure added without a corrective sentence turns this red.
+#[test]
+fn every_compile_failure_names_its_numbers_and_its_fix() {
+    let failures = [
+        DfaCompileError::TooLarge {
+            requested_bytes: 4096,
+            budget_bytes: 1024,
+            state_count: 7,
+        },
+        DfaCompileError::TrieStateCapExceeded { state_cap: 64 },
+        DfaCompileError::TooManyPatterns {
+            pattern_count: 5,
+            limit: 4,
+        },
+    ];
+    for failure in &failures {
+        let rendered = failure.to_string();
+        assert!(
+            rendered.contains("Fix:"),
+            "{failure:?} must state a corrective action: {rendered}"
+        );
+        let numbers: Vec<char> = rendered.chars().filter(char::is_ascii_digit).collect();
+        assert!(
+            !numbers.is_empty(),
+            "{failure:?} must carry the measured numbers: {rendered}"
+        );
     }
 }
 

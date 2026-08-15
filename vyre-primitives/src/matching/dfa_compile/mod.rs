@@ -73,6 +73,13 @@ pub enum DfaCompileError {
         /// State cap derived from the caller-supplied budget.
         state_cap: usize,
     },
+    /// More patterns than the `pid + 1` accept encoding can name.
+    TooManyPatterns {
+        /// Number of patterns the caller supplied.
+        pattern_count: usize,
+        /// Largest pattern count the accept encoding can carry.
+        limit: usize,
+    },
 }
 
 impl fmt::Display for DfaCompileError {
@@ -89,6 +96,13 @@ impl fmt::Display for DfaCompileError {
             Self::TrieStateCapExceeded { state_cap } => write!(
                 formatter,
                 "DFA trie exceeded state cap during construction: requested > {state_cap} states. Fix: reduce the pattern set or raise the budget (cap derived from budget_bytes / 1024)."
+            ),
+            Self::TooManyPatterns {
+                pattern_count,
+                limit,
+            } => write!(
+                formatter,
+                "DFA accept encoding names at most {limit} patterns; {pattern_count} were supplied. Fix: shard the pattern set across multiple DFAs."
             ),
         }
     }

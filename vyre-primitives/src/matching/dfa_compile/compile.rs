@@ -125,17 +125,22 @@ fn fold_ascii_byte(b: usize, case_insensitive: bool) -> usize {
 }
 
 /// Compile a DFA with an explicit state cap.
-///
-/// # Panics
-/// Panics when `pattern_idx` exceeds `u32::MAX - 1`, which the `pid + 1` wire encoding
-/// cannot represent. The caller bounds the pattern count first.
 fn dfa_compile_inner_capped(
     patterns: &[&[u8]],
     state_cap: usize,
     case_insensitive: bool,
 ) -> Result<CompiledDfa, DfaCompileError> {
     const NO_TRANSITION: u32 = u32::MAX;
-
+    // The accept fast path stores a pattern id as `pid + 1`, so `u32::MAX - 1` is
+    // the largest id it can name. Rejecting the whole set here keeps every later
+    // `pattern_idx as u32` in range instead of truncating one silently.
+    const PATTERN_LIMIT: usize = (u32::MAX - 1) as usize;
+    if patterns.len() > PATTERN_LIMIT {
+        return Err(DfaCompileError::TooManyPatterns {
+            pattern_count: patterns.len(),
+            limit: PATTERN_LIMIT,
+        });
+    }
     let upper_bound = patterns
         .iter()
         .fold(0usize, |acc, p| acc.saturating_add(p.len()))
@@ -186,9 +191,7 @@ fn dfa_compile_inner_capped(
         // pattern would win, silently misreporting earlier patterns on the fast path
         // (output_records is unaffected and always carries all pids).
         if accept[cur] == 0 {
-            accept[cur] = (pattern_idx as u32)
-                .checked_add(1)
-                .expect("pattern_idx must be <= u32::MAX - 1 to fit the pid+1 encoding");
+            accept[cur] = pattern_idx as u32 + 1;
         }
     }
 
