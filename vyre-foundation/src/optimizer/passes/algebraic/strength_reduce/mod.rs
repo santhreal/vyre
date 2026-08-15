@@ -299,50 +299,9 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
             }
             None
         }
-        // ── Shift fusion + shift-by-zero elimination ────────────
-        // (x << a) << b → x << (a + b) when a,b are literal.
-        // x << 0 → x,  x >> 0 → x.
+        // Shift identities and chained-shift fusion have one owner.
         BinOp::Shl | BinOp::Shr => {
-            // Zero shifted by any amount is still zero.
-            if matches!(left.as_ref(), Expr::LitU32(0) | Expr::LitI32(0)) {
-                return Some(left.as_ref().clone());
-            }
-            // Shift by zero → identity.
-            if matches!(right.as_ref(), Expr::LitU32(0)) {
-                return Some(left.as_ref().clone());
-            }
-            // Chained shift fusion: (x <<|>> a) <<|>> b → x <<|>> (a+b)
-            // Only fuse when both shifts are the same direction.
-            if let Expr::BinOp {
-                op: inner_op,
-                left: x,
-                right: inner_shift,
-            } = left.as_ref()
-            {
-                if inner_op == op {
-                    if let (Expr::LitU32(a), Expr::LitU32(b)) =
-                        (inner_shift.as_ref(), right.as_ref())
-                    {
-                        let total = a.saturating_add(*b);
-                        // Both operands of a shift are `u32`: V094 rejects any
-                        // other type, so there is no signed operand here whose
-                        // sign bit could be replicated. Every bit is discarded
-                        // once the total reaches the width, and the fused shift
-                        // cannot be emitted because the target text masks the
-                        // count with `& 31`, which would turn `x << 32` back
-                        // into `x`.
-                        if total > 31 {
-                            return Some(Expr::u32(0));
-                        }
-                        return Some(Expr::BinOp {
-                            op: *op,
-                            left: x.clone(),
-                            right: Box::new(Expr::u32(total)),
-                        });
-                    }
-                }
-            }
-            None
+            super::shift_fusion::reduce_shift(*op, left.as_ref(), right.as_ref())
         }
 
         // ── BitAnd mask fusion ──────────────────────────────────

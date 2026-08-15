@@ -552,45 +552,9 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         BinOp::BitXor if matches!(right, Expr::LitU32(0) | Expr::LitI32(0)) => Some(left.clone()),
         BinOp::BitXor if matches!(left, Expr::LitU32(0) | Expr::LitI32(0)) => Some(right.clone()),
 
-        // ── Shift fusion + shift-by-zero elimination ────────────
-        // (x << a) << b → x << (a + b) when a,b are literal.
-        // x << 0 → x,  x >> 0 → x.
+        // Shift identities and chained-shift fusion have one owner.
         BinOp::Shl | BinOp::Shr => {
-            if matches!(right, Expr::LitU32(0)) {
-                return Some(left.clone());
-            }
-            if let Expr::BinOp {
-                op: inner_op,
-                left: x,
-                right: inner_shift,
-            } = left
-            {
-                if *inner_op == op {
-                    if let (Expr::LitU32(a), Expr::LitU32(b)) = (inner_shift.as_ref(), right) {
-                        // Each shift masks its amount mod 32 and shifts bits off
-                        // the top, so the two compose into a single shift by
-                        // `(a & 31) + (b & 31)`. The IR's single shift ALSO masks
-                        // mod 32, so it can only represent a combined amount < 32;
-                        // for >= 32 every bit is shifted out of the 32-bit word
-                        // (the result is 0), which `x << k` cannot express
-                        // (it evaluates to `x << (k & 31)`, which is non-zero for
-                        // odd x). Only fuse while the combined amount stays in
-                        // range; otherwise leave the double shift for the backend,
-                        // which evaluates it correctly. The previous `.min(31)`
-                        // invented `x << 31`, miscompiling e.g. `(x << 16) << 16`
-                        // from 0 to `(x & 1) << 31`.
-                        let total = (a & 31) + (b & 31);
-                        if total < 32 {
-                            return Some(Expr::BinOp {
-                                op,
-                                left: x.clone(),
-                                right: Box::new(Expr::u32(total)),
-                            });
-                        }
-                    }
-                }
-            }
-            None
+            crate::optimizer::passes::algebraic::shift_fusion::reduce_shift(op, left, right)
         }
 
         // ─── Self-operand identities ─────────────────────────
