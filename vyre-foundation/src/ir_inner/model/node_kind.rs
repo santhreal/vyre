@@ -272,6 +272,10 @@ fn interpret_bin_op(op: BinOp, left: Value, right: Value) -> Result<Value, EvalE
             BinOp::SaturatingSub => Ok(Value::U32(left.saturating_sub(right))),
             BinOp::SaturatingMul => Ok(Value::U32(left.saturating_mul(right))),
             BinOp::AbsDiff => Ok(Value::U32(left.abs_diff(right))),
+            // Aliases of Add and Sub: unsigned arithmetic here already wraps,
+            // which is how the folder and every emitter lower them.
+            BinOp::WrappingAdd => Ok(Value::U32(left.wrapping_add(right))),
+            BinOp::WrappingSub => Ok(Value::U32(left.wrapping_sub(right))),
             BinOp::RotateLeft => Ok(Value::U32(left.rotate_left(right & 31))),
             BinOp::RotateRight => Ok(Value::U32(left.rotate_right(right & 31))),
             BinOp::MulHigh => Ok(Value::U32(u32::try_from((u64::from(left).wrapping_mul(u64::from(right))) >> 32).unwrap_or(u32::MAX))),
@@ -381,6 +385,10 @@ fn interpret_bin_op(op: BinOp, left: Value, right: Value) -> Result<Value, EvalE
             BinOp::SaturatingAdd => Ok(Value::I32(left.saturating_add(right))),
             BinOp::SaturatingSub => Ok(Value::I32(left.saturating_sub(right))),
             BinOp::SaturatingMul => Ok(Value::I32(left.saturating_mul(right))),
+            // Aliases of Add and Sub, as in the u32 and u64 arms: signed
+            // addition here wraps rather than trapping.
+            BinOp::WrappingAdd => Ok(Value::I32(left.wrapping_add(right))),
+            BinOp::WrappingSub => Ok(Value::I32(left.wrapping_sub(right))),
             _ => Err(EvalError::new(format!(
                 "unsupported i32 binary operation {op:?}. Fix: add interpreter semantics before registering this operation."
             ))),

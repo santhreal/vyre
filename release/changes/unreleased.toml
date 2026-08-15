@@ -1064,3 +1064,18 @@ text = "Two suites close the classes above from the tree at run time. The Naga s
 id = "gridsync-naga-duplication-pins-lowered-to-measured"
 category = "Changed"
 text = "Three duplication pins record what the tree measures after the owners above: `vyre-driver` 1047 to 994 duplicated lines, `vyre-emit-naga` 221 to 155, and `vyre-reference` 743 to 676, each with `total_lines` measured. A pin with room under it hides the next copy."
+
+[[fragments]]
+id = "u32-i32-wrapping-add-sub-in-the-reference-interpreter"
+category = "Fixed"
+text = "The reference interpreter evaluates `BinOp::WrappingAdd` and `BinOp::WrappingSub` on `u32` and `i32` operands. Both are aliases of `Add` and `Sub`, which the interpreter already evaluates with wrapping arithmetic and which the constant folder and every emitter lower identically, but only the `u64` branch listed them; a graph that named either on a 32-bit width was refused with `unsupported u32 binary operation` instead of evaluated. Four generated per-width sweeps covered the same operation table and none of them swept the pair, so the gap was invisible to all four."
+
+[[fragments]]
+id = "scalar-storage-graph-sweep-has-one-owner"
+category = "Changed"
+text = "One table drives the scalar storage-graph sweep and one table drives the dual scalar evaluator sweep, replacing four per-width harnesses that restated the corpus construction, the strided draw, the case loop and the diagnostic assertions once per width. Each row declares its literal, its corpus, its draw, its case counts and its expectations, and the operation set it exercises is derived from those expectations rather than listed a second time. The collapse raised coverage the copies had let drift: `f32` sweeps 4096 binary and 8192 unary cases rather than 2048 and 4096, `i32` samples 8192 unary cases rather than one pass over its corpus, and `i32` gained the saturating subtraction and multiplication cases the interpreter defines."
+
+[[fragments]]
+id = "scalar-sweep-closure-gate"
+category = "Added"
+text = "The scalar sweep is closed against the frozen public surface: every `NodeStorage` literal variant in the `vyre-foundation` snapshot must have a matrix row, a row naming a variant the surface does not carry fails, each row must sweep the full sampled depth or carry the reason it does not, each row must keep the operation count it declares today, and every operation a row leaves undeclared must still be refused by name. The dual sweep is closed the same way against the `vyre-reference` snapshot: every marker implementing `ReferenceEvaluator` is either exercised against its u32 contract or recorded with the payload shape it takes instead, and a marker that is both, or that the frozen surface no longer carries, fails. Adding a scalar literal, adding an evaluator, or widening the interpreter's operation table turns the suite red until a row records the decision."
