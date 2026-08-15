@@ -367,9 +367,17 @@ impl Diagnostic {
     }
 
     /// Serialize this diagnostic as canonical JSON.
+    ///
+    /// Every field is an owned string, integer, or enum, so `serde_json` has no
+    /// failing path here: it fails only on a map with non-string keys, a
+    /// non-finite float, or a `Serialize` impl that returns an error.
     #[must_use]
     pub fn to_json(&self) -> String {
-        serde_json::to_string(self).expect("Diagnostic serialization is infallible")
+        serde_json::to_string(self).expect(
+            "a diagnostic holds only owned strings, integers, and enums. \
+             Fix: a field added to Diagnostic serializes fallibly; make it data \
+             or give it a Serialize impl that cannot fail",
+        )
     }
 }
 

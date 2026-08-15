@@ -305,34 +305,32 @@ impl NodeGraph {
             path.push(root);
             stack.push((root, 0));
 
-            while let Some(&(node, child_idx)) = stack.last() {
+            // Each frame is popped to read it and pushed back with its cursor
+            // advanced, so the frame is owned rather than borrowed and the
+            // descent below can push a child without a second lookup.
+            while let Some((node, child_idx)) = stack.pop() {
                 let children = &adj[node as usize];
-                if child_idx < children.len() {
-                    // Advance this frame's cursor before descending.
-                    stack
-                        .last_mut()
-                        .expect("stack is non-empty inside `while let Some(..) = stack.last()`")
-                        .1 += 1;
-                    let next = children[child_idx];
-                    match state[next as usize] {
-                        0 => {
-                            state[next as usize] = 1;
-                            path.push(next);
-                            stack.push((next, 0));
-                        }
-                        1 => {
-                            // Back edge to a gray node: a directed cycle.
-                            let cycle_start = path.iter().position(|&n| n == next).unwrap_or(0);
-                            return Err(GraphValidateError::Cycle {
-                                path: path[cycle_start..].to_vec(),
-                            });
-                        }
-                        _ => {} // black: fully explored, no cycle through it.
-                    }
-                } else {
+                if child_idx >= children.len() {
                     state[node as usize] = 2;
                     path.pop();
-                    stack.pop();
+                    continue;
+                }
+                stack.push((node, child_idx + 1));
+                let next = children[child_idx];
+                match state[next as usize] {
+                    0 => {
+                        state[next as usize] = 1;
+                        path.push(next);
+                        stack.push((next, 0));
+                    }
+                    1 => {
+                        // Back edge to a gray node: a directed cycle.
+                        let cycle_start = path.iter().position(|&n| n == next).unwrap_or(0);
+                        return Err(GraphValidateError::Cycle {
+                            path: path[cycle_start..].to_vec(),
+                        });
+                    }
+                    _ => {} // black: fully explored, no cycle through it.
                 }
             }
         }
