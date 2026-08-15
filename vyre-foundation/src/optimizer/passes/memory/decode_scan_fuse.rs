@@ -22,7 +22,9 @@
 //!   * `b.count() > 0` (static size known  -  workgroup memory
 //!     requires a compile-time count), and
 //!   * `b` is not marked `pipeline_live_out` (a workgroup buffer
-//!     cannot be observed outside the dispatch),
+//!     cannot be observed outside the dispatch), and
+//!   * `b` fits the shared-memory budget the caller's capability
+//!     record reports for the target,
 //!
 //! the pass rewrites `b` in-place to
 //! `BufferDecl::workgroup(name, count, element)`  -  the access mode
@@ -34,16 +36,8 @@
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::ir::{BufferAccess, BufferDecl, DataType, Ident, Node, Program};
-use crate::optimizer::{fingerprint_program, vyre_pass, PassAnalysis, PassResult};
+use crate::optimizer::{fingerprint_program, vyre_pass, AdapterCaps, PassAnalysis, PassResult};
 use crate::transform::visit::for_each_node;
-
-/// Conservative ceiling on workgroup-promoted buffer size.
-///
-/// vyre-driver's `DeviceCaps::wgpu_like_default` reports 16 KiB of
-/// shared memory on the wgpu fallback path; CUDA/SPIR-V get 48 KiB+.
-/// Without a target backend at this stage, we use the wgpu floor so a
-/// program that compiles after this pass on any reachable backend.
-const MAX_WORKGROUP_PROMOTION_BYTES: u64 = 16 * 1024;
 
 /// Bytes-per-element for the destination workgroup buffer. Delegates
 /// to the canonical [`DataType::size_bytes`] table so every variant
@@ -59,14 +53,14 @@ fn element_bytes(element: &DataType) -> Option<u64> {
     element.size_bytes().map(|bytes| bytes as u64)
 }
 
-fn fits_workgroup_budget(buf: &BufferDecl) -> bool {
+fn fits_workgroup_budget(buf: &BufferDecl, budget_bytes: u64) -> bool {
     let Some(element_bytes) = element_bytes(&buf.element()) else {
         return false;
     };
     let Some(bytes) = u64::from(buf.count()).checked_mul(element_bytes) else {
         return false;
     };
-    bytes > 0 && bytes <= MAX_WORKGROUP_PROMOTION_BYTES
+    bytes > 0 && bytes <= budget_bytes
 }
 
 /// The single promotability predicate shared by [`run`], [`count_opportunities`]
@@ -77,11 +71,15 @@ fn fits_workgroup_budget(buf: &BufferDecl) -> bool {
 /// sized), not externally observed (`!pipeline_live_out`: workgroup buffers do
 /// not survive past dispatch end), fits the workgroup byte budget, AND is not
 /// referenced by a cross-workgroup op (see [`cross_workgroup_buffers`]).
-fn is_promotable_handoff(buf: &BufferDecl, cross_workgroup: &FxHashSet<Ident>) -> bool {
+fn is_promotable_handoff(
+    buf: &BufferDecl,
+    cross_workgroup: &FxHashSet<Ident>,
+    budget_bytes: u64,
+) -> bool {
     buf.access() == BufferAccess::ReadWrite
         && buf.count() > 0
         && !buf.is_pipeline_live_out()
-        && fits_workgroup_budget(buf)
+        && fits_workgroup_budget(buf, budget_bytes)
         && !cross_workgroup.contains(&Ident::from(buf.name()))
 }
 
@@ -143,7 +141,7 @@ impl DecodeScanFuse {
     /// Run only when a program has at least one promotable handoff buffer.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        if count_opportunities(program) == 0 {
+        if count_opportunities(program, &AdapterCaps::conservative()) == 0 {
             PassAnalysis::SKIP
         } else {
             PassAnalysis::RUN
@@ -153,8 +151,15 @@ impl DecodeScanFuse {
     /// Promote storage handoff buffers to workgroup memory.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
+        Self::transform_for_adapter(program, &AdapterCaps::conservative())
+    }
+
+    /// Promote storage handoff buffers to workgroup memory, bounded by
+    /// the shared-memory budget the target actually reports.
+    #[must_use]
+    pub fn transform_for_adapter(program: Program, caps: &AdapterCaps) -> PassResult {
         let before = fingerprint_program(&program);
-        let optimized = run(program);
+        let optimized = run(program, caps);
         PassResult {
             changed: fingerprint_program(&optimized) != before,
             program: optimized,
@@ -164,17 +169,22 @@ impl DecodeScanFuse {
 
 /// Run the decode→scan fusion over a Program.
 ///
-/// Promotes every handoff-looking `ReadWrite` storage buffer to
-/// workgroup memory. Returns the rewritten Program. Caller-visible
-/// buffers (`pipeline_live_out = true`) are preserved as-is.
+/// Promotes every handoff-looking `ReadWrite` storage buffer that fits
+/// `caps.max_shared_memory_bytes` to workgroup memory. Returns the
+/// rewritten Program. Caller-visible buffers (`pipeline_live_out = true`)
+/// are preserved as-is.
+///
+/// The budget is an input fact, not a constant. A target that reports more
+/// shared memory promotes buffers a lower-capability target cannot hold.
 #[must_use]
-pub fn run(program: Program) -> Program {
+pub fn run(program: Program, caps: &AdapterCaps) -> Program {
+    let budget_bytes = u64::from(caps.max_shared_memory_bytes);
     let mut cross_workgroup: FxHashSet<Ident> = FxHashSet::default();
     cross_workgroup_buffers(program.entry(), &mut cross_workgroup);
     let promotable: FxHashSet<Ident> = program
         .buffers
         .iter()
-        .filter(|b| is_promotable_handoff(b, &cross_workgroup))
+        .filter(|b| is_promotable_handoff(b, &cross_workgroup, budget_bytes))
         .map(|b| Ident::from(b.name()))
         .collect();
 
@@ -206,20 +216,22 @@ pub fn run(program: Program) -> Program {
 /// Count decode-handoff candidate buffers in `program`  -  the
 /// buffers `run` would promote. Identical filter to `run`.
 #[must_use]
-pub fn count_opportunities(program: &Program) -> usize {
+pub fn count_opportunities(program: &Program, caps: &AdapterCaps) -> usize {
+    let budget_bytes = u64::from(caps.max_shared_memory_bytes);
     let mut cross_workgroup: FxHashSet<Ident> = FxHashSet::default();
     cross_workgroup_buffers(program.entry(), &mut cross_workgroup);
     program
         .buffers
         .iter()
-        .filter(|b| is_promotable_handoff(b, &cross_workgroup))
+        .filter(|b| is_promotable_handoff(b, &cross_workgroup, budget_bytes))
         .count()
 }
 
 /// Map from candidate handoff buffer name to its declared element
 /// count. Parallel to [`count_opportunities`] with names exposed.
 #[must_use]
-pub fn candidate_handoffs(program: &Program) -> FxHashMap<Ident, u32> {
+pub fn candidate_handoffs(program: &Program, caps: &AdapterCaps) -> FxHashMap<Ident, u32> {
+    let budget_bytes = u64::from(caps.max_shared_memory_bytes);
     let mut cross_workgroup: FxHashSet<Ident> = FxHashSet::default();
     cross_workgroup_buffers(program.entry(), &mut cross_workgroup);
     let mut out = FxHashMap::default();
@@ -229,7 +241,7 @@ pub fn candidate_handoffs(program: &Program) -> FxHashMap<Ident, u32> {
         // budget check that `run` enforces, so it reported oversize buffers as
         // candidates that `run` would never promote; routing through
         // `is_promotable_handoff` fixes that divergence.
-        if is_promotable_handoff(buf, &cross_workgroup) {
+        if is_promotable_handoff(buf, &cross_workgroup, budget_bytes) {
             out.insert(Ident::from(buf.name()), buf.count());
         }
     }
@@ -258,7 +270,7 @@ mod tests {
     fn run_promotes_readwrite_handoff_to_workgroup() {
         let p = decoder_like();
         let before_bufs = p.buffers.len();
-        let after = run(p);
+        let after = run(p, &AdapterCaps::conservative());
         assert_eq!(after.buffers.len(), before_bufs);
         let decoded = after
             .buffers
@@ -271,7 +283,7 @@ mod tests {
     #[test]
     fn run_leaves_read_only_buffers_alone() {
         let p = decoder_like();
-        let after = run(p);
+        let after = run(p, &AdapterCaps::conservative());
         let input = after.buffers.iter().find(|b| b.name() == "input").unwrap();
         assert_eq!(input.access(), BufferAccess::ReadOnly);
     }
@@ -289,7 +301,7 @@ mod tests {
             [64, 1, 1],
             vec![],
         );
-        let after = run(p);
+        let after = run(p, &AdapterCaps::conservative());
         let r = after.buffers.iter().find(|b| b.name() == "result").unwrap();
         assert_eq!(r.access(), BufferAccess::ReadWrite);
         assert!(r.is_pipeline_live_out());
@@ -315,7 +327,7 @@ mod tests {
                 group: CommGroup::WORLD,
             }],
         );
-        let after = run(p);
+        let after = run(p, &AdapterCaps::conservative());
         let b = after.buffers.iter().find(|x| x.name() == "b").unwrap();
         assert_eq!(
             b.access(),
@@ -323,7 +335,8 @@ mod tests {
             "a buffer reduced across workgroups by AllReduce must not be promoted to workgroup-private memory"
         );
         assert_eq!(
-            count_opportunities(&Program::wrapped(
+            count_opportunities(
+                &Program::wrapped(
                 vec![
                     BufferDecl::storage("b", 0, BufferAccess::ReadWrite, DataType::U32)
                         .with_count(16)
@@ -334,7 +347,9 @@ mod tests {
                     op: CollectiveOp::Sum,
                     group: CommGroup::WORLD,
                 }],
-            )),
+                ),
+                &AdapterCaps::conservative()
+            ),
             0,
             "count_opportunities must agree with run and report no promotable handoff"
         );
@@ -358,7 +373,7 @@ mod tests {
                 group: CommGroup::WORLD,
             }],
         );
-        let after = run(p);
+        let after = run(p, &AdapterCaps::conservative());
         for name in ["src", "dst"] {
             let b = after.buffers.iter().find(|x| x.name() == name).unwrap();
             assert_eq!(
@@ -379,7 +394,7 @@ mod tests {
             [64, 1, 1],
             vec![],
         );
-        let after = run(p);
+        let after = run(p, &AdapterCaps::conservative());
         assert_eq!(after.buffers.len(), 1);
         assert_eq!(after.buffers[0].access(), BufferAccess::ReadOnly);
     }
@@ -398,7 +413,7 @@ mod tests {
             [64, 1, 1],
             vec![],
         );
-        let after = run(p);
+        let after = run(p, &AdapterCaps::conservative());
         let b = after
             .buffers
             .iter()
@@ -409,13 +424,12 @@ mod tests {
 
     #[test]
     fn count_opportunities_finds_one_candidate() {
-        assert_eq!(count_opportunities(&decoder_like()), 1);
+        assert_eq!(count_opportunities(&decoder_like(), &AdapterCaps::conservative()), 1);
     }
 
-    /// A ReadWrite handoff that exceeds 16 KiB stays in storage memory
-    ///  -  wgpu's shared-memory floor would reject the workgroup decl on
-    /// the fallback path. 4097 u32 elements = 16388 bytes, just above
-    /// the 16384-byte budget.
+    /// A ReadWrite handoff larger than the reported shared-memory budget
+    /// stays in storage memory: the workgroup decl would not fit. 4097 u32
+    /// elements = 16388 bytes, just above the conservative 16384-byte budget.
     #[test]
     fn run_leaves_oversize_handoff_in_storage() {
         let p = Program::wrapped(
@@ -428,8 +442,8 @@ mod tests {
             [64, 1, 1],
             vec![],
         );
-        assert_eq!(count_opportunities(&p), 0);
-        let after = run(p);
+        assert_eq!(count_opportunities(&p, &AdapterCaps::conservative()), 0);
+        let after = run(p, &AdapterCaps::conservative());
         let decoded = after
             .buffers
             .iter()
@@ -438,7 +452,50 @@ mod tests {
         assert_eq!(
             decoded.access(),
             BufferAccess::ReadWrite,
-            "oversize handoff must not be promoted; would exceed 16 KiB shared-memory floor"
+            "handoff above the reported shared-memory budget must not be promoted"
+        );
+    }
+
+    /// The promotion budget is the target's reported shared memory, not a
+    /// fixed portable floor. The same 16388-byte handoff that the
+    /// conservative profile refuses is promotable on a target that reports
+    /// more shared memory. Before the budget became an input this pass
+    /// pinned every target to the conservative figure, so a high-capability
+    /// target paid the weakest target's ceiling.
+    #[test]
+    fn a_larger_reported_shared_memory_budget_promotes_a_handoff_the_floor_refuses() {
+        let oversize_for_floor = || {
+            Program::wrapped(
+                vec![
+                    BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
+                        .with_count(64),
+                    BufferDecl::storage("decoded", 1, BufferAccess::ReadWrite, DataType::U32)
+                        .with_count(4097),
+                ],
+                [64, 1, 1],
+                vec![],
+            )
+        };
+        let floor = AdapterCaps::conservative();
+        let roomy = AdapterCaps::high_end();
+        assert!(
+            roomy.max_shared_memory_bytes > floor.max_shared_memory_bytes,
+            "profiles must differ in shared memory for this case to mean anything"
+        );
+
+        assert_eq!(count_opportunities(&oversize_for_floor(), &floor), 0);
+        assert_eq!(count_opportunities(&oversize_for_floor(), &roomy), 1);
+
+        let after = run(oversize_for_floor(), &roomy);
+        let decoded = after
+            .buffers
+            .iter()
+            .find(|b| b.name() == "decoded")
+            .unwrap();
+        assert_eq!(
+            decoded.access(),
+            BufferAccess::Workgroup,
+            "a target reporting room for the buffer must get the promotion"
         );
     }
 
@@ -454,7 +511,7 @@ mod tests {
             [64, 1, 1],
             vec![],
         );
-        let after = run(p);
+        let after = run(p, &AdapterCaps::conservative());
         let decoded = after
             .buffers
             .iter()
@@ -473,13 +530,13 @@ mod tests {
             [64, 1, 1],
             vec![],
         );
-        assert_eq!(count_opportunities(&p), 0);
+        assert_eq!(count_opportunities(&p, &AdapterCaps::conservative()), 0);
     }
 
     #[test]
     fn candidate_handoffs_exposes_name_and_count() {
         let p = decoder_like();
-        let cands = candidate_handoffs(&p);
+        let cands = candidate_handoffs(&p, &AdapterCaps::conservative());
         assert_eq!(cands.get(&Ident::from("decoded")).copied(), Some(128));
         assert!(!cands.contains_key(&Ident::from("input")));
     }
@@ -495,7 +552,7 @@ mod tests {
             [64, 1, 1],
             vec![],
         );
-        let cands = candidate_handoffs(&p);
+        let cands = candidate_handoffs(&p, &AdapterCaps::conservative());
         assert_eq!(cands.len(), 2);
         assert_eq!(cands.get(&Ident::from("a")).copied(), Some(32));
         assert_eq!(cands.get(&Ident::from("b")).copied(), Some(64));

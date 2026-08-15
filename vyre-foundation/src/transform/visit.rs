@@ -425,7 +425,11 @@ pub fn try_for_each_expr<B>(
     mut f: impl FnMut(&Expr) -> ControlFlow<B>,
 ) -> ControlFlow<B> {
     let mut stopped: Option<B> = None;
-    try_for_each_node(nodes, |node| {
+    // The inner walk's own `ControlFlow` is a stop signal with no payload: the
+    // caller's `B` cannot cross the `FnMut(&Node) -> ControlFlow<()>` boundary,
+    // so it is parked in `stopped` instead. The two must agree, or a break was
+    // reported without a value and this would answer `Continue` after stopping.
+    let signal = try_for_each_node(nodes, |node| {
         for operand in node_operands(node).into_iter().flatten() {
             let hit = any_subexpr(operand, &mut |expr| match f(expr) {
                 ControlFlow::Continue(()) => false,
@@ -440,6 +444,11 @@ pub fn try_for_each_expr<B>(
         }
         ControlFlow::Continue(())
     });
+    debug_assert_eq!(
+        signal.is_break(),
+        stopped.is_some(),
+        "the node walk stopped without a value to break with, or carried one without stopping"
+    );
     stopped.map_or(ControlFlow::Continue(()), ControlFlow::Break)
 }
 

@@ -20,6 +20,7 @@
 use crate::ir::Expr;
 use crate::ir::Ident;
 use crate::ir::Node;
+use crate::transform::visit;
 use crate::validate::{err, ValidationError};
 use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashSet;
@@ -98,6 +99,12 @@ fn validate_sequence(nodes: &[Node], errors: &mut Vec<ValidationError>) {
                 );
                 reads_since_barrier.extend(accesses.read_buffers);
                 atomics_since_barrier.extend(accesses.atomic_buffers);
+                // A variant this match does not name may still carry child
+                // bodies. `child_bodies` owns which slots exist, so a new
+                // one is validated instead of skipped in silence.
+                for body in visit::child_bodies(node) {
+                    validate_sequence(body, errors);
+                }
             }
         }
     }

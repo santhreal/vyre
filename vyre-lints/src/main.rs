@@ -112,8 +112,17 @@ struct Lint {
     /// Kinds this lint reports. The gate below requires every
     /// [`ViolationKind`] to be claimed by exactly one entry.
     kinds: &'static [ViolationKind],
-    /// Workspace-relative roots scanned when the caller overrides none.
-    default_roots: &'static [&'static str],
+    /// Roots scanned when the caller overrides none, resolved against the
+    /// workspace root.
+    ///
+    /// A function rather than a list because a list of crate names goes stale
+    /// the moment a crate is added, and it goes stale silently: the new crate
+    /// is simply not scanned and the lint still reports success. That is not
+    /// hypothetical here. `vyre-foundation` and `vyre-primitives` were never in
+    /// the CPU-fallback list, which is how a `PolicyRoute::CpuSimd` variant, two
+    /// threshold fields feeding it and a `-> bool { false }` selector sat in
+    /// `vyre-foundation/src/execution_plan/policy.rs` with this guard green.
+    default_roots: fn(&Path) -> Result<Vec<PathBuf>>,
     /// What a missing root means, appended to the fail-closed diagnostic.
     missing_root_fix: &'static str,
     /// How the fail-closed diagnostic names a missing root.
@@ -134,17 +143,7 @@ const LINTS: &[Lint] = &[
     Lint {
         flag: "check-production-cpu-fallbacks",
         kinds: &[ViolationKind::ProductionCpuFallback],
-        default_roots: &[
-            "vyre-aot/src",
-            "vyre/src",
-            "vyre-driver/src",
-            "vyre-driver-cuda/src",
-            "vyre-driver-wgpu/src",
-            "vyre-libs/src",
-            "vyre-lower/src",
-            "vyre-runtime/src",
-            "vyre-pass-engine/src",
-        ],
+        default_roots: production_source_roots,
         missing_root_fix:
             "Fix: update the release CPU fallback guard roots instead of silently skipping this source tree.",
         root_noun: "production root",
@@ -154,19 +153,24 @@ const LINTS: &[Lint] = &[
     Lint {
         flag: "check-consumer-coupling",
         kinds: &[ViolationKind::ConsumerCoupling],
-        default_roots: &[
-            "docs",
-            "vyre/src",
-            "vyre-driver/src",
-            "vyre-driver-cuda/src",
-            "vyre-driver-wgpu/src",
-            "vyre-foundation/src",
-            "vyre-libs/src",
-            "vyre-lower/src",
-            "vyre-primitives/src",
-            "vyre-runtime/src",
-            "vyre-pass-engine/src",
-        ],
+        default_roots: |workspace| {
+            fixed_roots(
+                workspace,
+                &[
+                    "docs",
+                    "vyre/src",
+                    "vyre-driver/src",
+                    "vyre-driver-cuda/src",
+                    "vyre-driver-wgpu/src",
+                    "vyre-foundation/src",
+                    "vyre-libs/src",
+                    "vyre-lower/src",
+                    "vyre-primitives/src",
+                    "vyre-runtime/src",
+                    "vyre-pass-engine/src",
+                ],
+            )
+        },
         missing_root_fix:
             "Fix: update the platform doc/comment guard roots instead of silently shrinking scan coverage.",
         root_noun: "consumer coupling root",
@@ -176,7 +180,9 @@ const LINTS: &[Lint] = &[
     Lint {
         flag: "check-module-forks",
         kinds: &[ViolationKind::ModuleFork],
-        default_roots: &["vyre-primitives/src/graph", "vyre-libs/src/graph"],
+        default_roots: |workspace| {
+            fixed_roots(workspace, &["vyre-primitives/src/graph", "vyre-libs/src/graph"])
+        },
         missing_root_fix:
             "Fix: update the duplicate-module scan roots instead of silently shrinking scan coverage.",
         root_noun: "module fork root",
@@ -186,13 +192,18 @@ const LINTS: &[Lint] = &[
     Lint {
         flag: "check-gpu-skip-guards",
         kinds: &[ViolationKind::GpuSkipGuard],
-        default_roots: &[
-            "vyre-driver-cuda/src",
-            "vyre-driver-cuda/tests",
-            "vyre-driver-wgpu/src",
-            "vyre-driver-wgpu/tests",
-            "vyre-runtime/src",
-        ],
+        default_roots: |workspace| {
+            fixed_roots(
+                workspace,
+                &[
+                    "vyre-driver-cuda/src",
+                    "vyre-driver-cuda/tests",
+                    "vyre-driver-wgpu/src",
+                    "vyre-driver-wgpu/tests",
+                    "vyre-runtime/src",
+                ],
+            )
+        },
         missing_root_fix:
             "Fix: update CUDA/WGPU validation roots instead of silently shrinking scan coverage.",
         root_noun: "GPU skip guard root",
@@ -200,6 +211,67 @@ const LINTS: &[Lint] = &[
         scan: run_gpu_skip_guards,
     },
 ];
+
+/// Workspace-relative `roots` joined onto `workspace`.
+fn fixed_roots(workspace: &Path, roots: &[&str]) -> Result<Vec<PathBuf>> {
+    Ok(roots.iter().map(|root| workspace.join(root)).collect())
+}
+
+/// Crates exempt from the production CPU/reference guard, with the reason.
+///
+/// `vyre-reference` computes on the host by definition: it is the parity oracle
+/// a conformance comparison reads. `vyre-test-support` and `vyre-lints` are
+/// harness and tooling, not a dispatch path. `vyre-spec` and `vyre-macros`
+/// declare rather than execute. Every other member is scanned, including one
+/// added after this line was written.
+const CPU_GUARD_EXEMPT_CRATES: &[(&str, &str)] = &[
+    ("vyre-reference", "the host parity oracle, which is the one legitimate host execution"),
+    ("vyre-test-support", "test harness, publish = false, never on a dispatch path"),
+    ("vyre-lints", "this tool; its own fixtures name the patterns it forbids"),
+    ("vyre-spec", "declares the frozen surface, executes nothing"),
+    ("vyre-macros", "proc macros run at compile time, not on a dispatch path"),
+];
+
+/// Every workspace member's `src` directory, minus the recorded exemptions.
+///
+/// Read from the workspace manifest at run time. A crate added to the workspace
+/// is scanned from its first commit without anyone editing this file, which is
+/// the property a hardcoded list cannot have: the list that stood here omitted
+/// `vyre-foundation` and `vyre-primitives`, so the guard reported success while
+/// never reading either of them.
+fn production_source_roots(workspace: &Path) -> Result<Vec<PathBuf>> {
+    let manifest = std::fs::read_to_string(workspace.join("Cargo.toml"))
+        .with_context(|| format!("reading {}", workspace.join("Cargo.toml").display()))?;
+    let manifest: toml::Value = manifest.parse().context("parsing the workspace manifest")?;
+    let members = manifest
+        .get("workspace")
+        .and_then(|workspace| workspace.get("members"))
+        .and_then(toml::Value::as_array)
+        .context(
+            "Fix: the workspace manifest declares no `workspace.members`, so the CPU fallback \
+             guard cannot derive what to scan and will not fall back to a stale list",
+        )?;
+
+    let exempt: Vec<&str> = CPU_GUARD_EXEMPT_CRATES.iter().map(|(name, _)| *name).collect();
+    let mut roots = Vec::with_capacity(members.len());
+    for member in members {
+        let Some(member) = member.as_str() else {
+            anyhow::bail!("Fix: a `workspace.members` entry is not a string");
+        };
+        if exempt.contains(&member) {
+            continue;
+        }
+        let source = workspace.join(member).join("src");
+        if source.is_dir() {
+            roots.push(source);
+        }
+    }
+    anyhow::ensure!(
+        !roots.is_empty(),
+        "Fix: the CPU fallback guard derived no scan roots from the workspace manifest"
+    );
+    Ok(roots)
+}
 
 /// Kinds reported by the default `raw_ir_in_libs` run rather than by a
 /// flag-selected lint.
@@ -211,16 +283,13 @@ const DEFAULT_RUN_KINDS: &[ViolationKind] = &[
 /// Run one lint: resolve its roots, fail closed on a missing one, emit, exit.
 fn run_lint(cli: &Cli, lint: &Lint, overrides: &[PathBuf]) -> Result<()> {
     if cli.print_default_roots {
-        for root in lint.default_roots {
-            println!("{root}");
+        for root in (lint.default_roots)(&cli.workspace_root)? {
+            println!("{}", root.display());
         }
         return Ok(());
     }
     let roots: Vec<PathBuf> = if overrides.is_empty() {
-        lint.default_roots
-            .iter()
-            .map(|root| cli.workspace_root.join(root))
-            .collect()
+        (lint.default_roots)(&cli.workspace_root)?
     } else {
         overrides.to_vec()
     };
@@ -387,8 +456,11 @@ fn emit_json(violations: &[Violation]) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Lint, DEFAULT_RUN_KINDS, LINTS};
+    use super::{
+        production_source_roots, Lint, CPU_GUARD_EXEMPT_CRATES, DEFAULT_RUN_KINDS, LINTS,
+    };
     use std::collections::BTreeMap;
+    use std::path::PathBuf;
     use vyre_lints::ViolationKind;
 
     /// Lint recorded as reporting `kind`.
@@ -435,7 +507,8 @@ mod tests {
     }
 
     #[test]
-    fn every_registered_lint_declares_a_distinct_flag_and_at_least_one_root() {
+    fn every_registered_lint_declares_a_distinct_flag_and_resolves_real_roots() {
+        let workspace = vyre_test_support::monorepo::vyre_workspace_root();
         let flags: std::collections::BTreeSet<_> = LINTS.iter().map(|lint| lint.flag).collect();
         assert_eq!(flags.len(), LINTS.len());
 
@@ -450,7 +523,18 @@ mod tests {
         } in LINTS
         {
             assert!(!kinds.is_empty(), "{flag} reports no violation kind");
-            assert!(!default_roots.is_empty(), "{flag} scans nothing by default");
+            let roots = default_roots(&workspace)
+                .unwrap_or_else(|error| panic!("{flag} cannot resolve its roots: {error}"));
+            assert!(!roots.is_empty(), "{flag} scans nothing by default");
+            for root in &roots {
+                assert!(
+                    root.exists(),
+                    "{flag} declares a root that does not exist in this checkout: {}. \
+                     A root that is missing is scanned as nothing, and the lint then reports \
+                     success over a tree it never opened.",
+                    root.display()
+                );
+            }
             assert!(
                 missing_root_fix.starts_with("Fix: "),
                 "{flag} missing-root diagnostic gives no corrective action"
@@ -460,6 +544,69 @@ mod tests {
                 "{flag} names a missing root as `{root_noun}`, which does not read as a root"
             );
             assert!(!context.is_empty(), "{flag} adds no context to a failure");
+        }
+    }
+
+    /// Every workspace member is either scanned for host execution or exempt
+    /// with a reason.
+    ///
+    /// The class this closes: a crate that nobody remembered to add to the
+    /// guard's root list. The list that used to stand in `LINTS` named nine
+    /// crates and omitted `vyre-foundation`, which is where a `CpuSimd` route,
+    /// its two threshold fields and its `-> bool { false }` selector lived while
+    /// this guard reported success. The roster is now read from the manifest, so
+    /// this test only has to prove the two sets partition the workspace, and a
+    /// member added tomorrow lands on the scanned side by default.
+    #[test]
+    fn every_workspace_member_is_scanned_for_host_execution_or_exempt_with_a_reason() {
+        let workspace = vyre_test_support::monorepo::vyre_workspace_root();
+        let manifest: toml::Value = std::fs::read_to_string(workspace.join("Cargo.toml"))
+            .expect("the workspace manifest is readable")
+            .parse()
+            .expect("the workspace manifest is valid TOML");
+        let members: Vec<String> = manifest["workspace"]["members"]
+            .as_array()
+            .expect("the workspace declares members")
+            .iter()
+            .filter_map(|member| member.as_str().map(str::to_owned))
+            .collect();
+        assert!(members.len() > 20, "the workspace member list is truncated");
+
+        let scanned: std::collections::BTreeSet<PathBuf> =
+            production_source_roots(&workspace).expect("roots resolve").into_iter().collect();
+        let exempt: std::collections::BTreeSet<&str> =
+            CPU_GUARD_EXEMPT_CRATES.iter().map(|(name, _)| *name).collect();
+
+        for member in &members {
+            let source = workspace.join(member).join("src");
+            if !source.is_dir() {
+                continue;
+            }
+            let is_scanned = scanned.contains(&source);
+            let is_exempt = exempt.contains(member.as_str());
+            assert!(
+                is_scanned != is_exempt,
+                "Fix: workspace member `{member}` is {}. Every member either has its sources \
+                 scanned for host execution or carries a row in CPU_GUARD_EXEMPT_CRATES saying \
+                 why it does not.",
+                if is_scanned {
+                    "both scanned and exempt"
+                } else {
+                    "neither scanned nor exempt"
+                }
+            );
+        }
+
+        for (name, reason) in CPU_GUARD_EXEMPT_CRATES {
+            assert!(
+                members.iter().any(|member| member == name),
+                "Fix: `{name}` is exempted from the host-execution guard but is not a workspace \
+                 member, so the row exempts nothing and hides the next crate that takes its name"
+            );
+            assert!(
+                reason.split_whitespace().count() >= 5,
+                "Fix: the exemption for `{name}` has no reason worth reading: {reason:?}"
+            );
         }
     }
 }

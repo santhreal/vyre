@@ -319,6 +319,20 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Changed
 
+- The decode-scan fusion pass takes the workgroup promotion budget from the
+  caller's capability record instead of a fixed constant. `run`,
+  `count_opportunities` and `candidate_handoffs` take an `AdapterCaps`, and
+  `DecodeScanFuse::transform_for_adapter` promotes against a named target.
+  `DecodeScanFuse::transform` keeps the conservative profile, so the default
+  path is unchanged. Previously every target was capped at the lowest
+  reported shared-memory figure.
+- `vyre_foundation::fp_parity::max_output_ulp` reports the largest ULP
+  distance across a program's declared F32 outputs. Output slot alignment is
+  now owned by one internal walk shared with the buffer parity comparison.
+- Routing no longer has a host arm. `PolicyRoute::CpuSimd`,
+  `RoutingDecision::CpuSimd`, `ExecutionPolicy::use_cpu_fast_path` and the two
+  host fast-path thresholds are gone, and `ExecutionPolicy::route` no longer
+  takes a byte count that only the deleted predicate read.
 - The standalone `vyre-harness` package is gone. Semantic operation identity,
   tier classification, and registration now live in `vyre-foundation`; library
   fixture views live in `vyre-libs`; conformance execution and parity policy

@@ -3,13 +3,12 @@
 use crate::optimizer::AdapterCaps;
 
 /// Backend route category emitted by the shared scheduling policy.
+///
+/// Every route runs the program on a device. There is no host-execution route:
+/// a workload the policy cannot place on a device is an error at the point that
+/// discovers it, not a category here.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum PolicyRoute {
-    /// Explicit diagnostic/reference route.
-    ///
-    /// `SchedulingPolicy::standard()` never emits this route; CPU execution is
-    /// allowed only when a caller opts into an oracle/test policy.
-    CpuSimd,
     /// Standard compiled GPU pipeline. Kept for explicit non-persistent
     /// policies and backend diagnostics; it is not the standard release route.
     GpuPipeline,
@@ -24,8 +23,6 @@ pub enum PolicyRoute {
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct SchedulingPolicy {
     persistent_runtime_node_max: usize,
-    cpu_fast_path_node_max: usize,
-    cpu_fast_path_static_bytes_below: u64,
     megakernel_node_count_above: usize,
     fused_over_dispatch_multiplier: u64,
     default_worker_count: u32,
@@ -45,13 +42,11 @@ impl Default for SchedulingPolicy {
 }
 
 impl SchedulingPolicy {
-    /// Return the standard CUDA-first megakernel policy used by vyre's built-in planners.
+    /// Return the standard persistent-megakernel policy used by the built-in planners.
     #[must_use]
     pub const fn standard() -> Self {
         Self {
             persistent_runtime_node_max: 64,
-            cpu_fast_path_node_max: 64,
-            cpu_fast_path_static_bytes_below: 1 << 16,
             megakernel_node_count_above: 1024,
             fused_over_dispatch_multiplier: 4,
             default_worker_count: 64,
@@ -77,25 +72,20 @@ impl SchedulingPolicy {
         node_count > self.persistent_runtime_node_max
     }
 
-    /// Route a plan represented by node count and static bytes.
+    /// Route a plan represented by node count.
+    ///
+    /// Two answers, because there are two: a program runs under the persistent
+    /// megakernel or under the compiled pipeline. `static_bytes` used to select
+    /// a third, host-executing route through `use_cpu_fast_path`, a predicate
+    /// that ignored both its arguments and answered `false`, so the arm was
+    /// unreachable and the parameter measured nothing.
     #[must_use]
-    pub const fn route(&self, node_count: usize, static_bytes: u64) -> PolicyRoute {
+    pub const fn route(&self, node_count: usize) -> PolicyRoute {
         if self.use_persistent_megakernel(node_count) {
             PolicyRoute::PersistentMegakernel
-        } else if self.use_cpu_fast_path(node_count, static_bytes) {
-            PolicyRoute::CpuSimd
         } else {
             PolicyRoute::GpuPipeline
         }
-    }
-
-    /// Return true when a tiny static workload should stay on CPU SIMD.
-    ///
-    /// The standard release policy is GPU-only and therefore returns `false`;
-    /// CPU SIMD remains an explicit oracle/test concept, not an implicit route.
-    #[must_use]
-    pub const fn use_cpu_fast_path(&self, _node_count: usize, _static_bytes: u64) -> bool {
-        false
     }
 
     /// Return true when the persistent megakernel is the preferred route.
@@ -458,41 +448,36 @@ mod tests {
 
     // --- Routing ---
 
+    /// Every node count the standard policy can be asked about routes to a
+    /// device.
+    ///
+    /// Four tests used to stand here, one per (node count, static bytes) pair,
+    /// all asserting `PersistentMegakernel`. They could not fail: the third
+    /// answer, a host-executing `CpuSimd` route, was produced by a predicate
+    /// that ignored its arguments and returned `false`, so no argument reached
+    /// it and no pair distinguished anything. The variant is gone and the
+    /// remaining answers are both device routes, so what is left to check is
+    /// that the sweep is total and never leaves the device, including at the
+    /// threshold the policy itself declares.
     #[test]
-    fn route_tiny_workload_uses_megakernel() {
-        assert_eq!(
-            policy().route(10, 100),
-            PolicyRoute::PersistentMegakernel,
-            "small node count + small bytes uses standard megakernel release path"
-        );
-    }
-
-    #[test]
-    fn route_large_bytes_uses_megakernel() {
-        // Below node threshold but above static bytes threshold.
-        assert_eq!(
-            policy().route(10, 1 << 20),
-            PolicyRoute::PersistentMegakernel,
-            "small nodes but large bytes uses standard megakernel release path"
-        );
-    }
-
-    #[test]
-    fn route_large_node_count_uses_megakernel() {
-        assert_eq!(
-            policy().route(2000, 0),
-            PolicyRoute::PersistentMegakernel,
-            "2000 nodes → megakernel"
-        );
-    }
-
-    #[test]
-    fn route_medium_node_count_uses_megakernel() {
-        assert_eq!(
-            policy().route(500, 1 << 20),
-            PolicyRoute::PersistentMegakernel,
-            "500 nodes uses standard megakernel release path"
-        );
+    fn every_node_count_routes_to_a_device() {
+        let policy = policy();
+        let threshold = policy.persistent_runtime_node_max;
+        for node_count in [
+            0,
+            1,
+            threshold.saturating_sub(1),
+            threshold,
+            threshold + 1,
+            usize::MAX,
+        ] {
+            assert_eq!(
+                policy.route(node_count),
+                PolicyRoute::PersistentMegakernel,
+                "Fix: the standard policy routes {node_count} nodes off the persistent \
+                 megakernel; it is the only standard release route"
+            );
+        }
     }
 
     // --- Persistent runtime ---

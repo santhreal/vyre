@@ -399,6 +399,8 @@ fn two_level_subgroup_reduce_body(
 mod tests {
     use super::*;
     use crate::ir::{BufferDecl, DataType, Expr, Node, Program};
+    use crate::transform::visit::try_for_each_expr;
+    use core::ops::ControlFlow;
 
     fn caps_with_subgroup(size: u32) -> AdapterCaps {
         AdapterCaps {
@@ -489,95 +491,37 @@ mod tests {
         )
     }
 
+    /// True when some `Select` under `nodes` has a `false_val` matching
+    /// `predicate`.
+    ///
+    /// A pair of hand-written descents used to stand here, one over `Node` and
+    /// one over `Expr`, together 90 lines and both ending in `_ => false`. As a
+    /// TEST helper that is worse than in production code: the assertion built on
+    /// it is `!contains(...)`, so a position the walk failed to reach reads as
+    /// proof that the emitted neutral is absent, and it would have gone on
+    /// passing after the lowering moved a select into a position neither list
+    /// named.
     fn nodes_contain_select_false(nodes: &[Node], predicate: fn(&Expr) -> bool) -> bool {
-        nodes
-            .iter()
-            .any(|node| node_contains_select_false(node, predicate))
+        any_expr_matching(nodes, &|expr| {
+            matches!(expr, Expr::Select { false_val, .. } if predicate(false_val))
+        })
     }
 
-    fn node_contains_select_false(node: &Node, predicate: fn(&Expr) -> bool) -> bool {
-        match node {
-            Node::Let { value, .. } | Node::Assign { value, .. } => {
-                expr_contains_select_false(value, predicate)
+    /// True when some expression anywhere under `nodes` satisfies `predicate`.
+    ///
+    /// `try_for_each_expr` owns which positions exist: every operand of every
+    /// node and every sub-expression of every operand. The predicate is shallow,
+    /// so a variant that gains an operand is reached without editing anything
+    /// here.
+    fn any_expr_matching(nodes: &[Node], predicate: &dyn Fn(&Expr) -> bool) -> bool {
+        try_for_each_expr(nodes, |expr| {
+            if predicate(expr) {
+                ControlFlow::Break(())
+            } else {
+                ControlFlow::Continue(())
             }
-            Node::Store { index, value, .. } => {
-                expr_contains_select_false(index, predicate)
-                    || expr_contains_select_false(value, predicate)
-            }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                expr_contains_select_false(cond, predicate)
-                    || nodes_contain_select_false(then, predicate)
-                    || nodes_contain_select_false(otherwise, predicate)
-            }
-            Node::Loop { from, to, body, .. } => {
-                expr_contains_select_false(from, predicate)
-                    || expr_contains_select_false(to, predicate)
-                    || nodes_contain_select_false(body, predicate)
-            }
-            Node::Block(body) => nodes_contain_select_false(body, predicate),
-            Node::Region { body, .. } => nodes_contain_select_false(body, predicate),
-            Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
-                expr_contains_select_false(offset, predicate)
-                    || expr_contains_select_false(size, predicate)
-            }
-            Node::Trap { address, .. } => expr_contains_select_false(address, predicate),
-            _ => false,
-        }
-    }
-
-    fn expr_contains_select_false(expr: &Expr, predicate: fn(&Expr) -> bool) -> bool {
-        match expr {
-            Expr::Select {
-                cond,
-                true_val,
-                false_val,
-            } => {
-                predicate(false_val)
-                    || expr_contains_select_false(cond, predicate)
-                    || expr_contains_select_false(true_val, predicate)
-                    || expr_contains_select_false(false_val, predicate)
-            }
-            Expr::Load { index, .. }
-            | Expr::UnOp { operand: index, .. }
-            | Expr::Cast { value: index, .. }
-            | Expr::SubgroupBallot { cond: index }
-            | Expr::SubgroupReduce { value: index, .. } => {
-                expr_contains_select_false(index, predicate)
-            }
-            Expr::BinOp { left, right, .. }
-            | Expr::SubgroupShuffle {
-                value: left,
-                lane: right,
-            } => {
-                expr_contains_select_false(left, predicate)
-                    || expr_contains_select_false(right, predicate)
-            }
-            Expr::Call { args, .. } => args
-                .iter()
-                .any(|arg| expr_contains_select_false(arg, predicate)),
-            Expr::Fma { a, b, c } => {
-                expr_contains_select_false(a, predicate)
-                    || expr_contains_select_false(b, predicate)
-                    || expr_contains_select_false(c, predicate)
-            }
-            Expr::Atomic {
-                index,
-                expected,
-                value,
-                ..
-            } => {
-                expr_contains_select_false(index, predicate)
-                    || expected
-                        .as_ref()
-                        .is_some_and(|expected| expr_contains_select_false(expected, predicate))
-                    || expr_contains_select_false(value, predicate)
-            }
-            _ => false,
-        }
+        })
+        .is_break()
     }
 
     fn workgroup_sum_region(scratch: &str, scope: ReductionScope) -> Node {
@@ -900,8 +844,8 @@ mod tests {
             panic!("expected Region");
         };
         assert!(
-            node_contains_subgroup_reduce_max(&body[0])
-                && node_contains_subgroup_reduce_max(&body[3]),
+            nodes_contain_subgroup_reduce_max(&body[0..1])
+                && nodes_contain_subgroup_reduce_max(&body[3..4]),
             "both levels of the 256-lane max reduction must use subgroup_reduce(Max): {body:?}"
         );
         assert!(
@@ -910,60 +854,33 @@ mod tests {
         );
     }
 
-    fn node_contains_subgroup_reduce_max(node: &Node) -> bool {
-        fn expr_has(expr: &Expr) -> bool {
-            match expr {
+    /// True when some expression under `nodes` is a Max subgroup reduce.
+    ///
+    /// The predicate is shallow; `any_expr_matching` owns which positions
+    /// exist, so a variant that gains an operand is reached without editing
+    /// this.
+    fn nodes_contain_subgroup_reduce_max(nodes: &[Node]) -> bool {
+        any_expr_matching(nodes, &|expr| {
+            matches!(
+                expr,
                 Expr::SubgroupReduce {
                     op: SubgroupReduceOp::Max,
                     ..
-                } => true,
-                Expr::SubgroupReduce { value, .. }
-                | Expr::Load { index: value, .. }
-                | Expr::Cast { value, .. }
-                | Expr::SubgroupShuffle { value, .. }
-                | Expr::SubgroupBallot { cond: value } => expr_has(value),
-                Expr::BinOp { left, right, .. } => expr_has(left) || expr_has(right),
-                Expr::Select {
-                    cond,
-                    true_val,
-                    false_val,
-                } => expr_has(cond) || expr_has(true_val) || expr_has(false_val),
-                _ => false,
-            }
-        }
-        match node {
-            Node::Let { value, .. } | Node::Assign { value, .. } => expr_has(value),
-            Node::Store { value, .. } => expr_has(value),
-            Node::If { then, .. } => then.iter().any(node_contains_subgroup_reduce_max),
-            _ => false,
-        }
+                }
+            )
+        })
     }
 
+    /// True when some select under `nodes` uses -inf as its false arm.
     fn nodes_contain_neg_inf_select_neutral(nodes: &[Node]) -> bool {
-        fn expr_has(expr: &Expr) -> bool {
-            match expr {
-                Expr::Select { false_val, .. } => {
-                    matches!(false_val.as_ref(), Expr::LitF32(v) if *v == f32::NEG_INFINITY)
-                        || expr_has(false_val)
-                }
-                Expr::SubgroupReduce { value, .. } => expr_has(value),
-                _ => false,
-            }
-        }
-        fn node_has(node: &Node) -> bool {
-            match node {
-                Node::Let { value, .. }
-                | Node::Assign { value, .. }
-                | Node::Store { value, .. } => expr_has(value),
-                Node::If { then, .. } => then.iter().any(node_has),
-                _ => false,
-            }
-        }
-        nodes.iter().any(node_has)
+        any_expr_matching(nodes, &|expr| {
+            matches!(expr, Expr::Select { false_val, .. }
+                if matches!(false_val.as_ref(), Expr::LitF32(v) if *v == f32::NEG_INFINITY))
+        })
     }
 
     #[test]
-    fn lowers_two_level_workgroup_sum_for_large_cuda_blocks() {
+    fn lowers_two_level_workgroup_sum_for_large_workgroups() {
         let region = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup);
         let program = Program::wrapped(
             vec![BufferDecl::workgroup("scratch", 256, DataType::F32)],
@@ -984,7 +901,7 @@ mod tests {
             "Fix: two-level subgroup lowering should emit first-level subgroup work, a barrier, full-warp second-level subgroup work, and a final barrier."
         );
         assert!(
-            node_contains_subgroup_add(&body[0]) && node_contains_subgroup_add(&body[3]),
+            nodes_contain_subgroup_add(&body[0..1]) && nodes_contain_subgroup_add(&body[3..4]),
             "Fix: both levels of the 256-lane reduction must use subgroup_add instead of the shared-memory tree: {body:?}"
         );
         assert!(matches!(&body[2], Node::Barrier { .. }));
@@ -1056,98 +973,10 @@ mod tests {
         );
     }
 
-    fn node_contains_subgroup_add(node: &Node) -> bool {
-        match node {
-            Node::Let { value, .. } | Node::Assign { value, .. } => {
-                expr_contains_subgroup_add(value)
-            }
-            Node::Store { index, value, .. } => {
-                expr_contains_subgroup_add(index) || expr_contains_subgroup_add(value)
-            }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                expr_contains_subgroup_add(cond)
-                    || then.iter().any(node_contains_subgroup_add)
-                    || otherwise.iter().any(node_contains_subgroup_add)
-            }
-            Node::Loop { from, to, body, .. } => {
-                expr_contains_subgroup_add(from)
-                    || expr_contains_subgroup_add(to)
-                    || body.iter().any(node_contains_subgroup_add)
-            }
-            Node::Block(body) => body.iter().any(node_contains_subgroup_add),
-            Node::Region { body, .. } => body.iter().any(node_contains_subgroup_add),
-            Node::Barrier { .. }
-            | Node::IndirectDispatch { .. }
-            | Node::AsyncWait { .. }
-            | Node::Trap { .. }
-            | Node::Resume { .. }
-            | Node::AllReduce { .. }
-            | Node::AllGather { .. }
-            | Node::ReduceScatter { .. }
-            | Node::Broadcast { .. }
-            | Node::Opaque(_)
-            | Node::Return => false,
-            Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
-                expr_contains_subgroup_add(offset) || expr_contains_subgroup_add(size)
-            }
-        }
-    }
-
-    fn expr_contains_subgroup_add(expr: &Expr) -> bool {
-        match expr {
-            Expr::SubgroupReduce { .. } => true,
-            Expr::Load { index, .. }
-            | Expr::Cast { value: index, .. }
-            | Expr::SubgroupShuffle { value: index, .. }
-            | Expr::SubgroupBallot { cond: index } => expr_contains_subgroup_add(index),
-            Expr::BinOp { left, right, .. } => {
-                expr_contains_subgroup_add(left) || expr_contains_subgroup_add(right)
-            }
-            Expr::UnOp { operand, .. } => expr_contains_subgroup_add(operand),
-            Expr::Call { args, .. } => args.iter().any(expr_contains_subgroup_add),
-            Expr::Select {
-                cond,
-                true_val,
-                false_val,
-            } => {
-                expr_contains_subgroup_add(cond)
-                    || expr_contains_subgroup_add(true_val)
-                    || expr_contains_subgroup_add(false_val)
-            }
-            Expr::Fma { a, b, c } => {
-                expr_contains_subgroup_add(a)
-                    || expr_contains_subgroup_add(b)
-                    || expr_contains_subgroup_add(c)
-            }
-            Expr::Atomic {
-                index,
-                expected,
-                value,
-                ..
-            } => {
-                expr_contains_subgroup_add(index)
-                    || expected
-                        .as_ref()
-                        .is_some_and(|expr| expr_contains_subgroup_add(expr))
-                    || expr_contains_subgroup_add(value)
-            }
-            Expr::LitU32(_)
-            | Expr::LitI32(_)
-            | Expr::LitF32(_)
-            | Expr::LitBool(_)
-            | Expr::Var(_)
-            | Expr::BufferRef { .. }
-            | Expr::InvocationId { .. }
-            | Expr::WorkgroupId { .. }
-            | Expr::LocalId { .. }
-            | Expr::BufLen { .. }
-            | Expr::SubgroupLocalId
-            | Expr::SubgroupSize
-            | Expr::Opaque(_) => false,
-        }
+    /// True when some expression under `nodes` is a subgroup reduce.
+    fn nodes_contain_subgroup_add(nodes: &[Node]) -> bool {
+        any_expr_matching(nodes, &|expr| {
+            matches!(expr, Expr::SubgroupReduce { .. })
+        })
     }
 }

@@ -16,12 +16,7 @@ impl RoutingPolicy for StandardPolicy {
     }
 
     fn route_with_explanation(&self, plan: &ExecutionPlan) -> RoutingExplanation {
-        match SchedulingPolicy::standard().route(plan.fusion.node_count, plan.memory.static_bytes) {
-            PolicyRoute::CpuSimd => RoutingExplanation {
-                policy: self.name(),
-                decision: RoutingDecision::PersistentMegakernel,
-                reason: "standard policy overrides CPU SIMD suggestion to persistent megakernel for release execution",
-            },
+        match SchedulingPolicy::standard().route(plan.fusion.node_count) {
             PolicyRoute::GpuPipeline => RoutingExplanation {
                 policy: self.name(),
                 decision: RoutingDecision::PersistentMegakernel,

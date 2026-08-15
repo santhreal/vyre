@@ -6,15 +6,12 @@
 use vyre_foundation::execution_plan::ExecutionPlan;
 
 /// Target backend category chosen by the router.
+///
+/// Every category is a device. A workload that cannot be placed on one is an
+/// error naming the missing capability, not a category here.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum RoutingDecision {
-    /// Legacy explicit reference route.
-    ///
-    /// The standard runtime policy does not select this automatically; callers
-    /// that require GPU execution should treat this as an opt-in diagnostic
-    /// route, never as an implicit fallback.
-    CpuSimd,
     /// Use the default GPU pipeline.
     GpuPipeline,
     /// Use the persistent megakernel.

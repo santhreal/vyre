@@ -103,7 +103,17 @@ pub(super) fn collect_carrier_names(
                     walk(inner, incoming_scope, loop_var, seen, order, local_lets);
                     local_lets.pop();
                 }
-                _ => {}
+                // A variant this match does not name may still carry child
+                // bodies. `child_bodies` owns which slots exist, so a new
+                // one contributes its carriers instead of being skipped.
+                // Each gets a fresh let frame: an unnamed body is a scope.
+                _ => {
+                    for inner in vyre_foundation::transform::visit::child_bodies(node) {
+                        local_lets.push(FxHashSet::default());
+                        walk(inner, incoming_scope, loop_var, seen, order, local_lets);
+                        local_lets.pop();
+                    }
+                }
             }
         }
     }

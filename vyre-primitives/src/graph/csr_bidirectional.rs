@@ -11,6 +11,7 @@ use crate::graph::csr_backward_traverse::csr_backward_traverse;
 use crate::graph::csr_closure_entry_points::{
     define_panicking_csr_closure_entry_points, define_try_csr_closure_entry_points,
 };
+#[cfg(any(test, feature = "cpu-parity"))]
 use crate::graph::csr_closure_inputs::CsrClosureInputs;
 use crate::graph::csr_forward_traverse::csr_forward_traverse;
 use crate::graph::csr_frontier_step::csr_frontier_step_dispatch_grid;

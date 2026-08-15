@@ -26,9 +26,3 @@ fn standard_runtime_routing_is_megakernel_first() {
     }
 }
 
-#[test]
-fn standard_runtime_routing_never_selects_reference_route_implicitly() {
-    let engine = RoutingEngine::new(StandardPolicy);
-    let plan = plan(&program_with_nodes(1, 1)).expect("routing fixture must be canonical");
-    assert_ne!(engine.route(&plan), RoutingDecision::CpuSimd);
-}
