@@ -7,19 +7,15 @@
 //! prove that a backend's emitted code respects the declared effect
 //! discipline.
 //!
-//! The kinds mirror `vyre_primitives::effects::EffectKind` so a
-//! downstream crate can convert this row into the primitives'
-//! `EffectRow`. The duplication is deliberate: foundation cannot
-//! depend on primitives (cycle), and a row is cheap.
+//! [`ProgramEffects`] is the one list of effect kinds. An analysis that needs
+//! a program's effects reads this row rather than restating the kinds.
 
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::Program;
 
-/// Set of effect kinds a `Program` produces. Matches the canonical
-/// `EffectKind` ordering shipped from `vyre_primitives::effects`.
-/// Each backend lowering pass may require / discharge / forbid
-/// specific kinds.
+/// Set of effect kinds a `Program` produces. Each backend lowering pass may
+/// require, discharge, or forbid specific kinds.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct ProgramEffects(u32);
 
