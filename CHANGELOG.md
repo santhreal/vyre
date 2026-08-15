@@ -1431,6 +1431,18 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   by their graph and rustfmt put every field on its own row. The redundant
   `name: name` half of eighty-four fields the positional-to-named rewrite left
   behind is gone as well.
+- The persistent collections come from `imbl` 7.0.1 instead of `im` 15.1.0.
+  `im` carries RUSTSEC-2026-0248 as unmaintained, pulls `bitmaps` 2.1.0 which
+  carries RUSTSEC-2026-0247, and its `OrdSet` insertion has an aliasing
+  violation, RUSTSEC-2023-0126; `cargo deny check advisories` failed on all
+  three. `imbl` is the maintained fork with the same API. The structural
+  sharing is why a std map is not the answer: the DCE live set is cloned at
+  every branch arm and every loop body, and the lowering variable scope
+  snapshots its binding map per scope, so a std map would deep-copy every
+  identifier where the persistent map shares its structure.
+  `vyre_foundation::optimizer::passes::fusion_cse::dce::LiveSet` is new and is
+  the one place the live-set type is named, replacing the concrete set spelled
+  in four files.
 
 ### Removed
 
