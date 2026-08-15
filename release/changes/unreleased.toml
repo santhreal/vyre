@@ -1832,3 +1832,8 @@ text = "ZX identity removal no longer splices out a phase-zero spider whose two 
 id = "kan-extension-one-owner"
 category = "Changed"
 text = "`reasoning::finite_category` states each construction once. Left and right Kan extension were four functions differing in whether the fold summed or multiplied and whether it ran per object or over a table; they are now `kan_extension_at` and `kan_extension_table` taking a `KanDirection`, over one shared fold. `is_adjoint_pair` is `adjoint_pair`, because it returns the pair and its witness rather than a bool, and `yoneda_natural_iso` is `natural_transformation_count`, because a count is what it returns."
+
+[[fragments]]
+id = "public-api-gate-no-silent-skip"
+category = "Fixed"
+text = "The public-API snapshot gate reports a crate it could not read instead of skipping it. Two paths dropped a package out of the comparison without a word: a publishable package whose `src` directory was missing, and an extraction that succeeded but returned nothing. No committed snapshot is empty, so an empty surface is a truncated rustdoc or a zero-byte `.rmeta` from a parallel build sharing one target directory, which is exactly the state in which a crate most needs to be checked. Both are findings now, and an extraction that exits nonzero prints what `cargo public-api` said rather than a bare sentence naming the crate."
