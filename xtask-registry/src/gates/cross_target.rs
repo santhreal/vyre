@@ -174,7 +174,11 @@ enum TripleResult {
 /// declares in its own configuration or the answer is about a build nobody runs.
 fn check_triple(root: &Path, triple: &str) -> TripleResult {
     let mut command = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string()));
-    command.current_dir(root).arg("check").arg("--target").arg(triple);
+    command
+        .current_dir(root)
+        .arg("check")
+        .arg("--target")
+        .arg(triple);
     for crate_name in PRODUCT_CRATES {
         command.arg("-p").arg(crate_name);
     }
@@ -260,7 +264,11 @@ fn collect_target_oses(source: &str, file: &Path, found: &mut BTreeMap<String, O
             let Some(end) = rest.find('"') else { break };
             let os = &rest[..end];
             rest = &rest[end..];
-            if os.is_empty() || !os.bytes().all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_') {
+            if os.is_empty()
+                || !os
+                    .bytes()
+                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_')
+            {
                 continue;
             }
             found.entry(os.to_string()).or_insert_with(|| {
@@ -302,7 +310,10 @@ mod tests {
             Path::new("a/b.rs"),
             &mut found,
         );
-        assert_eq!(found.keys().cloned().collect::<Vec<String>>(), ["ios", "macos"]);
+        assert_eq!(
+            found.keys().cloned().collect::<Vec<String>>(),
+            ["ios", "macos"]
+        );
         let origin = found["macos"].as_ref().expect("the arm is located");
         assert_eq!(origin.file, Path::new("a/b.rs"));
         assert_eq!(origin.line, 2);
@@ -316,7 +327,11 @@ mod tests {
             Path::new("a/b.rs"),
             &mut found,
         );
-        assert!(found.is_empty(), "got {:?}", found.keys().collect::<Vec<_>>());
+        assert!(
+            found.is_empty(),
+            "got {:?}",
+            found.keys().collect::<Vec<_>>()
+        );
     }
 
     #[test]
@@ -327,14 +342,22 @@ mod tests {
             Path::new("a/b.rs"),
             &mut found,
         );
-        assert!(found.is_empty(), "got {:?}", found.keys().collect::<Vec<_>>());
+        assert!(
+            found.is_empty(),
+            "got {:?}",
+            found.keys().collect::<Vec<_>>()
+        );
     }
 
     #[test]
     fn an_unterminated_literal_does_not_hang_or_panic() {
         let mut found = BTreeMap::new();
         collect_target_oses("#[cfg(target_os = \"macos", Path::new("a/b.rs"), &mut found);
-        assert!(found.is_empty(), "got {:?}", found.keys().collect::<Vec<_>>());
+        assert!(
+            found.is_empty(),
+            "got {:?}",
+            found.keys().collect::<Vec<_>>()
+        );
     }
 
     #[test]
@@ -352,7 +375,7 @@ mod tests {
     fn a_failure_with_no_error_line_still_names_itself() {
         assert_eq!(
             first_error_line("warning: something\n"),
-            "cargo check failed with no error line"
+            "the target check reported no error line"
         );
     }
 }

@@ -1,9 +1,9 @@
 {
   "schema_version": 4,
   "authority": "canonical OperationRegistration records joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows",
-  "operation_count": 354,
+  "operation_count": 359,
   "tier_counts": {
-    "intrinsic": 160,
+    "intrinsic": 165,
     "libs": 194
   },
   "category_counts": {
@@ -18,7 +18,7 @@
     "label": 1,
     "logical": 2,
     "matching": 4,
-    "math": 77,
+    "math": 82,
     "nn": 71,
     "opt": 1,
     "parsing": 45,
@@ -10870,7 +10870,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::parsing::ast_shunting_yard::statement_pass",
+          "operation": "anonymous::shunting_yard_statement_pass",
           "registered": false
         }
       ]
@@ -11172,7 +11172,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::parsing::c11_build_expression_shape_nodes::node_shape_pass",
+          "operation": "anonymous::vast_expression_shape_pass",
           "registered": false
         }
       ]
@@ -11383,7 +11383,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::parsing::c11_classify_vast_node_kinds::node_classification_pass",
+          "operation": "anonymous::vast_node_classification_pass",
           "registered": false
         }
       ]
@@ -11850,7 +11850,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-primitives::text::utf8_validate",
+          "operation": "vyre-primitives::text::line_index",
           "registered": true
         }
       ]
@@ -11965,7 +11965,7 @@
         },
         {
           "depth": 2,
-          "operation": "vyre-libs::parsing::c_lexer::classify_at_pos",
+          "operation": "anonymous::c_lexer_classify_at_pos",
           "registered": false
         },
         {
@@ -11975,7 +11975,7 @@
         },
         {
           "depth": 2,
-          "operation": "vyre-primitives::text::utf8_validate",
+          "operation": "vyre-primitives::text::line_index",
           "registered": true
         }
       ]
@@ -12094,7 +12094,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::parsing::c11_typedef_decl_kind_for_row::declaration_scan",
+          "operation": "anonymous::typedef_declaration_scan",
           "registered": false
         }
       ]
@@ -12213,7 +12213,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack::declaration_scan",
+          "operation": "anonymous::typedef_declaration_scan",
           "registered": false
         }
       ]
@@ -12419,7 +12419,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::parsing::c11_typedef_visible_name_for_row::visibility_scan",
+          "operation": "anonymous::typedef_visibility_scan",
           "registered": false
         }
       ]
@@ -12538,7 +12538,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack::visibility_scan",
+          "operation": "anonymous::typedef_visibility_scan",
           "registered": false
         }
       ]
@@ -12708,7 +12708,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::parsing::c::lower::ast_to_pg_semantic_graph::node_edge_pass",
+          "operation": "anonymous::semantic_graph_node_edge_pass",
           "registered": false
         }
       ]
@@ -13046,7 +13046,7 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-libs::parsing::c_lexer::classify_at_pos",
+          "operation": "anonymous::c_lexer_classify_at_pos",
           "registered": false
         }
       ]
@@ -23467,17 +23467,17 @@
         },
         {
           "depth": 1,
-          "operation": "vyre-primitives::graph::dominator_tree::init_state",
+          "operation": "anonymous::dominator_tree_init_state",
           "registered": false
         },
         {
           "depth": 1,
-          "operation": "vyre-primitives::graph::dominator_tree::recompute_depth",
+          "operation": "anonymous::dominator_tree_recompute_depth",
           "registered": false
         },
         {
           "depth": 1,
-          "operation": "vyre-primitives::graph::dominator_tree::intersect_predecessors",
+          "operation": "anonymous::dominator_tree_intersect_predecessors",
           "registered": false
         }
       ]
@@ -27648,6 +27648,76 @@
       ]
     },
     {
+      "id": "vyre-primitives::math::eigenvector_column_sign",
+      "tier": "intrinsic",
+      "category": "math",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "evec",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "F32",
+            "count": 4,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "math",
+        "inventory-registry"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-primitives::math::eigenvector_column_sign",
+          "registered": true
+        }
+      ]
+    },
+    {
       "id": "vyre-primitives::math::gaussian_rdp_step",
       "tier": "intrinsic",
       "category": "math",
@@ -27731,6 +27801,85 @@
         {
           "depth": 0,
           "operation": "vyre-primitives::math::gaussian_rdp_step",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-primitives::math::givens_rotate_pair",
+      "tier": "intrinsic",
+      "category": "math",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "m",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "F32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "coeff",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "F32",
+            "count": 2,
+            "pipeline_live_out": false
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "math",
+        "inventory-registry"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-primitives::math::givens_rotate_pair",
           "registered": true
         }
       ]
@@ -28031,6 +28180,249 @@
         {
           "depth": 0,
           "operation": "vyre-primitives::math::interval_merge",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-primitives::math::jacobi_apply_rotation",
+      "tier": "intrinsic",
+      "category": "math",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "a",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "F32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "evec",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "F32",
+            "count": 4,
+            "pipeline_live_out": false
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "math",
+        "inventory-registry"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-primitives::math::jacobi_apply_rotation",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-primitives::math::givens_rotate_pair",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-primitives::math::givens_rotate_pair",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-primitives::math::givens_rotate_pair",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-primitives::math::matrix_diagonal_extract",
+      "tier": "intrinsic",
+      "category": "math",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "m",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "F32",
+            "count": 9,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "diag",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "F32",
+            "count": 3,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "math",
+        "inventory-registry"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-primitives::math::matrix_diagonal_extract",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-primitives::math::matrix_identity_fill",
+      "tier": "intrinsic",
+      "category": "math",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "m",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "F32",
+            "count": 9,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "math",
+        "inventory-registry"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-primitives::math::matrix_identity_fill",
           "registered": true
         }
       ]
@@ -30016,6 +30408,41 @@
           "depth": 0,
           "operation": "vyre-primitives::math::symmetric_eigen_jacobi",
           "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-primitives::math::matrix_identity_fill",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-primitives::math::jacobi_apply_rotation",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-primitives::math::givens_rotate_pair",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-primitives::math::givens_rotate_pair",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-primitives::math::givens_rotate_pair",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-primitives::math::eigenvector_column_sign",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-primitives::math::matrix_diagonal_extract",
+          "registered": true
         }
       ]
     },
@@ -30223,6 +30650,41 @@
         {
           "depth": 1,
           "operation": "vyre-primitives::math::symmetric_eigen_jacobi",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-primitives::math::matrix_identity_fill",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-primitives::math::jacobi_apply_rotation",
+          "registered": true
+        },
+        {
+          "depth": 3,
+          "operation": "vyre-primitives::math::givens_rotate_pair",
+          "registered": true
+        },
+        {
+          "depth": 3,
+          "operation": "vyre-primitives::math::givens_rotate_pair",
+          "registered": true
+        },
+        {
+          "depth": 3,
+          "operation": "vyre-primitives::math::givens_rotate_pair",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-primitives::math::eigenvector_column_sign",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-primitives::math::matrix_diagonal_extract",
           "registered": true
         },
         {

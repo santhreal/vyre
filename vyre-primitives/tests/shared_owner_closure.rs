@@ -564,14 +564,29 @@ fn every_routed_convergence_op_registers_with_the_routing_contract() {
         .collect();
     let mut unregistered = Vec::new();
     for path in &members {
-        // An op's tests live either in the op's own file or in a `tests/mod.rs`
-        // under a directory named for it. Both are the same module.
-        let sibling = path.trim_end_matches(".rs").to_string() + "/tests/mod.rs";
-        let registered = [path.as_str(), sibling.as_str()].iter().any(|candidate| {
-            by_path
-                .get(*candidate)
-                .is_some_and(|text| text.contains("assert_routes_on_dispatch_span"))
-        });
+        // An op's tests live in the op's own file, in a `tests/mod.rs` under a
+        // directory named for it, or - once the op is split across files - in a
+        // `tests/mod.rs` beside the file in the op's own directory. All three are
+        // the same module. A registration in a neighbouring file counts only when
+        // it names the op, so a dialect directory shared by several ops can never
+        // lend one op's registration to another.
+        let named_directory = path.trim_end_matches(".rs").to_string() + "/tests/mod.rs";
+        let (directory, file) = path.rsplit_once('/').unwrap_or((".", path.as_str()));
+        let stem = file.trim_end_matches(".rs");
+        let op = if stem == "program" || stem == "mod" {
+            directory.rsplit('/').next().unwrap_or(directory)
+        } else {
+            stem
+        };
+        let beside = format!("{directory}/tests/mod.rs");
+        let registered = [path.as_str(), named_directory.as_str(), beside.as_str()]
+            .iter()
+            .any(|candidate| {
+                by_path.get(*candidate).is_some_and(|text| {
+                    text.contains("assert_routes_on_dispatch_span")
+                        && (*candidate == path.as_str() || text.contains(op))
+                })
+            });
         if !registered {
             unregistered.push(path.clone());
         }

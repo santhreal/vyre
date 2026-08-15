@@ -11,10 +11,14 @@
 //! 2. Walk the entry-body Node tree:
 //!    - `total_nodes`  -  recursive node count.
 //!    - `loops`  -  count of `Node::Loop`.
-//!    - `composed_nodes`  -  count of nodes that live inside a
+//!    - `composed_nodes`  -  count of nodes that are, or live inside, a
 //!      `Node::Region { source_region: Some(_), .. }` (i.e. the Region
 //!      was constructed by composing another registered op rather than
-//!      being an anonymous local wrapper).
+//!      being an anonymous local wrapper). A region that names a
+//!      composition is composition, so it counts itself: an operation that
+//!      tags its own entry region used to read as one uncomposed node, and
+//!      making every operation name itself lowered the measured fraction of
+//!      every operation that took the fix.
 //! 3. Pass if EITHER:
 //!    - Under raw budget: `loops <= 4 AND total_nodes <= 200`, OR
 //!    - Adequate composition: `composed_nodes / total_nodes >= 0.6`.
@@ -163,10 +167,18 @@ struct WalkState {
 /// `Region { source_region: Some(_), .. }`, every node beneath counts
 /// toward `composed_nodes`. Anonymous regions (`source_region: None`)
 /// do NOT promote their children to composed  -  they're local wrappers,
-/// not composition.
+/// not composition. A region that names a composition counts itself, because
+/// naming the operation behind a region is what composition is.
 fn walk(node: &Node, inside_composed_region: bool, state: &mut WalkState) {
     state.total_nodes += 1;
-    if inside_composed_region {
+    let names_a_composition = matches!(
+        node,
+        Node::Region {
+            source_region: Some(_),
+            ..
+        }
+    );
+    if inside_composed_region || names_a_composition {
         state.composed_nodes += 1;
     }
 

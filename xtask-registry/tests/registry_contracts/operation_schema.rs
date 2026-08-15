@@ -47,6 +47,14 @@ fn run_xtask(arguments: &[&str]) -> Output {
         .expect("Fix: xtask operation schema command must launch")
 }
 
+/// Assert the validator rejects a mutated schema, and says why.
+///
+/// A delegated gate binary returns its report as JSON on stdout and exits 0; the
+/// parent dispatcher treats a non-zero exit as a gate that could not run at all.
+/// So the verdict is the report, not the status: asserting on the status made
+/// every one of these mutations read as rejected while the validator was
+/// accepting them, and the same assertion passed against a schema that already
+/// disagreed with the live registry.
 fn assert_mutation_rejected<F>(expected_error: &str, mutate: F)
 where
     F: FnOnce(&mut Value),
@@ -61,15 +69,44 @@ where
     )
     .expect("Fix: mutated schema must be writable");
     let output = run_xtask(&["operation-schema", "--validate", path.to_str().unwrap()]);
-    let error = String::from_utf8_lossy(&output.stderr);
+    let findings = reported_findings(&output);
     assert!(
-        !output.status.success(),
-        "Fix: schema mutation was accepted"
+        !findings.is_empty(),
+        "Fix: schema mutation was accepted; stdout={} stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
     );
     assert!(
-        error.contains(expected_error),
-        "Fix: rejection must name `{expected_error}`; stderr={error}"
+        findings
+            .iter()
+            .any(|finding| finding.contains(expected_error)),
+        "Fix: rejection must name `{expected_error}`; findings={findings:?}"
     );
+}
+
+/// Every finding message the validator reported, as `message` plus its fix.
+fn reported_findings(output: &Output) -> Vec<String> {
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let report: Value = serde_json::from_str(stdout.trim()).unwrap_or_else(|error| {
+        panic!(
+            "Fix: the validator must print one JSON report; {error}; stdout={stdout} stderr={}",
+            String::from_utf8_lossy(&output.stderr)
+        )
+    });
+    report
+        .get("findings")
+        .and_then(Value::as_array)
+        .map(|findings| {
+            findings
+                .iter()
+                .map(|finding| {
+                    let message = finding.get("message").and_then(Value::as_str).unwrap_or("");
+                    let fix = finding.get("fix").and_then(Value::as_str).unwrap_or("");
+                    format!("{message} {fix}")
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// The committed JSON must be the exact serialization of today's live registrations.
@@ -92,10 +129,7 @@ fn committed_schema_matches_live_registrations() {
 /// `docs/generated/op-inventory.toml` and `docs/generated/catalog.toml`.
 #[test]
 fn schema_derived_markdown_views_are_current() {
-    for arguments in [
-        ["list-ops"].as_slice(),
-        ["catalog"].as_slice(),
-    ] {
+    for arguments in [["list-ops"].as_slice(), ["catalog"].as_slice()] {
         let output = run_xtask(arguments);
         assert!(
             output.status.success(),

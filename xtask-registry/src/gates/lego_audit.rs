@@ -138,6 +138,7 @@ impl Gate for LegoAudit {
             ));
         }
 
+        check_0_every_exemption_is_live(&mut report, &ops);
         check_1_no_reinvention(&mut report, &ops);
         check_2_depth_of_composition(&mut report, &ops);
         check_3_primitive_coverage(&mut report, &ops);
@@ -297,8 +298,20 @@ struct Walk {
     children: BTreeSet<String>,
 }
 
+/// A node is own work unless it is, or sits inside, a region that names the
+/// operation behind it. The naming region counts as composed because naming an
+/// operation is what composition is: when every operation started tagging its own
+/// entry region, the tag itself read as one more node of own work and lowered the
+/// measured fraction of every operation that took the fix.
 fn walk(node: &Node, inside_composed: bool, state: &mut Walk) {
-    if inside_composed {
+    let names_a_composition = matches!(
+        node,
+        Node::Region {
+            source_region: Some(_),
+            ..
+        }
+    );
+    if inside_composed || names_a_composition {
         state.composed_nodes += 1;
     } else {
         state.own_nodes += 1;
@@ -669,19 +682,21 @@ fn no_reinvention_pairs(ops: &[OpInfo]) -> Vec<(f64, &OpInfo, &OpInfo)> {
     pairs
 }
 
+/// Id fragments that mark an op as one phase of a larger composition rather than
+/// an op a caller reaches for.
+const PHASE_MARKERS: [&str; 9] = [
+    "::hidden_projection",
+    "::output_projection",
+    "::softmax_stats",
+    "::weight_write",
+    ".scope",
+    ".decl",
+    ".identifier_intern",
+    "::v_cycle_phase",
+    "::power_iteration_phase",
+];
+
 fn is_internal_phase_op(id: &str) -> bool {
-    const PHASE_MARKERS: &[&str] = &[
-        "::consumer_",
-        "::hidden_projection",
-        "::output_projection",
-        "::softmax_stats",
-        "::weight_write",
-        ".scope",
-        ".decl",
-        ".identifier_intern",
-        "::v_cycle_phase",
-        "::power_iteration_phase",
-    ];
     PHASE_MARKERS.iter().any(|marker| id.contains(marker))
 }
 
@@ -690,25 +705,54 @@ fn is_internal_phase_op(id: &str) -> bool {
 /// These operations emit pure, backend-neutral IR but have no lower registered
 /// composition unit. Keeping this list explicit prevents an arbitrary flat
 /// Tier-3 operation from bypassing the depth gate.
+const DECLARED_TIER3_LEAVES: [&str; 14] = [
+    "vyre-libs::nn::top_k",
+    "vyre-libs::parsing::c11_extract_calls",
+    "vyre-libs::parsing::c11_extract_functions",
+    "vyre-libs::parsing::c_keyword_packed_haystack",
+    "vyre-libs::parsing::c_keyword",
+    "vyre-libs::math::reduce_variance",
+    "vyre-libs::parsing::c11_annotate_typedef_names",
+    "vyre-libs::nn::softmax_top_k",
+    "vyre-libs::nn::flash_attention",
+    "vyre-libs::nn::linear_4bit_affine_grouped",
+    "vyre-libs::math::fft::scale_conjugate_inverse",
+    "vyre-libs::math::fft::pointwise_complex_multiply_conjugate",
+    "vyre-libs::math::linalg::matmul_strassen_2x2",
+    "vyre-libs::math::fft::fft_radix2",
+];
+
 fn is_declared_tier3_leaf(id: &str) -> bool {
-    matches!(
-        id,
-        "vyre-libs::nn::top_k"
-            | "vyre-libs::parsing::c11_extract_calls"
-            | "vyre-libs::parsing::c11_extract_functions"
-            | "vyre-libs::parsing::c_keyword_packed_haystack"
-            | "vyre-libs::parsing::c_keyword"
-            | "vyre-libs::math::reduce_variance"
-            | "vyre-libs::parsing::c11_annotate_typedef_names"
-            | "vyre-libs::parsing::c11_annotate_typedef_names_packed_haystack"
-            | "vyre-libs::nn::softmax_top_k"
-            | "vyre-libs::nn::flash_attention"
-            | "vyre-libs::nn::linear_4bit_affine_grouped"
-            | "vyre-libs::math::fft::scale_conjugate_inverse"
-            | "vyre-libs::math::fft::pointwise_complex_multiply_conjugate"
-            | "vyre-libs::math::linalg::matmul_strassen_2x2"
-            | "vyre-libs::math::fft::fft_radix2"
-    )
+    DECLARED_TIER3_LEAVES.contains(&id)
+}
+
+/// What a dead exemption row costs, and how to close it.
+const DEAD_EXEMPTION_FIX: &str =
+    "delete the row: an exemption that matches no registered op exempts nothing, and it reads as coverage of an op that no longer exists";
+
+/// Every exemption row must match a registered op.
+///
+/// An exemption is a rule that a named op is judged elsewhere. A row naming an op
+/// that was renamed or deleted stops exempting anything, and nothing says so: the
+/// list keeps its length, the audit keeps passing, and a reader takes the row as
+/// evidence the op is covered. Two rows were already in that state.
+fn check_0_every_exemption_is_live(report: &mut Report, ops: &[OpInfo]) {
+    for marker in PHASE_MARKERS {
+        if !ops.iter().any(|op| op.id.contains(marker)) {
+            report.find(Finding::new(
+                format!("no registered op id contains the phase marker `{marker}`"),
+                DEAD_EXEMPTION_FIX,
+            ));
+        }
+    }
+    for leaf in DECLARED_TIER3_LEAVES {
+        if !ops.iter().any(|op| op.id == leaf) {
+            report.find(Finding::new(
+                format!("no registered op answers to the declared Tier-3 leaf `{leaf}`"),
+                DEAD_EXEMPTION_FIX,
+            ));
+        }
+    }
 }
 
 /// Two op ids share a sub-dialect when their first TWO `::` segments
