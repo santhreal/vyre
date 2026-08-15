@@ -55,7 +55,6 @@ dispatch route. Metal is active on supported Apple targets. See
 | Concrete backends | `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-driver-spirv`, `vyre-driver-metal`, `vyre-driver-reference` | Target compilers, materializers, devices; admit authenticated payloads; submit typed work. |
 | Runtime | `vyre-runtime` | Compilation orchestration, admission, artifact sessions, recovery, persistence, residency, scheduling, readback. |
 | Artifact packaging | `vyre-aot` | Package validated artifacts without owning artifact identity or live dispatch. |
-| Frontends | `vyre-frontend-rust` | Lower source-language subsets into backend-neutral `Program` or `ProgramGraph` values. |
 | Conformance | `vyre-conform`, `vyre-conform-spec` | Execute canonical artifact routes; own frozen conformance schemas. |
 
 Domain logic does not import a CLI, transport, or concrete backend.

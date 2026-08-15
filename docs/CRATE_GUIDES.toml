@@ -37,9 +37,6 @@ error_behavior = "A registration source that the build declared but the linker d
 [profile.packaging]
 error_behavior = "Invalid plans, incompatible metadata, unsupported targets, and serialization failures prevent an artifact from being emitted or accepted."
 
-[profile.frontend]
-error_behavior = "Invalid source, unsupported language constructs, and lowering failures carry source context and do not produce a successful partial program."
-
 [profile.lowering]
 error_behavior = "Invalid IR, unsupported target operations, and failed lowering invariants stop emission with contextual diagnostics."
 
@@ -281,17 +278,6 @@ non_owned = 'Live device execution, runtime protocol mutation.'
 allowed_dependencies = ['vyre-driver', 'vyre-foundation', 'vyre-megakernel', 'vyre-primitives', 'vyre-spec']
 profile = 'packaging'
 
-[package.vyre-frontend-rust]
-landing_status = 'beta'
-release_status = 'This crate is a beta Rust frontend surface in the {vyre_version} workspace. It is not published as a standalone crate in this release.'
-path = 'vyre-frontend-rust'
-owner = 'rust-frontend'
-layer = 'frontend'
-owned = 'Lower the supported Rust frontend subset into typed Vyre programs and execute it through selected backends.'
-non_owned = 'Backend selection, runtime admission, product library ownership.'
-allowed_dependencies = ['vyre-foundation']
-profile = 'frontend'
-
 [package.vyre-bench]
 release_status = 'This crate is internal benchmark tooling for the {vyre_version} train and is not published to crates.io.'
 path = 'vyre-bench'
@@ -299,7 +285,7 @@ owner = 'benchmarks'
 layer = 'tooling'
 owned = 'Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark evidence.'
 non_owned = 'Production library semantics, device drivers as libraries.'
-allowed_dependencies = ['vyre', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-metal', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-emit-ptx', 'vyre-foundation', 'vyre-frontend-rust', 'vyre-libs', 'vyre-lower', 'vyre-primitives', 'vyre-reference', 'vyre-runtime', 'vyre-spec']
+allowed_dependencies = ['vyre', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-metal', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-emit-ptx', 'vyre-foundation', 'vyre-libs', 'vyre-lower', 'vyre-primitives', 'vyre-reference', 'vyre-runtime', 'vyre-spec']
 profile = 'tooling'
 
 [package.vyre-lints]

@@ -63,7 +63,7 @@ Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark ev
 - Path: `vyre-bench`
 - Owner: `benchmarks`
 - Layer: `tooling`
-- Internal production dependencies: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-frontend-rust`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`
+- Internal production dependencies: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-registry-link`, `vyre-runtime`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -74,7 +74,6 @@ Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark ev
 | `vyre-driver-wgpu` | portable backend execution | `private` | `portable-driver` |
 | `vyre-emit-ptx` | primary binary backend text emission | `private` | `primary-binary-emitter` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `private` | `foundation-ir` |
-| `vyre-frontend-rust` | Rust source lowering | `private` | `rust-frontend` |
 | `vyre-libs` | product operation builders | `private` | `product-libraries` |
 | `vyre-lower` | verified backend-neutral representation lowering | `private` | `lowering` |
 | `vyre-primitives` | reusable semantic Program builders | `private` | `primitive-library` |
@@ -315,19 +314,6 @@ Own typed IR and ProgramGraph contracts, validation, diagnostics, serialization,
 | --- | --- | --- | --- |
 | `vyre-macros` | compile-time registration generation | `private` | `registration-macros` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
-
-### `vyre-frontend-rust`
-
-Lower the supported Rust frontend subset into typed Vyre programs without owning backend execution.
-
-- Path: `vyre-frontend-rust`
-- Owner: `rust-frontend`
-- Layer: `frontend`
-- Internal production dependencies: `vyre-foundation`
-
-| Dependency | Purpose | Boundary | Owning seam |
-| --- | --- | --- | --- |
-| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `private` | `foundation-ir` |
 
 ### `vyre-grammar-gen`
 

@@ -320,16 +320,6 @@ feature = "serde"
 outcome = "compiles"
 
 [[pair]]
-member = "vyre-frontend-rust"
-feature = "(default)"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-frontend-rust"
-feature = "(none)"
-outcome = "compiles"
-
-[[pair]]
 member = "vyre-grammar-gen"
 feature = "(default)"
 outcome = "compiles"

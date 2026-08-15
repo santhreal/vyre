@@ -42,9 +42,6 @@ test_classes = ["Link-anchor and registration-source contracts", "Per-source flo
 [profile.packaging]
 test_classes = ["Artifact planning and serialization", "Package compatibility", "Invalid artifact and boundary rejection"]
 
-[profile.frontend]
-test_classes = ["Parser and lowering behavior", "Source diagnostics and unsupported-language rejection", "Generated program execution parity"]
-
 [profile.lowering]
 test_classes = ["Backend-neutral lowering transforms", "Pre-emission invariants", "Invalid IR and target rejection"]
 
@@ -109,10 +106,6 @@ evidence_outputs = ["release/evidence/benchmarks/", "Raw per-sample benchmark re
 commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask", "CARGO_BUILD_JOBS=1 ./cargo_full run --bin xtask -- vyre-release-gate --prepublish"]
 hardware = "Most policy tests are host-only. Commands that generate backend evidence inherit the hardware contract of the selected backend and must fail on an unavailable requested device."
 evidence_outputs = ["release/evidence/", "Generated documentation and matrices named by each command", "Command status and exact semantic blocker diagnostics"]
-
-[package.vyre-frontend-rust]
-commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust --all-features"]
-hardware = "Host parser and lowering tests require no accelerator. Feature-selected backend execution requires its physical device and reports acquisition failure."
 
 [package.vyre-runtime]
 commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --all-features"]

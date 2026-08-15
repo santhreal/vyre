@@ -1370,24 +1370,6 @@ boundary = "private"
 seam = "specification"
 
 [[crate]]
-package = "vyre-frontend-rust"
-path = "vyre-frontend-rust"
-owner = "rust-frontend"
-layer = "frontend"
-responsibility = "Lower the supported Rust frontend subset into typed Vyre programs without owning backend execution."
-
-[[crate.dependency]]
-package = "vyre-foundation"
-purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "foundation-ir"
-
-[[crate]]
 package = "vyre-bench"
 path = "vyre-bench"
 owner = "benchmarks"
@@ -1470,17 +1452,6 @@ optional = false
 default_features = true
 boundary = "private"
 seam = "foundation-ir"
-
-[[crate.dependency]]
-package = "vyre-frontend-rust"
-purpose = "Rust source lowering"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "rust-frontend"
 
 [[crate.dependency]]
 package = "vyre-libs"

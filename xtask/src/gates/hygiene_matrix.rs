@@ -572,7 +572,6 @@ fn hygiene_intake_summary(classes: &[HygieneFindingClass]) -> Vec<HygieneIntakeS
 fn hygiene_owner_lane_for_path(path: &str) -> &'static str {
     let normalized = path.replace('\\', "/");
     if normalized.contains("/libs/performance/matching/vyre/vyre-grammar-gen/")
-        || normalized.contains("/vyre-frontend-rust/")
         || normalized.contains("/vyre-libs/src/parsing/")
         || normalized.contains("/vyre-primitives/src/parsing/")
     {

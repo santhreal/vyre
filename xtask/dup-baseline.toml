@@ -130,11 +130,6 @@ duplicate_lines = 2860
 total_lines = 94229
 
 [[crate]]
-name = "vyre-frontend-rust"
-duplicate_lines = 138
-total_lines = 5228
-
-[[crate]]
 name = "vyre-grammar-gen"
 duplicate_lines = 26
 total_lines = 3276

@@ -49,7 +49,6 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-cuda -- --ignored --nocaptur
 | `test` | `bitset_popcount_gpu_parity` | `vyre-driver-cuda/tests/bitset_popcount_gpu_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-cuda --test bitset_popcount_gpu_parity` |
 | `test` | `bitset_popcount_primitive_gpu_parity` | `vyre-driver-cuda/tests/bitset_popcount_primitive_gpu_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-cuda --test bitset_popcount_primitive_gpu_parity` |
 | `test` | `bitset_primitives_gpu_parity` | `vyre-driver-cuda/tests/bitset_primitives_gpu_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-cuda --test bitset_primitives_gpu_parity` |
-| `test` | `borrowck_reachability_cuda` | `vyre-driver-cuda/tests/borrowck_reachability_cuda.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-cuda --test borrowck_reachability_cuda` |
 | `test` | `buffer_argument_op_lowers` | `vyre-driver-cuda/tests/buffer_argument_op_lowers.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-cuda --test buffer_argument_op_lowers` |
 | `test` | `byte_histogram_utf8_shape_gpu_parity` | `vyre-driver-cuda/tests/byte_histogram_utf8_shape_gpu_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-cuda --test byte_histogram_utf8_shape_gpu_parity` |
 | `test` | `c_preprocess_filter_cuda` | `vyre-driver-cuda/tests/c_preprocess_filter_cuda.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-cuda --test c_preprocess_filter_cuda` |

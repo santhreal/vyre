@@ -190,6 +190,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --all-features
 | `test` | `cost_model_predict_runtime_via_reference_parity` | `vyre-libs/tests/cost_model_predict_runtime_via_reference_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test cost_model_predict_runtime_via_reference_parity` |
 | `test` | `cost_model_predict_runtime_via_reference_parity` | `vyre-libs/tests/cost_model_predict_runtime_via_reference_parity.rs` | `analysis`, `cpu-parity`, `test-fixtures` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test cost_model_predict_runtime_via_reference_parity` |
 | `test` | `cpu_witnesses` | `vyre-libs/tests/cpu_witnesses.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test cpu_witnesses` |
+| `test` | `csr_sweep_arm_coverage` | `vyre-libs/tests/csr_sweep_arm_coverage.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test csr_sweep_arm_coverage` |
 | `test` | `decode_primitive_composition_contracts` | `vyre-libs/tests/decode_primitive_composition_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test decode_primitive_composition_contracts` |
 | `test` | `dedup_conv_ast_walk_family_guard` | `vyre-libs/tests/dedup_conv_ast_walk_family_guard.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test dedup_conv_ast_walk_family_guard` |
 | `test` | `delta_flow_arrangements` | `vyre-libs/tests/delta_flow_arrangements.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test delta_flow_arrangements` |
