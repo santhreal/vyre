@@ -47,7 +47,7 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 ### Boundaries
 
 The `test-support` owner maintains this `test-tooling` crate at `vyre-test-support`.
-Its allowed internal production dependencies are: `structure-gate`, `vyre-foundation`.
+Its allowed internal production dependencies are: `structure-gate`, `vyre-foundation`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
