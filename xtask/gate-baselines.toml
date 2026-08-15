@@ -7,8 +7,12 @@
 # down. A gate that cannot run at all fails outright: no row makes a
 # failing gate legal, and the writer refuses to record one.
 #
-# Record a pin from a real run with `xtask gates --write-baseline`, which
-# refuses to write while any gate cannot run.
+# Every pin below is 0 because the registry was rebuilt against the gate
+# contract and no gate had run under it yet. Zero is the only pin that
+# cannot excuse a finding, so a gate that reports one fails until the
+# number here is recorded from a real run. Record them all at once with
+# `xtask gates --write-baseline`, which refuses to write while any gate
+# cannot run.
 
 [[gate]]
 name = "abstraction-gate"
@@ -68,7 +72,7 @@ findings = 0
 
 [[gate]]
 name = "evidence-paths"
-findings = 18
+findings = 0
 
 [[gate]]
 name = "feature-isolation"
@@ -80,11 +84,11 @@ findings = 0
 
 [[gate]]
 name = "file-size"
-findings = 75
+findings = 0
 
 [[gate]]
 name = "frozen-contracts"
-findings = 1
+findings = 0
 
 [[gate]]
 name = "gate1"
@@ -92,7 +96,7 @@ findings = 0
 
 [[gate]]
 name = "gpu-loudness"
-findings = 2
+findings = 0
 
 [[gate]]
 name = "heuristic-audit"
@@ -100,23 +104,23 @@ findings = 0
 
 [[gate]]
 name = "hot-path-blocking-wait"
-findings = 6
+findings = 0
 
 [[gate]]
 name = "hot-path-inventory"
-findings = 12
+findings = 0
 
 [[gate]]
 name = "hot-path-nested-rows"
-findings = 28
+findings = 0
 
 [[gate]]
 name = "hot-path-owned-dispatch"
-findings = 114
+findings = 0
 
 [[gate]]
 name = "hot-path-reserve"
-findings = 1
+findings = 0
 
 [[gate]]
 name = "hot-path-scan"
@@ -124,11 +128,11 @@ findings = 0
 
 [[gate]]
 name = "hot-path-unbounded-cache"
-findings = 6
+findings = 0
 
 [[gate]]
 name = "hot-path-unbounded-read"
-findings = 1
+findings = 0
 
 [[gate]]
 name = "hygiene-matrix"
@@ -156,7 +160,7 @@ findings = 0
 
 [[gate]]
 name = "lint-expect-fix"
-findings = 360
+findings = 0
 
 [[gate]]
 name = "lint-missing-docs-override"
@@ -168,7 +172,7 @@ findings = 0
 
 [[gate]]
 name = "lint-unsafe-justification"
-findings = 2
+findings = 0
 
 [[gate]]
 name = "list-ops"
@@ -224,7 +228,7 @@ findings = 0
 
 [[gate]]
 name = "platform-consumer-docs"
-findings = 16
+findings = 0
 
 [[gate]]
 name = "primitive-admission-gate"
@@ -264,7 +268,7 @@ findings = 0
 
 [[gate]]
 name = "repo-hygiene"
-findings = 2
+findings = 0
 
 [[gate]]
 name = "shader-source"
@@ -276,6 +280,14 @@ findings = 0
 
 [[gate]]
 name = "single-backlog"
+findings = 0
+
+[[gate]]
+name = "source-parses"
+findings = 0
+
+[[gate]]
+name = "source-reachability"
 findings = 0
 
 [[gate]]
@@ -316,7 +328,7 @@ findings = 0
 
 [[gate]]
 name = "workspace-membership"
-findings = 2
+findings = 0
 
 [[gate]]
 name = "workspace-tests"

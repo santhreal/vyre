@@ -55,29 +55,61 @@ jobs:
         run: bash scripts/check_deep_bench_coverage.sh
 
   tree-rules:
-    name: Rules the sweep does not own yet
+    name: Rules the sweep owns, named by domain
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
 
-      # Every Cargo.toml on disk is a [workspace.members] entry or declares its
-      # own [workspace]. structure-gate checks the roster against the members
-      # list in both directions but never walks the filesystem, so a crate
-      # directory that no manifest lists is only visible here.
-      - name: No orphan crate directories
-        run: bash scripts/check_workspace_filesystem.sh
+      # rustfmt is the only single-file Rust parser the toolchain ships, and
+      # `source-parses` treats a missing rustfmt as a failure rather than as a
+      # clean tree, so the component is installed instead of assumed. The tree is
+      # never formatted here: --check is read-only and no --emit is passed.
+      - name: Install rustfmt for the parse rule
+        run: rustup component add rustfmt
 
-      # A published crate depending on a published member must carry a version,
-      # or `cargo publish` has nothing to resolve outside this workspace; a
-      # dependency on a `publish = false` member must not carry one, because that
-      # version can never exist on the registry. Both crate sets are derived from
-      # tracked manifests through each member's own `publish` key, including
-      # renames via `package =` and versions inherited through
-      # `workspace = true`, so a new member is classified without editing a list.
-      # Nothing else sees this: cargo resolves path edges locally and is happy,
-      # and the failure appears only during a publish nobody can rehearse.
-      - name: Internal dependency versions match publishability
-        run: bash scripts/check_internal_deps_have_versions.sh
+      # Each step below names a subset of the registry. The sweep above runs every
+      # gate already; these steps are what make each rule named by a workflow, so
+      # a gate cannot be registered, pinned and then reached by nothing. A rule
+      # whose verdict arrives in no job is what let three gates sit red for a
+      # fortnight.
+
+      # Every Cargo.toml is a workspace member, its own workspace root or a
+      # reviewed orphan; every path edge and inherited key resolves to a tracked
+      # manifest; and a publishable crate's dependency on a member carries a
+      # version exactly when that member is published. None of this runs cargo:
+      # the defect the path rule detects is a workspace cargo cannot load, and
+      # the publish rule fails only during a publish nobody can rehearse.
+      - name: Manifest rules
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset manifest-rules
+
+      # A file no target compiles is not code, it is a claim: glyph_grid shipped
+      # an op registration and eight contracts that no `mod` declaration named,
+      # while three generated documents listed the op as supported. A green build
+      # is exactly what an orphan produces. The parse half answers the other
+      # question, because the answer for an orphan and for a scaffolding template
+      # are both "no target". The size cap is here too: it is red on fourteen
+      # files and its verdict reached nobody, because no workflow ran it.
+      - name: Source rules
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset source-rules
+
+      # Allocation, blocking waits and unbounded growth on the dispatch path.
+      - name: Hot-path rules
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset hot-path-rules
+
+      # Lint hygiene, unsafe justification and the property-test floor.
+      - name: Lint rules
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset lint-rules
+
+      # Frozen public surfaces, IR wire field parity, device loudness and the
+      # unification ratchets.
+      - name: Contract rules
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset contract-rules
+
+      # What the checkout carries, what the release evidence cites and what the
+      # documents claim about the tree.
+      - name: Repository rules
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset repo-rules
 
       # ci.yml must keep the three-OS by two-toolchain matrix, must not carry a
       # no-GPU escape hatch, and gpu-parity.yml must still exist to own the
@@ -89,36 +121,9 @@ jobs:
       # `xtask docs-check` runs. These are its own behavior contracts, so a
       # change that weakens the validator fails here rather than passing
       # docs-check vacuously. Bytecode stays off so the run leaves no
-      # __pycache__ for scripts/check_repo_hygiene.sh to report.
+      # __pycache__ for the repository rules to report.
       - name: Documentation manifest validator contracts
         run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_docs_manifest.py
-
-      # A manifest naming a member that does not exist makes every cargo command
-      # fail from a clean checkout, which is why this gate runs no cargo at all:
-      # the defect it detects is precisely a workspace cargo cannot load. It
-      # reads tracked manifests with git and tomllib, and also rejects a path
-      # that resolves outside the repository.
-      - name: Every manifest path edge resolves to a tracked member
-        run: bash scripts/check_path_deps_resolve.sh
-
-      # A file no target compiles is not code, it is a claim. glyph_grid shipped
-      # an op registration and eight contracts that no `mod` declaration ever
-      # named, while three generated docs listed the op as supported, and four
-      # CUDA contract chunks outlived the test file that declared them. A green
-      # build is exactly what an orphan produces, so only this scan sees them.
-      - name: Every tracked source file is reachable from a cargo target
-        run: bash scripts/check_every_source_file_is_reachable.sh
-
-      # The other half: whatever a tracked .rs file is declared to be, it must
-      # parse. rustfmt is the only single-file Rust parser in the toolchain, so
-      # this step installs the component instead of assuming the runner image
-      # carries it; the gate itself treats a missing rustfmt as a failure rather
-      # than as a clean tree. Formatting differences are ignored: the tree is
-      # never formatted here and nothing is written.
-      - name: Every tracked source file parses
-        run: |
-          rustup component add rustfmt
-          bash scripts/check_every_source_file_parses.sh
 
   feature-msrv:
     name: Every feature compiles alone on the MSRV

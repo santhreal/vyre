@@ -35,6 +35,7 @@ pub mod proptest_coverage;
 pub mod repo_hygiene;
 pub mod scan;
 pub mod shader_source;
+pub mod source_reachability;
 pub mod sweep;
 pub mod unification;
 pub mod use_paths;
@@ -87,6 +88,8 @@ pub static GATES: &[&dyn Gate] = &[
     &repo_hygiene::RepoHygiene,
     &repo_hygiene::SingleBacklog,
     &shader_source::ShaderSource,
+    &source_reachability::SourceParses,
+    &source_reachability::SourceReachability,
     &unification::Unification,
     &workspace_build::WorkspaceCheck,
     &workspace_build::WorkspaceClippy,
