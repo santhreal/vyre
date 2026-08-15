@@ -1,17 +1,14 @@
-//! Yoneda lemma application primitive (P-PRIM-16).
+//! Yoneda lemma over a finite category.
 //!
-//! For a finite category C and presheaf F: C^op → Set, the Yoneda
-//! lemma states `Nat(Hom(-, X), F) ≅ F(X)`. The natural-transformation
-//! set is canonically isomorphic to the F-image of X.
+//! For a finite category C and a presheaf F: C^op → Set, the Yoneda lemma
+//! states `Nat(Hom(-, X), F) ≅ F(X)`: the set of natural transformations out of
+//! the representable functor is canonically isomorphic to the F-image of X.
 //!
-//! At the substrate level this gives the optimizer a way to reason
-//! about "all natural transformations from the representable functor
-//! Hom(-, X) into F" by inspecting only F(X). Used by
-//! functorial_pass_composition to recognize when a pass tree maps
-//! into a representable family.
+//! Pass composition uses that to decide whether a pass tree maps into a
+//! representable family, and it can decide it from the F-cardinality at one
+//! object without walking the rest of the category.
 
-extern crate alloc;
-use alloc::vec::Vec;
+use crate::telemetry::{bump, dataflow_fixpoint_calls};
 
 /// Finite category: object set + Hom-set sizes per `(source, target)`
 /// pair. `hom_size[s * n + t]` is `|Hom(s, t)|`.
@@ -35,7 +32,7 @@ impl FiniteCategory {
     #[must_use]
     pub fn discrete(n: u32) -> Self {
         let n_us = n as usize;
-        let mut hom_size = alloc::vec![0u32; n_us * n_us];
+        let mut hom_size = vec![0u32; n_us * n_us];
         for i in 0..n_us {
             hom_size[i * n_us + i] = 1;
         }
@@ -56,25 +53,24 @@ impl FiniteCategory {
     }
 }
 
-/// Compute the Yoneda embedding for object `x`: the cardinality
-/// vector `[|Hom(c_0, x)|, |Hom(c_1, x)|, ...]`. Each entry is the
-/// representable functor's image at `c_i`.
-///
+/// The Yoneda embedding of object `x`: the cardinality vector
+/// `[|Hom(c_0, x)|, |Hom(c_1, x)|, …]`, one entry per object of the category.
+/// Each entry is the representable functor's image at that object.
 #[must_use]
 pub fn yoneda_embedding(category: &FiniteCategory, x: u32) -> Vec<u32> {
+    bump(&dataflow_fixpoint_calls);
     (0..category.n).map(|c| category.hom(c, x)).collect()
 }
 
-/// Compute `|Nat(Hom(-, x), F)|` via the Yoneda isomorphism.
+/// `|Nat(Hom(-, x), F)|`, which the Yoneda lemma says is `|F(x)|`.
 ///
-/// `f_at_x` is `|F(x)|`. The Yoneda lemma states
-/// `|Nat(Hom(-, x), F)| = |F(x)|`. The substrate primitive is
-/// therefore a one-line forward of the F-image, and the reason for
-/// having it as a primitive is that the optimizer can call this
-/// without needing to know about the rest of the category  -  it
-/// only needs the F-cardinality at the chosen object.
+/// `f_at_x` is `|F(x)|`, so the body forwards it. The category and the object
+/// stay in the signature because they are what makes the claim checkable: a
+/// caller that has to name the category it is reasoning about cannot pass the
+/// cardinality of a different presheaf by accident.
 #[must_use]
-pub fn yoneda_natural_iso(_category: &FiniteCategory, _x: u32, f_at_x: u32) -> u32 {
+pub fn natural_transformation_count(_category: &FiniteCategory, _x: u32, f_at_x: u32) -> u32 {
+    bump(&dataflow_fixpoint_calls);
     f_at_x
 }
 
@@ -106,41 +102,41 @@ mod tests {
     fn yoneda_embedding_on_discrete_is_unit_vector() {
         // Hom(c_i, x) = 1 iff c_i == x, else 0.
         let cat = FiniteCategory::discrete(3);
-        assert_eq!(yoneda_embedding(&cat, 0), alloc::vec![1, 0, 0]);
-        assert_eq!(yoneda_embedding(&cat, 1), alloc::vec![0, 1, 0]);
-        assert_eq!(yoneda_embedding(&cat, 2), alloc::vec![0, 0, 1]);
+        assert_eq!(yoneda_embedding(&cat, 0), vec![1, 0, 0]);
+        assert_eq!(yoneda_embedding(&cat, 1), vec![0, 1, 0]);
+        assert_eq!(yoneda_embedding(&cat, 2), vec![0, 0, 1]);
     }
 
-    /// Closure-bar: yoneda_natural_iso must equal the supplied F-image
-    /// cardinality. If the substrate ever reverts to a hand-rolled
-    /// Hom-walk this test fires.
+    /// The count must equal the supplied F-image cardinality at every value,
+    /// including `u32::MAX`. A rewrite that reintroduced a hand-rolled Hom-walk
+    /// would compute something else and fire here.
     #[test]
     fn yoneda_iso_equals_f_image_cardinality() {
         let cat = FiniteCategory::discrete(3);
-        assert_eq!(yoneda_natural_iso(&cat, 0, 0), 0);
-        assert_eq!(yoneda_natural_iso(&cat, 0, 1), 1);
-        assert_eq!(yoneda_natural_iso(&cat, 0, 2), 2);
-        assert_eq!(yoneda_natural_iso(&cat, 0, 5), 5);
-        assert_eq!(yoneda_natural_iso(&cat, 0, 100), 100);
-        assert_eq!(yoneda_natural_iso(&cat, 0, u32::MAX), u32::MAX);
+        assert_eq!(natural_transformation_count(&cat, 0, 0), 0);
+        assert_eq!(natural_transformation_count(&cat, 0, 1), 1);
+        assert_eq!(natural_transformation_count(&cat, 0, 2), 2);
+        assert_eq!(natural_transformation_count(&cat, 0, 5), 5);
+        assert_eq!(natural_transformation_count(&cat, 0, 100), 100);
+        assert_eq!(natural_transformation_count(&cat, 0, u32::MAX), u32::MAX);
     }
 
-    /// Adversarial: non-discrete category with multi-morphism Hom-sets.
-    /// Yoneda still says |Nat(Hom(-, x), F)| = |F(x)| regardless of
-    /// the Hom-set shape.
+    /// A richer Hom-set does not change the answer. Yoneda gives
+    /// `|Nat(Hom(-, x), F)| = |F(x)|` whatever shape the Hom-sets have, so a
+    /// walk that consulted them would diverge from the lemma.
     #[test]
     fn yoneda_invariant_under_richer_homsets() {
         let mut cat = FiniteCategory::discrete(3);
         // Add 2 morphisms in Hom(0, 1).
         cat.hom_size[0 * 3 + 1] = 2;
         let f_at_x = 7;
-        assert_eq!(yoneda_natural_iso(&cat, 1, f_at_x), 7);
+        assert_eq!(natural_transformation_count(&cat, 1, f_at_x), 7);
     }
 
-    /// Adversarial: F empty at x ⇒ no natural transformations at all.
+    /// An empty F-image at x means there are no natural transformations at all.
     #[test]
     fn empty_f_image_means_no_natural_transformations() {
         let cat = FiniteCategory::discrete(2);
-        assert_eq!(yoneda_natural_iso(&cat, 0, 0), 0);
+        assert_eq!(natural_transformation_count(&cat, 0, 0), 0);
     }
 }

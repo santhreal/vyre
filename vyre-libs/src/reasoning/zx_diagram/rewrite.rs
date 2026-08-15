@@ -1,8 +1,11 @@
-//! ZX-diagram rewrite rules: spider fusion, identity removal, color
-//! change. Pure-CPU primitive over a `Vec<ZxSpider>` + edge multiset.
+//! ZX-diagram rewrite rules: spider fusion, identity removal, color change,
+//! and the simplification chain that runs the first two to fixpoint.
+//!
+//! Every rule runs on the host over a `Vec<ZxSpider>` and an edge multiset. No
+//! floating point: a phase is a numerator over the diagram's `phase_denom`, and
+//! two phases are equal when their numerators agree modulo that denominator.
 
-extern crate alloc;
-use alloc::vec::Vec;
+use crate::telemetry::{bump, dataflow_fixpoint_calls};
 
 /// Spider color: Z (green / phase basis) or X (red / spider basis).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -60,7 +63,8 @@ pub struct ZxDiagram {
 /// adjacency contracted; cross-color edges and self-loops are
 /// preserved.
 #[must_use]
-pub fn apply_spider_fusion(mut diagram: ZxDiagram) -> ZxDiagram {
+pub fn spider_fusion(mut diagram: ZxDiagram) -> ZxDiagram {
+    bump(&dataflow_fixpoint_calls);
     loop {
         let merge_pair = diagram.edges.iter().copied().find(|(u, v)| {
             u != v && diagram.spiders[*u as usize].color == diagram.spiders[*v as usize].color
@@ -99,11 +103,18 @@ pub fn apply_spider_fusion(mut diagram: ZxDiagram) -> ZxDiagram {
     diagram
 }
 
-/// Apply identity removal (S2): drop every phase-0 spider whose
-/// degree is exactly 2 and whose two neighbors share its color,
-/// splicing the two edges into one. Repeats until fixpoint.
+/// Apply identity removal (S2): drop every phase-0 spider whose two edges run
+/// to two other spiders that share its color, splicing those two edges into
+/// one. Repeats until fixpoint.
+///
+/// A self-loop is not a wire through the spider, so a spider carrying one is
+/// never removed however its degree counts up. Removing it dropped the spider
+/// and kept the loop edge, leaving an edge whose endpoint indexes past the end
+/// of the spider list, and the next rule to read that endpoint indexed out of
+/// bounds.
 #[must_use]
-pub fn apply_identity_removal(mut diagram: ZxDiagram) -> ZxDiagram {
+pub fn identity_removal(mut diagram: ZxDiagram) -> ZxDiagram {
+    bump(&dataflow_fixpoint_calls);
     loop {
         let mut removable: Option<u32> = None;
         for v in 0..diagram.spiders.len() {
@@ -128,11 +139,11 @@ pub fn apply_identity_removal(mut diagram: ZxDiagram) -> ZxDiagram {
             if neighbors.len() != 2 {
                 continue;
             }
-            // Both neighbors must match the spider's color.
-            let color_match = neighbors
+            // Both neighbors must be other spiders and match this spider's color.
+            let splices_a_wire = neighbors
                 .iter()
-                .all(|&n| diagram.spiders[n as usize].color == s.color);
-            if color_match {
+                .all(|&n| n as usize != v && diagram.spiders[n as usize].color == s.color);
+            if splices_a_wire {
                 removable = Some(v as u32);
                 break;
             }
@@ -174,9 +185,33 @@ pub fn apply_identity_removal(mut diagram: ZxDiagram) -> ZxDiagram {
 /// # Panics
 ///
 /// Panics if `v` is out of range.
-pub fn apply_color_change(diagram: &mut ZxDiagram, v: u32) {
+pub fn color_change(diagram: &mut ZxDiagram, v: u32) {
+    bump(&dataflow_fixpoint_calls);
     let s = &mut diagram.spiders[v as usize];
     s.color = s.color.flip();
+}
+
+/// The joint fixpoint of spider fusion and identity removal.
+///
+/// Each rule already runs to its own fixpoint, and each removes exactly one
+/// spider whenever it fires, so a round that leaves the spider count unchanged
+/// is the joint fixpoint and the loop stops on it. The loop is what makes the
+/// order of the pair stop mattering: a removal splice joins the identity
+/// spider's two neighbours, which are same-color by the rule that removed it,
+/// and fusion then merges that new adjacency.
+///
+/// Termination: the spider count strictly decreases on every round that does
+/// not return.
+#[must_use]
+pub fn simplified_diagram(diagram: ZxDiagram) -> ZxDiagram {
+    let mut current = diagram;
+    loop {
+        let before = current.spiders.len();
+        current = identity_removal(spider_fusion(current));
+        if current.spiders.len() == before {
+            return current;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -205,7 +240,7 @@ mod tests {
             spiders: vec![z(1), z(3)],
             edges: vec![(0, 1)],
         };
-        let out = apply_spider_fusion(d);
+        let out = spider_fusion(d);
         assert_eq!(out.spiders.len(), 1);
         assert_eq!(out.spiders[0].phase_num, 4);
         assert!(out.edges.is_empty());
@@ -219,7 +254,7 @@ mod tests {
             spiders: vec![z(1), x(2)],
             edges: vec![(0, 1)],
         };
-        let out = apply_spider_fusion(d.clone());
+        let out = spider_fusion(d.clone());
         assert_eq!(out, d);
     }
 
@@ -231,7 +266,7 @@ mod tests {
             spiders: vec![z(5), z(5)],
             edges: vec![(0, 1)],
         };
-        let out = apply_spider_fusion(d);
+        let out = spider_fusion(d);
         assert_eq!(out.spiders[0].phase_num, 2);
     }
 
@@ -243,7 +278,7 @@ mod tests {
             spiders: vec![z(1), z(2), z(3)],
             edges: vec![(0, 1), (1, 2)],
         };
-        let out = apply_spider_fusion(d);
+        let out = spider_fusion(d);
         assert_eq!(out.spiders.len(), 1);
         assert_eq!(out.spiders[0].phase_num, 6);
     }
@@ -257,7 +292,7 @@ mod tests {
             spiders: vec![z(1), z(0), z(2)],
             edges: vec![(0, 1), (1, 2)],
         };
-        let out = apply_identity_removal(d);
+        let out = identity_removal(d);
         assert_eq!(out.spiders.len(), 2);
         assert_eq!(out.edges, vec![(0, 1)]);
     }
@@ -270,7 +305,7 @@ mod tests {
             spiders: vec![z(1), z(1), z(2)],
             edges: vec![(0, 1), (1, 2)],
         };
-        let out = apply_identity_removal(d.clone());
+        let out = identity_removal(d.clone());
         assert_eq!(out, d);
     }
 
@@ -285,7 +320,7 @@ mod tests {
             spiders: vec![z(1), z(0), z(0), z(2)],
             edges: vec![(0, 1), (1, 2), (2, 3)],
         };
-        let out = apply_identity_removal(d);
+        let out = identity_removal(d);
         assert_eq!(out.spiders.len(), 2);
         assert_eq!(out.edges.len(), 1);
     }
@@ -297,11 +332,11 @@ mod tests {
             spiders: vec![z(3)],
             edges: vec![],
         };
-        apply_color_change(&mut d, 0);
+        color_change(&mut d, 0);
         assert_eq!(d.spiders[0].color, ZxColor::X);
         assert_eq!(d.spiders[0].phase_num, 3);
         // Apply twice → back to Z.
-        apply_color_change(&mut d, 0);
+        color_change(&mut d, 0);
         assert_eq!(d.spiders[0].color, ZxColor::Z);
     }
 
@@ -314,7 +349,7 @@ mod tests {
             spiders: vec![z(1), z(2), x(3)],
             edges: vec![(0, 1), (1, 2)],
         };
-        let out = apply_spider_fusion(d);
+        let out = spider_fusion(d);
         assert_eq!(out.spiders.len(), 2);
         // Z(merged) and X(3) connected by one edge.
         assert_eq!(out.edges.len(), 1);
@@ -328,7 +363,73 @@ mod tests {
             spiders: vec![z(1)],
             edges: vec![(0, 0)],
         };
-        let out = apply_spider_fusion(d.clone());
+        let out = spider_fusion(d.clone());
         assert_eq!(out, d);
+    }
+
+    /// A phase-zero spider whose only edges are two self-loops counts as
+    /// degree 2 with both neighbour slots naming itself, so the pre-fix rule
+    /// spliced it out and kept the loop edge. That left `edges = [(0, 0)]`
+    /// against an empty spider list, and the next rule to read endpoint 0
+    /// indexed out of bounds. A self-loop is not a wire through the spider, so
+    /// the diagram must come back unchanged.
+    #[test]
+    fn a_phase_zero_spider_with_self_loops_is_not_an_identity_wire() {
+        let d = ZxDiagram {
+            phase_denom: 8,
+            spiders: vec![z(0)],
+            edges: vec![(0, 0), (0, 0)],
+        };
+        let out = identity_removal(d.clone());
+        assert_eq!(out, d);
+        // Every surviving endpoint still names a spider that exists.
+        for &(a, b) in &out.edges {
+            assert!((a as usize) < out.spiders.len() && (b as usize) < out.spiders.len());
+        }
+    }
+
+    /// A phase-zero spider between two same-color neighbours collapses the
+    /// whole chain: whichever rule fires first, the joint fixpoint is one
+    /// spider carrying the summed phase.
+    #[test]
+    fn the_chain_collapses_an_identity_spider_and_its_neighbours() {
+        let d = ZxDiagram {
+            phase_denom: 8,
+            spiders: vec![z(1), z(0), z(2)],
+            edges: vec![(0, 1), (1, 2)],
+        };
+        let out = simplified_diagram(d);
+        assert_eq!(out.spiders.len(), 1);
+        assert_eq!(out.spiders[0].phase_num, 3);
+        assert!(out.edges.is_empty());
+    }
+
+    /// The chain returns a joint fixpoint, so running it again changes nothing.
+    /// A stop condition that read the wrong count would return early and fail
+    /// here on the second pass.
+    #[test]
+    fn the_chain_reaches_a_fixpoint() {
+        let cases = [
+            ZxDiagram {
+                phase_denom: 8,
+                spiders: vec![z(1), z(0), z(2), x(3)],
+                edges: vec![(0, 1), (1, 2), (2, 3)],
+            },
+            ZxDiagram {
+                phase_denom: 8,
+                spiders: vec![z(3), z(5), z(0), z(1)],
+                edges: vec![(0, 1), (1, 2), (2, 3)],
+            },
+            ZxDiagram {
+                phase_denom: 4,
+                spiders: vec![x(1), z(2), x(3)],
+                edges: vec![(0, 1), (1, 2)],
+            },
+        ];
+        for case in cases {
+            let once = simplified_diagram(case);
+            let twice = simplified_diagram(once.clone());
+            assert_eq!(once, twice);
+        }
     }
 }

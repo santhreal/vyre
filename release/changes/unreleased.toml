@@ -1744,3 +1744,23 @@ text = "The element-wise programs the SPIR-V dispatch tests and the Vulkan probe
 id = "spirv-capability-queries-use-trait-defaults"
 category = "Changed"
 text = "`vyre-driver-spirv` answers the seven capability queries it does not probe from the `VyreBackend` defaults instead of restating `false` for each. The Vulkan compute path probes four limits and claims nothing else, and the trait default is already the conservative answer, so a capability added to the trait no longer needs a hand-written denial here to keep the backend honest."
+[[fragments]]
+id = "uncomposable-primitive-admission"
+category = "Changed"
+text = "Five domains left `vyre-primitives` for `vyre-libs`, because an operation belongs in `vyre-primitives` only when it cannot be composed, meaning it needs its own backend emitter arm and its own reference-interpreter arm. None of these did: `cat` is now `reasoning::finite_category`, `zx` is `reasoning::zx_diagram`, `dnnf` is `reasoning::dnnf`, `types::linear_check` and `types::shape_smt` and the whole `effects` domain collapse into `analysis`. The `cat`, `zx`, `dnnf`, `types` and `effects` features are gone with them, and `vyre-libs` reasoning now depends on `vyre-primitives/graph` alone."
+[[fragments]]
+id = "effect-row-single-owner"
+category = "Removed"
+text = "`vyre_primitives::effects` is gone. `EffectRow`, `EffectKind`, `Handler`, `handler_apply` and `handler_compose` restated the seven effect kinds and three bit operations that `vyre_foundation::lower::ProgramEffects` already declares, on the same bit assignments, and a kind added to one would not appear in the other. The one live consumer is `vyre-libs::analysis::effect_signature`, which takes `ProgramEffects` directly: `check_signature` returns the unpermitted row as a verdict and `residual_effects` names what stays open after a handler discharges. Handler composition is row union, so it needs no function of its own."
+[[fragments]]
+id = "linear-and-shape-check-duplicates"
+category = "Removed"
+text = "`vyre_primitives::types` is gone. `LinearDiscipline` declared the same four substructural disciplines and the same `forbids_drop` and `forbids_reuse` predicates as `vyre_foundation::ir::LinearType`, and `check_linear_use` was a second implementation of the per-buffer decision `vyre_foundation::validate::linear_type` already makes and reports with a fix hint. `ShapeFormula` aliased `vyre_foundation::ir::ShapePredicate` and its evaluator forwarded to that type's own method. Both had no callers, and the foundation owner's own tests already assert every boundary the copies asserted."
+[[fragments]]
+id = "zx-identity-removal-self-loop"
+category = "Fixed"
+text = "ZX identity removal no longer splices out a phase-zero spider whose two edges are self-loops. The rule only checked that the spider had degree two, so a spider wired to itself twice satisfied it, was deleted, and left the loop edge naming an index past the end of the spider list. It now requires both neighbours to be other spiders of matching colour. `simplified_diagram` runs fusion and identity removal to a joint fixpoint, which terminates because every firing removes exactly one spider."
+[[fragments]]
+id = "kan-extension-one-owner"
+category = "Changed"
+text = "`reasoning::finite_category` states each construction once. Left and right Kan extension were four functions differing in whether the fold summed or multiplied and whether it ran per object or over a table; they are now `kan_extension_at` and `kan_extension_table` taking a `KanDirection`, over one shared fold. `is_adjoint_pair` is `adjoint_pair`, because it returns the pair and its witness rather than a bool, and `yoneda_natural_iso` is `natural_transformation_count`, because a count is what it returns."

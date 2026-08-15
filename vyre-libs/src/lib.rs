@@ -231,11 +231,10 @@ pub(crate) use math::linalg::{
 };
 
 // vyre-libs::hardware removed (audit 2026-04-21 BLOCKER-1/6).
-// Canonical Cat-C intrinsics live exclusively in
-// `vyre-primitives::hardware`; library compositions of atomic / clamp /
-// lzcnt / tzcnt ops
-// live in `vyre-libs::math::*` (which uses `Expr::Atomic`, `Expr::min`,
-// `Expr::max`, `Expr::popcount` directly; see docs/ARCHITECTURE.md).
+// An intrinsic needs its own emitter arm and its own reference-interpreter
+// arm, so every one of them lives in `vyre-primitives::hardware`. The atomic,
+// clamp, lzcnt and tzcnt compositions live in `vyre-libs::math::*` and reach
+// `Expr::Atomic`, `Expr::min`, `Expr::max` and `Expr::popcount` directly.
 //
 // vyre-libs::crypto removed (audit 2026-04-21 BLOCKER-3). Deprecated
 // shim deleted in favor of the canonical path at `vyre-libs::hash`.

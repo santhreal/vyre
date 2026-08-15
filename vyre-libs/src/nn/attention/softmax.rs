@@ -344,25 +344,35 @@ mod tests {
     use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
 
+    /// A library op states what it needs and stops there. What the region
+    /// marker prints in one dialect's text is that emitter's contract, not
+    /// this op's, so the assertion is against the lowered descriptor: the
+    /// generator label must survive lowering so any emitter can carry it.
     #[test]
-    fn softmax_lowers_and_emits_sm80_kernel() {
+    fn softmax_lowers_and_keeps_its_region_generator_in_the_descriptor() {
         let program = softmax("input", "output", 4);
         let descriptor = vyre_lower::lower_verified(&program)
             .map(|lowered| lowered.descriptor)
-            .unwrap();
-        let ptx = vyre_emit_ptx::emit_with_options(
-            &descriptor,
-            vyre_emit_ptx::PtxEmitOptions {
-                target: vyre_emit_ptx::ComputeCapability::SM_80,
-                subgroup_size: 32,
-                ulp_budget: Some(128),
-                cooperative_grid_sync: false,
-            },
-        )
-        .unwrap();
-        assert!(ptx.contains(".target sm_80"), "{ptx}");
-        assert!(ptx.contains(".visible .entry main("), "{ptx}");
-        assert!(ptx.contains("region: vyre-libs::nn::softmax"), "{ptx}");
+            .expect("Fix: the softmax program must lower to a verified descriptor.");
+
+        let generators: Vec<&str> = descriptor
+            .ops_iter()
+            .filter_map(|op| match &op.kind {
+                vyre_lower::descriptor::KernelOpKind::Region { generator } => {
+                    Some(generator.as_ref())
+                }
+                _ => None,
+            })
+            .collect();
+
+        assert!(
+            generators.contains(&"vyre-libs::nn::softmax"),
+            "Fix: lowering dropped the softmax region generator; found {generators:?}"
+        );
+        assert!(
+            descriptor.bindings.slots.len() >= 2,
+            "Fix: softmax must lower one input and one output binding."
+        );
     }
 
     #[test]

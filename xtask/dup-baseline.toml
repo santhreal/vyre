@@ -22,14 +22,12 @@
 # and `reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes` owns the
 # double-buffered workgroup scan sweep.
 #
-# Eleven of vyre-primitives' lines are deliberate and cannot be collapsed.
-# `vyre_primitives::types::linear_check::LinearDiscipline` and
-# `vyre_foundation::ir::LinearType` declare the same four substructural
-# disciplines and the same `forbids_drop` / `forbids_reuse` predicates. The
-# primitive layer builds with no IR dependency at all, since the
-# `vyre-foundation` edge is optional and absent under `--no-default-features`,
-# and a foundation-layer crate cannot import from the primitives layer, so
-# neither direction has a legal owner. The pair is pinned, not fixed.
+# The eleven vyre-primitives lines that were pinned as deliberate are gone.
+# `vyre_primitives::types::linear_check::LinearDiscipline` restated
+# `vyre_foundation::ir::LinearType`, including `forbids_drop` and
+# `forbids_reuse`, and the pair was recorded here as unownable because the
+# primitive layer builds with no IR dependency. It had no callers, so the copy
+# was deleted rather than pinned, and `vyre_foundation::ir` is the one owner.
 
 [[crate]]
 name = "conform"
@@ -138,8 +136,8 @@ total_lines = 3276
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 9450
-total_lines = 186303
+duplicate_lines = 9430
+total_lines = 186780
 
 [[crate]]
 name = "vyre-lints"
@@ -163,8 +161,8 @@ total_lines = 3605
 
 [[crate]]
 name = "vyre-primitives"
-duplicate_lines = 5332
-total_lines = 102185
+duplicate_lines = 5314
+total_lines = 100403
 
 [[crate]]
 name = "vyre-reference"

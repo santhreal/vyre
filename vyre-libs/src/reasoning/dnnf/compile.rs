@@ -1,12 +1,11 @@
-//! d-DNNF compiler: CNF → d-DNNF DAG via Shannon decomposition.
+//! d-DNNF compiler: CNF to a d-DNNF DAG via Shannon decomposition, and the
+//! linear-time model count and decision predicates over the result.
 //!
-//! Pure-CPU. Bounded by the compiler's max-depth parameter (so
-//! pathological CNFs cannot diverge  -  the user's optimizer caller
-//! can choose a depth budget rather than blocking on an SAT-hard
-//! input).
+//! Runs on the host. The `max_depth` parameter bounds the decomposition, so a
+//! pathological CNF returns a partial DAG instead of blocking the caller on an
+//! SAT-hard input. Every entry point charges the analysis call counter once.
 
-extern crate alloc;
-use alloc::vec::Vec;
+use crate::telemetry::{bump, dataflow_fixpoint_calls};
 
 /// One gate in a d-DNNF DAG.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -59,6 +58,7 @@ impl DnnfDag {
 /// `knowledge_compile_pass_precondition` for the budget heuristic).
 #[must_use]
 pub fn compile_dnnf(clauses: &[Vec<(u32, bool)>], num_vars: u32, max_depth: u32) -> DnnfDag {
+    bump(&dataflow_fixpoint_calls);
     let mut dag = DnnfDag {
         gates: Vec::new(),
         num_vars,
@@ -83,7 +83,7 @@ fn smoothed_true(dag: &mut DnnfDag, num_vars: u32, var: u32) -> u32 {
         let neg = dag.gates.len() as u32;
         dag.gates.push(DnnfGate::Literal(v, false));
         let or_id = dag.gates.len() as u32;
-        dag.gates.push(DnnfGate::Or(alloc::vec![pos, neg]));
+        dag.gates.push(DnnfGate::Or(vec![pos, neg]));
         taut_ids.push(or_id);
     }
     if taut_ids.len() == 1 {
@@ -162,15 +162,15 @@ fn compile_recursive(
     let pos_lit = dag.gates.len() as u32;
     dag.gates.push(DnnfGate::Literal(var, true));
     let pos_and = dag.gates.len() as u32;
-    dag.gates.push(DnnfGate::And(alloc::vec![pos_lit, left]));
+    dag.gates.push(DnnfGate::And(vec![pos_lit, left]));
 
     let neg_lit = dag.gates.len() as u32;
     dag.gates.push(DnnfGate::Literal(var, false));
     let neg_and = dag.gates.len() as u32;
-    dag.gates.push(DnnfGate::And(alloc::vec![neg_lit, right]));
+    dag.gates.push(DnnfGate::And(vec![neg_lit, right]));
 
     let or_id = dag.gates.len() as u32;
-    dag.gates.push(DnnfGate::Or(alloc::vec![pos_and, neg_and]));
+    dag.gates.push(DnnfGate::Or(vec![pos_and, neg_and]));
     or_id
 }
 
@@ -206,6 +206,7 @@ fn simplify_clauses(
 /// counting is structurally efficient).
 #[must_use]
 pub fn model_count(dag: &DnnfDag) -> u64 {
+    bump(&dataflow_fixpoint_calls);
     let mut counts: Vec<u64> = Vec::with_capacity(dag.gates.len());
     for gate in &dag.gates {
         let c = match gate {
@@ -232,6 +233,30 @@ pub fn model_count(dag: &DnnfDag) -> u64 {
     counts[dag.gates.len() - 1]
 }
 
+/// Whether the formula has at least one model.
+///
+/// The pass scheduler asks this before scheduling a pass, to decide whether the
+/// pass could ever apply.
+#[must_use]
+pub fn is_satisfiable(dag: &DnnfDag) -> bool {
+    model_count(dag) > 0
+}
+
+/// Whether every assignment over `num_vars` variables is a model.
+///
+/// False for `num_vars >= 64`, unconditionally: `2^64` does not fit the `u64`
+/// the count returns, and [`model_count`] saturates rather than wrapping, so
+/// the comparison cannot distinguish a tautology from a formula with
+/// `u64::MAX` models. Rejecting is the safe direction, because a caller acts on
+/// a tautology by skipping work.
+#[must_use]
+pub fn is_tautology(dag: &DnnfDag, num_vars: u32) -> bool {
+    if num_vars >= 64 {
+        return false;
+    }
+    model_count(dag) == 1u64 << num_vars
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -248,21 +273,21 @@ mod tests {
         // Formula: (x0). One satisfying assignment (x0=true) when
         // num_vars=1, two of four when num_vars > 1  -  the compiler
         // ships the variable-relative count.
-        let dag = compile_dnnf(&[alloc::vec![(0u32, true)]], 1, 4);
+        let dag = compile_dnnf(&[vec![(0u32, true)]], 1, 4);
         assert_eq!(model_count(&dag), 1);
     }
 
     #[test]
     fn compile_contradiction_yields_zero_models() {
         // (x0) ∧ (¬x0) is unsatisfiable.
-        let dag = compile_dnnf(&[alloc::vec![(0u32, true)], alloc::vec![(0, false)]], 1, 4);
+        let dag = compile_dnnf(&[vec![(0u32, true)], vec![(0, false)]], 1, 4);
         assert_eq!(model_count(&dag), 0);
     }
 
     #[test]
     fn compile_disjunction_of_two_lits() {
         // (x0 ∨ x1) over 2 vars: 3 satisfying assignments.
-        let dag = compile_dnnf(&[alloc::vec![(0u32, true), (1, true)]], 2, 4);
+        let dag = compile_dnnf(&[vec![(0u32, true), (1, true)]], 2, 4);
         assert_eq!(model_count(&dag), 3);
     }
 
@@ -271,10 +296,7 @@ mod tests {
     #[test]
     fn matches_brute_force_on_small_formulas() {
         // (x0 ∨ ¬x1) ∧ (x1 ∨ x2) with 3 vars.
-        let clauses = alloc::vec![
-            alloc::vec![(0u32, true), (1, false)],
-            alloc::vec![(1, true), (2, true)],
-        ];
+        let clauses = vec![vec![(0u32, true), (1, false)], vec![(1, true), (2, true)]];
         let dag = compile_dnnf(&clauses, 3, 8);
         let dag_count = model_count(&dag);
 
@@ -302,10 +324,10 @@ mod tests {
         // (x0 ∨ x1) ∧ (x2 ∨ x3) ∧ (x4 ∨ x5)  -  6 vars, depth budget 2
         // forces the compiler to fall back to the conservative
         // CNF-as-AND/OR encoding rather than full Shannon split.
-        let clauses = alloc::vec![
-            alloc::vec![(0u32, true), (1, true)],
-            alloc::vec![(2, true), (3, true)],
-            alloc::vec![(4, true), (5, true)],
+        let clauses = vec![
+            vec![(0u32, true), (1, true)],
+            vec![(2, true), (3, true)],
+            vec![(4, true), (5, true)],
         ];
         let dag = compile_dnnf(&clauses, 6, 2);
         assert_eq!(dag.num_vars, 6);
@@ -342,7 +364,7 @@ mod tests {
     /// DnnfDag::root returns the last gate id.
     #[test]
     fn root_is_last_gate() {
-        let dag = compile_dnnf(&[alloc::vec![(0u32, true)]], 1, 4);
+        let dag = compile_dnnf(&[vec![(0u32, true)]], 1, 4);
         assert_eq!(dag.root(), (dag.gates.len() - 1) as u32);
     }
 }

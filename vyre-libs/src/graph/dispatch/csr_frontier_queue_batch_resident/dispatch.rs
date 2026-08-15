@@ -1,7 +1,6 @@
 use super::{ResidentCsrQueueBatchScratch, ResidentCsrQueueBatchShape};
 use vyre_primitives::graph::csr_frontier_queue::validate_frontier_queue_batch;
 
-use crate::scratch::reserve_vec as reserve_graph_vec;
 use crate::dispatch_buffers::u32_word_bytes;
 use crate::graph::dispatch::csr_frontier_queue_batch_memory::ResidentCsrQueueBatchMemoryPlan;
 use crate::graph::dispatch::csr_frontier_queue_programs::ResidentCsrQueueProgramShape;
@@ -15,6 +14,7 @@ use crate::graph::dispatch::csr_frontier_queue_scratch::{
     resident_csr_queue_traverse_kind_for_graph_stats, FrontierWordPrefixScratch,
     ResidentCsrQueueMaterializer, ResidentCsrQueueSlotPlan, ResidentCsrQueueTraverseKind,
 };
+use crate::scratch::reserve_vec as reserve_graph_vec;
 use vyre_foundation::program_dispatch::{
     DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
@@ -579,8 +579,7 @@ fn prepare_batch_sequence_tables(
             traverse_kind,
             ResidentCsrQueueTraverseKind::MixedSplit { .. }
         ) {
-            let (high_queue, high_len) =
-                slots.high_split().map_err(DispatchError::BackendError)?;
+            let (high_queue, high_len) = slots.high_split().map_err(DispatchError::BackendError)?;
             scratch.high_len_handle_sets.push([high_len]);
             scratch.split_low_handle_sets.push([
                 slots.active_queue,

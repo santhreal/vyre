@@ -12,12 +12,12 @@ mod tests;
 
 pub use dispatch::{run_resident_csr_queue_batch_budgeted_into, run_resident_csr_queue_batch_into};
 
-use crate::scratch::reserve_vec as reserve_graph_vec;
 use crate::graph::dispatch::csr_frontier_queue_programs::ResidentCsrQueuePrograms;
 use crate::graph::dispatch::csr_frontier_queue_scratch::{
     ResidentCsrQueueMaterializer, ResidentCsrQueueSlots,
 };
 use crate::graph::dispatch::resident_handles::free_unique_resident_handles;
+use crate::scratch::reserve_vec as reserve_graph_vec;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher, ResidentReadRange};
 
 /// Reusable resident scratch for batched CSR queue traversal queries.
@@ -105,4 +105,3 @@ struct ResidentCsrQueueBatchShape {
     node_count: u32,
     materializer: ResidentCsrQueueMaterializer,
 }
-

@@ -6,10 +6,8 @@
 //! the bounded-stack single-lane fallback: overflow opens are deliberately
 //! ignored, so that stateful behavior is not replaced by an approximation.
 //!
-//! Migrated from `vyre-libs/src/parsing/bracket_match.rs` per
-//! `docs/lego-block-rule.md` Step 2 + `docs/lego-block-rule.md`.
-//! Reused by every parser dialect that needs matched-brace detection
-//! (C, Rust, Go, Python f-string interpolation).
+//! Every parser dialect that needs matched-brace detection reaches this one
+//! kernel: C, Rust, Go, and Python f-string interpolation.
 
 use std::sync::Arc;
 use vyre_foundation::ir::model::expr::Ident;
