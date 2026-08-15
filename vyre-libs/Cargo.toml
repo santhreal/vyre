@@ -150,7 +150,7 @@ naga.workspace = true
 c-grammar-gen = { package = "vyre-grammar-gen", path = "../vyre-grammar-gen" }
 tree-sitter = { workspace = true }
 tree-sitter-go = { workspace = true }
-vyre-test-support.workspace = true
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 
 
 [package.metadata.docs.rs]
