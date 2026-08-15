@@ -270,7 +270,12 @@ sha2 = "=0.11.0"
 percent-encoding = "=2.3.2"
 ed25519-dalek = { version = "=2.2.0", default-features = false, features = ["std"] }
 rustc-hash = "=2.1.3"
-im = "=15.1.0"
+# imbl is the maintained fork of im. im 15.1.0 carries RUSTSEC-2026-0248
+# (unmaintained) and pulls bitmaps 2.1.0 with RUSTSEC-2026-0247, and im's OrdSet
+# has an aliasing-violation advisory, RUSTSEC-2023-0126. The persistent HashSet
+# is what the DCE live set needs, so the fork replaces it rather than a std set
+# that would clone the whole set at every branch.
+imbl = "=7.0.1"
 rayon = "=1.12.0"
 wide = "=0.7.33"
 hex = "=0.4.3"

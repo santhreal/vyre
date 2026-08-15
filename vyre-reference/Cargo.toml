@@ -25,7 +25,7 @@ blake3.workspace = true
 bytemuck.workspace = true
 rustc-hash.workspace = true
 smallvec.workspace = true
-im.workspace = true
+imbl.workspace = true
 libm.workspace = true
 
 [dev-dependencies]
