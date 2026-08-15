@@ -3,9 +3,43 @@
 //! The CPU contracts in `vyre-libs/tests` and the backend parity arm in the
 //! driver crate build the same token streams, so the fixtures have one owner
 //! here rather than a copy per crate.
+//!
+//! [`CASES`] is that one owner's case list. Both arms iterate it, so a fixture
+//! added below and named there is proven on the CPU oracle and on every
+//! backend arm at once, and `c_ast_parity_case_matrix_gate` fails when a
+//! builder here is missing from it.
 
+use crate::c_frontend::parity_matrix::ParityCase;
 use crate::c_frontend::spelling::c_tokens;
 use crate::c_frontend::token_fixture::Fixture;
+
+/// Every advanced-declaration construct both arms evaluate.
+pub(crate) const CASES: &[ParityCase] = &[
+    ParityCase::new("nested_struct_union_enum", fixture_nested_struct_union_enum),
+    ParityCase::new("anonymous_struct_union", fixture_anonymous_struct_union),
+    ParityCase::new(
+        "typedef_multiple_declarators",
+        fixture_typedef_multiple_declarators,
+    ),
+    ParityCase::new("deeply_nested_pointer", fixture_deeply_nested_pointer),
+    ParityCase::new(
+        "storage_class_combinations",
+        fixture_storage_class_combinations,
+    ),
+    ParityCase::new("bitfield_nested_struct", fixture_bitfield_nested_struct),
+    ParityCase::new(
+        "gnu_attribute_field_and_typedef",
+        fixture_gnu_attribute_field_and_typedef,
+    ),
+    ParityCase::new(
+        "function_pointer_to_pointer",
+        fixture_function_pointer_to_pointer,
+    ),
+    ParityCase::new(
+        "array_of_function_pointers_qualified",
+        fixture_array_of_function_pointers_qualified,
+    ),
+];
 
 // ---------------------------------------------------------------------------
 // Fixtures
