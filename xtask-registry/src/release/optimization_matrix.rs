@@ -1,8 +1,7 @@
 //! Hold the optimizer integration matrix to the pass catalog the source declares.
 
 use serde::Serialize;
-use xtask::artifact_gate::{self, Inspection};
-use xtask::gate::{Gate, GateCtx, GateError, Report};
+use xtask::artifact_gate::Inspection;
 
 use crate::release::optimizer_pass_rows::{self, OptimizerPassRow};
 
@@ -30,34 +29,17 @@ struct OptimizationMatrixEntry {
     output: &'static str,
 }
 
-/// Holds the optimizer integration matrix to the live pass catalog.
-pub struct OptimizationMatrixGate;
-
-impl Gate for OptimizationMatrixGate {
-    fn name(&self) -> &'static str {
-        "optimization-matrix"
-    }
-
-    fn help(&self) -> &'static str {
-        "Regenerate release/evidence/optimization/optimization-integration-matrix.json from the \
-         live optimizer pass catalog and report every line the committed artifact disagrees on. \
-         Proves the artifact lists exactly the catalog entries the source registers, that no pass \
-         id repeats, and that every entry names an owner, invariant, proof and benchmark. Proves \
-         nothing about whether a pass is correct, ever fires, or improves anything: the named \
-         proof and benchmark are strings the catalog carries, not results this gate reads."
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
-    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        Ok(artifact_gate::settle_inspection(
-            ctx,
-            self.name(),
-            inspect(),
-        ))
-    }
+xtask::artifact_gate! {
+    /// Holds the optimizer integration matrix to the live pass catalog.
+    OptimizationMatrixGate,
+    name: "optimization-matrix",
+    help: "Regenerate release/evidence/optimization/optimization-integration-matrix.json from the \
+       live optimizer pass catalog and report every line the committed artifact disagrees on. \
+       Proves the artifact lists exactly the catalog entries the source registers, that no pass \
+       id repeats, and that every entry names an owner, invariant, proof and benchmark. Proves \
+       nothing about whether a pass is correct, ever fires, or improves anything: the named \
+       proof and benchmark are strings the catalog carries, not results this gate reads.",
+    inspect: |ctx| inspect(),
 }
 
 /// What the optimizer catalog says, and the artifact that records it.
