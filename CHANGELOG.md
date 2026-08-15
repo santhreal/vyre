@@ -1404,6 +1404,19 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   no scope model, compared against the exact oracle it cannot reproduce under
   shadowing. Removed with it, having no callers left, a wrapper whose body
   forwarded a fixture's source bytes to the sequence.
+- `vyre_foundation::optimizer::passes::algebraic::strength_reduce` recognizes
+  four constant-divisor shapes before it lowers them. A divisibility test `x %
+  d == 0` becomes Lemire's `rotate_right(x * inverse(odd(d)),
+  trailing_zeros(d)) <= limit`, which reads the operand once and emits two
+  operations where lowering the remainder emitted five. A common factor between
+  a dividend's multiplier and the divisor cancels, a constant division chain
+  fuses into one division, and a nested modulus narrows, each guarded by a
+  range proof from a new provable-upper-bound analysis so a rewrite that would
+  only hold without 32-bit wrapping is declined. Chained shift fusion no longer
+  folds an over-width total to zero, which was a miscompile for a signed right
+  shift, where the sign bit replicates instead. Rewrites that re-evaluate their
+  operand now clear one duplication budget owned by `strength_reduce`, so a
+  remainder of a buffer load no longer emits three loads of the same address.
 
 ### Removed
 
