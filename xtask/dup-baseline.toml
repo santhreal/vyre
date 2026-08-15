@@ -126,8 +126,8 @@ total_lines = 1139
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 2814
-total_lines = 95155
+duplicate_lines = 2752
+total_lines = 95524
 
 [[crate]]
 name = "vyre-grammar-gen"

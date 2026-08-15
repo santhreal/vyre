@@ -2,10 +2,9 @@
 
 /// Leading magic bytes for the vyre IR wire format.
 ///
-/// The `VYRE` tag identifies the stable schema documented in
-/// `docs/wire-format.md`; the version byte pair [`WIRE_FORMAT_VERSION`]
-/// immediately after the magic identifies which schema version the
-/// payload follows.
+/// The `VYRE` tag identifies the stable schema; the version byte pair
+/// [`WIRE_FORMAT_VERSION`] immediately after the magic identifies which
+/// schema version the payload follows.
 pub const MAGIC: &[u8; 4] = b"VYRE";
 
 /// Current wire-format schema version. Incremented on any

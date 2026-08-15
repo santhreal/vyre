@@ -52,9 +52,6 @@ mod ops;
 /// [`reference_eval_oob_report`].
 pub use oob::OobReport;
 
-/// Test-only entry point that runs the hashmap interpreter over a Program.
-#[cfg(test)]
-pub use execution::eval_hashmap_reference;
 /// Count arithmetic IR ops the reference interpreter executes in a scope (roofline /
 /// complexity analysis) (a backend-agnostic dynamic operation count).
 pub use execution::op_count::count_ops;

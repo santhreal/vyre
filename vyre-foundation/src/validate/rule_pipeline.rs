@@ -31,8 +31,8 @@ use std::ops::ControlFlow;
 
 /// Validate a program for structural and semantic correctness.
 ///
-/// The validator checks the stable rules documented in
-/// `docs/ir-semantics.md`: workgroup dimensions must be positive,
+/// The validator checks the stable rules of the IR semantics:
+/// workgroup dimensions must be positive,
 /// buffer names and bindings must be unique, workgroup buffers must have
 /// a positive element count, and the node tree must respect depth limits.
 /// A successful validation (empty error vector) means the program is

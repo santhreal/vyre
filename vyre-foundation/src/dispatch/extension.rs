@@ -15,8 +15,8 @@
 //! ExtensionXxx>>`. First call walks the inventory once. Every subsequent
 //! call is one hash + one table probe  -  sub-ns, no allocation, no lock.
 //! The prior implementation called `inventory::iter` per lookup which
-//! scaled linearly with the registration count and violated the
-//! hot-path invariant documented in `docs/inventory-contract.md`.
+//! scaled linearly with the registration count, which is the hot-path
+//! invariant a resolver lookup must not break.
 
 use std::fmt::Debug;
 use std::hash::Hash;

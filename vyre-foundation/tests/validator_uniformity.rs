@@ -6,16 +6,9 @@
 //! uniform; barriers in genuinely divergent control flow continue to
 //! emit V010. Each positive case has a sanitized negative twin.
 
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Node};
 use vyre_foundation::validate::validate;
-
-fn output_program(nodes: Vec<Node>) -> Program {
-    Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(4)],
-        [1, 1, 1],
-        nodes,
-    )
-}
+use vyre_test_support::ir_variants::single_u32_output_program as output_program;
 
 fn has_v010(errors: &[vyre_foundation::validate::ValidationError]) -> bool {
     errors

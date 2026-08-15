@@ -17,7 +17,7 @@ use std::sync::Arc;
 
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
-use vyre_foundation::transform::rewrite_walk::{self, NodeRewrite};
+use vyre_foundation::transform::rewrite_walk::NodeRewrite;
 
 use super::arena_cursor::ArenaCursor;
 use super::cse_via_encoded::{has_repeated_top_level_canonical, CanonicalLookup};
@@ -80,7 +80,7 @@ impl<C: CanonicalLookup + ?Sized> Hoister<'_, C> {
     /// [`rewrite_walk::rewrite_node`], so the agreement is structural rather
     /// than two hand-written matches kept in step by review.
     fn rewrite_scope(&mut self, body: &[Node]) -> Vec<Node> {
-        let prefix_len = super::encode::reachable_prefix_len(body);
+        let reachable_len = super::rewrite_walk::reachable_prefix(body).len();
         let scope_start = self.cursor.position();
 
         let mut collect = CollectOccurrences {
@@ -89,9 +89,7 @@ impl<C: CanonicalLookup + ?Sized> Hoister<'_, C> {
             slot: 0,
             occurrences: Vec::new(),
         };
-        for node in &body[..prefix_len] {
-            rewrite_walk::rewrite_node(node, &mut collect);
-        }
+        super::rewrite_walk::visit_scope(body, &mut collect);
         let occurrences = collect.occurrences;
 
         // Identify hoist-worthy canonicals (count >= 2, non-trivial,
@@ -124,7 +122,7 @@ impl<C: CanonicalLookup + ?Sized> Hoister<'_, C> {
         // Pass 2 restarts the cursor at the top of this scope so it sees the
         // identical id for every position pass 1 counted.
         self.cursor.rewind_to(scope_start);
-        let mut out: Vec<Node> = Vec::with_capacity(prefix_len + hoist_lets.len());
+        let mut out: Vec<Node> = Vec::with_capacity(reachable_len + hoist_lets.len());
         out.extend(hoist_lets);
         let mut substitute = SubstituteHoisted {
             hoister: self,
@@ -132,11 +130,7 @@ impl<C: CanonicalLookup + ?Sized> Hoister<'_, C> {
             top_ids: Vec::new(),
             slot: 0,
         };
-        for node in &body[..prefix_len] {
-            out.push(
-                rewrite_walk::rewrite_node(node, &mut substitute).unwrap_or_else(|| node.clone()),
-            );
-        }
+        super::rewrite_walk::extend_with_rewritten_scope(body, &mut substitute, &mut out);
         out
     }
 

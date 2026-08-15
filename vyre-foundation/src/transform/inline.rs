@@ -147,6 +147,7 @@ pub struct InlineCtx {
 }
 
 mod expand;
+mod expand_walk;
 mod impl_inlinectx;
 
 /// Map a callee's input buffers to the argument expressions from a call site.

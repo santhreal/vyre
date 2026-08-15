@@ -10,7 +10,7 @@
 //! encoder accepts.
 //!
 //! The dispatcher trait inverts the dependency on a concrete backend  -
-//! production callers wire `vyre-driver-wgpu` or `-cuda`; tests in this
+//! production callers wire a concrete driver crate; tests in this
 //! crate use the in-tree `CpuOracleDispatcher` (test-only).
 
 use vyre_foundation::ir::Program;

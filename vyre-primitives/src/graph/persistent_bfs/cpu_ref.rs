@@ -54,7 +54,7 @@ pub fn try_cpu_ref(
 
 /// Caller-owned workspace for repeated persistent-BFS CPU oracle runs.
 ///
-/// Conformance and CUDA parity sweeps call this oracle across large generated
+/// Conformance and backend parity sweeps call this oracle across large generated
 /// graph corpora. Reusing the per-iteration frontier scratch avoids a heap
 /// allocation per proof case while preserving the allocating compatibility API.
 #[cfg(any(test, feature = "cpu-parity"))]

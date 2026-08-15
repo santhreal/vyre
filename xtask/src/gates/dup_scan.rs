@@ -167,7 +167,7 @@ pub(crate) fn measure(root: &Path) -> Result<BTreeMap<String, CrateCount>, GateE
         }
         entry.duplicate_lines += duplicated.len();
     }
-    counts
+    Ok(counts)
 }
 
 /// Files a shingle was seen in, held inline so the index allocates nothing.
@@ -303,7 +303,7 @@ pub(crate) fn report_for(root: &Path, only: Option<&str>) -> Result<Vec<FileRepo
             .cmp(&left.duplicate_lines)
             .then_with(|| left.path.cmp(&right.path))
     });
-    reports
+    Ok(reports)
 }
 
 fn hash(window: &[String]) -> u64 {
@@ -724,7 +724,7 @@ mod tests {
         fs::write(dir.join("crate-a/src/lib.rs"), &block).expect("write");
         fs::write(dir.join("crate-b/src/lib.rs"), &block).expect("write");
 
-        let reports = report(&dir, Some("crate-a"));
+        let reports = report_for(&dir, Some("crate-a")).expect("the fixture checkout is reportable");
         assert_eq!(reports.len(), 1, "only the filtered crate is reported");
         assert_eq!(reports[0].path, "crate-a/src/lib.rs");
         assert_eq!(reports[0].duplicate_lines, SHINGLE);

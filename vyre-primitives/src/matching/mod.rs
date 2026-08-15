@@ -4,7 +4,8 @@
 //! `vyre_primitives::matching::bracket_match::bracket_match(...)`  -
 //! explicit paths; no wildcard re-exports.
 
-/// Anchor-DFA plan shared by software, SPIR-V, and accelerator experiments.
+
+/// Anchor-DFA plan shared by software and accelerator experiments.
 pub mod anchor_dfa;
 /// Bounded-stack bracket-pair detector.
 pub mod bracket_match;

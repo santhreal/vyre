@@ -1,4 +1,7 @@
+use std::borrow::Cow;
+
 use super::expand::CalleeExpander;
+use super::expand_walk::{expand_body, ExpandPolicy};
 use super::{
     input_arg_map, input_buffers, output_buffer, zero_value, Error, Expr, HashMap, Ident,
     InlineCtx, Node, OpResolver, Program, Result, UnresolvedCalls,
@@ -21,126 +24,21 @@ impl InlineCtx {
         }
     }
 
-    #[inline]
+    /// `nodes` with every `Expr::Call` in them expanded.
+    ///
+    /// Which positions a statement has is
+    /// [`crate::transform::rewrite_walk::rewrite_node`]'s decision, driven from
+    /// here through [`expand_body`]. The match this replaces enumerated them
+    /// itself and cloned an async copy's `offset` and `size` and a trap address
+    /// verbatim, so a call in one of those positions reached a backend under
+    /// `UnresolvedCalls::Reject`, which is the case inlining exists to refuse.
+    ///
+    /// # Errors
+    ///
+    /// Whatever expanding one of the calls reports.
     pub(crate) fn inline_nodes(&mut self, nodes: &[Node]) -> Result<Vec<Node>> {
-        let mut out = Vec::with_capacity(nodes.len());
-        for node in nodes {
-            out.extend(self.inline_node(node)?);
-        }
-        Ok(out)
-    }
-
-    #[inline]
-    #[expect(
-        clippy::too_many_lines,
-        reason = "exhaustive Node inlining dispatch keeps each IR variant's rewrite contract visible"
-    )]
-    pub(crate) fn inline_node(&mut self, node: &Node) -> Result<Vec<Node>> {
-        match node {
-            Node::Let { name, value } => {
-                let (mut prefix, value) = self.inline_expr(value)?;
-                prefix.push(Node::let_bind(name, value));
-                Ok(prefix)
-            }
-            Node::Assign { name, value } => {
-                let (mut prefix, value) = self.inline_expr(value)?;
-                prefix.push(Node::assign(name, value));
-                Ok(prefix)
-            }
-            Node::Store {
-                buffer,
-                index,
-                value,
-            } => {
-                let (mut prefix, index) = self.inline_expr(index)?;
-                let (value_prefix, value) = self.inline_expr(value)?;
-                prefix.extend(value_prefix);
-                prefix.push(Node::store(buffer, index, value));
-                Ok(prefix)
-            }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                let (mut prefix, cond) = self.inline_expr(cond)?;
-                prefix.push(Node::if_then_else(
-                    cond,
-                    self.inline_nodes(then)?,
-                    self.inline_nodes(otherwise)?,
-                ));
-                Ok(prefix)
-            }
-            Node::Loop {
-                var,
-                from,
-                to,
-                body,
-            } => {
-                let (mut prefix, from) = self.inline_expr(from)?;
-                let (to_prefix, to) = self.inline_expr(to)?;
-                prefix.extend(to_prefix);
-                prefix.push(Node::loop_for(var, from, to, self.inline_nodes(body)?));
-                Ok(prefix)
-            }
-            Node::Return => Ok(vec![Node::Return]),
-            Node::Block(nodes) => Ok(vec![Node::Block(self.inline_nodes(nodes)?)]),
-            Node::Barrier { ordering } => Ok(vec![Node::barrier_with_ordering(*ordering)]),
-            Node::IndirectDispatch {
-                count_buffer,
-                count_offset,
-            } => Ok(vec![Node::IndirectDispatch {
-                count_buffer: count_buffer.clone(),
-                count_offset: *count_offset,
-            }]),
-            Node::AsyncLoad {
-                source,
-                destination,
-                offset,
-                size,
-                tag,
-            } => Ok(vec![Node::async_load_gpu_driven(
-                source.clone(),
-                destination.clone(),
-                (**offset).clone(),
-                (**size).clone(),
-                tag.clone(),
-            )]),
-            Node::AsyncStore {
-                source,
-                destination,
-                offset,
-                size,
-                tag,
-            } => Ok(vec![Node::async_store(
-                source.clone(),
-                destination.clone(),
-                (**offset).clone(),
-                (**size).clone(),
-                tag.clone(),
-            )]),
-            Node::AsyncWait { tag } => Ok(vec![Node::async_wait(tag)]),
-            Node::Trap { .. }
-            | Node::Resume { .. }
-            | Node::AllReduce { .. }
-            | Node::AllGather { .. }
-            | Node::ReduceScatter { .. }
-            | Node::Broadcast { .. } => Ok(vec![node.clone()]),
-            Node::Region {
-                generator,
-                source_region,
-                body,
-            } => Ok(vec![Node::Region {
-                generator: generator.clone(),
-                source_region: source_region.clone(),
-                body: std::sync::Arc::new(self.inline_nodes(body)?),
-            }]),
-            Node::Opaque(extension) => Err(Error::lowering(format!(
-                "inliner cannot rewrite opaque statement extension `{}`/`{}`. Fix: lower the extension to core Node variants before inlining.",
-                extension.extension_kind(),
-                extension.debug_identity()
-            ))),
-        }
+        let mut policy = CallerInline(self);
+        Ok(expand_body(nodes, &mut policy)?.into_owned())
     }
 
     /// `expr` with every `Expr::Call` replaced by the value its callee produces,
@@ -158,6 +56,16 @@ impl InlineCtx {
     /// arguments already inlined and no argument is walked twice.
     pub(crate) fn inline_expr(&mut self, expr: &Expr) -> Result<(Vec<Node>, Expr)> {
         let mut prefix = Vec::new();
+        let inlined = self.inline_expr_into(expr, &mut prefix)?;
+        Ok((prefix, inlined.unwrap_or_else(|| expr.clone())))
+    }
+
+    /// `expr` with every `Expr::Call` replaced by the value its callee
+    /// produces, hoisting the statements that value needs onto `prefix`.
+    ///
+    /// Reports `None` when the expression held no call, so a call-free operand
+    /// is not cloned.
+    fn inline_expr_into(&mut self, expr: &Expr, prefix: &mut Vec<Node>) -> Result<Option<Expr>> {
         let mut failure = None;
         let inlined = rewrite_expr(expr, &mut |candidate| {
             if failure.is_some() {
@@ -179,13 +87,27 @@ impl InlineCtx {
         });
         match failure {
             Some(error) => Err(error),
-            None => Ok((prefix, inlined.into_owned())),
+            None => Ok(match inlined {
+                Cow::Borrowed(_) => None,
+                Cow::Owned(value) => Some(value),
+            }),
         }
     }
 
-    /// One call site expanded, with `args` already inlined by the caller.
+    /// One call site expanded, with `args` already expanded by whichever side
+    /// owns them: the caller's own operands, or a callee body's nested call.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::InlineCycle`] for a recursive composition, and
+    /// [`Error::InlineUnknownOp`] for a call the resolver cannot expand under
+    /// [`UnresolvedCalls::Reject`].
     #[inline]
-    fn expand_call(&mut self, op_id: &str, args: &[Expr]) -> Result<(Vec<Node>, Expr)> {
+    pub(in crate::transform::inline) fn expand_call(
+        &mut self,
+        op_id: &str,
+        args: &[Expr],
+    ) -> Result<(Vec<Node>, Expr)> {
         if self.stack.iter().any(|active| active == op_id) {
             return Err(Error::InlineCycle {
                 op_id: op_id.to_string(),
@@ -259,5 +181,18 @@ impl InlineCtx {
         }
 
         Ok((nodes, Expr::var(&result_name)))
+    }
+}
+
+/// Caller-side inlining as a policy over the one statement walk.
+///
+/// Nothing is renamed here: the caller's statements are already written in the
+/// caller's namespace, so the only position that changes is an operand holding
+/// a call.
+struct CallerInline<'a>(&'a mut InlineCtx);
+
+impl ExpandPolicy for CallerInline<'_> {
+    fn operand(&mut self, expr: &Expr, prefix: &mut Vec<Node>) -> Result<Option<Expr>> {
+        self.0.inline_expr_into(expr, prefix)
     }
 }

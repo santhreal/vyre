@@ -90,13 +90,13 @@ static DELEGATED: &[Delegated] = &[
     },
     Delegated {
         name: "catalog",
-        help: "Hold the per-subsystem catalog under docs/catalog to the live inventory; --write regenerates it",
+        help: "Hold docs/generated/catalog.toml to the live operation inventory; --write regenerates it",
         package: "xtask-registry",
         generates: true,
     },
     Delegated {
         name: "compile",
-        help: "Compile the registered release corpus through every linked target facet; --program ID narrows to one case",
+        help: "Compile the registered release corpus; --program ID narrows to one case, --input PATH compiles one wire file, --to ID also compiles that registered target, --out DIR writes the payloads",
         package: "xtask-registry",
         generates: false,
     },
@@ -120,19 +120,19 @@ static DELEGATED: &[Delegated] = &[
     },
     Delegated {
         name: "lego-audit",
-        help: "Hold registered composition to the pinned catalog baseline; --write records it",
+        help: "Hold registered composition to the ten composition laws; --write records the composition baseline",
         package: "xtask-registry",
         generates: true,
     },
     Delegated {
         name: "lego-quick",
-        help: "Fast composition boundary checks over every registered operation",
+        help: "Composition boundary checks over every Rust source in the tree; --staged narrows to the staged set",
         package: "xtask-registry",
         generates: false,
     },
     Delegated {
         name: "list-ops",
-        help: "Hold the schema-derived operation inventory to the live registry; --write regenerates it",
+        help: "Hold docs/generated/op-inventory.toml to the live operation registry; --write regenerates it",
         package: "xtask-registry",
         generates: true,
     },
@@ -144,7 +144,7 @@ static DELEGATED: &[Delegated] = &[
     },
     Delegated {
         name: "optimization-docs",
-        help: "Hold the optimizer pass reference to the passes the source declares; --write regenerates it",
+        help: "Hold docs/generated/optimizer-passes.toml to the passes the source declares; --write regenerates it",
         package: "xtask-registry",
         generates: true,
     },

@@ -26,7 +26,7 @@
 //! so is any drift in the f64 CPU oracle, which is a separate independent implementation.
 #![cfg(feature = "math")]
 
-use vyre_primitives::math::symmetric_eigen_jacobi::EIGENVECTOR_SIGN_EPSILON;
+use vyre_primitives::math::eigenvector_column_sign::EIGENVECTOR_SIGN_EPSILON;
 use vyre_primitives::math::tensor_train_decompose::tensor_train_decompose_step;
 use vyre_primitives::wire::{decode_f32_le_bytes_all as unpack_f32, pack_f32_slice as pack_f32};
 use vyre_reference::value::Value;

@@ -220,6 +220,30 @@ pub fn create_parent_dir(path: &Path) {
     }
 }
 
+/// Render `value` as the exact bytes an evidence artifact holds on disk.
+///
+/// Pretty JSON, workspace paths normalised to repository-relative form, one
+/// trailing newline. A gate that regenerates an artifact in memory and a writer
+/// that puts one on disk must agree byte for byte, or every comparison reports
+/// a difference that is only the serializer, so both read this.
+///
+/// # Errors
+///
+/// Returns the serializer's message when `value` cannot be represented as JSON.
+pub fn render_evidence_json(value: &impl serde::Serialize) -> Result<String, String> {
+    let json = serde_json::to_string_pretty(value).map_err(|error| error.to_string())?;
+    let vyre_root = crate::checkout::checkout_root();
+    let santh_root = vyre_root
+        .parent()
+        .and_then(Path::parent)
+        .and_then(Path::parent)
+        .and_then(Path::parent)
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| vyre_root.clone());
+    let json = normalize_serialized_workspace_paths(&json, &vyre_root, &santh_root);
+    Ok(format!("{json}\n"))
+}
+
 /// Write `value` as pretty JSON, exiting with a `Fix:` message on failure.
 ///
 /// The parent directory is created here, because an artifact writer that has to
@@ -229,7 +253,7 @@ pub fn write_json(path: &Path, value: &impl serde::Serialize) {
     let json = match render_evidence_json(value) {
         Ok(json) => json,
         Err(error) => {
-            eprintln!("Fix: {error} for `{}`", path.display());
+            eprintln!("Fix: failed to serialize `{}`: {error}", path.display());
             std::process::exit(1);
         }
     };

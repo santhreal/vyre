@@ -39,7 +39,8 @@
 //! cannot register the op, you do not yet know what shape it builds.
 
 use std::path::PathBuf;
-use std::process;
+
+use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
 
 use crate::gates::lego_audit::{collect_ops, OpInfo, Tier};
 use xtask::gates::dedup_report::{
@@ -56,48 +57,82 @@ const DEFAULT_TOP_N: usize = 5;
 const DEFAULT_MIN_SCORE: f64 = 0.20;
 const DEFAULT_ALL_MIN_SCORE: f64 = 0.80;
 
-pub(crate) fn run(args: &[String]) {
-    let cli = match parse_args(args) {
-        Ok(c) => c,
-        Err(err) => {
-            eprintln!("Fix: {err}");
-            print_usage();
-            process::exit(1);
-        }
-    };
+/// Reports registered operations that duplicate each other by IR shape.
+pub struct WhatsSimilar;
 
-    let ops = collect_ops();
-    match &cli.mode {
-        Mode::Target(op_id) => run_target_query(
-            &ops,
-            op_id,
-            cli.top_n,
-            cli.min_score,
-            cli.duplicate_report_json.as_ref(),
-        ),
-        Mode::All => run_all_pairs_query(
-            &ops,
-            cli.top_n,
-            cli.min_score,
-            cli.duplicate_report_json.as_ref(),
-        ),
+impl Gate for WhatsSimilar {
+    fn name(&self) -> &'static str {
+        "whats-similar"
+    }
+
+    fn help(&self) -> &'static str {
+        "Report duplicate operations by IR shape across the whole registry; --op-id ID narrows to one"
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut argv = vec![String::from("xtask"), String::from("whats-similar")];
+        argv.extend(ctx.args.iter().cloned());
+        if ctx.flag("--op-id").is_none() && !ctx.has("--all") {
+            argv.push(String::from("--all"));
+        }
+        let cli = parse_args(&argv).map_err(|error| {
+            GateError::new(
+                error,
+                "pass --op-id ID to narrow to one operation, or no selection to scan every pair",
+            )
+        })?;
+        let ops = collect_ops();
+        let mut report = Report::clean();
+        match &cli.mode {
+            Mode::Target(op_id) => run_target_query(
+                &mut report,
+                &ops,
+                op_id,
+                cli.top_n,
+                cli.min_score,
+                cli.duplicate_report_json.as_ref(),
+            )?,
+            Mode::All => run_all_pairs_query(
+                &mut report,
+                &ops,
+                cli.top_n,
+                cli.min_score,
+                cli.duplicate_report_json.as_ref(),
+            )?,
+        }
+        Ok(report)
     }
 }
 
+/// Score at or above which two operations are the same operation twice.
+const DUPLICATE_SCORE: f64 = 0.95;
+
+/// One finding for a pair that is the same shape twice.
+fn duplicate_finding(left: &str, right: &str, score: f64) -> Finding {
+    Finding::new(
+        format!(
+            "`{left}` and `{right}` are {:.0}% structurally identical, so the registry carries the same operation twice",
+            score * 100.0
+        ),
+        "extract the shared body into a registered primitive and compose both operations from it, or record the pair as a known-distinct implementation family",
+    )
+}
+
 fn run_target_query(
+    report: &mut Report,
     ops: &[OpInfo],
     op_id: &str,
     top_n: usize,
     min_score: f64,
     duplicate_report_json: Option<&PathBuf>,
-) {
+) -> Result<(), GateError> {
     let target = match ops.iter().find(|o| o.id == op_id) {
         Some(op) => op,
         None => {
-            eprintln!(
-                "Fix: operation id `{op_id}` is absent from OperationRegistry. Submit one OperationRegistration with a neutral builder before running whats-similar."
-            );
-            process::exit(1);
+            return Err(GateError::new(
+                format!("operation id `{op_id}` is not registered"),
+                "submit one OperationRegistration with a neutral builder for it, or name a registered id",
+            ));
         }
     };
 
@@ -116,86 +151,87 @@ fn run_target_query(
         .filter(|(s, _, _, _)| *s >= min_score)
         .collect();
     scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+    for (score, _, _, op) in &scored {
+        if *score >= DUPLICATE_SCORE {
+            report.find(duplicate_finding(op_id, &op.id, *score));
+        }
+    }
     scored.truncate(top_n);
     if let Some(path) = duplicate_report_json {
         let generator_command = duplicate_report_generator_command(
             &format!("whats-similar --op-id {}", target.id),
             path,
         );
-        let report = target_duplicate_report(target, &scored, &generator_command);
-        if let Err(error) = write_duplicate_report_json(path, &report) {
-            eprintln!(
-                "Fix: whats-similar could not write duplicate family report `{}`: {error}",
-                path.display()
-            );
-            process::exit(1);
+        let duplicates = target_duplicate_report(target, &scored, &generator_command);
+        if let Err(error) = write_duplicate_report_json(path, &duplicates) {
+            return Err(GateError::new(
+                format!(
+                    "could not write the duplicate family report `{}`: {error}",
+                    path.display()
+                ),
+                "pass a writable path after --duplicate-report-json",
+            ));
         }
     }
 
-    println!(
-        "whats-similar: target `{}` (tier={}, own_nodes={}, composed_nodes={}, fingerprint={} bytes)",
+    report.note(format!("whats-similar: target `{}` (tier={}, own_nodes={}, composed_nodes={}, fingerprint={} bytes)",
         target.id,
         tier_label(target.tier),
         target.own_nodes,
         target.composed_nodes,
-        target.fingerprint.len()
-    );
-    println!();
+        target.fingerprint.len()));
 
     if scored.is_empty() {
-        println!(
-            "  ✓ no neighbors at score ≥ {:.2}. The op shape is novel (or your fingerprint is too short).",
-            min_score
-        );
-        return;
+        report.note(format!("  ✓ no neighbors at score ≥ {:.2}. The op shape is novel (or your fingerprint is too short).",
+            min_score));
+        return Ok(());
     }
 
-    println!(
+    report.note(format!(
         "  Top {} matches by bigram-cosine structural similarity:",
         scored.len()
-    );
+    ));
     for (i, (score, same_contract, same_family, op)) in scored.iter().enumerate() {
         let verdict = pair_verdict(*score, *same_contract, *same_family);
-        println!(
+        report.note(format!(
             "    {:>2}. {:>5.1}%  {}  ({})",
             i + 1,
             score * 100.0,
             op.id,
             verdict
-        );
-        println!(
+        ));
+        report.note(format!(
             "         tier={} own={} composed={} children={}",
             tier_label(op.tier),
             op.own_nodes,
             op.composed_nodes,
             op.children.len()
-        );
+        ));
         if !same_contract {
-            println!(
+            report.note(format!(
                 "         contract=DIFFERENT target_buffers={} match_buffers={}",
                 target.buffer_signature.len(),
                 op.buffer_signature.len()
-            );
+            ));
         }
         if *same_family {
-            println!(
+            report.note(format!(
                 "         implementation=CENTRALIZED family={}",
                 implementation_family(target).unwrap_or("unknown")
-            );
+            ));
         }
     }
-    println!();
-    println!(
-        "  Bar: ≥ 0.95 = duplicate, ≥ 0.80 = very similar, ≥ 0.50 = same family, < 0.20 = unrelated."
-    );
+    report.note(format!("  Bar: ≥ 0.95 = duplicate, ≥ 0.80 = very similar, ≥ 0.50 = same family, < 0.20 = unrelated."));
+    Ok(())
 }
 
 fn run_all_pairs_query(
+    report: &mut Report,
     ops: &[OpInfo],
     top_n: usize,
     min_score: f64,
     duplicate_report_json: Option<&PathBuf>,
-) {
+) -> Result<(), GateError> {
     let eligible: Vec<&OpInfo> = ops.iter().filter(|op| op.fingerprint.len() >= 10).collect();
     let mut pairs: Vec<(f64, &OpInfo, &OpInfo)> = Vec::new();
     let mut contract_variants = 0usize;
@@ -224,43 +260,42 @@ fn run_all_pairs_query(
         }
     }
     pairs.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+    for (score, left, right) in &pairs {
+        if *score >= DUPLICATE_SCORE {
+            report.find(duplicate_finding(&left.id, &right.id, *score));
+        }
+    }
     pairs.truncate(top_n);
     if let Some(path) = duplicate_report_json {
         let generator_command = duplicate_report_generator_command("whats-similar --all", path);
-        let report = all_pairs_duplicate_report(&pairs, &generator_command);
-        if let Err(error) = write_duplicate_report_json(path, &report) {
-            eprintln!(
-                "Fix: whats-similar could not write duplicate family report `{}`: {error}",
-                path.display()
-            );
-            process::exit(1);
+        let duplicates = all_pairs_duplicate_report(&pairs, &generator_command);
+        if let Err(error) = write_duplicate_report_json(path, &duplicates) {
+            return Err(GateError::new(
+                format!(
+                    "could not write the duplicate family report `{}`: {error}",
+                    path.display()
+                ),
+                "pass a writable path after --duplicate-report-json",
+            ));
         }
     }
 
-    println!(
-        "whats-similar: scanned {} registered ops for all-pairs duplicate candidates (min={:.2}, top={})",
+    report.note(format!("whats-similar: scanned {} registered ops for all-pairs duplicate candidates (min={:.2}, top={})",
         eligible.len(),
         min_score,
-        top_n
-    );
+        top_n));
     if contract_variants > 0 {
-        println!(
-            "  skipped {contract_variants} same-body pairs with different buffer contracts; these are wrapper/variant candidates, not raw duplicate ops."
-        );
+        report.note(format!("  skipped {contract_variants} same-body pairs with different buffer contracts; these are wrapper/variant candidates, not raw duplicate ops."));
     }
     if centralized_family_variants > 0 {
-        println!(
-            "  skipped {centralized_family_variants} same-family pairs already routed through a centralized builder."
-        );
+        report.note(format!("  skipped {centralized_family_variants} same-family pairs already routed through a centralized builder."));
     }
     if distinct_family_variants > 0 {
-        println!(
-            "  skipped {distinct_family_variants} known-distinct implementation-family pairs with shared scaffolding but different semantics."
-        );
+        report.note(format!("  skipped {distinct_family_variants} known-distinct implementation-family pairs with shared scaffolding but different semantics."));
     }
     if pairs.is_empty() {
-        println!("  no registered-op pairs crossed the duplicate/similarity floor.");
-        return;
+        report.note("no registered-op pair crossed the duplicate or similarity floor");
+        return Ok(());
     }
     for (index, (score, left, right)) in pairs.iter().enumerate() {
         let verdict = match *score {
@@ -269,22 +304,28 @@ fn run_all_pairs_query(
             s if s >= 0.50 => "SIMILAR",
             _ => "RELATED",
         };
-        println!("  {:>2}. {:>5.1}%  {}", index + 1, score * 100.0, verdict);
-        println!(
+        report.note(format!(
+            "  {:>2}. {:>5.1}%  {}",
+            index + 1,
+            score * 100.0,
+            verdict
+        ));
+        report.note(format!(
             "      A: {} tier={} own={} composed={}",
             left.id,
             tier_label(left.tier),
             left.own_nodes,
             left.composed_nodes
-        );
-        println!(
+        ));
+        report.note(format!(
             "      B: {} tier={} own={} composed={}",
             right.id,
             tier_label(right.tier),
             right.own_nodes,
             right.composed_nodes
-        );
+        ));
     }
+    Ok(())
 }
 
 fn target_duplicate_report(
@@ -547,21 +588,6 @@ fn parse_args(args: &[String]) -> Result<Cli, String> {
         min_score,
         duplicate_report_json,
     })
-}
-
-fn print_usage() {
-    eprintln!(
-        "Usage: cargo_full run --bin xtask -- whats-similar --op-id <id> [--top N] [--min FLOAT]\n\
-         Usage: cargo_full run --bin xtask -- whats-similar --all [--top N] [--min FLOAT]\n\
-         Add --duplicate-report-json PATH to write the shared duplicate-family report schema.\n\
-         \n\
-         Pre-write similarity query: report the top-N ops most structurally\n\
-         similar to <id> by IR-shape bigram cosine. Use BEFORE shipping a new\n\
-         op to detect reinvention. Use --all to find duplicate candidates\n\
-         across the entire registered-op surface.\n\
-         \n\
-         Defaults: --top 5, --min 0.20 for --op-id, --min 0.80 for --all."
-    );
 }
 
 #[cfg(test)]

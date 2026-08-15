@@ -69,7 +69,7 @@ pub fn ssa_dominance_scan(
                                 // 4 per match across ALL lanes); if total matches exceed
                                 // phi_words/4 the later offsets run past `out_phi_nodes`. The
                                 // reference silently DROPS OOB stores, masking the hazard, but a
-                                // real GPU (CUDA does no bounds-checking) corrupts memory. We
+                                // real GPU (which does no bounds-checking) corrupts memory. We
                                 // skip the store when full while STILL counting via the atomic
                                 // above, the canonical GPU append-buffer overflow protocol:
                                 // `out_phi_count` keeps rising past capacity so the caller
@@ -118,8 +118,8 @@ pub fn ssa_dominance_scan_program(num_nodes: u32, phi_words: u32) -> Program {
     // Control-flow nest the lane guard: `t < num_nodes` must gate the `ast_opcodes[t]`
     // load via an `if_then`, NOT an `Expr::and`: a data-flow AND evaluates both
     // operands, so `load(ast_opcodes, t)` would execute for over-fired lanes
-    // (t >= num_nodes; GPU dispatch rounds up to full workgroups), reading OOB (UB on
-    // CUDA; silently zero-filled on the reference). Nesting keeps the load inside the
+    // (t >= num_nodes; GPU dispatch rounds up to full workgroups), reading OOB (undefined
+    // behaviour on a real GPU; silently zero-filled on the reference). Nesting keeps the load inside the
     // in-range branch. This guard is the outermost of the nest that bottoms out at the
     // phi-capacity gate (depth 6 == MAX_DEPTH); the match condition below is merged into
     // one `and` so that gate fits within the depth budget.
