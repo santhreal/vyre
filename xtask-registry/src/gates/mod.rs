@@ -6,6 +6,7 @@
 //! source text alone belongs in `xtask::gates`, which links none of this.
 
 pub mod abstraction_gate;
+pub mod cross_target;
 pub mod gate1;
 pub mod heuristic_audit;
 pub mod lego_audit;

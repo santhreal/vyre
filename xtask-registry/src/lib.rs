@@ -29,6 +29,7 @@ pub static GATES: &[&dyn Gate] = &[
     &docs::operation_schema::OperationSchemaGate,
     &docs::optimization_docs::OptimizationDocs,
     &gates::abstraction_gate::AbstractionGate,
+    &gates::cross_target::CrossTarget,
     &gates::gate1::Gate1,
     &gates::heuristic_audit::HeuristicAudit,
     &gates::lego_audit::LegoAudit,
