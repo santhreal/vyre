@@ -4,9 +4,15 @@
   "findings": [
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 224,
+      "line": 239,
       "pattern": "unbounded_read",
       "text": "std::fs::read_to_string(directory.join(\"Cargo.toml\")).is_ok_and(|text| {"
+    },
+    {
+      "path": "vyre-foundation/src/transform/visit.rs",
+      "line": 376,
+      "pattern": "unbounded_read",
+      "text": "Node::IndirectDispatch { count_buffer, .. } => BufferRefs::read(count_buffer),"
     },
     {
       "path": "vyre-lower/src/artifact_golden.rs",
@@ -18,9 +24,19 @@
   "release_blocking_findings": [
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 224,
+      "line": 239,
       "pattern": "unbounded_read",
       "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "vyre-foundation/src/transform/visit.rs",
+      "line": 376,
+      "pattern": "unbounded_read",
+      "owner_lane": "foundation_optimizer",
       "surface": "production",
       "risk": "release_blocker",
       "hot_path": false,
@@ -38,6 +54,6 @@
     }
   ],
   "blockers": [
-    "2 release-blocking `resource-bound` finding(s) remain"
+    "3 release-blocking `resource-bound` finding(s) remain"
   ]
 }
