@@ -56,15 +56,27 @@ mod op_id_forms_math {
 #[cfg(feature = "decode")]
 mod op_id_forms_decode {
     use vyre_primitives::decode::ziftsieve::{
-        ziftsieve_literal_copy, ziftsieve_literal_copy_with_op_id, OP_ID,
+        ziftsieve_literal_copy, ziftsieve_literal_copy_with_op_id, ZiftsieveBuffers,
+        ZiftsieveExtents, OP_ID,
+    };
+
+    const BUFFERS: ZiftsieveBuffers<'static> = ZiftsieveBuffers {
+        input: "in",
+        output: "out",
+        seq_literal_start: "start",
+        seq_literal_len: "len",
+        seq_literal_offset: "offset",
+    };
+    const EXTENTS: ZiftsieveExtents = ZiftsieveExtents {
+        input_len: 256,
+        seq_count: 4,
+        max_output: 512,
     };
 
     #[test]
     fn ziftsieve_literal_copy_delegates_to_the_op_id_form() {
-        let wrapper = ziftsieve_literal_copy("in", "out", "start", "len", "offset", 256, 4, 512);
-        let explicit = ziftsieve_literal_copy_with_op_id(
-            OP_ID, "in", "out", "start", "len", "offset", 256, 4, 512,
-        );
+        let wrapper = ziftsieve_literal_copy(BUFFERS, EXTENTS);
+        let explicit = ziftsieve_literal_copy_with_op_id(OP_ID, BUFFERS, EXTENTS);
         assert!(
             wrapper.structural_eq(&explicit),
             "Fix: ziftsieve_literal_copy must build the same program as \
@@ -74,18 +86,9 @@ mod op_id_forms_decode {
 
     #[test]
     fn the_op_id_reaches_the_program_identity() {
-        let caller_id = ziftsieve_literal_copy_with_op_id(
-            "vyre-libs::decode::ziftsieve",
-            "in",
-            "out",
-            "start",
-            "len",
-            "offset",
-            256,
-            4,
-            512,
-        );
-        let canonical = ziftsieve_literal_copy("in", "out", "start", "len", "offset", 256, 4, 512);
+        let caller_id =
+            ziftsieve_literal_copy_with_op_id("vyre-libs::decode::ziftsieve", BUFFERS, EXTENTS);
+        let canonical = ziftsieve_literal_copy(BUFFERS, EXTENTS);
         assert!(
             !caller_id.structural_eq(&canonical),
             "Fix: the op id a composition crate supplies must reach the program identity, \

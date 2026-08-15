@@ -51,7 +51,6 @@ pub const vyre_libs::decode::BASE64_DECODE_TABLE_BUFFER: &str
 pub const vyre_libs::decode::HEX_DECODE_TABLE_BUFFER: &str
 pub const vyre_libs::decode::base64::BASE64_DECODE_TABLE_BUFFER: &str
 pub const vyre_libs::decode::hex::HEX_DECODE_TABLE_BUFFER: &str
-pub const vyre_libs::decode::ziftsieve::NOTE_ZIFTSIEVE_GPU_DESIGN: &str
 pub const vyre_libs::nn::quant::Q2_K_BLOCKS_PER_SUPER: u32
 pub const vyre_libs::nn::quant::Q2_K_BLOCK_SIZE: u32
 pub const vyre_libs::nn::quant::Q2_K_SUPER_BLOCK_SIZE: u32
@@ -157,8 +156,8 @@ pub fn vyre_libs::decode::inflate_stored_block_then_aho_corasick(input: &str, de
 pub fn vyre_libs::decode::inflate_stored_block_tiled_then_aho_corasick(input: &str, decoded: &str, transitions: &str, accept: &str, matches: &str, input_len: u32, state_count: u32, tile_width: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::decode::streaming::dram_bytes_saved(handoff_byte_count: u32, invocations: u32) -> u64
 pub fn vyre_libs::decode::streaming::fuse_decode_scan(decoder: vyre_foundation::ir_inner::model::program::definition::Program, scanner: vyre_foundation::ir_inner::model::program::definition::Program, handoff_buf: &str, handoff_byte_count: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::decode::streaming::DecodeScanFuseError>
-pub fn vyre_libs::decode::ziftsieve::ziftsieve_gpu(input: &str, output: &str, seq_literal_start: &str, seq_literal_len: &str, seq_literal_offset: &str, input_len: u32, seq_count: u32, max_output: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::decode::ziftsieve_gpu(input: &str, output: &str, seq_literal_start: &str, seq_literal_len: &str, seq_literal_offset: &str, input_len: u32, seq_count: u32, max_output: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::decode::ziftsieve::ziftsieve_gpu(buffers: vyre_primitives::decode::ziftsieve::ZiftsieveBuffers<'_>, extents: vyre_primitives::decode::ziftsieve::ZiftsieveExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::decode::ziftsieve_gpu(buffers: vyre_primitives::decode::ziftsieve::ZiftsieveBuffers<'_>, extents: vyre_primitives::decode::ziftsieve::ZiftsieveExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::descriptor::BufferDescriptor::new(name: alloc::string::String, access: vyre_spec::buffer_access::BufferAccess, dtype: vyre_spec::data_type::DataType, count: u32) -> Self
 pub fn vyre_libs::descriptor::ProgramDescriptor::from_program(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> Self
 pub fn vyre_libs::descriptor::ProgramDescriptor::new(buffer_count: usize, workgroup_size: [u32; 3], buffers: alloc::vec::Vec<vyre_libs::descriptor::BufferDescriptor>, rw_bytes_lower_bound: usize, entry_node_count: usize) -> Self
@@ -457,7 +456,7 @@ pub fn vyre_libs::prelude::relu(input: &str, output: &str, n: u32) -> vyre_found
 pub fn vyre_libs::prelude::relu::relu(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::prelude::scan_prefix_sum(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::prelude::substring_search(haystack: &str, needle: &str, matches: &str, haystack_len: u32, needle_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::prelude::ziftsieve_gpu(input: &str, output: &str, seq_literal_start: &str, seq_literal_len: &str, seq_literal_offset: &str, input_len: u32, seq_count: u32, max_output: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::prelude::ziftsieve_gpu(buffers: vyre_primitives::decode::ziftsieve::ZiftsieveBuffers<'_>, extents: vyre_primitives::decode::ziftsieve::ZiftsieveExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::range_ordering::match_order(left_id: vyre_foundation::ir_inner::model::generated::Expr, right_id: vyre_foundation::ir_inner::model::generated::Expr, res_name: &str) -> (alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, vyre_foundation::ir_inner::model::generated::Expr)
 pub fn vyre_libs::representation::unpack::unpack_4bit_f32(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::representation::unpack_4bit_f32(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
