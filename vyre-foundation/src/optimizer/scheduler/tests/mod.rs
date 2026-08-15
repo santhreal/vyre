@@ -377,7 +377,11 @@ impl ProgramPass for RefusingPass {
         panic!("cost-monotone scheduler must call try_transform before transform")
     }
 
-    fn try_transform(&self, _program: Program) -> Result<PassResult, RefusalReason> {
+    fn try_transform(
+        &self,
+        _program: Program,
+        _caps: &crate::optimizer::AdapterCaps,
+    ) -> Result<PassResult, RefusalReason> {
         Err(RefusalReason::CostIncrease {
             delta: 1,
             detail: "test pass refuses cost-up rewrite",
@@ -423,7 +427,12 @@ impl ProgramPass for BatchingPass {
         RewriteBatchCandidates::new(candidates, 1, width, 2).with_threshold(self.threshold)
     }
 
-    fn apply_rewrite_batch(&self, program: Program, batch: &RewriteBatch) -> PassResult {
+    fn apply_rewrite_batch(
+        &self,
+        program: Program,
+        batch: &RewriteBatch,
+        _caps: &crate::optimizer::AdapterCaps,
+    ) -> PassResult {
         self.batch_calls.fetch_add(1, Ordering::Relaxed);
         rewrite_matching_stores(program, Some(batch))
     }

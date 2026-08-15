@@ -13,7 +13,7 @@ use std::process::Command;
 
 use toml::Value;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Gate, GateCtx, GateError, Report};
 use crate::manifest_walk::MAX_MANIFEST_BYTES;
 
 /// What an upward edge or an unclaimed layer costs the reader.
