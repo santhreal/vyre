@@ -16,7 +16,7 @@
 use rustc_hash::FxHashMap;
 
 use super::binding::Binding;
-use super::typecheck::expr_type;
+use super::typecheck::{expr_type, ScopeTypes};
 use super::{bytes_rejection, err, ValidationError, ValidationOptions};
 use crate::ir_inner::model::expr::{Expr, Ident};
 use crate::ir_inner::model::node::{Node, NodeExtension};
@@ -69,7 +69,7 @@ pub(crate) fn check_assign(
             ));
         }
         if binding.ty_known {
-            if let Some(value_ty) = expr_type(value, buffers, scope) {
+            if let Some(value_ty) = expr_type(value, &mut ScopeTypes::new(buffers, scope)) {
                 if value_ty != binding.ty {
                     errors.push(err("V045", ValidationPhase::Node, ValidationLocation::Program, format!(
                         "assignment to `{name}` has type `{value_ty}` but the binding was declared as `{declared}`",
@@ -88,7 +88,7 @@ pub(crate) fn check_assign(
                 access = buffer.access
             ), "use a read-write/output buffer or store into a mutable local binding"));
         }
-        if let Some(value_ty) = expr_type(value, buffers, scope) {
+        if let Some(value_ty) = expr_type(value, &mut ScopeTypes::new(buffers, scope)) {
             let element = &buffer.element;
             if !store_value_compatible(&value_ty, element) {
                 errors.push(err(
@@ -129,7 +129,7 @@ pub(crate) fn check_store(
     let Some(buffer) = buffers.get(buffer_name.as_str()) else {
         return;
     };
-    if let Some(value_ty) = expr_type(value, buffers, scope) {
+    if let Some(value_ty) = expr_type(value, &mut ScopeTypes::new(buffers, scope)) {
         let element = &buffer.element;
         if !store_value_compatible(&value_ty, element) {
             let legal_targets = store_value_targets(element);
@@ -144,7 +144,7 @@ pub(crate) fn check_store(
             ));
         }
     }
-    if let Some(index_ty) = expr_type(index, buffers, scope) {
+    if let Some(index_ty) = expr_type(index, &mut ScopeTypes::new(buffers, scope)) {
         if index_ty != DataType::U32 {
             errors.push(err(
                 "V122",
@@ -167,7 +167,7 @@ pub(crate) fn check_if_condition(
     scope: &Scope,
     errors: &mut Vec<ValidationError>,
 ) {
-    if let Some(cond_ty) = expr_type(cond, buffers, scope) {
+    if let Some(cond_ty) = expr_type(cond, &mut ScopeTypes::new(buffers, scope)) {
         if !matches!(cond_ty, DataType::U32 | DataType::Bool) {
             errors.push(err(
                 "V123",
@@ -188,7 +188,7 @@ pub(crate) fn check_loop_bounds(
     scope: &Scope,
     errors: &mut Vec<ValidationError>,
 ) {
-    if let Some(from_ty) = expr_type(from, buffers, scope) {
+    if let Some(from_ty) = expr_type(from, &mut ScopeTypes::new(buffers, scope)) {
         if from_ty != DataType::U32 {
             errors.push(err(
                 "V124",
@@ -201,7 +201,7 @@ pub(crate) fn check_loop_bounds(
             ));
         }
     }
-    if let Some(to_ty) = expr_type(to, buffers, scope) {
+    if let Some(to_ty) = expr_type(to, &mut ScopeTypes::new(buffers, scope)) {
         if to_ty != DataType::U32 {
             errors.push(err(
                 "V125",

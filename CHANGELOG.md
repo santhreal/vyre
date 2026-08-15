@@ -1617,6 +1617,19 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   admitting a narrower integer there is red until both arms dispatch it;
   enumerating the `DataType` enum instead would demand a case for the sub-byte
   quantization storage families that predicate deliberately excludes.
+- `vyre_foundation::optimizer::passes::algebraic::strength_reduce` recognizes
+  four constant-divisor shapes before it lowers them. A divisibility test `x %
+  d == 0` becomes Lemire's `rotate_right(x * inverse(odd(d)),
+  trailing_zeros(d)) <= limit`, which reads the operand once and emits two
+  operations where lowering the remainder emitted five. A common factor between
+  a dividend's multiplier and the divisor cancels, a constant division chain
+  fuses into one division, and a nested modulus narrows, each guarded by a
+  range proof from a new provable-upper-bound analysis so a rewrite that would
+  only hold without 32-bit wrapping is declined. Chained shift fusion no longer
+  folds an over-width total to zero, which was a miscompile for a signed right
+  shift, where the sign bit replicates instead. Rewrites that re-evaluate their
+  operand now clear one duplication budget owned by `strength_reduce`, so a
+  remainder of a buffer load no longer emits three loads of the same address.
 
 ### Removed
 
@@ -2728,6 +2741,34 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   contract now derives the workspace member list at run time and fails when a
   member has no classified testing guide row, or when a row names a crate the
   workspace no longer has.
+- Expression type inference has one owner,
+  `vyre_foundation::validate::typecheck::expr_type`, and the environment its
+  consumers supplied differently is the
+  `vyre_foundation::validate::typecheck::TypeEnv` trait: a scalar lookup, a
+  buffer element lookup, and a hook that observes the type of every
+  subexpression a walk resolves.
+  `vyre_foundation::optimizer::fact_cache::type_facts` and the reverse-mode
+  forward pass in `vyre_foundation::transform::autodiff::grad` each carried a
+  second `Expr` walker, and the three answers had drifted. `Expr::BufferRef`
+  was a word in both copies where validation reports nothing on purpose, so a
+  buffer name could pass an operand typecheck it must never pass; the
+  validator's answer wins. Arithmetic in the fact cache was the left operand's
+  type falling back to the right, so a mixed-width expression took the left
+  operand's width; it now unifies, and an unknown or mismatched pair answers
+  `u32`, which is what validation already assumes of the same expression, so an
+  optimizer fact cannot contradict a validation decision. `BitAnd`, `BitOr`,
+  `BitXor`, `AbsDiff`, `WrappingAdd`, `WrappingSub`, `MulHigh` and `Shuffle`
+  were typed from their operands in the fact cache and are integer-typed by the
+  owner; logical `And` and `Or` and the comparisons stay `bool`, as all three
+  copies already had them. Autodiff typed `Expr::SubgroupShuffle` and
+  `Expr::SubgroupReduce` as words, so the adjoint of an f32 moved between lanes
+  was refused as a non-differentiable cast; both now report their value
+  operand's type. Autodiff also inherits the iterative walk, so a deep forward
+  expression can no longer overflow the stack while its locals are typed. The
+  deliberate i32 `AbsDiff` rejection and the unknown result type of
+  `Expr::Call` are unchanged. A contract reads the `Expr` enum's own source at
+  run time and fails when a variant has no recorded answer, or when a second
+  file in the crate defines an `expr_type` walker.
 
 ## [0.7.1] - 2026-08-01
 

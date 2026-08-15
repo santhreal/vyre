@@ -19,8 +19,8 @@ pub(crate) fn validate_binop_operands(
     scope: &FxHashMap<crate::ir::Ident, Binding>,
     errors: &mut Vec<ValidationError>,
 ) {
-    let left_ty = expr_type(left, buffers, scope);
-    let right_ty = expr_type(right, buffers, scope);
+    let left_ty = expr_type(left, &mut ScopeTypes::new(buffers, scope));
+    let right_ty = expr_type(right, &mut ScopeTypes::new(buffers, scope));
 
     match op {
         // Arithmetic: U32, I32, and F32 are all valid in target-text.
@@ -233,7 +233,7 @@ pub(crate) fn validate_unop_operand(
     scope: &FxHashMap<crate::ir::Ident, Binding>,
     errors: &mut Vec<ValidationError>,
 ) {
-    if let Some(ty) = expr_type(expr, buffers, scope) {
+    if let Some(ty) = expr_type(expr, &mut ScopeTypes::new(buffers, scope)) {
         match op {
             crate::ir_inner::model::spec_types::UnOp::Negate => {
                 if matches!(ty, DataType::I32) {
@@ -340,26 +340,103 @@ pub(crate) fn validate_unop_operand(
     }
 }
 
+/// Environment the one expression type walker reads its free names from.
+///
+/// [`expr_type`] is the only answer in this crate to "what type does this
+/// expression have". Its consumers - IR validation, the optimizer fact cache,
+/// and autodiff forward-type recording - differ only in where a scalar's type
+/// and a buffer's element type come from, and in whether they want the type of
+/// every subexpression the walk resolves along the way.
+pub(crate) trait TypeEnv {
+    /// Static type of the scalar named `name`, or `None` when it is unbound or
+    /// its binding type could not be inferred.
+    fn var_type(&self, name: &str) -> Option<DataType>;
+
+    /// Declared element type of the buffer named `name`.
+    fn buffer_element(&self, name: &str) -> Option<DataType>;
+
+    /// Observe the resolved type of every expression the walk visits, in
+    /// post-order, subexpressions included.
+    ///
+    /// The walk enters every child even when the parent's type does not depend
+    /// on it, so an implementor that records these gets the type of a whole
+    /// expression tree out of one traversal.
+    fn on_typed(&mut self, _expr: &Expr, _ty: Option<&DataType>) {}
+}
+
+/// [`TypeEnv`] backed by the validator's buffer table and lexical scope.
+pub(crate) struct ScopeTypes<'a> {
+    buffers: &'a FxHashMap<&'a str, &'a BufferDecl>,
+    scope: &'a FxHashMap<crate::ir::Ident, Binding>,
+}
+
+impl<'a> ScopeTypes<'a> {
+    #[inline]
+    pub(crate) fn new(
+        buffers: &'a FxHashMap<&'a str, &'a BufferDecl>,
+        scope: &'a FxHashMap<crate::ir::Ident, Binding>,
+    ) -> Self {
+        Self { buffers, scope }
+    }
+}
+
+impl TypeEnv for ScopeTypes<'_> {
+    #[inline]
+    fn var_type(&self, name: &str) -> Option<DataType> {
+        self.scope.get(name).map(|binding| binding.ty.clone())
+    }
+
+    #[inline]
+    fn buffer_element(&self, name: &str) -> Option<DataType> {
+        self.buffers.get(name).map(|buffer| buffer.element.clone())
+    }
+}
+
 /// Infer the static type of an expression, if it can be determined from the IR.
+///
+/// The walk is iterative so a deep expression cannot overflow the stack, and it
+/// visits every child so [`TypeEnv::on_typed`] sees the whole tree.
 #[inline]
 #[expect(
     clippy::too_many_lines,
     reason = "iterative expression type inference keeps every Expr variant in one non-recursive dispatch table to preserve stack-safety and exhaustiveness"
 )]
-pub(crate) fn expr_type(
-    expr: &Expr,
-    buffers: &FxHashMap<&str, &BufferDecl>,
-    scope: &FxHashMap<crate::ir::Ident, Binding>,
-) -> Option<DataType> {
-    enum Frame<'a> {
-        Enter(&'a Expr),
-        Bin,
-        Un,
+pub(crate) fn expr_type<E: TypeEnv + ?Sized>(expr: &Expr, env: &mut E) -> Option<DataType> {
+    /// How the result of an expression is produced once its children are typed.
+    enum Combine {
+        /// Drop the given number of child results; the answer is the value left
+        /// underneath, which is either a type pushed before the children were
+        /// entered or the first child's own type.
+        Drop(usize),
+        /// Unify two arithmetic operand types.
+        Arith,
+        /// `cond`, `true_val`, `false_val`: the two arms must agree.
         Select,
+        /// `a`, `b`, `c`: fused multiply-add is F32 only.
         Fma,
     }
 
-    let mut frames: SmallVec<[Frame<'_>; 32]> = SmallVec::new();
+    enum Frame<'a> {
+        Enter(&'a Expr),
+        Combine(&'a Expr, Combine),
+    }
+
+    type Frames<'a> = SmallVec<[Frame<'a>; 32]>;
+
+    fn plan<'a, I>(expr: &'a Expr, combine: Combine, children: I, frames: &mut Frames<'a>)
+    where
+        I: IntoIterator<Item = &'a Expr>,
+        I::IntoIter: DoubleEndedIterator,
+    {
+        frames.push(Frame::Combine(expr, combine));
+        for child in children.into_iter().rev() {
+            frames.push(Frame::Enter(child));
+        }
+    }
+
+    use crate::ir_inner::model::spec_types::UnOp;
+
+    let mut frames: Frames<'_> = SmallVec::new();
     frames.push(Frame::Enter(expr));
     let mut values: SmallVec<[Option<DataType>; 32]> = SmallVec::new();
     while let Some(frame) = frames.pop() {
@@ -371,159 +448,223 @@ pub(crate) fn expr_type(
                 | Expr::WorkgroupId { .. }
                 | Expr::LocalId { .. }
                 | Expr::SubgroupLocalId
-                | Expr::SubgroupSize
-                | Expr::Atomic { .. } => values.push(Some(DataType::U32)),
+                | Expr::SubgroupSize => {
+                    values.push(Some(DataType::U32));
+                    plan(expr, Combine::Drop(0), [], &mut frames);
+                }
                 // A buffer reference names a buffer rather than producing a
                 // value, so it has no type. Reporting one would let it pass
                 // an operand typecheck it must never pass.
-                Expr::BufferRef { .. } => values.push(None),
-                Expr::LitI32(_) => values.push(Some(DataType::I32)),
-                Expr::LitF32(_) => values.push(Some(DataType::F32)),
-                Expr::LitBool(_) => values.push(Some(DataType::Bool)),
-                Expr::Var(name) => values.push(scope.get(name.as_str()).map(|b| b.ty.clone())),
-                Expr::Load { buffer, .. } => {
-                    values.push(buffers.get(buffer.as_str()).map(|b| b.element.clone()));
+                Expr::BufferRef { .. } => {
+                    values.push(None);
+                    plan(expr, Combine::Drop(0), [], &mut frames);
                 }
-                Expr::Call { .. } => values.push(None),
-                Expr::Cast { target, .. } => values.push(Some(target.clone())),
-                Expr::BinOp { op, left, right } => match op {
-                    BinOp::Add
-                    | BinOp::Sub
-                    | BinOp::Mul
-                    | BinOp::Div
-                    | BinOp::SaturatingAdd
-                    | BinOp::SaturatingSub
-                    | BinOp::SaturatingMul
-                    | BinOp::Min
-                    | BinOp::Max => {
-                        frames.push(Frame::Bin);
-                        frames.push(Frame::Enter(right));
-                        frames.push(Frame::Enter(left));
+                Expr::LitI32(_) => {
+                    values.push(Some(DataType::I32));
+                    plan(expr, Combine::Drop(0), [], &mut frames);
+                }
+                Expr::LitF32(_) => {
+                    values.push(Some(DataType::F32));
+                    plan(expr, Combine::Drop(0), [], &mut frames);
+                }
+                Expr::LitBool(_) => {
+                    values.push(Some(DataType::Bool));
+                    plan(expr, Combine::Drop(0), [], &mut frames);
+                }
+                Expr::Var(name) => {
+                    values.push(env.var_type(name.as_str()));
+                    plan(expr, Combine::Drop(0), [], &mut frames);
+                }
+                Expr::Opaque(extension) => {
+                    values.push(extension.result_type());
+                    plan(expr, Combine::Drop(0), [], &mut frames);
+                }
+                Expr::Load { buffer, index } => {
+                    values.push(env.buffer_element(buffer.as_str()));
+                    plan(expr, Combine::Drop(1), [index.as_ref()], &mut frames);
+                }
+                Expr::Cast { target, value } => {
+                    values.push(Some(target.clone()));
+                    plan(expr, Combine::Drop(1), [value.as_ref()], &mut frames);
+                }
+                Expr::Call { args, .. } => {
+                    values.push(None);
+                    plan(expr, Combine::Drop(args.len()), args.iter(), &mut frames);
+                }
+                Expr::BinOp { op, left, right } => {
+                    let operands = [left.as_ref(), right.as_ref()];
+                    match op {
+                        BinOp::Add
+                        | BinOp::Sub
+                        | BinOp::Mul
+                        | BinOp::Div
+                        | BinOp::SaturatingAdd
+                        | BinOp::SaturatingSub
+                        | BinOp::SaturatingMul
+                        | BinOp::Min
+                        | BinOp::Max => plan(expr, Combine::Arith, operands, &mut frames),
+                        // Logical And/Or and all comparisons evaluate to Bool.
+                        // The reference interpreter produces Value::Bool here, so
+                        // the static type must match or programs like `(a && b) + 1`
+                        // pass validation and then fail at interpreter time.
+                        BinOp::And
+                        | BinOp::Or
+                        | BinOp::Eq
+                        | BinOp::Ne
+                        | BinOp::Lt
+                        | BinOp::Gt
+                        | BinOp::Le
+                        | BinOp::Ge => {
+                            values.push(Some(DataType::Bool));
+                            plan(expr, Combine::Drop(2), operands, &mut frames);
+                        }
+                        // Bitwise, modulo, shift, rotate, unsigned absolute
+                        // difference, multiply-high, and the wave operators are
+                        // integer-typed, and an extension operator has no
+                        // declared result type. U32 is the safe default for all
+                        // of them: the operand-checker already rejects
+                        // non-integer operands, and an answer here keeps the
+                        // enclosing operator's mixed-type check armed.
+                        _ => {
+                            values.push(Some(DataType::U32));
+                            plan(expr, Combine::Drop(2), operands, &mut frames);
+                        }
                     }
-                    // Logical And/Or and all comparisons evaluate to Bool.
-                    // The reference interpreter produces Value::Bool here, so
-                    // the static type must match or programs like `(a && b) + 1`
-                    // pass validation and then fail at interpreter time.
-                    BinOp::And
-                    | BinOp::Or
-                    | BinOp::Eq
-                    | BinOp::Ne
-                    | BinOp::Lt
-                    | BinOp::Gt
-                    | BinOp::Le
-                    | BinOp::Ge => values.push(Some(DataType::Bool)),
-                    // Bitwise / mod / shifts are integer-typed. U32 is the safe
-                    // default; the operand-checker already rejects non-integer
-                    // operands.
-                    _ => values.push(Some(DataType::U32)),
-                },
-                Expr::UnOp { op, operand } => match op {
-                    crate::ir_inner::model::spec_types::UnOp::Negate
-                    | crate::ir_inner::model::spec_types::UnOp::BitNot
-                    | crate::ir_inner::model::spec_types::UnOp::Popcount
-                    | crate::ir_inner::model::spec_types::UnOp::Clz
-                    | crate::ir_inner::model::spec_types::UnOp::Ctz
-                    | crate::ir_inner::model::spec_types::UnOp::ReverseBits => {
-                        frames.push(Frame::Un);
-                        frames.push(Frame::Enter(operand));
+                }
+                Expr::UnOp { op, operand } => {
+                    let operand = [operand.as_ref()];
+                    match op {
+                        UnOp::Negate
+                        | UnOp::BitNot
+                        | UnOp::Popcount
+                        | UnOp::Clz
+                        | UnOp::Ctz
+                        | UnOp::ReverseBits => plan(expr, Combine::Drop(0), operand, &mut frames),
+                        // LogicalNot produces Bool. Integer lowering emits
+                        // `x == 0u`, which also yields Bool.
+                        UnOp::LogicalNot | UnOp::IsNan | UnOp::IsInf | UnOp::IsFinite => {
+                            values.push(Some(DataType::Bool));
+                            plan(expr, Combine::Drop(1), operand, &mut frames);
+                        }
+                        UnOp::Sin
+                        | UnOp::Cos
+                        | UnOp::Exp
+                        | UnOp::Log
+                        | UnOp::Log2
+                        | UnOp::Exp2
+                        | UnOp::Tan
+                        | UnOp::Acos
+                        | UnOp::Asin
+                        | UnOp::Atan
+                        | UnOp::Tanh
+                        | UnOp::Sinh
+                        | UnOp::Cosh
+                        | UnOp::Abs
+                        | UnOp::Sqrt
+                        | UnOp::InverseSqrt
+                        | UnOp::Reciprocal
+                        | UnOp::Floor
+                        | UnOp::Ceil
+                        | UnOp::Round
+                        | UnOp::Trunc
+                        | UnOp::Sign => {
+                            values.push(Some(DataType::F32));
+                            plan(expr, Combine::Drop(1), operand, &mut frames);
+                        }
+                        // Lane unpacking and extension operators have no
+                        // statically known result type.
+                        _ => {
+                            values.push(None);
+                            plan(expr, Combine::Drop(1), operand, &mut frames);
+                        }
                     }
-                    // LogicalNot produces Bool. Integer lowering emits
-                    // `x == 0u`, which also yields Bool.
-                    crate::ir_inner::model::spec_types::UnOp::LogicalNot
-                    | crate::ir_inner::model::spec_types::UnOp::IsNan
-                    | crate::ir_inner::model::spec_types::UnOp::IsInf
-                    | crate::ir_inner::model::spec_types::UnOp::IsFinite => {
-                        values.push(Some(DataType::Bool));
-                    }
-                    crate::ir_inner::model::spec_types::UnOp::Sin
-                    | crate::ir_inner::model::spec_types::UnOp::Cos
-                    | crate::ir_inner::model::spec_types::UnOp::Exp
-                    | crate::ir_inner::model::spec_types::UnOp::Log
-                    | crate::ir_inner::model::spec_types::UnOp::Log2
-                    | crate::ir_inner::model::spec_types::UnOp::Exp2
-                    | crate::ir_inner::model::spec_types::UnOp::Tan
-                    | crate::ir_inner::model::spec_types::UnOp::Acos
-                    | crate::ir_inner::model::spec_types::UnOp::Asin
-                    | crate::ir_inner::model::spec_types::UnOp::Atan
-                    | crate::ir_inner::model::spec_types::UnOp::Tanh
-                    | crate::ir_inner::model::spec_types::UnOp::Sinh
-                    | crate::ir_inner::model::spec_types::UnOp::Cosh
-                    | crate::ir_inner::model::spec_types::UnOp::Abs
-                    | crate::ir_inner::model::spec_types::UnOp::Sqrt
-                    | crate::ir_inner::model::spec_types::UnOp::InverseSqrt
-                    | crate::ir_inner::model::spec_types::UnOp::Reciprocal
-                    | crate::ir_inner::model::spec_types::UnOp::Floor
-                    | crate::ir_inner::model::spec_types::UnOp::Ceil
-                    | crate::ir_inner::model::spec_types::UnOp::Round
-                    | crate::ir_inner::model::spec_types::UnOp::Trunc
-                    | crate::ir_inner::model::spec_types::UnOp::Sign => {
-                        values.push(Some(DataType::F32))
-                    }
-                    _ => values.push(None),
-                },
+                }
                 Expr::Select {
+                    cond,
                     true_val,
                     false_val,
+                } => plan(
+                    expr,
+                    Combine::Select,
+                    [cond.as_ref(), true_val.as_ref(), false_val.as_ref()],
+                    &mut frames,
+                ),
+                Expr::Fma { a, b, c } => plan(
+                    expr,
+                    Combine::Fma,
+                    [a.as_ref(), b.as_ref(), c.as_ref()],
+                    &mut frames,
+                ),
+                Expr::Atomic {
+                    index,
+                    expected,
+                    value,
                     ..
                 } => {
-                    frames.push(Frame::Select);
-                    frames.push(Frame::Enter(false_val));
-                    frames.push(Frame::Enter(true_val));
+                    values.push(Some(DataType::U32));
+                    let operands = [index.as_ref()]
+                        .into_iter()
+                        .chain(expected.as_deref())
+                        .chain([value.as_ref()]);
+                    plan(
+                        expr,
+                        Combine::Drop(2 + usize::from(expected.is_some())),
+                        operands,
+                        &mut frames,
+                    );
                 }
-                Expr::Fma { a, b, c } => {
-                    frames.push(Frame::Fma);
-                    frames.push(Frame::Enter(c));
-                    frames.push(Frame::Enter(b));
-                    frames.push(Frame::Enter(a));
-                }
-                &Expr::SubgroupBallot { .. } => {
-                    values.push(Some(crate::ir_inner::model::spec_types::DataType::U32));
+                Expr::SubgroupBallot { cond } => {
+                    values.push(Some(DataType::U32));
+                    plan(expr, Combine::Drop(1), [cond.as_ref()], &mut frames);
                 }
                 // Both operations produce the same type as their value operand.
-                Expr::SubgroupShuffle { value, .. } | Expr::SubgroupReduce { value, .. } => {
-                    frames.push(Frame::Un);
-                    frames.push(Frame::Enter(value));
+                Expr::SubgroupShuffle { value, lane } => plan(
+                    expr,
+                    Combine::Drop(1),
+                    [value.as_ref(), lane.as_ref()],
+                    &mut frames,
+                ),
+                Expr::SubgroupReduce { value, .. } => {
+                    plan(expr, Combine::Drop(0), [value.as_ref()], &mut frames);
                 }
-
-                Expr::Opaque(extension) => values.push(extension.result_type()),
             },
-            Frame::Bin => {
-                let r = values.pop().unwrap_or(None);
-                let l = values.pop().unwrap_or(None);
-                if l == r && l == Some(DataType::F32) {
-                    values.push(Some(DataType::F32));
-                } else {
-                    values.push(Some(
-                        l.as_ref()
-                            .filter(|_| l == r)
-                            .cloned()
-                            .unwrap_or(DataType::U32),
-                    ));
+            Frame::Combine(expr, combine) => {
+                match combine {
+                    Combine::Drop(count) => {
+                        values.truncate(values.len().saturating_sub(count));
+                    }
+                    Combine::Arith => {
+                        let right = values.pop().unwrap_or(None);
+                        let left = values.pop().unwrap_or(None);
+                        // Operands unify, or the result falls back to U32. The
+                        // fallback is deliberately confident: answering `None`
+                        // for a mismatched or unknown operand pair would
+                        // disarm the mixed-type and saturating-operand checks
+                        // of every enclosing operator.
+                        values.push(Some(match (left, right) {
+                            (Some(left), Some(right)) if left == right => left,
+                            _ => DataType::U32,
+                        }));
+                    }
+                    Combine::Select => {
+                        let false_ty = values.pop().unwrap_or(None);
+                        let true_ty = values.pop().unwrap_or(None);
+                        values.pop();
+                        values.push(if true_ty == false_ty { true_ty } else { None });
+                    }
+                    Combine::Fma => {
+                        let c = values.pop().unwrap_or(None);
+                        let b = values.pop().unwrap_or(None);
+                        let a = values.pop().unwrap_or(None);
+                        values.push(
+                            (a == Some(DataType::F32)
+                                && b == Some(DataType::F32)
+                                && c == Some(DataType::F32))
+                            .then_some(DataType::F32),
+                        );
+                    }
                 }
-            }
-            Frame::Un => {
-                let operand = values.pop().unwrap_or(None);
-                values.push(operand);
-            }
-            Frame::Select => {
-                let f = values.pop().unwrap_or(None);
-                let t = values.pop().unwrap_or(None);
-                values.push(if t == f { t } else { None });
-            }
-            Frame::Fma => {
-                let tc = values.pop().unwrap_or(None);
-                let tb = values.pop().unwrap_or(None);
-                let ta = values.pop().unwrap_or(None);
-                values.push(
-                    if ta == Some(DataType::F32)
-                        && tb == Some(DataType::F32)
-                        && tc == Some(DataType::F32)
-                    {
-                        Some(DataType::F32)
-                    } else {
-                        None
-                    },
-                );
+                env.on_typed(expr, values.last().and_then(Option::as_ref));
             }
         }
     }
@@ -554,12 +695,16 @@ mod tests {
         }
     }
 
+    fn ty(expr: &Expr) -> Option<DataType> {
+        expr_type(expr, &mut ScopeTypes::new(&empty_buffers(), &empty_scope()))
+    }
+
     #[test]
     fn and_or_type_is_bool() {
         for op in [BinOp::And, BinOp::Or] {
             let e = bin(op, Expr::LitBool(true), Expr::LitBool(false));
             assert_eq!(
-                expr_type(&e, &empty_buffers(), &empty_scope()),
+                ty(&e),
                 Some(DataType::Bool),
                 "And/Or must type as Bool (reference interpreter produces Value::Bool)"
             );
@@ -577,21 +722,14 @@ mod tests {
             BinOp::Ge,
         ] {
             let e = bin(op, Expr::LitU32(1), Expr::LitU32(2));
-            assert_eq!(
-                expr_type(&e, &empty_buffers(), &empty_scope()),
-                Some(DataType::Bool),
-                "comparison must type as Bool"
-            );
+            assert_eq!(ty(&e), Some(DataType::Bool), "comparison must type as Bool");
         }
     }
 
     #[test]
     fn bitwise_type_is_integer() {
         let e = bin(BinOp::BitAnd, Expr::LitU32(1), Expr::LitU32(2));
-        assert_eq!(
-            expr_type(&e, &empty_buffers(), &empty_scope()),
-            Some(DataType::U32)
-        );
+        assert_eq!(ty(&e), Some(DataType::U32));
     }
 
     #[test]
