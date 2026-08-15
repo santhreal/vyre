@@ -1906,3 +1906,13 @@ text = "Chained shift fusion has one owner and one answer. Constant folding and 
 id = "single-invocation-region-one-owner"
 category = "Added"
 text = "`vyre_foundation::algebra::composition::single_invocation` and `single_invocation_region` build the entry of a serial kernel: one anonymous composition region whose body runs on invocation zero of axis zero. The shape was written out by hand in every serial primitive."
+
+[[fragments]]
+id = "gate-scaffolding-one-owner-each"
+category = "Changed"
+text = "Five shapes the gate crates repeated per gate have one owner each. `xtask::toml_text` renders a TOML basic string and a one-line string array, which four generators spelled with two different escapers. `xtask::tree_walk` is public, so a gate outside `xtask` walks the tree through the one prune rule instead of a hand-rolled `read_dir` recursion: dependency drift, the heuristic audit and the lego audit cross-dialect scan all read the same set of directories now, and the three that pruned only `target` and `.git` no longer read `target-codex`, `target_tests` or `.cargo-target`. `xtask::output_arg::cargo_runner` is the one resolver for the bounded cargo wrapper. `xtask_registry::corpus::selected_cases` selects release corpus cases for the compile and shrink gates, which carried the same filter and the same empty-selection error."
+
+[[fragments]]
+id = "self-exclusive-region-scan-uses-child-bodies"
+category = "Fixed"
+text = "The self-exclusive region scan descends through `transform::visit::child_bodies` instead of its own exhaustive `match node`. A node variant that carries a body would have had to be added to both lists, and the scan's copy is the one a reader would not think to check when adding one."

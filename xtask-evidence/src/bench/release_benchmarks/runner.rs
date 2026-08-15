@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
 use serde_json::Value;
@@ -286,7 +286,7 @@ pub(super) fn run_command(workspace_root: &Path, args: &[&str]) {
 }
 
 pub(super) fn run_command_status(workspace_root: &Path, args: &[&str]) -> Result<(), String> {
-    let runner = cargo_runner(workspace_root);
+    let runner = xtask::output_arg::cargo_runner(workspace_root);
     let status = Command::new(&runner)
         .args(args)
         .current_dir(workspace_root)
@@ -299,17 +299,6 @@ pub(super) fn run_command_status(workspace_root: &Path, args: &[&str]) -> Result
             "Fix: failed to run `{display}`: {error}. Set VYRE_CARGO_RUNNER to the bounded workspace cargo wrapper if it is not named `cargo_full`."
         )),
     }
-}
-
-pub(super) fn cargo_runner(workspace_root: &Path) -> PathBuf {
-    if let Some(runner) = std::env::var_os("VYRE_CARGO_RUNNER") {
-        return PathBuf::from(runner);
-    }
-    let local = workspace_root.join("cargo_full");
-    if local.is_file() {
-        return local;
-    }
-    PathBuf::from("cargo_full")
 }
 
 pub(super) struct Config {

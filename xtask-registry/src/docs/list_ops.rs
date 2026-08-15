@@ -1,6 +1,7 @@
 //! `cargo xtask list-ops` renders the canonical live operation schema as Markdown.
 
 use xtask::gate::{Gate, GateCtx, GateError, Report};
+use xtask::toml_text::{array, quote};
 
 use crate::docs::operation_schema::{self, OperationRecord};
 
@@ -65,40 +66,23 @@ fn render(operations: &[OperationRecord]) -> String {
             "bytes_extraction = {}\n",
             operation.signature.bytes_extraction
         ));
-        text.push_str(&format!("features = {}\n", array(&operation.features)));
+        text.push_str(&format!(
+            "features = {}\n",
+            array(operation.features.iter().map(String::as_str))
+        ));
         text.push_str(&format!(
             "target_facets = {}\n",
-            array(&operation.target_facets)
+            array(operation.target_facets.iter().map(String::as_str))
         ));
-        text.push_str(&format!("laws = {}\n", array(&operation.laws)));
+        text.push_str(&format!(
+            "laws = {}\n",
+            array(operation.laws.iter().map(String::as_str))
+        ));
         text.push_str(&format!(
             "backends = {}\n",
-            array(
-                &operation
-                    .backend_support
-                    .keys()
-                    .cloned()
-                    .collect::<Vec<String>>()
-            )
+            array(operation.backend_support.keys().map(String::as_str))
         ));
     }
     text
 }
 
-/// One TOML basic string.
-fn quote(value: &str) -> String {
-    format!("\"{}\"", value.replace('\\', "\\\\").replace('"', "\\\""))
-}
-
-/// One TOML array of basic strings, rendered on one line.
-fn array(values: &[String]) -> String {
-    let mut text = String::from("[");
-    for (index, value) in values.iter().enumerate() {
-        if index > 0 {
-            text.push_str(", ");
-        }
-        text.push_str(&quote(value));
-    }
-    text.push(']');
-    text
-}

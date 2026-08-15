@@ -974,75 +974,62 @@ fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
     let mut flagged = 0usize;
     for dialect in &dialects {
         let dialect_name = dialect.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        let mut stack = vec![dialect.clone()];
-        while let Some(dir) = stack.pop() {
-            let read_dir = match std::fs::read_dir(&dir) {
-                Ok(read_dir) => read_dir,
+        let sources = xtask::tree_walk::pruned_by(dialect, |name| {
+            !xtask::tree_walk::BUILD_OUTPUT_AND_VCS.contains(&name)
+        });
+        for entry in sources {
+            let entry = match entry {
+                Ok(entry) => entry,
                 Err(error) => {
                     report.find(violation(format!("  ✗ {}: failed to read dialect directory: {error}. Fix: make the checked source tree fully readable.",
-                        dir.display())));
+                        dialect.display())));
                     flagged += 1;
                     continue;
                 }
             };
-            for entry in read_dir {
-                let entry = match entry {
-                    Ok(entry) => entry,
-                    Err(error) => {
-                        report.find(violation(format!("  ✗ {}: failed to read dialect directory entry: {error}. Fix: make the checked source tree fully readable.",
-                            dir.display())));
-                        flagged += 1;
-                        continue;
-                    }
-                };
-                let path = entry.path();
-                if is_test_source_path(&path) {
-                    continue;
-                }
-                if path.is_dir() {
-                    stack.push(path);
-                    continue;
-                }
-                if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
-                    continue;
-                }
-                let text = match read_text_bounded(&path) {
-                    Ok(text) => text,
-                    Err(error) => {
-                        report.find(violation(format!("  ✗ {}: failed to read Rust source for reach-through audit: {error}. Fix: make the checked source tree fully readable.",
-                            path.display())));
-                        flagged += 1;
-                        continue;
-                    }
-                };
-                let Ok(file) = syn::parse_file(&text) else {
-                    report.find(violation(format!("  ✗ {}/{}: failed to parse Rust source for reach-through audit. Fix: keep checked-in Rust source syntactically parseable.",
-                        dialect_name,
-                        path.file_name().and_then(|n| n.to_str()).unwrap_or("?"))));
+            let path = entry.into_path();
+            if is_test_source_path(&path) {
+                continue;
+            }
+            if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+                continue;
+            }
+            let text = match read_text_bounded(&path) {
+                Ok(text) => text,
+                Err(error) => {
+                    report.find(violation(format!("  ✗ {}: failed to read Rust source for reach-through audit: {error}. Fix: make the checked source tree fully readable.",
+                        path.display())));
                     flagged += 1;
                     continue;
-                };
-                for use_path in collect_use_paths(&file) {
-                    if use_path.is_public {
+                }
+            };
+            let Ok(file) = syn::parse_file(&text) else {
+                report.find(violation(format!("  ✗ {}/{}: failed to parse Rust source for reach-through audit. Fix: keep checked-in Rust source syntactically parseable.",
+                    dialect_name,
+                    path.file_name().and_then(|n| n.to_str()).unwrap_or("?"))));
+                flagged += 1;
+                continue;
+            };
+            for use_path in collect_use_paths(&file) {
+                if use_path.is_public {
+                    continue;
+                }
+                for other in &dialects {
+                    let other_name = other.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                    if other_name == dialect_name || other_name.is_empty() {
                         continue;
                     }
-                    for other in &dialects {
-                        let other_name = other.file_name().and_then(|n| n.to_str()).unwrap_or("");
-                        if other_name == dialect_name || other_name.is_empty() {
-                            continue;
-                        }
-                        if use_path.imports_dialect(other_name) {
-                            report.note(format!("  ✗ {}/{} line {}: `{}` → imports `{other_name}` dialect privately. \
-                                 Fix: hoist the shared piece into vyre-primitives, or route via a \
-                                 public re-export at crate root.",
-                                dialect_name,
-                                path.file_name()
-                                    .and_then(|n| n.to_str())
-                                    .unwrap_or("?"),
-                                use_path.line,
-                                use_path.segments.join("::")));
-                            flagged += 1;
-                        }
+                    if use_path.imports_dialect(other_name) {
+                        report.note(format!("  ✗ {}/{} line {}: `{}` → imports `{other_name}` dialect privately. \
+                             Fix: hoist the shared piece into vyre-primitives, or route via a \
+                             public re-export at crate root.",
+                            dialect_name,
+                            path.file_name()
+                                .and_then(|n| n.to_str())
+                                .unwrap_or("?"),
+                            use_path.line,
+                            use_path.segments.join("::")));
+                        flagged += 1;
                     }
                 }
             }

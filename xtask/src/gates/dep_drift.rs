@@ -1,7 +1,6 @@
 //! The `dep-drift` gate: workspace-managed dependency pins stay aligned.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -99,48 +98,21 @@ fn collect_manifests(root: &Path, sink: &mut BTreeSet<PathBuf>, report: &mut Rep
         ));
         return;
     }
-    if root.ends_with("target") || root.ends_with(".git") {
-        return;
-    }
-    let manifest = root.join("Cargo.toml");
-    if manifest.exists() {
-        sink.insert(manifest);
-    }
-    let entries = match fs::read_dir(root) {
-        Ok(entries) => entries,
-        Err(error) => {
-            report.find(Finding::in_file(
-                root,
-                format!("cannot read the manifest scan directory: {error}"),
-                "make the directory readable; an unreadable directory hides every manifest under it",
-            ));
-            return;
-        }
-    };
-    for entry in entries {
+    for entry in crate::tree_walk::pruned(root, crate::tree_walk::BUILD_OUTPUT_AND_VCS) {
         let entry = match entry {
             Ok(entry) => entry,
             Err(error) => {
                 report.find(Finding::in_file(
-                    root,
-                    format!("cannot read a manifest scan entry: {error}"),
-                    "make every entry in the directory readable",
+                    error.path().unwrap_or(root),
+                    format!("cannot read the manifest scan tree: {error}"),
+                    "make every directory under the scan root readable; an unreadable directory hides every manifest under it",
                 ));
                 continue;
             }
         };
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
+        if entry.file_name() == "Cargo.toml" {
+            sink.insert(entry.into_path());
         }
-        let name = path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or_default();
-        if matches!(name, "target" | ".git") {
-            continue;
-        }
-        collect_manifests(&path, sink, report);
     }
 }
 

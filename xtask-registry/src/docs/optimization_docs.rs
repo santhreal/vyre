@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
 use xtask::gate::{Gate, GateCtx, GateError, Report};
+use xtask::toml_text::{array, quote};
 
 use vyre_foundation::optimizer::pass_catalog::{
     optimization_catalog, OptimizationCatalogEntryKind,
@@ -46,23 +47,6 @@ impl Gate for OptimizationDocs {
 /// Repository-relative document this gate owns.
 const PASSES_PATH: &str = "docs/generated/optimizer-passes.toml";
 
-/// One TOML basic string.
-fn quote(value: &str) -> String {
-    format!("\"{}\"", value.replace('\\', "\\\\").replace('"', "\\\""))
-}
-
-/// One TOML array of basic strings, rendered on one line.
-fn array(values: &[&str]) -> String {
-    let mut text = String::from("[");
-    for (index, value) in values.iter().enumerate() {
-        if index > 0 {
-            text.push_str(", ");
-        }
-        text.push_str(&quote(value));
-    }
-    text.push(']');
-    text
-}
 
 fn metadata_by_name() -> Result<BTreeMap<&'static str, PassMetadata>, String> {
     let registrations = registered_pass_registrations().map_err(|error| error.to_string())?;
@@ -91,8 +75,14 @@ fn build() -> Result<String, String> {
             OptimizationCatalogEntryKind::ExecutablePass => "executable pass",
             OptimizationCatalogEntryKind::SupplementalRule => "supplemental rule",
         };
-        let requires = registered.map_or_else(|| array(&[]), |row| array(row.requires));
-        let invalidates = registered.map_or_else(|| array(&[]), |row| array(row.invalidates));
+        let requires = registered.map_or_else(
+            || array([]),
+            |row| array(row.requires.iter().copied()),
+        );
+        let invalidates = registered.map_or_else(
+            || array([]),
+            |row| array(row.invalidates.iter().copied()),
+        );
         let termination = match entry.kind {
             OptimizationCatalogEntryKind::ExecutablePass => {
                 "bounded by the scheduler restart and iteration budgets"
@@ -130,7 +120,7 @@ fn build() -> Result<String, String> {
             quote(entry.owner),
             quote(&format!("{:?}", entry.phase)),
             quote(&format!("{:?}", entry.boundary_class)),
-            array(entry.requires_caps),
+            array(entry.requires_caps.iter().copied()),
             quote(&format!("{}", entry.preserves_abi)),
             quote(entry.invariant),
             quote(termination),

@@ -9,7 +9,6 @@
 //!
 //! Default mode: warning. `--strict` exits non-zero  -  the gate.
 
-use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -132,44 +131,28 @@ fn scan_dir(
     findings: &mut Vec<(PathBuf, usize, &'static str, &'static str)>,
     scan_errors: &mut Vec<String>,
 ) {
-    let entries = match fs::read_dir(dir) {
-        Ok(e) => e,
-        Err(error) => {
-            scan_errors.push(format!(
-                "could not read heuristic audit directory `{}`: {error}",
-                dir.display()
-            ));
-            return;
-        }
-    };
-    for entry in entries {
+    // Heuristic markers in tests are intentional fixtures, not production debt.
+    let sources = xtask::tree_walk::pruned_by(dir, |name| {
+        !matches!(name, "tests" | "fuzz" | "benches" | "examples")
+            && !xtask::tree_walk::BUILD_OUTPUT_AND_VCS.contains(&name)
+    });
+    for entry in sources {
         let entry = match entry {
             Ok(entry) => entry,
             Err(error) => {
                 scan_errors.push(format!(
-                    "could not read heuristic audit entry in `{}`: {error}",
+                    "could not read heuristic audit entry under `{}`: {error}",
                     dir.display()
                 ));
                 continue;
             }
         };
-        let path = entry.path();
-        if path.is_dir() {
-            // Skip test directories  -  heuristic markers in tests are
-            // intentional fixtures, not production debt.
-            if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
-                if matches!(name, "tests" | "fuzz" | "benches" | "examples") {
-                    continue;
-                }
-            }
-            scan_dir(&path, findings, scan_errors);
-            continue;
-        }
-        if path.extension().and_then(|s| s.to_str()) != Some("rs") {
+        let path = entry.into_path();
+        if path.extension().and_then(|extension| extension.to_str()) != Some("rs") {
             continue;
         }
         let body = match read_text_bounded(&path) {
-            Ok(b) => b,
+            Ok(body) => body,
             Err(error) => {
                 scan_errors.push(format!(
                     "could not read heuristic audit source `{}`: {error}",
@@ -209,6 +192,7 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     /// The audit must scan a standalone Vyre workspace instead of appending its monorepo path twice.
     #[test]
