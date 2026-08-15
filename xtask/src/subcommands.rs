@@ -236,12 +236,6 @@ static DELEGATED: &[Delegated] = &[
         generates: true,
     },
     Delegated {
-        name: "lego-quick",
-        help: "Composition boundary checks over every Rust source in the tree; --staged narrows to the staged set",
-        package: "xtask-registry",
-        generates: false,
-    },
-    Delegated {
         name: "list-ops",
         help: "Hold docs/generated/op-inventory.toml to the live operation registry; --write regenerates it",
         package: "xtask-registry",
