@@ -74,6 +74,7 @@ pub static GATES: &[&dyn Gate] = &[
     &hot_path_scan::HotPathScan,
     &hygiene_matrix::HygieneMatrix,
     &layering::Layering,
+    &layering::NeutralCrates,
     &lint_hygiene::ExpectHasFix,
     &lint_hygiene::MissingDocsOverride,
     &lint_hygiene::UnsafeBudget,

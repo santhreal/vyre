@@ -226,9 +226,11 @@ Exits nonzero on:
 
 ### `scripts/check_architectural_invariants.sh`
 
-Subject: present (cites the deleted docs/ARCHITECTURE.md in prose only).
+Subject: present (cites the deleted docs/ARCHITECTURE.md in prose only). File
+deleted; every assertion is in `neutral-crates`.
 
-Invoked by: gates.yml, architectural-invariants.yml.
+Invoked by: nothing. architectural-invariants.yml now names `neutral-crates` and
+`layering`, and the gates.yml step is gone.
 
 Gate: xtask/src/gates/layering.rs, as the direct-edge half beside the transitive half.
 
@@ -249,6 +251,8 @@ Findings:
 - The legacy-name check runs `rg ... 2>/dev/null` and reads a nonzero exit as `no hits`. A ripgrep that is absent or that errors makes this assertion unreachable, which is the same class source_scan.sh was written to remove.
 - It writes hits to /tmp/vyre_arch_legacy_hits.$$, a file outside the repository.
 - The crate and dependency lists are hardcoded, so a new neutral crate is unchecked until someone edits the list. check_layering.py derives both from the registry.
+- The forbidden-edge rule matched `^name =`, so it could not see a dependency written in the dotted form `name.workspace = true`, which is how nearly every manifest in this tree writes one. Rule B was unreachable for its whole life. The gate reads the parsed manifest, so both forms are one entry, and it reports what the shell form could not: `vyre` depends on `vyre-runtime` in `[dependencies]`. That is a real finding and it is left standing. Either the facade stops re-exporting the runtime or `vyre` leaves the neutral list, and neither is a gate author's decision.
+- The optional-entry exclusion is kept, so an optional forbidden edge is a note rather than a finding. `vyre` carries two, to `vyre-driver-cuda` and `vyre-driver-wgpu`, behind its `cuda` and `wgpu` features.
 
 ### `scripts/check_audit_status_tags.sh`
 
@@ -2423,6 +2427,9 @@ The `findings` column is the count with the injection applied, given the pin in
 | `layering` | Change `layer` on the `vyre-spec` entry to a name NEUTRAL_LAYERS does not hold. | gate errors: a layer with no neutrality decision would be skipped |
 | `layering` | Add `("invented", true)` to `NEUTRAL_LAYERS`. | gate errors: a decision no member uses is an allowance nothing needs |
 | `layering` | Add `"not-a-crate"` to `BACKEND_APIS`. | gate errors: a boundary named after a crate the workspace never resolves cannot be crossed |
+| `neutral-crates` | Add `naga.workspace = true` to `[dependencies]` in `vyre-primitives/Cargo.toml`. | 1 to 2, and the dotted form is what the shell rule could not see |
+| `neutral-crates` | Add `vyre-ir = "0.1"` to `vyre-bench/competitors/Cargo.toml`, which cargo never loads. | 1 to 2 |
+| `neutral-crates` | Add `"vyre-gone"` to `NEUTRAL_CRATES`. | gate errors: a neutrality rule over a manifest that does not exist reports success forever |
 
 Three of these are negative controls rather than injections: the reindented
 frozen enum, the version string cited as a path, and the loud abort added beside a

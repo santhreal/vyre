@@ -42,7 +42,7 @@ let outputs = backend.dispatch(&program, &inputs, &config)?;
   the wgpu and reference backends.
 - **No peer-backend deps.** The crate must not pull
   `vyre-driver-wgpu` or `vyre-driver-spirv`; the boundary is enforced
-  by `docs/CRATE_OWNERSHIP.toml` and `scripts/check_architectural_invariants.sh`.
+  by `docs/CRATE_OWNERSHIP.toml` and the `layering` gate.
 
 ## Where to look
 

@@ -18,13 +18,45 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
-use crate::gates::manifest_contract::{dependency_hosts, entries, target_package};
+use crate::gates::manifest_contract::{dep_lines, dependency_hosts, entries, target_package};
 use crate::gates::scan::Tree;
 
 /// Production dependency tables. Development edges are excluded because a test
 /// may depend upward deliberately, which is the same allowance `check-tier-deps`
 /// makes.
 const PRODUCTION_TABLES: &[&str] = &["dependencies", "build-dependencies"];
+
+/// Crates that must name no concrete backend, driver product or runtime in a
+/// production dependency table.
+///
+/// This is the direct-edge half of the layering contract, kept beside the
+/// transitive half. The two answer different questions: the closure rule asks
+/// whether an edge is declared, this one asks whether a named crate has an edge
+/// at all, and a crate can satisfy the first while carrying the second.
+const NEUTRAL_CRATES: &[&str] = &[
+    "vyre",
+    "vyre-driver",
+    "vyre-foundation",
+    "vyre-primitives",
+    "vyre-reference",
+    "vyre-spec",
+];
+
+/// Packages a neutral crate must not depend on outside `[dev-dependencies]`.
+const FORBIDDEN_DEPENDENCIES: &[&str] = &[
+    "naga",
+    "vyre-aot",
+    "vyre-driver-cuda",
+    "vyre-driver-spirv",
+    "vyre-driver-wgpu",
+    "vyre-runtime",
+    "wgpu",
+];
+
+/// Crate names that no manifest may declare, because the crates they name are
+/// gone and a manifest citing one describes an architecture the tree does not
+/// have.
+const RETIRED_CRATES: &[&str] = &["vyre-ir", "vyre-wgpu"];
 
 /// Whether each layer is substrate-neutral.
 ///
@@ -134,6 +166,128 @@ impl Gate for Layering {
                 .count(),
             BACKEND_APIS.join(", ")
         ));
+        Ok(report)
+    }
+}
+
+/// No named neutral crate carries a production edge to a backend, driver product
+/// or runtime, and no manifest names a retired crate.
+pub struct NeutralCrates;
+
+impl Gate for NeutralCrates {
+    fn name(&self) -> &'static str {
+        "neutral-crates"
+    }
+
+    fn help(&self) -> &'static str {
+        "keep the named substrate-neutral crates free of production edges to backends, driver products and the runtime, and keep retired crate names out of every manifest"
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let tree = Tree::open(&ctx.root)?;
+        let root = tree.read_toml("Cargo.toml")?;
+        let workspace_deps = root
+            .get("workspace")
+            .and_then(toml::Value::as_table)
+            .and_then(|workspace| workspace.get("dependencies"))
+            .and_then(toml::Value::as_table)
+            .cloned()
+            .unwrap_or_default();
+        let mut report = Report::clean();
+        let mut optional = Vec::new();
+
+        for crate_name in NEUTRAL_CRATES {
+            let manifest = format!("{crate_name}/Cargo.toml");
+            if !tree.has(&manifest) {
+                return Err(GateError::new(
+                    format!("neutral crate `{crate_name}` has no manifest at {manifest}"),
+                    "point the rule at the directory the crate moved to, or drop the name; a \
+                     neutrality rule over a manifest that does not exist reports success \
+                     forever",
+                ));
+            }
+            let text = tree.read(&manifest)?;
+            let table = toml::from_str::<toml::Table>(&text).map_err(|error| {
+                GateError::new(
+                    format!("{manifest} is not readable as TOML: {error}"),
+                    "repair the manifest",
+                )
+            })?;
+            let lines = dep_lines(&text);
+            for (prefix, host) in dependency_hosts(&table) {
+                for section in PRODUCTION_TABLES {
+                    for (key, spec) in entries(&host, section) {
+                        let package = target_package(&key, &spec, &workspace_deps);
+                        if !FORBIDDEN_DEPENDENCIES.contains(&package.as_str()) {
+                            continue;
+                        }
+                        let table_name = format!("{prefix}{section}");
+                        if spec
+                            .get("optional")
+                            .and_then(toml::Value::as_bool)
+                            .unwrap_or(false)
+                        {
+                            optional.push(format!("{crate_name} -> {package} ({table_name})"));
+                            continue;
+                        }
+                        let message = format!(
+                            "`{crate_name}` depends on `{package}` in [{table_name}], which a \
+                             substrate-neutral crate may not name outside [dev-dependencies]"
+                        );
+                        let fix = "move the dependency under [dev-dependencies], move the \
+                                   production code that needs it into the crate that owns the \
+                                   backend, or take the crate out of NEUTRAL_CRATES in \
+                                   xtask/src/gates/layering.rs once an owner decides it is no \
+                                   longer neutral";
+                        report.find(
+                            match lines.get(&(table_name.clone(), key.clone())).copied() {
+                                Some(line) => Finding::at(&manifest, line, message, fix),
+                                None => Finding::in_file(&manifest, message, fix),
+                            },
+                        );
+                    }
+                }
+            }
+        }
+
+        for manifest in tree
+            .paths()
+            .iter()
+            .filter(|path| path.file_name().and_then(|name| name.to_str()) == Some("Cargo.toml"))
+        {
+            let text = tree.read(manifest)?;
+            for (number, line) in crate::gates::scan::numbered(&text) {
+                let key = line
+                    .trim()
+                    .trim_start_matches('"')
+                    .split(['.', ' ', '=', '"'])
+                    .next()
+                    .unwrap_or_default();
+                if !line.contains('=') || !RETIRED_CRATES.contains(&key) {
+                    continue;
+                }
+                report.find(Finding::at(
+                    manifest.clone(),
+                    number,
+                    format!("manifest names the retired crate `{key}`"),
+                    "delete the entry, or rename it to the crate that took the name's place; \
+                     a manifest citing a crate the workspace does not have describes an \
+                     architecture nobody can build",
+                ));
+            }
+        }
+
+        report.note(format!(
+            "{} neutral crate(s) checked against {}",
+            NEUTRAL_CRATES.len(),
+            FORBIDDEN_DEPENDENCIES.join(", ")
+        ));
+        if !optional.is_empty() {
+            report.note(format!(
+                "optional edge(s) permitted by the rule, activated only by a feature: {}",
+                optional.join(", ")
+            ));
+        }
         Ok(report)
     }
 }

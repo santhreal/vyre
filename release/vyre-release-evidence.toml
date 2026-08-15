@@ -203,7 +203,7 @@ evidence = [
   "../.github/workflows/architectural-invariants.yml",
   "../.github/CI_REQUIRED.md",
   "../scripts/apply-branch-protection.sh",
-  "../scripts/check_architectural_invariants.sh",
+  "cargo_full run --bin xtask -- neutral-crates",
 ]
 
 [[requirements]]

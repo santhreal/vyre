@@ -191,6 +191,10 @@ name = "metadata-matrix"
 findings = 0
 
 [[gate]]
+name = "neutral-crates"
+findings = 0
+
+[[gate]]
 name = "op-matrix"
 findings = 0
 

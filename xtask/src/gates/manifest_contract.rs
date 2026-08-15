@@ -697,7 +697,7 @@ fn finding(
 ///
 /// A dependency read out of a parsed table has no position, and a finding a
 /// reader cannot jump to costs them the search.
-fn dep_lines(text: &str) -> BTreeMap<(String, String), u32> {
+pub(crate) fn dep_lines(text: &str) -> BTreeMap<(String, String), u32> {
     let mut located = BTreeMap::new();
     let mut table = String::new();
     for (index, line) in text.lines().enumerate() {

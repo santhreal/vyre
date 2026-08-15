@@ -889,7 +889,7 @@ fn release_surface_coverage(vyre_root: &Path) -> ReleaseSurfaceCoverage {
             .join("scripts/apply-branch-protection.sh")
             .is_file()
             && vyre_root
-                .join("scripts/check_architectural_invariants.sh")
+                .join("xtask/src/gates/layering.rs")
                 .is_file(),
         github_workflows: vyre_root.join(".github/workflows").is_dir(),
         branch_protection_controls: vyre_root.join(".github/CI_REQUIRED.md").is_file()
@@ -1650,11 +1650,11 @@ fn scan_release_controls(
     if required_status_doc.is_file() {
         scan_doc_file(&required_status_doc, scanned_files, findings);
     }
-    for script in [
+    for control in [
         "scripts/apply-branch-protection.sh",
-        "scripts/check_architectural_invariants.sh",
+        "xtask/src/gates/layering.rs",
     ] {
-        let path = vyre_root.join(script);
+        let path = vyre_root.join(control);
         if path.is_file() {
             scan_tooling_file(&path, scanned_files, findings);
         }

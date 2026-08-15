@@ -75,6 +75,7 @@ pub static SUBSETS: &[Subset] = &[
             "path-deps-resolve",
             "internal-dep-versions",
             "layering",
+            "neutral-crates",
         ],
     },
     Subset {
