@@ -98,3 +98,6 @@ __pycache__/
 # scripts/bench/cross_backend_comparison.sh. One local run's numbers are not a
 # documentation page and cannot be classified as one.
 /docs/perf/
+
+# Process tooling: lane, worktree and merge accounting, not product.
+.internal/

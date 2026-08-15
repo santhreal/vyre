@@ -11,7 +11,7 @@ use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::spec_types::{AtomicOp, BufferAccess, DataType};
 use crate::memory_model::MemoryOrdering;
-use crate::validate::typecheck::expr_type;
+use crate::validate::typecheck::{expr_type, ScopeTypes};
 use crate::validate::{err, Binding, ValidationError};
 use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashMap;
@@ -69,7 +69,7 @@ pub(crate) fn validate_atomic(
     // VAL-001: the atomic index must be u32. target-text `atomicLoad`/`atomicStore`
     // and friends are indexed by `u32`; an f32 or i32 index slips past
     // validation today and then crashes the backend at dispatch time.
-    if let Some(index_ty) = expr_type(index, buffers, scope) {
+    if let Some(index_ty) = expr_type(index, &mut ScopeTypes::new(buffers, scope)) {
         if index_ty != DataType::U32 {
             errors.push(err(
                 "V027",
@@ -157,7 +157,7 @@ pub(crate) fn validate_atomic(
                 "atomics only support U32 elements",
             ));
         }
-        if let Some(val_ty) = expr_type(value, buffers, scope) {
+        if let Some(val_ty) = expr_type(value, &mut ScopeTypes::new(buffers, scope)) {
             if val_ty != DataType::U32 {
                 errors.push(err(
                     "V057",
@@ -170,7 +170,9 @@ pub(crate) fn validate_atomic(
         }
         match (op, expected) {
             (AtomicOp::CompareExchange, Some(expected_expr)) => {
-                if let Some(expected_ty) = expr_type(expected_expr, buffers, scope) {
+                if let Some(expected_ty) =
+                    expr_type(expected_expr, &mut ScopeTypes::new(buffers, scope))
+                {
                     if expected_ty != DataType::U32 {
                         errors.push(err(
     "V058",

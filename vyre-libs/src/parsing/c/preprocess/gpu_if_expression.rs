@@ -72,15 +72,20 @@ mod stack;
 #[cfg(test)]
 mod tests;
 
+use super::c_int_literal_grammar::{
+    dec_digit_flag, push_digit_value, push_radix_class, push_saturating_digit_accumulate,
+    push_suffix_class, suffix_advance_expr, suffix_matched_expr, DigitValue, SuffixClass,
+};
 use super::gpu_directive_parse_program::{
-    push_directive_row_bounds, push_hash_and_keyword_start, push_keyword_end,
-    push_ws_skip_from_expr, runtime_sized_input, token_column,
+    payload_ws_skip, push_directive_row_bounds, push_hash_and_keyword_start, push_keyword_end,
+    push_ws_skip_from_expr, runtime_sized_input, token_column, PayloadWsSkip,
 };
 use super::gpu_if_expression_abi::{
     BINDING_DIRECTIVE_KINDS, BINDING_DIRECTIVE_VALUES, BINDING_MACRO_NAMES_PACKED,
     BINDING_MACRO_OFFSETS, BINDING_MACRO_VALUES, BINDING_SOURCE, BINDING_TOK_LENS,
     BINDING_TOK_STARTS, OP_ID, STACK_DEPTH,
 };
+use super::gpu_int_literal_scan::MAX_SUFFIX;
 use super::gpu_source_bytes::{
     safe_load_source_layout_byte_expr, source_buffer_element, source_byte_len_expr,
     SourceByteLayout,
@@ -144,6 +149,23 @@ fn gpu_if_expression_with_byte_layouts(
             macro_names_layout,
             addr,
             macro_names_byte_len.clone(),
+        )
+    };
+    // Every whitespace run in the payload walk is the same bounded loop over
+    // the row, differing only in the names a straight-line kernel must give
+    // each scope's bindings.
+    let payload_ws_run = |loop_var: &str, done_var: &str, byte_var: &str, flag_var: &str| {
+        payload_ws_skip(
+            &PayloadWsSkip {
+                loop_var,
+                done_var,
+                byte_var,
+                flag_var,
+                pos_var: "scan_pos",
+                end_var: "tok_end",
+                len_var: "tok_len",
+            },
+            &safe_load_src,
         )
     };
 
@@ -212,45 +234,11 @@ fn gpu_if_expression_with_byte_layouts(
                         // inputs have already passed phase-2 line splicing
                         // and phase-3 comment replacement, so this evaluator
                         // does not duplicate comment scanning in the hot loop.
-                        iter_body.push(Node::let_bind("inner_ws_done", Expr::u32(0)));
-                        iter_body.push(Node::loop_for(
+                        iter_body.extend(payload_ws_run(
                             "ws_skip",
-                            Expr::u32(0),
-                            Expr::var("tok_len"),
-                            vec![Node::if_then(
-                                Expr::and(
-                                    Expr::eq(Expr::var("inner_ws_done"), Expr::u32(0)),
-                                    Expr::lt(Expr::var("scan_pos"), Expr::var("tok_end")),
-                                ),
-                                vec![
-                                    Node::let_bind("wb2", safe_load_src(Expr::var("scan_pos"))),
-                                    Node::let_bind(
-                                        "wb2_ws",
-                                        Expr::select(
-                                            Expr::or(
-                                                Expr::or(
-                                                    Expr::eq(Expr::var("wb2"), Expr::u32(b' ' as u32)),
-                                                    Expr::eq(Expr::var("wb2"), Expr::u32(b'\t' as u32)),
-                                                ),
-                                                Expr::or(
-                                                    Expr::eq(Expr::var("wb2"), Expr::u32(0x0B)),
-                                                    Expr::eq(Expr::var("wb2"), Expr::u32(0x0C)),
-                                                ),
-                                            ),
-                                            Expr::u32(1),
-                                            Expr::u32(0),
-                                        ),
-                                    ),
-                                    Node::if_then_else(
-                                        Expr::eq(Expr::var("wb2_ws"), Expr::u32(1)),
-                                        vec![Node::assign(
-                                            "scan_pos",
-                                            Expr::add(Expr::var("scan_pos"), Expr::u32(1)),
-                                        )],
-                                        vec![Node::assign("inner_ws_done", Expr::u32(1))],
-                                    ),
-                                ],
-                            )],
+                            "inner_ws_done",
+                            "wb2",
+                            "wb2_ws",
                         ));
                         // End of payload?
                         iter_body.push(Node::if_then(
@@ -268,98 +256,106 @@ fn gpu_if_expression_with_byte_layouts(
                                 // ---- Integer literal ----
                                 classify.push(Node::let_bind(
                                     "is_dec_digit",
-                                    Expr::select(
-                                        Expr::and(
-                                            Expr::ge(Expr::var("c"), Expr::u32(b'0' as u32)),
-                                            Expr::le(Expr::var("c"), Expr::u32(b'9' as u32)),
-                                        ),
-                                        Expr::u32(1),
-                                        Expr::u32(0),
-                                    ),
+                                    dec_digit_flag(Expr::var("c")),
                                 ));
                                 classify.push(Node::if_then(
                                     Expr::eq(Expr::var("is_dec_digit"), Expr::u32(1)),
                                     {
                                         let mut lit_nodes: Vec<Node> = Vec::new();
-                                        // Inline integer-literal scan
-                                        // (mirrors gpu_int_literal_scan
-                                        // semantics; simplified to u32
-                                        // wrapping). Detect radix.
-                                        lit_nodes.push(Node::let_bind(
-                                            "is_hex",
-                                            Expr::select(
-                                                Expr::and(
-                                                    Expr::eq(Expr::var("c"), Expr::u32(b'0' as u32)),
-                                                    Expr::or(
-                                                        Expr::eq(Expr::var("c1"), Expr::u32(b'x' as u32)),
-                                                        Expr::eq(Expr::var("c1"), Expr::u32(b'X' as u32)),
-                                                    ),
-                                                ),
-                                                Expr::u32(1),
-                                                Expr::u32(0),
-                                            ),
-                                        ));
-                                        lit_nodes.push(Node::let_bind(
-                                            "is_bin",
-                                            Expr::select(
-                                                Expr::and(
-                                                    Expr::eq(Expr::var("c"), Expr::u32(b'0' as u32)),
-                                                    Expr::or(
-                                                        Expr::eq(Expr::var("c1"), Expr::u32(b'b' as u32)),
-                                                        Expr::eq(Expr::var("c1"), Expr::u32(b'B' as u32)),
-                                                    ),
-                                                ),
-                                                Expr::u32(1),
-                                                Expr::u32(0),
-                                            ),
-                                        ));
-                                        lit_nodes.push(Node::let_bind(
-                                            "is_oct",
-                                            Expr::select(
-                                                Expr::and(
-                                                    Expr::eq(Expr::var("c"), Expr::u32(b'0' as u32)),
-                                                    Expr::and(
-                                                        Expr::eq(Expr::var("is_hex"), Expr::u32(0)),
-                                                        Expr::eq(Expr::var("is_bin"), Expr::u32(0)),
-                                                    ),
-                                                ),
-                                                Expr::u32(1),
-                                                Expr::u32(0),
-                                            ),
-                                        ));
-                                        lit_nodes.push(Node::let_bind(
+                                        push_radix_class(
+                                            &mut lit_nodes,
+                                            "c",
+                                            "c1",
                                             "lit_radix",
-                                            Expr::select(
-                                                Expr::eq(Expr::var("is_hex"), Expr::u32(1)),
-                                                Expr::u32(16),
-                                                Expr::select(
-                                                    Expr::eq(Expr::var("is_bin"), Expr::u32(1)),
-                                                    Expr::u32(2),
-                                                    Expr::select(
-                                                        Expr::eq(Expr::var("is_oct"), Expr::u32(1)),
-                                                        Expr::u32(8),
-                                                        Expr::u32(10),
-                                                    ),
-                                                ),
-                                            ),
-                                        ));
-                                        lit_nodes.push(Node::let_bind(
                                             "lit_skip",
-                                            Expr::select(
-                                                Expr::or(
-                                                    Expr::eq(Expr::var("is_hex"), Expr::u32(1)),
-                                                    Expr::eq(Expr::var("is_bin"), Expr::u32(1)),
-                                                ),
-                                                Expr::u32(2),
-                                                Expr::u32(0),
-                                            ),
-                                        ));
+                                        );
                                         lit_nodes.push(Node::assign(
                                             "scan_pos",
                                             Expr::add(Expr::var("scan_pos"), Expr::var("lit_skip")),
                                         ));
+                                        lit_nodes.push(Node::let_bind(
+                                            "lit_digits_start",
+                                            Expr::var("scan_pos"),
+                                        ));
                                         lit_nodes.push(Node::let_bind("lit_value", Expr::u32(0)));
                                         lit_nodes.push(Node::let_bind("lit_done", Expr::u32(0)));
+
+                                        let mut digit_step: Vec<Node> = vec![
+                                            Node::let_bind(
+                                                "ldb",
+                                                safe_load_src(Expr::var("scan_pos")),
+                                            ),
+                                            Node::let_bind(
+                                                "ldb1",
+                                                safe_load_src(Expr::add(
+                                                    Expr::var("scan_pos"),
+                                                    Expr::u32(1),
+                                                )),
+                                            ),
+                                        ];
+                                        push_digit_value(
+                                            &mut digit_step,
+                                            &DigitValue {
+                                                byte_var: "ldb",
+                                                dec_var: "ld_dec",
+                                                hex_lower_var: "ld_lc",
+                                                hex_upper_var: "ld_uc",
+                                                value_var: "ld_v",
+                                            },
+                                        );
+                                        // A digit separator is only a separator when a digit of
+                                        // this radix follows it, so the next byte is decoded too.
+                                        push_digit_value(
+                                            &mut digit_step,
+                                            &DigitValue {
+                                                byte_var: "ldb1",
+                                                dec_var: "ld1_dec",
+                                                hex_lower_var: "ld1_lc",
+                                                hex_upper_var: "ld1_uc",
+                                                value_var: "ld1_v",
+                                            },
+                                        );
+                                        digit_step.push(Node::let_bind(
+                                            "lit_separator",
+                                            Expr::select(
+                                                Expr::and(
+                                                    Expr::eq(
+                                                        Expr::var("ldb"),
+                                                        Expr::u32(b'\'' as u32),
+                                                    ),
+                                                    Expr::lt(
+                                                        Expr::var("ld1_v"),
+                                                        Expr::var("lit_radix"),
+                                                    ),
+                                                ),
+                                                Expr::u32(1),
+                                                Expr::u32(0),
+                                            ),
+                                        ));
+
+                                        let mut fold: Vec<Node> = Vec::new();
+                                        push_saturating_digit_accumulate(
+                                            &mut fold,
+                                            "lit_value",
+                                            "lit_radix",
+                                            "ld_v",
+                                            "lit_separator",
+                                        );
+                                        fold.push(Node::assign(
+                                            "scan_pos",
+                                            Expr::add(Expr::var("scan_pos"), Expr::u32(1)),
+                                        ));
+                                        digit_step.push(Node::if_then_else(
+                                            Expr::or(
+                                                Expr::lt(Expr::var("ld_v"), Expr::var("lit_radix")),
+                                                Expr::eq(
+                                                    Expr::var("lit_separator"),
+                                                    Expr::u32(1),
+                                                ),
+                                            ),
+                                            fold,
+                                            vec![Node::assign("lit_done", Expr::u32(1))],
+                                        ));
                                         lit_nodes.push(Node::loop_for(
                                             "lit_d",
                                             Expr::u32(0),
@@ -367,259 +363,91 @@ fn gpu_if_expression_with_byte_layouts(
                                             vec![Node::if_then(
                                                 Expr::and(
                                                     Expr::eq(Expr::var("lit_done"), Expr::u32(0)),
-                                                    Expr::lt(Expr::var("scan_pos"), Expr::var("tok_end")),
+                                                    Expr::lt(
+                                                        Expr::var("scan_pos"),
+                                                        Expr::var("tok_end"),
+                                                    ),
                                                 ),
-                                                vec![
-                                                    Node::let_bind("ldb", safe_load_src(Expr::var("scan_pos"))),
-                                                    Node::let_bind(
-                                                        "ldb1",
-                                                        safe_load_src(Expr::add(
-                                                            Expr::var("scan_pos"),
-                                                            Expr::u32(1),
-                                                        )),
-                                                    ),
-                                                    Node::let_bind(
-                                                        "ld_dec",
-                                                        Expr::select(
-                                                            Expr::and(
-                                                                Expr::ge(Expr::var("ldb"), Expr::u32(b'0' as u32)),
-                                                                Expr::le(Expr::var("ldb"), Expr::u32(b'9' as u32)),
-                                                            ),
-                                                            Expr::u32(1),
-                                                            Expr::u32(0),
-                                                        ),
-                                                    ),
-                                                    Node::let_bind(
-                                                        "ld_lc",
-                                                        Expr::select(
-                                                            Expr::and(
-                                                                Expr::ge(Expr::var("ldb"), Expr::u32(b'a' as u32)),
-                                                                Expr::le(Expr::var("ldb"), Expr::u32(b'f' as u32)),
-                                                            ),
-                                                            Expr::u32(1),
-                                                            Expr::u32(0),
-                                                        ),
-                                                    ),
-                                                    Node::let_bind(
-                                                        "ld_uc",
-                                                        Expr::select(
-                                                            Expr::and(
-                                                                Expr::ge(Expr::var("ldb"), Expr::u32(b'A' as u32)),
-                                                                Expr::le(Expr::var("ldb"), Expr::u32(b'F' as u32)),
-                                                            ),
-                                                            Expr::u32(1),
-                                                            Expr::u32(0),
-                                                        ),
-                                                    ),
-                                                    Node::let_bind(
-                                                        "ld_v",
-                                                        Expr::select(
-                                                            Expr::eq(Expr::var("ld_dec"), Expr::u32(1)),
-                                                            Expr::sub(Expr::var("ldb"), Expr::u32(b'0' as u32)),
-                                                            Expr::select(
-                                                                Expr::eq(Expr::var("ld_lc"), Expr::u32(1)),
-                                                                Expr::add(
-                                                                    Expr::sub(Expr::var("ldb"), Expr::u32(b'a' as u32)),
-                                                                    Expr::u32(10),
-                                                                ),
-                                                                Expr::select(
-                                                                    Expr::eq(Expr::var("ld_uc"), Expr::u32(1)),
-                                                                    Expr::add(
-                                                                        Expr::sub(Expr::var("ldb"), Expr::u32(b'A' as u32)),
-                                                                        Expr::u32(10),
-                                                                    ),
-                                                                    Expr::u32(99),
-                                                                ),
-                                                            ),
-                                                        ),
-                                                    ),
-                                                    Node::let_bind(
-                                                        "ld1_dec",
-                                                        Expr::select(
-                                                            Expr::and(
-                                                                Expr::ge(Expr::var("ldb1"), Expr::u32(b'0' as u32)),
-                                                                Expr::le(Expr::var("ldb1"), Expr::u32(b'9' as u32)),
-                                                            ),
-                                                            Expr::u32(1),
-                                                            Expr::u32(0),
-                                                        ),
-                                                    ),
-                                                    Node::let_bind(
-                                                        "ld1_lc",
-                                                        Expr::select(
-                                                            Expr::and(
-                                                                Expr::ge(Expr::var("ldb1"), Expr::u32(b'a' as u32)),
-                                                                Expr::le(Expr::var("ldb1"), Expr::u32(b'f' as u32)),
-                                                            ),
-                                                            Expr::u32(1),
-                                                            Expr::u32(0),
-                                                        ),
-                                                    ),
-                                                    Node::let_bind(
-                                                        "ld1_uc",
-                                                        Expr::select(
-                                                            Expr::and(
-                                                                Expr::ge(Expr::var("ldb1"), Expr::u32(b'A' as u32)),
-                                                                Expr::le(Expr::var("ldb1"), Expr::u32(b'F' as u32)),
-                                                            ),
-                                                            Expr::u32(1),
-                                                            Expr::u32(0),
-                                                        ),
-                                                    ),
-                                                    Node::let_bind(
-                                                        "ld1_v",
-                                                        Expr::select(
-                                                            Expr::eq(Expr::var("ld1_dec"), Expr::u32(1)),
-                                                            Expr::sub(Expr::var("ldb1"), Expr::u32(b'0' as u32)),
-                                                            Expr::select(
-                                                                Expr::eq(Expr::var("ld1_lc"), Expr::u32(1)),
-                                                                Expr::add(
-                                                                    Expr::sub(Expr::var("ldb1"), Expr::u32(b'a' as u32)),
-                                                                    Expr::u32(10),
-                                                                ),
-                                                                Expr::select(
-                                                                    Expr::eq(Expr::var("ld1_uc"), Expr::u32(1)),
-                                                                    Expr::add(
-                                                                        Expr::sub(Expr::var("ldb1"), Expr::u32(b'A' as u32)),
-                                                                        Expr::u32(10),
-                                                                    ),
-                                                                    Expr::u32(99),
-                                                                ),
-                                                            ),
-                                                        ),
-                                                    ),
-                                                    Node::let_bind(
-                                                        "lit_separator",
-                                                        Expr::select(
-                                                            Expr::and(
-                                                                Expr::eq(Expr::var("ldb"), Expr::u32(b'\'' as u32)),
-                                                                Expr::lt(Expr::var("ld1_v"), Expr::var("lit_radix")),
-                                                            ),
-                                                            Expr::u32(1),
-                                                            Expr::u32(0),
-                                                        ),
-                                                    ),
-                                                    Node::if_then_else(
-                                                        Expr::or(
-                                                            Expr::lt(Expr::var("ld_v"), Expr::var("lit_radix")),
-                                                            Expr::eq(Expr::var("lit_separator"), Expr::u32(1)),
-                                                        ),
-                                                        vec![
-                                                            Node::assign(
-                                                                "lit_value",
-                                                                Expr::select(
-                                                                    Expr::eq(Expr::var("lit_separator"), Expr::u32(1)),
-                                                                    Expr::var("lit_value"),
-                                                                    Expr::add(
-                                                                        Expr::mul(
-                                                                            Expr::var("lit_value"),
-                                                                            Expr::var("lit_radix"),
-                                                                        ),
-                                                                        Expr::var("ld_v"),
-                                                                    ),
-                                                                ),
-                                                            ),
-                                                            Node::assign(
-                                                                "scan_pos",
-                                                                Expr::add(Expr::var("scan_pos"), Expr::u32(1)),
-                                                            ),
-                                                        ],
-                                                        vec![Node::assign("lit_done", Expr::u32(1))],
-                                                    ),
-                                                ],
+                                                digit_step,
                                             )],
                                         ));
-                                        // Skip suffix u/U/l/L/z/Z/wb/WB (up to 4 loop iterations).
+
+                                        let suffix = SuffixClass {
+                                            byte_var: "sfb",
+                                            next_byte_var: "sfb1",
+                                            single_var: "is_single_suf",
+                                            z_var: "is_z_suf",
+                                            wb_var: "is_wb_suf",
+                                        };
+                                        let mut suffix_step: Vec<Node> = vec![
+                                            Node::let_bind(
+                                                "sfb",
+                                                safe_load_src(Expr::var("scan_pos")),
+                                            ),
+                                            Node::let_bind(
+                                                "sfb1",
+                                                safe_load_src(Expr::add(
+                                                    Expr::var("scan_pos"),
+                                                    Expr::u32(1),
+                                                )),
+                                            ),
+                                        ];
+                                        push_suffix_class(&mut suffix_step, &suffix);
+                                        suffix_step.push(Node::if_then_else(
+                                            suffix_matched_expr(&suffix),
+                                            vec![Node::assign(
+                                                "scan_pos",
+                                                Expr::add(
+                                                    Expr::var("scan_pos"),
+                                                    suffix_advance_expr(&suffix),
+                                                ),
+                                            )],
+                                            vec![Node::assign("suf_done", Expr::u32(1))],
+                                        ));
+                                        // A radix prefix with no digit after it is not a literal,
+                                        // so it must not eat a following suffix byte either. The
+                                        // CPU reference rewinds to the start and reports no
+                                        // literal in that case.
+                                        lit_nodes.push(Node::let_bind(
+                                            "lit_saw_digits",
+                                            Expr::select(
+                                                Expr::gt(
+                                                    Expr::var("scan_pos"),
+                                                    Expr::var("lit_digits_start"),
+                                                ),
+                                                Expr::u32(1),
+                                                Expr::u32(0),
+                                            ),
+                                        ));
                                         lit_nodes.push(Node::let_bind("suf_done", Expr::u32(0)));
-                                        lit_nodes.push(Node::loop_for(
-                                            "lit_suf",
-                                            Expr::u32(0),
-                                            Expr::u32(4),
-                                            vec![Node::if_then(
-                                                Expr::and(
-                                                    Expr::eq(Expr::var("suf_done"), Expr::u32(0)),
-                                                    Expr::lt(Expr::var("scan_pos"), Expr::var("tok_end")),
-                                                ),
-                                                vec![
-                                                    Node::let_bind("sfb", safe_load_src(Expr::var("scan_pos"))),
-                                                    Node::let_bind(
-                                                        "sfb1",
-                                                        safe_load_src(Expr::add(
+                                        lit_nodes.push(Node::if_then(
+                                            Expr::eq(Expr::var("lit_saw_digits"), Expr::u32(1)),
+                                            vec![Node::loop_for(
+                                                "lit_suf",
+                                                Expr::u32(0),
+                                                Expr::u32(MAX_SUFFIX),
+                                                vec![Node::if_then(
+                                                    Expr::and(
+                                                        Expr::eq(
+                                                            Expr::var("suf_done"),
+                                                            Expr::u32(0),
+                                                        ),
+                                                        Expr::lt(
                                                             Expr::var("scan_pos"),
-                                                            Expr::u32(1),
-                                                        )),
-                                                    ),
-                                                    Node::let_bind(
-                                                        "is_single_suf",
-                                                        Expr::select(
-                                                            Expr::or(
-                                                                Expr::or(
-                                                                    Expr::eq(Expr::var("sfb"), Expr::u32(b'u' as u32)),
-                                                                    Expr::eq(Expr::var("sfb"), Expr::u32(b'U' as u32)),
-                                                                ),
-                                                                Expr::or(
-                                                                    Expr::eq(Expr::var("sfb"), Expr::u32(b'l' as u32)),
-                                                                    Expr::eq(Expr::var("sfb"), Expr::u32(b'L' as u32)),
-                                                                ),
-                                                            ),
-                                                            Expr::u32(1),
-                                                            Expr::u32(0),
+                                                            Expr::var("tok_end"),
                                                         ),
                                                     ),
-                                                    Node::let_bind(
-                                                        "is_z_suf",
-                                                        Expr::select(
-                                                            Expr::or(
-                                                                Expr::eq(Expr::var("sfb"), Expr::u32(b'z' as u32)),
-                                                                Expr::eq(Expr::var("sfb"), Expr::u32(b'Z' as u32)),
-                                                            ),
-                                                            Expr::u32(1),
-                                                            Expr::u32(0),
-                                                        ),
-                                                    ),
-                                                    Node::let_bind(
-                                                        "is_wb_suf",
-                                                        Expr::select(
-                                                            Expr::and(
-                                                                Expr::or(
-                                                                    Expr::eq(Expr::var("sfb"), Expr::u32(b'w' as u32)),
-                                                                    Expr::eq(Expr::var("sfb"), Expr::u32(b'W' as u32)),
-                                                                ),
-                                                                Expr::or(
-                                                                    Expr::eq(Expr::var("sfb1"), Expr::u32(b'b' as u32)),
-                                                                    Expr::eq(Expr::var("sfb1"), Expr::u32(b'B' as u32)),
-                                                                ),
-                                                            ),
-                                                            Expr::u32(1),
-                                                            Expr::u32(0),
-                                                        ),
-                                                    ),
-                                                    Node::if_then_else(
-                                                        Expr::or(
-                                                            Expr::or(
-                                                                Expr::eq(Expr::var("is_single_suf"), Expr::u32(1)),
-                                                                Expr::eq(Expr::var("is_z_suf"), Expr::u32(1)),
-                                                            ),
-                                                            Expr::eq(Expr::var("is_wb_suf"), Expr::u32(1)),
-                                                        ),
-                                                        vec![Node::assign(
-                                                            "scan_pos",
-                                                            Expr::add(
-                                                                Expr::var("scan_pos"),
-                                                                Expr::select(
-                                                                    Expr::eq(Expr::var("is_wb_suf"), Expr::u32(1)),
-                                                                    Expr::u32(2),
-                                                                    Expr::u32(1),
-                                                                ),
-                                                            ),
-                                                        )],
-                                                        vec![Node::assign("suf_done", Expr::u32(1))],
-                                                    ),
-                                                ],
+                                                    suffix_step,
+                                                )],
                                             )],
                                         ));
-                                        lit_nodes.extend(push_stack("val_stack", "vsp", Expr::var("lit_value")));
-                                        lit_nodes.push(Node::assign("last_was_value", Expr::u32(1)));
+                                        lit_nodes.extend(push_stack(
+                                            "val_stack",
+                                            "vsp",
+                                            Expr::var("lit_value"),
+                                        ));
+                                        lit_nodes
+                                            .push(Node::assign("last_was_value", Expr::u32(1)));
                                         lit_nodes
                                     },
                                 ));
@@ -825,45 +653,11 @@ fn gpu_if_expression_with_byte_layouts(
                                             {
                                                 let mut def_nodes: Vec<Node> = Vec::new();
                                                 // Skip whitespace.
-                                                def_nodes.push(Node::let_bind("def_ws_done", Expr::u32(0)));
-                                                def_nodes.push(Node::loop_for(
+                                                def_nodes.extend(payload_ws_run(
                                                     "def_ws",
-                                                    Expr::u32(0),
-                                                    Expr::var("tok_len"),
-                                                    vec![Node::if_then(
-                                                        Expr::and(
-                                                            Expr::eq(Expr::var("def_ws_done"), Expr::u32(0)),
-                                                            Expr::lt(Expr::var("scan_pos"), Expr::var("tok_end")),
-                                                        ),
-                                                        vec![
-                                                            Node::let_bind("dwsb", safe_load_src(Expr::var("scan_pos"))),
-                                                            Node::let_bind(
-                                                                "dws_is_ws",
-                                                                Expr::select(
-                                                                    Expr::or(
-                                                                        Expr::or(
-                                                                            Expr::eq(Expr::var("dwsb"), Expr::u32(b' ' as u32)),
-                                                                            Expr::eq(Expr::var("dwsb"), Expr::u32(b'\t' as u32)),
-                                                                        ),
-                                                                        Expr::or(
-                                                                            Expr::eq(Expr::var("dwsb"), Expr::u32(0x0B)),
-                                                                            Expr::eq(Expr::var("dwsb"), Expr::u32(0x0C)),
-                                                                        ),
-                                                                    ),
-                                                                    Expr::u32(1),
-                                                                    Expr::u32(0),
-                                                                ),
-                                                            ),
-                                                            Node::if_then_else(
-                                                                Expr::eq(Expr::var("dws_is_ws"), Expr::u32(1)),
-                                                                vec![Node::assign(
-                                                                    "scan_pos",
-                                                                    Expr::add(Expr::var("scan_pos"), Expr::u32(1)),
-                                                                )],
-                                                                vec![Node::assign("def_ws_done", Expr::u32(1))],
-                                                            ),
-                                                        ],
-                                                    )],
+                                                    "def_ws_done",
+                                                    "dwsb",
+                                                    "dws_is_ws",
                                                 ));
                                                 // Optional `(`.
                                                 def_nodes.push(Node::let_bind("def_open", safe_load_src(Expr::var("scan_pos"))));
@@ -883,45 +677,11 @@ fn gpu_if_expression_with_byte_layouts(
                                                     )],
                                                 ));
                                                 // Skip ws after `(`.
-                                                def_nodes.push(Node::let_bind("def_ws2_done", Expr::u32(0)));
-                                                def_nodes.push(Node::loop_for(
+                                                def_nodes.extend(payload_ws_run(
                                                     "def_ws2",
-                                                    Expr::u32(0),
-                                                    Expr::var("tok_len"),
-                                                    vec![Node::if_then(
-                                                        Expr::and(
-                                                            Expr::eq(Expr::var("def_ws2_done"), Expr::u32(0)),
-                                                            Expr::lt(Expr::var("scan_pos"), Expr::var("tok_end")),
-                                                        ),
-                                                        vec![
-                                                            Node::let_bind("dws2b", safe_load_src(Expr::var("scan_pos"))),
-                                                            Node::let_bind(
-                                                                "dws2_is_ws",
-                                                                Expr::select(
-                                                                    Expr::or(
-                                                                        Expr::or(
-                                                                            Expr::eq(Expr::var("dws2b"), Expr::u32(b' ' as u32)),
-                                                                            Expr::eq(Expr::var("dws2b"), Expr::u32(b'\t' as u32)),
-                                                                        ),
-                                                                        Expr::or(
-                                                                            Expr::eq(Expr::var("dws2b"), Expr::u32(0x0B)),
-                                                                            Expr::eq(Expr::var("dws2b"), Expr::u32(0x0C)),
-                                                                        ),
-                                                                    ),
-                                                                    Expr::u32(1),
-                                                                    Expr::u32(0),
-                                                                ),
-                                                            ),
-                                                            Node::if_then_else(
-                                                                Expr::eq(Expr::var("dws2_is_ws"), Expr::u32(1)),
-                                                                vec![Node::assign(
-                                                                    "scan_pos",
-                                                                    Expr::add(Expr::var("scan_pos"), Expr::u32(1)),
-                                                                )],
-                                                                vec![Node::assign("def_ws2_done", Expr::u32(1))],
-                                                            ),
-                                                        ],
-                                                    )],
+                                                    "def_ws2_done",
+                                                    "dws2b",
+                                                    "dws2_is_ws",
                                                 ));
                                                 // Capture inner ident.
                                                 def_nodes.push(Node::let_bind("inner_start", Expr::var("scan_pos")));
@@ -1071,57 +831,23 @@ fn gpu_if_expression_with_byte_layouts(
                                                 // Skip closing `)` if there was an opener.
                                                 def_nodes.push(Node::if_then(
                                                     Expr::eq(Expr::var("had_paren"), Expr::u32(1)),
-                                                    vec![
-                                                        // Skip ws.
-                                                        Node::let_bind("def_ws3_done", Expr::u32(0)),
-                                                        Node::loop_for(
+                                                    {
+                                                        let mut close_nodes = payload_ws_run(
                                                             "def_ws3",
-                                                            Expr::u32(0),
-                                                            Expr::var("tok_len"),
-                                                            vec![Node::if_then(
-                                                                Expr::and(
-                                                                    Expr::eq(Expr::var("def_ws3_done"), Expr::u32(0)),
-                                                                    Expr::lt(Expr::var("scan_pos"), Expr::var("tok_end")),
-                                                                ),
-                                                                vec![
-                                                                    Node::let_bind("dws3b", safe_load_src(Expr::var("scan_pos"))),
-                                                                    Node::let_bind(
-                                                                        "dws3_is_ws",
-                                                                        Expr::select(
-                                                                            Expr::or(
-                                                                                Expr::or(
-                                                                                    Expr::eq(Expr::var("dws3b"), Expr::u32(b' ' as u32)),
-                                                                                    Expr::eq(Expr::var("dws3b"), Expr::u32(b'\t' as u32)),
-                                                                                ),
-                                                                                Expr::or(
-                                                                                    Expr::eq(Expr::var("dws3b"), Expr::u32(0x0B)),
-                                                                                    Expr::eq(Expr::var("dws3b"), Expr::u32(0x0C)),
-                                                                                ),
-                                                                            ),
-                                                                            Expr::u32(1),
-                                                                            Expr::u32(0),
-                                                                        ),
-                                                                    ),
-                                                                    Node::if_then_else(
-                                                                        Expr::eq(Expr::var("dws3_is_ws"), Expr::u32(1)),
-                                                                        vec![Node::assign(
-                                                                            "scan_pos",
-                                                                            Expr::add(Expr::var("scan_pos"), Expr::u32(1)),
-                                                                        )],
-                                                                        vec![Node::assign("def_ws3_done", Expr::u32(1))],
-                                                                    ),
-                                                                ],
-                                                            )],
-                                                        ),
+                                                            "def_ws3_done",
+                                                            "dws3b",
+                                                            "dws3_is_ws",
+                                                        );
                                                         // Consume `)` if present.
-                                                        Node::if_then(
+                                                        close_nodes.push(Node::if_then(
                                                             Expr::eq(safe_load_src(Expr::var("scan_pos")), Expr::u32(b')' as u32)),
                                                             vec![Node::assign(
                                                                 "scan_pos",
                                                                 Expr::add(Expr::var("scan_pos"), Expr::u32(1)),
                                                             )],
-                                                        ),
-                                                    ],
+                                                        ));
+                                                        close_nodes
+                                                    },
                                                 ));
                                                 def_nodes.extend(push_stack("val_stack", "vsp", Expr::var("def_found")));
                                                 def_nodes.push(Node::assign("last_was_value", Expr::u32(1)));
@@ -1156,45 +882,11 @@ fn gpu_if_expression_with_byte_layouts(
                                                     ),
                                                     {
                                                         let mut hx_nodes: Vec<Node> = Vec::new();
-                                                        hx_nodes.push(Node::let_bind("hx_ws_done", Expr::u32(0)));
-                                                        hx_nodes.push(Node::loop_for(
+                                                        hx_nodes.extend(payload_ws_run(
                                                             "hx_ws",
-                                                            Expr::u32(0),
-                                                            Expr::var("tok_len"),
-                                                            vec![Node::if_then(
-                                                                Expr::and(
-                                                                    Expr::eq(Expr::var("hx_ws_done"), Expr::u32(0)),
-                                                                    Expr::lt(Expr::var("scan_pos"), Expr::var("tok_end")),
-                                                                ),
-                                                                vec![
-                                                                    Node::let_bind("hxwsb", safe_load_src(Expr::var("scan_pos"))),
-                                                                    Node::let_bind(
-                                                                        "hxws_is_ws",
-                                                                        Expr::select(
-                                                                            Expr::or(
-                                                                                Expr::or(
-                                                                                    Expr::eq(Expr::var("hxwsb"), Expr::u32(b' ' as u32)),
-                                                                                    Expr::eq(Expr::var("hxwsb"), Expr::u32(b'\t' as u32)),
-                                                                                ),
-                                                                                Expr::or(
-                                                                                    Expr::eq(Expr::var("hxwsb"), Expr::u32(0x0B)),
-                                                                                    Expr::eq(Expr::var("hxwsb"), Expr::u32(0x0C)),
-                                                                                ),
-                                                                            ),
-                                                                            Expr::u32(1),
-                                                                            Expr::u32(0),
-                                                                        ),
-                                                                    ),
-                                                                    Node::if_then_else(
-                                                                        Expr::eq(Expr::var("hxws_is_ws"), Expr::u32(1)),
-                                                                        vec![Node::assign(
-                                                                            "scan_pos",
-                                                                            Expr::add(Expr::var("scan_pos"), Expr::u32(1)),
-                                                                        )],
-                                                                        vec![Node::assign("hx_ws_done", Expr::u32(1))],
-                                                                    ),
-                                                                ],
-                                                            )],
+                                                            "hx_ws_done",
+                                                            "hxwsb",
+                                                            "hxws_is_ws",
                                                         ));
                                                         hx_nodes.push(Node::let_bind("hx_open", safe_load_src(Expr::var("scan_pos"))));
                                                         hx_nodes.push(Node::if_then(

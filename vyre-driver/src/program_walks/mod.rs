@@ -17,7 +17,7 @@ pub use grid::{
 pub use indirect::{find_indirect_dispatch, IndirectDispatch};
 pub(crate) use launch_geometry::program_uses_launch_geometry_ids;
 pub use outputs::{
-    element_size_bytes, enforce_actual_output_budget, output_binding_layout,
+    element_size_bytes, enforce_actual_output_budget, enforce_output_budget, output_binding_layout,
     output_binding_layout_parts, output_binding_layouts, output_binding_layouts_into,
     output_layout_from_program, OutputBindingLayout, OutputLayout,
 };

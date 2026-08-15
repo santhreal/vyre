@@ -11,6 +11,9 @@ use crate::parsing::c::lex::tokens::{
 mod directive_scan;
 use directive_scan::ScannedDirective;
 
+/// Byte grammar of a C integer literal: radix prefix, digit value, type suffix.
+mod c_int_literal_grammar;
+
 /// Preprocessor side-effect metadata.
 pub mod effects;
 /// Macro-expansion kernel.
