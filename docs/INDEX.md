@@ -18,7 +18,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `operation-registry` | [`../vyre-foundation/src/operation.rs`](../vyre-foundation/src/operation.rs) |
 | `optimization` | [`optimization/OWNERSHIP.toml`](optimization/OWNERSHIP.toml) |
 | `public-facade` | [`../vyre/src/lib.rs`](../vyre/src/lib.rs) |
-| `release-tooling` | [`../scripts/release_docs.py`](../scripts/release_docs.py) |
+| `release-tooling` | [`../xtask/src/release/release_docs.rs`](../xtask/src/release/release_docs.rs) |
 | `runtime` | [`../vyre-runtime/src/lib.rs`](../vyre-runtime/src/lib.rs) |
 | `testing` | [`testing/TESTING.toml`](testing/TESTING.toml) |
 

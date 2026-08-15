@@ -35,7 +35,7 @@ authority = "../vyre/src/lib.rs"
 
 [[owner]]
 id = "release-tooling"
-authority = "../scripts/release_docs.py"
+authority = "../xtask/src/release/release_docs.rs"
 
 [[owner]]
 id = "runtime"

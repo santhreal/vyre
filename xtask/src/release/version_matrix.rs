@@ -307,7 +307,7 @@ fn is_bare_release_tag_command(line: &str, bare_tag: &str, bare_rc_tag: &str) ->
 /// mdbook carried. The book is gone and nothing regenerates that page, so every
 /// run opened with an unreadable-document finding and the token scan judged a
 /// file that does not exist. The changelog is the surviving release-notes
-/// surface and `scripts/release_docs.py` writes its identity preamble from the
+/// surface and `xtask release-docs` writes its identity preamble from the
 /// same release train these tokens come from.
 fn current_release_notes_path(vyre_root: &Path) -> PathBuf {
     vyre_root.join("CHANGELOG.md")

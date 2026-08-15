@@ -1069,10 +1069,12 @@ mod tests {
 
     /// WHY: a `#[path]` that climbs out of the module directory must compare
     /// equal to the tracked entry it names, or the file it points at reads as
-    /// both a missing module and an orphan.
+    /// both a missing module and an orphan. `..` removes the component before
+    /// it, which is what climbing out means; keeping that component would name
+    /// a path no tracked entry has.
     #[test]
     fn relative_paths_collapse() {
-        assert_eq!(normalize("a/b/../c/./d.rs"), "a/b/c/d.rs");
+        assert_eq!(normalize("a/b/../c/./d.rs"), "a/c/d.rs");
         assert_eq!(normalize("./a.rs"), "a.rs");
     }
 

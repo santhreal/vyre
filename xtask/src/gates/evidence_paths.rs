@@ -212,7 +212,7 @@ fn collect(
                 .iter()
                 .rev()
                 .find(|step| !step.starts_with('['))
-                .map(String::as_str)
+                .map(|step| step.trim_start_matches('.'))
                 .unwrap_or_default();
             if looks_like_path(text, key, extensions) {
                 out.push(Citation {

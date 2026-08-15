@@ -10,13 +10,29 @@ use std::process::{Command, Output};
 
 use common::workspace_root;
 
-/// Run the generator the fixture itself carries, not the checkout's copy.
-fn run_generator(root: &Path, mode: &str) -> Output {
-    Command::new("python3")
-        .arg(root.join("scripts/release_docs.py"))
-        .arg(mode)
+/// Run the gate against one checkout, from inside it.
+///
+/// The gate resolves its root by walking up from the working directory, so a
+/// fixture is judged by running there. `mode` is `--check` or `--write`, and
+/// `--check` is the absence of `--write`.
+fn run_gate(root: &Path, mode: &str) -> Output {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_xtask"));
+    command.current_dir(root).arg("release-docs");
+    if mode == "--write" {
+        command.arg("--write");
+    }
+    command
         .output()
-        .expect("Fix: release document generator must launch with python3")
+        .expect("Fix: the xtask binary must be runnable")
+}
+
+/// Everything the gate reported, so an assertion names the finding text.
+fn reported(output: &Output) -> String {
+    format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    )
 }
 
 fn write_fixture(root: &Path, actions: usize, duplicate_package: bool) {
@@ -24,11 +40,13 @@ fn write_fixture(root: &Path, actions: usize, duplicate_package: bool) {
         fs::create_dir_all(root.join(directory))
             .expect("Fix: release document fixture directories must be creatable");
     }
-    fs::copy(
-        workspace_root().join("scripts/release_docs.py"),
-        root.join("scripts/release_docs.py"),
+    // The gate resolves the checkout root by walking up for a `[workspace]`, so
+    // a fixture without one would be judged against whichever ancestor has one.
+    fs::write(
+        root.join("Cargo.toml"),
+        "[workspace]\nmembers = []\nresolver = \"2\"\n",
     )
-    .expect("Fix: fixture must copy the production release document generator");
+    .expect("Fix: fixture workspace manifest must be writable");
     fs::copy(
         workspace_root().join("scripts/final-launch.sh"),
         root.join("scripts/final-launch.sh"),
@@ -86,15 +104,16 @@ packages = ["a"]
 /// Locks the repository release surfaces to the train and fragment authorities.
 #[test]
 fn workspace_release_documents_are_current() {
-    let output = run_generator(&workspace_root(), "--check");
+    let output = run_gate(&workspace_root(), "--check");
     assert!(
         output.status.success(),
         "Fix: regenerate or repair release documents: {}",
-        String::from_utf8_lossy(&output.stderr)
+        reported(&output)
     );
-    assert_eq!(
-        String::from_utf8(output.stdout).expect("Fix: generator output must be UTF-8"),
-        "release-docs: release train, fragments, changelog, and release notes agree\n"
+    assert!(
+        reported(&output).ends_with("release-docs: 0 finding(s)\n"),
+        "{}",
+        reported(&output)
     );
 }
 
@@ -104,12 +123,8 @@ fn workspace_release_documents_are_current() {
 fn write_derives_the_changelog_from_fragments() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), 3, false);
-    let output = run_generator(temp.path(), "--write");
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    let output = run_gate(temp.path(), "--write");
+    assert!(output.status.success(), "{}", reported(&output));
 
     let changelog = fs::read_to_string(temp.path().join("CHANGELOG.md"))
         .expect("Fix: generated changelog must be readable");
@@ -139,12 +154,13 @@ fn a_fragment_file_in_the_retired_shape_is_rejected_by_name() {
     )
     .expect("Fix: retired-shape fixture fragment must be writable");
 
-    let output = run_generator(temp.path(), "--check");
+    let output = run_gate(temp.path(), "--check");
     assert!(!output.status.success());
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let reported = reported(&output);
     assert!(
-        stderr.contains("release/changes/unreleased/legacy-shape.toml: unexpected key(s) fragments"),
-        "the rejection must name the file and the key: {stderr}"
+        reported
+            .contains("release/changes/unreleased/legacy-shape.toml: unexpected key(s) fragments"),
+        "the rejection must name the file and the key: {reported}"
     );
 }
 
@@ -160,12 +176,45 @@ fn two_independently_written_fragments_both_reach_the_changelog() {
         "category = \"Changed\"\ntext = \"The second author's change is recorded too.\"\n",
     )
     .expect("Fix: second fixture fragment must be writable");
-    assert!(run_generator(temp.path(), "--write").status.success());
+    assert!(run_gate(temp.path(), "--write").status.success());
 
     let changelog = fs::read_to_string(temp.path().join("CHANGELOG.md"))
         .expect("Fix: generated changelog must be readable");
     assert!(changelog.contains("- The exact release regression is fixed."));
     assert!(changelog.contains("- The second author's change is recorded too."));
+}
+
+/// A fragment written but not yet staged still reaches the changelog.
+///
+/// WHY: the fragment is written in the same change it describes, and the
+/// documents are regenerated before anything is staged. Listing the git index
+/// instead of the directory would drop exactly the newest fragment, and the
+/// release would ship describing every change but the last one.
+#[test]
+fn an_unstaged_fragment_reaches_the_changelog() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_fixture(temp.path(), 3, false);
+    assert!(
+        Command::new("git")
+            .arg("-C")
+            .arg(temp.path())
+            .arg("init")
+            .arg("--quiet")
+            .status()
+            .expect("Fix: git must be runnable")
+            .success(),
+        "Fix: the fixture must initialise as a repository"
+    );
+    fs::write(
+        temp.path().join("release/changes/unreleased/never-staged.toml"),
+        "category = \"Added\"\ntext = \"The unstaged fragment is still a change.\"\n",
+    )
+    .expect("Fix: unstaged fixture fragment must be writable");
+    assert!(run_gate(temp.path(), "--write").status.success());
+
+    let changelog = fs::read_to_string(temp.path().join("CHANGELOG.md"))
+        .expect("Fix: generated changelog must be readable");
+    assert!(changelog.contains("- The unstaged fragment is still a change."));
 }
 
 /// Prevents a hand edit to the generated changelog section from silently
@@ -174,7 +223,7 @@ fn two_independently_written_fragments_both_reach_the_changelog() {
 fn check_rejects_generated_changelog_drift() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), 3, false);
-    assert!(run_generator(temp.path(), "--write").status.success());
+    assert!(run_gate(temp.path(), "--write").status.success());
     let changelog_path = temp.path().join("CHANGELOG.md");
     let generated = fs::read_to_string(&changelog_path)
         .expect("Fix: generated fixture changelog must be readable");
@@ -187,9 +236,11 @@ fn check_rejects_generated_changelog_drift() {
     )
     .expect("Fix: drifted fixture changelog must be writable");
 
-    let output = run_generator(temp.path(), "--check");
+    let output = run_gate(temp.path(), "--check");
     assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("generated release content is stale"));
+    assert!(reported(&output).contains(
+        "the generated release content disagrees with the fragments and the train"
+    ));
 }
 
 /// Prevents a package from publishing under two versions or repositories in one release train.
@@ -197,34 +248,53 @@ fn check_rejects_generated_changelog_drift() {
 fn duplicate_release_group_membership_fails_closed() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), 3, true);
-    let output = run_generator(temp.path(), "--write");
+    let output = run_gate(temp.path(), "--write");
     assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr)
-        .contains("package `a` belongs to both `vyre` and `secondary`"));
+    assert!(reported(&output).contains("package `a` belongs to both `secondary` and `vyre`"));
 }
 
-/// Preserves the exact three-action approval boundary required by prepublication evidence.
+/// Preserves the exact approval boundary required by prepublication evidence.
+///
+/// Every external action carries an id, and no two share one: the launch record
+/// cites an action by id, so a missing or repeated id records approval for an
+/// action nobody can identify.
 #[test]
-fn incomplete_external_action_boundary_fails_closed() {
+fn an_external_action_without_an_id_fails_closed() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_fixture(temp.path(), 3, false);
+    let train_path = temp.path().join("release/release-train.toml");
+    let train = fs::read_to_string(&train_path).expect("Fix: fixture train must be readable");
+    fs::write(&train_path, train.replace("id = \"action-2\"\n", ""))
+        .expect("Fix: modified fixture train must be writable");
+
+    let output = run_gate(temp.path(), "--write");
+    assert!(!output.status.success());
+    assert!(reported(&output)
+        .contains("an approval-gated external action has no id, or two share one"));
+}
+
+/// The train declares one entry per action the launch contract needs.
+///
+/// WHY: the count used to be the literal three, restated here and in the launch
+/// contract. A fourth required action would have left this gate green while the
+/// release recorded approval for three.
+#[test]
+fn a_missing_external_action_fails_closed() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), 2, false);
-    let output = run_generator(temp.path(), "--write");
+    let output = run_gate(temp.path(), "--write");
     assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr)
-        .contains("exactly three approval-gated external actions"));
+    assert!(reported(&output).contains(
+        "the train declares 2 approval-gated external action(s) and the launch contract needs 3"
+    ));
 }
 
 /// Prevents release notes from passing when the train adds a token that the changelog omits.
-///
-/// The assertion below named `missing required token`, which the generator has
-/// never emitted: it reports `CHANGELOG.md: missing required release token`, so
-/// the test was red on arrival and said nothing about the rule it guards. The
-/// document name is part of the message and is asserted with it.
 #[test]
 fn missing_release_note_token_fails_closed() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), 3, false);
-    assert!(run_generator(temp.path(), "--write").status.success());
+    assert!(run_gate(temp.path(), "--write").status.success());
     let train_path = temp.path().join("release/release-train.toml");
     let train = fs::read_to_string(&train_path).expect("Fix: fixture train must be readable");
     fs::write(
@@ -236,10 +306,11 @@ fn missing_release_note_token_fails_closed() {
     )
     .expect("Fix: modified fixture train must be writable");
 
-    let output = run_generator(temp.path(), "--check");
+    let output = run_gate(temp.path(), "--check");
     assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr)
-        .contains("CHANGELOG.md: missing required release token `required-but-absent`"));
+    assert!(reported(&output).contains(
+        "the release train requires the token `required-but-absent`, which the changelog does not carry"
+    ));
 }
 
 /// Prevents completion evidence from claiming publish or push success before those actions run.
@@ -247,7 +318,7 @@ fn missing_release_note_token_fails_closed() {
 fn guarded_launch_order_fails_closed_when_candidate_tags_are_reordered() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), 3, false);
-    assert!(run_generator(temp.path(), "--write").status.success());
+    assert!(run_gate(temp.path(), "--write").status.success());
     let launch_path = temp.path().join("scripts/final-launch.sh");
     let launch =
         fs::read_to_string(&launch_path).expect("Fix: fixture launch script must be readable");
@@ -264,7 +335,7 @@ fn guarded_launch_order_fails_closed_when_candidate_tags_are_reordered() {
     fs::write(&launch_path, reordered)
         .expect("Fix: reordered fixture launch script must be writable");
 
-    let output = run_generator(temp.path(), "--check");
+    let output = run_gate(temp.path(), "--check");
     assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("are out of order"));
+    assert!(reported(&output).contains("are out of order"));
 }

@@ -1,4 +1,5 @@
 {
+  "source_fingerprint": "git:01bb4fcce8e0172b2b99cd2b0430d7c75da4f8b6:dirty=true:worktree=a6e2e434bb772dd5cbe5aa04c4e2e6bf6e0a264fbc46399973375e0c4cab138b",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -21,32 +22,38 @@
       "text": "b.build_with_match_kind(MatchKind::LeftmostFirst).expect("
     },
     {
+      "path": "structure-gate/src/source_scan.rs",
+      "line": 129,
+      "pattern": "expect_call",
+      "text": ".expect(\"masking replaces whole opaque spans with ASCII, so the rest stays valid UTF-8\")"
+    },
+    {
       "path": "structure-gate/src/lib.rs",
-      "line": 223,
+      "line": 227,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 225,
+      "line": 229,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 557,
+      "line": 562,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 577,
+      "line": 582,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 579,
+      "line": 584,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
     },
@@ -153,12 +160,6 @@
       "text": "panic!(\"trusted VAST postorder walk shape was not prevalidated: {error}\")"
     },
     {
-      "path": "vyre-libs/src/device/scratch.rs",
-      "line": 73,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
-    },
-    {
       "path": "vyre-libs/src/scan/classic_ac/bounded_ranges/mod.rs",
       "line": 312,
       "pattern": "panic_macro",
@@ -172,19 +173,13 @@
     },
     {
       "path": "vyre-libs/src/scan/nfa/tables.rs",
-      "line": 29,
+      "line": 31,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "vyre-libs/src/scan/nfa/tables.rs",
-      "line": 100,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-libs/src/scan/nfa/tables.rs",
-      "line": 154,
+      "line": 82,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -267,6 +262,12 @@
       "text": ".expect(\"truncated VAST: node_count * row stride overflowed usize\");"
     },
     {
+      "path": "vyre-libs/src/scratch.rs",
+      "line": 73,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
+    },
+    {
       "path": "vyre-libs/src/visual/glyph_grid/mod.rs",
       "line": 89,
       "pattern": "documented_panic_contract",
@@ -303,7 +304,7 @@
       "text": ".expect(\"Fix: cols * rows overflows u32\");"
     },
     {
-      "path": "vyre-foundation/src/analysis/graph_view.rs",
+      "path": "vyre-foundation/src/graph_view.rs",
       "line": 314,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"stack is non-empty inside `while let Some(..) = stack.last()`\")"
@@ -340,21 +341,27 @@
     },
     {
       "path": "vyre-test-support/src/binop_parity.rs",
-      "line": 236,
+      "line": 243,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "vyre-test-support/src/binop_parity.rs",
-      "line": 254,
+      "line": 261,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "vyre-test-support/src/binop_parity.rs",
-      "line": 344,
+      "line": 351,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|err| panic!(\"Fix: cannot list the workspace root {root:?}: {err}\"));"
+    },
+    {
+      "path": "vyre-test-support/src/binop_parity.rs",
+      "line": 521,
+      "pattern": "panic_macro",
+      "text": "panic!(\"Fix: no reference for `{op}`; add a row to {table_name} in vyre-test-support\")"
     },
     {
       "path": "vyre-test-support/src/data_type_variants.rs",
@@ -429,20 +436,26 @@
       "text": "panic!("
     },
     {
+      "path": "vyre-test-support/src/public_api.rs",
+      "line": 63,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 281,
+      "line": 283,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 300,
+      "line": 302,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 384,
+      "line": 386,
       "pattern": "documented_panic_contract",
       "text": "let path = entry.expect(\"source entry must be readable\").path();"
     },
@@ -538,31 +551,31 @@
     },
     {
       "path": "vyre-primitives/src/graph/vast_tree_walk.rs",
-      "line": 69,
+      "line": 68,
       "pattern": "documented_panic_contract",
       "text": "try_ast_walk_preorder(nodes, out, node_count, out_cap).unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "vyre-primitives/src/graph/vast_tree_walk.rs",
-      "line": 94,
+      "line": 93,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "vyre-primitives/src/graph/dominator_frontier.rs",
-      "line": 410,
+      "line": 409,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "vyre-primitives/src/graph/persistent_bfs/program.rs",
-      "line": 504,
+      "line": 495,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "vyre-primitives/src/graph/persistent_bfs/program.rs",
-      "line": 576,
+      "line": 567,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
@@ -574,7 +587,7 @@
     },
     {
       "path": "vyre-primitives/src/graph/csr_forward_or_changed/program_parallel_batch_global.rs",
-      "line": 68,
+      "line": 67,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
@@ -598,7 +611,7 @@
     },
     {
       "path": "vyre-primitives/src/fixpoint/persistent_fixpoint.rs",
-      "line": 737,
+      "line": 735,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: the program must declare a buffer named `{buffer}`.\");"
     },
@@ -694,31 +707,31 @@
     },
     {
       "path": "vyre-lower/src/artifact_golden.rs",
-      "line": 84,
+      "line": 86,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "vyre-lower/src/artifact_golden.rs",
-      "line": 120,
+      "line": 122,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "vyre-lower/src/artifact_golden.rs",
-      "line": 128,
+      "line": 130,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "vyre-lower/src/artifact_golden.rs",
-      "line": 148,
+      "line": 150,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"Fix: cannot create {}: {error}\", parent.display());"
     },
     {
       "path": "vyre-lower/src/artifact_golden.rs",
-      "line": 152,
+      "line": 154,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"Fix: cannot write {}: {error}\", path.display());"
     },
@@ -772,25 +785,25 @@
     },
     {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 32,
+      "line": 47,
       "pattern": "unwrap_call",
       "text": ".unwrap();"
     },
     {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 35,
+      "line": 51,
       "pattern": "unwrap_call",
       "text": ".unwrap();"
     },
     {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 43,
+      "line": 59,
       "pattern": "unwrap_call",
       "text": ".unwrap();"
     },
     {
       "path": "vyre-runtime/src/pipeline_cache/test_artifact_fixtures.rs",
-      "line": 44,
+      "line": 60,
       "pattern": "unwrap_call",
       "text": "compile(&request).unwrap()"
     },
@@ -829,18 +842,6 @@
       "line": 96,
       "pattern": "expect_call",
       "text": ".expect(\"production session initialized\")"
-    },
-    {
-      "path": "xtask-registry/src/release/conformance_matrix.rs",
-      "line": 169,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"backend registry startup failed: {error}\"));"
-    },
-    {
-      "path": "xtask-registry/src/release/conformance_matrix.rs",
-      "line": 173,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"backend registry startup failed: {error}\"))"
     }
   ],
   "release_blocking_findings": [],

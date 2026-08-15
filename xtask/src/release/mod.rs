@@ -14,6 +14,7 @@ pub mod launch_state;
 pub mod metadata_matrix;
 pub mod package_readiness;
 pub mod release_conformance;
+pub mod release_docs;
 pub mod release_train;
 pub mod repo_boundary;
 pub mod version_matrix;
@@ -29,6 +30,7 @@ pub static GATES: &[&dyn crate::gate::Gate] = &[
     &metadata_matrix::MetadataMatrixGate,
     &package_readiness::PackageReadinessGate,
     &release_conformance::ReleaseConformanceGate,
+    &release_docs::ReleaseDocs,
     &version_matrix::VersionMatrixGate,
     &crate::gate::Delegated {
         name: "backend-matrix",

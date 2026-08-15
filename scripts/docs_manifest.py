@@ -75,7 +75,7 @@ def generated_provenance(path: str) -> tuple[str, str] | None:
     if path.startswith("catalog/"):
         return "generated/OP_SCHEMA.json", "../xtask-registry/src/docs/catalog.rs"
     if path.startswith("release/"):
-        return "../release/release-train.toml", "../scripts/release_docs.py"
+        return "../release/release-train.toml", "../xtask/src/release/release_docs.rs"
     if path.startswith("testing/"):
         return "testing/TESTING.toml", "../scripts/testing_guides.py"
     return GENERATED_PROVENANCE.get(path)
@@ -153,7 +153,7 @@ def bootstrap() -> None:
         ("operation-registry", "../vyre-foundation/src/operation.rs"),
         ("optimization", "optimization/OWNERSHIP.toml"),
         ("public-facade", "../vyre/src/lib.rs"),
-        ("release-tooling", "../scripts/release_docs.py"),
+        ("release-tooling", "../xtask/src/release/release_docs.rs"),
         ("runtime", "../vyre-runtime/src/lib.rs"),
         ("testing", "testing/TESTING.toml"),
     ]

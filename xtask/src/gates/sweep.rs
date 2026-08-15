@@ -491,7 +491,11 @@ mod tests {
             "a subset nobody runs leaves every gate it holds named by nobody: {unrun_subset:?}"
         );
 
-        let with_unnamed: Vec<&str> = [names.clone(), vec!["file-size"]].concat();
+        // A gate no subset holds and no workflow names. `file-size` used to
+        // stand here and was wired into `source-rules` since, which made this
+        // direction assert nothing: the name has to be one the subsets do not
+        // carry for the check to be about wiring at all.
+        let with_unnamed: Vec<&str> = [names.clone(), vec!["unwired-gate"]].concat();
         let unnamed = workflow_failures(
             &with_unnamed,
             &["gates".to_string(), "dep-drift".to_string()],
@@ -499,7 +503,7 @@ mod tests {
         );
         assert_eq!(unnamed.len(), 1);
         assert!(
-            unnamed[0].contains("no workflow names `file-size`"),
+            unnamed[0].contains("no workflow names `unwired-gate`"),
             "got {unnamed:?}"
         );
 
@@ -508,7 +512,7 @@ mod tests {
             &[
                 "gates".to_string(),
                 "dep-drift".to_string(),
-                "file-size".to_string(),
+                "unwired-gate".to_string(),
             ],
             &every_subset,
         );

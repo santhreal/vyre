@@ -14,8 +14,11 @@ The crate has no concrete backend dependencies. It depends only on
 `vyre-foundation` and `vyre-spec`.
 
 [`src/organization.rs`](src/organization.rs) is the one classification
-of every Cargo feature. `tests/feature_classification.rs` fails if a
-new feature is added without being listed there.
+of every Cargo feature, and its own
+`every_cargo_feature_is_classified_exactly_once` test fails if a new
+feature is added without being listed there. The test lives beside the
+lists because they are crate-private: an integration test would force
+them into the public API.
 
 ## Domain layout (current tree, including the defect)
 

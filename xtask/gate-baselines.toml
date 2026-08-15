@@ -267,6 +267,10 @@ name = "release-conformance"
 findings = 0
 
 [[gate]]
+name = "release-docs"
+findings = 0
+
+[[gate]]
 name = "release-evidence"
 findings = 0
 

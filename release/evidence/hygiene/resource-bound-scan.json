@@ -1,7 +1,28 @@
 {
+  "source_fingerprint": "git:01bb4fcce8e0172b2b99cd2b0430d7c75da4f8b6:dirty=true:worktree=a6e2e434bb772dd5cbe5aa04c4e2e6bf6e0a264fbc46399973375e0c4cab138b",
   "schema_version": 1,
   "scan": "resource-bound",
-  "findings": [],
-  "release_blocking_findings": [],
-  "blockers": []
+  "findings": [
+    {
+      "path": "structure-gate/src/source_scan.rs",
+      "line": 30,
+      "pattern": "unbounded_read",
+      "text": "let text = fs::read_to_string(&file).ok()?;"
+    }
+  ],
+  "release_blocking_findings": [
+    {
+      "path": "structure-gate/src/source_scan.rs",
+      "line": 30,
+      "pattern": "unbounded_read",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    }
+  ],
+  "blockers": [
+    "1 release-blocking `resource-bound` finding(s) remain"
+  ]
 }
