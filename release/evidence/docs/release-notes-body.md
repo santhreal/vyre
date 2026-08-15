@@ -3488,6 +3488,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - Public API checks now discover every committed crate snapshot, parse exact
   package names, use dependency-noise-free output, and reject ordinary snapshot
   updates that remove or change an existing item.
+- The committed public-API snapshots for `vyre-driver`, `vyre-driver-spirv`,
+  `vyre-libs` and `vyre-pass-engine` record the surface those crates publish
+  now. The identifier type moved to
+  `vyre_foundation::ir::model::expr::ident::Ident` when that file was split,
+  the driver publishes `ErrorCode::summary`, `ErrorCode::ALL`, the
+  `error_catalog` module and `migration::DEPRECATED_OP_CODE`, the SPIR-V
+  registration no longer answers seven capability questions one method at a
+  time, and the tiled matmul builders are reachable through the composition
+  prelude. A stale snapshot fails the drift check for every crate at once,
+  which hides the next real change behind noise.
 - The release publish order is derived from the manifests instead of listed in
   source. It was a hardcoded table of twenty-six steps, and moving library code
   into `vyre-libs` gave that crate five consumers while the table still held it

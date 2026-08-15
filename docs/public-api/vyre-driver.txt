@@ -204,6 +204,7 @@ pub const fn vyre_driver::BindingSet::invocation_grid(&self) -> core::option::Op
 pub const fn vyre_driver::BindingSet::new(artifact: vyre_megakernel::Digest) -> Self
 pub const fn vyre_driver::BindingSet::resources(&self) -> &alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, vyre_driver::BoundResource>
 pub const fn vyre_driver::backend::ErrorCode::stable_id(self) -> u32
+pub const fn vyre_driver::backend::ErrorCode::summary(self) -> &'static str
 pub const fn vyre_driver::backend::RegexAcceleratorCapability::evidence(self, transfer_bytes: u64) -> vyre_driver::backend::RegexAcceleratorEvidence
 pub const fn vyre_driver::backend::RegexAcceleratorCapability::supported(backend: &'static str, accelerator_class: vyre_driver::backend::RegexAcceleratorClass, device_signature: &'static str, rule_capacity: u32, stream_mode: vyre_driver::backend::RegexAcceleratorStreamMode, match_schema: vyre_driver::backend::RegexAcceleratorMatchSchema) -> Self
 pub const fn vyre_driver::backend::RegexAcceleratorCapability::unsupported(backend: &'static str, accelerator_class: vyre_driver::backend::RegexAcceleratorClass, unsupported_reason: &'static str) -> Self
@@ -257,6 +258,7 @@ pub const fn vyre_driver::tuner::Tuner::mode(&self) -> vyre_driver::tuner::Mode
 pub const vyre_driver::CURRENT_PIPELINE_CACHE_KEY_VERSION: u32
 pub const vyre_driver::DEVICE_BUFFER_FEATURE: &str
 pub const vyre_driver::backend::DEVICE_BUFFER_FEATURE: &str
+pub const vyre_driver::backend::ErrorCode::ALL: &'static [Self]
 pub const vyre_driver::backend::REGEX_ACCELERATOR_EVIDENCE_SCHEMA_VERSION: u32
 pub const vyre_driver::bindless_policy::BINDLESS_RESOURCE_COUNT_THRESHOLD: u32
 pub const vyre_driver::cache_eviction_heat::DECAY_HALF_LIFE_S: f64
@@ -286,6 +288,7 @@ pub const vyre_driver::pipeline::cache::PipelineFeatureFlags::PUSH_CONSTANTS: Se
 pub const vyre_driver::pipeline::cache::PipelineFeatureFlags::SPECULATIVE: Self
 pub const vyre_driver::pipeline::cache::PipelineFeatureFlags::SUBGROUP_OPS: Self
 pub const vyre_driver::pipeline::cache::PipelineFeatureFlags::TENSOR_CORES: Self
+pub const vyre_driver::registry::migration::DEPRECATED_OP_CODE: &str
 pub const vyre_driver::shape_prediction::MAX_HISTORY: usize
 pub const vyre_driver::speculate::COUNTER_TAIL_BYTES: usize
 pub const vyre_driver::speculate::DEFAULT_THRESHOLD_PCT: u32
@@ -708,6 +711,7 @@ pub fn vyre_driver::backend::default_supported_ops() -> &'static std::collection
 pub fn vyre_driver::backend::default_supported_ops_with_trap() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub fn vyre_driver::backend::dialect_and_language_supported_ops() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub fn vyre_driver::backend::dialect_only_supported_ops() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
+pub fn vyre_driver::backend::error_catalog::render_catalog_toml() -> alloc::string::String
 pub fn vyre_driver::backend::lowering::LowerableOp::lower_binary(&self, ctx: &mut (), program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::backend::lowering::LowerableOp::lower_expression(&self, ctx: &mut dyn vyre_driver::backend::lowering::TargetGenCtx, program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::backend::lowering::TargetGenCtx::register_expression(&mut self, format: &str) -> core::result::Result<(), ()>
@@ -1302,6 +1306,7 @@ pub mod vyre_driver::arm_independence
 pub mod vyre_driver::async_copy_overlap
 pub mod vyre_driver::autotune_store
 pub mod vyre_driver::backend
+pub mod vyre_driver::backend::error_catalog
 pub mod vyre_driver::backend::lowering
 pub mod vyre_driver::backend::validation
 pub mod vyre_driver::benchmark_pass_selection
@@ -1807,7 +1812,7 @@ pub vyre_driver::ExtractionDevice::autotune_record: core::option::Option<&'a vyr
 pub vyre_driver::ExtractionDevice::hot_path: bool
 pub vyre_driver::ExtractionDevice::profile: &'a vyre_driver::device_profile::DeviceProfile
 pub vyre_driver::ExtractionDevice::trace_jit: core::option::Option<vyre_driver::trace_jit_policy::TraceJitInputs>
-pub vyre_driver::IndirectDispatch::count_buffer: vyre_foundation::ir_inner::model::expr::Ident
+pub vyre_driver::IndirectDispatch::count_buffer: vyre_foundation::ir_inner::model::expr::ident::Ident
 pub vyre_driver::IndirectDispatch::count_offset: u64
 pub vyre_driver::IntrinsicRegistrationError::UnknownId
 pub vyre_driver::IntrinsicRegistrationError::UnknownId::id: &'static str
@@ -2726,7 +2731,7 @@ pub vyre_driver::pipeline_fusion::CrossPipelineConflict::WriteWriteConflict
 pub vyre_driver::pipeline_fusion::CrossPipelineFusionDecision::Fuse
 pub vyre_driver::pipeline_fusion::CrossPipelineFusionDecision::KeepSeparate
 pub vyre_driver::pipeline_fusion::CrossPipelineFusionDecision::KeepSeparate::reason: vyre_driver::pipeline_fusion::CrossPipelineConflict
-pub vyre_driver::program_walks::IndirectDispatch::count_buffer: vyre_foundation::ir_inner::model::expr::Ident
+pub vyre_driver::program_walks::IndirectDispatch::count_buffer: vyre_foundation::ir_inner::model::expr::ident::Ident
 pub vyre_driver::program_walks::IndirectDispatch::count_offset: u64
 pub vyre_driver::program_walks::OutputBindingLayout::binding: u32
 pub vyre_driver::program_walks::OutputBindingLayout::layout: vyre_driver::OutputLayout

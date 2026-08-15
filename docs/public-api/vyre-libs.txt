@@ -21,13 +21,13 @@ impl vyre_libs::descriptor::BufferDescriptor
 impl vyre_libs::descriptor::ProgramDescriptor
 impl vyre_libs::math::linalg::Dot
 impl vyre_libs::math::linalg::MatmulBias
-impl vyre_libs::math::linalg::MatmulBiasTiled
 impl vyre_libs::nn::linear::Linear
 impl vyre_libs::parsing::lr_tables::Action
 impl vyre_libs::parsing::lr_tables::LrTables
 impl vyre_libs::parsing::source_cache::SourceHash
 impl vyre_libs::prelude::LayerNorm
 impl vyre_libs::prelude::Matmul
+impl vyre_libs::prelude::MatmulBiasTiled
 impl vyre_libs::prelude::MatmulTiled
 impl vyre_libs::tensor_ref::TensorRef
 impl<T> vyre_libs::parsing::source_cache::ParsedSourceLru<T>
@@ -243,12 +243,6 @@ pub fn vyre_libs::math::linalg::MatmulBias::new(a: vyre_libs::tensor_ref::Tensor
 pub fn vyre_libs::math::linalg::MatmulBias::with_region_generator(self, name: &'static str) -> Self
 pub fn vyre_libs::math::linalg::MatmulBias::with_tenant_id(self, tenant_id: u32) -> Self
 pub fn vyre_libs::math::linalg::MatmulBias::with_workgroup_size(self, size: [u32; 3]) -> Self
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::auto(a: vyre_libs::tensor_ref::TensorRef, b: vyre_libs::tensor_ref::TensorRef, bias: vyre_libs::tensor_ref::TensorRef, out: vyre_libs::tensor_ref::TensorRef) -> Self
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::tensor_ref::TensorRefError>
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::new(a: vyre_libs::tensor_ref::TensorRef, b: vyre_libs::tensor_ref::TensorRef, bias: vyre_libs::tensor_ref::TensorRef, out: vyre_libs::tensor_ref::TensorRef, tile: u32) -> Self
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::with_region_generator(self, name: &'static str) -> Self
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::with_tenant_id(self, tenant_id: u32) -> Self
-pub fn vyre_libs::math::linalg::MatmulBiasTiled::with_workgroup_size(self, size: [u32; 3]) -> Self
 pub fn vyre_libs::math::linalg::dot(lhs: &str, rhs: &str, out: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::math::linalg::matmul(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::math::linalg::matmul_bias(a: &str, b: &str, bias: &str, out: &str, m: u32, k: u32, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -427,6 +421,12 @@ pub fn vyre_libs::prelude::Matmul::new(a: vyre_libs::tensor_ref::TensorRef, b: v
 pub fn vyre_libs::prelude::Matmul::with_region_generator(self, name: &'static str) -> Self
 pub fn vyre_libs::prelude::Matmul::with_tenant_id(self, tenant_id: u32) -> Self
 pub fn vyre_libs::prelude::Matmul::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs::prelude::MatmulBiasTiled::auto(a: vyre_libs::tensor_ref::TensorRef, b: vyre_libs::tensor_ref::TensorRef, bias: vyre_libs::tensor_ref::TensorRef, out: vyre_libs::tensor_ref::TensorRef) -> Self
+pub fn vyre_libs::prelude::MatmulBiasTiled::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::tensor_ref::TensorRefError>
+pub fn vyre_libs::prelude::MatmulBiasTiled::new(a: vyre_libs::tensor_ref::TensorRef, b: vyre_libs::tensor_ref::TensorRef, bias: vyre_libs::tensor_ref::TensorRef, out: vyre_libs::tensor_ref::TensorRef, tile: u32) -> Self
+pub fn vyre_libs::prelude::MatmulBiasTiled::with_region_generator(self, name: &'static str) -> Self
+pub fn vyre_libs::prelude::MatmulBiasTiled::with_tenant_id(self, tenant_id: u32) -> Self
+pub fn vyre_libs::prelude::MatmulBiasTiled::with_workgroup_size(self, size: [u32; 3]) -> Self
 pub fn vyre_libs::prelude::MatmulTiled::auto(a: vyre_libs::tensor_ref::TensorRef, b: vyre_libs::tensor_ref::TensorRef, out: vyre_libs::tensor_ref::TensorRef) -> Self
 pub fn vyre_libs::prelude::MatmulTiled::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::tensor_ref::TensorRefError>
 pub fn vyre_libs::prelude::MatmulTiled::new(a: vyre_libs::tensor_ref::TensorRef, b: vyre_libs::tensor_ref::TensorRef, out: vyre_libs::tensor_ref::TensorRef, tile: u32) -> Self
@@ -449,6 +449,7 @@ pub fn vyre_libs::prelude::inflate::inflate_stored_block_tiled_then_aho_corasick
 pub fn vyre_libs::prelude::layer_norm(input: &str, output: &str, n: u32, eps: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::prelude::linear(x: &str, w: &str, b: &str, out: &str, in_dim: u32, out_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::prelude::matmul(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::prelude::matmul_bias_tiled(a: &str, b: &str, bias: &str, out: &str, m: u32, k: u32, n: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::prelude::matmul_tiled(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::prelude::matmul_tiled::matmul_bias_tiled(a: &str, b: &str, bias: &str, out: &str, m: u32, k: u32, n: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::prelude::matmul_tiled::matmul_tiled(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -543,14 +544,14 @@ pub fn vyre_libs::scan::substring_search(haystack: &str, needle: &str, matches: 
 pub fn vyre_libs::scan::try_reference_post_process(matches: &[vyre_foundation::match_result::ByteRange], haystack: &[u8]) -> core::result::Result<alloc::vec::Vec<vyre_libs::scan::post_process::PostProcessedMatch>, vyre_libs::scan::post_process::PostProcessError>
 pub fn vyre_libs::scan::try_reference_post_process_into(matches: &[vyre_foundation::match_result::ByteRange], haystack: &[u8], triples: &mut alloc::vec::Vec<vyre_primitives::matching::region::RegionTriple>, out: &mut alloc::vec::Vec<vyre_libs::scan::post_process::PostProcessedMatch>) -> core::result::Result<(), vyre_libs::scan::post_process::PostProcessError>
 pub fn vyre_libs::tensor_ref::TensorRef::element_count(&self) -> core::option::Option<u32>
-pub fn vyre_libs::tensor_ref::TensorRef::f16_1d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::Ident>, len: u32) -> Self
-pub fn vyre_libs::tensor_ref::TensorRef::f16_2d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::Ident>, rows: u32, cols: u32) -> Self
-pub fn vyre_libs::tensor_ref::TensorRef::f32_1d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::Ident>, len: u32) -> Self
-pub fn vyre_libs::tensor_ref::TensorRef::f32_2d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::Ident>, rows: u32, cols: u32) -> Self
+pub fn vyre_libs::tensor_ref::TensorRef::f16_1d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::ident::Ident>, len: u32) -> Self
+pub fn vyre_libs::tensor_ref::TensorRef::f16_2d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::ident::Ident>, rows: u32, cols: u32) -> Self
+pub fn vyre_libs::tensor_ref::TensorRef::f32_1d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::ident::Ident>, len: u32) -> Self
+pub fn vyre_libs::tensor_ref::TensorRef::f32_2d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::ident::Ident>, rows: u32, cols: u32) -> Self
 pub fn vyre_libs::tensor_ref::TensorRef::name_str(&self) -> &str
-pub fn vyre_libs::tensor_ref::TensorRef::new(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::Ident>, dtype: vyre_spec::data_type::DataType, shape: alloc::vec::Vec<u32>) -> Self
-pub fn vyre_libs::tensor_ref::TensorRef::u32_1d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::Ident>, len: u32) -> Self
-pub fn vyre_libs::tensor_ref::TensorRef::u32_2d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::Ident>, rows: u32, cols: u32) -> Self
+pub fn vyre_libs::tensor_ref::TensorRef::new(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::ident::Ident>, dtype: vyre_spec::data_type::DataType, shape: alloc::vec::Vec<u32>) -> Self
+pub fn vyre_libs::tensor_ref::TensorRef::u32_1d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::ident::Ident>, len: u32) -> Self
+pub fn vyre_libs::tensor_ref::TensorRef::u32_2d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::ident::Ident>, rows: u32, cols: u32) -> Self
 pub fn vyre_libs::tensor_ref::check_dtype(r: &vyre_libs::tensor_ref::TensorRef, expected: vyre_spec::data_type::DataType, op: &'static str) -> core::result::Result<(), vyre_libs::tensor_ref::TensorRefError>
 pub fn vyre_libs::tensor_ref::check_shape(r: &vyre_libs::tensor_ref::TensorRef, expected: &[u32], op: &'static str) -> core::result::Result<(), vyre_libs::tensor_ref::TensorRefError>
 pub fn vyre_libs::tensor_ref::check_unique_names(refs: &[&vyre_libs::tensor_ref::TensorRef], op: &'static str) -> core::result::Result<(), vyre_libs::tensor_ref::TensorRefError>
@@ -689,6 +690,7 @@ pub struct vyre_libs::parsing::source_cache::ParsedSourceLru<T>
 pub struct vyre_libs::parsing::source_cache::SourceHash(pub [u8; 32])
 pub struct vyre_libs::prelude::LayerNorm
 pub struct vyre_libs::prelude::Matmul
+pub struct vyre_libs::prelude::MatmulBiasTiled
 pub struct vyre_libs::prelude::MatmulTiled
 pub struct vyre_libs::prelude::matmul_tiled::MatmulBiasTiled
 pub struct vyre_libs::prelude::matmul_tiled::MatmulTiled
@@ -844,7 +846,7 @@ pub vyre_libs::ProgramDescriptor::entry_node_count: usize
 pub vyre_libs::ProgramDescriptor::rw_bytes_lower_bound: usize
 pub vyre_libs::ProgramDescriptor::workgroup_size: [u32; 3]
 pub vyre_libs::TensorRef::dtype: vyre_spec::data_type::DataType
-pub vyre_libs::TensorRef::name: vyre_foundation::ir_inner::model::expr::Ident
+pub vyre_libs::TensorRef::name: vyre_foundation::ir_inner::model::expr::ident::Ident
 pub vyre_libs::TensorRef::shape: alloc::sync::Arc<[u32]>
 pub vyre_libs::TensorRefError::DtypeMismatch
 pub vyre_libs::TensorRefError::DtypeMismatch::expected: vyre_spec::data_type::DataType
@@ -919,7 +921,7 @@ pub vyre_libs::prelude::BuildOptions::region_generator: core::option::Option<&'s
 pub vyre_libs::prelude::BuildOptions::tenant_id: core::option::Option<u32>
 pub vyre_libs::prelude::BuildOptions::workgroup_size: core::option::Option<[u32; 3]>
 pub vyre_libs::prelude::TensorRef::dtype: vyre_spec::data_type::DataType
-pub vyre_libs::prelude::TensorRef::name: vyre_foundation::ir_inner::model::expr::Ident
+pub vyre_libs::prelude::TensorRef::name: vyre_foundation::ir_inner::model::expr::ident::Ident
 pub vyre_libs::prelude::TensorRef::shape: alloc::sync::Arc<[u32]>
 pub vyre_libs::prelude::TensorRefError::DtypeMismatch
 pub vyre_libs::prelude::TensorRefError::DtypeMismatch::expected: vyre_spec::data_type::DataType
@@ -959,7 +961,7 @@ pub vyre_libs::scan::post_process::PostProcessedMatch::entropy_bits_per_byte: f3
 pub vyre_libs::scan::post_process::PostProcessedMatch::pattern_id: u32
 pub vyre_libs::scan::post_process::PostProcessedMatch::start: u32
 pub vyre_libs::tensor_ref::TensorRef::dtype: vyre_spec::data_type::DataType
-pub vyre_libs::tensor_ref::TensorRef::name: vyre_foundation::ir_inner::model::expr::Ident
+pub vyre_libs::tensor_ref::TensorRef::name: vyre_foundation::ir_inner::model::expr::ident::Ident
 pub vyre_libs::tensor_ref::TensorRef::shape: alloc::sync::Arc<[u32]>
 pub vyre_libs::tensor_ref::TensorRefError::DtypeMismatch
 pub vyre_libs::tensor_ref::TensorRefError::DtypeMismatch::expected: vyre_spec::data_type::DataType

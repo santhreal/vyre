@@ -102,7 +102,7 @@ pub fn vyre_pass_engine::optimizer::dce_via_encoded::gpu_dce(program: vyre_found
 pub fn vyre_pass_engine::optimizer::dead_branch::apply_dead_branch(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::encode::apply_live_bitset_mask(program: &vyre_foundation::ir_inner::model::program::definition::Program, encoded: &vyre_pass_engine::optimizer::encode::EncodedProgram, live_words: &[u32]) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::encode::apply_live_mask(program: &vyre_foundation::ir_inner::model::program::definition::Program, encoded: &vyre_pass_engine::optimizer::encode::EncodedProgram, live: &[bool]) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_pass_engine::optimizer::encode::collect_expr_var_refs(expr: &vyre_foundation::ir_inner::model::generated::Expr, out: &mut alloc::vec::Vec<vyre_foundation::ir_inner::model::expr::Ident>)
+pub fn vyre_pass_engine::optimizer::encode::collect_expr_var_refs(expr: &vyre_foundation::ir_inner::model::generated::Expr, out: &mut alloc::vec::Vec<vyre_foundation::ir_inner::model::expr::ident::Ident>)
 pub fn vyre_pass_engine::optimizer::encode::encode_program(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_pass_engine::optimizer::encode::EncodedProgram, vyre_pass_engine::optimizer::encode::EncodeError>
 pub fn vyre_pass_engine::optimizer::encode::reachable_prefix_len(entry: &[vyre_foundation::ir_inner::model::generated::Node]) -> usize
 pub fn vyre_pass_engine::optimizer::expr_arena::bin_op_from_tag(tag: u32) -> core::option::Option<vyre_spec::bin_op::BinOp>
@@ -189,7 +189,7 @@ pub vyre_pass_engine::optimizer::encode::EncodedProgram::node_count: u32
 pub vyre_pass_engine::optimizer::encode::EncodedProgram::node_tags: alloc::vec::Vec<u32>
 pub vyre_pass_engine::optimizer::encode::EncodedProgram::nodes: alloc::vec::Vec<u32>
 pub vyre_pass_engine::optimizer::encode::EncodedProgram::wrapping: core::option::Option<vyre_pass_engine::optimizer::encode::WrappingRegion>
-pub vyre_pass_engine::optimizer::encode::WrappingRegion::generator: vyre_foundation::ir_inner::model::expr::Ident
+pub vyre_pass_engine::optimizer::encode::WrappingRegion::generator: vyre_foundation::ir_inner::model::expr::ident::Ident
 pub vyre_pass_engine::optimizer::encode::WrappingRegion::source_region: core::option::Option<vyre_foundation::ir_inner::model::expr::GeneratorRef>
 pub vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding::arg0: alloc::vec::Vec<u32>
 pub vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding::arg1: alloc::vec::Vec<u32>
