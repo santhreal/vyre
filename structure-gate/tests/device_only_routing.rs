@@ -45,8 +45,8 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use super::source_scan::{is_word_byte, matching_brace, rust_sources_with_text};
-use super::workspace_root;
+use structure_gate::source_scan::{is_word_byte, matching_brace, rust_sources_with_text};
+use structure_gate::workspace_root;
 
 /// Variant names that mark an enum as a routing enum.
 ///

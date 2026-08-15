@@ -1638,3 +1638,23 @@ text = "The mdbook is deleted: 134 files, every `.md` under `docs/` plus `book.t
 id = "data-type-element-owner"
 category = "Changed"
 text = "`vyre-test-support` states which flat `DataType` forms exist in one ungated module, `data_type_elements`. The list sat inside `data_type_variants`, which is gated behind `ir-fixtures`, so a suite that wanted the flat element list had to enable a feature that pulls `vyre-foundation` into its dev graph; for `vyre-spec`, a leaf crate that declares `DataType` in the first place, that meant building the whole compiler to read a list of discriminants. `vyre-spec` is now a plain dependency of `vyre-test-support` and `ir-fixtures` means `vyre-foundation` plus `smallvec`. The IR fixture table builds its flat leaves from the same module, so the two tables cannot disagree about which element types exist."
+
+[[fragments]]
+id = "workspace-contract-target-owners"
+category = "Changed"
+text = "The workspace contract suite no longer compiles into `vyre-foundation`'s test target. `tests/contract/mod.rs` was included by `vyre-foundation/tests/contract_workspace.rs`, so a contract that judges the whole workspace could not run until the compiler built, and a crate that has nothing to do with the routing rule decided whether the rule ran at all. Each contract now sits with its subject: the device-only routing rule and the node child descent rule are `structure-gate` tests, which is the crate that reads source text and depends on no vyre crate; the validator rejection contract is a `vyre-foundation` test target; the public-API snapshot check joins the other snapshot contracts in `xtask`. `structure_gate::source_scan` owns the workspace source walk, the brace matcher and the comment and literal masker, and the masker is built on the same `opaque_span` the registration parser uses, so a masker and a parser can no longer disagree about whether a raw string or a nested block comment holds code."
+
+[[fragments]]
+id = "registry-link-coverage-contract"
+category = "Added"
+text = "`xtask-registry` asserts that every crate submitting an operation registration in source contributes at least one operation to the live registry. Dropping one of those links left the registry answering with hundreds of ids from the crate that was still linked, every count agreeing with itself, and a whole tier missing from the catalog. The expected set is read from the sources when the test runs, so a third registering crate is covered the day it registers. This replaces a smoke test that grepped `list-ops` output for one crate's prefix from another crate's test target."
+
+[[fragments]]
+id = "xtask-help-lists-every-subcommand"
+category = "Added"
+text = "`xtask --help` is checked against the registered subcommand table rather than against four names written into a test. A help route that prints the header and a truncated table still exits zero and still contains `SUBCOMMANDS:`, so the previous route check passed while commands were unreachable."
+
+[[fragments]]
+id = "public-api-refresh-build-jobs"
+category = "Fixed"
+text = "The public-API snapshot fixture no longer forces `CARGO_BUILD_JOBS=1` on the refresh it runs. Parallelism is declared in `.cargo/config.toml`, and an environment variable overrides it, so the fixture rebuilt one codegen job at a time regardless of the host."

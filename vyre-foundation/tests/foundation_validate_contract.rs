@@ -1,4 +1,4 @@
-// Workspace contract: foundation validator must stay rejection-complete.
+// The validator must stay rejection-complete.
 //
 // These tests encode non-negotiable validation contracts. If the validator
 // becomes permissive and starts accepting the malformed programs below, this

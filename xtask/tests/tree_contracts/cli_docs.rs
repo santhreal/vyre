@@ -85,6 +85,30 @@ fn every_xtask_binary_help_route_exits_zero() {
     }
 }
 
+/// `xtask --help` lists every registered subcommand.
+///
+/// WHY: a reader reaches a subcommand through help. A help route that prints a
+/// header and a truncated table, or that stops at the first row whose usage
+/// string is empty, still exits 0 and still contains `SUBCOMMANDS:`, so the
+/// route check above passes while the commands are unreachable. The expected
+/// set is the table itself, so a subcommand added tomorrow is judged tomorrow.
+#[test]
+fn xtask_help_lists_every_registered_subcommand() {
+    let output = run(env!("CARGO_BIN_EXE_xtask"), &["--help"]);
+    let help = String::from_utf8_lossy(&output.stdout);
+    let missing: Vec<&str> = xtask::subcommands::SUBCOMMANDS
+        .iter()
+        .map(|entry| entry.name)
+        .filter(|name| !help.contains(name))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "Fix: `xtask --help` omits {} registered subcommand(s): {}",
+        missing.len(),
+        missing.join(", ")
+    );
+}
+
 /// Prevents the historical `scaffold_rule --help` bug from creating a rule
 /// literally named `--help`, and pins that the tree it would write is resolved
 /// from the repository root instead of the process working directory. The old

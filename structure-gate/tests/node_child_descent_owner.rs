@@ -62,10 +62,10 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use super::source_scan::{
+use structure_gate::source_scan::{
     is_word_byte, mask_comments_and_strings, matching_brace, rust_sources_with_text,
 };
-use super::workspace_root;
+use structure_gate::workspace_root;
 
 /// Field names that hold child nodes on some `Node` variant.
 ///
