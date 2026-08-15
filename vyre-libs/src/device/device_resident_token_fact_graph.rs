@@ -62,6 +62,24 @@ pub struct TokenFactNode {
     pub payload_bytes: u64,
 }
 
+impl TokenFactNode {
+    /// One node in the shared payload slab.
+    #[must_use]
+    pub const fn new(
+        id: u32,
+        kind: TokenFactNodeKind,
+        payload_offset: u64,
+        payload_bytes: u64,
+    ) -> Self {
+        Self {
+            id,
+            kind,
+            payload_offset,
+            payload_bytes,
+        }
+    }
+}
+
 /// One logical edge before resident CSR packing.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TokenFactEdge {
@@ -71,6 +89,14 @@ pub struct TokenFactEdge {
     pub to: u32,
     /// Edge class.
     pub kind: TokenFactEdgeKind,
+}
+
+impl TokenFactEdge {
+    /// One dependency edge between two producer-defined node ids.
+    #[must_use]
+    pub const fn new(from: u32, to: u32, kind: TokenFactEdgeKind) -> Self {
+        Self { from, to, kind }
+    }
 }
 
 /// CSR layout shared by parser, semantic, diagnostic, and dataflow execution.
@@ -587,13 +613,13 @@ mod tests {
     fn token_fact_graph_packs_stable_shared_csr() {
         let graph = plan_device_resident_token_fact_graph(
             &[
-                node(20, TokenFactNodeKind::Fact, 12, 4),
-                node(10, TokenFactNodeKind::Token, 0, 4),
-                node(30, TokenFactNodeKind::Diagnostic, 20, 8),
+                TokenFactNode::new(20, TokenFactNodeKind::Fact, 12, 4),
+                TokenFactNode::new(10, TokenFactNodeKind::Token, 0, 4),
+                TokenFactNode::new(30, TokenFactNodeKind::Diagnostic, 20, 8),
             ],
             &[
-                edge(20, 30, TokenFactEdgeKind::DiagnosticProvenance),
-                edge(10, 20, TokenFactEdgeKind::SemanticFact),
+                TokenFactEdge::new(20, 30, TokenFactEdgeKind::DiagnosticProvenance),
+                TokenFactEdge::new(10, 20, TokenFactEdgeKind::SemanticFact),
             ],
             32,
         )
@@ -625,12 +651,12 @@ mod tests {
     fn token_fact_graph_deduplicates_parallel_edges_deterministically() {
         let graph = plan_device_resident_token_fact_graph(
             &[
-                node(2, TokenFactNodeKind::Fact, 4, 4),
-                node(1, TokenFactNodeKind::Token, 0, 4),
+                TokenFactNode::new(2, TokenFactNodeKind::Fact, 4, 4),
+                TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 4),
             ],
             &[
-                edge(1, 2, TokenFactEdgeKind::SemanticFact),
-                edge(1, 2, TokenFactEdgeKind::SemanticFact),
+                TokenFactEdge::new(1, 2, TokenFactEdgeKind::SemanticFact),
+                TokenFactEdge::new(1, 2, TokenFactEdgeKind::SemanticFact),
             ],
             8,
         )
@@ -645,8 +671,8 @@ mod tests {
         assert_eq!(
             plan_device_resident_token_fact_graph(
                 &[
-                    node(1, TokenFactNodeKind::Token, 0, 1),
-                    node(1, TokenFactNodeKind::Fact, 1, 1),
+                    TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 1),
+                    TokenFactNode::new(1, TokenFactNodeKind::Fact, 1, 1),
                 ],
                 &[],
                 2,
@@ -656,8 +682,8 @@ mod tests {
         );
         assert_eq!(
             plan_device_resident_token_fact_graph(
-                &[node(1, TokenFactNodeKind::Token, 0, 1)],
-                &[edge(1, 2, TokenFactEdgeKind::SemanticFact)],
+                &[TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 1)],
+                &[TokenFactEdge::new(1, 2, TokenFactEdgeKind::SemanticFact)],
                 1,
             )
             .expect_err("unknown edge nodes should fail"),
@@ -665,7 +691,7 @@ mod tests {
         );
         assert_eq!(
             plan_device_resident_token_fact_graph(
-                &[node(1, TokenFactNodeKind::Token, 8, 8)],
+                &[TokenFactNode::new(1, TokenFactNodeKind::Token, 8, 8)],
                 &[],
                 12,
             )
@@ -687,7 +713,7 @@ mod tests {
         for order in [[9_u32, 4, 9, 4], [4, 9, 4, 9], [4, 4, 9, 9]] {
             let nodes = order
                 .iter()
-                .map(|id| node(*id, TokenFactNodeKind::Token, 0, 0))
+                .map(|id| TokenFactNode::new(*id, TokenFactNodeKind::Token, 0, 0))
                 .collect::<Vec<_>>();
             assert_eq!(
                 plan_device_resident_token_fact_graph(&nodes, &[], 4)
@@ -703,9 +729,9 @@ mod tests {
         let mut nodes = Vec::new();
         let mut edges = Vec::new();
         for id in (0..1024_u32).rev() {
-            nodes.push(node(id, TokenFactNodeKind::Token, u64::from(id), 1));
+            nodes.push(TokenFactNode::new(id, TokenFactNodeKind::Token, u64::from(id), 1));
             if id > 0 {
-                edges.push(edge(id - 1, id, TokenFactEdgeKind::TokenFlow));
+                edges.push(TokenFactEdge::new(id - 1, id, TokenFactEdgeKind::TokenFlow));
             }
         }
 
@@ -723,13 +749,13 @@ mod tests {
     fn token_fact_graph_scratch_reuses_staging_allocations() {
         let mut scratch = DeviceResidentTokenFactGraphScratch::new();
         let nodes = [
-            node(3, TokenFactNodeKind::Fact, 2, 1),
-            node(1, TokenFactNodeKind::Token, 0, 1),
-            node(2, TokenFactNodeKind::Semantic, 1, 1),
+            TokenFactNode::new(3, TokenFactNodeKind::Fact, 2, 1),
+            TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 1),
+            TokenFactNode::new(2, TokenFactNodeKind::Semantic, 1, 1),
         ];
         let edges = [
-            edge(1, 2, TokenFactEdgeKind::SemanticFact),
-            edge(2, 3, TokenFactEdgeKind::FactDependency),
+            TokenFactEdge::new(1, 2, TokenFactEdgeKind::SemanticFact),
+            TokenFactEdge::new(2, 3, TokenFactEdgeKind::FactDependency),
         ];
         plan_device_resident_token_fact_graph_with_scratch(&nodes, &edges, 3, &mut scratch)
             .expect("Fix: first scratch-backed token/fact graph should pack");
@@ -757,10 +783,10 @@ mod tests {
     fn layout_scratch_reuses_the_out_degree_buffer() {
         let mut scratch = DeviceResidentTokenFactGraphScratch::new();
         let nodes = (0..512_u32)
-            .map(|id| node(id, TokenFactNodeKind::Fact, u64::from(id) * 4, 4))
+            .map(|id| TokenFactNode::new(id, TokenFactNodeKind::Fact, u64::from(id) * 4, 4))
             .collect::<Vec<_>>();
         let edges = (1..512_u32)
-            .map(|id| edge(0, id, TokenFactEdgeKind::FactDependency))
+            .map(|id| TokenFactEdge::new(0, id, TokenFactEdgeKind::FactDependency))
             .collect::<Vec<_>>();
         let graph = plan_device_resident_token_fact_graph(&nodes, &edges, 2_048)
             .expect("Fix: profiling graph should pack");
@@ -781,13 +807,13 @@ mod tests {
     fn layout_accounts_for_the_resident_byte_envelope() {
         let graph = plan_device_resident_token_fact_graph(
             &[
-                node(1, TokenFactNodeKind::Token, 0, 8),
-                node(2, TokenFactNodeKind::Semantic, 8, 8),
-                node(3, TokenFactNodeKind::Fact, 16, 8),
+                TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 8),
+                TokenFactNode::new(2, TokenFactNodeKind::Semantic, 8, 8),
+                TokenFactNode::new(3, TokenFactNodeKind::Fact, 16, 8),
             ],
             &[
-                edge(1, 2, TokenFactEdgeKind::SemanticFact),
-                edge(2, 3, TokenFactEdgeKind::FactDependency),
+                TokenFactEdge::new(1, 2, TokenFactEdgeKind::SemanticFact),
+                TokenFactEdge::new(2, 3, TokenFactEdgeKind::FactDependency),
             ],
             24,
         )
@@ -811,16 +837,16 @@ mod tests {
     fn layout_exports_max_out_degree_for_hub_heavy_queue_planning() {
         let graph = plan_device_resident_token_fact_graph(
             &[
-                node(1, TokenFactNodeKind::Fact, 0, 4),
-                node(2, TokenFactNodeKind::Fact, 4, 4),
-                node(3, TokenFactNodeKind::Fact, 8, 4),
-                node(4, TokenFactNodeKind::Fact, 12, 4),
+                TokenFactNode::new(1, TokenFactNodeKind::Fact, 0, 4),
+                TokenFactNode::new(2, TokenFactNodeKind::Fact, 4, 4),
+                TokenFactNode::new(3, TokenFactNodeKind::Fact, 8, 4),
+                TokenFactNode::new(4, TokenFactNodeKind::Fact, 12, 4),
             ],
             &[
-                edge(1, 2, TokenFactEdgeKind::FactDependency),
-                edge(1, 3, TokenFactEdgeKind::FactDependency),
-                edge(1, 4, TokenFactEdgeKind::FactDependency),
-                edge(2, 3, TokenFactEdgeKind::FactDependency),
+                TokenFactEdge::new(1, 2, TokenFactEdgeKind::FactDependency),
+                TokenFactEdge::new(1, 3, TokenFactEdgeKind::FactDependency),
+                TokenFactEdge::new(1, 4, TokenFactEdgeKind::FactDependency),
+                TokenFactEdge::new(2, 3, TokenFactEdgeKind::FactDependency),
             ],
             16,
         )
@@ -843,12 +869,12 @@ mod tests {
         for case_index in 0..4096_u64 {
             let node_count = 1 + (next_u64(&mut state) % 64) as u32;
             let nodes = (0..node_count)
-                .map(|index| node(index + 1, TokenFactNodeKind::Fact, u64::from(index) * 4, 4))
+                .map(|index| TokenFactNode::new(index + 1, TokenFactNodeKind::Fact, u64::from(index) * 4, 4))
                 .collect::<Vec<_>>();
             let mut edges = Vec::new();
             if case_index % 4 == 0 {
                 for to in 2..=node_count {
-                    edges.push(edge(1, to, TokenFactEdgeKind::FactDependency));
+                    edges.push(TokenFactEdge::new(1, to, TokenFactEdgeKind::FactDependency));
                 }
             }
             let attempts = next_u64(&mut state) % (u64::from(node_count) * 5 + 1);
@@ -860,7 +886,7 @@ mod tests {
                 } else {
                     TokenFactEdgeKind::DiagnosticProvenance
                 };
-                edges.push(edge(from, to, kind));
+                edges.push(TokenFactEdge::new(from, to, kind));
             }
             let graph =
                 plan_device_resident_token_fact_graph(&nodes, &edges, u64::from(node_count) * 4)
@@ -902,17 +928,17 @@ mod tests {
     fn layout_profiles_large_graph_with_bounded_top_rank_storage() {
         let node_count = 32_770_u32;
         let nodes = (0..node_count)
-            .map(|index| node(index + 1, TokenFactNodeKind::Fact, u64::from(index) * 4, 4))
+            .map(|index| TokenFactNode::new(index + 1, TokenFactNodeKind::Fact, u64::from(index) * 4, 4))
             .collect::<Vec<_>>();
         let mut edges = Vec::with_capacity(32_858);
         for to in 2..=51 {
-            edges.push(edge(1, to, TokenFactEdgeKind::FactDependency));
+            edges.push(TokenFactEdge::new(1, to, TokenFactEdgeKind::FactDependency));
         }
         for to in 3..=42 {
-            edges.push(edge(2, to, TokenFactEdgeKind::FactDependency));
+            edges.push(TokenFactEdge::new(2, to, TokenFactEdgeKind::FactDependency));
         }
         for from in 3..=node_count {
-            edges.push(edge(from, 1, TokenFactEdgeKind::FactDependency));
+            edges.push(TokenFactEdge::new(from, 1, TokenFactEdgeKind::FactDependency));
         }
         let graph =
             plan_device_resident_token_fact_graph(&nodes, &edges, u64::from(node_count) * 4)
@@ -968,7 +994,7 @@ mod tests {
     #[test]
     fn layout_rejects_public_graphs_with_invalid_csr_rows() {
         let mut graph = plan_device_resident_token_fact_graph(
-            &[node(1, TokenFactNodeKind::Fact, 0, 4)],
+            &[TokenFactNode::new(1, TokenFactNodeKind::Fact, 0, 4)],
             &[],
             4,
         )
@@ -984,23 +1010,6 @@ mod tests {
         );
     }
 
-    fn node(
-        id: u32,
-        kind: TokenFactNodeKind,
-        payload_offset: u64,
-        payload_bytes: u64,
-    ) -> TokenFactNode {
-        TokenFactNode {
-            id,
-            kind,
-            payload_offset,
-            payload_bytes,
-        }
-    }
-
-    fn edge(from: u32, to: u32, kind: TokenFactEdgeKind) -> TokenFactEdge {
-        TokenFactEdge { from, to, kind }
-    }
 
     fn next_u64(state: &mut u64) -> u64 {
         *state = state

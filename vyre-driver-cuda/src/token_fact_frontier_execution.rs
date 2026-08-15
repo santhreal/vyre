@@ -514,13 +514,13 @@ mod tests {
     fn planner_combines_token_fact_residency_with_frontier_barriers() {
         let graph = plan_device_resident_token_fact_graph(
             &[
-                node(1, TokenFactNodeKind::Token, 0, 16),
-                node(2, TokenFactNodeKind::Semantic, 16, 16),
-                node(3, TokenFactNodeKind::Fact, 32, 16),
+                TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 16),
+                TokenFactNode::new(2, TokenFactNodeKind::Semantic, 16, 16),
+                TokenFactNode::new(3, TokenFactNodeKind::Fact, 32, 16),
             ],
             &[
-                edge(1, 2, TokenFactEdgeKind::SemanticFact),
-                edge(2, 3, TokenFactEdgeKind::FactDependency),
+                TokenFactEdge::new(1, 2, TokenFactEdgeKind::SemanticFact),
+                TokenFactEdge::new(2, 3, TokenFactEdgeKind::FactDependency),
             ],
             48,
         )
@@ -578,7 +578,7 @@ mod tests {
     fn planner_sizes_resident_work_queue_for_edge_expansion_headroom() {
         let nodes = (0_u32..5)
             .map(|index| {
-                node(
+                TokenFactNode::new(
                     index + 1,
                     TokenFactNodeKind::Fact,
                     u64::from(index) * 16,
@@ -632,7 +632,7 @@ mod tests {
     fn planner_avoids_total_edge_queue_reservation_for_sparse_dense_graph_frontiers() {
         let nodes = (0_u32..100)
             .map(|index| {
-                node(
+                TokenFactNode::new(
                     index + 1,
                     TokenFactNodeKind::Fact,
                     u64::from(index) * 16,
@@ -686,7 +686,7 @@ mod tests {
     fn planner_reserves_hub_degree_headroom_for_sparse_star_frontier() {
         let nodes = (0_u32..100)
             .map(|index| {
-                node(
+                TokenFactNode::new(
                     index + 1,
                     TokenFactNodeKind::Fact,
                     u64::from(index) * 16,
@@ -695,7 +695,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
         let edges = (2_u32..=100)
-            .map(|to| edge(1, to, TokenFactEdgeKind::FactDependency))
+            .map(|to| TokenFactEdge::new(1, to, TokenFactEdgeKind::FactDependency))
             .collect::<Vec<_>>();
         let graph = plan_device_resident_token_fact_graph(&nodes, &edges, 1_600)
             .expect("Fix: hub-heavy token/fact graph should pack");
@@ -739,7 +739,7 @@ mod tests {
     fn planner_uses_top_degree_profile_for_power_law_frontier_headroom() {
         let nodes = (0_u32..128)
             .map(|index| {
-                node(
+                TokenFactNode::new(
                     index + 1,
                     TokenFactNodeKind::Fact,
                     u64::from(index) * 16,
@@ -748,12 +748,12 @@ mod tests {
             })
             .collect::<Vec<_>>();
         let mut edges = (2_u32..=65)
-            .map(|to| edge(1, to, TokenFactEdgeKind::FactDependency))
+            .map(|to| TokenFactEdge::new(1, to, TokenFactEdgeKind::FactDependency))
             .collect::<Vec<_>>();
         for from in 2_u32..=128 {
             for step in 1_u32..=4 {
                 let to = ((from - 1 + step) % 128) + 1;
-                edges.push(edge(from, to, TokenFactEdgeKind::FactDependency));
+                edges.push(TokenFactEdge::new(from, to, TokenFactEdgeKind::FactDependency));
             }
         }
         let graph = plan_device_resident_token_fact_graph(&nodes, &edges, 2_048)
@@ -874,7 +874,7 @@ mod tests {
     fn planner_clamps_queue_expansion_after_graph_and_frontier_reserve() {
         let nodes = (0_u32..10)
             .map(|index| {
-                node(
+                TokenFactNode::new(
                     index + 1,
                     TokenFactNodeKind::Fact,
                     u64::from(index) * 16,
@@ -975,7 +975,7 @@ mod tests {
     #[test]
     fn planner_rejects_payload_that_exceeds_budget_before_frontier_planning() {
         let graph = plan_device_resident_token_fact_graph(
-            &[node(1, TokenFactNodeKind::Token, 0, 64)],
+            &[TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 64)],
             &[],
             64,
         )
@@ -1091,7 +1091,7 @@ mod tests {
     #[test]
     fn planner_accounts_warm_resident_graph_without_upload_pressure() {
         let graph = plan_device_resident_token_fact_graph(
-            &[node(1, TokenFactNodeKind::Token, 0, 16)],
+            &[TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 16)],
             &[],
             16,
         )
@@ -1162,7 +1162,7 @@ mod tests {
     #[test]
     fn planner_rejects_frontier_waves_without_matching_active_item_counts() {
         let graph = plan_device_resident_token_fact_graph(
-            &[node(1, TokenFactNodeKind::Token, 0, 16)],
+            &[TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 16)],
             &[],
             16,
         )
@@ -1208,7 +1208,7 @@ mod tests {
     #[test]
     fn planner_does_not_allocate_resident_work_queue_for_empty_frontier() {
         let graph = plan_device_resident_token_fact_graph(
-            &[node(1, TokenFactNodeKind::Token, 0, 16)],
+            &[TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 16)],
             &[],
             16,
         )
@@ -1246,30 +1246,13 @@ mod tests {
         assert!(plan.work_queue.final_only_host_sync);
     }
 
-    fn node(
-        id: u32,
-        kind: TokenFactNodeKind,
-        payload_offset: u64,
-        payload_bytes: u64,
-    ) -> TokenFactNode {
-        TokenFactNode {
-            id,
-            kind,
-            payload_offset,
-            payload_bytes,
-        }
-    }
-
-    fn edge(from: u32, to: u32, kind: TokenFactEdgeKind) -> TokenFactEdge {
-        TokenFactEdge { from, to, kind }
-    }
 
     fn complete_directed_edges(node_count: u32, kind: TokenFactEdgeKind) -> Vec<TokenFactEdge> {
         let mut edges = Vec::new();
         for from in 1..=node_count {
             for to in 1..=node_count {
                 if from != to {
-                    edges.push(edge(from, to, kind));
+                    edges.push(TokenFactEdge::new(from, to, kind));
                 }
             }
         }
