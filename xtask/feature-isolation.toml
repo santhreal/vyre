@@ -741,11 +741,6 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
-feature = "cat"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
 feature = "cpu-parity"
 outcome = "compiles"
 
@@ -757,16 +752,6 @@ outcome = "compiles"
 [[pair]]
 member = "vyre-primitives"
 feature = "decode"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "dnnf"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "effects"
 outcome = "compiles"
 
 [[pair]]
@@ -866,22 +851,12 @@ outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
-feature = "types"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
 feature = "visual"
 outcome = "compiles"
 
 [[pair]]
 member = "vyre-primitives"
 feature = "vyre-foundation"
-outcome = "compiles"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "zx"
 outcome = "compiles"
 
 [[pair]]

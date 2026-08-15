@@ -1,5 +1,12 @@
+# `release_contract_path` names the document a release is judged against. It
+# pointed at `../docs/RELEASE.md`, an operator runbook deleted with the mdbook,
+# so the gate opened every run with a blocker naming a file no clone has. The
+# surviving authority is the release train beside this manifest: it declares the
+# versions, the product-scoped tags, the package membership, the repository, and
+# the three approval-gated external actions, and unlike a prose runbook it is
+# the file every generator and gate already reads.
 schema_version = 2
-release_contract_path = "../docs/RELEASE.md"
+release_contract_path = "release-train.toml"
 
 [release]
 vyre = "0.7.2"
@@ -205,8 +212,8 @@ title = "Public launch state preserves approval-gated external actions"
 status = "closed"
 evidence = [
   "cargo_full run --bin xtask -- release-evidence",
-  "cargo_full run --bin xtask -- vyre-release-gate --prepublish",
   "cargo_full run --bin xtask -- vyre-release-gate",
+  "cargo_full run --bin xtask -- vyre-release-gate --launch-complete",
   "cargo_full run --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json",
   "evidence/final/release-evidence-run.json",
   "evidence/final/expected-artifacts.json",

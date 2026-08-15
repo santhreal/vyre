@@ -15,7 +15,6 @@ MAX_INPUT_BYTES = 16_777_216
 CURRENT_DOCS = [
     Path("docs/ARCHITECTURE.md"),
 ]
-RFC = Path("docs/rfcs/0005-persistent-megakernel.md")
 MANIFEST = Path("docs/DOCS.toml")
 
 
@@ -244,15 +243,6 @@ def validate(root: Path) -> None:
         if page_status.get(path) != "current":
             raise ContractError(f"`{MANIFEST}` must classify `{path}` as current")
 
-    if (root / RFC).is_file():
-        rfc_text = read_text(root / RFC)
-        texts[RFC] = rfc_text
-        verification_date(RFC, rfc_text)
-        if "Status: **Superseded**" not in rfc_text:
-            raise ContractError(f"`{RFC}` must be explicitly superseded")
-        if page_status.get(RFC) != "superseded":
-            raise ContractError(f"`{MANIFEST}` must classify `{RFC}` as superseded")
-
     stale_absent = [
         r"planned\s+`?vyre-megakernel`?",
         r"planned compiler crate",
@@ -272,7 +262,7 @@ def validate(root: Path) -> None:
             r"codex-[0-9a-z]+",
         ]
         forbid_patterns(path, text, forbidden)
-        if path in CURRENT_DOCS or path == RFC:
+        if path in CURRENT_DOCS:
             forbid_patterns(path, text, stale_absent)
 
     architecture = texts[Path("docs/ARCHITECTURE.md")]
@@ -291,19 +281,6 @@ def validate(root: Path) -> None:
         ],
     )
 
-    if RFC in texts:
-        require_tokens(
-            RFC,
-            texts[RFC],
-            [
-                "Historical motivation",
-                "Superseded design",
-                "Current resolution",
-                "does not support a general",
-                "vyre-megakernel",
-                "workspace member",
-            ],
-        )
     validate_optimization_lanes(root, workspace_package_names(root, members))
 
 

@@ -129,7 +129,7 @@ git push origin "$release_branch"
 git push origin "$VYRE_RELEASE_TAG_VYRE_RC"
 
 
-"$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate --prepublish
+"$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate
 VYRE_RELEASE_APPROVED="$VYRE_RELEASE_PUBLISH_APPROVAL_TOKEN" bash scripts/publish-release.sh
 printf 'verified GitHub repository is public: %s\n' "$VYRE_RELEASE_PUBLIC_REPO"
 
@@ -137,7 +137,7 @@ git tag -a "$VYRE_RELEASE_TAG_VYRE" -m "$VYRE_RELEASE_TAG_VYRE"
 git push origin "$VYRE_RELEASE_TAG_VYRE"
 
 
-release_notes="docs/release/v${VYRE_RELEASE_VYRE_VERSION}.md"
+release_notes="release/evidence/docs/release-notes-body.md"
 gh release create "$VYRE_RELEASE_TAG_VYRE" \
     --repo "$VYRE_RELEASE_VYRE_REPOSITORY" \
     --title "$VYRE_RELEASE_DISPLAY" \
@@ -191,7 +191,7 @@ jq -n \
     }' > release/evidence/final/public-launch-completion.json
 
 "$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json
-"$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate
+"$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate --launch-complete
 
 git add \
     release/evidence/package/publish-readiness.json \

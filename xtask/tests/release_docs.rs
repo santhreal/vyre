@@ -83,7 +83,7 @@ packages = ["a"]
     .expect("Fix: fixture changelog must be writable");
 }
 
-/// Locks the repository release surfaces to the train, fragment, and generated-view authorities.
+/// Locks the repository release surfaces to the train and fragment authorities.
 #[test]
 fn workspace_release_documents_are_current() {
     let output = run_generator(&workspace_root(), "--check");
@@ -94,11 +94,12 @@ fn workspace_release_documents_are_current() {
     );
     assert_eq!(
         String::from_utf8(output.stdout).expect("Fix: generator output must be UTF-8"),
-        "release-docs: release train, fragments, and changelog agree\n"
+        "release-docs: release train, fragments, changelog, and release notes agree\n"
     );
 }
 
-/// Proves one write derives the changelog section from the train and the fragments.
+/// Proves one write derives the changelog's release identities and its change
+/// list from the train and the fragments, with no hand-maintained copy between.
 #[test]
 fn write_derives_the_changelog_from_fragments() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
@@ -114,24 +115,31 @@ fn write_derives_the_changelog_from_fragments() {
         .expect("Fix: generated changelog must be readable");
     assert!(changelog.contains("- The exact release regression is fixed."));
     assert!(!changelog.contains("stale text"));
-
+    assert!(changelog.contains(
+        "Vyre 1.2.3 releases from candidate tag `vyre-v1.2.3-rc.1` and final tag `vyre-v1.2.3`."
+    ));
+    assert!(changelog.contains("Backend crates carried at that version: `a@1.2.3`."));
+    assert!(changelog.contains("## [1.2.2]"));
 }
 
-/// Prevents a hand edit to generated changelog content from surviving `--check`.
-///
-/// The generated artifact is the `[Unreleased]` section of `CHANGELOG.md`. Text
-/// edited into it is a release note nobody derived from a fragment, so `--check`
-/// has to refuse it rather than read it as current.
+/// Prevents a hand edit to the generated changelog section from silently
+/// changing what a release claims to contain.
 #[test]
 fn check_rejects_generated_changelog_drift() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), 3, false);
     assert!(run_generator(temp.path(), "--write").status.success());
+    let changelog_path = temp.path().join("CHANGELOG.md");
+    let generated = fs::read_to_string(&changelog_path)
+        .expect("Fix: generated fixture changelog must be readable");
     fs::write(
-        temp.path().join("CHANGELOG.md"),
-        "# Changelog\n\n## [Unreleased]\n\n### Fixed\n\n- locally edited release note\n\n## [1.2.2]\n\n- prior release\n",
+        &changelog_path,
+        generated.replace(
+            "- The exact release regression is fixed.",
+            "- A hand-written claim no fragment backs.",
+        ),
     )
-    .expect("Fix: stale fixture changelog must be writable");
+    .expect("Fix: drifted fixture changelog must be writable");
 
     let output = run_generator(temp.path(), "--check");
     assert!(!output.status.success());
@@ -160,7 +168,12 @@ fn incomplete_external_action_boundary_fails_closed() {
         .contains("exactly three approval-gated external actions"));
 }
 
-/// Prevents release notes from passing when the train adds a token that the published notes omit.
+/// Prevents release notes from passing when the train adds a token that the changelog omits.
+///
+/// The assertion below named `missing required token`, which the generator has
+/// never emitted: it reports `CHANGELOG.md: missing required release token`, so
+/// the test was red on arrival and said nothing about the rule it guards. The
+/// document name is part of the message and is asserted with it.
 #[test]
 fn missing_release_note_token_fails_closed() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
@@ -180,7 +193,7 @@ fn missing_release_note_token_fails_closed() {
     let output = run_generator(temp.path(), "--check");
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr)
-        .contains("missing required release token `required-but-absent`"));
+        .contains("CHANGELOG.md: missing required release token `required-but-absent`"));
 }
 
 /// Prevents completion evidence from claiming publish or push success before those actions run.
@@ -192,8 +205,12 @@ fn guarded_launch_order_fails_closed_when_candidate_tags_are_reordered() {
     let launch_path = temp.path().join("scripts/final-launch.sh");
     let launch =
         fs::read_to_string(&launch_path).expect("Fix: fixture launch script must be readable");
-    let candidate = "git tag -a \"$VYRE_RELEASE_TAG_VYRE_RC\" -m \"$VYRE_RELEASE_TAG_VYRE_RC\"";
-    let prepublish = "\"$CARGO_RUNNER\" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate --prepublish";
+    // Both tokens carry their trailing newline: the launch-complete invocation
+    // one screen below has the prepublication command as a strict prefix, so a
+    // newline-free token would rewrite that line too and the swap would prove
+    // nothing about ordering.
+    let candidate = "git tag -a \"$VYRE_RELEASE_TAG_VYRE_RC\" -m \"$VYRE_RELEASE_TAG_VYRE_RC\"\n";
+    let prepublish = "\"$CARGO_RUNNER\" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate\n";
     let reordered = launch
         .replace(candidate, "__VYRE_RELEASE_ORDER_SWAP__")
         .replace(prepublish, candidate)
