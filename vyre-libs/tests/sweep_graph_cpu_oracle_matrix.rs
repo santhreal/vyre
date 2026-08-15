@@ -140,39 +140,6 @@ fn oracle_bidirectional_step(
     out
 }
 
-fn oracle_persistent_bfs(
-    node_count: u32,
-    offsets: &[u32],
-    targets: &[u32],
-    masks: &[u32],
-    frontier: &[u32],
-    allow_mask: u32,
-    max_iters: u32,
-) -> (Vec<u32>, u32) {
-    let words = bitset_words(node_count);
-    let mut out = frontier.to_vec();
-    out.resize(words, 0);
-    let mut changed = 0;
-    for _ in 0..max_iters {
-        let step =
-            csr_sweep::oracle_forward_step(node_count, offsets, targets, masks, &out, allow_mask);
-        let mut step_changed = false;
-        for word in 0..words {
-            let before = out[word];
-            out[word] |= step[word];
-            if out[word] != before {
-                step_changed = true;
-            }
-        }
-        if step_changed {
-            changed = 1;
-        } else {
-            break;
-        }
-    }
-    (out, changed)
-}
-
 /// Independent model of the reverse-or-changed FIXED POINT: the set of nodes that can
 /// reach an initial-frontier node along kind-passing edges. Built as an explicit reverse
 /// adjacency list + an iterative worklist BFS, a wholly different structure from the
@@ -361,7 +328,7 @@ fn generated_csr_and_persistent_bfs_oracles_cover_4096_shapes() {
         assert_eq!(actual_step, expected_step, "case={case} forward_or_changed");
 
         let max_iters = (case as u32 % 9) + 1;
-        let expected_bfs = oracle_persistent_bfs(
+        let expected_bfs = csr_sweep::oracle_persistent_closure(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
         let actual_bfs = persistent_bfs::cpu_ref(
@@ -577,7 +544,7 @@ fn sweep_persistent_bfs_matches_independent_oracle_matrix() {
         0xA24B_AED4,
     ) {
         let max_iters = (case as u32 % 9) + 1;
-        let expected = oracle_persistent_bfs(
+        let expected = csr_sweep::oracle_persistent_closure(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
         let actual = bfs_expand(
