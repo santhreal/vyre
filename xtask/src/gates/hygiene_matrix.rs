@@ -10,8 +10,10 @@ use serde::{Deserialize, Serialize};
 use syn::visit::Visit;
 use walkdir::WalkDir;
 
+use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+
 #[derive(Debug, Serialize)]
-struct HygieneMatrix {
+struct HygieneMatrixArtifact {
     schema_version: u32,
     scanned_roots: Vec<String>,
     scanned_files: usize,
@@ -389,73 +391,120 @@ fn is_declared_structural_gate(
         .any(|declaration| declaration.file == file && declaration.test == test)
 }
 
-/// The vyre workspace root this build was compiled against.
-pub(crate) fn run(args: &[String]) {
-    let output = crate::output_arg::parsed_or_exit(parse_output(args));
-    let roots = [crate::checkout::checkout_root()];
-    let scanned_roots = roots
-        .iter()
-        .map(|root| root.display().to_string())
-        .collect::<Vec<_>>();
-    let mut scanned_files = 0usize;
-    let mut findings = Vec::new();
-    for root in &roots {
-        scan_root(root, &mut scanned_files, &mut findings);
-    }
-    scan_source_inspection_test_files(&roots[0], &mut scanned_files, &mut findings);
-    scan_release_xtask(&roots[0], &mut scanned_files, &mut findings);
-    scan_release_tooling(&roots[0], &mut scanned_files, &mut findings);
-    scan_release_docs(&roots[0], &mut scanned_files, &mut findings);
-    scan_release_workflows(&roots[0], &mut scanned_files, &mut findings);
-    scan_release_controls(&roots[0], &mut scanned_files, &mut findings);
-    check_required_cargo_wrappers(&roots[0], &mut findings);
-    let threshold_policy = collect_threshold_policy(&roots[0]);
-    let release_surface_coverage = release_surface_coverage(&roots[0]);
-    let hot_paths = load_hot_path_files(&roots[0]);
-    let mut structural_gates = load_structural_gates(&roots[0]);
-    let finding_classes = classify_findings(&roots[0], &findings, &hot_paths, &structural_gates);
-    structural_gates.blockers.extend(stale_declaration_blockers(
-        &roots[0],
-        &structural_gates.declarations,
-        &findings,
-    ));
-    let release_blocker_count = finding_classes
-        .iter()
-        .filter(|finding| finding.release_blocker)
-        .count();
-    let mut blockers = if release_blocker_count == 0 {
-        Vec::new()
-    } else {
-        vec![format!(
-            "{release_blocker_count} release-blocking source hygiene finding(s) remain; {} total finding(s) preserved in classification output",
-            findings.len()
-        )]
-    };
-    blockers.extend(threshold_policy.blockers.iter().cloned());
-    blockers.extend(structural_gates.blockers.iter().cloned());
-    let finding_summary = finding_summary(&findings);
-    let classification_summary = classification_summary(&finding_classes);
-    let intake_summary = hygiene_intake_summary(&finding_classes);
-    let matrix = HygieneMatrix {
-        schema_version: 5,
-        scanned_roots,
-        scanned_files,
-        release_surface_coverage,
-        finding_summary,
-        classification_summary,
-        intake_summary,
-        threshold_policy,
-        structural_gates,
-        finding_classes,
-        release_blocker_count,
-        findings,
-        blockers,
-    };
+/// Scans the release surface for hidden fallbacks, unbounded reads, missing
+/// panic contracts and undeclared thresholds, and owns the evidence artifacts.
+pub struct HygieneMatrix;
 
-    crate::output_arg::write_json(&output, &matrix);
-    write_sibling_artifacts(&output, &matrix);
-    crate::output_arg::report_evidence_artifact("hygiene-matrix", &output, &matrix.blockers);
+impl Gate for HygieneMatrix {
+    fn name(&self) -> &'static str {
+        "hygiene-matrix"
+    }
+
+    fn help(&self) -> &'static str {
+        "Scan the release surface for hidden fallbacks, unbounded reads, undocumented panics and undeclared thresholds, and hold release/evidence/hygiene to what it found; --write regenerates it"
+    }
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let root = ctx.root.clone();
+        // The gate owns the artifact directory, so there is no flag that moves
+        // it. A caller that could redirect the output could also make the gate
+        // check a file nothing reads.
+        let mut inspection = crate::artifact_gate::Inspection::new();
+        let scanned_roots = vec![root.display().to_string()];
+        let mut scanned_files = 0usize;
+        let mut findings = Vec::new();
+        scan_root(&root, &mut scanned_files, &mut findings);
+        scan_source_inspection_test_files(&root, &mut scanned_files, &mut findings);
+        scan_release_xtask(&root, &mut scanned_files, &mut findings);
+        scan_release_tooling(&root, &mut scanned_files, &mut findings);
+        scan_release_docs(&root, &mut scanned_files, &mut findings);
+        scan_release_workflows(&root, &mut scanned_files, &mut findings);
+        scan_release_controls(&root, &mut scanned_files, &mut findings);
+        check_required_cargo_wrappers(&root, &mut findings);
+        let threshold_policy = collect_threshold_policy(&root);
+        let release_surface_coverage = release_surface_coverage(&root);
+        let hot_paths = load_hot_path_files(&root);
+        let mut structural_gates = load_structural_gates(&root);
+        let finding_classes = classify_findings(&root, &findings, &hot_paths, &structural_gates);
+        structural_gates.blockers.extend(stale_declaration_blockers(
+            &root,
+            &structural_gates.declarations,
+            &findings,
+        ));
+        let release_blocker_count = finding_classes
+            .iter()
+            .filter(|finding| finding.release_blocker)
+            .count();
+        // Every release-blocking finding is one finding, so the pin counts what
+        // the tree owes rather than one sentence about how much it owes.
+        for finding in finding_classes.iter().filter(|row| row.release_blocker) {
+            inspection.find(Finding::at(
+                &finding.path,
+                u32::try_from(finding.line).unwrap_or(u32::MAX),
+                format!(
+                    "release-blocking `{}` on the {} surface, owner lane {}, risk {}",
+                    finding.pattern, finding.surface, finding.owner_lane, finding.risk
+                ),
+                "remove the pattern from the release surface, or move the code off it",
+            ));
+        }
+        let mut blockers = if release_blocker_count == 0 {
+            Vec::new()
+        } else {
+            vec![format!(
+                "{release_blocker_count} release-blocking source hygiene finding(s) remain; {} total finding(s) preserved in classification output",
+                findings.len()
+            )]
+        };
+        blockers.extend(threshold_policy.blockers.iter().cloned());
+        blockers.extend(structural_gates.blockers.iter().cloned());
+        for blocker in threshold_policy
+            .blockers
+            .iter()
+            .chain(structural_gates.blockers.iter())
+        {
+            inspection.find(Finding::new(
+                blocker.clone(),
+                "declare the threshold or the structural gate the blocker names, or delete the stale declaration",
+            ));
+        }
+        let scan_note = format!(
+            "scanned {scanned_files} file(s) | {} hygiene finding(s) | {release_blocker_count} release-blocking",
+            findings.len()
+        );
+        let finding_summary = finding_summary(&findings);
+        let classification_summary = classification_summary(&finding_classes);
+        let intake_summary = hygiene_intake_summary(&finding_classes);
+        let matrix = HygieneMatrixArtifact {
+            schema_version: 5,
+            scanned_roots,
+            scanned_files,
+            release_surface_coverage,
+            finding_summary,
+            classification_summary,
+            intake_summary,
+            threshold_policy,
+            structural_gates,
+            finding_classes,
+            release_blocker_count,
+            findings,
+            blockers,
+        };
+
+        inspection.generates(&format!("{ARTIFACT_DIR}/hygiene-matrix.json"), &matrix);
+        declare_sibling_artifacts(&mut inspection, &matrix);
+        let mut report = crate::artifact_gate::settle_inspection(ctx, self.name(), inspection);
+        report.note(scan_note);
+        Ok(report)
+    }
 }
+
+/// Directory every artifact this gate owns lives in.
+const ARTIFACT_DIR: &str = "release/evidence/hygiene";
 
 fn finding_summary(findings: &[HygieneFinding]) -> Vec<HygieneFindingSummary> {
     let mut counts = std::collections::BTreeMap::<String, usize>::new();
@@ -874,14 +923,14 @@ fn release_surface_coverage(vyre_root: &Path) -> ReleaseSurfaceCoverage {
     }
 }
 
-fn write_sibling_artifacts(output: &Path, matrix: &HygieneMatrix) {
-    let Some(parent) = output.parent() else {
-        eprintln!(
-            "Fix: hygiene matrix output `{}` has no parent directory.",
-            output.display()
-        );
-        std::process::exit(1);
-    };
+/// Declare the eight artifacts that travel with the matrix.
+///
+/// Every one is derived from the matrix, so they are declared where the matrix
+/// is built rather than written by a second pass that could disagree with it.
+fn declare_sibling_artifacts(
+    inspection: &mut crate::artifact_gate::Inspection,
+    matrix: &HygieneMatrixArtifact,
+) {
     let intake_blockers = if matrix.release_blocker_count == 0 {
         Vec::new()
     } else {
@@ -890,8 +939,8 @@ fn write_sibling_artifacts(output: &Path, matrix: &HygieneMatrix) {
             matrix.release_blocker_count
         )]
     };
-    write_json(
-        &parent.join("implementation-intake.json"),
+    inspection.generates(
+        &format!("{ARTIFACT_DIR}/implementation-intake.json"),
         &HygieneIntakeArtifact {
             schema_version: 1,
             release_blocker_count: matrix.release_blocker_count,
@@ -899,8 +948,8 @@ fn write_sibling_artifacts(output: &Path, matrix: &HygieneMatrix) {
             blockers: intake_blockers,
         },
     );
-    write_json(
-        &parent.join("threshold-policy.json"),
+    inspection.generates(
+        &format!("{ARTIFACT_DIR}/threshold-policy.json"),
         &matrix.threshold_policy,
     );
     for &(artifact, scan, patterns) in HYGIENE_SCANS {
@@ -927,8 +976,8 @@ fn write_sibling_artifacts(output: &Path, matrix: &HygieneMatrix) {
                 release_blocking_findings.len()
             )]
         };
-        write_json(
-            &parent.join(artifact),
+        inspection.generates(
+            &format!("{ARTIFACT_DIR}/{artifact}"),
             &HygieneScan {
                 schema_version: 1,
                 scan: scan.to_string(),
@@ -1304,10 +1353,6 @@ const HYGIENE_SCANS: &[(&str, &str, &[&str])] = &[
         CARGO_WRAPPER_PATTERNS,
     ),
 ];
-
-fn write_json(path: &Path, value: &impl Serialize) {
-    crate::output_arg::write_json(path, value);
-}
 
 fn scan_root(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneFinding>) {
     for entry in WalkDir::new(root).into_iter().filter_entry(|entry| {
@@ -2586,19 +2631,6 @@ fn update_brace_depth(current: usize, line: &str) -> usize {
     let mut state = BraceDepthState::with_depth(current);
     state.update(line);
     state.depth
-}
-
-fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    crate::output_arg::parse_output_arg(
-        args,
-        "hygiene-matrix",
-        "Writes source hygiene release evidence.",
-        default_output,
-    )
-}
-
-fn default_output() -> PathBuf {
-    crate::checkout::checkout_root().join("release/evidence/hygiene/hygiene-matrix.json")
 }
 
 #[cfg(test)]

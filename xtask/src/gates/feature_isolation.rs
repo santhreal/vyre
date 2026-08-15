@@ -45,9 +45,11 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{self, Command};
+use std::process::Command;
 
 use serde::Deserialize;
+
+use crate::gate::{Gate, GateCtx, GateError, Report};
 
 /// Stand-in feature name for the per-member `--no-default-features` probe.
 ///
@@ -562,27 +564,26 @@ pub fn first_error(stdout: &str) -> Option<String> {
 }
 
 /// Compile one pair once.
-fn check_once(root: &Path, cargo: &str, pair: &Pair) -> Observation {
+fn check_once(root: &Path, cargo: &str, pair: &Pair) -> Result<Observation, GateError> {
     let mut command = Command::new(cargo);
     command
         .current_dir(root)
         .args(["check", "--locked", "-p", &pair.member])
         .args(pair.cargo_flags())
         .args(["--all-targets", "--message-format=json"]);
-    let output = command.output().unwrap_or_else(|error| {
-        eprintln!(
-            "Fix: cannot run `{cargo} check` for `{}`: {error}",
-            pair.label()
-        );
-        process::exit(1);
-    });
+    let output = command.output().map_err(|error| {
+        GateError::new(
+            format!("cannot run `{cargo} check` for `{}`: {error}", pair.label()),
+            "install a cargo the sweep can run, or set CARGO to one",
+        )
+    })?;
     let compiles = output.status.success();
-    Observation {
+    Ok(Observation {
         first_error: (!compiles)
             .then(|| first_error(&String::from_utf8_lossy(&output.stdout)))
             .flatten(),
         compiles,
-    }
+    })
 }
 
 /// Compile one pair, and confirm a failure by compiling it again.
@@ -596,10 +597,10 @@ fn check_once(root: &Path, cargo: &str, pair: &Pair) -> Observation {
 /// blocked pairs, and a gate that publishes false reds gets ignored, which is
 /// the outcome this whole axis exists to prevent. Only a failure is retried, so
 /// a green sweep pays nothing.
-fn compile(root: &Path, cargo: &str, pair: &Pair) -> Observation {
-    let first = check_once(root, cargo, pair);
+fn compile(root: &Path, cargo: &str, pair: &Pair) -> Result<Observation, GateError> {
+    let first = check_once(root, cargo, pair)?;
     if first.compiles {
-        return first;
+        return Ok(first);
     }
     check_once(root, cargo, pair)
 }
@@ -710,28 +711,27 @@ fn cargo_binary() -> String {
     std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string())
 }
 
-fn report(failures: &[String], fix: &str) {
-    if failures.is_empty() {
-        return;
-    }
-    eprintln!("feature-isolation: {} disagreement(s):", failures.len());
-    for failure in failures {
-        eprintln!("  - {failure}");
-    }
-    eprintln!("Fix: {fix}");
-    process::exit(1);
+/// Turn one half's disagreements into findings under the fix that closes them.
+fn record(report: &mut Report, failures: Vec<String>, fix: &str) {
+    report.findings.extend(
+        Report::from_messages(failures, fix).findings,
+    );
 }
 
-/// Compile each pair in turn, printing the outcome as it goes.
+/// Compile each pair in turn, recording the outcome as it goes.
 ///
-/// Both the sweep and `--write` need exactly this, and a sweep with no progress
-/// output is indistinguishable from a hang for its whole multi-hour run.
-fn observe(root: &Path, pairs: &[Pair]) -> Vec<(Pair, Observation)> {
+/// Both the sweep and `--write` need exactly this. The per-pair line is a note
+/// rather than a print, because a gate returns everything it has to say.
+fn observe(
+    root: &Path,
+    pairs: &[Pair],
+    report: &mut Report,
+) -> Result<Vec<(Pair, Observation)>, GateError> {
     let cargo = cargo_binary();
     let mut observed = Vec::with_capacity(pairs.len());
     for (index, pair) in pairs.iter().enumerate() {
-        let observation = compile(root, &cargo, pair);
-        println!(
+        let observation = compile(root, &cargo, pair)?;
+        report.note(format!(
             "[{}/{}] {}: {}",
             index + 1,
             pairs.len(),
@@ -741,159 +741,176 @@ fn observe(root: &Path, pairs: &[Pair]) -> Vec<(Pair, Observation)> {
                 (Some(error), false) => error.clone(),
                 (None, false) => BLOCKED.to_string(),
             }
-        );
+        ));
         observed.push((pair.clone(), observation));
     }
-    observed
+    Ok(observed)
 }
 
-/// Run the gate.
-///
-/// `args` is the process argument vector, so the dispatcher path and the
-/// subcommand name are dropped before the flags are read.
-pub fn run(args: &[String]) {
-    let root = crate::checkout::checkout_root();
-    let flags = args.iter().skip(2).map(String::as_str).collect::<Vec<_>>();
-    let list = flags.contains(&"--list");
-    let sweep = flags.contains(&"--sweep");
-    let write = flags.contains(&"--write");
-    let only_unrecorded = flags.contains(&"--only-unrecorded");
-    let mut member = None;
-    let mut rest = flags.iter();
-    while let Some(argument) = rest.next() {
-        match *argument {
-            "--list" | "--sweep" | "--write" | "--only-unrecorded" => {}
-            "--member" => {
-                member = rest.next().copied();
-                if member.is_none() {
-                    eprintln!("Fix: `--member` needs the package name to restrict the sweep to.");
-                    process::exit(1);
+/// What an unrecorded or stale row costs, and how to close it.
+const DECLARATION_FIX: &str = "record a row for every derived selection in xtask/feature-isolation.toml and delete every row no manifest declares; `xtask feature-isolation --sweep --write --only-unrecorded` observes just the selections that have none";
+
+/// What a row that disagrees with the compiler costs, and how to close it.
+const COMPILE_FIX: &str = "give the feature the missing edge in its own [features] table so enabling it enables what it needs, or move the source behind the cfg that matches; record a row as blocked only for a constraint inherent to the crate";
+
+/// Holds every feature selection the manifests declare to its recorded compile outcome.
+pub struct FeatureIsolation;
+
+impl Gate for FeatureIsolation {
+    fn name(&self) -> &'static str {
+        "feature-isolation"
+    }
+
+    fn help(&self) -> &'static str {
+        "Hold every feature selection the manifests declare to its recorded compile outcome; --sweep also compiles each pair, --write records what it observed, --member NAME narrows the sweep, --list prints the axis"
+    }
+
+    fn generates(&self) -> bool {
+        true
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let root = &ctx.root;
+        let mut report = Report::clean();
+        let list = ctx.has("--list");
+        let sweep = ctx.has("--sweep");
+        let only_unrecorded = ctx.has("--only-unrecorded");
+        let mut member = None;
+        let mut rest = ctx.args.iter();
+        while let Some(argument) = rest.next() {
+            match argument.as_str() {
+                "--list" | "--sweep" | "--write" | "--only-unrecorded" => {}
+                "--member" => {
+                    member = rest.next().map(String::as_str);
+                    if member.is_none() {
+                        return Err(GateError::new(
+                            "`--member` was passed without a package name",
+                            "name the package to restrict the sweep to",
+                        ));
+                    }
+                }
+                other => {
+                    return Err(GateError::new(
+                        format!("`{other}` is not an argument this gate takes"),
+                        "pass [--list] [--sweep [--write] [--only-unrecorded]] [--member NAME]",
+                    ));
                 }
             }
-            other => {
-                eprintln!(
-                    "Fix: `feature-isolation` takes [--list] [--sweep [--write] [--only-unrecorded]] [--member NAME]; `{other}` is not one of them."
-                );
-                process::exit(1);
-            }
         }
-    }
-    if write && !sweep {
-        eprintln!(
-            "Fix: `--write` records observed outcomes, so it needs `--sweep` to observe them."
-        );
-        process::exit(1);
-    }
-    if only_unrecorded && !sweep {
-        eprintln!(
-            "Fix: `--only-unrecorded` narrows what the sweep compiles, so it needs `--sweep`."
-        );
-        process::exit(1);
-    }
+        if ctx.write && !sweep {
+            return Err(GateError::new(
+                "`--write` records observed outcomes and nothing was observed",
+                "pass `--sweep` so there is an observation to record",
+            ));
+        }
+        if only_unrecorded && !sweep {
+            return Err(GateError::new(
+                "`--only-unrecorded` narrows what the sweep compiles and no sweep was asked for",
+                "pass `--sweep`",
+            ));
+        }
 
-    let pairs = derive_pairs(&root).unwrap_or_else(|error| {
-        eprintln!("Fix: {error}");
-        process::exit(1);
-    });
+        let pairs = derive_pairs(root).map_err(|error| {
+            GateError::new(error, "repair the manifests the axis is derived from")
+        })?;
 
-    // The agreement half always judges the whole axis: it costs milliseconds,
-    // and a per-member view of a completeness check is not a completeness check.
-    let mut selected = match member {
-        None => pairs.clone(),
-        Some(name) => {
-            let selected = pairs
-                .iter()
-                .filter(|pair| pair.member == name)
-                .cloned()
-                .collect::<Vec<_>>();
+        // The agreement half always judges the whole axis: it costs milliseconds,
+        // and a per-member view of a completeness check is not a completeness check.
+        let mut selected = match member {
+            None => pairs.clone(),
+            Some(name) => {
+                let selected = pairs
+                    .iter()
+                    .filter(|pair| pair.member == name)
+                    .cloned()
+                    .collect::<Vec<_>>();
+                if selected.is_empty() {
+                    return Err(GateError::new(
+                        format!("no workspace member is named `{name}`"),
+                        "run with `--list` to print the axis",
+                    ));
+                }
+                selected
+            }
+        };
+        if only_unrecorded {
+            let recorded = load_rows(root).unwrap_or_default();
+            selected.retain(|pair| {
+                !recorded
+                    .iter()
+                    .any(|row| row.member == pair.member && row.feature == pair.feature)
+            });
             if selected.is_empty() {
-                eprintln!("Fix: no workspace member is named `{name}`; `--list` prints the axis.");
-                process::exit(1);
+                report.note("every selection on the axis already has a row");
+                return Ok(report);
             }
-            selected
         }
-    };
-    if only_unrecorded {
-        let recorded = load_rows(&root).unwrap_or_default();
-        selected.retain(|pair| {
-            !recorded
+
+        if list {
+            for pair in &selected {
+                report.note(pair.label());
+            }
+            report.note(format!(
+                "{} pair(s) derived from the tracked manifests",
+                selected.len()
+            ));
+            return Ok(report);
+        }
+
+        if ctx.write {
+            let previous = load_rows(root).unwrap_or_default();
+            let observed = observe(root, &selected, &mut report)?;
+            let path = data_path(root);
+            fs::write(&path, render(&pairs, &observed, &previous)).map_err(|error| {
+                GateError::new(
+                    format!("cannot write {}: {error}", path.display()),
+                    "make the feature-isolation record writable",
+                )
+            })?;
+            report.note(format!("wrote {}", path.display()));
+            return Ok(report);
+        }
+
+        let rows = load_rows(root)
+            .map_err(|error| GateError::new(error, "repair xtask/feature-isolation.toml"))?;
+        record(
+            &mut report,
+            agreement_failures(&pairs, &rows),
+            DECLARATION_FIX,
+        );
+
+        if !sweep {
+            report.note(format!(
+                "{} declared pair(s) agree with the manifests",
+                pairs.len()
+            ));
+            return Ok(report);
+        }
+
+        let mut failures = Vec::new();
+        for (pair, observation) in observe(root, &selected, &mut report)? {
+            let recorded_compiles = rows
                 .iter()
-                .any(|row| row.member == pair.member && row.feature == pair.feature)
-        });
-        if selected.is_empty() {
-            println!("feature-isolation: every selection on the axis already has a row");
-            return;
+                .find(|row| row.member == pair.member && row.feature == pair.feature)
+                .is_some_and(|row| row.outcome == COMPILES);
+            match (recorded_compiles, observation.compiles) {
+                (true, false) => failures.push(format!(
+                    "`{}` is recorded `{COMPILES}` and fails with {}",
+                    pair.label(),
+                    observation
+                        .first_error
+                        .as_deref()
+                        .unwrap_or("no parsed diagnostic")
+                )),
+                (false, true) => failures.push(format!(
+                    "`{}` is recorded `{BLOCKED}` and now compiles; set outcome = \"{COMPILES}\" and drop its reason",
+                    pair.label()
+                )),
+                _ => {}
+            }
         }
+        record(&mut report, failures, COMPILE_FIX);
+        report.note(format!("{} pair(s) compiled", selected.len()));
+        Ok(report)
     }
-
-    if list {
-        for pair in &selected {
-            println!("{}", pair.label());
-        }
-        println!(
-            "feature-isolation: {} pair(s) derived from the tracked manifests",
-            selected.len()
-        );
-        return;
-    }
-
-    if write {
-        let previous = load_rows(&root).unwrap_or_default();
-        let observed = observe(&root, &selected);
-        let path = data_path(&root);
-        fs::write(&path, render(&pairs, &observed, &previous)).unwrap_or_else(|error| {
-            eprintln!("Fix: cannot write {}: {error}", path.display());
-            process::exit(1);
-        });
-        println!("wrote {}", path.display());
-        return;
-    }
-
-    let rows = load_rows(&root).unwrap_or_else(|error| {
-        eprintln!("Fix: {error}");
-        process::exit(1);
-    });
-    report(
-        &agreement_failures(&pairs, &rows),
-        "record a row for every derived selection in xtask/feature-isolation.toml and delete every row no manifest declares; `cargo run -p xtask --bin xtask -- feature-isolation --sweep --write --only-unrecorded` observes just the selections that have none.",
-    );
-
-    if !sweep {
-        println!(
-            "feature-isolation: {} declared pair(s) agree with the manifests",
-            pairs.len()
-        );
-        return;
-    }
-
-    let mut failures = Vec::new();
-    for (pair, observation) in observe(&root, &selected) {
-        let recorded_compiles = rows
-            .iter()
-            .find(|row| row.member == pair.member && row.feature == pair.feature)
-            .is_some_and(|row| row.outcome == COMPILES);
-        match (recorded_compiles, observation.compiles) {
-            (true, false) => failures.push(format!(
-                "`{}` is recorded `{COMPILES}` and fails with {}",
-                pair.label(),
-                observation
-                    .first_error
-                    .as_deref()
-                    .unwrap_or("no parsed diagnostic")
-            )),
-            (false, true) => failures.push(format!(
-                "`{}` is recorded `{BLOCKED}` and now compiles; set outcome = \"{COMPILES}\" and drop its reason",
-                pair.label()
-            )),
-            _ => {}
-        }
-    }
-    report(
-        &failures,
-        "give the feature the missing edge in its own [features] table so enabling it enables what it needs, or move the source behind the cfg that matches; record a row as blocked only for a constraint inherent to the crate.",
-    );
-    println!(
-        "feature-isolation: {} pair(s) compile as recorded",
-        selected.len()
-    );
 }
