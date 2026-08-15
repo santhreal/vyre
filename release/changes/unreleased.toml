@@ -1725,11 +1725,6 @@ category = "Changed"
 text = "`vyre_foundation::algebra::composition::trap_program` builds the program a builder returns when its inputs cannot produce a valid one. `vyre-primitives` and `vyre-libs` each had their own copy, differing only in whether one output buffer of count 1 is declared, and a trap program is IR composed out of IR, so neither crate is its home. The declared output is an `Option` argument because that is the whole difference between the two former copies."
 
 [[fragments]]
-id = "single-output-program-fixture-owner"
-category = "Changed"
-text = "`vyre-test-support` states the minimal one-output test program once, as `ir_variants::single_u32_output_program`. Suites that needed a program with somewhere to store a result each declared the same buffer and workgroup size locally, so a change to the shape had to be found in every copy."
-
-[[fragments]]
 id = "inline-expansion-one-walk"
 category = "Fixed"
 text = "Call inlining expands a call in every operand position. The caller side and the callee side each enumerated `Node` themselves and had diverged: the caller copied the `AsyncLoad` and `AsyncStore` offset and size and the `Trap` address verbatim, so a call written there survived a pass whose contract is that no call reaches a backend. Both sides are now policies over one expansion walk, `transform::inline::expand_walk`, which descends through the structural node rewrite. A call inside a callee body was also expanded under the caller's substitution, which renames locals but does not bind callee parameters or retarget buffer-reference arguments, so `call outer(BufferRef(data))` with a nested call in `outer` produced a program reading a buffer only the callee declares. Nested-call arguments are expanded under the callee's policy."
@@ -1870,6 +1865,9 @@ category = "Fixed"
 text = "`release/changes/unreleased.toml` parses again. Two fragments had been appended without their `[[fragments]]` header, so the second `id` key overwrote the first and every release-docs command failed at the TOML parser before it reached a verdict."
 
 [[fragments]]
+id = "over-width-shift-chain-folds-to-zero"
+category = "Fixed"
+text = "Strength reduction folds a chained shift whose counts reach the register width to zero again. It had been changed to leave both shifts standing, on the reasoning that a right shift on a signed operand replicates the sign bit, but V094 rejects a shift whose operands are not `u32`, so that operand cannot reach the pass. The fused shift is not an alternative: the target text masks a shift count with `& 31`, so emitting `x << 32` would emit `x`."
 id = "public-api-gate-no-silent-skip"
 category = "Fixed"
 text = "The public-API snapshot gate reports a crate it could not read instead of skipping it. Two paths dropped a package out of the comparison without a word: a publishable package whose `src` directory was missing, and an extraction that succeeded but returned nothing. No committed snapshot is empty, so an empty surface is a truncated rustdoc or a zero-byte `.rmeta` from a parallel build sharing one target directory, which is exactly the state in which a crate most needs to be checked. Both are findings now, and an extraction that exits nonzero prints what `cargo public-api` said rather than a bare sentence naming the crate."
