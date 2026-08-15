@@ -68,7 +68,7 @@ max_sleep_findings = 0
 max_panic_findings = 0
 
 [[hot_path]]
-file = "vyre-emit-naga/src/emitter/op_dispatch.rs"
+file = "vyre-emit-naga/src/emitter/op_dispatch/op_routing.rs"
 reason = "Descriptor op dispatch in shared Naga emission; every emitted op routes through this decision surface."
 max_findings = 0
 max_allocation_findings = 0

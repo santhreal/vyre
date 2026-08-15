@@ -1,15 +1,11 @@
 # vyre-spec
 
-Frozen data contracts for the vyre GPU compute IR.
+The frozen vocabulary. Operation definitions, data types, categories,
+algebraic laws, invariants, token tables, known-answer vectors. It has
+no dependencies and most of the workspace depends on it.
 
-## What this crate is
-
-`vyre-spec` is the leaf crate of the vyre ecosystem. It contains only frozen
-data types: IR scalar and operation types, algebraic laws, conformance
-categories, verification evidence, engine invariants, and the `I1..I15`
-intrinsic catalog. Zero dependencies. Every vyre consumer transitively depends
-on this crate, so backend vendors may depend on `vyre-spec` alone to prove
-conformance without pulling in the compiler or the conform runtime.
+Not here: anything that executes, allocates, or decides. A contract
+that runs is no longer a contract.
 
 ## What you get
 
@@ -101,8 +97,8 @@ Malformed programs, incompatible schemas, and invalid transformations fail close
 
 ### Testing
 
-Use [`docs/testing/vyre-spec.md`](../docs/testing/vyre-spec.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -110,9 +106,8 @@ requirements, evidence outputs, expected skips, and failure semantics.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

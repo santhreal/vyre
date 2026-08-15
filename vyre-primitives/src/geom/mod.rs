@@ -1,4 +1,4 @@
-//! Tier 2.5 geometric-algebra primitives (#8).
+//! Parked composition (belongs in vyre-libs): geometric-algebra primitives (#8).
 //!
 //! Geometric (Clifford) algebra unifies vectors, quaternions, dual
 //! quaternions, projective transformations, spinors. Recent ML work

@@ -1,4 +1,4 @@
-//! Tier 2.5 bitset primitives  -  `and`/`or`/`not`/`xor`/`popcount`/
+//! Parked composition (belongs in vyre-libs): bitset primitives  -  `and`/`or`/`not`/`xor`/`popcount`/
 //! `any`/`contains` over packed u32 bitsets. These are the LEGO
 //! blocks every higher-level graph/taint composition reaches for
 //! when combining two NodeSets.

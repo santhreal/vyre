@@ -1,6 +1,10 @@
 # vyre-reference
 
-Pure-Rust CPU reference interpreter for vyre IR.
+The pure-Rust interpreter for vyre IR, and the only crate permitted
+to compute on the CPU.
+
+Not here: performance work, and any role other than oracle. It is not
+a backend and not a fallback. Speed here buys nothing.
 
 ```
 cargo add vyre-reference
@@ -78,7 +82,7 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Execute programs with the canonical host oracle and produce semantic witnesses.
+The only crate permitted to compute on the CPU: the pure-Rust IR oracle. Not a backend and not a fallback.
 
 ### Boundaries
 
@@ -105,8 +109,8 @@ Unsupported operations, malformed bindings, and invalid memory access return ref
 
 ### Testing
 
-Use [`docs/testing/vyre-reference.md`](../docs/testing/vyre-reference.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -114,9 +118,8 @@ requirements, evidence outputs, expected skips, and failure semantics.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

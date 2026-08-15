@@ -1,4 +1,4 @@
-//! Tier 2.5 byte/text scan primitives (DFA, substring, filters).
+//! Parked composition (belongs in vyre-libs): byte/text scan primitives (DFA, substring, filters).
 //!
 //! The path IS the interface. Callers write
 //! `vyre_primitives::matching::bracket_match::bracket_match(...)`  -

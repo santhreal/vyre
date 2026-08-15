@@ -1,4 +1,4 @@
-//! Tier 2.5 text primitives.
+//! Parked composition (belongs in vyre-libs): text primitives.
 //!
 //! The path IS the interface. Callers write
 //! `vyre_primitives::text::char_class::char_class(...)`  -  explicit

@@ -1,6 +1,11 @@
 # vyre-bench
 
-Canonical benchmarking and performance-regression infrastructure for the [Vyre](../README.md) GPU compiler.
+The cross-backend benchmark and parity harness for the
+[Vyre](../README.md) GPU compiler.
+
+Not here: a benchmark whose baseline is vyre's own unfused output.
+Beating your own slow path is not a result. The baseline is the best
+available native implementation for that class.
 
 ## Architecture
 
@@ -231,7 +236,7 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark evidence.
+Own reproducible workload benchmarks against the best available native baseline for each class, not against vyre's own unfused output.
 
 ### Boundaries
 
@@ -258,8 +263,8 @@ Invalid arguments, stale evidence, violated repository contracts, and failed com
 
 ### Testing
 
-Use [`docs/testing/vyre-bench.md`](../docs/testing/vyre-bench.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -267,9 +272,8 @@ This crate is internal benchmark tooling for the 0.7.2 train and is not publishe
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

@@ -6,11 +6,11 @@
 //! module closes: the registry, the pinned baseline, and the workflows must now
 //! agree, and disagreement is a hard failure.
 //!
-//! A gate that currently reports findings is pinned at its present result
-//! rather than excused. The pin ratchets: more findings than the pin fails,
-//! fewer is reported so the pin can be lowered, and a red gate that starts
-//! passing fails until its pin is flipped to green. Progress therefore lands in
-//! this file instead of quietly widening the tolerance.
+//! A gate that reports findings is pinned at its present finding count rather
+//! than excused. The pin ratchets: more findings than the pin fails, fewer is
+//! reported so the pin can be lowered. No pin makes a failing gate legal and no
+//! owner sentence buys it time: a gate that exits nonzero is a failure, so
+//! progress lands in the code the gate judges instead of in this file.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -20,16 +20,18 @@ use serde::Deserialize;
 
 use crate::subcommands::{self, Kind, Subcommand};
 
-/// Workspace root, resolved from the xtask manifest directory.
-/// Pinned result for one gate.
+/// Pinned finding count for one gate.
+///
+/// `deny_unknown_fields` is load-bearing. This file used to carry `status` and
+/// `owner` per row, which together let a failing gate stay legal indefinitely
+/// behind a prose excuse; three gates sat red that way for a fortnight while
+/// the sweep reported that every gate held its baseline. A row that still
+/// carries either field now fails to load instead of being ignored.
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Baseline {
     name: String,
-    status: String,
     output_lines: usize,
-    /// PR that is expected to clear a red gate. Required while it is red.
-    #[serde(default)]
-    owner: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -60,7 +62,7 @@ fn load_baselines(root: &Path) -> Vec<Baseline> {
 
 /// Observed result of running one gate.
 struct Observed {
-    status: &'static str,
+    passed: bool,
     output_lines: usize,
 }
 
@@ -76,11 +78,7 @@ fn execute(entry: &Subcommand) -> Observed {
     let mut text = String::from_utf8_lossy(&output.stdout).into_owned();
     text.push_str(&String::from_utf8_lossy(&output.stderr));
     Observed {
-        status: if output.status.success() {
-            "green"
-        } else {
-            "red"
-        },
+        passed: output.status.success(),
         output_lines: text.lines().count(),
     }
 }
@@ -122,15 +120,6 @@ fn workflow_invocations(root: &Path) -> Vec<String> {
     found
 }
 
-/// An owner has to name something a reader can go and look at. The baseline
-/// writer emits `unassigned` for a newly red gate, which satisfies "a value is
-/// present" while carrying none of the meaning, so the placeholders it and its
-/// predecessors produce are rejected by name.
-fn is_real_owner(owner: &str) -> bool {
-    const PLACEHOLDERS: [&str; 5] = ["unassigned", "unknown", "none", "tbd", "todo"];
-    !owner.is_empty() && !PLACEHOLDERS.contains(&owner.to_ascii_lowercase().as_str())
-}
-
 /// Reject a registry, baseline and workflow set that do not agree.
 ///
 /// This is the meta-check. It is what makes an unwired gate impossible rather
@@ -158,19 +147,6 @@ fn wiring_failures(root: &Path, baselines: &[Baseline]) -> Vec<String> {
             )),
             Some(_) => {}
         }
-        let owner = pin.owner.as_deref().map(str::trim).unwrap_or("");
-        if pin.status == "red" && !is_real_owner(owner) {
-            failures.push(format!(
-                "gate `{}` is pinned red with no owner; name the PR that clears it",
-                pin.name
-            ));
-        }
-        if pin.status != "red" && pin.status != "green" {
-            failures.push(format!(
-                "gate `{}` has status `{}`; use `green` or `red`",
-                pin.name, pin.status
-            ));
-        }
     }
 
     let invoked = workflow_invocations(root);
@@ -194,24 +170,20 @@ fn wiring_failures(root: &Path, baselines: &[Baseline]) -> Vec<String> {
     failures
 }
 
-fn render_baseline(rows: &[(String, Observed, Option<String>)]) -> String {
+fn render_baseline(rows: &[(String, Observed)]) -> String {
     let mut text = String::from(
-        "# Pinned result of every registered gate, written by `xtask gates --write-baseline`.\n\
+        "# Pinned finding count of every registered gate, written by\n\
+         # `xtask gates --write-baseline`.\n\
          #\n\
-         # `status` is the exit result and `output_lines` is the combined stdout and\n\
-         # stderr line count, used as the finding count. More lines than the pin\n\
-         # fails; fewer is reported so the pin can be lowered here. A red gate that\n\
-         # starts passing fails until its status is flipped, and must name the PR\n\
-         # that clears it while it is still red.\n",
+         # `output_lines` is the combined stdout and stderr line count, used as the\n\
+         # finding count. More lines than the pin fails; fewer is reported so the pin\n\
+         # can be lowered here. A gate that exits nonzero fails outright: no row makes\n\
+         # a failing gate legal, and the writer refuses to record one.\n",
     );
-    for (name, observed, owner) in rows {
+    for (name, observed) in rows {
         text.push_str("\n[[gate]]\n");
         text.push_str(&format!("name = \"{name}\"\n"));
-        text.push_str(&format!("status = \"{}\"\n", observed.status));
         text.push_str(&format!("output_lines = {}\n", observed.output_lines));
-        if let Some(owner) = owner {
-            text.push_str(&format!("owner = \"{owner}\"\n"));
-        }
     }
     text
 }
@@ -228,30 +200,28 @@ pub(crate) fn run(args: &[String]) {
     }
 
     if args.iter().any(|argument| argument == "--write-baseline") {
-        let previous = fs::read_to_string(baseline_path(&root))
-            .ok()
-            .and_then(|text| toml::from_str::<BaselineFile>(&text).ok())
-            .map(|file| file.gate)
-            .unwrap_or_default();
         let mut rows = Vec::new();
+        let mut failing = Vec::new();
         for entry in subcommands::gates() {
             let observed = execute(entry);
-            // A green gate carries no owner. Keeping one from a previous run
-            // left stale assignments on gates that had already been cleared.
-            let owner = (observed.status == "red")
-                .then(|| {
-                    previous
-                        .iter()
-                        .find(|pin| pin.name == entry.name)
-                        .and_then(|pin| pin.owner.clone())
-                })
-                .flatten()
-                .or_else(|| (observed.status == "red").then(|| "unassigned".to_string()));
             println!(
                 "{}: {} ({} lines)",
-                entry.name, observed.status, observed.output_lines
+                entry.name,
+                if observed.passed { "green" } else { "red" },
+                observed.output_lines
             );
-            rows.push((entry.name.to_string(), observed, owner));
+            if !observed.passed {
+                failing.push(entry.name);
+            }
+            rows.push((entry.name.to_string(), observed));
+        }
+        if !failing.is_empty() {
+            eprintln!(
+                "Fix: {} gate(s) fail and a baseline may not record a failure: {}. Fix what they report, then write the baseline.",
+                failing.len(),
+                failing.join(", ")
+            );
+            process::exit(1);
         }
         let path = baseline_path(&root);
         fs::write(&path, render_baseline(&rows)).unwrap_or_else(|error| {
@@ -270,19 +240,11 @@ pub(crate) fn run(args: &[String]) {
             continue;
         };
         let observed = execute(entry);
-        if observed.status != pin.status {
-            let detail = if observed.status == "red" {
-                format!(
-                    "gate `{}` regressed from {} to red; fix the finding it reports",
-                    entry.name, pin.status
-                )
-            } else {
-                format!(
-                    "gate `{}` now passes but is pinned red; set status = \"green\" and output_lines = {} in xtask/gate-baselines.toml",
-                    entry.name, observed.output_lines
-                )
-            };
-            failures.push(detail);
+        if !observed.passed {
+            failures.push(format!(
+                "gate `{}` failed with {} output line(s); fix what it reports",
+                entry.name, observed.output_lines
+            ));
             continue;
         }
         if observed.output_lines > pin.output_lines {
@@ -294,15 +256,12 @@ pub(crate) fn run(args: &[String]) {
         }
         if observed.output_lines < pin.output_lines {
             println!(
-                "{}: {} ({} lines, improved from {}); lower the pin in xtask/gate-baselines.toml",
-                entry.name, pin.status, observed.output_lines, pin.output_lines
+                "{}: green ({} lines, improved from {}); lower the pin in xtask/gate-baselines.toml",
+                entry.name, observed.output_lines, pin.output_lines
             );
             continue;
         }
-        println!(
-            "{}: {} ({} lines)",
-            entry.name, pin.status, pin.output_lines
-        );
+        println!("{}: green ({} lines)", entry.name, pin.output_lines);
     }
 
     if !failures.is_empty() {
@@ -322,12 +281,10 @@ pub(crate) fn run(args: &[String]) {
 mod tests {
     use super::*;
 
-    fn pin(name: &str, status: &str, owner: Option<&str>) -> Baseline {
+    fn pin(name: &str) -> Baseline {
         Baseline {
             name: name.to_string(),
-            status: status.to_string(),
             output_lines: 0,
-            owner: owner.map(str::to_string),
         }
     }
 
@@ -344,69 +301,37 @@ mod tests {
         );
     }
 
-    /// WHY: a red pin with no owner is an excuse rather than a plan, and it is
-    /// how a temporary exemption becomes permanent.
+    /// WHY: `status = "red"` beside an `owner` sentence is exactly how three
+    /// gates stayed failing for a fortnight while this sweep printed that every
+    /// gate held its baseline. Both fields are gone, and a file that still
+    /// carries either has to fail to load rather than have it silently ignored,
+    /// which is what a default serde derive would do. Each field is offered on
+    /// its own: a row carrying both proves only that one of them was caught.
     #[test]
-    fn a_red_pin_without_an_owner_is_a_failure() {
-        let failures = wiring_failures(
-            &crate::checkout::checkout_root(),
-            &[pin("gate1", "red", None)],
-        );
-        assert!(
-            failures
-                .iter()
-                .any(|failure| failure.contains("pinned red with no owner")),
-            "got {failures:?}"
-        );
-    }
-
-    /// WHY: the baseline writer stamps `unassigned` on every newly red gate, so
-    /// a check that only tests for presence is satisfied by the placeholder it
-    /// just wrote and never asks anyone to own anything. Every placeholder the
-    /// writer or a human reaches for has to be rejected by name, in any case.
-    #[test]
-    fn a_red_pin_owned_by_a_placeholder_is_a_failure() {
-        for placeholder in [
-            "unassigned",
-            "UNASSIGNED",
-            "unknown",
-            "none",
-            "tbd",
-            "todo",
-            "  ",
+    fn a_baseline_row_that_pins_a_retired_field_is_rejected() {
+        for (field, row) in [
+            ("status", "status = \"red\"\n"),
+            ("owner", "owner = \"PR-26\"\n"),
         ] {
-            let failures = wiring_failures(
-                &crate::checkout::checkout_root(),
-                &[pin("gate1", "red", Some(placeholder))],
-            );
+            let text = format!("[[gate]]\nname = \"gate1\"\noutput_lines = 0\n{row}");
+
+            let parsed = toml::from_str::<BaselineFile>(&text);
+            assert!(parsed.is_err(), "a row carrying `{field}` must not parse");
+            let error = parsed.unwrap_err().to_string();
+
             assert!(
-                failures
-                    .iter()
-                    .any(|failure| failure.contains("pinned red with no owner")),
-                "placeholder owner {placeholder:?} must not satisfy the meta-check, got {failures:?}"
+                error.contains(field),
+                "the diagnostic must name the rejected field `{field}`, got {error}"
             );
         }
-
-        let failures = wiring_failures(
-            &crate::checkout::checkout_root(),
-            &[pin("gate1", "red", Some("PR-26"))],
-        );
-        assert!(
-            !failures
-                .iter()
-                .any(|failure| failure.contains("pinned red with no owner")),
-            "a named owner must satisfy the meta-check, got {failures:?}"
-        );
     }
 
     /// WHY: a pin naming a deleted or renamed subcommand silently stops
     /// covering anything.
     #[test]
     fn a_pin_for_an_unregistered_subcommand_is_a_failure() {
-        let failures = wiring_failures(
-            &crate::checkout::checkout_root(),
-            &[pin("no-such-gate", "green", None)],
-        );
+        let failures =
+            wiring_failures(&crate::checkout::checkout_root(), &[pin("no-such-gate")]);
         assert!(
             failures
                 .iter()
@@ -419,10 +344,7 @@ mod tests {
     /// sweep run something CI cannot judge.
     #[test]
     fn a_pin_for_a_non_gate_is_a_failure() {
-        let failures = wiring_failures(
-            &crate::checkout::checkout_root(),
-            &[pin("shrink", "green", None)],
-        );
+        let failures = wiring_failures(&crate::checkout::checkout_root(), &[pin("shrink")]);
         assert!(
             failures
                 .iter()

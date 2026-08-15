@@ -1,6 +1,18 @@
-# `vyre-megakernel`
+# vyre-megakernel
 
-Use this crate through the contract and checked-in example below.
+The whole-program compile seam: a validated typed graph plus external
+facts plus an explicit search budget in, one versioned immutable
+artifact and its target payloads out. It owns candidate generation,
+fusion legality, the cost model, selection, and the target compiler
+facets.
+
+Not here: device admission, submission, queues, residency, recovery.
+Those consume the artifact and must not alter its identity. Also not
+here: any claim of a measured winner that no clock produced.
+
+Every production compile emits a megakernel artifact. Persistence is a
+schedule the compiler may select, not the output type. Static and
+persistent routes consume the same artifact class.
 
 <!-- BEGIN GENERATED CRATE CONTRACT -->
 ## Crate contract
@@ -10,7 +22,7 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Explore and select legal whole-ProgramGraph fusion schedules under explicit SearchBudget bounds, expose selected modules and canonical ABI to registered target compilers, then emit canonical Artifact and ArtifactEnvelope records without owning admission, execution, or lifecycle policy.
+Explore and select legal whole-ProgramGraph fusion schedules under explicit SearchBudget bounds, emit a megakernel Artifact and TargetPayloads, and never claim a measured winner that no clock produced. Does not own admission, execution, or lifecycle policy.
 
 ### Boundaries
 
@@ -37,8 +49,8 @@ Invalid program shape, unsupported whole-graph lowering, and artifact constructi
 
 ### Testing
 
-Use [`docs/testing/vyre-megakernel.md`](../docs/testing/vyre-megakernel.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -46,9 +58,8 @@ requirements, evidence outputs, expected skips, and failure semantics.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

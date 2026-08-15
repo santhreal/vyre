@@ -1,4 +1,4 @@
-//! Tier 2.5 mathematical primitives.
+//! Parked composition (belongs in vyre-libs): mathematical primitives.
 //!
 //! Each module exposes one reusable GPU composition with a stable op id.
 //! Callers import the narrow module they need so region-chain audits can see

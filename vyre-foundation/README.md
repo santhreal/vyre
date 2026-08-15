@@ -1,9 +1,14 @@
 # vyre-foundation
 
-The hardware-neutral compiler foundation for vyre: IR (`Expr`, `Node`,
-`Program`), type system, memory model, wire format, visitor traits, and
-extension resolvers. Every other vyre crate depends on this one; this
-crate depends only on `vyre-spec`, `vyre-macros`, and lightweight
+The IR: program and node and expression, the type system, the memory
+model, the wire format, validation, visiting, the optimizer, the
+execution plan, program dispatch.
+
+Not here: application semantics. No operation knows what a neural
+network is. Almost every crate depends on this one, so a domain
+concept admitted here is a domain concept every crate inherits.
+
+This crate depends only on `vyre-spec`, `vyre-macros`, and lightweight
 third-party data crates. It does not know what `naga`, `wgpu`, a
 dialect, or a backend is.
 
@@ -68,8 +73,8 @@ Malformed programs, incompatible schemas, and invalid transformations fail close
 
 ### Testing
 
-Use [`docs/testing/vyre-foundation.md`](../docs/testing/vyre-foundation.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -77,9 +82,8 @@ requirements, evidence outputs, expected skips, and failure semantics.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

@@ -1,4 +1,4 @@
-//! Tier 2.5 reduction primitives  -  `count`/`min`/`max`/`sum` over
+//! Parked composition (belongs in vyre-libs): reduction primitives  -  `count`/`min`/`max`/`sum` over
 //! bitsets and fixed-width u32 ValueSets.
 //!
 //! Scalar reductions use one grid-stride workgroup and global atomics

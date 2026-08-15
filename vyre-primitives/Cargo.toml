@@ -7,7 +7,7 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Compositional primitives for vyre  -  marker types (always on) + Tier 2.5 LEGO substrate (feature-gated per domain)."
+description = "Marker types and uncomposable hardware intrinsics. Compositions that still live here are parked pending a move to vyre-libs."
 readme = "README.md"
 keywords = ["gpu", "ir", "primitive", "vyre", "lego"]
 categories = ["algorithms", "api-bindings"]
@@ -15,8 +15,8 @@ documentation = "https://docs.rs/vyre-primitives"
 exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [features]
-# Default: marker-types only, zero IR-builder deps. Consumers that
-# need a Tier 2.5 builder enable the matching domain flag.
+# Default: marker types only, zero IR-builder deps. Domain features
+# enable either hardware (belongs here) or a parked composition.
 default = []
 
 # Enable GPU-backend parity tests (requires CUDA driver + device).
@@ -34,9 +34,9 @@ cpu-parity = []
 # `cfg(feature = "vyre-foundation")` which matched nothing.
 vyre-foundation = ["dep:vyre-foundation"]
 
-# Per-domain Tier 2.5 feature flags. See docs/lego-block-rule.md.
-# Every domain pulls vyre-foundation  -  every primitive ships CPU
-# reference + GPU `fn(...) -> Program` builder together.
+# Domain features. `hardware` is Category C and belongs here. Every
+# other domain is a composition parked until it moves to vyre-libs.
+# Classified in src/organization.rs. Every IR domain pulls foundation.
 text = ["vyre-foundation", "reduce"]
 # `hash`: `matching/nfa_to_dfa.rs` imports `crate::hash::fnv1a` UNCONDITIONALLY, so
 # the `matching` domain does not compile standalone without it. Previously omitted
@@ -93,7 +93,8 @@ visual = ["vyre-foundation"]
 # being a second thing to remember.
 hardware = ["vyre-foundation", "inventory-registry"]
 
-# Convenience aggregate  -  enable the entire Tier 2.5 substrate.
+# Convenience aggregate: every domain currently in this crate,
+# including parked compositions and hardware.
 all-lego = [
     "text", "matching", "math", "nn", "hash", "parsing",
     "geom", "opt", "topology",

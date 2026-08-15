@@ -1,4 +1,4 @@
-//! Tier 2.5 hash primitives.
+//! Parked composition (belongs in vyre-libs): hash primitives.
 //!
 //! The path IS the interface. Callers write
 //! `vyre_primitives::hash::fnv1a::fnv1a32(...)`  -  explicit paths;
