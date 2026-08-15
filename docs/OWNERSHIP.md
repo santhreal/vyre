@@ -146,15 +146,13 @@ Define backend-neutral device, target compiler registration, artifact materializ
 - Path: `vyre-driver`
 - Owner: `backend-contract`
 - Layer: `backend-neutral`
-- Internal production dependencies: `vyre-foundation`, `vyre-libs`, `vyre-macros`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-spec`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
 | `vyre-libs` | composition library the driver adapters plan against | `private` | `product-libraries` |
-| `vyre-macros` | compile-time registration generation | `private` | `registration-macros` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `public` | `megakernel-compiler` |
-| `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | `private` | `pass-engine` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
 
 ### `vyre-driver-cuda`
@@ -477,7 +475,7 @@ Own compile-to-materialize orchestration, artifact sessions, recovery, persisten
 - Path: `vyre-runtime`
 - Owner: `runtime`
 - Layer: `runtime`
-- Internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-pass-engine`
+- Internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -485,7 +483,6 @@ Own compile-to-materialize orchestration, artifact sessions, recovery, persisten
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
 | `vyre-libs` | composition trees the megakernel planner plans against | `private` | `product-libraries` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `public` | `megakernel-compiler` |
-| `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | `private` | `pass-engine` |
 
 ### `vyre-safetensors`
 

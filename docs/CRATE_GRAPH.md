@@ -96,9 +96,7 @@ graph TD
   C6 --> C26
   C7 --> C17
   C7 --> C20
-  C7 --> C23
   C7 --> C24
-  C7 --> C25
   C7 --> C31
   C8 --> C7
   C8 --> C15
@@ -171,7 +169,6 @@ graph TD
   C29 --> C17
   C29 --> C20
   C29 --> C24
-  C29 --> C25
   C32 --> C0
   C32 --> C17
   C33 --> C0
@@ -207,7 +204,7 @@ graph TD
 | `vyre-aot` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
 | `vyre-aot` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-aot` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-aot` | `vyre-primitives` | reusable semantic Program builders | `bitset`, `fixpoint`, `graph`, `inventory-registry`, `math`, `reduce` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
+| `vyre-aot` | `vyre-primitives` | reusable semantic Program builders | None | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `vyre-aot` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
 | `vyre-bench` | `vyre` | public lifecycle facade | None | `always` | `normal` | `false` | `false` | `private` | `public-facade` |
 | `vyre-bench` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
@@ -246,9 +243,7 @@ graph TD
 | `vyre-debug` | `vyre-primitives` | reusable semantic Program builders | None | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `vyre-driver` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-driver` | `vyre-libs` | composition library the driver adapters plan against | None | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |
-| `vyre-driver` | `vyre-macros` | compile-time registration generation | None | `always` | `normal` | `false` | `true` | `private` | `registration-macros` |
 | `vyre-driver` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-driver` | `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | None | `always` | `normal` | `true` | `true` | `private` | `pass-engine` |
 | `vyre-driver` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-driver-cuda` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
 | `vyre-driver-cuda` | `vyre-emit-ptx` | primary binary backend text emission | None | `always` | `normal` | `false` | `true` | `private` | `primary-binary-emitter` |
@@ -321,7 +316,6 @@ graph TD
 | `vyre-runtime` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-runtime` | `vyre-libs` | composition trees the megakernel planner plans against | None | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |
 | `vyre-runtime` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-runtime` | `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | None | `always` | `normal` | `true` | `true` | `private` | `pass-engine` |
 | `vyre-test-support` | `structure-gate` | resolve the checkout a gate reports on from the working directory at run time | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
 | `vyre-test-support` | `vyre-foundation` | IR statement fixtures for the run-time variant enumeration, behind the ir-fixtures feature | None | `always` | `normal` | `true` | `true` | `private` | `foundation-ir` |
 | `xtask` | `structure-gate` | resolve the checkout a gate reports on from the working directory at run time | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
