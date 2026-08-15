@@ -1,17 +1,20 @@
-//! Run a subcommand that is implemented in a crate linking vyre.
+//! Run a gate that is implemented in a crate linking vyre.
 //!
-//! This crate links no vyre crate, so those subcommands cannot be called: they
-//! are built on demand and executed as a child process. Cargo's own output is
-//! captured rather than inherited, because the gate sweep records how many
-//! lines a gate printed and a `Compiling ...` line would change the recorded
-//! result of the gate it wraps. On a build failure the captured text is printed
-//! and the exit code is cargo's.
+//! This crate links no vyre crate, so those gates cannot be called: the owning
+//! package is built on demand and executed as a child process. Delegation is a
+//! property of one gate and not a category, so a delegated gate answers the
+//! same contract as a local one. The child serialises its `Report` on stdout
+//! and the parent renders it, which is the whole protocol; cargo's own output
+//! is captured rather than inherited so a `Compiling ...` line cannot reach the
+//! report.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::LazyLock;
 
 use serde_json::Value;
+
+use crate::gate::{GateCtx, GateError, Report};
 
 /// Package whose binary owns the subcommand table.
 const DISPATCHER_PACKAGE: &str = "xtask";
@@ -32,7 +35,12 @@ pub fn dispatcher() -> &'static Path {
             eprintln!("Fix: cannot resolve the running binary: {error}. Rebuild it with `cargo build -p {DISPATCHER_PACKAGE}`.");
             std::process::exit(1);
         });
-        dispatcher_from(&current).unwrap_or_else(|| build(DISPATCHER_PACKAGE))
+        dispatcher_from(&current).unwrap_or_else(|| {
+            build(DISPATCHER_PACKAGE).unwrap_or_else(|error| {
+                eprintln!("{error}");
+                std::process::exit(1);
+            })
+        })
     });
     DISPATCHER.as_path()
 }
@@ -48,7 +56,10 @@ fn dispatcher_from(current: &Path) -> Option<PathBuf> {
 /// `args` is the process argument vector, so `args[0]` is the dispatcher's own
 /// path and is dropped.
 pub fn run(package: &str, args: &[String]) -> ! {
-    let executable = build(package);
+    let executable = build(package).unwrap_or_else(|error| {
+        eprintln!("{error}");
+        std::process::exit(1);
+    });
     let status = Command::new(&executable)
         .args(&args[1..])
         .status()
@@ -60,6 +71,48 @@ pub fn run(package: &str, args: &[String]) -> ! {
             std::process::exit(1);
         });
     std::process::exit(status.code().unwrap_or(1));
+}
+
+/// Build the package that implements `name`, run it, and read back the report.
+///
+/// The child writes one JSON `Report` on stdout and nothing else, so anything
+/// it printed on stderr belongs to the build or to a crash and is carried into
+/// the error. A child that cannot run is a `GateError` rather than a clean
+/// report: a gate that failed to execute has not judged the tree.
+pub fn run_child_gate(package: &str, name: &str, ctx: &GateCtx) -> Result<Report, GateError> {
+    let executable = build(package)?;
+    let output = Command::new(&executable)
+        .arg(name)
+        .args(&ctx.args)
+        .current_dir(&ctx.root)
+        .output()
+        .map_err(|error| {
+            GateError::new(
+                format!("cannot run {} for `{name}`: {error}", executable.display()),
+                format!("rebuild it with `cargo build -p {package}`"),
+            )
+        })?;
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    if !output.status.success() {
+        return Err(GateError::new(
+            format!(
+                "`{name}` exited {} in {package}: {}",
+                output.status.code().unwrap_or(-1),
+                stderr.trim()
+            ),
+            format!("run `cargo xtask {name}` and fix what it reports"),
+        ));
+    }
+    serde_json::from_slice(&output.stdout).map_err(|error| {
+        GateError::new(
+            format!(
+                "`{name}` in {package} did not return a report: {error}; it printed {:?} and {:?}",
+                String::from_utf8_lossy(&output.stdout).trim(),
+                stderr.trim()
+            ),
+            format!("a gate returns a Report and prints nothing; make `{name}` return its findings instead of printing them"),
+        )
+    })
 }
 
 /// Run a delegated binary's `main`: help, argument count, then dispatch.
@@ -130,7 +183,11 @@ fn cargo() -> String {
 }
 
 /// Build one delegated crate and return the path of the binary cargo produced.
-fn build(package: &str) -> PathBuf {
+///
+/// A crate that does not compile is a gate that could not run, so the compiler
+/// diagnostics travel in the error rather than to this process's stderr: the
+/// caller may be the sweep, which renders every gate's outcome in one place.
+fn build(package: &str) -> Result<PathBuf, GateError> {
     let output = Command::new(cargo())
         .args([
             "build",
@@ -142,26 +199,29 @@ fn build(package: &str) -> PathBuf {
             "--message-format=json",
         ])
         .output()
-        .unwrap_or_else(|error| {
-            eprintln!("Fix: cannot run cargo to build {package}: {error}");
-            std::process::exit(1);
-        });
+        .map_err(|error| {
+            GateError::new(
+                format!("cannot run cargo to build {package}: {error}"),
+                "install a cargo that the workspace configuration selects".to_string(),
+            )
+        })?;
     if !output.status.success() {
-        eprint!("{}", String::from_utf8_lossy(&output.stderr));
+        let mut diagnostics = String::from_utf8_lossy(&output.stderr).into_owned();
         for line in String::from_utf8_lossy(&output.stdout).lines() {
             if let Some(rendered) = rendered_diagnostic(line) {
-                eprint!("{rendered}");
+                diagnostics.push_str(&rendered);
             }
         }
-        eprintln!("Fix: `{package}` must compile before `{package}` subcommands can run.");
-        std::process::exit(output.status.code().unwrap_or(1));
+        return Err(GateError::new(
+            format!("`{package}` does not compile:\n{}", diagnostics.trim_end()),
+            format!("`{package}` must compile before the gates it implements can run"),
+        ));
     }
-    executable_from(&String::from_utf8_lossy(&output.stdout), package).unwrap_or_else(|| {
-        eprintln!(
-            "Fix: cargo built `{package}` without reporting an executable; \
-             check that `{package}` declares a binary named `{package}`."
-        );
-        std::process::exit(1);
+    executable_from(&String::from_utf8_lossy(&output.stdout), package).ok_or_else(|| {
+        GateError::new(
+            format!("cargo built `{package}` without reporting an executable"),
+            format!("check that `{package}` declares a binary named `{package}`"),
+        )
     })
 }
 

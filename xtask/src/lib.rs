@@ -22,6 +22,7 @@ pub mod binary;
 pub mod checkout;
 pub mod delegate;
 pub mod docs;
+pub mod gate;
 pub mod gates;
 pub mod hash;
 pub mod json_output;
