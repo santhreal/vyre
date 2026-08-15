@@ -5,7 +5,7 @@
 //! copies had drifted. `search.binary.u32.1m` omitted `SuiteKind::Smoke` from
 //! its private suite list, so that case never ran in the smoke suite and a
 //! regression in it was invisible to every smoke run. Collapsing the copies onto
-//! `crate::cases::honest_case` removes the place drift can live, but only for the
+//! `crate::cases::harness` removes the place drift can live, but only for the
 //! cases that exist today. This file states the invariants as properties over
 //! the registry, so a case added tomorrow is covered without editing a list.
 //!
@@ -20,7 +20,7 @@
 //! of those is unit-tested in `cases::reference_sample` and
 //! `cases::release_workloads::resident_batch`.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use vyre_bench::api::case::{BenchCase, BenchLayer};
 use vyre_bench::api::suite::SuiteKind;
@@ -103,6 +103,71 @@ fn every_honest_case_runs_in_the_smoke_suite() {
     assert!(
         excluded.is_empty(),
         "Fix: an honest case outside the smoke suite is never smoke-tested: {excluded:?}"
+    );
+}
+
+/// Every honest-layer case is built by one declaration owner, and that owner
+/// serves more than one case.
+///
+/// The six honest cases each open-coded the whole `BenchCase` block: ten methods
+/// per case whose only variable content was an id, a sentence, a tag list and a
+/// memory floor. Six copies of a ten-method block is where
+/// `search.binary.u32.1m` lost `SuiteKind::Smoke`, and the same shape carried a
+/// `bytes_touched` default that silently reported `(0, 0)` for
+/// `regex.backtracking.adversarial`. `cases::harness::HarnessCase` is the single
+/// owner; a case reports it through `declaration_owner`.
+///
+/// A declaration owner is also required to serve more than one case, across the
+/// whole registry rather than only the honest layer, because an "owner" invented
+/// for a single case is the open-coded block under a new name. The case set is
+/// walked from the registry, so an honest case added tomorrow is inside this gate
+/// without being named here.
+#[test]
+fn every_honest_case_names_one_shared_declaration_owner() {
+    let honest: Vec<&'static dyn BenchCase> = registered()
+        .into_iter()
+        .filter(|case| matches!(case.metadata().layer, BenchLayer::Honest))
+        .collect();
+
+    assert!(
+        honest.len() > 1,
+        "Fix: the honest layer published {} cases, so a shared declaration owner \
+         cannot be observed",
+        honest.len()
+    );
+
+    let unowned: Vec<String> = honest
+        .iter()
+        .filter(|case| case.declaration_owner().is_empty())
+        .map(|case| case.id().0)
+        .collect();
+    assert!(
+        unowned.is_empty(),
+        "Fix: these honest cases declare themselves instead of going through the \
+         shared case harness, so their metadata, suite list and requirement shape \
+         are private copies again: {unowned:?}"
+    );
+
+    let mut per_owner: BTreeMap<&'static str, Vec<String>> = BTreeMap::new();
+    for case in registered() {
+        let owner = case.declaration_owner();
+        if !owner.is_empty() {
+            per_owner.entry(owner).or_default().push(case.id().0);
+        }
+    }
+    assert!(
+        !per_owner.is_empty(),
+        "Fix: no case in the registry names a declaration owner, so the honest \
+         check above passed on an empty set"
+    );
+    let solitary: Vec<(&&str, &Vec<String>)> = per_owner
+        .iter()
+        .filter(|(_, cases)| cases.len() < 2)
+        .collect();
+    assert!(
+        solitary.is_empty(),
+        "Fix: a declaration owner serving one case is that case's own block under \
+         another name: {solitary:?}"
     );
 }
 

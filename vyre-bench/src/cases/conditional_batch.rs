@@ -8,15 +8,12 @@
 
 use super::byte_pack::u32_bytes;
 use super::conditional::{
-    conditional_measure, conditional_program, pattern_streams, verify_sparse_outputs,
-    ConditionalLabels, ConditionalPrepared, HONEST_SUITES,
+    conditional_measure, conditional_program, file_metadata_predicates, fired_append,
+    pattern_index_binds, pattern_streams, rule_conditions, rule_fires, stream_predicates,
+    verify_sparse_outputs, ConditionalLabels, ConditionalPrepared, PatternStreams,
 };
 use super::harness::{CaseOps, HarnessCase, WorkloadDescription};
-use super::mix32;
-use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, Correctness, DeterminismClass,
-    WorkloadClass,
-};
+use crate::api::case::{BenchCase, BenchContext, BenchError, BenchRun, Correctness};
 use crate::api::metric::elapsed_ns;
 use crate::api::resident::{input_bytes_total, u32_counter_reset_program, ResidentInputSet};
 use rayon::prelude::*;
@@ -49,31 +46,20 @@ pub(crate) const LABELS: ConditionalLabels = ConditionalLabels {
     wire_context: "conditional-batch output",
 };
 
-static WORKLOAD: WorkloadDescription = WorkloadDescription {
-    id: "conditions.yara_like.batch.16x64k",
-    name: "Batched YARA-like Conditional Eval 16x64K",
-    summary: "Evaluate 65,536 rule conditions across 16 files with sparse fired-pair output",
-    tags: &[
+static WORKLOAD: WorkloadDescription = WorkloadDescription::honest(
+    "conditions.yara_like.batch.16x64k",
+    "Batched YARA-like Conditional Eval 16x64K",
+    "Evaluate 65,536 rule conditions across 16 files with sparse fired-pair output",
+    &[
         "honest",
         "conditions",
         "rule-engine",
         "batched",
         "sparse-output",
     ],
-    layer: BenchLayer::Honest,
-    workload: WorkloadClass::Honest,
-    determinism: DeterminismClass::Deterministic,
-    owner_crate: "vyre-bench",
-    suites: HONEST_SUITES,
-    needs_gpu: true,
-    needs_network: false,
-    min_vram_bytes: Some(
-        PATTERN_COUNT as u64 * 12 + RULES_PER_FILE as u64 * 36 + EVAL_COUNT as u64 * 4 + 128,
-    ),
-    min_input_bytes: None,
-    feature_set: &[],
-    contract: None,
-};
+    PATTERN_COUNT as u64 * 12 + RULES_PER_FILE as u64 * 36 + EVAL_COUNT as u64 * 4 + 128,
+    None,
+);
 
 static OPS: CaseOps<ConditionalPrepared> = CaseOps {
     build: prepare_conditional_batch,
@@ -95,6 +81,15 @@ fn verify_fired_pairs(run: &BenchRun) -> Result<Correctness, BenchError> {
 
 fn bytes_touched(prepared: &ConditionalPrepared) -> (u64, u64) {
     (prepared.input_bytes_total, EVAL_COUNT as u64 * 4 + 4)
+}
+
+/// Load word `offset` of this lane's packed rule descriptor.
+fn descriptor_word(offset: u32) -> Expr {
+    if offset == 0 {
+        Expr::load("rule_desc", Expr::var("desc"))
+    } else {
+        Expr::load("rule_desc", Expr::add(Expr::var("desc"), Expr::u32(offset)))
+    }
 }
 
 fn condition_program() -> Program {
@@ -120,92 +115,42 @@ fn condition_program() -> Program {
             Node::let_bind("tid", Expr::gid_x()),
             Node::if_then(
                 Expr::lt(Expr::var("tid"), Expr::u32(EVAL_COUNT)),
-                vec![
-                    Node::let_bind(
-                        "file",
-                        Expr::div(Expr::var("tid"), Expr::u32(RULES_PER_FILE)),
-                    ),
-                    Node::let_bind(
-                        "rule",
-                        Expr::rem(Expr::var("tid"), Expr::u32(RULES_PER_FILE)),
-                    ),
-                    Node::let_bind("desc", Expr::mul(Expr::var("rule"), Expr::u32(DESC_WORDS))),
-                    Node::let_bind("pa", Expr::load("rule_desc", Expr::var("desc"))),
-                    Node::let_bind(
-                        "pb",
-                        Expr::load("rule_desc", Expr::add(Expr::var("desc"), Expr::u32(1))),
-                    ),
-                    Node::let_bind(
-                        "pc",
-                        Expr::load("rule_desc", Expr::add(Expr::var("desc"), Expr::u32(2))),
-                    ),
-                    Node::let_bind(
-                        "pd",
-                        Expr::load("rule_desc", Expr::add(Expr::var("desc"), Expr::u32(3))),
-                    ),
-                    Node::let_bind(
-                        "both_literals",
-                        Expr::and(
-                            Expr::ne(Expr::load("matched", Expr::var("pa")), Expr::u32(0)),
-                            Expr::ne(Expr::load("matched", Expr::var("pb")), Expr::u32(0)),
+                [
+                    vec![
+                        Node::let_bind(
+                            "file",
+                            Expr::div(Expr::var("tid"), Expr::u32(RULES_PER_FILE)),
                         ),
-                    ),
-                    Node::let_bind(
-                        "count_ok",
-                        Expr::ge(
-                            Expr::load("counts", Expr::var("pc")),
-                            Expr::load("rule_desc", Expr::add(Expr::var("desc"), Expr::u32(4))),
+                        Node::let_bind(
+                            "rule",
+                            Expr::rem(Expr::var("tid"), Expr::u32(RULES_PER_FILE)),
                         ),
+                        Node::let_bind("desc", Expr::mul(Expr::var("rule"), Expr::u32(DESC_WORDS))),
+                    ],
+                    pattern_index_binds(
+                        descriptor_word(0),
+                        descriptor_word(1),
+                        descriptor_word(2),
+                        descriptor_word(3),
                     ),
-                    Node::let_bind(
-                        "offset_ok",
-                        Expr::le(
-                            Expr::load("offsets", Expr::var("pd")),
-                            Expr::load("rule_desc", Expr::add(Expr::var("desc"), Expr::u32(5))),
-                        ),
+                    stream_predicates(descriptor_word(4), descriptor_word(5)),
+                    // Sixteen files per run, so this lane's file size is a load
+                    // rather than a constant. Bound before the size predicate
+                    // reads it twice.
+                    vec![Node::let_bind(
+                        "filesize",
+                        Expr::load("file_sizes", Expr::var("file")),
+                    )],
+                    file_metadata_predicates(
+                        Expr::var("filesize"),
+                        descriptor_word(6),
+                        descriptor_word(7),
+                        Expr::load("file_entropy", Expr::var("file")),
+                        descriptor_word(8),
                     ),
-                    Node::let_bind("filesize", Expr::load("file_sizes", Expr::var("file"))),
-                    Node::let_bind(
-                        "size_ok",
-                        Expr::and(
-                            Expr::ge(
-                                Expr::var("filesize"),
-                                Expr::load("rule_desc", Expr::add(Expr::var("desc"), Expr::u32(6))),
-                            ),
-                            Expr::le(
-                                Expr::var("filesize"),
-                                Expr::load("rule_desc", Expr::add(Expr::var("desc"), Expr::u32(7))),
-                            ),
-                        ),
-                    ),
-                    Node::let_bind(
-                        "entropy_ok",
-                        Expr::le(
-                            Expr::load("file_entropy", Expr::var("file")),
-                            Expr::load("rule_desc", Expr::add(Expr::var("desc"), Expr::u32(8))),
-                        ),
-                    ),
-                    Node::let_bind(
-                        "fired",
-                        Expr::and(
-                            Expr::and(Expr::var("both_literals"), Expr::var("count_ok")),
-                            Expr::and(
-                                Expr::var("offset_ok"),
-                                Expr::and(Expr::var("size_ok"), Expr::var("entropy_ok")),
-                            ),
-                        ),
-                    ),
-                    Node::if_then(
-                        Expr::var("fired"),
-                        vec![
-                            Node::let_bind(
-                                "slot",
-                                Expr::atomic_add("fired_count", Expr::u32(0), Expr::u32(1)),
-                            ),
-                            Node::store("fired_pairs", Expr::var("slot"), Expr::var("tid")),
-                        ],
-                    ),
-                ],
+                    fired_append("fired_pairs"),
+                ]
+                .concat(),
             ),
         ],
     )
@@ -217,18 +162,12 @@ fn prepare_conditional_batch(ctx: &mut BenchContext) -> Result<ConditionalPrepar
 
     let (matched, counts, offsets) = pattern_streams(PATTERN_COUNT, BASE_FILESIZE_BYTES);
 
+    // One rule per lane within a file, its nine parameters packed side by side.
     let mut rule_desc = Vec::with_capacity((RULES_PER_FILE * DESC_WORDS) as usize);
     for rule in 0..RULES_PER_FILE {
-        let seed = mix32(rule);
-        rule_desc.push(seed & (PATTERN_COUNT - 1));
-        rule_desc.push(mix32(seed ^ 0x9E37_79B9) & (PATTERN_COUNT - 1));
-        rule_desc.push(mix32(seed ^ 0x85EB_CA6B) & (PATTERN_COUNT - 1));
-        rule_desc.push(mix32(seed ^ 0xC2B2_AE35) & (PATTERN_COUNT - 1));
-        rule_desc.push((seed >> 5) % 7 + 1);
-        rule_desc.push(BASE_FILESIZE_BYTES - ((seed >> 11) % (BASE_FILESIZE_BYTES / 2)));
-        rule_desc.push(BASE_FILESIZE_BYTES - ((seed >> 17) & 4095));
-        rule_desc.push(BASE_FILESIZE_BYTES + ((seed >> 3) & 8191));
-        rule_desc.push(600 + ((seed >> 9) % 320));
+        rule_desc.extend_from_slice(
+            &rule_conditions(rule, PATTERN_COUNT, BASE_FILESIZE_BYTES).descriptor_words(),
+        );
     }
     let file_sizes: Vec<u32> = (0..FILE_COUNT)
         .map(|file| BASE_FILESIZE_BYTES + file * 257)
@@ -253,10 +192,11 @@ fn prepare_conditional_batch(ctx: &mut BenchContext) -> Result<ConditionalPrepar
     )?;
     let baseline_start = std::time::Instant::now();
     let baseline_output = cpu_batch(
-        &matched,
-        &counts,
-        &offsets,
-        &rule_desc,
+        &PatternStreams {
+            matched: &matched,
+            counts: &counts,
+            offsets: &offsets,
+        },
         &file_sizes,
         &file_entropy,
     );
@@ -279,38 +219,24 @@ fn prepare_conditional_batch(ctx: &mut BenchContext) -> Result<ConditionalPrepar
     })
 }
 
+/// The host oracle: the fired file-and-rule pairs, sorted, with their count in
+/// the first buffer and the identifiers padded out to the sparse buffer's
+/// declared length.
 fn cpu_batch(
-    matched: &[u32],
-    counts: &[u32],
-    offsets: &[u32],
-    rule_desc: &[u32],
+    streams: &PatternStreams<'_>,
     file_sizes: &[u32],
     file_entropy: &[u32],
 ) -> Vec<Vec<u8>> {
-    let mut fired: Vec<u32> = (0..EVAL_COUNT as usize)
+    let mut fired: Vec<u32> = (0..EVAL_COUNT)
         .into_par_iter()
-        .filter_map(|tid| {
-            let file = tid / RULES_PER_FILE as usize;
-            let rule = tid % RULES_PER_FILE as usize;
-            let desc = rule * DESC_WORDS as usize;
-            if matched[rule_desc[desc] as usize] == 0 || matched[rule_desc[desc + 1] as usize] == 0
-            {
-                return None;
-            }
-            if counts[rule_desc[desc + 2] as usize] < rule_desc[desc + 4] {
-                return None;
-            }
-            if offsets[rule_desc[desc + 3] as usize] > rule_desc[desc + 5] {
-                return None;
-            }
-            let filesize = file_sizes[file];
-            if filesize < rule_desc[desc + 6] || filesize > rule_desc[desc + 7] {
-                return None;
-            }
-            if file_entropy[file] > rule_desc[desc + 8] {
-                return None;
-            }
-            Some(tid as u32)
+        .filter(|tid| {
+            let file = (tid / RULES_PER_FILE) as usize;
+            rule_fires(
+                streams,
+                &rule_conditions(tid % RULES_PER_FILE, PATTERN_COUNT, BASE_FILESIZE_BYTES),
+                file_sizes[file],
+                file_entropy[file],
+            )
         })
         .collect();
     fired.sort_unstable();
@@ -377,7 +303,10 @@ mod tests {
             CONDITIONAL_BATCH.id().0,
             "conditions.yara_like.batch.16x64k"
         );
-        assert_eq!(CONDITIONAL_BATCH.suites(), HONEST_SUITES);
+        assert_eq!(
+            CONDITIONAL_BATCH.suites(),
+            crate::cases::harness::HONEST_SUITES
+        );
         assert!(CONDITIONAL_BATCH.performance_contract().is_none());
     }
 }
