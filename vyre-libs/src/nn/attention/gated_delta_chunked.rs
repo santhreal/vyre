@@ -133,8 +133,13 @@ fn pair_dot_nodes(
     nodes
 }
 
-/// Build the authoritative cumulative-decay triangular chunk schedule.
-pub(super) fn chunked_gated_delta_impl(
+/// Build a fixed-size-64 chunk schedule for gated delta prefill.
+///
+/// The schedule retains the exact recurrent dependency inside each causal
+/// lower-triangular tile. Its final tile is padded structurally and guarded,
+/// so padding cannot read inputs, modify state, or appear in the output. It
+/// builds the authoritative cumulative-decay triangular schedule.
+pub fn chunked_gated_delta(
     spec: &GatedDeltaSpec<'_>,
 ) -> Result<Program, RecurrentGatedDeltaError> {
     let counts = spec.counts()?;

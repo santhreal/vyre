@@ -36,96 +36,12 @@ pub enum RecurrentGatedDeltaError {
 }
 
 /// Build a token-recurrent gated delta update.
-#[allow(clippy::too_many_arguments)]
-pub fn recurrent_gated_delta(
-    query: &str,
-    key: &str,
-    value: &str,
-    decay_log: &str,
-    beta_logits: &str,
-    state_input: &str,
-    output: &str,
-    state_output: &str,
-    batch: u32,
-    sequence: u32,
-    key_heads: u32,
-    value_heads: u32,
-    key_dim: u32,
-    value_dim: u32,
-    eps: f32,
-    dtype: DataType,
-) -> Result<Program, RecurrentGatedDeltaError> {
-    recurrent_gated_delta_impl(&GatedDeltaSpec {
-        query,
-        key,
-        value,
-        decay_log,
-        beta_logits,
-        state_input,
-        output,
-        state_output,
-        batch,
-        sequence,
-        key_heads,
-        value_heads,
-        key_dim,
-        value_dim,
-        eps,
-        dtype,
-    })
-}
-
-/// Build a fixed-size-64 chunk schedule for gated delta prefill.
-///
-/// The schedule retains the exact recurrent dependency inside each causal
-/// lower-triangular tile. Its final tile is padded structurally and guarded,
-/// so padding cannot read inputs, modify state, or appear in the output.
-#[allow(clippy::too_many_arguments)]
-pub fn chunked_gated_delta(
-    query: &str,
-    key: &str,
-    value: &str,
-    decay_log: &str,
-    beta_logits: &str,
-    state_input: &str,
-    output: &str,
-    state_output: &str,
-    batch: u32,
-    sequence: u32,
-    key_heads: u32,
-    value_heads: u32,
-    key_dim: u32,
-    value_dim: u32,
-    eps: f32,
-    dtype: DataType,
-) -> Result<Program, RecurrentGatedDeltaError> {
-    super::gated_delta_chunked::chunked_gated_delta_impl(&GatedDeltaSpec {
-        query,
-        key,
-        value,
-        decay_log,
-        beta_logits,
-        state_input,
-        output,
-        state_output,
-        batch,
-        sequence,
-        key_heads,
-        value_heads,
-        key_dim,
-        value_dim,
-        eps,
-        dtype,
-    })
-}
-
-/// Token-recurrent gated delta arithmetic.
 ///
 /// Q and K are L2-normalized in F32. `decay_log` is exponentiated and
 /// `beta_logits` is passed through sigmoid. Matrix state remains F32; activation
 /// output converts once to `dtype`. `state_input` is preserved and
 /// `state_output` receives the continued generation.
-fn recurrent_gated_delta_impl(
+pub fn recurrent_gated_delta(
     spec: &GatedDeltaSpec<'_>,
 ) -> Result<Program, RecurrentGatedDeltaError> {
     let counts = spec.counts()?;

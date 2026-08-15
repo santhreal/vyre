@@ -21,7 +21,9 @@ pub mod turboquant;
 
 pub use flash_attention::flash_attention;
 pub use flash_attention_2::{flash_attention_2, flash_attention_2_reference};
-pub use gated_delta::{chunked_gated_delta, recurrent_gated_delta, RecurrentGatedDeltaError};
+pub use gated_delta::{recurrent_gated_delta, RecurrentGatedDeltaError};
+pub use gated_delta_chunked::chunked_gated_delta;
+pub use gated_delta_layout::GatedDeltaSpec;
 pub use gqa_attention::{gqa_attention, gqa_attention_causal, gqa_attention_causal_typed};
 pub use head_to_token::{attention_head_to_token, attention_head_to_token_typed};
 pub use kv_cache::{kv_cache_append, kv_cache_append_typed, KvCacheAppendError};

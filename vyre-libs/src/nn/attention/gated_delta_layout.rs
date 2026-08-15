@@ -2,11 +2,11 @@
 //! schedules.
 //!
 //! [`recurrent_gated_delta`](super::gated_delta::recurrent_gated_delta) and
-//! [`chunked_gated_delta`](super::gated_delta::chunked_gated_delta) address the
-//! same six tensors with the same flat layout and validate the same shape
-//! contract; only their schedules differ. Both used to carry a private copy of
-//! that math. The copies are merged here so a layout change cannot land in one
-//! schedule and miss the other.
+//! [`chunked_gated_delta`](super::gated_delta_chunked::chunked_gated_delta)
+//! address the same six tensors with the same flat layout and validate the same
+//! shape contract; only their schedules differ. Both used to carry a private
+//! copy of that math. The copies are merged here so a layout change cannot land
+//! in one schedule and miss the other.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, UnOp};
 
@@ -17,39 +17,39 @@ use super::gated_delta::RecurrentGatedDeltaError;
 /// Both schedules take the same sixteen inputs; carrying them as one value
 /// keeps the two builders' entry points and their impls from drifting apart
 /// argument by argument.
-pub(super) struct GatedDeltaSpec<'a> {
+pub struct GatedDeltaSpec<'a> {
     /// Query activations, `[batch, sequence, key_heads, key_dim]`.
-    pub(super) query: &'a str,
+    pub query: &'a str,
     /// Key activations, `[batch, sequence, key_heads, key_dim]`.
-    pub(super) key: &'a str,
+    pub key: &'a str,
     /// Value activations, `[batch, sequence, value_heads, value_dim]`.
-    pub(super) value: &'a str,
+    pub value: &'a str,
     /// Per-token log decay, `[batch, sequence, value_heads]`.
-    pub(super) decay_log: &'a str,
+    pub decay_log: &'a str,
     /// Per-token pre-sigmoid gate, `[batch, sequence, value_heads]`.
-    pub(super) beta_logits: &'a str,
+    pub beta_logits: &'a str,
     /// Incoming matrix state, `[batch, value_heads, key_dim, value_dim]`.
-    pub(super) state_input: &'a str,
+    pub state_input: &'a str,
     /// Attention output, shaped like `value`.
-    pub(super) output: &'a str,
+    pub output: &'a str,
     /// Continued matrix state, shaped like `state_input`.
-    pub(super) state_output: &'a str,
+    pub state_output: &'a str,
     /// Batch count.
-    pub(super) batch: u32,
+    pub batch: u32,
     /// Tokens per sequence.
-    pub(super) sequence: u32,
+    pub sequence: u32,
     /// Query/key head count.
-    pub(super) key_heads: u32,
+    pub key_heads: u32,
     /// Value/state head count; a multiple of `key_heads`.
-    pub(super) value_heads: u32,
+    pub value_heads: u32,
     /// Query/key feature width.
-    pub(super) key_dim: u32,
+    pub key_dim: u32,
     /// Value/state feature width.
-    pub(super) value_dim: u32,
+    pub value_dim: u32,
     /// L2-normalization epsilon.
-    pub(super) eps: f32,
+    pub eps: f32,
     /// Activation dtype for every non-state buffer.
-    pub(super) dtype: DataType,
+    pub dtype: DataType,
 }
 
 /// Flattened element counts derived from a validated [`GatedDeltaSpec`].

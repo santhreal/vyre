@@ -20,6 +20,7 @@ use support::ir_fingerprint::assert_pinned_ir_fingerprints;
 use vyre_foundation::ir::{DataType, Node, Program};
 use vyre_libs::nn::attention::{
     chunked_gated_delta, flash_attention_2, mla_decode, recurrent_gated_delta, softmax,
+    GatedDeltaSpec,
 };
 use vyre_libs::nn::norm::layer_norm;
 
@@ -35,43 +36,28 @@ const DELTA_SEQ: u32 = 70;
 
 fn gated_delta_fixture(
     build: fn(
-        &str,
-        &str,
-        &str,
-        &str,
-        &str,
-        &str,
-        &str,
-        &str,
-        u32,
-        u32,
-        u32,
-        u32,
-        u32,
-        u32,
-        f32,
-        DataType,
+        &GatedDeltaSpec<'_>,
     ) -> Result<Program, vyre_libs::nn::attention::RecurrentGatedDeltaError>,
     dtype: DataType,
 ) -> Program {
-    build(
-        "query",
-        "key",
-        "value",
-        "decay_log",
-        "beta_logits",
-        "state_in",
-        "out",
-        "state_out",
-        2,
-        DELTA_SEQ,
-        2,
-        4,
-        3,
-        5,
-        1e-5,
+    build(&GatedDeltaSpec {
+        query: "query",
+        key: "key",
+        value: "value",
+        decay_log: "decay_log",
+        beta_logits: "beta_logits",
+        state_input: "state_in",
+        output: "out",
+        state_output: "state_out",
+        batch: 2,
+        sequence: DELTA_SEQ,
+        key_heads: 2,
+        value_heads: 4,
+        key_dim: 3,
+        value_dim: 5,
+        eps: 1e-5,
         dtype,
-    )
+    })
     .expect("gated delta fixture builds")
 }
 
