@@ -126,7 +126,7 @@ total_lines = 1139
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 2884
+duplicate_lines = 2860
 total_lines = 94229
 
 [[crate]]
