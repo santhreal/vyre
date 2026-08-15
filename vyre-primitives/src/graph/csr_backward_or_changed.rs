@@ -169,10 +169,7 @@ pub fn cpu_ref(
 /// converged frontier and `1` iff any pass set a new bit.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
-pub fn cpu_ref_closure(
-    inputs: CsrClosureInputs<'_>,
-    frontier: &[u32],
-) -> (Vec<u32>, u32) {
+pub fn cpu_ref_closure(inputs: CsrClosureInputs<'_>, frontier: &[u32]) -> (Vec<u32>, u32) {
     let graph = inputs.graph;
     let words = bitset_words(graph.node_count).max(1) as usize;
     let mut out = frontier.to_vec();

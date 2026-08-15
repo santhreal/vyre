@@ -29,8 +29,8 @@
 //!   (`csr_forward_or_changed_parallel_snapshot_*`), so it is one hop per
 //!   iteration for any numbering.
 
-use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use super::*;
+use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use crate::wire::pack_u32_slice;
 use vyre_driver::backend::VyreBackend;
 use vyre_driver::grid_sync::{
@@ -249,7 +249,19 @@ fn assert_device_matches_oracle(
     allow_mask: u32,
     max_iters: u32,
 ) -> (u32, bool) {
-    let (frontier, outcome) = try_cpu_ref_converged(CsrClosureInputs { graph: CsrGraphView { node_count: node_count, edge_offsets: edge_offsets, edge_targets: edge_targets, edge_kind_mask: edge_kind_mask }, allow_mask: allow_mask, max_iters: max_iters }, frontier_in)
+    let (frontier, outcome) = try_cpu_ref_converged(
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: node_count,
+                edge_offsets: edge_offsets,
+                edge_targets: edge_targets,
+                edge_kind_mask: edge_kind_mask,
+            },
+            allow_mask: allow_mask,
+            max_iters: max_iters,
+        },
+        frontier_in,
+    )
     .expect("Fix: CPU oracle must accept a valid graph.");
     let (device_frontier, device_changed, device_converged) = run_converged(
         node_count,
@@ -442,7 +454,19 @@ fn grid_sync_converged_word_matches_oracle_through_the_closure_split_entry() {
         .expect("Fix: persistent_bfs closure-split dispatch must succeed on a valid graph.");
         let converged = read_named_output(&program, &outputs, "converged")[0];
 
-        let (_, oracle) = try_cpu_ref_converged(CsrClosureInputs { graph: CsrGraphView { node_count: node_count, edge_offsets: &offsets, edge_targets: &targets, edge_kind_mask: &masks }, allow_mask: 0xFFFF_FFFF, max_iters: max_iters }, &seed)
+        let (_, oracle) = try_cpu_ref_converged(
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: node_count,
+                    edge_offsets: &offsets,
+                    edge_targets: &targets,
+                    edge_kind_mask: &masks,
+                },
+                allow_mask: 0xFFFF_FFFF,
+                max_iters: max_iters,
+            },
+            &seed,
+        )
         .expect("Fix: CPU oracle must accept a valid graph.");
         assert_eq!(
             converged,
@@ -527,7 +551,19 @@ fn assert_batch_device_matches_oracle(
 
     let mut oracle_outcomes = Vec::with_capacity(seeds.len());
     for (query, seed) in seeds.iter().enumerate() {
-        let (frontier, outcome) = try_cpu_ref_converged(CsrClosureInputs { graph: CsrGraphView { node_count: node_count, edge_offsets: edge_offsets, edge_targets: edge_targets, edge_kind_mask: edge_kind_mask }, allow_mask: allow_mask, max_iters: max_iters }, seed)
+        let (frontier, outcome) = try_cpu_ref_converged(
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: node_count,
+                    edge_offsets: edge_offsets,
+                    edge_targets: edge_targets,
+                    edge_kind_mask: edge_kind_mask,
+                },
+                allow_mask: allow_mask,
+                max_iters: max_iters,
+            },
+            seed,
+        )
         .expect("Fix: CPU oracle must accept a valid graph.");
         let start = query * words;
         let end = start + words;
@@ -668,7 +704,19 @@ fn assert_device_density_matches_oracle(
     allow_mask: u32,
     max_iters: u32,
 ) -> Vec<u32> {
-    let (frontier, _outcome, active) = try_cpu_ref_density(CsrClosureInputs { graph: CsrGraphView { node_count: node_count, edge_offsets: edge_offsets, edge_targets: edge_targets, edge_kind_mask: edge_kind_mask }, allow_mask: allow_mask, max_iters: max_iters }, frontier_in)
+    let (frontier, _outcome, active) = try_cpu_ref_density(
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: node_count,
+                edge_offsets: edge_offsets,
+                edge_targets: edge_targets,
+                edge_kind_mask: edge_kind_mask,
+            },
+            allow_mask: allow_mask,
+            max_iters: max_iters,
+        },
+        frontier_in,
+    )
     .expect("Fix: CPU density oracle must accept a valid graph.");
     assert_eq!(
         active.len(),
@@ -833,7 +881,19 @@ fn assert_batch_device_density_matches_oracle(
 
     let mut oracle = Vec::with_capacity(seeds.len() * max_iters as usize);
     for (query, seed) in seeds.iter().enumerate() {
-        let (_frontier, _outcome, active) = try_cpu_ref_density(CsrClosureInputs { graph: CsrGraphView { node_count: node_count, edge_offsets: edge_offsets, edge_targets: edge_targets, edge_kind_mask: edge_kind_mask }, allow_mask: allow_mask, max_iters: max_iters }, seed)
+        let (_frontier, _outcome, active) = try_cpu_ref_density(
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: node_count,
+                    edge_offsets: edge_offsets,
+                    edge_targets: edge_targets,
+                    edge_kind_mask: edge_kind_mask,
+                },
+                allow_mask: allow_mask,
+                max_iters: max_iters,
+            },
+            seed,
+        )
         .expect("Fix: CPU density oracle must accept a valid graph.");
         let start = query * max_iters as usize;
         let end = start + max_iters as usize;

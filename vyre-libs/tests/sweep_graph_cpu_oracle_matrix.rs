@@ -10,7 +10,6 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use vyre_libs::graph::dispatch::cpu_oracle::CpuOracleDispatcher;
 use vyre_libs::graph::dispatch::csr_bidirectional::reference_bidirectional_step;
 use vyre_libs::graph::dispatch::csr_forward_or_changed::reference_forward_step_with_change_flag;
@@ -19,6 +18,7 @@ use vyre_libs::graph::dispatch::exploded::{
 };
 use vyre_libs::graph::dispatch::persistent_bfs::bfs_expand;
 use vyre_primitives::graph::csr_backward_or_changed;
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use vyre_primitives::graph::csr_forward_or_changed;
 use vyre_primitives::graph::exploded::build_cpu_reference;
 use vyre_primitives::graph::motif::{self, MotifEdge};
@@ -429,7 +429,19 @@ fn generated_csr_and_persistent_bfs_oracles_cover_4096_shapes() {
         let expected_bfs = oracle_persistent_bfs(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
-        let actual_bfs = persistent_bfs::cpu_ref(CsrClosureInputs { graph: CsrGraphView { node_count: node_count, edge_offsets: &offsets, edge_targets: &targets, edge_kind_mask: &masks }, allow_mask: allow_mask, max_iters: max_iters }, &frontier);
+        let actual_bfs = persistent_bfs::cpu_ref(
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: node_count,
+                    edge_offsets: &offsets,
+                    edge_targets: &targets,
+                    edge_kind_mask: &masks,
+                },
+                allow_mask: allow_mask,
+                max_iters: max_iters,
+            },
+            &frontier,
+        );
         assert_eq!(actual_bfs, expected_bfs, "case={case} persistent_bfs");
     }
 }
@@ -445,7 +457,19 @@ fn generated_csr_backward_or_changed_oracles_cover_4096_shapes() {
         //    closure. This is the op's real contract: a single node-parallel pass reads the
         //    live accumulator and is order-dependent for multi-hop chains, but the CONVERGED
         //    set is unique regardless of pass order.
-        let (closure, _changed) = csr_backward_or_changed::cpu_ref_closure(CsrClosureInputs { graph: CsrGraphView { node_count: node_count, edge_offsets: &offsets, edge_targets: &targets, edge_kind_mask: &masks }, allow_mask: allow_mask, max_iters: max_iters }, &frontier);
+        let (closure, _changed) = csr_backward_or_changed::cpu_ref_closure(
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: node_count,
+                    edge_offsets: &offsets,
+                    edge_targets: &targets,
+                    edge_kind_mask: &masks,
+                },
+                allow_mask: allow_mask,
+                max_iters: max_iters,
+            },
+            &frontier,
+        );
         let expected = oracle_backward_closure(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
@@ -606,7 +630,19 @@ fn sweep_persistent_bfs_matches_independent_oracle_matrix() {
         let expected = oracle_persistent_bfs(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
-        let actual = bfs_expand(CsrClosureInputs { graph: CsrGraphView { node_count: node_count, edge_offsets: &offsets, edge_targets: &targets, edge_kind_mask: &masks }, allow_mask: allow_mask, max_iters: max_iters }, &frontier);
+        let actual = bfs_expand(
+            CsrClosureInputs {
+                graph: CsrGraphView {
+                    node_count: node_count,
+                    edge_offsets: &offsets,
+                    edge_targets: &targets,
+                    edge_kind_mask: &masks,
+                },
+                allow_mask: allow_mask,
+                max_iters: max_iters,
+            },
+            &frontier,
+        );
         assert_eq!(
             actual, expected,
             "Fix: persistent_bfs case {case} node_count={node_count} max_iters={max_iters} must match independent oracle."

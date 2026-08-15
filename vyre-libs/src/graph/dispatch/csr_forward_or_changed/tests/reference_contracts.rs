@@ -1,5 +1,5 @@
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use super::*;
+use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 
 #[test]
 fn step_flips_change_flag_when_new_bits_added() {
@@ -37,8 +37,19 @@ fn matches_primitive_directly() {
 #[test]
 fn closure_reaches_full_chain_via_change_flag() {
     let (off, tgt, msk) = linear_graph();
-    let out =
-        reference_forward_closure_via_change_flag(CsrClosureInputs { graph: CsrGraphView { node_count: 4, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 10 }, &[0b0001]);
+    let out = reference_forward_closure_via_change_flag(
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: 4,
+                edge_offsets: &off,
+                edge_targets: &tgt,
+                edge_kind_mask: &msk,
+            },
+            allow_mask: 0xFFFF_FFFF,
+            max_iters: 10,
+        },
+        &[0b0001],
+    );
     assert_eq!(out, vec![0b1111]);
 }
 
@@ -62,8 +73,19 @@ fn closure_terminates_with_self_loop_under_max_iters() {
     let off = vec![0, 1, 1];
     let tgt = vec![0];
     let msk = vec![1];
-    let out =
-        reference_forward_closure_via_change_flag(CsrClosureInputs { graph: CsrGraphView { node_count: 2, edge_offsets: &off, edge_targets: &tgt, edge_kind_mask: &msk }, allow_mask: 0xFFFF_FFFF, max_iters: 50 }, &[0b01]);
+    let out = reference_forward_closure_via_change_flag(
+        CsrClosureInputs {
+            graph: CsrGraphView {
+                node_count: 2,
+                edge_offsets: &off,
+                edge_targets: &tgt,
+                edge_kind_mask: &msk,
+            },
+            allow_mask: 0xFFFF_FFFF,
+            max_iters: 50,
+        },
+        &[0b01],
+    );
     // Self-loop never adds new bits -> terminates immediately.
     assert_eq!(out, vec![0b01]);
 }
