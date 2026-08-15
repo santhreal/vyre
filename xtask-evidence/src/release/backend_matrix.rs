@@ -210,7 +210,7 @@ const CUDA_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
     },
     BackendFeatureRequirement {
         id: "megakernel-paired-speculation",
-        relative: "vyre-runtime/src/megakernel/speculation.rs",
+        relative: "vyre-runtime/src/resident_work_queue/speculation.rs",
         role: "Megakernel paired speculative execution adoption policy",
         tokens: &[
             "PairedSpeculationWindow",
@@ -240,7 +240,7 @@ const WGPU_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
     },
     BackendFeatureRequirement {
         id: "wgpu-readback-ring",
-        relative: "vyre-driver-wgpu/src/runtime/readback_ring.rs",
+        relative: "vyre-driver-wgpu/src/runtime/readback_ring/ring.rs",
         role: "WGPU sparse/readback ring",
         tokens: &["ring", "readback"],
     },
@@ -270,7 +270,7 @@ const WGPU_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
     },
     BackendFeatureRequirement {
         id: "megakernel-paired-speculation",
-        relative: "vyre-runtime/src/megakernel/speculation.rs",
+        relative: "vyre-runtime/src/resident_work_queue/speculation.rs",
         role: "Megakernel paired speculative execution adoption policy",
         tokens: &[
             "PairedSpeculationWindow",

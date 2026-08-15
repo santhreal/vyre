@@ -62,7 +62,7 @@ struct PendingPublish {
     args: [u32; 3],
 }
 
-/// Compose an [`AsyncUringStream`] with the megakernel ring-slot writer so the
+/// Compose an [`AsyncUringStream`] with the resident-work-queue ring-slot writer so the
 /// host can drive the compatibility mapped-read ingest loop with one compact
 /// pump. Native NVMe → BAR1 ingest is owned by
 /// [`super::driver::NvmeGpuIngestDriver::new_gpudirect`].

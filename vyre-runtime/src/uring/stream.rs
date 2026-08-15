@@ -23,11 +23,11 @@ pub struct Iovec {
 }
 
 /// `IORING_OP_READV`  -  scatter-read into an array of iovecs.
-pub const IORING_OP_READV: u8 = 1;
+pub(crate) const IORING_OP_READV: u8 = 1;
 /// `IORING_OP_READ_FIXED`  -  read into a pre-registered buffer.
-pub const IORING_OP_READ_FIXED: u8 = 22;
+pub(crate) const IORING_OP_READ_FIXED: u8 = 22;
 /// `IORING_OP_URING_CMD`  -  vendor-specific passthrough (NVMe). Kernel 6.0+.
-pub const IORING_OP_URING_CMD: u8 = 46;
+pub(crate) const IORING_OP_URING_CMD: u8 = 46;
 
 /// GPU-visible memory region that io_uring is allowed to DMA into.
 ///

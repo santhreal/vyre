@@ -161,7 +161,6 @@ The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
 | `test` | `live_capability_honesty` | `vyre-driver-wgpu/tests/live_capability_honesty.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test live_capability_honesty` |
 | `test` | `loop_carrier_three_level_if_real_dispatch` | `vyre-driver-wgpu/tests/loop_carrier_three_level_if_real_dispatch.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test loop_carrier_three_level_if_real_dispatch` |
 | `test` | `lowering_actionable_errors` | `vyre-driver-wgpu/tests/lowering_actionable_errors.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test lowering_actionable_errors` |
-| `test` | `megakernel_emit` | `vyre-driver-wgpu/tests/megakernel_emit.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test megakernel_emit` |
 | `test` | `naga_deeper_regressions` | `vyre-driver-wgpu/tests/naga_deeper_regressions.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test naga_deeper_regressions` |
 | `test` | `naga_findings_followup` | `vyre-driver-wgpu/tests/naga_findings_followup.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test naga_findings_followup` |
 | `test` | `naga_loop_region_followup` | `vyre-driver-wgpu/tests/naga_loop_region_followup.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test naga_loop_region_followup` |
@@ -180,6 +179,7 @@ The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
 | `test` | `resident_grid_sync_contracts` | `vyre-driver-wgpu/tests/resident_grid_sync_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test resident_grid_sync_contracts` |
 | `test` | `resident_output_contracts` | `vyre-driver-wgpu/tests/resident_output_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test resident_output_contracts` |
 | `test` | `resident_timed_outputs` | `vyre-driver-wgpu/tests/resident_timed_outputs.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test resident_timed_outputs` |
+| `test` | `resident_work_queue_emit` | `vyre-driver-wgpu/tests/resident_work_queue_emit.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test resident_work_queue_emit` |
 | `test` | `same_width_store_parity` | `vyre-driver-wgpu/tests/same_width_store_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test same_width_store_parity` |
 | `test` | `self_optimizer_canonicalize_e2e` | `vyre-driver-wgpu/tests/self_optimizer_canonicalize_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test self_optimizer_canonicalize_e2e` |
 | `test` | `self_optimizer_const_fold_e2e` | `vyre-driver-wgpu/tests/self_optimizer_const_fold_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test self_optimizer_const_fold_e2e` |

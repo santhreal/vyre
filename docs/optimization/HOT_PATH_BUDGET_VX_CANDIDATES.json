@@ -110,9 +110,9 @@
     "suggested_vx": "HOTPATH-VYRE-FOUNDATION-SRC-OPTIMIZER-PASSES-LOOPS-LOOP-FISSION-RS-MAX-PANIC-FINDINGS"
   },
   {
-    "file": "vyre-runtime/src/megakernel/ring.rs",
+    "file": "vyre-runtime/src/resident_work_queue/ring.rs",
     "line": 97,
-    "owner_lane": "runtime_megakernel",
+    "owner_lane": "runtime_resident_work_queue",
     "budget": "max_findings",
     "actual": 9,
     "limit": 6,
@@ -121,9 +121,9 @@
     "suggested_vx": "HOTPATH-VYRE-RUNTIME-SRC-MEGAKERNEL-RING-RS-MAX-FINDINGS"
   },
   {
-    "file": "vyre-runtime/src/megakernel/ring.rs",
+    "file": "vyre-runtime/src/resident_work_queue/ring.rs",
     "line": 332,
-    "owner_lane": "runtime_megakernel",
+    "owner_lane": "runtime_resident_work_queue",
     "budget": "max_allocation_findings",
     "actual": 8,
     "limit": 6,
@@ -132,9 +132,9 @@
     "suggested_vx": "HOTPATH-VYRE-RUNTIME-SRC-MEGAKERNEL-RING-RS-MAX-ALLOCATION-FINDINGS"
   },
   {
-    "file": "vyre-runtime/src/megakernel/ring.rs",
+    "file": "vyre-runtime/src/resident_work_queue/ring.rs",
     "line": 97,
-    "owner_lane": "runtime_megakernel",
+    "owner_lane": "runtime_resident_work_queue",
     "budget": "max_panic_findings",
     "actual": 1,
     "limit": 0,
@@ -143,9 +143,9 @@
     "suggested_vx": "HOTPATH-VYRE-RUNTIME-SRC-MEGAKERNEL-RING-RS-MAX-PANIC-FINDINGS"
   },
   {
-    "file": "vyre-runtime/src/megakernel/telemetry.rs",
+    "file": "vyre-runtime/src/resident_work_queue/telemetry.rs",
     "line": 40,
-    "owner_lane": "runtime_megakernel",
+    "owner_lane": "runtime_resident_work_queue",
     "budget": "max_findings",
     "actual": 35,
     "limit": 9,
@@ -154,9 +154,9 @@
     "suggested_vx": "HOTPATH-VYRE-RUNTIME-SRC-MEGAKERNEL-TELEMETRY-RS-MAX-FINDINGS"
   },
   {
-    "file": "vyre-runtime/src/megakernel/telemetry.rs",
+    "file": "vyre-runtime/src/resident_work_queue/telemetry.rs",
     "line": 40,
-    "owner_lane": "runtime_megakernel",
+    "owner_lane": "runtime_resident_work_queue",
     "budget": "max_allocation_findings",
     "actual": 25,
     "limit": 9,
@@ -165,9 +165,9 @@
     "suggested_vx": "HOTPATH-VYRE-RUNTIME-SRC-MEGAKERNEL-TELEMETRY-RS-MAX-ALLOCATION-FINDINGS"
   },
   {
-    "file": "vyre-runtime/src/megakernel/telemetry.rs",
+    "file": "vyre-runtime/src/resident_work_queue/telemetry.rs",
     "line": 69,
-    "owner_lane": "runtime_megakernel",
+    "owner_lane": "runtime_resident_work_queue",
     "budget": "max_panic_findings",
     "actual": 10,
     "limit": 0,

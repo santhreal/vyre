@@ -13,8 +13,7 @@
 use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{
-    BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ShapeDim, ValueContract,
-    ValueLifetime,
+    BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{compile, Artifact, CompileRequest, Digest, ExternalFacts, SearchBudget};
 

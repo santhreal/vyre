@@ -55,14 +55,14 @@ ROWS=(
     # vyre_test_support::ir_variants enumerate NODE_VARIANT_NAMES at run time and
     # fail until every declared variant has a fixture and a traversal decision.
     "P-DELETE-1__child_bodies_owner@@fn child_bodies\\b@@vyre-foundation/src@@1"
-    "P-DELETE-10__buffer_access_auto@@BufferAccess::(infer|auto|derive_from)@@vyre-foundation/src/lower vyre-driver-wgpu/src vyre-runtime/src/megakernel@@0"
+    "P-DELETE-10__buffer_access_auto@@BufferAccess::(infer|auto|derive_from)@@vyre-foundation/src/lower vyre-driver-wgpu/src vyre-runtime/src/resident_work_queue@@0"
     "P-UNIFY-2__cpu_references@@fn cpu_reference\\b@@vyre-foundation/src vyre-reference/src@@0"
     # Floor 1, not 0: the unification this row tracks is ACHIEVED. There is
     # exactly one fusion-planning entry point and it lives in
     # vyre-foundation/src/execution_plan/fusion/fuse.rs. The previous 0 was
     # never measured, because all three declared paths had moved; the row
     # scanned nothing. A second entry point anywhere fails this row.
-    "P-UNIFY-4__fusion_planning@@fn (plan_fusion|fuse_programs|tensor_network_fusion_order)\\b@@vyre-foundation/src/execution_plan vyre-pass-engine/src vyre-runtime/src/megakernel@@1"
+    "P-UNIFY-4__fusion_planning@@fn (plan_fusion|fuse_programs|tensor_network_fusion_order)\\b@@vyre-foundation/src/execution_plan vyre-pass-engine/src vyre-runtime/src/resident_work_queue@@1"
     "P-UNIFY-1b__cache_in_wgpu@@impl PipelineCacheStore for@@vyre-driver-wgpu/src@@0"
 )
 

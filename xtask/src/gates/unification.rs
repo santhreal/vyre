@@ -39,7 +39,7 @@ const ROWS: &[Row] = &[
         roots: &[
             "vyre-foundation/src/lower",
             "vyre-driver-wgpu/src",
-            "vyre-runtime/src/megakernel",
+            "vyre-runtime/src/resident_work_queue",
         ],
         line: |line| {
             line.contains("BufferAccess::infer")
@@ -62,7 +62,7 @@ const ROWS: &[Row] = &[
         roots: &[
             "vyre-foundation/src/execution_plan",
             "vyre-pass-engine/src",
-            "vyre-runtime/src/megakernel",
+            "vyre-runtime/src/resident_work_queue",
         ],
         line: |line| {
             contains_word(line, "fn plan_fusion")

@@ -179,7 +179,7 @@ const WAIVERS: &[Waiver] = &[
         reason: "the reference evaluator interprets each variant, so its dispatch is the decision, not a descent shortcut",
     },
     Waiver {
-        path: "vyre-runtime/src/megakernel/planner/barriers.rs",
+        path: "vyre-runtime/src/resident_work_queue/planner/barriers.rs",
         owner: "Backends",
         reason: "barrier planning; a missed nested barrier is a race, highest-priority conversion",
     },

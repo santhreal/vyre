@@ -106,7 +106,6 @@ pub mod artifact_admission;
 pub mod resource_residency;
 
 /// Resident work-queue protocols, scheduling policy, and runtime IO.
-#[path = "megakernel/mod.rs"]
 pub mod resident_work_queue;
 
 /// Authenticated persistent execution over retained artifact bindings.

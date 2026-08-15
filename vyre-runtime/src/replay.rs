@@ -515,4 +515,3 @@ impl From<ReplayLogError> for PipelineError {
         PipelineError::Backend(err.to_string())
     }
 }
-

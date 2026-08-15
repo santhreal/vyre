@@ -21,7 +21,7 @@
 //! 5. **Large-file advisory**  -  files over a per-file source-line
 //!    review guideline are reported as notes for a split-by-responsibility
 //!    review. This is advisory and never fails the audit; the hard size
-//!    ceiling is `scripts/check_max_file_size.sh`.
+//!    ceiling is the `file-size` gate.
 //! 6. **Composition-chain coverage**  -  every non-leaf registered op must
 //!    render at least one child Region. Explicit pure-IR leaves and tiny
 //!    operations are exempt.
@@ -78,7 +78,7 @@ const FINGERPRINT_SIM_THRESHOLD: f64 = 0.88;
 /// Line count at which a source file is flagged for a split-by-responsibility
 /// *review*. Crossing it is a guideline prompt, not a law and not a build
 /// failure. The hard god-file ceiling (ratcheted, with a per-file exception
-/// list) is enforced by `scripts/check_max_file_size.sh`.
+/// list) is enforced by the `file-size` gate.
 const LARGE_FILE_ADVISORY_LINES: usize = 500;
 const MIN_CALLERS_FOR_PRIMITIVE: usize = 2;
 
@@ -1025,15 +1025,15 @@ fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
                         continue;
                     }
                     if use_path.imports_dialect(other_name) {
-                        report.note(format!("  ✗ {}/{} line {}: `{}` → imports `{other_name}` dialect privately. \
+                        report.note(format!(
+                            "  ✗ {}/{} line {}: `{}` → imports `{other_name}` dialect privately. \
                              Fix: hoist the shared piece into vyre-primitives, or route via a \
                              public re-export at crate root.",
                             dialect_name,
-                            path.file_name()
-                                .and_then(|n| n.to_str())
-                                .unwrap_or("?"),
+                            path.file_name().and_then(|n| n.to_str()).unwrap_or("?"),
                             use_path.line,
-                            use_path.segments.join("::")));
+                            use_path.segments.join("::")
+                        ));
                         flagged += 1;
                     }
                 }

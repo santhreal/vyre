@@ -195,7 +195,7 @@ max_panic_findings = 0
 
 # Persistent megakernel runtime surfaces.
 [[hot_path]]
-file = "vyre-runtime/src/megakernel/ring.rs"
+file = "vyre-runtime/src/resident_work_queue/ring.rs"
 reason = "Megakernel host ring producer/consumer seam; persistent dispatch publishes work through this ABI."
 max_findings = 6
 max_allocation_findings = 6
@@ -205,7 +205,7 @@ max_sleep_findings = 0
 max_panic_findings = 0
 
 [[hot_path]]
-file = "vyre-runtime/src/megakernel/telemetry.rs"
+file = "vyre-runtime/src/resident_work_queue/telemetry.rs"
 reason = "Megakernel control/ring telemetry decode; release evidence and scheduler tuning consume this snapshot."
 max_findings = 9
 max_allocation_findings = 9

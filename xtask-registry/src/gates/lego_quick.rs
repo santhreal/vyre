@@ -17,7 +17,7 @@
 //!    has grown a second responsibility worth splitting, it is a
 //!    guideline, not a law. The hard size cap (a genuine god-file ceiling
 //!    with a ratcheted per-file exception list) lives in
-//!    `scripts/check_max_file_size.sh`, not here.
+//!    the `file-size` gate, not here.
 //!
 //! The full op-fingerprint reinvention check (`lego-audit` check 1)
 //! requires loading every registered operation and remains a separate CI gate.
@@ -35,7 +35,7 @@ use xtask::gates::use_paths::{collect_use_paths, is_test_source_path};
 /// Line count at which a source file is *flagged for a split-by-responsibility
 /// review*. This is a guideline, not a law: crossing it does not fail the gate.
 /// The hard god-file ceiling is enforced separately by
-/// `scripts/check_max_file_size.sh` with its ratcheted per-file exception list.
+/// the `file-size` gate with its ratcheted per-file exception list.
 const LARGE_FILE_ADVISORY_LINES: usize = 500;
 const MAX_LEGO_QUICK_SOURCE_BYTES: u64 = 2_097_152;
 

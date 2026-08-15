@@ -32,13 +32,13 @@ const IORING_REGISTER_BUFFERS: u32 = 0;
 const IORING_REGISTER_FILES: u32 = 2;
 
 /// SQE flag marking the `fd` field as a registered-file index.
-pub const IOSQE_FIXED_FILE: u8 = 1 << 0;
+pub(crate) const IOSQE_FIXED_FILE: u8 = 1 << 0;
 
 // ---- Struct Definitions ----
 
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
-pub struct io_sqring_offsets {
+pub(crate) struct io_sqring_offsets {
     pub head: u32,
     pub tail: u32,
     pub ring_mask: u32,
@@ -52,7 +52,7 @@ pub struct io_sqring_offsets {
 
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
-pub struct io_cqring_offsets {
+pub(crate) struct io_cqring_offsets {
     pub head: u32,
     pub tail: u32,
     pub ring_mask: u32,
@@ -66,7 +66,7 @@ pub struct io_cqring_offsets {
 
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
-pub struct io_uring_params {
+pub(crate) struct io_uring_params {
     pub sq_entries: u32,
     pub cq_entries: u32,
     pub flags: u32,
@@ -81,7 +81,7 @@ pub struct io_uring_params {
 
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
-pub struct io_uring_sqe {
+pub(crate) struct io_uring_sqe {
     pub opcode: u8,
     pub flags: u8,
     pub ioprio: u16,
@@ -100,7 +100,7 @@ pub struct io_uring_sqe {
 
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
-pub struct io_uring_cqe {
+pub(crate) struct io_uring_cqe {
     pub user_data: u64,
     pub res: i32,
     pub flags: u32,
@@ -371,7 +371,7 @@ impl IoUringState {
     }
 
     /// Obtain a mutable reference to the next available SQE.
-    pub fn get_sqe(&mut self) -> Option<&mut io_uring_sqe> {
+    pub(crate) fn get_sqe(&mut self) -> Option<&mut io_uring_sqe> {
         // SAFETY: mmap regions and kernel offsets are valid; &mut self forbids producers racing.
         unsafe {
             let head = (*(self.sq_ring_ptr.add(kernel_offset_usize_or_panic(
@@ -429,7 +429,7 @@ impl IoUringState {
     }
 
     /// Read the next available CQE from the completion queue.
-    pub fn peek_cqe(&mut self) -> Option<&io_uring_cqe> {
+    pub(crate) fn peek_cqe(&mut self) -> Option<&io_uring_cqe> {
         // SAFETY: cq_ring_ptr is live and Acquire tail reads synchronize with kernel CQE writes.
         unsafe {
             let head_ptr = self.cq_ring_ptr.add(kernel_offset_usize_or_panic(

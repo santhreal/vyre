@@ -101,7 +101,7 @@ fn write_fixture(root: &Path) {
         root.join("docs/ARCHITECTURE.md"),
         current_header(
             "Architecture",
-            "Use generated/OP_SCHEMA.json. The semantic authority is vyre-foundation::operation::OperationRegistry; derived catalogs do not own shadow operation identities. Evidence selects CUDA as the preferred backend. Cross-program composition target. vyre-megakernel emits Artifact envelopes. Persistent protocol lives in vyre-runtime/src/megakernel/. The older bytecode interpreter design is superseded.",
+            "Use generated/OP_SCHEMA.json. The semantic authority is vyre-foundation::operation::OperationRegistry; derived catalogs do not own shadow operation identities. Evidence selects CUDA as the preferred backend. Cross-program composition target. vyre-megakernel emits Artifact envelopes. Persistent protocol lives in vyre-runtime/src/resident_work_queue/. The older bytecode interpreter design is superseded.",
         ),
     )
     .unwrap();

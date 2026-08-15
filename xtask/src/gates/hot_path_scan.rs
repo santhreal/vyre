@@ -975,7 +975,7 @@ write = ["vyre-driver/src/**"]
                 limit: 9,
             },
             BudgetDelta {
-                file: "vyre-runtime/src/megakernel/telemetry.rs".to_string(),
+                file: "vyre-runtime/src/resident_work_queue/telemetry.rs".to_string(),
                 budget: "max_panic_findings",
                 actual: 10,
                 limit: 0,
@@ -990,7 +990,7 @@ write = ["vyre-driver/src/**"]
                 content: "Some(cached.module.clone())".to_string(),
             },
             Hit {
-                file: "vyre-runtime/src/megakernel/telemetry.rs".to_string(),
+                file: "vyre-runtime/src/resident_work_queue/telemetry.rs".to_string(),
                 line: 69,
                 pattern: "panic!",
                 kind: PatternKind::Panic,
@@ -1002,8 +1002,8 @@ write = ["vyre-driver/src/**"]
 [lane.lower_emit]
 write = ["vyre-emit-naga/src/**"]
 
-[lane.runtime_megakernel]
-write = ["vyre-runtime/src/megakernel/**"]
+[lane.runtime_resident_work_queue]
+write = ["vyre-runtime/src/resident_work_queue/**"]
 "#,
         )
         .unwrap();
@@ -1026,9 +1026,12 @@ write = ["vyre-runtime/src/megakernel/**"]
             json[0]["suggested_vx"],
             "HOTPATH-VYRE-EMIT-NAGA-SRC-LIB-RS-MAX-FINDINGS"
         );
-        assert_eq!(json[1]["file"], "vyre-runtime/src/megakernel/telemetry.rs");
+        assert_eq!(
+            json[1]["file"],
+            "vyre-runtime/src/resident_work_queue/telemetry.rs"
+        );
         assert_eq!(json[1]["line"], 69);
-        assert_eq!(json[1]["owner_lane"], "runtime_megakernel");
+        assert_eq!(json[1]["owner_lane"], "runtime_resident_work_queue");
         assert_eq!(json[1]["budget"], "max_panic_findings");
     }
 

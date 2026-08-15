@@ -125,11 +125,9 @@ impl Gate for UnboundedCache {
                     scan::contains_word(line, "HashMap::new()")
                         || scan::contains_word(line, "VecDeque::new()")
                 },
-                // Each of the two reviewed sites documents its own bound in-module.
-                reviewed: &[
-                    "vyre-driver-wgpu/src/buffer/handle.rs",
-                    "vyre-runtime/src/uring/io_loop.rs",
-                ],
+                // The reviewed site bounds both queues by the ring's outstanding
+                // submissions and documents that on each field.
+                reviewed: &["vyre-runtime/src/uring/pump.rs"],
                 reviewed_line: None,
                 message: "unbounded associative container construction",
                 fix: "construct with a bound (capacity, eviction, pool) or move the site \

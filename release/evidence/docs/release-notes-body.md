@@ -1509,6 +1509,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   positional arguments, free to drift from the list it forwards to and
   unprovable from either side. A composition names the primitive it composes.
   The public names are unchanged.
+- `MapResult` has one definition. `vyre-driver-wgpu` spelled `Result<(),
+  wgpu::BufferAsyncError>` three times: the public alias in the readback ring
+  plus a private copy in the readback and timestamp recorders, one of which
+  imported the public alias in the same file it redefined. Both recorders use
+  the published alias.
 - Every registered xtask subcommand is now a gate answering one contract: it
   returns findings and notes instead of printing, and the runner decides what
   that means. The `Kind` enum is gone, so no check is exempt from the sweep by
@@ -1954,6 +1959,22 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   semantic operation witnesses, including each operation's declared tolerance.
   The library operation catalog distinguishes the complete semantic inventory
   from its deterministic executable-fixture projection.
+- Six source files over their measured ceiling are split along the boundaries
+  already inside them, and each new file is named for its contents.
+  `vyre-runtime/src/tenant.rs` became
+  `tenant/{error,quota,handle,registry}.rs`;
+  `vyre-primitives/src/matching/dfa_compile.rs` became
+  `dfa_compile/{wire,compile}.rs`; `vyre-driver-wgpu/src/buffer/handle.rs`
+  became `buffer/{handle,staging,bind_group_cache}/`;
+  `vyre-primitives/src/math/sinkhorn_iterate.rs` became
+  `sinkhorn_iterate/{program,reference,reference_f64}.rs`;
+  `vyre-primitives/src/text/utf8_validate.rs` became
+  `utf8_validate/{program,sequence_rules,reference}.rs`; and
+  `vyre-driver-wgpu/src/runtime/readback_ring.rs` became
+  `readback_ring/{slot,stats,capacity,ring,ring_set}.rs`. Every public path is
+  unchanged. Each test module moved next to the code it proves, which is what
+  keeps `lock_inner` and `lock_cache` private to the bind-group cache instead
+  of widening them for a test in another module.
 - Duplication pins for three crates now record the measured tree: vyre-macros
   89 to 41, vyre-lints 66 to 0, vyre-debug 54 to 9. Their total line counts are
   corrected to the measured values, which were already stale before these
@@ -2105,6 +2126,19 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   whose generator was retired is stale by construction, and the README sections
   plus `--help` are the live surface. `scripts/cli_docs.py` and
   `scripts/lib/cargo_runner.py` are gone.
+- The runtime module that owns persistent slot residency is
+  `vyre-runtime/src/resident_work_queue/`, and its lane, its test files, and
+  its architecture page carry the same name. The directory was `megakernel/`, a
+  name the crate's own types never used: nothing in it is named `Megakernel`,
+  the artifact compiler `vyre-megakernel` is a different crate that
+  legitimately keeps the word, and the module was reached through a path
+  attribute pointing at a directory the public paths did not mention. The 24
+  `megakernel_*` test files, the `runtime_megakernel` ownership lane in
+  `docs/optimization/OWNERSHIP.toml`, the hot-path and hygiene rows, and the
+  regenerated testing guides now all name the resident work queue.
+  `vyre-runtime/ARCHITECTURE.md` described three types that do not exist and a
+  directory that no longer did; it now describes the real submodules and the
+  real public surface.
 - `recurrent_gated_delta` and `chunked_gated_delta` take `&GatedDeltaSpec`,
   which is now public, and the chunked schedule is exported from the module
   that builds it. Each entry point had restated the same sixteen positional
@@ -2161,6 +2195,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `analysis`. The `cat`, `zx`, `dnnf`, `types` and `effects` features are gone
   with them, and `vyre-libs` reasoning now depends on `vyre-primitives/graph`
   alone.
+- `vyre-runtime/src/uring/` exposes its flat parent re-exports and nothing
+  else. Its six submodules were public alongside those re-exports, giving every
+  type two paths, and the io_uring ABI structures and opcodes were public from
+  a crate that never intends a caller to build a submission queue entry by
+  hand. Every caller in the workspace already spelled `uring::X`, so the
+  submodules are private and the ABI items, `get_sqe`, and `peek_cqe` are
+  `pub(crate)`.
 - The validation rule registry is one table in
   `vyre-foundation/src/validate/catalog.rs`, carrying each code's phase,
   invariant and corrective action. `docs/generated/error-codes.toml` is
@@ -2326,6 +2367,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 
 ### Removed
 
+- `vyre-runtime/src/resident_work_queue/scaling.rs` is gone. It declared no
+  item of its own: every line was a `pub use` of a `planner` or `policy` item,
+  so each of those 77 items had two public paths and a reader had to pick. Its
+  one caller, `telemetry.rs`, imports from `super::policy` directly.
+- `SlotState` is gone from the readback ring. It named the four slot lifecycle
+  states a second time, as a public enum nothing in the workspace constructed,
+  matched, or returned; the ring stores its state as a `u8` and compares
+  against the `SLOT_*` codes. The codes are the single naming and are private
+  to the ring.
 - Neural operations and opaque-payload helpers now use their category-owned
   module paths. Flat compatibility re-exports and the `matching::ops` shim are
   gone; unclassified backend failures use `BackendError::Other`.
@@ -2430,6 +2480,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `build_transition_table_lane_major` packer, its fallible counterpart, the
   `bench` feature and the `scan::nfa::bench` module that was its only non-test
   consumer are gone.
+- `scripts/check_max_file_size.sh` is gone. It was a second implementation of
+  the per-file line cap with its own table of exemptions, invoked by no
+  workflow and no gate, so the two owners of one rule could disagree without
+  anything noticing. The `file-size` gate is the only owner; the script's
+  section left `xtask/script-assertion-ledger.md` by deletion.
 - The buffer-name form of each classic Aho-Corasick program left the published
   surface of vyre-libs. The `build_*`/`try_build_*` entry that binds the pinned
   ABI names is the one published path per program. The legacy buffered
@@ -3812,6 +3867,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   registry at run time and run through every safety rule, including reversed
   and rotated lane orders, so a new intrinsic cannot arrive with a witness
   program no gate executes.
+- The per-file line ratchet holds ceilings for files that exist. Forty-eight
+  rows named files that had already been split away, one row excluded the whole
+  resident runtime tree while its restructure was pending, and twenty-three
+  audit rows were dead or shadowed by a tighter core row; a ratchet row on a
+  missing file holds no ceiling and reports nothing. The stale rows are
+  deleted, the tree exclusion ended with the restructure it waited on, and the
+  six files split in this change are replaced by rows measuring their largest
+  children, so each one is now held to a tighter number than the file it came
+  from.
 - The crate ownership registry records the feature selection each dependency
   edge is built with. The `xtask-registry` to `vyre-libs` row named no features
   while the edge enables `full` and `matching-regex`, so the derived crate

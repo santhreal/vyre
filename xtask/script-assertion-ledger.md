@@ -37,7 +37,6 @@ runs. The ledger is empty when the registry owns every rule.
 - `scripts/check_expect_has_fix.sh`
 - `scripts/check_gpu_test_loudness.sh`
 - `scripts/check_invariant_paths_exist.sh`
-- `scripts/check_max_file_size.sh`
 - `scripts/check_metal_macbook.sh`
 - `scripts/check_no_string_wgsl.sh`
 - `scripts/check_op_names.sh`
@@ -467,28 +466,6 @@ Exits nonzero on:
 Findings:
 
 - Nothing invokes it.
-
-### `scripts/check_max_file_size.sh`
-
-Subject: present.
-
-Invoked by: nothing; the path appears as a string in xtask-registry/src/gates/lego_audit.rs and lego_quick.rs.
-
-Gate: xtask/src/gates/file_size.rs.
-
-Assertions:
-
-- Every .rs file under a src/ tree is within a line cap: 8000 for tests, benches, fuzz and the xtask crates, a per-file ceiling for a listed core file, 2500 for other core files, a per-file ceiling for a listed non-core file, 3000 otherwise.
-
-Exits nonzero on:
-
-- any file above its cap
-
-Findings:
-
-- 21 of the 26 AUDIT_EXCEPTIONS entries are unreachable. The branch order tests is_core_path before AUDIT_EXCEPTIONS, and those 21 paths are core paths, so their per-file ceilings are never read and CORE_AUDIT_EXCEPTIONS or the 2500 core cap applies instead. Only five entries are reachable: the two vyre-driver-cuda files, vyre-driver/src/pipeline.rs, and the two megakernel files that is_core_path deliberately excludes.
-- 28 distinct exception entries name a file that does not exist: 15 of 26 in AUDIT_EXCEPTIONS and 25 of 70 in CORE_AUDIT_EXCEPTIONS. Each reserves a ceiling for nothing, which is the defect the unsafe-budget gate was rewritten to remove.
-- It walks the filesystem rather than tracked files, so an untracked file under any src/ tree is judged and a caps table is compared against a tree git does not carry.
 
 ### `scripts/check_metal_macbook.sh`
 
@@ -1517,7 +1494,7 @@ The `findings` column is the count with the injection applied, given the pin in
 | `gpu-loudness` | Add `if adapter.is_err() { return; }` to a test body. | 2 to 3 |
 | `gpu-loudness` | Add `Backend::acquire_or_panic();` five lines below an existing finding site in `conform/vyre-conform/tests/cert_artifact/prove_failure_contracts.rs`. | 2 to 1, which is the allowance working rather than a failure |
 | `unification` | Add a second `pub fn child_bodies` to any file under `vyre-foundation/src`. | 0 to 2, because a row over its ceiling reports every site |
-| `unification` | Add `BufferAccess::infer(` to a file under `vyre-runtime/src/megakernel`. | 0 to 1 |
+| `unification` | Add `BufferAccess::infer(` to a file under `vyre-runtime/src/resident_work_queue`. | 0 to 1 |
 | `unification` | Rename the directory `vyre-foundation/src/execution_plan` and update its `mod` declaration. | 0 to 1, reported as a path that does not exist rather than as a clean row |
 | `evidence-paths` | In any artifact under `release/evidence`, change one cited path to a filename that does not exist but keeps a tree extension. | 18 to 19 |
 | `evidence-paths` | Add `"manifest": "target/debug/build.rs"` to an artifact object, with `target/` gitignored. | 18 to 19, in the gitignored class rather than the missing class |

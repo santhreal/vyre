@@ -15,7 +15,7 @@
 //!
 //! The runtime side (compiling both variants on a side pipeline cache
 //! key, dispatching them in alternation, recording observations to
-//! [`crate::autotune_store`]) lives in `runtime_megakernel` and is
+//! [`crate::autotune_store`]) lives in `runtime_resident_work_queue` and is
 //! Codex's lane. This module is the half that's safe to land before
 //! that wiring exists  -  every consumer reads the same decision contract.
 

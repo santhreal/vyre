@@ -117,8 +117,6 @@ The crate lives at `vyre-driver-cuda`. The `cuda-driver` owner maintains its
 | `test` | `line_splice_classify_gpu_parity` | `vyre-driver-cuda/tests/line_splice_classify_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test line_splice_classify_gpu_parity` |
 | `test` | `math_primitives_gpu_parity` | `vyre-driver-cuda/tests/math_primitives_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test math_primitives_gpu_parity` |
 | `test` | `math_scan_prefix_sum_gpu_parity` | `vyre-driver-cuda/tests/math_scan_prefix_sum_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test math_scan_prefix_sum_gpu_parity` |
-| `test` | `megakernel_scale_scheduler_contracts` | `vyre-driver-cuda/tests/megakernel_scale_scheduler_contracts.rs` | None | `./cargo_full test -p vyre-driver-cuda --test megakernel_scale_scheduler_contracts` |
-| `test` | `megakernel_wave_policy_parity` | `vyre-driver-cuda/tests/megakernel_wave_policy_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test megakernel_wave_policy_parity` |
 | `test` | `mla_decode_shared_memory_scaling` | `vyre-driver-cuda/tests/mla_decode_shared_memory_scaling.rs` | None | `./cargo_full test -p vyre-driver-cuda --test mla_decode_shared_memory_scaling` |
 | `test` | `module_cache_contracts` | `vyre-driver-cuda/tests/module_cache_contracts.rs` | None | `./cargo_full test -p vyre-driver-cuda --test module_cache_contracts` |
 | `test` | `motif_gpu_parity` | `vyre-driver-cuda/tests/motif_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test motif_gpu_parity` |
@@ -144,6 +142,8 @@ The crate lives at `vyre-driver-cuda`. The `cuda-driver` owner maintains its
 | `test` | `resident_buffer_contracts` | `vyre-driver-cuda/tests/resident_buffer_contracts.rs` | None | `./cargo_full test -p vyre-driver-cuda --test resident_buffer_contracts` |
 | `test` | `resident_dispatch_contracts` | `vyre-driver-cuda/tests/resident_dispatch_contracts.rs` | None | `./cargo_full test -p vyre-driver-cuda --test resident_dispatch_contracts` |
 | `test` | `resident_handle_ownership_contracts` | `vyre-driver-cuda/tests/resident_handle_ownership_contracts.rs` | None | `./cargo_full test -p vyre-driver-cuda --test resident_handle_ownership_contracts` |
+| `test` | `resident_work_queue_scale_scheduler_contracts` | `vyre-driver-cuda/tests/resident_work_queue_scale_scheduler_contracts.rs` | None | `./cargo_full test -p vyre-driver-cuda --test resident_work_queue_scale_scheduler_contracts` |
+| `test` | `resident_work_queue_wave_policy_parity` | `vyre-driver-cuda/tests/resident_work_queue_wave_policy_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test resident_work_queue_wave_policy_parity` |
 | `test` | `rle_segment_lengths_gpu_parity` | `vyre-driver-cuda/tests/rle_segment_lengths_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test rle_segment_lengths_gpu_parity` |
 | `test` | `scallop_join_ddnnf_gpu_parity` | `vyre-driver-cuda/tests/scallop_join_ddnnf_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test scallop_join_ddnnf_gpu_parity` |
 | `test` | `scallop_provenance_gpu_parity` | `vyre-driver-cuda/tests/scallop_provenance_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test scallop_provenance_gpu_parity` |

@@ -1,6 +1,7 @@
 use super::pool_backend_error;
 use crate::buffer::{BufferPool, GpuBufferHandle};
 use crate::numeric::WGPU_NUMERIC;
+use crate::runtime::readback_ring::MapResult;
 use crossbeam_channel::Receiver;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -8,8 +9,6 @@ use std::sync::{
 };
 use std::time::Instant;
 use vyre_driver::BackendError;
-
-type MapResult = Result<(), wgpu::BufferAsyncError>;
 
 const TIMESTAMP_QUERY_COUNT: u32 = 4;
 const TIMESTAMP_READBACK_BYTES: u64 = 32;

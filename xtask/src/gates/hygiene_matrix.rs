@@ -672,14 +672,14 @@ fn hygiene_owner_lane_for_path(path: &str) -> &'static str {
     {
         return "lower_emit";
     }
-    if normalized.contains("/vyre-runtime/src/megakernel/") {
-        return "runtime_megakernel";
+    if normalized.contains("/vyre-runtime/src/resident_work_queue/") {
+        return "runtime_resident_work_queue";
     }
     if normalized.contains("/vyre-libs/src/scheduling/")
         || normalized.contains("/vyre-libs/src/device/")
         || normalized.contains("/vyre-runtime/src/")
     {
-        return "runtime_megakernel";
+        return "runtime_resident_work_queue";
     }
     if normalized.contains("/vyre-bench/") {
         return "bench_harness";
@@ -888,9 +888,7 @@ fn release_surface_coverage(vyre_root: &Path) -> ReleaseSurfaceCoverage {
         release_scripts: vyre_root
             .join("scripts/apply-branch-protection.sh")
             .is_file()
-            && vyre_root
-                .join("xtask/src/gates/layering.rs")
-                .is_file(),
+            && vyre_root.join("xtask/src/gates/layering.rs").is_file(),
         github_workflows: vyre_root.join(".github/workflows").is_dir(),
         branch_protection_controls: vyre_root.join(".github/CI_REQUIRED.md").is_file()
             && vyre_root
@@ -1233,7 +1231,7 @@ fn scan_threshold_constants(vyre_root: &Path) -> Vec<ObservedThresholdConst> {
 fn threshold_scan_roots(vyre_root: &Path) -> Vec<PathBuf> {
     [
         "vyre-foundation/src/optimizer",
-        "vyre-runtime/src/megakernel",
+        "vyre-runtime/src/resident_work_queue",
         "vyre-driver-wgpu/src/runtime",
         "vyre-driver-wgpu/src/buffer",
     ]
@@ -1356,9 +1354,7 @@ const HYGIENE_SCANS: &[(&str, &str, &[&str])] = &[
 
 fn scan_root(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneFinding>) {
     for entry in tree_walk::pruned_by(root, |name| {
-        !BUILD_OUTPUT_AND_VCS.contains(&name)
-            && name != "release"
-            && !is_xtask_tree_directory(name)
+        !BUILD_OUTPUT_AND_VCS.contains(&name) && name != "release" && !is_xtask_tree_directory(name)
     }) {
         let entry = match entry {
             Ok(entry) => entry,
@@ -2151,9 +2147,8 @@ fn line_contains_read_call(line: &str) -> bool {
 
 /// True when `line` calls `name` as a whole path segment rather than as a suffix.
 fn calls_path_function(line: &str, name: &str) -> bool {
-    line.match_indices(name).any(|(index, _)| {
-        is_word_start(line, index) && line[index + name.len()..].starts_with('(')
-    })
+    line.match_indices(name)
+        .any(|(index, _)| is_word_start(line, index) && line[index + name.len()..].starts_with('('))
 }
 
 fn line_contains_unbounded_read(path: &Path, line: &str) -> bool {
@@ -2686,7 +2681,10 @@ mod tests {
         fs::create_dir_all(&scripts).expect("Fix: create the fixture scripts directory.");
         for (name, body) in [
             ("gate.sh", "#!/usr/bin/env bash\ncargo build --workspace\n"),
-            ("gate.py", "import sys\nrun([\"x\"])  # cargo build --workspace\n"),
+            (
+                "gate.py",
+                "import sys\nrun([\"x\"])  # cargo build --workspace\n",
+            ),
         ] {
             fs::write(scripts.join(name), body).expect("Fix: write the fixture script.");
         }
@@ -3090,8 +3088,12 @@ mod tests {
             },
         ];
 
-        let classes =
-            classify_findings(Path::new("."), &findings, &hot_paths, &structural_gates(&[]));
+        let classes = classify_findings(
+            Path::new("."),
+            &findings,
+            &hot_paths,
+            &structural_gates(&[]),
+        );
 
         assert_eq!(classes[0].surface, "production");
         assert_eq!(classes[0].risk, "release_blocker");
@@ -3216,8 +3218,12 @@ mod tests {
             test: None,
         }];
 
-        let classes =
-            classify_findings(Path::new("."), &findings, &hot_paths, &structural_gates(&[]));
+        let classes = classify_findings(
+            Path::new("."),
+            &findings,
+            &hot_paths,
+            &structural_gates(&[]),
+        );
 
         assert_eq!(classes[0].surface, "test");
         assert_eq!(classes[0].risk, "test_hygiene");
@@ -3321,18 +3327,23 @@ mod tests {
 
     #[test]
     fn hygiene_classifier_marks_hot_path_debt_as_release_blocker() {
-        let hot_paths =
-            std::collections::BTreeSet::from(["vyre-runtime/src/megakernel/ring.rs".to_string()]);
+        let hot_paths = std::collections::BTreeSet::from([
+            "vyre-runtime/src/resident_work_queue/ring.rs".to_string(),
+        ]);
         let findings = vec![HygieneFinding {
-            path: "vyre-runtime/src/megakernel/ring.rs".to_string(),
+            path: "vyre-runtime/src/resident_work_queue/ring.rs".to_string(),
             line: 12,
             pattern: "TODO",
             text: "// TODO: remove allocation".to_string(),
             test: None,
         }];
 
-        let classes =
-            classify_findings(Path::new("."), &findings, &hot_paths, &structural_gates(&[]));
+        let classes = classify_findings(
+            Path::new("."),
+            &findings,
+            &hot_paths,
+            &structural_gates(&[]),
+        );
 
         assert!(classes[0].hot_path);
         assert_eq!(classes[0].risk, "release_blocker");

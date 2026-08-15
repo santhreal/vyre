@@ -33,7 +33,7 @@ write = [
 ]
 avoid = [
   "vyre-driver-*",
-  "vyre-runtime/src/megakernel/**",
+  "vyre-runtime/src/resident_work_queue/**",
   "vyre-bench/**",
 ]
 required_commands = [
@@ -157,16 +157,16 @@ required_commands = [
   "cargo_full test -p vyre-lower -p vyre-emit-naga -p vyre-emit-ptx -p vyre-emit-spirv -p vyre-emit-metal",
 ]
 
-[lane.runtime_megakernel]
-purpose = "Persistent megakernel queue, scheduler, resident protocol, IO, recovery, runtime throughput."
+[lane.runtime_resident_work_queue]
+purpose = "Resident work queue, scheduler, resident protocol, IO, recovery, runtime throughput."
 layer = "Runtime"
 write = [
-  "vyre-runtime/src/megakernel/**",
-  "vyre-runtime/tests/megakernel*",
+  "vyre-runtime/src/resident_work_queue/**",
+  "vyre-runtime/tests/resident_work_queue*",
   "vyre-runtime/tests/*scheduler*",
 ]
 required_commands = [
-  "cargo_full test -p vyre-runtime megakernel",
+  "cargo_full test -p vyre-runtime resident_work_queue",
 ]
 
 [lane.runtime_residency]
@@ -218,7 +218,7 @@ write = [
 avoid = [
   "vyre-driver-cuda/src/**",
   "vyre-driver-wgpu/src/**",
-  "vyre-runtime/src/megakernel/**",
+  "vyre-runtime/src/resident_work_queue/**",
 ]
 required_commands = [
   "cargo_full test -p vyre-primitives graph",
@@ -238,7 +238,7 @@ write = [
 avoid = [
   "vyre-driver-cuda/src/**",
   "vyre-driver-wgpu/src/**",
-  "vyre-runtime/src/megakernel/**",
+  "vyre-runtime/src/resident_work_queue/**",
 ]
 required_commands = [
   "cargo_full test -p vyre-libs parsing",
@@ -272,7 +272,7 @@ write = [
 ]
 avoid = [
   "vyre-libs/src/parsing/**",
-  "vyre-runtime/src/megakernel/**",
+  "vyre-runtime/src/resident_work_queue/**",
 ]
 required_commands = [
   "cargo_full test -p vyre-libs scan",
@@ -446,7 +446,7 @@ write = [
 ]
 avoid = [
   "vyre-driver-cuda/src/backend/**",
-  "vyre-runtime/src/megakernel/**",
+  "vyre-runtime/src/resident_work_queue/**",
   "release/evidence/final/**",
 ]
 required_commands = [

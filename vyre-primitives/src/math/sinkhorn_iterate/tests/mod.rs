@@ -1,6 +1,11 @@
+use super::program::{sinkhorn_single_word_harness, sinkhorn_transfer_body, sinkhorn_wrap};
 use super::*;
-use crate::fixpoint::persistent_fixpoint::{declared_words, required_workgroups};
+use crate::fixpoint::persistent_fixpoint::{
+    declared_words, fixpoint_route, required_workgroups, routed_persistent_fixpoint, FixpointState,
+    PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
+};
 use std::sync::Arc;
+use vyre_foundation::ir::Program;
 
 /// The binding names every program test in this module builds against.
 const FIXTURE: SinkhornBuffers<'static> = SinkhornBuffers::CANONICAL;
