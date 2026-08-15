@@ -118,7 +118,7 @@ impl AdapterDependent {
         program: ir::Program,
         caps: &optimizer::AdapterCaps,
     ) -> optimizer::PassResult {
-        optimizer::pass_result(program, caps.subgroup_ops)
+        optimizer::pass_result(program, caps.supports_subgroup_ops)
     }
 }
 
@@ -208,10 +208,11 @@ fn vyre_pass_cost_model_matrix_emits_expected_metadata() {
 fn an_adapter_dependent_pass_receives_the_record_and_an_independent_one_ignores_it() {
     use optimizer::{AdapterCaps, ProgramPass};
     let program = ir::Program { id: 7 };
-    let with_subgroups = AdapterCaps { subgroup_ops: true };
-    let without_subgroups = AdapterCaps {
-        subgroup_ops: false,
+    let with_subgroups = AdapterCaps {
+        supports_subgroup_ops: true,
+        ..AdapterCaps::conservative()
     };
+    let without_subgroups = AdapterCaps::conservative();
 
     assert!(
         AdapterDependent

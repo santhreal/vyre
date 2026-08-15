@@ -59,11 +59,13 @@ pub mod optimizer {
         Megakernel,
     }
 
-    /// Device facts a pass may compile against, mirroring the real record's
-    /// shape only as far as the macro's generated code touches it.
+    /// Device facts a pass may compile against. The macro names this type in
+    /// every expansion, so the stub carries the fields the generated code and
+    /// the test passes read, under the names the real record uses.
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub struct AdapterCaps {
         pub backend: &'static str,
+        pub supports_subgroup_ops: bool,
         pub max_workgroup_size: [u32; 3],
     }
 
@@ -72,6 +74,7 @@ pub mod optimizer {
         pub const fn conservative() -> Self {
             Self {
                 backend: "conservative",
+                supports_subgroup_ops: false,
                 max_workgroup_size: [256, 1, 1],
             }
         }
@@ -101,13 +104,6 @@ pub mod optimizer {
         pass_result(program, false)
     }
 
-    /// Device facts a pass may read. The macro names this type in every
-    /// expansion, so the double declares one; `subgroup_ops` is a fact a test
-    /// pass can branch on to show that the record reached it.
-    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    pub struct AdapterCaps {
-        pub subgroup_ops: bool,
-    }
 
     pub mod private {
         pub trait Sealed {}
