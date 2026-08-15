@@ -26,6 +26,7 @@
 use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{BinOp, Expr, Node, Program};
+use vyre_foundation::transform::visit::for_each_node;
 use vyre_libs::scan::classic_ac::{
     build_ac_bounded_count_prefilter_program, build_ac_bounded_count_program,
     build_ac_bounded_count_suffix2_prefilter_program,
@@ -233,26 +234,17 @@ fn unbounded_classic_program(dfa: &CompiledDfa) -> Program {
 }
 
 /// Depth-first statement walk over a program body, in emission order.
+///
+/// Descent is `for_each_node`, the crate-wide exhaustive traversal owner. The
+/// hand-rolled walk this replaces enumerated the nesting variants itself and
+/// ended in `_ => {}`, which is the failure mode this whole file exists to
+/// prevent: a `Node` variant that gains a body is classified as a leaf, the walk
+/// silently stops returning the transition step and output-link span nested
+/// inside it, and the comparisons below go vacuous on the builders that use it
+/// rather than red.
 fn all_nodes(program: &Program) -> Vec<&Node> {
-    fn push<'a>(nodes: &'a [Node], out: &mut Vec<&'a Node>) {
-        for node in nodes {
-            out.push(node);
-            match node {
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    push(then, out);
-                    push(otherwise, out);
-                }
-                Node::Loop { body, .. } => push(body, out),
-                Node::Block(body) => push(body, out),
-                Node::Region { body, .. } => push(body, out),
-                _ => {}
-            }
-        }
-    }
     let mut out = Vec::new();
-    push(&program.entry, &mut out);
+    for_each_node(program.entry(), |node| out.push(node));
     out
 }
 

@@ -147,36 +147,26 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ops::ControlFlow;
     use vyre_foundation::ir::Node;
+    use vyre_foundation::transform::visit::try_for_each_node;
 
+    /// Bounds of the first `Loop` in emission order.
+    ///
+    /// Descent is `try_for_each_node`, the crate-wide exhaustive traversal owner.
+    /// The hand-rolled walk this replaces enumerated the nesting variants itself
+    /// and ended in `_ => {}`, so a `Node` variant that gains a body would have
+    /// been treated as a leaf: the walk would return `None` for a program whose
+    /// only DFA loop sits inside that variant, and the assertions below would
+    /// report a missing walk loop instead of checking its bounds.
     fn first_loop_bounds(nodes: &[Node]) -> Option<(&Expr, &Expr)> {
-        for node in nodes {
-            match node {
-                Node::Loop { from, to, .. } => return Some((from, to)),
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    if let Some(bounds) = first_loop_bounds(then) {
-                        return Some(bounds);
-                    }
-                    if let Some(bounds) = first_loop_bounds(otherwise) {
-                        return Some(bounds);
-                    }
-                }
-                Node::Block(body) => {
-                    if let Some(bounds) = first_loop_bounds(body) {
-                        return Some(bounds);
-                    }
-                }
-                Node::Region { body, .. } => {
-                    if let Some(bounds) = first_loop_bounds(body) {
-                        return Some(bounds);
-                    }
-                }
-                _ => {}
-            }
+        match try_for_each_node(nodes, |node| match node {
+            Node::Loop { from, to, .. } => ControlFlow::Break((from, to)),
+            _ => ControlFlow::Continue(()),
+        }) {
+            ControlFlow::Break(bounds) => Some(bounds),
+            ControlFlow::Continue(()) => None,
         }
-        None
     }
 
     #[test]

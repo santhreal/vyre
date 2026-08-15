@@ -2,14 +2,17 @@
 //!
 //! This module owns the transition walk for the whole crate: the dense
 //! `state = transitions[state * 256 + byte]` step, the flat output-link span,
-//! the bounded suffix replay, the candidate-end byte gate, and the per-region
-//! binary search. Every other AC builder here and under `scan/` projects from
-//! those primitives and supplies only what genuinely differs: its admission
-//! predicate, its emission, its prefilter shape.
+//! the bounded suffix replay, the candidate-end byte gate, the per-region binary
+//! search, the range-bound arithmetic (`bounded_walk_prologue_nodes`,
+//! `match_span_start_nodes`, `ac_ranges_output_records_len`) and the fail-closed
+//! rejection path (`ac_ranges_program_or_fail_closed`). Every other AC builder
+//! here and under `scan/` projects from those primitives and supplies only what
+//! genuinely differs: its admission predicate, its emission, its prefilter
+//! shape. The gate widths and the program assembly built on top of them belong
+//! to the `prefilter` submodule, and the ungated scan below is one of its rows.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::region::wrap_anonymous;
 use crate::scan::builders::{
     append_match, append_match_subgroup, load_packed_byte, load_packed_byte_expr,
 };
@@ -44,6 +47,9 @@ pub use prefilter::{
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_program,
+};
+use prefilter::{
+    build_ranges_scan, ranges_scan_program, try_build_ranges_scan, PrefilterGate, PrefilterWidth,
 };
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
 pub(in crate::scan) use regex_exact::regex_exact_ranges_program;
@@ -204,7 +210,36 @@ pub(in crate::scan) struct AcInputBindings<'a> {
     pub pattern_count: u32,
 }
 
-impl AcInputBindings<'_> {
+impl<'a> AcInputBindings<'a> {
+    /// The shared inputs under the six buffer names every bounded-ranges builder
+    /// threads through, in binding order, plus the three DFA-derived counts that
+    /// size bindings 1-4.
+    ///
+    /// Taking the names as one array is what keeps the field list from being
+    /// respelled at every call site: the builders here bind the identical six
+    /// names, and a struct literal spelling them out is nine lines of the same
+    /// text in each.
+    pub(in crate::scan) const fn new(
+        names: [&'a str; 6],
+        state_count: u32,
+        output_records_len: u32,
+        pattern_count: u32,
+    ) -> Self {
+        let [haystack, transitions, output_offsets, output_records, pattern_lengths, haystack_len] =
+            names;
+        Self {
+            haystack,
+            transitions,
+            output_offsets,
+            output_records,
+            pattern_lengths,
+            haystack_len,
+            state_count,
+            output_records_len,
+            pattern_count,
+        }
+    }
+
     /// The six declarations, in binding order.
     pub(in crate::scan) fn decls(&self) -> Vec<BufferDecl> {
         let mut decls = classic_ac_dfa_buffer_decls(
@@ -232,18 +267,6 @@ impl AcInputBindings<'_> {
             BufferDecl::storage(self.haystack_len, 5, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(1),
         ]);
-        decls
-    }
-
-    /// [`Self::decls`] plus the single-element read-write match counter every
-    /// bounded-ranges dispatch shape binds at slot 6.
-    ///
-    /// It deliberately stops there: slots 7 and up are the per-shape gate masks,
-    /// presence bitmaps and match sinks, which differ per program and stay with
-    /// their own builder.
-    pub(in crate::scan) fn decls_with_match_count(&self, match_count: &str) -> Vec<BufferDecl> {
-        let mut decls = self.decls();
-        decls.push(BufferDecl::read_write(match_count, 6, DataType::U32).with_count(1));
         decls
     }
 }
@@ -384,49 +407,26 @@ pub fn classic_ac_bounded_ranges_program_with_subgroup_coalesce(
     max_pattern_len: u32,
     use_subgroup_coalesce: bool,
 ) -> Program {
-    let max_pattern_len = max_pattern_len.max(1);
-    let i = Expr::var("i");
-    let walk_body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::load(haystack_len, Expr::u32(0))),
-            bounded_ranges_scan_nodes(
+    ranges_scan_program(
+        PrefilterGate::unfiltered(),
+        AcInputBindings::new(
+            [
                 haystack,
                 transitions,
                 output_offsets,
                 output_records,
                 pattern_lengths,
-                match_count,
-                matches,
-                max_pattern_len,
-                use_subgroup_coalesce,
-            ),
+                haystack_len,
+            ],
+            state_count,
+            output_records_len,
+            pattern_count,
         ),
-    ];
-
-    let mut buffers = AcInputBindings {
-        haystack,
-        transitions,
-        output_offsets,
-        output_records,
-        pattern_lengths,
-        haystack_len,
-        state_count,
-        output_records_len,
-        pattern_count,
-    }
-    .decls_with_match_count(match_count);
-    buffers.extend([
-        BufferDecl::output(matches, 7, DataType::U32).with_count(max_matches.saturating_mul(3))
-    ]);
-
-    Program::wrapped(
-        buffers,
-        [128, 1, 1],
-        vec![wrap_anonymous(
-            "vyre-libs::matching::classic_ac_bounded_ranges",
-            walk_body,
-        )],
+        match_count,
+        matches,
+        max_matches,
+        max_pattern_len,
+        use_subgroup_coalesce,
     )
 }
 
@@ -842,15 +842,12 @@ pub fn build_ac_bounded_ranges_program_with_subgroup_coalesce(
     max_matches: u32,
     use_subgroup_coalesce: bool,
 ) -> Program {
-    ac_ranges_program_or_fail_closed(
-        try_build_ac_bounded_ranges_program_with_subgroup_coalesce(
-            dfa,
-            pattern_count,
-            max_matches,
-            use_subgroup_coalesce,
-        ),
-        "bounded-ranges",
-        "try_build_ac_bounded_ranges_program_with_subgroup_coalesce",
+    build_ranges_scan(
+        PrefilterWidth::Unfiltered,
+        dfa,
+        pattern_count,
+        max_matches,
+        use_subgroup_coalesce,
     )
 }
 
@@ -885,23 +882,13 @@ pub fn try_build_ac_bounded_ranges_program_with_subgroup_coalesce(
     max_matches: u32,
     use_subgroup_coalesce: bool,
 ) -> Result<Program, String> {
-    let output_records_len = ac_ranges_output_records_len(dfa, "bounded-ranges")?;
-    Ok(classic_ac_bounded_ranges_program_with_subgroup_coalesce(
-        "haystack",
-        "transitions",
-        "output_offsets",
-        "output_records",
-        "pattern_lengths",
-        "haystack_len",
-        "match_count",
-        "matches",
-        dfa.state_count,
-        output_records_len,
+    try_build_ranges_scan(
+        PrefilterWidth::Unfiltered,
+        dfa,
         pattern_count,
         max_matches,
-        dfa.max_pattern_len,
         use_subgroup_coalesce,
-    ))
+    )
 }
 
 /// CPU reference for [`classic_ac_bounded_ranges_program`]. Returns

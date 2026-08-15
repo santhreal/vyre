@@ -1,112 +1,28 @@
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
+//! The suffix3-gated bounded-ranges shapes: match triples, a global presence
+//! bitmap, a per-region bitmap, and the fused presence-and-positions program.
+//!
+//! All four bind the IDENTICAL suffix3 gate and inputs and differ only in the
+//! result buffer, the trailing sink and the replay, so each is one call to the
+//! family's assembler with those three supplied. The gate width itself, the
+//! shared input ABI and the fail-closed path have their owners elsewhere; this
+//! file restates none of them.
 
-use crate::region::wrap_anonymous;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
+
 use vyre_primitives::matching::CompiledDfa;
 
-use super::super::super::count_program::{
-    count_suffix2_prefilter_body, suffix3_prefilter_match_nodes, CLASSIC_AC_SUFFIX2_MASK_WORDS,
-    CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
-};
 use super::super::{
-    ac_ranges_output_records_len, ac_ranges_program_or_fail_closed,
-    bounded_ranges_presence_and_positions_by_region_nodes, bounded_ranges_presence_by_region_nodes,
-    bounded_ranges_presence_nodes, bounded_ranges_scan_nodes, AcInputBindings,
+    ac_ranges_output_records_len, bounded_ranges_presence_and_positions_by_region_nodes,
+    bounded_ranges_presence_by_region_nodes, bounded_ranges_presence_nodes, AcInputBindings,
+};
+use super::{
+    build_ranges_scan, gated_ranges_program, try_build_ranges_scan, PrefilterGate, PrefilterWidth,
+    FIRST_GATE_BINDING,
 };
 
-/// Bindings 7-9: the candidate-end byte mask, the suffix2 bigram mask and the
-/// suffix3 bloom that gate a position before the bounded DFA replay runs. One
-/// value instead of three names threaded through every suffix3 builder.
-#[derive(Clone, Copy)]
-struct SuffixGateBindings<'a> {
-    end_mask: &'a str,
-    suffix2_mask: &'a str,
-    suffix3_bloom: &'a str,
-}
-
-impl SuffixGateBindings<'_> {
-    /// The three declarations, in binding order.
-    fn decls(&self) -> [BufferDecl; 3] {
-        [
-            BufferDecl::storage(self.end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(8),
-            BufferDecl::storage(self.suffix2_mask, 8, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
-            BufferDecl::storage(self.suffix3_bloom, 9, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
-        ]
-    }
-}
-
-/// The suffix2/suffix3 candidate-gating body shared by the match-emitting scan
-/// program and the presence-bitmap program. Both run the IDENTICAL prefilter
-/// cascade (byte end-mask → suffix2 → suffix3 bloom) and only differ in the
-/// `replay_nodes` they execute at an accepted candidate position. Extracted so
-/// the two output modes cannot drift in their candidate logic.
-#[allow(clippy::too_many_arguments)]
-fn suffix3_prefilter_body(
-    haystack: &str,
-    haystack_len: &str,
-    candidate_end_mask: &str,
-    candidate_suffix2_mask: &str,
-    candidate_suffix3_bloom: &str,
-    replay_nodes: Vec<Node>,
-) -> Vec<Node> {
-    let suffix3_match_nodes =
-        suffix3_prefilter_match_nodes(haystack, candidate_suffix3_bloom, replay_nodes.clone());
-    count_suffix2_prefilter_body(
-        haystack,
-        candidate_end_mask,
-        candidate_suffix2_mask,
-        haystack_len,
-        replay_nodes,
-        suffix3_match_nodes,
-    )
-}
-
-#[allow(clippy::too_many_arguments)]
-fn suffix3_prefilter_program(
-    names: [&str; 9],
-    state_count: u32,
-    output_records_len: u32,
-    pattern_count: u32,
-    result: BufferDecl,
-    trailing_output: Option<BufferDecl>,
-    generator: &'static str,
-    replay_nodes: Vec<Node>,
-) -> Program {
-    let [haystack, transitions, output_offsets, output_records, pattern_lengths, haystack_len, candidate_end_mask, candidate_suffix2_mask, candidate_suffix3_bloom] =
-        names;
-    let gates = SuffixGateBindings {
-        end_mask: candidate_end_mask,
-        suffix2_mask: candidate_suffix2_mask,
-        suffix3_bloom: candidate_suffix3_bloom,
-    };
-    let body = suffix3_prefilter_body(
-        haystack,
-        haystack_len,
-        candidate_end_mask,
-        candidate_suffix2_mask,
-        candidate_suffix3_bloom,
-        replay_nodes,
-    );
-    let mut buffers = AcInputBindings {
-        haystack,
-        transitions,
-        output_offsets,
-        output_records,
-        pattern_lengths,
-        haystack_len,
-        state_count,
-        output_records_len,
-        pattern_count,
-    }
-    .decls();
-    buffers.reserve(4 + usize::from(trailing_output.is_some()));
-    buffers.push(result);
-    buffers.extend(gates.decls());
-    buffers.extend(trailing_output);
-    Program::wrapped(buffers, [128, 1, 1], vec![wrap_anonymous(generator, body)])
-}
+/// The binding the per-region attribution table starts at: immediately after the
+/// suffix3 gate's three mask buffers.
+const FIRST_REGION_BINDING: u32 = FIRST_GATE_BINDING + PrefilterWidth::Suffix3.mask_count();
 
 /// Build a bounded-window AC ranges program with byte, suffix2, and suffix3
 /// candidate filters before match-emitting replay.
@@ -174,38 +90,30 @@ pub fn classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesc
     max_pattern_len: u32,
     use_subgroup_coalesce: bool,
 ) -> Program {
-    suffix3_prefilter_program(
-        [
-            haystack,
-            transitions,
-            output_offsets,
-            output_records,
-            pattern_lengths,
-            haystack_len,
+    super::ranges_scan_program(
+        PrefilterGate::suffix3(
             candidate_end_mask,
             candidate_suffix2_mask,
             candidate_suffix3_bloom,
-        ],
-        state_count,
-        output_records_len,
-        pattern_count,
-        BufferDecl::read_write(match_count, 6, DataType::U32).with_count(1),
-        Some(
-            BufferDecl::output(matches, 10, DataType::U32)
-                .with_count(max_matches.saturating_mul(3)),
         ),
-        "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_prefilter",
-        bounded_ranges_scan_nodes(
-            haystack,
-            transitions,
-            output_offsets,
-            output_records,
-            pattern_lengths,
-            match_count,
-            matches,
-            max_pattern_len,
-            use_subgroup_coalesce,
+        AcInputBindings::new(
+            [
+                haystack,
+                transitions,
+                output_offsets,
+                output_records,
+                pattern_lengths,
+                haystack_len,
+            ],
+            state_count,
+            output_records_len,
+            pattern_count,
         ),
+        match_count,
+        matches,
+        max_matches,
+        max_pattern_len,
+        use_subgroup_coalesce,
     )
 }
 
@@ -241,24 +149,28 @@ pub fn classic_ac_bounded_ranges_suffix3_presence_program(
     pattern_count: u32,
     max_pattern_len: u32,
 ) -> Program {
-    suffix3_prefilter_program(
-        [
-            haystack,
-            transitions,
-            output_offsets,
-            output_records,
-            pattern_lengths,
-            haystack_len,
+    gated_ranges_program(
+        PrefilterGate::suffix3(
             candidate_end_mask,
             candidate_suffix2_mask,
             candidate_suffix3_bloom,
-        ],
-        state_count,
-        output_records_len,
-        pattern_count,
+        ),
+        AcInputBindings::new(
+            [
+                haystack,
+                transitions,
+                output_offsets,
+                output_records,
+                pattern_lengths,
+                haystack_len,
+            ],
+            state_count,
+            output_records_len,
+            pattern_count,
+        ),
         BufferDecl::read_write(presence, 6, DataType::U32)
             .with_count(presence_bitmap_words(pattern_count)),
-        None,
+        Vec::new(),
         "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence",
         bounded_ranges_presence_nodes(
             haystack,
@@ -316,31 +228,29 @@ pub fn presence_by_region_words(pattern_count: u32, max_regions: u32) -> u32 {
     presence_bitmap_words(pattern_count).saturating_mul(max_regions.max(1))
 }
 
-/// Bindings 0-11 of the region-presence program, shared BYTE-IDENTICALLY by the
-/// presence-only program ([`classic_ac_bounded_ranges_suffix3_presence_by_region_program`])
-/// and the fused presence+positions program
-/// ([`classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program`],
-/// which appends its match-counter binding 12 + triple-output binding 13). One
-/// source of truth keeps the shared static-table / region-attribution ABI identical
-/// across both builders (a binding added or resized here reaches both at once).
-fn presence_by_region_base_buffer_decls(
-    inputs: AcInputBindings<'_>,
-    gates: SuffixGateBindings<'_>,
-    presence: &str,
-    region_starts: &str,
-    region_base: &str,
-    total_presence_words: u32,
-) -> Vec<BufferDecl> {
-    let mut buffers = inputs.decls();
-    buffers.reserve(6);
-    buffers
-        .push(BufferDecl::read_write(presence, 6, DataType::U32).with_count(total_presence_words));
-    buffers.extend(gates.decls());
-    buffers.extend([
-        BufferDecl::storage(region_starts, 10, BufferAccess::ReadOnly, DataType::U32),
-        BufferDecl::storage(region_base, 11, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-    ]);
-    buffers
+/// The per-region attribution table, bound immediately after the suffix3 gate:
+/// `region_starts` (the ascending file start offsets of the coalesced buffer,
+/// with `region_starts[0] == 0`) then the shard's single-element `region_base`.
+///
+/// Both region-attributed builders bind exactly these, which is what keeps
+/// bindings 0-11 byte-identical between the presence-only program and the fused
+/// presence+positions program that appends its own sink after them.
+fn region_table_decls(region_starts: &str, region_base: &str) -> Vec<BufferDecl> {
+    vec![
+        BufferDecl::storage(
+            region_starts,
+            FIRST_REGION_BINDING,
+            BufferAccess::ReadOnly,
+            DataType::U32,
+        ),
+        BufferDecl::storage(
+            region_base,
+            FIRST_REGION_BINDING + 1,
+            BufferAccess::ReadOnly,
+            DataType::U32,
+        )
+        .with_count(1),
+    ]
 }
 
 /// Region-attributed variant of [`classic_ac_bounded_ranges_suffix3_presence_program`]:
@@ -373,57 +283,41 @@ pub fn classic_ac_bounded_ranges_suffix3_presence_by_region_program(
     max_pattern_len: u32,
     max_regions: u32,
 ) -> Program {
-    let presence_words = presence_bitmap_words(pattern_count);
-    let total_presence_words = presence_by_region_words(pattern_count, max_regions);
-    let replay_nodes = bounded_ranges_presence_by_region_nodes(
-        haystack,
-        transitions,
-        output_offsets,
-        output_records,
-        presence,
-        region_starts,
-        region_base,
-        max_pattern_len,
-        presence_words,
-        ceil_log2(max_regions),
-    );
-    let body = suffix3_prefilter_body(
-        haystack,
-        haystack_len,
-        candidate_end_mask,
-        candidate_suffix2_mask,
-        candidate_suffix3_bloom,
-        replay_nodes,
-    );
-
-    Program::wrapped(
-        presence_by_region_base_buffer_decls(
-            AcInputBindings {
+    gated_ranges_program(
+        PrefilterGate::suffix3(
+            candidate_end_mask,
+            candidate_suffix2_mask,
+            candidate_suffix3_bloom,
+        ),
+        AcInputBindings::new(
+            [
                 haystack,
                 transitions,
                 output_offsets,
                 output_records,
                 pattern_lengths,
                 haystack_len,
-                state_count,
-                output_records_len,
-                pattern_count,
-            },
-            SuffixGateBindings {
-                end_mask: candidate_end_mask,
-                suffix2_mask: candidate_suffix2_mask,
-                suffix3_bloom: candidate_suffix3_bloom,
-            },
+            ],
+            state_count,
+            output_records_len,
+            pattern_count,
+        ),
+        BufferDecl::read_write(presence, 6, DataType::U32)
+            .with_count(presence_by_region_words(pattern_count, max_regions)),
+        region_table_decls(region_starts, region_base),
+        "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence_by_region",
+        bounded_ranges_presence_by_region_nodes(
+            haystack,
+            transitions,
+            output_offsets,
+            output_records,
             presence,
             region_starts,
             region_base,
-            total_presence_words,
+            max_pattern_len,
+            presence_bitmap_words(pattern_count),
+            ceil_log2(max_regions),
         ),
-        [128, 1, 1],
-        vec![wrap_anonymous(
-            "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence_by_region",
-            body,
-        )],
     )
 }
 
@@ -554,70 +448,56 @@ pub fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_progra
     max_matches: u32,
     first_positioned_pattern_id: u32,
 ) -> Program {
-    let presence_words = presence_bitmap_words(pattern_count);
-    let total_presence_words = presence_by_region_words(pattern_count, max_regions);
-    let replay_nodes = bounded_ranges_presence_and_positions_by_region_nodes(
-        haystack,
-        transitions,
-        output_offsets,
-        output_records,
-        pattern_lengths,
-        presence,
-        region_starts,
-        region_base,
-        match_count,
-        matches,
-        max_pattern_len,
-        presence_words,
-        ceil_log2(max_regions),
-        first_positioned_pattern_id,
+    let mut trailing = region_table_decls(region_starts, region_base);
+    // Match counter + triple output: the position half of the fused output.
+    // `append_match` bounds writes to `buf_len(matches) / 3 == max_matches`.
+    trailing.push(
+        BufferDecl::read_write(match_count, FIRST_REGION_BINDING + 2, DataType::U32).with_count(1),
     );
-    let body = suffix3_prefilter_body(
-        haystack,
-        haystack_len,
-        candidate_end_mask,
-        candidate_suffix2_mask,
-        candidate_suffix3_bloom,
-        replay_nodes,
+    trailing.push(
+        BufferDecl::output(matches, FIRST_REGION_BINDING + 3, DataType::U32)
+            .with_count(max_matches.saturating_mul(3)),
     );
 
-    let mut buffers = presence_by_region_base_buffer_decls(
-        AcInputBindings {
+    gated_ranges_program(
+        PrefilterGate::suffix3(
+            candidate_end_mask,
+            candidate_suffix2_mask,
+            candidate_suffix3_bloom,
+        ),
+        AcInputBindings::new(
+            [
+                haystack,
+                transitions,
+                output_offsets,
+                output_records,
+                pattern_lengths,
+                haystack_len,
+            ],
+            state_count,
+            output_records_len,
+            pattern_count,
+        ),
+        BufferDecl::read_write(presence, 6, DataType::U32)
+            .with_count(presence_by_region_words(pattern_count, max_regions)),
+        trailing,
+        "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region",
+        bounded_ranges_presence_and_positions_by_region_nodes(
             haystack,
             transitions,
             output_offsets,
             output_records,
             pattern_lengths,
-            haystack_len,
-            state_count,
-            output_records_len,
-            pattern_count,
-        },
-        SuffixGateBindings {
-            end_mask: candidate_end_mask,
-            suffix2_mask: candidate_suffix2_mask,
-            suffix3_bloom: candidate_suffix3_bloom,
-        },
-        presence,
-        region_starts,
-        region_base,
-        total_presence_words,
-    );
-    // Match counter (binding 12) + triple output (binding 13): the position half of
-    // the fused output. `append_match` bounds writes to `buf_len(matches) / 3 ==
-    // max_matches`.
-    buffers.push(BufferDecl::read_write(match_count, 12, DataType::U32).with_count(1));
-    buffers.push(
-        BufferDecl::output(matches, 13, DataType::U32).with_count(max_matches.saturating_mul(3)),
-    );
-
-    Program::wrapped(
-        buffers,
-        [128, 1, 1],
-        vec![wrap_anonymous(
-            "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region",
-            body,
-        )],
+            presence,
+            region_starts,
+            region_base,
+            match_count,
+            matches,
+            max_pattern_len,
+            presence_bitmap_words(pattern_count),
+            ceil_log2(max_regions),
+            first_positioned_pattern_id,
+        ),
     )
 }
 
@@ -644,6 +524,10 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_prog
 
 /// Build a fused program whose presence bitmap covers all patterns while match
 /// triples are emitted only for IDs at or above the supplied boundary.
+///
+/// # Errors
+/// Returns an actionable error when the boundary exceeds the pattern count, or
+/// when DFA output-record metadata exceeds the u32 GPU buffer-count ABI.
 pub fn try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered(
     dfa: &CompiledDfa,
     pattern_count: u32,
@@ -714,15 +598,12 @@ pub fn build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
     max_matches: u32,
     use_subgroup_coalesce: bool,
 ) -> Program {
-    ac_ranges_program_or_fail_closed(
-        try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
-            dfa,
-            pattern_count,
-            max_matches,
-            use_subgroup_coalesce,
-        ),
-        "bounded-ranges suffix3 prefilter",
-        "try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce",
+    build_ranges_scan(
+        PrefilterWidth::Suffix3,
+        dfa,
+        pattern_count,
+        max_matches,
+        use_subgroup_coalesce,
     )
 }
 
@@ -757,27 +638,12 @@ pub fn try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coale
     max_matches: u32,
     use_subgroup_coalesce: bool,
 ) -> Result<Program, String> {
-    let output_records_len = ac_ranges_output_records_len(dfa, "bounded-ranges suffix3 prefilter")?;
-    Ok(
-        classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
-            "haystack",
-            "transitions",
-            "output_offsets",
-            "output_records",
-            "pattern_lengths",
-            "haystack_len",
-            "match_count",
-            "candidate_end_mask",
-            "candidate_suffix2_mask",
-            "candidate_suffix3_bloom",
-            "matches",
-            dfa.state_count,
-            output_records_len,
-            pattern_count,
-            max_matches,
-            dfa.max_pattern_len,
-            use_subgroup_coalesce,
-        ),
+    try_build_ranges_scan(
+        PrefilterWidth::Suffix3,
+        dfa,
+        pattern_count,
+        max_matches,
+        use_subgroup_coalesce,
     )
 }
 
@@ -791,7 +657,7 @@ mod tests {
     use crate::scan::classic_ac::{
         classic_ac_bounded_ranges_scan, classic_ac_candidate_end_byte_mask_words,
         classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,
-        classic_ac_compile,
+        classic_ac_compile, CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
     };
 
     /// Behavioral Law-10 regression guard: the infallible suffix3 prefilter builder
