@@ -1114,3 +1114,13 @@ text = "Two CI jobs named cargo test targets that do not exist and would have fa
 id = "ci-workflow-reference-closure-gate"
 category = "Added"
 text = "A gate resolves every name a `run:` step passes to cargo or to a shell against this tree: each `-p` package is a workspace member, each `--test` and `--bin` target is declared or auto-discovered by the package the same command line addresses, and each `scripts/` path is published. Steps are extracted by indentation and each is its own scope, so a target is never resolved against a neighbouring step's package. Nothing is listed in the test: a workflow added tomorrow is judged tomorrow, and renaming a target without updating its workflow is red locally instead of in CI."
+
+[[fragments]]
+id = "megakernel-byte-accounting-has-one-value"
+category = "Fixed"
+text = "The six byte counts that decide a megakernel wave's device-memory plan travel as one value, `vyre_driver::megakernel_execution::MegakernelByteLayout`, instead of a positional list of six `u64` arguments restated at every hop from the caller that measures them to `plan_megakernel_memory_budget`. The list was written out nine times across `vyre_driver::megakernel_execution`, `vyre_driver::megakernel_frontier`, `vyre_driver_cuda::megakernel_plan_cache`, `vyre_driver_cuda::megakernel_scheduler` and `vyre_driver_cuda::megakernel_barrier_planner`, and any two of the six could be exchanged at a call site without a compiler complaint because they share a type: swapping the scratch and output counts, or the per-node and per-edge counts, produced a plan that was arithmetically valid and wrong. Named fields make each of those a type error. `MegakernelExecutionRequest` carries the same value rather than a second copy of the same six fields, and the CUDA plan cache's unbounded sparse probe now says so in its own argument instead of leaving a bare `u64::MAX` in the eighth position."
+
+[[fragments]]
+id = "workspace-member-roster-has-one-owner"
+category = "Fixed"
+text = "The workspace member roster has one reader, `structure_gate::workspace_members`. It was parsed out of the root manifest three times, once inside `structure-gate` and once in each of two gates, and every copy carried its own filter over the member list, so a member added under a path one copy accepted and another skipped would be gated by one and invisible to the other. The CI reference gate resolves a package's directory through `structure_gate::member_directory` for the same reason instead of walking the roster itself."

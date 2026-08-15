@@ -47,7 +47,7 @@ total_lines = 106
 [[crate]]
 name = "structure-gate"
 duplicate_lines = 0
-total_lines = 1947
+total_lines = 1955
 
 [[crate]]
 name = "tests"
@@ -76,13 +76,13 @@ total_lines = 2227
 
 [[crate]]
 name = "vyre-driver"
-duplicate_lines = 986
-total_lines = 36334
+duplicate_lines = 946
+total_lines = 36317
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 2658
-total_lines = 67275
+duplicate_lines = 2603
+total_lines = 67247
 
 [[crate]]
 name = "vyre-driver-metal"
@@ -197,7 +197,7 @@ total_lines = 9706
 [[crate]]
 name = "xtask"
 duplicate_lines = 102
-total_lines = 17046
+total_lines = 17349
 
 [[crate]]
 name = "xtask-evidence"

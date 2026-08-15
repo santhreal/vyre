@@ -893,8 +893,8 @@ pub fn vyre_driver::megakernel_execution::MegakernelMemoryError::fmt(&self, f: &
 pub fn vyre_driver::megakernel_execution::MegakernelTopologyDecision::stable_explanation(&self) -> alloc::string::String
 pub fn vyre_driver::megakernel_execution::NeutralMegakernelExecutionPlanner::plan_execution(&mut self, request: vyre_driver::megakernel_execution::MegakernelExecutionRequest) -> core::result::Result<vyre_driver::megakernel_execution::MegakernelExecutionPlan, vyre_driver::megakernel_execution::MegakernelMemoryError>
 pub fn vyre_driver::megakernel_execution::megakernel_resident_graph_bytes(graph: vyre_driver::megakernel_execution::MegakernelGraphShape, bytes_per_node: u64, bytes_per_edge: u64) -> core::result::Result<u64, vyre_driver::megakernel_execution::MegakernelMemoryError>
-pub fn vyre_driver::megakernel_execution::plan_megakernel_execution(sample: vyre_driver::megakernel_execution::MegakernelExecutionSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, bytes_per_node: u64, bytes_per_edge: u64, frontier_bytes: u64, scratch_bytes: u64, output_bytes: u64, budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64, capabilities: vyre_driver::megakernel_execution::MegakernelDeviceCapabilities) -> core::result::Result<vyre_driver::megakernel_execution::MegakernelExecutionPlan, vyre_driver::megakernel_execution::MegakernelMemoryError>
-pub fn vyre_driver::megakernel_execution::plan_megakernel_memory_budget(topology: vyre_driver::megakernel_execution::MegakernelExecutionTopology, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, bytes_per_node: u64, bytes_per_edge: u64, frontier_bytes: u64, scratch_bytes: u64, output_bytes: u64, budget_bytes: u64) -> core::result::Result<vyre_driver::megakernel_execution::MegakernelMemoryPlan, vyre_driver::megakernel_execution::MegakernelMemoryError>
+pub fn vyre_driver::megakernel_execution::plan_megakernel_execution(sample: vyre_driver::megakernel_execution::MegakernelExecutionSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, bytes: vyre_driver::megakernel_execution::MegakernelByteLayout, launch_overhead_ns: f64, fusion_pressure: f64, capabilities: vyre_driver::megakernel_execution::MegakernelDeviceCapabilities) -> core::result::Result<vyre_driver::megakernel_execution::MegakernelExecutionPlan, vyre_driver::megakernel_execution::MegakernelMemoryError>
+pub fn vyre_driver::megakernel_execution::plan_megakernel_memory_budget(topology: vyre_driver::megakernel_execution::MegakernelExecutionTopology, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, bytes: vyre_driver::megakernel_execution::MegakernelByteLayout) -> core::result::Result<vyre_driver::megakernel_execution::MegakernelMemoryPlan, vyre_driver::megakernel_execution::MegakernelMemoryError>
 pub fn vyre_driver::megakernel_execution::select_megakernel_topology(sample: vyre_driver::megakernel_execution::MegakernelExecutionSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64, capabilities: vyre_driver::megakernel_execution::MegakernelDeviceCapabilities) -> vyre_driver::megakernel_execution::MegakernelTopologyDecision
 pub fn vyre_driver::megakernel_execution::select_megakernel_topology_stable(sample: vyre_driver::megakernel_execution::MegakernelExecutionSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64, previous_topology: vyre_driver::megakernel_execution::MegakernelExecutionTopology, capabilities: vyre_driver::megakernel_execution::MegakernelDeviceCapabilities) -> vyre_driver::megakernel_execution::MegakernelTopologyDecision
 pub fn vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::arithmetic_overflow(field: &'static str) -> Self
@@ -1479,6 +1479,7 @@ pub struct vyre_driver::megakernel_barrier::MegakernelBarrierGroup
 pub struct vyre_driver::megakernel_barrier::MegakernelBarrierPlan
 pub struct vyre_driver::megakernel_barrier::MegakernelBarrierScratch
 pub struct vyre_driver::megakernel_barrier::MegakernelWaveDependency
+pub struct vyre_driver::megakernel_execution::MegakernelByteLayout
 pub struct vyre_driver::megakernel_execution::MegakernelDeviceCapabilities
 pub struct vyre_driver::megakernel_execution::MegakernelExecutionPlan
 pub struct vyre_driver::megakernel_execution::MegakernelExecutionRequest
@@ -2451,21 +2452,22 @@ pub vyre_driver::megakernel_barrier::MegakernelBarrierPlanError::StorageReserveF
 pub vyre_driver::megakernel_barrier::MegakernelBarrierPlanError::StorageReserveFailed::requested: usize
 pub vyre_driver::megakernel_barrier::MegakernelWaveDependency::after: usize
 pub vyre_driver::megakernel_barrier::MegakernelWaveDependency::before: usize
+pub vyre_driver::megakernel_execution::MegakernelByteLayout::budget_bytes: u64
+pub vyre_driver::megakernel_execution::MegakernelByteLayout::bytes_per_edge: u64
+pub vyre_driver::megakernel_execution::MegakernelByteLayout::bytes_per_node: u64
+pub vyre_driver::megakernel_execution::MegakernelByteLayout::frontier_bytes: u64
+pub vyre_driver::megakernel_execution::MegakernelByteLayout::output_bytes: u64
+pub vyre_driver::megakernel_execution::MegakernelByteLayout::scratch_bytes: u64
 pub vyre_driver::megakernel_execution::MegakernelDeviceCapabilities::supports_device_wide_barrier: bool
 pub vyre_driver::megakernel_execution::MegakernelExecutionPlan::downgraded_to_sparse: bool
 pub vyre_driver::megakernel_execution::MegakernelExecutionPlan::memory: vyre_driver::megakernel_execution::MegakernelMemoryPlan
 pub vyre_driver::megakernel_execution::MegakernelExecutionPlan::topology: vyre_driver::megakernel_execution::MegakernelExecutionTopology
-pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::budget_bytes: u64
-pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::bytes_per_edge: u64
-pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::bytes_per_node: u64
+pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::bytes: vyre_driver::megakernel_execution::MegakernelByteLayout
 pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::capabilities: vyre_driver::megakernel_execution::MegakernelDeviceCapabilities
-pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::frontier_bytes: u64
 pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::fusion_pressure: f64
 pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::graph: vyre_driver::megakernel_execution::MegakernelGraphShape
 pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::launch_overhead_ns: f64
-pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::output_bytes: u64
 pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::sample: vyre_driver::megakernel_execution::MegakernelExecutionSample
-pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::scratch_bytes: u64
 pub vyre_driver::megakernel_execution::MegakernelExecutionSample::dispatch_cost_ns: f64
 pub vyre_driver::megakernel_execution::MegakernelExecutionSample::frontier_density: f64
 pub vyre_driver::megakernel_execution::MegakernelExecutionSample::readback_bytes: u64

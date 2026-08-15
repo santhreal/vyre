@@ -172,7 +172,7 @@ fn references(workflow: &str, command: &str) -> Vec<Reference> {
 /// Package names declared by the workspace members, read from their manifests.
 fn declared_packages(root: &Path) -> BTreeSet<String> {
     let mut packages = BTreeSet::new();
-    for member in workspace_members(root) {
+    for member in structure_gate::workspace_members(root) {
         let manifest = root.join(&member).join("Cargo.toml");
         let Ok(text) = fs::read_to_string(&manifest) else {
             continue;
@@ -188,26 +188,6 @@ fn declared_packages(root: &Path) -> BTreeSet<String> {
     packages
 }
 
-fn workspace_members(root: &Path) -> Vec<String> {
-    let manifest = root.join("Cargo.toml");
-    let text = fs::read_to_string(&manifest)
-        .unwrap_or_else(|error| panic!("Fix: cannot read {}: {error}", manifest.display()));
-    let table = toml::from_str::<toml::Value>(&text)
-        .unwrap_or_else(|error| panic!("Fix: cannot parse {}: {error}", manifest.display()));
-    table
-        .get("workspace")
-        .and_then(|workspace| workspace.get("members"))
-        .and_then(toml::Value::as_array)
-        .map(|members| {
-            members
-                .iter()
-                .filter_map(toml::Value::as_str)
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
 fn manifest_package_name(text: &str) -> Option<String> {
     toml::from_str::<toml::Value>(text)
         .ok()?
@@ -217,24 +197,13 @@ fn manifest_package_name(text: &str) -> Option<String> {
         .map(str::to_string)
 }
 
-/// Directory of the member declaring `package`.
-fn package_directory(root: &Path, package: &str) -> Option<std::path::PathBuf> {
-    workspace_members(root).into_iter().find_map(|member| {
-        let directory = root.join(&member);
-        let text = fs::read_to_string(directory.join("Cargo.toml")).ok()?;
-        (manifest_package_name(&text).as_deref() == Some(package)).then_some(directory)
-    })
-}
-
 /// Whether `package` declares or auto-discovers a target of `kind` named `name`.
 ///
 /// Cargo auto-discovers `tests/NAME.rs` and `tests/NAME/main.rs`, and the same
 /// two shapes under `src/bin` for a binary, so both are accepted alongside an
 /// explicit `[[test]]` or `[[bin]]` block.
 fn target_exists(root: &Path, package: &str, kind: Kind, name: &str) -> bool {
-    let Some(directory) = package_directory(root, package) else {
-        return false;
-    };
+    let directory = structure_gate::member_directory(root, package);
     let (auto_dir, table) = match kind {
         Kind::Test => ("tests", "test"),
         Kind::Bin => ("src/bin", "bin"),

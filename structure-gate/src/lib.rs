@@ -561,7 +561,17 @@ pub fn member_directory(root: &Path, package: &str) -> PathBuf {
     )
 }
 
-fn workspace_members(root: &Path) -> Vec<String> {
+/// The workspace member roster, as the root manifest declares it.
+///
+/// Every gate that resolves a name against the tree needs this list, so it has
+/// one owner: a second copy drifts the moment a member is added under a path
+/// one copy filters and the other does not.
+///
+/// # Panics
+///
+/// Panics when the root manifest cannot be read or parsed.
+#[must_use]
+pub fn workspace_members(root: &Path) -> Vec<String> {
     let manifest = root.join("Cargo.toml");
     let text = read_source_bounded(&manifest)
         .unwrap_or_else(|error| panic!("Fix: cannot read {}: {error}", manifest.display()));

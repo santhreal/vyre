@@ -21,9 +21,9 @@ use crate::megakernel_barrier::{
     MegakernelBarrierPlanError, MegakernelBarrierScratch, MegakernelWaveDependency,
 };
 use crate::megakernel_execution::{
-    megakernel_resident_graph_bytes, MegakernelDeviceCapabilities, MegakernelExecutionPlan,
-    MegakernelExecutionPlanner, MegakernelExecutionRequest, MegakernelExecutionSample,
-    MegakernelGraphShape, MegakernelMemoryError,
+    megakernel_resident_graph_bytes, MegakernelByteLayout, MegakernelDeviceCapabilities,
+    MegakernelExecutionPlan, MegakernelExecutionPlanner, MegakernelExecutionRequest,
+    MegakernelExecutionSample, MegakernelGraphShape, MegakernelMemoryError,
 };
 use crate::reservation_policy::{
     reserve_typed_vec_to_capacity as reserve_vec_to_capacity, storage_reserve_failure_adapter,
@@ -342,12 +342,14 @@ pub fn plan_megakernel_frontier_execution_with_scratch(
             ..sample
         },
         graph,
-        bytes_per_node,
-        bytes_per_edge,
-        frontier_bytes: memory.peak_frontier_bytes,
-        scratch_bytes: memory.peak_scratch_bytes,
-        output_bytes: memory.peak_output_bytes,
-        budget_bytes,
+        bytes: MegakernelByteLayout {
+            bytes_per_node,
+            bytes_per_edge,
+            frontier_bytes: memory.peak_frontier_bytes,
+            scratch_bytes: memory.peak_scratch_bytes,
+            output_bytes: memory.peak_output_bytes,
+            budget_bytes,
+        },
         launch_overhead_ns,
         fusion_pressure: capabilities.admissible_fusion_pressure(fusion_pressure),
         capabilities,

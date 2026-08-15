@@ -168,7 +168,9 @@ fn banned_spellings() -> Vec<String> {
 /// directory holds cross-crate contracts compiled into `vyre-foundation` and is
 /// no member's `tests/`, so it is named separately.
 fn scanned_directories(root: &Path) -> Vec<(String, PathBuf)> {
-    let mut owners: BTreeSet<String> = members(root).into_iter().collect();
+    let mut owners: BTreeSet<String> = structure_gate::workspace_members(root)
+        .into_iter()
+        .collect();
     owners.extend(conform_members(root));
 
     let mut directories = Vec::new();
@@ -224,26 +226,6 @@ fn declares_workspace(manifest: &Path) -> bool {
         text.lines()
             .any(|line| line.trim_start().starts_with("[workspace]"))
     })
-}
-
-/// Workspace members, as declared by the root manifest.
-fn members(root: &Path) -> Vec<String> {
-    let text = std::fs::read_to_string(root.join("Cargo.toml"))
-        .expect("Fix: the workspace manifest must be readable");
-    let value = toml::from_str::<toml::Value>(&text)
-        .expect("Fix: the workspace manifest must parse as TOML");
-    value
-        .get("workspace")
-        .and_then(|workspace| workspace.get("members"))
-        .and_then(toml::Value::as_array)
-        .map(|members| {
-            members
-                .iter()
-                .filter_map(toml::Value::as_str)
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default()
 }
 
 /// Every `.rs` file under `directory`, at any depth.

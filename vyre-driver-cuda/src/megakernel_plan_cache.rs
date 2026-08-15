@@ -19,9 +19,9 @@ use crate::megakernel_scheduler::{
     CudaMegakernelScheduleSample,
 };
 use vyre_driver::megakernel_execution::{
-    plan_megakernel_memory_budget, MegakernelExecutionPlan, MegakernelExecutionTopology,
-    MegakernelGraphShape, MegakernelMemoryBudget, MegakernelMemoryError,
-    MegakernelTopologyDecision,
+    plan_megakernel_memory_budget, MegakernelByteLayout, MegakernelExecutionPlan,
+    MegakernelExecutionTopology, MegakernelGraphShape, MegakernelMemoryBudget,
+    MegakernelMemoryError, MegakernelTopologyDecision,
 };
 
 const DEFAULT_MAX_MEGAKERNEL_PLANS: usize = 256;
@@ -318,11 +318,14 @@ impl CudaMegakernelPlanCache {
     /// Return a cache-backed, memory-validated CUDA megakernel execution plan.
     ///
     /// The cache key uses sparse-plan memory pressure because sparse is the
-    /// lower-bound resident footprint shared by every topology. A cache hit
-    /// reuses the prior topology decision, then this method validates the exact
-    /// current dense/fused/sparse byte budget before returning a launchable
-    /// plan. If the cached non-sparse topology no longer fits, the method
-    /// downgrades to sparse only after proving the sparse plan fits.
+    /// lower-bound resident footprint shared by every topology. That probe runs
+    /// against an unbounded cap so it measures the footprint instead of failing
+    /// early on a budget the caller may still satisfy under another topology. A
+    /// cache hit reuses the prior topology decision, then this method validates
+    /// the exact current dense/fused/sparse byte budget before returning a
+    /// launchable plan. If the cached non-sparse topology no longer fits, the
+    /// method downgrades to sparse only after proving the sparse plan fits the
+    /// real cap.
     pub fn get_or_plan_execution(
         &mut self,
         graph_layout_hash: u64,
@@ -330,24 +333,17 @@ impl CudaMegakernelPlanCache {
         device: CudaMegakernelDeviceKey,
         sample: CudaMegakernelScheduleSample,
         graph: MegakernelGraphShape,
-        bytes_per_node: u64,
-        bytes_per_edge: u64,
-        frontier_bytes: u64,
-        scratch_bytes: u64,
-        output_bytes: u64,
-        budget_bytes: u64,
+        bytes: MegakernelByteLayout,
         launch_overhead_ns: f64,
         fusion_pressure: f64,
     ) -> Result<MegakernelExecutionPlan, MegakernelMemoryError> {
         let sparse_memory = plan_megakernel_memory_budget(
             MegakernelExecutionTopology::SparseFrontier,
             graph,
-            bytes_per_node,
-            bytes_per_edge,
-            frontier_bytes,
-            scratch_bytes,
-            output_bytes,
-            u64::MAX,
+            MegakernelByteLayout {
+                budget_bytes: u64::MAX,
+                ..bytes
+            },
         )?;
         let cached = self.get_or_select_topology(
             graph_layout_hash,
@@ -357,21 +353,12 @@ impl CudaMegakernelPlanCache {
             graph,
             MegakernelMemoryBudget {
                 required_bytes: sparse_memory.required_bytes,
-                budget_bytes,
+                budget_bytes: bytes.budget_bytes,
             },
             launch_overhead_ns,
             fusion_pressure,
         )?;
-        match plan_megakernel_memory_budget(
-            cached.topology,
-            graph,
-            bytes_per_node,
-            bytes_per_edge,
-            frontier_bytes,
-            scratch_bytes,
-            output_bytes,
-            budget_bytes,
-        ) {
+        match plan_megakernel_memory_budget(cached.topology, graph, bytes) {
             Ok(memory) => Ok(MegakernelExecutionPlan {
                 topology: cached.topology,
                 memory,
@@ -383,12 +370,7 @@ impl CudaMegakernelPlanCache {
                 let memory = plan_megakernel_memory_budget(
                     MegakernelExecutionTopology::SparseFrontier,
                     graph,
-                    bytes_per_node,
-                    bytes_per_edge,
-                    frontier_bytes,
-                    scratch_bytes,
-                    output_bytes,
-                    budget_bytes,
+                    bytes,
                 )?;
                 Ok(MegakernelExecutionPlan {
                     topology: MegakernelExecutionTopology::SparseFrontier,
@@ -621,8 +603,22 @@ mod tests {
     use crate::megakernel_scheduler::CudaMegakernelScheduleSample;
     use crate::synthetic_device_caps::synthetic_sm120_envelope_default;
     use vyre_driver::megakernel_execution::{
-        MegakernelExecutionTopology, MegakernelGraphShape, MegakernelTopologyDecision,
+        MegakernelByteLayout, MegakernelExecutionTopology, MegakernelGraphShape,
+        MegakernelTopologyDecision,
     };
+
+    /// The byte layout every execution-plan case in this module shares, with the
+    /// two counts the cases actually vary left to the caller.
+    fn byte_layout(scratch_bytes: u64, budget_bytes: u64) -> MegakernelByteLayout {
+        MegakernelByteLayout {
+            bytes_per_node: 16,
+            bytes_per_edge: 8,
+            frontier_bytes: 4_096,
+            scratch_bytes,
+            output_bytes: 512,
+            budget_bytes,
+        }
+    }
 
     fn device() -> CudaMegakernelDeviceKey {
         CudaMegakernelDeviceKey {
@@ -1055,12 +1051,7 @@ mod tests {
                 device(),
                 sample,
                 graph,
-                16,
-                8,
-                4_096,
-                2_048,
-                512,
-                128 * 1024,
+                byte_layout(2_048, 128 * 1024),
                 250.0,
                 0.95,
             )
@@ -1075,12 +1066,7 @@ mod tests {
                     ..sample
                 },
                 graph,
-                16,
-                8,
-                4_096,
-                2_048,
-                512,
-                128 * 1024,
+                byte_layout(2_048, 128 * 1024),
                 250.0,
                 0.95,
             )
@@ -1111,12 +1097,7 @@ mod tests {
                     node_count: 1_000,
                     edge_count: 4_000,
                 },
-                16,
-                8,
-                4_096,
-                10_000,
-                512,
-                80_000,
+                byte_layout(10_000, 80_000),
                 250.0,
                 0.90,
             )

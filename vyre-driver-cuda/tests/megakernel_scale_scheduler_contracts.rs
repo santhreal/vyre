@@ -1,7 +1,7 @@
 //! CUDA telemetry to scale-aware megakernel scheduler contracts.
 
 use vyre_driver::megakernel_execution::{
-    MegakernelExecutionTopology, MegakernelGraphShape, MegakernelMemoryBudget,
+    MegakernelByteLayout, MegakernelExecutionTopology, MegakernelGraphShape, MegakernelMemoryBudget,
 };
 use vyre_driver::megakernel_fixtures::DIAMOND_DEPENDENCIES;
 use vyre_driver::megakernel_frontier::MegakernelFrontierWave;
@@ -115,6 +115,14 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
         "Fix: real dense CUDA telemetry must select a dense or fused megakernel topology, got {:?}.",
         dense_decision
     );
+    let bytes = MegakernelByteLayout {
+        bytes_per_node: 16,
+        bytes_per_edge: 8,
+        frontier_bytes: large.readback_bytes,
+        scratch_bytes: large.readback_bytes / 4,
+        output_bytes: large.readback_bytes,
+        budget_bytes: large.readback_bytes.saturating_mul(64),
+    };
     let mut execution_cache = CudaMegakernelPlanCache::new();
     let execution_plan = execution_cache
         .get_or_plan_execution(
@@ -126,12 +134,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
                 node_count: 65_536,
                 edge_count: 262_144,
             },
-            16,
-            8,
-            large.readback_bytes,
-            large.readback_bytes / 4,
-            large.readback_bytes,
-            large.readback_bytes.saturating_mul(64),
+            bytes,
             launch_ns,
             schedule[1],
         )
@@ -149,12 +152,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
                 node_count: 65_536,
                 edge_count: 262_144,
             },
-            16,
-            8,
-            large.readback_bytes,
-            large.readback_bytes / 4,
-            large.readback_bytes,
-            large.readback_bytes.saturating_mul(64),
+            bytes,
             launch_ns,
             schedule[1],
         )
