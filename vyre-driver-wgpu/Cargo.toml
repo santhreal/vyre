@@ -66,6 +66,9 @@ vyre-runtime.workspace = true
 # `ir-fixtures` carries the shared u32 binop parity tables the live-GPU
 # parity suites read their operands and pinned oracle answers from.
 vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
+# The canonical self-hosted optimizer scaling bench lives behind this feature,
+# so both concrete driver crates report the same fixtures and table.
+vyre-driver = { workspace = true, features = ["test-fixtures"] }
 criterion.workspace = true
 stats_alloc.workspace = true
 tokio.workspace = true
