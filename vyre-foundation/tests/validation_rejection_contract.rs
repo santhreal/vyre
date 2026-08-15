@@ -4,7 +4,7 @@
 //! emits the expected diagnostic. Negative assertions (allowed operations)
 //! are included where the contract explicitly permits them.
 
-use vyre_foundation::ir::{Expr, Node};
+use vyre_foundation::ir::{DataType, Expr, Node};
 use vyre_foundation::validate::validate;
 use vyre_test_support::ir_variants::single_u32_output_program as output_program;
 

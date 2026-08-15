@@ -30,9 +30,24 @@ impl CalleeExpander<'_> {
                     },
                 ))
             }
-            Expr::Call { .. } => {
-                let renamed = self.rename_expr_vars(expr)?;
-                self.ctx.inline_expr(&renamed)
+            // A nested call's arguments are callee expressions: they can name a
+            // callee local, a callee parameter bound to a scalar, or a
+            // parameter bound to one of the caller's buffers. Expanding them
+            // under the caller's policy renamed the locals and did nothing
+            // else, so a parameter name survived into a program whose buffer
+            // table never declared it. Only the call itself belongs to the
+            // caller, which resolves and expands it.
+            Expr::Call { op_id, args } => {
+                let mut prefix = Vec::new();
+                let mut expanded = Vec::with_capacity(args.len());
+                for arg in args {
+                    let (statements, value) = self.expr(arg)?;
+                    prefix.extend(statements);
+                    expanded.push(value);
+                }
+                let (statements, value) = self.ctx.expand_call(op_id, &expanded)?;
+                prefix.extend(statements);
+                Ok((prefix, value))
             }
             Expr::InvocationId { .. }
             | Expr::WorkgroupId { .. }
