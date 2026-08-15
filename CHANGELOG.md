@@ -1733,6 +1733,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   butterfly takes log2(32) exchange steps, where three reduction tests each
   spelled out the same two count assertions and their messages. Emitted PTX is
   unchanged: every fixture reproduces its callers' descriptor field for field.
+- The `vyre-reference` and `vyre-runtime` public-API snapshots record two moves
+  already in the tree. Every `LocalSlots::visit_*` signature names
+  `vyre_foundation::ir_inner::model::expr::ident::Ident`, which is where the
+  identifier type lives since the expression module was split by what it holds.
+  `ReplayFailureEvidence` and `ReplayFailureClass` are named from the
+  `vyre-runtime` crate root, and the replay log's record and capacity constants
+  `HEADER_BYTES`, `LOG_MAGIC`, `LOG_VERSION`, `MAX_REPLAY_RECORDS` and
+  `RECORD_BYTES` are public, so a consumer sizing a replay log reads the same
+  numbers the writer uses.
 - The GPU queue bench families in `vyre-bench` have one owner per concern. The
   skewed-CSR and IFDS cases each carried their own copy of the
   queue-materialize dispatch sequence, the queue-driven traversal plan, the

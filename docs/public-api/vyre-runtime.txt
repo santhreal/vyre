@@ -66,12 +66,12 @@ impl vyre_runtime::PipelineCacheStore for vyre_runtime::InMemoryPipelineCache
 impl vyre_runtime::PipelineCacheStore for vyre_runtime::LayeredPipelineCache
 impl vyre_runtime::PipelineError
 impl vyre_runtime::PipelineFingerprint
+impl vyre_runtime::ReplayFailureEvidence
 impl vyre_runtime::artifact_admission::AdmittedArtifact
 impl vyre_runtime::artifact_admission::ArtifactAdmissionError
 impl vyre_runtime::artifact_admission::ArtifactSession
 impl vyre_runtime::artifact_admission::RetainedArtifactSession
 impl vyre_runtime::persistent_executor::PersistentExecutor
-impl vyre_runtime::replay::ReplayFailureEvidence
 impl vyre_runtime::replay::RingLog
 impl vyre_runtime::resident_work_queue::ControlSnapshot
 impl vyre_runtime::resident_work_queue::CountMinSketch
@@ -232,6 +232,11 @@ pub const fn vyre_runtime::tenant::TenantSelectionScratch::new() -> Self
 pub const vyre_runtime::OPCODE_RANGE_PER_TENANT: u32
 pub const vyre_runtime::TENANT_ID_MAX: u32
 pub const vyre_runtime::TENANT_OPCODE_BASE: u32
+pub const vyre_runtime::replay::HEADER_BYTES: u64
+pub const vyre_runtime::replay::LOG_MAGIC: &[u8; 8]
+pub const vyre_runtime::replay::LOG_VERSION: u32
+pub const vyre_runtime::replay::MAX_REPLAY_RECORDS: u64
+pub const vyre_runtime::replay::RECORD_BYTES: u64
 pub const vyre_runtime::resident_work_queue::ARG0_WORD: u32
 pub const vyre_runtime::resident_work_queue::ARGS_PER_SLOT: u32
 pub const vyre_runtime::resident_work_queue::AUTOMATA_WORKLIST_EVIDENCE_SCHEMA_VERSION: u32
@@ -501,6 +506,7 @@ pub fn vyre_runtime::PipelineError::from(err: vyre_runtime::replay::ReplayLogErr
 pub fn vyre_runtime::PipelineError::is_drain_incomplete(&self) -> bool
 pub fn vyre_runtime::PipelineFingerprint::hex(&self) -> alloc::string::String
 pub fn vyre_runtime::PipelineFingerprint::of(artifact: &vyre_megakernel::Artifact) -> Self
+pub fn vyre_runtime::ReplayFailureEvidence::from_backend_error(slot_status: u32, error: &vyre_driver::backend::error::BackendError, output_bytes: &[u8]) -> Self
 pub fn vyre_runtime::UringCompletionPump<'_>::default() -> Self
 pub fn vyre_runtime::UringCompletionPump<'a>::is_shutdown_requested(&self) -> bool
 pub fn vyre_runtime::UringCompletionPump<'a>::new() -> Self
@@ -559,9 +565,8 @@ pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::put(&self, fp: vyre_run
 pub fn vyre_runtime::recover_artifact_session(session: &vyre_runtime::artifact_admission::ArtifactSession, failure: vyre_driver::backend::error::BackendError) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::recovery::classify_backend_error(error: &vyre_driver::backend::error::BackendError) -> vyre_foundation::diagnostics::RetryClass
 pub fn vyre_runtime::recovery::recover_artifact_session(session: &vyre_runtime::artifact_admission::ArtifactSession, failure: vyre_driver::backend::error::BackendError) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
-pub fn vyre_runtime::replay::ReplayFailureEvidence::from_backend_error(slot_status: u32, error: &vyre_driver::backend::error::BackendError, output_bytes: &[u8]) -> Self
 pub fn vyre_runtime::replay::RingLog::append(&mut self, slot: vyre_runtime::replay::RecordedSlot) -> core::result::Result<(), vyre_runtime::replay::ReplayLogError>
-pub fn vyre_runtime::replay::RingLog::append_with_failure(&mut self, slot: vyre_runtime::replay::RecordedSlot, failure: vyre_runtime::replay::ReplayFailureEvidence) -> core::result::Result<(), vyre_runtime::replay::ReplayLogError>
+pub fn vyre_runtime::replay::RingLog::append_with_failure(&mut self, slot: vyre_runtime::replay::RecordedSlot, failure: vyre_runtime::ReplayFailureEvidence) -> core::result::Result<(), vyre_runtime::replay::ReplayLogError>
 pub fn vyre_runtime::replay::RingLog::capacity(&self) -> u64
 pub fn vyre_runtime::replay::RingLog::cursor(&self) -> u64
 pub fn vyre_runtime::replay::RingLog::open(path: impl core::convert::AsRef<std::path::Path>, capacity: u64) -> core::result::Result<Self, vyre_runtime::replay::ReplayLogError>
@@ -1360,7 +1365,7 @@ pub vyre_runtime::ReplayFailureClass::ProgramBug
 pub vyre_runtime::ReplayFailureClass::TransientQueue
 pub vyre_runtime::ReplayFailureClass::Unclassified
 pub vyre_runtime::ReplayFailureEvidence::backend_error_code: u32
-pub vyre_runtime::ReplayFailureEvidence::failure_class: vyre_runtime::replay::ReplayFailureClass
+pub vyre_runtime::ReplayFailureEvidence::failure_class: vyre_runtime::ReplayFailureClass
 pub vyre_runtime::ReplayFailureEvidence::output_digest: u64
 pub vyre_runtime::ReplayFailureEvidence::slot_status: u32
 pub vyre_runtime::ReplayLogError::CapacityOverflow
@@ -1373,7 +1378,7 @@ pub vyre_runtime::ReplayLogError::Io::op: &'static str
 pub vyre_runtime::ReplayLogError::Io::path: alloc::sync::Arc<str>
 pub vyre_runtime::ReplayLogError::Io::source: std::io::error::Error
 pub vyre_runtime::ReplayLogError::ZeroCapacity
-pub vyre_runtime::ReplayRecord::failure: core::option::Option<vyre_runtime::replay::ReplayFailureEvidence>
+pub vyre_runtime::ReplayRecord::failure: core::option::Option<vyre_runtime::ReplayFailureEvidence>
 pub vyre_runtime::ReplayRecord::slot: vyre_runtime::replay::RecordedSlot
 pub vyre_runtime::ResidentQueueCompletion::device_ns: core::option::Option<u64>
 pub vyre_runtime::ResidentQueueCompletion::state: vyre_runtime::persistent_executor::ResidentQueueState
@@ -1466,7 +1471,7 @@ pub vyre_runtime::replay::ReplayFailureClass::ProgramBug
 pub vyre_runtime::replay::ReplayFailureClass::TransientQueue
 pub vyre_runtime::replay::ReplayFailureClass::Unclassified
 pub vyre_runtime::replay::ReplayFailureEvidence::backend_error_code: u32
-pub vyre_runtime::replay::ReplayFailureEvidence::failure_class: vyre_runtime::replay::ReplayFailureClass
+pub vyre_runtime::replay::ReplayFailureEvidence::failure_class: vyre_runtime::ReplayFailureClass
 pub vyre_runtime::replay::ReplayFailureEvidence::output_digest: u64
 pub vyre_runtime::replay::ReplayFailureEvidence::slot_status: u32
 pub vyre_runtime::replay::ReplayLogError::CapacityOverflow
@@ -1479,7 +1484,7 @@ pub vyre_runtime::replay::ReplayLogError::Io::op: &'static str
 pub vyre_runtime::replay::ReplayLogError::Io::path: alloc::sync::Arc<str>
 pub vyre_runtime::replay::ReplayLogError::Io::source: std::io::error::Error
 pub vyre_runtime::replay::ReplayLogError::ZeroCapacity
-pub vyre_runtime::replay::ReplayRecord::failure: core::option::Option<vyre_runtime::replay::ReplayFailureEvidence>
+pub vyre_runtime::replay::ReplayRecord::failure: core::option::Option<vyre_runtime::ReplayFailureEvidence>
 pub vyre_runtime::replay::ReplayRecord::slot: vyre_runtime::replay::RecordedSlot
 pub vyre_runtime::resident_work_queue::AutomataStateIndex::byte_index: u32
 pub vyre_runtime::resident_work_queue::AutomataStateIndex::state_id: u32
