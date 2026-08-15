@@ -1698,3 +1698,21 @@ text = "`abstraction-gate` no longer demands an operation registration for a reg
 id = "hot-path-scan-excludes-test-bodies"
 category = "Fixed"
 text = "`hot-path-scan` counts runtime code only. It claimed to skip `#[cfg(test)]`, calling those \"intentional dev-only lines, not runtime cost\", but an attribute annotates the item that follows it and the scan skipped the attribute line alone. Every `panic!`, `format!` and `.to_string()` inside a `mod tests` body was reported as hot-path cost and weighted per kLOC, and the same bodies inflated the `count_code_lines` denominator, so a file's real density read lower than it is. Seventeen of 125 findings were test code, one `mod tests` spanning 575 lines of a backend dispatch file. The scan now tracks the item a `#[cfg(test)]` annotates to its closing brace, or to its semicolon when it has no body, with a brace counter that ignores braces inside string and character literals and a `'` that opens a lifetime rather than a literal. The `hot-path-scan` pin falls from 170 to 154 and `abstraction-gate` from 32 to 23."
+id = "pass-engine-scope-walk-one-owner"
+category = "Changed"
+text = "The pass engine has one scope walk. `optimizer::rewrite_walk` owns the encoder's reachable-prefix truncation and the borrow-preserving rebuild, and const propagation, cross-scope CSE, encoded CSE and the encoded-order rewrite call it. Four copies of the same loop stood beside each other and three of them discarded the walk's unchanged answer, so a pass that propagated nothing still deep-copied every nested body it visited. Constant propagation also stopped enumerating `Node` itself: it is a policy over the one structural node rewrite, so a body-bearing variant added to the IR is descended into instead of switching propagation off for everything inside it."
+
+[[fragments]]
+id = "trap-program-one-owner"
+category = "Changed"
+text = "`vyre_foundation::algebra::composition::trap_program` builds the program a builder returns when its inputs cannot produce a valid one. `vyre-primitives` and `vyre-libs` each had their own copy, differing only in whether one output buffer of count 1 is declared, and a trap program is IR composed out of IR, so neither crate is its home. The declared output is an `Option` argument because that is the whole difference between the two former copies."
+
+[[fragments]]
+id = "single-output-program-fixture-owner"
+category = "Changed"
+text = "`vyre-test-support` states the minimal one-output test program once, as `ir_variants::single_u32_output_program`. Suites that needed a program with somewhere to store a result each declared the same buffer and workgroup size locally, so a change to the shape had to be found in every copy."
+
+[[fragments]]
+id = "inline-expansion-one-walk"
+category = "Fixed"
+text = "Call inlining expands a call in every operand position. The caller side and the callee side each enumerated `Node` themselves and had diverged: the caller copied the `AsyncLoad` and `AsyncStore` offset and size and the `Trap` address verbatim, so a call written there survived a pass whose contract is that no call reaches a backend. Both sides are now policies over one expansion walk, `transform::inline::expand_walk`, which descends through the structural node rewrite. A call inside a callee body was also expanded under the caller's substitution, which renames locals but does not bind callee parameters or retarget buffer-reference arguments, so `call outer(BufferRef(data))` with a nested call in `outer` produced a program reading a buffer only the callee declares. Nested-call arguments are expanded under the callee's policy."
