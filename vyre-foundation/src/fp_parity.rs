@@ -25,6 +25,32 @@ pub const BACKEND_TRANSCENDENTAL_ULP_BUDGET: u32 = 128;
 /// program-level, not an op-id whitelist.
 pub const BACKEND_ELEMENTARY_F32_ULP_BUDGET: u32 = 4;
 
+/// Normalize an f32 so two backends that agree numerically agree bitwise.
+///
+/// Every NaN payload collapses to one quiet NaN and every subnormal flushes to
+/// a zero of its own sign. A signed zero is preserved: `-0.0` and `+0.0` are
+/// numerically equal and every backend distinguishes their bits, so collapsing
+/// them here would hide a real difference. The wire encoder does collapse them,
+/// which is a different contract for a different purpose and lives with the
+/// encoder.
+///
+/// This is the one definition. Four identical bodies stood in
+/// `scalar_ops`, two reference evaluators and one reference test, and the whole
+/// f32 parity story is that they agree: a copy that flushed a subnormal to
+/// `+0.0` instead of its own sign would make one evaluator's output differ from
+/// another's on a value neither considers exceptional, and the ULP window above
+/// would report the difference as drift.
+#[must_use]
+pub fn canonical_f32(value: f32) -> f32 {
+    if value.is_nan() {
+        f32::from_bits(0x7FC0_0000)
+    } else if value.is_subnormal() {
+        f32::from_bits(value.to_bits() & 0x8000_0000)
+    } else {
+        value
+    }
+}
+
 /// Return the allowed f32 ULP tolerance for backend-vs-reference parity checks.
 ///
 /// Every caller compares a backend against the reference oracle, so the window

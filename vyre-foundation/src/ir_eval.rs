@@ -11,9 +11,10 @@
 
 use std::borrow::Cow;
 
+use crate::fp_parity::canonical_f32;
 use crate::ir::{BinOp, DataType, Expr, UnOp};
 use crate::ir_inner::model::node_kind::Value;
-use crate::scalar_ops::{apply_binary, apply_unary, canonical_f32};
+use crate::scalar_ops::{apply_binary, apply_unary};
 
 /// Recursively fold a literal-only expression tree.
 #[must_use]

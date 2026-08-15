@@ -22,22 +22,9 @@
 //! result), and the folder used to answer it with a `u32` literal, silently
 //! retyping the expression.
 
+use crate::fp_parity::canonical_f32;
 use crate::ir_inner::model::node_kind::{EvalError, Value};
 use crate::ir_inner::model::spec_types::{BinOp, UnOp};
-
-/// Normalize an f32 so two backends that agree numerically agree bitwise:
-/// every NaN payload collapses to one quiet NaN and subnormals flush to a
-/// signed zero.
-#[must_use]
-pub(crate) fn canonical_f32(value: f32) -> f32 {
-    if value.is_nan() {
-        f32::from_bits(0x7FC0_0000)
-    } else if value.is_subnormal() {
-        f32::from_bits(value.to_bits() & 0x8000_0000)
-    } else {
-        value
-    }
-}
 
 fn unsupported_binary(op: BinOp, width: &str) -> EvalError {
     EvalError::new(format!(

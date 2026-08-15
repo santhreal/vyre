@@ -3210,6 +3210,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   delegate to that owner rather than restating the variant list, and the
   descendant scan uses an explicit worklist so a deep tree cannot overflow the
   native stack.
+- The f32 parity canonicalizer has one owner.
+  `vyre_foundation::fp_parity::canonical_f32` states the rule once: a NaN
+  becomes the canonical quiet NaN and a subnormal becomes a zero of the same
+  sign. Three production copies of that body existed, in the foundation scalar
+  operations, the foundation IR evaluator, and the reference float operations,
+  so a change to the parity contract had to be made in three places to take
+  effect. The wire encoder keeps its own canonicalizer because it enforces a
+  different contract: it also collapses negative zero and flushes subnormals to
+  positive zero, which loses sign. The two test-side restatements also stay,
+  each now saying why: a judge that calls the code it judges proves nothing.
 - The operand namespace table of a lowered kernel op has one owner again,
   `vyre_lower::operand_class`. Structural verification and data-dependency
   queries answered from two tables that disagreed on a structured loop operand
