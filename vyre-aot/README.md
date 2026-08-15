@@ -1,6 +1,12 @@
 # vyre-aot
 
-Ahead-of-time packaging for canonical Vyre compiler artifacts.
+Ahead-of-time compilation to target bytes plus a self-contained
+launcher bundle, for embedded and competition targets where no
+compiler ships alongside.
+
+Not here: a second compile path. It must produce the same artifact
+class as every other route. Nothing in the workspace currently
+depends on this crate.
 
 ## Compile flow
 
@@ -74,7 +80,7 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Plan and package ahead-of-time artifacts without owning live backend execution.
+Package the same megakernel artifact class ahead of time. Not a second compile path. No workspace crate currently depends on this one.
 
 ### Boundaries
 
@@ -101,8 +107,8 @@ Invalid plans, incompatible metadata, unsupported targets, and serialization fai
 
 ### Testing
 
-Use [`docs/testing/vyre-aot.md`](../docs/testing/vyre-aot.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -110,9 +116,8 @@ requirements, evidence outputs, expected skips, and failure semantics.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

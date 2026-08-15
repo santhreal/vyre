@@ -374,16 +374,21 @@ impl MigrationRegistry {
     }
 }
 
+/// Diagnostic code for an op resolved through a deprecation marker.
+///
+/// The catalog renderer reads this constant, so the string has one owner.
+pub const DEPRECATED_OP_CODE: &str = "W-OP-DEPRECATED";
+
 /// Build a `Severity::Warning` diagnostic for a deprecated op.
 ///
 /// The decoder calls this after resolving a deprecated op and pushes
 /// the result onto its diagnostic buffer. The caller sees a
-/// machine-readable `W-OP-DEPRECATED` warning with the op location
+/// machine-readable [`DEPRECATED_OP_CODE`] warning with the op location
 /// and migration note attached as the suggested fix.
 #[must_use]
 pub fn deprecation_diagnostic(dep: &Deprecation) -> Diagnostic {
     Diagnostic::warning(
-        "W-OP-DEPRECATED",
+        DEPRECATED_OP_CODE,
         format!(
             "op `{}` is deprecated since version {}",
             dep.op_id, dep.deprecated_since

@@ -7,23 +7,26 @@ use vyre_foundation::ir::{Expr, Node};
 
 use super::tensor_core_policy::MatmulKernelPath;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum MmaBackendKind {
-    Ptx,
-    Metal,
-    Wgpu,
-}
-
+/// One descriptor-level MMA instruction shape and operand precision.
+///
+/// The name states the shape and the precision because that is the whole
+/// property a caller gates on. Which target lowers it is the driver's
+/// question, and the driver answers it by filling in [`MmaCapabilityRecord`].
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum MmaInstructionClass {
-    PtxMmaSyncAlignedM16N8K16F16,
-    PtxMmaSyncAlignedM16N8K16Bf16,
-    PtxMmaSyncAlignedM16N8K4Tf32,
+    DescriptorMmaM16N8K16F16,
+    DescriptorMmaM16N8K16Bf16,
+    DescriptorMmaM16N8K4Tf32,
 }
 
+/// What a target can do with a matrix-multiply-accumulate fragment.
+///
+/// `descriptor_mma` is the coarse gate: whether the target lowers a
+/// descriptor-level MMA op at all, as opposed to expanding it back into
+/// scalar FMAs. The remaining fields are per shape and precision, because a
+/// target can lower F16 M16N8K16 and still have no TF32 form.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) struct MmaCapabilityRecord {
-    pub(crate) backend: MmaBackendKind,
     pub(crate) descriptor_mma: bool,
     pub(crate) f16_m16n8k16: bool,
     pub(crate) bf16_m16n8k16: bool,
@@ -31,9 +34,9 @@ pub(crate) struct MmaCapabilityRecord {
 }
 
 impl MmaCapabilityRecord {
-    pub(crate) const fn ptx_sm80() -> Self {
+    /// A target that lowers descriptor MMA at every shape this module emits.
+    pub(crate) const fn all_descriptor_mma_shapes() -> Self {
         Self {
-            backend: MmaBackendKind::Ptx,
             descriptor_mma: true,
             f16_m16n8k16: true,
             bf16_m16n8k16: true,
@@ -41,19 +44,10 @@ impl MmaCapabilityRecord {
         }
     }
 
-    pub(crate) const fn metal() -> Self {
+    /// A target with no descriptor-level MMA. Every tensor-core path on such a
+    /// target lowers to the cooperative body instead.
+    pub(crate) const fn no_descriptor_mma() -> Self {
         Self {
-            backend: MmaBackendKind::Metal,
-            descriptor_mma: false,
-            f16_m16n8k16: false,
-            bf16_m16n8k16: false,
-            tf32_m16n8k4: false,
-        }
-    }
-
-    pub(crate) const fn wgpu() -> Self {
-        Self {
-            backend: MmaBackendKind::Wgpu,
             descriptor_mma: false,
             f16_m16n8k16: false,
             bf16_m16n8k16: false,
@@ -65,13 +59,8 @@ impl MmaCapabilityRecord {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum MmaFallbackDiagnostic {
     CooperativePath,
-    BackendDoesNotLowerDescriptorMma {
-        backend: MmaBackendKind,
-    },
-    MissingInstructionClass {
-        backend: MmaBackendKind,
-        path: MatmulKernelPath,
-    },
+    TargetDoesNotLowerDescriptorMma,
+    MissingInstructionClass { path: MatmulKernelPath },
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -91,15 +80,10 @@ pub(crate) fn gate_mma_path(
             instruction_class: None,
             fallback_diagnostic: Some(if path == MatmulKernelPath::Cooperative {
                 MmaFallbackDiagnostic::CooperativePath
-            } else if !capabilities.descriptor_mma {
-                MmaFallbackDiagnostic::BackendDoesNotLowerDescriptorMma {
-                    backend: capabilities.backend,
-                }
+            } else if capabilities.descriptor_mma {
+                MmaFallbackDiagnostic::MissingInstructionClass { path }
             } else {
-                MmaFallbackDiagnostic::MissingInstructionClass {
-                    backend: capabilities.backend,
-                    path,
-                }
+                MmaFallbackDiagnostic::TargetDoesNotLowerDescriptorMma
             }),
         };
     };
@@ -115,19 +99,19 @@ fn instruction_class_for(
     path: MatmulKernelPath,
     capabilities: MmaCapabilityRecord,
 ) -> Option<MmaInstructionClass> {
-    if capabilities.backend != MmaBackendKind::Ptx || !capabilities.descriptor_mma {
+    if !capabilities.descriptor_mma {
         return None;
     }
 
     match path {
         MatmulKernelPath::TensorCoreF16M16N8K16 if capabilities.f16_m16n8k16 => {
-            Some(MmaInstructionClass::PtxMmaSyncAlignedM16N8K16F16)
+            Some(MmaInstructionClass::DescriptorMmaM16N8K16F16)
         }
         MatmulKernelPath::TensorCoreBf16M16N8K16 if capabilities.bf16_m16n8k16 => {
-            Some(MmaInstructionClass::PtxMmaSyncAlignedM16N8K16Bf16)
+            Some(MmaInstructionClass::DescriptorMmaM16N8K16Bf16)
         }
         MatmulKernelPath::TensorCoreTf32M16N8K4 if capabilities.tf32_m16n8k4 => {
-            Some(MmaInstructionClass::PtxMmaSyncAlignedM16N8K4Tf32)
+            Some(MmaInstructionClass::DescriptorMmaM16N8K4Tf32)
         }
         _ => None,
     }
@@ -246,33 +230,63 @@ mod tests {
     }
 
     #[test]
-    fn mma_capability_gate_accepts_ptx_and_reports_instruction_class() {
+    fn mma_capability_gate_accepts_descriptor_mma_and_reports_instruction_class() {
         let gate = gate_mma_path(
             MatmulKernelPath::TensorCoreF16M16N8K16,
-            MmaCapabilityRecord::ptx_sm80(),
+            MmaCapabilityRecord::all_descriptor_mma_shapes(),
         );
 
         assert_eq!(gate.selected_path, MatmulKernelPath::TensorCoreF16M16N8K16);
         assert_eq!(
             gate.instruction_class,
-            Some(MmaInstructionClass::PtxMmaSyncAlignedM16N8K16F16)
+            Some(MmaInstructionClass::DescriptorMmaM16N8K16F16)
         );
         assert_eq!(gate.fallback_diagnostic, None);
     }
 
     #[test]
-    fn mma_capability_gate_falls_back_on_unsupported_backends() {
-        for capabilities in [MmaCapabilityRecord::metal(), MmaCapabilityRecord::wgpu()] {
-            let gate = gate_mma_path(MatmulKernelPath::TensorCoreF16M16N8K16, capabilities);
+    fn mma_capability_gate_falls_back_without_descriptor_mma() {
+        let gate = gate_mma_path(
+            MatmulKernelPath::TensorCoreF16M16N8K16,
+            MmaCapabilityRecord::no_descriptor_mma(),
+        );
 
-            assert_eq!(gate.selected_path, MatmulKernelPath::Cooperative);
-            assert_eq!(gate.instruction_class, None);
-            assert_eq!(
-                gate.fallback_diagnostic,
-                Some(MmaFallbackDiagnostic::BackendDoesNotLowerDescriptorMma {
-                    backend: capabilities.backend,
-                })
-            );
-        }
+        assert_eq!(gate.selected_path, MatmulKernelPath::Cooperative);
+        assert_eq!(gate.instruction_class, None);
+        assert_eq!(
+            gate.fallback_diagnostic,
+            Some(MmaFallbackDiagnostic::TargetDoesNotLowerDescriptorMma)
+        );
+    }
+
+    /// The boundary the removed backend enum could not express: a target that
+    /// lowers descriptor MMA but has no form for the requested precision. The
+    /// old gate keyed on the backend identity, so it reported "this backend
+    /// does not lower descriptor MMA" for a target that plainly does.
+    #[test]
+    fn descriptor_mma_without_the_requested_precision_reports_the_missing_class() {
+        let partial = MmaCapabilityRecord {
+            descriptor_mma: true,
+            f16_m16n8k16: true,
+            bf16_m16n8k16: false,
+            tf32_m16n8k4: false,
+        };
+
+        let gate = gate_mma_path(MatmulKernelPath::TensorCoreBf16M16N8K16, partial);
+
+        assert_eq!(gate.selected_path, MatmulKernelPath::Cooperative);
+        assert_eq!(gate.instruction_class, None);
+        assert_eq!(
+            gate.fallback_diagnostic,
+            Some(MmaFallbackDiagnostic::MissingInstructionClass {
+                path: MatmulKernelPath::TensorCoreBf16M16N8K16
+            })
+        );
+
+        assert_eq!(
+            gate_mma_path(MatmulKernelPath::TensorCoreF16M16N8K16, partial).instruction_class,
+            Some(MmaInstructionClass::DescriptorMmaM16N8K16F16),
+            "Fix: a per-shape gap must not disable the shapes the target does lower."
+        );
     }
 }

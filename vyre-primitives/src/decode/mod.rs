@@ -1,4 +1,4 @@
-//! Tier 2.5 decode primitives.
+//! Parked composition (belongs in vyre-libs): decode primitives.
 
 /// Base64 decode kernel body.
 pub mod base64;

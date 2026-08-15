@@ -1,4 +1,4 @@
-//! Tier 2.5 parsing primitives.
+//! Parked composition (belongs in vyre-libs): parsing primitives.
 //!
 //! These are the reusable optimizer kernels that Tier 3 language packs compose
 //! into full parsing/AST passes.

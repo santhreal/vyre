@@ -6,16 +6,16 @@
 //!
 //! This replaces ad-hoc cache invalidation with formal causal analysis.
 
-#[cfg(any(test, feature = "cpu-parity"))]
-use vyre_foundation::pass_substrate::dataflow_fixpoint::reachability_closure_into;
-use crate::prelude::reachability_closure_via_into;
 #[cfg(test)]
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
+use crate::prelude::reachability_closure_via_into;
 use vyre_foundation::ir::Program;
+#[cfg(any(test, feature = "cpu-parity"))]
+use vyre_foundation::pass_substrate::dataflow_fixpoint::reachability_closure_into;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::do_calculus::{
     do_intervention_delete_incoming, do_rule2_reverse_incoming, do_rule3_subgraph,

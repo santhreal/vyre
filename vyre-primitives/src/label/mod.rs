@@ -1,4 +1,4 @@
-//! Tier 2.5 label → NodeSet resolver.
+//! Parked composition (belongs in vyre-libs): label → NodeSet resolver.
 //!
 //! Given a node-tags buffer (each word = tag bitmask over a
 //! registered TagFamily) and a family-mask constant, emit a NodeSet

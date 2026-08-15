@@ -106,8 +106,9 @@ no Santh-internal crates - keeping the dependency cone narrow.
 
 See also:
 
-- `../docs/ARCHITECTURE.md` - workspace boundaries and the
-  "frontends on CPU, vyre Programs on GPU" partition.
+- [`../README.md`](../README.md) for crate placement. Table construction
+  is host-side and happens once at build time. The parser is a
+  composition and lives in `vyre-libs`.
 - `../vyre-libs/src/parsing/` - consumer implementation (feature `c-parser`).
 
 ## Contributing
@@ -185,8 +186,8 @@ Invalid arguments, stale evidence, violated repository contracts, and failed com
 
 ### Testing
 
-Use [`docs/testing/vyre-grammar-gen.md`](../docs/testing/vyre-grammar-gen.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -194,9 +195,8 @@ requirements, evidence outputs, expected skips, and failure semantics.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

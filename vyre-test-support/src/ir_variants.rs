@@ -34,7 +34,10 @@
 use std::sync::Arc;
 
 use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{CollectiveOp, CommGroup, Expr, Node, NodeExtension, NODE_VARIANT_NAMES};
+use vyre_foundation::ir::{
+    BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Node, NodeExtension, Program,
+    NODE_VARIANT_NAMES,
+};
 use vyre_foundation::transform::visit::node_shape;
 use vyre_foundation::MemoryOrdering;
 
@@ -62,6 +65,22 @@ impl NodeSample {
             None => format!("Node::{}", self.variant),
         }
     }
+}
+
+/// A program whose only buffer is a four-element `U32` output, wrapping `nodes`
+/// in a single workgroup.
+///
+/// Three validator suites built this same program to give the validator a body
+/// to judge. The buffer and the workgroup size are scaffolding for the node
+/// list under test, so each suite had to keep scaffolding it was not testing
+/// in agreement with the other two.
+#[must_use]
+pub fn single_u32_output_program(nodes: Vec<Node>) -> Program {
+    Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(4)],
+        [1, 1, 1],
+        nodes,
+    )
 }
 
 /// A statement-node extension payload with no reachable children.

@@ -91,3 +91,23 @@ the naive path at 100 MiB.
 timings for the same macro cases are published as release evidence under
 `release/evidence/benchmarks/`. The `runtime_io` rows time telemetry record
 construction for the stated byte counts, not the transfer.
+
+### vyre-foundation
+
+`cargo bench -p vyre-foundation --bench optimizer_pipeline`
+
+Measured at commit 4cb6a3a37d5db12159dd52ca6103d122c959ea47 on the machine in
+the header. `optimize()` is the host IR pipeline every compile runs before any
+backend lowering, so these are compile latency, not device time.
+
+| bench | median |
+| --- | --- |
+| optimizer/pipeline/release_corpus_families | 240.21 us |
+| optimizer/pipeline/kernel_wide/16 | 242.40 us |
+| optimizer/pipeline/kernel_wide/64 | 886.14 us |
+| optimizer/pipeline/kernel_loop_nest/4x8 | 70.902 us |
+
+`release_corpus_families` optimizes one program per semantic family of the
+shipped release corpus per iteration. The two `kernel_wide` rows scale straight
+line arithmetic depth, so the difference between them is rewrite work rather
+than per-pass fixed cost: 4x the depth costs 3.65x the time.

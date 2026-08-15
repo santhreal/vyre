@@ -342,7 +342,7 @@ fn parse_package(
         }
     }
     Ok(Some(PackageMetadata {
-        name,
+        name: name.to_string(),
         manifest: path.display().to_string(),
         version,
         description,

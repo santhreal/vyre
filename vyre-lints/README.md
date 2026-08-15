@@ -1,10 +1,12 @@
 # vyre-lints
 
-`vyre-lints` enforces architectural boundaries inside the Vyre workspace.
+The workspace lints: production CPU fallbacks, silent GPU skip guards,
+module forks, consumer coupling, raw IR construction in composition
+crates.
 
-It catches raw IR construction where dialect crates should use the shared
-builder patterns instead. The crate ships as a library plus a small CLI so CI
-can run the same checks locally and in release gates.
+Each lint exists because the defect it caught shipped once. Not here:
+style. A lint that fires on formatting trains everyone to ignore the
+lints that catch a CPU fallback.
 
 ## Usage
 
@@ -76,8 +78,8 @@ Invalid arguments, stale evidence, violated repository contracts, and failed com
 
 ### Testing
 
-Use [`docs/testing/vyre-lints.md`](../docs/testing/vyre-lints.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -85,9 +87,8 @@ requirements, evidence outputs, expected skips, and failure semantics.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

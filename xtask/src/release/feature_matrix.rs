@@ -10,7 +10,6 @@ use crate::manifest_walk::{self, PackageManifest};
 
 /// The artifact this gate owns, relative to the workspace root.
 const ARTIFACT: &str = "release/evidence/metadata/feature-matrix.json";
-
 #[derive(Debug, Serialize)]
 struct FeatureMatrix {
     schema_version: u32,
@@ -265,7 +264,7 @@ fn parse_features(path: &Path) -> Result<Option<PackageFeatures>, String> {
     );
     let release_policy = release_policy(&name);
     Ok(Some(PackageFeatures {
-        name,
+        name: name.to_string(),
         manifest: path.display().to_string(),
         feature_count: features.len(),
         has_default_feature,

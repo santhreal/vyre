@@ -1,8 +1,8 @@
 //! Release gap #1 - reference completeness (deterministic transcendentals).
 //!
-//! See `contracts/release.md`. The CPU reference oracle must emit
-//! byte-identical f32 results for sin/cos/sqrt/exp/log across proptest
-//! inputs. Cross-backend bitwise GPU parity is tracked separately in
+//! The CPU reference oracle must emit byte-identical f32 results for
+//! sin/cos/sqrt/exp/log across proptest inputs. Cross-backend bitwise GPU
+//! parity is tracked separately in
 //! `vyre-driver-wgpu/tests/gap_transcendentals_parity.rs`.
 
 use proptest::prelude::*;

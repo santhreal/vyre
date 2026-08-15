@@ -36,6 +36,7 @@ enum Kind {
     Test,
     Bin,
     Script,
+    Subcommand,
 }
 
 impl Kind {
@@ -45,6 +46,7 @@ impl Kind {
             Kind::Test => "test target (--test)",
             Kind::Bin => "binary (--bin)",
             Kind::Script => "script path",
+            Kind::Subcommand => "xtask subcommand",
         }
     }
 }
@@ -126,6 +128,12 @@ fn run_commands(text: &str) -> Vec<String> {
     commands
 }
 
+/// Packages whose binary takes a registered subcommand as its first argument.
+///
+/// `xtask` dispatches by name, and the other two implement rows of the same
+/// table, so a step naming any of them passes a subcommand the same way.
+const SUBCOMMAND_PACKAGES: [&str; 3] = ["xtask", "xtask-registry", "xtask-evidence"];
+
 /// Every cargo and script name one step's command line passes.
 ///
 /// Tokenizing on whitespace is enough because the input is a shell command
@@ -147,6 +155,13 @@ fn references(workflow: &str, command: &str) -> Vec<Reference> {
     };
 
     let tokens: Vec<&str> = command.split_whitespace().collect();
+    let addresses_dispatcher = tokens.windows(2).any(|pair| {
+        matches!(pair[0], "-p" | "--package") && SUBCOMMAND_PACKAGES.contains(&pair[1])
+    }) || tokens.iter().any(|token| {
+        token
+            .strip_prefix("--package=")
+            .is_some_and(|name| SUBCOMMAND_PACKAGES.contains(&name))
+    });
     for (index, token) in tokens.iter().enumerate() {
         let next = tokens.get(index + 1).copied().unwrap_or_default();
         match *token {
@@ -163,6 +178,23 @@ fn references(workflow: &str, command: &str) -> Vec<Reference> {
                 } else if token.starts_with("scripts/") {
                     push(Kind::Script, token);
                 }
+            }
+        }
+    }
+
+    if addresses_dispatcher {
+        // A `run: |` block is one string, so a step that runs the dispatcher
+        // five times holds five `--` separators and the first one is not the
+        // only subcommand the step passes.
+        for (index, token) in tokens.iter().enumerate() {
+            if *token != "--" {
+                continue;
+            }
+            let Some(name) = tokens.get(index + 1) else {
+                continue;
+            };
+            if !name.starts_with('-') {
+                push(Kind::Subcommand, name);
             }
         }
     }
@@ -361,5 +393,51 @@ fn every_script_a_workflow_runs_is_published() {
         offenders.is_empty(),
         "{offenders:#?} run a script that is not in this tree. Fix: publish it, correct the \
          path, or drop the step."
+    );
+}
+
+/// Every subcommand a workflow passes to the dispatcher is registered.
+///
+/// WHY: `xtask` resolves a subcommand by name and exits with an error when the
+/// name is not in the table. A row renamed or removed leaves the step naming a
+/// command that no longer exists, and nothing local goes red: the package
+/// exists, the binary exists, and the name is one shell token in a `run:` line.
+/// `xtask gates` judges the other direction, that a registered row is wired
+/// into CI, so this closes the pair.
+#[test]
+fn every_xtask_subcommand_a_workflow_names_is_registered() {
+    let root = workspace_root();
+    let registered: BTreeSet<&str> = xtask::subcommands::registry()
+        .into_iter()
+        .map(xtask::gate::Gate::name)
+        .collect();
+    let mut offenders = Vec::new();
+    let mut checked = 0_usize;
+
+    for (workflow, commands) in workflow_files(&root) {
+        for command in &commands {
+            for reference in references(&workflow, command) {
+                if reference.kind != Kind::Subcommand {
+                    continue;
+                }
+                checked += 1;
+                if !registered.contains(reference.name.as_str()) {
+                    offenders.push(format!("{}: `{}`", reference.workflow, reference.name));
+                }
+            }
+        }
+    }
+    offenders.sort();
+    offenders.dedup();
+
+    assert!(
+        checked > 0,
+        "Fix: no workflow step passes a subcommand to the build-task dispatcher, so this gate guards nothing"
+    );
+    assert!(
+        offenders.is_empty(),
+        "{offenders:#?} pass a subcommand no row of the table registers, so the step fails with \
+         `unknown subcommand` on the first CI run that reaches it. Fix: name a registered \
+         subcommand, or drop the step with the row it followed."
     );
 }

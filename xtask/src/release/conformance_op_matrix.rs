@@ -4,10 +4,9 @@
 //! the declared release surface, not the linked one.
 
 use std::collections::BTreeSet;
-use std::io;
 use std::path::Path;
 
-const MAX_CONFORMANCE_EVIDENCE_TEXT_BYTES: u64 = 8_388_608;
+use crate::release::conformance_evidence_semantics::read_conformance_text;
 
 /// What `docs/optimization/OP_MATRIX.toml` requires of a release.
 pub struct OpMatrixCatalog {
@@ -44,7 +43,7 @@ pub struct OpMatrixReleaseBackendSpec {
 /// file is reported in one run.
 pub fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog {
     let matrix_path = vyre_root.join("docs/optimization/OP_MATRIX.toml");
-    let text = match read_text_bounded(&matrix_path) {
+    let text = match read_conformance_text(&matrix_path) {
         Ok(text) => text,
         Err(error) => {
             return OpMatrixCatalog {
@@ -283,7 +282,7 @@ pub fn classify_conformance_case_classes(
     let mut classes = BTreeSet::new();
     for test_path in test_paths {
         let path = vyre_root.join(test_path);
-        let text = read_text_bounded(&path).unwrap_or_default();
+        let text = read_conformance_text(&path).unwrap_or_default();
         let lowered = format!("{test_path}\n{text}").to_ascii_lowercase();
         classes.extend(crate::text_markers::classify_text(
             &lowered,
@@ -301,10 +300,3 @@ pub fn classify_conformance_case_classes(
     classes
 }
 
-fn read_text_bounded(path: &Path) -> io::Result<String> {
-    crate::output_arg::read_text_bounded(
-        path,
-        MAX_CONFORMANCE_EVIDENCE_TEXT_BYTES,
-        "conformance evidence",
-    )
-}

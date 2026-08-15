@@ -1,16 +1,20 @@
 # vyre-pass-engine
 
-Executes vyre's optimizer passes as vyre Programs. The pass semantics belong to
-`vyre-foundation` and run on CPU by default; this crate encodes a `Program` into
-the canonical 5-buffer `ProgramGraph` ABI and runs the pass as graph primitives
-over that encoding, for graphs too large for the CPU pass. Dead-code
-elimination is `persistent_bfs` reachability, CSE is `union_find` over a
-structural-hash key, constant folding is `level_wave` bottom-up evaluation.
+The optimizer's own passes, executed as vyre Programs through the
+dispatcher seam. The compiler running on the device it compiles for.
 
-The name states the job, not a hardware tier. Every entry point takes a
-`vyre_foundation::program_dispatch::ProgramDispatcher`: the parity tests run the
-pass against `vyre_libs::graph::dispatch::cpu_oracle`, a CPU dispatcher, and
-production runs the identical Program against a backend dispatcher.
+Pass semantics belong to `vyre-foundation`. This crate encodes a
+`Program` into the canonical 5-buffer `ProgramGraph` ABI and runs the
+pass as graph primitives over that encoding. Dead-code elimination is
+`persistent_bfs` reachability, CSE is `union_find` over a structural-hash
+key, constant folding is `level_wave` bottom-up evaluation.
+
+Not here: host reimplementations of passes that exist as compositions.
+
+Every entry point takes a
+`vyre_foundation::program_dispatch::ProgramDispatcher`. Parity tests run
+the pass against `vyre_libs::graph::dispatch::cpu_oracle`. Production
+runs the identical Program against a backend dispatcher.
 
 ## Dep direction
 
@@ -79,8 +83,8 @@ Invalid program shape, encoding limits, and dispatch buffer contracts are reject
 
 ### Testing
 
-Use [`docs/testing/vyre-pass-engine.md`](../docs/testing/vyre-pass-engine.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -88,9 +92,8 @@ requirements, evidence outputs, expected skips, and failure semantics.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 
