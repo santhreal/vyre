@@ -2410,6 +2410,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 
 ### Fixed
 
+- Each crate README links the testing guide rendered for that crate instead of
+  the data file every guide is rendered from. The generated Testing section
+  pointed at `docs/testing/TESTING.toml`, which sends a reader to a table of
+  every crate to find the rows describing one, and the generated per-crate page
+  is what answers the question. The section now links `docs/testing/<crate>.md`
+  and names the TOML as its authority.
 - `abstraction-gate` no longer demands an operation registration for a region
   that names no operation. Two prefixes mean the same thing: `inline::`, minted
   by `reparent_entry_node` for a body the composer reparented onto its caller,

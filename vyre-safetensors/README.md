@@ -49,8 +49,9 @@ Invalid plans, stale artifacts, unavailable selected backends, IO failures, and 
 
 ### Testing
 
-See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
-hardware contract, expected skips, and failure semantics.
+See [`docs/testing/vyre-safetensors.md`](../docs/testing/vyre-safetensors.md) for the crate's test command,
+hardware contract, expected skips, and failure semantics. It is generated
+from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 

@@ -135,7 +135,7 @@ Run the checked-in behavior from `vyre-libs/examples/check_select1.rs`:
 
 ### Features
 
-- Manifest features: `analysis`, `bench`, `c-parser`, `cat-a-builder-options`, `cpu-parity`, `crypto`, `crypto-blake3`, `decode`, `default`, `device`, `encoding`, `full`, `go-parser`, `graph-dispatch`, `hash`, `intern`, `logical`, `matching`, `matching-dfa`, `matching-nfa`, `matching-regex`, `matching-substring`, `math`, `math-algebra`, `math-broadcast`, `math-linalg`, `math-scan`, `math-succinct`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `parsing`, `python-parser`, `reasoning`, `rule`, `scheduling`, `security`, `solvers`, `telemetry`, `test-fixtures`, `text`, `visual`
+- Manifest features: `analysis`, `c-parser`, `cat-a-builder-options`, `cpu-parity`, `crypto`, `crypto-blake3`, `decode`, `default`, `device`, `encoding`, `full`, `go-parser`, `graph-dispatch`, `hash`, `intern`, `logical`, `matching`, `matching-dfa`, `matching-nfa`, `matching-regex`, `matching-substring`, `math`, `math-algebra`, `math-broadcast`, `math-linalg`, `math-scan`, `math-succinct`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `parsing`, `python-parser`, `reasoning`, `rule`, `scheduling`, `security`, `solvers`, `telemetry`, `test-fixtures`, `text`, `visual`
 - Default feature members: `math-linalg`, `math-scan`, `math-broadcast`, `nn-activation`, `nn-linear`, `nn-norm`, `matching-substring`, `matching-dfa`, `hash`, `decode`
 
 ### Errors and unsupported behavior
@@ -144,8 +144,9 @@ Invalid shapes, unsupported compositions, arithmetic overflow, and malformed evi
 
 ### Testing
 
-See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
-hardware contract, expected skips, and failure semantics.
+See [`docs/testing/vyre-libs.md`](../docs/testing/vyre-libs.md) for the crate's test command,
+hardware contract, expected skips, and failure semantics. It is generated
+from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 

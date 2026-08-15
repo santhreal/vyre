@@ -132,8 +132,9 @@ Unsupported operations, invalid layouts, and target encoding failures return an 
 
 ### Testing
 
-See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
-hardware contract, expected skips, and failure semantics.
+See [`docs/testing/vyre-emit-ptx.md`](../docs/testing/vyre-emit-ptx.md) for the crate's test command,
+hardware contract, expected skips, and failure semantics. It is generated
+from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 

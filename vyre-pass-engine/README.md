@@ -83,8 +83,9 @@ Invalid program shape, encoding limits, and dispatch buffer contracts are reject
 
 ### Testing
 
-See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
-hardware contract, expected skips, and failure semantics.
+See [`docs/testing/vyre-pass-engine.md`](../docs/testing/vyre-pass-engine.md) for the crate's test command,
+hardware contract, expected skips, and failure semantics. It is generated
+from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 

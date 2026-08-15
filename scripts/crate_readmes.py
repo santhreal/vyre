@@ -215,10 +215,11 @@ def render_contract(
     allowed = ", ".join(f"`{item}`" for item in record.allowed_dependencies) or "None"
     available = ", ".join(f"`{item}`" for item in features) or "None"
     defaults = ", ".join(f"`{item}`" for item in default_features) or "None"
-    testing_toml = "docs/testing/TESTING.toml"
-    testing_link = f"{'../' * len(Path(record.path).parts)}{testing_toml}"
+    testing_guide = f"docs/testing/{record.package}.md"
+    up = "../" * len(Path(record.path).parts)
+    testing_link = f"{up}{testing_guide}"
     ownership_toml = "docs/CRATE_OWNERSHIP.toml"
-    ownership_link = f"{'../' * len(Path(record.path).parts)}{ownership_toml}"
+    ownership_link = f"{up}{ownership_toml}"
     return "\n".join(
         [
             BEGIN_MARKER,
@@ -256,8 +257,9 @@ def render_contract(
             "",
             "### Testing",
             "",
-            f"See [`{testing_toml}`]({testing_link}) for the crate's test command,",
-            "hardware contract, expected skips, and failure semantics.",
+            f"See [`{testing_guide}`]({testing_link}) for the crate's test command,",
+            "hardware contract, expected skips, and failure semantics. It is generated",
+            "from `docs/testing/TESTING.toml`, which is authoritative.",
             "",
             "### Release status",
             "",

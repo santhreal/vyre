@@ -41,8 +41,9 @@ Device acquisition, lowering, allocation, and dispatch failures are explicit bac
 
 ### Testing
 
-See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
-hardware contract, expected skips, and failure semantics.
+See [`docs/testing/vyre-driver-reference.md`](../docs/testing/vyre-driver-reference.md) for the crate's test command,
+hardware contract, expected skips, and failure semantics. It is generated
+from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 
