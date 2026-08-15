@@ -186,10 +186,9 @@ impl Gate for DocsCheck {
         for finding in validate(&docs, &owners, &pages, &published) {
             report.find(finding);
         }
-
-        let links = link_findings(&ctx.root, &pages, &mut report)?;
-
         if report.count() > 0 {
+            // The manifest is the authority for everything below, so a manifest
+            // that does not hold is not a tree to render navigation from.
             return Ok(report);
         }
 
@@ -202,17 +201,23 @@ impl Gate for DocsCheck {
                 write_file(&ctx.root.join(path), content)?;
             }
             report.note("wrote the summary and the authority index".to_string());
-            return Ok(report);
-        }
-        for (path, content) in &rendered {
-            if read_text(&ctx.root, path)?.as_str() != content.as_str() {
-                report.find(Finding::in_file(
-                    *path,
-                    "the generated navigation disagrees with the documentation manifest",
-                    REGENERATE,
-                ));
+        } else {
+            for (path, content) in &rendered {
+                if read_text(&ctx.root, path)?.as_str() != content.as_str() {
+                    report.find(Finding::in_file(
+                        *path,
+                        "the generated navigation disagrees with the documentation manifest",
+                        REGENERATE,
+                    ));
+                }
             }
         }
+
+        // Links are resolved after the navigation is written, because the
+        // navigation is generated: a stale summary linking a page the manifest
+        // no longer holds used to report a broken link and then refuse to write
+        // the summary that no longer links it.
+        let links = link_findings(&ctx.root, &pages, &mut report)?;
         report.note(format!(
             "{} published page(s), {links} outbound link(s)",
             pages.len()
@@ -1012,6 +1017,8 @@ fn write_file(path: &Path, content: &str) -> Result<(), GateError> {
 mod tests {
     use super::*;
 
+    use std::path::PathBuf;
+
     use tempfile::TempDir;
 
     /// A page row with coherent defaults, overridden field by field.
@@ -1281,5 +1288,102 @@ mod tests {
         assert!(workflows < authority, "{summary}");
         assert_eq!(summary.matches("(INDEX.md)").count(), 1, "{summary}");
         assert!(summary.ends_with("\n"), "{summary}");
+    }
+
+    /// A manifest and tree the whole gate accepts, holding one page plus the two
+    /// generated navigation documents.
+    fn tree(temporary: &TempDir) -> PathBuf {
+        let root = temporary.path().to_path_buf();
+        let docs = root.join(DOCS);
+        fs::create_dir_all(&docs).expect("a docs directory");
+        fs::write(docs.join("guide.md"), "# Guide\n").expect("a page");
+        fs::write(docs.join("gen.rs"), "// generator\n").expect("a generator");
+        fs::write(
+            docs.join("DOCS.toml"),
+            "version = 2\n\
+             \n\
+             [[owner]]\n\
+             id = \"docs\"\n\
+             authority = \"guide.md\"\n\
+             \n\
+             [[page]]\n\
+             path = \"guide.md\"\n\
+             title = \"Guide\"\n\
+             status = \"current\"\n\
+             audience = \"user\"\n\
+             owner = \"docs\"\n\
+             kind = \"guide\"\n\
+             section = \"User workflows\"\n\
+             authority = \"self\"\n\
+             generation = \"manual\"\n\
+             nav = true\n\
+             \n\
+             [[page]]\n\
+             path = \"INDEX.md\"\n\
+             title = \"Documentation authority and lifecycle\"\n\
+             status = \"generated\"\n\
+             audience = \"contributor\"\n\
+             owner = \"docs\"\n\
+             kind = \"governance\"\n\
+             section = \"Documentation authority\"\n\
+             authority = \"DOCS.toml\"\n\
+             generation = \"generated\"\n\
+             generator = \"gen.rs\"\n\
+             nav = true\n",
+        )
+        .expect("the manifest");
+        root
+    }
+
+    /// WHY: the navigation is generated, and a link inside it used to block the
+    /// write that would have fixed it. Deleting a page from the manifest left the
+    /// stale summary linking a file that no longer exists, the link finding
+    /// returned before the render, and `--write` reported the broken link instead
+    /// of replacing the document that carried it. Nothing could regenerate the
+    /// navigation without hand-editing the generated file first.
+    #[test]
+    fn stale_navigation_does_not_block_its_own_regeneration() {
+        let temporary = TempDir::new().expect("a temporary directory");
+        let root = tree(&temporary);
+        fs::write(
+            root.join(SUMMARY),
+            "# Summary\n\n- [Gone](gone.md)\n- [Guide](guide.md)\n",
+        )
+        .expect("a stale summary");
+        fs::write(root.join(INDEX), "# Stale\n").expect("a stale index");
+
+        let checked = DocsCheck
+            .run(&GateCtx::new(root.clone(), Vec::new()))
+            .expect("the gate runs");
+        let reported = messages(&checked.findings);
+        assert!(
+            reported.contains("names no such path: docs/gone.md"),
+            "the dead link is still reported: {reported}"
+        );
+        assert!(
+            reported.contains("disagrees with the documentation manifest"),
+            "and so is the drift the same run can see: {reported}"
+        );
+
+        let written = DocsCheck
+            .run(&GateCtx::new(root.clone(), vec!["--write".to_string()]))
+            .expect("the gate runs");
+        assert!(
+            written.findings.is_empty(),
+            "writing the navigation resolves both: {}",
+            messages(&written.findings)
+        );
+        let summary = fs::read_to_string(root.join(SUMMARY)).expect("the written summary");
+        assert!(!summary.contains("gone.md"), "{summary}");
+        assert!(summary.contains("[Guide](guide.md)"), "{summary}");
+
+        let again = DocsCheck
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the gate runs");
+        assert!(
+            again.findings.is_empty(),
+            "and the written tree is clean: {}",
+            messages(&again.findings)
+        );
     }
 }

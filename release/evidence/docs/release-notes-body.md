@@ -3032,6 +3032,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   forty. `docs/optimization/OWNERSHIP.toml` also assigned two scopes that match
   nothing: a gitignored `BACKLOG.md`, which made the architecture-docs verdict
   depend on an untracked file, and a deleted `docs/catalog/**`.
+- The generated documentation navigation regenerates over its own staleness.
+  `docs-check` resolved every link before rendering and returned on the first
+  finding, so deleting a page from the manifest left the stale summary linking
+  a file that no longer exists, and `--write` reported that link instead of
+  writing the summary that no longer carries it: the only way out was to
+  hand-edit a generated document. Links are now resolved after the navigation
+  is written, a manifest that does not hold still blocks the render, and a
+  check run reports the drift and the dead links together instead of stopping
+  at the first.
 - Testing guides are now generated for all 36 workspace members from Cargo
   features and targets plus maintained hardware, evidence, skip, and failure
   metadata. The documentation gate rejects missing, orphaned, or stale guides.
