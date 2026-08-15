@@ -2,9 +2,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Instant;
 
-use vyre_driver::materialize::{
-    self, ExecutableModule, InstanceCore, InstanceMessages, MaterializerDevice,
-};
+use vyre_driver::materialize::{self, ExecutableModule, InstanceCore, MaterializerDevice};
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, Completion, DeviceIdentity,
     DispatchConfig, ResidentOwner, Submission, TimedDispatchResult,
@@ -13,34 +11,6 @@ use vyre_foundation::ir::Program;
 use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
 
 use crate::{vulkan, SPIRV_BACKEND_ID};
-
-/// SPIR-V rejection text, unchanged from when this crate owned the whole path.
-const MESSAGES: InstanceMessages = InstanceMessages {
-    foreign_artifact: || BackendError::InvalidProgram {
-        fix: "Fix: bind resources against the exact artifact digest owned by this instance."
-            .to_string(),
-    },
-    unmapped_buffer: |name| BackendError::InvalidProgram {
-        fix: format!(
-            "Fix: target Program buffer `{name}` must project from the canonical artifact ABI."
-        ),
-    },
-    missing_output_value: |value| BackendError::InvalidProgram {
-        fix: format!(
-            "Fix: selected execution must produce canonical output value {}.",
-            value.0
-        ),
-    },
-    missing_retained_value: |value| BackendError::InvalidProgram {
-        fix: format!(
-            "Fix: selected execution must preserve retained value {}.",
-            value.0
-        ),
-    },
-    completion_consumed: || BackendError::InvalidProgram {
-        fix: "Fix: consume each Submission completion exactly once.".to_string(),
-    },
-};
 
 /// Rejection for a dispatch that skipped a declared output slot.
 fn omitted_output(output_index: usize, name: &str) -> BackendError {
@@ -89,7 +59,9 @@ impl ArtifactMaterializer for SpirvMaterializer {
                     })
                 })?;
         Ok(Box::new(SpirvArtifactInstance {
-            core: self.descriptor.instance(artifact, payload, MESSAGES),
+            core: self
+                .descriptor
+                .instance(artifact, payload, materialize::NEUTRAL_MESSAGES),
             native: Arc::clone(&self.device),
             modules,
         }))
