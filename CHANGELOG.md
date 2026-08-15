@@ -3027,6 +3027,13 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `unexpected content, expected nothing`, and source reading goes through the
   one bounded reader `vyre_lints::read_source_bounded` so a single cap covers
   every file the lint walks.
+- The `cargo_full` wrapper no longer exports `CARGO_BUILD_JOBS`. An environment
+  variable overrides `.cargo/config.toml`, so the wrapper's default of `1`
+  silently replaced the declared `[build] jobs = 16` on every invocation, and
+  every build, test run, and gate in this workspace ran one codegen job at a
+  time regardless of how many cores the host had. Parallelism is declared once,
+  in the config file, where it is reviewable and applies to every build
+  equally.
 
 ## [0.7.1] - 2026-08-01
 
