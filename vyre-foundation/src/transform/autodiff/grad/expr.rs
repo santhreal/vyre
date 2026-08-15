@@ -5,6 +5,7 @@ use crate::ir::{DataType, Expr, Node};
 use super::{AdjointEnv, PullbackMap};
 use crate::transform::autodiff::error::AutodiffError;
 use crate::transform::autodiff::rules::{binop_adjoints, fma_adjoints, unop_adjoint};
+use crate::validate::typecheck::expr_type;
 
 pub(super) fn insert_pullback(
     pullbacks: &mut PullbackMap,
@@ -123,7 +124,7 @@ pub(super) fn emit_adjoint_expr(
         // Integer/bool/precision-changing casts are quantization boundaries, not
         // smooth maps. Passing gradients through them silently corrupts results.
         Expr::Cast { target, value } => {
-            let source = env.expr_type(value);
+            let source = expr_type(value, env);
             if target == &DataType::F32 && source == Some(DataType::F32) {
                 emit_adjoint_expr(value, adjoint, body, env)?;
             } else {
