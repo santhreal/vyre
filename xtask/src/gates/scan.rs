@@ -608,6 +608,182 @@ pub fn numbered(text: &str) -> Vec<(u32, &str)> {
         .collect()
 }
 
+/// Which lines belong to a `#[cfg(test)]` item, by 0-based index.
+///
+/// The scan always meant to exclude test code: it skipped a line that WAS the
+/// `#[cfg(test)]` attribute, and called that "intentional dev-only lines, not
+/// runtime cost". An attribute annotates the item that follows it, so skipping
+/// the attribute line excluded one line and nothing else. Every `panic!`,
+/// `format!` and `.to_string()` inside a `mod tests` body was reported as
+/// runtime hot-path cost, including panics that exist only to destructure a
+/// fixture and which the heatmap then weighted twelve times per kLOC. The same
+/// bodies inflated `count_code_lines`, so the per-kLOC denominator was wrong in
+/// the opposite direction and a file's real density read lower than it is.
+///
+/// An item with a body runs to the line that closes it. An item without one
+/// (`#[cfg(test)] use super::*;`) runs to its terminating semicolon.
+#[must_use]
+pub fn cfg_test_lines(lines: &[&str]) -> Vec<bool> {
+    let mut test_only = vec![false; lines.len()];
+    let mut depth = 0i32;
+    let mut index = 0usize;
+    while index < lines.len() {
+        let scan = scan_code(lines[index]);
+        if scan.code.trim() != "#[cfg(test)]" {
+            depth += scan.brace_delta;
+            index += 1;
+            continue;
+        }
+        let outer_depth = depth;
+        let mut opened = false;
+        while index < lines.len() {
+            let line = scan_code(lines[index]);
+            depth += line.brace_delta;
+            opened |= line.brace_delta > 0;
+            test_only[index] = true;
+            index += 1;
+            if opened && depth <= outer_depth {
+                break;
+            }
+            if !opened && line.code.trim_end().ends_with(';') {
+                break;
+            }
+        }
+    }
+    test_only
+}
+
+/// One line's runtime code and the nesting it contributes.
+pub struct CodeScan<'a> {
+    /// Everything before a line comment.
+    pub code: &'a str,
+    /// The line comment, from its `//` to the end of the line, or empty.
+    pub comment: &'a str,
+    /// `{` minus `}`, counting only braces that sit in code.
+    pub brace_delta: i32,
+    /// `(` minus `)`, counting only parentheses that sit in code.
+    pub paren_delta: i32,
+}
+
+/// Split `line` into runtime code and comment, and count its nesting.
+///
+/// Braces inside a string or character literal do not open or close a block,
+/// and `//` inside one does not start a comment. A `'` that opens a lifetime
+/// rather than a character literal is left alone: taking `&'a str` for the
+/// start of a literal used to swallow the rest of the line, so a `//` after a
+/// lifetime read as code and a `{` after one moved the block depth.
+#[must_use]
+pub fn scan_code(line: &str) -> CodeScan<'_> {
+    let bytes = line.as_bytes();
+    let mut brace_delta = 0i32;
+    let mut paren_delta = 0i32;
+    let mut in_string = false;
+    let mut in_char = false;
+    let mut escaped = false;
+    let mut index = 0usize;
+
+    while index < bytes.len() {
+        let byte = bytes[index];
+        if escaped {
+            escaped = false;
+            index += 1;
+            continue;
+        }
+        if in_string {
+            if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'"' {
+                in_string = false;
+            }
+            index += 1;
+            continue;
+        }
+        if in_char {
+            if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'\'' {
+                in_char = false;
+            }
+            index += 1;
+            continue;
+        }
+        match byte {
+            b'"' => in_string = true,
+            b'\'' if opens_char_literal(bytes, index) => in_char = true,
+            b'/' if bytes.get(index + 1) == Some(&b'/') => {
+                return CodeScan {
+                    code: &line[..index],
+                    comment: &line[index..],
+                    brace_delta,
+                    paren_delta,
+                };
+            }
+            b'{' => brace_delta += 1,
+            b'}' => brace_delta -= 1,
+            b'(' => paren_delta += 1,
+            b')' => paren_delta -= 1,
+            _ => {}
+        }
+        index += 1;
+    }
+    CodeScan {
+        code: line,
+        comment: "",
+        brace_delta,
+        paren_delta,
+    }
+}
+
+/// True when the `'` at `index` opens a character literal rather than a
+/// lifetime, judged by whether a closing `'` follows within one escape
+/// sequence.
+fn opens_char_literal(bytes: &[u8], index: usize) -> bool {
+    let limit = (index + 5).min(bytes.len());
+    bytes[index + 1..limit].contains(&b'\'')
+}
+
+/// Which lines construct or handle an error, by 0-based index.
+///
+/// A measured path is the one a successful call takes. An error message is
+/// built once, on the way out, by code that has already decided the call
+/// failed, and this workspace requires that message to carry context and a
+/// fix, so every such message allocates. Counting those allocations as
+/// per-dispatch cost set two rules against each other: the CUDA dispatch
+/// surface read as nineteen allocations on the launch path when every one of
+/// them was a `format!` inside a `return Err`, and the only way to meet the
+/// budget was to make the errors say less.
+///
+/// A construction runs from the line that opens it to the line where the
+/// nesting it opened closes, so a message that spans six lines is one
+/// exclusion and not six.
+#[must_use]
+pub fn error_construction_lines(lines: &[&str]) -> Vec<bool> {
+    const OPENERS: &[&str] = &["Err(", "map_err(", "ok_or_else(", "ok_or("];
+    let mut on_error_path = vec![false; lines.len()];
+    let mut depth = 0i32;
+    let mut index = 0usize;
+    while index < lines.len() {
+        let scan = scan_code(lines[index]);
+        let delta = scan.brace_delta + scan.paren_delta;
+        if !contains_any(scan.code, OPENERS) {
+            depth += delta;
+            index += 1;
+            continue;
+        }
+        let outer_depth = depth;
+        while index < lines.len() {
+            let line = scan_code(lines[index]);
+            depth += line.brace_delta + line.paren_delta;
+            on_error_path[index] = true;
+            index += 1;
+            if depth <= outer_depth {
+                break;
+            }
+        }
+    }
+    on_error_path
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

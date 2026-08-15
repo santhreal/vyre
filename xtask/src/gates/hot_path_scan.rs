@@ -36,6 +36,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
 use crate::gates::ownership::{load_ownership_lanes, owner_lane_for_file, OwnershipLaneRule};
+use crate::gates::scan::{cfg_test_lines, error_construction_lines, scan_code};
 
 const MAX_HOT_PATH_SCAN_FILE_BYTES: u64 = 2_097_152;
 
@@ -289,6 +290,7 @@ impl Gate for HotPathScan {
 
         let mut hits: Vec<Hit> = Vec::new();
         let mut code_lines_by_file: BTreeMap<String, usize> = BTreeMap::new();
+        let mut error_path_by_file: BTreeMap<String, usize> = BTreeMap::new();
         let mut scanned = 0usize;
         let mut missing: Vec<String> = Vec::new();
         for entry in &entries {
@@ -301,7 +303,8 @@ impl Gate for HotPathScan {
             match read_text_bounded(&path) {
                 Ok(text) => {
                     code_lines_by_file.insert(entry.file.clone(), count_code_lines(&text));
-                    collect_findings(&entry.file, &text, &mut hits);
+                    let on_error_paths = collect_findings(&entry.file, &text, &mut hits);
+                    error_path_by_file.insert(entry.file.clone(), on_error_paths);
                 }
                 // An unreadable file used to warn and go unscanned, which is a
                 // budget nobody measured reported as a budget held.
@@ -362,8 +365,9 @@ impl Gate for HotPathScan {
             .collect();
         for (file, counts) in &by_file {
             let reason = reason_by_file.get(file).copied().unwrap_or("");
+            let on_error_paths = error_path_by_file.get(*file).copied().unwrap_or(0);
             report.note(format!(
-                "{file}: total={} allocations={} clones={} locks={} sleeps={} panics={} formats={}{}{reason}",
+                "{file}: total={} allocations={} clones={} locks={} sleeps={} panics={} formats={} error-path={on_error_paths}{}{reason}",
                 counts.total,
                 counts.allocations,
                 counts.clones,
@@ -464,29 +468,39 @@ fn write_budget_vx_candidates(path: &Path, candidates: &[BudgetVxCandidate]) -> 
     std::fs::write(path, format!("{text}\n"))
 }
 
-fn collect_findings(file: &str, text: &str, out: &mut Vec<Hit>) {
+/// Record every measured-path pattern hit in `text`, and return how many hits
+/// were left out because they build an error rather than a result.
+fn collect_findings(file: &str, text: &str, out: &mut Vec<Hit>) -> usize {
     let lines: Vec<&str> = text.lines().collect();
     let test_only = cfg_test_lines(&lines);
+    let on_error_path = error_construction_lines(&lines);
+    let mut excluded = 0usize;
     for (line_no, line) in lines.iter().enumerate() {
         if test_only[line_no] {
             continue;
         }
-        let scan_line = scan_code(line).segment;
+        let scan_line = scan_code(line).code;
         if scan_line.trim_start().is_empty() {
             continue;
         }
         for spec in PATTERNS {
-            if scan_line.contains(spec.text) {
-                out.push(Hit {
-                    file: file.to_string(),
-                    line: (line_no + 1) as u32,
-                    pattern: spec.name,
-                    kind: spec.kind,
-                    content: (*line).to_string(),
-                });
+            if !scan_line.contains(spec.text) {
+                continue;
             }
+            if on_error_path[line_no] {
+                excluded += 1;
+                continue;
+            }
+            out.push(Hit {
+                file: file.to_string(),
+                line: (line_no + 1) as u32,
+                pattern: spec.name,
+                kind: spec.kind,
+                content: (*line).to_string(),
+            });
         }
     }
+    excluded
 }
 
 fn count_code_lines(text: &str) -> usize {
@@ -496,130 +510,9 @@ fn count_code_lines(text: &str) -> usize {
         .iter()
         .enumerate()
         .filter(|(line_no, line)| {
-            !test_only[*line_no] && !scan_code(line).segment.trim_start().is_empty()
+            !test_only[*line_no] && !scan_code(line).code.trim_start().is_empty()
         })
         .count()
-}
-
-/// Which lines belong to a `#[cfg(test)]` item, by 0-based index.
-///
-/// The scan always meant to exclude test code: it skipped a line that WAS the
-/// `#[cfg(test)]` attribute, and called that "intentional dev-only lines, not
-/// runtime cost". An attribute annotates the item that follows it, so skipping
-/// the attribute line excluded one line and nothing else. Every `panic!`,
-/// `format!` and `.to_string()` inside a `mod tests` body was reported as
-/// runtime hot-path cost, including panics that exist only to destructure a
-/// fixture and which the heatmap then weighted twelve times per kLOC. The same
-/// bodies inflated `count_code_lines`, so the per-kLOC denominator was wrong in
-/// the opposite direction and a file's real density read lower than it is.
-///
-/// An item with a body runs to the line that closes it. An item without one
-/// (`#[cfg(test)] use super::*;`) runs to its terminating semicolon.
-fn cfg_test_lines(lines: &[&str]) -> Vec<bool> {
-    let mut test_only = vec![false; lines.len()];
-    let mut depth = 0i32;
-    let mut index = 0usize;
-    while index < lines.len() {
-        let scan = scan_code(lines[index]);
-        if scan.segment.trim() != "#[cfg(test)]" {
-            depth += scan.brace_delta;
-            index += 1;
-            continue;
-        }
-        let outer_depth = depth;
-        let mut opened = false;
-        while index < lines.len() {
-            let line = scan_code(lines[index]);
-            depth += line.brace_delta;
-            opened |= line.brace_delta > 0;
-            test_only[index] = true;
-            index += 1;
-            if opened && depth <= outer_depth {
-                break;
-            }
-            if !opened && line.segment.trim_end().ends_with(';') {
-                break;
-            }
-        }
-    }
-    test_only
-}
-
-/// One line's runtime code and the block nesting it contributes.
-struct CodeScan<'a> {
-    /// Everything before a line comment.
-    segment: &'a str,
-    /// `{` minus `}`, counting only braces that sit in code.
-    brace_delta: i32,
-}
-
-/// Split `line` into runtime code and comment, and count its braces.
-///
-/// Braces inside a string or character literal do not open or close a block,
-/// and `//` inside one does not start a comment. A `'` that opens a lifetime
-/// rather than a character literal is left alone: taking `&'a str` for the
-/// start of a literal used to swallow the rest of the line, so a `//` after a
-/// lifetime read as code and a `{` after one moved the block depth.
-fn scan_code(line: &str) -> CodeScan<'_> {
-    let bytes = line.as_bytes();
-    let mut brace_delta = 0i32;
-    let mut in_string = false;
-    let mut in_char = false;
-    let mut escaped = false;
-    let mut index = 0usize;
-
-    while index < bytes.len() {
-        let byte = bytes[index];
-        if escaped {
-            escaped = false;
-            index += 1;
-            continue;
-        }
-        if in_string {
-            if byte == b'\\' {
-                escaped = true;
-            } else if byte == b'"' {
-                in_string = false;
-            }
-            index += 1;
-            continue;
-        }
-        if in_char {
-            if byte == b'\\' {
-                escaped = true;
-            } else if byte == b'\'' {
-                in_char = false;
-            }
-            index += 1;
-            continue;
-        }
-        match byte {
-            b'"' => in_string = true,
-            b'\'' if opens_char_literal(bytes, index) => in_char = true,
-            b'/' if bytes.get(index + 1) == Some(&b'/') => {
-                return CodeScan {
-                    segment: &line[..index],
-                    brace_delta,
-                };
-            }
-            b'{' => brace_delta += 1,
-            b'}' => brace_delta -= 1,
-            _ => {}
-        }
-        index += 1;
-    }
-    CodeScan {
-        segment: line,
-        brace_delta,
-    }
-}
-
-/// True when the `'` at `index` opens a character literal rather than a
-/// lifetime, judged by whether a closing `'` follows within one escape
-/// sequence.
-fn opens_char_literal(bytes: &[u8], index: usize) -> bool {
-    let limit = (index + 5).min(bytes.len());
-    bytes[index + 1..limit].contains(&b'\'')
 }
 
 fn collect_budget_deltas(
@@ -834,7 +727,7 @@ mod tests {
     #[test]
     fn collect_findings_picks_up_clone() {
         let mut out = Vec::new();
-        collect_findings("x.rs", "let y = x.clone();\n", &mut out);
+        let _ = collect_findings("x.rs", "let y = x.clone();\n", &mut out);
         assert_eq!(out.len(), 1);
         assert_eq!(out[0].pattern, "clone");
         assert_eq!(out[0].kind, PatternKind::Clone);
@@ -844,14 +737,14 @@ mod tests {
     #[test]
     fn collect_findings_skips_comments() {
         let mut out = Vec::new();
-        collect_findings("x.rs", "// uses x.clone() in docs\n", &mut out);
+        let _ = collect_findings("x.rs", "// uses x.clone() in docs\n", &mut out);
         assert!(out.is_empty());
     }
 
     #[test]
     fn collect_findings_picks_up_multiple_patterns() {
         let mut out = Vec::new();
-        collect_findings(
+        let _ = collect_findings(
             "x.rs",
             "let v: Vec<u32> = Vec::new();\nlet s = String::from(\"a\");\nlet l = Mutex::new(0);\n",
             &mut out,
@@ -872,7 +765,7 @@ mod tests {
     #[test]
     fn collect_findings_picks_up_sleep_and_panic_patterns() {
         let mut out = Vec::new();
-        collect_findings(
+        let _ = collect_findings(
             "x.rs",
             "std::thread::sleep(d);\ntokio::time::sleep(d);\npanic!(\"bad\");\ntodo!();\nunimplemented!();\n",
             &mut out,
@@ -894,7 +787,7 @@ mod tests {
     #[test]
     fn collect_findings_picks_up_format_macro() {
         let mut out = Vec::new();
-        collect_findings("x.rs", "let s = format!(\"{}\", 5);\n", &mut out);
+        let _ = collect_findings("x.rs", "let s = format!(\"{}\", 5);\n", &mut out);
         assert_eq!(out.len(), 1);
         assert_eq!(out[0].pattern, "format!");
     }
@@ -1079,7 +972,7 @@ write = ["vyre-runtime/src/resident_work_queue/**"]
         let mut out = Vec::new();
         let text = "// format!(\"{}\", x)\nlet keep = 1; // panic!(\"comment\")\nlet msg = format!(\"{}\", keep);\n\n";
 
-        collect_findings("x.rs", text, &mut out);
+        let _ = collect_findings("x.rs", text, &mut out);
 
         assert_eq!(count_code_lines(text), 2);
         assert_eq!(out.len(), 1);
@@ -1108,7 +1001,7 @@ write = ["vyre-runtime/src/resident_work_queue/**"]
             "}\n",
         );
         let mut out = Vec::new();
-        collect_findings("x.rs", text, &mut out);
+        let _ = collect_findings("x.rs", text, &mut out);
 
         assert_eq!(
             out.iter().map(|f| f.pattern).collect::<Vec<_>>(),
@@ -1139,7 +1032,7 @@ write = ["vyre-runtime/src/resident_work_queue/**"]
             "}\n",
         );
         let mut out = Vec::new();
-        collect_findings("x.rs", text, &mut out);
+        let _ = collect_findings("x.rs", text, &mut out);
 
         assert_eq!(
             out.iter().map(|f| f.pattern).collect::<Vec<_>>(),
@@ -1161,10 +1054,54 @@ write = ["vyre-runtime/src/resident_work_queue/**"]
             "}\n",
         );
         let mut out = Vec::new();
-        collect_findings("x.rs", text, &mut out);
+        let _ = collect_findings("x.rs", text, &mut out);
 
         assert_eq!(out.len(), 1, "got {out:?}");
         assert_eq!(out[0].line, 4);
+    }
+
+    /// WHY: the exclusion that took the CUDA dispatch surface from nineteen
+    /// measured allocations to the ones a successful launch pays. Every message
+    /// in this fixture is built after the call has already failed, and this
+    /// workspace requires those messages to carry context.
+    #[test]
+    fn an_allocation_that_builds_an_error_is_not_measured_but_is_counted() {
+        let text = concat!(
+            "pub fn f(n: usize) -> Result<usize, String> {\n",
+            "    if n == 0 {\n",
+            "        return Err(format!(\n",
+            "            \"Fix: n must exceed {n}.\"\n",
+            "        ));\n",
+            "    }\n",
+            "    Ok(n)\n",
+            "}\n",
+        );
+        let mut out = Vec::new();
+        let excluded = collect_findings("x.rs", text, &mut out);
+
+        assert!(out.is_empty(), "got {out:?}");
+        assert_eq!(excluded, 1);
+    }
+
+    /// WHY: the exclusion must end where the error expression ends, or the first
+    /// `map_err` in a function hides every allocation after it.
+    #[test]
+    fn an_allocation_after_an_error_expression_is_still_measured() {
+        let text = concat!(
+            "pub fn f(input: &str) -> Result<String, String> {\n",
+            "    let n: usize = input\n",
+            "        .parse()\n",
+            "        .map_err(|error| format!(\"Fix: {error}\"))?;\n",
+            "    let label = format!(\"{n} items\");\n",
+            "    Ok(label)\n",
+            "}\n",
+        );
+        let mut out = Vec::new();
+        let excluded = collect_findings("x.rs", text, &mut out);
+
+        assert_eq!(out.len(), 1, "got {out:?}");
+        assert_eq!(out[0].line, 5);
+        assert_eq!(excluded, 1);
     }
 
     /// WHY: a brace inside a string literal is not a block. `panic!("{")` in a
@@ -1185,9 +1122,9 @@ write = ["vyre-runtime/src/resident_work_queue/**"]
         let scan = scan_code("fn f<'a>(x: &'a str) { // format!(\"{}\", x)");
         assert_eq!(scan.brace_delta, 1);
         assert!(
-            !scan.segment.contains("format!"),
+            !scan.code.contains("format!"),
             "the trailing comment must still be stripped, got {:?}",
-            scan.segment
+            scan.code
         );
     }
 

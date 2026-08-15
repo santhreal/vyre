@@ -339,6 +339,18 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   so a new submitting crate is judged the moment it submits, and a companion
   contract fails when the scan finds no submitters, which is the state that
   would accept every discarding import in the tree.
+- `docs/lego-block-rule.md` is back, rewritten against source. It owns the four
+  things nothing else states: the discovery step, the Category A and Category C
+  placement test, the promotion criteria, and the Gate 1 budget in prose. The
+  mdbook deletion took it out while `check-tier-deps` still read it for the
+  cross-crate promotion contract, so the gate reported five findings against a
+  file that was not there, and the workspace rules named required reading that
+  did not exist. Every claim in it was checked: the discovery commands are the
+  subcommands that exist, the budget numbers are the constants the gate
+  compiles, the promotion contract forbids the compatibility shim this
+  workspace does not ship, and the worked example names the primitive that
+  survived it. `gate1` states the countable half and points at the policy for
+  the rest, instead of recording that the policy was deleted.
 - `scripts/check_branch_accounting.py` derives the campaign's own branch and
   worktree state from git at run time and fails when it is inconsistent: a
   branch no owner branch holds and no worktree carries is work nobody is doing
@@ -400,6 +412,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 
 ### Changed
 
+- The heuristic audit reads an author's note, not any sentence that names a
+  policy. A marker now has to open a plain comment: a doc comment describing a
+  cache's eviction policy to its caller, a term used mid-paragraph while
+  explaining an allocation, and a marker inside a string literal or an inline
+  test module are no longer reported as hand-rolled heuristics. Three of the
+  four findings it reported were descriptions, one of them on a test, and two
+  sat in crates that cannot depend on the composition the fix names.
 - The Aho-Corasick emit paths in `vyre-libs/src/scan/` read the flat
   output-record span through one owner. Six builders each wrote their own loop
   over `out_begin..out_end` binding `pattern_id` from `output_records`, and
@@ -918,8 +937,7 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `README.md` charter. `vyre-libs` owns every composition, including
   compiler-internal domains. `vyre-primitives` owns only uncomposable
   intrinsics. Persistence is selected at compile time. Unmeasured selections
-  are never called autoroute. The deleted `docs/lego-block-rule.md` two-caller
-  promotion rule is void.
+  are never called autoroute.
 - Documentation pages now declare audience, owner, authority, kind, and
   generated/manual ownership. Crate dependency records declare purpose,
   features, target conditions, visibility, and destination seam, and optimizer
@@ -1008,12 +1026,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   be collapsed from this side.
 - Five enforcement sites state the contract they enforce instead of citing a
   document. `structure-gate` names the composition rule at `CATEGORY_A_CRATE`
-  and the one-owner rule at `substrate_home_failures`; `gate1` states its
-  complexity budget and records that the two-caller promotion rule of the
-  deleted composition-policy document is void; the CLI surface contract names
-  the generated README block it counts; and the tree-contract link unit states
-  why two suites stay separate targets. A rule that lives only in a document
-  stops being enforced the day the document is deleted, and four of these cited
+  and the one-owner rule at `substrate_home_failures`; `gate1` states the
+  countable half of the composition budget it enforces and leaves the reuse
+  criterion to the policy an author applies; the CLI surface contract names the
+  generated README block it counts; and the tree-contract link unit states why
+  two suites stay separate targets. A rule that lives only in a document stops
+  being enforced the day the document is deleted, and four of these cited
   documents that already were.
 - Seven release gate scripts run `scripts/lib/<name>.py` instead of piping a
   Python program into an interpreter through a heredoc. A heredoc hides a whole
@@ -1573,6 +1591,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   without the `anonymous::` prefix the audit gates read, or a child region
   could be attached with no parent. The literals carry no information the two
   constructors do not, so they are gone.
+- The line scanner that separates code from a comment, counts nesting, and
+  decides which lines belong to an inline test module lives in the scan module
+  that already owns what is not code. The hot-path scan held the only copy, so
+  the heuristic audit could not tell a test fixture from production debt.
 - vyre-aot, vyre-debug, vyre-driver-spirv, vyre-driver-wgpu, vyre-emit-naga,
   vyre-grammar-gen, vyre-megakernel, vyre-reference and vyre-runtime publish
   each item at one path; submodules that exist because a file was split are
@@ -2668,6 +2690,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   for a literal `materialize::admit(` call and so reported all four backends as
   hand-rolling admission. It now accepts either spelling and additionally
   rejects a backend that defines `admit` or `admit_modules` itself.
+- The hot-path scan measures the path a successful call takes. An allocation
+  that builds an error is excluded and counted separately, because this
+  workspace requires an error to carry context and a fix, so the CUDA host
+  dispatch surface read as nineteen per-launch allocations when every one of
+  them was a format inside a return Err. Each file's note now ends with its
+  error-path count, and every hot-path budget in
+  docs/optimization/HOT_PATHS.toml is lowered to the measurement that remains.
 - `abstraction-gate` no longer demands an operation registration for a region
   that names no operation. Two prefixes mean the same thing: `inline::`, minted
   by `reparent_entry_node` for a body the composer reparented onto its caller,
