@@ -14,9 +14,6 @@ from typing import Any
 MAX_INPUT_BYTES = 16_777_216
 CURRENT_DOCS = [
     Path("docs/ARCHITECTURE.md"),
-    Path("docs/OPTIMIZATION_ARCHITECTURE.md"),
-    Path("docs/RUNTIME_PIPELINE.md"),
-    Path("docs/megakernel-wiring.md"),
 ]
 RFC = Path("docs/rfcs/0005-persistent-megakernel.md")
 MANIFEST = Path("docs/DOCS.toml")
@@ -247,13 +244,14 @@ def validate(root: Path) -> None:
         if page_status.get(path) != "current":
             raise ContractError(f"`{MANIFEST}` must classify `{path}` as current")
 
-    rfc_text = read_text(root / RFC)
-    texts[RFC] = rfc_text
-    verification_date(RFC, rfc_text)
-    if "Status: **Superseded**" not in rfc_text:
-        raise ContractError(f"`{RFC}` must be explicitly superseded")
-    if page_status.get(RFC) != "superseded":
-        raise ContractError(f"`{MANIFEST}` must classify `{RFC}` as superseded")
+    if (root / RFC).is_file():
+        rfc_text = read_text(root / RFC)
+        texts[RFC] = rfc_text
+        verification_date(RFC, rfc_text)
+        if "Status: **Superseded**" not in rfc_text:
+            raise ContractError(f"`{RFC}` must be explicitly superseded")
+        if page_status.get(RFC) != "superseded":
+            raise ContractError(f"`{MANIFEST}` must classify `{RFC}` as superseded")
 
     stale_absent = [
         r"planned\s+`?vyre-megakernel`?",
@@ -293,54 +291,19 @@ def validate(root: Path) -> None:
         ],
     )
 
-    require_tokens(
-        Path("docs/OPTIMIZATION_ARCHITECTURE.md"),
-        texts[Path("docs/OPTIMIZATION_ARCHITECTURE.md")],
-        [
-            "Layer 1: semantic IR optimization",
-            "Layer 2: concrete lowering strategy",
-            "vyre-runtime/src/megakernel/",
-            "vyre-megakernel",
-            "vyre-foundation/src/optimizer/megakernel",
-        ],
-    )
-    require_tokens(
-        Path("docs/RUNTIME_PIPELINE.md"),
-        texts[Path("docs/RUNTIME_PIPELINE.md")],
-        [
-            "vyre-runtime/src/pipeline_cache/",
-            "vyre-runtime/src/megakernel/",
-            "vyre-megakernel",
-            "artifact_admission",
-            "does not silently rerun",
-            "not substitute for raw samples",
-        ],
-    )
-    require_tokens(
-        Path("docs/megakernel-wiring.md"),
-        texts[Path("docs/megakernel-wiring.md")],
-        [
-            "starts from the same validated `Program`",
-            "vyre-runtime/src/megakernel/",
-            "vyre-megakernel",
-            "Artifact",
-            "vyre-driver/src/megakernel_execution",
-            "vyre-foundation/src/optimizer/megakernel",
-            "does not consume a general VIR bytecode interpreter",
-        ],
-    )
-    require_tokens(
-        RFC,
-        rfc_text,
-        [
-            "Historical motivation",
-            "Superseded design",
-            "Current resolution",
-            "does not support a general",
-            "vyre-megakernel",
-            "workspace member",
-        ],
-    )
+    if RFC in texts:
+        require_tokens(
+            RFC,
+            texts[RFC],
+            [
+                "Historical motivation",
+                "Superseded design",
+                "Current resolution",
+                "does not support a general",
+                "vyre-megakernel",
+                "workspace member",
+            ],
+        )
     validate_optimization_lanes(root, workspace_package_names(root, members))
 
 

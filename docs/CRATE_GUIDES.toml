@@ -1,5 +1,5 @@
 schema_version = 1
-last_verified = "2026-08-04"
+last_verified = "2026-08-15"
 
 [profile.facade]
 error_behavior = "Facade artifact workflows preserve structured compiler, admission, submission, and completion errors. Unavailable targets fail closed without backend fallback."
@@ -63,7 +63,7 @@ default_internal_status = "repository-internal"
 path = 'vyre-megakernel'
 owner = 'megakernel-compiler'
 layer = 'compiler-boundary'
-owned = 'Compile validated typed Program graphs into canonical static and persistent megakernel artifacts without owning admission, execution, or lifecycle policy.'
+owned = 'Select a legal whole-graph megakernel artifact under an explicit SearchBudget. Never claim a measured winner that no clock produced.'
 non_owned = 'Admission, execution, lifecycle policy, concrete backends, runtime protocol.'
 allowed_dependencies = ['vyre-foundation']
 profile = 'compiler-boundary'
@@ -72,8 +72,8 @@ profile = 'compiler-boundary'
 path = 'vyre'
 owner = 'public-facade'
 layer = 'facade'
-owned = 'Expose canonical frontend IR, compiler artifact, runtime submission, and scan product entry points.'
-non_owned = 'Backend implementation traits and configuration, concrete target lowering, optimizer internals, and conformance machinery.'
+owned = 'Public facade. Re-export IR, driver, runtime, and the artifact compiler.'
+non_owned = 'Logic, backend implementation, concrete target lowering, optimizer internals, and conformance machinery.'
 allowed_dependencies = ['vyre-driver', 'vyre-driver-cuda', 'vyre-driver-wgpu', 'vyre-foundation', 'vyre-megakernel', 'vyre-runtime', 'vyre-spec']
 profile = 'facade'
 
@@ -149,8 +149,8 @@ profile = 'concrete-backend'
 path = 'vyre-reference'
 owner = 'reference-semantics'
 layer = 'semantics'
-owned = 'Execute programs with the canonical host oracle and produce semantic witnesses.'
-non_owned = 'Device dispatch, artifact packaging, product compositions.'
+owned = 'The only crate permitted to compute on the CPU: the IR oracle.'
+non_owned = 'Device dispatch, artifact packaging, production answers, performance work.'
 allowed_dependencies = ['vyre-foundation', 'vyre-primitives', 'vyre-spec']
 profile = 'semantics'
 
@@ -177,8 +177,8 @@ profile = 'foundation'
 path = 'vyre-primitives'
 owner = 'primitive-library'
 layer = 'primitives'
-owned = 'Own reusable Tier 2.5 program builders shared by higher-level libraries and runtimes.'
-non_owned = 'Concrete backends, runtime lifecycle, product-only glue.'
+owned = 'Own marker types and uncomposable hardware intrinsics. A composition belongs in vyre-libs.'
+non_owned = 'Compositions, concrete backends, runtime lifecycle.'
 allowed_dependencies = ['vyre-foundation', 'vyre-spec']
 profile = 'primitives'
 
@@ -255,8 +255,8 @@ release_status = 'This crate is an active experimental runtime surface in the {v
 path = 'vyre-runtime'
 owner = 'runtime'
 layer = 'runtime'
-owned = 'Own backend-neutral execution planning, persistent runtime contracts, caches, telemetry, and IO substrate.'
-non_owned = 'Artifact schema authorship (vyre-megakernel), concrete shader emission, language frontends.'
+owned = 'Execute the artifact selected persistence: sessions, residency, caches, telemetry, and IO.'
+non_owned = 'Whether to be persistent, artifact schema authorship, concrete shader emission.'
 allowed_dependencies = ['vyre-driver', 'vyre-foundation', 'vyre-megakernel', 'vyre-pass-engine']
 profile = 'runtime'
 
@@ -264,8 +264,8 @@ profile = 'runtime'
 path = 'vyre-libs'
 owner = 'product-libraries'
 layer = 'libraries'
-owned = 'Own product-facing Tier 3 program compositions built from neutral primitives and contracts.'
-non_owned = 'Concrete backends, runtime protocol, foundation IR node authorship.'
+owned = 'Own every composition in the workspace: consumer dialects and compiler-internal domains. Returns Programs. No backend, no emitter, no host rewrite of IR.'
+non_owned = 'Concrete backends, emitters, foundation IR node authorship.'
 allowed_dependencies = ['vyre-foundation', 'vyre-primitives', 'vyre-spec']
 profile = 'libraries'
 
@@ -273,8 +273,8 @@ profile = 'libraries'
 path = 'vyre-aot'
 owner = 'aot-artifacts'
 layer = 'packaging'
-owned = 'Plan and package ahead-of-time artifacts without owning live backend execution.'
-non_owned = 'Live device execution, runtime protocol mutation.'
+owned = 'Package the same megakernel artifact class ahead of time. Not a second compile path.'
+non_owned = 'A distinct compiler, live device execution, runtime protocol mutation.'
 allowed_dependencies = ['vyre-driver', 'vyre-foundation', 'vyre-megakernel', 'vyre-primitives', 'vyre-spec']
 profile = 'packaging'
 
@@ -283,8 +283,8 @@ release_status = 'This crate is internal benchmark tooling for the {vyre_version
 path = 'vyre-bench'
 owner = 'benchmarks'
 layer = 'tooling'
-owned = 'Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark evidence.'
-non_owned = 'Production library semantics, device drivers as libraries.'
+owned = 'Own reproducible workload benchmarks against the best available native baseline for each class.'
+non_owned = 'Baselines that are vyre unfused output, production library semantics.'
 allowed_dependencies = ['vyre', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-metal', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-emit-ptx', 'vyre-foundation', 'vyre-libs', 'vyre-lower', 'vyre-primitives', 'vyre-reference', 'vyre-runtime', 'vyre-spec']
 profile = 'tooling'
 

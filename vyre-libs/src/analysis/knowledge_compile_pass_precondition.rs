@@ -47,10 +47,10 @@
 //! by the pass framework that supplies the `nodes`, `children`, and
 //! topological order buffers.
 
-use crate::scratch::reserve_vec_capacity;
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
+use crate::scratch::reserve_vec_capacity;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::graph::knowledge_compile::ddnnf_evaluate;
 #[cfg(test)]

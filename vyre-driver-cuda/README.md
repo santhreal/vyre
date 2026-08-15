@@ -42,16 +42,16 @@ let outputs = backend.dispatch(&program, &inputs, &config)?;
   the wgpu and reference backends.
 - **No peer-backend deps.** The crate must not pull
   `vyre-driver-wgpu` or `vyre-driver-spirv`; the boundary is enforced
-  by `OWNERSHIP.md` and `scripts/check_architectural_invariants.sh`.
+  by `docs/CRATE_OWNERSHIP.toml` and `scripts/check_architectural_invariants.sh`.
 
 ## Where to look
 
 - `src/backend/mod.rs`  -  `VyreBackend` implementation and capability probing.
 - `src/codegen.rs`  -  PTX emit pipeline.
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) describes the CUDA driver boundary.
-- `docs/optimization/OWNERSHIP.toml` and `docs/optimization/README.md` define
-  CUDA optimization ownership and the patch proof contract.
-- `docs/OWNERSHIP.md` defines workspace ownership.
+- The workspace [`README.md`](../README.md) places this crate: driver
+  names, dialect names, and device quirks live here and nowhere else.
+- `docs/optimization/OWNERSHIP.toml` defines CUDA optimization lanes.
+- `docs/CRATE_OWNERSHIP.toml` defines workspace ownership.
 
 <!-- BEGIN GENERATED CRATE CONTRACT -->
 ## Crate contract
@@ -88,8 +88,8 @@ Device acquisition, lowering, allocation, and dispatch failures are explicit bac
 
 ### Testing
 
-Use [`docs/testing/vyre-driver-cuda.md`](../docs/testing/vyre-driver-cuda.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -97,9 +97,8 @@ requirements, evidence outputs, expected skips, and failure semantics.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

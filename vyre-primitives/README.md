@@ -1,29 +1,27 @@
 # vyre-primitives
 
-The operation substrate for vyre: Category C hardware intrinsics under
-`hardware/`, plus the compositional primitives that Tier-3 domain
-libraries (`vyre-libs`) reuse. Consumers compose primitives without
-touching `vyre-driver-*` directly.
+Marker types the interpreter and emitters dispatch on, and hardware
+intrinsics: operations that need a dedicated emitter arm in every
+backend and a dedicated arm in the reference interpreter.
 
-## What this crate is
+Not here: compositions. A function that returns a `Program` built from
+existing IR belongs in `vyre-libs`, whoever calls it. The domain
+folders listed below that are compositions, not intrinsics, are a live
+defect. They were admitted as "shared builders reused by two or more
+dialects." Reuse count is not an admission criterion.
 
-The crate is feature-gated per domain so a consumer that wants only
-bitset operations does not pay for the matching DFA, the d-DNNF
-compiler, or the cryptographic hash family. Each domain is a feature
-flag; a crate-level marker type lives at
-`vyre-primitives::<domain>::*` and submits one
-`OperationRegistration::primitive(...)` so the canonical operation registry
-enumerates every primitive linked into the current binary.
+The crate has no concrete backend dependencies. It depends only on
+`vyre-foundation` and `vyre-spec`.
 
-The crate intentionally has zero concrete backend dependencies. It
-depends only on `vyre-foundation` + `vyre-spec`.
-The boundary is enforced by `scripts/check_architectural_invariants.sh`
-and `OWNERSHIP.md`.
+[`src/organization.rs`](src/organization.rs) is the one classification
+of every Cargo feature. `tests/feature_classification.rs` fails if a
+new feature is added without being listed there.
 
-## Domain layout
+## Domain layout (current tree, including the defect)
 
-Mirrors the Linux kernel `fs/` / `mm/` / `net/` shape: each domain is
-its own subdirectory under `src/`, gated behind a Cargo feature flag.
+Each domain is a subdirectory under `src/`, gated behind a Cargo
+feature. `hardware` is the Category C home. The other domain folders
+that build compositions belong in `vyre-libs`.
 
 | Feature              | Subsystem            | Highlights                                              |
 |---------------------|----------------------|---------------------------------------------------------|
@@ -43,35 +41,29 @@ its own subdirectory under `src/`, gated behind a Cargo feature flag.
 | `dnnf`              | `dnnf/`              | host-side d-DNNF compiler + model counter (P-PRIM-6)    |
 | `inventory-registry`| (gate)               | Enables `inventory::submit!` registration system       |
 
-`all-lego` enables every Tier-2.5 domain; `default` enables the small
-core (`bitset`, `reduce`, `inventory-registry`).
+`all-lego` enables every domain currently in this crate, including
+compositions that should move. `default` enables `bitset`, `reduce`,
+and `inventory-registry`.
 
 ## Architecture decisions
 
-- **Marker types only at the public surface.** Each primitive is a
-  unit struct that implements the relevant trait
-  (`ReferenceEvaluator`, `BackendEmitter`, etc.). The implementations
-  live in `vyre-reference` (CPU oracle) and the per-backend crate.
-- **No GPU code in this crate.** Every primitive's GPU lowering lives
-  in the concrete driver crate that owns the target. The marker type
-  does not import shader strings: the
-  `check_no_string_wgsl.sh` gate is non-negotiable.
-- **Promotion path.** A composition that lives in `vyre-libs` is
-  promoted to a primitive here only after ≥3 distinct callers and an
-  explicit architectural review. The `LEGO_PRIMITIVES.md` audit tracks
-  candidates.
-- **Per-domain test directories.** Every domain ships positive,
-  negative, adversarial, cross-call, and proptest fixtures; see
-  `tests/<domain>_*.rs`.
+- **Intrinsic means uncomposable.** An operation stays here only when
+  it cannot be expressed as IR composition.
+- **Marker types at the public surface.** Implementations live in
+  `vyre-reference` and the concrete driver crates.
+- **No GPU code in this crate.** Lowering lives in the driver that
+  owns the target. `check_no_string_wgsl.sh` is non-negotiable.
+- **No promotion by caller count.** A composition does not move here
+  because a second dialect called it.
 
 ## Where to look
 
 - `src/lib.rs`: feature-gate table and the public domain list.
 - `src/markers.rs`: the always-on marker registry types.
+- `src/hardware/`: the Category C intrinsic home.
 - `tests/`: per-domain adversarial corpora.
-- `docs/OWNERSHIP.md`: workspace boundary definition.
-- `docs/generated/OP_SCHEMA.json`: canonical operation tiers, signatures,
-  fixtures, backend evidence, and composition chains.
+- `docs/generated/OP_SCHEMA.json`: canonical operation tiers.
+- The workspace [`README.md`](../README.md) for the two placement rules.
 
 ## Conformance
 
@@ -88,7 +80,7 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Own reusable Tier 2.5 program builders shared by higher-level libraries and runtimes.
+Own marker types and uncomposable hardware intrinsics. A composition belongs in vyre-libs, not here.
 
 ### Boundaries
 
@@ -115,8 +107,8 @@ Invalid dimensions, overflow, unsupported contracts, and malformed program input
 
 ### Testing
 
-Use [`docs/testing/vyre-primitives.md`](../docs/testing/vyre-primitives.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -124,9 +116,8 @@ requirements, evidence outputs, expected skips, and failure semantics.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

@@ -5,7 +5,7 @@ package = "vyre-megakernel"
 path = "vyre-megakernel"
 owner = "megakernel-compiler"
 layer = "compiler-boundary"
-responsibility = "Explore and select legal whole-ProgramGraph fusion schedules under explicit SearchBudget bounds, expose selected modules and canonical ABI to registered target compilers, then emit canonical Artifact and ArtifactEnvelope records without owning admission, execution, or lifecycle policy."
+responsibility = "Explore and select legal whole-ProgramGraph fusion schedules under explicit SearchBudget bounds, emit a megakernel Artifact and TargetPayloads, and never claim a measured winner that no clock produced. Does not own admission, execution, or lifecycle policy."
 
 [[crate.dependency]]
 package = "vyre-foundation"
@@ -41,7 +41,7 @@ package = "vyre"
 path = "vyre"
 owner = "public-facade"
 layer = "facade"
-responsibility = "Expose canonical frontend IR, compiler artifact, runtime submission, and scan product entry points without re-owning backend contracts."
+responsibility = "Public facade. Re-export IR, driver, runtime, and the artifact compiler. Own no logic."
 
 [[crate.dependency]]
 package = "vyre-driver"
@@ -676,7 +676,7 @@ package = "vyre-reference"
 path = "vyre-reference"
 owner = "reference-semantics"
 layer = "semantics"
-responsibility = "Execute programs with the canonical host oracle and produce semantic witnesses."
+responsibility = "The only crate permitted to compute on the CPU: the pure-Rust IR oracle. Not a backend and not a fallback."
 
 [[crate.dependency]]
 package = "vyre-foundation"
@@ -730,7 +730,7 @@ package = "vyre-primitives"
 path = "vyre-primitives"
 owner = "primitive-library"
 layer = "primitives"
-responsibility = "Own reusable Tier 2.5 program builders shared by higher-level libraries and runtimes."
+responsibility = "Own marker types and uncomposable hardware intrinsics. A composition belongs in vyre-libs, not here."
 
 [[crate.dependency]]
 package = "vyre-foundation"
@@ -785,11 +785,11 @@ seam = "foundation-ir"
 
 [[crate.dependency]]
 package = "vyre-spec"
-purpose = "declared operation signatures behind the ir-fixtures feature, so a fixture names the same operation the registry does"
+purpose = "DataType and declared operation signatures for fixture tables, without gating a leaf crate behind ir-fixtures"
 features = []
 conditions = ["always"]
 kinds = ["normal"]
-optional = true
+optional = false
 default_features = true
 boundary = "private"
 seam = "specification"
@@ -1215,7 +1215,7 @@ package = "vyre-runtime"
 path = "vyre-runtime"
 owner = "runtime"
 layer = "runtime"
-responsibility = "Own compile-to-materialize orchestration, artifact sessions, recovery, persistence, residency, scheduling, caches, telemetry, readback, and IO."
+responsibility = "Execute the artifact's selected persistence: sessions, recovery, residency, scheduling, caches, telemetry, readback, and IO. Does not decide whether to be persistent."
 
 [[crate.dependency]]
 package = "vyre-libs"
@@ -1273,7 +1273,7 @@ package = "vyre-libs"
 path = "vyre-libs"
 owner = "product-libraries"
 layer = "libraries"
-responsibility = "Own product-facing Tier 3 program compositions built from neutral primitives and contracts."
+responsibility = "Own every composition in the workspace: consumer dialects and compiler-internal solvers, encoding, analysis, scheduling, and reasoning. Returns Programs. No backend, no emitter, no host rewrite of IR."
 
 [[crate.dependency]]
 package = "vyre-reference"
@@ -1324,7 +1324,7 @@ package = "vyre-aot"
 path = "vyre-aot"
 owner = "aot-artifacts"
 layer = "packaging"
-responsibility = "Plan and package ahead-of-time artifacts without owning live backend execution."
+responsibility = "Package the same megakernel artifact class ahead of time. Not a second compile path. No workspace crate currently depends on this one."
 
 [[crate.dependency]]
 package = "vyre-driver"
@@ -1386,7 +1386,7 @@ package = "vyre-bench"
 path = "vyre-bench"
 owner = "benchmarks"
 layer = "tooling"
-responsibility = "Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark evidence."
+responsibility = "Own reproducible workload benchmarks against the best available native baseline for each class, not against vyre's own unfused output."
 
 [[crate.dependency]]
 package = "vyre"

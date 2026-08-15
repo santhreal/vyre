@@ -1,4 +1,4 @@
-//! Tier 2.5 graph primitives.
+//! Parked composition (belongs in vyre-libs): graph primitives.
 //!
 //! The path IS the interface. Callers write
 //! `vyre_primitives::graph::toposort::toposort(...)`; no wildcard

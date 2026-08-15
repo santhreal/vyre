@@ -1,4 +1,4 @@
-//! Tier 2.5 optimization primitives (#9, #14, #46).
+//! Parked composition (belongs in vyre-libs): optimization primitives (#9, #14, #46).
 //!
 //! Convex + combinatorial optimization at GPU primitive level. Composes
 //! with `vyre-primitives::math` for the underlying linear-algebra

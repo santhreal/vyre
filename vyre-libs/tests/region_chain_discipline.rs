@@ -2,11 +2,9 @@
 //! [`Program`] whose top-level entry is exactly one [`Node::Region`]
 //! with a stable `generator` ident.
 //!
-//! Enforces the architectural invariant documented in
-//! `docs/lego-block-rule.md` and `audits/vision-adherence-deep-audit-2026-04-21.md`
-//! BLOCKER-5: the optimizer, source-mapping, and CSE passes all rely on
-//! finding a single Region at the entry of every op so they can treat
-//! it as atomic. Bare statement bodies bypass that contract silently.
+//! The optimizer, source-mapping and CSE passes all find a single Region at
+//! the entry of an op and treat it as atomic. A bare statement body bypasses
+//! that contract silently, so the entry Region is an invariant, not a style.
 //!
 //! If this test fails, DO NOT weaken the assertion. Add a
 //! [`crate::region::wrap_anonymous`] call to the offending op's

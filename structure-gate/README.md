@@ -1,6 +1,11 @@
-# `structure-gate`
+# structure-gate
 
-Use this crate through the contract and checked-in example below.
+The structural contract: the crate roster, one identity per operation,
+one home per concept. It also owns the correct source-text reader, the
+one that handles nested block comments, raw strings, and a character
+literal that is not a lifetime.
+
+Not here: a second source scanner.
 
 <!-- BEGIN GENERATED CLI CONTRACT -->
 ## Command-line interface
@@ -61,8 +66,8 @@ Invalid arguments, violated repository contracts, and an unreadable checkout ret
 
 ### Testing
 
-Use [`docs/testing/structure-gate.md`](../docs/testing/structure-gate.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -70,9 +75,8 @@ requirements, evidence outputs, expected skips, and failure semantics.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

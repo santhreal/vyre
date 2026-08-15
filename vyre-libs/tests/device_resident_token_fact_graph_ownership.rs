@@ -143,7 +143,10 @@ fn the_resident_layout_is_declared_in_exactly_one_crate() {
 /// emitter crate extends the ban without an edit here.
 fn banned_vocabulary() -> BTreeSet<String> {
     let root = vyre_workspace_root();
-    let mut banned: BTreeSet<String> = ALWAYS_BANNED.iter().map(|term| (*term).to_string()).collect();
+    let mut banned: BTreeSet<String> = ALWAYS_BANNED
+        .iter()
+        .map(|term| (*term).to_string())
+        .collect();
     for member in structure_gate::workspace_members(&root) {
         let name = member.rsplit('/').next().unwrap_or(&member);
         for prefix in ["vyre-driver-", "vyre-emit-"] {

@@ -12,9 +12,9 @@
 //! it, every other file asks `delegate`, and the packages scanned are derived
 //! from the workspace roster at run time rather than listed here.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use super::common::workspace_root;
+use super::common::{sources_under, workspace_root};
 
 /// The one file allowed to resolve the running binary, relative to the checkout.
 const OWNER: &str = "xtask/src/delegate.rs";
@@ -35,31 +35,13 @@ fn build_task_packages(root: &Path) -> Vec<String> {
     packages
 }
 
-/// Every `.rs` file under `directory`, in sorted order.
-fn rust_sources(directory: &Path) -> Vec<PathBuf> {
-    let mut found = Vec::new();
-    let Ok(entries) = std::fs::read_dir(directory) else {
-        return found;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_dir() {
-            found.extend(rust_sources(&path));
-        } else if path.extension().is_some_and(|ext| ext == "rs") {
-            found.push(path);
-        }
-    }
-    found.sort();
-    found
-}
-
 /// Files under every build-task package's `src` that name `SELF_RESOLUTION`,
 /// reported relative to the checkout root.
 fn self_resolving_sources(root: &Path) -> Vec<String> {
     let mut found = Vec::new();
     for package in build_task_packages(root) {
         let directory = structure_gate::member_directory(root, &package);
-        for source in rust_sources(&directory.join("src")) {
+        for source in sources_under(&directory.join("src"), &["rs"]) {
             let text = std::fs::read_to_string(&source)
                 .unwrap_or_else(|error| panic!("Fix: cannot read {}: {error}", source.display()));
             if text.contains(SELF_RESOLUTION) {

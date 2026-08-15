@@ -33,7 +33,6 @@ fn run_snapshot_refresh(root: &Path, package: &str) -> Result<(), String> {
         .arg(scripts.join("check_public_api_snapshot.sh"))
         .arg("--refresh")
         .arg(package)
-        .env("CARGO_BUILD_JOBS", "1")
         .current_dir(root)
         .output()
         .map_err(|error| format!("could not execute public API snapshot refresh: {error}"))?;
@@ -263,4 +262,29 @@ fn snapshot_includes_modules_and_reexports_but_excludes_private_items() {
             "snapshot must exclude private item `{private_item}`:\n{snapshot}"
         );
     }
+}
+
+/// The committed snapshots are the live public surface.
+///
+/// WHY: every other contract in this file judges which snapshot files exist and
+/// how one is extracted. None of them reads the committed bytes against today's
+/// rustdoc output, so a public item added without refreshing its snapshot
+/// passes all of them. `.github/workflows/public-api.yml` runs this script, so
+/// the drift was caught in CI and not by a local test run.
+#[test]
+fn committed_snapshots_match_the_live_public_surface() {
+    let script = snapshot_script();
+    let output = Command::new("bash")
+        .arg(&script)
+        .current_dir(workspace_root())
+        .output()
+        .expect("Fix: bash must be available to run the public API snapshot gate");
+
+    assert!(
+        output.status.success(),
+        "Fix: the public API changed without its snapshot. Refresh it with `{} --refresh <package>`.\nstdout:\n{}\nstderr:\n{}",
+        script.display(),
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
 }

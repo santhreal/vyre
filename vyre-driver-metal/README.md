@@ -64,8 +64,8 @@ Device acquisition, lowering, allocation, and dispatch failures are explicit bac
 
 ### Testing
 
-Use [`docs/testing/vyre-driver-metal.md`](../docs/testing/vyre-driver-metal.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -73,9 +73,8 @@ This crate is active on supported Apple targets in the 0.7.2 train. Non-Apple ta
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

@@ -1,7 +1,12 @@
 # vyre-runtime
 
-Artifact admission, persistent resident queues, resource residency, and Linux
-zero-copy IO for Vyre.
+Persistent execution: the resident work queue, the persistent executor,
+artifact admission, resource residency, pipeline cache, tenancy,
+scheduling, replay, recovery, and io_uring streaming.
+
+Not here: compilation, and any decision about whether to be persistent.
+Persistence is selected during compile, in the artifact. This crate
+executes that selection.
 
 ## What this crate provides
 
@@ -113,7 +118,7 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Own compile-to-materialize orchestration, artifact sessions, recovery, persistence, residency, scheduling, caches, telemetry, readback, and IO.
+Execute the artifact's selected persistence: sessions, recovery, residency, scheduling, caches, telemetry, readback, and IO. Does not decide whether to be persistent.
 
 ### Boundaries
 
@@ -140,8 +145,8 @@ Invalid plans, stale artifacts, unavailable selected backends, IO failures, and 
 
 ### Testing
 
-Use [`docs/testing/vyre-runtime.md`](../docs/testing/vyre-runtime.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -149,9 +154,8 @@ This crate is an active experimental runtime surface in the 0.7.2 workspace. Its
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

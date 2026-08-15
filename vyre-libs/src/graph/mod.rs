@@ -1,4 +1,4 @@
-//! Graph / AST buffer compositions (`docs/ops-catalog.md` §1).
+//! Graph and AST buffer compositions.
 //!
 //! Host-side packed layout lives in [`vyre_foundation::vast`]. The programs
 //! here are minimal GPU-facing slices of that contract.

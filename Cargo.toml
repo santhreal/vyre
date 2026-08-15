@@ -263,7 +263,16 @@ aho-corasick = "=1.1.4"
 faer = { version = "=0.24.4", default-features = false, features = ["std", "rayon"] }
 memchr = "=2.8.3"
 regex-syntax = "=0.8.11"
-blake3 = "=1.8.5"
+# `no_neon` keeps the aarch64 NEON C intrinsics out of the build. blake3 is the
+# only C-compiling dependency in the shared graph (vyre-driver, vyre-foundation,
+# vyre-libs, vyre-runtime all take it directly), and on aarch64 its build script
+# compiles `c/blake3_neon.c` unconditionally, so cross-checking any Apple target
+# needed a cross C compiler with the Apple SDK. Every blake3 call here hashes
+# program identity, cache keys, and label/value fields - kilobytes of already
+# canonical bytes on the host compile path, never a device path and never bulk
+# data - so the portable Rust backend is not on any measured hot path. The x86_64
+# assembly backend is untouched, which is where production throughput is.
+blake3 = { version = "=1.8.5", features = ["no_neon"] }
 sha2 = "=0.11.0"
 percent-encoding = "=2.3.2"
 ed25519-dalek = { version = "=2.2.0", default-features = false, features = ["std"] }

@@ -1,6 +1,10 @@
 # vyre-debug
 
-`vyre-debug` is the static diagnostic and inspection toolkit for the Vyre 0.7.2 megakernel ecosystem.
+Inspection: descriptor dumps and diffs, naga traces, source assignments,
+dangling analysis, carrier inspection.
+
+Not here: anything a user's program depends on. This crate reads what
+other crates produced.
 
 ## Overview
 
@@ -98,8 +102,8 @@ Invalid arguments, stale evidence, violated repository contracts, and failed com
 
 ### Testing
 
-Use [`docs/testing/vyre-debug.md`](../docs/testing/vyre-debug.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -107,9 +111,8 @@ requirements, evidence outputs, expected skips, and failure semantics.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

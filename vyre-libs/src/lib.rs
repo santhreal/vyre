@@ -1,52 +1,35 @@
-//! # vyre-libs  -  Category A composition ecosystem
+//! # vyre-libs: every composition in the workspace
 //!
-//! `vyre-libs` composes foundation IR and primitive-owned kernels into reusable programs.
-//!
-//! Almost every function is a **pure Category A composition**: it returns a
-//! [`vyre_foundation::ir::Program`] built entirely from existing vyre IR primitives. The
-//! sole exception is the `math::atomic` family, which are **Category B**
-//! (`Category::Intrinsic`) because they require the backend to own the
-//! `Expr::Atomic` target builder emitter arm (F-IR-35).
-//!
-//! This is the ML/DSP/cryptographic ecosystem layer. Examples:
+//! Each public function returns a [`vyre_foundation::ir::Program`] built from
+//! existing IR. No shader source, no backend, no dispatch. Consumer dialects
+//! and compiler-internal domains are equal residents.
 //!
 //! ```ignore
-//! use vyre_libs::nn::linear::linear;
-//! let program = linear(/* input_buf */ "x", /* weights */ "w", /* bias */ "b");
-//! // `program` is a standard vyre_foundation::ir::Program you dispatch against any backend.
+//! use vyre_libs::math::dot;
+//! let program = dot("x", "y", "result", 128)?;
 //! ```
 //!
-//! ## Domain ownership
+//! Product dialects include `math`, `nn`, `scan`, `hash`, `decode`, `parsing`,
+//! `security`, `visual`, `logical`, and `rule`. `hash` replaced `crypto`.
+//! `scan` replaced `matching`. Compiler-internal domains (`device`,
+//! `solvers`, `encoding`, `analysis`, `scheduling`, `reasoning`,
+//! `graph-dispatch`, `telemetry`) are compositions too. They are feature-gated
+//! and are not in `full` because they submit no `OperationRegistration`.
 //!
-//! Each public domain module owns its product-level compositions. A domain may
-//! move to a dedicated crate only through a clean public cutover that migrates
-//! every caller and removes the old path. This crate does not promise
-//! compatibility reexports or parallel old/new routes.
+//! The sole Category B exception is the `math::atomic` family, which needs
+//! the backend `Expr::Atomic` emitter arm.
 //!
-//! `vyre-graph-stitch` was deliberately omitted  -  "logical linker for
-//! emitted graphs" is a `vyre-foundation` concern (IR composition),
-//! not a library crate.
-//!
-//! ## Region wrapping
+//! A domain may move to a dedicated crate only through a clean public cutover
+//! that migrates every caller and removes the old path.
 //!
 //! Every public composition wraps its body in a
 //! [`vyre_foundation::ir::Node::Region`] with a stable generator name. The
-//! optimizer treats Regions as atomic by default (preserves
-//! debuggability + source-mapping); explicit inline passes can unroll
-//! them. This is LLVM's function-vs-always-inline split at IR level.
+//! optimizer treats regions as atomic until an explicit inline pass unrolls
+//! them.
 //!
-//! ## Feature flags
-//!
-//! Each domain lives behind a feature flag so minimal consumers pay
-//! for only what they use:
-//!
-//! - `math` (default)  -  linear algebra, scans, broadcasts
-//! - `nn` (default, implies `math`)  -  neural-net primitives
-//! - `matching` (default)  -  regex, DFA, substring, multi-pattern
-//! - `crypto` (default)  -  hashing, MAC, checksums
-//!
-//! Turn defaults off with `default-features = false` and cherry-pick
-//! what you need.
+//! Defaults enable a math / linear / matching / decode core. `crypto` and
+//! `matching-regex` are opt-in. Turn defaults off with
+//! `default-features = false` and enable the dialect you need.
 
 // Semantic catalog entries are immutable values over static identifiers and
 // function pointers, so the standard auto-traits provide Send + Sync without
@@ -248,11 +231,10 @@ pub(crate) use math::linalg::{
 };
 
 // vyre-libs::hardware removed (audit 2026-04-21 BLOCKER-1/6).
-// Canonical Cat-C intrinsics live exclusively in
-// `vyre-primitives::hardware`; library compositions of atomic / clamp /
-// lzcnt / tzcnt ops
-// live in `vyre-libs::math::*` (which uses `Expr::Atomic`, `Expr::min`,
-// `Expr::max`, `Expr::popcount` directly per docs/ARCHITECTURE.md).
+// An intrinsic needs its own emitter arm and its own reference-interpreter
+// arm, so every one of them lives in `vyre-primitives::hardware`. The atomic,
+// clamp, lzcnt and tzcnt compositions live in `vyre-libs::math::*` and reach
+// `Expr::Atomic`, `Expr::min`, `Expr::max` and `Expr::popcount` directly.
 //
 // vyre-libs::crypto removed (audit 2026-04-21 BLOCKER-3). Deprecated
 // shim deleted in favor of the canonical path at `vyre-libs::hash`.

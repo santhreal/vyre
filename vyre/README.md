@@ -1,7 +1,10 @@
 # vyre
 
-Stable facade for Vyre frontend IR, whole-program compiler artifacts, and
-authenticated runtime sessions.
+The public facade. Re-exports the IR, the driver, the runtime, and the
+artifact compiler behind backend features. The crate a user adds.
+
+Not here: logic. A facade with behaviour is a fourth place to look for
+a bug. The charter is the workspace [`README.md`](../README.md).
 
 ## Install
 
@@ -66,8 +69,8 @@ canonical artifact value IDs.
 | `vyre::BindingSet` | `vyre-driver` | Typed resource bindings keyed by artifact value identity |
 
 Concrete drivers own target compilation, device acquisition, native
-materialization, and submission. The facade does not select a concrete backend
-or lower directly to target text.
+materialization, and submission. The facade re-exports selection. It
+does not lower directly to target text.
 
 ## Conformance
 
@@ -75,10 +78,11 @@ Pair `vyre` with `vyre-reference` and backend KAT parity tests for a binary
 verdict on backend correctness. Reference execution is an explicit oracle, not
 a production fallback.
 
-## The book
+## Documentation
 
-Documentation and tutorials live in [`docs/`](../docs/). Build the mdBook for
-the complete rendered guide.
+Start with the workspace [`README.md`](../README.md) and
+[`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md). Per-crate `README`
+files are the rest of the guide. There is no mdBook.
 
 ## License
 
@@ -92,7 +96,7 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Expose canonical frontend IR, compiler artifact, runtime submission, and scan product entry points without re-owning backend contracts.
+Public facade. Re-export IR, driver, runtime, and the artifact compiler. Own no logic.
 
 ### Boundaries
 
@@ -119,8 +123,8 @@ Facade artifact workflows preserve structured compiler, admission, submission, a
 
 ### Testing
 
-Use [`docs/testing/vyre.md`](../docs/testing/vyre.md) for exact commands, Cargo targets, hardware
-requirements, evidence outputs, expected skips, and failure semantics.
+See [`docs/testing/TESTING.toml`](../docs/testing/TESTING.toml) for the crate's test command,
+hardware contract, expected skips, and failure semantics.
 
 ### Release status
 
@@ -128,9 +132,8 @@ requirements, evidence outputs, expected skips, and failure semantics.
 
 ### Ownership
 
-`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
-and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
-`docs/OWNERSHIP.md` after changing that registry.
+[`docs/CRATE_OWNERSHIP.toml`](../docs/CRATE_OWNERSHIP.toml) is authoritative for this crate's
+responsibility and allowed internal edges.
 
 ### License
 

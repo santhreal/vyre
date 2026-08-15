@@ -61,10 +61,11 @@ pub fn run_resident_csr_queue_query_into(
         }
         ResidentCsrQueueMaterializer::AtomicWordScan => 0,
     };
-    let precomputed_block_offsets = matches!(
-        materializer,
-        ResidentCsrQueueMaterializer::DeterministicWordPrefix
-    ) && frontier_word_prefix_uses_precomputed_offsets(word_prefix_blocks);
+    let precomputed_block_offsets =
+        matches!(
+            materializer,
+            ResidentCsrQueueMaterializer::DeterministicWordPrefix
+        ) && frontier_word_prefix_uses_precomputed_offsets(word_prefix_blocks);
     scratch.programs.ensure(
         "frontier",
         ResidentCsrQueueProgramShape {
@@ -94,7 +95,9 @@ pub fn run_resident_csr_queue_query_into(
         ResidentCsrQueueTraverseKind::MixedSplit { .. } => {
             slots.high_split().map_err(DispatchError::BackendError)?
         }
-        ResidentCsrQueueTraverseKind::RowSerial | ResidentCsrQueueTraverseKind::RowStrided => (0, 0),
+        ResidentCsrQueueTraverseKind::RowSerial | ResidentCsrQueueTraverseKind::RowStrided => {
+            (0, 0)
+        }
     };
     let clear_handles = [slots.frontier_out];
     let queue_len_handles = [slots.queue_len];
