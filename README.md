@@ -33,8 +33,10 @@ cargo add vyre-driver-cuda
 cargo add vyre-driver-wgpu
 ```
 
-A missing or incompatible target fails with a structured diagnostic. Vyre does
-not silently replace it with CPU execution.
+Vyre has no CPU execution path. A missing or incompatible target fails with a
+structured diagnostic; it is never replaced by host execution. `vyre-reference`
+is an independent oracle used to prove GPU results in conformance and parity
+testing, not a route a program can be dispatched down.
 
 ## Compile a graph
 
@@ -94,8 +96,6 @@ Attach a payload through the selected registered target compiler. Construct an
   materialization, and native submission.
 - `vyre-runtime` owns artifact sessions, recovery, persistence, residency, and
   readback.
-- `vyre-scan` owns scan compilation, database framing, paging, residency,
-  execution, and readback.
 - `vyre-aot` packages canonical artifacts without reconstructing them.
 - `vyre-conform` compares production artifact execution with the independent
   reference engine.
