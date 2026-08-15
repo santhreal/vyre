@@ -12,6 +12,7 @@ pub mod audit_status;
 pub mod check_tier_deps;
 pub mod dedup_report;
 pub mod dep_drift;
+pub mod doc_contract;
 pub mod dup_scan;
 pub mod evidence_paths;
 pub mod feature_isolation;
@@ -48,6 +49,7 @@ pub static GATES: &[&dyn Gate] = &[
     &audit_status::AuditStatus,
     &check_tier_deps::CheckTierDeps,
     &dep_drift::DepDrift,
+    &doc_contract::DocClaims,
     &dup_scan::DupScan,
     &evidence_paths::EvidencePaths,
     &evidence_paths::InvariantPaths,

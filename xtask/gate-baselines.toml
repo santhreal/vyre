@@ -55,6 +55,10 @@ name = "dep-drift"
 findings = 0
 
 [[gate]]
+name = "doc-claims"
+findings = 0
+
+[[gate]]
 name = "docs-check"
 findings = 0
 
