@@ -172,9 +172,9 @@ fn signature_from_declaration(
 }
 
 /// Holds the canonical live operation contract schema to the registry.
-pub struct OperationSchema;
+pub struct OperationSchemaGate;
 
-impl Gate for OperationSchema {
+impl Gate for OperationSchemaGate {
     fn name(&self) -> &'static str {
         "operation-schema"
     }

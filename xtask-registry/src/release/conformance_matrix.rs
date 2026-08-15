@@ -146,9 +146,9 @@ const ALLOWED_SCAN_ENGINE_SUPPORT: &[&str] =
     &["supported", "unsupported", "not_applicable", "experimental"];
 
 /// Holds release op and backend conformance coverage to the recorded matrix.
-pub struct ConformanceMatrix;
+pub struct ConformanceMatrixGate;
 
-impl Gate for ConformanceMatrix {
+impl Gate for ConformanceMatrixGate {
     fn name(&self) -> &'static str {
         "conformance-matrix"
     }
