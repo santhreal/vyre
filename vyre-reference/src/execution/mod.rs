@@ -244,15 +244,6 @@ pub fn reference_eval_lane_rotated(
     hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Rotated(by), None)
 }
 
-/// Differential oracle retained for tests during the generic interpreter transition.
-#[cfg(test)]
-pub fn eval_hashmap_reference(
-    program: &Program,
-    inputs: &[Value],
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    run_arena_reference(program, inputs)
-}
-
 /// Interpret a compact [`NodeStorage`] graph and return output node values.
 pub fn run_storage_graph(
     nodes: &[(NodeId, NodeStorage)],
