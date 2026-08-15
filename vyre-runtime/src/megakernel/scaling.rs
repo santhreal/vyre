@@ -1,6 +1,6 @@
 //! Occupancy-aware resident work-queue scaling.
 
-#[cfg(feature = "self-substrate-adapters")]
+#[cfg(feature = "libs-compositions")]
 pub use super::planner::{
     build_bellman_tn_order_program, build_kfac_autotune_step_program,
     build_persistent_fixpoint_program, build_sinkhorn_clustering_program,

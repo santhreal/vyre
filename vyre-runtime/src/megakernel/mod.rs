@@ -65,7 +65,7 @@ pub use mixed_work::{
     MixedWorkProtocolEvidence, MixedWorkProtocolPlan, MixedWorkQueueClass, MixedWorkUnit,
     MixedWorkUnitType, OutputSlabId, ResidentArtifactId, MIXED_WORK_PROTOCOL_SCHEMA_VERSION,
 };
-#[cfg(feature = "self-substrate-adapters")]
+#[cfg(feature = "libs-compositions")]
 pub use planner::{
     build_bellman_tn_order_program, build_kfac_autotune_step_program,
     build_persistent_fixpoint_program, build_scallop_provenance_wide_program,

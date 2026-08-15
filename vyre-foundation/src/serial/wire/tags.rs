@@ -41,9 +41,13 @@ pub(crate) use bin_op_tag::bin_op_tag;
 /// its tag (12) is rejected here because the element-size payload must be
 /// read by `Reader::data_type` (see `impl_reader.rs`).
 pub(crate) use data_type_from_tag::data_type_from_tag;
-// `data_type_tag` was re-exported here but unused at the crate boundary  -
-// callers use `put_data_type` which wraps it (ORPH-004). Kept private to
-// its defining module to avoid a dead re-export.
+/// Encode a data type enum into its stable VIR0 tag byte.
+///
+/// The one owner of that mapping, for the wire encoder and for every consumer
+/// whose identity must agree with the wire format: the driver's specialization
+/// cache key reads the same table so a key cannot name a different type than
+/// the artifact it is filed under.
+pub use data_type_tag::data_type_tag;
 /// Encode a data type enum and any required payload for the wire stream.
 ///
 /// For `DataType::Array` this also writes the `element_size` u32 payload;

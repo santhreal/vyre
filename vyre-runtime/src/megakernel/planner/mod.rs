@@ -5,7 +5,7 @@ mod caps;
 mod config;
 mod geometry;
 mod grid;
-#[cfg(feature = "self-substrate-adapters")]
+#[cfg(feature = "libs-compositions")]
 mod programs;
 mod sizing;
 
@@ -19,7 +19,7 @@ pub use geometry::{
     ResidentLaunchGeometry,
 };
 pub use grid::{ResidentGridLimits, ResidentGridPlan, ResidentGridRequest};
-#[cfg(feature = "self-substrate-adapters")]
+#[cfg(feature = "libs-compositions")]
 pub use programs::{
     build_bellman_tn_order_program, build_kfac_autotune_step_program,
     build_persistent_fixpoint_program, build_scallop_provenance_wide_program,

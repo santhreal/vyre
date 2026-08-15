@@ -789,7 +789,7 @@ pub(crate) fn for_each_descendant(node: &Node, f: &mut impl FnMut(&Node)) {
 ///
 /// The scan short-circuits on the first match.
 #[must_use]
-pub(crate) fn any_expr_in(nodes: &[Node], pred: &mut impl FnMut(&Expr) -> bool) -> bool {
+pub fn any_expr_in(nodes: &[Node], pred: &mut impl FnMut(&Expr) -> bool) -> bool {
     let mut stack: SmallVec<[&Node; 64]> = SmallVec::new();
     stack.extend(nodes.iter().rev());
     while let Some(current) = stack.pop() {

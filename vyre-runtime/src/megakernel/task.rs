@@ -482,7 +482,7 @@ impl TaskQueueSnapshot {
     /// Build a Program that runs a one-shot persistent fixpoint over
     /// the queue snapshot's state-counter buffer, converging the
     /// counts to a stable equilibrium representing the queue's
-    /// long-run distribution. Wires the self-substrate persistent
+    /// long-run distribution. Wires the composed persistent
     /// fixpoint builder for observability collectors that want stable
     /// signals over transient queue jitter.
     ///
@@ -495,7 +495,7 @@ impl TaskQueueSnapshot {
     /// P-RUNTIME-4: replaces a host-side jitter-smoothing loop with
     /// a single GPU-side fixpoint dispatch.
     #[must_use]
-    #[cfg(feature = "self-substrate-adapters")]
+    #[cfg(feature = "libs-compositions")]
     pub fn build_state_convergence_program(
         transfer_body: Vec<vyre_foundation::ir::Node>,
         current_buffer: &str,

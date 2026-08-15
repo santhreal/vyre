@@ -117,7 +117,7 @@ Run the checked-in behavior from `vyre-driver/examples/vyre_driver_release_surfa
 
 ### Features
 
-- Manifest features: `default`, `self-substrate-adapters`, `test-fixtures`
+- Manifest features: `default`, `libs-compositions`, `test-fixtures`
 - Default feature members: None
 
 ### Errors and unsupported behavior

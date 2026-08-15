@@ -305,7 +305,7 @@ seam = "product-libraries"
 [[crate.dependency]]
 package = "vyre-driver"
 purpose = "backend-neutral target, materialization, submission, and completion contracts"
-features = ["self-substrate-adapters"]
+features = ["libs-compositions"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false

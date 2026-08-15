@@ -154,6 +154,8 @@ pub mod case_table;
 #[cfg(feature = "ir-fixtures")]
 pub mod cast_parity;
 pub mod consumer_boundary;
+#[cfg(feature = "ir-fixtures")]
+pub mod data_type_variants;
 pub mod exploded_ifds_cases;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_regions;
@@ -196,6 +198,36 @@ fn read_source_file_with_cap(path: &Path, max_bytes: u64) -> std::io::Result<Str
         )));
     }
     Ok(text)
+}
+
+/// The brace-delimited body that follows `declaration` in `source`.
+///
+/// `declaration` is the text up to and including the opening brace, so
+/// `"pub enum DataType {"` or `"pub trait NodeVisitor {"`. The returned slice
+/// excludes both braces and is nesting-aware, which is the whole reason this
+/// is one function: a scan that stopped at the first `}` would end inside the
+/// first struct-shaped variant or the first defaulted method body, and would
+/// then report a short member list as fact.
+///
+/// Returns `None` when `declaration` does not appear, or when its braces never
+/// close.
+#[must_use]
+pub fn braced_body<'a>(source: &'a str, declaration: &str) -> Option<&'a str> {
+    let start = source.find(declaration)? + declaration.len();
+    let mut depth = 1usize;
+    for (offset, ch) in source[start..].char_indices() {
+        match ch {
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(&source[start..start + offset]);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
 }
 
 /// Assert the registry-closure contract for the crate rooted at `crate_dir`.

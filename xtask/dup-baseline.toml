@@ -76,7 +76,7 @@ total_lines = 2227
 
 [[crate]]
 name = "vyre-driver"
-duplicate_lines = 901
+duplicate_lines = 810
 total_lines = 36317
 
 [[crate]]
@@ -126,7 +126,7 @@ total_lines = 1139
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 3055
+duplicate_lines = 3019
 total_lines = 94662
 
 [[crate]]

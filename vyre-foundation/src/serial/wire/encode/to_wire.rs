@@ -12,6 +12,7 @@ use crate::serial::wire::framing::{
     WIRE_FORMAT_VERSION,
 };
 use crate::serial::wire::tags::access_tag::access_tag;
+use crate::serial::wire::tags::data_type_tag::data_type_tag;
 use crate::serial::wire::Program;
 use crate::serial::{put_leb_u32, put_leb_u64};
 
@@ -542,7 +543,7 @@ fn put_memory_regions_with_scratch(
             out,
             access_tag(&buffer.access()).map_err(WireEncodeErr::from)?,
         );
-        put_u8(out, data_type_tag(&buffer.element())?);
+        put_u8(out, dense_element_tag(&buffer.element())?);
         put_u8(out, 0);
         shape.clear();
         put_leb_u64(shape, u64::from(buffer.count()));
@@ -580,7 +581,7 @@ fn put_memory_regions_with_scratch(
             // by value: storage is Box<DataType>, scale and zero_point
             // are owned. The helpers want references - &*storage drops
             // the Box to get &DataType.
-            put_leb_u64(shape, u64::from(data_type_tag(&storage)?));
+            put_leb_u64(shape, u64::from(dense_element_tag(&storage)?));
             put_dense_quantization_scale(shape, &scale)?;
             put_dense_quantization_zero_point(shape, &zero_point)?;
         }
@@ -639,47 +640,34 @@ fn memory_kind_tag(kind: MemoryKind) -> u8 {
     }
 }
 
-fn data_type_tag(value: &DataType) -> Result<u8, WireEncodeErr> {
-    Ok(match value {
-        DataType::U32 => 0x01,
-        DataType::I32 => 0x02,
-        DataType::U64 => 0x03,
-        DataType::Vec2U32 => 0x04,
-        DataType::Vec4U32 => 0x05,
-        DataType::Bool => 0x06,
-        DataType::Bytes => 0x07,
-        DataType::Array { .. } => 0x08,
-        DataType::F16 => 0x09,
-        DataType::BF16 => 0x0A,
-        DataType::F32 => 0x0B,
-        DataType::F64 => 0x0C,
-        DataType::Tensor => 0x0D,
-        DataType::U8 => 0x0E,
-        DataType::U16 => 0x0F,
-        DataType::I8 => 0x10,
-        DataType::I16 => 0x11,
-        DataType::I64 => 0x12,
-        DataType::Handle(_) => 0x13,
-        DataType::Vec { .. } => 0x14,
-        DataType::TensorShaped { .. } => 0x15,
-        // Quantised scalar families are valid buffer elements (no
-        // additional payload  -  same shape as the U8/I32/F32 family).
-        DataType::F8E4M3 => 0x19,
-        DataType::F8E5M2 => 0x1A,
-        DataType::I4 => 0x1B,
-        DataType::FP4 => 0x1C,
-        DataType::NF4 => 0x1D,
-        DataType::Quantized { .. } => 0x1F,
-        DataType::Opaque(_) => 0x80,
-        _ => {
-            return Err(WireEncodeErr::static_msg(
-                "Fix: unknown DataType variant cannot be serialized into VYRE wire format. \
-                 Sparse/Vec/TensorShaped/DeviceMesh types are not valid buffer elements in the \
-                 dense memory-region encoder; lower to a supported scalar/array/handle/opaque \
-                 first.",
-            ));
-        }
-    })
+/// The wire tag for a DENSE memory-region element type.
+///
+/// The tag itself comes from `tags::data_type_tag`, the one owner of that
+/// mapping. What is local here is the narrower domain: a sparse or
+/// device-mesh type is a legal `DataType` and has a wire tag, but it is not a
+/// legal element of a dense memory region, so this encoder refuses it rather
+/// than emitting a blob whose region stride is meaningless. Restating the tag
+/// table to express that restriction is what let the two copies drift.
+fn dense_element_tag(value: &DataType) -> Result<u8, WireEncodeErr> {
+    if matches!(
+        value,
+        DataType::SparseCsr { .. }
+            | DataType::SparseCoo { .. }
+            | DataType::SparseBsr { .. }
+            | DataType::DeviceMesh { .. }
+    ) {
+        return Err(dense_element_rejection());
+    }
+    data_type_tag(value).map_err(|_| dense_element_rejection())
+}
+
+fn dense_element_rejection() -> WireEncodeErr {
+    WireEncodeErr::static_msg(
+        "Fix: unknown DataType variant cannot be serialized into VYRE wire format. \
+         Sparse/Vec/TensorShaped/DeviceMesh types are not valid buffer elements in the \
+         dense memory-region encoder; lower to a supported scalar/array/handle/opaque \
+         first.",
+    )
 }
 
 fn put_dense_quantization_scale(

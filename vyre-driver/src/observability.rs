@@ -12,9 +12,9 @@
 //! backend-specific gauges via the
 //! [`crate::observability::BackendObservabilityProvider`] trait.
 
-#[cfg(feature = "self-substrate-adapters")]
+#[cfg(feature = "libs-compositions")]
 use vyre_libs::analysis::decision_telemetry as decision_obs;
-#[cfg(feature = "self-substrate-adapters")]
+#[cfg(feature = "libs-compositions")]
 use vyre_libs::telemetry::observability as substrate_obs;
 
 use std::collections::VecDeque;
@@ -163,7 +163,7 @@ impl DriverObservability {
     /// Take a snapshot of all driver-tier metrics now.
     #[must_use]
     pub fn snapshot() -> Self {
-        #[cfg(feature = "self-substrate-adapters")]
+        #[cfg(feature = "libs-compositions")]
         {
             Self::try_snapshot().unwrap_or_else(|_| Self {
                 substrate_calls: Vec::new(),
@@ -173,7 +173,7 @@ impl DriverObservability {
                 dispatch: snapshot_dispatch_telemetry(),
             })
         }
-        #[cfg(not(feature = "self-substrate-adapters"))]
+        #[cfg(not(feature = "libs-compositions"))]
         {
             Self {
                 substrate_calls: Vec::new(),
@@ -194,7 +194,7 @@ impl DriverObservability {
     /// method instead of treating the compatibility [`Self::snapshot`] fallback
     /// as a full observability view.
     pub fn try_snapshot() -> Result<Self, crate::backend::BackendError> {
-        #[cfg(feature = "self-substrate-adapters")]
+        #[cfg(feature = "libs-compositions")]
         {
             Ok(Self {
                 substrate_calls: substrate_obs::snapshot_counters(),
@@ -204,10 +204,10 @@ impl DriverObservability {
                 dispatch: snapshot_dispatch_telemetry(),
             })
         }
-        #[cfg(not(feature = "self-substrate-adapters"))]
+        #[cfg(not(feature = "libs-compositions"))]
         {
             Err(crate::backend::BackendError::new(
-                "vyre-driver observability substrate telemetry requires the self-substrate-adapters feature. Fix: enable the feature for substrate counters, or use DriverObservability::snapshot for dispatch-only compatibility telemetry."
+                "vyre-driver observability substrate telemetry requires the libs-compositions feature. Fix: enable the feature for substrate counters, or use DriverObservability::snapshot for dispatch-only compatibility telemetry."
                     .to_string(),
             ))
         }
@@ -526,7 +526,7 @@ pub fn record_substrate_audit_event(event: SubstrateAuditEvent) {
     }
 }
 
-#[cfg(feature = "self-substrate-adapters")]
+#[cfg(feature = "libs-compositions")]
 fn snapshot_trace_events() -> Vec<SubstrateAuditEvent> {
     trace_events()
         .lock()
@@ -584,7 +584,7 @@ mod tests {
     use super::*;
 
     #[test]
-    #[cfg(feature = "self-substrate-adapters")]
+    #[cfg(feature = "libs-compositions")]
     fn snapshot_yields_nonempty_substrate_list() {
         let snap = DriverObservability::snapshot();
         assert!(
@@ -596,7 +596,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "self-substrate-adapters")]
+    #[cfg(feature = "libs-compositions")]
     fn prometheus_output_contains_module_labels() {
         let snap = DriverObservability::snapshot();
         let prom = snap.to_prometheus();
@@ -606,13 +606,13 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "self-substrate-adapters"))]
+    #[cfg(not(feature = "libs-compositions"))]
     fn try_snapshot_without_adapter_feature_returns_structured_error() {
         let error = DriverObservability::try_snapshot()
             .expect_err("try_snapshot must report missing substrate telemetry as an error");
         let message = error.to_string();
         assert!(
-            message.contains("self-substrate-adapters"),
+            message.contains("libs-compositions"),
             "structured error must name the missing feature"
         );
         assert!(
@@ -622,7 +622,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "self-substrate-adapters"))]
+    #[cfg(not(feature = "libs-compositions"))]
     fn snapshot_without_adapter_feature_is_dispatch_only_not_panic() {
         let snapshot = DriverObservability::snapshot();
         assert!(snapshot.substrate_calls.is_empty());
@@ -631,7 +631,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "self-substrate-adapters")]
+    #[cfg(feature = "libs-compositions")]
     fn total_calls_appears_in_prometheus() {
         let snap = DriverObservability::snapshot();
         let prom = snap.to_prometheus();
@@ -639,7 +639,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "self-substrate-adapters")]
+    #[cfg(feature = "libs-compositions")]
     fn audit_log_and_prometheus_include_recorded_events() {
         let _guard = audit_events_test_lock();
         clear_substrate_audit_events_for_test();
@@ -695,7 +695,7 @@ mod tests {
                 >= before.output_slot_retained_capacity_bytes + 16
         );
 
-        #[cfg(feature = "self-substrate-adapters")]
+        #[cfg(feature = "libs-compositions")]
         {
             let snap = DriverObservability::snapshot();
             let prom = snap.to_prometheus();
@@ -716,7 +716,7 @@ mod tests {
         assert!(after.grid_sync_segments >= before.grid_sync_segments + 4);
         assert!(after.grid_sync_points >= before.grid_sync_points + 3);
 
-        #[cfg(feature = "self-substrate-adapters")]
+        #[cfg(feature = "libs-compositions")]
         assert!(DriverObservability::snapshot()
             .to_prometheus()
             .contains("kind=\"sync_points\""));

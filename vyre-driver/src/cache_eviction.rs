@@ -1,7 +1,7 @@
 //! Backend-neutral cache eviction policy.
 //!
 //! Concrete drivers use this for pipeline/module caches without depending
-//! on domain or self-substrate crates. Inputs are caller-owned marginal
+//! on domain or composition crates. Inputs are caller-owned marginal
 //! gains; output is a 0/1 retention vector where `1` means keep.
 
 /// Compute the retention set: `k` entries to keep from `n` gains.
