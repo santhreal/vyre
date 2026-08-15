@@ -1350,7 +1350,7 @@ seam = "megakernel-compiler"
 [[crate.dependency]]
 package = "vyre-primitives"
 purpose = "reusable semantic Program builders"
-features = ["bitset", "fixpoint", "graph", "inventory-registry", "math", "reduce"]
+features = []
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
