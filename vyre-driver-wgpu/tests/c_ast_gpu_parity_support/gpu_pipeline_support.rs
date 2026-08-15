@@ -1,29 +1,18 @@
 use super::*;
 
+/// Assert the GPU reproduces the CPU oracle from the token stream through the
+/// classifier.
+///
+/// Binds this crate's [`GpuArm`] to the shared parity sequence in
+/// `tests/support/c_frontend/parity_matrix`. The sequence, the programs and the
+/// comparisons have one owner there because the CPU-reference arm in
+/// `vyre-libs/tests` runs the same three stages; only the dispatch differs.
+///
+/// This stops at the classifier. `assert_family_parity` continues into the
+/// property-graph lowerer, which is why the three C-AST families that iterate a
+/// `CASES` table call that instead.
 pub(crate) fn assert_full_pipeline_parity(fix: &Fixture, label: &str) {
-    let raw_cpu = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let raw_gpu = run_gpu_vast_builder(fix);
-    assert_words_eq(
-        &raw_gpu,
-        &raw_cpu,
-        &format!("{label}: raw VAST GPU/CPU parity"),
-    );
-
-    let annotated_cpu = reference_c11_annotate_typedef_names(&raw_cpu, fix.source.as_bytes());
-    let annotated_gpu = run_gpu_typedef_annotation(fix, &raw_gpu);
-    assert_words_eq(
-        &annotated_gpu,
-        &annotated_cpu,
-        &format!("{label}: annotated VAST GPU/CPU parity"),
-    );
-
-    let typed_cpu = reference_c11_classify_vast_node_kinds(&annotated_cpu);
-    let typed_gpu = run_gpu_classifier(&annotated_gpu);
-    assert_words_eq(
-        &typed_gpu,
-        &typed_cpu,
-        &format!("{label}: typed VAST GPU/CPU parity"),
-    );
+    crate::c_frontend::parity_matrix::assert_arm_parity_through_classify(&GpuArm, fix, label);
 }
 
 pub(crate) fn assert_gpu_pg_parity(fix: &Fixture, typed_vast: &[u8], label: &str) {
@@ -43,40 +32,17 @@ pub(crate) fn run_gpu_vast_builder_from_parts(
     tok_starts: &[u32],
     tok_lens: &[u32],
 ) -> Vec<u8> {
-    let program = c11_build_vast_nodes(
-        "tok_types",
-        "tok_starts",
-        "tok_lens",
-        Expr::u32(tok_types.len() as u32),
-        "out_vast_nodes",
-        "out_count",
-    );
-    let tok_type_bytes = bytes(tok_types);
-    let tok_start_bytes = bytes(tok_starts);
-    let tok_len_bytes = bytes(tok_lens);
-    let outputs = dispatch_gpu_program(
-        "GPU C VAST builder",
-        program,
-        vec![tok_type_bytes, tok_start_bytes, tok_len_bytes],
-    );
-    assert_eq!(outputs.len(), 2, "expected [vast_nodes, count]");
-    outputs[0].clone()
-}
-
-fn run_gpu_vast_builder(fix: &Fixture) -> Vec<u8> {
-    run_gpu_vast_builder_from_parts(&fix.tok_types, &fix.tok_starts, &fix.tok_lens)
+    arm_raw_vast(&GpuArm, tok_types, tok_starts, tok_lens)
 }
 
 pub(crate) fn run_gpu_classifier(annotated_vast: &[u8]) -> Vec<u8> {
-    run_gpu_classifier_with_count(annotated_vast, node_count_from_vast(annotated_vast))
+    arm_typed_vast(&GpuArm, annotated_vast)
 }
 
 pub(crate) fn run_gpu_classifier_with_count(annotated_vast: &[u8], num_nodes: u32) -> Vec<u8> {
-    let program =
-        c11_classify_vast_node_kinds("vast_nodes", Expr::u32(num_nodes), "typed_vast_nodes");
     let outputs = dispatch_gpu_program(
         "GPU VAST classifier",
-        program,
+        program::classify(num_nodes),
         vec![annotated_vast.to_vec()],
     );
     assert_eq!(outputs.len(), 1);
@@ -101,12 +67,15 @@ pub(crate) fn run_gpu_expr_shape(raw_vast: &[u8], typed_vast: &[u8]) -> Vec<u8> 
 }
 
 pub(crate) fn run_gpu_pg_lower(typed_vast: &[u8]) -> Vec<u8> {
-    run_gpu_pg_lower_with_count(typed_vast, node_count_from_vast(typed_vast))
+    arm_pg_nodes(&GpuArm, typed_vast)
 }
 
 pub(crate) fn run_gpu_pg_lower_with_count(typed_vast: &[u8], num_nodes: u32) -> Vec<u8> {
-    let program = c_lower_ast_to_pg_nodes("vast_nodes", Expr::u32(num_nodes), "out_pg_nodes");
-    let outputs = dispatch_gpu_program("GPU AST-to-PG lower", program, vec![typed_vast.to_vec()]);
+    let outputs = dispatch_gpu_program(
+        "GPU AST-to-PG lower",
+        program::lower_pg(num_nodes),
+        vec![typed_vast.to_vec()],
+    );
     assert_eq!(outputs.len(), 1);
     outputs[0].clone()
 }

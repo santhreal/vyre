@@ -25,9 +25,14 @@
 //! in. A stream spelled one token per line reads as a copy of any other stream
 //! that happens to share eight consecutive tokens, which is what the fixture
 //! streams here were measured as.
+//!
+//! `parity_matrix` owns the case list and the four-stage scaffold a family's
+//! CPU arm and its backend arm both run, so neither arm keeps a case list of
+//! its own to drift from the other's.
 
 pub(crate) mod expression_pipeline;
 pub(crate) mod macro_expansion;
+pub(crate) mod parity_matrix;
 pub(crate) mod reference_lexer;
 pub(crate) mod rows;
 pub(crate) mod scope_fixture;

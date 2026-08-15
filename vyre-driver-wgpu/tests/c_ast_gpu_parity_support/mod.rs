@@ -17,18 +17,19 @@ use vyre_libs::parsing::c::lex::tokens::{
     TOK_ASSIGN, TOK_COLON, TOK_COMMA, TOK_IDENTIFIER, TOK_LBRACE, TOK_LBRACKET, TOK_LPAREN,
     TOK_RBRACE, TOK_RBRACKET, TOK_RPAREN, TOK_SEMICOLON, TOK_TYPEDEF, TOK_VOID,
 };
-use vyre_libs::parsing::c::lower::{
-    c_lower_ast_to_pg_nodes, c_lower_ast_to_pg_semantic_graph, reference_ast_to_pg_nodes,
-};
+use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_semantic_graph, reference_ast_to_pg_nodes};
 use vyre_libs::parsing::c::parse::vast::{
-    c11_annotate_global_typedef_names_fast, c11_annotate_typedef_names,
-    c11_annotate_typedef_names_precomputed_scope, c11_build_expression_shape_nodes,
-    c11_build_vast_nodes, c11_classify_vast_node_kinds, c11_precompute_vast_scopes,
-    c11_prehash_vast_identifiers, reference_c11_annotate_typedef_names,
-    reference_c11_build_vast_nodes, reference_c11_classify_vast_node_kinds,
+    c11_annotate_global_typedef_names_fast, c11_build_expression_shape_nodes,
 };
 use vyre_libs::parsing::c::sema::c_sema_scope;
 
+pub(crate) use crate::c_frontend::parity_matrix::{
+    arm_annotated_vast, arm_pg_nodes, arm_raw_vast, arm_typed_vast, primary_output, program,
+    ParityArm,
+};
+// Only the three C-AST family roots that iterate a `CASES` table call this.
+#[allow(unused_imports)]
+pub(crate) use crate::c_frontend::parity_matrix::assert_family_parity;
 pub(crate) use crate::c_frontend::rows::*;
 #[allow(unused_imports)]
 pub(crate) use crate::c_frontend::semantic_graph::*;

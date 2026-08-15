@@ -83,6 +83,21 @@ pub(crate) fn classify(fix: &Fixture) -> Vec<u8> {
     annotate_and_classify(fix).1
 }
 
+/// Typed VAST for a fixture WITHOUT typedef annotation: build, then classify.
+///
+/// The classifier reads the typedef flags an annotation pass writes, so this is
+/// the weaker of the two chains and the two disagree on the kind of a GNU
+/// attribute's payload identifier: `packed` in
+/// `enum __attribute__((packed)) E` classifies as ATTRIBUTE_PACKED only once the
+/// row is annotated. Every other kind these fixtures produce is the same either
+/// way, which is why a contract about declarator and specifier kinds can skip
+/// annotation and one about attribute payloads cannot. Use [`classify`] unless
+/// the point is that the classifier does not need annotated input.
+pub(crate) fn classify_without_annotation(fix: &Fixture) -> Vec<u8> {
+    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
+    reference_c11_classify_vast_node_kinds(&raw)
+}
+
 /// `c_fixture![("int", TOK_IDENTIFIER), ("x", TOK_IDENTIFIER)]`.
 ///
 /// The expansion is rooted at `$crate::c_frontend`, the name every consumer
