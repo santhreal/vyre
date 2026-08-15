@@ -17,6 +17,8 @@ categories = ["compilers", "hardware-support"]
 workspace = true
 
 [dependencies]
+vyre-spec.workspace = true
+vyre-primitives = { workspace = true, default-features = false }
 vyre-foundation.workspace = true
 vyre-driver.workspace = true
 vyre-megakernel.workspace = true
@@ -33,6 +35,7 @@ default = []
 ptx = []
 
 [dev-dependencies]
+vyre-test-support.workspace = true
 vyre-lower.workspace = true
 tempfile.workspace = true
 inventory.workspace = true
