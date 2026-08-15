@@ -5,6 +5,7 @@ use std::sync::Arc;
 pub use vyre_foundation::ir::model::node::node_op_id;
 use vyre_foundation::ir::model::node::Node;
 use vyre_foundation::ir::{OpId, Program, ValidationError};
+use vyre_foundation::transform::visit::child_bodies;
 
 const CORE_SUPPORTED_OP_IDS: &[&str] = &[
     "vyre.node.let",
@@ -31,11 +32,13 @@ const CORE_SUPPORTED_OP_IDS: &[&str] = &[
 ];
 
 /// Validate that `backend` supports every operation in `program`.
+///
+/// # Errors
+///
+/// Returns the first node, in depth-first source order, whose operation the
+/// backend does not declare support for.
 pub fn validate_program(program: &Program, backend: &dyn Backend) -> Result<(), ValidationError> {
-    for (index, node) in program.entry().iter().enumerate() {
-        validate_node(node, index, backend.id(), backend.supported_ops())?;
-    }
-    Ok(())
+    validate_nodes(program.entry(), backend.id(), backend.supported_ops())
 }
 
 /// Default core operation support set for legacy backends.
@@ -67,52 +70,35 @@ pub fn default_supported_ops_with_trap() -> &'static std::collections::HashSet<O
     })
 }
 
-fn validate_node(
-    node: &Node,
-    index: usize,
+/// Check every node in `nodes` and in every body nested under it.
+///
+/// Child bodies come from [`child_bodies`], the shared-read descent owner in
+/// `vyre-foundation`, so this crate does not restate which `Node` variants
+/// nest. The hand-written match this replaces ended in a catch-all arm, and
+/// `Node` is `#[non_exhaustive]`: a variant added upstream landed there as a
+/// transparent leaf, so an unsupported operation buried in its body validated
+/// clean and reached the backend anyway.
+///
+/// `index` is the node's position in the body that holds it, matching the
+/// error the recursive walk reported.
+fn validate_nodes(
+    nodes: &[Node],
     backend: &'static str,
     supported: &std::collections::HashSet<OpId>,
 ) -> Result<(), ValidationError> {
-    let op = node_op_id(node);
-    if !supported.contains(op) {
-        let op_id = Arc::<str>::from(op);
-        return Err(ValidationError::unsupported_op(backend, &op_id, index));
-    }
-    match node {
-        Node::If {
-            then, otherwise, ..
-        } => {
-            for (offset, nested) in then.iter().enumerate() {
-                validate_node(nested, offset, backend, supported)?;
-            }
-            for (offset, nested) in otherwise.iter().enumerate() {
-                validate_node(nested, offset, backend, supported)?;
-            }
+    let mut stack: Vec<(&Node, usize)> = Vec::with_capacity(nodes.len());
+    stack.extend(nodes.iter().enumerate().rev().map(|(index, node)| (node, index)));
+    while let Some((node, index)) = stack.pop() {
+        let op = node_op_id(node);
+        if !supported.contains(op) {
+            let op_id = Arc::<str>::from(op);
+            return Err(ValidationError::unsupported_op(backend, &op_id, index));
         }
-        Node::Loop { body, .. } | Node::Block(body) => {
-            for (offset, nested) in body.iter().enumerate() {
-                validate_node(nested, offset, backend, supported)?;
-            }
+        // Groups in reverse, each reversed, so `then` pops before `otherwise`
+        // and both in source order: the same visit order as the recursion.
+        for body in child_bodies(node).into_iter().rev() {
+            stack.extend(body.iter().enumerate().rev().map(|(index, node)| (node, index)));
         }
-        Node::Region { body, .. } => {
-            for (offset, nested) in body.iter().enumerate() {
-                validate_node(nested, offset, backend, supported)?;
-            }
-        }
-        // Leaf nodes and backend-transparent nodes (opaque extensions
-        // validate themselves via `NodeExtension::validate_extension`).
-        Node::Let { .. }
-        | Node::Assign { .. }
-        | Node::Store { .. }
-        | Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncLoad { .. }
-        | Node::AsyncWait { .. }
-        | Node::Opaque(_) => {}
-        // `Node` is `#[non_exhaustive]` in vyre-foundation. Future variants
-        // land here as transparent leaves until a dedicated arm is added.
-        _ => {}
     }
     Ok(())
 }
