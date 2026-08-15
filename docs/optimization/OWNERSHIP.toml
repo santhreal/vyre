@@ -1,6 +1,10 @@
 # Canonical optimization ownership map.
 # Agents must choose one lane and stay inside its write set unless the main
 # integrator explicitly expands scope.
+#
+# Every write and avoid entry must match something in the tree, and every
+# `-p` package must be a workspace member. `scripts/architecture_docs.py`
+# checks that on every run, so a lane cannot outlive the code it names.
 
 [lane.coordination]
 purpose = "Canonical roadmap, active claims, lane boundaries, and structural enforcement."
@@ -209,7 +213,6 @@ write = [
   "vyre-primitives/src/bitset/**",
   "vyre-libs/src/analysis/**",
   "vyre-libs/src/graph/**",
-  "vyre-libs/src/dataflow/**",
   "vyre-libs/src/security/**",
 ]
 avoid = [
@@ -245,7 +248,6 @@ required_commands = [
 purpose = "Literal, regex, automata, decode-scan, and static scan primitives with shared result compaction."
 layer = "Scan/static analysis"
 write = [
-  "vyre-scan/src/**",
   "vyre-libs/src/scan/**",
   "vyre-libs/src/decode/**",
   "vyre-primitives/src/matching/**",
@@ -253,7 +255,6 @@ write = [
   "vyre-libs/tests/*regex*",
 ]
 required_commands = [
-  "cargo_full test -p vyre-scan",
   "cargo_full test -p vyre-libs scan",
   "cargo_full test -p vyre-primitives matching",
 ]
@@ -262,7 +263,6 @@ required_commands = [
 purpose = "Scan/automata seam: literal, regex, DFA/NFA/PFAC-style planners, resident automata databases, streaming scan state, and scan-to-flow finding relations."
 layer = "Scan/automata seam"
 write = [
-  "vyre-scan/src/**",
   "vyre-libs/src/scan/**",
   "vyre-primitives/src/matching/**",
   "vyre-primitives/src/text/**",
@@ -275,7 +275,6 @@ avoid = [
   "vyre-runtime/src/megakernel/**",
 ]
 required_commands = [
-  "cargo_full test -p vyre-scan",
   "cargo_full test -p vyre-libs scan",
   "cargo_full test -p vyre-primitives matching",
 ]
@@ -285,8 +284,6 @@ purpose = "Security predicate tables, taint/dataflow facts, borrow facts, semiri
 layer = "Security/dataflow"
 write = [
   "vyre-libs/src/security/**",
-  "vyre-libs/src/dataflow/**",
-  "vyre-libs/src/borrowck/**",
   "vyre-libs/src/analysis/**",
   "vyre-foundation/src/pass_substrate/**",
   "vyre-foundation/src/transform/compiler/dataflow_fixpoint.rs",
@@ -307,7 +304,6 @@ write = [
   "vyre-driver-wgpu/src/**",
   "vyre-runtime/src/**",
   "vyre-libs/src/security/**",
-  "vyre-scan/src/**",
   "vyre-libs/src/scan/**",
   "scripts/**",
   "release/evidence/**",
@@ -329,7 +325,7 @@ write = [
   "vyre-libs/src/nn/**",
   "vyre-libs/src/math/**",
   "vyre-primitives/src/math/**",
-  "vyre-libs/tests/*matmul*",
+  "vyre-libs/tests/*quantized*",
   "vyre-libs/tests/*attention*",
 ]
 required_commands = [
@@ -344,7 +340,7 @@ write = [
   "vyre-libs/src/math/**",
   "vyre-libs/src/nn/**",
   "vyre-primitives/src/math/**",
-  "vyre-libs/tests/*matmul*",
+  "vyre-libs/tests/*gemm*",
   "vyre-libs/tests/*attention*",
   "vyre-bench/src/**",
   "docs/OWNERSHIP.md",
@@ -372,7 +368,7 @@ write = [
   "xtask/src/docs/research_source_ledger.rs",
   "docs/optimization/FRONTIER_LEADERBOARD_BASELINES.toml",
   "docs/optimization/RESEARCH_SOURCE_LEDGER.toml",
-  "xtask/src/release/release_evidence/expected_artifacts.rs",
+  "xtask-evidence/src/release/release_evidence/expected_artifacts.rs",
   "xtask/src/release/release_train.rs",
   "xtask/src/toml_config.rs",
   "xtask/src/**",

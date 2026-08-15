@@ -1,6 +1,6 @@
 # Vyre architecture
 
-Last verified: 2026-08-12
+Last verified: 2026-08-14
 
 This guide describes Vyre 0.7.2 and the decided target structure it is
 migrating to. Workspace membership, dependency edges, and operation counts
@@ -12,18 +12,24 @@ live.
 
 ## System shape
 
-A frontend builds typed `Program` values and adapts them into a validated
-`ProgramGraph`. The whole-program compiler selects a bounded legal
-schedule and produces an immutable `Artifact`. A registered target
-compiler attaches an authenticated `TargetPayload`; the matching driver
-materializer admits that payload and creates an `ArtifactInstance`. Typed
-bindings produce a `Submission`, then completion and readback. The
-reference interpreter is an oracle, not a silent fallback for a requested
-target.
+A caller builds typed `Program` values through the builder API and adapts
+them into a validated `ProgramGraph`. The whole-program compiler selects a
+bounded legal schedule and produces an immutable `Artifact`. A registered
+target compiler attaches an authenticated `TargetPayload`; the matching
+driver materializer admits that payload and creates an `ArtifactInstance`.
+Typed bindings produce a `Submission`, then completion and readback.
+
+Every program executes on an accelerator. There is no CPU execution path
+for a requested target, no CPU fast path, and no silent CPU fallback: a
+target that cannot execute a program fails closed. The one host executor in
+the workspace is `vyre-reference`, the semantic oracle that conformance and
+parity compare against, and it is never reachable as a substitute for a
+requested target. Compiling and optimizing run on the host; that is compile
+time, not program execution.
 
 ```mermaid
 flowchart LR
-    Frontend[Frontend Program values] --> Graph[Validated ProgramGraph]
+    Builders[Typed Program values] --> Graph[Validated ProgramGraph]
     Graph --> Compiler[Whole-program compiler]
     Compiler --> Artifact[Immutable Artifact]
     Artifact --> TargetCompiler[Registered target compiler]
@@ -42,20 +48,36 @@ dispatch route. Metal is active on supported Apple targets. See
 
 ## Workspace boundaries
 
-| Boundary | Current owner | Responsibility |
+Every crate in the workspace appears here, grouped by the layer the
+[ownership registry](CRATE_OWNERSHIP.toml) assigns it. The registry is the
+authority for membership, layer, and dependency edges; this table exists so
+no crate is reachable without a stated responsibility. Layer names are the
+registry's own.
+
+| Layer | Crates | Responsibility |
 | --- | --- | --- |
-| Public facade | `vyre` | Canonical graph compilation, artifact sessions, feature-gated target selection. |
-| Stable contracts | `vyre-spec` | Frozen cross-engine analysis, soundness, and interchange schemas. |
-| IR, registry, optimizer | `vyre-foundation` | `Program`, `ProgramGraph`, validation, serialization, semantic operation identity, diagnostics, backend-neutral optimization passes. |
-| Reusable operations | `vyre-primitives` | Category C hardware intrinsic builders under `src/hardware/`, plus the shared composition builders that still await the Category A move; see below. |
-| Library compositions | `vyre-libs` | Product-facing Category A compositions. Becoming the single Category A home; see below. |
-| Compiler self-use | `vyre-pass-engine` | Executes the optimizer's own passes as Vyre Programs through the dispatcher seam. |
-| Whole-program compiler | `vyre-megakernel` | Bounded legal whole-graph schedules, immutable artifacts, target payloads. |
-| Backend contracts | `vyre-driver` | Backend-neutral target compiler, materializer, device, binding, submission, completion, capability contracts. |
-| Concrete backends | `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-driver-spirv`, `vyre-driver-metal`, `vyre-driver-reference` | Target compilers, materializers, devices; admit authenticated payloads; submit typed work. |
-| Runtime | `vyre-runtime` | Compilation orchestration, admission, artifact sessions, recovery, persistence, residency, scheduling, readback. |
-| Artifact packaging | `vyre-aot` | Package validated artifacts without owning artifact identity or live dispatch. |
-| Conformance | `vyre-conform`, `vyre-conform-spec` | Execute canonical artifact routes; own frozen conformance schemas. |
+| foundation | `vyre-spec` | Stable schemas, operation definitions, and compatibility contracts, with no runtime dependency. |
+| foundation | `vyre-macros` | Compile-time registration and declaration macros. |
+| foundation | `vyre-foundation` | Typed IR and `ProgramGraph`, validation, diagnostics, serialization, semantic operation registration, and backend-neutral optimization passes. |
+| primitives | `vyre-primitives` | Reusable program builders shared by higher layers, and Category C hardware intrinsics under `src/hardware/`. |
+| libraries | `vyre-libs` | Product-facing Category A compositions built from neutral primitives. Becoming the single Category A home; see below. |
+| pass-engine | `vyre-pass-engine` | Executes the optimizer's own passes as Vyre Programs through the `ProgramDispatcher` seam. |
+| lowering | `vyre-lower` | The single backend-neutral lowering boundary and its pre-emission transforms. |
+| emitter | `vyre-emit-naga`, `vyre-emit-ptx`, `vyre-emit-spirv`, `vyre-emit-metal` | Consume verified lowering products and emit target module text or bytes. Shader dialect detail lives here and nowhere above it. |
+| compiler-boundary | `vyre-megakernel` | Explore legal whole-graph fusion schedules under explicit `SearchBudget` bounds, expose selected modules and the canonical ABI to registered target compilers, and emit `Artifact` records without owning admission or lifecycle. |
+| backend-neutral | `vyre-driver` | Backend-neutral device, target-compiler registration, materialization, binding, submission, completion, capability, dispatch, and evidence contracts. |
+| concrete-backend | `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-driver-spirv`, `vyre-driver-metal`, `vyre-driver-reference` | Target compilation, device acquisition, materialization, dispatch, and backend evidence for one target each. Concrete API detail stays inside the owning driver. |
+| semantics | `vyre-reference` | The canonical host oracle. Produces semantic witnesses for conformance and parity, and is never selectable as a substitute for a requested target. |
+| runtime | `vyre-runtime` | Compile-to-materialize orchestration, admission, artifact sessions, recovery, persistence, residency, scheduling, caches, telemetry, readback, and IO. |
+| runtime | `vyre-safetensors` | Validate safetensors metadata, shard indexes, compiler requirements, trusted shard digests, and immutable checkpoint identity. |
+| packaging | `vyre-aot` | Plan and package ahead-of-time artifacts without owning artifact identity or live dispatch. |
+| registry-link | `vyre-registry-link` | Own every inventory registry link anchor and assert that each linked source reached the registry it submits into. |
+| facade | `vyre` | Public entry points for graph compilation, artifact sessions, and runtime submission, without re-owning backend contracts. |
+| conformance | `vyre-conform`, `vyre-conform-spec` | Execute production artifacts against independent reference semantics, minimize counterexamples, check algebraic laws, issue versioned certificates, and own the frozen conformance schemas. |
+| tooling | `xtask`, `xtask-registry`, `xtask-evidence` | Gates that judge the tree from source text, manifests, workflows, and recorded evidence; the subcommands that must observe the live registry or a linked driver; and the subcommands that decide whether a recorded measurement still describes this tree. |
+| tooling | `vyre-bench`, `vyre-debug`, `vyre-lints`, `vyre-grammar-gen` | Reproducible benchmarks and raw evidence; typed program, lowering, and composition inspection; source-level policy lints; host-side grammar tables. |
+| test-tooling | `vyre-test-support` | Shared deterministic fixtures and assertions for workspace tests. |
+| standalone-tooling | `structure-gate` | The crate roster, one operation identity per semantic operation, and one home per concept. Depends on no vyre crate so it keeps judging a tree that does not build. |
 
 Domain logic does not import a CLI, transport, or concrete backend.
 Shared crates use neutral target and artifact terms. Concrete backend API
@@ -132,12 +154,13 @@ operations.
   `docs/lego-block-rule.md` gates making a helper public.
 - Category B stays banned.
 
-Optimization semantics live only in `vyre-foundation` and run on CPU.
-Compile time on CPU is the default; vyre optimizes for the runtime of
-user programs, not its own compile time. Executing optimizer passes as
-dispatched Programs is an execution strategy for graphs too large for
-CPU passes, never a second implementation of a pass: the pass semantics
-are foundation's, the pass engine replays them.
+Optimization semantics live only in `vyre-foundation`, and they run on the
+host at compile time. Compiling is not executing: the host transforms IR,
+it never runs a user program. Vyre optimizes the runtime of user programs,
+not its own compile time. Executing optimizer passes as dispatched Programs
+is an execution strategy for graphs too large to transform on the host,
+never a second implementation of a pass: the pass semantics are
+foundation's, the pass engine replays them.
 
 `vyre-pass-engine` is narrowed to exactly that pass engine, landed
 2026-08-13. It holds `vyre-pass-engine/src/lib.rs` and
@@ -150,7 +173,7 @@ module trees moved out, all of them to `vyre-libs`:
 - `logic/` to `vyre_libs::reasoning`.
 - `data/` to `vyre_libs::encoding`.
 - `math/` to `vyre_libs::solvers`.
-- `graph/` to `vyre_libs::graph::dispatch`, the CPU oracle dispatcher
+- `graph/` to `vyre_libs::graph::dispatch`, the host parity dispatcher
   with it.
 - `hardware/` device-boundary contracts to `vyre_libs::device`.
 - `telemetry/` call counters to `vyre_libs::telemetry`.
@@ -159,13 +182,16 @@ module trees moved out, all of them to `vyre-libs`:
 The name states the job, not a hardware tier: the crate executes passes,
 and which device runs them is the dispatcher's answer, not the crate's.
 The dispatch seam itself is `vyre_foundation::program_dispatch::ProgramDispatcher`,
-and the CPU dispatcher its parity tests measure against is
-`vyre_libs::graph::dispatch::cpu_oracle`.
+and the host dispatcher its parity tests measure against is
+`vyre_libs::graph::dispatch::cpu_oracle`. That dispatcher exists so parity
+has something to compare against. It is not a route any product path can
+select and it is not part of the shipped surface, so it is reachable only
+under test or an explicitly named parity feature.
 
-The dependency DAG: `vyre-foundation` (IR, registry, CPU optimizer) ←
+The dependency DAG: `vyre-foundation` (IR, registry, host optimizer) ←
 `vyre-primitives` (hardware intrinsics) ← `vyre-libs` (compositions) ←
 `vyre-pass-engine` ← compiler and drivers. Foundation cannot consume the
-operation crates, so `vyre_foundation::pass_substrate` owns the CPU pass
+operation crates, so `vyre_foundation::pass_substrate` owns the host pass
 math outright. It is not a duplicate: the pass engine imports those
 functions and adds dispatch around them, so one implementation keeps one
 home. `pass_substrate` is now the only `*substrate*` name in the tree,
@@ -179,7 +205,7 @@ Registry impact, landed: `OperationTier::Primitive` merged into
 
 ## Whole-program artifact pipeline
 
-1. Frontends and builders produce typed `Program` values.
+1. Builders produce typed `Program` values.
 2. `ProgramGraph` centralizes graph adaptation, typed value identity,
    constants, lifetimes, effects, and validation.
 3. The megakernel compiler performs semantic optimization, explores
@@ -236,7 +262,7 @@ Two layers.
 
 Pass execution through the dispatcher seam is not a third layer and not
 a second implementation: it replays Layer 1 semantics on device for
-graphs too large for CPU passes.
+graphs too large to transform on the host.
 
 Shared launch planning, cache identity, and capability records live in
 `vyre-driver`. Persistent queue scheduling lives in `vyre-runtime`. The

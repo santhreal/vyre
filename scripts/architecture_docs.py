@@ -100,6 +100,79 @@ def crate_rows(ownership: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
+def workspace_package_names(root: Path, members: list[str]) -> set[str]:
+    names: set[str] = set()
+    for member in members:
+        manifest = read_toml(root / member / "Cargo.toml")
+        name = manifest.get("package", {}).get("name")
+        if not isinstance(name, str) or not name:
+            raise ContractError(f"workspace member `{member}` has no package.name")
+        names.add(name)
+    return names
+
+
+def validate_optimization_lanes(root: Path, packages: set[str]) -> None:
+    """Every lane must name paths that exist and commands that can run.
+
+    A lane is an assignment. A write glob that matches nothing and a
+    `-p` package no manifest declares both hand an owner a scope they
+    cannot enter, and neither fails until someone tries. `vyre-scan`
+    survived three lanes here after the crate stopped existing.
+    """
+    path = Path("docs/optimization/OWNERSHIP.toml")
+    lanes = read_toml(root / path).get("lane")
+    if not isinstance(lanes, dict) or not lanes:
+        raise ContractError(f"`{path}` has no [lane.*] tables")
+    failures: list[str] = []
+    for lane, body in lanes.items():
+        if not isinstance(body, dict):
+            failures.append(f"lane `{lane}` is not a table")
+            continue
+        for key in ("purpose", "layer"):
+            value = body.get(key)
+            if not isinstance(value, str) or not value.strip():
+                failures.append(f"lane `{lane}` has no {key}")
+        for key in ("write", "required_commands"):
+            entries = body.get(key)
+            if not isinstance(entries, list) or not entries:
+                failures.append(f"lane `{lane}` has no {key} entries")
+        for key in ("write", "avoid"):
+            entries = body.get(key)
+            for pattern in entries if isinstance(entries, list) else []:
+                if not isinstance(pattern, str) or not pattern.strip():
+                    failures.append(f"lane `{lane}` has an empty {key} entry")
+                elif pattern.startswith("/") or ".." in Path(pattern).parts:
+                    failures.append(
+                        f"lane `{lane}` {key} entry `{pattern}` is not a repository-relative path"
+                    )
+                elif next(root.glob(pattern), None) is None:
+                    failures.append(
+                        f"lane `{lane}` {key} entry `{pattern}` matches nothing in the tree"
+                    )
+        commands = body.get("required_commands")
+        for command in commands if isinstance(commands, list) else []:
+            if not isinstance(command, str) or not command.strip():
+                failures.append(f"lane `{lane}` has an empty required command")
+                continue
+            tokens = command.split()
+            for index, token in enumerate(tokens):
+                if token != "-p":
+                    continue
+                if index + 1 >= len(tokens):
+                    failures.append(f"lane `{lane}` command `{command}` ends with a bare -p")
+                elif tokens[index + 1] not in packages:
+                    failures.append(
+                        f"lane `{lane}` command `{command}` names package"
+                        f" `{tokens[index + 1]}`, which no workspace manifest declares"
+                    )
+    if failures:
+        joined = "".join(f"\n  {failure}" for failure in failures)
+        raise ContractError(
+            f"`{path}` assigns scope that does not exist. Delete the entry or"
+            f" restore what it names:{joined}"
+        )
+
+
 def validate(root: Path) -> None:
     root = root.resolve()
     workspace = read_toml(root / "Cargo.toml")
@@ -110,6 +183,7 @@ def validate(root: Path) -> None:
         raise ContractError("workspace members must be explicit paths")
     if "vyre-megakernel" not in members:
         raise ContractError("workspace.members must include vyre-megakernel")
+    validate_optimization_lanes(root, workspace_package_names(root, members))
 
     train = read_toml(root / "release/release-train.toml")
     version = train.get("versions", {}).get("vyre")
