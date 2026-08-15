@@ -142,6 +142,52 @@ mod tests {
         silent_skips(line, &masked)
     }
 
+    /// WHY: the shell original carried ten patterns and matched seven, because
+    /// three were malformed and grep's exit of 2 read as no match. Enumerating
+    /// every shape with the line it must catch is what keeps a shape from going
+    /// quiet again: a shape that stops matching turns this red rather than
+    /// lowering a count nobody reads.
+    #[test]
+    fn every_shape_matches_the_line_it_names() {
+        let injections = [
+            "        if backend.is_err() { return Ok(()); }",
+            "        if backend.is_err() { return; }",
+            "        if let Err(error) = probe() { return Ok(()); }",
+            "        println!(\"skipped: no adapter\");",
+            "        println!(\"no GPU on this host\");",
+            "        eprintln!(\"GPU unavailable\");",
+            "#[cfg(not(feature = \"gpu\"))]",
+            "#[cfg_attr(not(feature = \"gpu\"), ignore)]",
+            "#[cfg_attr(not(any(feature = \"gpu\", feature = \"cuda\")), ignore)]",
+            "        return; // no GPU here",
+            "        return Ok(()); // no GPU here",
+        ];
+        for line in injections {
+            assert!(
+                !skips(line).is_empty(),
+                "no shape matched the injected line {line:?}"
+            );
+        }
+    }
+
+    /// WHY: the allowance is the only thing standing between a probe helper and a
+    /// finding, so it has to apply to every shape rather than the one it was
+    /// written against.
+    #[test]
+    fn a_loud_abort_covers_any_shape() {
+        for line in [
+            "        if backend.is_err() { return Ok(()); }",
+            "#[cfg(not(feature = \"gpu\"))]",
+            "        return; // no GPU here",
+        ] {
+            let lines = vec![line, "        let backend = Backend::acquire_or_panic();"];
+            assert!(
+                loud_within_window(&lines, 0),
+                "the allowance missed {line:?}"
+            );
+        }
+    }
+
     /// WHY: the three cfg shapes are the ones the shell original could never
     /// match. If they stop matching here the gate silently returns to asserting
     /// nothing, which is the defect this port exists to fix. They also prove the
