@@ -1229,6 +1229,17 @@ boundary = "private"
 seam = "product-libraries"
 
 [[crate.dependency]]
+package = "vyre-primitives"
+purpose = "buffer and extent records the planner's forwarded builders take"
+features = ["math"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
 package = "vyre-driver"
 purpose = "backend-neutral target, materialization, submission, and completion contracts"
 features = []

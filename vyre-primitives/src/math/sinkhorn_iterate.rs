@@ -119,6 +119,9 @@ pub struct SinkhornExtents {
 ///
 /// A `17 x 17` problem is already 289 cells, so this threshold is crossed at
 /// modest sizes with both extents far under one workgroup width.
+///
+/// [`persistent_fixpoint`]: crate::fixpoint::persistent_fixpoint::persistent_fixpoint
+/// [`persistent_fixpoint_grid`]: crate::fixpoint::persistent_fixpoint::persistent_fixpoint_grid
 #[must_use]
 pub fn sinkhorn_iterate(buffers: SinkhornBuffers<'_>, extents: SinkhornExtents) -> Program {
     let SinkhornExtents {

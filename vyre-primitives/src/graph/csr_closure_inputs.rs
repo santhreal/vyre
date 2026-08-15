@@ -20,6 +20,8 @@
 //! The seed stays a separate argument. It is not part of the group: a launch
 //! planner validates the graph, the mask and the budget without ever seeing a
 //! frontier, so folding the seed in would force those callers to invent one.
+//!
+//! [`CsrGraphView`]: crate::graph::csr_closure_inputs::CsrGraphView
 
 /// The CSR arrays one graph traversal walks.
 ///

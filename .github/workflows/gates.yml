@@ -9,17 +9,19 @@ jobs:
   registered-gates:
     name: Every registered gate
     runs-on: ubuntu-latest
-    env:
-      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
-      # Runs every subcommand registered as a gate and holds each to the
-      # result pinned in xtask/gate-baselines.toml. 41 subcommands were
-      # registered here and 9 were ever invoked; this step is what makes the
-      # other 32 count for anything. It is also the backstop for a gate that
-      # belongs to no subset, which the sweep's wiring check reports.
+      # Runs every registered gate and holds each to the number pinned in
+      # xtask/gate-baselines.toml. Registering a gate without a pin fails, and a
+      # pin naming no gate fails, so neither list is maintained by hand and no
+      # rule can be registered and left unrun. The source-scanning rules, the
+      # frozen contracts, the size ratchet, the unification rows, the release
+      # evidence path oracle and the doc claim manifest are all in here; they
+      # used to be twenty separate steps below, each able to go red without
+      # anyone noticing which. It is also the backstop for a gate that belongs
+      # to no subset, which the sweep's wiring check reports.
       - name: Run the registered gate sweep
         run: ./cargo_full run -p xtask -- gates
 
@@ -51,17 +53,6 @@ jobs:
       - name: External IR extension demo builds standalone
         run: bash scripts/check_external_ir_extension_ci.sh
 
-      # Manifest text gives direct edges only, which is all that
-      # check_architectural_invariants.sh and `xtask check-tier-deps` read. A
-      # forbidden edge three crates below a member is invisible to both and
-      # exists only in the resolved graph, so this runs `cargo tree` per member
-      # and holds every transitive internal edge to the closure
-      # docs/CRATE_OWNERSHIP.toml declares. It used to send cargo's stderr to
-      # /dev/null, so a cargo that could not resolve the workspace printed "All
-      # layer invariants green." and exited 0.
-      - name: Transitive layer closure per member
-        run: bash scripts/check_layering.sh
-
       # bench-regression.yml times one case, which proves the runner works, not
       # that the registry still covers the dimensions the audit rows claim. This
       # holds each dimension to a named case and resolves every `--case`
@@ -71,35 +62,61 @@ jobs:
         run: bash scripts/check_deep_bench_coverage.sh
 
   tree-rules:
-    name: Rules that need no build
+    name: Rules the sweep owns, named by domain
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
 
-      # Every Cargo.toml on disk is a [workspace.members] entry or declares its
-      # own [workspace]. structure-gate checks the roster against the members
-      # list in both directions but never walks the filesystem, so a crate
-      # directory that no manifest lists is only visible here.
-      - name: No orphan crate directories
-        run: bash scripts/check_workspace_filesystem.sh
+      # rustfmt is the only single-file Rust parser the toolchain ships, and
+      # `source-parses` treats a missing rustfmt as a failure rather than as a
+      # clean tree, so the component is installed instead of assumed. The tree is
+      # never formatted here: --check is read-only and no --emit is passed.
+      - name: Install rustfmt for the parse rule
+        run: rustup component add rustfmt
 
-      # A published crate depending on a published member must carry a version,
-      # or `cargo publish` has nothing to resolve outside this workspace; a
-      # dependency on a `publish = false` member must not carry one, because that
-      # version can never exist on the registry. Both crate sets are derived from
-      # tracked manifests through each member's own `publish` key, including
-      # renames via `package =` and versions inherited through
-      # `workspace = true`, so a new member is classified without editing a list.
-      # Nothing else sees this: cargo resolves path edges locally and is happy,
-      # and the failure appears only during a publish nobody can rehearse.
-      - name: Internal dependency versions match publishability
-        run: bash scripts/check_internal_deps_have_versions.sh
+      # Each step below names a subset of the registry. The sweep above runs every
+      # gate already; these steps are what make each rule named by a workflow, so
+      # a gate cannot be registered, pinned and then reached by nothing. A rule
+      # whose verdict arrives in no job is what let three gates sit red for a
+      # fortnight.
 
-      # `missing_docs = "deny"` in [workspace.lints.rust] is the floor every
-      # member inherits. A crate-root #![allow(missing_docs)] silently removes
-      # it for that whole crate; a module-scoped allow stays permitted.
-      - name: No crate-root missing_docs override
-        run: bash scripts/check_no_missing_docs_override.sh
+      # Every Cargo.toml is a workspace member, its own workspace root or a
+      # reviewed orphan; every path edge and inherited key resolves to a tracked
+      # manifest; and a publishable crate's dependency on a member carries a
+      # version exactly when that member is published. None of this runs cargo:
+      # the defect the path rule detects is a workspace cargo cannot load, and
+      # the publish rule fails only during a publish nobody can rehearse.
+      - name: Manifest rules
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset manifest-rules
+
+      # A file no target compiles is not code, it is a claim: glyph_grid shipped
+      # an op registration and eight contracts that no `mod` declaration named,
+      # while three generated documents listed the op as supported. A green build
+      # is exactly what an orphan produces. The parse half answers the other
+      # question, because the answer for an orphan and for a scaffolding template
+      # are both "no target". The size cap is here too: it is red on fourteen
+      # files and its verdict reached nobody, because no workflow ran it.
+      - name: Source rules
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset source-rules
+
+      # Allocation, blocking waits and unbounded growth on the dispatch path.
+      - name: Hot-path rules
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset hot-path-rules
+
+      # Lint hygiene, unsafe justification and the property-test floor.
+      - name: Lint rules
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset lint-rules
+
+      # Frozen public surfaces, IR wire field parity, device loudness and the
+      # unification ratchets.
+      - name: Contract rules
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset contract-rules
+
+      # What the checkout carries, what the release evidence cites and what the
+      # documents claim about the tree.
+      - name: Repository rules
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset repo-rules
 
       # ci.yml must keep the three-OS by two-toolchain matrix, must not carry a
       # no-GPU escape hatch, and gpu-parity.yml must still exist to own the
@@ -111,110 +128,13 @@ jobs:
       # `xtask docs-check` runs. These are its own behavior contracts, so a
       # change that weakens the validator fails here rather than passing
       # docs-check vacuously. Bytecode stays off so the run leaves no
-      # __pycache__ for scripts/check_repo_hygiene.sh to report.
+      # __pycache__ for the repository rules to report.
       - name: Documentation manifest validator contracts
         run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_docs_manifest.py
-
-      # A lower bound, not an equality. The earlier version of this script
-      # failed when coverage GREW, demanding a manual floor bump, which is why
-      # it sat unwired: it punished the improvement it exists to encourage.
-      - name: Property-test coverage does not shrink
-        run: bash scripts/check_proptest_coverage.sh
-
-      # The execution queue is a gitignored local file, so its absence is not a
-      # violation and this gate measures tracked files only. The earlier version
-      # asserted the file exists, which no clean checkout can satisfy.
-      - name: One execution queue, no committed parallel plans
-        run: bash scripts/check_single_backlog.sh
-
-      # Each row pins a cross-crate unification that has already landed. A
-      # declared search path that no longer exists fails as UNMEASURABLE rather
-      # than scoring 0 and passing, which is how three of these rows spent
-      # months reporting success while scanning deleted trees.
-      - name: Unification baselines hold
-        run: bash scripts/check_unification_baselines.sh
-
-      # unsafe_code = "deny" is inherited workspace-wide, so the set of files
-      # carrying an allow(unsafe_code) override IS the complete unsafe surface,
-      # enforced by rustc rather than approximated by grep. This pins that set.
-      - name: Unsafe surface matches the reviewed budget
-        run: bash scripts/check_unsafe_budget.sh
-
-      # Source-scanning rules, all on scripts/lib/source_scan.sh. They were
-      # written against ripgrep with `2>/dev/null || true`, which reports a clean
-      # tree whenever ripgrep is missing or lacks a feature, so none of them could
-      # be trusted until they stopped depending on an optional binary.
-      - name: No registry walk on the dispatch hot path
-        run: bash scripts/check_no_hot_path_inventory.sh
-      - name: Nested byte rows held at their ceiling
-        run: bash scripts/check_no_hot_path_vec_vec.sh
-      - name: Unbounded container construction held at its ceiling
-        run: bash scripts/check_no_unbounded_cache.sh
-      - name: Read-all confined to reviewed cache modules
-        run: bash scripts/check_no_unbounded_external_read.sh
-      - name: Production dispatch stays borrowed
-        run: bash scripts/check_no_owned_dispatch_hot_paths.sh
-      - name: Blocking waits held at their ceiling
-        run: bash scripts/check_no_hot_path_blocking_wait.sh
-      - name: Ordinary outputs stage through readback rings
-        run: bash scripts/check_direct_readback_ring_default.sh
-      - name: Adding a backend stays one crate plus inventory
-        run: bash scripts/check_backend_extension_contract.sh
-      - name: Status-managed audits tag every finding
-        run: bash scripts/check_audit_status_tags.sh
-
-      # Program's fields are extracted from source and each must be classified as
-      # serialized or explicitly transient, so a new field turns this red until
-      # someone decides whether it belongs on the wire.
-      - name: Every Program field is serialized or declared transient
-        run: bash scripts/check_ir_wire_field_sync.sh
-
-      # Every load-bearing claim in a doc names the test that proves it. A claim
-      # whose phrase left the doc, or whose test file is gone, fails here.
-      - name: Every doc claim has a proving test
-        run: bash scripts/check_doc_claim_to_test.sh
-
-      # `try_reserve(additional)` guarantees `len() + additional`, so deriving
-      # `additional` from `capacity()` under-reserves any warm buffer whose
-      # capacity sits between `target / 2` and `target`: the call succeeds, the
-      # capacity stays short, and the following fill reallocates. It compiles,
-      # it returns Ok, and every result is correct, so no build, test, clippy,
-      # or unsafe-budget gate can see it. Only a source scan can.
-      - name: Reserve calls size from len, not capacity
-        run: bash scripts/check_no_under_reserve.sh
-
-      # A manifest naming a member that does not exist makes every cargo command
-      # fail from a clean checkout, which is why this gate runs no cargo at all:
-      # the defect it detects is precisely a workspace cargo cannot load. It
-      # reads tracked manifests with git and tomllib, and also rejects a path
-      # that resolves outside the repository.
-      - name: Every manifest path edge resolves to a tracked member
-        run: bash scripts/check_path_deps_resolve.sh
-
-      # A file no target compiles is not code, it is a claim. glyph_grid shipped
-      # an op registration and eight contracts that no `mod` declaration ever
-      # named, while three generated docs listed the op as supported, and four
-      # CUDA contract chunks outlived the test file that declared them. A green
-      # build is exactly what an orphan produces, so only this scan sees them.
-      - name: Every tracked source file is reachable from a cargo target
-        run: bash scripts/check_every_source_file_is_reachable.sh
-
-      # The other half: whatever a tracked .rs file is declared to be, it must
-      # parse. rustfmt is the only single-file Rust parser in the toolchain, so
-      # this step installs the component instead of assuming the runner image
-      # carries it; the gate itself treats a missing rustfmt as a failure rather
-      # than as a clean tree. Formatting differences are ignored: the tree is
-      # never formatted here and nothing is written.
-      - name: Every tracked source file parses
-        run: |
-          rustup component add rustfmt
-          bash scripts/check_every_source_file_parses.sh
 
   feature-msrv:
     name: Every feature compiles alone on the MSRV
     runs-on: ubuntu-latest
-    env:
-      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -262,8 +182,6 @@ jobs:
   feature-gated-sweeps:
     name: Oracle-matrix sweeps ci.yml cannot reach
     runs-on: ubuntu-latest
-    env:
-      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -290,8 +208,6 @@ jobs:
   spirv-validation:
     name: Emitted SPIR-V is validated, not just shaped
     runs-on: ubuntu-latest
-    env:
-      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

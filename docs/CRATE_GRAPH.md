@@ -166,6 +166,7 @@ graph TD
   C28 --> C17
   C28 --> C19
   C28 --> C23
+  C28 --> C25
   C31 --> C0
   C31 --> C17
   C31 --> C30
@@ -312,6 +313,7 @@ graph TD
 | `vyre-runtime` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-runtime` | `vyre-libs` | composition trees the megakernel planner plans against | None | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |
 | `vyre-runtime` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
+| `vyre-runtime` | `vyre-primitives` | buffer and extent records the planner's forwarded builders take | `math` | `always` | `normal` | `true` | `false` | `public` | `primitive-library` |
 | `vyre-test-support` | `structure-gate` | resolve the checkout a gate reports on from the working directory at run time | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
 | `vyre-test-support` | `vyre-foundation` | IR statement fixtures for the run-time variant enumeration, behind the ir-fixtures feature | None | `always` | `normal` | `true` | `true` | `private` | `foundation-ir` |
 | `vyre-test-support` | `vyre-spec` | DataType and declared operation signatures for fixture tables, without gating a leaf crate behind ir-fixtures | None | `always` | `normal` | `false` | `true` | `private` | `specification` |

@@ -101,6 +101,14 @@ pub mod optimizer {
         pass_result(program, false)
     }
 
+    /// Device facts a pass may read. The macro names this type in every
+    /// expansion, so the double declares one; `subgroup_ops` is a fact a test
+    /// pass can branch on to show that the record reached it.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct AdapterCaps {
+        pub subgroup_ops: bool,
+    }
+
     pub mod private {
         pub trait Sealed {}
     }

@@ -97,6 +97,43 @@ define_single_argument_pass!(
     cost_model_family = "megakernel"
 );
 
+/// A pass that reads device facts. Its inherent `transform_for_adapter` reports
+/// a change only when the adapter offers subgroup operations, so the assertion
+/// below can tell which record the expansion forwarded.
+#[vyre_pass(
+    name = "adapter.subgroup_dependent",
+    requires = [],
+    invalidates = [],
+    adapter_dependent = true,
+    analyze = "always"
+)]
+pub struct AdapterDependent;
+
+impl AdapterDependent {
+    fn transform(program: ir::Program) -> optimizer::PassResult {
+        optimizer::unchanged(program)
+    }
+
+    fn transform_for_adapter(
+        program: ir::Program,
+        caps: &optimizer::AdapterCaps,
+    ) -> optimizer::PassResult {
+        optimizer::pass_result(program, caps.subgroup_ops)
+    }
+}
+
+/// A pass that never declares `adapter_dependent`, whose expansion must discard
+/// the record rather than reach for an inherent method it does not have.
+#[vyre_pass(
+    name = "adapter.independent",
+    requires = [],
+    invalidates = [],
+    analyze = "always"
+)]
+pub struct AdapterIndependent;
+
+crate::define_unchanged_pass_body!(AdapterIndependent);
+
 #[test]
 fn vyre_pass_phase_matrix_emits_expected_metadata() {
     use optimizer::{PassPhase, ProgramPass};
@@ -163,6 +200,36 @@ fn vyre_pass_cost_model_matrix_emits_expected_metadata() {
             metadata.cost_model_family, *cost_model_family,
             "{}",
             metadata.name
+        );
+    }
+}
+
+#[test]
+fn an_adapter_dependent_pass_receives_the_record_and_an_independent_one_ignores_it() {
+    use optimizer::{AdapterCaps, ProgramPass};
+    let program = ir::Program { id: 7 };
+    let with_subgroups = AdapterCaps { subgroup_ops: true };
+    let without_subgroups = AdapterCaps {
+        subgroup_ops: false,
+    };
+
+    assert!(
+        AdapterDependent
+            .transform_for_adapter(program.clone(), &with_subgroups)
+            .changed,
+        "a device-dependent pass must see the capability it branches on"
+    );
+    assert!(
+        !AdapterDependent
+            .transform_for_adapter(program.clone(), &without_subgroups)
+            .changed
+    );
+
+    for caps in [with_subgroups, without_subgroups] {
+        assert_eq!(
+            AdapterIndependent.transform_for_adapter(program.clone(), &caps),
+            AdapterIndependent.transform(program.clone()),
+            "a pass that reads no device facts must answer the same on every device"
         );
     }
 }

@@ -276,6 +276,7 @@ fn collect_target_oses(source: &str, file: &Path, found: &mut BTreeMap<String, O
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeSet;
 
     #[test]
     fn every_recorded_platform_has_a_distinct_triple() {

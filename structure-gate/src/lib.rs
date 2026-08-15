@@ -877,7 +877,7 @@ fn nth_argument<'a>(after: &'a str, call: &str, index: usize) -> Option<&'a str>
 ///
 /// The gate reads source text without compiling it, so nothing else
 /// distinguishes a comma inside `", "` from an argument separator.
-fn opaque_span(text: &str, at: usize) -> Option<usize> {
+pub fn opaque_span(text: &str, at: usize) -> Option<usize> {
     let rest = &text[at..];
     if let Some(body) = rest.strip_prefix("//") {
         return Some(2 + body.find('\n').map_or(body.len(), |end| end + 1));

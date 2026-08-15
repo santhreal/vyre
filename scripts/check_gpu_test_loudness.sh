@@ -30,9 +30,9 @@ SILENT_SKIP_PATTERNS=(
     'if let Err\([^=]+\)\s*=\s*.*\s*\{\s*return'
     'println!\("(skipped|no GPU|GPU unavailable)'
     'eprintln!\("(skipped|no GPU|GPU unavailable)'
-    '#\\[cfg\\(not\\(.*gpu.*\\)\\)'
-    '#\\[cfg_attr\\(not\\(feature = \"gpu\"\\),\\s*ignore'
-    '#\\[cfg_attr\\(not\\(any\\(.*gpu.*\\)\\),\\s*ignore'
+    '#\[cfg\(not\(.*gpu.*\)\)'
+    '#\[cfg_attr\(not\(feature = "gpu"\),[[:space:]]*ignore'
+    '#\[cfg_attr\(not\(any\(.*gpu.*\)\),[[:space:]]*ignore'
     'return; *// *no GPU'
     'return Ok\(\(\)\); *// *no GPU'
 )
@@ -56,7 +56,21 @@ errors=()
 while IFS= read -r f; do
     rel="${f#./}"
     for pat in "${SILENT_SKIP_PATTERNS[@]}"; do
-        if hits=$(grep -nE "$pat" "$f" 2>/dev/null); then
+        # Three of these patterns carried an escaped backslash, so grep read an
+        # unterminated bracket expression, exited 2, and `if hits=$(grep ...)`
+        # read that failure as no match with the error sent to /dev/null. Ten
+        # patterns were seven for the life of this script. A search that fails is
+        # now fatal: an unmeasured tree is not a clean tree.
+        hits=$(grep -nE "$pat" "$f") && status=0 || status=$?
+        if (( status > 1 )); then
+            echo "gpu-test-loudness gate: grep exited $status on pattern:" >&2
+            echo "    $pat" >&2
+            echo "    file: $f" >&2
+            echo "    Fix: repair the pattern. A search that errors reports no" >&2
+            echo "    match, which reads as a clean file." >&2
+            exit 2
+        fi
+        if (( status == 0 )); then
             while IFS= read -r line; do
                 [[ -z "$line" ]] && continue
                 line_number="${line%%:*}"

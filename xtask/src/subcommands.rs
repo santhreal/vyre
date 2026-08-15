@@ -106,6 +106,72 @@ pub static SUBSETS: &[Subset] = &[
             "bench-crossback",
         ],
     },
+    Subset {
+        name: "manifest-rules",
+        help: "What the manifests must say about each other and about the layering, read without cargo",
+        gates: &[
+            "workspace-membership",
+            "path-deps-resolve",
+            "internal-dep-versions",
+            "layering",
+            "neutral-crates",
+        ],
+    },
+    Subset {
+        name: "source-rules",
+        help: "What every tracked source file must be: compiled by a target, parseable, and inside its size cap",
+        gates: &["source-reachability", "source-parses", "file-size"],
+    },
+    Subset {
+        name: "hot-path-rules",
+        help: "Allocation, blocking and unbounded growth on the dispatch path",
+        gates: &[
+            "hot-path-nested-rows",
+            "hot-path-blocking-wait",
+            "hot-path-unbounded-cache",
+            "hot-path-owned-dispatch",
+            "hot-path-unbounded-read",
+            "hot-path-inventory",
+            "hot-path-reserve",
+        ],
+    },
+    Subset {
+        name: "lint-rules",
+        help: "Lint hygiene, unsafe justification and property-test coverage",
+        gates: &[
+            "lint-expect-fix",
+            "lint-missing-docs-override",
+            "lint-unsafe-budget",
+            "lint-unsafe-justification",
+            "proptest-coverage",
+            "audit-status",
+        ],
+    },
+    Subset {
+        name: "contract-rules",
+        help: "Frozen public surfaces, wire field parity, device loudness and the unification ratchets",
+        gates: &[
+            "frozen-contracts",
+            "backend-extension",
+            "program-wire-fields",
+            "readback-ring",
+            "unification",
+            "gpu-loudness",
+            "shader-source",
+        ],
+    },
+    Subset {
+        name: "repo-rules",
+        help: "What the checkout carries, what the release evidence cites, and what the documents claim",
+        gates: &[
+            "repo-hygiene",
+            "single-backlog",
+            "platform-consumer-docs",
+            "doc-claims",
+            "evidence-paths",
+            "invariant-paths",
+        ],
+    },
 ];
 
 /// Every gate implemented in a crate that links vyre.

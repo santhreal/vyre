@@ -1,39 +1,22 @@
 //! Program builders surfaced through the megakernel planner.
 
-/// for callers that need the full iterative-balance variant rather
-/// than the dispatch-clustering simplification.
+use vyre_primitives::math::bellman_shortest_path::{BellmanBuffers, BellmanExtents};
+use vyre_primitives::math::sinkhorn_iterate::{SinkhornBuffers, SinkhornExtents};
+
+/// Full Sinkhorn-balanced clustering Program builder. Wraps
+/// [`vyre_libs::solvers::sinkhorn_full_clustering::sinkhorn_full_clustering_program`]
+/// for callers that need the full iterative-balance variant rather than the
+/// dispatch-clustering simplification.
+///
+/// The binding record and the extents are the primitive's own types, so a change
+/// to either reaches this wrapper as a type error rather than as a silently
+/// reordered argument list.
 #[must_use]
-#[allow(clippy::too_many_arguments)]
 pub fn build_sinkhorn_full_clustering_program(
-    k: &str,
-    k_t: &str,
-    a: &str,
-    b: &str,
-    u_curr: &str,
-    u_next: &str,
-    v: &str,
-    kv: &str,
-    ktu: &str,
-    changed: &str,
-    m: u32,
-    n: u32,
-    max_iterations: u32,
+    buffers: SinkhornBuffers<'_>,
+    extents: SinkhornExtents,
 ) -> vyre_foundation::ir::Program {
-    vyre_libs::solvers::sinkhorn_full_clustering::sinkhorn_full_clustering_program(
-        k,
-        k_t,
-        a,
-        b,
-        u_curr,
-        u_next,
-        v,
-        kv,
-        ktu,
-        changed,
-        m,
-        n,
-        max_iterations,
-    )
+    vyre_libs::solvers::sinkhorn_full_clustering::sinkhorn_full_clustering_program(buffers, extents)
 }
 
 /// Build a multi-word scallop-provenance Program. Wraps
@@ -61,30 +44,15 @@ pub fn build_scallop_provenance_wide_program(
 }
 /// Bellman tensor-network ordering Program builder. Wraps
 /// [`vyre_libs::solvers::bellman_tn_order::bellman_tn_order_program`].
+///
+/// `n_nodes` and `n_edges` are named by [`BellmanExtents`], and the buffer names
+/// by [`BellmanBuffers`], which is what makes the pair unorderable by mistake.
 #[must_use]
-#[allow(clippy::too_many_arguments)]
 pub fn build_bellman_tn_order_program(
-    src: &str,
-    dst: &str,
-    weight: &str,
-    dist: &str,
-    next_dist: &str,
-    changed: &str,
-    n_nodes: u32,
-    n_edges: u32,
-    max_iterations: u32,
+    buffers: BellmanBuffers<'_>,
+    extents: BellmanExtents,
 ) -> vyre_foundation::ir::Program {
-    vyre_libs::solvers::bellman_tn_order::bellman_tn_order_program(
-        src,
-        dst,
-        weight,
-        dist,
-        next_dist,
-        changed,
-        n_nodes,
-        n_edges,
-        max_iterations,
-    )
+    vyre_libs::solvers::bellman_tn_order::bellman_tn_order_program(buffers, extents)
 }
 
 /// KFAC autotune-step Program builder. Wraps

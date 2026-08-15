@@ -9,14 +9,18 @@ jobs:
   architecture-release-gate:
     name: Architecture release gate
     runs-on: ubuntu-latest
-    env:
-      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
+      # Two rules, one gate module. `neutral-crates` reads the manifests of the
+      # named neutral crates directly; `layering` resolves the whole graph and
+      # holds every member inside its declared closure.
       - name: Verify neutral dependency ownership
-        run: bash scripts/check_architectural_invariants.sh
+        run: ./cargo_full run -p xtask -- neutral-crates
+
+      - name: Verify the transitive layer closure
+        run: ./cargo_full run -p xtask -- layering
 
       - name: Verify architecture and documentation authority
         run: python3 scripts/architecture_docs.py . --check

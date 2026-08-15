@@ -118,6 +118,9 @@ pub struct BellmanExtents {
 /// compiled with `src` and `dst` transposed, or `dist` and `next_dist`
 /// transposed, and emitted a program that relaxed the graph backwards or wrote
 /// its output into the scratch half of the ping-pong.
+///
+/// [`persistent_fixpoint`]: crate::fixpoint::persistent_fixpoint::persistent_fixpoint
+/// [`persistent_fixpoint_grid`]: crate::fixpoint::persistent_fixpoint::persistent_fixpoint_grid
 #[must_use]
 pub fn bellman_shortest_path(buffers: BellmanBuffers<'_>, extents: BellmanExtents) -> Program {
     let BellmanBuffers {
@@ -181,6 +184,8 @@ pub fn bellman_shortest_path(buffers: BellmanBuffers<'_>, extents: BellmanExtent
 /// relaxation in groups above 0, and those groups are the only writers of the
 /// slots they own. That is what makes the shared-convergence-word race in
 /// [`persistent_fixpoint`] observable here rather than masked.
+///
+/// [`persistent_fixpoint`]: crate::fixpoint::persistent_fixpoint::persistent_fixpoint
 fn bellman_transfer_body(buffers: BellmanBuffers<'_>, extents: BellmanExtents) -> Vec<Node> {
     let BellmanBuffers {
         src,
