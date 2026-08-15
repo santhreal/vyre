@@ -23,7 +23,7 @@ Any other normal or build dependency requires an ownership-registry change.
 Run the checked-in behavior from `vyre-frontend-rust/tests/adversarial_lexer_oracle.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust --test adversarial_lexer_oracle
+./cargo_full test -p vyre-frontend-rust --test adversarial_lexer_oracle
 ```
 
 ### Features

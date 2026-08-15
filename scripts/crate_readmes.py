@@ -84,7 +84,7 @@ def runnable_example(
         feature_args = f" --features {','.join(features)}" if features else ""
         return (
             f"`{relative}/examples/{name}.rs`",
-            f"CARGO_BUILD_JOBS=1 ./cargo_full run -p {package} --example {name}{feature_args}",
+            f"./cargo_full run -p {package} --example {name}{feature_args}",
         )
     examples = sorted(
         path
@@ -95,7 +95,7 @@ def runnable_example(
         example = examples[0]
         return (
             f"`{example.relative_to(root).as_posix()}`",
-            f"CARGO_BUILD_JOBS=1 ./cargo_full run -p {package} --example {example.stem}",
+            f"./cargo_full run -p {package} --example {example.stem}",
         )
 
     package_table = manifest.get("package", {})
@@ -103,7 +103,7 @@ def runnable_example(
     if autobins and (root / relative / "src/main.rs").is_file():
         return (
             f"`{relative}/src/main.rs`",
-            f"CARGO_BUILD_JOBS=1 ./cargo_full run -p {package} -- --help",
+            f"./cargo_full run -p {package} -- --help",
         )
     bins = manifest.get("bin", [])
     if isinstance(bins, list) and bins:
@@ -115,7 +115,7 @@ def runnable_example(
         if names:
             return (
                 f"the `{names[0]}` binary target",
-                f"CARGO_BUILD_JOBS=1 ./cargo_full run -p {package} --bin {names[0]} -- --help",
+                f"./cargo_full run -p {package} --bin {names[0]} -- --help",
             )
 
     tests = sorted(
@@ -127,11 +127,11 @@ def runnable_example(
         test = tests[0]
         return (
             f"`{test.relative_to(root).as_posix()}`",
-            f"CARGO_BUILD_JOBS=1 ./cargo_full test -p {package} --test {test.stem}",
+            f"./cargo_full test -p {package} --test {test.stem}",
         )
     return (
         f"the `{package}` library target",
-        f"CARGO_BUILD_JOBS=1 ./cargo_full test -p {package} --lib",
+        f"./cargo_full test -p {package} --lib",
     )
 
 
