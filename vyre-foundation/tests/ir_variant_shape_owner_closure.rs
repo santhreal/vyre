@@ -43,11 +43,12 @@
 //! somebody adds a fixture, and adding the fixture forces a decision about
 //! every owner and every consumer above.
 
-use vyre_foundation::ir::{BinOp, Expr, Ident, Node, Program};
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 use vyre_foundation::optimizer::cost::CostCertificate;
+use vyre_foundation::optimizer::{registered_pass_registrations, ProgramPass};
 use vyre_foundation::transform::rewrite_walk::{self, NodeRewrite};
 use vyre_foundation::transform::visit::{
-    child_bodies, child_bodies_mut, node_scalars, node_shape, walk_nodes_mut,
+    child_bodies, child_bodies_mut, for_each_expr, node_scalars, node_shape, walk_nodes_mut,
 };
 use vyre_foundation::visit::node_map::map_body;
 use vyre_foundation::MemoryOrdering;
@@ -405,6 +406,113 @@ fn the_reported_binding_is_the_ident_the_rewriting_walk_renames() {
             Some(&renamed),
             "Fix: the rewriting walk and node_scalars name different fields of \
              {} as its binding",
+            sample.label()
+        );
+    }
+}
+
+/// The literal the propagating pass substitutes for [`propagation_marker`].
+const PROPAGATED: u32 = 7;
+
+/// The name the optimizer probe plants in one operand slot at a time.
+///
+/// It is a `Var` rather than the shared [`operand_marker`] because the property
+/// under test is what the optimizer's expression rewrite REACHES, and a read of
+/// a uniquely-bound literal is the cheapest thing every backend-neutral rewrite
+/// is obliged to fold.
+fn propagation_marker() -> Expr {
+    Expr::var("vyre_optimizer_reach_marker")
+}
+
+/// The buffers the operand fixtures name, so a probe program is well formed.
+fn fixture_buffers() -> Vec<BufferDecl> {
+    ["fixture_buffer", "fixture_src", "fixture_dst"]
+        .into_iter()
+        .enumerate()
+        .map(|(binding, name)| {
+            let binding = u32::try_from(binding).expect("three fixture buffers fit in u32");
+            BufferDecl::storage(name, binding, BufferAccess::ReadWrite, DataType::U32).with_count(4)
+        })
+        .collect()
+}
+
+/// The registered pass whose whole job is to substitute an expression at every
+/// read site, instantiated from the registry.
+///
+/// Read by name from the inventory registry rather than constructed here, so a
+/// pass that is renamed or unregistered fails this gate loudly instead of
+/// leaving it asserting nothing.
+fn literal_propagating_pass() -> Box<dyn ProgramPass> {
+    const NAME: &str = "reaching_def_propagate";
+    let registrations =
+        registered_pass_registrations().expect("the registered pass graph must schedule");
+    let registration = registrations
+        .iter()
+        .find(|registration| registration.metadata.name == NAME)
+        .unwrap_or_else(|| {
+            panic!(
+                "no registered pass named `{NAME}`; this gate reaches the optimizer's \
+                 expression rewrite through it, so a rename must be followed here"
+            )
+        });
+    (registration.factory)()
+}
+
+/// True iff `program` still mentions [`propagation_marker`] anywhere.
+fn marker_survives(program: &Program) -> bool {
+    let Expr::Var(marker) = propagation_marker() else {
+        unreachable!("the propagation marker is a Var by construction");
+    };
+    let mut found = false;
+    for_each_expr(program.entry(), |expr| {
+        if matches!(expr, Expr::Var(name) if *name == marker) {
+            found = true;
+        }
+    });
+    found
+}
+
+/// The optimizer's expression rewrite reaches every operand slot the rewriting
+/// owner offers, measured through a registered pass rather than through the
+/// walk itself.
+///
+/// `optimizer::rewrite` used to carry its own exhaustive enumeration of `Node`
+/// beside `rewrite_walk::rewrite_node`, and the pair had diverged: the owner
+/// descended into an async copy's `offset` and `size` and the optimizer copy did
+/// not, so every pass routed through `rewrite_program` left those two
+/// expression positions unrewritten. Nothing in this suite could see it, because
+/// the optimizer path was outside the closure it checks.
+///
+/// The slot set is [`node_operand_samples`], derived from the variant registry,
+/// so a `Node` variant that gains an operand fails
+/// [`the_fixture_set_covers_every_declared_node_variant`] first and then fails
+/// here until the optimizer reaches it.
+#[test]
+fn the_optimizer_expression_rewrite_reaches_every_operand_slot() {
+    let pass = literal_propagating_pass();
+    for sample in node_operand_samples(&propagation_marker()) {
+        let Expr::Var(marker) = propagation_marker() else {
+            unreachable!("the propagation marker is a Var by construction");
+        };
+        let program = Program::wrapped(
+            fixture_buffers(),
+            [1, 1, 1],
+            vec![
+                Node::let_bind(marker.as_ref(), Expr::u32(PROPAGATED)),
+                sample.node.clone(),
+            ],
+        );
+        assert!(
+            marker_survives(&program),
+            "{}: the probe program must contain the marker before the pass runs, \
+             or this case proves nothing",
+            sample.label()
+        );
+        let rewritten = pass.batch_apply(program).program;
+        assert!(
+            !marker_survives(&rewritten),
+            "{}: the optimizer's expression rewrite did not reach this operand slot, \
+             so every pass routed through it silently leaves the position alone",
             sample.label()
         );
     }

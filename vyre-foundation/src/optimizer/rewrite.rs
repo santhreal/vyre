@@ -1,9 +1,9 @@
 #![allow(clippy::expect_used)]
 use crate::ir::{BinOp, Expr, Node, Program};
+use crate::transform::rewrite_walk::{self, NodeRewrite};
 use crate::transform::visit::{any_subexpr, expr_children};
 use smallvec::SmallVec;
 use std::borrow::Cow;
-use std::sync::Arc;
 
 /// Push every operand of `expr` onto an order-insensitive worklist.
 ///
@@ -53,187 +53,53 @@ pub(crate) fn rewrite_node_slices<'a>(
     rewritten.map_or(Cow::Borrowed(nodes), Cow::Owned)
 }
 
+/// Offers every operand expression of a node to one closure, and nothing else.
+///
+/// The value namespace is left alone: `ident` keeps its default answer, so a
+/// `Let` target, a `Loop` induction variable and an async copy tag survive an
+/// expression rewrite unrenamed. That is what separates an expression rewrite
+/// from the substitutions in [`crate::transform::subst`], which do rename.
+struct ExprOperands<'f, F>(&'f mut F);
+
+impl<F: FnMut(&Expr) -> Option<Expr>> NodeRewrite for ExprOperands<'_, F> {
+    fn operand(&mut self, expr: &Expr) -> Option<Expr> {
+        rewrite_operand(expr, self.0)
+    }
+}
+
+/// `expr` rewritten under `transform`, or `None` when nothing in it changed.
+///
+/// The answer shape [`NodeRewrite::operand`] wants, from the `Cow` shape
+/// [`rewrite_expr`] returns. Every `NodeRewrite` policy whose operand hook is a
+/// whole-expression rewrite goes through here rather than converting the `Cow`
+/// itself, because a policy that converts it by hand can get the direction
+/// wrong and report a rewrite it did not make, which re-dirties every pass in
+/// the scheduler's next fixpoint iteration.
+pub(crate) fn rewrite_operand(
+    expr: &Expr,
+    transform: &mut impl FnMut(&Expr) -> Option<Expr>,
+) -> Option<Expr> {
+    match rewrite_expr(expr, transform) {
+        Cow::Borrowed(_) => None,
+        Cow::Owned(rewritten) => Some(rewritten),
+    }
+}
+
+/// Run an expression-rewrite closure over every node of `nodes`.
+///
+/// Which positions exist is [`rewrite_walk::rewrite_node`]'s decision, the one
+/// rewriting enumeration of `Node`. This module used to carry a second one, an
+/// exhaustive `match` per variant that had to be edited in lockstep with the
+/// owner; the pair had already diverged once, when the owner descended into an
+/// async copy's `offset` and `size` and the copy here did not, so every pass
+/// routed through [`rewrite_program`] left those two expression positions
+/// unrewritten.
 pub(crate) fn rewrite_nodes_cow<'a>(
     nodes: &'a [Node],
     expr: &mut impl FnMut(&Expr) -> Option<Expr>,
 ) -> Cow<'a, [Node]> {
-    let mut rewritten: Option<Vec<Node>> = None;
-    for (index, node) in nodes.iter().enumerate() {
-        match rewrite_node_cow(node, expr) {
-            Cow::Borrowed(_) if rewritten.is_none() => {}
-            Cow::Borrowed(borrowed) => {
-                if let Some(out) = rewritten.as_mut() {
-                    out.push(borrowed.clone());
-                }
-            }
-            Cow::Owned(owned) => {
-                let out = rewritten.get_or_insert_with(|| {
-                    // Final length is exactly nodes.len(); pre-size so the
-                    // push loop never reallocates as remaining nodes
-                    // (whether borrowed or owned) are appended.
-                    let mut v = Vec::with_capacity(nodes.len());
-                    v.extend_from_slice(&nodes[..index]);
-                    v
-                });
-                out.push(owned);
-            }
-        }
-    }
-    rewritten.map_or(Cow::Borrowed(nodes), Cow::Owned)
-}
-
-fn rewrite_node_cow<'a>(
-    node: &'a Node,
-    expr: &mut impl FnMut(&Expr) -> Option<Expr>,
-) -> Cow<'a, Node> {
-    match node {
-        Node::Let { name, value } => match rewrite_expr(value, expr) {
-            Cow::Borrowed(_) => Cow::Borrowed(node),
-            Cow::Owned(value) => Cow::Owned(Node::let_bind(name, value)),
-        },
-        Node::Assign { name, value } => match rewrite_expr(value, expr) {
-            Cow::Borrowed(_) => Cow::Borrowed(node),
-            Cow::Owned(value) => Cow::Owned(Node::assign(name, value)),
-        },
-        Node::Store {
-            buffer,
-            index,
-            value,
-        } => {
-            let idx = rewrite_expr(index, expr);
-            let val = rewrite_expr(value, expr);
-            if matches!((&idx, &val), (Cow::Borrowed(_), Cow::Borrowed(_))) {
-                Cow::Borrowed(node)
-            } else {
-                Cow::Owned(Node::store(buffer, idx.into_owned(), val.into_owned()))
-            }
-        }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            let c = rewrite_expr(cond, expr);
-            let t = rewrite_nodes_cow(then, expr);
-            let o = rewrite_nodes_cow(otherwise, expr);
-            if matches!(
-                (&c, &t, &o),
-                (Cow::Borrowed(_), Cow::Borrowed(_), Cow::Borrowed(_))
-            ) {
-                Cow::Borrowed(node)
-            } else {
-                Cow::Owned(Node::if_then_else(
-                    c.into_owned(),
-                    t.into_owned(),
-                    o.into_owned(),
-                ))
-            }
-        }
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => {
-            let f = rewrite_expr(from, expr);
-            let t = rewrite_expr(to, expr);
-            let b = rewrite_nodes_cow(body, expr);
-            if matches!(
-                (&f, &t, &b),
-                (Cow::Borrowed(_), Cow::Borrowed(_), Cow::Borrowed(_))
-            ) {
-                Cow::Borrowed(node)
-            } else {
-                Cow::Owned(Node::loop_for(
-                    var,
-                    f.into_owned(),
-                    t.into_owned(),
-                    b.into_owned(),
-                ))
-            }
-        }
-        Node::Block(body) => match rewrite_nodes_cow(body, expr) {
-            Cow::Borrowed(_) => Cow::Borrowed(node),
-            Cow::Owned(body) => Cow::Owned(Node::block(body)),
-        },
-        Node::Trap { address, tag } => match rewrite_expr(address, expr) {
-            Cow::Borrowed(_) => Cow::Borrowed(node),
-            Cow::Owned(address) => Cow::Owned(Node::Trap {
-                address: Box::new(address),
-                tag: tag.clone(),
-            }),
-        },
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => match rewrite_nodes_cow(body, expr) {
-            Cow::Borrowed(_) => Cow::Borrowed(node),
-            Cow::Owned(body) => Cow::Owned(Node::Region {
-                generator: generator.clone(),
-                source_region: source_region.clone(),
-                body: Arc::new(body),
-            }),
-        },
-        // Async copies carry `offset`/`size` EXPRESSIONS (Box<Expr>); the
-        // canonical "rewrite every node" driver must descend into them just
-        // like Trap's address above. Omitting them silently skipped two
-        // expression positions for every pass routed through rewrite_program
-        // (const_fold/strength_reduce left them unoptimized; a correctness
-        // rewrite would have left a dangling reference there).
-        Node::AsyncLoad {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } => {
-            let off = rewrite_expr(offset, expr);
-            let sz = rewrite_expr(size, expr);
-            if matches!((&off, &sz), (Cow::Borrowed(_), Cow::Borrowed(_))) {
-                Cow::Borrowed(node)
-            } else {
-                Cow::Owned(Node::async_load_gpu_driven(
-                    source.clone(),
-                    destination.clone(),
-                    off.into_owned(),
-                    sz.into_owned(),
-                    tag.clone(),
-                ))
-            }
-        }
-        Node::AsyncStore {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } => {
-            let off = rewrite_expr(offset, expr);
-            let sz = rewrite_expr(size, expr);
-            if matches!((&off, &sz), (Cow::Borrowed(_), Cow::Borrowed(_))) {
-                Cow::Borrowed(node)
-            } else {
-                Cow::Owned(Node::async_store(
-                    source.clone(),
-                    destination.clone(),
-                    off.into_owned(),
-                    sz.into_owned(),
-                    tag.clone(),
-                ))
-            }
-        }
-        Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AllReduce { .. }
-        | Node::AllGather { .. }
-        | Node::ReduceScatter { .. }
-        | Node::Broadcast { .. }
-        | Node::AsyncWait { .. }
-        | Node::Resume { .. }
-        | Node::Opaque(_) => Cow::Borrowed(node),
-    }
+    rewrite_walk::rewrite_body(nodes, &mut ExprOperands(expr))
+        .map_or(Cow::Borrowed(nodes), Cow::Owned)
 }
 
 #[expect(
