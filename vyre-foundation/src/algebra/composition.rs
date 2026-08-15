@@ -7,8 +7,8 @@
 
 use std::sync::Arc;
 
-use crate::ir::model::expr::{GeneratorRef, Ident};
-use crate::ir::{Node, Program};
+use crate::ir::model::expr::{Expr, GeneratorRef, Ident};
+use crate::ir::{BufferDecl, DataType, Node, Program};
 use rustc_hash::FxHashMap;
 
 /// Generator suffix marking a region as non-composable with itself.
@@ -39,6 +39,32 @@ pub fn wrap_anonymous_region(generator: &str, body: Vec<Node>) -> Node {
 #[must_use]
 pub fn wrap_child_region(generator: &str, parent: GeneratorRef, body: Vec<Node>) -> Node {
     wrap_region(generator, body, Some(parent))
+}
+
+/// The program a builder returns when its inputs cannot produce a valid one.
+///
+/// Every primitive and composition builder is infallible, so an invalid shape
+/// becomes an IR trap the backend refuses rather than a host panic. `output`
+/// declares the single result buffer a caller expects to bind, and is `None`
+/// for a builder whose signature promises no output.
+#[must_use]
+pub fn trap_program(
+    op_id: &str,
+    output: Option<(&str, DataType)>,
+    message: impl Into<String>,
+) -> Program {
+    let buffers = match output {
+        Some((name, element)) => vec![BufferDecl::output(name, 0, element).with_count(1)],
+        None => Vec::new(),
+    };
+    Program::wrapped(
+        buffers,
+        [1, 1, 1],
+        vec![wrap_anonymous_region(
+            op_id,
+            vec![Node::trap(Expr::u32(0), message.into())],
+        )],
+    )
 }
 
 /// Clone a program's entry regions and attach them to a composing parent.
@@ -193,5 +219,32 @@ mod tests {
             duplicate_self_exclusive_regions(program.entry()),
             vec!["vyre.test.parser".to_string()]
         );
+    }
+
+    /// The trap body and the declared output are the whole contract callers rely on.
+    #[test]
+    fn a_trap_program_declares_only_the_output_it_was_asked_for() {
+        let with_output = trap_program(
+            "vyre.test.reduce",
+            Some(("result", DataType::F32)),
+            "shape has zero elements",
+        );
+        assert_eq!(with_output.buffers().len(), 1);
+        let buffer = &with_output.buffers()[0];
+        assert_eq!(&*buffer.name, "result");
+        assert_eq!(buffer.element, DataType::F32);
+        assert_eq!(buffer.count, 1);
+
+        let Some(Node::Region { generator, body, .. }) = with_output.entry().first() else {
+            panic!("a trap program's entry is one region: {:?}", with_output.entry());
+        };
+        assert_eq!(generator.as_str(), "vyre.test.reduce");
+        assert!(
+            matches!(body.as_slice(), [Node::Trap { tag, .. }] if tag.as_str() == "shape has zero elements"),
+            "the region body carries the message as a trap: {body:?}"
+        );
+
+        let without_output = trap_program("vyre.test.barrier", None, "unsupported scope");
+        assert!(without_output.buffers().is_empty());
     }
 }

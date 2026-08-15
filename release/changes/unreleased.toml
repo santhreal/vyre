@@ -1678,3 +1678,8 @@ text = "`vyre-test-support` states which flat `DataType` forms exist in one unga
 id = "pass-engine-scope-walk-one-owner"
 category = "Changed"
 text = "The pass engine has one scope walk. `optimizer::rewrite_walk` owns the encoder's reachable-prefix truncation and the borrow-preserving rebuild, and const propagation, cross-scope CSE, encoded CSE and the encoded-order rewrite call it. Four copies of the same loop stood beside each other and three of them discarded the walk's unchanged answer, so a pass that propagated nothing still deep-copied every nested body it visited. Constant propagation also stopped enumerating `Node` itself: it is a policy over the one structural node rewrite, so a body-bearing variant added to the IR is descended into instead of switching propagation off for everything inside it."
+
+[[fragments]]
+id = "trap-program-one-owner"
+category = "Changed"
+text = "`vyre_foundation::algebra::composition::trap_program` builds the program a builder returns when its inputs cannot produce a valid one. `vyre-primitives` and `vyre-libs` each had their own copy, differing only in whether one output buffer of count 1 is declared, and a trap program is IR composed out of IR, so neither crate is its home. The declared output is an `Option` argument because that is the whole difference between the two former copies."
