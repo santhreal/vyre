@@ -1898,3 +1898,13 @@ text = "The optimizer compiles for the adapter it was given. `Autotune` and `Dec
 id = "nfa-state-major-table-single-owner"
 category = "Removed"
 text = "One NFA transition-table layout remains. `vyre-libs::scan::nfa::build_transition_table` and `subgroup_nfa::nfa_step` both use the state-major `[num_states x 256 x LANES]` shape indexed `src * 256 * LANES + byte * LANES + dst_lane`. The transposed `build_transition_table_lane_major` packer, its fallible counterpart, the `bench` feature and the `scan::nfa::bench` module that was its only non-test consumer are gone."
+
+[[fragments]]
+id = "one-owner-for-the-region-node"
+category = "Changed"
+text = "Every `Node::Region` in `vyre-primitives` and `vyre-libs` is now built by `vyre_foundation::algebra::composition::wrap_anonymous_region` or `wrap_child_region`. 188 hand-written struct literals restated the same three fields, and each one was a place where a generator name could be spelled without the `anonymous::` prefix the audit gates read, or a child region could be attached with no parent. The literals carry no information the two constructors do not, so they are gone."
+
+[[fragments]]
+id = "one-owner-for-the-cell-count-guard"
+category = "Changed"
+text = "Eleven builders computed their own buffer cell count and wrote their own overflow message. `vyre_primitives::math::matrix_cells` and `square_matrix_cells` now own both: the count of a `rows x cols` operand, the `n == 0` rejection for a square one, and one sentence naming the caller and the shape that did not fit. The messages change text. They previously named a domain noun the op id already carries, and eleven copies had drifted to eleven phrasings of the same fact."

@@ -31,10 +31,8 @@
 //! | future `vyre-libs::security::anomaly` | covariance-based anomaly detection |
 //! | `vyre-foundation::transform` dispatch compression | randomized SVD compresses huge low-rank dispatch dependency matrices for polyhedral fusion analysis at workspace scale |
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -82,9 +80,9 @@ pub fn try_randomized_projection_step(
         return Err("Fix: randomized_projection_step requires l > 0, got 0.".to_string());
     }
 
-    let a_cells = checked_randomized_svd_cells("A input", m, n)?;
-    let omega_cells = checked_randomized_svd_cells("omega input", n, l)?;
-    let cells = checked_randomized_svd_cells("projection output", m, l)?;
+    let a_cells = crate::math::matrix_cells(&format!("{OP_ID} A input"), m, n)?;
+    let omega_cells = crate::math::matrix_cells(&format!("{OP_ID} omega input"), n, l)?;
+    let cells = crate::math::matrix_cells(&format!("{OP_ID} projection output"), m, l)?;
     let t = Expr::InvocationId { axis: 0 };
 
     // i = t / l, j = t % l
@@ -130,20 +128,8 @@ pub fn try_randomized_projection_step(
             BufferDecl::storage(y, 2, BufferAccess::ReadWrite, DataType::U32).with_count(cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
-}
-
-fn checked_randomized_svd_cells(context: &str, lhs: u32, rhs: u32) -> Result<u32, String> {
-    lhs.checked_mul(rhs).ok_or_else(|| {
-        format!(
-            "randomized_projection_step {context} shape {lhs}x{rhs} overflows cell count. Fix: shard the randomized SVD matrix before GPU dispatch."
-        )
-    })
 }
 
 /// CPU reference: `Y = A · Ω` in f64.
@@ -466,8 +452,9 @@ mod tests {
             .expect_err("checked randomized projection builder must reject m*l overflow");
 
         assert!(
-            error.contains("overflows cell count"),
-            "error should describe projection shape overflow: {error}"
+            error.contains("randomized_projection_step projection output shape")
+                && error.contains("overflows the u32 cell count"),
+            "error should name the operand and the shape that overflowed: {error}"
         );
     }
 }

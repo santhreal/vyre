@@ -5,10 +5,11 @@
 //! rotated Gram matrix. The read-out is one operation, not a loop each of them
 //! spells again.
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{
+    trap_program, wrap_anonymous_region, wrap_child_region,
+};
 
-use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -43,31 +44,21 @@ pub fn matrix_diagonal_extract_region(
     diagonal: &str,
     n: u32,
 ) -> Node {
-    Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: Some(GeneratorRef {
+    wrap_child_region(
+        OP_ID,
+        GeneratorRef {
             name: parent_op_id.to_string(),
-        }),
-        body: Arc::new(matrix_diagonal_extract_body(matrix, diagonal, n)),
-    }
+        },
+        matrix_diagonal_extract_body(matrix, diagonal, n),
+    )
 }
 
 /// Build a standalone diagonal read-out Program.
 #[must_use]
 pub fn matrix_diagonal_extract(matrix: &str, diagonal: &str, n: u32) -> Program {
-    if n == 0 {
-        return trap_program(
-            OP_ID,
-            Some((diagonal, DataType::F32)),
-            format!("Fix: matrix_diagonal_extract requires n > 0, got {n}."),
-        );
-    }
-    let Some(cells) = n.checked_mul(n) else {
-        return trap_program(
-            OP_ID,
-            Some((diagonal, DataType::F32)),
-            format!("Fix: matrix_diagonal_extract n*n overflows matrix cell count for n={n}."),
-        );
+    let cells = match crate::math::square_matrix_cells(OP_ID, n) {
+        Ok(cells) => cells,
+        Err(message) => return trap_program(OP_ID, Some((diagonal, DataType::F32)), message),
     };
     Program::wrapped(
         vec![
@@ -75,14 +66,13 @@ pub fn matrix_diagonal_extract(matrix: &str, diagonal: &str, n: u32) -> Program 
             BufferDecl::output(diagonal, 1, DataType::F32).with_count(n),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
                 Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
                 matrix_diagonal_extract_body(matrix, diagonal, n),
-            )]),
-        }],
+            )],
+        )],
     )
 }
 

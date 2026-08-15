@@ -6,19 +6,10 @@
 //! 16.16 fixed-point row/column contraction. This module keeps that kernel in
 //! one place while callers retain their own validation language and op ids.
 
-use std::sync::Arc;
+use vyre_foundation::algebra::composition::wrap_anonymous_region;
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-/// Return `rows * cols` as a u32 cell count with an actionable overflow error.
-pub(crate) fn checked_cells(label: &'static str, rows: u32, cols: u32) -> Result<u32, String> {
-    rows.checked_mul(cols).ok_or_else(|| {
-        format!(
-            "{label} rows*cols overflows cell count for rows={rows}, cols={cols}. Fix: shard the contraction before GPU dispatch."
-        )
-    })
-}
 pub(crate) fn fixed_u32_matvec_program(
     op_id: &'static str,
     matrix: &str,
@@ -59,11 +50,7 @@ pub(crate) fn fixed_u32_matvec_program(
             BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(n),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(op_id, body)],
     )
 }
 
@@ -93,9 +80,9 @@ pub(crate) fn try_fixed_u32_matmul(
             context.operation
         ));
     }
-    let lhs_cells = checked_cells(context.lhs_label, rows, shared)?;
-    let rhs_cells = checked_cells(context.rhs_label, shared, cols)?;
-    let out_cells = checked_cells(context.out_label, rows, cols)?;
+    let lhs_cells = crate::math::matrix_cells(context.lhs_label, rows, shared)?;
+    let rhs_cells = crate::math::matrix_cells(context.rhs_label, shared, cols)?;
+    let out_cells = crate::math::matrix_cells(context.out_label, rows, cols)?;
     Ok(fixed_u32_matmul_program(
         context.op_id,
         lhs,
@@ -179,11 +166,7 @@ where
                 .with_count(out_cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(op_id, body)],
     )
 }
 

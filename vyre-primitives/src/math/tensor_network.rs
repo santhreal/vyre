@@ -320,8 +320,9 @@ mod tests {
             .expect_err("checked tensor contraction builder must reject output overflow");
 
         assert!(
-            error.contains("overflows cell count"),
-            "error should describe the output tensor overflow: {error}"
+            error.contains("tn_pair_contract output shape")
+                && error.contains("overflows the u32 cell count"),
+            "error should name the operand and the shape that overflowed: {error}"
         );
     }
 }

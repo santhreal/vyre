@@ -26,10 +26,8 @@
 //! | `vyre-libs::security::what_if` consumers | "would finding fire under fix X?" counterfactual analysis |
 //! | `vyre-foundation::transform` change-impact analysis | `do(rule_X)` on the rule dependency graph predicts which downstream Programs invalidate. Replaces ad-hoc cache-invalidation tracking with formal causal analysis. |
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -74,13 +72,7 @@ pub fn try_do_intervention_delete_incoming(
     out_adjacency: &str,
     n: u32,
 ) -> Result<Program, String> {
-    if n == 0 {
-        return Err(format!(
-            "Fix: do_intervention_delete_incoming requires n > 0, got {n}."
-        ));
-    }
-
-    let cells = checked_square_cells(n, OP_ID)?;
+    let cells = crate::math::square_matrix_cells(OP_ID, n)?;
     let t = Expr::InvocationId { axis: 0 };
 
     // Decode (i, j) from flat invocation t = i*n + j; only j matters.
@@ -104,11 +96,7 @@ pub fn try_do_intervention_delete_incoming(
                 .with_count(cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }
 
@@ -293,8 +281,9 @@ mod tests {
             .expect_err("checked do-intervention builder must reject n*n overflow");
 
         assert!(
-            error.contains("overflows adjacency cell count"),
-            "error should describe the adjacency matrix overflow: {error}"
+            error.contains("do_intervention_delete_incoming shape")
+                && error.contains("overflows the u32 cell count"),
+            "error should name the op and the shape that overflowed: {error}"
         );
     }
 
@@ -356,13 +345,7 @@ pub fn try_do_rule2_reverse_incoming(
     out_adjacency: &str,
     n: u32,
 ) -> Result<Program, String> {
-    if n == 0 {
-        return Err(format!(
-            "Fix: do_rule2_reverse_incoming requires n > 0, got {n}."
-        ));
-    }
-
-    let cells = checked_square_cells(n, RULE2_OP_ID)?;
+    let cells = crate::math::square_matrix_cells(RULE2_OP_ID, n)?;
     let t = Expr::InvocationId { axis: 0 };
     let row = Expr::div(t.clone(), Expr::u32(n));
     let col = Expr::rem(t.clone(), Expr::u32(n));
@@ -398,20 +381,8 @@ pub fn try_do_rule2_reverse_incoming(
                 .with_count(cells),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(RULE2_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(RULE2_OP_ID, body)],
     ))
-}
-
-fn checked_square_cells(n: u32, op_id: &'static str) -> Result<u32, String> {
-    n.checked_mul(n).ok_or_else(|| {
-        format!(
-            "{op_id} n={n} overflows adjacency cell count. Fix: shard the causal graph before GPU dispatch."
-        )
-    })
 }
 
 /// Emit a Program for do-calculus **Rule 3 subgraph extraction**: the GPU/IR
@@ -462,10 +433,7 @@ pub fn try_do_rule3_subgraph(
     kept_len: &str,
     n: u32,
 ) -> Result<Program, String> {
-    if n == 0 {
-        return Err(format!("Fix: do_rule3_subgraph requires n > 0, got {n}."));
-    }
-    let cells = checked_square_cells(n, RULE3_OP_ID)?;
+    let cells = crate::math::square_matrix_cells(RULE3_OP_ID, n)?;
 
     let lane0 = Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0));
 
@@ -544,11 +512,7 @@ pub fn try_do_rule3_subgraph(
             BufferDecl::storage(kept_len, 4, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(RULE3_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(RULE3_OP_ID, body)],
     ))
 }
 
@@ -988,8 +952,9 @@ mod rule2_tests {
             .expect_err("checked Rule 2 builder must reject n*n overflow");
 
         assert!(
-            error.contains("overflows adjacency cell count"),
-            "error should describe the adjacency matrix overflow: {error}"
+            error.contains("do_rule2_reverse_incoming shape")
+                && error.contains("overflows the u32 cell count"),
+            "error should name the op and the shape that overflowed: {error}"
         );
     }
 

@@ -70,10 +70,7 @@ pub fn try_mz_project_step(
     out: &str,
     n: u32,
 ) -> Result<Program, String> {
-    if n == 0 {
-        return Err(format!("Fix: mz_project_step requires n > 0, got {n}."));
-    }
-    let matrix_cells = checked_mz_cells(n)?;
+    let matrix_cells = crate::math::square_matrix_cells(OP_ID, n)?;
 
     Ok(crate::fixed_u32_matmul::fixed_u32_matvec_program(
         OP_ID,
@@ -83,14 +80,6 @@ pub fn try_mz_project_step(
         n,
         matrix_cells,
     ))
-}
-
-fn checked_mz_cells(n: u32) -> Result<u32, String> {
-    n.checked_mul(n).ok_or_else(|| {
-        format!(
-            "mz_project_step n={n} overflows dense projector cell count. Fix: shard the Mori-Zwanzig resolved space before GPU dispatch."
-        )
-    })
 }
 
 /// CPU reference, f64.
@@ -295,8 +284,9 @@ mod tests {
             .expect_err("checked M-Z builder must reject n*n overflow");
 
         assert!(
-            error.contains("overflows dense projector cell count"),
-            "error should describe dense projector overflow: {error}"
+            error.contains("mori_zwanzig_project_step shape")
+                && error.contains("overflows the u32 cell count"),
+            "error should name the op and the shape that overflowed: {error}"
         );
     }
 

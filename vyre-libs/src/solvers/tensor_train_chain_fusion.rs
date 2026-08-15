@@ -143,7 +143,7 @@ pub fn fusion_pressure_via_with_scratch(
                 "Fix: fusion_pressure_via accumulator length exceeds u32.".to_string(),
             )
         })?;
-        let core_len = checked_cells(r_prev, r_next, "r_prev*r_next")?;
+        let core_len = bounded_core_cells(r_prev, r_next, "r_prev*r_next")?;
         scratch.core_slice.clear();
         scratch.core_slice.resize(core_len, FIXED_ONE);
         dispatch_tt_step_with_scratch_into(
@@ -219,7 +219,7 @@ fn dispatch_tt_step_with_scratch_into(
     decode_u32_output_exact(&outputs[0], output_len, "fusion_pressure_via TT", out)
 }
 
-fn checked_cells(left: u32, right: u32, label: &str) -> Result<usize, DispatchError> {
+fn bounded_core_cells(left: u32, right: u32, label: &str) -> Result<usize, DispatchError> {
     let value = left.checked_mul(right).ok_or_else(|| {
         DispatchError::BadInputs(format!(
             "Fix: fusion_pressure_via buffer size overflows {label}: {left} * {right}."

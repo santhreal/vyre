@@ -28,10 +28,8 @@
 //! | future `vyre-libs::ml::pde_emulator` | physics-informed NN training |
 //! | `vyre-driver` multilevel scheduling | IR-graph contraction levels match V-cycle levels; apply the same smoother as the dispatch scheduler smoother |
 
-use std::sync::Arc;
-use vyre_foundation::algebra::composition::trap_program;
+use vyre_foundation::algebra::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -77,10 +75,7 @@ pub fn try_jacobi_smooth_step(
     x_out: &str,
     n: u32,
 ) -> Result<Program, String> {
-    if n == 0 {
-        return Err(format!("Fix: jacobi_smooth_step requires n > 0, got {n}."));
-    }
-    let matrix_cells = checked_jacobi_cells(n)?;
+    let matrix_cells = crate::math::square_matrix_cells(OP_ID, n)?;
 
     let t = Expr::InvocationId { axis: 0 };
 
@@ -159,11 +154,7 @@ pub fn try_jacobi_smooth_step(
             BufferDecl::storage(x_out, 4, BufferAccess::ReadWrite, DataType::U32).with_count(n),
         ],
         [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }
 
@@ -270,14 +261,6 @@ pub fn jacobi_smooth_step_serial_body(
             ),
         ],
     )]
-}
-
-fn checked_jacobi_cells(n: u32) -> Result<u32, String> {
-    n.checked_mul(n).ok_or_else(|| {
-        format!(
-            "jacobi_smooth_step n={n} overflows dense matrix cell count. Fix: shard or sparsify the AMG level before GPU dispatch."
-        )
-    })
 }
 
 /// CPU reference: one weighted Jacobi step in f64.
@@ -537,8 +520,9 @@ mod tests {
             .expect_err("checked Jacobi builder must reject dense matrix overflow");
 
         assert!(
-            error.contains("overflows dense matrix cell count"),
-            "error should describe dense matrix overflow: {error}"
+            error.contains("amg_jacobi_step shape")
+                && error.contains("overflows the u32 cell count"),
+            "error should name the op and the shape that overflowed: {error}"
         );
     }
 }

@@ -245,8 +245,9 @@ mod tests {
             .expect_err("checked monoidal compose builder must reject output overflow");
 
         assert!(
-            error.contains("overflows cell count"),
-            "error should describe the output tensor overflow: {error}"
+            error.contains("monoidal_compose output shape")
+                && error.contains("overflows the u32 cell count"),
+            "error should name the operand and the shape that overflowed: {error}"
         );
     }
 
