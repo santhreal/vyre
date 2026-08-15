@@ -29,6 +29,7 @@ pub mod op_names;
 pub mod ownership;
 pub mod parity_testing;
 pub mod platform_boundary;
+pub mod platform_docs;
 pub mod proptest_coverage;
 pub mod repo_hygiene;
 pub mod scan;
@@ -77,6 +78,7 @@ pub static GATES: &[&dyn Gate] = &[
     &op_names::OpNames,
     &parity_testing::ParityTestingIsolated,
     &platform_boundary::PlatformBoundary,
+    &platform_docs::PlatformConsumerDocs,
     &proptest_coverage::ProptestCoverage,
     &repo_hygiene::RepoHygiene,
     &repo_hygiene::SingleBacklog,

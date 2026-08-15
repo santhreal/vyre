@@ -215,6 +215,10 @@ name = "platform-boundary"
 findings = 0
 
 [[gate]]
+name = "platform-consumer-docs"
+findings = 16
+
+[[gate]]
 name = "primitive-admission-gate"
 findings = 0
 
