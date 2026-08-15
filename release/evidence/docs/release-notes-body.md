@@ -363,6 +363,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   direction, that a registered row is wired into CI, so the pair is now closed.
   Names are extracted per step, including every command in a joined `run:`
   block, and resolved when the test runs rather than listed in it.
+- `vyre_foundation::algebra::composition::single_invocation` and
+  `single_invocation_region` build the entry of a serial kernel: one anonymous
+  composition region whose body runs on invocation zero of axis zero. The shape
+  was written out by hand in every serial primitive.
 
 ### Changed
 
@@ -2097,6 +2101,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   actions complete and zero blockers, so the gate every sweep runs with no
   arguments could not pass before the version it guards had shipped. The
   removed `--prepublish` flag is rejected rather than ignored.
+- An artifact-inspection gate is declared, not hand-written. Eleven gates
+  across xtask, xtask-registry and xtask-evidence each spelled the same struct,
+  the same four trait methods and the same call into `settle_inspection`,
+  differing only in a name, a help string and one inspection expression.
+  `xtask::artifact_gate!` now owns that shape and the eleven declarations state
+  only what differs. Gates whose `run` does real work, such as
+  release-conformance argument parsing, keep their own implementation.
 - `transform::visit` is split by what is being visited. `node` owns the
   per-variant `Node` decisions a traversal cannot re-derive safely - which
   bodies a variant nests, which scalar name it binds and what it does to that
@@ -3573,3 +3584,34 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   backend uses once it has probed one, and a scheduler built without an adapter
   states the conservative fallback at the place that chose it instead of
   leaving it to whichever pass reached for a profile first.
+- Chained shift fusion has one owner and one answer. Constant folding and
+  strength reduction each carried the rule, and they disagreed: folding
+  declined a pair whose counts reach the word width and left the double shift
+  for the backend, reduction folded it to zero. Both were also wrong about a
+  count above 31, which the target text masks with `& 31`, so `(x << 40) << 1`
+  shifts by nine and not off the end. `algebra::shift_fusion::reduce_shift`
+  masks each count, folds to zero once the sum reaches the width, and fuses
+  otherwise, checked against an evaluation of the chain it replaces for every
+  count pair up to 40.
+- `BinOp::result_class` is the one answer to what a binary operator's result
+  type is, and `BinOp::takes_numeric_operands` is derived from it.
+  `validate::typecheck` asked that question twice and wrote its own operator
+  list each time, once to give an expression a static type and once to decide
+  what its operands must be. The lists had already drifted on `AbsDiff`, which
+  is in the operand list and not the type list; that happens to be correct and
+  nothing said so, and nothing would have caught the reverse. Both lists ended
+  in a catch-all, and `BinOp` is `#[non_exhaustive]`, so a new operator took
+  whatever the last arm held. The match now lives in `vyre-spec` beside the
+  enum with no catch-all arm, so adding an operator fails to compile there
+  instead. `BinOpResult` is closed on purpose: a new operator is additive, a
+  new RESULT CLASS is a new answer every consumer has to decide for.
+- The buffer-set equivalence property reads the declared owners instead of
+  restating them. `referenced_buffers` answers from `ProgramFacts`, whose SoA
+  extraction fills its `buffer_refs` column from its own exhaustive match, and
+  nothing made that column agree with `visit::node_buffer_refs` and
+  `visit::expr_buffer_ref`, which are the declared owners of which variant
+  names a buffer. The oracle that checked it was a third enumeration ending in
+  `_ => {}`, so a variant added to both real enumerations was reported as
+  naming nothing by the oracle and the property passed while the two sides were
+  free to disagree about it. It now composes the two owners, which makes it an
+  oracle for the agreement rather than a second opinion about the variant list.
