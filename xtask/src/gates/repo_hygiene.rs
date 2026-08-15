@@ -55,6 +55,7 @@ const SILENT_SKIPS: &[(&str, &str)] = &[
     ("adapter missing", "skipp"),
 ];
 
+/// Instruction files, redirects and backlog files hold their agreed shape.
 pub struct RepoHygiene;
 
 impl Gate for RepoHygiene {

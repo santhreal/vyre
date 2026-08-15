@@ -15,6 +15,10 @@ name = "audit-status"
 findings = 0
 
 [[gate]]
+name = "backend-extension"
+findings = 0
+
+[[gate]]
 name = "catalog"
 output_lines = 1
 
@@ -43,8 +47,20 @@ name = "feature-isolation"
 output_lines = 1
 
 [[gate]]
+name = "file-size"
+findings = 75
+
+[[gate]]
+name = "frozen-contracts"
+findings = 1
+
+[[gate]]
 name = "gate1"
 output_lines = 372
+
+[[gate]]
+name = "gpu-loudness"
+findings = 2
 
 [[gate]]
 name = "heuristic-audit"
@@ -135,7 +151,15 @@ name = "primitive-admission-gate"
 output_lines = 3
 
 [[gate]]
+name = "program-wire-fields"
+findings = 0
+
+[[gate]]
 name = "proptest-coverage"
+findings = 0
+
+[[gate]]
+name = "readback-ring"
 findings = 0
 
 [[gate]]
@@ -148,6 +172,10 @@ findings = 0
 
 [[gate]]
 name = "single-backlog"
+findings = 0
+
+[[gate]]
+name = "unification"
 findings = 0
 
 [[gate]]

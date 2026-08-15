@@ -30,6 +30,7 @@ const NOT_OPERATION_SOURCES: &[&str] = &[
     "relation_analyzer.rs",
 ];
 
+/// An operation is named for what it computes, not for the fact that it runs.
 pub struct OperationNames;
 
 impl Gate for OperationNames {

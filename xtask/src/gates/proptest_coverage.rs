@@ -29,6 +29,7 @@ const MARKERS: &[&str] = &[
     "extern crate proptest",
 ];
 
+/// The number of property-test files stays at or above the measured floor.
 pub struct ProptestCoverage;
 
 impl Gate for ProptestCoverage {

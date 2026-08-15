@@ -27,8 +27,11 @@ pub const MAX_FILE_BYTES: u64 = 16_777_216;
 
 /// One matching line.
 pub struct Hit {
+    /// Repository-relative path of the file the line came from.
     pub file: PathBuf,
+    /// One-based line number.
     pub line: u32,
+    /// The line, trimmed.
     pub text: String,
 }
 
@@ -91,6 +94,7 @@ impl Tree {
     }
 
     #[must_use]
+    /// The workspace root every relative path resolves against.
     pub fn root(&self) -> &Path {
         &self.root
     }
@@ -143,6 +147,7 @@ impl Tree {
     }
 
     #[must_use]
+    /// An absolute path for a repository-relative one.
     pub fn absolute(&self, relative: impl AsRef<Path>) -> PathBuf {
         self.root.join(relative)
     }
@@ -329,8 +334,11 @@ impl Tree {
 
 /// One workspace member.
 pub struct Member {
+    /// Repository-relative directory of the member.
     pub path: String,
+    /// Package name from the member manifest.
     pub name: String,
+    /// The member manifest, parsed.
     pub manifest: toml::Table,
 }
 
@@ -381,10 +389,13 @@ pub struct Rule<'r> {
     /// An occurrence form that is reviewed wherever it appears, such as a hit
     /// inside a doc comment.
     pub reviewed_line: Option<&'r dyn Fn(&str) -> bool>,
+    /// What an occurrence means.
     pub message: &'r str,
+    /// The corrective action for an occurrence.
     pub fix: &'r str,
     /// What an occurrence nobody signed off means, and what to do about it.
     pub unreviewed_message: &'r str,
+    /// The corrective action for an occurrence nobody signed off.
     pub unreviewed_fix: &'r str,
 }
 

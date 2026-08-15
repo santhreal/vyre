@@ -53,6 +53,7 @@ const PERMITTED_PREFIXES: &[&str] = &[
 /// Where a shader may be parsed from text instead of emitted structurally.
 const PARSE_SCOPE: &[&str] = &["vyre-driver-wgpu/src", "vyre-foundation/src"];
 
+/// Shader text is emitted structurally, never assembled from string pieces.
 pub struct ShaderSource;
 
 impl Gate for ShaderSource {

@@ -20,6 +20,7 @@ const EXECUTION_ORDER: &str = "## Highest Leverage Execution Order";
 /// The line that marks an audit as status managed.
 const LEGEND: &str = "Status legend:";
 
+/// Every managed audit document carries a status legend and per-row statuses.
 pub struct AuditStatus;
 
 impl Gate for AuditStatus {
