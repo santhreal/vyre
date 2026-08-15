@@ -14,6 +14,8 @@ pub(crate) struct PassArgs {
     pub(crate) preserves_abi: Option<LitBool>,
     pub(crate) cost_model_family: Option<LitStr>,
     pub(crate) analyze_always: bool,
+    /// The pass reads device facts and implements `transform_for_adapter`.
+    pub(crate) adapter_dependent: bool,
 }
 
 impl Parse for PassArgs {
@@ -27,6 +29,7 @@ impl Parse for PassArgs {
         let mut preserves_abi = None;
         let mut cost_model_family = None;
         let mut analyze_always = false;
+        let mut adapter_dependent = false;
         let mut seen_keys = std::collections::BTreeSet::new();
 
         while !input.is_empty() {
@@ -55,6 +58,9 @@ impl Parse for PassArgs {
                         "pass metadata arrays accept only string literals. Fix: use [\"analysis_name\"].",
                     )?
                 }
+                "adapter_dependent" => {
+                    adapter_dependent = input.parse::<LitBool>()?.value;
+                }
                 "preserves_abi" => preserves_abi = Some(input.parse()?),
                 "cost_model_family" => cost_model_family = Some(input.parse()?),
                 "analyze" => {
@@ -71,7 +77,7 @@ impl Parse for PassArgs {
                 _ => {
                     return Err(syn::Error::new(
                         key.span(),
-                        "unsupported vyre_pass argument. Fix: use name, requires, invalidates, phase, boundary_class, requires_caps, preserves_abi, cost_model_family, or analyze.",
+                        "unsupported vyre_pass argument. Fix: use name, requires, invalidates, phase, boundary_class, requires_caps, preserves_abi, cost_model_family, adapter_dependent, or analyze.",
                     ));
                 }
             }
@@ -94,6 +100,7 @@ impl Parse for PassArgs {
             preserves_abi,
             cost_model_family,
             analyze_always,
+            adapter_dependent,
         })
     }
 }
@@ -307,6 +314,19 @@ pub(crate) fn vyre_pass_impl(args: TokenStream, item: TokenStream) -> TokenStrea
     } else {
         quote! { Self::analyze_impl(program) }
     };
+    // A pass is device-dependent only by saying so. Everything else gets a
+    // `transform_for_adapter` that discards the adapter, which is the honest
+    // statement that its rewrite is the same program on every device; the
+    // alternative, letting a pass pick a profile inside `transform`, is how
+    // the whole pipeline came to compile against one profile nobody chose.
+    let transform_for_adapter_body = if args.adapter_dependent {
+        quote! { Self::transform_for_adapter(program, caps) }
+    } else {
+        quote! {
+            let _ = caps;
+            Self::transform(program)
+        }
+    };
     let metadata = quote! {
         ::vyre::optimizer::PassMetadata {
             name: #name,
@@ -342,6 +362,15 @@ pub(crate) fn vyre_pass_impl(args: TokenStream, item: TokenStream) -> TokenStrea
                 program: ::vyre::ir::Program,
             ) -> ::vyre::optimizer::PassResult {
                 Self::transform(program)
+            }
+
+            #[inline]
+            fn transform_for_adapter(
+                &self,
+                program: ::vyre::ir::Program,
+                caps: &::vyre::optimizer::AdapterCaps,
+            ) -> ::vyre::optimizer::PassResult {
+                #transform_for_adapter_body
             }
 
             #[inline]

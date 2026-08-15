@@ -9,7 +9,7 @@ use rustc_hash::FxHashSet;
 
 /// Dynamically adjust dispatch dimensions and workgroup bounds.
 #[derive(Debug, Default)]
-#[vyre_pass(name = "autotune", requires = [], invalidates = [])]
+#[vyre_pass(name = "autotune", requires = [], invalidates = [], adapter_dependent = true)]
 pub struct Autotune;
 
 impl Autotune {
@@ -30,7 +30,11 @@ impl Autotune {
         PassAnalysis::RUN
     }
 
-    /// Autotune invocation scales without introducing partial-wave OOB accesses.
+    /// Autotune for no known device.
+    ///
+    /// The conservative profile is the fallback a caller with no adapter
+    /// gets, named here rather than assumed: the scheduler supplies the real
+    /// one through `transform_for_adapter`.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
         Self::transform_for_adapter(program, &AdapterCaps::conservative())

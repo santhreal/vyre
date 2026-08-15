@@ -635,7 +635,9 @@ fn the_optimizer_expression_rewrite_reaches_every_operand_slot() {
              or this case proves nothing",
             sample.label()
         );
-        let rewritten = pass.batch_apply(program).program;
+        let rewritten = pass
+            .batch_apply(program, &vyre_foundation::optimizer::AdapterCaps::conservative())
+            .program;
         assert!(
             !marker_survives(&rewritten),
             "{}: the optimizer's expression rewrite did not reach this operand slot, \
