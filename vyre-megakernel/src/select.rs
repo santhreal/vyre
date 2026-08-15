@@ -11,11 +11,12 @@ pub(crate) struct Selection {
     pub(crate) cost: CostBreakdown,
 }
 
+/// Lowest-cost candidate, or nothing when the search scored no plan at all.
 pub(crate) fn choose(
     candidates: Vec<CandidatePlan>,
     facts: &PlanningFacts,
     dependencies: &[DependencyEdge],
-) -> Selection {
+) -> Option<Selection> {
     candidates
         .into_iter()
         .map(|candidate| {
@@ -28,5 +29,4 @@ pub(crate) fn choose(
                 .cmp(&right.cost.total)
                 .then_with(|| left.candidate.node_groups.cmp(&right.candidate.node_groups))
         })
-        .expect("candidate search always includes the baseline")
 }

@@ -21,7 +21,15 @@ pub(crate) fn plan(
 ) -> Result<ArtifactPlan, CompileError> {
     let facts = crate::facts::derive(graph, dependencies);
     let search = crate::search::explore(graph, &facts, dependencies, budget);
-    let selection = crate::select::choose(search.candidates, &facts, dependencies);
+    let selection =
+        crate::select::choose(search.candidates, &facts, dependencies).ok_or_else(|| {
+            failure(
+                CompilerFailureKind::InvalidSearchBudget,
+                "search.candidates",
+                "schedule search scored no candidate plan",
+                "raise the candidate bound so the unfused baseline plan is explored",
+            )
+        })?;
     let candidate = selection.candidate;
     let node_groups: Vec<FusionGroupId> = candidate
         .node_groups
