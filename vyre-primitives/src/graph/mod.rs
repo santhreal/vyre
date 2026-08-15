@@ -79,15 +79,15 @@ pub(crate) mod csr_closure_entry_points;
 pub mod csr_forward_or_changed;
 /// One BFS frontier step over ProgramGraph CSR.
 pub mod csr_forward_traverse;
-/// The ONE packed-bitset addressing skeleton: word index, bit mask, the
-/// bit-is-set probe, and the atomic set with 0-to-1 flip detection. Peer of
-/// `edge_scan` for the same reason: every consumer is a sibling.
-pub(crate) mod frontier_bits;
 /// The ONE canonical CSR neighbor-expansion edge-scan, shared by every
 /// `csr_forward_or_changed` variant and the persistent-BFS batch step. Lives at
 /// `graph/` level because it is the common parent of both consumer subsystems;
 /// burying it inside one of them would force the other to reach across a sibling.
 pub(crate) mod edge_scan;
+/// The ONE packed-bitset addressing skeleton: word index, bit mask, the
+/// bit-is-set probe, and the atomic set with 0-to-1 flip detection. Peer of
+/// `edge_scan` for the same reason: every consumer is a sibling.
+pub(crate) mod frontier_bits;
 /// One persistent-BFS workgroup step with coalesced change detection.
 pub mod persistent_bfs_step;
 

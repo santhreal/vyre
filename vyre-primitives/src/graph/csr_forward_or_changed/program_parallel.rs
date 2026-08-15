@@ -223,7 +223,8 @@ fn csr_forward_or_changed_parallel_body_prefixed_impl(
         return preamble;
     }
 
-    let mut body = bind_bit_address(&src, word_idx.as_str(), bit_mask.as_str(), |word| word).to_vec();
+    let mut body =
+        bind_bit_address(&src, word_idx.as_str(), bit_mask.as_str(), |word| word).to_vec();
     body.push(Node::let_bind(
         src_word.as_str(),
         Expr::load(frontier_out, Expr::var(word_idx.as_str())),

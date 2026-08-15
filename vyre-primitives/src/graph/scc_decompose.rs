@@ -59,8 +59,7 @@ pub fn scc_decompose(
     // One bit address serves both bitsets: forward and backward reach share the
     // node domain, so the pivot's SCC is exactly the nodes whose bit is set in
     // both. Addressing them separately is what lets the two sides disagree.
-    let mut body =
-        bind_bit_address(&t, "word_idx", "bit", |word| word).to_vec();
+    let mut body = bind_bit_address(&t, "word_idx", "bit", |word| word).to_vec();
     body.extend([
         bind_word(
             forward_bitset,

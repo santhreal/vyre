@@ -922,9 +922,12 @@ fn persistent_bfs_batch_parallel_step_body(
     // the address, the load and the test are separate statements rather than one
     // `frontier_bits::when_bit_set` probe. The word index is `select`ed to zero out
     // of bounds so the pre-barrier load stays in range for the tail lanes.
-    body.extend(bind_bit_address(&src, word_idx.as_str(), bit_mask.as_str(), |word| {
-        Expr::select(Expr::var(in_bounds.as_str()), word, Expr::u32(0))
-    }));
+    body.extend(bind_bit_address(
+        &src,
+        word_idx.as_str(),
+        bit_mask.as_str(),
+        |word| Expr::select(Expr::var(in_bounds.as_str()), word, Expr::u32(0)),
+    ));
     body.extend([
         Node::let_bind(
             src_word.as_str(),
