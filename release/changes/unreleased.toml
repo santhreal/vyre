@@ -1845,6 +1845,9 @@ category = "Changed"
 text = "`reasoning::finite_category` states each construction once. Left and right Kan extension were four functions differing in whether the fold summed or multiplied and whether it ran per object or over a table; they are now `kan_extension_at` and `kan_extension_table` taking a `KanDirection`, over one shared fold. `is_adjoint_pair` is `adjoint_pair`, because it returns the pair and its witness rather than a bool, and `yoneda_natural_iso` is `natural_transformation_count`, because a count is what it returns."
 
 [[fragments]]
+id = "gate-wiring-both-directions"
+category = "Changed"
+text = "The gate sweep's wiring check now runs from gate to workflow as well as from workflow to gate. A registered gate that no workflow names, directly or through a subset a workflow runs, fails the check instead of sitting in the registry as decoration. `file-size` was red on fourteen source files while nothing in CI named it, so its judgement reached nobody who could act on it. Wiring failures are not pinnable."
 id = "generated-docs-restored"
 category = "Fixed"
 text = "`docs/CLI.md`, `docs/CRATE_GRAPH.md`, `docs/OWNERSHIP.md` and the 35 per-crate testing guides are present again. The book deletion removed them without retiring the generators that own them, so `crate_ownership.py`, `testing_guides.py` and `cli_docs.py` each failed `--check` against a tree their own `--write` reproduces, and `docs/DOCS.toml` listed two pages out of forty. `docs/optimization/OWNERSHIP.toml` also assigned two scopes that match nothing: a gitignored `BACKLOG.md`, which made the architecture-docs verdict depend on an untracked file, and a deleted `docs/catalog/**`."
@@ -1875,6 +1878,24 @@ category = "Fixed"
 text = "The public-API snapshot gate reports a crate it could not read instead of skipping it. Two paths dropped a package out of the comparison without a word: a publishable package whose `src` directory was missing, and an extraction that succeeded but returned nothing. No committed snapshot is empty, so an empty surface is a truncated rustdoc or a zero-byte `.rmeta` from a parallel build sharing one target directory, which is exactly the state in which a crate most needs to be checked. Both are findings now, and an extraction that exits nonzero prints what `cargo public-api` said rather than a bare sentence naming the crate."
 
 [[fragments]]
+id = "domain-subsets-name-every-gate"
+category = "Added"
+text = "Four subsets group the gates no workflow named: `composition`, `structure`, `docs` and `ir`. The gates workflow runs each as its own step, so a red gate is addressed to the owner of that domain instead of arriving inside one whole-registry log. The whole-registry sweep stays as the backstop for a gate that belongs to no subset."
+
+[[fragments]]
+id = "clippy-gate-can-run"
+category = "Fixed"
+text = "`workspace-clippy` passed `--message-format=json` after the `--` that hands the rest of the line to the lint driver, so clippy-driver answered `Unrecognized option: 'message-format'` for every crate and the only gate that judges lints could not run. The flag now sits on cargo's side of the separator."
+
+[[fragments]]
+id = "gate-child-runs-the-build-it-made"
+category = "Fixed"
+text = "A delegated gate ran the binary at the shared `target/debug/<package>` path, which every checkout building this workspace overwrites, so a sweep that took minutes could execute another checkout's gate code against this tree. The child now runs from a copy made when the build finished."
+
+[[fragments]]
+id = "release-hygiene-reads-a-module-that-exists"
+category = "Fixed"
+text = "The release hygiene scan named `release_gate`, a module deleted when the composite became the `prepublish` subset, so one entry in its list scanned nothing while reading as coverage. It reads `lockfile`, the gate that inherited the lockfile step."
 id = "release-gate-is-a-registered-gate"
 category = "Fixed"
 text = "`vyre-release-gate` implements the `Gate` contract. The registry assigned it to `xtask-evidence` and no implementation existed, so that crate's own table check failed. Options now parse from the runner's argument offset instead of argv position 2, the default manifest resolves under the context root instead of through a second checkout probe, and the two exit paths become one `Report` whose findings are the blockers and whose note carries the requirement count and the scope. `--help` left the option parser because `help()` answers it, and `GateOptions` derives `Debug`, without which the crate's lib test did not compile."

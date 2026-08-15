@@ -1431,11 +1431,18 @@ fn scan_source_inspection_test_files(
 }
 
 /// The xtask command modules whose own source the release hygiene scan reads.
+///
+/// `release_gate` was a composite subcommand that ran other subcommands. It is
+/// the `prepublish` subset now, and its lockfile step is the `lockfile-clean`
+/// gate, so this reads `lockfile` in its place. A name here that resolves to no
+/// source file scans nothing while reading as coverage, which is what the
+/// resolution test below prevents.
 const RELEASE_XTASK_COMMAND_MODULES: &[&str] = &[
     "backend_matrix",
     "conformance_matrix",
     "feature_matrix",
     "hygiene_matrix",
+    "lockfile",
     "metadata_matrix",
     "optimization_corpus",
     "optimization_matrix",

@@ -8,6 +8,7 @@
 //! is captured rather than inherited so a `Compiling ...` line cannot reach the
 //! report.
 
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::LazyLock;
@@ -63,13 +64,15 @@ pub fn run_child_gate(package: &str, name: &str, ctx: &GateCtx) -> Result<Report
         .arg(name)
         .args(&ctx.args)
         .current_dir(&ctx.root)
-        .output()
-        .map_err(|error| {
-            GateError::new(
-                format!("cannot run {} for `{name}`: {error}", executable.display()),
-                format!("rebuild it with `cargo build -p {package}`"),
-            )
-        })?;
+        .output();
+    // The copy exists only for this run, and the next gate makes its own.
+    let _ = fs::remove_file(&executable);
+    let output = output.map_err(|error| {
+        GateError::new(
+            format!("cannot run {} for `{name}`: {error}", executable.display()),
+            format!("rebuild it with `cargo build -p {package}`"),
+        )
+    })?;
     let stderr = String::from_utf8_lossy(&output.stderr);
     if !output.status.success() {
         return Err(GateError::new(
@@ -209,12 +212,38 @@ fn build(package: &str) -> Result<PathBuf, GateError> {
             format!("`{package}` must compile before the gates it implements can run"),
         ));
     }
-    executable_from(&String::from_utf8_lossy(&output.stdout), package).ok_or_else(|| {
+    let built =
+        executable_from(&String::from_utf8_lossy(&output.stdout), package).ok_or_else(|| {
+            GateError::new(
+                format!("cargo built `{package}` without reporting an executable"),
+                format!("check that `{package}` declares a binary named `{package}`"),
+            )
+        })?;
+    private_copy(&built, package)
+}
+
+/// Copy the binary cargo just built out of the shared target directory.
+///
+/// `target/debug/<package>` is one path, and cargo hashes a workspace member by
+/// its path relative to the workspace root, so several checkouts sharing a
+/// target directory compute the same unit hash and overwrite each other's
+/// artifact. Measured 2026-08-15: a sweep that took minutes ran another
+/// checkout's `xtask`, which reported four registered subsets as unregistered
+/// because that binary's registry predated them. The copy is named for this
+/// process, so the child that judges this tree is the child this build made.
+fn private_copy(built: &Path, package: &str) -> Result<PathBuf, GateError> {
+    let copy = std::env::temp_dir().join(format!("vyre-gate-{package}-{}", std::process::id()));
+    fs::copy(built, &copy).map_err(|error| {
         GateError::new(
-            format!("cargo built `{package}` without reporting an executable"),
-            format!("check that `{package}` declares a binary named `{package}`"),
+            format!(
+                "cannot copy {} to {}: {error}",
+                built.display(),
+                copy.display()
+            ),
+            "make the temporary directory writable; a binary read out of the shared target directory may have been built by another checkout".to_string(),
         )
-    })
+    })?;
+    Ok(copy)
 }
 
 /// The rendered compiler message carried by one `--message-format=json` line.
@@ -293,6 +322,32 @@ mod tests {
             None
         );
         assert_eq!(rendered_diagnostic("not json"), None);
+    }
+
+    /// WHY: eight checkouts share one target directory, and cargo hands the
+    /// artifact at `target/debug/<package>` to whichever of them asks. A child
+    /// executed straight from that path is whatever checkout built last, which
+    /// is how a sweep came to report four registered subsets as unregistered.
+    /// The copy carries this process's id, so two gates in one process reuse it
+    /// and two processes never collide.
+    #[test]
+    fn a_child_runs_from_a_copy_this_process_owns() {
+        let temp = tempfile::tempdir().expect("Fix: fixture directory must be creatable");
+        let built = temp.path().join("xtask-registry");
+        std::fs::write(&built, b"binary bytes").expect("Fix: fixture binary must be writable");
+
+        let copy = private_copy(&built, "xtask-registry").expect("the copy must be made");
+        assert_ne!(copy, built, "a copy at the same path protects nothing");
+        assert_eq!(
+            std::fs::read(&copy).expect("the copy must be readable"),
+            b"binary bytes"
+        );
+        assert!(copy
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.contains("xtask-registry")
+                && name.ends_with(&std::process::id().to_string())));
+        std::fs::remove_file(&copy).expect("the copy must be removable");
     }
 
     /// WHY: a sibling build-task binary is not the dispatcher, so it must build

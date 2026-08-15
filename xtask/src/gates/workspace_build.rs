@@ -22,17 +22,34 @@ struct Diagnostic {
     message: String,
 }
 
+/// The argv cargo receives, with `--message-format=json` on cargo's side.
+///
+/// Everything after `--` belongs to the lint driver. Appended at the end, the
+/// flag reached clippy-driver, which answered `Unrecognized option:
+/// 'message-format'` for every crate, so `workspace-clippy` could not run at
+/// all and reported an error instead of a lint.
+fn argv<'a>(arguments: &[&'a str]) -> Vec<&'a str> {
+    let mut argv = Vec::with_capacity(arguments.len() + 1);
+    let at = arguments
+        .iter()
+        .position(|argument| *argument == "--")
+        .unwrap_or(arguments.len());
+    argv.extend_from_slice(&arguments[..at]);
+    argv.push("--message-format=json");
+    argv.extend_from_slice(&arguments[at..]);
+    argv
+}
+
 /// Run one cargo invocation and return the diagnostics it emitted.
 ///
-/// `--message-format=json` is the only reason this is reliable: a gate that
-/// scraped human output counted the same error twice as soon as cargo repeated
-/// its summary. Nothing here sets a build-affecting flag or variable, because
-/// build configuration is declared once in `.cargo/config.toml`.
+/// The json format is the only reason this is reliable: a gate that scraped
+/// human output counted the same error twice as soon as cargo repeated its
+/// summary. Nothing here sets a build-affecting flag or variable, because build
+/// configuration is declared once in `.cargo/config.toml`.
 fn diagnostics(root: &Path, arguments: &[&str]) -> Result<Vec<Diagnostic>, GateError> {
     let cargo = crate::output_arg::cargo_runner(root);
     let output = Command::new(&cargo)
-        .args(arguments)
-        .arg("--message-format=json")
+        .args(argv(arguments))
         .current_dir(root)
         .output()
         .map_err(|error| {
@@ -254,5 +271,59 @@ impl Gate for WorkspaceTests {
         }
         report.note(format!("tested {}", TESTED_PACKAGES.join(", ")));
         Ok(report)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// WHY: `workspace-clippy` is the only gate that judges lints, and for the
+    /// whole of the cutover it judged nothing: the json flag was appended after
+    /// the `--` that hands the rest to clippy-driver, which rejected it per
+    /// crate, so the gate reported a gate error instead of a lint. The flag has
+    /// to sit on cargo's side of the separator for every gate in this module,
+    /// not only the one that was reported.
+    #[test]
+    fn the_json_flag_stays_on_cargos_side_of_the_lint_separator() {
+        let clippy = argv(&[
+            "clippy",
+            "--workspace",
+            "--all-features",
+            "--all-targets",
+            "--",
+            "-D",
+            "warnings",
+        ]);
+        let flag = clippy
+            .iter()
+            .position(|argument| *argument == "--message-format=json")
+            .expect("cargo must be asked for json diagnostics");
+        let separator = clippy
+            .iter()
+            .position(|argument| *argument == "--")
+            .expect("the lint arguments must still be passed through");
+        assert!(
+            flag < separator,
+            "the driver receives everything after `--`: {clippy:?}"
+        );
+        assert_eq!(&clippy[separator..], &["--", "-D", "warnings"]);
+    }
+
+    /// WHY: an invocation with no separator must still ask for json, and the
+    /// flag must not be inserted before the subcommand, which cargo reads first.
+    #[test]
+    fn an_invocation_without_a_separator_still_asks_for_json() {
+        let check = argv(&["check", "--workspace", "--all-features", "--all-targets"]);
+        assert_eq!(
+            check,
+            vec![
+                "check",
+                "--workspace",
+                "--all-features",
+                "--all-targets",
+                "--message-format=json",
+            ]
+        );
     }
 }
