@@ -3705,6 +3705,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   registry at run time and run through every safety rule, including reversed
   and rotated lane orders, so a new intrinsic cannot arrive with a witness
   program no gate executes.
+- The crate ownership registry records the feature selection each dependency
+  edge is built with. The `xtask-registry` to `vyre-libs` row named no features
+  while the edge enables `full` and `matching-regex`, so the derived crate
+  graph described a build nothing performs. The row now names both, and the
+  graph is regenerated from it.
 - The sweep runner's name has one owner. `gates` was a literal in the
   dispatcher, in the generated help and in the check that every subcommand a
   workflow names is dispatchable, and that check compared against the gate

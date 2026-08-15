@@ -1085,7 +1085,7 @@ seam = "backend-contract"
 [[crate.dependency]]
 package = "vyre-libs"
 purpose = "product operation builders"
-features = ["full"]
+features = ["full", "matching-regex"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
