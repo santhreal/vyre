@@ -1,6 +1,23 @@
 //! Unified device-resident token/fact graph layout.
+//!
+//! This module is the single owner of the device-resident token/fact graph:
+//! the CSR packing, the resident byte envelope, and the out-degree skew profile
+//! a backend needs to size its expansion queues. A backend crate converts the
+//! layout into its own scheduler types and issues its own device calls; it does
+//! not restate any of the arithmetic here. Every term is backend-neutral so the
+//! same layout serves every target.
 
-use std::collections::HashMap;
+/// Number of rank buckets carried for token/fact out-degree skew planning.
+pub const TOKEN_FACT_DEGREE_PROFILE_BUCKETS: usize = 16;
+
+/// Power-of-two ranks used by the token/fact out-degree profile.
+pub const TOKEN_FACT_DEGREE_PROFILE_RANKS: [u64; TOKEN_FACT_DEGREE_PROFILE_BUCKETS] = [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1_024, 2_048, 4_096, 8_192, 16_384, 32_768,
+];
+
+/// Highest rank the profile reports, and therefore how many top out-degrees the
+/// profile has to retain from a graph of any size.
+const TOKEN_FACT_DEGREE_PROFILE_MAX_RANK: usize = 32_768;
 
 /// Node class stored in the unified compiler/dataflow graph.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -45,6 +62,24 @@ pub struct TokenFactNode {
     pub payload_bytes: u64,
 }
 
+impl TokenFactNode {
+    /// One node in the shared payload slab.
+    #[must_use]
+    pub const fn new(
+        id: u32,
+        kind: TokenFactNodeKind,
+        payload_offset: u64,
+        payload_bytes: u64,
+    ) -> Self {
+        Self {
+            id,
+            kind,
+            payload_offset,
+            payload_bytes,
+        }
+    }
+}
+
 /// One logical edge before resident CSR packing.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TokenFactEdge {
@@ -54,6 +89,14 @@ pub struct TokenFactEdge {
     pub to: u32,
     /// Edge class.
     pub kind: TokenFactEdgeKind,
+}
+
+impl TokenFactEdge {
+    /// One dependency edge between two producer-defined node ids.
+    #[must_use]
+    pub const fn new(from: u32, to: u32, kind: TokenFactEdgeKind) -> Self {
+        Self { from, to, kind }
+    }
 }
 
 /// CSR layout shared by parser, semantic, diagnostic, and dataflow execution.
@@ -81,12 +124,85 @@ pub struct DeviceResidentTokenFactGraph {
     pub fact_nodes: u32,
 }
 
+/// Backend-neutral resident byte envelope for a packed token/fact graph.
+///
+/// A backend reads this to size its resident allocations and its frontier
+/// expansion queues. The record widths are the caller's concrete ABI widths;
+/// everything derived from them is computed once, here.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DeviceResidentTokenFactGraphLayout {
+    /// Resident node count.
+    pub node_count: u64,
+    /// Resident CSR edge count after row deduplication.
+    pub edge_count: u64,
+    /// Maximum outgoing CSR row degree in the resident token/fact graph.
+    pub max_out_degree: u64,
+    /// Prefix sums of top out-degrees at [`TOKEN_FACT_DEGREE_PROFILE_RANKS`].
+    pub top_out_degree_prefix_sums: [u64; TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
+    /// Fixed bytes per resident node record.
+    pub node_record_bytes: u64,
+    /// Fixed bytes per resident edge record.
+    pub edge_record_bytes: u64,
+    /// Bytes for resident node records.
+    pub node_bytes: u64,
+    /// Bytes for resident edge records.
+    pub edge_bytes: u64,
+    /// Bytes for the shared token/fact payload slab.
+    pub payload_bytes: u64,
+    /// Total bytes that must remain device-resident for the layout.
+    pub resident_bytes: u64,
+}
+
+impl DeviceResidentTokenFactGraphLayout {
+    /// Build a layout from aggregate byte fields when CSR row offsets are not
+    /// available to the caller. This preserves correctness by treating total
+    /// edge count as the maximum possible row degree.
+    #[must_use]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn from_aggregate_fields(
+        node_count: u64,
+        edge_count: u64,
+        node_record_bytes: u64,
+        edge_record_bytes: u64,
+        node_bytes: u64,
+        edge_bytes: u64,
+        payload_bytes: u64,
+        resident_bytes: u64,
+    ) -> Self {
+        Self {
+            node_count,
+            edge_count,
+            max_out_degree: edge_count,
+            top_out_degree_prefix_sums: [edge_count; TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
+            node_record_bytes,
+            edge_record_bytes,
+            node_bytes,
+            edge_bytes,
+            payload_bytes,
+            resident_bytes,
+        }
+    }
+}
+
+/// One edge staged as resident indices, kept narrow so the CSR sort moves
+/// twelve bytes per edge rather than a pointer-width tuple.
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+struct StagedEdge {
+    from: u32,
+    to: u32,
+    kind: TokenFactEdgeKind,
+}
+
 /// Reusable host-side staging for resident token/fact graph CSR packing.
+///
+/// Packing resolves edge endpoints by binary search over the sorted node ids
+/// rather than through a hash index, so the staging holds only contiguous
+/// vectors and the repeat call allocates nothing.
 #[derive(Debug, Default)]
 pub struct DeviceResidentTokenFactGraphScratch {
-    index_by_id: HashMap<u32, usize>,
     ordered_nodes: Vec<TokenFactNode>,
-    staged_edges: Vec<(usize, u32, TokenFactEdgeKind)>,
+    staged_edges: Vec<StagedEdge>,
+    row_degrees: Vec<u32>,
 }
 
 impl DeviceResidentTokenFactGraphScratch {
@@ -97,9 +213,9 @@ impl DeviceResidentTokenFactGraphScratch {
     }
 
     fn clear_preserving_capacity(&mut self) {
-        self.index_by_id.clear();
         self.ordered_nodes.clear();
         self.staged_edges.clear();
+        self.row_degrees.clear();
     }
 }
 
@@ -132,6 +248,21 @@ pub enum DeviceResidentTokenFactGraphError {
     },
     /// CSR row offsets cannot fit the release ABI.
     CsrIndexOverflow,
+    /// Resident record widths must be explicit, non-zero ABI values.
+    ZeroRecordWidth {
+        /// Field that was zero.
+        field: &'static str,
+    },
+    /// Public CSR fields are inconsistent with each other.
+    InvalidCsrShape {
+        /// Invalid CSR field or relationship.
+        field: &'static str,
+    },
+    /// Resident byte arithmetic overflowed.
+    ByteCountOverflow {
+        /// Field being computed.
+        field: &'static str,
+    },
 }
 
 impl std::fmt::Display for DeviceResidentTokenFactGraphError {
@@ -147,7 +278,7 @@ impl std::fmt::Display for DeviceResidentTokenFactGraphError {
             ),
             Self::PayloadOverflow { id } => write!(
                 f,
-                "device-resident token/fact graph payload range overflowed for node {id}. Fix: shard the translation unit or payload slab before CUDA upload."
+                "device-resident token/fact graph payload range overflowed for node {id}. Fix: shard the translation unit or payload slab before device upload."
             ),
             Self::PayloadOutOfBounds {
                 id,
@@ -159,7 +290,19 @@ impl std::fmt::Display for DeviceResidentTokenFactGraphError {
             ),
             Self::CsrIndexOverflow => write!(
                 f,
-                "device-resident token/fact graph exceeds u32 CSR limits. Fix: shard before CUDA resident layout packing."
+                "device-resident token/fact graph exceeds u32 CSR limits. Fix: shard before resident layout packing."
+            ),
+            Self::ZeroRecordWidth { field } => write!(
+                f,
+                "device-resident token/fact graph layout received zero {field}. Fix: pass the concrete resident ABI record width."
+            ),
+            Self::InvalidCsrShape { field } => write!(
+                f,
+                "device-resident token/fact graph layout received invalid CSR {field}. Fix: rebuild the token/fact graph through the canonical resident graph planner."
+            ),
+            Self::ByteCountOverflow { field } => write!(
+                f,
+                "device-resident token/fact graph layout overflowed while computing {field}. Fix: shard the token/fact graph before resident upload."
             ),
         }
     }
@@ -185,17 +328,12 @@ pub fn plan_device_resident_token_fact_graph_with_scratch(
     scratch: &mut DeviceResidentTokenFactGraphScratch,
 ) -> Result<DeviceResidentTokenFactGraph, DeviceResidentTokenFactGraphError> {
     scratch.clear_preserving_capacity();
-    scratch.index_by_id.reserve(nodes.len());
     scratch.ordered_nodes.reserve(nodes.len());
     scratch.staged_edges.reserve(edges.len());
+    u32::try_from(nodes.len()).map_err(|_| DeviceResidentTokenFactGraphError::CsrIndexOverflow)?;
+    u32::try_from(edges.len()).map_err(|_| DeviceResidentTokenFactGraphError::CsrIndexOverflow)?;
+
     for node in nodes {
-        if scratch
-            .index_by_id
-            .insert(node.id, scratch.ordered_nodes.len())
-            .is_some()
-        {
-            return Err(DeviceResidentTokenFactGraphError::DuplicateNode { id: node.id });
-        }
         let end = node
             .payload_offset
             .checked_add(node.payload_bytes)
@@ -211,18 +349,19 @@ pub fn plan_device_resident_token_fact_graph_with_scratch(
     }
     scratch.ordered_nodes.sort_unstable_by_key(|node| node.id);
 
-    u32::try_from(scratch.ordered_nodes.len())
-        .map_err(|_| DeviceResidentTokenFactGraphError::CsrIndexOverflow)?;
-    scratch.index_by_id.clear();
-    let mut node_ids = Vec::with_capacity(scratch.ordered_nodes.len());
-    let mut node_kinds = Vec::with_capacity(scratch.ordered_nodes.len());
-    let mut payload_offsets = Vec::with_capacity(scratch.ordered_nodes.len());
-    let mut payload_lengths = Vec::with_capacity(scratch.ordered_nodes.len());
+    let node_count = scratch.ordered_nodes.len();
+    let mut node_ids = Vec::with_capacity(node_count);
+    let mut node_kinds = Vec::with_capacity(node_count);
+    let mut payload_offsets = Vec::with_capacity(node_count);
+    let mut payload_lengths = Vec::with_capacity(node_count);
     let mut token_nodes = 0_u32;
     let mut fact_nodes = 0_u32;
-    for (index, node) in scratch.ordered_nodes.iter().enumerate() {
-        u32::try_from(index).map_err(|_| DeviceResidentTokenFactGraphError::CsrIndexOverflow)?;
-        scratch.index_by_id.insert(node.id, index);
+    for node in &scratch.ordered_nodes {
+        // Ids are sorted, so a duplicate is always adjacent. Reporting the
+        // smallest duplicated id keeps the error independent of input order.
+        if node_ids.last() == Some(&node.id) {
+            return Err(DeviceResidentTokenFactGraphError::DuplicateNode { id: node.id });
+        }
         node_ids.push(node.id);
         node_kinds.push(node.kind);
         payload_offsets.push(node.payload_offset);
@@ -237,38 +376,32 @@ pub fn plan_device_resident_token_fact_graph_with_scratch(
     }
 
     for edge in edges {
-        let from = *scratch
-            .index_by_id
-            .get(&edge.from)
-            .ok_or(DeviceResidentTokenFactGraphError::UnknownEdgeNode { id: edge.from })?;
-        let to = *scratch
-            .index_by_id
-            .get(&edge.to)
-            .ok_or(DeviceResidentTokenFactGraphError::UnknownEdgeNode { id: edge.to })?;
-        let to =
-            u32::try_from(to).map_err(|_| DeviceResidentTokenFactGraphError::CsrIndexOverflow)?;
-        scratch.staged_edges.push((from, to, edge.kind));
+        let from = resident_index(&node_ids, edge.from)?;
+        let to = resident_index(&node_ids, edge.to)?;
+        scratch.staged_edges.push(StagedEdge {
+            from,
+            to,
+            kind: edge.kind,
+        });
     }
+    scratch.staged_edges.sort_unstable();
 
-    u32::try_from(edges.len()).map_err(|_| DeviceResidentTokenFactGraphError::CsrIndexOverflow)?;
-    scratch
-        .staged_edges
-        .sort_unstable_by_key(|&(from, to, kind)| (from, to, kind));
-    let mut row_offsets = Vec::with_capacity(scratch.ordered_nodes.len() + 1);
+    let mut row_offsets = Vec::with_capacity(node_count + 1);
     let mut column_indices = Vec::with_capacity(scratch.staged_edges.len());
     let mut edge_kinds = Vec::with_capacity(scratch.staged_edges.len());
     row_offsets.push(0);
     let mut edge_index = 0_usize;
-    for row in 0..scratch.ordered_nodes.len() {
+    for row in 0..node_count {
+        let row = u32::try_from(row).map_err(|_| DeviceResidentTokenFactGraphError::CsrIndexOverflow)?;
         let mut last_edge = None;
-        while let Some(&(from, to, kind)) = scratch.staged_edges.get(edge_index) {
-            if from != row {
+        while let Some(&staged) = scratch.staged_edges.get(edge_index) {
+            if staged.from != row {
                 break;
             }
-            let edge_key = (to, kind);
+            let edge_key = (staged.to, staged.kind);
             if last_edge != Some(edge_key) {
-                column_indices.push(to);
-                edge_kinds.push(kind);
+                column_indices.push(staged.to);
+                edge_kinds.push(staged.kind);
                 last_edge = Some(edge_key);
             }
             edge_index += 1;
@@ -292,6 +425,186 @@ pub fn plan_device_resident_token_fact_graph_with_scratch(
     })
 }
 
+/// Resolve a producer-defined node id to its resident CSR index.
+///
+/// `node_ids` is sorted ascending by construction, so this is a binary search
+/// over one contiguous `u32` run. That beats a hash index here: the index would
+/// have to be built for every node before the first edge is resolved, and the
+/// search array is already needed as the packed output column.
+fn resident_index(
+    node_ids: &[u32],
+    id: u32,
+) -> Result<u32, DeviceResidentTokenFactGraphError> {
+    let index = node_ids
+        .binary_search(&id)
+        .map_err(|_| DeviceResidentTokenFactGraphError::UnknownEdgeNode { id })?;
+    u32::try_from(index).map_err(|_| DeviceResidentTokenFactGraphError::CsrIndexOverflow)
+}
+
+/// Compute the resident byte envelope and out-degree skew profile for a graph.
+pub fn plan_device_resident_token_fact_graph_layout(
+    graph: &DeviceResidentTokenFactGraph,
+    node_record_bytes: u64,
+    edge_record_bytes: u64,
+) -> Result<DeviceResidentTokenFactGraphLayout, DeviceResidentTokenFactGraphError> {
+    let mut scratch = DeviceResidentTokenFactGraphScratch::new();
+    plan_device_resident_token_fact_graph_layout_with_scratch(
+        graph,
+        node_record_bytes,
+        edge_record_bytes,
+        &mut scratch,
+    )
+}
+
+/// Compute the resident byte envelope reusing caller-owned profiling scratch.
+pub fn plan_device_resident_token_fact_graph_layout_with_scratch(
+    graph: &DeviceResidentTokenFactGraph,
+    node_record_bytes: u64,
+    edge_record_bytes: u64,
+    scratch: &mut DeviceResidentTokenFactGraphScratch,
+) -> Result<DeviceResidentTokenFactGraphLayout, DeviceResidentTokenFactGraphError> {
+    if node_record_bytes == 0 {
+        return Err(DeviceResidentTokenFactGraphError::ZeroRecordWidth {
+            field: "node_record_bytes",
+        });
+    }
+    if edge_record_bytes == 0 {
+        return Err(DeviceResidentTokenFactGraphError::ZeroRecordWidth {
+            field: "edge_record_bytes",
+        });
+    }
+    let node_count = u64::try_from(graph.node_ids.len()).map_err(|_| {
+        DeviceResidentTokenFactGraphError::ByteCountOverflow {
+            field: "node count",
+        }
+    })?;
+    let edge_count = u64::try_from(graph.column_indices.len()).map_err(|_| {
+        DeviceResidentTokenFactGraphError::ByteCountOverflow {
+            field: "edge count",
+        }
+    })?;
+    let (max_out_degree, top_out_degree_prefix_sums) =
+        csr_out_degree_profile(graph, edge_count, &mut scratch.row_degrees)?;
+    let node_bytes = checked_mul(node_count, node_record_bytes, "node bytes")?;
+    let edge_bytes = checked_mul(edge_count, edge_record_bytes, "edge bytes")?;
+    let resident_without_payload = checked_add(node_bytes, edge_bytes, "node plus edge bytes")?;
+    let resident_bytes = checked_add(
+        resident_without_payload,
+        graph.payload_bytes,
+        "resident bytes",
+    )?;
+
+    Ok(DeviceResidentTokenFactGraphLayout {
+        node_count,
+        edge_count,
+        max_out_degree,
+        top_out_degree_prefix_sums,
+        node_record_bytes,
+        edge_record_bytes,
+        node_bytes,
+        edge_bytes,
+        payload_bytes: graph.payload_bytes,
+        resident_bytes,
+    })
+}
+
+fn checked_mul(
+    left: u64,
+    right: u64,
+    field: &'static str,
+) -> Result<u64, DeviceResidentTokenFactGraphError> {
+    left.checked_mul(right)
+        .ok_or(DeviceResidentTokenFactGraphError::ByteCountOverflow { field })
+}
+
+fn checked_add(
+    left: u64,
+    right: u64,
+    field: &'static str,
+) -> Result<u64, DeviceResidentTokenFactGraphError> {
+    left.checked_add(right)
+        .ok_or(DeviceResidentTokenFactGraphError::ByteCountOverflow { field })
+}
+
+/// Validate the CSR rows and report the top out-degrees the profile needs.
+///
+/// Degrees are collected once into a reusable `u32` buffer, and only when a
+/// graph has more rows than the highest reported rank is the buffer reduced to
+/// that prefix. Sorting the retained prefix is then the whole cost. A heap kept
+/// per row instead paid a sift for every row of every graph.
+fn csr_out_degree_profile(
+    graph: &DeviceResidentTokenFactGraph,
+    edge_count: u64,
+    row_degrees: &mut Vec<u32>,
+) -> Result<(u64, [u64; TOKEN_FACT_DEGREE_PROFILE_BUCKETS]), DeviceResidentTokenFactGraphError> {
+    let expected_row_offsets = graph.node_ids.len().checked_add(1).ok_or(
+        DeviceResidentTokenFactGraphError::ByteCountOverflow {
+            field: "row offset count",
+        },
+    )?;
+    if graph.row_offsets.len() != expected_row_offsets {
+        return Err(DeviceResidentTokenFactGraphError::InvalidCsrShape {
+            field: "row_offsets length",
+        });
+    }
+    let declared_edges = u64::from(*graph.row_offsets.last().ok_or(
+        DeviceResidentTokenFactGraphError::InvalidCsrShape {
+            field: "row_offsets terminator",
+        },
+    )?);
+    if declared_edges != edge_count {
+        return Err(DeviceResidentTokenFactGraphError::InvalidCsrShape {
+            field: "row_offsets edge count",
+        });
+    }
+
+    row_degrees.clear();
+    row_degrees.reserve(graph.node_ids.len());
+    let mut max_out_degree = 0_u32;
+    for row in graph.row_offsets.windows(2) {
+        let start = row[0];
+        let end = row[1];
+        if end < start {
+            return Err(DeviceResidentTokenFactGraphError::InvalidCsrShape {
+                field: "row_offsets ordering",
+            });
+        }
+        let degree = end - start;
+        max_out_degree = max_out_degree.max(degree);
+        row_degrees.push(degree);
+    }
+    if row_degrees.len() > TOKEN_FACT_DEGREE_PROFILE_MAX_RANK {
+        row_degrees.select_nth_unstable_by(TOKEN_FACT_DEGREE_PROFILE_MAX_RANK - 1, |lhs, rhs| {
+            rhs.cmp(lhs)
+        });
+        row_degrees.truncate(TOKEN_FACT_DEGREE_PROFILE_MAX_RANK);
+    }
+    row_degrees.sort_unstable_by(|lhs, rhs| rhs.cmp(lhs));
+
+    let mut prefix_sum = 0_u64;
+    let mut prefix_sums = [0_u64; TOKEN_FACT_DEGREE_PROFILE_BUCKETS];
+    let mut bucket = 0_usize;
+    for (index, degree) in row_degrees.iter().enumerate() {
+        prefix_sum = checked_add(prefix_sum, u64::from(*degree), "top out-degree prefix sum")?;
+        let rank = u64::try_from(index + 1).map_err(|_| {
+            DeviceResidentTokenFactGraphError::ByteCountOverflow {
+                field: "out-degree profile rank",
+            }
+        })?;
+        while bucket < TOKEN_FACT_DEGREE_PROFILE_BUCKETS
+            && rank >= TOKEN_FACT_DEGREE_PROFILE_RANKS[bucket]
+        {
+            prefix_sums[bucket] = prefix_sum;
+            bucket += 1;
+        }
+    }
+    while bucket < TOKEN_FACT_DEGREE_PROFILE_BUCKETS {
+        prefix_sums[bucket] = prefix_sum;
+        bucket += 1;
+    }
+    Ok((u64::from(max_out_degree), prefix_sums))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -300,13 +613,13 @@ mod tests {
     fn token_fact_graph_packs_stable_shared_csr() {
         let graph = plan_device_resident_token_fact_graph(
             &[
-                node(20, TokenFactNodeKind::Fact, 12, 4),
-                node(10, TokenFactNodeKind::Token, 0, 4),
-                node(30, TokenFactNodeKind::Diagnostic, 20, 8),
+                TokenFactNode::new(20, TokenFactNodeKind::Fact, 12, 4),
+                TokenFactNode::new(10, TokenFactNodeKind::Token, 0, 4),
+                TokenFactNode::new(30, TokenFactNodeKind::Diagnostic, 20, 8),
             ],
             &[
-                edge(20, 30, TokenFactEdgeKind::DiagnosticProvenance),
-                edge(10, 20, TokenFactEdgeKind::SemanticFact),
+                TokenFactEdge::new(20, 30, TokenFactEdgeKind::DiagnosticProvenance),
+                TokenFactEdge::new(10, 20, TokenFactEdgeKind::SemanticFact),
             ],
             32,
         )
@@ -338,12 +651,12 @@ mod tests {
     fn token_fact_graph_deduplicates_parallel_edges_deterministically() {
         let graph = plan_device_resident_token_fact_graph(
             &[
-                node(2, TokenFactNodeKind::Fact, 4, 4),
-                node(1, TokenFactNodeKind::Token, 0, 4),
+                TokenFactNode::new(2, TokenFactNodeKind::Fact, 4, 4),
+                TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 4),
             ],
             &[
-                edge(1, 2, TokenFactEdgeKind::SemanticFact),
-                edge(1, 2, TokenFactEdgeKind::SemanticFact),
+                TokenFactEdge::new(1, 2, TokenFactEdgeKind::SemanticFact),
+                TokenFactEdge::new(1, 2, TokenFactEdgeKind::SemanticFact),
             ],
             8,
         )
@@ -358,8 +671,8 @@ mod tests {
         assert_eq!(
             plan_device_resident_token_fact_graph(
                 &[
-                    node(1, TokenFactNodeKind::Token, 0, 1),
-                    node(1, TokenFactNodeKind::Fact, 1, 1),
+                    TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 1),
+                    TokenFactNode::new(1, TokenFactNodeKind::Fact, 1, 1),
                 ],
                 &[],
                 2,
@@ -369,8 +682,8 @@ mod tests {
         );
         assert_eq!(
             plan_device_resident_token_fact_graph(
-                &[node(1, TokenFactNodeKind::Token, 0, 1)],
-                &[edge(1, 2, TokenFactEdgeKind::SemanticFact)],
+                &[TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 1)],
+                &[TokenFactEdge::new(1, 2, TokenFactEdgeKind::SemanticFact)],
                 1,
             )
             .expect_err("unknown edge nodes should fail"),
@@ -378,7 +691,7 @@ mod tests {
         );
         assert_eq!(
             plan_device_resident_token_fact_graph(
-                &[node(1, TokenFactNodeKind::Token, 8, 8)],
+                &[TokenFactNode::new(1, TokenFactNodeKind::Token, 8, 8)],
                 &[],
                 12,
             )
@@ -391,14 +704,34 @@ mod tests {
         );
     }
 
+    /// WHY: duplicate detection moved from a first-seen hash probe to an
+    /// adjacent-pair scan over sorted ids. The reported id must therefore be the
+    /// smallest duplicated one no matter how the producer ordered its nodes, or
+    /// two runs over the same graph would blame different nodes.
+    #[test]
+    fn token_fact_graph_reports_the_smallest_duplicate_regardless_of_input_order() {
+        for order in [[9_u32, 4, 9, 4], [4, 9, 4, 9], [4, 4, 9, 9]] {
+            let nodes = order
+                .iter()
+                .map(|id| TokenFactNode::new(*id, TokenFactNodeKind::Token, 0, 0))
+                .collect::<Vec<_>>();
+            assert_eq!(
+                plan_device_resident_token_fact_graph(&nodes, &[], 4)
+                    .expect_err("duplicate nodes should fail"),
+                DeviceResidentTokenFactGraphError::DuplicateNode { id: 4 },
+                "input order {order:?}"
+            );
+        }
+    }
+
     #[test]
     fn token_fact_graph_packs_large_unsorted_input_with_stable_indices() {
         let mut nodes = Vec::new();
         let mut edges = Vec::new();
         for id in (0..1024_u32).rev() {
-            nodes.push(node(id, TokenFactNodeKind::Token, u64::from(id), 1));
+            nodes.push(TokenFactNode::new(id, TokenFactNodeKind::Token, u64::from(id), 1));
             if id > 0 {
-                edges.push(edge(id - 1, id, TokenFactEdgeKind::TokenFlow));
+                edges.push(TokenFactEdge::new(id - 1, id, TokenFactEdgeKind::TokenFlow));
             }
         }
 
@@ -416,19 +749,18 @@ mod tests {
     fn token_fact_graph_scratch_reuses_staging_allocations() {
         let mut scratch = DeviceResidentTokenFactGraphScratch::new();
         let nodes = [
-            node(3, TokenFactNodeKind::Fact, 2, 1),
-            node(1, TokenFactNodeKind::Token, 0, 1),
-            node(2, TokenFactNodeKind::Semantic, 1, 1),
+            TokenFactNode::new(3, TokenFactNodeKind::Fact, 2, 1),
+            TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 1),
+            TokenFactNode::new(2, TokenFactNodeKind::Semantic, 1, 1),
         ];
         let edges = [
-            edge(1, 2, TokenFactEdgeKind::SemanticFact),
-            edge(2, 3, TokenFactEdgeKind::FactDependency),
+            TokenFactEdge::new(1, 2, TokenFactEdgeKind::SemanticFact),
+            TokenFactEdge::new(2, 3, TokenFactEdgeKind::FactDependency),
         ];
         plan_device_resident_token_fact_graph_with_scratch(&nodes, &edges, 3, &mut scratch)
             .expect("Fix: first scratch-backed token/fact graph should pack");
         let ordered_capacity = scratch.ordered_nodes.capacity();
         let staged_capacity = scratch.staged_edges.capacity();
-        let index_capacity = scratch.index_by_id.capacity();
 
         let graph =
             plan_device_resident_token_fact_graph_with_scratch(&nodes[..2], &[], 3, &mut scratch)
@@ -436,7 +768,6 @@ mod tests {
 
         assert_eq!(scratch.ordered_nodes.capacity(), ordered_capacity);
         assert_eq!(scratch.staged_edges.capacity(), staged_capacity);
-        assert_eq!(scratch.index_by_id.capacity(), index_capacity);
         assert_eq!(graph.node_ids, vec![1, 3]);
         assert_eq!(
             graph.row_offsets,
@@ -445,21 +776,245 @@ mod tests {
         );
     }
 
-    fn node(
-        id: u32,
-        kind: TokenFactNodeKind,
-        payload_offset: u64,
-        payload_bytes: u64,
-    ) -> TokenFactNode {
-        TokenFactNode {
-            id,
-            kind,
-            payload_offset,
-            payload_bytes,
+    /// WHY: the degree profile is the only per-row allocation left on the
+    /// residency path. A second layout call over a smaller graph must reuse the
+    /// same buffer, or the profile reintroduces a per-plan allocation.
+    #[test]
+    fn layout_scratch_reuses_the_out_degree_buffer() {
+        let mut scratch = DeviceResidentTokenFactGraphScratch::new();
+        let nodes = (0..512_u32)
+            .map(|id| TokenFactNode::new(id, TokenFactNodeKind::Fact, u64::from(id) * 4, 4))
+            .collect::<Vec<_>>();
+        let edges = (1..512_u32)
+            .map(|id| TokenFactEdge::new(0, id, TokenFactEdgeKind::FactDependency))
+            .collect::<Vec<_>>();
+        let graph = plan_device_resident_token_fact_graph(&nodes, &edges, 2_048)
+            .expect("Fix: profiling graph should pack");
+        plan_device_resident_token_fact_graph_layout_with_scratch(&graph, 32, 16, &mut scratch)
+            .expect("Fix: first layout should plan");
+        let degree_capacity = scratch.row_degrees.capacity();
+        assert!(degree_capacity >= 512);
+
+        let small = plan_device_resident_token_fact_graph(&nodes[..4], &[], 2_048)
+            .expect("Fix: smaller profiling graph should pack");
+        plan_device_resident_token_fact_graph_layout_with_scratch(&small, 32, 16, &mut scratch)
+            .expect("Fix: second layout should plan");
+
+        assert_eq!(scratch.row_degrees.capacity(), degree_capacity);
+    }
+
+    #[test]
+    fn layout_accounts_for_the_resident_byte_envelope() {
+        let graph = plan_device_resident_token_fact_graph(
+            &[
+                TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 8),
+                TokenFactNode::new(2, TokenFactNodeKind::Semantic, 8, 8),
+                TokenFactNode::new(3, TokenFactNodeKind::Fact, 16, 8),
+            ],
+            &[
+                TokenFactEdge::new(1, 2, TokenFactEdgeKind::SemanticFact),
+                TokenFactEdge::new(2, 3, TokenFactEdgeKind::FactDependency),
+            ],
+            24,
+        )
+        .expect("Fix: token/fact graph should pack");
+
+        let layout = plan_device_resident_token_fact_graph_layout(&graph, 32, 16)
+            .expect("Fix: token/fact graph should produce a resident layout");
+
+        assert_eq!(layout.node_count, 3);
+        assert_eq!(layout.edge_count, 2);
+        assert_eq!(layout.max_out_degree, 1);
+        assert_eq!(layout.top_out_degree_prefix_sums[0], 1);
+        assert_eq!(layout.top_out_degree_prefix_sums[1], 2);
+        assert_eq!(layout.top_out_degree_prefix_sums[15], 2);
+        assert_eq!(layout.node_bytes, 96);
+        assert_eq!(layout.edge_bytes, 32);
+        assert_eq!(layout.resident_bytes, 152);
+    }
+
+    #[test]
+    fn layout_exports_max_out_degree_for_hub_heavy_queue_planning() {
+        let graph = plan_device_resident_token_fact_graph(
+            &[
+                TokenFactNode::new(1, TokenFactNodeKind::Fact, 0, 4),
+                TokenFactNode::new(2, TokenFactNodeKind::Fact, 4, 4),
+                TokenFactNode::new(3, TokenFactNodeKind::Fact, 8, 4),
+                TokenFactNode::new(4, TokenFactNodeKind::Fact, 12, 4),
+            ],
+            &[
+                TokenFactEdge::new(1, 2, TokenFactEdgeKind::FactDependency),
+                TokenFactEdge::new(1, 3, TokenFactEdgeKind::FactDependency),
+                TokenFactEdge::new(1, 4, TokenFactEdgeKind::FactDependency),
+                TokenFactEdge::new(2, 3, TokenFactEdgeKind::FactDependency),
+            ],
+            16,
+        )
+        .expect("Fix: hub-heavy token/fact graph should pack");
+
+        let layout = plan_device_resident_token_fact_graph_layout(&graph, 32, 16)
+            .expect("Fix: hub-heavy token/fact graph should produce a resident layout");
+
+        assert_eq!(layout.edge_count, 4);
+        assert_eq!(layout.max_out_degree, 3);
+        assert_eq!(layout.top_out_degree_prefix_sums[0], 3);
+        assert_eq!(layout.top_out_degree_prefix_sums[1], 4);
+        assert_eq!(layout.top_out_degree_prefix_sums[2], 4);
+    }
+
+    #[test]
+    fn generated_layout_profiles_top_out_degree_prefixes() {
+        let mut state = 0x5eec_c0de_f00d_7715_u64;
+        let mut scratch = DeviceResidentTokenFactGraphScratch::new();
+        for case_index in 0..4096_u64 {
+            let node_count = 1 + (next_u64(&mut state) % 64) as u32;
+            let nodes = (0..node_count)
+                .map(|index| TokenFactNode::new(index + 1, TokenFactNodeKind::Fact, u64::from(index) * 4, 4))
+                .collect::<Vec<_>>();
+            let mut edges = Vec::new();
+            if case_index % 4 == 0 {
+                for to in 2..=node_count {
+                    edges.push(TokenFactEdge::new(1, to, TokenFactEdgeKind::FactDependency));
+                }
+            }
+            let attempts = next_u64(&mut state) % (u64::from(node_count) * 5 + 1);
+            for _ in 0..attempts {
+                let from = 1 + (next_u64(&mut state) % u64::from(node_count)) as u32;
+                let to = 1 + (next_u64(&mut state) % u64::from(node_count)) as u32;
+                let kind = if next_u64(&mut state) & 1 == 0 {
+                    TokenFactEdgeKind::FactDependency
+                } else {
+                    TokenFactEdgeKind::DiagnosticProvenance
+                };
+                edges.push(TokenFactEdge::new(from, to, kind));
+            }
+            let graph =
+                plan_device_resident_token_fact_graph(&nodes, &edges, u64::from(node_count) * 4)
+                    .expect("Fix: generated token/fact graph should pack");
+            let layout = plan_device_resident_token_fact_graph_layout_with_scratch(
+                &graph,
+                32,
+                16,
+                &mut scratch,
+            )
+            .expect("Fix: generated token/fact graph should produce a resident layout");
+            let mut degrees = graph
+                .row_offsets
+                .windows(2)
+                .map(|row| u64::from(row[1] - row[0]))
+                .collect::<Vec<_>>();
+            degrees.sort_unstable_by(|lhs, rhs| rhs.cmp(lhs));
+
+            assert_eq!(
+                layout.max_out_degree,
+                degrees.first().copied().unwrap_or(0),
+                "case {case_index}"
+            );
+            for (bucket, rank) in TOKEN_FACT_DEGREE_PROFILE_RANKS.iter().enumerate() {
+                let expected = degrees
+                    .iter()
+                    .take((*rank as usize).min(degrees.len()))
+                    .copied()
+                    .sum::<u64>();
+                assert_eq!(
+                    layout.top_out_degree_prefix_sums[bucket], expected,
+                    "case {case_index} bucket {bucket}"
+                );
+            }
         }
     }
 
-    fn edge(from: u32, to: u32, kind: TokenFactEdgeKind) -> TokenFactEdge {
-        TokenFactEdge { from, to, kind }
+    #[test]
+    fn layout_profiles_large_graph_with_bounded_top_rank_storage() {
+        let node_count = 32_770_u32;
+        let nodes = (0..node_count)
+            .map(|index| TokenFactNode::new(index + 1, TokenFactNodeKind::Fact, u64::from(index) * 4, 4))
+            .collect::<Vec<_>>();
+        let mut edges = Vec::with_capacity(32_858);
+        for to in 2..=51 {
+            edges.push(TokenFactEdge::new(1, to, TokenFactEdgeKind::FactDependency));
+        }
+        for to in 3..=42 {
+            edges.push(TokenFactEdge::new(2, to, TokenFactEdgeKind::FactDependency));
+        }
+        for from in 3..=node_count {
+            edges.push(TokenFactEdge::new(from, 1, TokenFactEdgeKind::FactDependency));
+        }
+        let graph =
+            plan_device_resident_token_fact_graph(&nodes, &edges, u64::from(node_count) * 4)
+                .expect("Fix: large skewed token/fact graph should pack");
+
+        let layout = plan_device_resident_token_fact_graph_layout(&graph, 32, 16)
+            .expect("Fix: large skewed token/fact graph should produce a resident layout");
+
+        assert_eq!(layout.node_count, u64::from(node_count));
+        assert_eq!(layout.edge_count, 32_858);
+        assert_eq!(layout.max_out_degree, 50);
+        assert_eq!(layout.top_out_degree_prefix_sums[0], 50);
+        assert_eq!(layout.top_out_degree_prefix_sums[1], 90);
+        assert_eq!(layout.top_out_degree_prefix_sums[2], 92);
+        assert_eq!(layout.top_out_degree_prefix_sums[15], 32_856);
+    }
+
+    #[test]
+    fn aggregate_layout_constructor_preserves_the_safe_edge_bound() {
+        let layout = DeviceResidentTokenFactGraphLayout::from_aggregate_fields(
+            4, 9, 32, 16, 128, 144, 64, 336,
+        );
+
+        assert_eq!(layout.max_out_degree, 9);
+        assert_eq!(
+            layout.top_out_degree_prefix_sums,
+            [9; TOKEN_FACT_DEGREE_PROFILE_BUCKETS]
+        );
+        assert_eq!(layout.resident_bytes, 336);
+    }
+
+    #[test]
+    fn layout_rejects_missing_abi_widths() {
+        let graph = plan_device_resident_token_fact_graph(&[], &[], 0)
+            .expect("Fix: empty graph still has a valid resident layout");
+
+        assert_eq!(
+            plan_device_resident_token_fact_graph_layout(&graph, 0, 8)
+                .expect_err("zero node record width should fail"),
+            DeviceResidentTokenFactGraphError::ZeroRecordWidth {
+                field: "node_record_bytes",
+            }
+        );
+        assert_eq!(
+            plan_device_resident_token_fact_graph_layout(&graph, 8, 0)
+                .expect_err("zero edge record width should fail"),
+            DeviceResidentTokenFactGraphError::ZeroRecordWidth {
+                field: "edge_record_bytes",
+            }
+        );
+    }
+
+    #[test]
+    fn layout_rejects_public_graphs_with_invalid_csr_rows() {
+        let mut graph = plan_device_resident_token_fact_graph(
+            &[TokenFactNode::new(1, TokenFactNodeKind::Fact, 0, 4)],
+            &[],
+            4,
+        )
+        .expect("Fix: token/fact graph should pack before adversarial mutation");
+        graph.row_offsets[1] = 1;
+
+        assert_eq!(
+            plan_device_resident_token_fact_graph_layout(&graph, 32, 16)
+                .expect_err("invalid CSR row offsets should fail before resident planning"),
+            DeviceResidentTokenFactGraphError::InvalidCsrShape {
+                field: "row_offsets edge count",
+            }
+        );
+    }
+
+
+    fn next_u64(state: &mut u64) -> u64 {
+        *state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        *state
     }
 }
